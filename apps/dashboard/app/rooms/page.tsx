@@ -109,11 +109,26 @@ export default function RoomsPage() {
   };
 
   const saveRoom = async () => {
-    if (!token || !selectedId || !editName.trim()) return;
+    if (!selectedId || !editName.trim()) return;
+    const patchToken = adminJwt.trim();
+    if (!patchToken) {
+      setError("Renaming a room needs an admin JWT (from Quickstart or Projects → Session).");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      await client.updateRoom(selectedId, { name: editName.trim() });
+      await fetchWorkerJson<{ ok?: boolean }>(
+        `${WORKER_URL}/rooms/${encodeURIComponent(selectedId)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${patchToken}`,
+          },
+          body: JSON.stringify({ name: editName.trim() }),
+        },
+      );
       setNotice("Room updated.");
       await loadRooms();
     } catch (e: unknown) {

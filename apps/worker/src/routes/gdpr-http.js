@@ -69,7 +69,9 @@ export async function dispatchGdprRoutes(request, url, h) {
           .bind(projectId, userId)
           .all(),
         env.DB.prepare(
-          "SELECT room_id, role, joined_at FROM room_members WHERE project_id = ? AND user_id = ?" // perf: unbounded (room count is bounded by project size)
+          `SELECT rm.room_id, rm.role, rm.joined_at FROM room_members rm
+           INNER JOIN rooms r ON r.id = rm.room_id
+           WHERE r.project_id = ? AND rm.user_id = ?`
         )
           .bind(projectId, userId)
           .all(),
@@ -122,7 +124,9 @@ export async function dispatchGdprRoutes(request, url, h) {
 
     const [gdprMemberRooms, gdprMessageRooms] = await Promise.all([
       env.DB.prepare(
-        "SELECT DISTINCT room_id FROM room_members WHERE project_id = ? AND user_id = ? AND room_id IS NOT NULL"
+        `SELECT DISTINCT rm.room_id AS room_id FROM room_members rm
+         INNER JOIN rooms r ON r.id = rm.room_id
+         WHERE r.project_id = ? AND rm.user_id = ? AND rm.room_id IS NOT NULL`
       )
         .bind(projectId, userId)
         .all(),
@@ -159,9 +163,13 @@ export async function dispatchGdprRoutes(request, url, h) {
       .run();
 
     await env.DB.prepare(
-      "DELETE FROM room_members WHERE project_id = ? AND user_id = ?"
+      `DELETE FROM room_members WHERE room_id IN (
+         SELECT rm.room_id FROM room_members rm
+         INNER JOIN rooms r ON r.id = rm.room_id
+         WHERE r.project_id = ? AND rm.user_id = ?
+       ) AND user_id = ?`
     )
-      .bind(projectId, userId)
+      .bind(projectId, userId, userId)
       .run();
 
     await env.DB.prepare(
@@ -260,7 +268,9 @@ export async function dispatchGdprRoutes(request, url, h) {
         .bind(projectId, userId)
         .first(),
       env.DB.prepare(
-        "SELECT COUNT(*) FROM room_members WHERE project_id = ? AND user_id = ?"
+        `SELECT COUNT(*) AS c FROM room_members rm
+         INNER JOIN rooms r ON r.id = rm.room_id
+         WHERE r.project_id = ? AND rm.user_id = ?`
       )
         .bind(projectId, userId)
         .first(),
@@ -272,9 +282,9 @@ export async function dispatchGdprRoutes(request, url, h) {
     ]);
 
     const remainingCounts = {
-      messages: Number(messagesRemaining ?? 0),
-      room_members: Number(membersRemaining ?? 0),
-      message_reactions: Number(reactionsRemaining ?? 0),
+      messages: Number(messagesRemaining?.c ?? messagesRemaining?.["COUNT(*)"] ?? 0),
+      room_members: Number(membersRemaining?.c ?? membersRemaining?.["COUNT(*)"] ?? 0),
+      message_reactions: Number(reactionsRemaining?.c ?? reactionsRemaining?.["COUNT(*)"] ?? 0),
     };
     const hasRemaining =
       remainingCounts.messages > 0 ||

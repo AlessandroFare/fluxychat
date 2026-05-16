@@ -29,8 +29,13 @@ export async function GET(request: Request) {
   if (!workerRes.ok) {
     const contentType = workerRes.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
-      const json = await workerRes.json().catch(() => ({}));
-      return NextResponse.json(json, { status: workerRes.status });
+      const json = (await workerRes.json().catch(() => ({}))) as { error?: string; message?: string };
+      const detail = json.error || json.message || `Worker returned ${workerRes.status}`;
+      const hint =
+        workerRes.status === 404
+          ? ` Endpoint not found on ${workerBase}. Redeploy the Worker (includes GET /gdpr/export) and confirm FLUXYCHAT_WORKER_URL / NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL on Vercel.`
+          : "";
+      return NextResponse.json({ error: `${detail}.${hint}` }, { status: workerRes.status });
     }
     const text = await workerRes.text();
     return NextResponse.json(

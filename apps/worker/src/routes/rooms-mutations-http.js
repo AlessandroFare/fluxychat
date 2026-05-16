@@ -341,9 +341,15 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     const roomId = parts[2];
     const targetUserId = parts[4];
     if (!targetUserId) return json({ error: "user id required" }, { status: 400 });
-    await env.DB.prepare(
-      "DELETE FROM room_members WHERE room_id = ? AND user_id = ?"
-    ).bind(roomId, targetUserId).run();
+    const roomInProject = await env.DB.prepare(
+      "SELECT id FROM rooms WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(roomId, auth.projectId)
+      .first();
+    if (!roomInProject) return json({ error: "room not found" }, { status: 404 });
+    await env.DB.prepare("DELETE FROM room_members WHERE room_id = ? AND user_id = ?")
+      .bind(roomId, targetUserId)
+      .run();
     ctx.waitUntil(
       writeAuditEvent(env, {
         projectId: auth.projectId,
@@ -396,13 +402,26 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       values.push(body.type);
     }
     if (!updates.length) return json({ error: "no fields to update" }, { status: 400 });
-    updates.push("updated_at = ?");
-    values.push(new Date().toISOString());
     values.push(roomId);
     values.push(auth.projectId);
-    await env.DB.prepare(
-      `UPDATE rooms SET ${updates.join(", ")} WHERE id = ? AND project_id = ?`
-    ).bind(...values).run();
+    const now = new Date().toISOString();
+    const updatesWithTs = [...updates, "updated_at = ?"];
+    const valuesWithTs = [...values.slice(0, -2), now, roomId, auth.projectId];
+    try {
+      await env.DB.prepare(
+        `UPDATE rooms SET ${updatesWithTs.join(", ")} WHERE id = ? AND project_id = ?`,
+      )
+        .bind(...valuesWithTs)
+        .run();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("updated_at")) throw err;
+      await env.DB.prepare(
+        `UPDATE rooms SET ${updates.join(", ")} WHERE id = ? AND project_id = ?`,
+      )
+        .bind(...values)
+        .run();
+    }
     ctx.waitUntil(invalidateCache(env, `rooms:${auth.projectId}`).catch(() => {}));
     return json({ ok: true, roomId });
   }
