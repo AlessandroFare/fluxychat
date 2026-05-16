@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
@@ -128,6 +128,8 @@ function finishQuickstartAndOpenConsole(router: ReturnType<typeof useRouter>, cl
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isReviewMode = searchParams.get("review") === "1";
   const {
     hasHydrated,
     adminJwt,
@@ -471,7 +473,16 @@ export default function OnboardingPage() {
       {error ? <Banner variant="error">Error: {error}</Banner> : null}
       {notice ? <Banner variant="success">{notice}</Banner> : null}
 
-      <div className="mb-6">
+      <div className="mb-6 space-y-3">
+        {isReviewMode ? (
+          <Banner variant="info">
+            Review mode — your setup is already complete. Walk through any step again, or{" "}
+            <Link href="/" className="font-medium underline underline-offset-2">
+              return to overview
+            </Link>
+            .
+          </Banner>
+        ) : null}
         <Banner variant="success">
           Work through each step in order. Green checks mean a step is done. The agent step is optional. After your first
           message you can open the console overview, or continue to try an agent (subject to monthly quota).

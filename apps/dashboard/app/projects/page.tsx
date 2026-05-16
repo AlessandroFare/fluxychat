@@ -33,7 +33,7 @@ import { fetchWorkerJson } from "@/lib/worker-fetch";
 
 const WORKER_URL = getPublicWorkerUrl();
 
-type WorkspacePanel = "none" | "create" | "edit-plan" | "session";
+type WorkspacePanel = "none" | "create" | "edit-plan" | "edit-name" | "session";
 
 interface Project {
   id: string;
@@ -88,6 +88,7 @@ export default function ProjectsPage() {
   const hostedCloud = isHostedCloudMode();
   const canManageTenantPlans = !hostedCloud || isPlatformOperator;
   const canCreateProjects = canManageTenantPlans;
+  const canRenameProject = Boolean(adminJwt.trim() && selectedProject?.id);
 
   const selectedPlanCatalog = PUBLIC_PLAN_CATALOG[planName] ?? PUBLIC_PLAN_CATALOG.free;
 
@@ -179,6 +180,38 @@ export default function ProjectsPage() {
     }
   };
 
+  const renameProject = async () => {
+    if (!adminJwt.trim() || !selectedProject?.id || !name.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const json = await fetchWorkerJson<{ project: Project }>(
+        `${WORKER_URL}/admin/projects/${selectedProject.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(authHeader(adminJwt) || {}),
+          },
+          body: JSON.stringify({ name: name.trim() }),
+        },
+      );
+      setProjects((prev) =>
+        prev.map((p) => (p.id === selectedProject.id ? { ...p, ...json.project } : p)),
+      );
+      if (activeProject?.id === selectedProject.id) {
+        setActiveProject({ ...activeProject, ...json.project });
+        void persistActiveProjectToClerk({ ...activeProject, ...json.project });
+      }
+      setPanel("none");
+      setNotice(`Renamed to “${json.project.name}”.`);
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const savePlan = async () => {
     if (!adminJwt.trim() || !selectedProject?.id) return;
     setLoading(true);
@@ -252,7 +285,8 @@ export default function ProjectsPage() {
       ) : null}
       {hostedCloud && !isPlatformOperator ? (
         <div className="mb-4 rounded-xl border border-amber-200/80 bg-amber-50 p-3 text-sm text-amber-950">
-          Plan tiers and quotas are managed by the platform. Use{" "}
+          Hosted cloud includes one project per account — use <strong>Rename</strong> to change its display name.
+          Plan tiers and quotas are managed by the platform; use{" "}
           <a href="/billing" className="font-medium underline underline-offset-2">
             Billing
           </a>{" "}
@@ -413,6 +447,42 @@ export default function ProjectsPage() {
             </Panel>
           ) : null}
 
+          {panel === "edit-name" && selectedProject ? (
+            <Panel className="rounded-2xl border border-border/80 p-6">
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-heading text-xl font-semibold">Rename project</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Updates the display name for <strong>{selectedProject.id}</strong>.
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setPanel("none")}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <FormField label="Project name" hint="Shown in the console and in JWT tenant claims.">
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Acme Corp"
+                  autoFocus
+                />
+              </FormField>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Button
+                  className="bg-brand text-white hover:bg-[#e8614d]"
+                  onClick={() => void renameProject()}
+                  disabled={loading || !name.trim()}
+                >
+                  {loading ? "Saving…" : "Save name"}
+                </Button>
+                <Button variant="ghost" onClick={() => setPanel("none")}>
+                  Cancel
+                </Button>
+              </div>
+            </Panel>
+          ) : null}
+
           {panel === "edit-plan" && selectedProject && canManageTenantPlans ? (
             <Panel className="rounded-2xl border border-border/80 p-6">
               <div className="mb-5 flex items-start justify-between gap-3">
@@ -506,6 +576,19 @@ export default function ProjectsPage() {
                     <Button variant="neutral" size="sm" onClick={activateForDashboard}>
                       Use in dashboard
                       <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  ) : null}
+                  {canRenameProject ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setName(selectedProject.name);
+                        setPanel("edit-name");
+                      }}
+                    >
+                      <Pencil className="mr-1.5 h-4 w-4" />
+                      Rename
                     </Button>
                   ) : null}
                   {canManageTenantPlans ? (

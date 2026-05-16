@@ -9,7 +9,8 @@ import { ConsoleShell } from "./components/console-shell";
 import { ConsolePageHeader } from "./components/console-page-header";
 import { useConsoleSetupPhase, useDashboardSession } from "./components/dashboard-session";
 import { CONSOLE_NAV_MAIN } from "./components/console-nav";
-import { HOSTED_COPY, HOSTED_PATHS, hostedQuickstartReviewHref } from "@/lib/hosted-product";
+import { HOSTED_COPY, HOSTED_PATHS } from "@/lib/hosted-product";
+import { useQuickstartHref } from "@/lib/use-quickstart-href";
 import {
   isQuickstartComplete,
   loadQuickstartProgress,
@@ -27,6 +28,7 @@ const CHECKLIST = [
 
 export default function HomePage() {
   const phase = useConsoleSetupPhase();
+  const quickstartHref = useQuickstartHref();
   const { user, isSignedIn } = useUser();
   const { hasHydrated, clerkUserId, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
   const [progress, setProgress] = useState<QuickstartProgress>({});
@@ -76,7 +78,7 @@ export default function HomePage() {
         description={
           <>
             Manage projects, rooms, agents, and billing on Fluxychat Cloud. New here?{" "}
-            <Link href={HOSTED_PATHS.getStarted} className="font-medium text-primary underline-offset-2 hover:underline">
+            <Link href={quickstartHref} className="font-medium text-primary underline-offset-2 hover:underline">
               Quickstart
             </Link>
             . Self-hosting is documented under{" "}
@@ -139,7 +141,7 @@ export default function HomePage() {
         </ul>
         {!quickstartComplete ? (
           <p className="mt-3 text-xs text-muted-foreground">
-            <Link href={HOSTED_PATHS.onboarding} className="font-medium text-primary underline-offset-2 hover:underline">
+            <Link href={quickstartHref} className="font-medium text-primary underline-offset-2 hover:underline">
               Open quickstart
             </Link>{" "}
             to finish setup before using the rest of the console.
@@ -147,7 +149,7 @@ export default function HomePage() {
         ) : (
           <p className="mt-3 text-xs text-muted-foreground">
             Revisit the tutorial anytime via{" "}
-            <Link href={hostedQuickstartReviewHref()} className="font-medium text-primary underline-offset-2 hover:underline">
+            <Link href={quickstartHref} className="font-medium text-primary underline-offset-2 hover:underline">
               quickstart (review)
             </Link>
             .

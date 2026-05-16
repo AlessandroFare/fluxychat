@@ -34,10 +34,15 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="sm:max-w-md">
+      <DialogContent
+        showCloseButton={false}
+        className="border border-slate-200 bg-white text-slate-900 shadow-[var(--shadow-modal)] sm:max-w-md"
+      >
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description ? <DialogDescription>{description}</DialogDescription> : null}
+          <DialogTitle className="text-slate-900">{title}</DialogTitle>
+          {description ? (
+            <DialogDescription className="text-slate-600">{description}</DialogDescription>
+          ) : null}
         </DialogHeader>
         <DialogFooter className="gap-2 sm:justify-end">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

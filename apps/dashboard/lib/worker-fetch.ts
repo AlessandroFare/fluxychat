@@ -70,7 +70,12 @@ export async function fetchWorker(
   input: RequestInfo | URL,
   init?: RequestInit
 ): Promise<Response> {
-  const res = await fetch(input, init);
+  let res: Response;
+  try {
+    res = await fetch(input, init);
+  } catch (err) {
+    throw enrichNetworkFetchError(err, input);
+  }
   if (!res.ok) {
     const body: unknown = await res.json().catch(() => ({}));
     const errBody =

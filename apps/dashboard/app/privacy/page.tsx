@@ -10,9 +10,9 @@ import { fetchWorker, fetchWorkerJson } from "@/lib/worker-fetch";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { PRIVACY_UPDATED, RETENTION_DEFAULTS, SUB_PROCESSORS } from "@/lib/privacy-legal-copy";
 
-const COOKIE_CONSENT_KEY = "fluxychat_cookie_consent";
-
 const WORKER_URL = getPublicWorkerUrl();
+
+const COOKIE_CONSENT_KEY = "fluxychat_cookie_consent";
 
 export default function PrivacyPage() {
   const { memberJwt, adminJwt, activeProject } = useDashboardSession();
@@ -54,7 +54,7 @@ export default function PrivacyPage() {
     setGdprBusy("export");
     setGdprStatus(null);
     try {
-      const res = await fetchWorker(`${WORKER_URL}/gdpr/export`, {
+      const res = await fetchWorker("/api/gdpr/export", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const blob = await res.blob();

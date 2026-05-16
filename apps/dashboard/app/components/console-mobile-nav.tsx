@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useQuickstartHref } from "@/lib/use-quickstart-href";
 import { CONSOLE_NAV_MAIN, CONSOLE_NAV_TOOLS } from "./console-nav";
 
 const MOBILE_LINKS = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS];
 
 export function ConsoleMobileNav() {
   const pathname = usePathname();
+  const quickstartHref = useQuickstartHref();
 
   return (
     <div className="border-b border-black/[0.06] bg-white/90 px-3 py-2 lg:hidden">
@@ -31,7 +33,7 @@ export function ConsoleMobileNav() {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={item.href === "/onboarding" ? quickstartHref : item.href}
                 className={cn(
                   "rounded-lg px-2 py-2 text-center text-xs font-medium",
                   isActive ? "bg-primary/10 text-primary" : "text-slate-600 hover:bg-slate-50",

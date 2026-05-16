@@ -170,6 +170,69 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
     }
   }
 
+  const projectPathMatch = url.pathname.match(/^\/admin\/projects\/([^/]+)$/);
+  if (projectPathMatch && request.method === "PATCH") {
+    if (requireAdminAuth) {
+      const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+        if (err instanceof Response) throw err;
+        logError("auth.jwt_verify_failed", err, requestLogCtx);
+        return null;
+      });
+      if (!adminAuth) {
+        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      }
+      if (!hasAnyRole(adminAuth.roles, ["owner", "admin"])) {
+        return json({ error: "forbidden" }, { status: 403 });
+      }
+      const targetProjectId = projectPathMatch[1];
+      const scopeErr = tenantScopeForbidden(adminAuth, targetProjectId, env);
+      if (scopeErr) {
+        return json(
+          { error: scopeErr.error, reason: scopeErr.reason },
+          { status: scopeErr.status },
+        );
+      }
+      const body = await request.json().catch(() => null);
+      const name = typeof body?.name === "string" ? body.name.trim() : "";
+      if (!name) {
+        return json({ error: "name required" }, { status: 400 });
+      }
+      const existing = await env.DB.prepare(
+        "SELECT id, name, created_at FROM projects WHERE id = ? LIMIT 1",
+      )
+        .bind(targetProjectId)
+        .first();
+      if (!existing) {
+        return json({ error: "project not found" }, { status: 404 });
+      }
+      const now = new Date().toISOString();
+      await env.DB.prepare("UPDATE projects SET name = ? WHERE id = ?")
+        .bind(name, targetProjectId)
+        .run();
+      ctx.waitUntil(
+        writeAuditEvent(env, {
+          projectId: adminAuth.projectId,
+          actorUserId: adminAuth.userId,
+          actorRoles: adminAuth.roles,
+          action: "admin.project.rename",
+          targetType: "project",
+          targetId: targetProjectId,
+          traceId,
+          metadata: { previousName: existing.name, name },
+        }).catch(() => {}),
+      );
+      const plan = await getProjectPlan(env, targetProjectId);
+      return json({
+        project: {
+          id: targetProjectId,
+          name,
+          created_at: existing.created_at,
+          plan,
+        },
+      });
+    }
+  }
+
   if (
     url.pathname.startsWith("/admin/projects/") &&
     url.pathname.endsWith("/keys/rotate") &&

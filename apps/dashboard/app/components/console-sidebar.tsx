@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { FluxychatLogotype } from "@/components/FluxychatLogo";
 import { cn } from "@/lib/utils";
 import { CONSOLE_NAV_MAIN, CONSOLE_NAV_TOOLS } from "./console-nav";
+import { QuickstartNavLink } from "./quickstart-nav-link";
 
 function NavLink({ href, label, icon: Icon }: (typeof CONSOLE_NAV_MAIN)[number]) {
   const pathname = usePathname();
@@ -43,7 +44,11 @@ export function ConsoleSidebar() {
           <ul className="space-y-0.5">
             {CONSOLE_NAV_MAIN.map((item) => (
               <li key={item.href}>
-                <NavLink {...item} />
+                {item.href === "/onboarding" ? (
+                  <QuickstartNavLink label={item.label} icon={item.icon} />
+                ) : (
+                  <NavLink {...item} />
+                )}
               </li>
             ))}
           </ul>
