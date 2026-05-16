@@ -20,11 +20,13 @@ export function QuickstartGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoaded, isSignedIn } = useUser();
-  const { hasHydrated, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const { hasHydrated, clerkUserId, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
 
   useEffect(() => {
     if (!isClerkClientConfigured() || !isLoaded || !isSignedIn || !hasHydrated) return;
+    const activeClerkId = user?.id ?? null;
+    if (!activeClerkId || clerkUserId !== activeClerkId) return;
 
     const session = {
       adminJwt,
@@ -32,8 +34,8 @@ export function QuickstartGate({ children }: { children: React.ReactNode }) {
       activeProjectId: activeProject?.id ?? null,
       lastRoomId: lastRoom?.id ?? null,
     };
-    const progress = loadQuickstartProgress();
-    const complete = isQuickstartComplete(session, progress);
+    const progress = loadQuickstartProgress(activeClerkId);
+    const complete = isQuickstartComplete(activeClerkId, session, progress);
     const review = searchParams.get("review") === "1";
 
     if (pathname.startsWith("/onboarding")) {
@@ -52,6 +54,8 @@ export function QuickstartGate({ children }: { children: React.ReactNode }) {
     searchParams,
     isLoaded,
     isSignedIn,
+    user?.id,
+    clerkUserId,
     hasHydrated,
     adminJwt,
     memberJwt,

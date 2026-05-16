@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import { ArrowRight, CheckCircle2, Circle, KeyRound } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { ConsoleShell } from "./components/console-shell";
@@ -26,16 +27,26 @@ const CHECKLIST = [
 
 export default function HomePage() {
   const phase = useConsoleSetupPhase();
-  const { hasHydrated, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
+  const { user, isSignedIn } = useUser();
+  const { hasHydrated, clerkUserId, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
   const [progress, setProgress] = useState<QuickstartProgress>({});
 
+  const activeClerkId = isSignedIn && user?.id ? user.id : null;
+
   useEffect(() => {
-    setProgress(loadQuickstartProgress());
-  }, []);
+    if (!activeClerkId) {
+      setProgress({});
+      return;
+    }
+    setProgress(loadQuickstartProgress(activeClerkId));
+  }, [activeClerkId]);
 
   const quickstartComplete =
     hasHydrated &&
+    Boolean(activeClerkId) &&
+    clerkUserId === activeClerkId &&
     isQuickstartComplete(
+      activeClerkId,
       {
         adminJwt,
         memberJwt,
@@ -50,7 +61,9 @@ export default function HomePage() {
     project: Boolean(activeProject?.id),
     member: memberJwt.trim().length >= 12,
     room: Boolean(lastRoom?.id),
-    message: Boolean(progress.firstMessageSent || progress.completedAt),
+    message:
+      Boolean(progress.firstMessageSent || progress.completedAt) &&
+      progress.clerkUserId === activeClerkId,
   };
 
   const primaryCta = quickstartComplete

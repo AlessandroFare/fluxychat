@@ -121,8 +121,8 @@ function firstIncompleteStep(args: {
   return STEPS.length - 1;
 }
 
-function finishQuickstartAndOpenConsole(router: ReturnType<typeof useRouter>) {
-  markQuickstartComplete();
+function finishQuickstartAndOpenConsole(router: ReturnType<typeof useRouter>, clerkUserId: string) {
+  markQuickstartComplete(clerkUserId);
   router.push("/");
 }
 
@@ -226,15 +226,9 @@ export default function OnboardingPage() {
   );
 
   useEffect(() => {
-    if (!hasHydrated || stepInitialized) return;
-    setActiveStep(furthest);
-    setStepInitialized(true);
-  }, [hasHydrated, furthest, stepInitialized]);
-
-  useEffect(() => {
-    if (messages.length < 1) return;
-    markQuickstartFirstMessage();
-  }, [messages.length]);
+    if (messages.length < 1 || !clerkUser?.id) return;
+    markQuickstartFirstMessage(clerkUser.id);
+  }, [messages.length, clerkUser?.id]);
 
   const autoMintMemberRef = React.useRef(false);
   useEffect(() => {
@@ -743,7 +737,7 @@ export default function OnboardingPage() {
               type="button"
               variant="ghost"
               disabled={messages.length < 1}
-              onClick={() => finishQuickstartAndOpenConsole(router)}
+              onClick={() => clerkUser?.id && finishQuickstartAndOpenConsole(router, clerkUser.id)}
             >
               Open console
             </Button>
@@ -816,7 +810,11 @@ export default function OnboardingPage() {
             <Button type="button" variant="ghost" onClick={goBack}>
               <ChevronLeft className="h-4 w-4" aria-hidden /> Back
             </Button>
-            <ShadcnButton type="button" variant="default" onClick={() => finishQuickstartAndOpenConsole(router)}>
+            <ShadcnButton
+              type="button"
+              variant="default"
+              onClick={() => clerkUser?.id && finishQuickstartAndOpenConsole(router, clerkUser.id)}
+            >
               Done — open console
             </ShadcnButton>
           </div>

@@ -10,17 +10,23 @@ import { useDashboardSession } from "./dashboard-session";
  * After Clerk sign-in: provision tenant project + mint admin JWT (hosted cloud).
  */
 export function FluxyAutoConnect() {
-  const { isSignedIn, isLoaded } = useUser();
-  const { adminJwt, memberJwt, setAdminJwt, setMemberJwt, setActiveProject } =
+  const { isSignedIn, isLoaded, user } = useUser();
+  const { hasHydrated, clerkUserId, adminJwt, memberJwt, setAdminJwt, setMemberJwt, setActiveProject } =
     useDashboardSession();
-  const ran = useRef(false);
+  const ranForUser = useRef<string | null>(null);
   const [provisionError, setProvisionError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isClerkClientConfigured() || !isLoaded || !isSignedIn || ran.current) return;
-    if (adminJwt.trim().length >= 12 && memberJwt.trim().length >= 12) return;
+    if (!isClerkClientConfigured() || !isLoaded || !isSignedIn || !hasHydrated) return;
+    if (!user?.id || clerkUserId !== user.id) return;
 
-    ran.current = true;
+    if (ranForUser.current === user.id) return;
+    if (adminJwt.trim().length >= 12 && memberJwt.trim().length >= 12) {
+      ranForUser.current = user.id;
+      return;
+    }
+
+    ranForUser.current = user.id;
     setProvisionError(null);
 
     void (async () => {
@@ -49,7 +55,7 @@ export function FluxyAutoConnect() {
 
         if (!res.ok) {
           setProvisionError(json.error || "Could not connect to Fluxychat Cloud");
-          ran.current = false;
+          ranForUser.current = null;
           return;
         }
 
@@ -61,10 +67,21 @@ export function FluxyAutoConnect() {
         }
       } catch {
         setProvisionError("Network error while connecting to Fluxychat Cloud");
-        ran.current = false;
+        ranForUser.current = null;
       }
     })();
-  }, [isLoaded, isSignedIn, adminJwt, memberJwt, setAdminJwt, setMemberJwt, setActiveProject]);
+  }, [
+    isLoaded,
+    isSignedIn,
+    hasHydrated,
+    clerkUserId,
+    user?.id,
+    adminJwt,
+    memberJwt,
+    setAdminJwt,
+    setMemberJwt,
+    setActiveProject,
+  ]);
 
   if (!provisionError) return null;
 

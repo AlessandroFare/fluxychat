@@ -1,6 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { isClerkClientConfigured } from "@/lib/hosted-product";
+import { purgeLegacyUnscopedKeys, scopedStorageKey } from "@/lib/scoped-browser-storage";
 
 export interface DashboardProject {
   id: string;
@@ -25,9 +27,18 @@ export interface DashboardRoomRef {
   created_at?: string;
 }
 
+interface StoredDashboardSession {
+  adminJwt?: string;
+  memberJwt?: string;
+  activeProject?: DashboardProject | null;
+  lastRoom?: DashboardRoomRef | null;
+}
+
 interface DashboardSessionValue {
-  /** True after sessionStorage has been read (client-only). */
+  /** True after storage has been read for the active scope (client-only). */
   hasHydrated: boolean;
+  /** Clerk user id when hosted cloud; null when signed out or self-host. */
+  clerkUserId: string | null;
   adminJwt: string;
   memberJwt: string;
   activeProject: DashboardProject | null;
@@ -37,38 +48,41 @@ interface DashboardSessionValue {
   setActiveProject: (value: DashboardProject | null) => void;
   setLastRoom: (value: DashboardRoomRef | null) => void;
   clearSession: () => void;
+  /** Hosted: bind storage to Clerk user; clears state when user changes or signs out. */
+  switchClerkUser: (clerkUserId: string | null) => void;
   authHeader: (token?: string | null) => HeadersInit | undefined;
 }
 
-const STORAGE_KEY = "fluxychat.dashboard.session.v1";
+const STORAGE_BASE = "fluxychat.dashboard.session.v1";
+const LEGACY_STORAGE_KEYS = [STORAGE_BASE];
 
-// Migrate from localStorage to sessionStorage for better security:
-// sessionStorage is cleared when the browser tab closes, reducing the window
-// for token theft via XSS. We also attempt a one-time migration of any
-// existing localStorage data to sessionStorage and then remove it.
-function loadSession(): {
-  adminJwt?: string;
-  memberJwt?: string;
-  activeProject?: DashboardProject | null;
-  lastRoom?: DashboardRoomRef | null;
-} | null {
+function storageKeyForScope(clerkUserId: string | null): string {
+  if (clerkUserId) return scopedStorageKey(STORAGE_BASE, clerkUserId);
+  return STORAGE_BASE;
+}
+
+function loadSessionForScope(clerkUserId: string | null): StoredDashboardSession | null {
   try {
-    // Prefer sessionStorage
-    const sessionRaw = window.sessionStorage.getItem(STORAGE_KEY);
-    if (sessionRaw) {
-      return JSON.parse(sessionRaw);
-    }
-    // One-time migration from localStorage → sessionStorage
-    const localRaw = window.localStorage.getItem(STORAGE_KEY);
-    if (localRaw) {
-      window.sessionStorage.setItem(STORAGE_KEY, localRaw);
-      window.localStorage.removeItem(STORAGE_KEY);
-      return JSON.parse(localRaw);
-    }
+    const key = storageKeyForScope(clerkUserId);
+    const sessionRaw = window.sessionStorage.getItem(key);
+    if (sessionRaw) return JSON.parse(sessionRaw) as StoredDashboardSession;
   } catch {
     // Ignore corrupted state
   }
   return null;
+}
+
+function saveSessionForScope(clerkUserId: string | null, data: StoredDashboardSession): void {
+  const key = storageKeyForScope(clerkUserId);
+  window.sessionStorage.setItem(key, JSON.stringify(data));
+}
+
+function removeSessionForScope(clerkUserId: string | null): void {
+  try {
+    window.sessionStorage.removeItem(storageKeyForScope(clerkUserId));
+  } catch {
+    // ignore
+  }
 }
 
 const DashboardSessionContext = createContext<DashboardSessionValue | null>(null);
@@ -78,33 +92,64 @@ export function DashboardSessionProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const clerkHosted = isClerkClientConfigured();
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [clerkUserId, setClerkUserId] = useState<string | null>(null);
   const [adminJwt, setAdminJwtState] = useState("");
   const [memberJwt, setMemberJwtState] = useState("");
   const [activeProject, setActiveProjectState] = useState<DashboardProject | null>(null);
   const [lastRoom, setLastRoomState] = useState<DashboardRoomRef | null>(null);
+  const scopeRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    const stored = loadSession();
-    if (stored) {
-      setAdminJwtState(stored.adminJwt || "");
-      setMemberJwtState(stored.memberJwt || "");
-      setActiveProjectState(stored.activeProject || null);
-      setLastRoomState(stored.lastRoom || null);
+  const applyStoredSession = useCallback((stored: StoredDashboardSession | null) => {
+    if (!stored) {
+      setAdminJwtState("");
+      setMemberJwtState("");
+      setActiveProjectState(null);
+      setLastRoomState(null);
+      return;
     }
-    setHasHydrated(true);
+    setAdminJwtState(stored.adminJwt || "");
+    setMemberJwtState(stored.memberJwt || "");
+    setActiveProjectState(stored.activeProject || null);
+    setLastRoomState(stored.lastRoom || null);
   }, []);
 
+  const switchClerkUser = useCallback(
+    (nextClerkUserId: string | null) => {
+      purgeLegacyUnscopedKeys(LEGACY_STORAGE_KEYS);
+      if (scopeRef.current === nextClerkUserId) return;
+
+      scopeRef.current = nextClerkUserId;
+      setClerkUserId(nextClerkUserId);
+
+      if (nextClerkUserId) {
+        applyStoredSession(loadSessionForScope(nextClerkUserId));
+      } else {
+        applyStoredSession(null);
+      }
+      setHasHydrated(true);
+    },
+    [applyStoredSession],
+  );
+
   useEffect(() => {
-    window.sessionStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ adminJwt, memberJwt, activeProject, lastRoom })
-    );
-  }, [activeProject, adminJwt, memberJwt, lastRoom]);
+    if (clerkHosted) return;
+    scopeRef.current = null;
+    setClerkUserId(null);
+    applyStoredSession(loadSessionForScope(null));
+    setHasHydrated(true);
+  }, [applyStoredSession, clerkHosted]);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    saveSessionForScope(scopeRef.current, { adminJwt, memberJwt, activeProject, lastRoom });
+  }, [activeProject, adminJwt, hasHydrated, lastRoom, memberJwt]);
 
   const value = useMemo<DashboardSessionValue>(
     () => ({
       hasHydrated,
+      clerkUserId,
       adminJwt,
       memberJwt,
       activeProject,
@@ -113,23 +158,28 @@ export function DashboardSessionProvider({
       setMemberJwt: setMemberJwtState,
       setActiveProject: setActiveProjectState,
       setLastRoom: setLastRoomState,
+      switchClerkUser,
       clearSession() {
         setAdminJwtState("");
         setMemberJwtState("");
         setActiveProjectState(null);
         setLastRoomState(null);
-        try {
-          window.sessionStorage.removeItem(STORAGE_KEY);
-        } catch {
-          // ignore
-        }
+        removeSessionForScope(scopeRef.current);
       },
       authHeader(token) {
         const selectedToken = token?.trim() || adminJwt.trim() || memberJwt.trim();
         return selectedToken ? { Authorization: `Bearer ${selectedToken}` } : undefined;
       },
     }),
-    [activeProject, adminJwt, hasHydrated, lastRoom, memberJwt]
+    [
+      activeProject,
+      adminJwt,
+      clerkUserId,
+      hasHydrated,
+      lastRoom,
+      memberJwt,
+      switchClerkUser,
+    ],
   );
 
   return (

@@ -6,6 +6,7 @@ import ConditionalHeader from "./components/ConditionalHeader";
 import { ClerkShell } from "./components/clerk-shell";
 import { ConsoleChrome } from "./components/console-chrome";
 import { DashboardSessionProvider } from "./components/dashboard-session";
+import { ClerkSessionBinder } from "./components/clerk-session-binder";
 import { FluxyAutoConnect } from "./components/fluxy-auto-connect";
 import { BetaBanner } from "./components/beta-banner";
 import { CookieConsentBanner } from "./components/cookie-consent-banner";
@@ -33,7 +34,12 @@ export default function RootLayout({
   const shell = (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
       <DashboardSessionProvider>
-        {clerkPublishableKey ? <FluxyAutoConnect /> : null}
+        {clerkPublishableKey ? (
+          <>
+            <ClerkSessionBinder />
+            <FluxyAutoConnect />
+          </>
+        ) : null}
         <BetaBanner />
         <ConditionalHeader />
         <main className="min-h-dvh bg-[#faf9f6] text-foreground antialiased">
