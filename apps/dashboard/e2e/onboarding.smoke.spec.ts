@@ -5,10 +5,18 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("onboarding smoke", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/onboarding");
+    await page.context().addCookies([
+      {
+        name: "fc_console_ack",
+        value: "1",
+        url: "http://127.0.0.1:3000",
+      },
+    ]);
+    await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
   });
 
   test("shows quickstart wizard and step rail", async ({ page }) => {
+    await expect(page.getByTestId("onboarding-page")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Quickstart wizard" })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Onboarding steps" })).toBeVisible();
     await expect(page.getByText("Step 1 of")).toBeVisible();

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
@@ -128,8 +128,11 @@ function finishQuickstartAndOpenConsole(router: ReturnType<typeof useRouter>, cl
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isReviewMode = searchParams.get("review") === "1";
+  const [isReviewMode, setIsReviewMode] = useState(false);
+
+  useEffect(() => {
+    setIsReviewMode(new URLSearchParams(window.location.search).get("review") === "1");
+  }, []);
   const {
     hasHydrated,
     adminJwt,
@@ -476,16 +479,16 @@ export default function OnboardingPage() {
       <div className="mb-6 space-y-3">
         {isReviewMode ? (
           <Banner variant="info">
-            Review mode — your setup is already complete. Walk through any step again, or{" "}
+            Review mode: you are already set up. Repeat any step, or go back to the{" "}
             <Link href="/" className="font-medium underline underline-offset-2">
-              return to overview
+              overview
             </Link>
             .
           </Banner>
         ) : null}
         <Banner variant="success">
-          Work through each step in order. Green checks mean a step is done. The agent step is optional. After your first
-          message you can open the console overview, or continue to try an agent (subject to monthly quota).
+          Complete each step in order. A green check means that step is done. The agent step is optional. After your first
+          message you can open the console, or try an agent (monthly quota applies).
         </Banner>
       </div>
 

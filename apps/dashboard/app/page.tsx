@@ -77,16 +77,16 @@ export default function HomePage() {
       <ConsolePageHeader
         description={
           <>
-            Manage projects, rooms, agents, and billing on Fluxychat Cloud. New here?{" "}
+            Run your tenant: projects, rooms, agents, and billing. First time here? Start the{" "}
             <Link href={quickstartHref} className="font-medium text-primary underline-offset-2 hover:underline">
-              Quickstart
+              quickstart
             </Link>
-            . Self-hosting is documented under{" "}
+            . Self-hosting notes live in{" "}
             <Link
               href={`${HOSTED_PATHS.getStarted}#self-host`}
               className="font-medium text-primary underline-offset-2 hover:underline"
             >
-              advanced
+              get started
             </Link>
             .
           </>
@@ -101,10 +101,10 @@ export default function HomePage() {
               {quickstartComplete && activeProject
                 ? `Quickstart complete · ${activeProject.name}`
                 : phase === "ready" && activeProject
-                  ? `Connected · ${activeProject.name} — finish quickstart to unlock overview`
+                  ? `Signed in · ${activeProject.name} — finish the quickstart to use the console`
                   : phase === "jwt_only"
-                    ? "JWT saved — continue the quickstart wizard"
-                    : "Start with the quickstart wizard"}
+                    ? "JWT saved — pick a project in the quickstart"
+                    : "Run the quickstart to connect and send a first message"}
             </p>
           </div>
           <Button asChild className="gap-1 shrink-0">

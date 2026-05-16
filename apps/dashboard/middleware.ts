@@ -16,6 +16,8 @@ const isClerkPublicRoute = createRouteMatcher([
   /** Worker JWT in Authorization header — not Clerk session cookies */
   "/api/fluxy/search-messages(.*)",
   "/api/fluxy/config(.*)",
+  /** Worker JWT in Authorization — not Clerk session cookies */
+  "/api/gdpr(.*)",
 ]);
 
 function isPublicPath(pathname: string): boolean {

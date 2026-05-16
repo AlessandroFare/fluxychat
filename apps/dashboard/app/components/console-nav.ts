@@ -22,7 +22,7 @@ export interface ConsoleNavItem {
 
 export const CONSOLE_NAV_MAIN: ConsoleNavItem[] = [
   { href: "/", label: "Overview", icon: LayoutDashboard, description: "Session and shortcuts" },
-  { href: "/onboarding", label: "Quickstart", icon: BookOpen, description: "JWT, project, first room" },
+  { href: "/onboarding", label: "Quickstart", icon: BookOpen, description: "Connect, project, first room" },
   { href: "/projects", label: "Projects", icon: FolderKanban, description: "API keys, plans, quotas" },
   { href: "/rooms", label: "Rooms", icon: MessageSquare, description: "Join rooms and read traffic" },
   { href: "/agents", label: "Agents", icon: Bot, description: "Configure in-room AI" },

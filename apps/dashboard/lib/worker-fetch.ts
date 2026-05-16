@@ -16,13 +16,21 @@ export function readWorkerTraceId(res: Response): string | undefined {
 function readWorkerErrorMessage(
   body: WorkerErrorBody,
   status: number,
-  traceId?: string
+  traceId?: string,
+  requestUrl?: string
 ): string {
   const msg = body.error || body.message;
+  const isDashboardApi =
+    typeof requestUrl === "string" &&
+    (requestUrl.startsWith("/api/") || requestUrl.includes("/api/gdpr/"));
   const base =
     typeof msg === "string" && msg.trim()
       ? msg
-      : `Worker request failed (${status})`;
+      : status === 404 && isDashboardApi
+        ? `Dashboard API returned 404 (${requestUrl}). Redeploy the latest dashboard build.`
+        : status === 404
+          ? `Worker returned 404. Redeploy the Worker (GET /gdpr/export) and check FLUXYCHAT_WORKER_URL on Vercel.`
+          : `Request failed (${status})`;
   const trace =
     traceId ||
     (typeof body.traceId === "string" && body.traceId.trim()
@@ -31,14 +39,21 @@ function readWorkerErrorMessage(
   return trace ? `${base} (trace: ${trace})` : base;
 }
 
+function requestUrlFromInput(input: RequestInfo | URL): string {
+  return typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+}
+
 /** Parse worker JSON with unknown-safe narrowing. */
-export async function parseWorkerJson<T>(res: Response): Promise<T> {
+export async function parseWorkerJson<T>(
+  res: Response,
+  requestUrl?: string
+): Promise<T> {
   const body: unknown = await res.json().catch(() => ({}));
   if (!res.ok) {
     const errBody =
       body && typeof body === "object" ? (body as WorkerErrorBody) : {};
     throw new Error(
-      readWorkerErrorMessage(errBody, res.status, readWorkerTraceId(res))
+      readWorkerErrorMessage(errBody, res.status, readWorkerTraceId(res), requestUrl)
     );
   }
   return body as T;
@@ -59,7 +74,7 @@ export async function fetchWorkerJson<T>(
 ): Promise<T> {
   try {
     const res = await fetch(input, init);
-    return parseWorkerJson<T>(res);
+    return parseWorkerJson<T>(res, requestUrlFromInput(input));
   } catch (err) {
     throw enrichNetworkFetchError(err, input);
   }
@@ -81,7 +96,12 @@ export async function fetchWorker(
     const errBody =
       body && typeof body === "object" ? (body as WorkerErrorBody) : {};
     throw new Error(
-      readWorkerErrorMessage(errBody, res.status, readWorkerTraceId(res))
+      readWorkerErrorMessage(
+        errBody,
+        res.status,
+        readWorkerTraceId(res),
+        typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+      )
     );
   }
   return res;

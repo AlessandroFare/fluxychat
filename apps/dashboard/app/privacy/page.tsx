@@ -47,7 +47,7 @@ export default function PrivacyPage() {
     const token = memberJwt.trim() || adminJwt.trim();
     if (!token) {
       setGdprStatus(
-        "Add a member or admin JWT from Onboarding (session) before exporting."
+        "Save a member or admin JWT in Quickstart (this browser session) before exporting."
       );
       return;
     }
