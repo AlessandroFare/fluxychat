@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
@@ -22,6 +23,10 @@ import {
 } from "@/lib/agent-catalog";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
+import {
+  markQuickstartComplete,
+  markQuickstartFirstMessage,
+} from "@/lib/quickstart-progress";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
@@ -116,8 +121,15 @@ function firstIncompleteStep(args: {
   return STEPS.length - 1;
 }
 
+function finishQuickstartAndOpenConsole(router: ReturnType<typeof useRouter>) {
+  markQuickstartComplete();
+  router.push("/");
+}
+
 export default function OnboardingPage() {
+  const router = useRouter();
   const {
+    hasHydrated,
     adminJwt,
     setAdminJwt,
     memberJwt,
@@ -152,13 +164,9 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const [isGuidedEntry, setIsGuidedEntry] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  const [stepInitialized, setStepInitialized] = useState(false);
   const { user: clerkUser, isSignedIn: clerkSignedIn } = useUser();
-
-  useEffect(() => {
-    setIsGuidedEntry(new URLSearchParams(window.location.search).get("guided") === "1");
-  }, []);
 
   useEffect(() => {
     if (!isClerkClientConfigured() || !clerkSignedIn || !clerkUser?.id) return;
@@ -218,9 +226,15 @@ export default function OnboardingPage() {
   );
 
   useEffect(() => {
-    if (!isGuidedEntry) return;
-    setActiveStep((current) => Math.min(Math.max(current, furthest), STEPS.length - 1));
-  }, [isGuidedEntry, furthest]);
+    if (!hasHydrated || stepInitialized) return;
+    setActiveStep(furthest);
+    setStepInitialized(true);
+  }, [hasHydrated, furthest, stepInitialized]);
+
+  useEffect(() => {
+    if (messages.length < 1) return;
+    markQuickstartFirstMessage();
+  }, [messages.length]);
 
   const autoMintMemberRef = React.useRef(false);
   useEffect(() => {
@@ -428,7 +442,12 @@ export default function OnboardingPage() {
       setNotice("Agent invoke queued.");
       return json;
     } catch (err: unknown) {
-      setError(messageFromUnknown(err, "Failed to invoke agent"));
+      const msg = messageFromUnknown(err, "Failed to invoke agent");
+      setError(
+        msg.includes("quota_exceeded") || msg.includes("quota")
+          ? `${msg} — monthly agent invoke limit reached (see Billing).`
+          : msg,
+      );
     } finally {
       setInvokingAgent(false);
     }
@@ -458,14 +477,12 @@ export default function OnboardingPage() {
       {error ? <Banner variant="error">Error: {error}</Banner> : null}
       {notice ? <Banner variant="success">{notice}</Banner> : null}
 
-      {isGuidedEntry && furthest > 0 ? (
-        <div className="mb-6">
-          <Banner variant="success">
-            You are signed in. Green checks mean a step is done. Hit <strong>Continue</strong> when you are ready for
-            the next one.
-          </Banner>
-        </div>
-      ) : null}
+      <div className="mb-6">
+        <Banner variant="success">
+          Work through each step in order. Green checks mean a step is done. The agent step is optional. After your first
+          message you can open the console overview, or continue to try an agent (subject to monthly quota).
+        </Banner>
+      </div>
 
       {/* Step rail */}
       <nav aria-label="Onboarding steps" className="mb-8 flex flex-wrap gap-2">
@@ -722,6 +739,14 @@ export default function OnboardingPage() {
             <Button type="button" variant="primary" disabled={messages.length < 1} onClick={goNext}>
               Continue <ChevronRight className="h-4 w-4" aria-hidden />
             </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={messages.length < 1}
+              onClick={() => finishQuickstartAndOpenConsole(router)}
+            >
+              Open console
+            </Button>
           </div>
         </Section>
       ) : null}
@@ -791,8 +816,8 @@ export default function OnboardingPage() {
             <Button type="button" variant="ghost" onClick={goBack}>
               <ChevronLeft className="h-4 w-4" aria-hidden /> Back
             </Button>
-            <ShadcnButton asChild variant="default">
-              <Link href="/">Done — open console</Link>
+            <ShadcnButton type="button" variant="default" onClick={() => finishQuickstartAndOpenConsole(router)}>
+              Done — open console
             </ShadcnButton>
           </div>
         </Section>

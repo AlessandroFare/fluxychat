@@ -9,6 +9,12 @@ vi.mock("@clerk/nextjs", () => ({
   useUser: () => ({ user: null, isSignedIn: false }),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/onboarding",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock("@fluxy-chat/sdk", () => ({
   FluxyChatClient: function FluxyChatClient() {
     return {};
@@ -26,8 +32,8 @@ describe("OnboardingPage", () => {
     window.sessionStorage.clear();
   });
 
-  it("starts at step 1 when session is hydrated (guided walkthrough)", async () => {
-    window.localStorage.setItem(
+  it("resumes at first incomplete step after session hydrates", async () => {
+    window.sessionStorage.setItem(
       "fluxychat.dashboard.session.v1",
       JSON.stringify({
         adminJwt: "admin.jwt.token.long.enough",
@@ -51,9 +57,9 @@ describe("OnboardingPage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Step 1 of 6/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 4 of 6/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Active project:/i)).toHaveTextContent("Demo Project");
+    expect(screen.getByTestId("create-room-btn")).toBeInTheDocument();
   });
 });

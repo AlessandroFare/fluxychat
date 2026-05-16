@@ -11,7 +11,7 @@ export default function SignUpPage() {
         routing="path"
         path="/sign-up"
         signInUrl="/sign-in"
-        forceRedirectUrl="/onboarding?guided=1"
+        forceRedirectUrl="/onboarding"
         appearance={clerkAuthAppearance}
       />
     </MarketingShell>

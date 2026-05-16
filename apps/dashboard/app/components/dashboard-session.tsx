@@ -26,6 +26,8 @@ export interface DashboardRoomRef {
 }
 
 interface DashboardSessionValue {
+  /** True after sessionStorage has been read (client-only). */
+  hasHydrated: boolean;
   adminJwt: string;
   memberJwt: string;
   activeProject: DashboardProject | null;
@@ -76,6 +78,7 @@ export function DashboardSessionProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [adminJwt, setAdminJwtState] = useState("");
   const [memberJwt, setMemberJwtState] = useState("");
   const [activeProject, setActiveProjectState] = useState<DashboardProject | null>(null);
@@ -83,11 +86,13 @@ export function DashboardSessionProvider({
 
   useEffect(() => {
     const stored = loadSession();
-    if (!stored) return;
-    setAdminJwtState(stored.adminJwt || "");
-    setMemberJwtState(stored.memberJwt || "");
-    setActiveProjectState(stored.activeProject || null);
-    setLastRoomState(stored.lastRoom || null);
+    if (stored) {
+      setAdminJwtState(stored.adminJwt || "");
+      setMemberJwtState(stored.memberJwt || "");
+      setActiveProjectState(stored.activeProject || null);
+      setLastRoomState(stored.lastRoom || null);
+    }
+    setHasHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -99,6 +104,7 @@ export function DashboardSessionProvider({
 
   const value = useMemo<DashboardSessionValue>(
     () => ({
+      hasHydrated,
       adminJwt,
       memberJwt,
       activeProject,
@@ -123,7 +129,7 @@ export function DashboardSessionProvider({
         return selectedToken ? { Authorization: `Bearer ${selectedToken}` } : undefined;
       },
     }),
-    [activeProject, adminJwt, lastRoom, memberJwt]
+    [activeProject, adminJwt, hasHydrated, lastRoom, memberJwt]
   );
 
   return (

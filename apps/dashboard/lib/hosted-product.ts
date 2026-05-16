@@ -43,7 +43,12 @@ export function consoleEntryHref(): string {
   return isClerkClientConfigured() ? HOSTED_PATHS.signIn : HOSTED_PATHS.getStarted;
 }
 
-/** Primary signup / trial CTA destination after Clerk. */
+/** Primary signup CTA — full quickstart wizard (first-time setup). */
 export function hostedSignupRedirect(): string {
-  return `${HOSTED_PATHS.onboarding}?guided=1`;
+  return HOSTED_PATHS.onboarding;
+}
+
+/** Returning users reopen the wizard without being kicked to overview. */
+export function hostedQuickstartReviewHref(): string {
+  return `${HOSTED_PATHS.onboarding}?review=1`;
 }

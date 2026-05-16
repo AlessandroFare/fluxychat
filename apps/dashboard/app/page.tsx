@@ -1,31 +1,61 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, Circle, KeyRound } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { ConsoleShell } from "./components/console-shell";
 import { ConsolePageHeader } from "./components/console-page-header";
 import { useConsoleSetupPhase, useDashboardSession } from "./components/dashboard-session";
 import { CONSOLE_NAV_MAIN } from "./components/console-nav";
-import { HOSTED_COPY, HOSTED_PATHS } from "@/lib/hosted-product";
+import { HOSTED_COPY, HOSTED_PATHS, hostedQuickstartReviewHref } from "@/lib/hosted-product";
+import {
+  isQuickstartComplete,
+  loadQuickstartProgress,
+  type QuickstartProgress,
+} from "@/lib/quickstart-progress";
 import { cn } from "@/lib/utils";
 
 const CHECKLIST = [
   { key: "jwt", label: "Admin JWT saved" },
   { key: "project", label: "Project selected" },
-  { key: "rooms", label: "Ready for rooms and agents" },
+  { key: "member", label: "Member JWT minted" },
+  { key: "room", label: "Room created" },
+  { key: "message", label: "First message sent" },
 ] as const;
 
 export default function HomePage() {
   const phase = useConsoleSetupPhase();
-  const { activeProject } = useDashboardSession();
+  const { hasHydrated, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
+  const [progress, setProgress] = useState<QuickstartProgress>({});
 
-  const primaryCta =
-    phase === "no_jwt"
-      ? { href: HOSTED_PATHS.onboarding, label: HOSTED_COPY.connectAccount }
-      : phase === "jwt_only"
-        ? { href: "/projects", label: "Select project" }
-        : { href: "/rooms", label: "Open rooms" };
+  useEffect(() => {
+    setProgress(loadQuickstartProgress());
+  }, []);
+
+  const quickstartComplete =
+    hasHydrated &&
+    isQuickstartComplete(
+      {
+        adminJwt,
+        memberJwt,
+        activeProjectId: activeProject?.id ?? null,
+        lastRoomId: lastRoom?.id ?? null,
+      },
+      progress,
+    );
+
+  const checklistDone = {
+    jwt: adminJwt.trim().length >= 12,
+    project: Boolean(activeProject?.id),
+    member: memberJwt.trim().length >= 12,
+    room: Boolean(lastRoom?.id),
+    message: Boolean(progress.firstMessageSent || progress.completedAt),
+  };
+
+  const primaryCta = quickstartComplete
+    ? { href: "/rooms", label: "Open rooms" }
+    : { href: HOSTED_PATHS.onboarding, label: "Continue quickstart" };
 
   return (
     <ConsoleShell>
@@ -53,11 +83,13 @@ export default function HomePage() {
           <div>
             <h2 className="font-heading text-base font-semibold text-slate-900">Session</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {phase === "ready" && activeProject
-                ? `Connected · ${activeProject.name}`
-                : phase === "jwt_only"
-                  ? "JWT saved — choose a project next"
-                  : "No admin JWT yet"}
+              {quickstartComplete && activeProject
+                ? `Quickstart complete · ${activeProject.name}`
+                : phase === "ready" && activeProject
+                  ? `Connected · ${activeProject.name} — finish quickstart to unlock overview`
+                  : phase === "jwt_only"
+                    ? "JWT saved — continue the quickstart wizard"
+                    : "Start with the quickstart wizard"}
             </p>
           </div>
           <Button asChild className="gap-1 shrink-0">
@@ -68,28 +100,46 @@ export default function HomePage() {
           </Button>
         </div>
         <ul className="mt-5 space-y-2 border-t border-black/[0.06] pt-4">
-          {CHECKLIST.map((item, index) => {
-            const done =
-              phase === "ready" ? true : phase === "jwt_only" ? index === 0 : false;
-            const current =
-              phase === "no_jwt" ? index === 0 : phase === "jwt_only" ? index === 1 : index === 2;
+          {CHECKLIST.map((item) => {
+            const done = checklistDone[item.key];
+            const firstOpenIndex = CHECKLIST.findIndex((c) => !checklistDone[c.key]);
+            const isCurrent =
+              !quickstartComplete &&
+              !done &&
+              CHECKLIST.findIndex((c) => c.key === item.key) === firstOpenIndex;
             return (
               <li key={item.key} className="flex items-center gap-2 text-sm">
                 {done ? (
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
                 ) : (
                   <Circle
-                    className={cn("h-4 w-4 shrink-0", current ? "text-primary" : "text-slate-300")}
+                    className={cn("h-4 w-4 shrink-0", isCurrent ? "text-primary" : "text-slate-300")}
                     aria-hidden
                   />
                 )}
-                <span className={cn(done ? "text-slate-700" : current ? "font-medium text-slate-900" : "text-slate-400")}>
+                <span className={cn(done ? "text-slate-700" : isCurrent ? "font-medium text-slate-900" : "text-slate-400")}>
                   {item.label}
                 </span>
               </li>
             );
           })}
         </ul>
+        {!quickstartComplete ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            <Link href={HOSTED_PATHS.onboarding} className="font-medium text-primary underline-offset-2 hover:underline">
+              Open quickstart
+            </Link>{" "}
+            to finish setup before using the rest of the console.
+          </p>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Revisit the tutorial anytime via{" "}
+            <Link href={hostedQuickstartReviewHref()} className="font-medium text-primary underline-offset-2 hover:underline">
+              quickstart (review)
+            </Link>
+            .
+          </p>
+        )}
         <p className="mt-4 flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
           <KeyRound className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
           Requests use Bearer JWTs to your Worker. The optional{" "}
