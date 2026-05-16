@@ -1,8 +1,12 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { isClerkEnabled } from "@/lib/clerk-config";
-import { provisionFluxyForClerkUser } from "@/lib/fluxy-provision";
-import { getConsoleApiKey } from "@/lib/fluxy-server";
+import {
+  fluxyUserIdFromClerk,
+  provisionFluxyForClerkUser,
+  resolveProjectApiKeyForClerkUser,
+} from "@/lib/fluxy-provision";
+import { getConsoleApiKey, mintWorkerToken } from "@/lib/fluxy-server";
 import { messageFromUnknown } from "@/lib/error-message";
 
 /**
@@ -55,6 +59,22 @@ export async function POST(request: Request) {
         }
       : null;
 
+    const memberUserId = fluxyUserIdFromClerk(userId);
+    let memberJwt: string | undefined;
+    const apiKeyForMember =
+      (await resolveProjectApiKeyForClerkUser(userId)) || getConsoleApiKey();
+    if (apiKeyForMember) {
+      const memberMint = await mintWorkerToken(
+        {
+          userId: memberUserId,
+          roles: ["member"],
+          ttlSeconds: 7200,
+        },
+        apiKeyForMember,
+      );
+      memberJwt = memberMint.token;
+    }
+
     return NextResponse.json({
       adminJwt: result.adminJwt,
       expiresIn: result.expiresIn,
@@ -62,6 +82,8 @@ export async function POST(request: Request) {
       activeProject,
       createdNewProject: result.createdNewProject,
       clerkUserId: userId,
+      memberJwt,
+      memberUserId,
     });
   } catch (err: unknown) {
     const message = messageFromUnknown(err, "Connect failed");

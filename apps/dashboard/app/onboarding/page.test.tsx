@@ -5,6 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardSessionProvider } from "../components/dashboard-session";
 import OnboardingPage from "./page";
 
+vi.mock("@clerk/nextjs", () => ({
+  useUser: () => ({ user: null, isSignedIn: false }),
+}));
+
 vi.mock("@fluxy-chat/sdk", () => ({
   FluxyChatClient: function FluxyChatClient() {
     return {};

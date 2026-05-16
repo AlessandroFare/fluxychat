@@ -26,7 +26,7 @@ export function ConnectFluxyButton({
 }: ConnectFluxyButtonProps) {
   const { isSignedIn } = useUser();
   const router = useRouter();
-  const { setAdminJwt, setActiveProject } = useDashboardSession();
+  const { setAdminJwt, setMemberJwt, setActiveProject } = useDashboardSession();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +50,7 @@ export function ConnectFluxyButton({
       });
       const json = (await res.json()) as {
         adminJwt?: string;
+        memberJwt?: string;
         activeProject?: { id: string; name: string; created_at: string; apiKey?: string };
         error?: string;
       };
@@ -59,6 +60,9 @@ export function ConnectFluxyButton({
       }
       if (json.adminJwt) {
         setAdminJwt(json.adminJwt);
+      }
+      if (json.memberJwt) {
+        setMemberJwt(json.memberJwt);
       }
       if (json.activeProject) {
         setActiveProject(json.activeProject);

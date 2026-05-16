@@ -11,13 +11,14 @@ import { useDashboardSession } from "./dashboard-session";
  */
 export function FluxyAutoConnect() {
   const { isSignedIn, isLoaded } = useUser();
-  const { adminJwt, setAdminJwt, setActiveProject } = useDashboardSession();
+  const { adminJwt, memberJwt, setAdminJwt, setMemberJwt, setActiveProject } =
+    useDashboardSession();
   const ran = useRef(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isClerkClientConfigured() || !isLoaded || !isSignedIn || ran.current) return;
-    if (adminJwt.trim().length >= 12) return;
+    if (adminJwt.trim().length >= 12 && memberJwt.trim().length >= 12) return;
 
     ran.current = true;
     setProvisionError(null);
@@ -41,6 +42,7 @@ export function FluxyAutoConnect() {
         });
         const json = (await res.json()) as {
           adminJwt?: string;
+          memberJwt?: string;
           activeProject?: { id: string; name: string; created_at: string; apiKey?: string };
           error?: string;
         };
@@ -52,6 +54,7 @@ export function FluxyAutoConnect() {
         }
 
         if (json.adminJwt) setAdminJwt(json.adminJwt);
+        if (json.memberJwt) setMemberJwt(json.memberJwt);
         if (json.activeProject) {
           setActiveProject(json.activeProject);
           void persistActiveProjectToClerk(json.activeProject);
@@ -61,7 +64,7 @@ export function FluxyAutoConnect() {
         ran.current = false;
       }
     })();
-  }, [isLoaded, isSignedIn, adminJwt, setAdminJwt, setActiveProject]);
+  }, [isLoaded, isSignedIn, adminJwt, memberJwt, setAdminJwt, setMemberJwt, setActiveProject]);
 
   if (!provisionError) return null;
 

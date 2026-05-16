@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
 import { Button as ShadcnButton } from "~/components/ui/button";
@@ -19,6 +20,8 @@ import {
   expandModelShortcut,
   modelSuggestionsForProvider,
 } from "@/lib/agent-catalog";
+import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
+import { isClerkClientConfigured } from "@/lib/hosted-product";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
@@ -90,9 +93,11 @@ function isOnboardingStepComplete(
   },
 ): boolean {
   const { adminJwt, activeProject, memberJwt, room, messageCount } = args;
+  const hasMember = Boolean(memberJwt.trim());
   if (step === 0) return adminJwt.trim().length >= 12;
   if (step === 1) return Boolean(activeProject?.id);
-  if (step === 2) return Boolean(memberJwt.trim());
+  if (step === 2) return hasMember;
+  if (step >= 3 && !hasMember) return false;
   if (step === 3) return Boolean(room?.id);
   if (step === 4) return messageCount >= 1;
   return true;
@@ -149,10 +154,16 @@ export default function OnboardingPage() {
 
   const [isGuidedEntry, setIsGuidedEntry] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  const { user: clerkUser, isSignedIn: clerkSignedIn } = useUser();
 
   useEffect(() => {
     setIsGuidedEntry(new URLSearchParams(window.location.search).get("guided") === "1");
   }, []);
+
+  useEffect(() => {
+    if (!isClerkClientConfigured() || !clerkSignedIn || !clerkUser?.id) return;
+    setUserId(fluxyUserIdFromClerk(clerkUser.id));
+  }, [clerkSignedIn, clerkUser?.id]);
 
   useEffect(() => {
     if (room?.id || !lastRoom?.id) return;
@@ -208,8 +219,16 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (!isGuidedEntry) return;
-    setActiveStep((current) => Math.max(current, furthest));
+    setActiveStep((current) => Math.min(Math.max(current, furthest), STEPS.length - 1));
   }, [isGuidedEntry, furthest]);
+
+  const autoMintMemberRef = React.useRef(false);
+  useEffect(() => {
+    if (!isClerkClientConfigured() || !clerkSignedIn) return;
+    if (!adminJwt.trim() || !project?.id || memberJwt.trim() || autoMintMemberRef.current) return;
+    autoMintMemberRef.current = true;
+    void mintMemberJwt();
+  }, [clerkSignedIn, adminJwt, project?.id, memberJwt]);
 
   function goNext() {
     setActiveStep((s) => Math.min(STEPS.length - 1, s + 1));
@@ -554,7 +573,7 @@ export default function OnboardingPage() {
       {activeStep === 2 ? (
         <Section
           title="Mint member JWT"
-          description="Pick a user id for this session. Minting runs on the dashboard server, not in the browser."
+          description="On hosted cloud this is usually minted at sign-in. Pick a user id for SDK calls; minting runs on the dashboard server."
         >
           <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
             <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="userId (e.g. alice)" />

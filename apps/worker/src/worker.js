@@ -284,18 +284,18 @@ export default {
       .map((o) => o.trim())
       .filter(Boolean);
     const requestOrigin = request.headers.get("Origin") || "";
-    const corsOrigin = allowedOrigins.includes(requestOrigin)
-      ? requestOrigin
-      : allowedOrigins.includes("*")
-        ? "*"
-        : allowedOrigins[0] || "*";
+    const corsOrigin = allowedOrigins.includes("*")
+      ? "*"
+      : requestOrigin && allowedOrigins.includes(requestOrigin)
+        ? requestOrigin
+        : null;
 
     const cspHeader = env.CSP_ENABLED === "true"
       ? "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
       : null;
 
     const corsHeaders = {
-      "Access-Control-Allow-Origin": corsOrigin,
+      ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
       "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Trace-Id,X-Fluxy-Api-Key,X-Project-Id",
       "Access-Control-Expose-Headers": "X-Trace-Id,Retry-After",
@@ -329,6 +329,9 @@ export default {
     });
 
     if (request.method === "OPTIONS") {
+      if (requestOrigin && !corsOrigin) {
+        return new Response("CORS origin not allowed", { status: 403 });
+      }
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 

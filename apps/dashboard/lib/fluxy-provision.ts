@@ -4,12 +4,15 @@ import {
   readFluxyPrivateApiKey,
   syncFluxyProjectSecretsToClerk,
 } from "@/lib/clerk-fluxy-metadata";
+import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import {
   createWorkerProject,
   getConsoleApiKey,
   listWorkerProjects,
   mintWorkerToken,
 } from "@/lib/fluxy-server";
+
+export { fluxyUserIdFromClerk };
 
 export interface ProvisionResult {
   adminJwt: string;
@@ -22,10 +25,6 @@ export interface ProvisionResult {
     apiKey?: string;
   } | null;
   createdNewProject: boolean;
-}
-
-function fluxyUserIdFromClerk(clerkUserId: string): string {
-  return clerkUserId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
 }
 
 function defaultProjectName(user: User | null): string {
