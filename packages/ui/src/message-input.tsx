@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { FluxyChatAttachment } from "@fluxychat/sdk";
+import type { FluxyChatAttachment } from "@fluxy-chat/sdk";
 import { getActiveMentionAtCursor, mentionMatchesQuery } from "./mention-utils";
 
 export interface MentionSuggestion {

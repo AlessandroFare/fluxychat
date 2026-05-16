@@ -74,7 +74,7 @@ export function LlmProviderCredentials({ adminJwt }: LlmProviderCredentialsProps
   return (
     <Section
       title="Project LLM credentials"
-      description="Bring your own LLM keys per project (encrypted in D1 when WEBHOOK_SECRET_ENCRYPTION_KEY is set). Keys override Worker env defaults. The @fluxychat/sdk npm package never includes provider secrets — only your Fluxy JWT/API key for chat."
+      description="Bring your own LLM keys per project (encrypted in D1 when WEBHOOK_SECRET_ENCRYPTION_KEY is set). Keys override Worker env defaults. The @fluxy-chat/sdk npm package never includes provider secrets — only your Fluxy JWT/API key for chat."
     >
       {error ? <p className="mb-2 text-sm text-red-400">{error}</p> : null}
       {notice ? <p className="mb-2 text-sm text-green-400">{notice}</p> : null}

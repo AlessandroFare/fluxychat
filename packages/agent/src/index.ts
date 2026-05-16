@@ -6,7 +6,7 @@ import {
   type FluxyChatMessage,
   type FluxyRoomConnectionOptions,
   type FluxyWaitForOptions,
-} from "@fluxychat/sdk";
+} from "@fluxy-chat/sdk";
 import { mintWorkerToken } from "./mint";
 
 export {
@@ -14,7 +14,7 @@ export {
   FluxyConnectionError,
   FluxySendError,
   FluxyTimeoutError,
-} from "@fluxychat/sdk";
+} from "@fluxy-chat/sdk";
 
 export { mintWorkerToken, type MintTokenInput, type MintTokenResult } from "./mint";
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { getPublicWorkerUrl, isPublicHostedCloud } from "@/lib/worker-url-client";
 
-const INSTALL = "pnpm add @fluxychat/sdk";
+const INSTALL = "pnpm add @fluxy-chat/sdk";
 
 export function QuickstartSdkSnippet() {
   const [workerUrl, setWorkerUrl] = useState(getPublicWorkerUrl());

@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { FluxyChatClient } from "@fluxychat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { Badge } from "@/components/ui/badge";
 import { AgentFormFields, type AgentFormValues } from "../components/agent-form-fields";
 import { useDashboardSession } from "../components/dashboard-session";

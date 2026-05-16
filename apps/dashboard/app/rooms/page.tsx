@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FluxyChatClient, type FluxyChatRoom } from "@fluxychat/sdk";
+import { FluxyChatClient, type FluxyChatRoom } from "@fluxy-chat/sdk";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";

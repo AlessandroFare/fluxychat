@@ -16,7 +16,7 @@
     "react": ">=18"
   },
   "dependencies": {
-    "@fluxychat/sdk": "workspace:*"
+    "@fluxy-chat/sdk": "workspace:*"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

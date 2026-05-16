@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { FluxyChatClient, useChat } from "@fluxychat/sdk";
+import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
 import { Button as ShadcnButton } from "~/components/ui/button";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";

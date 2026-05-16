@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { FluxyChatClient, type FluxyChatRoom } from "@fluxychat/sdk";
+import { FluxyChatClient, type FluxyChatRoom } from "@fluxy-chat/sdk";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
 import { cn } from "@/lib/utils";

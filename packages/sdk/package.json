@@ -1,5 +1,5 @@
 {
-  "name": "@fluxychat/sdk",
+  "name": "@fluxy-chat/sdk",
   "version": "0.1.0",
   "description": "Fluxychat JavaScript/TypeScript SDK — WebSocket rooms, REST messages, useChat hook",
   "license": "MIT",

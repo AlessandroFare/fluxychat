@@ -1,4 +1,4 @@
-import type { FluxyChatMessage } from "@fluxychat/sdk";
+import type { FluxyChatMessage } from "@fluxy-chat/sdk";
 import { MessageItem } from "./message-item";
 
 export interface AgentMessageProps {

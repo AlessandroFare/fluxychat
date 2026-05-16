@@ -9,7 +9,7 @@ export default defineConfig({
     alias: {
       "@": dirname,
       "~": dirname,
-      "@fluxychat/sdk": path.resolve(dirname, "../../packages/sdk/src/index.ts"),
+      "@fluxy-chat/sdk": path.resolve(dirname, "../../packages/sdk/src/index.ts"),
       "@fluxychat/ui": path.resolve(dirname, "../../packages/ui/src/index.tsx"),
     },
   },

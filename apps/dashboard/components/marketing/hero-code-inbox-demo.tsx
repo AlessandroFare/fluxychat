@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const SNIPPET = `import { FluxyChatClient, useChat } from "@fluxychat/sdk";
+const SNIPPET = `import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
 
 const client = new FluxyChatClient({
   baseUrl: "https://your-worker.example.com",
@@ -59,7 +59,7 @@ function coloredFullLine(line: string, lineIndex: number): React.ReactNode {
         <Tok style={{ color: C.kw }}>import</Tok>{" "}
         <Tok style={{ color: C.fn }}>{`{ FluxyChatClient, useChat }`}</Tok>{" "}
         <Tok style={{ color: C.kw }}>from</Tok>{" "}
-        <Tok style={{ color: C.str }}>&quot;@fluxychat/sdk&quot;</Tok>
+        <Tok style={{ color: C.str }}>&quot;@fluxy-chat/sdk&quot;</Tok>
         <Tok style={{ color: C.punct }}>;</Tok>
       </>
     );

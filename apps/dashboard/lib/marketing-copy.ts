@@ -12,7 +12,7 @@ export const PAGE_METADATA = {
   landing: buildPageMetadata({
     title: "In-app chat SDK for Cloudflare",
     description:
-      "Add realtime rooms, agents, and webhooks with @fluxychat/sdk. Start on hosted cloud or deploy the Worker in your Cloudflare account.",
+      "Add realtime rooms, agents, and webhooks with @fluxy-chat/sdk. Start on hosted cloud or deploy the Worker in your Cloudflare account.",
     path: "/landing",
   }),
   getStarted: buildPageMetadata({

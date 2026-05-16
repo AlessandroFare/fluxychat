@@ -14,7 +14,7 @@ const STEPS = [
   {
     n: "02",
     title: "Install SDK",
-    body: "Add @fluxychat/sdk and point baseUrl at the hosted API.",
+    body: "Add @fluxy-chat/sdk and point baseUrl at the hosted API.",
   },
   {
     n: "03",

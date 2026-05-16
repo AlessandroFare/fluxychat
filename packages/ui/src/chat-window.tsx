@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { FluxyChatAttachment, FluxyChatMessage } from "@fluxychat/sdk";
+import type { FluxyChatAttachment, FluxyChatMessage } from "@fluxy-chat/sdk";
 import { AgentTypingIndicator } from "./agent-typing-indicator";
 import { ChannelList } from "./channel-list";
 import { MessageInput } from "./message-input";

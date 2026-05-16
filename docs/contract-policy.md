@@ -12,7 +12,7 @@ Consideriamo **public contract**:
   - `/agents*`
   - `/stats/*`
 - Webhook payload + headers (`X-Fluxy-*`)
-- SDK (`@fluxychat/sdk`): API pubbliche exportate
+- SDK (`@fluxy-chat/sdk`): API pubbliche exportate
 
 ## Versioning
 

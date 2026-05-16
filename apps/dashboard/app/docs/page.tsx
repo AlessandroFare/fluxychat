@@ -111,7 +111,7 @@ export default function DocsPage() {
       <section id="sdk" className="mt-12 scroll-mt-24">
         <h2 className="font-heading text-xl font-semibold text-slate-900">SDK</h2>
         <pre className="mt-4 overflow-x-auto rounded-xl bg-[#111111] p-4 text-sm text-slate-100">
-          {`pnpm add @fluxychat/sdk\n\nimport { FluxyChatClient, useChat } from "@fluxychat/sdk";\n\nconst client = new FluxyChatClient({\n  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL,\n  userId: "user_123",\n  token: memberJwtFromYourBackend,\n});`}
+          {`pnpm add @fluxy-chat/sdk\n\nimport { FluxyChatClient, useChat } from "@fluxy-chat/sdk";\n\nconst client = new FluxyChatClient({\n  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL,\n  userId: "user_123",\n  token: memberJwtFromYourBackend,\n});`}
         </pre>
       </section>
 

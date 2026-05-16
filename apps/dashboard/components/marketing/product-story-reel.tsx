@@ -13,7 +13,7 @@ const SCENES = [
       <div className="rounded-xl border border-orange-400/40 bg-zinc-950/95 px-5 py-4 font-mono text-base shadow-inner sm:text-lg">
         <span className="text-orange-400">$ </span>
         <span className="text-zinc-100">pnpm add </span>
-        <span className="text-emerald-400">@fluxychat/sdk</span>
+        <span className="text-emerald-400">@fluxy-chat/sdk</span>
       </div>
     ),
   },

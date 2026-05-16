@@ -25,9 +25,9 @@ Ultra-low-cost realtime chat (SaaS + SDK), inspired by services like TalkJS but 
 
 Backend: your messages and metadata live on **your Cloudflare Worker + D1** (multi-tenant hosted cloud or self-host).
 
-### Publish `@fluxychat/sdk` to npm
+### Publish `@fluxy-chat/sdk` to npm
 
-1. Create npm org/user **`fluxychat`** (or publish under your user scope).
+1. npm org **`fluxy-chat`** (scope `@fluxy-chat`) — already created for publish.
 2. `cd packages/sdk && pnpm run build && pnpm test`
 3. `npm login` then `npm publish --access public` (from `packages/sdk`).
 4. Consumers set `baseUrl` to their Worker and mint JWTs server-side — see `packages/sdk/README.md`.
@@ -182,7 +182,7 @@ Basic plan enforcement is enabled by default (can be disabled in dev):
 ### SDK quickstart for agents
 
 ```ts
-import { FluxyChatClient, useChat } from "@fluxychat/sdk";
+import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
 
 const client = new FluxyChatClient({
   baseUrl: "http://127.0.0.1:8787",

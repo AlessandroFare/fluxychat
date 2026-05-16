@@ -1,4 +1,4 @@
-# @fluxychat/sdk
+# @fluxy-chat/sdk
 
 Client for a **Fluxychat Worker** (self-hosted or [Fluxychat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and optional React `useChat`.
 
@@ -7,9 +7,9 @@ The SDK talks to **your** Worker URL. It does **not** include LLM API keys — o
 ## Install
 
 ```bash
-npm install @fluxychat/sdk
+npm install @fluxy-chat/sdk
 # or
-pnpm add @fluxychat/sdk
+pnpm add @fluxy-chat/sdk
 ```
 
 Requires **React 18+** if you use `useChat` (peer dependency).
@@ -37,7 +37,7 @@ Use the returned `token` in the browser.
 ## Quick start (React)
 
 ```tsx
-import { FluxyChatClient, useChat } from "@fluxychat/sdk";
+import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
 
 const client = new FluxyChatClient({
   baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,

@@ -357,7 +357,7 @@ Esempi:
 - `2026-04-27 | M5-B/docs-use-cases | aggiunta struttura docs/ con home e 3 guide use case (support chat, team chat, assistant room) + link da README | assistant`
 - `2026-04-27 | M5-B/docs-auth-cookbook | aggiunto cookbook docs/cookbook/auth-jwt.md con flow API key->JWT, mapping ruoli, esempi curl, WS auth e snippet Next.js route handler | assistant`
 - `2026-04-27 | M5-B/docs-troubleshooting | aggiunta guida docs/troubleshooting.md con playbook per WS disconnect, webhook retry/backlog, rate limit 429 e SLO breach (comandi stats/ops, stats/slo, deliveries, audit) | assistant`
-- `2026-04-27 | M5-B/docs-snippets-nextjs | aggiunto snippet docs/snippets/nextjs-end-to-end.md (App Router) con env, route handler mint JWT e pagina client con @fluxychat/sdk useChat | assistant`
+- `2026-04-27 | M5-B/docs-snippets-nextjs | aggiunto snippet docs/snippets/nextjs-end-to-end.md (App Router) con env, route handler mint JWT e pagina client con @fluxy-chat/sdk useChat | assistant`
 - `2026-04-27 | M5-B/contract-policy | aggiunta policy docs/contract-policy.md (compat rules, semver SDK, deprecations) + creato CHANGELOG.md iniziale | assistant`
 - `2026-04-27 | M5-C/quotas-enforcement | aggiunta migrazione 0018 project_usage_monthly e enforcement quote mensili su POST /messages, WS send message, /agents/:id/invoke e enqueue webhook deliveries; risposta 402 quota_exceeded + test e2e | assistant`
 - `2026-04-27 | M5-C/pricing-guardrails | esteso /stats/costs con stima ricavi + gross margin e guardrails (MIN_GROSS_MARGIN) basati su env PRICE_*; dashboard analytics aggiornata per visualizzarli; README aggiornato | assistant`

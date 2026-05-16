@@ -21,7 +21,7 @@ const HOSTED_STEPS = [
   {
     icon: Package,
     title: "Install the SDK",
-    body: "Run pnpm add @fluxychat/sdk in your app and set baseUrl to the hosted API URL from the console.",
+    body: "Run pnpm add @fluxy-chat/sdk in your app and set baseUrl to the hosted API URL from the console.",
   },
   {
     icon: Code2,

@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { FluxyChatMessage } from "@fluxychat/sdk";
+import type { FluxyChatMessage } from "@fluxy-chat/sdk";
 
 export interface MessageListProps {
   messages: FluxyChatMessage[];

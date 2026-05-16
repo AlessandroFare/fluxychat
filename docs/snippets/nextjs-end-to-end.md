@@ -57,7 +57,7 @@ Crea `app/fluxy-demo/page.tsx`:
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FluxyChatClient, useChat } from "@fluxychat/sdk";
+import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
 
 export default function FluxyDemoPage() {
   const baseUrl = process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!;

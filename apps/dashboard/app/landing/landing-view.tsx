@@ -40,7 +40,7 @@ import { HOSTED_COPY, HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted
 import { formatNumber } from "@/lib/format-number";
 import { cn } from "@/lib/utils";
 
-const INSTALL_CMD = "pnpm add @fluxychat/sdk";
+const INSTALL_CMD = "pnpm add @fluxy-chat/sdk";
 
 const STACK_LOGOS = [
   "Next.js",
@@ -104,7 +104,7 @@ const COMPARE_ROWS: {
     stream: "Strong SDKs",
     ably: "Strong SDKs",
     pusher: "Channels SDKs",
-    fluxy: "Opinionated @fluxychat/sdk + examples",
+    fluxy: "Opinionated @fluxy-chat/sdk + examples",
   },
   {
     label: "Self-host / fork friendliness (MIT-style workflow)",
@@ -124,7 +124,7 @@ const LANDING_STATS = [
   {
     icon: Cpu,
     value: "Hooks + REST",
-    label: "Build UI with @fluxychat/sdk. Manage keys and quotas in the dashboard.",
+    label: "Build UI with @fluxy-chat/sdk. Manage keys and quotas in the dashboard.",
   },
   {
     icon: Layers,
@@ -152,7 +152,7 @@ const USE_CASE_ROWS = [
 const FAQ_ITEMS = [
   {
     q: "What is the chat API vs the SDK?",
-    a: "Your backend calls the Worker over HTTP. The browser uses @fluxychat/sdk to subscribe, send, and render. Same product, two surfaces.",
+    a: "Your backend calls the Worker over HTTP. The browser uses @fluxy-chat/sdk to subscribe, send, and render. Same product, two surfaces.",
   },
   {
     q: "How is this different from a fully managed vendor?",
@@ -390,7 +390,7 @@ export function LandingView() {
      </h1>
 
      <p className="mt-5 max-w-2xl text-balance text-lg text-slate-600 sm:text-xl">
-       Sign up, add @fluxychat/sdk, and run rooms, agents, and webhooks on hosted cloud. No Worker deploy required to
+       Sign up, add @fluxy-chat/sdk, and run rooms, agents, and webhooks on hosted cloud. No Worker deploy required to
        start.
      </p>
      <p className="mt-2 max-w-2xl text-balance text-sm text-slate-500 sm:text-base">
@@ -421,7 +421,7 @@ export function LandingView() {
      <p className="mt-4 max-w-xl text-xs text-slate-500 sm:text-sm">
        Works with npm and yarn too — same package name{" "}
        <code className="rounded border border-black/[0.06] bg-white/85 px-1.5 py-0.5 font-mono text-slate-700">
-         @fluxychat/sdk
+         @fluxy-chat/sdk
        </code>
        .
      </p>
