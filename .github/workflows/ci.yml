@@ -25,6 +25,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace packages for dashboard tests
+        run: pnpm --filter @fluxychat/sdk build
+
       - name: Test
         run: pnpm test
 

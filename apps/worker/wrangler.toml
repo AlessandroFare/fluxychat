@@ -48,9 +48,10 @@ preview_id = "536bdaedd5ce4e28b898e4bfb65ef3a2"   # npx wrangler kv namespace cr
 binding = "ATTACHMENTS"
 bucket_name = "fluxychat-attachments"
 
+# Free Workers plan requires SQLite-backed DO (new_sqlite_classes, not new_classes).
 [[migrations]]
 tag = "v1"
-new_classes = ["RoomDurableObject"]
+new_sqlite_classes = ["RoomDurableObject"]
 
 # Daily retention cleanup at 03:00 UTC (worker scheduled handler)
 [triggers]
