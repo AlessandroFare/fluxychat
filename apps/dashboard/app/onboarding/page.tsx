@@ -119,6 +119,8 @@ export default function OnboardingPage() {
     setMemberJwt,
     activeProject,
     setActiveProject,
+    lastRoom,
+    setLastRoom,
   } = useDashboardSession();
 
   const [projectName, setProjectName] = useState("My first project");
@@ -151,6 +153,17 @@ export default function OnboardingPage() {
   useEffect(() => {
     setIsGuidedEntry(new URLSearchParams(window.location.search).get("guided") === "1");
   }, []);
+
+  useEffect(() => {
+    if (room?.id || !lastRoom?.id) return;
+    setRoom({
+      id: lastRoom.id,
+      type: lastRoom.type || "group",
+      name: lastRoom.name || lastRoom.id,
+      created_at: lastRoom.created_at || new Date().toISOString(),
+    });
+    setExistingRoomId(lastRoom.id);
+  }, [lastRoom, room?.id]);
 
   const project = activeProject as CreatedProject | null;
   const activeRoomId = room?.id ?? "";
@@ -274,14 +287,17 @@ export default function OnboardingPage() {
     setExistingRoomId(id);
     if (!id) {
       setRoom(null);
+      setLastRoom(null);
       return;
     }
-    setRoom({
+    const picked = {
       id,
       type: "group",
       name: id,
       created_at: new Date().toISOString(),
-    });
+    };
+    setRoom(picked);
+    setLastRoom(picked);
     setNotice("Using existing room.");
     setError(null);
   }
@@ -313,6 +329,7 @@ export default function OnboardingPage() {
         }),
       });
       setRoom(json.room);
+      setLastRoom(json.room);
       setNotice("Room created.");
       setActiveStep(4);
     } catch (err: unknown) {

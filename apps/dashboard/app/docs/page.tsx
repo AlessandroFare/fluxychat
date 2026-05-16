@@ -128,7 +128,7 @@ export default function DocsPage() {
           <Link href={HOSTED_PATHS.signUp}>{HOSTED_COPY.startFree}</Link>
         </Button>
         <Button asChild variant="outline">
-          <a href="https://github.com/fluxychat/fluxychat" target="_blank" rel="noreferrer">
+          <a href="https://github.com/AlessandroFare/fluxychat" target="_blank" rel="noreferrer">
             View monorepo on GitHub
           </a>
         </Button>

@@ -23,7 +23,7 @@ export const clerkLocalization = {
 
 export const clerkAuthAppearance = {
   variables: {
-    colorPrimary: "#e8450a",
+    colorPrimary: "#ff725e",
     colorText: "#0f172a",
     borderRadius: "0.75rem",
   },
@@ -31,7 +31,7 @@ export const clerkAuthAppearance = {
     card: "shadow-[var(--shadow-subtle-3)] border border-black/[0.06] w-full",
     headerTitle: "font-heading text-xl",
     headerSubtitle: "text-sm text-slate-600",
-    formButtonPrimary: "bg-[#e8450a] text-white hover:bg-[#d63d08]",
-    footerActionLink: "text-[#e8450a] hover:text-[#d63d08]",
+    formButtonPrimary: "bg-[#ff725e] text-white hover:bg-[#e8614d]",
+    footerActionLink: "text-[#ff725e] hover:text-[#e8614d]",
   },
 } as const;

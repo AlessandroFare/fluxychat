@@ -699,8 +699,8 @@ export function LandingView() {
           </div>
           <p className="mt-10 text-center text-xs text-slate-500">
             Need enterprise SSO, VPC-style isolation, or custom SLOs? Email{" "}
-            <a className="text-slate-300 underline underline-offset-2" href="mailto:support@fluxychat.dev">
-              support@fluxychat.dev
+            <a className="text-slate-300 underline underline-offset-2" href="mailto:fluxychat@outlook.com">
+              fluxychat@outlook.com
             </a>
             .
           </p>
@@ -817,10 +817,10 @@ export function LandingView() {
             <a href="#faq" className="hover:text-white">
               FAQ
             </a>
-            <a href="mailto:support@fluxychat.dev" className="hover:text-white">
-              support@fluxychat.dev
+            <a href="mailto:fluxychat@outlook.com" className="hover:text-white">
+              fluxychat@outlook.com
             </a>
-            <a href="https://github.com/fluxychat" target="_blank" rel="noreferrer" className="hover:text-white">
+            <a href="https://github.com/AlessandroFare/fluxychat" target="_blank" rel="noreferrer" className="hover:text-white">
               GitHub
             </a>
           </nav>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkAndConsumeRateLimit,
   hasAnyRole,
+  resolveCacheVersionKey,
   retryDelayMsForAttempt,
   truncateForStorage,
 } from "./worker.js";
@@ -358,6 +359,12 @@ describe("verifyJwtAndGetContext", () => {
       expect(e).toBeInstanceOf(Response);
       expect(await e.text()).toBe("Unauthorized");
     }
+  });
+
+  it("resolveCacheVersionKey shares project version for all rooms list cache keys", () => {
+    expect(resolveCacheVersionKey("rooms:proj-1:alice:all")).toBe("ver:rooms:proj-1");
+    expect(resolveCacheVersionKey("rooms:proj-1")).toBe("ver:rooms:proj-1");
+    expect(resolveCacheVersionKey("stats:proj-1")).toBe("ver:stats:proj-1");
   });
 
   it("rejects with generic 401 when jwt_secret is empty string", async () => {

@@ -4,7 +4,7 @@ const SITE_NAME = "Fluxychat";
 
 /** Public site origin for canonical URLs and OG tags. Set in production. */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://fluxychat.dev"
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://fluxychat.vercel.app"
 ).replace(/\/$/, "");
 
 const DEFAULT_OG_IMAGE = `${SITE_URL}/fluxychat-icon.svg`;

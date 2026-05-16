@@ -6,12 +6,12 @@
   "author": "Fluxychat",
   "repository": {
     "type": "git",
-    "url": "https://example.com/replace-with-your-repo.git",
+    "url": "git+https://github.com/AlessandroFare/fluxychat.git",
     "directory": "packages/sdk"
   },
-  "homepage": "https://www.npmjs.com/package/@fluxychat/sdk",
+  "homepage": "https://github.com/AlessandroFare/fluxychat/tree/main/packages/sdk#readme",
   "bugs": {
-    "url": "https://example.com/replace-with-your-repo/issues"
+    "url": "https://github.com/AlessandroFare/fluxychat/issues"
   },
   "keywords": [
     "chat",

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FluxyChatClient, type FluxyChatRoom } from "@fluxychat/sdk";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
@@ -18,6 +18,8 @@ const WORKER_URL = getPublicWorkerUrl();
 export default function RoomsPage() {
   const { adminJwt, memberJwt, activeProject } = useDashboardSession();
   const token = (adminJwt || memberJwt).trim();
+  /** Prefer member JWT for listing — matches quickstart; admin still used for mutations when needed. */
+  const listToken = (memberJwt || adminJwt).trim();
   const [rooms, setRooms] = useState<FluxyChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,8 +50,18 @@ export default function RoomsPage() {
     [token]
   );
 
-  const loadRooms = async () => {
-    if (!token) {
+  const listClient = useMemo(
+    () =>
+      new FluxyChatClient({
+        baseUrl: WORKER_URL,
+        userId: "dashboard",
+        token: listToken || undefined,
+      }),
+    [listToken]
+  );
+
+  const loadRooms = useCallback(async () => {
+    if (!listToken) {
       setError("JWT required (member or admin from Projects / Onboarding).");
       return;
     }
@@ -57,16 +69,24 @@ export default function RoomsPage() {
     setError(null);
     setNotice(null);
     try {
-      const list = await client.listRooms();
+      const list = await listClient.listRooms();
       setRooms(list);
       setNotice(`Loaded ${list.length} rooms.`);
-      if (list.length && !selectedId) setSelectedId(list[0].id);
+      setSelectedId((prev) => {
+        if (prev && list.some((r) => r.id === prev)) return prev;
+        return list[0]?.id ?? null;
+      });
     } catch (e: unknown) {
       setError(messageFromUnknown(e, "Failed to load rooms"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [listClient, listToken]);
+
+  useEffect(() => {
+    if (!listToken) return;
+    void loadRooms();
+  }, [listToken, loadRooms]);
 
   const createRoom = async () => {
     if (!token || !newName.trim()) return;

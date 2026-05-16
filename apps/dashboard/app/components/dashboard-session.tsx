@@ -17,13 +17,23 @@ export interface DashboardProject {
   } | null;
 }
 
+/** Last room used in quickstart / chat (persisted for onboarding progress). */
+export interface DashboardRoomRef {
+  id: string;
+  type?: string;
+  name?: string;
+  created_at?: string;
+}
+
 interface DashboardSessionValue {
   adminJwt: string;
   memberJwt: string;
   activeProject: DashboardProject | null;
+  lastRoom: DashboardRoomRef | null;
   setAdminJwt: (value: string) => void;
   setMemberJwt: (value: string) => void;
   setActiveProject: (value: DashboardProject | null) => void;
+  setLastRoom: (value: DashboardRoomRef | null) => void;
   clearSession: () => void;
   authHeader: (token?: string | null) => HeadersInit | undefined;
 }
@@ -34,7 +44,12 @@ const STORAGE_KEY = "fluxychat.dashboard.session.v1";
 // sessionStorage is cleared when the browser tab closes, reducing the window
 // for token theft via XSS. We also attempt a one-time migration of any
 // existing localStorage data to sessionStorage and then remove it.
-function loadSession(): { adminJwt?: string; memberJwt?: string; activeProject?: DashboardProject | null } | null {
+function loadSession(): {
+  adminJwt?: string;
+  memberJwt?: string;
+  activeProject?: DashboardProject | null;
+  lastRoom?: DashboardRoomRef | null;
+} | null {
   try {
     // Prefer sessionStorage
     const sessionRaw = window.sessionStorage.getItem(STORAGE_KEY);
@@ -64,6 +79,7 @@ export function DashboardSessionProvider({
   const [adminJwt, setAdminJwtState] = useState("");
   const [memberJwt, setMemberJwtState] = useState("");
   const [activeProject, setActiveProjectState] = useState<DashboardProject | null>(null);
+  const [lastRoom, setLastRoomState] = useState<DashboardRoomRef | null>(null);
 
   useEffect(() => {
     const stored = loadSession();
@@ -71,27 +87,31 @@ export function DashboardSessionProvider({
     setAdminJwtState(stored.adminJwt || "");
     setMemberJwtState(stored.memberJwt || "");
     setActiveProjectState(stored.activeProject || null);
+    setLastRoomState(stored.lastRoom || null);
   }, []);
 
   useEffect(() => {
     window.sessionStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ adminJwt, memberJwt, activeProject })
+      JSON.stringify({ adminJwt, memberJwt, activeProject, lastRoom })
     );
-  }, [activeProject, adminJwt, memberJwt]);
+  }, [activeProject, adminJwt, memberJwt, lastRoom]);
 
   const value = useMemo<DashboardSessionValue>(
     () => ({
       adminJwt,
       memberJwt,
       activeProject,
+      lastRoom,
       setAdminJwt: setAdminJwtState,
       setMemberJwt: setMemberJwtState,
       setActiveProject: setActiveProjectState,
+      setLastRoom: setLastRoomState,
       clearSession() {
         setAdminJwtState("");
         setMemberJwtState("");
         setActiveProjectState(null);
+        setLastRoomState(null);
         try {
           window.sessionStorage.removeItem(STORAGE_KEY);
         } catch {
@@ -103,7 +123,7 @@ export function DashboardSessionProvider({
         return selectedToken ? { Authorization: `Bearer ${selectedToken}` } : undefined;
       },
     }),
-    [activeProject, adminJwt, memberJwt]
+    [activeProject, adminJwt, lastRoom, memberJwt]
   );
 
   return (

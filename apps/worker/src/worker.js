@@ -154,10 +154,17 @@ function validateRoles(roles) {
 
 // ========== CACHING LAYER ==========
 
+/** Rooms list keys are per-user but invalidation is per-project (see invalidateCache on room mutations). */
+export function resolveCacheVersionKey(cacheKey) {
+  const roomsMatch = /^rooms:([^:]+)(?::|$)/.exec(cacheKey);
+  if (roomsMatch) return `ver:rooms:${roomsMatch[1]}`;
+  return `ver:${cacheKey}`;
+}
+
 async function getCachedOrFetch(env, cacheKey, fetchFn, ttlSeconds = 60) {
   if (!env.RATE_LIMIT_KV) return fetchFn();
   try {
-    const versionKey = `ver:${cacheKey}`;
+    const versionKey = resolveCacheVersionKey(cacheKey);
     const version = await env.RATE_LIMIT_KV.get(versionKey);
     const effectiveKey = version ? `${cacheKey}:v${version}` : cacheKey;
     const cached = await env.RATE_LIMIT_KV.get(effectiveKey);
@@ -168,7 +175,7 @@ async function getCachedOrFetch(env, cacheKey, fetchFn, ttlSeconds = 60) {
   }
   const result = await fetchFn();
   try {
-    const versionKey = `ver:${cacheKey}`;
+    const versionKey = resolveCacheVersionKey(cacheKey);
     const version = await env.RATE_LIMIT_KV.get(versionKey) || "1";
     const effectiveKey = `${cacheKey}:v${version}`;
     await env.RATE_LIMIT_KV.put(effectiveKey, JSON.stringify(result), {
@@ -182,7 +189,7 @@ async function getCachedOrFetch(env, cacheKey, fetchFn, ttlSeconds = 60) {
 async function invalidateCache(env, cacheKey) {
   if (!env.RATE_LIMIT_KV) return;
   try {
-    const versionKey = `ver:${cacheKey}`;
+    const versionKey = resolveCacheVersionKey(cacheKey);
     const currentVersion = await env.RATE_LIMIT_KV.get(versionKey);
     const nextVersion = String(Number(currentVersion || "1") + 1);
     await env.RATE_LIMIT_KV.put(versionKey, nextVersion, { expirationTtl: 3600 });

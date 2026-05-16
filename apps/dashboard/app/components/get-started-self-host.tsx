@@ -24,7 +24,7 @@ export function GetStartedSelfHostSection() {
           </ul>
           <p className="mt-4 text-sm">
             <Link
-              href="https://github.com/fluxychat/fluxychat/tree/main/apps/worker"
+              href="https://github.com/AlessandroFare/fluxychat/tree/main/apps/worker"
               className="font-medium text-primary underline-offset-2 hover:underline"
               target="_blank"
               rel="noreferrer"

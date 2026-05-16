@@ -1,6 +1,8 @@
 ## fluxychat
 
-Ultra-low-cost realtime chat (SaaS + SDK), inspired by services like TalkJS but built on modern edge-native primitives:
+Ultra-low-cost realtime chat (SaaS + SDK), inspired by services like TalkJS but built on modern edge-native primitives.
+
+**Live demo console:** [fluxychat.vercel.app](https://fluxychat.vercel.app) · **Source:** [github.com/AlessandroFare/fluxychat](https://github.com/AlessandroFare/fluxychat) · **Support:** fluxychat@outlook.com
 
 - **Cloudflare Workers + Durable Objects** for WebSocket handling and presence.
 - **Cloudflare D1 (SQLite edge)** for messages and metadata.
@@ -14,6 +16,23 @@ Ultra-low-cost realtime chat (SaaS + SDK), inspired by services like TalkJS but 
 - `apps/ai-agent` – AI Agent Service (processes mention webhooks, calls LLM providers, posts replies).
 - `packages/sdk` – TypeScript client SDK (`useChat`, low-level client).
 - `packages/ui` – Headless, themeable chat UI components.
+
+### What the hosted app does
+
+1. **Sign up** (Clerk) → provisions a Worker project + admin JWT.
+2. **Quickstart** (`/onboarding`) → member JWT, room, first message, optional agent.
+3. **Console** → rooms, agents, webhooks, billing, analytics, GDPR tools.
+
+Backend: your messages and metadata live on **your Cloudflare Worker + D1** (multi-tenant hosted cloud or self-host).
+
+### Publish `@fluxychat/sdk` to npm
+
+1. Create npm org/user **`fluxychat`** (or publish under your user scope).
+2. `cd packages/sdk && pnpm run build && pnpm test`
+3. `npm login` then `npm publish --access public` (from `packages/sdk`).
+4. Consumers set `baseUrl` to their Worker and mint JWTs server-side — see `packages/sdk/README.md`.
+
+`@fluxychat/ui` and `@fluxychat/agent` are workspace packages today (not published yet).
 
 ### Getting started
 
