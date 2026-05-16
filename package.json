@@ -1,0 +1,29 @@
+{
+  "name": "fluxychat",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Fluxychat – ultra-low-cost realtime chat (SaaS + SDK) on Cloudflare Workers and Next.js",
+  "scripts": {
+    "dev": "pnpm --filter \"./apps/*\" --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:e2e:smoke": "pnpm --filter @fluxychat/dashboard test:e2e:smoke",
+    "smoke:worker": "pnpm --filter @fluxychat/worker smoke:remote",
+    "smoke:bundled": "bash scripts/smoke-test.sh",
+    "provision:bootstrap": "node scripts/provision-bootstrap.mjs",
+    "sanitize:plans": "node scripts/sanitize-project-plans.mjs",
+    "sanitize:plans:apply": "node scripts/sanitize-project-plans.mjs -- --apply"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "baseline-browser-mapping": "^2.10.29",
+    "turbo": "^2.2.3"
+  }
+}

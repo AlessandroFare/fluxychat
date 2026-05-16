@@ -1,0 +1,17 @@
+{
+  "name": "@fluxychat/ai-agent",
+  "version": "0.1.0",
+  "description": "Fluxychat AI Agent Service – processes mention webhooks and calls LLM providers",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/agent.js",
+    "deploy": "wrangler deploy src/agent.js",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "vitest": "^4.1.5",
+    "wrangler": "latest"
+  }
+}

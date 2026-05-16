@@ -1,0 +1,57 @@
+{
+  "name": "@fluxychat/sdk",
+  "version": "0.1.0",
+  "description": "Fluxychat JavaScript/TypeScript SDK — WebSocket rooms, REST messages, useChat hook",
+  "license": "MIT",
+  "author": "Fluxychat",
+  "repository": {
+    "type": "git",
+    "url": "https://example.com/replace-with-your-repo.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://www.npmjs.com/package/@fluxychat/sdk",
+  "bugs": {
+    "url": "https://example.com/replace-with-your-repo/issues"
+  },
+  "keywords": [
+    "chat",
+    "websocket",
+    "realtime",
+    "cloudflare",
+    "fluxychat"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/room-connection.js",
+    "dist/room-connection.d.ts",
+    "dist/errors.js",
+    "dist/errors.d.ts",
+    "dist/message-stream.js",
+    "dist/message-stream.d.ts",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm run build",
+    "dev": "tsc -w -p tsconfig.json",
+    "lint": "eslint src --ext .ts,.tsx",
+    "test": "pnpm exec vitest run"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.2.14",
+    "typescript": "latest",
+    "vitest": "^4.1.5"
+  }
+}

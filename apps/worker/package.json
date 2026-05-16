@@ -1,0 +1,24 @@
+{
+  "name": "@fluxychat/worker",
+  "version": "0.1.0",
+  "description": "Fluxychat Cloudflare Worker – WebSocket, Durable Objects, D1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/worker.js",
+    "deploy": "wrangler deploy src/worker.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "drill:tenant-recovery": "node scripts/tenant-recovery-drill.mjs",
+    "perf:workload-check": "node scripts/perf-workload-check.mjs",
+    "smoke:remote": "node scripts/smoke-remote.mjs"
+  },
+  "dependencies": {
+    "@aptos-labs/ts-sdk": "latest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "vitest": "^4.1.5",
+    "wrangler": "latest"
+  }
+}

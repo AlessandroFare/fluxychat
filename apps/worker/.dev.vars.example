@@ -1,0 +1,71 @@
+# Copy to `.dev.vars` in this folder (Wrangler loads it for `wrangler dev`).
+# Do not commit real secrets. Lines are KEY=value (no quotes needed for simple values).
+
+# --- CORS / auth (local dashboard) ---
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+# Set to "false" only for local experiments (keep true in shared/staging/prod).
+REQUIRE_ADMIN_AUTH=true
+
+# --- Hosted SaaS (multi-tenant cloud) ---
+# HOSTED_MULTI_TENANT=true
+# FLUXY_PLATFORM_PROJECT_ID=<uuid-from-provision-bootstrap>
+# Tenants cannot use Worker AI_API_KEY; they must set project LLM credentials (or set for internal demos):
+# ALLOW_WORKER_LLM_FALLBACK=false
+# PLATFORM_BOOTSTRAP_SECRET=<random-32+-chars-for-one-time-setup>
+# ALLOW_PLATFORM_BOOTSTRAP=true
+# One-time / periodic: POST /platform/sanitize-plans (pnpm sanitize:plans from repo root)
+# SANITIZE_ALLOW_MANUAL_PAID_TIERS=true   # keep starter/pro without Stripe when sanitizing
+
+# --- Stripe (billing) — leave empty until you run Stripe E2E ---
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# --- AI (agents, optional auto room summary) ---
+# OpenAI-compatible default (also used when provider=openai or custom without override)
+AI_BASE_URL=
+AI_API_KEY=
+ANTHROPIC_API_KEY=
+# AI_MODEL=
+
+# Optional per-provider keys / base URLs (see apps/worker/src/lib/llm-providers.js)
+# MINIMAX_API_KEY=
+# MINIMAX_BASE_URL=https://api.minimaxi.com/v1
+# ZENCODE_API_KEY=
+# ZENCODE_BASE_URL=https://your-zencode-host/v1
+# OPENROUTER_API_KEY=
+# GROQ_API_KEY=
+# DEEPSEEK_API_KEY=
+# TOGETHER_API_KEY=
+# FIREWORKS_API_KEY=
+# MISTRAL_API_KEY=
+# XAI_API_KEY=
+# MOONSHOT_API_KEY=
+# OLLAMA_BASE_URL=http://127.0.0.1:11434/v1
+
+# --- Webhook signing secrets at rest ---
+# Base64-encoded 32-byte AES key (required in prod; generate once and store in Wrangler secrets).
+# WEBHOOK_SECRET_ENCRYPTION_KEY=
+# Local dev without encryption key: allow one-time plaintext storage (never in production).
+ALLOW_PLAINTEXT_WEBHOOK_SECRETS=true
+# Force encryption even when ALLOW_PLAINTEXT is unset (staging/prod should set WEBHOOK_SECRET_ENCRYPTION_KEY).
+# REQUIRE_WEBHOOK_SECRET_ENCRYPTION=true
+
+# --- Optional: dispatch operational alerts ---
+# ALERT_DISPATCH_WEBHOOK_URL=
+
+# --- Quotas & pricing assumptions (defaults match README) ---
+# QUOTAS_ENABLED=true
+# QUOTA_MESSAGES_PER_MONTH=50000
+# QUOTA_AGENT_INVOKES_PER_MONTH=1000
+# QUOTA_WEBHOOK_DELIVERIES_PER_MONTH=10000
+# COST_MESSAGES_PER_MILLION=1
+# COST_REQUESTS_PER_MILLION=0.2
+# PRICE_PER_MILLION_MESSAGES=1
+# MIN_GROSS_MARGIN=0.3
+
+# --- Optional automations ---
+# BUILTIN_MODERATION_ENABLED=true
+# BUILTIN_MODERATION_BLOCKED_SUBSTRINGS=spam,scam
+# AUTO_ROOM_SUMMARY_ENABLED=true
+# AUTO_ROOM_SUMMARY_EVERY_N=50
+# AUTO_ROOM_SUMMARY_COOLDOWN_MINUTES=120

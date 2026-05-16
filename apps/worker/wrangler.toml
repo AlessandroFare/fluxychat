@@ -1,0 +1,60 @@
+name = "fluxychat-worker"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+# Local optional vars/secrets: see `.dev.vars.example` (copy to `.dev.vars` for `wrangler dev`).
+# Runtime env/secrets checklist:
+# - Optional automatic AI room summaries (requires AI_BASE_URL + AI_API_KEY):
+#   AUTO_ROOM_SUMMARY_ENABLED=true
+#   AUTO_ROOM_SUMMARY_EVERY_N=50   # fire when message count is a multiple of N (per room)
+#   AUTO_ROOM_SUMMARY_COOLDOWN_MINUTES=120   # skip if a manual or auto summary ran recently
+# - Optional built-in substring moderation (webhook event moderation.auto_flag):
+#   BUILTIN_MODERATION_ENABLED=true
+#   BUILTIN_MODERATION_BLOCKED_SUBSTRINGS=badword1,badword2
+# - Optional at-rest encryption for webhook secrets (base64-encoded 32 bytes key):
+#   WEBHOOK_SECRET_ENCRYPTION_KEY=...base64(32bytes)...
+# - REQUIRE_ADMIN_AUTH=true
+# - HOSTED_MULTI_TENANT=true + FLUXY_PLATFORM_PROJECT_ID (from pnpm provision:bootstrap)
+# - PLATFORM_BOOTSTRAP_SECRET (one-time; POST /platform/bootstrap)
+# - QUOTAS_ENABLED=true
+# - DEFAULT_PRICING_VERSION=v1
+# - QUOTA_MESSAGES_PER_MONTH / QUOTA_AGENT_INVOKES_PER_MONTH / QUOTA_WEBHOOK_DELIVERIES_PER_MONTH
+# - ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+# - tenant JWT secrets stored in D1 project_secrets
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "RoomDurableObject"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fluxychat"
+database_id = "2393de6c-4c38-4e1e-afbb-2f26e64e6904"
+migrations_dir = "db"
+
+# KV namespace used for distributed rate limiting.
+# IMPORTANT: Create KV namespace and update IDs before production deploy:
+#   npx wrangler kv namespace create RATE_LIMIT_KV
+#   npx wrangler kv namespace create RATE_LIMIT_KV --preview
+# Then paste the returned id below.
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "02d35b13ac6640c58fcd66166ea0214c"   # npx wrangler kv namespace create RATE_LIMIT_KV → paste id here
+preview_id = "536bdaedd5ce4e28b898e4bfb65ef3a2"   # npx wrangler kv namespace create RATE_LIMIT_KV --preview → paste id here
+
+# R2 bucket for file attachments and media storage.
+# Create with: wrangler r2 bucket create fluxychat-attachments
+[[r2_buckets]]
+binding = "ATTACHMENTS"
+bucket_name = "fluxychat-attachments"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RoomDurableObject"]
+
+# Daily retention cleanup at 03:00 UTC (worker scheduled handler)
+[triggers]
+crons = ["0 3 * * *"]
+
+
+

@@ -1,0 +1,35 @@
+# Example environment variables for local development
+# Copy this to .dev.vars and fill in your values
+
+# Fluxychat API base URL (local or production)
+FLUXY_BASE_URL=http://127.0.0.1:8787
+
+# Webhook secret (must match the secret used when registering webhook in Fluxychat)
+WEBHOOK_SECRET=your-webhook-secret-here
+
+# JWT secret for service-to-service auth (must match project's JWT secret in Fluxychat)
+# For local dev, you can use the default secret from the worker
+JWT_SECRET=default-secret-change-me
+
+# OpenAI API key (global default)
+OPENAI_API_KEY=sk-your-openai-api-key-here
+
+# Optional: OpenAI organization ID
+# OPENAI_ORG_ID=org-...
+
+# Optional: Custom OpenAI base URL (for Azure OpenAI or proxies)
+# OPENAI_BASE_URL=https://api.openai.com/v1
+
+# Agent-specific configs (optional, can use KV instead)
+# Format: AGENT_<projectId>_<handle>_<field>
+# Example for project "proj_123" and handle "chatgpt":
+# AGENT_proj_123_chatgpt_BOT_ID=bot_chatgpt
+# AGENT_proj_123_chatgpt_PROVIDER=openai
+# AGENT_proj_123_chatgpt_MODEL=gpt-4o-mini
+# AGENT_proj_123_chatgpt_MODE=chat
+# AGENT_proj_123_chatgpt_CAPABILITIES=chat
+# AGENT_proj_123_chatgpt_SYSTEM_PROMPT=You are a helpful assistant in a chat application.
+# AGENT_proj_123_chatgpt_API_KEY=sk-... # Optional override
+
+# Fluxychat API key (if needed for fetching context)
+# FLUXY_API_KEY=fc_...

@@ -1,0 +1,10 @@
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <path
+    d="M 95,75 L 415,75 L 258,245 L 95,245 C -5,245 -5,75 95,75 Z"
+    fill="#FF6A1A"
+  />
+  <path
+    d="M 95,262 L 315,262 L 215,395 L 95,395 C -5,395 -5,262 95,262 Z"
+    fill="#FF6A1A"
+  />
+</svg>

@@ -1,0 +1,17 @@
+name = "fluxychat-ai-agent"
+main = "src/agent.js"
+compatibility_date = "2025-01-01"
+
+# D1 binding for looking up agent configs from the bots table
+[[d1_databases]]
+binding = "DB"
+database_name = "fluxychat-db"
+database_id = "2393de6c-4c38-4e1e-afbb-2f26e64e6904"   # mirrors apps/worker/wrangler.toml DB binding (fluxychat)
+
+# Environment variables needed:
+# - FLUXY_BASE_URL: Base URL of Fluxychat API (e.g., https://api.fluxychat.com)
+# - REQUIRE_WEBHOOK_SIGNATURE=true
+# - WEBHOOK_SECRET or WEBHOOK_SECRET_<projectId>
+# - JWT_SECRET or JWT_SECRET_<projectId>
+# - OPENAI_API_KEY: OpenAI API key (optional, can be per-agent config)
+# - AGENT_CONFIG_KV: Optional KV namespace for agent configs (or use env vars)

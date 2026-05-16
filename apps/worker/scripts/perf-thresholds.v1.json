@@ -1,0 +1,12 @@
+{
+  "name": "fluxychat-perf-baseline-v1",
+  "description": "Default guardrails for perf-workload-check in pre-production and smoke environments.",
+  "thresholds": {
+    "successRateMinPct": 99,
+    "throughputMinMsgPerSec": 20,
+    "latencyP95MaxMs": 1200,
+    "latencyAvgMaxMs": 500,
+    "failureCountMax": 0
+  }
+}
+

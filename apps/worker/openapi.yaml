@@ -1,0 +1,2098 @@
+openapi: 3.1.0
+info:
+  title: Fluxychat Realtime API
+  version: "1.0.0"
+  description: |
+    HTTP+WebSocket API for the Fluxychat real-time messaging platform.
+    This spec focuses on the REST surface exposed by the Cloudflare Worker.
+    Operational smoke checks against this contract: `scripts/smoke-test.sh` (see README `pnpm smoke:bundled`).
+
+servers:
+  - url: https://api.fluxychat.example.com
+    description: Production
+  - url: http://127.0.0.1:8787
+    description: Local development
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    fluxyApiKey:
+      type: apiKey
+      in: header
+      name: X-Fluxy-Api-Key
+      description: |
+        Project API key (prefix `fc_...`). The worker also accepts the same value as query parameter `apiKey`.
+
+  schemas:
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        roomId:
+          type: string
+        senderId:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        editedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    Reaction:
+      type: object
+      properties:
+        messageId:
+          type: integer
+        roomId:
+          type: string
+        userId:
+          type: string
+        emoji:
+          type: string
+        op:
+          type: string
+          enum: [add, remove]
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/token:
+    post:
+      summary: Mint a short-lived JWT
+      description: |
+        Server-side token minting for SDKs. Authenticates the project via API key (not Bearer JWT).
+      security:
+        - fluxyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, roles]
+              properties:
+                userId:
+                  type: string
+                  description: Subject claim (`sub`); 1–128 chars, alphanumeric with `_` `-`.
+                roles:
+                  type: array
+                  items:
+                    type: string
+                  description: JWT role claims (e.g. member, admin, owner).
+                ttlSeconds:
+                  type: integer
+                  description: Token lifetime in seconds (clamped 60–86400; default 3600).
+      responses:
+        "200":
+          description: Signed JWT and echo of claims
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  expiresIn:
+                    type: integer
+                  claims:
+                    type: object
+        "400":
+          description: Bad request (missing userId, invalid roles, or project secret not configured)
+        "401":
+          description: Missing or invalid API key
+
+  /billing/checkout:
+    post:
+      summary: Create Stripe Checkout session
+      description: |
+        Returns a hosted Checkout URL when `STRIPE_SECRET_KEY` is configured; otherwise `501` with `billing_not_configured`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planName:
+                  type: string
+                  description: Target plan (e.g. starter, pro).
+                successUrl:
+                  type: string
+                cancelUrl:
+                  type: string
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  sessionId:
+                    type: string
+        "401":
+          description: Unauthorized
+        "501":
+          description: Stripe not configured on this deployment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: billing_not_configured
+
+  /billing/plan:
+    get:
+      summary: Current plan and monthly usage
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plan row plus usage counters for current UTC month
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan:
+                    type: object
+                  usage:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                  monthKey:
+                    type: string
+        "401":
+          description: Unauthorized
+
+  /billing/portal:
+    post:
+      summary: Stripe Customer Portal session
+      description: Requires Stripe configuration; returns portal URL or error.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                returnUrl:
+                  type: string
+      responses:
+        "200":
+          description: Portal URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+        "401":
+          description: Unauthorized
+        "501":
+          description: Stripe not configured
+
+  /gdpr/delete:
+    delete:
+      summary: GDPR right to erasure
+      description: Requires JWT with owner or admin role.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Erasure completed (may include partial_erasure warnings)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  message:
+                    type: string
+                  partial_erasure:
+                    type: boolean
+                  remaining_counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+        "401":
+          description: Unauthorized
+        "403":
+          description: Caller is not owner/admin
+
+  /gdpr/export:
+    get:
+      summary: GDPR data portability export
+      description: Returns a JSON attachment with the authenticated user's data in the project.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: JSON export (attachment disposition)
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          description: Unauthorized
+
+  /health:
+    get:
+      summary: Health check
+      description: No authentication. Reports D1/DO presence and optional KV/R2 degradation.
+      security: []
+      responses:
+        "200":
+          description: Critical dependencies OK (optional services may still be missing)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  ts:
+                    type: integer
+                  version:
+                    type: string
+                  checks:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  degraded:
+                    type: boolean
+                  degradedFeatures:
+                    type: object
+                    additionalProperties:
+                      type: string
+        "503":
+          description: Critical dependency missing (e.g. database)
+
+  /messages:
+    post:
+      summary: Create message
+      description: Create a new message in a room (JWT with `sub` and `tid` required).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, content]
+              properties:
+                roomId:
+                  type: string
+                content:
+                  type: string
+                replyTo:
+                  type: integer
+                  nullable: true
+      responses:
+        "200":
+          description: Created message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: "#/components/schemas/Message"
+        "400":
+          description: Invalid roomId or content
+        "401":
+          description: Unauthorized
+        "402":
+          description: Monthly project quota exceeded (`quota_exceeded`)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: quota_exceeded
+                  metric:
+                    type: string
+                  limit:
+                    type: integer
+                  used:
+                    type: integer
+                  month:
+                    type: string
+                  resetsAt:
+                    type: string
+                    format: date-time
+                  retryAfterSeconds:
+                    type: integer
+        "429":
+          description: Per-tenant/user/room rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: rate_limit_exceeded
+                  retryAfterSeconds:
+                    type: integer
+
+  /messages/{id}:
+    patch:
+      summary: Edit message
+      description: Edit an existing message (must be the original sender).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+      responses:
+        "200":
+          description: Edited message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    allOf:
+                      - $ref: "#/components/schemas/Message"
+                      - type: object
+                        properties:
+                          editedAt:
+                            type: string
+                            format: date-time
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    delete:
+      summary: Delete message
+      description: Delete a message (must be the original sender).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /messages/{id}/reactions:
+    post:
+      summary: Add reaction
+      description: Add an emoji reaction to a message.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emoji]
+              properties:
+                emoji:
+                  type: string
+      responses:
+        "200":
+          description: Reaction added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  reaction:
+                    $ref: "#/components/schemas/Reaction"
+        "404":
+          description: Message not found
+    delete:
+      summary: Remove reaction
+      description: Remove an emoji reaction from a message.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emoji]
+              properties:
+                emoji:
+                  type: string
+      responses:
+        "200":
+          description: Reaction removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  reaction:
+                    $ref: "#/components/schemas/Reaction"
+        "404":
+          description: Message not found
+
+  /rooms/{id}/read:
+    post:
+      summary: Mark room read
+      description: Record a read receipt up to a given message in a room.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messageId]
+              properties:
+                messageId:
+                  type: integer
+      responses:
+        "200":
+          description: Read receipt stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /reports:
+    post:
+      summary: Report message
+      description: Create a moderation report for a specific message.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messageId, roomId]
+              properties:
+                messageId:
+                  type: integer
+                roomId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Report accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        "401":
+          description: Unauthorized
+
+  /api/messages:
+    get:
+      summary: List messages
+      description: Cursor-based history for a room. Requires member JWT with access to the room.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: before
+          in: query
+          required: false
+          description: Return messages created before this ISO timestamp.
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Message"
+
+  /rooms:
+    get:
+      summary: List rooms
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [dm, group, public]
+        - name: userId
+          in: query
+          required: false
+          description: If provided, includes `unreadCount` per room.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Rooms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rooms:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                        name:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                        unreadCount:
+                          type: integer
+                          nullable: true
+    post:
+      summary: Create room
+      description: Create a room (type dm/group/public); currently keyed by project API key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum: [dm, group, public]
+                members:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                      role:
+                        type: string
+                        default: member
+      responses:
+        "200":
+          description: Created room
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                      name:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+
+  /rooms/dm:
+    post:
+      summary: Ensure DM room
+      description: Returns an existing DM room for the pair or creates one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [a, b]
+              properties:
+                a:
+                  type: string
+                b:
+                  type: string
+      responses:
+        "200":
+          description: DM room
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                      name:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+
+  /rooms/{id}/unread:
+    get:
+      summary: Get unread count for room
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unreadCount:
+                    type: integer
+
+  /rooms/{id}/members:
+    get:
+      summary: List room members
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Room members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                        role:
+                          type: string
+                        joined_at:
+                          type: string
+                          format: date-time
+
+  /search/messages:
+    get:
+      summary: Search messages
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: roomId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Message"
+
+  /search/conversations:
+    get:
+      summary: Search conversations
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Matching rooms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rooms:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        room_id:
+                          type: string
+                        matches:
+                          type: integer
+                        lastMessage:
+                          type: string
+                          format: date-time
+
+  /export/messages.json:
+    get:
+      summary: Export messages (JSON)
+      parameters:
+        - name: roomId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: JSON export
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Message"
+
+  /export/messages.csv:
+    get:
+      summary: Export messages (CSV)
+      parameters:
+        - name: roomId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /stats/rooms/{id}:
+    get:
+      summary: Room stats
+      description: Message volume and active users for a room.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Room stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roomId:
+                    type: string
+                  messageCount:
+                    type: integer
+                  activeUsers:
+                    type: integer
+
+  /stats/costs:
+    get:
+      summary: Cost estimates
+      description: Rough cost projection based on total message count.
+      responses:
+        "200":
+          description: Cost stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalMessages:
+                    type: integer
+                  pricing:
+                    type: object
+                    properties:
+                      per1k:
+                        type: number
+                      per100k:
+                        type: number
+                      per1M:
+                        type: number
+                  note:
+                    type: string
+
+  /admin/mute:
+    post:
+      summary: Mute user (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, userId]
+              properties:
+                roomId:
+                  type: string
+                userId:
+                  type: string
+                durationSeconds:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Muted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+
+  /admin/ban:
+    post:
+      summary: Ban user (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, userId]
+              properties:
+                roomId:
+                  type: string
+                userId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Banned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /admin/unmute:
+    post:
+      summary: Unmute user (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, userId]
+              properties:
+                roomId:
+                  type: string
+                userId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Unmuted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /admin/unban:
+    post:
+      summary: Unban user (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, userId]
+              properties:
+                roomId:
+                  type: string
+                userId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Unbanned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /admin/announcement:
+    post:
+      summary: Send system announcement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, content]
+              properties:
+                roomId:
+                  type: string
+                content:
+                  type: string
+                userId:
+                  type: string
+                  description: Defaults to "system" if omitted.
+      responses:
+        "200":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /automation/trigger:
+    post:
+      summary: Trigger automation event
+      description: Generic automation hook (e.g. room_summary, dm_message).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventType]
+              properties:
+                eventType:
+                  type: string
+                roomId:
+                  type: string
+                payload:
+                  type: object
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /admin/projects:
+    get:
+      summary: List projects (internal/admin)
+      responses:
+        "200":
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+    post:
+      summary: Create project (internal/admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        "200":
+          description: Created project + API key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+                      apiKey:
+                        type: string
+
+  /bots:
+    post:
+      summary: Create or update bot/agent
+      description: >
+        Registers a bot/agent for the authenticated project. Bots can be used
+        by external services (e.g. AI agents) to post messages into rooms.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                id:
+                  type: string
+                  description: Optional stable identifier for the bot.
+                name:
+                  type: string
+                webhookUrl:
+                  type: string
+                  description: Optional webhook URL to receive events out-of-band.
+                handle:
+                  type: string
+                  description: >
+                    Optional short handle used for mentions, e.g. "chatgpt" for @chatgpt.
+                provider:
+                  type: string
+                  description: Optional provider identifier, e.g. "openai".
+                model:
+                  type: string
+                  description: Optional model identifier, e.g. "gpt-4o".
+                capabilities:
+                  description: >
+                    Optional list of capabilities, e.g. ["chat","suggest","image"].
+                  oneOf:
+                    - type: array
+                      items:
+                        type: string
+                    - type: string
+                config:
+                  type: object
+                  additionalProperties: true
+                  description: Optional arbitrary configuration JSON.
+      responses:
+        "200":
+          description: Bot/agent definition
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bot:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      projectId:
+                        type: string
+                      name:
+                        type: string
+                      webhookUrl:
+                        type: string
+                        nullable: true
+                      handle:
+                        type: string
+                        nullable: true
+                      provider:
+                        type: string
+                        nullable: true
+                      model:
+                        type: string
+                        nullable: true
+                      capabilities:
+                        type: array
+                        items:
+                          type: string
+
+  /rooms/{id}/messages/from-bot:
+    post:
+      summary: Post a message as a bot/agent
+      description: >
+        Injects a message into the given room authored by the specified bot.
+        Useful for AI agents and automations.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [botId, content]
+              properties:
+                botId:
+                  type: string
+                  description: Bot/agent identifier as registered via /bots.
+                content:
+                  type: string
+                replyTo:
+                  type: integer
+                  nullable: true
+                  description: Optional parent message id for replies/threads.
+      responses:
+        "200":
+          description: Created bot message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: "#/components/schemas/Message"
+
+  /agents:
+    get:
+      summary: List agents (bots) for the project
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Agent list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agents:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          description: Unauthorized
+        "402":
+          description: Agent-invoke quota exceeded (listing consumes quota in current worker)
+    post:
+      summary: Create or update an agent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                handle:
+                  type: string
+                provider:
+                  type: string
+                model:
+                  type: string
+                systemPrompt:
+                  type: string
+                webhookUrl:
+                  type: string
+                capabilities:
+                  oneOf:
+                    - type: array
+                      items:
+                        type: string
+                    - type: string
+                config:
+                  type: object
+      responses:
+        "200":
+          description: Created agent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent:
+                    type: object
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+
+  /agents/{agentId}:
+    parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get agent by id
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent:
+                    type: object
+        "404":
+          description: Not found
+    patch:
+      summary: Update agent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent:
+                    type: object
+        "404":
+          description: Not found
+    delete:
+      summary: Delete agent
+      description: Requires owner or admin role.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /agents/{agentId}/invoke:
+    parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Run agent and optionally post reply message
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, content]
+              properties:
+                roomId:
+                  type: string
+                content:
+                  type: string
+                replyTo:
+                  type: integer
+                  nullable: true
+      responses:
+        "200":
+          description: Completed run with assistant message
+          content:
+            application/json:
+              schema:
+                type: object
+        "402":
+          description: Quota exceeded
+        "404":
+          description: Agent not found
+        "429":
+          description: Agent rate limit
+        "500":
+          description: Invoke failed
+
+  /agents/{agentId}/runs:
+    parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+    get:
+      summary: List recent agent runs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  runs:
+                    type: array
+                    items:
+                      type: object
+
+  /attachments/{fileKey}:
+    parameters:
+      - name: fileKey
+        in: path
+        required: true
+        description: >
+          R2 object key (often `projectId/userId/...`). Keys may include `/`; encode slashes as `%2F`
+          when using single-segment OpenAPI clients, or build the raw path `/attachments/<fullKey>`.
+        schema:
+          type: string
+    get:
+      summary: Download uploaded attachment
+      description: Public read; returns binary stream when R2 is configured.
+      security: []
+      responses:
+        "200":
+          description: File bytes
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid key
+        "404":
+          description: Not found
+        "503":
+          description: R2 not configured or error
+
+  /benchmark:
+    post:
+      summary: Admin DB/KV benchmark
+      description: Requires JWT with owner or admin.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                iterations:
+                  type: integer
+                  maximum: 1000
+      responses:
+        "200":
+          description: Benchmark summary
+          content:
+            application/json:
+              schema:
+                type: object
+        "403":
+          description: Forbidden
+
+  /compliance/report:
+    get:
+      summary: Compliance snapshot (admin/owner)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Structured compliance report
+          content:
+            application/json:
+              schema:
+                type: object
+        "403":
+          description: Forbidden
+
+  /stats/ai:
+    get:
+      summary: AI usage stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /stats/ops:
+    get:
+      summary: Operational counters
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /stats/slo:
+    get:
+      summary: SLO / error-rate snapshot
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /stats/alerts:
+    get:
+      summary: List operational alerts
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /stats/alerts/evaluate:
+    post:
+      summary: Evaluate alert rules now
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /stats/launch-kpis:
+    get:
+      summary: Activation and retention KPIs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /upload:
+    post:
+      summary: Upload file to R2
+      description: >
+        Binary body; set `Content-Type`, optional `X-File-Name`, optional `X-Room-Id`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Upload metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  file:
+                    type: object
+        "400":
+          description: Validation failed
+        "503":
+          description: R2 not configured or upload error
+
+  /webhooks/register:
+    post:
+      summary: Register outbound webhook
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, eventTypes]
+              properties:
+                url:
+                  type: string
+                eventTypes:
+                  type: array
+                  items:
+                    type: string
+                secret:
+                  type: string
+                  description: Shown only once in response when provided.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhook:
+                    type: object
+
+  /webhooks/{webhookId}:
+    parameters:
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      summary: Update webhook (owner/admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                eventTypes:
+                  type: array
+                  items:
+                    type: string
+                secret:
+                  type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    delete:
+      summary: Delete webhook (owner/admin)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /webhooks/verify:
+    post:
+      summary: Verify HMAC signature for a payload
+      description: Uses stored `secret_hash` for the webhook; optional `secret` for raw verification.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [webhookId, signature, payload]
+              properties:
+                webhookId:
+                  type: string
+                signature:
+                  type: string
+                payload:
+                  type: string
+                secret:
+                  type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+
+  /webhooks/stripe:
+    post:
+      summary: Stripe webhook ingress
+      description: >
+        Signed with `Stripe-Signature`. Not JWT-authenticated.
+      security: []
+      responses:
+        "200":
+          description: Event processed or duplicate ignored
+        "400":
+          description: Invalid signature or body
+
+  /admin/reports:
+    get:
+      summary: List moderation reports and auto_flags
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      type: object
+
+  /admin/audit/events:
+    get:
+      summary: Operational audit log
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: action
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+
+  /admin/webhooks:
+    get:
+      summary: List project webhooks (metadata only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhooks:
+                    type: array
+                    items:
+                      type: object
+
+  /admin/webhooks/deliveries:
+    get:
+      summary: List webhook delivery attempts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deliveries:
+                    type: array
+                    items:
+                      type: object
+
+  /admin/webhooks/deliveries/{deliveryId}/replay:
+    parameters:
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Reset delivery for retry
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  deliveryId:
+                    type: string
+        "404":
+          description: Delivery not found
+
+  /admin/alerts/rules:
+    get:
+      summary: List alert rules
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rules:
+                    type: array
+                    items:
+                      type: object
+    post:
+      summary: Create or replace alert rule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /admin/projects/{projectId}/plan:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Upsert plan limits for a project (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planName]
+              properties:
+                planName:
+                  type: string
+                billingStatus:
+                  type: string
+                messageLimitMonthly:
+                  type: integer
+                agentInvokeLimitMonthly:
+                  type: integer
+                webhookDeliveryLimitMonthly:
+                  type: integer
+                pricingVersion:
+                  type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan:
+                    type: object
+
+  /rooms/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      summary: Update room name or type
+      description: Requires owner or admin.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum: [dm, group, public]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  roomId:
+                    type: string
+        "403":
+          description: Forbidden
+        "404":
+          description: Room not found
+    delete:
+      summary: Delete room and cascade data
+      description: Requires owner or admin.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  roomId:
+                    type: string
+
+  /rooms/{id}/stream:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Server-Sent Events stream for room updates
+      description: Requires `Accept: text/event-stream` and room membership.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            example: text/event-stream
+      responses:
+        "200":
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "401":
+          description: Unauthorized
+        "403":
+          description: Not a room member
+        "406":
+          description: Accept header not acceptable
+
+

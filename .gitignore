@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build / cache
+.turbo/
+dist/
+*.tsbuildinfo
+
+# Next.js
+apps/dashboard/.next/
+apps/dashboard/out/
+apps/dashboard/.vercel/
+
+# Cloudflare Wrangler local state & secrets
+apps/worker/.wrangler/
+apps/worker/.dev.vars
+apps/ai-agent/.wrangler/
+apps/ai-agent/.dev.vars
+
+# Environment & secrets (never commit)
+.env
+.env.*
+!.env.example
+apps/dashboard/.env.local
+apps/dashboard/.env.*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Local AI session data (keep .cursor/rules/ if you want shared conventions on GitHub)
+.claude/
+.cursor/
+.cursor/rules/
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Misc local tooling
+*.local
+
+# Logo source bundle (canonical copies live in apps/dashboard)
+fluxychat-logo-assets/

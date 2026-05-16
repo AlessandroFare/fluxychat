@@ -1,0 +1,9 @@
+# Next.js
+.next/
+out/
+.vercel/
+
+# Secrets
+.env
+.env.local
+.env.*.local

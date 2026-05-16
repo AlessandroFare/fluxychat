@@ -1,0 +1,11 @@
+{
+  "name": "fluxychat-agent-bot-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node run.mjs"
+  },
+  "dependencies": {
+    "@fluxychat/agent": "workspace:*"
+  }
+}
