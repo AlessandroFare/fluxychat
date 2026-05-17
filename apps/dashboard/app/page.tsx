@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useClerkUser } from "@/lib/clerk-user";
 import { ArrowRight, CheckCircle2, Circle, KeyRound } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { ConsoleShell } from "./components/console-shell";
@@ -29,7 +29,7 @@ const CHECKLIST = [
 export default function HomePage() {
   const phase = useConsoleSetupPhase();
   const quickstartHref = useQuickstartHref();
-  const { user, isSignedIn } = useUser();
+  const { user, isSignedIn } = useClerkUser();
   const { hasHydrated, clerkUserId, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
   const [progress, setProgress] = useState<QuickstartProgress>({});
 

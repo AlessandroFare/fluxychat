@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useClerkUser } from "@/lib/clerk-user";
 import { HOSTED_PATHS, hostedQuickstartReviewHref, isClerkClientConfigured } from "@/lib/hosted-product";
 import { isQuickstartComplete, loadQuickstartProgress } from "@/lib/quickstart-progress";
 import { useDashboardSession } from "@/app/components/dashboard-session";
 
 /** Wizard URL, or review mode when this Clerk user already finished quickstart. */
 export function useQuickstartHref(): string {
-  const { isSignedIn, user } = useUser();
+  const { isSignedIn, user } = useClerkUser();
   const { hasHydrated, clerkUserId, adminJwt, memberJwt, activeProject, lastRoom } =
     useDashboardSession();
   const [href, setHref] = useState<string>(HOSTED_PATHS.onboarding);

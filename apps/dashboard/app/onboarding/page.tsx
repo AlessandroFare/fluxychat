@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useClerkUser } from "@/lib/clerk-user";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
 import { Button as ShadcnButton } from "~/components/ui/button";
@@ -171,7 +171,7 @@ export default function OnboardingPage() {
 
   const [activeStep, setActiveStep] = useState(0);
   const [stepInitialized, setStepInitialized] = useState(false);
-  const { user: clerkUser, isSignedIn: clerkSignedIn } = useUser();
+  const { user: clerkUser, isSignedIn: clerkSignedIn } = useClerkUser();
 
   useEffect(() => {
     if (!isClerkClientConfigured() || !clerkSignedIn || !clerkUser?.id) return;

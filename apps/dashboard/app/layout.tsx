@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import ConditionalHeader from "./components/ConditionalHeader";
 import { ClerkShell } from "./components/clerk-shell";
+import { ClerkUserBridge } from "@/lib/clerk-user";
 import { ConsoleChrome } from "./components/console-chrome";
 import { DashboardSessionProvider } from "./components/dashboard-session";
 import { ClerkSessionBinder } from "./components/clerk-session-binder";
@@ -32,6 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const shell = (
+    <ClerkUserBridge>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
       <DashboardSessionProvider>
         {clerkPublishableKey ? (
@@ -48,6 +50,7 @@ export default function RootLayout({
         <CookieConsentBanner />
       </DashboardSessionProvider>
     </ThemeProvider>
+    </ClerkUserBridge>
   );
 
   return (

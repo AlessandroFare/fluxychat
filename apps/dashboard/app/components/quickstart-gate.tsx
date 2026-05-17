@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useClerkUser } from "@/lib/clerk-user";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
@@ -20,7 +20,7 @@ export function QuickstartGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useClerkUser();
   const { hasHydrated, clerkUserId, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
 
   useEffect(() => {
