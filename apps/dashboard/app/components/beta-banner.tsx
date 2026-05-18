@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
 
@@ -16,7 +15,6 @@ interface HealthPayload {
 }
 
 export function BetaBanner() {
-  const pathname = usePathname();
   const [workerPaymentsDisabled, setWorkerPaymentsDisabled] = useState(false);
   const [workerUnreachable, setWorkerUnreachable] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -42,11 +40,6 @@ export function BetaBanner() {
       cancelled = true;
     };
   }, []);
-
-  // Hide on slides page for clean presentation
-  if (pathname === "/slides" || pathname?.startsWith("/slides/")) {
-    return null;
-  }
 
   const visible =
     !dismissed && (forceBetaNotice || workerPaymentsDisabled || workerUnreachable);
