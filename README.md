@@ -1,12 +1,10 @@
 ## fluxychat
 
-> **Open beta** — [Try the hosted console](https://fluxychat.vercel.app/landing)
-> · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk)
-> · Feedback: fluxychat@outlook.com
+> **Open beta** — [Try the hosted console](https://fluxychat.vercel.app/landing) · **NPM** — [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · **Support** — fluxychat@outlook.com
 
 Ultra-low-cost realtime chat (SaaS + SDK), inspired by services like TalkJS but built on modern edge-native primitives.
 
-**Live demo console:** [fluxychat.vercel.app](https://fluxychat.vercel.app) · **Source:** [github.com/AlessandroFare/fluxychat](https://github.com/AlessandroFare/fluxychat) · **Support:** fluxychat@outlook.com
+**Source:** [github.com/AlessandroFare/fluxychat](https://github.com/AlessandroFare/fluxychat)
 
 - **Cloudflare Workers + Durable Objects** for WebSocket handling and presence.
 - **Cloudflare D1 (SQLite edge)** for messages and metadata.
