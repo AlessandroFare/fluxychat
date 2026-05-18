@@ -67,6 +67,50 @@ describe("FluxyChatClient", () => {
     expect(body.attachments[0].url).toContain("cdn.example");
   });
 
+  it("fetchMessages() sends before cursor and returns chronological order", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          messages: [
+            { id: 2, roomId: "r", userId: "u", content: "b", createdAt: "2026-01-02T00:00:00.000Z" },
+            { id: 1, roomId: "r", userId: "u", content: "a", createdAt: "2026-01-01T00:00:00.000Z" },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const messages = await client.fetchMessages("room", {
+      limit: 25,
+      before: "2026-01-03T00:00:00.000Z",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const calledUrl = String(fetchMock.mock.calls[0]?.[0]);
+    expect(calledUrl).toContain("before=2026-01-03");
+    expect(calledUrl).toContain("limit=25");
+    expect(messages.map((m) => m.id)).toEqual([1, 2]);
+  });
+
+  it("fetchRoomMembers() normalizes user_id to userId", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          members: [{ user_id: "alice", role: "owner", joined_at: "2026-01-01T00:00:00.000Z" }],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const members = await client.fetchRoomMembers("room-1");
+    expect(members[0]?.userId).toBe("alice");
+    expect(members[0]?.role).toBe("owner");
+  });
+
   it("uploadFile() sends bytes and required headers", async () => {
     const fetchMock = vi.mocked(globalThis.fetch);
     fetchMock.mockResolvedValue(

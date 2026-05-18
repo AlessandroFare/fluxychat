@@ -2,6 +2,7 @@ import {
   FluxyChatClient,
   FluxyChatRoomConnection,
   FluxyMessageStream,
+  buildAgentOutboundWsPayload,
   type FluxyChatEvent,
   type FluxyChatMessage,
   type FluxyRoomConnectionOptions,
@@ -169,13 +170,14 @@ export class FluxyAgent {
   send(room: FluxyRoom | string, content: string, replyTo?: number | null): void {
     const roomId = typeof room === "string" ? room : room.id;
     const connection = this.getConnection(roomId, "send");
-    connection.sendJson({
-      type: "message",
-      userId: this.id,
-      content,
-      parentId: replyTo ?? null,
-      attachments: [],
-    });
+    connection.sendJson(
+      buildAgentOutboundWsPayload({
+        userId: this.id,
+        content,
+        parentId: replyTo ?? null,
+        attachments: [],
+      }),
+    );
   }
 
   createStream(

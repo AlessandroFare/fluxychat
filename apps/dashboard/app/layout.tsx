@@ -9,6 +9,7 @@ import { ConsoleChrome } from "./components/console-chrome";
 import { DashboardSessionProvider } from "./components/dashboard-session";
 import { ClerkSessionBinder } from "./components/clerk-session-binder";
 import { FluxyAutoConnect } from "./components/fluxy-auto-connect";
+import { FluxyRealtimeShell } from "./components/fluxy-realtime-shell";
 import { BetaBanner } from "./components/beta-banner";
 import { CookieConsentBanner } from "./components/cookie-consent-banner";
 import { Geist } from "next/font/google";
@@ -42,12 +43,14 @@ export default function RootLayout({
             <FluxyAutoConnect />
           </>
         ) : null}
-        <BetaBanner />
-        <ConditionalHeader />
-        <main className="min-h-dvh bg-[#faf9f6] text-foreground antialiased">
-          <ConsoleChrome>{children}</ConsoleChrome>
-        </main>
-        <CookieConsentBanner />
+        <FluxyRealtimeShell>
+          <BetaBanner />
+          <ConditionalHeader />
+          <main className="min-h-dvh bg-[#faf9f6] text-foreground antialiased">
+            <ConsoleChrome>{children}</ConsoleChrome>
+          </main>
+          <CookieConsentBanner />
+        </FluxyRealtimeShell>
       </DashboardSessionProvider>
     </ThemeProvider>
     </ClerkUserBridge>

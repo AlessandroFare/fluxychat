@@ -49,3 +49,5 @@ coverage/
 
 # Logo source bundle (canonical copies live in apps/dashboard)
 fluxychat-logo-assets/
+
+portal/

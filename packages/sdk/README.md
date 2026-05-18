@@ -36,6 +36,8 @@ Use the returned `token` in the browser.
 
 ## Quick start (React)
 
+### Option A — explicit client
+
 ```tsx
 import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
 
@@ -46,10 +48,45 @@ const client = new FluxyChatClient({
 });
 
 function Room({ roomId }: { roomId: string }) {
-  const { messages, sendMessage, connectionStatus } = useChat({ roomId, client });
-  // render messages…
+  const { messages, sendMessage, connectionStatus, loadMore, hasMore, isLoadingMore } =
+    useChat({ roomId, client });
+  // render messages; call loadMore() when the user scrolls to the top
 }
 ```
+
+### Option B — `FluxyRealtimeProvider` (hosted Next.js or custom mint)
+
+Wrap your app (or chat layout) once. The provider refreshes the member JWT before expiry and on auth errors.
+
+```tsx
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/sdk";
+
+export function ChatLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <FluxyRealtimeProvider
+      workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!}
+      connectUrl="/api/fluxy/connect"
+    >
+      {children}
+    </FluxyRealtimeProvider>
+  );
+}
+
+function Room({ roomId }: { roomId: string }) {
+  const { messages, sendMessage, loadMore, hasMore } = useChat({ roomId });
+  // …
+}
+```
+
+For your own backend mint flow, pass `authTokenProvider={() => fetch("/api/chat-token").then(r => r.json())}` instead of `connectUrl`.
+
+### Pagination
+
+`GET /api/messages` supports a `before` cursor (`createdAt` of the oldest visible message). The SDK sorts history chronologically and exposes:
+
+- `hasMore` — another page may exist
+- `isLoadingMore` — `loadMore()` in flight
+- `loadMore()` — prepends older messages
 
 ## Self-host vs hosted cloud
 

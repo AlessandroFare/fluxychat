@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useClerkUser } from "@/lib/clerk-user";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/sdk";
 import { Button as ShadcnButton } from "~/components/ui/button";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
@@ -192,19 +192,8 @@ export default function OnboardingPage() {
   const project = activeProject as CreatedProject | null;
   const activeRoomId = room?.id ?? "";
 
-  const client = useMemo(
-    () =>
-      new FluxyChatClient({
-        baseUrl: WORKER_URL,
-        userId,
-        token: memberJwt || undefined,
-      }),
-    [memberJwt, userId],
-  );
-
   const { messages, sendMessage, connectionStatus } = useChat({
     roomId: activeRoomId,
-    client,
   });
 
   const furthest = useMemo(

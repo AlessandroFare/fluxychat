@@ -165,10 +165,6 @@ importers:
         version: 4.1.5(@types/node@24.10.1)(jsdom@29.1.0(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.10.1)(typescript@6.0.3))(vite@8.0.10(@types/node@24.10.1)(esbuild@0.27.3)(jiti@1.21.7))
 
   packages/sdk:
-    dependencies:
-      react:
-        specifier: '>=18'
-        version: 19.2.3
     devDependencies:
       '@types/node':
         specifier: ^24.3.0
@@ -176,6 +172,15 @@ importers:
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      react:
+        specifier: latest
+        version: 19.2.6
+      react-dom:
+        specifier: latest
+        version: 19.2.6(react@19.2.6)
       typescript:
         specifier: latest
         version: 5.9.3
@@ -4636,10 +4641,6 @@ packages:
 
   react@19.2.0:
     resolution: {integrity: sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ==}
-    engines: {node: '>=0.10.0'}
-
-  react@19.2.3:
-    resolution: {integrity: sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA==}
     engines: {node: '>=0.10.0'}
 
   react@19.2.6:
@@ -10235,8 +10236,6 @@ snapshots:
       '@types/react': 19.2.7
 
   react@19.2.0: {}
-
-  react@19.2.3: {}
 
   react@19.2.6: {}
 

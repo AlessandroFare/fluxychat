@@ -378,28 +378,35 @@ function MemberList({
   onRemove: (userId: string) => void;
   memberBusy: boolean;
 }) {
-  const [members, setMembers] = useState<{ user_id: string; role: string }[]>([]);
+  const [members, setMembers] = useState<{ userId: string; role: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const load = async () => {
+  const adminClient = useMemo(
+    () =>
+      new FluxyChatClient({
+        baseUrl: WORKER_URL,
+        userId: "dashboard",
+        token: adminJwt,
+      }),
+    [adminJwt],
+  );
+
+  const load = useCallback(async () => {
     if (!adminJwt) return;
     setLoading(true);
     try {
-      const data = await fetchWorkerJson<{ members?: { user_id: string; role: string }[] }>(
-        `${WORKER_URL}/rooms/${encodeURIComponent(roomId)}/members`,
-        { headers: { Authorization: `Bearer ${adminJwt}` } }
-      );
-      setMembers(data.members || []);
+      const list = await adminClient.fetchRoomMembers(roomId);
+      setMembers(list);
     } catch {
       setMembers([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [adminClient, adminJwt, roomId]);
 
   React.useEffect(() => {
     void load();
-  }, [roomId, adminJwt]);
+  }, [load]);
 
   if (!adminJwt) {
     return (
@@ -415,16 +422,16 @@ function MemberList({
     <ul className="list-none p-0 m-0">
       {members.map((m) => (
         <li
-          key={m.user_id}
+          key={m.userId}
           className="flex items-center justify-between border-b border-border py-1.5 text-sm"
         >
           <span>
-            <code>{m.user_id}</code> · {m.role}
+            <code>{m.userId}</code> · {m.role}
           </span>
           <button
             type="button"
             disabled={memberBusy}
-            onClick={() => onRemove(m.user_id)}
+            onClick={() => onRemove(m.userId)}
             className="rounded border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-800 disabled:cursor-not-allowed"
           >
             Remove

@@ -1,4 +1,4 @@
-export {
+﻿export {
   FluxyAuthError,
   FluxyConnectionError,
   FluxySendError,
@@ -18,8 +18,45 @@ export {
 
 export { FluxyMessageStream, type FluxyMessageStreamOptions } from "./message-stream";
 
+export {
+  clampHistoryLimit,
+  mergeMessagesChronological,
+  sortMessagesChronological,
+  MAX_HISTORY_LIMIT,
+  type HistoryMessage,
+} from "./message-history";
+
+export { decodeFluxyJwtPayload, jwtRefreshDelayMs, type DecodedFluxyJwt } from "./jwt-utils";
+
+export {
+  FLUXY_MAX_MESSAGE_LENGTH,
+  normalizeRoomMember,
+  normalizeRoomMembers,
+} from "./room-rest";
+
+export {
+  validateAgentOutboundMessage,
+  buildAgentOutboundWsPayload,
+  type AgentOutboundMessageInput,
+  type AgentOutboundValidationResult,
+} from "./agent-outbound";
+
+export {
+  FluxyRealtimeProvider,
+  type FluxyRealtimeProviderProps,
+  type FluxyAuthTokenResult,
+} from "./realtime-provider";
+
+export { useFluxyChat, useFluxyChatOptional, type FluxyRealtimeContextValue } from "./use-fluxy-chat";
+
+export { useChat, type UseChatOptions } from "./use-chat";
+
+export { useRooms } from "./use-rooms";
+
 import { FluxyChatRoomConnection, type FluxyRoomConnectionOptions } from "./room-connection";
 import { FluxyAuthError, FluxySendError } from "./errors";
+import { clampHistoryLimit, sortMessagesChronological } from "./message-history";
+import { normalizeRoomMembers } from "./room-rest";
 
 export interface FluxyChatMessage {
   id: number;
@@ -87,6 +124,18 @@ export interface FluxyChatRoom {
   type: "dm" | "group" | "public";
   name: string;
   created_at: string;
+}
+
+export interface FluxyRoomMember {
+  userId: string;
+  role: string;
+  joined_at?: string;
+}
+
+export interface FetchMessagesOptions {
+  limit?: number;
+  /** ISO `createdAt` cursor â€” returns messages older than this timestamp. */
+  before?: string;
 }
 
 export interface FluxyChatToolDefinition {
@@ -256,19 +305,49 @@ export class FluxyChatClient {
     return new EventSource(url.toString());
   }
 
-  async fetchMessages(roomId: string, limit = 50): Promise<FluxyChatMessage[]> {
+  async fetchMessages(
+    roomId: string,
+    limitOrOptions: number | FetchMessagesOptions = 50,
+  ): Promise<FluxyChatMessage[]> {
     const trimmedRoomId = roomId.trim();
     if (!trimmedRoomId) return [];
+
+    const options: FetchMessagesOptions =
+      typeof limitOrOptions === "number" ? { limit: limitOrOptions } : limitOrOptions;
+    const limit = clampHistoryLimit(options.limit);
 
     const url = new URL("/api/messages", this.baseUrl);
     url.searchParams.set("roomId", trimmedRoomId);
     url.searchParams.set("limit", String(limit));
+    if (options.before?.trim()) {
+      url.searchParams.set("before", options.before.trim());
+    }
     const res = await fetch(url.toString(), {
       headers: this.authHeaders(),
     });
     if (!res.ok) throw new Error(`Failed to fetch messages: ${res.status}`);
     const body = await res.json();
-    return body.messages ?? [];
+    return sortMessagesChronological((body.messages ?? []) as FluxyChatMessage[]);
+  }
+
+  async fetchRoomMembers(roomId: string): Promise<FluxyRoomMember[]> {
+    const trimmedRoomId = roomId.trim();
+    if (!trimmedRoomId) return [];
+    const url = new URL(`/rooms/${encodeURIComponent(trimmedRoomId)}/members`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to fetch room members: ${res.status}`);
+    const body = await res.json();
+    return normalizeRoomMembers(body.members ?? []);
+  }
+
+  /** Alias for {@link fetchMessages} — chronological room history via REST. */
+  fetchRoomHistory(
+    roomId: string,
+    options?: FetchMessagesOptions,
+  ): Promise<FluxyChatMessage[]> {
+    return this.fetchMessages(roomId, options ?? {});
   }
 
   async listRooms(type?: string): Promise<FluxyChatRoom[]> {
@@ -625,473 +704,3 @@ export class FluxyChatClient {
     if (!res.ok) throw new Error(`Failed to delete webhook: ${res.status}`);
   }
 }
-
-// React hook convenience API
-import { useEffect, useRef, useState } from "react";
-
-export interface UseChatOptions {
-  roomId: string;
-  client: FluxyChatClient;
-  agentId?: string;
-}
-
-export function useChat({ roomId, client, agentId }: UseChatOptions) {
-  const [messages, setMessages] = useState<FluxyChatMessage[]>([]);
-  const [online, setOnline] = useState(0);
-  const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
-  const [seenBy, setSeenBy] = useState<Record<number, string[]>>({});
-  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
-  const [connected, setConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connecting" | "connected" | "reconnecting" | "disconnected" | "polling" | "sse"
-  >("connecting");
-  const [reconnectAttempt, setReconnectAttempt] = useState(0);
-  const [connectionError, setConnectionError] = useState<Error | null>(null);
-  const [agentTyping, setAgentTyping] = useState(false);
-  const [wsTypingAgentId, setWsTypingAgentId] = useState<string | null>(null);
-  const [invokeTypingAgentId, setInvokeTypingAgentId] = useState<string | null>(null);
-  const [reactions, setReactions] = useState<
-    Record<number, Record<string, number>>
-  >({});
-  const connectionRef = useRef<FluxyChatRoomConnection | null>(null);
-  const sseRef = useRef<EventSource | null>(null);
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    const trimmedRoomId = roomId.trim();
-    const MAX_WS_RECONNECT_ATTEMPTS = 6;
-    const POLL_INTERVAL_MS = 4000;
-
-    const stopPollingFallback = () => {
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
-    };
-
-    const stopSSEFallback = () => {
-      if (sseRef.current) {
-        sseRef.current.close();
-        sseRef.current = null;
-      }
-    };
-
-    const startPollingFallback = () => {
-      stopPollingFallback();
-      stopSSEFallback();
-      const tick = async () => {
-        if (!active) return;
-        try {
-          const next = await client.fetchMessages(trimmedRoomId);
-          if (active) setMessages(next);
-        } catch {
-          /* ignore transient poll errors */
-        }
-      };
-      void tick();
-      pollTimerRef.current = setInterval(tick, POLL_INTERVAL_MS);
-    };
-
-    const startSSEFallback = () => {
-      stopPollingFallback();
-      stopSSEFallback();
-      const es = client.connectSSE(trimmedRoomId);
-      if (!es) {
-        startPollingFallback();
-        return;
-      }
-      sseRef.current = es;
-      setConnectionStatus("sse");
-
-      es.addEventListener("message", (event: MessageEvent) => {
-        if (!active) return;
-        try {
-          const data: FluxyChatEvent = JSON.parse(event.data);
-          handleEvent(data);
-        } catch {
-          /* ignore malformed SSE events */
-        }
-      });
-
-      es.addEventListener("error", () => {
-        if (!active) return;
-        stopSSEFallback();
-        startPollingFallback();
-        setConnectionStatus("polling");
-      });
-    };
-
-    const handleEvent = (data: FluxyChatEvent) => {
-      if (data.type === "history") {
-        setMessages(data.messages);
-      } else if (data.type === "message") {
-        setMessages((prev: FluxyChatMessage[]) => {
-          const idx = prev.findIndex((m) => m.id === data.id);
-          if (idx >= 0) {
-            const next = [...prev];
-            next[idx] = { ...next[idx], ...data };
-            return next;
-          }
-          return [...prev, data];
-        });
-      } else if (data.type === "presence") {
-        setOnline(data.online);
-        if (data.users) setOnlineUsers(data.users);
-      } else if (data.type === "typing") {
-        setTypingUsers((prev: Record<string, boolean>) => ({
-          ...prev,
-          [data.userId]: data.isTyping,
-        }));
-      } else if (data.type === "agentTyping") {
-        setAgentTyping(data.isTyping);
-        setWsTypingAgentId(data.isTyping ? data.agentId : null);
-      } else if (data.type === "edit") {
-        setMessages((prev: FluxyChatMessage[]) =>
-          prev.map((m: FluxyChatMessage) =>
-            m.id === data.id
-              ? {
-                  ...m,
-                  content: data.content,
-                  editedAt: data.editedAt,
-                  streaming: data.streaming ?? false,
-                }
-              : m
-          )
-        );
-      } else if (data.type === "reaction") {
-        setReactions((prev: Record<number, Record<string, number>>) => {
-          const byMessage = { ...prev };
-          const current = { ...(byMessage[data.messageId] || {}) };
-          const existingCount = current[data.emoji] || 0;
-          if (data.op === "remove") {
-            const nextCount = Math.max(existingCount - 1, 0);
-            if (nextCount === 0) {
-              delete current[data.emoji];
-            } else {
-              current[data.emoji] = nextCount;
-            }
-          } else {
-            current[data.emoji] = existingCount + 1;
-          }
-          if (Object.keys(current).length === 0) {
-            delete byMessage[data.messageId];
-          } else {
-            byMessage[data.messageId] = current;
-          }
-          return byMessage;
-        });
-      } else if (data.type === "read") {
-        setSeenBy((prev: Record<number, string[]>) => {
-          const existing = prev[data.messageId] || [];
-          if (existing.includes(data.userId)) return prev;
-          return {
-            ...prev,
-            [data.messageId]: [...existing, data.userId],
-          };
-        });
-      } else if (data.type === "delete") {
-        if (data.hard) {
-          setMessages((prev: FluxyChatMessage[]) =>
-            prev.filter((m: FluxyChatMessage) => m.id !== data.id)
-          );
-        } else {
-          setMessages((prev: FluxyChatMessage[]) =>
-            prev.map((m: FluxyChatMessage) =>
-              m.id === data.id
-                ? { ...m, content: "[deleted]", deletedAt: data.deletedAt }
-                : m
-            )
-          );
-        }
-      }
-    };
-
-    if (!trimmedRoomId || !client.isAuthenticated()) {
-      setMessages([]);
-      setConnected(false);
-      setConnectionStatus("disconnected");
-      return () => {
-        active = false;
-        stopPollingFallback();
-        stopSSEFallback();
-        connectionRef.current?.close();
-        connectionRef.current = null;
-      };
-    }
-
-    client.fetchMessages(trimmedRoomId).then((initial) => {
-      if (!active) return;
-      setMessages(initial);
-    }).catch(() => {
-      /* history load is best-effort until member JWT + room are ready */
-    });
-
-    const connection = client.connectRoom(trimmedRoomId, {
-      maxReconnectAttempts: MAX_WS_RECONNECT_ATTEMPTS,
-      onStatusChange: (status) => {
-        if (!active) return;
-        if (status === "connected") {
-          setConnected(true);
-          setConnectionStatus("connected");
-          setReconnectAttempt(0);
-          setConnectionError(null);
-          stopPollingFallback();
-          stopSSEFallback();
-        } else if (status === "connecting") {
-          setConnectionStatus("connecting");
-          setConnected(false);
-        } else if (status === "reconnecting") {
-          setConnectionStatus("reconnecting");
-          setConnected(false);
-          setReconnectAttempt(connection.reconnectAttempts);
-        } else if (status === "disconnected") {
-          setConnected(false);
-          setConnectionStatus("disconnected");
-        }
-      },
-      onAuthError: (err) => {
-        if (!active) return;
-        setConnectionError(err);
-        setConnected(false);
-        setConnectionStatus("disconnected");
-      },
-      onConnectionError: (err) => {
-        if (!active) return;
-        if (!(err instanceof FluxyAuthError)) {
-          setConnectionError(err);
-        }
-      },
-      onReconnectFailed: () => {
-        if (!active) return;
-        setReconnectAttempt(connection.reconnectAttempts);
-        if (client.isAuthenticated()) {
-          startSSEFallback();
-        } else {
-          startPollingFallback();
-        }
-      },
-    });
-
-    connection.addEventListener("message", (data) => {
-      if (!active) return;
-      handleEvent(data);
-    });
-    connectionRef.current = connection;
-    connection.connect();
-
-    return () => {
-      active = false;
-      stopPollingFallback();
-      stopSSEFallback();
-      connection.close();
-      connectionRef.current = null;
-      setConnected(false);
-      setConnectionStatus("disconnected");
-    };
-  }, [roomId, client]);
-
-  const sendMessage = (
-    content: string,
-    replyTo?: number | null,
-    attachments?: FluxyChatAttachment[]
-  ) => {
-    if (client.isAuthenticated()) {
-      void client
-        .createMessage(roomId, content, replyTo, attachments)
-        .catch((err) =>
-          // eslint-disable-next-line no-console
-          console.error("[fluxychat] REST sendMessage failed, falling back to WS:", err)
-        );
-      return;
-    }
-    try {
-      connectionRef.current?.sendJson({
-        type: "message",
-        userId: client.userId,
-        content,
-        parentId: replyTo ?? null,
-        attachments: attachments ?? [],
-      });
-    } catch (err) {
-      if (err instanceof FluxySendError) return;
-      throw err;
-    }
-  };
-
-  const setTyping = (isTyping: boolean) => {
-    try {
-      connectionRef.current?.sendJson({
-        type: "typing",
-        userId: client.userId,
-        isTyping,
-      });
-    } catch {
-      /* socket not open */
-    }
-  };
-
-  const editMessage = (messageId: number, content: string) => {
-    const tryWsEdit = () => {
-      try {
-        connectionRef.current?.sendJson({
-          type: "edit",
-          userId: client.userId,
-          messageId,
-          content,
-        });
-      } catch {
-        /* socket not open */
-      }
-    };
-
-    if (client.isAuthenticated()) {
-      void client.editMessageRest(messageId, content).catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error("[fluxychat] REST editMessage failed, falling back to WS:", err);
-        tryWsEdit();
-      });
-      return;
-    }
-    tryWsEdit();
-  };
-
-  const sendReaction = (
-    messageId: number,
-    emoji: string,
-    op: "add" | "remove" = "add"
-  ) => {
-    if (client.isAuthenticated()) {
-      void client
-        .sendReactionRest(messageId, emoji, op)
-        .catch((err) =>
-          // eslint-disable-next-line no-console
-          console.error("[fluxychat] REST sendReaction failed, falling back to WS:", err)
-        );
-      return;
-    }
-    try {
-      connectionRef.current?.sendJson({
-        type: "reaction",
-        userId: client.userId,
-        messageId,
-        emoji,
-        op,
-      });
-    } catch {
-      /* socket not open */
-    }
-  };
-
-  const sendReadReceipt = (messageId: number) => {
-    if (client.isAuthenticated()) {
-      void client
-        .markReadRest(roomId, messageId)
-        .catch((err) =>
-          // eslint-disable-next-line no-console
-          console.error("[fluxychat] REST sendReadReceipt failed, falling back to WS:", err)
-        );
-      return;
-    }
-    try {
-      connectionRef.current?.sendJson({
-        type: "read",
-        userId: client.userId,
-        messageId,
-      });
-    } catch {
-      /* socket not open */
-    }
-  };
-
-  const deleteMessage = (messageId: number) => {
-    const tryWsDelete = () => {
-      try {
-        connectionRef.current?.sendJson({ type: "delete", messageId });
-      } catch {
-        /* socket not open */
-      }
-    };
-
-    if (client.isAuthenticated()) {
-      void client.deleteMessageRest(messageId).catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error("[fluxychat] REST deleteMessage failed, falling back to WS:", err);
-        tryWsDelete();
-      });
-      return;
-    }
-    tryWsDelete();
-  };
-
-  const invokeAgent = async (
-    content: string,
-    options?: {
-      agentId?: string;
-      replyTo?: number | null;
-    }
-  ) => {
-    const targetAgentId = options?.agentId || agentId;
-    if (!targetAgentId) {
-      throw new Error("invokeAgent requires an agentId in hook options or call options");
-    }
-    setAgentTyping(true);
-    try {
-      const result = await client.invokeAgentRest(targetAgentId, roomId, content, {
-        replyTo: options?.replyTo,
-      });
-      return result;
-    } finally {
-      setAgentTyping(false);
-    }
-  };
-
-  return {
-    messages,
-    online,
-    typingUsers,
-    seenBy,
-    onlineUsers,
-    connected,
-    connectionStatus,
-    reconnectAttempt,
-    connectionError,
-    agentTyping,
-    typingAgentId: wsTypingAgentId ?? invokeTypingAgentId,
-    reactions,
-    sendMessage,
-    setTyping,
-    editMessage,
-    sendReaction,
-    sendReadReceipt,
-    deleteMessage,
-    invokeAgent,
-  };
-}
-
-export function useRooms(client: FluxyChatClient) {
-  const [rooms, setRooms] = useState<(FluxyChatRoom & { unreadCount?: number })[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const next = await client.listRooms();
-      setRooms(next);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void load();
-  }, [client]);
-
-  return { rooms, loading, error, reload: load };
-}
-
-
