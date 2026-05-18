@@ -377,31 +377,31 @@ export function LandingView() {
          New
        </span>
        <span className="truncate text-left sm:text-center">
-         Open beta — hosted quickstart or MIT self-host →
+         Free hosted tier — SDK live in minutes →
        </span>
      </Link>
 
      <p className="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-       Realtime that feels like serverless
+       In-app chat for Cloudflare
      </p>
 
      {/* Headline */}
      <h1 className="font-heading flex flex-wrap items-baseline justify-center gap-x-[0.18em] gap-y-1 text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-[#111111] sm:text-6xl md:text-7xl">
-       <span>WebSockets without</span>
-       <span className="am-text-gradient--hero am-text-gradient--hero-glow">a second stack</span>
+       <span>Ship in-app chat</span>
+       <span className="am-text-gradient--hero am-text-gradient--hero-glow">today</span>
        <span className="text-[#111111]">.</span>
      </h1>
 
      <p className="mt-5 max-w-2xl text-balance text-lg text-slate-600 sm:text-xl">
-       REST on Vercel is one file. Realtime still means another vendor or socket ops. Fluxychat runs rooms on
-       Cloudflare Workers + D1 — SDK on npm, hosted cloud in minutes, or MIT self-host.
+       Sign up, add @fluxy-chat/sdk, and run rooms, agents, and webhooks on hosted cloud. No Worker deploy required to
+       start.
      </p>
      <p className="mt-2 max-w-2xl text-balance text-sm text-slate-500 sm:text-base">
+       Later, deploy the Worker in your own Cloudflare account from the monorepo.{" "}
        <Link href={HOSTED_PATHS.why} className="font-medium text-slate-700 underline-offset-2 hover:underline">
          Why we built it
        </Link>
-       {" · "}
-       Open beta — feedback welcome at fluxychat@outlook.com
+       .
      </p>
 
      {/* Install bar — copy nero + CTA brand */}

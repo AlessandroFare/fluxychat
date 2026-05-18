@@ -6,7 +6,7 @@ import { MarketingShell } from "../components/marketing-shell";
 import { GetStartedAuthCta } from "../components/get-started-auth-cta";
 import { HOSTED_COPY, HOSTED_PATHS } from "@/lib/hosted-product";
 import { PAGE_METADATA } from "@/lib/marketing-copy";
-import { WHY_FAQ, WHY_SECTIONS, WHY_THESIS } from "@/lib/why-copy";
+import { WHY_CTA, WHY_FAQ, WHY_SECTIONS, WHY_THESIS } from "@/lib/why-copy";
 
 export const metadata: Metadata = PAGE_METADATA.why;
 
@@ -23,7 +23,7 @@ export default function WhyPage() {
 
       <p className="mt-8 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Why Fluxychat</p>
       <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-        Realtime that feels like serverless
+        Why I built Fluxychat
       </h1>
       <p className="mt-4 text-lg leading-relaxed text-slate-600">{WHY_THESIS}</p>
 
@@ -73,10 +73,8 @@ export default function WhyPage() {
 
       <div className="mt-14 flex flex-col gap-4 rounded-2xl border border-black/[0.06] bg-white/90 p-6 shadow-[var(--shadow-subtle-2)] sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-heading text-lg font-semibold text-slate-900">Try the open beta</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Quickstart wizard, SDK on npm, MIT repo on GitHub. Blunt feedback welcome.
-          </p>
+          <p className="font-heading text-lg font-semibold text-slate-900">{WHY_CTA.title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{WHY_CTA.body}</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <GetStartedAuthCta />
@@ -95,7 +93,7 @@ export default function WhyPage() {
       </div>
 
       <p className="mt-8 text-center text-xs text-muted-foreground">
-        Questions or launch feedback:{" "}
+        Questions or feedback:{" "}
         <a href="mailto:fluxychat@outlook.com" className="text-primary underline-offset-2 hover:underline">
           fluxychat@outlook.com
         </a>
