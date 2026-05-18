@@ -19,7 +19,9 @@ export default function ConditionalHeader() {
     pathname === "/sign-in" ||
     pathname?.startsWith("/sign-in/") ||
     pathname === "/sign-up" ||
-    pathname?.startsWith("/sign-up/")
+    pathname?.startsWith("/sign-up/") ||
+    pathname === "/slides" ||
+    pathname?.startsWith("/slides/")
   ) {
     return null;
   }
