@@ -6,19 +6,43 @@
  *   PLATFORM_BOOTSTRAP_SECRET=... FLUXY_WORKER_URL=https://api.example.com node scripts/provision-bootstrap.mjs
  *   pnpm provision:bootstrap
  *
- * Prints FLUXY_CONSOLE_API_KEY + FLUXY_PLATFORM_PROJECT_ID for dashboard .env.local
+ * Secrets are written to scripts/.provision-secrets.env (gitignored, mode 600 on Unix).
+ * They are not printed to stdout (avoids CI logs and terminal history leaks).
  */
 
-const workerUrl = (
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SECRETS_PATH = path.join(__dirname, ".provision-secrets.env");
+
+function stripTrailingSlashes(u) {
+  let s = u;
+  while (s.endsWith("/")) s = s.slice(0, -1);
+  return s;
+}
+
+const workerUrl = stripTrailingSlashes(
   process.env.FLUXY_WORKER_URL ||
-  process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL ||
-  process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL ||
-  "http://127.0.0.1:8787"
-).replace(/\/$/, "");
+    process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL ||
+    process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL ||
+    "http://127.0.0.1:8787",
+);
 
 const bootstrapSecret = process.env.PLATFORM_BOOTSTRAP_SECRET?.trim();
 const projectName = process.env.PLATFORM_PROJECT_NAME?.trim() || "Fluxychat Platform";
 const existingKey = process.env.FLUXY_CONSOLE_API_KEY?.trim();
+
+function writeSecretsFile(lines) {
+  const body = `${lines.join("\n")}\n`;
+  fs.writeFileSync(SECRETS_PATH, body, { encoding: "utf8", mode: 0o600 });
+  try {
+    fs.chmodSync(SECRETS_PATH, 0o600);
+  } catch {
+    /* Windows may ignore chmod */
+  }
+}
 
 async function verifyExistingKey() {
   if (!existingKey) return false;
@@ -40,10 +64,9 @@ async function verifyExistingKey() {
     return false;
   }
   const json = await res.json();
-  console.log("\n✓ FLUXY_CONSOLE_API_KEY is valid");
+  console.log("\n✓ FLUXY_CONSOLE_API_KEY is valid (key value not logged)");
   console.log(`  projectId (tid): ${json.claims?.tid}`);
-  console.log("\nAdd to apps/dashboard/.env.local:");
-  console.log(`FLUXY_CONSOLE_API_KEY=${existingKey}`);
+  console.log("\nAdd to apps/dashboard/.env.local (copy from your secure store; key is in FLUXY_CONSOLE_API_KEY env):");
   console.log(`FLUXY_CONSOLE_PROJECT_ID=${json.claims?.tid}`);
   console.log(`FLUXY_PLATFORM_PROJECT_ID=${json.claims?.tid}`);
   console.log(`NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL=${workerUrl}`);
@@ -80,22 +103,34 @@ async function runBootstrap() {
   }
 
   const { project, setup } = json;
+  const consoleKey = setup?.FLUXY_CONSOLE_API_KEY || project.apiKey;
+  const consoleProjectId = setup?.FLUXY_CONSOLE_PROJECT_ID || project.id;
+  const platformProjectId = setup?.FLUXY_PLATFORM_PROJECT_ID || project.id;
+
   console.log("\n✓ Platform project created on", workerUrl);
   console.log(`  name: ${project.name}`);
   console.log(`  id:   ${project.id}`);
-  console.log(`  key:  ${project.apiKey}\n`);
-  console.log("--- Worker secrets / vars ---");
-  console.log(`HOSTED_MULTI_TENANT=true`);
-  console.log(`FLUXY_PLATFORM_PROJECT_ID=${setup?.FLUXY_PLATFORM_PROJECT_ID || project.id}`);
-  console.log(`PLATFORM_BOOTSTRAP_SECRET=(keep secret, disable ALLOW_PLATFORM_BOOTSTRAP after setup)`);
-  console.log("\n--- apps/dashboard/.env.local ---");
-  console.log(`NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL=${workerUrl}`);
-  console.log(`FLUXY_CONSOLE_API_KEY=${setup?.FLUXY_CONSOLE_API_KEY || project.apiKey}`);
-  console.log(`FLUXY_CONSOLE_PROJECT_ID=${setup?.FLUXY_CONSOLE_PROJECT_ID || project.id}`);
-  console.log(`FLUXY_PLATFORM_PROJECT_ID=${setup?.FLUXY_PLATFORM_PROJECT_ID || project.id}`);
-  console.log("\n--- Clerk webhook (optional, eager provision) ---");
-  console.log(`POST ${process.env.DASHBOARD_PUBLIC_URL || "https://your-dashboard"}/api/webhooks/clerk`);
-  console.log("Event: user.created");
+  console.log("  apiKey: (written to secrets file only, not logged)\n");
+
+  writeSecretsFile([
+    "--- Worker secrets / vars ---",
+    "HOSTED_MULTI_TENANT=true",
+    `FLUXY_PLATFORM_PROJECT_ID=${platformProjectId}`,
+    "PLATFORM_BOOTSTRAP_SECRET=(keep secret, disable ALLOW_PLATFORM_BOOTSTRAP after setup)",
+    "",
+    "--- apps/dashboard/.env.local ---",
+    `NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL=${workerUrl}`,
+    `FLUXY_CONSOLE_API_KEY=${consoleKey}`,
+    `FLUXY_CONSOLE_PROJECT_ID=${consoleProjectId}`,
+    `FLUXY_PLATFORM_PROJECT_ID=${platformProjectId}`,
+    "",
+    "--- Clerk webhook (optional, eager provision) ---",
+    `POST ${process.env.DASHBOARD_PUBLIC_URL || "https://your-dashboard"}/api/webhooks/clerk`,
+    "Event: user.created",
+  ]);
+
+  console.log(`Secrets written to: ${SECRETS_PATH}`);
+  console.log("Copy the FLUXY_* lines from that file into apps/dashboard/.env.local (file is gitignored).");
 }
 
 async function main() {

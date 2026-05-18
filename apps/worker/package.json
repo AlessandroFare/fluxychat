@@ -17,8 +17,8 @@
     "@aptos-labs/ts-sdk": "latest"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "latest",
+    "@cloudflare/workers-types": "^4.20260515.1",
     "vitest": "^4.1.5",
-    "wrangler": "latest"
+    "wrangler": "^4.92.0"
   }
 }

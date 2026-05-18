@@ -18,6 +18,9 @@ apps/worker/.dev.vars
 apps/ai-agent/.wrangler/
 apps/ai-agent/.dev.vars
 
+# Bootstrap script writes API keys here (never commit)
+scripts/.provision-secrets.env
+
 # Environment & secrets (never commit)
 .env
 .env.*

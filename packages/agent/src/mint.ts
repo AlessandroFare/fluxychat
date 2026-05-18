@@ -12,8 +12,14 @@ export interface MintTokenResult {
   claims: { sub: string; tid: string; roles: string[] };
 }
 
+function trimTrailingSlashes(url: string): string {
+  let out = url;
+  while (out.endsWith("/")) out = out.slice(0, -1);
+  return out;
+}
+
 export async function mintWorkerToken(input: MintTokenInput): Promise<MintTokenResult> {
-  const base = input.baseUrl.replace(/\/+$/, "");
+  const base = trimTrailingSlashes(input.baseUrl);
   const res = await fetch(`${base}/auth/token`, {
     method: "POST",
     headers: {

@@ -52,12 +52,34 @@ export interface FluxyChatAttachment {
   contentType?: string;
 }
 
+const AUDIO_FILE_SUFFIXES = [".webm", ".m4a", ".mp3", ".wav", ".ogg"];
+
+function fileNameLooksLikeAudio(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  for (const ext of AUDIO_FILE_SUFFIXES) {
+    if (lower.endsWith(ext)) return true;
+  }
+  return false;
+}
+
 function inferAttachmentKind(contentType: string, fileName: string): string {
   const ct = (contentType || "").toLowerCase();
   if (ct.startsWith("image/")) return "image";
   if (ct.startsWith("audio/")) return "audio";
-  if (/\.(webm|m4a|mp3|wav|ogg)$/i.test(fileName)) return "audio";
+  if (fileNameLooksLikeAudio(fileName)) return "audio";
   return "file";
+}
+
+function trimTrailingSlashes(url: string): string {
+  let out = url;
+  while (out.endsWith("/")) out = out.slice(0, -1);
+  return out;
+}
+
+function httpUrlToWebSocketBase(url: string): string {
+  if (url.startsWith("https://")) return `wss://${url.slice("https://".length)}`;
+  if (url.startsWith("http://")) return `ws://${url.slice("http://".length)}`;
+  return url;
 }
 
 export interface FluxyChatRoom {
@@ -177,7 +199,7 @@ export class FluxyChatClient {
    readonly token?: string;
 
   constructor(options: FluxyChatClientOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, "");
+    this.baseUrl = trimTrailingSlashes(options.baseUrl);
     this.userId = options.userId;
     this.apiKey = options.apiKey;
     this.token = options.token;
@@ -202,7 +224,7 @@ export class FluxyChatClient {
   }
 
   connect(roomId: string): WebSocket {
-    const wsBase = this.baseUrl.replace(/^http/, "ws");
+    const wsBase = httpUrlToWebSocketBase(this.baseUrl);
     const url = new URL(
       `/ws/room/${encodeURIComponent(roomId)}`,
       wsBase.endsWith("/") ? wsBase : `${wsBase}/`

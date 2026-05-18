@@ -110,15 +110,17 @@ function sanitizeString(input, maxLength = 1024) {
   }
   // XSS prevention: strip all HTML tags and neutralize dangerous URL schemes.
   // This is a defense-in-depth measure; the client must also escape content on render.
-  sanitized = sanitized
-    // Remove HTML comments
-    .replace(/<!--[\s\S]*?-->/g, "")
-    // Remove all HTML tags (opening, closing, self-closing)
-    .replace(/<[^>]*>/g, "")
-    // Neutralize javascript:/data:/vbscript: URL schemes that could survive tag stripping
-    .replace(/\b(javascript|data|vbscript)\s*:/gi, "blocked:")
-    // Remove null bytes that could bypass filters
-    .replace(/\0/g, "");
+  // Repeat until stable so nested / partial tag sequences cannot survive a single pass.
+  const maxPasses = 24;
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    const before = sanitized;
+    sanitized = sanitized
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<[^>]*>/g, "")
+      .replace(/\b(javascript|data|vbscript)\s*:/gi, "blocked:")
+      .replace(/\0/g, "");
+    if (sanitized === before) break;
+  }
   return sanitized;
 }
 
