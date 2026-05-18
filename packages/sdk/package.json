@@ -48,6 +48,8 @@
     "dist/room-rest.d.ts",
     "dist/agent-outbound.js",
     "dist/agent-outbound.d.ts",
+    "dist/url-utils.js",
+    "dist/url-utils.d.ts",
     "LICENSE",
     "README.md"
   ],

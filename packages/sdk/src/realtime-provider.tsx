@@ -3,6 +3,7 @@
 import React from "react";
 import { FluxyChatClient } from "./index";
 import { decodeFluxyJwtPayload, jwtRefreshDelayMs } from "./jwt-utils";
+import { trimTrailingSlashes } from "./url-utils";
 import { FluxyRealtimeContext, type FluxyRealtimeContextValue } from "./use-fluxy-chat";
 
 export interface FluxyAuthTokenResult {
@@ -159,7 +160,7 @@ export function FluxyRealtimeProvider({
   const client = React.useMemo(() => {
     if (!token?.trim() || !userId.trim()) return null;
     return new FluxyChatClient({
-      baseUrl: workerUrl.replace(/\/+$/, ""),
+      baseUrl: trimTrailingSlashes(workerUrl),
       userId,
       token,
     });

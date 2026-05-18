@@ -13,9 +13,6 @@
     "perf:workload-check": "node scripts/perf-workload-check.mjs",
     "smoke:remote": "node scripts/smoke-remote.mjs"
   },
-  "dependencies": {
-    "@aptos-labs/ts-sdk": "latest"
-  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260515.1",
     "vitest": "^4.1.5",

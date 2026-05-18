@@ -57,6 +57,7 @@ import { FluxyChatRoomConnection, type FluxyRoomConnectionOptions } from "./room
 import { FluxyAuthError, FluxySendError } from "./errors";
 import { clampHistoryLimit, sortMessagesChronological } from "./message-history";
 import { normalizeRoomMembers } from "./room-rest";
+import { trimTrailingSlashes } from "./url-utils";
 
 export interface FluxyChatMessage {
   id: number;
@@ -105,12 +106,6 @@ function inferAttachmentKind(contentType: string, fileName: string): string {
   if (ct.startsWith("audio/")) return "audio";
   if (fileNameLooksLikeAudio(fileName)) return "audio";
   return "file";
-}
-
-function trimTrailingSlashes(url: string): string {
-  let out = url;
-  while (out.endsWith("/")) out = out.slice(0, -1);
-  return out;
 }
 
 function httpUrlToWebSocketBase(url: string): string {
