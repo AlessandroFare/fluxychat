@@ -20,6 +20,12 @@ export { mintWorkerToken, type MintTokenInput, type MintTokenResult } from "./mi
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:8787";
 
+function trimTrailingSlashes(url: string): string {
+  let out = url;
+  while (out.endsWith("/")) out = out.slice(0, -1);
+  return out;
+}
+
 export interface FluxyAgentConfig {
   /** Agent id — used as JWT `sub` / message `userId` (must match a row in `agents` for invoke). */
   id: string;
@@ -67,7 +73,7 @@ export class FluxyAgent {
     this.id = config.id.trim();
     this.name = config.name?.trim() || this.id;
     this.apiKey = config.apiKey.trim();
-    this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+    this.baseUrl = trimTrailingSlashes(config.baseUrl ?? DEFAULT_BASE_URL);
     this.roles = config.roles?.length ? config.roles : ["member"];
     this.tokenTtlSeconds = config.tokenTtlSeconds ?? 3600;
   }

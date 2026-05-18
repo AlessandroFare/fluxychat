@@ -102,25 +102,50 @@ function isValidHandle(handle) {
   return typeof handle === "string" && VALID_HANDLE_REGEX.test(handle);
 }
 
+/** Remove HTML comments without regex (handles unclosed `<!--`). */
+function stripHtmlCommentsIndex(s) {
+  let out = s;
+  for (let guard = 0; guard < 512; guard += 1) {
+    const start = out.indexOf("<!--");
+    if (start === -1) return out;
+    const end = out.indexOf("-->", start + 4);
+    if (end === -1) {
+      out = out.slice(0, start) + out.slice(start + 4);
+      continue;
+    }
+    out = out.slice(0, start) + out.slice(end + 3);
+  }
+  return out;
+}
+
+/** Remove `<...>` segments without regex (handles unclosed `<`). */
+function stripHtmlTagsIndex(s) {
+  let out = s;
+  for (let guard = 0; guard < 512; guard += 1) {
+    const open = out.indexOf("<");
+    if (open === -1) return out;
+    const close = out.indexOf(">", open + 1);
+    if (close === -1) {
+      out = out.slice(0, open) + out.slice(open + 1);
+      continue;
+    }
+    out = out.slice(0, open) + out.slice(close + 1);
+  }
+  return out;
+}
+
 function sanitizeString(input, maxLength = 1024) {
   if (typeof input !== "string") return "";
   let sanitized = input.trim();
   if (sanitized.length > maxLength) {
     sanitized = sanitized.slice(0, maxLength);
   }
-  // XSS prevention: strip all HTML tags and neutralize dangerous URL schemes.
-  // This is a defense-in-depth measure; the client must also escape content on render.
-  // Repeat until stable so nested / partial tag sequences cannot survive a single pass.
-  const maxPasses = 24;
-  for (let pass = 0; pass < maxPasses; pass += 1) {
-    const before = sanitized;
-    sanitized = sanitized
-      .replace(/<!--[\s\S]*?-->/g, "")
-      .replace(/<[^>]*>/g, "")
-      .replace(/\b(javascript|data|vbscript)\s*:/gi, "blocked:")
-      .replace(/\0/g, "");
-    if (sanitized === before) break;
-  }
+  // XSS prevention: defense-in-depth; client must still escape on render.
+  sanitized = stripHtmlCommentsIndex(sanitized);
+  sanitized = stripHtmlTagsIndex(sanitized);
+  sanitized = sanitized
+    .replace(/\b(javascript|data|vbscript)\s*:/gi, "blocked:")
+    .replace(/\0/g, "");
   return sanitized;
 }
 
