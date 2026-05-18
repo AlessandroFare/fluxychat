@@ -2,6 +2,10 @@
 
 Documentazione orientata ai casi d’uso (M5-B).
 
+## GTM / launch
+
+- [Show HN launch playbook (EN)](./launch-hn.md)
+
 ## Use cases
 
 - [Support chat](./use-cases/support-chat.md)

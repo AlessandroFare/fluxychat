@@ -6,6 +6,7 @@ import { isClerkEnabled } from "@/lib/clerk-config";
 
 const isClerkPublicRoute = createRouteMatcher([
   "/landing(.*)",
+  "/why(.*)",
   "/enter(.*)",
   "/get-started(.*)",
   "/docs(.*)",
@@ -22,7 +23,7 @@ const isClerkPublicRoute = createRouteMatcher([
 
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/favicon.ico") return true;
-  const prefixes = ["/landing", "/enter", "/get-started", "/docs", "/api/webhooks", "/api"];
+  const prefixes = ["/landing", "/why", "/enter", "/get-started", "/docs", "/api/webhooks", "/api"];
   for (const p of prefixes) {
     if (pathname === p || pathname.startsWith(`${p}/`)) return true;
   }

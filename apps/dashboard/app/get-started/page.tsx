@@ -54,6 +54,10 @@ export default function GetStartedPage() {
         <a href="#self-host" className="font-medium text-primary underline-offset-2 hover:underline">
           advanced
         </a>
+        . Positioning and tradeoffs:{" "}
+        <Link href={HOSTED_PATHS.why} className="font-medium text-primary underline-offset-2 hover:underline">
+          /why
+        </Link>
         .
       </p>
 

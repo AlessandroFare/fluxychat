@@ -6,6 +6,7 @@
 
 export const HOSTED_PATHS = {
   landing: "/landing",
+  why: "/why",
   getStarted: "/get-started",
   docs: "/docs",
   onboarding: "/onboarding",
@@ -17,6 +18,7 @@ export const HOSTED_PATHS = {
 /** Routes that use marketing layout (no console sidebar). */
 export const MARKETING_PATH_PREFIXES = [
   "/landing",
+  "/why",
   "/enter",
   "/get-started",
   "/docs",

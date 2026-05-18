@@ -1,8 +1,10 @@
 ## fluxychat
 
-> **Open beta** — [Try the hosted console](https://fluxychat.vercel.app/landing) · **NPM** — [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · **Support** — fluxychat@outlook.com
+> **Open beta** — [Try hosted cloud](https://fluxychat.vercel.app/landing) · [Why Fluxychat](https://fluxychat.vercel.app/why) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · **Support:** fluxychat@outlook.com
 
-Ultra-low-cost realtime chat (SaaS + SDK), inspired by services like TalkJS but built on modern edge-native primitives.
+**Realtime that feels like serverless.** Edge-native chat on Cloudflare Workers + D1 — `@fluxy-chat/sdk`, operator console, MIT self-host or hosted quickstart.
+
+REST on Vercel is trivial; stateful WebSockets still push teams toward another vendor or ops stack. Fluxychat keeps rooms on **Workers + Durable Objects + D1** so you can start on hosted cloud and fork later without rewriting transport.
 
 **Source:** [github.com/AlessandroFare/fluxychat](https://github.com/AlessandroFare/fluxychat)
 

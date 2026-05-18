@@ -12,6 +12,8 @@ export default function ConditionalHeader() {
   if (
     pathname === "/landing" ||
     pathname?.startsWith("/landing/") ||
+    pathname === "/why" ||
+    pathname?.startsWith("/why/") ||
     pathname === "/enter" ||
     pathname?.startsWith("/enter/") ||
     pathname === "/sign-in" ||

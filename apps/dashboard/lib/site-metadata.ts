@@ -54,7 +54,7 @@ export const ROOT_METADATA: Metadata = {
   ...buildPageMetadata({
     title: SITE_NAME,
     description:
-      "Realtime in-app chat on the edge. SDK, AI agents, and operator console for Cloudflare Workers.",
+      "Realtime that feels like serverless. Edge-native chat on Cloudflare Workers with an open SDK and optional hosted cloud.",
     absoluteTitle: true,
   }),
   title: {

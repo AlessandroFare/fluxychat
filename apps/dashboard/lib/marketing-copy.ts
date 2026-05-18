@@ -6,14 +6,20 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const SITE_DESCRIPTION =
-  "Realtime in-app chat on the edge. SDK, AI agents, and operator console for Cloudflare Workers.";
+  "Realtime that feels like serverless. Edge-native chat on Cloudflare Workers with an open SDK and optional hosted cloud.";
 
 export const PAGE_METADATA = {
   landing: buildPageMetadata({
-    title: "In-app chat SDK for Cloudflare",
+    title: "Realtime chat on Cloudflare edge",
     description:
-      "Add realtime rooms, agents, and webhooks with @fluxy-chat/sdk. Start on hosted cloud or deploy the Worker in your Cloudflare account.",
+      "WebSockets without a second infra stack. @fluxy-chat/sdk, hosted quickstart, or MIT self-host on Workers + D1.",
     path: "/landing",
+  }),
+  why: buildPageMetadata({
+    title: "Why Fluxychat",
+    description:
+      "Why edge-native chat on Cloudflare Workers, hosted vs self-host, honest tradeoffs, and what Fluxychat is not.",
+    path: "/why",
   }),
   getStarted: buildPageMetadata({
     title: "Quickstart",
