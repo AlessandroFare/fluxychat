@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { FluxychatIcon, FluxychatMark } from "@/components/FluxychatLogo";
+import { FluxychatIcon } from "@/components/FluxychatLogo";
 
 // Design tokens for the slide deck
 const colors = {
@@ -18,34 +17,36 @@ const colors = {
 interface SlideProps {
   children: React.ReactNode;
   className?: string;
+  slideNumber: number;
+  totalSlides: number;
 }
 
-function Slide({ children, className = "" }: SlideProps) {
+function Slide({ children, className = "", slideNumber, totalSlides }: SlideProps) {
   return (
     <div
-      className={`w-full h-full flex flex-col p-12 lg:p-16 ${className}`}
-      style={{ backgroundColor: colors.background }}
+      className={`slide-page w-full flex flex-col p-10 relative ${className}`}
+      style={{
+        backgroundColor: colors.background,
+        aspectRatio: "16/9",
+        pageBreakAfter: "always",
+        pageBreakInside: "avoid",
+      }}
     >
       {children}
+      <div
+        className="absolute bottom-4 right-6 text-xs font-mono"
+        style={{ color: colors.textMuted }}
+      >
+        {slideNumber} / {totalSlides}
+      </div>
     </div>
   );
 }
 
-function SlideNumber({ current, total }: { current: number; total: number }) {
-  return (
-    <div
-      className="absolute bottom-6 right-8 text-sm font-mono"
-      style={{ color: colors.textMuted }}
-    >
-      {current} / {total}
-    </div>
-  );
-}
-
-function CodeBlock({ children, language = "tsx" }: { children: string; language?: string }) {
+function CodeBlock({ children }: { children: string }) {
   return (
     <pre
-      className="rounded-lg p-6 text-sm lg:text-base overflow-x-auto font-mono"
+      className="rounded-lg p-4 text-xs overflow-x-auto font-mono leading-relaxed"
       style={{
         backgroundColor: colors.codeBackground,
         border: `1px solid ${colors.border}`,
@@ -62,7 +63,7 @@ function Badge({ children, variant = "default" }: { children: React.ReactNode; v
   const fg = variant === "orange" ? "white" : colors.accent;
   return (
     <span
-      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
       style={{ backgroundColor: bg, color: fg }}
     >
       {children}
@@ -70,30 +71,30 @@ function Badge({ children, variant = "default" }: { children: React.ReactNode; v
   );
 }
 
-// Individual Slides
-function TitleSlide() {
+// Slide 1: Title
+function TitleSlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   return (
-    <Slide className="justify-center items-center text-center">
-      <div className="flex flex-col items-center gap-8">
-        <FluxychatIcon size={80} />
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides} className="justify-center items-center text-center">
+      <div className="flex flex-col items-center gap-5">
+        <FluxychatIcon size={56} />
         <h1
-          className="text-6xl lg:text-7xl font-bold tracking-tight"
+          className="text-5xl font-bold tracking-tight"
           style={{ color: colors.text, letterSpacing: "-0.03em" }}
         >
           Fluxychat
         </h1>
         <p
-          className="text-2xl lg:text-3xl font-light"
+          className="text-xl font-light"
           style={{ color: colors.textMuted }}
         >
           Realtime that feels like serverless
         </p>
-        <div className="flex items-center gap-4 mt-8">
+        <div className="flex items-center gap-3 mt-4">
           <Badge>Open beta</Badge>
           <Badge>MIT</Badge>
         </div>
         <p
-          className="text-lg font-mono mt-4"
+          className="text-sm font-mono mt-2"
           style={{ color: colors.accent }}
         >
           fluxychat.vercel.app
@@ -103,11 +104,12 @@ function TitleSlide() {
   );
 }
 
-function ProblemSlide() {
+// Slide 2: Problem
+function ProblemSlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   return (
-    <Slide>
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides}>
       <h2
-        className="text-4xl lg:text-5xl font-bold tracking-tight mb-12"
+        className="text-3xl font-bold tracking-tight mb-6"
         style={{ color: colors.text, letterSpacing: "-0.02em" }}
       >
         REST is trivial on serverless.
@@ -115,46 +117,46 @@ function ProblemSlide() {
         <span style={{ color: colors.textMuted }}>WebSockets aren{"'"}t.</span>
       </h2>
 
-      <ul className="space-y-6 text-xl lg:text-2xl mb-12" style={{ color: colors.text }}>
-        <li className="flex items-start gap-4">
+      <ul className="space-y-3 text-base mb-6" style={{ color: colors.text }}>
+        <li className="flex items-start gap-3">
           <span style={{ color: colors.accent }}>1.</span>
           <span>You need a second vendor for sockets</span>
         </li>
-        <li className="flex items-start gap-4">
+        <li className="flex items-start gap-3">
           <span style={{ color: colors.accent }}>2.</span>
           <span>A second ops stack to monitor</span>
         </li>
-        <li className="flex items-start gap-4">
+        <li className="flex items-start gap-3">
           <span style={{ color: colors.accent }}>3.</span>
           <span>Vercel doesn{"'"}t host your WebSockets</span>
         </li>
       </ul>
 
       <div
-        className="flex items-center justify-center gap-4 p-8 rounded-xl mt-auto"
+        className="flex items-center justify-center gap-4 p-5 rounded-xl mt-auto"
         style={{ backgroundColor: colors.codeBackground, border: `1px solid ${colors.border}` }}
       >
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-1">
           <div
-            className="w-32 h-16 rounded-lg flex items-center justify-center text-sm font-medium"
+            className="w-28 h-12 rounded-lg flex items-center justify-center text-xs font-medium"
             style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
           >
             Next.js on Vercel
           </div>
         </div>
-        <span className="text-3xl" style={{ color: colors.textMuted }}>→</span>
-        <div className="flex flex-col items-center gap-2">
+        <span className="text-xl" style={{ color: colors.textMuted }}>→</span>
+        <div className="flex flex-col items-center gap-1">
           <div
-            className="w-24 h-16 rounded-lg flex items-center justify-center text-2xl font-bold"
+            className="w-16 h-12 rounded-lg flex items-center justify-center text-xl font-bold"
             style={{ color: colors.accent }}
           >
             ???
           </div>
         </div>
-        <span className="text-3xl" style={{ color: colors.textMuted }}>→</span>
-        <div className="flex flex-col items-center gap-2">
+        <span className="text-xl" style={{ color: colors.textMuted }}>→</span>
+        <div className="flex flex-col items-center gap-1">
           <div
-            className="w-32 h-16 rounded-lg flex items-center justify-center text-sm font-medium"
+            className="w-28 h-12 rounded-lg flex items-center justify-center text-xs font-medium"
             style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
           >
             Pusher / Ably
@@ -165,55 +167,53 @@ function ProblemSlide() {
   );
 }
 
-function SolutionSlide() {
+// Slide 3: Solution
+function SolutionSlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   return (
-    <Slide>
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides}>
       <h2
-        className="text-4xl lg:text-5xl font-bold tracking-tight mb-4"
+        className="text-3xl font-bold tracking-tight mb-2"
         style={{ color: colors.text, letterSpacing: "-0.02em" }}
       >
         Chat on your Cloudflare edge
       </h2>
-      <p className="text-xl mb-12" style={{ color: colors.textMuted }}>
+      <p className="text-base mb-6" style={{ color: colors.textMuted }}>
         One stack. Your infrastructure. Zero cold starts.
       </p>
 
       <div
-        className="flex-1 flex items-center justify-center p-8 rounded-xl"
+        className="flex-1 flex items-center justify-center p-5 rounded-xl"
         style={{ backgroundColor: colors.codeBackground, border: `1px solid ${colors.border}` }}
       >
-        <div className="flex items-center gap-6 flex-wrap justify-center">
-          {/* Next.js App */}
-          <div className="flex flex-col items-center gap-2">
+        <div className="flex items-center gap-5 flex-wrap justify-center">
+          <div className="flex flex-col items-center gap-1">
             <div
-              className="w-36 h-20 rounded-lg flex items-center justify-center text-sm font-medium"
+              className="w-28 h-14 rounded-lg flex items-center justify-center text-xs font-medium"
               style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
             >
               Next.js App
             </div>
-            <span className="text-xs" style={{ color: colors.textMuted }}>Your frontend</span>
+            <span className="text-[10px]" style={{ color: colors.textMuted }}>Your frontend</span>
           </div>
 
-          <span className="text-2xl" style={{ color: colors.textMuted }}>→</span>
+          <span className="text-lg" style={{ color: colors.textMuted }}>→</span>
 
-          {/* SDK */}
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-1">
             <div
-              className="w-36 h-20 rounded-lg flex items-center justify-center text-sm font-mono font-medium"
+              className="w-28 h-14 rounded-lg flex items-center justify-center text-[10px] font-mono font-medium"
               style={{ backgroundColor: colors.accentLight, border: `1px solid ${colors.accent}`, color: colors.accent }}
             >
               @fluxy-chat/sdk
             </div>
-            <span className="text-xs" style={{ color: colors.textMuted }}>React hooks</span>
+            <span className="text-[10px]" style={{ color: colors.textMuted }}>React hooks</span>
           </div>
 
-          <span className="text-2xl" style={{ color: colors.textMuted }}>→</span>
+          <span className="text-lg" style={{ color: colors.textMuted }}>→</span>
 
-          {/* Cloudflare Stack */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
               <div
-                className="w-28 h-14 rounded-lg flex items-center justify-center text-xs font-medium"
+                className="w-20 h-10 rounded-lg flex items-center justify-center text-[10px] font-medium"
                 style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
               >
                 Worker
@@ -222,19 +222,19 @@ function SolutionSlide() {
             </div>
             <div className="flex gap-2">
               <div
-                className="w-20 h-12 rounded flex items-center justify-center text-xs"
+                className="w-14 h-8 rounded flex items-center justify-center text-[10px]"
                 style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
               >
                 DO
               </div>
               <div
-                className="w-20 h-12 rounded flex items-center justify-center text-xs"
+                className="w-14 h-8 rounded flex items-center justify-center text-[10px]"
                 style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
               >
                 D1
               </div>
             </div>
-            <span className="text-xs text-center" style={{ color: colors.textMuted }}>
+            <span className="text-[10px] text-center" style={{ color: colors.textMuted }}>
               Durable Objects + SQLite
             </span>
           </div>
@@ -244,41 +244,42 @@ function SolutionSlide() {
   );
 }
 
-function AudienceSlide() {
+// Slide 4: Audience
+function AudienceSlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   return (
-    <Slide>
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides}>
       <h2
-        className="text-4xl lg:text-5xl font-bold tracking-tight mb-12"
+        className="text-3xl font-bold tracking-tight mb-6"
         style={{ color: colors.text, letterSpacing: "-0.02em" }}
       >
         Who it{"'"}s for
       </h2>
 
-      <div className="grid grid-cols-2 gap-8 flex-1">
+      <div className="grid grid-cols-2 gap-5 flex-1">
         <div
-          className="p-8 rounded-xl"
+          className="p-5 rounded-xl"
           style={{ backgroundColor: colors.accentLight, border: `1px solid ${colors.accent}` }}
         >
           <h3
-            className="text-2xl font-semibold mb-6"
+            className="text-lg font-semibold mb-4"
             style={{ color: colors.accent }}
           >
             For you if...
           </h3>
-          <ul className="space-y-4 text-lg" style={{ color: colors.text }}>
-            <li className="flex items-start gap-3">
+          <ul className="space-y-2 text-sm" style={{ color: colors.text }}>
+            <li className="flex items-start gap-2">
               <span style={{ color: colors.accent }}>+</span>
               Building edge-first apps
             </li>
-            <li className="flex items-start gap-3">
+            <li className="flex items-start gap-2">
               <span style={{ color: colors.accent }}>+</span>
               Want MIT license / self-host option
             </li>
-            <li className="flex items-start gap-3">
+            <li className="flex items-start gap-2">
               <span style={{ color: colors.accent }}>+</span>
               Prefer building your own UI
             </li>
-            <li className="flex items-start gap-3">
+            <li className="flex items-start gap-2">
               <span style={{ color: colors.accent }}>+</span>
               Value infrastructure ownership
             </li>
@@ -286,25 +287,25 @@ function AudienceSlide() {
         </div>
 
         <div
-          className="p-8 rounded-xl"
+          className="p-5 rounded-xl"
           style={{ backgroundColor: colors.codeBackground, border: `1px solid ${colors.border}` }}
         >
           <h3
-            className="text-2xl font-semibold mb-6"
+            className="text-lg font-semibold mb-4"
             style={{ color: colors.textMuted }}
           >
             Not for you if...
           </h3>
-          <ul className="space-y-4 text-lg" style={{ color: colors.textMuted }}>
-            <li className="flex items-start gap-3">
+          <ul className="space-y-2 text-sm" style={{ color: colors.textMuted }}>
+            <li className="flex items-start gap-2">
               <span>-</span>
               Need TalkJS-style widget on day 1
             </li>
-            <li className="flex items-start gap-3">
+            <li className="flex items-start gap-2">
               <span>-</span>
               Require enterprise SLA today
             </li>
-            <li className="flex items-start gap-3">
+            <li className="flex items-start gap-2">
               <span>-</span>
               Don{"'"}t want to touch infrastructure
             </li>
@@ -315,7 +316,8 @@ function AudienceSlide() {
   );
 }
 
-function SDKSlide() {
+// Slide 5: SDK
+function SDKSlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   const codeExample = `import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/sdk";
 
 function App() {
@@ -331,7 +333,6 @@ function App() {
 
 function ChatRoom({ roomId }: { roomId: string }) {
   const { messages, send, isConnected } = useChat({ roomId });
-
   return (
     <div>
       {messages.map((m) => <Message key={m.id} {...m} />)}
@@ -341,10 +342,10 @@ function ChatRoom({ roomId }: { roomId: string }) {
 }`;
 
   return (
-    <Slide>
-      <div className="flex items-center justify-between mb-8">
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides}>
+      <div className="flex items-center justify-between mb-4">
         <h2
-          className="text-4xl lg:text-5xl font-bold tracking-tight font-mono"
+          className="text-3xl font-bold tracking-tight font-mono"
           style={{ color: colors.text, letterSpacing: "-0.02em" }}
         >
           useChat(roomId)
@@ -356,8 +357,8 @@ function ChatRoom({ roomId }: { roomId: string }) {
         <CodeBlock>{codeExample}</CodeBlock>
       </div>
 
-      <div className="flex gap-4 mt-6">
-        <span className="text-sm font-mono" style={{ color: colors.textMuted }}>
+      <div className="flex gap-4 mt-4">
+        <span className="text-xs font-mono" style={{ color: colors.textMuted }}>
           npm install @fluxy-chat/sdk
         </span>
       </div>
@@ -365,65 +366,62 @@ function ChatRoom({ roomId }: { roomId: string }) {
   );
 }
 
-function ConsoleSlide() {
+// Slide 6: Console
+function ConsoleSlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   return (
-    <Slide>
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides}>
       <h2
-        className="text-4xl lg:text-5xl font-bold tracking-tight mb-4"
+        className="text-3xl font-bold tracking-tight mb-2"
         style={{ color: colors.text, letterSpacing: "-0.02em" }}
       >
         Ship faster with the console
       </h2>
-      <p className="text-xl mb-8" style={{ color: colors.textMuted }}>
+      <p className="text-base mb-5" style={{ color: colors.textMuted }}>
         Everything you need to manage realtime chat at scale.
       </p>
 
       <div
-        className="flex-1 rounded-xl p-8"
+        className="flex-1 rounded-xl p-5"
         style={{ backgroundColor: colors.codeBackground, border: `1px solid ${colors.border}` }}
       >
-        {/* Wireframe UI */}
-        <div className="grid grid-cols-12 gap-4 h-full">
-          {/* Sidebar */}
+        <div className="grid grid-cols-12 gap-3 h-full">
           <div
-            className="col-span-3 rounded-lg p-4"
+            className="col-span-3 rounded-lg p-3"
             style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
           >
-            <div className="space-y-3">
-              <div className="h-8 rounded" style={{ backgroundColor: colors.accentLight }} />
-              <div className="h-6 rounded w-3/4" style={{ backgroundColor: colors.border }} />
-              <div className="h-6 rounded w-2/3" style={{ backgroundColor: colors.border }} />
-              <div className="h-6 rounded w-4/5" style={{ backgroundColor: colors.border }} />
-              <div className="h-6 rounded w-1/2" style={{ backgroundColor: colors.border }} />
+            <div className="space-y-2">
+              <div className="h-5 rounded" style={{ backgroundColor: colors.accentLight }} />
+              <div className="h-4 rounded w-3/4" style={{ backgroundColor: colors.border }} />
+              <div className="h-4 rounded w-2/3" style={{ backgroundColor: colors.border }} />
+              <div className="h-4 rounded w-4/5" style={{ backgroundColor: colors.border }} />
             </div>
           </div>
 
-          {/* Main content */}
-          <div className="col-span-9 space-y-4">
+          <div className="col-span-9 space-y-3">
             <div
-              className="rounded-lg p-4 h-1/2"
+              className="rounded-lg p-3 h-1/2"
               style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
             >
-              <div className="h-6 rounded w-1/4 mb-4" style={{ backgroundColor: colors.border }} />
-              <div className="grid grid-cols-3 gap-3">
-                <div className="h-20 rounded" style={{ backgroundColor: colors.accentLight }} />
-                <div className="h-20 rounded" style={{ backgroundColor: colors.codeBackground }} />
-                <div className="h-20 rounded" style={{ backgroundColor: colors.codeBackground }} />
+              <div className="h-4 rounded w-1/4 mb-3" style={{ backgroundColor: colors.border }} />
+              <div className="grid grid-cols-3 gap-2">
+                <div className="h-12 rounded" style={{ backgroundColor: colors.accentLight }} />
+                <div className="h-12 rounded" style={{ backgroundColor: colors.codeBackground }} />
+                <div className="h-12 rounded" style={{ backgroundColor: colors.codeBackground }} />
               </div>
             </div>
             <div
-              className="rounded-lg p-4 flex-1"
+              className="rounded-lg p-3"
               style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
             >
-              <div className="h-4 rounded w-1/3 mb-3" style={{ backgroundColor: colors.border }} />
-              <div className="h-4 rounded w-full mb-2" style={{ backgroundColor: colors.codeBackground }} />
-              <div className="h-4 rounded w-5/6" style={{ backgroundColor: colors.codeBackground }} />
+              <div className="h-3 rounded w-1/3 mb-2" style={{ backgroundColor: colors.border }} />
+              <div className="h-3 rounded w-full mb-1" style={{ backgroundColor: colors.codeBackground }} />
+              <div className="h-3 rounded w-5/6" style={{ backgroundColor: colors.codeBackground }} />
             </div>
           </div>
         </div>
       </div>
 
-      <ul className="flex gap-8 mt-6 text-base" style={{ color: colors.text }}>
+      <ul className="flex gap-6 mt-4 text-xs" style={{ color: colors.text }}>
         <li>Onboarding wizard</li>
         <li>Room management</li>
         <li>AI agents</li>
@@ -434,31 +432,32 @@ function ConsoleSlide() {
   );
 }
 
-function HostingSlide() {
+// Slide 7: Hosting
+function HostingSlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   return (
-    <Slide>
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides}>
       <h2
-        className="text-4xl lg:text-5xl font-bold tracking-tight mb-12"
+        className="text-3xl font-bold tracking-tight mb-6"
         style={{ color: colors.text, letterSpacing: "-0.02em" }}
       >
         Hosted vs Self-host
       </h2>
 
-      <div className="grid grid-cols-2 gap-8 flex-1">
+      <div className="grid grid-cols-2 gap-5 flex-1">
         <div
-          className="p-8 rounded-xl flex flex-col"
+          className="p-5 rounded-xl flex flex-col"
           style={{ backgroundColor: colors.accentLight, border: `1px solid ${colors.accent}` }}
         >
           <h3
-            className="text-2xl font-semibold mb-2"
+            className="text-lg font-semibold mb-1"
             style={{ color: colors.accent }}
           >
             Hosted Cloud
           </h3>
-          <p className="text-lg mb-6" style={{ color: colors.text }}>
+          <p className="text-sm mb-4" style={{ color: colors.text }}>
             Sign up and start in minutes
           </p>
-          <ul className="space-y-3 text-base flex-1" style={{ color: colors.text }}>
+          <ul className="space-y-2 text-xs flex-1" style={{ color: colors.text }}>
             <li className="flex items-start gap-2">
               <span style={{ color: colors.accent }}>+</span>
               Zero infrastructure setup
@@ -473,7 +472,7 @@ function HostingSlide() {
             </li>
           </ul>
           <div
-            className="mt-6 px-4 py-2 rounded-lg text-center font-mono text-sm"
+            className="mt-4 px-3 py-1.5 rounded-lg text-center font-mono text-[10px]"
             style={{ backgroundColor: "white" }}
           >
             fluxychat.vercel.app/get-started
@@ -481,19 +480,19 @@ function HostingSlide() {
         </div>
 
         <div
-          className="p-8 rounded-xl flex flex-col"
+          className="p-5 rounded-xl flex flex-col"
           style={{ backgroundColor: colors.codeBackground, border: `1px solid ${colors.border}` }}
         >
           <h3
-            className="text-2xl font-semibold mb-2"
+            className="text-lg font-semibold mb-1"
             style={{ color: colors.text }}
           >
             Self-host
           </h3>
-          <p className="text-lg mb-6" style={{ color: colors.textMuted }}>
+          <p className="text-sm mb-4" style={{ color: colors.textMuted }}>
             Clone the MIT repo, your CF account
           </p>
-          <ul className="space-y-3 text-base flex-1" style={{ color: colors.text }}>
+          <ul className="space-y-2 text-xs flex-1" style={{ color: colors.text }}>
             <li className="flex items-start gap-2">
               <span>+</span>
               Full infrastructure control
@@ -508,7 +507,7 @@ function HostingSlide() {
             </li>
           </ul>
           <div
-            className="mt-6 px-4 py-2 rounded-lg text-center font-mono text-sm"
+            className="mt-4 px-3 py-1.5 rounded-lg text-center font-mono text-[10px]"
             style={{ backgroundColor: "white", border: `1px solid ${colors.border}` }}
           >
             github.com/fluxychat/fluxychat
@@ -517,7 +516,7 @@ function HostingSlide() {
       </div>
 
       <p
-        className="text-center mt-8 text-lg font-medium"
+        className="text-center mt-4 text-sm font-medium"
         style={{ color: colors.accent }}
       >
         Same codebase. Same features. Your choice.
@@ -526,7 +525,8 @@ function HostingSlide() {
   );
 }
 
-function DemoSlide() {
+// Slide 8: Demo
+function DemoSlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   const steps = [
     { num: 1, label: "Sign up", desc: "Create account" },
     { num: 2, label: "Quickstart", desc: "Follow wizard" },
@@ -536,21 +536,21 @@ function DemoSlide() {
   ];
 
   return (
-    <Slide>
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides}>
       <h2
-        className="text-4xl lg:text-5xl font-bold tracking-tight mb-12"
+        className="text-3xl font-bold tracking-tight mb-6"
         style={{ color: colors.text, letterSpacing: "-0.02em" }}
       >
         Live demo flow
       </h2>
 
       <div className="flex-1 flex items-center">
-        <div className="w-full flex items-center justify-between gap-4">
+        <div className="w-full flex items-center justify-between gap-2">
           {steps.map((step, i) => (
-            <div key={step.num} className="flex items-center gap-4">
-              <div className="flex flex-col items-center gap-3">
+            <div key={step.num} className="flex items-center gap-2">
+              <div className="flex flex-col items-center gap-2">
                 <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold"
                   style={{
                     backgroundColor: i === 0 ? colors.accent : colors.codeBackground,
                     color: i === 0 ? "white" : colors.text,
@@ -560,18 +560,12 @@ function DemoSlide() {
                   {step.num}
                 </div>
                 <div className="text-center">
-                  <p className="font-semibold" style={{ color: colors.text }}>{step.label}</p>
-                  <p className="text-sm" style={{ color: colors.textMuted }}>{step.desc}</p>
-                </div>
-                <div
-                  className="w-32 h-24 rounded-lg flex items-center justify-center text-xs"
-                  style={{ backgroundColor: colors.codeBackground, border: `1px solid ${colors.border}`, color: colors.textMuted }}
-                >
-                  screenshot
+                  <p className="font-semibold text-xs" style={{ color: colors.text }}>{step.label}</p>
+                  <p className="text-[10px]" style={{ color: colors.textMuted }}>{step.desc}</p>
                 </div>
               </div>
               {i < steps.length - 1 && (
-                <span className="text-2xl" style={{ color: colors.border }}>→</span>
+                <span className="text-base" style={{ color: colors.border }}>→</span>
               )}
             </div>
           ))}
@@ -581,11 +575,12 @@ function DemoSlide() {
   );
 }
 
-function TradeoffsSlide() {
+// Slide 9: Tradeoffs
+function TradeoffsSlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   return (
-    <Slide>
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides}>
       <h2
-        className="text-4xl lg:text-5xl font-bold tracking-tight mb-8"
+        className="text-3xl font-bold tracking-tight mb-5"
         style={{ color: colors.text, letterSpacing: "-0.02em" }}
       >
         Honest tradeoffs
@@ -595,52 +590,52 @@ function TradeoffsSlide() {
         className="flex-1 rounded-xl overflow-hidden"
         style={{ border: `1px solid ${colors.border}` }}
       >
-        <table className="w-full h-full">
+        <table className="w-full text-xs">
           <thead>
             <tr style={{ backgroundColor: colors.codeBackground }}>
-              <th className="p-4 text-left text-lg font-semibold" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>
+              <th className="p-3 text-left font-semibold" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>
                 Aspect
               </th>
-              <th className="p-4 text-left text-lg font-semibold" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>
+              <th className="p-3 text-left font-semibold" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>
                 Stream / TalkJS
               </th>
-              <th className="p-4 text-left text-lg font-semibold" style={{ color: colors.accent, borderBottom: `1px solid ${colors.border}` }}>
+              <th className="p-3 text-left font-semibold" style={{ color: colors.accent, borderBottom: `1px solid ${colors.border}` }}>
                 Fluxychat
               </th>
             </tr>
           </thead>
           <tbody>
             <tr style={{ backgroundColor: "white" }}>
-              <td className="p-4 font-medium" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Time to polished UI</td>
-              <td className="p-4" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>Minutes (pre-built)</td>
-              <td className="p-4" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Hours (build yours)</td>
+              <td className="p-3 font-medium" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Time to polished UI</td>
+              <td className="p-3" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>Minutes (pre-built)</td>
+              <td className="p-3" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Hours (build yours)</td>
             </tr>
             <tr style={{ backgroundColor: colors.codeBackground }}>
-              <td className="p-4 font-medium" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Infrastructure control</td>
-              <td className="p-4" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>Their servers</td>
-              <td className="p-4" style={{ color: colors.accent, borderBottom: `1px solid ${colors.border}` }}>Your Worker</td>
+              <td className="p-3 font-medium" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Infrastructure control</td>
+              <td className="p-3" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>Their servers</td>
+              <td className="p-3" style={{ color: colors.accent, borderBottom: `1px solid ${colors.border}` }}>Your Worker</td>
             </tr>
             <tr style={{ backgroundColor: "white" }}>
-              <td className="p-4 font-medium" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Customization</td>
-              <td className="p-4" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>Theme tokens</td>
-              <td className="p-4" style={{ color: colors.accent, borderBottom: `1px solid ${colors.border}` }}>Full source code</td>
+              <td className="p-3 font-medium" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Customization</td>
+              <td className="p-3" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>Theme tokens</td>
+              <td className="p-3" style={{ color: colors.accent, borderBottom: `1px solid ${colors.border}` }}>Full source code</td>
             </tr>
             <tr style={{ backgroundColor: colors.codeBackground }}>
-              <td className="p-4 font-medium" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Pricing model</td>
-              <td className="p-4" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>Per MAU</td>
-              <td className="p-4" style={{ color: colors.accent, borderBottom: `1px solid ${colors.border}` }}>CF usage-based</td>
+              <td className="p-3 font-medium" style={{ color: colors.text, borderBottom: `1px solid ${colors.border}` }}>Pricing model</td>
+              <td className="p-3" style={{ color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>Per MAU</td>
+              <td className="p-3" style={{ color: colors.accent, borderBottom: `1px solid ${colors.border}` }}>CF usage-based</td>
             </tr>
             <tr style={{ backgroundColor: "white" }}>
-              <td className="p-4 font-medium" style={{ color: colors.text }}>Maturity</td>
-              <td className="p-4" style={{ color: colors.textMuted }}>Production-proven</td>
-              <td className="p-4" style={{ color: colors.text }}>Beta</td>
+              <td className="p-3 font-medium" style={{ color: colors.text }}>Maturity</td>
+              <td className="p-3" style={{ color: colors.textMuted }}>Production-proven</td>
+              <td className="p-3" style={{ color: colors.text }}>Beta</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <p
-        className="text-center mt-6 text-base"
+        className="text-center mt-4 text-xs"
         style={{ color: colors.textMuted }}
       >
         Fluxychat is in open beta. Expect rough edges. We{"'"}re shipping fast.
@@ -649,52 +644,46 @@ function TradeoffsSlide() {
   );
 }
 
-function CTASlide() {
+// Slide 10: CTA
+function CTASlide({ slideNumber, totalSlides }: { slideNumber: number; totalSlides: number }) {
   return (
-    <Slide className="justify-center items-center text-center">
-      <FluxychatIcon size={64} />
+    <Slide slideNumber={slideNumber} totalSlides={totalSlides} className="justify-center items-center text-center">
+      <FluxychatIcon size={48} />
 
       <h2
-        className="text-4xl lg:text-5xl font-bold tracking-tight mt-8 mb-12"
+        className="text-3xl font-bold tracking-tight mt-5 mb-6"
         style={{ color: colors.text, letterSpacing: "-0.02em" }}
       >
         Get started
       </h2>
 
-      <div className="grid grid-cols-2 gap-x-16 gap-y-4 text-left text-lg mb-12">
+      <div className="grid grid-cols-2 gap-x-12 gap-y-3 text-left text-sm mb-6">
         <div>
           <span className="font-medium" style={{ color: colors.text }}>Landing</span>
-          <p className="font-mono" style={{ color: colors.accent }}>fluxychat.vercel.app/landing</p>
+          <p className="font-mono text-xs" style={{ color: colors.accent }}>fluxychat.vercel.app/landing</p>
         </div>
         <div>
           <span className="font-medium" style={{ color: colors.text }}>Why Fluxychat</span>
-          <p className="font-mono" style={{ color: colors.accent }}>fluxychat.vercel.app/why</p>
+          <p className="font-mono text-xs" style={{ color: colors.accent }}>fluxychat.vercel.app/why</p>
         </div>
         <div>
           <span className="font-medium" style={{ color: colors.text }}>GitHub</span>
-          <p className="font-mono" style={{ color: colors.accent }}>github.com/fluxychat/fluxychat</p>
+          <p className="font-mono text-xs" style={{ color: colors.accent }}>github.com/fluxychat/fluxychat</p>
         </div>
         <div>
           <span className="font-medium" style={{ color: colors.text }}>npm</span>
-          <p className="font-mono" style={{ color: colors.accent }}>npmjs.com/package/@fluxy-chat/sdk</p>
+          <p className="font-mono text-xs" style={{ color: colors.accent }}>npmjs.com/package/@fluxy-chat/sdk</p>
         </div>
       </div>
 
-      <div
-        className="w-48 h-48 rounded-xl flex items-center justify-center mb-6"
-        style={{ backgroundColor: colors.codeBackground, border: `1px solid ${colors.border}` }}
-      >
-        <span className="text-sm" style={{ color: colors.textMuted }}>QR Code</span>
-      </div>
-
-      <p className="font-mono text-lg" style={{ color: colors.textMuted }}>
+      <p className="font-mono text-sm" style={{ color: colors.textMuted }}>
         fluxychat@outlook.com
       </p>
     </Slide>
   );
 }
 
-const slides = [
+const slideComponents = [
   TitleSlide,
   ProblemSlide,
   SolutionSlide,
@@ -708,106 +697,71 @@ const slides = [
 ];
 
 export default function SlidesPage() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  const goToSlide = useCallback((index: number) => {
-    if (index >= 0 && index < slides.length) {
-      setCurrentSlide(index);
-    }
-  }, []);
-
-  const nextSlide = useCallback(() => {
-    goToSlide(currentSlide + 1);
-  }, [currentSlide, goToSlide]);
-
-  const prevSlide = useCallback(() => {
-    goToSlide(currentSlide - 1);
-  }, [currentSlide, goToSlide]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        nextSlide();
-      } else if (e.key === "ArrowLeft" || e.key === "Backspace") {
-        e.preventDefault();
-        prevSlide();
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        goToSlide(0);
-      } else if (e.key === "End") {
-        e.preventDefault();
-        goToSlide(slides.length - 1);
-      } else if (e.key >= "1" && e.key <= "9") {
-        e.preventDefault();
-        goToSlide(parseInt(e.key) - 1);
-      } else if (e.key === "0") {
-        e.preventDefault();
-        goToSlide(9);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nextSlide, prevSlide, goToSlide]);
-
-  const CurrentSlideComponent = slides[currentSlide];
+  const totalSlides = slideComponents.length;
 
   return (
-    <div
-      className="fixed inset-0 overflow-hidden select-none"
-      style={{ backgroundColor: colors.background }}
-    >
-      {/* 16:9 aspect ratio container */}
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div
-          className="w-full h-full max-w-[1920px] max-h-[1080px] relative"
-          style={{
-            aspectRatio: "16/9",
-            maxHeight: "min(100%, calc((100vw - 2rem) * 9 / 16))",
-            maxWidth: "min(100%, calc((100vh - 2rem) * 16 / 9))",
-          }}
-        >
-          <CurrentSlideComponent />
-          <SlideNumber current={currentSlide + 1} total={slides.length} />
-        </div>
-      </div>
-
-      {/* Navigation hints */}
+    <>
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: 16in 9in;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+          }
+          .slide-page {
+            width: 16in !important;
+            height: 9in !important;
+            page-break-after: always;
+            page-break-inside: avoid;
+          }
+          .print-button {
+            display: none !important;
+          }
+        }
+        @media screen {
+          .slide-page {
+            max-width: 1200px;
+            margin: 0 auto 2rem auto;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+          }
+        }
+      `}</style>
       <div
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs font-mono"
-        style={{ color: colors.textMuted }}
+        className="min-h-screen py-8 px-4"
+        style={{ backgroundColor: "#e5e5e5" }}
       >
-        <span>← →</span>
-        <span>or click</span>
-      </div>
-
-      {/* Click zones for navigation */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-0 top-0 w-1/3 h-full cursor-w-resize opacity-0"
-        aria-label="Previous slide"
-      />
-      <button
-        onClick={nextSlide}
-        className="absolute right-0 top-0 w-2/3 h-full cursor-e-resize opacity-0"
-        aria-label="Next slide"
-      />
-
-      {/* Slide dots */}
-      <div className="absolute bottom-4 left-4 flex gap-1.5">
-        {slides.map((_, i) => (
+        <div className="max-w-5xl mx-auto mb-6 flex items-center justify-between print-button">
+          <div>
+            <h1 className="text-xl font-bold" style={{ color: colors.text }}>
+              Fluxychat Slide Deck
+            </h1>
+            <p className="text-sm" style={{ color: colors.textMuted }}>
+              {totalSlides} slides | 16:9 format
+            </p>
+          </div>
           <button
-            key={i}
-            onClick={() => goToSlide(i)}
-            className="w-2 h-2 rounded-full transition-all"
+            onClick={() => window.print()}
+            className="px-4 py-2 rounded-lg font-medium text-sm transition-colors"
             style={{
-              backgroundColor: i === currentSlide ? colors.accent : colors.border,
+              backgroundColor: colors.accent,
+              color: "white",
             }}
-            aria-label={`Go to slide ${i + 1}`}
+          >
+            Export to PDF
+          </button>
+        </div>
+
+        {slideComponents.map((SlideComponent, index) => (
+          <SlideComponent
+            key={index}
+            slideNumber={index + 1}
+            totalSlides={totalSlides}
           />
         ))}
       </div>
-    </div>
+    </>
   );
 }
