@@ -15,6 +15,7 @@ Use-case oriented documentation.
 ## Dashboard app
 
 - [Session, operator pages, GDPR & SDK transport](./dashboard-integration.md)
+- [Custom domains: Vercel + Cloudflare Worker + Clerk](./hosted-domains.md)
 - [Stripe billing runbook](./billing-stripe-runbook.md)
 - [Billing overage policy](./billing-overage-policy.md)
 
