@@ -271,7 +271,7 @@ export function LandingView() {
    blendSoftness={0.42}
  />
 
- {/* Wash laterali + accenti bassi sx/dx — centro libero per headline */}
+ {/* Side washes + low L/R accents — center kept clear for headline */}
  <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" aria-hidden>
    <div
      className="landing-hero-blob landing-hero-blob--b absolute"
@@ -341,8 +341,8 @@ export function LandingView() {
  </div>
 
  {/*
-   Overlay: quasi nessun bianco in basso-sinistra (così il blob emerge),
-   ma abbastanza bianco al centro-top per leggibilità testo.
+   Overlay: minimal white bottom-left (blobs show through),
+   enough white center-top for readable headline text.
  */}
  <div
    className="pointer-events-none absolute inset-0 z-[1]"
@@ -358,7 +358,7 @@ export function LandingView() {
    }}
    aria-hidden
  />
- {/* Fade bianco solo in alto per navbar */}
+ {/* Top white fade for navbar legibility */}
  <div
    className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-24"
    style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.7) 0%, transparent 100%)" }}

@@ -55,15 +55,15 @@ Pre-req: you have an **admin JWT** for the project (Dashboard `Onboarding` can m
    - Cancel subscription → confirm `customer.subscription.deleted` fires
    - Refresh Billing page → expect `planName: free`, `billingStatus: cancelled`
 
-### Exit criteria produzione (M6-B)
+### Production exit criteria (M6-B)
 
-Segnare questa sezione come completata solo dopo un giro su **Stripe live** (o modalità test con webhook puntato all’ambiente reale) sul worker deployato:
+Mark this section complete only after one pass on **Stripe live** (or test mode with webhooks pointed at the real deployed worker):
 
-- [ ] `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET` presenti sul Worker; endpoint dashboard `https://<worker>/webhooks/stripe` registrato in Stripe con eventi minimi elencati sopra.
-- [ ] Checkout test (carta `4242…`) → redirect `success` → refresh Billing → `billingStatus: active`, `planName` coerente, `stripeCustomerId` / `stripeSubscriptionId` valorizzati.
-- [ ] In Stripe **Developers → Webhooks → eventi**: almeno un `checkout.session.completed` consegnato `200` e nessun loop di errori.
-- [ ] Portal “Manage subscription” → modifica o cancellazione → evento `customer.subscription.updated` o `deleted` → stato piano aggiornato in D1 dopo refresh.
-- [ ] Replay manuale dello stesso `event id` (o retry Stripe) non corrompe il piano (idempotenza `stripe_webhook_events`).
+- [ ] `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` set on the Worker; Stripe dashboard endpoint `https://<worker>/webhooks/stripe` registered with the minimum events listed above.
+- [ ] Test checkout (card `4242…`) → `success` redirect → refresh Billing → `billingStatus: active`, consistent `planName`, `stripeCustomerId` / `stripeSubscriptionId` populated.
+- [ ] In Stripe **Developers → Webhooks → events**: at least one `checkout.session.completed` delivered with `200` and no error loop.
+- [ ] Portal “Manage subscription” → change or cancel → `customer.subscription.updated` or `deleted` → plan state updated in D1 after refresh.
+- [ ] Manual replay of the same `event id` (or Stripe retry) does not corrupt the plan (`stripe_webhook_events` idempotency).
 
 ### Troubleshooting
 
@@ -76,4 +76,3 @@ Segnare questa sezione come completata solo dopo un giro su **Stripe live** (o m
 - **Subscription events can't resolve project id**:
   - Ensure checkout includes `subscription_data.metadata.project_id` and `subscription_data.metadata.plan_name`.
   - Ensure `project_plans.stripe_customer_id`/`stripe_subscription_id` is being persisted.
-

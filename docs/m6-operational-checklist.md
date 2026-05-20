@@ -1,33 +1,33 @@
-# M6-A / M6-D — Checklist operativa (deploy, smoke, pilot, performance)
+# M6-A / M6-D — Operational checklist (deploy, smoke, pilot, performance)
 
-Questo documento **non sostituisce** `RUNBOOK_DEPLOY_ROLLBACK.md` e `docs/performance-benchmark.md`: li incrocia per chiudere **M6-A** (rollout) e la parte **M6-D** eseguibile senza inventare numeri (benchmark/SLO su env reale).
+This document **does not replace** `RUNBOOK_DEPLOY_ROLLBACK.md` and `docs/performance-benchmark.md`: it cross-references them to close **M6-A** (rollout) and the executable part of **M6-D** (benchmark/SLO on a real env without inventing numbers).
 
-## Prerequisiti account (una tantum)
+## Account prerequisites (one-time)
 
-- [ ] **Workers Paid** attivo sull’account Cloudflare usato per il deploy.
-- [ ] **D1** `fluxychat` (o nome scelto) creato; `database_id` in `apps/worker/wrangler.toml` allineato.
-- [ ] **KV** per rate limit: creare namespace e incollare ID in `wrangler.toml` (sostituire `REPLACE_WITH_*`). Comandi: vedi `RUNBOOK_DEPLOY_ROLLBACK.md` §1.1.
-- [ ] **R2** bucket allegati creato; binding `ATTACHMENTS` coerente con il bucket reale.
-- [ ] **Segreti** Worker (`wrangler secret put …`) e variabili documentate in `apps/worker/.dev.vars.example` / runbook (Stripe, AI, ecc. solo se servono).
+- [ ] **Workers Paid** enabled on the Cloudflare account used for deploy.
+- [ ] **D1** `fluxychat` (or chosen name) created; `database_id` in `apps/worker/wrangler.toml` aligned.
+- [ ] **KV** for rate limits: create namespace and paste ID in `wrangler.toml` (replace `REPLACE_WITH_*`). Commands: see `RUNBOOK_DEPLOY_ROLLBACK.md` §1.1.
+- [ ] **R2** attachments bucket created; `ATTACHMENTS` binding matches the real bucket.
+- [ ] Worker **secrets** (`wrangler secret put …`) and vars documented in `apps/worker/.dev.vars.example` / runbook (Stripe, AI, etc. only if needed).
 
-## Fase 1 — Migrazioni e deploy
+## Phase 1 — Migrations and deploy
 
-Seguire **§2 Deploy** del runbook:
+Follow runbook **§2 Deploy**:
 
 - [ ] `pnpm exec wrangler d1 migrations apply <database_name> --remote`
 - [ ] `pnpm --filter @fluxychat/worker deploy`
-- [ ] `pnpm --filter @fluxychat/ai-agent deploy` (se usate mention → AI agent)
+- [ ] `pnpm --filter @fluxychat/ai-agent deploy` (if you use mention → AI agent)
 
-## Fase 2 — Smoke automatico (subito dopo deploy)
+## Phase 2 — Automated smoke (right after deploy)
 
-Con **JWT admin** (claim `tid` = project id, ruoli `owner`/`admin`/`moderator`) del tenant di smoke:
+With **admin JWT** (`tid` = project id, roles `owner`/`admin`/`moderator`) for the smoke tenant:
 
 ```bash
 cd apps/worker
 pnpm run smoke:remote -- --base-url https://<worker-host> --admin-jwt "<JWT>"
 ```
 
-Oppure:
+Or:
 
 ```bash
 set SMOKE_BASE_URL=https://<worker-host>
@@ -35,28 +35,28 @@ set SMOKE_ADMIN_JWT=<JWT>
 pnpm run smoke:remote
 ```
 
-Check impliciti:
+Implicit checks:
 
-- [ ] `GET /health` → `200`, `ok: true` (se `degraded`, verificare KV/R2 quando potete).
-- [ ] `GET /stats/slo`, `/stats/costs`, `/stats/launch-kpis` → `200` senza `error` nel JSON.
+- [ ] `GET /health` → `200`, `ok: true` (if `degraded`, verify KV/R2 when you can).
+- [ ] `GET /stats/slo`, `/stats/costs`, `/stats/launch-kpis` → `200` without `error` in JSON.
 
-Integrare con gli smoke curl del runbook **§3** (webhook deliveries, auth/token, messaggio di prova) per copertura completa.
+Combine with runbook **§3** curl smoke (webhook deliveries, auth/token, test message) for full coverage.
 
-**Alternativa bash:** dalla root del monorepo, `./scripts/smoke-test.sh` (vedi `RUNBOOK_DEPLOY_ROLLBACK.md` §3) con `TEST_API_KEY=fc_...` — esercita anche room/messages/GDPR senza JWT pre-mintato.
+**Bash alternative:** from monorepo root, `./scripts/smoke-test.sh` (see `RUNBOOK_DEPLOY_ROLLBACK.md` §3) with `TEST_API_KEY=fc_...` — also exercises room/messages/GDPR without a pre-minted JWT.
 
-## Fase 3 — Pilot end-to-end (M6-A exit)
+## Phase 3 — End-to-end pilot (M6-A exit)
 
-Definire **un tenant pilota** (anche interno) e completare:
+Define **one pilot tenant** (even internal) and complete:
 
-- [ ] Dashboard → **Onboarding** (o API equivalente): progetto, API key, JWT member, room, primo messaggio, prima invoke agent (se in scope).
-- [ ] Dashboard → **Billing** → load plan (verifica `project_plans` + usage).
-- [ ] Dashboard → **Analytics**: sezione costi/guardrail e (se usata) performance signal.
+- [ ] Dashboard → **Onboarding** (or equivalent API): project, API key, member JWT, room, first message, first agent invoke (if in scope).
+- [ ] Dashboard → **Billing** → load plan (verify `project_plans` + usage).
+- [ ] Dashboard → **Analytics**: cost/guardrail section and (if used) performance signal.
 
-Annotare `project_id`, data/ora, eventuali incidenti in `RUNBOOK` incident log se applicabile.
+Record `project_id`, date/time, and any incidents in the runbook incident log if applicable.
 
-## Fase 4 — Performance / SLO (M6-D)
+## Phase 4 — Performance / SLO (M6-D)
 
-Dopo che esistono JWT **member** + **admin** e una `room-id` di test:
+After you have **member** + **admin** JWTs and a test `room-id`:
 
 ```bash
 cd apps/worker
@@ -70,31 +70,30 @@ pnpm run perf:workload-check -- \
   --thresholds-file scripts/perf-thresholds.v1.json
 ```
 
-Dettagli e interpretazione: `docs/performance-benchmark.md`.
+Details and interpretation: `docs/performance-benchmark.md`.
 
-- [ ] Eseguito su **env target** (non solo localhost), risultati archiviati (JSON export da Analytics se usate la card export).
+- [ ] Run on **target env** (not localhost only); archive results (JSON export from Analytics if you use the export card).
 
-## Fase 5 — Rollout controllato “esterni”
+## Phase 5 — Controlled rollout to external users
 
-Gate minimi prima di aprire a utenti esterni:
+Minimum gates before opening to external users:
 
-- [ ] Smoke Fase 2 + 3 OK su ambiente **production** (o staging identico).
-- [ ] Stripe (se monetizzazione attiva): checklist produzione in `docs/billing-stripe-runbook.md` sezione *Exit criteria produzione*.
-- [ ] Canale supporto / raccolta issue (anche form interno) definito — vedi `docs/m6-pilot-gtm-playbook.md`.
+- [ ] Phase 2 + 3 OK on **production** (or staging-identical) env.
+- [ ] Stripe (if monetization is on): production checklist in `docs/billing-stripe-runbook.md` (*Production exit criteria* section).
+- [ ] Support / issue intake channel defined (email, form, or GitHub issues).
 
-## Collegamenti
+## Links
 
 - Deploy / rollback: `RUNBOOK_DEPLOY_ROLLBACK.md`
 - Stripe E2E: `docs/billing-stripe-runbook.md`
 - Benchmark: `docs/performance-benchmark.md`
-- Pilot / feedback GTM: `docs/m6-pilot-gtm-playbook.md`
 
-## Matrice SPEC — restano fuori da questo file (promemoria)
+## SPEC matrix — out of scope for this file (reminder)
 
-| Area | Azione tipica |
+| Area | Typical action |
 |------|----------------|
-| §5 HTTP API | Mappa implementata: `docs/spec-implementation-map.md`. |
-| §8 SDK/UI edge | Test/caso d’uso upload avanzati (drag-drop, errori rete). |
-| §9 Dashboard | Stripe prod verificato + eventuale sito docs hosted. |
-| §10 Pricing | Exit M6-B produzione. |
-| §12 / §15 NFR | Dopo pilot: tuning `COST_*` / `PRICE_*` da traffico reale (`/stats/costs`). |
+| §5 HTTP API | Implementation map: `docs/spec-implementation-map.md`. |
+| §8 SDK/UI edge | Advanced upload test cases (drag-drop, network errors). |
+| §9 Dashboard | Stripe prod verified + optional hosted docs site. |
+| §10 Pricing | M6-B production exit. |
+| §12 / §15 NFR | After pilot: tune `COST_*` / `PRICE_*` from real traffic (`/stats/costs`). |

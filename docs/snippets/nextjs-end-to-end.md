@@ -1,13 +1,11 @@
 # Snippet: Next.js end-to-end (App Router)
 
-Obiettivo: un’integrazione “copy‑paste” che:
+Goal: a copy-paste integration that:
 
-- minta un **JWT** dal backend Next.js (usando API key server-side)
-- renderizzi una pagina client che si connette alla room e invia messaggi (SDK)
+- mints a **JWT** from the Next.js backend (server-side API key)
+- renders a client page that connects to a room and sends messages (SDK)
 
 ## 1) `.env.local` (Next.js)
-
-Metti queste env nel tuo progetto Next.js:
 
 ```bash
 NEXT_PUBLIC_FLUXYCHAT_WORKER_URL="http://127.0.0.1:8787"
@@ -15,14 +13,14 @@ FLUXY_BASE_URL="http://127.0.0.1:8787"
 FLUXY_API_KEY="fc_..."
 ```
 
-Note:
+Notes:
 
-- `NEXT_PUBLIC_*` e leggibile nel browser (ok per base URL).
-- **NON** esporre `FLUXY_API_KEY` nel client: resta solo server-side.
+- `NEXT_PUBLIC_*` is readable in the browser (OK for base URL).
+- **Do not** expose `FLUXY_API_KEY` to the client — server-side only.
 
-## 2) Route handler per mint JWT
+## 2) Route handler to mint JWT
 
-Crea `app/api/fluxy/token/route.ts`:
+Create `app/api/fluxy/token/route.ts`:
 
 ```ts
 import { NextResponse } from "next/server";
@@ -49,9 +47,9 @@ export async function POST(request: Request) {
 }
 ```
 
-## 3) Pagina chat (client) con SDK
+## 3) Chat page (client) with SDK
 
-Crea `app/fluxy-demo/page.tsx`:
+Create `app/fluxy-demo/page.tsx`:
 
 ```tsx
 "use client";
@@ -151,8 +149,7 @@ export default function FluxyDemoPage() {
 }
 ```
 
-## 4) Note importanti
+## 4) Important notes
 
-- La room deve esistere e l’utente deve essere membro, altrimenti WS puo fallire con `403`.
-- In produzione, il tuo backend dovrebbe decidere i ruoli (non il client).
-
+- The room must exist and the user must be a member, otherwise WS may fail with `403`.
+- In production, your backend should decide roles (not the client).

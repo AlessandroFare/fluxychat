@@ -2,7 +2,7 @@
 
 FluxyChat already exposes lightweight endpoints to validate baseline performance and SLO signals in a real environment.
 
-Ordine consigliato con deploy e smoke: `docs/m6-operational-checklist.md` (Fase 4 + link a questo file).
+Recommended order with deploy and smoke: `docs/m6-operational-checklist.md` (Phase 4 + link to this file).
 
 ### Endpoints
 

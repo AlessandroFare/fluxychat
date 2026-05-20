@@ -1,10 +1,6 @@
 # Fluxychat Docs
 
-Documentazione orientata ai casi d’uso (M5-B).
-
-## GTM / launch
-
-- [Show HN launch playbook (EN)](./launch-hn.md)
+Use-case oriented documentation.
 
 ## Use cases
 
@@ -33,12 +29,10 @@ Documentazione orientata ai casi d’uso (M5-B).
 ## M6 rollout & pilot
 
 - [Checklist deploy, smoke, pilot, benchmark (M6-A / M6-D)](./m6-operational-checklist.md)
-- [Pilot / feedback / GTM (M6-C)](./m6-pilot-gtm-playbook.md)
 
-## SPEC & prodotto
+## SPEC & product
 
-- [Mappa endpoint SPEC §5 / §6 ↔ Worker](./spec-implementation-map.md)
-- [Snippet positioning / ICP per landing](./product-landing-snippet.md)
+- [SPEC §5 / §6 endpoint map ↔ Worker](./spec-implementation-map.md)
 
 ## Snippets
 
@@ -50,16 +44,15 @@ Documentazione orientata ai casi d’uso (M5-B).
 
 ## Release
 
-- [Demo script (10-12 min)](./release/demo-script.md)
 - [Release notes v0.2.0 (suggested)](./release/release-notes-v0.2.0.md)
 
-## Prerequisiti comuni
+## Common prerequisites
 
 - **Base URL**: `FLUXY_BASE_URL` (dev: `http://127.0.0.1:8787`)
 - **API key**: `X-Fluxy-Api-Key: fc_...` (server-to-server)
 - **JWT**: `Authorization: Bearer <JWT>` (client/SDK)
 
-Per mintare un JWT:
+Mint a JWT:
 
 ```bash
 curl -X POST "$FLUXY_BASE_URL/auth/token" \
@@ -71,4 +64,3 @@ curl -X POST "$FLUXY_BASE_URL/auth/token" \
     "ttlSeconds": 3600
   }'
 ```
-

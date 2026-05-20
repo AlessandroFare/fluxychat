@@ -1,14 +1,14 @@
 # Use case: Support chat
 
-Obiettivo: aggiungere una chat “support” tra utenti e team di supporto, con moderazione e export.
+Goal: a support chat between end users and your support team, with moderation and export.
 
-## Flow consigliato
+## Recommended flow
 
-- Il backend della tua app genera un JWT per l’utente (ruolo `member`)
-- Il dashboard/support tool usa JWT con ruolo `admin`/`moderator`
-- La room “support” e una `group` (o `dm` se 1:1)
+- Your app backend mints a JWT for the end user (`member` role)
+- The dashboard / support tool uses an `admin` or `moderator` JWT
+- The support room is a `group` (or `dm` for 1:1)
 
-## 1) Mint JWT per l’utente (server-side)
+## 1) Mint JWT for the user (server-side)
 
 ```bash
 export FLUXY_BASE_URL="http://127.0.0.1:8787"
@@ -24,7 +24,7 @@ curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
   }'
 ```
 
-## 2) Creare una room support (server-side)
+## 2) Create a support room (server-side)
 
 ```bash
 curl -sS -X POST "$FLUXY_BASE_URL/rooms" \
@@ -40,9 +40,9 @@ curl -sS -X POST "$FLUXY_BASE_URL/rooms" \
   }'
 ```
 
-## 3) Inviare messaggi (client/SDK o REST)
+## 3) Send messages (client/SDK or REST)
 
-REST (richiede JWT):
+REST (requires JWT):
 
 ```bash
 export FLUXY_JWT="<JWT>"
@@ -53,11 +53,11 @@ curl -sS -X POST "$FLUXY_BASE_URL/messages" \
   -H "Content-Type: application/json" \
   -d '{
     "roomId": "'"$ROOM_ID"'",
-    "content": "Ciao, ho bisogno di aiuto"
+    "content": "Hi, I need help"
   }'
 ```
 
-## 4) Moderazione base (admin/moderator)
+## 4) Basic moderation (admin/moderator)
 
 ```bash
 export ADMIN_JWT="<ADMIN_JWT>"
@@ -80,10 +80,9 @@ curl -sS "$FLUXY_BASE_URL/admin/audit/events?limit=50&action=admin.mute" \
   -H "Authorization: Bearer $ADMIN_JWT"
 ```
 
-## 5) Export per audit/compliance
+## 5) Export for audit/compliance
 
 ```bash
 curl -sS "$FLUXY_BASE_URL/export/messages.json?roomId=$ROOM_ID" \
   -H "X-Fluxy-Api-Key: $FLUXY_API_KEY" > messages.json
 ```
-

@@ -1,15 +1,15 @@
 # Cookbook: Auth / Token / JWT (role-based)
 
-Fluxychat usa due forme di credenziali:
+Fluxychat uses two credential forms:
 
-- **API key** (`X-Fluxy-Api-Key`): server-to-server, identifica il **tenant/project**.
-- **JWT** (`Authorization: Bearer ...`): client-to-worker/SDK, contiene `sub` (userId), `tid` (projectId), `roles`, `exp`.
+- **API key** (`X-Fluxy-Api-Key`): server-to-server, identifies the **tenant/project**.
+- **JWT** (`Authorization: Bearer ...`): client-to-worker/SDK, contains `sub` (userId), `tid` (projectId), `roles`, `exp`.
 
-Regola pratica:
+Practical rule:
 
-- **La tua app** conserva l’API key in backend e **minta i JWT** per i client (mai esporre l’API key nel browser).
+- **Your app** keeps the API key on the backend and **mints JWTs** for clients (never expose the API key in the browser).
 
-## Variabili utili
+## Useful variables
 
 ```bash
 export FLUXY_BASE_URL="http://127.0.0.1:8787"
@@ -31,31 +31,31 @@ curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
   }'
 ```
 
-Risposta:
+Response:
 
 - `token`: JWT
-- `expiresIn`: secondi
-- `claims`: echo dei claim principali
+- `expiresIn`: seconds
+- `claims`: echo of main claims
 
-## 2) Ruoli: cosa sbloccano (quick map)
+## 2) Roles: what they unlock (quick map)
 
-I ruoli vivono nel claim `roles` del JWT.
+Roles live in the JWT `roles` claim.
 
-- **member**: operazioni chat base (send/edit/delete own message, read receipts, reactions)
-- **moderator**: azioni admin/moderazione (es. mute/ban, webhook replay) dove consentito
-- **admin**: tutte le admin ops standard (alerts rules, webhooks, projects…) salvo restrizioni
-- **owner**: superset di `admin` (per operazioni “piu sensibili”)
+- **member**: basic chat (send/edit/delete own message, read receipts, reactions)
+- **moderator**: admin/moderation actions (e.g. mute/ban, webhook replay) where allowed
+- **admin**: standard admin ops (alert rules, webhooks, projects…) unless restricted
+- **owner**: superset of `admin` (for more sensitive operations)
 
-Nota: diversi endpoint admin richiedono ruoli specifici. In generale:
+Note: different admin endpoints require specific roles. In general:
 
 - `/admin/alerts/rules`: **owner/admin**
 - `/admin/projects*`: **owner/admin**
 - `/admin/mute|ban|unmute|unban|announcement`: **owner/admin/moderator**
 - `/admin/audit/events`: **owner/admin**
 
-## 3) Esempi role-based
+## 3) Role-based examples
 
-### 3.1 JWT per user “member”
+### 3.1 JWT for a `member` user
 
 ```bash
 curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
@@ -64,7 +64,7 @@ curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
   -d '{ "userId": "customer_123", "roles": ["member"], "ttlSeconds": 3600 }'
 ```
 
-### 3.2 JWT per “moderator”
+### 3.2 JWT for `moderator`
 
 ```bash
 curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
@@ -73,7 +73,7 @@ curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
   -d '{ "userId": "mod_1", "roles": ["moderator"], "ttlSeconds": 3600 }'
 ```
 
-### 3.3 JWT per “admin”
+### 3.3 JWT for `admin`
 
 ```bash
 curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
@@ -82,7 +82,7 @@ curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
   -d '{ "userId": "admin_1", "roles": ["admin"], "ttlSeconds": 3600 }'
 ```
 
-## 4) Chiamate REST con JWT
+## 4) REST calls with JWT
 
 ### Send message
 
@@ -109,7 +109,7 @@ curl -sS -X POST "$FLUXY_BASE_URL/admin/mute" \
 
 ## 5) WebSocket auth (client-side)
 
-Formato:
+Format:
 
 - `GET /ws/room/:roomId?token=<JWT>`
 - membership check enforced
@@ -119,9 +119,9 @@ const wsUrl = `${baseUrl.replace("http", "ws")}/ws/room/${roomId}?token=${encode
 const ws = new WebSocket(wsUrl)
 ```
 
-## 6) Next.js snippet (Route Handler) per mintare JWT
+## 6) Next.js snippet (Route Handler) to mint JWT
 
-Esempio concettuale: la tua app riceve una sessione utente, poi chiama Fluxychat `/auth/token` con la tua API key.
+Conceptual example: your app receives a user session, then calls Fluxychat `/auth/token` with your API key.
 
 ```ts
 import { NextResponse } from "next/server";
@@ -145,10 +145,9 @@ export async function POST(request: Request) {
 }
 ```
 
-## 7) Failure modes comuni
+## 7) Common failure modes
 
-- **401 invalid api key**: l’API key non risolve un project valido (o e revoked)
-- **401 token expired**: `exp` passato, minta un JWT nuovo (ttl piu corto e rotation lato app)
-- **403 forbidden**: ruolo nel token insufficiente per endpoint admin
-- **403 WS**: user non membro della room (membership check)
-
+- **401 invalid api key**: API key does not resolve a valid project (or is revoked)
+- **401 token expired**: `exp` passed — mint a new JWT (shorter TTL and rotation in your app)
+- **403 forbidden**: token role insufficient for admin endpoint
+- **403 WS**: user is not a room member (membership check)

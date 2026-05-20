@@ -1,96 +1,97 @@
 # Fluxychat — Product Specification v3.0
 
-> **One-liner:** La chat real-time più economica del mercato per prodotti SaaS — WebSocket serverless, self-serve, senza DevOps.
+> **One-liner:** The most affordable real-time chat for SaaS products — serverless WebSockets, self-serve, no DevOps.
 
 ---
 
-## 1. Posizionamento
+## 1. Positioning
 
-### Il problema
+### The problem
 
-Aggiungere chat real-time a un prodotto SaaS è ancora inutilmente costoso e complesso:
+Adding real-time chat to a SaaS product is still unnecessarily expensive and complex:
 
-- **Pusher / Ably** costano $49–$299/mese anche per volumi modesti, con pricing opaco.
-- **Sendbird / Stream** sono orientati all'enterprise — sales-driven, niente self-serve.
-- **Firebase / Supabase** ti obbligano a spostare il DB da loro.
-- **Farlo da soli** richiede di gestire WebSocket stateful su serverless, che Vercel e Netlify non supportano bene.
+- **Pusher / Ably** cost $49–$299/month even at modest volume, with opaque pricing.
+- **Sendbird / Stream** are enterprise-oriented — sales-driven, no self-serve.
+- **Firebase / Supabase** push you to move your database to them.
+- **Rolling your own** means running stateful WebSockets on serverless, which Vercel and Netlify do not support well.
 
-### La soluzione
+### The solution
 
-Fluxychat è una piattaforma SaaS + SDK che ti dà chat real-time production-ready in meno di un'ora, a una frazione del costo dei competitor.
+Fluxychat is a SaaS platform + SDK that gives you production-ready real-time chat in under an hour, at a fraction of competitor cost.
 
 | | Fluxychat | Pusher | Sendbird |
 |---|---|---|---|
-| WebSocket serverless | ✅ | ✅ | ❌ |
+| Serverless WebSocket | ✅ | ✅ | ❌ |
 | Chat primitives (rooms, DM, reactions…) | ✅ | ❌ | ✅ |
-| Self-serve + pricing chiaro | ✅ | ✅ | ❌ |
-| Free tier generoso | ✅ | ❌ | ❌ |
-| AI agent contestuale | ✅ (Starter+) | ❌ | ❌ |
-| Prezzo entry | **£0** | $49/mese | "Parla con sales" |
+| Self-serve + clear pricing | ✅ | ✅ | ❌ |
+| Generous free tier | ✅ | ❌ | ❌ |
+| Contextual AI agent | ✅ (Starter+) | ❌ | ❌ |
+| Entry price | **£0** | $49/month | "Talk to sales" |
 
-### Differenziatore principale
+### Main differentiator
 
-**Il prezzo.** £1 per 1 milione di messaggi. Free tier da 50k messaggi/mese. Nessun lock-in su DB o stack. Funziona con qualsiasi backend — Next.js, Express, Laravel, qualsiasi cosa.
+**Price.** £1 per 1 million messages. Free tier of 50k messages/month. No lock-in on DB or stack. Works with any backend — Next.js, Express, Laravel, anything.
 
-L'AI è disponibile nei piani a pagamento come upgrade naturale, non come requisito per iniziare.
+AI is available on paid plans as a natural upgrade, not a requirement to get started.
 
 ---
 
 ## 2. Target
 
-### Cliente primario (oggi)
+### Primary customer (today)
 
-Indie developer e startup che costruiscono prodotti SaaS su stack moderni (Next.js, Vercel, TypeScript) e devono aggiungere chat senza diventare esperti di WebSocket e senza spendere centinaia di euro al mese.
+Indie developers and startups building SaaS on modern stacks (Next.js, Vercel, TypeScript) who need chat without becoming WebSocket experts or spending hundreds per month.
 
-**Profilo tipico:**
-- Team 1–10 persone
-- Stack: Next.js / Vercel, TypeScript, Prisma o Supabase per il DB principale
-- Problema sentito: *"Voglio aggiungere chat al mio SaaS. Pusher costa troppo e Firebase mi obbliga a cambiare tutto."*
-- Canali: Twitter/X dev community, Hacker News, Product Hunt, SEO tecnico
+**Typical profile:**
+- Team of 1–10
+- Stack: Next.js / Vercel, TypeScript, Prisma or Supabase for the main DB
+- Pain: *"I want chat in my SaaS. Pusher is too expensive and Firebase forces me to change everything."*
+- Channels: Twitter/X dev community, Hacker News, Product Hunt, technical SEO
 
-### Cliente secondario (6–18 mesi)
+### Secondary customer (6–18 months)
 
-Team di prodotto in aziende mid-market che vogliono sostituire soluzioni legacy o aggiungere comunicazione real-time ai loro tool interni, con budget e requisiti più strutturati.
+Product teams in mid-market companies replacing legacy chat or adding real-time communication to internal tools, with budget and structured requirements.
 
 ---
 
-## 3. Architettura
+## 3. Architecture
 
-### Stack tecnico
+### Technical stack
 
-| Layer | Tecnologia | Ruolo |
+| Layer | Technology | Role |
 |---|---|---|
-| Edge runtime | Cloudflare Workers | Entrypoint HTTP + WebSocket |
-| Stato real-time | Cloudflare Durable Objects | RoomDurableObject per ogni room |
-| Database primario | Cloudflare D1 (SQLite edge) | Messaggi, rooms, membri, moderation |
-| Cache / sessioni | Cloudflare KV | Rate limiting, presenza aggregata |
-| File storage | Cloudflare R2 | Allegati e media |
-| AI routing | Worker dedicato | Riceve eventi, chiama LLM, posta risposte |
-| Dashboard | Next.js 16 (App Router) | Admin, analytics, configurazione |
-| SDK client | TypeScript | `useChat()` hook + client REST tipizzato |
+| Edge runtime | Cloudflare Workers | HTTP + WebSocket entrypoint |
+| Real-time state | Cloudflare Durable Objects | RoomDurableObject per room |
+| Primary database | Cloudflare D1 (edge SQLite) | Messages, rooms, members, moderation |
+| Cache / sessions | Cloudflare KV | Rate limiting, aggregated presence |
+| File storage | Cloudflare R2 | Attachments and media |
+| AI routing | Dedicated worker | Receives events, calls LLM, posts replies |
+| Dashboard | Next.js 16 (App Router) | Admin, analytics, configuration |
+| Client SDK | TypeScript | `useChat()` hook + typed REST client |
 
-### Perché Cloudflare
+### Why Cloudflare
 
-- Durable Objects risolvono nativamente il problema WebSocket su serverless — niente Terraform, niente DevOps.
-- Costo infrastrutturale bassissimo → permette il pricing aggressivo che è il cuore del posizionamento.
-- Edge globale → latenza bassa ovunque senza configurazione.
+- Durable Objects natively solve WebSockets on serverless — no Terraform, no DevOps.
+- Very low infrastructure cost → enables aggressive pricing at the core of positioning.
+- Global edge → low latency everywhere without configuration.
 
-### Flusso di un messaggio
+### Message flow
 
 ```
 Client WS  ──►  RoomDurableObject
                     │
-                    ├──► broadcast a tutti i client connessi nella room
+                    ├──► broadcast to all clients connected in the room
                     ├──► persist in D1 (messages)
                     ├──► parse @mentions → automation_events
                     └──► deliver webhooks (message.created)
 
-[Solo se AI abilitata]
+[When AI is enabled]
 AgentRouter  ◄──  automation_events (type = mention / dm_message)
     │
-    ├──► carica contesto: ultimi N messaggi + app_context opzionale
-    ├──► chiama LLM configurato
-    └──► POST /rooms/{id}/messages/from-bot  →  broadcast risposta
+    ├──► [optional] GET {context_fetch_url} → { ticket: {...}, user: {...} }
+    ├──► LLM call with context + tools
+    ├──► [if tool call] POST {tool_execute_url} → runs action in your system
+    └──► response posted in the room
 ```
 
 ---
@@ -99,7 +100,7 @@ AgentRouter  ◄──  automation_events (type = mention / dm_message)
 
 ### Project (Tenant)
 
-Rappresenta un cliente di Fluxychat. Ogni progetto ha chiavi API e JWT secret propri.
+Represents a Fluxychat customer. Each project has its own API keys and JWT secret.
 
 ```sql
 projects(id, name, created_at)
@@ -145,12 +146,12 @@ moderation_events(project_id, room_id, user_id, action, reason, expires_at, crea
 -- action: "mute" | "ban" | "unmute" | "unban" | "report" | "flag"
 ```
 
-### Bots & Agenti
+### Bots & Agents
 
 ```sql
 bots(id, project_id, name, webhook_url, created_at)
 
--- Estensione per agenti AI (piani Starter+)
+-- Extension for AI agents (Starter+ plans)
 -- handle, provider, model, system_prompt, tools_schema,
 -- context_fetch_url, tool_execute_url, capabilities,
 -- rate_limit_rpm, is_builtin
@@ -167,71 +168,71 @@ automation_events(project_id, event_type, room_id, payload, delivered, created_a
 
 ## 5. HTTP API
 
-### Autenticazione
+### Authentication
 
-Tutte le mutation richiedono JWT HMAC-signed per-project:
+All mutations require per-project HMAC-signed JWT:
 
 ```
 Authorization: Bearer <JWT>
--- oppure --
+-- or --
 ?token=<JWT>
 ```
 
 Claims: `sub` (userId), `tid` (projectId), `roles`, `exp`.
 
-### Messaggi
+### Messages
 
-| Endpoint | Method | Descrizione |
+| Endpoint | Method | Description |
 |---|---|---|
-| `/messages` | POST | Crea messaggio. Body: `{ roomId, content, replyTo? }` |
-| `/messages/{id}` | PATCH | Modifica (solo mittente originale) |
-| `/messages/{id}` | DELETE | Soft-delete (solo mittente originale) |
-| `/messages/{id}/reactions` | POST | Aggiunge reazione `{ emoji }` |
-| `/messages/{id}/reactions` | DELETE | Rimuove reazione `{ emoji }` |
+| `/messages` | POST | Create message. Body: `{ roomId, content, replyTo? }` |
+| `/messages/{id}` | PATCH | Edit (original sender only) |
+| `/messages/{id}` | DELETE | Soft-delete (original sender only) |
+| `/messages/{id}/reactions` | POST | Add reaction `{ emoji }` |
+| `/messages/{id}/reactions` | DELETE | Remove reaction `{ emoji }` |
 
 ### Rooms
 
-| Endpoint | Method | Descrizione |
+| Endpoint | Method | Description |
 |---|---|---|
-| `/rooms` | GET | Lista rooms. Params: `type`, `userId` (include unreadCount) |
-| `/rooms` | POST | Crea room. Body: `{ id?, name, type, members? }` |
-| `/rooms/dm` | POST | Crea o recupera DM tra due utenti `{ a, b }` |
-| `/rooms/{id}/members` | GET | Lista membri con ruoli |
-| `/rooms/{id}/read` | POST | Aggiorna read receipt `{ messageId }` |
+| `/rooms` | GET | List rooms. Params: `type`, `userId` (includes unreadCount) |
+| `/rooms` | POST | Create room. Body: `{ id?, name, type, members? }` |
+| `/rooms/dm` | POST | Create or fetch DM between two users `{ a, b }` |
+| `/rooms/{id}/members` | GET | List members with roles |
+| `/rooms/{id}/read` | POST | Update read receipt `{ messageId }` |
 | `/rooms/{id}/unread` | GET | `{ unreadCount }` per userId |
 
-### Ricerca & Export
+### Search & Export
 
-| Endpoint | Method | Descrizione |
+| Endpoint | Method | Description |
 |---|---|---|
-| `/api/messages` | GET | History paginata. Params: `roomId`, `before`, `limit` |
+| `/api/messages` | GET | Paginated history. Params: `roomId`, `before`, `limit` |
 | `/search/messages` | GET | Full-text search. Params: `q`, `roomId?`, `limit` |
-| `/search/conversations` | GET | Rooms che matchano query con `matches` e `lastMessage` |
-| `/export/messages.json` | GET | Export JSON. Params: `roomId`, `from?`, `to?` |
-| `/export/messages.csv` | GET | Export CSV per room |
+| `/search/conversations` | GET | Rooms matching query with `matches` and `lastMessage` |
+| `/export/messages.json` | GET | JSON export. Params: `roomId`, `from?`, `to?` |
+| `/export/messages.csv` | GET | CSV export per room |
 
-### Moderazione & Admin
+### Moderation & Admin
 
-| Endpoint | Method | Descrizione |
+| Endpoint | Method | Description |
 |---|---|---|
-| `/reports` | POST | Segnala messaggio `{ messageId, roomId, reason? }` |
-| `/admin/mute` | POST | Muta utente in room |
-| `/admin/ban` | POST | Banna utente |
-| `/admin/unmute` | POST | Rimuove mute |
-| `/admin/unban` | POST | Rimuove ban |
-| `/admin/announcement` | POST | Messaggio di sistema in una room |
-| `/admin/reports` | GET | Lista segnalazioni recenti |
-| `/admin/webhooks` | GET | Lista webhooks registrati |
-| `/admin/projects` | GET/POST | Gestione progetti e API key |
+| `/reports` | POST | Report message `{ messageId, roomId, reason? }` |
+| `/admin/mute` | POST | Mute user in room |
+| `/admin/ban` | POST | Ban user |
+| `/admin/unmute` | POST | Remove mute |
+| `/admin/unban` | POST | Remove ban |
+| `/admin/announcement` | POST | System message in a room |
+| `/admin/reports` | GET | Recent reports list |
+| `/admin/webhooks` | GET | Registered webhooks list |
+| `/admin/projects` | GET/POST | Projects and API key management |
 
-### Stats & Costi
+### Stats & Costs
 
-| Endpoint | Method | Descrizione |
+| Endpoint | Method | Description |
 |---|---|---|
 | `/stats/rooms/{id}` | GET | `{ roomId, messageCount, activeUsers }` |
-| `/stats/costs` | GET | Stima costi basata su volume messaggi (+ AI se abilitata) |
+| `/stats/costs` | GET | Cost estimate from message volume (+ AI if enabled) |
 
-**Estensioni HTTP (implementate nel Worker, oltre alla tabella):** auth API key (`/auth/token`), CRUD agent (`/agents`), room `PATCH`/`DELETE`, membri `POST`/`DELETE`, stream SSE (`GET /rooms/{id}/stream`), upload (`POST /upload`), GDPR, billing Stripe, osservabilità (`/stats/*`, `/benchmark`, …). Mappa dettagliata: `docs/spec-implementation-map.md`.
+**HTTP extensions (implemented in Worker, beyond the table):** API key auth (`/auth/token`), agent CRUD (`/agents`), room `PATCH`/`DELETE`, member `POST`/`DELETE`, SSE stream (`GET /rooms/{id}/stream`), upload (`POST /upload`), GDPR, Stripe billing, observability (`/stats/*`, `/benchmark`, …). Detailed map: `docs/spec-implementation-map.md`.
 
 ### WebSocket
 
@@ -239,26 +240,26 @@ Claims: `sub` (userId), `tid` (projectId), `roles`, `exp`.
 GET /ws/room/{roomId}?userId=...&token=...
 ```
 
-Tipi di messaggio in ingresso e uscita:
+Inbound and outbound message types:
 
-| Tipo | Direzione | Descrizione |
+| Type | Direction | Description |
 |---|---|---|
-| `history` | ← server | Ultimi 50 messaggi al connect |
-| `message` | ↔ | Nuovo messaggio |
-| `edit` | ↔ | Modifica messaggio |
-| `delete` | ↔ | Cancellazione messaggio |
-| `reaction` | ↔ | Aggiunta/rimozione reazione |
+| `history` | ← server | Last 50 messages on connect |
+| `message` | ↔ | New message |
+| `edit` | ↔ | Message edit |
+| `delete` | ↔ | Message delete |
+| `reaction` | ↔ | Add/remove reaction |
 | `read` | → server | Read receipt |
-| `typing` | ↔ | Indicatore di digitazione |
-| `presence` | ← server | Lista utenti online nella room |
+| `typing` | ↔ | Typing indicator |
+| `presence` | ← server | Online users in room |
 | `ping` / `pong` | ↔ | Keep-alive |
-| `error` | ← server | Errore (es. utente bannato) |
+| `error` | ← server | Error (e.g. user banned) |
 
 ---
 
-## 6. Webhooks & Integrazioni
+## 6. Webhooks & Integrations
 
-### Registrazione
+### Registration
 
 ```
 POST /webhooks/register
@@ -267,7 +268,7 @@ POST /webhooks/register
 
 ### Delivery
 
-Payload standard firmato HMAC-SHA256 (`X-Fluxy-Signature: sha256=<hex>`):
+Standard payload signed HMAC-SHA256 (`X-Fluxy-Signature: sha256=<hex>`):
 
 ```json
 {
@@ -280,73 +281,73 @@ Payload standard firmato HMAC-SHA256 (`X-Fluxy-Signature: sha256=<hex>`):
 
 ### Event types
 
-| Evento | Trigger |
+| Event | Trigger |
 |---|---|
-| `message.created` | Nuovo messaggio via REST |
-| `report.created` | Nuova segnalazione |
-| `mention` | Utente o bot menzionato |
-| `dm_message` | Messaggio in room DM |
-| `room_summary` | Summary generato (se AI abilitata) |
+| `message.created` | New message via REST |
+| `report.created` | New report |
+| `mention` | User or bot mentioned |
+| `dm_message` | Message in DM room |
+| `room_summary` | Summary generated (if AI enabled) |
 
 ---
 
-## 7. AI Layer (Piani Starter e Pro)
+## 7. AI Layer (Starter and Pro plans)
 
-L'AI non è il prodotto — è un upgrade. Il developer abilita l'agente con un toggle dopo aver già integrato la chat.
+AI is not the core product — it is an upgrade. The developer enables the agent with a toggle after chat is already integrated.
 
-### Principio di funzionamento
+### How it works
 
-L'agente è un partecipante della room invocabile via `@mention`. Prima di rispondere, può richiedere contesto applicativo al backend del developer (opzionale) ed eseguire azioni tramite tool calling.
+The agent is a room participant invokable via `@mention`. Before replying, it can fetch app context from the developer backend (optional) and run actions via tool calling.
 
 ```
-@assistant dimmi lo stato del ticket #42
+@assistant what's the status of ticket #42
     │
-    ├──► [opzionale] GET {context_fetch_url} → { ticket: {...}, user: {...} }
-    ├──► LLM call con contesto + tools
-    ├──► [se tool call] POST {tool_execute_url} → esegue azione nel tuo sistema
-    └──► risposta postata nella room
+    ├──► [optional] GET {context_fetch_url} → { ticket: {...}, user: {...} }
+    ├──► LLM call with context + tools
+    ├──► [if tool call] POST {tool_execute_url} → runs action in your system
+    └──► reply posted in the room
 ```
 
-### Configurazione agente
+### Agent configuration
 
 ```typescript
 const agent = await fluxy.agents.create({
   handle: 'assistant',
   provider: 'anthropic',           // "openai" | "anthropic" | "custom"
   model: 'claude-3-5-sonnet',
-  systemPrompt: 'Sei un assistente per {{room_name}}.',
-  contextFetchUrl: 'https://myapp.com/api/fluxy/context',  // opzionale
-  toolExecuteUrl: 'https://myapp.com/api/fluxy/tools',     // opzionale
+  systemPrompt: 'You are an assistant for {{room_name}}.',
+  contextFetchUrl: 'https://myapp.com/api/fluxy/context',  // optional
+  toolExecuteUrl: 'https://myapp.com/api/fluxy/tools',     // optional
   toolsSchema: [ /* OpenAI-compatible function definitions */ ]
 });
 
 await fluxy.rooms.update(roomId, { agentEnabled: true, agentId: agent.id });
 ```
 
-### Agenti built-in (abilitabili con un toggle)
+### Built-in agents (enable with a toggle)
 
-| Agente | Funzione | Trigger |
+| Agent | Function | Trigger |
 |---|---|---|
-| `@summarizer` | Summary della conversazione on-demand o periodico | `@summarizer` o timer |
-| `@moderator` | Analisi contenuti asincrona, flag automatico | Ogni messaggio |
-| `@assistant` | General-purpose, configurabile dal developer | `@assistant` |
-| `@onboarding` | Guida interattiva per nuovi membri | Join in room |
+| `@summarizer` | On-demand or periodic conversation summary | `@summarizer` or timer |
+| `@moderator` | Async content analysis, automatic flag | Every message |
+| `@assistant` | General-purpose, developer-configurable | `@assistant` |
+| `@onboarding` | Interactive guide for new members | Join room |
 
-### Endpoint AI
+### AI endpoints
 
-| Endpoint | Method | Descrizione |
+| Endpoint | Method | Description |
 |---|---|---|
-| `/agents` | POST/GET | Crea / lista agenti del progetto |
-| `/agents/{id}` | PATCH | Aggiorna configurazione |
-| `/agents/{id}/invoke` | POST | Invocazione diretta senza @mention |
-| `/agents/{id}/runs` | GET | Storico esecuzioni (latency, tokens, status) |
-| `/stats/ai` | GET | Usage totale: invocazioni, token, costo stimato |
+| `/agents` | POST/GET | Create / list project agents |
+| `/agents/{id}` | PATCH | Update configuration |
+| `/agents/{id}/invoke` | POST | Direct invoke without @mention |
+| `/agents/{id}/runs` | GET | Run history (latency, tokens, status) |
+| `/stats/ai` | GET | Total usage: invocations, tokens, estimated cost |
 
 ---
 
 ## 8. SDK & UI Kit
 
-### `useChat(roomId)` — hook principale
+### `useChat(roomId)` — main hook
 
 ```typescript
 const {
@@ -358,36 +359,36 @@ const {
   markRead,
   typing,
   presence,
-  // AI (solo se agente abilitato)
+  // AI (only when agent enabled)
   agentTyping,
   invokeAgent,
 } = useChat(roomId, { token });
 ```
 
-### Componenti UI (headless, Tailwind + Radix)
+### UI components (headless, Tailwind + Radix)
 
-- `MessageList` — lista messaggi con virtualizzazione
-- `MessageItem` — singolo messaggio con reazioni, threading, OG preview
-- `MessageInput` — input con mention autocomplete, upload allegati
-- `PresenceList` — lista utenti online
-- `ChannelList` — lista rooms con unread count
-- `AgentMessage` — variante MessageItem con badge AI
-- `AgentTypingIndicator` — animazione "assistente sta scrivendo…"
+- `MessageList` — virtualized message list
+- `MessageItem` — single message with reactions, threading, OG preview
+- `MessageInput` — input with mention autocomplete, attachment upload
+- `PresenceList` — online users
+- `ChannelList` — rooms with unread count
+- `AgentMessage` — MessageItem variant with AI badge
+- `AgentTypingIndicator` — "assistant is typing…" animation
 
 ---
 
 ## 9. Dashboard
 
-Applicazione Next.js 16 per la gestione del progetto.
+Next.js 16 application for project management.
 
-**Funzionalità:**
-- Gestione progetti e API key
-- Configurazione webhooks e bots/agenti
-- Moderazione: lista segnalazioni, mute/ban
-- Analytics: messaggi per room, utenti attivi
-- Costi: stima in tempo reale basata sul volume
-- Export messaggi (JSON/CSV)
-- (Piani AI) Configurazione agenti, storico AgentRun, AI usage & costi
+**Features:**
+- Projects and API key management
+- Webhook and bot/agent configuration
+- Moderation: reports list, mute/ban
+- Analytics: messages per room, active users
+- Costs: real-time estimate from volume
+- Message export (JSON/CSV)
+- (AI plans) Agent configuration, AgentRun history, AI usage & costs
 
 ---
 
@@ -395,71 +396,71 @@ Applicazione Next.js 16 per la gestione del progetto.
 
 | | Free | Starter | Pro |
 |---|---|---|---|
-| **Prezzo** | £0 | £29/mese | £99/mese |
-| Messaggi | 50k/mese | 1M/mese | 10M/mese |
-| Overage messaggi | — | £1/1M | £1/1M |
-| AI token inclusi | — | 500k/mese | 3M/mese |
-| Agenti custom | — | 3 | Illimitati |
-| Agenti built-in | — | Tutti | Tutti |
-| Webhooks | 1 | 10 | Illimitati |
+| **Price** | £0 | £29/month | £99/month |
+| Messages | 50k/month | 1M/month | 10M/month |
+| Message overage | — | £1/1M | £1/1M |
+| AI tokens included | — | 500k/month | 3M/month |
+| Custom agents | — | 3 | Unlimited |
+| Built-in agents | — | All | All |
+| Webhooks | 1 | 10 | Unlimited |
 | Export | — | ✅ | ✅ |
-| Supporto | Community | Email | Prioritario |
+| Support | Community | Email | Priority |
 
-**Overage AI:** pass-through dal provider LLM + 20% di margine. Il developer vede il costo reale nel dashboard.
+**AI overage:** pass-through from LLM provider + 20% margin. Developer sees real cost in the dashboard.
 
 ---
 
 ## 11. Roadmap
 
-### Fase 1 — Core (0–2 mesi)
-*Obiettivo: chat stabile e production-ready, primi developer sul free tier.*
+### Phase 1 — Core (0–2 months)
+*Goal: stable production-ready chat, first developers on free tier.*
 
-- Worker + Durable Objects stabili con test di carico
-- SDK `useChat()` con reconnection e backoff automatico
-- Dashboard: gestione progetti, API key, rooms, moderation base
-- Documentazione + starter kit Next.js (deploy in < 5 minuti)
-- Free tier attivo: 50k messaggi/mese
+- Stable Worker + Durable Objects with load tests
+- SDK `useChat()` with reconnection and automatic backoff
+- Dashboard: projects, API keys, rooms, basic moderation
+- Documentation + Next.js starter kit (deploy in < 5 minutes)
+- Active free tier: 50k messages/month
 
-### Fase 2 — AI Layer (2–4 mesi)
-*Obiettivo: differenziatore AI disponibile nei piani a pagamento.*
+### Phase 2 — AI Layer (2–4 months)
+*Goal: AI differentiator on paid plans.*
 
-- AgentRouter: pipeline completa trigger → context → LLM → tool execution → output
-- Agenti configurabili dal dashboard (context_fetch_url, tool_execute_url, tools_schema)
-- Agenti built-in: @summarizer, @moderator, @assistant
-- AgentRun tracking: latency, tokens, errori — visibile nel dashboard
-- Stats AI e costi nel dashboard
+- AgentRouter: full pipeline trigger → context → LLM → tool execution → output
+- Agents configurable from dashboard (context_fetch_url, tool_execute_url, tools_schema)
+- Built-in agents: @summarizer, @moderator, @assistant
+- AgentRun tracking: latency, tokens, errors — visible in dashboard
+- AI stats and costs in dashboard
 
-### Fase 3 — Scale & Enterprise (4–12 mesi)
-*Obiettivo: crescere upmarket, aumentare ARPU.*
+### Phase 3 — Scale & Enterprise (4–12 months)
+*Goal: grow upmarket, increase ARPU.*
 
 - Multi-provider AI routing (OpenAI, Anthropic, Azure, custom)
 - SSO / SAML
-- Audit log completo
-- SLA garantito e supporto dedicato
-- Agent marketplace: template condivisibili tra developer
+- Full audit log
+- Guaranteed SLA and dedicated support
+- Agent marketplace: shareable templates between developers
 
 ---
 
-## 12. Requisiti Non-Funzionali
+## 12. Non-Functional Requirements
 
 ### Performance
-- Latenza WS: < 100ms p99 per send/receive
-- Latenza agente: < 3s p50 per risposta AI (escluso tempo LLM provider)
-- Timeout tool execution: 10s per chiamata, max 5 iterazioni per evitare loop
+- WS latency: < 100ms p99 for send/receive
+- Agent latency: < 3s p50 for AI response (excluding LLM provider time)
+- Tool execution timeout: 10s per call, max 5 iterations to avoid loops
 
-### Sicurezza
-- JWT HMAC-signed per-project con scadenza
-- API key non stocare in chiaro (hash)
+### Security
+- Per-project HMAC-signed JWT with expiry
+- API keys not stored in plaintext (hash)
 - Webhook signing HMAC-SHA256
-- Rate limiting per-tenant su messaggi e invocazioni AI
-- Mute/ban enforcement a livello Durable Object (non bypassabile dal client)
+- Per-tenant rate limiting on messages and AI invocations
+- Mute/ban enforced at Durable Object level (not bypassable from client)
 
-### Osservabilità
-- Structured logs su Worker e DO con `trace_id` per ogni request
-- Metriche: throughput messaggi, errori WS, webhook failures, AgentRun status
-- Alert su `rate_limit_exceeded` e `agent_error_rate`
+### Observability
+- Structured logs on Worker and DO with `trace_id` per request
+- Metrics: message throughput, WS errors, webhook failures, AgentRun status
+- Alerts on `rate_limit_exceeded` and `agent_error_rate`
 
-### Costi infrastruttura
-- Target: ~£1 per 1M messaggi (infra Cloudflare edge)
-- AI: pass-through costo provider + margine — developer vede costo reale
-- Niente compute pesante nel router HTTP: tutto in Durable Objects
+### Infrastructure cost
+- Target: ~£1 per 1M messages (Cloudflare edge infra)
+- AI: provider cost pass-through + margin — developer sees real cost
+- No heavy compute in HTTP router: everything in Durable Objects

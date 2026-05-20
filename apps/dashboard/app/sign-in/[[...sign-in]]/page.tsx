@@ -1,6 +1,7 @@
 import { SignIn } from "@clerk/nextjs";
 import { MarketingShell } from "@/app/components/marketing-shell";
 import { clerkAuthAppearance } from "@/lib/clerk-copy";
+import { CLERK_SIGN_IN_REDIRECT_URL } from "@/lib/clerk-redirects";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,8 @@ export default function SignInPage() {
         routing="path"
         path="/sign-in"
         signUpUrl="/sign-up"
-        forceRedirectUrl="/"
+        forceRedirectUrl={CLERK_SIGN_IN_REDIRECT_URL}
+        fallbackRedirectUrl={CLERK_SIGN_IN_REDIRECT_URL}
         appearance={clerkAuthAppearance}
       />
     </MarketingShell>

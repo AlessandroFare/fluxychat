@@ -1,10 +1,10 @@
 # Public contract & changelog policy
 
-Questa policy definisce come evolvono gli **endpoint pubblici** (`/agents`, `/stats/*`, SDK) senza rompere integrazioni.
+This policy defines how **public endpoints** (`/agents`, `/stats/*`, SDK) evolve without breaking integrations.
 
-## Ambito “public”
+## “Public” scope
 
-Consideriamo **public contract**:
+We treat as **public contract**:
 
 - HTTP API:
   - `/auth/token`
@@ -12,60 +12,59 @@ Consideriamo **public contract**:
   - `/agents*`
   - `/stats/*`
 - Webhook payload + headers (`X-Fluxy-*`)
-- SDK (`@fluxy-chat/sdk`): API pubbliche exportate
+- SDK (`@fluxy-chat/sdk`): exported public APIs
 
 ## Versioning
 
 - **SDK**: Semantic Versioning (SemVer) `MAJOR.MINOR.PATCH`
-  - **PATCH**: bugfix, docs, performance, nessuna breaking change
-  - **MINOR**: nuove feature compatibili, nuovi campi/endpoint opzionali
-  - **MAJOR**: breaking changes (rimozioni, rename, cambi semantici)
-- **HTTP API**: default “v1 compatibile”
-  - Breaking changes solo con nuova base path (es. `/v2/...`) o dietro feature flag esplicito.
+  - **PATCH**: bugfix, docs, performance, no breaking changes
+  - **MINOR**: compatible new features, optional fields/endpoints
+  - **MAJOR**: breaking changes (removals, renames, semantic changes)
+- **HTTP API**: default “v1 compatible”
+  - Breaking changes only with a new base path (e.g. `/v2/...`) or an explicit feature flag.
 
-## Regole di compatibilità (HTTP)
+## HTTP compatibility rules
 
-Consentito senza bump major:
+Allowed without a major bump:
 
-- aggiungere nuovi campi JSON
-- aggiungere nuovi endpoint
-- aggiungere nuovi valori opzionali per campi esistenti
-- aggiungere nuove header non richieste
+- add new JSON fields
+- add new endpoints
+- add new optional values for existing fields
+- add new non-required headers
 
-Breaking change (da evitare in v1):
+Breaking change (avoid in v1):
 
-- rimuovere/renominare campi o endpoint
-- cambiare significato di un campo (semantica)
-- rendere obbligatorio un campo prima opzionale
-- cambiare codici HTTP di successo/errore in modo incompatibile
+- remove/rename fields or endpoints
+- change field semantics
+- make an optional field required
+- change success/error HTTP codes incompatibly
 
 ## Deprecation policy
 
-Quando si depreca:
+When deprecating:
 
-- mantenere la compatibilità per almeno **1 minor release (SDK)** o **30 giorni** (HTTP) prima di rimozione.
-- documentare in `CHANGELOG.md`:
-  - cosa è deprecato
-  - alternativa
-  - data target di rimozione
+- keep compatibility for at least **1 minor SDK release** or **30 days** (HTTP) before removal.
+- document in `CHANGELOG.md`:
+  - what is deprecated
+  - alternative
+  - target removal date
 
-Esempio:
+Example:
 
-- `/bots/*` resta compatibile ma **deprecato** a favore di `/agents/*`.
+- `/bots/*` remains compatible but is **deprecated** in favor of `/agents/*`.
 
 ## Error contract
 
-Regole:
+Rules:
 
-- risposte JSON di errore devono avere `error` stringa stabile quando possibile
-- `401` = auth mancante/invalid/expired
+- JSON error responses should use a stable `error` string when possible
+- `401` = missing/invalid/expired auth
 - `403` = forbidden (role/membership)
-- `429` = rate limited (sempre con `Retry-After`)
+- `429` = rate limited (always with `Retry-After`)
 
 ## Changelog
 
-- ogni rilascio significativo aggiorna `CHANGELOG.md`
-- includere:
+- every significant release updates `CHANGELOG.md`
+- include:
   - Added / Changed / Fixed / Deprecated / Removed / Security
-  - note migrazioni D1 (tag/migration id)
-
+  - D1 migration notes (tag/migration id)

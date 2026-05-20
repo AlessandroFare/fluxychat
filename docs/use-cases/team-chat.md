@@ -1,10 +1,10 @@
 # Use case: Team chat
 
-Obiettivo: chat interna (team workspace) con rooms multiple, unread count e webhooks per integrazioni.
+Goal: internal team workspace chat with multiple rooms, unread counts, and webhooks for integrations.
 
-## 1) Rooms e membership
+## 1) Rooms and membership
 
-Creazione room con membri:
+Create a room with members:
 
 ```bash
 export FLUXY_BASE_URL="http://127.0.0.1:8787"
@@ -23,7 +23,7 @@ curl -sS -X POST "$FLUXY_BASE_URL/rooms" \
   }'
 ```
 
-Lista rooms:
+List rooms:
 
 ```bash
 curl -sS "$FLUXY_BASE_URL/rooms" \
@@ -40,21 +40,21 @@ curl -sS "$FLUXY_BASE_URL/rooms/$ROOM_ID/unread?userId=alice" \
 
 ## 2) WebSocket connect (client-side)
 
-Il WS e room-scoped e richiede token:
+The WebSocket is room-scoped and requires a token:
 
 - URL: `/ws/room/:roomId?token=<JWT>`
-- membership check enforced lato Worker/DO
+- Membership is enforced in the Worker / Durable Object
 
-Esempio concettuale:
+Conceptual example:
 
 ```js
 const ws = new WebSocket(`${baseUrl.replace("http", "ws")}/ws/room/${roomId}?token=${encodeURIComponent(jwt)}`);
 ws.onmessage = (ev) => console.log(JSON.parse(ev.data));
 ```
 
-## 3) Webhooks per integrazioni (server-side)
+## 3) Webhooks for integrations (server-side)
 
-Registrazione webhook (admin JWT):
+Register a webhook (admin JWT):
 
 ```bash
 export ADMIN_JWT="<ADMIN_JWT>"
@@ -69,8 +69,7 @@ curl -sS -X POST "$FLUXY_BASE_URL/webhooks" \
   }'
 ```
 
-Note:
+Notes:
 
-- Le delivery sono persistite in `webhook_deliveries` con retry/backoff.
+- Deliveries are stored in `webhook_deliveries` with retry/backoff.
 - Admin inspection: `GET /admin/webhooks/deliveries`
-

@@ -1,31 +1,31 @@
 # Troubleshooting guide
 
-Questa guida copre i failure mode piu comuni in produzione e in dev.
+Common failure modes in production and local development.
 
-## Strumenti rapidi
+## Quick tools
 
 - **Health**: `GET /health`
 - **Ops counters**: `GET /stats/ops?minutes=60` (JWT)
 - **SLO snapshot**: `GET /stats/slo?minutes=60` (JWT)
 - **Webhook deliveries**: `GET /admin/webhooks/deliveries?limit=100` (JWT admin/mod)
 - **Audit trail**: `GET /admin/audit/events?limit=100` (JWT owner/admin)
-- **Trace**: usa header `X-Trace-Id` nelle chiamate per correlare log
+- **Trace**: send header `X-Trace-Id` on requests to correlate logs
 
 ## 1) WebSocket disconnect / reconnect loop
 
-### Sintomi
+### Symptoms
 
-- client passa `connected -> reconnecting -> disconnected` ripetutamente
-- mancato aggiornamento realtime in room
-- WS handshake rifiutato
+- Client cycles `connected → reconnecting → disconnected`
+- Missing realtime updates in a room
+- WebSocket handshake rejected
 
-### Diagnosi
+### Diagnosis
 
-- **Token**: verifica che il WS URL contenga `token=<JWT>` e che non sia scaduto (`exp`)
-- **Membership**: connessione WS rifiutata se l’utente non e membro della room
-- **Rate limit**: se il client spamma, potresti vedere 429 su REST e/o messaggi WS rifiutati
+- **Token**: confirm the WS URL includes `token=<JWT>` and the token is not expired (`exp`)
+- **Membership**: WS is rejected if the user is not a room member
+- **Rate limit**: aggressive clients may see HTTP 429 and/or rejected WS messages
 
-Comandi utili:
+Useful commands:
 
 ```bash
 curl -sS "$FLUXY_BASE_URL/health"
@@ -34,28 +34,28 @@ curl -sS -H "Authorization: Bearer <JWT>" "$FLUXY_BASE_URL/stats/slo?minutes=15"
 
 ### Fix
 
-- rigenera JWT se scaduto (usa `POST /auth/token`)
-- assicurati che la room abbia membership corretta (`POST /rooms` con `members`)
-- riduci retry aggressivi lato client (backoff esponenziale)
+- Regenerate the JWT if expired (`POST /auth/token`)
+- Ensure the room has correct membership (`POST /rooms` with `members`)
+- Use exponential backoff on the client; avoid tight retry loops
 
-## 2) Webhook retry / backlog / delivery fallite
+## 2) Webhook retry / backlog / failed deliveries
 
-### Sintomi
+### Symptoms
 
-- integrazione esterna non riceve eventi
-- aumento `webhook_delivery_failed`
-- deliveries in `pending` a lungo o `failed`
+- External integration does not receive events
+- Rising `webhook_delivery_failed` metrics
+- Deliveries stuck in `pending` or `failed`
 
-### Diagnosi
+### Diagnosis
 
-Ispeziona deliveries:
+Inspect deliveries:
 
 ```bash
 curl -sS -H "Authorization: Bearer <ADMIN_JWT>" \
   "$FLUXY_BASE_URL/admin/webhooks/deliveries?limit=50"
 ```
 
-Cosa guardare:
+Check:
 
 - `status`: `pending | delivered | failed`
 - `attempt_count`
@@ -64,46 +64,44 @@ Cosa guardare:
 
 ### Fix
 
-- se endpoint downstream e temporaneamente giu: attendi il backoff o fai replay
-- replay manuale:
+- If the downstream endpoint is temporarily down: wait for backoff or replay
+- Manual replay:
 
 ```bash
 curl -sS -X POST -H "Authorization: Bearer <ADMIN_JWT>" \
   "$FLUXY_BASE_URL/admin/webhooks/deliveries/<deliveryId>/replay"
 ```
 
-- se `failed` dopo max attempts: correggi downstream e poi replay (il replay resetta a pending e riprova)
+- If `failed` after max attempts: fix downstream, then replay (replay resets to pending and retries)
 
 ## 3) Rate limit (HTTP 429)
 
-### Sintomi
+### Symptoms
 
-- risposte `429 Too Many Requests`
-- header `Retry-After`
-- errori lato client durante invio messaggi/reports
+- `429 Too Many Requests` responses
+- `Retry-After` header present
+- Client errors while sending messages or reports
 
-### Diagnosi
+### Diagnosis
 
-- identifica endpoint e chiave logica (tenant/user/room)
-- verifica se KV `RATE_LIMIT_KV` e configurato o stai usando fallback in-memory
+- Identify endpoint and logical key (tenant/user/room)
+- Check whether `RATE_LIMIT_KV` is configured or you are on in-memory fallback
 
 ### Fix
 
-- rispetta `Retry-After` lato client
-- riduci burst (debounce su input, batching eventi)
-- se necessario, aumenta env:
-  - `RATE_LIMIT_MESSAGES_PER_MINUTE`
-  - (eventuali altri limiti configurati nel worker)
+- Respect `Retry-After` on the client
+- Reduce burst traffic (debounce input, batch events)
+- If needed, tune env vars such as `RATE_LIMIT_MESSAGES_PER_MINUTE` (and other limits in the worker)
 
-## 4) SLO breach / aumento error rate
+## 4) SLO breach / rising error rate
 
-### Sintomi
+### Symptoms
 
-- `GET /stats/slo` segnala health score basso
-- incremento `requests_error`
-- spike in webhook failures o agent failures
+- `GET /stats/slo` shows a low health score
+- Increased `requests_error`
+- Spikes in webhook or agent failures
 
-### Diagnosi
+### Diagnosis
 
 ```bash
 curl -sS -H "Authorization: Bearer <JWT>" \
@@ -113,15 +111,14 @@ curl -sS -H "Authorization: Bearer <JWT>" \
   "$FLUXY_BASE_URL/stats/slo?minutes=60"
 ```
 
-Azioni:
+Actions:
 
-- correlare finestra temporale con deploy recente (usa runbook)
-- ispezionare alert events: `GET /stats/alerts` (JWT)
-- se impatta azioni admin/mod: vedere audit trail
+- Correlate the time window with a recent deploy (see runbook)
+- Inspect alert events: `GET /stats/alerts` (JWT)
+- For admin/mod impact: review the audit trail
 
 ### Fix
 
-- se regressione chiara post-deploy: eseguire rollback (vedi `RUNBOOK_DEPLOY_ROLLBACK.md`)
-- se spike webhook: mitigare downstream + replay selettivo
-- se errori auth: rigenerare JWT e verificare secrets tenant
-
+- Clear regression after deploy: roll back (see `RUNBOOK_DEPLOY_ROLLBACK.md`)
+- Webhook spike: stabilize downstream + selective replay
+- Auth errors: regenerate JWTs and verify tenant secrets

@@ -50,4 +50,11 @@ coverage/
 # Logo source bundle (canonical copies live in apps/dashboard)
 fluxychat-logo-assets/
 
+# Founder / GTM internal (keep locally; not for public clone)
+docs/launch-hn.md
+docs/m6-pilot-gtm-playbook.md
+docs/product-landing-snippet.md
+docs/release/demo-script.md
+ROADMAP_EXECUTION.md
+
 portal/

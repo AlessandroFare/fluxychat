@@ -1,34 +1,34 @@
 # Fluxychat Deploy & Rollback Runbook
 
-Runbook operativo per rilasci in produzione del backend edge (`apps/worker`) e servizio AI (`apps/ai-agent`).
+Operational runbook for production releases of the edge backend (`apps/worker`) and AI service (`apps/ai-agent`).
 
 ## 1) Pre-deploy checklist (go/no-go)
 
-- [ ] Nessun incidente P0/P1 aperto sui flussi core (messaggi, webhook, auth, agent invoke).
-- [ ] Tutti i test passano in CI o localmente:
-  - `pnpm test` (root: tutti i workspace con script `test`)
-  - `pnpm -r lint` (dashboard, `packages/sdk`, `packages/ui`; i workspace senza script `lint` vengono saltati)
-- [ ] Variabili ambiente production verificate:
-  - `JWT_SECRET` / segreti auth tenant
-  - binding `DB` valido
-  - binding `RATE_LIMIT_KV` valorizzato (non placeholder)
-  - variabili AI provider (se usate)
-- [ ] Migrazioni D1 presenti e validate in staging.
-- [ ] Finestra di deploy comunicata.
-- [ ] Rollback owner assegnato.
+- [ ] No open P0/P1 incidents on core flows (messages, webhooks, auth, agent invoke).
+- [ ] All tests pass in CI or locally:
+  - `pnpm test` (root: all workspaces with a `test` script)
+  - `pnpm -r lint` (dashboard, `packages/sdk`, `packages/ui`; workspaces without `lint` are skipped)
+- [ ] Production environment variables verified:
+  - `JWT_SECRET` / tenant auth secrets
+  - valid `DB` binding
+  - `RATE_LIMIT_KV` set to a real namespace (not a placeholder)
+  - AI provider variables (if used)
+- [ ] D1 migrations present and validated in staging.
+- [ ] Deploy window communicated.
+- [ ] Rollback owner assigned.
 
 ## 1.1) Config checklist (real environment)
 
 ### Worker (`apps/worker`)
 
-- [ ] `DB` binding punta al database D1 corretto.
-- [ ] `ROOM` Durable Object migrato e attivo.
-- [ ] `RATE_LIMIT_KV` valorizzato con namespace reale.
+- [ ] `DB` binding points to the correct D1 database.
+- [ ] `ROOM` Durable Object migrated and active.
+- [ ] `RATE_LIMIT_KV` set to a real namespace ID.
 - [ ] `REQUIRE_ADMIN_AUTH=true`.
 - [ ] `QUOTAS_ENABLED=true`.
-- [ ] `DEFAULT_PROJECT_ID` impostato solo per bootstrap/dev, non per traffic reale.
-- [ ] Segreti per tenant configurati in `project_secrets` (`jwt_secret`) o tramite flow admin previsto.
-- [ ] Pricing/plan defaults verificati:
+- [ ] `DEFAULT_PROJECT_ID` only for bootstrap/dev, not real traffic.
+- [ ] Tenant secrets in `project_secrets` (`jwt_secret`) or via the intended admin flow.
+- [ ] Pricing/plan defaults verified:
   - `QUOTA_MESSAGES_PER_MONTH`
   - `QUOTA_AGENT_INVOKES_PER_MONTH`
   - `QUOTA_WEBHOOK_DELIVERIES_PER_MONTH`
@@ -36,17 +36,17 @@ Runbook operativo per rilasci in produzione del backend edge (`apps/worker`) e s
 
 ### AI agent (`apps/ai-agent`)
 
-- [ ] `FLUXY_BASE_URL` punta al worker deployato.
+- [ ] `FLUXY_BASE_URL` points to the deployed worker.
 - [ ] `REQUIRE_WEBHOOK_SIGNATURE=true`.
-- [ ] `WEBHOOK_SECRET` oppure `WEBHOOK_SECRET_<projectId>` configurato.
-- [ ] `JWT_SECRET` oppure `JWT_SECRET_<projectId>` configurato, senza fallback placeholder.
-- [ ] Provider secrets presenti (`OPENAI_API_KEY` o equivalenti per agent config).
+- [ ] `WEBHOOK_SECRET` or `WEBHOOK_SECRET_<projectId>` configured.
+- [ ] `JWT_SECRET` or `JWT_SECRET_<projectId>` configured, no placeholder fallback.
+- [ ] Provider secrets present (`OPENAI_API_KEY` or equivalents for agent config).
 
 ### Dashboard (`apps/dashboard`)
 
-- [ ] `NEXT_PUBLIC_FLUXYCHAT_WORKER_URL` punta al worker corretto.
-- [ ] Sessione admin disponibile per pagine `Projects`, `Admin`, `Analytics`, `Agents`.
-- [ ] Onboarding validato con:
+- [ ] `NEXT_PUBLIC_FLUXYCHAT_WORKER_URL` points to the correct worker.
+- [ ] Admin session available for `Projects`, `Admin`, `Analytics`, `Agents`.
+- [ ] Onboarding validated with:
   - project create
   - member JWT mint
   - room create
@@ -55,9 +55,9 @@ Runbook operativo per rilasci in produzione del backend edge (`apps/worker`) e s
 
 ## 2) Deploy procedure (production)
 
-Eseguire dalla root del monorepo.
+Run from the monorepo root.
 
-### Step A - Sanity check locale
+### Step A — Local sanity check
 
 ```bash
 pnpm install
@@ -67,51 +67,51 @@ pnpm --filter @fluxychat/worker test
 pnpm --filter @fluxychat/dashboard build
 ```
 
-### Step B - Apply migrazioni D1
+### Step B — Apply D1 migrations
 
 ```bash
 cd apps/worker
 pnpm exec wrangler d1 migrations apply fluxychat --remote
 ```
 
-Se il deploy non introduce nuove migrazioni, questo comando deve risultare no-op.
+If the deploy introduces no new migrations, this command should be a no-op.
 
-### Step C - Deploy Worker API realtime
+### Step C — Deploy realtime Worker API
 
 ```bash
 pnpm --filter @fluxychat/worker deploy
 ```
 
-**Nota `wrangler deploy --env production`:** funziona solo se in `apps/worker/wrangler.toml` esiste una sezione `[env.production]` (o l’ambiente richiesto) con binding/variabili coerenti. Finché usate solo il blocco top-level del file, il comando standard è `pnpm --filter @fluxychat/worker deploy` (equivalente a `wrangler deploy` nella cartella worker **senza** `--env`).
+**Note on `wrangler deploy --env production`:** only use it if `apps/worker/wrangler.toml` defines an `[env.production]` section (or the target env) with consistent bindings/vars. While you use only the top-level block, the standard command is `pnpm --filter @fluxychat/worker deploy` (equivalent to `wrangler deploy` in the worker folder **without** `--env`).
 
-### Step D - Deploy AI Agent service
+### Step D — Deploy AI Agent service
 
 ```bash
 pnpm --filter @fluxychat/ai-agent deploy
 ```
 
-## 3) Post-deploy smoke checks (entro 10 minuti)
+## 3) Post-deploy smoke checks (within 10 minutes)
 
-Eseguire con token admin valido (JWT con ruoli `owner`/`admin`/`moderator`).
+Use a valid admin token (JWT with `owner`/`admin`/`moderator` roles).
 
-**Smoke end-to-end (bash, dalla root repo):** con `TEST_API_KEY` (prefisso `fc_`) e opzionale `TEST_PROJECT_ID` / `WORKER_URL`:
+**End-to-end smoke (bash, from repo root):** with `TEST_API_KEY` (`fc_` prefix) and optional `TEST_PROJECT_ID` / `WORKER_URL`:
 
 ```bash
 export TEST_API_KEY=fc_...
-export TEST_PROJECT_ID=<uuid-opzionale-per-verifica-tid>
+export TEST_PROJECT_ID=<optional-uuid-to-verify-tid>
 ./scripts/smoke-test.sh
-# oppure: ./scripts/smoke-test.sh --local
+# or: ./scripts/smoke-test.sh --local
 ```
 
-Copre: `/auth/token`, `/rooms`, `/messages`, `/api/messages`, `/billing/checkout` (accetta anche `501` se Stripe assente), probe quota, `/health`, `DELETE /gdpr/delete`.
+Covers: `/auth/token`, `/rooms`, `/messages`, `/api/messages`, `/billing/checkout` (also accepts `501` if Stripe is absent), quota probe, `/health`, `DELETE /gdpr/delete`.
 
-**Opzione rapida (solo stats):** dalla cartella `apps/worker`, dopo aver esportato o passato base URL e JWT:
+**Quick option (stats only):** from `apps/worker`, after exporting or passing base URL and JWT:
 
 ```bash
 pnpm run smoke:remote -- --base-url https://<worker-domain> --admin-jwt "<JWT_ADMIN>"
 ```
 
-Verifica automaticamente `/health`, `/stats/slo`, `/stats/costs`, `/stats/launch-kpis`. Poi completare i curl sotto per ops e webhook.
+Automatically checks `/health`, `/stats/slo`, `/stats/costs`, `/stats/launch-kpis`. Then complete the curls below for ops and webhooks.
 
 ```bash
 curl -sS https://<worker-domain>/health
@@ -120,67 +120,67 @@ curl -sS -H "Authorization: Bearer <JWT>" https://<worker-domain>/stats/slo?minu
 curl -sS -H "Authorization: Bearer <JWT>" https://<worker-domain>/admin/webhooks/deliveries?limit=20
 ```
 
-Validazioni minime:
+Minimum validations:
 
-- [ ] `/health` risponde `ok: true`.
-- [ ] Error rate non in spike anomalo.
-- [ ] Nessun aumento rapido di webhook `failed`.
-- [ ] Endpoint auth/token e send message testati su tenant smoke.
-- [ ] `/stats/costs` espone `plan` e `usage` coerenti col tenant smoke.
-- [ ] AI agent mention webhook rifiuta richieste senza signature.
+- [ ] `/health` returns `ok: true`.
+- [ ] Error rate not in an abnormal spike.
+- [ ] No rapid increase in webhook `failed` deliveries.
+- [ ] `auth/token` and test message send exercised on smoke tenant.
+- [ ] `/stats/costs` exposes `plan` and `usage` consistent with the smoke tenant.
+- [ ] AI agent mention webhook rejects requests without a signature.
 
 ## 4) Rollback procedure (fast path)
 
-Trigger rollback se:
+Trigger rollback if:
 
-- incremento error rate persistente > SLO target per oltre 5-10 minuti;
-- regressione auth/authz;
-- fallimento delivery webhook diffuso;
-- incidenti su message send/read in tenant pilota.
+- persistent error-rate increase above SLO target for more than 5–10 minutes;
+- auth/authz regression;
+- widespread webhook delivery failure;
+- message send/read incidents on pilot tenants.
 
-### Step A - Stop escalation
+### Step A — Stop escalation
 
-- Congelare nuovi deploy.
-- Aprire incidente con `trace_id` e finestra temporale.
+- Freeze new deploys.
+- Open an incident with `trace_id` and time window.
 
-### Step B - Ripristinare versione precedente
+### Step B — Restore previous version
 
-Usare Cloudflare dashboard o CLI con versione precedente nota.
-Se serve rollback DB, evitare downgrade distruttivi: preferire fix forward o feature flag disable.
+Use the Cloudflare dashboard or CLI with a known previous version.
+For DB rollback, avoid destructive downgrades: prefer fix-forward or disabling a feature flag.
 
-### Step C - Mitigazione immediata
+### Step C — Immediate mitigation
 
-- Disabilitare temporaneamente feature impattante (es. invoke agent, webhook custom) se possibile.
-- Confermare recovery con smoke checks sezione 3.
+- Temporarily disable the impacted feature (e.g. agent invoke, custom webhooks) if possible.
+- Confirm recovery with section 3 smoke checks.
 
-## 5) Incident log minimo (obbligatorio)
+## 5) Minimum incident log (required)
 
-Per ogni rollback registrare:
+For every rollback record:
 
-- timestamp start/end;
-- owner on-call;
-- impatto utenti/tenant;
-- metrica trigger (es. `requests_error`, `webhook_delivery_failed`);
-- azione eseguita;
-- stato finale.
+- start/end timestamp;
+- on-call owner;
+- user/tenant impact;
+- trigger metric (e.g. `requests_error`, `webhook_delivery_failed`);
+- action taken;
+- final state.
 
-## 6) Drill operativo mensile
+## 6) Monthly operational drill
 
-Frequenza consigliata: 1 volta al mese.
+Recommended frequency: once per month.
 
-- Drill A: deploy completo + smoke checks.
-- Drill B: rollback simulato con recovery in <= 15 minuti.
-- Drill C: restore tenant test da backup validato.
+- Drill A: full deploy + smoke checks.
+- Drill B: simulated rollback with recovery within ≤ 15 minutes.
+- Drill C: validated restore of a test tenant from backup.
 
-### Drill C - Procedura pratica (tenant backup/restore)
+### Drill C — Practical procedure (tenant backup/restore)
 
-Prerequisiti:
+Prerequisites:
 
-- tenant con room sorgente popolata (`DRILL_SOURCE_ROOM_ID`);
-- API key valida del tenant;
-- worker raggiungibile (`FLUXY_BASE_URL`).
+- source room populated (`DRILL_SOURCE_ROOM_ID`);
+- valid tenant API key;
+- reachable worker (`FLUXY_BASE_URL`).
 
-Comando:
+Command:
 
 ```bash
 cd apps/worker
@@ -191,27 +191,27 @@ DRILL_MESSAGE_LIMIT="20" \
 pnpm run drill:tenant-recovery
 ```
 
-Cosa verifica lo script:
+What the script verifies:
 
-- export backup JSON dalla room sorgente (`/export/messages.json`);
-- creazione room di recovery dedicata;
-- replay controllato dei messaggi di backup;
-- re-export della room recovery e confronto conteggi.
+- export backup JSON from the source room (`/export/messages.json`);
+- create a dedicated recovery room;
+- controlled replay of backup messages;
+- re-export the recovery room and compare counts.
 
 Output:
 
-- artifact JSON in `apps/worker/drills/tenant-recovery-<timestamp>.json`;
-- `isRecoveryValid: true` quando il recovery check e superato.
+- JSON artifact in `apps/worker/drills/tenant-recovery-<timestamp>.json`;
+- `isRecoveryValid: true` when the recovery check passes.
 
-Output atteso:
+Expected outcomes:
 
-- runbook aggiornato;
-- gap operativi trasformati in task roadmap;
-- evidenza del tempo medio di recovery.
+- runbook updated;
+- operational gaps turned into roadmap tasks;
+- evidence of mean recovery time.
 
 ## 7) End-to-end validation sequence
 
-Eseguire in quest’ordine prima di ogni rollout chiuso:
+Run in this order before each closed rollout:
 
 1. `pnpm --filter @fluxychat/worker test`
 2. `pnpm --filter @fluxychat/ai-agent test`
@@ -219,8 +219,7 @@ Eseguire in quest’ordine prima di ogni rollout chiuso:
 4. `pnpm --filter @fluxychat/dashboard build`
 5. `pnpm --filter @fluxychat/worker deploy`
 6. `pnpm --filter @fluxychat/ai-agent deploy`
-7. Onboarding reale da dashboard
-8. Invio primo messaggio
-9. Primo agent invoke
-10. Verifica `stats/ops`, `stats/slo`, `stats/costs`, `stats/launch-kpis`
-
+7. Real onboarding from the dashboard
+8. Send first message
+9. First agent invoke
+10. Verify `stats/ops`, `stats/slo`, `stats/costs`, `stats/launch-kpis`
