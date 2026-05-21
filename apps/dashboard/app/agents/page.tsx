@@ -743,7 +743,10 @@ export default function AgentsPage() {
               ) : (
                 <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
                   {runs.map((run) => (
-                    <AgentRunHistoryRow key={run.id} run={run as unknown as Record<string, unknown>} />
+                    <AgentRunHistoryRow
+                      key={run.id}
+                      run={run as unknown as Record<string, unknown>}
+                    />
                   ))}
                 </div>
               )}

@@ -1,11 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  normalizeAgentRun,
-  runStatusLabel,
-  type AgentRunDisplay,
-} from "@/lib/agent-run-display";
+import { normalizeAgentRun, runStatusLabel } from "@/lib/agent-run-display";
 import { formatDateTime } from "@/lib/format-datetime";
 import { AgentRunStatus } from "./agent-run-status";
 import { cn } from "@/lib/utils";
@@ -19,20 +15,14 @@ function statusVariant(
 }
 
 export interface AgentRunHistoryRowProps {
-  run: Record<string, unknown> | AgentRunDisplay;
+  run: Record<string, unknown>;
   className?: string;
 }
 
 export function AgentRunHistoryRow({ run: raw, className }: AgentRunHistoryRowProps) {
-  const row =
-    raw && typeof raw === "object" && "id" in raw
-      ? normalizeAgentRun(raw as Record<string, unknown>)
-      : (raw as AgentRunDisplay);
-
+  const row = normalizeAgentRun(raw);
   const createdAt =
-    raw && typeof raw === "object" && "created_at" in raw
-      ? String((raw as Record<string, unknown>).created_at ?? "")
-      : row.created_at;
+    raw.created_at != null ? String(raw.created_at) : row.created_at;
 
   return (
     <div
