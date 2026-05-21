@@ -23,6 +23,20 @@ import {
 } from "./message-validation.js";
 import { schedulePostMessageAutomations } from "./post-message-automations.js";
 
+/** Best-effort realtime tool/run events for connected room clients. */
+async function announceRoomEvent(env, roomId, payload) {
+  try {
+    const id = env.ROOM.idFromName(roomId);
+    const stub = env.ROOM.get(id);
+    await stub.fetch("https://internal/announce", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
 export function mapBotRowToAgent(row) {
   const provider = row.provider || null;
   const model = row.model || null;
@@ -114,15 +128,41 @@ export async function upsertAgentFromBody(env, projectId, body) {
   };
 }
 
-export async function invokeMentionedAgents(env, projectId, roomId, userId, content, mentions, traceId) {
+/** Normalize @handle / handle for mention lookups (DB may store either form). */
+export function normalizeMentionHandle(handle) {
+  return String(handle || "")
+    .replace(/^@/, "")
+    .trim()
+    .toLowerCase();
+}
+
+export async function invokeMentionedAgents(
+  env,
+  projectId,
+  roomId,
+  userId,
+  content,
+  mentions,
+  traceId,
+  parentId = null,
+) {
+  const resolvedParentId =
+    parentId != null && Number.isFinite(Number(parentId))
+      ? Math.floor(Number(parentId))
+      : null;
   const agentHandles = mentions.map((m) => (m.startsWith("@") ? m.slice(1) : m));
   if (!agentHandles.length) return;
 
-  const placeholders = agentHandles.map(() => "?").join(",");
+  const normalized = [
+    ...new Set(agentHandles.map((h) => normalizeMentionHandle(h)).filter(Boolean)),
+  ];
+  if (!normalized.length) return;
+
+  const placeholders = normalized.map(() => "?").join(",");
   const agentRows = await env.DB.prepare(
-    `SELECT id, name, handle, provider, model, config, system_prompt, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm FROM bots WHERE project_id = ? AND handle IN (${placeholders})`
+    `SELECT id, name, handle, provider, model, config, system_prompt, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm FROM bots WHERE project_id = ? AND LOWER(REPLACE(handle, '@', '')) IN (${placeholders})`
   )
-    .bind(projectId, ...agentHandles)
+    .bind(projectId, ...normalized)
     .all();
 
   for (const agentRow of agentRows.results || []) {
@@ -142,7 +182,7 @@ export async function invokeMentionedAgents(env, projectId, roomId, userId, cont
         projectId,
         roomId,
         userId: agentRow.id,
-        parentId: null,
+        parentId: resolvedParentId,
       });
 
       const result = await executeAgentRun(env, {
@@ -165,7 +205,19 @@ export async function invokeMentionedAgents(env, projectId, roomId, userId, cont
           const agentMsgInsert = await env.DB.prepare(
             "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
           )
-            .bind(projectId, roomId, agentRow.id, agentContent, createdAt, null, null, null, null, null, null)
+            .bind(
+              projectId,
+              roomId,
+              agentRow.id,
+              agentContent,
+              createdAt,
+              resolvedParentId,
+              null,
+              null,
+              null,
+              null,
+              null,
+            )
             .run();
           mentionMessageId = agentMsgInsert.meta.last_row_id;
 
@@ -177,6 +229,7 @@ export async function invokeMentionedAgents(env, projectId, roomId, userId, cont
               id: mentionMessageId,
               content: agentContent,
               userId: agentRow.id,
+              parentId: resolvedParentId,
             }),
           }).catch(() => {});
 
@@ -244,18 +297,36 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     projectId,
   });
   if (!primaryResolved.ok) {
+    const latencyMs = Math.round(performance.now() - startTime);
+    const errorText = primaryResolved.error || "llm_provider_not_configured";
+    await announceRoomEvent(env, roomId, {
+      type: "agentRun",
+      run: {
+        id: runId,
+        status: "failed",
+        latency_ms: latencyMs,
+        input_tokens: 0,
+        output_tokens: 0,
+        estimated_cost: 0,
+        room_id: roomId,
+        tool_calls: [],
+        iterations: 0,
+        error: errorText,
+        created_at: new Date().toISOString(),
+      },
+    });
     return {
       runId,
       status: "failed",
       content: null,
-      latencyMs: Math.round(performance.now() - startTime),
+      latencyMs,
       inputTokens: 0,
       outputTokens: 0,
       estimatedCost: 0,
       toolCalls: [],
       contextFetched: 0,
       iterations: 0,
-      error: primaryResolved.error || "llm_provider_not_configured",
+      error: errorText,
     };
   }
   let connection = primaryResolved;
@@ -385,10 +456,6 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
       if (!hasToolCalls || shouldStop) break;
 
-      for (const tc of extracted.toolCalls) {
-        allToolCalls.push({ id: tc.id, name: tc.name, arguments: tc.arguments });
-      }
-
       if (!toolExecuteUrl) break;
 
       if (isAnthropicConnection(connection)) {
@@ -413,7 +480,32 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       }
 
       for (const tc of extracted.toolCalls) {
+        await announceRoomEvent(env, roomId, {
+          type: "tool_call",
+          runId,
+          agentId: agentRow.id,
+          toolCallId: tc.id,
+          name: tc.name,
+          arguments: tc.arguments,
+        });
         const toolResult = await executeToolCall(env, toolExecuteUrl, tc, projectId, runId, traceId);
+        await announceRoomEvent(env, roomId, {
+          type: toolResult.success ? "tool_result" : "tool_error",
+          runId,
+          agentId: agentRow.id,
+          toolCallId: tc.id,
+          name: tc.name,
+          result: toolResult.success ? toolResult.result : undefined,
+          error: toolResult.success ? undefined : toolResult.error || "tool_failed",
+        });
+        allToolCalls.push({
+          id: tc.id,
+          name: tc.name,
+          arguments: tc.arguments,
+          success: toolResult.success,
+          result: toolResult.success ? toolResult.result : undefined,
+          error: toolResult.success ? undefined : toolResult.error,
+        });
         const resultMsg = buildToolResultMessage(connection, tc, toolResult);
         messages.push(resultMsg);
         if (!toolResult.success) break;
@@ -422,6 +514,27 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
     const latencyMs = Math.round(performance.now() - startTime);
     const finalContent = lastContent || "I was unable to generate a response.";
+
+    await announceRoomEvent(env, roomId, {
+      type: "agentRun",
+      run: {
+        id: runId,
+        status: "completed",
+        latency_ms: latencyMs,
+        input_tokens: totalInputTokens,
+        output_tokens: totalOutputTokens,
+        estimated_cost: estimateCost(
+          connection.providerId,
+          connection.model,
+          totalInputTokens,
+          totalOutputTokens,
+        ),
+        room_id: roomId,
+        tool_calls: allToolCalls,
+        iterations,
+        created_at: new Date().toISOString(),
+      },
+    });
 
     return {
       runId,
@@ -438,6 +551,23 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     };
   } catch (err) {
     const latencyMs = Math.round(performance.now() - startTime);
+    const errorText = truncateForStorage(err instanceof Error ? err.message : "agent_run_failed");
+    await announceRoomEvent(env, roomId, {
+      type: "agentRun",
+      run: {
+        id: runId,
+        status: "failed",
+        latency_ms: latencyMs,
+        input_tokens: totalInputTokens,
+        output_tokens: totalOutputTokens,
+        estimated_cost: 0,
+        room_id: roomId,
+        tool_calls: allToolCalls,
+        iterations,
+        error: errorText,
+        created_at: new Date().toISOString(),
+      },
+    });
     return {
       runId,
       status: "failed",
@@ -449,7 +579,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       toolCalls: allToolCalls,
       contextFetched,
       iterations,
-      error: truncateForStorage(err instanceof Error ? err.message : "agent_run_failed"),
+      error: errorText,
     };
   }
 }

@@ -513,11 +513,35 @@ export async function dispatchAgentsRoutes(request, url, h) {
     const agentId = url.pathname.split("/")[2];
     const limit = Number(url.searchParams.get("limit") || "50");
     const rows = await env.DB.prepare(
-      "SELECT id, status, latency_ms, input_tokens, output_tokens, estimated_cost, error, room_id, created_at FROM agent_runs WHERE project_id = ? AND agent_id = ? ORDER BY created_at DESC LIMIT ?"
+      "SELECT id, status, latency_ms, input_tokens, output_tokens, estimated_cost, error, room_id, tool_calls_json, context_fetched, iterations, created_at FROM agent_runs WHERE project_id = ? AND agent_id = ? ORDER BY created_at DESC LIMIT ?"
     )
       .bind(auth.projectId, agentId, limit)
       .all();
-    return json({ runs: rows.results || [] });
+    const runs = (rows.results || []).map((row) => {
+      let toolCalls = [];
+      if (row.tool_calls_json) {
+        try {
+          toolCalls = JSON.parse(row.tool_calls_json);
+        } catch {
+          toolCalls = [];
+        }
+      }
+      return {
+        id: row.id,
+        status: row.status,
+        latency_ms: row.latency_ms,
+        input_tokens: row.input_tokens,
+        output_tokens: row.output_tokens,
+        estimated_cost: row.estimated_cost,
+        error: row.error,
+        room_id: row.room_id,
+        tool_calls: toolCalls,
+        context_fetched: row.context_fetched,
+        iterations: row.iterations,
+        created_at: row.created_at,
+      };
+    });
+    return json({ runs });
   }
 
   // Bot message injection: POST /rooms/:id/messages/from-bot

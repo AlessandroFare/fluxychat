@@ -103,6 +103,24 @@ describe("resolveLlmConnection", () => {
   });
 });
 
+describe("resolveLlmConnectionWithFallback", () => {
+  it("uses agent config fallback provider when set", async () => {
+    const env = {
+      AI_API_KEY: "sk-openai",
+      AI_BASE_URL: "https://api.openai.com",
+      ANTHROPIC_API_KEY: "sk-ant",
+    };
+    const { primary, fallback } = await resolveLlmConnectionWithFallback(env, {
+      provider: "openai",
+      model: "gpt-4o-mini",
+      config: { llm: { fallbackProvider: "anthropic", fallbackModel: "claude-sonnet-4-20250514" } },
+    });
+    expect(primary.ok).toBe(true);
+    expect(fallback?.ok).toBe(true);
+    expect(fallback?.providerId).toBe("anthropic");
+  });
+});
+
 describe("listLlmProvidersForApi", () => {
   it("returns providers with model capabilities", async () => {
     const catalog = await listLlmProvidersForApi({ AI_API_KEY: "x" }, {});

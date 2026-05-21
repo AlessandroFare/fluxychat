@@ -72,6 +72,7 @@ import {
   toMinuteBucketIso,
 } from "./lib/operational-metrics.js";
 import { createJsonResponder } from "./lib/http-json.js";
+import { handleFetchThrownError } from "./lib/http-cors.js";
 
 export { RoomDurableObject } from "./durable-objects/room-do.js";
 export { retryDelayMsForAttempt } from "./lib/webhook-delivery.js";
@@ -362,6 +363,7 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
+    try {
     const projectId = await resolveProjectId(request, env);
     resolvedProjectIdForMetrics = projectId;
     ctx.waitUntil(
@@ -547,6 +549,14 @@ export default {
     if (stripeRes) return stripeRes;
 
     return notFound();
+    } catch (err) {
+      return handleFetchThrownError(err, {
+        corsHeaders,
+        traceId,
+        logError,
+        requestLogCtx,
+      });
+    }
   },
 
   async scheduled(event, env, ctx) {

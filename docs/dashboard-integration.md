@@ -39,6 +39,10 @@ Relevant to the home demo:
 - **Send message**: REST when the client has a JWT; otherwise WebSocket payload.
 - **Edit / delete message**: REST when authenticated; on failure, **WebSocket fallback** for the same operation.
 - **Reconnect**: exponential backoff; after repeated failures the hook falls back to **SSE** (`GET /rooms/:id/stream` via `connectSSE`), then **REST polling** if SSE is unavailable.
+- **`useChat` history replay** (Portal-style):
+  - `replay: "connect"` (default) — REST fetch on mount + apply WS `history` events.
+  - `replay: "request"` — skip auto-load for heavy rooms; call `loadHistory()` when the UI needs messages.
+  - `replayHistoryOnReconnect` — passed to `connectRoom` (default `true` when `replay` is `"connect"`).
 - **`connectionStatus`**: `connected` | `connecting` | `reconnecting` | `disconnected` | `sse` | `polling`.
 
 ## File uploads & composed attachments

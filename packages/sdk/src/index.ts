@@ -49,7 +49,11 @@ export {
 
 export { useFluxyChat, useFluxyChatOptional, type FluxyRealtimeContextValue } from "./use-fluxy-chat";
 
-export { useChat, type UseChatOptions } from "./use-chat";
+export {
+  useChat,
+  type UseChatOptions,
+  type UseChatHistoryReplay,
+} from "./use-chat";
 
 export { useRooms } from "./use-rooms";
 
@@ -163,6 +167,9 @@ export interface FluxyChatToolCall {
   id: string;
   name: string;
   arguments: string;
+  success?: boolean;
+  result?: unknown;
+  error?: string;
 }
 
 export interface FluxyChatAgentRun {
@@ -222,6 +229,31 @@ export type FluxyChatEvent =
     }
   | { type: "typing"; userId: string; isTyping: boolean }
   | { type: "agentTyping"; agentId: string; isTyping: boolean }
+  | {
+      type: "tool_call";
+      runId: string;
+      agentId: string;
+      toolCallId: string;
+      name: string;
+      arguments?: string;
+    }
+  | {
+      type: "tool_result";
+      runId: string;
+      agentId: string;
+      toolCallId: string;
+      name: string;
+      result?: unknown;
+    }
+  | {
+      type: "tool_error";
+      runId: string;
+      agentId: string;
+      toolCallId: string;
+      name: string;
+      error?: string;
+    }
+  | { type: "agentRun"; run: FluxyChatAgentRun }
   | { type: "presence"; online: number; users?: string[] }
   | { type: "error"; message: string };
 

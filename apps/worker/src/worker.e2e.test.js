@@ -867,7 +867,10 @@ class FakeDB {
       return null;
     }
 
-    if (sql.includes("SELECT id, name, provider, model, system_prompt, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm FROM bots WHERE id = ? AND project_id = ?")) {
+    if (
+      sql.includes("FROM bots WHERE id = ? AND project_id = ?") &&
+      sql.includes("tool_execute_url")
+    ) {
       const [agentId, projectId] = args;
       const row = this.bots.find((b) => b.id === agentId && b.project_id === projectId);
       return row || null;
@@ -2106,6 +2109,186 @@ describe("worker integration flows", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toContain("private");
+  });
+
+  it("agent invoke runs tools end-to-end (mock LLM tool_calls + toolExecuteUrl)", async () => {
+    const toolExecuteUrl = "https://tools.mock.example/execute";
+    const announced = [];
+    let llmCalls = 0;
+    let toolExecuteCalls = 0;
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      const u = String(url);
+      if (u.startsWith(toolExecuteUrl)) {
+        toolExecuteCalls += 1;
+        const body = JSON.parse(String(init?.body || "{}"));
+        expect(body.tool_name).toBe("search_docs");
+        expect(body.tool_call_id).toBe("call_e2e_1");
+        return new Response(JSON.stringify({ hits: ["doc-1"] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (u.includes("/v1/chat/completions")) {
+        llmCalls += 1;
+        if (llmCalls === 1) {
+          return new Response(
+            JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    content: null,
+                    tool_calls: [
+                      {
+                        id: "call_e2e_1",
+                        type: "function",
+                        function: { name: "search_docs", arguments: '{"q":"beta"}' },
+                      },
+                    ],
+                  },
+                  finish_reason: "tool_calls",
+                },
+              ],
+              usage: { prompt_tokens: 10, completion_tokens: 5 },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: { content: "Answer after tool round." },
+                finish_reason: "stop",
+              },
+            ],
+            usage: { prompt_tokens: 8, completion_tokens: 12 },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    db.rooms.push({
+      id: roomId,
+      project_id: projectId,
+      type: "group",
+      name: "Tool room",
+    });
+    db.roomMembers.push({
+      room_id: roomId,
+      user_id: userId,
+      role: "member",
+      joined_at: new Date().toISOString(),
+    });
+    db.bots.push({
+      id: "tool-agent",
+      project_id: projectId,
+      name: "Tool Agent",
+      provider: "openai",
+      model: "gpt-4o-mini",
+      system_prompt: "You are a test agent.",
+      context_fetch_url: null,
+      tool_execute_url: toolExecuteUrl,
+      tools_schema: JSON.stringify([
+        {
+          type: "function",
+          function: {
+            name: "search_docs",
+            description: "Search documentation",
+            parameters: {
+              type: "object",
+              properties: { q: { type: "string" } },
+            },
+          },
+        },
+      ]),
+      rate_limit_rpm: 60,
+    });
+
+    const baseEnv = createEnv(db);
+    const envTools = {
+      ...baseEnv,
+      AI_BASE_URL: "http://llm.mock",
+      AI_API_KEY: "test-key",
+      ROOM: {
+        idFromName(name) {
+          return `room:${name}`;
+        },
+        get() {
+          return {
+            async fetch(target, init) {
+              const path = String(target);
+              if (path.includes("/announce") && init?.body) {
+                try {
+                  announced.push(JSON.parse(String(init.body)));
+                } catch {
+                  /* ignore */
+                }
+              }
+              if (path.includes("/stream")) {
+                return new Response(JSON.stringify({ ok: true, id: 9001 }), {
+                  headers: { "Content-Type": "application/json" },
+                });
+              }
+              return new Response(JSON.stringify({ ok: true }), {
+                headers: { "Content-Type": "application/json" },
+              });
+            },
+          };
+        },
+      },
+    };
+
+    const token = await makeJwt(
+      { sub: userId, tid: projectId, roles: ["admin"], exp: Math.floor(Date.now() / 1000) + 3600 },
+      jwtSecret,
+    );
+
+    const invokeRes = await callWorker({
+      env: envTools,
+      url: "https://fluxy.local/agents/tool-agent/invoke",
+      method: "POST",
+      token,
+      body: { roomId, content: "Find docs about beta" },
+    });
+    expect(invokeRes.status).toBe(200);
+    const invokeBody = await invokeRes.json();
+    expect(invokeBody.run.status).toBe("completed");
+    expect(invokeBody.run.toolCalls).toHaveLength(1);
+    expect(invokeBody.run.toolCalls[0].name).toBe("search_docs");
+    expect(invokeBody.run.toolCalls[0].success).toBe(true);
+    expect(invokeBody.run.toolCalls[0].result).toEqual({ hits: ["doc-1"] });
+    expect(invokeBody.message?.content).toContain("Answer after tool");
+
+    expect(llmCalls).toBe(2);
+    expect(toolExecuteCalls).toBe(1);
+
+    const storedRun = db.agentRuns.find((r) => r.agent_id === "tool-agent");
+    expect(storedRun?.status).toBe("completed");
+    const storedTools = JSON.parse(storedRun.tool_calls_json);
+    expect(storedTools[0].success).toBe(true);
+    expect(storedTools[0].name).toBe("search_docs");
+
+    expect(announced.some((e) => e.type === "tool_call" && e.name === "search_docs")).toBe(true);
+    expect(announced.some((e) => e.type === "tool_result" && e.name === "search_docs")).toBe(true);
+    expect(announced.some((e) => e.type === "agentRun" && e.run?.status === "completed")).toBe(
+      true,
+    );
+
+    const runsRes = await callWorker({
+      env: envTools,
+      url: "https://fluxy.local/agents/tool-agent/runs?limit=5",
+      method: "GET",
+      token,
+    });
+    expect(runsRes.status).toBe(200);
+    const runsBody = await runsRes.json();
+    expect(runsBody.runs[0].tool_calls[0].name).toBe("search_docs");
+    expect(runsBody.runs[0].tool_calls[0].success).toBe(true);
+
+    fetchSpy.mockRestore();
   });
 
   it("returns billing plan and usage", async () => {

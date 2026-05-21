@@ -97,7 +97,39 @@ Full operator docs: [docs/dashboard-integration.md](https://github.com/Alessandr
 
 ## Agents
 
-Agent invokes run on the Worker (`POST /agents/:id/invoke`). Configure provider keys on the Worker or per-project in the console. The SDK exposes REST helpers only.
+Agent invokes run on the Worker (`POST /agents/:id/invoke` or `@handle` in a room message). Configure provider keys on the Worker or per-project in the console.
+
+- `invokeAgentRest(agentId, roomId, content, { replyTo })` — REST invoke with optional thread parent message id.
+- `getAgentRuns(agentId)` — run history including `tool_calls` when tools were used.
+- Live room events (WebSocket): `tool_call`, `tool_result`, `tool_error`, `agentRun` (latency, tokens, status).
+
+### History replay (heavy rooms)
+
+```tsx
+const { messages, loadHistory, historyLoaded } = useChat({
+  roomId,
+  replay: "request", // skip REST + WS history on connect
+});
+// later: await loadHistory();
+```
+
+Default is `replay: "connect"`. Pass `replayHistoryOnReconnect: false` to `connectRoom` if you manage history yourself.
+
+### Custom bot streaming (`FluxyMessageStream`)
+
+For bots outside the built-in agent runtime, stream into one message row over WebSocket:
+
+```ts
+import { FluxyChatClient, FluxyMessageStream } from "@fluxy-chat/sdk";
+
+const connection = client.connectRoom(roomId);
+connection.connect();
+const stream = new FluxyMessageStream(connection, agentUserId, { parentId: null });
+stream.push("Hello ");
+stream.end();
+```
+
+See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/bot-streaming-fluxy-message-stream.md) in the monorepo.
 
 ## Support
 

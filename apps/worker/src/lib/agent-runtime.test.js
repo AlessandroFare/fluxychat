@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { mapBotRowToAgent } from "./agent-runtime.js";
+import { mapBotRowToAgent, normalizeMentionHandle } from "./agent-runtime.js";
+
+describe("normalizeMentionHandle", () => {
+  it("strips @ and lowercases", () => {
+    expect(normalizeMentionHandle("@Assistant")).toBe("assistant");
+    expect(normalizeMentionHandle("onboarding")).toBe("onboarding");
+  });
+});
 
 describe("mapBotRowToAgent", () => {
   it("maps D1 bot row to API agent shape", () => {

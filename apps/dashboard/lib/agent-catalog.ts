@@ -184,13 +184,28 @@ export function providerHint(provider: string): string | undefined {
   return AGENT_PROVIDER_OPTIONS.find((p) => p.id === provider)?.hint;
 }
 
+export interface AgentLlmConfigInput {
+  provider: string;
+  llmBaseUrl: string;
+  fallbackProvider?: string;
+  fallbackModel?: string;
+}
+
 export function buildAgentLlmConfig(
-  provider: string,
-  baseUrl: string,
-): { llm: { baseUrl: string } } | undefined {
-  const trimmed = baseUrl.trim();
-  if (!trimmed || !providerAllowsCustomBaseUrl(provider)) return undefined;
-  return { llm: { baseUrl: trimmed } };
+  input: AgentLlmConfigInput,
+): { llm: Record<string, string> } | undefined {
+  const llm: Record<string, string> = {};
+  const trimmedBase = input.llmBaseUrl.trim();
+  if (trimmedBase && providerAllowsCustomBaseUrl(input.provider)) {
+    llm.baseUrl = trimmedBase;
+  }
+  const fbProvider = (input.fallbackProvider ?? "").trim();
+  const fbModel = (input.fallbackModel ?? "").trim();
+  if (fbProvider) {
+    llm.fallbackProvider = fbProvider;
+    if (fbModel) llm.fallbackModel = fbModel;
+  }
+  return Object.keys(llm).length ? { llm } : undefined;
 }
 
 /** When user types a composite ref, sync provider + model fields. */

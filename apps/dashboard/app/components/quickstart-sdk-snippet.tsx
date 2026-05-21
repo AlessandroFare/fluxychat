@@ -6,9 +6,17 @@ import { getPublicWorkerUrl, isPublicHostedCloud } from "@/lib/worker-url-client
 
 const INSTALL = "pnpm add @fluxy-chat/sdk";
 
+const USE_CHAT_SNIPPET = `const { messages, sendMessage, loadHistory } = useChat({
+  roomId: "assistant:general",
+  replay: "connect", // or "request" + loadHistory() for heavy rooms
+});`;
+
+const STREAM_BOT_HINT =
+  "Custom bots: FluxyMessageStream — see docs/cookbook/bot-streaming-fluxy-message-stream.md";
+
 export function QuickstartSdkSnippet() {
   const [workerUrl, setWorkerUrl] = useState(getPublicWorkerUrl());
-  const [copied, setCopied] = useState<"install" | "env" | null>(null);
+  const [copied, setCopied] = useState<"install" | "env" | "hook" | null>(null);
 
   useEffect(() => {
     void fetch("/api/fluxy/config")
@@ -25,7 +33,7 @@ export function QuickstartSdkSnippet() {
     ? `NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL=${workerUrl}`
     : `NEXT_PUBLIC_FLUXYCHAT_WORKER_URL=${workerUrl}`;
 
-  async function copy(text: string, key: "install" | "env") {
+  async function copy(text: string, key: "install" | "env" | "hook") {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(key);
@@ -60,6 +68,18 @@ export function QuickstartSdkSnippet() {
           Copy
         </button>
       </div>
+      <pre className="overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-slate-200">
+        {USE_CHAT_SNIPPET}
+      </pre>
+      <button
+        type="button"
+        onClick={() => void copy(USE_CHAT_SNIPPET, "hook")}
+        className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
+      >
+        {copied === "hook" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        Copy useChat
+      </button>
+      <p className="text-xs text-slate-400">{STREAM_BOT_HINT}</p>
     </div>
   );
 }

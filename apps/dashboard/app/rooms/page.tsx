@@ -12,6 +12,7 @@ import { Banner, Button, Input, Section } from "../components/ui";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
+import { AssistantRoomPanel } from "../components/assistant-room-panel";
 
 const WORKER_URL = getPublicWorkerUrl();
 
@@ -216,6 +217,8 @@ export default function RoomsPage() {
       />
       {error ? <Banner variant="error">Error: {error}</Banner> : null}
       {notice ? <Banner variant="success">{notice}</Banner> : null}
+
+      <AssistantRoomPanel memberJwt={memberJwt} adminJwt={adminJwt} />
 
       <Section title="Session">
         <Button onClick={loadRooms} disabled={loading || !token}>

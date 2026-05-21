@@ -71,11 +71,20 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     }
     const now = new Date().toISOString();
     const newRoomId = body.id && isValidId(body.id) ? body.id : crypto.randomUUID();
-    await env.DB.prepare(
-      "INSERT INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, ?, ?, ?)"
-    )
-      .bind(newRoomId, auth.projectId, body.type, nameValidation.name, now)
-      .run();
+    try {
+      await env.DB.prepare(
+        "INSERT INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, ?, ?, ?)"
+      )
+        .bind(newRoomId, auth.projectId, body.type, nameValidation.name, now)
+        .run();
+    } catch (dbErr) {
+      const msg = String(dbErr?.message || dbErr || "");
+      if (msg.includes("UNIQUE") || msg.toLowerCase().includes("primary key")) {
+        return json({ error: "room_id_already_exists" }, { status: 409 });
+      }
+      logError("room.create_insert_failed", dbErr, requestLogCtx);
+      return json({ error: "room_create_failed" }, { status: 500 });
+    }
 
     ctx.waitUntil(invalidateCache(env, `rooms:${auth.projectId}`).catch(() => {}));
 
@@ -114,7 +123,7 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       room: {
         id: newRoomId,
         type: body.type,
-        name: body.name,
+        name: nameValidation.name,
         created_at: now,
       },
     });

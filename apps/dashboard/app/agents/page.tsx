@@ -5,6 +5,7 @@ import {
   Bot,
   History,
   KeyRound,
+  MessageSquare,
   Pencil,
   Play,
   Plus,
@@ -14,7 +15,13 @@ import {
 } from "lucide-react";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { Badge } from "@/components/ui/badge";
-import { AgentFormFields, type AgentFormValues } from "../components/agent-form-fields";
+import { AgentRoomChat } from "../components/agent-room-chat";
+import { AgentRunHistoryRow } from "../components/agent-run-history-row";
+import { AgentProfileForm } from "../components/agent-profile-form";
+import type { AgentFormValues } from "../components/agent-form-fields";
+import { LlmProviderRegistryOverview } from "../components/llm-provider-registry-overview";
+import { ModelCapabilityBadges } from "../components/model-capability-badges";
+import { LlmCredentialStatus } from "../components/llm-credential-status";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
@@ -22,9 +29,16 @@ import { LlmProviderCredentials } from "../components/llm-provider-credentials";
 import { RoomPicker } from "../components/room-picker";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import { Button, EmptyState, Input, Panel, SkeletonCard } from "../components/ui";
+import { ASSISTANT_ROOM_ID } from "@/lib/assistant-room";
+import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
+import { useClerkUser } from "@/lib/clerk-user";
+import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { fetchLlmCatalog, type LlmCatalogResponse } from "@/lib/llm-catalog-client";
 import { buildAgentLlmConfig, formatModelRef } from "@/lib/agent-catalog";
-import { formatDateTime } from "@/lib/format-datetime";
+import {
+  findCatalogProvider,
+  resolveModelCapabilities,
+} from "@/lib/llm-registry-ui";
 import { cn } from "@/lib/utils";
 
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
@@ -33,7 +47,7 @@ import { messageFromUnknown } from "@/lib/error-message";
 
 const WORKER_URL = getPublicWorkerUrl();
 
-type AgentsPanel = "none" | "create" | "edit" | "invoke" | "llm-keys";
+type AgentsPanel = "none" | "create" | "edit" | "invoke" | "chat" | "llm-keys";
 
 interface Agent {
   id: string;
@@ -62,6 +76,7 @@ interface AgentRun {
   error?: string | null;
   room_id?: string | null;
   iterations?: number;
+  tool_calls?: unknown[];
   created_at: string;
 }
 
@@ -75,10 +90,14 @@ const emptyForm = (): AgentFormValues => ({
   contextFetchUrl: "",
   toolExecuteUrl: "",
   llmBaseUrl: "",
+  fallbackProvider: "",
+  fallbackModel: "",
 });
 
 function agentToForm(agent: Agent): AgentFormValues {
-  const cfg = agent.config as { llm?: { baseUrl?: string } } | null | undefined;
+  const cfg = agent.config as {
+    llm?: { baseUrl?: string; fallbackProvider?: string; fallbackModel?: string };
+  } | null | undefined;
   return {
     name: agent.name,
     handle: agent.handle || "",
@@ -89,6 +108,8 @@ function agentToForm(agent: Agent): AgentFormValues {
     contextFetchUrl: agent.contextFetchUrl || "",
     toolExecuteUrl: agent.toolExecuteUrl || "",
     llmBaseUrl: cfg?.llm?.baseUrl || "",
+    fallbackProvider: cfg?.llm?.fallbackProvider || "",
+    fallbackModel: cfg?.llm?.fallbackModel || "",
   };
 }
 
@@ -127,7 +148,12 @@ function formToPayload(form: AgentFormValues) {
     systemPrompt: form.systemPrompt.trim() || undefined,
     contextFetchUrl: form.contextFetchUrl.trim() || undefined,
     toolExecuteUrl: form.toolExecuteUrl.trim() || undefined,
-    config: buildAgentLlmConfig(form.provider, form.llmBaseUrl),
+    config: buildAgentLlmConfig({
+      provider: form.provider,
+      llmBaseUrl: form.llmBaseUrl,
+      fallbackProvider: form.fallbackProvider,
+      fallbackModel: form.fallbackModel,
+    }),
   };
 }
 
@@ -140,15 +166,13 @@ function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function runStatusVariant(status: string): "success" | "destructive" | "muted" {
-  if (status === "completed") return "success";
-  if (status === "failed") return "destructive";
-  return "muted";
-}
-
 export default function AgentsPage() {
   const { adminJwt, memberJwt, activeProject } = useDashboardSession();
+  const { user: clerkUser } = useClerkUser();
   const sessionToken = (adminJwt || memberJwt).trim();
+  const memberUserId = clerkUser?.id
+    ? fluxyUserIdFromClerk(clerkUser.id)
+    : "dashboard";
 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runs, setRuns] = useState<AgentRun[]>([]);
@@ -160,9 +184,13 @@ export default function AgentsPage() {
 
   const [llmCatalog, setLlmCatalog] = useState<LlmCatalogResponse | null>(null);
   const [loadLiveModels, setLoadLiveModels] = useState(false);
+  const [llmKeysFocusProvider, setLlmKeysFocusProvider] = useState<string | null>(null);
+  const [llmKeysReturnPanel, setLlmKeysReturnPanel] = useState<AgentsPanel | null>(null);
 
-  const [invokeRoomId, setInvokeRoomId] = useState("");
+  const [invokeRoomId, setInvokeRoomId] = useState(ASSISTANT_ROOM_ID);
   const [invokeText, setInvokeText] = useState("");
+  const [chatRoomId, setChatRoomId] = useState(ASSISTANT_ROOM_ID);
+  const [preparingChat, setPreparingChat] = useState(false);
 
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [loadingRuns, setLoadingRuns] = useState(false);
@@ -252,20 +280,40 @@ export default function AgentsPage() {
     void loadAgents();
   }, [adminJwt, loadAgents]);
 
-  useEffect(() => {
-    if (!adminJwt.trim()) return;
-    let cancelled = false;
-    void fetchLlmCatalog(adminJwt.trim(), { live: loadLiveModels })
-      .then((c) => {
-        if (!cancelled) setLlmCatalog(c);
-      })
-      .catch(() => {
-        if (!cancelled) setLlmCatalog(null);
-      });
-    return () => {
-      cancelled = true;
-    };
+  const reloadLlmCatalog = useCallback(async () => {
+    if (!adminJwt.trim()) {
+      setLlmCatalog(null);
+      return;
+    }
+    try {
+      const c = await fetchLlmCatalog(adminJwt.trim(), { live: loadLiveModels });
+      setLlmCatalog(c);
+    } catch {
+      setLlmCatalog(null);
+    }
   }, [adminJwt, loadLiveModels]);
+
+  useEffect(() => {
+    void reloadLlmCatalog();
+  }, [reloadLlmCatalog]);
+
+  const openLlmKeysForProvider = useCallback(
+    (providerId: string, returnPanel?: AgentsPanel) => {
+      setLlmKeysFocusProvider(providerId);
+      setLlmKeysReturnPanel(returnPanel ?? null);
+      setPanel("llm-keys");
+      setError(null);
+    },
+    [],
+  );
+
+  const closeLlmKeysPanel = useCallback(() => {
+    const back = llmKeysReturnPanel;
+    setLlmKeysReturnPanel(null);
+    setLlmKeysFocusProvider(null);
+    setPanel(back && back !== "llm-keys" ? back : "none");
+    void reloadLlmCatalog();
+  }, [llmKeysReturnPanel, reloadLlmCatalog]);
 
   useEffect(() => {
     if (panel === "invoke" && selectedId) {
@@ -341,6 +389,34 @@ export default function AgentsPage() {
     }
   };
 
+  const openAgentChat = async () => {
+    if (!selectedAgent) return;
+    const jwt = memberJwt.trim();
+    if (!jwt) {
+      setError(
+        "Member JWT required for live chat. Complete Quickstart, sign in on hosted cloud, or paste a member JWT in Projects.",
+      );
+      return;
+    }
+    setPreparingChat(true);
+    setError(null);
+    try {
+      const { room } = await ensureAssistantRoom({
+        workerUrl: WORKER_URL,
+        memberJwt: jwt,
+        memberUserId,
+      });
+      setChatRoomId(room.id);
+      setInvokeRoomId(room.id);
+      setPanel("chat");
+      setNotice(`Chat room “${room.id}” is ready.`);
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Could not open assistant room"));
+    } finally {
+      setPreparingChat(false);
+    }
+  };
+
   const invokeAgent = async () => {
     if (!selectedId || !invokeText.trim() || !invokeRoomId.trim()) {
       setError("Select a room and enter a message.");
@@ -392,7 +468,7 @@ export default function AgentsPage() {
           <>
             Bots for project{" "}
             <code className="text-xs">{activeProject?.name || "—"}</code>. Pick one from the list, then create,
-            edit, or test invoke.
+            edit profile, test invoke, or chat in the assistant room.
           </>
         }
         actions={
@@ -400,7 +476,15 @@ export default function AgentsPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setPanel(panel === "llm-keys" ? "none" : "llm-keys")}
+              onClick={() => {
+                if (panel === "llm-keys") {
+                  closeLlmKeysPanel();
+                  return;
+                }
+                setLlmKeysReturnPanel(null);
+                setLlmKeysFocusProvider(null);
+                setPanel("llm-keys");
+              }}
             >
               <KeyRound className="mr-1.5 h-4 w-4" />
               LLM keys
@@ -425,8 +509,20 @@ export default function AgentsPage() {
       ) : null}
 
       {panel === "llm-keys" && adminJwt.trim() ? (
-        <div className="mb-6 space-y-3">
-          <div className="flex items-center justify-between">
+        <div className="mb-6 space-y-6">
+          {llmKeysReturnPanel ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand/20 bg-brand/5 px-4 py-3 text-sm">
+              <span className="text-foreground">
+                {llmKeysReturnPanel === "create"
+                  ? "Return to new agent profile after saving keys."
+                  : "Return to edit agent profile after saving keys."}
+              </span>
+              <Button variant="neutral" size="sm" onClick={closeLlmKeysPanel}>
+                Back to profile
+              </Button>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <input
                 type="checkbox"
@@ -435,11 +531,16 @@ export default function AgentsPage() {
               />
               Load live OpenRouter models in catalog
             </label>
-            <Button variant="ghost" size="sm" onClick={() => setPanel("none")}>
+            <Button variant="ghost" size="sm" onClick={closeLlmKeysPanel}>
               Close
             </Button>
           </div>
-          <LlmProviderCredentials adminJwt={adminJwt} />
+          <LlmProviderRegistryOverview catalog={llmCatalog} />
+          <LlmProviderCredentials
+            adminJwt={adminJwt}
+            focusProviderId={llmKeysFocusProvider}
+            onSaved={() => void reloadLlmCatalog()}
+          />
         </div>
       ) : null}
 
@@ -516,15 +617,17 @@ export default function AgentsPage() {
           {panel === "create" ? (
             <Panel className="rounded-2xl border border-border/80 p-6">
               <PanelHeader
-                title="Create agent"
-                description="Adds a bot to this project. Mention it in chat with @handle."
+                title="New agent profile"
+                description="Adds a bot to this project. Use @handle in chat for streaming invoke."
                 onClose={() => setPanel("none")}
               />
-              <AgentFormFields
+              <AgentProfileForm
                 values={createForm}
                 onChange={(patch) => setCreateForm((f) => ({ ...f, ...patch }))}
                 llmCatalog={llmCatalog}
-                idPrefix="create"
+                onConfigureKeys={(providerId) =>
+                  openLlmKeysForProvider(providerId, "create")
+                }
               />
               <div className="mt-6 flex flex-wrap gap-2">
                 <Button
@@ -544,15 +647,17 @@ export default function AgentsPage() {
           {panel === "edit" && selectedAgent ? (
             <Panel className="rounded-2xl border border-border/80 p-6">
               <PanelHeader
-                title="Edit agent"
+                title="Edit agent profile"
                 description={`Updating ${selectedAgent.name}`}
                 onClose={() => setPanel("none")}
               />
-              <AgentFormFields
+              <AgentProfileForm
                 values={editForm}
                 onChange={(patch) => setEditForm((f) => ({ ...f, ...patch }))}
                 llmCatalog={llmCatalog}
-                idPrefix="edit"
+                onConfigureKeys={(providerId) =>
+                  openLlmKeysForProvider(providerId, "edit")
+                }
               />
               <div className="mt-6 flex flex-wrap gap-2">
                 <Button variant="neutral" onClick={() => void saveAgentEdits()} disabled={updatingAgent}>
@@ -565,6 +670,23 @@ export default function AgentsPage() {
             </Panel>
           ) : null}
 
+          {panel === "chat" && selectedAgent ? (
+            <Panel className="rounded-2xl border border-border/80 p-6">
+              <PanelHeader
+                title="Chat with agent"
+                description={`Live room chat with ${selectedAgent.name} in ${chatRoomId}. Built-in agents are provisioned when you create a project.`}
+                onClose={() => setPanel("none")}
+              />
+              <AgentRoomChat
+                roomId={chatRoomId}
+                agentId={selectedAgent.id}
+                agentName={selectedAgent.name}
+                agentHandle={selectedAgent.handle}
+                adminJwt={adminJwt}
+              />
+            </Panel>
+          ) : null}
+
           {panel === "invoke" && selectedAgent ? (
             <Panel className="rounded-2xl border border-border/80 p-6">
               <PanelHeader
@@ -572,6 +694,17 @@ export default function AgentsPage() {
                 description={`Send a message as ${selectedAgent.name} into a room.`}
                 onClose={() => setPanel("none")}
               />
+              <p className="mb-4 text-xs text-muted-foreground">
+                One-shot REST invoke. For live streaming, tools in-thread, and run feedback use{" "}
+                <button
+                  type="button"
+                  className="font-medium text-brand hover:underline"
+                  onClick={() => void openAgentChat()}
+                >
+                  Chat in room
+                </button>
+                .
+              </p>
               <div className="mb-6 grid gap-2 sm:grid-cols-[minmax(160px,220px)_1fr_auto] sm:items-end">
                 <div>
                   <p className="mb-1 text-xs font-medium text-muted-foreground">Room</p>
@@ -610,26 +743,7 @@ export default function AgentsPage() {
               ) : (
                 <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
                   {runs.map((run) => (
-                    <div
-                      key={run.id}
-                      className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 text-sm"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Badge variant={runStatusVariant(run.status)}>{run.status}</Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDateTime(run.created_at)}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Room {run.room_id || "—"} · tokens {run.input_tokens ?? 0}/
-                        {run.output_tokens ?? 0}
-                        {run.latency_ms != null ? ` · ${run.latency_ms}ms` : ""}
-                        {run.estimated_cost != null ? ` · $${run.estimated_cost.toFixed(4)}` : ""}
-                      </p>
-                      {run.error ? (
-                        <p className="mt-1 text-xs text-red-600">{run.error}</p>
-                      ) : null}
-                    </div>
+                    <AgentRunHistoryRow key={run.id} run={run as unknown as Record<string, unknown>} />
                   ))}
                 </div>
               )}
@@ -656,7 +770,16 @@ export default function AgentsPage() {
                     }}
                   >
                     <Pencil className="mr-1.5 h-4 w-4" />
-                    Edit agent
+                    Edit profile
+                  </Button>
+                  <Button
+                    variant="neutral"
+                    size="sm"
+                    onClick={() => void openAgentChat()}
+                    disabled={preparingChat}
+                  >
+                    <MessageSquare className="mr-1.5 h-4 w-4" />
+                    {preparingChat ? "Opening…" : "Chat in room"}
                   </Button>
                   <Button variant="neutral" size="sm" onClick={() => setPanel("invoke")}>
                     <Play className="mr-1.5 h-4 w-4" />
@@ -682,11 +805,51 @@ export default function AgentsPage() {
                   <StatRow
                     label="Provider / model"
                     value={
-                      selectedAgent.provider && selectedAgent.model
-                        ? formatModelRef(selectedAgent.provider, selectedAgent.model)
-                        : "—"
+                      selectedAgent.provider && selectedAgent.model ? (
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                          <code className="text-xs">
+                            {formatModelRef(selectedAgent.provider, selectedAgent.model)}
+                          </code>
+                          {(() => {
+                            const caps = resolveModelCapabilities(
+                              llmCatalog,
+                              selectedAgent.provider || "",
+                              selectedAgent.model || "",
+                            );
+                            return caps ? <ModelCapabilityBadges capabilities={caps} /> : null;
+                          })()}
+                        </span>
+                      ) : (
+                        "—"
+                      )
                     }
                   />
+                  {selectedAgent.provider ? (
+                    <StatRow
+                      label="LLM keys"
+                      value={
+                        <span className="inline-flex flex-wrap items-center justify-end gap-2">
+                          <LlmCredentialStatus
+                            status={
+                              findCatalogProvider(llmCatalog, selectedAgent.provider || "")
+                                ?.credentialStatus
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() =>
+                              openLlmKeysForProvider(selectedAgent.provider || "", "none")
+                            }
+                          >
+                            Configure keys
+                          </Button>
+                        </span>
+                      }
+                    />
+                  ) : null}
                   <StatRow
                     label="Rate limit"
                     value={selectedAgent.rateLimitRpm ? `${selectedAgent.rateLimitRpm}/min` : "default"}

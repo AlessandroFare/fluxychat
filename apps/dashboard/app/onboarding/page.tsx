@@ -27,6 +27,10 @@ import {
   markQuickstartComplete,
   markQuickstartFirstMessage,
 } from "@/lib/quickstart-progress";
+import { ASSISTANT_ROOM_ID } from "@/lib/assistant-room";
+import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
+import { AgentRoomChat } from "../components/agent-room-chat";
+import type { UseChatHistoryReplay } from "@fluxy-chat/sdk";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
@@ -75,7 +79,7 @@ const STEPS = [
   },
   {
     title: "Try an agent (optional)",
-    short: "Register a bot and invoke it once. Uses your agent quota.",
+    short: "Register a bot and invoke it once. Custom streaming bots: docs/cookbook/bot-streaming-fluxy-message-stream.md",
   },
 ] as const;
 
@@ -121,8 +125,33 @@ function firstIncompleteStep(args: {
   return STEPS.length - 1;
 }
 
-function finishQuickstartAndOpenConsole(router: ReturnType<typeof useRouter>, clerkUserId: string) {
-  markQuickstartComplete(clerkUserId);
+async function finishQuickstartAndOpenConsole(
+  router: ReturnType<typeof useRouter>,
+  args: {
+    clerkUserId: string;
+    memberJwt: string;
+    memberUserId: string;
+    setLastRoom: (room: CreatedRoom) => void;
+  },
+) {
+  markQuickstartComplete(args.clerkUserId);
+  if (args.memberJwt.trim() && args.memberUserId.trim()) {
+    try {
+      const { room } = await ensureAssistantRoom({
+        workerUrl: WORKER_URL,
+        memberJwt: args.memberJwt.trim(),
+        memberUserId: args.memberUserId.trim(),
+      });
+      args.setLastRoom({
+        id: room.id,
+        type: room.type,
+        name: room.name,
+        created_at: room.created_at,
+      });
+    } catch {
+      // Non-blocking: user may already have a room from step 3.
+    }
+  }
   router.push("/");
 }
 
@@ -189,11 +218,20 @@ export default function OnboardingPage() {
     setExistingRoomId(lastRoom.id);
   }, [lastRoom, room?.id]);
 
+  useEffect(() => {
+    if (activeStep !== 3 || roomMode !== "create" || roomName.trim()) return;
+    setRoomName(ASSISTANT_ROOM_ID);
+  }, [activeStep, roomMode, roomName]);
+
   const project = activeProject as CreatedProject | null;
   const activeRoomId = room?.id ?? "";
 
-  const { messages, sendMessage, connectionStatus } = useChat({
+  const [skipHistoryOnConnect, setSkipHistoryOnConnect] = useState(false);
+  const onboardingReplay: UseChatHistoryReplay = skipHistoryOnConnect ? "request" : "connect";
+
+  const { messages, sendMessage, connectionStatus, historyLoaded, loadHistory } = useChat({
     roomId: activeRoomId,
+    replay: onboardingReplay,
   });
 
   const furthest = useMemo(
@@ -351,7 +389,11 @@ export default function OnboardingPage() {
       });
       setRoom(json.room);
       setLastRoom(json.room);
-      setNotice("Room created.");
+      setNotice(
+        json.room.id === ASSISTANT_ROOM_ID
+          ? "Assistant room ready — you can chat with built-in agents from the Agents page."
+          : "Room created.",
+      );
       setActiveStep(4);
     } catch (err: unknown) {
       setError(messageFromUnknown(err, "Failed to create room"));
@@ -625,7 +667,7 @@ export default function OnboardingPage() {
       {activeStep === 3 ? (
         <Section
           title="Room"
-          description="Create a new channel or pick one you already created in Rooms."
+          description="Create a new channel or pick one you already created in Rooms. We suggest the assistant room for testing AI agents later."
         >
           <div className="mb-4 flex flex-wrap gap-2">
             <button
@@ -661,20 +703,31 @@ export default function OnboardingPage() {
               placeholder="Select a room"
             />
           ) : (
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-            <Input
-              data-testid="room-id-input"
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              placeholder="room id (e.g. support)"
-            />
+          <div className="flex flex-col gap-2">
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+              <Input
+                data-testid="room-id-input"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                placeholder={`room id (e.g. ${ASSISTANT_ROOM_ID})`}
+              />
+              <Button
+                variant="primary"
+                data-testid="create-room-btn"
+                onClick={() => void createRoom()}
+                disabled={creatingRoom || !memberJwt}
+              >
+                {creatingRoom ? "Creating…" : "Create room"}
+              </Button>
+            </div>
             <Button
-              variant="primary"
-              data-testid="create-room-btn"
-              onClick={() => void createRoom()}
-              disabled={creatingRoom || !memberJwt}
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-fit text-xs"
+              onClick={() => setRoomName(ASSISTANT_ROOM_ID)}
             >
-              {creatingRoom ? "Creating…" : "Create room"}
+              Use suggested assistant room ({ASSISTANT_ROOM_ID})
             </Button>
           </div>
           )}
@@ -696,6 +749,24 @@ export default function OnboardingPage() {
 
       {activeStep === 4 ? (
         <Section title="First message" description={`Connection: ${connectionStatus}. Send from the input or use the quick-send button.`}>
+          <label className="mb-2 flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              className="h-3 w-3 rounded border-border"
+              checked={skipHistoryOnConnect}
+              onChange={(e) => setSkipHistoryOnConnect(e.target.checked)}
+            />
+            Skip history on connect (heavy rooms)
+            {skipHistoryOnConnect && !historyLoaded ? (
+              <button
+                type="button"
+                className="text-brand hover:underline"
+                onClick={() => void loadHistory()}
+              >
+                Load history
+              </button>
+            ) : null}
+          </label>
           <div className="h-[220px] overflow-auto rounded-xl border border-border bg-muted/30 p-3" data-testid="message-list">
             {messages.length ? (
               messages.map((m) => (
@@ -740,7 +811,15 @@ export default function OnboardingPage() {
               type="button"
               variant="ghost"
               disabled={messages.length < 1}
-              onClick={() => clerkUser?.id && finishQuickstartAndOpenConsole(router, clerkUser.id)}
+              onClick={() => {
+                if (!clerkUser?.id) return;
+                void finishQuickstartAndOpenConsole(router, {
+                  clerkUserId: clerkUser.id,
+                  memberJwt,
+                  memberUserId: userId.trim() || "alice",
+                  setLastRoom,
+                });
+              }}
             >
               Open console
             </Button>
@@ -751,7 +830,7 @@ export default function OnboardingPage() {
       {activeStep === 5 ? (
         <Section
           title="Try an agent (optional)"
-          description="Create a bot with your admin JWT, then post one invoke into the room above."
+          description="Create a bot with your admin JWT, then post one invoke into the room above. For a Node bot that streams via FluxyMessageStream, see docs/cookbook/bot-streaming-fluxy-message-stream.md."
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="Agent name" className="sm:flex-1" />
@@ -802,13 +881,38 @@ export default function OnboardingPage() {
               Active agent: <code>{agent.id}</code>
             </p>
           ) : null}
-          <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-            <Input value={agentPrompt} onChange={(e) => setAgentPrompt(e.target.value)} placeholder="Agent prompt" />
-            <Button variant="primary" onClick={() => void invokeAgent()} disabled={invokingAgent || !agent}>
-              {invokingAgent ? "Invoking…" : "Invoke"}
-            </Button>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">The reply shows up in the room through your Worker.</p>
+          {agent && room && memberJwt.trim() ? (
+            <div className="mt-4">
+              <p className="mb-2 text-xs font-medium text-foreground">Live agent chat</p>
+              <AgentRoomChat
+                roomId={activeRoomId}
+                agentId={agent.id}
+                agentName={agent.name}
+                agentHandle="assistant"
+                adminJwt={adminJwt}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+                <Input
+                  value={agentPrompt}
+                  onChange={(e) => setAgentPrompt(e.target.value)}
+                  placeholder="Agent prompt"
+                />
+                <Button
+                  variant="primary"
+                  onClick={() => void invokeAgent()}
+                  disabled={invokingAgent || !agent}
+                >
+                  {invokingAgent ? "Invoking…" : "REST invoke"}
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Create a room and mint member JWT to use live chat with @mention invoke.
+              </p>
+            </>
+          )}
           <div className="mt-4 flex flex-wrap gap-2">
             <Button type="button" variant="ghost" onClick={goBack}>
               <ChevronLeft className="h-4 w-4" aria-hidden /> Back
@@ -816,7 +920,15 @@ export default function OnboardingPage() {
             <ShadcnButton
               type="button"
               variant="default"
-              onClick={() => clerkUser?.id && finishQuickstartAndOpenConsole(router, clerkUser.id)}
+              onClick={() => {
+                if (!clerkUser?.id) return;
+                void finishQuickstartAndOpenConsole(router, {
+                  clerkUserId: clerkUser.id,
+                  memberJwt,
+                  memberUserId: userId.trim() || "alice",
+                  setLastRoom,
+                });
+              }}
             >
               Done — open console
             </ShadcnButton>

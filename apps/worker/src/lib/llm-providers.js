@@ -406,6 +406,9 @@ export function parseAgentLlmConfig(config) {
       o.apiStyle === "anthropic" || o.apiStyle === "openai-compatible"
         ? o.apiStyle
         : undefined,
+    fallbackProvider:
+      typeof o.fallbackProvider === "string" ? o.fallbackProvider.trim() : undefined,
+    fallbackModel: typeof o.fallbackModel === "string" ? o.fallbackModel.trim() : undefined,
   };
 }
 
@@ -494,6 +497,18 @@ export async function resolveLlmConnection(env, { provider: providerField, model
 export async function resolveLlmConnectionWithFallback(env, primary) {
   const main = await resolveLlmConnection(env, primary);
   if (!main.ok) return { primary: main, fallback: null };
+
+  const agentLlm = parseAgentLlmConfig(primary.config);
+  if (agentLlm.fallbackProvider) {
+    let fallback = await resolveLlmConnection(env, {
+      provider: agentLlm.fallbackProvider,
+      model: agentLlm.fallbackModel || null,
+      config: primary.config,
+      projectId: primary.projectId,
+    });
+    if (fallback && !fallback.ok) fallback = null;
+    return { primary: main, fallback };
+  }
 
   let fallback = null;
   const sharedLlmOk = workerSharedLlmAllowed(env, primary.projectId);

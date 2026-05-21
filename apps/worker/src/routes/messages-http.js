@@ -255,7 +255,16 @@ export async function dispatchMessagesRoutes(request, url, h) {
 
     if (mentions.length) {
       ctx.waitUntil(
-        invokeMentionedAgents(env, authProjectId, roomId, authUserId, content, mentions, traceId).catch((err) =>
+        invokeMentionedAgents(
+          env,
+          authProjectId,
+          roomId,
+          authUserId,
+          content,
+          mentions,
+          traceId,
+          parentId,
+        ).catch((err) =>
           logError("agent.mention_invoke_failed", err, requestLogCtx)
         )
       );

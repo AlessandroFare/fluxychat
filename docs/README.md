@@ -11,6 +11,13 @@ Use-case oriented documentation.
 ## Cookbooks
 
 - [Auth / Token / JWT (role-based)](./cookbook/auth-jwt.md)
+- [Node bot streaming with FluxyMessageStream](./cookbook/bot-streaming-fluxy-message-stream.md)
+
+### Beta console features (open beta)
+
+- Agent chat: tool_call / tool_result / tool_error in-thread, run banner, reply-to, replay toggle
+- Agent profile: prompt templates, fallback provider/model
+- Rooms page: embedded assistant room chat
 
 ## Dashboard app
 

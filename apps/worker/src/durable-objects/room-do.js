@@ -12,6 +12,7 @@ import {
 } from "../lib/message-enrichment.js";
 import { deliverWebhooks } from "../lib/webhook-delivery.js";
 import { schedulePostMessageAutomations } from "../lib/post-message-automations.js";
+import { invokeMentionedAgents } from "../lib/agent-runtime.js";
 export class RoomDurableObject {
   constructor(state, env) {
     this.state = state;
@@ -487,6 +488,19 @@ export class RoomDurableObject {
             createdAt,
           }).catch((err) =>
             console.error("webhook mention error", err)
+          );
+
+          void invokeMentionedAgents(
+            this.env,
+            projectId,
+            roomId,
+            userId,
+            validatedContent,
+            mentions,
+            undefined,
+            parentId || null,
+          ).catch((err) =>
+            logError("agent.mention_invoke_error", err, { projectId, roomId }),
           );
         }
 
@@ -964,6 +978,28 @@ export class RoomDurableObject {
           messageId: body.messageId,
           emoji: body.emoji,
           op: body.op,
+        });
+      } else if (
+        body.type === "tool_call" ||
+        body.type === "tool_result" ||
+        body.type === "tool_error"
+      ) {
+        this.broadcast({
+          type: body.type,
+          roomId: body.roomId || roomIdStr,
+          runId: body.runId,
+          agentId: body.agentId,
+          toolCallId: body.toolCallId,
+          name: body.name,
+          arguments: body.arguments,
+          result: body.result,
+          error: body.error,
+        });
+      } else if (body.type === "agentRun" && body.run) {
+        this.broadcast({
+          type: "agentRun",
+          roomId: body.roomId || roomIdStr,
+          run: body.run,
         });
       } else {
         const messageId = body.id || Date.now();

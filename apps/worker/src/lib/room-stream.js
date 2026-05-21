@@ -1,4 +1,5 @@
-const STREAM_PUSH_FLUSH_MS = 150;
+/** Throttle DO stream deltas (lower = snappier live UI; DO still batches DB writes). */
+const STREAM_PUSH_FLUSH_MS = 80;
 
 export async function roomStreamOp(env, roomId, body) {
   const id = env.ROOM.idFromName(roomId);

@@ -8,12 +8,15 @@ import {
 } from "./message-history";
 import { FluxyChatRoomConnection } from "./room-connection";
 import type {
+  FluxyChatAgentRun,
   FluxyChatAttachment,
   FluxyChatClient,
   FluxyChatEvent,
   FluxyChatMessage,
 } from "./index";
 import { useFluxyChatOptional } from "./use-fluxy-chat";
+
+export type UseChatHistoryReplay = "connect" | "request";
 
 export interface UseChatOptions {
   roomId: string;
@@ -22,9 +25,24 @@ export interface UseChatOptions {
   agentId?: string;
   /** Initial REST page size (default 50). */
   historyLimit?: number;
+  /**
+   * When to load message history (Portal-style replay).
+   * - `connect` (default): REST fetch on mount + apply WS `history` events.
+   * - `request`: skip auto-load; call `loadHistory()` when needed (heavy rooms).
+   */
+  replay?: UseChatHistoryReplay;
+  /** Refetch REST history after WebSocket reconnect (default true). */
+  replayHistoryOnReconnect?: boolean;
 }
 
-export function useChat({ roomId, client: clientProp, agentId, historyLimit = 50 }: UseChatOptions) {
+export function useChat({
+  roomId,
+  client: clientProp,
+  agentId,
+  historyLimit = 50,
+  replay = "connect",
+  replayHistoryOnReconnect = true,
+}: UseChatOptions) {
   const realtime = useFluxyChatOptional();
   const client = clientProp ?? realtime?.client ?? null;
 
@@ -45,9 +63,53 @@ export function useChat({ roomId, client: clientProp, agentId, historyLimit = 50
   const [wsTypingAgentId, setWsTypingAgentId] = React.useState<string | null>(null);
   const [invokeTypingAgentId, setInvokeTypingAgentId] = React.useState<string | null>(null);
   const [reactions, setReactions] = React.useState<Record<number, Record<string, number>>>({});
+  const [historyLoaded, setHistoryLoaded] = React.useState(false);
+  const [lastAgentRun, setLastAgentRun] = React.useState<FluxyChatAgentRun | null>(null);
+  const [toolThreadEvents, setToolThreadEvents] = React.useState<
+    Array<{
+      key: string;
+      kind: "tool_call" | "tool_result" | "tool_error";
+      runId: string;
+      toolCallId: string;
+      name: string;
+      arguments?: string;
+      resultPreview?: string | null;
+      error?: string | null;
+    }>
+  >([]);
   const connectionRef = React.useRef<FluxyChatRoomConnection | null>(null);
+  const historyOnConnect = replay === "connect";
+
+  const appendToolThreadEvent = React.useCallback(
+    (entry: (typeof toolThreadEvents)[number]) => {
+      setToolThreadEvents((prev) => {
+        if (prev.some((e) => e.key === entry.key)) return prev;
+        return [...prev, entry];
+      });
+    },
+    [],
+  );
+
+  const clearToolThread = React.useCallback(() => {
+    setToolThreadEvents([]);
+    setLastAgentRun(null);
+  }, []);
   const sseRef = React.useRef<EventSource | null>(null);
   const pollTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadHistory = React.useCallback(async () => {
+    if (!client) return;
+    const trimmedRoomId = roomId.trim();
+    if (!trimmedRoomId) return;
+    try {
+      const initial = await client.fetchMessages(trimmedRoomId, { limit: historyLimit });
+      setMessages(initial);
+      setHasMore(initial.length >= historyLimit);
+      setHistoryLoaded(true);
+    } catch {
+      /* best-effort */
+    }
+  }, [client, historyLimit, roomId]);
 
   const loadMore = React.useCallback(async () => {
     if (!client || isLoadingMore || !hasMore) return;
@@ -145,18 +207,29 @@ export function useChat({ roomId, client: clientProp, agentId, historyLimit = 50
 
     const handleEvent = (data: FluxyChatEvent) => {
       if (data.type === "history") {
+        if (!historyOnConnect) return;
         setMessages((prev) =>
           mergeMessagesChronological(prev, sortMessagesChronological(data.messages)),
         );
+        setHistoryLoaded(true);
       } else if (data.type === "message") {
         setMessages((prev) => {
+          const normalized = {
+            ...data,
+            userId:
+              data.userId ??
+              ("senderId" in data && typeof data.senderId === "string"
+                ? data.senderId
+                : undefined) ??
+              prev.find((m) => m.id === data.id)?.userId,
+          };
           const idx = prev.findIndex((m) => m.id === data.id);
           if (idx >= 0) {
             const next = [...prev];
-            next[idx] = { ...next[idx], ...data };
+            next[idx] = { ...next[idx], ...normalized };
             return sortMessagesChronological(next);
           }
-          return sortMessagesChronological([...prev, data]);
+          return sortMessagesChronological([...prev, normalized]);
         });
       } else if (data.type === "presence") {
         setOnline(data.online);
@@ -169,6 +242,44 @@ export function useChat({ roomId, client: clientProp, agentId, historyLimit = 50
       } else if (data.type === "agentTyping") {
         setAgentTyping(data.isTyping);
         setWsTypingAgentId(data.isTyping ? data.agentId : null);
+      } else if (data.type === "tool_call") {
+        appendToolThreadEvent({
+          key: `${data.runId}:${data.toolCallId}:call`,
+          kind: "tool_call",
+          runId: data.runId,
+          toolCallId: data.toolCallId,
+          name: data.name,
+          arguments: data.arguments,
+        });
+      } else if (data.type === "tool_result") {
+        let preview: string | null = null;
+        try {
+          preview =
+            data.result != null
+              ? JSON.stringify(data.result).slice(0, 160)
+              : null;
+        } catch {
+          preview = String(data.result);
+        }
+        appendToolThreadEvent({
+          key: `${data.runId}:${data.toolCallId}:result`,
+          kind: "tool_result",
+          runId: data.runId,
+          toolCallId: data.toolCallId,
+          name: data.name,
+          resultPreview: preview,
+        });
+      } else if (data.type === "tool_error") {
+        appendToolThreadEvent({
+          key: `${data.runId}:${data.toolCallId}:error`,
+          kind: "tool_error",
+          runId: data.runId,
+          toolCallId: data.toolCallId,
+          name: data.name,
+          error: data.error ?? "tool_failed",
+        });
+      } else if (data.type === "agentRun") {
+        setLastAgentRun(data.run);
       } else if (data.type === "edit") {
         setMessages((prev) =>
           prev.map((m) =>
@@ -242,20 +353,28 @@ export function useChat({ roomId, client: clientProp, agentId, historyLimit = 50
       };
     }
 
-    client
-      .fetchMessages(trimmedRoomId, { limit: historyLimit })
-      .then((initial) => {
-        if (!active) return;
-        setMessages(initial);
-        setHasMore(initial.length >= historyLimit);
-      })
-      .catch(() => {
-        /* history load is best-effort until member JWT + room are ready */
-      });
+    if (historyOnConnect) {
+      client
+        .fetchMessages(trimmedRoomId, { limit: historyLimit })
+        .then((initial) => {
+          if (!active) return;
+          setMessages(initial);
+          setHasMore(initial.length >= historyLimit);
+          setHistoryLoaded(true);
+        })
+        .catch(() => {
+          /* history load is best-effort until member JWT + room are ready */
+        });
+    } else {
+      setMessages([]);
+      setHasMore(false);
+      setHistoryLoaded(false);
+    }
 
     const connection = client.connectRoom(trimmedRoomId, {
       maxReconnectAttempts: MAX_WS_RECONNECT_ATTEMPTS,
       historyLimit,
+      replayHistoryOnReconnect: historyOnConnect && replayHistoryOnReconnect,
       onStatusChange: (status) => {
         if (!active) return;
         if (status === "connected") {
@@ -317,7 +436,14 @@ export function useChat({ roomId, client: clientProp, agentId, historyLimit = 50
       setConnected(false);
       setConnectionStatus("disconnected");
     };
-  }, [roomId, client, historyLimit, realtime?.refreshSession]);
+  }, [
+    roomId,
+    client,
+    historyLimit,
+    historyOnConnect,
+    replayHistoryOnReconnect,
+    realtime?.refreshSession,
+  ]);
 
   const sendMessage = (
     content: string,
@@ -482,6 +608,8 @@ export function useChat({ roomId, client: clientProp, agentId, historyLimit = 50
     messages,
     hasMore,
     isLoadingMore,
+    historyLoaded,
+    loadHistory,
     loadMore,
     online,
     typingUsers,
@@ -501,5 +629,8 @@ export function useChat({ roomId, client: clientProp, agentId, historyLimit = 50
     sendReadReceipt,
     deleteMessage,
     invokeAgent,
+    toolThreadEvents,
+    clearToolThread,
+    lastAgentRun,
   };
 }
