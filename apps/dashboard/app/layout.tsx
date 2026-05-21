@@ -1,6 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider } from "./components/theme-provider";
 import "./globals.css";
 import ConditionalHeader from "./components/ConditionalHeader";
 import { ClerkShell } from "./components/clerk-shell";
