@@ -7,6 +7,10 @@ ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 REQUIRE_ADMIN_AUTH=true
 
 # --- Hosted SaaS (multi-tenant cloud) ---
+# Local dev tip: after `pnpm provision:bootstrap`, copy BOTH fc_... key AND project UUID
+# from scripts/.provision-secrets.env into dashboard .env.local AND FLUXY_PLATFORM_PROJECT_ID here.
+# Mismatched key vs project id → Cloud connect "forbidden" and onboarding create project fails.
+# For simplest local dev you can leave HOSTED_MULTI_TENANT unset/false.
 # HOSTED_MULTI_TENANT=true
 # FLUXY_PLATFORM_PROJECT_ID=<uuid-from-provision-bootstrap>
 # Tenants cannot use Worker AI_API_KEY; they must set project LLM credentials (or set for internal demos):
@@ -69,3 +73,12 @@ ALLOW_PLAINTEXT_WEBHOOK_SECRETS=true
 # AUTO_ROOM_SUMMARY_ENABLED=true
 # AUTO_ROOM_SUMMARY_EVERY_N=50
 # AUTO_ROOM_SUMMARY_COOLDOWN_MINUTES=120
+
+# --- Public demo room (GET /demo/session, dashboard /demo) ---
+# DEMO_ROOM_ID=public-demo-room
+# DEMO_API_KEY=fc_your_project_key
+# DEMO_USER_ID=demo-guest
+# DEMO_TOKEN_TTL_SECONDS=1800
+# DEMO_READ_ONLY=false
+# DEMO_ENABLED=true
+# RATE_LIMIT_DEMO_SESSIONS_PER_MINUTE=20

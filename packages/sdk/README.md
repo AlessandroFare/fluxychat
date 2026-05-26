@@ -14,6 +14,29 @@ pnpm add @fluxy-chat/sdk
 
 Requires **React 18+** if you use `useChat` (peer dependency).
 
+### Vanilla store (Vue, Solid, Node)
+
+```ts
+import { createFluxyRoomSession } from "@fluxy-chat/sdk";
+
+const { store, stop } = createFluxyRoomSession({
+  roomId: "my-room",
+  client,
+});
+
+const unsub = store.subscribe((state) => {
+  console.log(state.messages, state.connectionState);
+});
+
+store.getState().sendMessage("hello");
+store.getState().sendMessage("", null, undefined, {
+  templateId: "tpl_…",
+  templateVars: { name: "Ada" },
+});
+
+// cleanup: unsub(); stop();
+```
+
 ## What you must configure
 
 | Piece | Who sets it | Notes |
@@ -48,8 +71,17 @@ const client = new FluxyChatClient({
 });
 
 function Room({ roomId }: { roomId: string }) {
-  const { messages, sendMessage, connectionStatus, loadMore, hasMore, isLoadingMore } =
-    useChat({ roomId, client });
+  const {
+    messages,
+    sendMessage,
+    connectionState,
+    retryMessage,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+  } = useChat({ roomId, client });
+  // connectionState.nextRetryAt → "Reconnecting in 3s…"
+  // messages[].deliveryStatus → pending | sent | failed
   // render messages; call loadMore() when the user scrolls to the top
 }
 ```

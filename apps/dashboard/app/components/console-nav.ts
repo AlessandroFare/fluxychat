@@ -1,9 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   BarChart3,
   BookOpen,
   Bot,
   CreditCard,
+  FileText,
   FolderKanban,
   LayoutDashboard,
   MessageSquare,
@@ -31,6 +33,8 @@ export const CONSOLE_NAV_MAIN: ConsoleNavItem[] = [
 
 export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
   { href: "/analytics", label: "Analytics", icon: BarChart3, description: "Room stats and cost estimates" },
+  { href: "/activities", label: "Activities", icon: Activity, description: "Webhooks, agents, automation" },
+  { href: "/templates", label: "Templates", icon: FileText, description: "Message templates with variables" },
   { href: "/search", label: "Search", icon: Search, description: "Find messages by keyword" },
   { href: "/admin", label: "Admin", icon: Shield, description: "Mute, ban, webhooks" },
   { href: "/privacy", label: "Privacy", icon: ShieldCheck, description: "GDPR export and retention" },

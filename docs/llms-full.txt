@@ -1,0 +1,82 @@
+# FluxyChat — documentation bundle for LLMs
+
+URL: https://github.com/AlessandroFare/fluxychat
+
+## What FluxyChat is
+
+FluxyChat is a multi-tenant realtime **in-app chat** API on Cloudflare Workers:
+
+- **WebSocket** rooms (`GET /ws/room/:roomId`)
+- **One Durable Object per room** (ordering, fan-out, presence)
+- **D1** for history, quotas, agents, webhooks
+- **Next.js console** (hosted beta) + **MIT self-host**
+- **npm** `@fluxy-chat/sdk` — headless transport + React `useChat`
+
+Not a telco SMS/WhatsApp provider. Compare to Pusher, Stream, Ably, or self-hosted Socket.io + your own DB.
+
+## SDK (@fluxy-chat/sdk)
+
+Install: `npm install @fluxy-chat/sdk`
+
+### Mint member JWT (server-side)
+
+```bash
+curl -X POST "$WORKER_URL/auth/token" \
+  -H "Content-Type: application/json" \
+  -H "X-Fluxy-Api-Key: fc_your_project_key" \
+  -d '{"userId":"alice","roles":["member"],"ttlSeconds":3600}'
+```
+
+### React useChat
+
+```tsx
+const { messages, sendMessage, connectionState, retryMessage, loadMore, hasMore } =
+  useChat({ roomId, client });
+```
+
+- **Optimistic sends**: messages include `deliveryStatus` (`pending` | `sent` | `failed`) and `clientMessageId`
+- **retryMessage(clientMessageId)** after failure
+- **connectionState**: `{ status, lastError, retryAttempt, nextRetryAt, transport }` for "Reconnecting in Ns" UI
+- **Transport fallback**: WebSocket → SSE → polling (inside hook when reconnect exhausts)
+
+### Framework-agnostic
+
+- `FluxyChatClient` — REST + WS URL
+- `FluxyChatRoomConnection` — reconnect with exponential backoff, optional REST history replay on reconnect
+- `FluxyMessageStream` — bot/agent outbound streaming helper
+
+## WebSocket event types (inbound/outbound)
+
+`history`, `message`, `edit`, `delete`, `reaction`, `read`, `typing`, `presence`, `agentTyping`, `tool_call`, `tool_result`, `tool_error`, `agentRun`, `error`, `ping`/`pong`
+
+## REST highlights
+
+- `POST /messages` — create message (JWT); optional `clientMessageId`, `templateId`, `templateVars`
+- `GET/POST/PATCH/DELETE /templates` — message templates (admin JWT)
+- `GET /activities` — merged webhook + agent + automation timeline
+- `GET /api/messages?roomId=&limit=&before=` — paginated history
+- `POST /webhooks/register` — HMAC-signed outbound events
+- `POST /agents/:id/invoke` — agent in room (streaming tool events on room WS)
+
+## Webhooks
+
+Signed with `X-Fluxy-Signature: sha256=<hex>`. Event types include `message.created`, `mention`, `dm_message`, `report.created`, `room_summary`.
+
+## Self-host
+
+Monorepo: `apps/worker`, `apps/dashboard`, `packages/sdk`. Deploy Worker with wrangler; D1 migrations; set JWT secret and API keys per project.
+
+## Hosted beta
+
+https://www.fluxychat.com/get-started — Clerk signup provisions project + console.
+
+## Further reading (repo paths)
+
+- docs/README.md — index
+- docs/cookbook/auth-jwt.md
+- docs/use-cases/support-chat.md
+- docs/use-cases/team-chat.md
+- docs/use-cases/assistant-room.md
+- docs/dashboard-integration.md
+- docs/troubleshooting.md
+- SPEC.md — full domain model

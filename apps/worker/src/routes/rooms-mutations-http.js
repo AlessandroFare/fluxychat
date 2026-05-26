@@ -2,6 +2,11 @@
  * Split from worker fetch handler (original lines 3197-3627).
  * @returns {Promise<Response|null>}
  */
+import {
+  mapMemberRow,
+  normalizeMemberPreferencesPatch,
+  parseMemberPreferencesJson,
+} from "../lib/member-preferences.js";
 import { pickRouteDeps } from "./route-http-deps.js";
 
 export async function dispatchRoomsMutationsRoutes(request, url, h) {
@@ -280,11 +285,70 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       return json({ error: "forbidden" }, { status: 403 });
     }
     const rows = await env.DB.prepare(
-      "SELECT user_id, role, joined_at FROM room_members WHERE room_id = ? LIMIT 1000" // perf: unbounded
+      `SELECT user_id, role, joined_at, notify_enabled, preferences_json
+       FROM room_members WHERE room_id = ? LIMIT 1000`
     )
       .bind(membersRoomId)
       .all();
-    return json({ members: rows.results || [] });
+    const members = (rows.results || [])
+      .map(mapMemberRow)
+      .filter(Boolean);
+    return json({ members });
+  }
+
+  if (
+    url.pathname.match(/^\/rooms\/[^/]+\/members\/me\/preferences$/) &&
+    request.method === "PATCH"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const parts = url.pathname.split("/");
+    const prefRoomId = parts[2];
+    const canAccess = await canAccessRoom(env, auth, prefRoomId);
+    if (!canAccess) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const patch = normalizeMemberPreferencesPatch(await request.json().catch(() => null));
+    if (!patch) {
+      return json({ error: "invalid_preferences" }, { status: 400 });
+    }
+    const existing = await env.DB.prepare(
+      `SELECT preferences_json, notify_enabled FROM room_members WHERE room_id = ? AND user_id = ?`
+    )
+      .bind(prefRoomId, auth.userId)
+      .first();
+    if (!existing) {
+      return json({ error: "not_a_member" }, { status: 404 });
+    }
+    const notifyEnabled =
+      patch.notifyEnabled !== undefined
+        ? patch.notifyEnabled
+          ? 1
+          : 0
+        : existing.notify_enabled;
+    let preferences = parseMemberPreferencesJson(existing.preferences_json) ?? {};
+    if (patch.preferences) {
+      preferences = { ...preferences, ...patch.preferences };
+    }
+    await env.DB.prepare(
+      `UPDATE room_members SET notify_enabled = ?, preferences_json = ? WHERE room_id = ? AND user_id = ?`
+    )
+      .bind(notifyEnabled, JSON.stringify(preferences), prefRoomId, auth.userId)
+      .run();
+    return json({
+      member: {
+        userId: auth.userId,
+        role: auth.roles?.[0] ?? "member",
+        notifyEnabled: notifyEnabled === 1,
+        preferences,
+      },
+    });
   }
 
   if (

@@ -303,6 +303,82 @@ export async function dispatchPublicRoutes(request, url, h) {
     }
   }
 
+  if (url.pathname === "/demo/session" && request.method === "GET") {
+    if (env.DEMO_ENABLED !== "true") {
+      return json({ enabled: false, error: "demo_disabled" }, { status: 404 });
+    }
+    const roomId = (env.DEMO_ROOM_ID || "").trim();
+    const apiKey = (env.DEMO_API_KEY || "").trim();
+    if (!roomId || !apiKey) {
+      return json({ enabled: false, error: "demo_not_configured" }, { status: 404 });
+    }
+
+    const ip = request.headers.get("CF-Connecting-IP") || request.headers.get("x-forwarded-for") || "unknown";
+    const demoRate = await checkAndConsumeRateLimit(env, {
+      key: `demo:${ip}`,
+      limit: Number(env.RATE_LIMIT_DEMO_SESSIONS_PER_MINUTE || 20),
+      windowSeconds: 60,
+    });
+    if (!demoRate.allowed) {
+      return json(
+        { error: "rate_limit_exceeded", retryAfterSeconds: demoRate.retryAfterSeconds },
+        { status: 429, headers: { "Retry-After": String(demoRate.retryAfterSeconds) } },
+      );
+    }
+    const demoUserId = (env.DEMO_USER_ID || "demo-guest").trim();
+    if (!isValidId(demoUserId) || !isValidId(roomId)) {
+      return json({ error: "demo_misconfigured" }, { status: 500 });
+    }
+    const keyRequest = new Request(request.url, {
+      headers: { "X-Fluxy-Api-Key": apiKey },
+    });
+    const demoProjectId = await resolveProjectId(keyRequest, env);
+    if (!demoProjectId) {
+      return json({ error: "demo_api_key_invalid" }, { status: 401 });
+    }
+    const room = await env.DB.prepare(
+      "SELECT id FROM rooms WHERE id = ? AND project_id = ?"
+    )
+      .bind(roomId, demoProjectId)
+      .first();
+    if (!room) {
+      return json({ error: "demo_room_not_found" }, { status: 404 });
+    }
+    const now = new Date().toISOString();
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)"
+    )
+      .bind(roomId, demoUserId, "guest", now)
+      .run();
+    const row = await env.DB.prepare(
+      "SELECT jwt_secret FROM project_secrets WHERE project_id = ?"
+    )
+      .bind(demoProjectId)
+      .first();
+    if (!row?.jwt_secret) {
+      return json({ error: "demo_project_secret_missing" }, { status: 500 });
+    }
+    const ttlSeconds = Math.min(
+      3600,
+      Math.max(300, Number(env.DEMO_TOKEN_TTL_SECONDS || 1800)),
+    );
+    const token = await signJwtHs256(row.jwt_secret, {
+      sub: demoUserId,
+      tid: demoProjectId,
+      roles: ["member"],
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + ttlSeconds,
+    });
+    return json({
+      enabled: true,
+      roomId,
+      userId: demoUserId,
+      token,
+      expiresIn: ttlSeconds,
+      readOnly: env.DEMO_READ_ONLY === "true",
+    });
+  }
+
   if (url.pathname === "/auth/token" && request.method === "POST") {
     const apiKey =
       request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");

@@ -10,6 +10,8 @@ const isClerkPublicRoute = createRouteMatcher([
   "/enter(.*)",
   "/get-started(.*)",
   "/docs(.*)",
+  "/compare(.*)",
+  "/demo(.*)",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/console-ack(.*)",
@@ -23,7 +25,17 @@ const isClerkPublicRoute = createRouteMatcher([
 
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/favicon.ico") return true;
-  const prefixes = ["/landing", "/why", "/enter", "/get-started", "/docs", "/api/webhooks", "/api"];
+  const prefixes = [
+    "/landing",
+    "/why",
+    "/enter",
+    "/get-started",
+    "/docs",
+    "/compare",
+    "/demo",
+    "/api/webhooks",
+    "/api",
+  ];
   for (const p of prefixes) {
     if (pathname === p || pathname.startsWith(`${p}/`)) return true;
   }

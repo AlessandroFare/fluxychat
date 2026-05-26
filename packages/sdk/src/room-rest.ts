@@ -12,7 +12,26 @@ export function normalizeRoomMember(raw: Record<string, unknown>): FluxyRoomMemb
       : typeof raw.joinedAt === "string"
         ? raw.joinedAt
         : undefined;
-  return { userId, role, joined_at };
+  const joinedAt =
+    typeof raw.joinedAt === "string"
+      ? raw.joinedAt
+      : joined_at;
+  const notifyEnabled =
+    typeof raw.notifyEnabled === "boolean"
+      ? raw.notifyEnabled
+      : raw.notify_enabled !== 0 && raw.notify_enabled !== false;
+  const preferences =
+    raw.preferences && typeof raw.preferences === "object" && !Array.isArray(raw.preferences)
+      ? (raw.preferences as Record<string, unknown>)
+      : undefined;
+  return {
+    userId,
+    role,
+    joined_at: joinedAt,
+    joinedAt,
+    notifyEnabled,
+    preferences,
+  };
 }
 
 export function normalizeRoomMembers(rows: unknown[]): FluxyRoomMember[] {

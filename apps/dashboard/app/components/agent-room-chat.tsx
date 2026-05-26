@@ -17,6 +17,10 @@ import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
 import { messageFromUnknown } from "@/lib/error-message";
 import { AgentRoomMessage } from "./agent-room-message";
+import {
+  AgentRoomTemplatePicker,
+  type AgentRoomTemplateSelection,
+} from "./agent-room-template-picker";
 import { AgentRunStatus } from "./agent-run-status";
 import { Button, Input } from "./ui";
 import { cn } from "@/lib/utils";
@@ -56,6 +60,8 @@ export function AgentRoomChat({
   const [runPending, setRunPending] = useState(false);
   const [runFeedback, setRunFeedback] = useState<string | null>(null);
   const [skipHistoryOnConnect, setSkipHistoryOnConnect] = useState(false);
+  const [templateSelection, setTemplateSelection] =
+    useState<AgentRoomTemplateSelection | null>(null);
   const pollSinceRef = useRef<string | null>(null);
   const runFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -84,6 +90,7 @@ export function AgentRoomChat({
     sendMessage,
     invokeAgent,
     connectionStatus,
+    connectionState,
     agentTyping,
     connected,
     toolThreadEvents,
@@ -91,6 +98,7 @@ export function AgentRoomChat({
     lastAgentRun,
     historyLoaded,
     loadHistory,
+    retryMessage,
   } = useChat({
     roomId: trimmedRoomId,
     agentId,
@@ -236,7 +244,8 @@ export function AgentRoomChat({
   }
 
   async function askAgent() {
-    const text = draft.trim();
+    const templateSend = templateSelection;
+    const text = templateSend ? templateSend.renderedPreview.trim() : draft.trim();
     if (!text || !trimmedRoomId) return;
     setInputError(null);
     beginRunTracking();
@@ -244,9 +253,12 @@ export function AgentRoomChat({
 
     try {
       if (usesMentionInvoke) {
-        const payload = `${mentionPrefixForAgent(agentHandle)}${text}`.trim();
+        const payload = templateSend
+          ? `${mentionPrefixForAgent(agentHandle)}${templateSend.renderedPreview}`.trim()
+          : `${mentionPrefixForAgent(agentHandle)}${text}`.trim();
         await sendMessage(payload, parentId);
         setDraft("");
+        setTemplateSelection(null);
         setReplyToId(null);
         if (!adminJwt.trim()) {
           setInvokeError(
@@ -256,8 +268,16 @@ export function AgentRoomChat({
         return;
       }
 
-      await sendMessage(text, parentId);
+      if (templateSend) {
+        await sendMessage("", parentId, undefined, {
+          templateId: templateSend.templateId,
+          templateVars: templateSend.vars,
+        });
+      } else {
+        await sendMessage(text, parentId);
+      }
       setDraft("");
+      setTemplateSelection(null);
       setReplyToId(null);
       try {
         const result = await invokeAgent(text, { replyTo: parentId });
@@ -271,7 +291,24 @@ export function AgentRoomChat({
     }
   }
 
-  const canSend = Boolean(trimmedRoomId && draft.trim() && !isAgentBusy);
+  const canSend = Boolean(
+    trimmedRoomId &&
+      !isAgentBusy &&
+      (templateSelection?.renderedPreview.trim() || draft.trim()),
+  );
+
+  const reconnectHint = (() => {
+    if (connectionState.status !== "reconnecting" || !connectionState.nextRetryAt) {
+      return null;
+    }
+    const seconds = Math.max(
+      0,
+      Math.ceil(
+        (new Date(connectionState.nextRetryAt).getTime() - Date.now()) / 1000,
+      ),
+    );
+    return `Reconnecting in ${seconds}s…`;
+  })();
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
@@ -302,7 +339,9 @@ export function AgentRoomChat({
           Skip history on connect
         </label>
         <span>
-          {connectionStatus}
+          {reconnectHint ?? connectionStatus}
+          {connectionState.transport === "sse" ? " · SSE" : ""}
+          {connectionState.transport === "polling" ? " · polling" : ""}
           {connected ? " · live" : ""}
           {skipHistoryOnConnect && !historyLoaded ? (
             <button
@@ -349,6 +388,11 @@ export function AgentRoomChat({
             <AgentRoomMessage
               key={m.id}
               message={m}
+              onRetry={
+                m.clientMessageId
+                  ? (clientMessageId) => retryMessage(clientMessageId)
+                  : undefined
+              }
               agentId={agentId}
               localUserId={localUserId}
               parentMessage={
@@ -395,16 +439,25 @@ export function AgentRoomChat({
         </div>
       ) : null}
 
+      <AgentRoomTemplatePicker
+        adminJwt={adminJwt}
+        disabled={!trimmedRoomId || isAgentBusy}
+        value={templateSelection}
+        onChange={setTemplateSelection}
+      />
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={
-            usesMentionInvoke
-              ? `Message @${mentionHandle}…`
-              : `Ask ${agentName}…`
+            templateSelection
+              ? "Optional note (template message will be sent)"
+              : usesMentionInvoke
+                ? `Message @${mentionHandle}…`
+                : `Ask ${agentName}…`
           }
-          disabled={!trimmedRoomId || isAgentBusy}
+          disabled={!trimmedRoomId || isAgentBusy || Boolean(templateSelection)}
           className="sm:flex-1"
           onKeyDown={(e) => {
             if (e.key !== "Enter" || e.shiftKey) return;

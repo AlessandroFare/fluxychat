@@ -2,6 +2,12 @@
  * Messages: create, edit, delete, reactions
  * @returns {Promise<Response|null>}
  */
+import { normalizeClientMessageId } from "../lib/client-message-id.js";
+import { attachAttachmentsToMessages } from "../lib/messages-attachments.js";
+import {
+  normalizeTemplateVars,
+  renderMessageTemplate,
+} from "../lib/message-template.js";
 import { pickRouteDeps } from "./route-http-deps.js";
 
 export async function dispatchMessagesRoutes(request, url, h) {
@@ -74,16 +80,60 @@ export async function dispatchMessagesRoutes(request, url, h) {
         { status: 400 }
       );
     }
-    const contentValidation = validateMessageContent(body.content);
+    const { userId: authUserId, projectId: authProjectId } = auth;
+    const roomId = body.roomId;
+
+    let content = "";
+    const templateId =
+      typeof body.templateId === "string" ? body.templateId.trim() : "";
+    if (templateId) {
+      const tpl = await env.DB.prepare(
+        `SELECT body FROM message_templates WHERE id = ? AND project_id = ?`
+      )
+        .bind(templateId, authProjectId)
+        .first();
+      if (!tpl) {
+        return json({ error: "template_not_found" }, { status: 404 });
+      }
+      const vars = normalizeTemplateVars(body.templateVars ?? body.vars) ?? {};
+      content = renderMessageTemplate(tpl.body, vars);
+    } else {
+      const contentValidation = validateMessageContent(body.content);
+      if (!contentValidation.valid) {
+        return json({ error: contentValidation.error }, { status: 400 });
+      }
+      content = contentValidation.content;
+    }
+
+    const contentValidation = validateMessageContent(content);
     if (!contentValidation.valid) {
       return json({ error: contentValidation.error }, { status: 400 });
     }
-
-    const { userId: authUserId, projectId: authProjectId } = auth;
-    const roomId = body.roomId;
-    const content = contentValidation.content;
+    content = contentValidation.content;
     const parentId = body.replyTo ? Number(body.replyTo) || null : null;
+    const clientMessageId = normalizeClientMessageId(body.clientMessageId);
     const createdAt = new Date().toISOString();
+
+    if (clientMessageId) {
+      const existing = await env.DB.prepare(
+        `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
+                mentions, og_title, og_description, og_image, og_url, client_message_id
+         FROM messages
+         WHERE project_id = ? AND room_id = ? AND client_message_id = ? AND deleted_at IS NULL
+         LIMIT 1`
+      )
+        .bind(authProjectId, roomId, clientMessageId)
+        .first();
+      if (existing) {
+        const [mapped] = await attachAttachmentsToMessages(
+          env,
+          authProjectId,
+          existing.room_id,
+          [existing],
+        );
+        return json({ message: mapped });
+      }
+    }
 
     const quotaResult = await checkAndConsumeProjectQuota(env, {
       projectId: authProjectId,
@@ -130,7 +180,10 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     const insertRes = await env.DB.prepare(
-      "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      `INSERT INTO messages (
+        project_id, room_id, user_id, content, created_at, parent_id,
+        mentions, og_title, og_description, og_image, og_url, client_message_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         authProjectId,
@@ -143,7 +196,8 @@ export async function dispatchMessagesRoutes(request, url, h) {
         preview?.title || null,
         preview?.description || null,
         preview?.imageUrl || null,
-        preview?.url || null
+        preview?.url || null,
+        clientMessageId
       )
       .run();
     ctx.waitUntil(
@@ -226,6 +280,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
         senderId: authUserId,
         createdAt,
         parentId,
+        clientMessageId: clientMessageId ?? undefined,
         mentions,
         preview,
         attachments: sanitizedAttachments.map((a) => ({
@@ -285,10 +340,12 @@ export async function dispatchMessagesRoutes(request, url, h) {
       message: {
         id: messageId,
         roomId,
+        userId: authUserId,
         senderId: authUserId,
         content,
         createdAt,
         parentId,
+        clientMessageId: clientMessageId ?? undefined,
         mentions,
         preview,
         attachments: sanitizedAttachments.map((a) => ({

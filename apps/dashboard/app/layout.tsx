@@ -56,8 +56,16 @@ export default function RootLayout({
     </ClerkUserBridge>
   );
 
+  const docsLlmsUrl =
+    process.env.NEXT_PUBLIC_LLM_DOCS_URL?.trim() ||
+    `${(process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://fluxychat.vercel.app").replace(/\/$/, "")}/docs/llms.txt`;
+
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+      <head>
+        <link rel="llms" href={docsLlmsUrl} />
+        <link rel="alternate" type="text/plain" href={docsLlmsUrl} title="LLM documentation index" />
+      </head>
       <body>
         {clerkPublishableKey ? (
           <ClerkShell publishableKey={clerkPublishableKey}>{shell}</ClerkShell>

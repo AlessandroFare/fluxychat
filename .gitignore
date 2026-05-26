@@ -55,7 +55,12 @@ docs/launch-hn.md
 docs/m6-pilot-gtm-playbook.md
 docs/product-landing-snippet.md
 docs/release/demo-script.md
+docs/distribution-playbook.md
 ROADMAP_EXECUTION.md
 
 portal/
 opencode-dev/
+
+# Local reference repos / exports
+sent-dm-typescript-main/
+directories_links.xlsx

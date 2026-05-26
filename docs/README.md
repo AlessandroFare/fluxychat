@@ -2,6 +2,8 @@
 
 Use-case oriented documentation.
 
+**LLM / agent discovery:** [`llms.txt`](./llms.txt) · [`llms-full.txt`](./llms-full.txt) (index + bundle, Sent-style)
+
 ## Use cases
 
 - [Support chat](./use-cases/support-chat.md)
@@ -12,6 +14,8 @@ Use-case oriented documentation.
 
 - [Auth / Token / JWT (role-based)](./cookbook/auth-jwt.md)
 - [Node bot streaming with FluxyMessageStream](./cookbook/bot-streaming-fluxy-message-stream.md)
+- [Transport fallback (WS → SSE → polling)](./cookbook/transport-fallback.md)
+- [Message templates & member preferences](./cookbook/message-templates.md)
 
 ### Beta console features (open beta)
 

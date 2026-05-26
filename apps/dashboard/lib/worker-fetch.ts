@@ -3,6 +3,7 @@ import { messageFromUnknown } from "@/lib/error-message";
 export interface WorkerErrorBody {
   error?: string;
   message?: string;
+  reason?: string;
   traceId?: string;
 }
 
@@ -19,7 +20,11 @@ function readWorkerErrorMessage(
   traceId?: string,
   requestUrl?: string
 ): string {
-  const msg = body.error || body.message;
+  const msg =
+    body.message ||
+    (body.reason && body.error
+      ? `${body.error} (${body.reason})`
+      : body.error || body.reason);
   const isDashboardApi =
     typeof requestUrl === "string" &&
     (requestUrl.startsWith("/api/") || requestUrl.includes("/api/gdpr/"));

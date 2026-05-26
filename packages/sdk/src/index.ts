@@ -55,6 +55,50 @@ export {
   type UseChatHistoryReplay,
 } from "./use-chat";
 
+export {
+  createFluxyRoomStore,
+  syncRoomConnectionState,
+  type FluxyRoomStore,
+  type FluxyRoomStoreState,
+  type FluxyUseChatConnectionStatus,
+  type FluxyToolThreadEvent,
+} from "./fluxy-room-store";
+
+export {
+  createFluxyRoomSession,
+  startFluxyRoomSession,
+  type StartFluxyRoomSessionOptions,
+} from "./room-session";
+
+export { useFluxyRoomStore, useFluxyRoomStoreState } from "./use-fluxy-room-store";
+
+export {
+  renderMessageTemplate,
+  extractTemplateVarNames,
+  type FluxyMessageTemplate,
+  type FluxySendMessageOptions,
+  type FluxyProjectActivity,
+} from "./message-template";
+
+export {
+  buildFluxyConnectionState,
+  type FluxyChatTransport,
+  type FluxyConnectionState,
+  type FluxyConnectionStateStatus,
+} from "./connection-state";
+
+export {
+  applyServerMessageAck,
+  createClientMessageId,
+  createOptimisticMessage,
+  markMessageDeliveryFailed,
+  tryMatchPendingByInbound,
+  type FluxyChatMessageWithDelivery,
+  type FluxyDeliverableMessage,
+  type FluxyMessageDeliveryFields,
+  type FluxyMessageDeliveryStatus,
+} from "./message-delivery";
+
 export { useRooms } from "./use-rooms";
 
 import { FluxyChatRoomConnection, type FluxyRoomConnectionOptions } from "./room-connection";
@@ -83,6 +127,11 @@ export interface FluxyChatMessage {
   attachments?: FluxyChatAttachment[];
   /** True while an agent (or user) is still streaming tokens into this message. */
   streaming?: boolean;
+  /** Client-only id for optimistic send dedupe (not stored server-side yet). */
+  clientMessageId?: string;
+  /** Client-only delivery state for optimistic UI. */
+  deliveryStatus?: "pending" | "sent" | "failed";
+  deliveryError?: string;
 }
 
 export interface FluxyChatAttachment {
@@ -129,6 +178,9 @@ export interface FluxyRoomMember {
   userId: string;
   role: string;
   joined_at?: string;
+  joinedAt?: string;
+  notifyEnabled?: boolean;
+  preferences?: Record<string, unknown>;
 }
 
 export interface FetchMessagesOptions {
@@ -357,6 +409,125 @@ export class FluxyChatClient {
     return sortMessagesChronological((body.messages ?? []) as FluxyChatMessage[]);
   }
 
+  async listMessageTemplates(): Promise<import("./message-template").FluxyMessageTemplate[]> {
+    if (!this.token) return [];
+    const res = await fetch(new URL("/templates", this.baseUrl).toString(), {
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to list templates: ${res.status}`);
+    const body = await res.json();
+    return body.templates ?? [];
+  }
+
+  async createMessageTemplate(
+    name: string,
+    body: string,
+  ): Promise<import("./message-template").FluxyMessageTemplate | null> {
+    if (!this.token) return null;
+    const res = await fetch(new URL("/templates", this.baseUrl).toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify({ name, body }),
+    });
+    if (!res.ok) throw new Error(`Failed to create template: ${res.status}`);
+    const json = await res.json();
+    return json.template ?? null;
+  }
+
+  async updateMessageTemplate(
+    templateId: string,
+    patch: { name?: string; body?: string },
+  ): Promise<import("./message-template").FluxyMessageTemplate | null> {
+    if (!this.token) return null;
+    const url = new URL(`/templates/${encodeURIComponent(templateId)}`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new Error(`Failed to update template: ${res.status}`);
+    const json = await res.json();
+    return json.template ?? null;
+  }
+
+  async deleteMessageTemplate(templateId: string): Promise<boolean> {
+    if (!this.token) return false;
+    const url = new URL(`/templates/${encodeURIComponent(templateId)}`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "DELETE",
+      headers: this.authHeaders(),
+    });
+    return res.ok;
+  }
+
+  async renderMessageTemplate(options: {
+    templateId?: string;
+    body?: string;
+    vars?: Record<string, string | number | boolean | null | undefined>;
+  }): Promise<string> {
+    if (!this.token) throw new Error("JWT is required to render templates");
+    const res = await fetch(new URL("/templates/render", this.baseUrl).toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify({
+        templateId: options.templateId,
+        body: options.body,
+        vars: options.vars,
+        templateVars: options.vars,
+      }),
+    });
+    if (!res.ok) throw new Error(`Failed to render template: ${res.status}`);
+    const json = await res.json();
+    return String(json.content ?? "");
+  }
+
+  async listActivities(options?: {
+    limit?: number;
+    roomId?: string;
+  }): Promise<import("./message-template").FluxyProjectActivity[]> {
+    if (!this.token) return [];
+    const url = new URL("/activities", this.baseUrl);
+    if (options?.limit) url.searchParams.set("limit", String(options.limit));
+    if (options?.roomId?.trim()) url.searchParams.set("roomId", options.roomId.trim());
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to list activities: ${res.status}`);
+    const body = await res.json();
+    return body.activities ?? [];
+  }
+
+  async updateMemberPreferences(
+    roomId: string,
+    patch: { notifyEnabled?: boolean; preferences?: Record<string, unknown> },
+  ): Promise<FluxyRoomMember | null> {
+    if (!this.token) return null;
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/members/me/preferences`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new Error(`Failed to update member preferences: ${res.status}`);
+    const body = await res.json();
+    const member = body.member;
+    if (!member) return null;
+    return normalizeRoomMembers([member])[0] ?? null;
+  }
+
   async fetchRoomMembers(roomId: string): Promise<FluxyRoomMember[]> {
     const trimmedRoomId = roomId.trim();
     if (!trimmedRoomId) return [];
@@ -394,7 +565,9 @@ export class FluxyChatClient {
     roomId: string,
     content: string,
     replyTo?: number | null,
-    attachments?: FluxyChatAttachment[]
+    attachments?: FluxyChatAttachment[],
+    clientMessageId?: string,
+    options?: import("./message-template").FluxySendMessageOptions,
   ): Promise<FluxyChatMessage | null> {
     if (!this.token) return null;
     const res = await fetch(new URL("/messages", this.baseUrl).toString(), {
@@ -405,9 +578,12 @@ export class FluxyChatClient {
       },
       body: JSON.stringify({
         roomId,
-        content,
+        content: options?.templateId ? content || "" : content,
         replyTo: replyTo ?? null,
         ...(attachments?.length ? { attachments } : {}),
+        ...(clientMessageId?.trim() ? { clientMessageId: clientMessageId.trim() } : {}),
+        ...(options?.templateId ? { templateId: options.templateId } : {}),
+        ...(options?.templateVars ? { templateVars: options.templateVars } : {}),
       }),
     });
     if (!res.ok) {

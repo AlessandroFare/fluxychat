@@ -4,7 +4,14 @@ import { normalizeRoomMember, normalizeRoomMembers } from "./room-rest";
 describe("room-rest", () => {
   it("normalizeRoomMember maps user_id to userId", () => {
     const member = normalizeRoomMember({ user_id: "alice", role: "owner" });
-    expect(member).toEqual({ userId: "alice", role: "owner", joined_at: undefined });
+    expect(member).toEqual({
+      userId: "alice",
+      role: "owner",
+      joined_at: undefined,
+      joinedAt: undefined,
+      notifyEnabled: true,
+      preferences: undefined,
+    });
   });
 
   it("normalizeRoomMembers skips invalid rows", () => {

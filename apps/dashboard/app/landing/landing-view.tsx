@@ -33,6 +33,8 @@ import { TeamsStartFlow } from "~/components/marketing/teams-start-flow";
 import { FlowingMenu, MESSAGING_FLOW_ITEMS } from "~/components/marketing/flowing-menu";
 import { PillarsBento, type PillarBentoItem } from "~/components/marketing/pillars-bento";
 import { MiddlewarePipelineViz } from "~/components/marketing/middleware-pipeline-viz";
+import { MessageLifecycleSection } from "~/components/marketing/message-lifecycle-section";
+import { COMPARE_ROWS } from "@/lib/compare-providers";
 import { ConsoleEntryLink } from "../components/console-entry-link";
 import { LandingHeroAuthCta, LandingNavAuthCta } from "../components/landing-auth-cta";
 import { FluxychatIcon, FluxychatLogotype } from "@/components/FluxychatLogo";
@@ -75,43 +77,6 @@ const PILLARS: readonly PillarBentoItem[] = [
     label: "Automate",
     title: "Agents and webhooks",
     body: "Invoke AI in rooms, retry webhook delivery, and fall back to SSE when WebSockets are blocked.",
-  },
-];
-
-const COMPARE_ROWS: {
-  label: string;
-  stream: string;
-  ably: string;
-  pusher: string;
-  fluxy: string;
-}[] = [
-  {
-    label: "Edge-native (Cloudflare-style) deployment",
-    stream: "Managed cloud",
-    ably: "Managed cloud",
-    pusher: "Managed cloud",
-    fluxy: "Designed for Workers + DO + D1",
-  },
-  {
-    label: "Operator dashboard (projects, keys, billing hooks)",
-    stream: "Separate product area",
-    ably: "Console + APIs",
-    pusher: "Channels dashboard",
-    fluxy: "First-party console in this repo",
-  },
-  {
-    label: "SDK focus (drop-in hooks, minimal ceremony)",
-    stream: "Strong SDKs",
-    ably: "Strong SDKs",
-    pusher: "Channels SDKs",
-    fluxy: "Opinionated @fluxy-chat/sdk + examples",
-  },
-  {
-    label: "Self-host / fork friendliness (MIT-style workflow)",
-    stream: "Proprietary stack",
-    ably: "Managed-first",
-    pusher: "Managed-first",
-    fluxy: "Monorepo you can run end-to-end",
   },
 ];
 
@@ -203,27 +168,29 @@ export function LandingView() {
         className={cn(
           "fixed z-50 transition-[top,left,right,width,transform,border-radius,box-shadow,padding,border-width] duration-300 ease-out",
           navDocked
-            ? "left-1/2 right-auto top-3 w-[min(100%-1.25rem,44rem)] -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/85 py-2 pl-3 pr-2 shadow-[0_12px_40px_-8px_rgba(17,17,17,0.16)] backdrop-blur-xl sm:top-5 sm:pl-5 sm:pr-3"
+            ? "left-1/2 right-auto top-3 w-[min(calc(100vw-1.5rem),72rem)] -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/90 py-2 pl-3 pr-2 shadow-[0_12px_40px_-8px_rgba(17,17,17,0.16)] backdrop-blur-xl sm:top-5 sm:pl-4 sm:pr-3"
             : "left-0 right-0 top-0 border-b border-black/[0.06] bg-white/90 py-0 backdrop-blur-md",
         )}
       >
         <div
           className={cn(
-            "mx-auto flex max-w-6xl items-center justify-between gap-2 sm:gap-3",
-            navDocked ? "px-1 sm:px-2" : "h-16 px-4 sm:px-6",
+            "mx-auto grid w-full max-w-6xl items-center gap-2 sm:gap-3 md:grid-cols-[auto_1fr_auto]",
+            navDocked ? "px-2 sm:px-3" : "h-16 px-4 sm:px-6",
           )}
         >
-          <Link
-            href="/landing"
-            className={cn("shrink-0 text-slate-900", navDocked ? "scale-[0.92] sm:scale-100" : "")}
-            aria-label="Fluxychat"
-          >
-            <FluxychatLogotype size={navDocked ? 26 : 30} />
-          </Link>
+          <div className="flex min-w-0 shrink-0 items-center">
+            <Link
+              href="/landing"
+              className={cn("text-slate-900", navDocked ? "scale-[0.92] sm:scale-100" : "")}
+              aria-label="Fluxychat"
+            >
+              <FluxychatLogotype size={navDocked ? 26 : 30} />
+            </Link>
+          </div>
           <nav
             className={cn(
-              "hidden items-center font-medium md:flex",
-              navDocked ? "gap-3 lg:gap-4" : "gap-6 text-sm",
+              "hidden min-w-0 justify-center overflow-x-auto font-medium scrollbar-none md:flex md:flex-nowrap",
+              navDocked ? "gap-2.5 px-2 text-xs lg:gap-3 lg:text-sm" : "gap-5 text-sm lg:gap-6",
             )}
           >
             <Link href={HOSTED_PATHS.docs} className={navDocked ? navLinkClassDock : navLinkClass}>
@@ -235,14 +202,20 @@ export function LandingView() {
             <a href="#pricing" className={navDocked ? navLinkClassDock : navLinkClass}>
               Pricing
             </a>
-            <a href="#compare" className={navDocked ? navLinkClassDock : navLinkClass}>
+            <Link href="/compare" className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}>
               Compare
+            </Link>
+            <a href="#lifecycle" className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}>
+              Lifecycle
             </a>
+            <Link href="/demo" className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}>
+              Demo
+            </Link>
             <a href="#faq" className={navDocked ? navLinkClassDock : navLinkClass}>
               FAQ
             </a>
           </nav>
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
             <LandingNavAuthCta navDocked={navDocked} />
           </div>
         </div>
@@ -713,6 +686,8 @@ export function LandingView() {
           </p>
         </div>
       </section>
+
+      <MessageLifecycleSection />
 
       {/* Compare — light */}
       <section

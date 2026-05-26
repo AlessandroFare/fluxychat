@@ -1,0 +1,47 @@
+# FluxyChat
+
+> Multi-tenant realtime chat on Cloudflare Workers (Durable Objects + D1). MIT self-host + hosted beta.
+
+## Docs index
+
+- [Docs home](https://github.com/AlessandroFare/fluxychat/blob/main/docs/README.md)
+- [Full LLM bundle](https://github.com/AlessandroFare/fluxychat/blob/main/docs/llms-full.txt)
+- [SDK README](https://github.com/AlessandroFare/fluxychat/blob/main/packages/sdk/README.md)
+- [SPEC](https://github.com/AlessandroFare/fluxychat/blob/main/SPEC.md)
+- [Auth / JWT cookbook](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/auth-jwt.md)
+- [Next.js end-to-end](https://github.com/AlessandroFare/fluxychat/blob/main/docs/snippets/nextjs-end-to-end.md)
+- [Support chat use case](https://github.com/AlessandroFare/fluxychat/blob/main/docs/use-cases/support-chat.md)
+- [Team chat use case](https://github.com/AlessandroFare/fluxychat/blob/main/docs/use-cases/team-chat.md)
+- [Assistant room / agents](https://github.com/AlessandroFare/fluxychat/blob/main/docs/use-cases/assistant-room.md)
+- [Bot streaming (FluxyMessageStream)](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/bot-streaming-fluxy-message-stream.md)
+- [Dashboard integration](https://github.com/AlessandroFare/fluxychat/blob/main/docs/dashboard-integration.md)
+- [Hosted domains](https://github.com/AlessandroFare/fluxychat/blob/main/docs/hosted-domains.md)
+- [Troubleshooting](https://github.com/AlessandroFare/fluxychat/blob/main/docs/troubleshooting.md)
+- [Contract policy](https://github.com/AlessandroFare/fluxychat/blob/main/docs/contract-policy.md)
+
+## Product URLs
+
+- Beta: https://www.fluxychat.com/get-started
+- GitHub: https://github.com/AlessandroFare/fluxychat
+- npm SDK: https://www.npmjs.com/package/@fluxy-chat/sdk
+
+## SDK quick reference
+
+```ts
+import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({ baseUrl, userId, token });
+const { messages, sendMessage, connectionState, retryMessage, loadMore } = useChat({
+  roomId,
+  client,
+});
+```
+
+- Headless core: `FluxyChatClient`, `FluxyChatRoomConnection` (reconnect/backoff, history replay)
+- React: `useChat`, `FluxyRealtimeProvider`
+- Per-message delivery: `deliveryStatus` pending | sent | failed, `retryMessage(clientMessageId)`
+- Connection UI: `connectionState` with `status`, `lastError`, `retryAttempt`, `nextRetryAt`
+
+## Architecture (one paragraph)
+
+One Room Durable Object per channel handles WebSocket fan-out and ordering; messages persist asynchronously to D1. JWT per project for members; Next.js console for rooms, agents, webhooks, billing. Agents emit `tool_call` / `tool_result` on the same room WebSocket as user messages.

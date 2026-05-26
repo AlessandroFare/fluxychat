@@ -22,6 +22,8 @@ export const MARKETING_PATH_PREFIXES = [
   "/enter",
   "/get-started",
   "/docs",
+  "/compare",
+  "/demo",
   "/sign-in",
   "/sign-up",
 ] as const;

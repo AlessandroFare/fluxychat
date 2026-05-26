@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/sdk",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Fluxychat JavaScript/TypeScript SDK — WebSocket rooms, REST messages, FluxyRealtimeProvider, useChat with loadMore",
   "license": "MIT",
   "author": "Fluxychat",
@@ -50,6 +50,18 @@
     "dist/agent-outbound.d.ts",
     "dist/url-utils.js",
     "dist/url-utils.d.ts",
+    "dist/connection-state.js",
+    "dist/connection-state.d.ts",
+    "dist/message-delivery.js",
+    "dist/message-delivery.d.ts",
+    "dist/fluxy-room-store.js",
+    "dist/fluxy-room-store.d.ts",
+    "dist/room-session.js",
+    "dist/room-session.d.ts",
+    "dist/use-fluxy-room-store.js",
+    "dist/use-fluxy-room-store.d.ts",
+    "dist/message-template.js",
+    "dist/message-template.d.ts",
     "LICENSE",
     "README.md"
   ],
@@ -74,5 +86,8 @@
     "react-dom": "latest",
     "typescript": "latest",
     "vitest": "^4.1.5"
+  },
+  "dependencies": {
+    "zustand": "^5.0.13"
   }
 }

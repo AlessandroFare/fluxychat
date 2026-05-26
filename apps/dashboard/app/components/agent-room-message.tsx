@@ -12,6 +12,7 @@ export interface AgentRoomMessageProps {
   /** Parent message when this row is a reply. */
   parentMessage?: FluxyChatMessage | null;
   onReply?: (messageId: number) => void;
+  onRetry?: (clientMessageId: string) => void;
 }
 
 function displayUserId(message: FluxyChatMessage): string {
@@ -30,6 +31,7 @@ export function AgentRoomMessage({
   localUserId,
   parentMessage,
   onReply,
+  onRetry,
 }: AgentRoomMessageProps) {
   const author = displayUserId(message);
   const isAgent = author === agentId;
@@ -73,6 +75,24 @@ export function AgentRoomMessage({
         {isAgent ? (
           <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
             agent
+          </span>
+        ) : null}
+        {message.deliveryStatus === "pending" ? (
+          <span className="text-[10px] text-muted-foreground">Sending…</span>
+        ) : null}
+        {message.deliveryStatus === "failed" ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive">
+            Failed to send
+            {message.clientMessageId && onRetry ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-5 px-1 text-[10px] text-destructive"
+                onClick={() => onRetry(message.clientMessageId!)}
+              >
+                Retry
+              </Button>
+            ) : null}
           </span>
         ) : null}
         {isStreaming ? (

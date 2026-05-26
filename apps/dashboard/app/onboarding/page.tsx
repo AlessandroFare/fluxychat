@@ -176,6 +176,7 @@ export default function OnboardingPage() {
 
   const [projectName, setProjectName] = useState("My first project");
   const [creatingProject, setCreatingProject] = useState(false);
+  const [provisioningCloud, setProvisioningCloud] = useState(false);
 
   const [userId, setUserId] = useState("alice");
   const [mintingJwt, setMintingJwt] = useState(false);
@@ -278,6 +279,51 @@ export default function OnboardingPage() {
     setActiveStep((s) => Math.max(0, s - 1));
   }
 
+  async function provisionHostedProject() {
+    if (!isClerkClientConfigured() || !clerkSignedIn) {
+      setError("Sign in with Clerk first (step 1), then use hosted provisioning.");
+      return;
+    }
+    if (project?.id) {
+      setNotice("Project already provisioned. Continue to the next step.");
+      setError(null);
+      return;
+    }
+    setProvisioningCloud(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/fluxy/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          createProject: true,
+          projectName: projectName.trim() || undefined,
+        }),
+      });
+      const json = (await res.json()) as {
+        adminJwt?: string;
+        memberJwt?: string;
+        activeProject?: CreatedProject;
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(json.error || "Hosted provisioning failed");
+      }
+      if (json.adminJwt) setAdminJwt(json.adminJwt);
+      if (json.memberJwt) setMemberJwt(json.memberJwt);
+      if (json.activeProject) setActiveProject(json.activeProject);
+      setNotice("Tenant project provisioned via hosted connect.");
+    } catch (err: unknown) {
+      const message = messageFromUnknown(err, "Hosted provisioning failed");
+      setError(
+        `${message}. Ensure FLUXY_CONSOLE_API_KEY and FLUXY_PLATFORM_PROJECT_ID in apps/dashboard/.env.local match the same pnpm provision:bootstrap run as apps/worker/.dev.vars.`,
+      );
+    } finally {
+      setProvisioningCloud(false);
+    }
+  }
+
   async function createProject() {
     if (project?.id) {
       setNotice("Your cloud project is already provisioned. Continue to mint a member JWT.");
@@ -305,7 +351,14 @@ export default function OnboardingPage() {
       setNotice("Project created.");
       setActiveStep(2);
     } catch (err: unknown) {
-      setError(messageFromUnknown(err, "Failed to create project"));
+      const message = messageFromUnknown(err, "Failed to create project");
+      if (message.includes("forbidden")) {
+        setError(
+          `${message}. On hosted multi-tenant mode, use "Provision via Clerk" (platform bootstrap key) instead of manual create — or set HOSTED_MULTI_TENANT=false in apps/worker/.dev.vars for local-only dev.`,
+        );
+      } else {
+        setError(message);
+      }
     } finally {
       setCreatingProject(false);
     }
@@ -584,22 +637,43 @@ export default function OnboardingPage() {
               <code className="text-xs">{project.id}</code>). Continue to mint a member JWT for the SDK.
             </p>
           ) : (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Input
-                data-testid="project-name-input"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="Project name"
-                className="sm:flex-1"
-              />
-              <Button
-                variant="primary"
-                data-testid="create-project-btn"
-                onClick={() => void createProject()}
-                disabled={creatingProject}
-              >
-                {creatingProject ? "Creating…" : "Create project"}
-              </Button>
+            <div className="flex flex-col gap-3">
+              {isClerkClientConfigured() && clerkSignedIn ? (
+                <div className="rounded-lg border border-brand/25 bg-brand/5 p-3 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">Hosted cloud (recommended)</p>
+                  <p className="mt-1">
+                    Creates your tenant project with the bootstrap API key on the Worker — no manual JWT
+                    paste required.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className="mt-3"
+                    data-testid="provision-hosted-btn"
+                    onClick={() => void provisionHostedProject()}
+                    disabled={provisioningCloud}
+                  >
+                    {provisioningCloud ? "Provisioning…" : "Provision via Clerk"}
+                  </Button>
+                </div>
+              ) : null}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  data-testid="project-name-input"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="Project name"
+                  className="sm:flex-1"
+                />
+                <Button
+                  variant="outline"
+                  data-testid="create-project-btn"
+                  onClick={() => void createProject()}
+                  disabled={creatingProject || provisioningCloud}
+                >
+                  {creatingProject ? "Creating…" : "Create project (admin JWT)"}
+                </Button>
+              </div>
             </div>
           )}
           {project?.apiKey ? (

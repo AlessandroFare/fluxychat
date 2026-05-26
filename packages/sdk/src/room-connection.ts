@@ -72,6 +72,8 @@ export class FluxyChatRoomConnection {
   private hasConnectedOnce = false;
   private pendingHistoryReplay = false;
   private lastError: Error | null = null;
+  private nextReconnectAtMs: number | null = null;
+  private scheduledReconnectDelayMs = 0;
   private listeners: MessageListener[] = [];
   private waitForEntries: WaitForEntry[] = [];
   private seenIds: number[] = [];
@@ -100,6 +102,15 @@ export class FluxyChatRoomConnection {
 
   getLastError(): Error | null {
     return this.lastError;
+  }
+
+  /** When reconnecting, time of the next socket open attempt. */
+  getNextReconnectAt(): Date | null {
+    return this.nextReconnectAtMs != null ? new Date(this.nextReconnectAtMs) : null;
+  }
+
+  getScheduledReconnectDelayMs(): number {
+    return this.scheduledReconnectDelayMs;
   }
 
   get readyState(): number {
@@ -182,6 +193,10 @@ export class FluxyChatRoomConnection {
   private setStatus(next: FluxyRoomConnectionStatus): void {
     if (this.status === next) return;
     this.status = next;
+    if (next === "connected") {
+      this.nextReconnectAtMs = null;
+      this.scheduledReconnectDelayMs = 0;
+    }
     this.options.onStatusChange?.(next);
   }
 
@@ -270,6 +285,8 @@ export class FluxyChatRoomConnection {
       this.options.baseBackoffMs,
       this.options.maxBackoffMs,
     );
+    this.scheduledReconnectDelayMs = delay;
+    this.nextReconnectAtMs = Date.now() + delay;
     this.clearReconnectTimer();
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;

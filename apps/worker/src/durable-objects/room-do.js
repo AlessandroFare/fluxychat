@@ -132,7 +132,7 @@ export class RoomDurableObject {
     // Optionally restore recent history and send to new client
     const projectId = this.projectId;
     const result = await this.env.DB.prepare(
-      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50"
+      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50"
     )
       .bind(projectId, roomId)
       .all();
@@ -904,7 +904,7 @@ export class RoomDurableObject {
 
       const projectId = this.projectId;
       this.env.DB.prepare(
-        "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50"
+        "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50"
       ).bind(projectId, roomId).all().then(async (result) => {
         const rows = result.results || [];
         const mapped = await attachAttachmentsToMessages(this.env, projectId, roomId, rows);
@@ -1021,6 +1021,7 @@ export class RoomDurableObject {
           mentions: Array.isArray(body.mentions) ? body.mentions : [],
           preview: body.preview ?? null,
           attachments: Array.isArray(body.attachments) ? body.attachments : [],
+          ...(body.clientMessageId ? { clientMessageId: body.clientMessageId } : {}),
         };
         this.broadcast(payload);
       }

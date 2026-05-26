@@ -22,6 +22,7 @@ class FakeDB {
     this.bots = [];
     this.messageMentions = [];
     this.automationEvents = [];
+    this.messageTemplates = [];
     this.attachments = [];
     this.stripeWebhookEvents = [];
     this.lastMessageId = 0;
@@ -65,6 +66,7 @@ class FakeDB {
     }
 
     if (sql.includes("INSERT INTO messages")) {
+      const hasClientMessageId = sql.includes("client_message_id");
       const [
         projectId,
         roomId,
@@ -77,7 +79,10 @@ class FakeDB {
         ogDescription,
         ogImage,
         ogUrl,
-      ] = args;
+        clientMessageId,
+      ] = hasClientMessageId
+        ? args
+        : [...args, null];
       const id = ++this.lastMessageId;
       this.messages.push({
         id,
@@ -94,8 +99,43 @@ class FakeDB {
         og_description: ogDescription,
         og_image: ogImage,
         og_url: ogUrl,
+        client_message_id: clientMessageId ?? null,
       });
       return { meta: { last_row_id: id, changes: 1 } };
+    }
+
+    if (sql.includes("INSERT INTO message_templates")) {
+      const [id, projectId, name, body, createdAt, updatedAt] = args;
+      this.messageTemplates.push({
+        id,
+        project_id: projectId,
+        name,
+        body,
+        created_at: createdAt,
+        updated_at: updatedAt,
+      });
+      return { meta: { changes: 1 } };
+    }
+
+    if (sql.includes("UPDATE message_templates SET")) {
+      const [name, body, updatedAt, id, projectId] = args;
+      const row = this.messageTemplates.find(
+        (t) => t.id === id && t.project_id === projectId
+      );
+      if (!row) return { meta: { changes: 0 } };
+      row.name = name;
+      row.body = body;
+      row.updated_at = updatedAt;
+      return { meta: { changes: 1 } };
+    }
+
+    if (sql.includes("DELETE FROM message_templates WHERE id = ?")) {
+      const [id, projectId] = args;
+      const before = this.messageTemplates.length;
+      this.messageTemplates = this.messageTemplates.filter(
+        (t) => !(t.id === id && t.project_id === projectId)
+      );
+      return { meta: { changes: before - this.messageTemplates.length } };
     }
 
     if (
@@ -933,6 +973,40 @@ class FakeDB {
       return row || null;
     }
 
+    if (sql.includes("SELECT body FROM message_templates WHERE id = ?")) {
+      const [id, projectId] = args;
+      const row = this.messageTemplates.find(
+        (t) => t.id === id && t.project_id === projectId
+      );
+      return row ? { body: row.body } : null;
+    }
+
+    if (
+      sql.includes("client_message_id") &&
+      sql.includes("FROM messages") &&
+      sql.includes("project_id = ?") &&
+      sql.includes("room_id = ?") &&
+      sql.includes("client_message_id = ?")
+    ) {
+      const [projectId, roomId, clientMessageId] = args;
+      const row = this.messages.find(
+        (m) =>
+          m.project_id === projectId &&
+          m.room_id === roomId &&
+          m.client_message_id === clientMessageId &&
+          !m.deleted_at
+      );
+      return row || null;
+    }
+
+    if (sql.includes("FROM message_templates WHERE id = ? AND project_id = ?")) {
+      const [id, projectId] = args;
+      const row = this.messageTemplates.find(
+        (t) => t.id === id && t.project_id === projectId
+      );
+      return row || null;
+    }
+
     return null;
   }
 
@@ -948,6 +1022,57 @@ class FakeDB {
         .slice()
         .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
       return { results };
+    }
+
+    if (
+      sql.includes("FROM message_templates") &&
+      sql.includes("WHERE project_id = ?")
+    ) {
+      const [projectId] = args;
+      const results = this.messageTemplates
+        .filter((t) => t.project_id === projectId)
+        .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+      return { results };
+    }
+
+    if (sql.includes("FROM automation_events") && sql.includes("WHERE project_id = ?")) {
+      const [projectId, roomId, limit] = args.length === 3 ? args : [args[0], null, args[1]];
+      let rows = this.automationEvents.filter((e) => e.project_id === projectId);
+      if (roomId) rows = rows.filter((e) => e.room_id === roomId);
+      rows = rows
+        .slice()
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, Number(limit));
+      return { results: rows };
+    }
+
+    if (
+      sql.includes("FROM webhook_deliveries") &&
+      sql.includes("WHERE project_id = ?") &&
+      sql.includes("ORDER BY created_at DESC")
+    ) {
+      const [projectId, limit] = args;
+      const results = this.webhookDeliveries
+        .filter((d) => d.project_id === projectId)
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, Number(limit));
+      return { results };
+    }
+
+    if (
+      sql.includes("FROM agent_runs") &&
+      sql.includes("WHERE project_id = ?") &&
+      sql.includes("ORDER BY created_at DESC LIMIT ?") &&
+      !sql.includes("AND agent_id = ?")
+    ) {
+      const [projectId, roomId, limit] = args.length === 3 ? args : [args[0], null, args[1]];
+      let rows = this.agentRuns.filter((r) => r.project_id === projectId);
+      if (roomId) rows = rows.filter((r) => r.room_id === roomId);
+      rows = rows
+        .slice()
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, Number(limit));
+      return { results: rows };
     }
 
     if (sql.includes("SELECT id, url, secret, secret_ciphertext, secret_iv, event_types FROM webhooks WHERE project_id = ?")) {
@@ -1283,6 +1408,126 @@ describe("worker integration flows", () => {
     expect(deleteRes.status).toBe(200);
     expect(db.messages[0].deleted_at).toBeTruthy();
     expect(db.messages[0].content).toBe("[deleted]");
+  });
+
+  it("message templates CRUD + render + POST /messages with templateId", async () => {
+    const adminToken = await makeJwt(
+      { sub: "admin_1", tid: projectId, roles: ["admin"], exp: Math.floor(Date.now() / 1000) + 3600 },
+      jwtSecret
+    );
+    const memberToken = await makeJwt(
+      { sub: userId, tid: projectId, roles: ["member"], exp: Math.floor(Date.now() / 1000) + 3600 },
+      jwtSecret
+    );
+
+    const createTpl = await callWorker({
+      env,
+      url: "https://fluxy.local/templates",
+      method: "POST",
+      body: { name: "welcome", body: "Hello {{name}} in {{roomId}}" },
+      token: adminToken,
+    });
+    expect(createTpl.status).toBe(200);
+    const tplJson = await createTpl.json();
+    const templateId = tplJson.template.id;
+    expect(db.messageTemplates).toHaveLength(1);
+
+    const renderRes = await callWorker({
+      env,
+      url: "https://fluxy.local/templates/render",
+      method: "POST",
+      body: { templateId, vars: { name: "Ada", roomId } },
+      token: adminToken,
+    });
+    expect(renderRes.status).toBe(200);
+    expect((await renderRes.json()).content).toBe(`Hello Ada in ${roomId}`);
+
+    const msgRes = await callWorker({
+      env,
+      url: "https://fluxy.local/messages",
+      method: "POST",
+      body: {
+        roomId,
+        templateId,
+        templateVars: { name: "Ada", roomId },
+        clientMessageId: "cmsg_e2e_template_01",
+      },
+      token: memberToken,
+    });
+    expect(msgRes.status).toBe(200);
+    const msgJson = await msgRes.json();
+    expect(msgJson.message.content).toBe(`Hello Ada in ${roomId}`);
+    expect(msgJson.message.clientMessageId).toBe("cmsg_e2e_template_01");
+
+    const dupRes = await callWorker({
+      env,
+      url: "https://fluxy.local/messages",
+      method: "POST",
+      body: {
+        roomId,
+        templateId,
+        templateVars: { name: "Ignored", roomId },
+        clientMessageId: "cmsg_e2e_template_01",
+      },
+      token: memberToken,
+    });
+    expect(dupRes.status).toBe(200);
+    const dupJson = await dupRes.json();
+    expect(dupJson.message.id).toBe(msgJson.message.id);
+    expect(db.messages).toHaveLength(1);
+  });
+
+  it("GET /activities merges automation, webhooks, and agent runs", async () => {
+    const adminToken = await makeJwt(
+      { sub: "admin_1", tid: projectId, roles: ["admin"], exp: Math.floor(Date.now() / 1000) + 3600 },
+      jwtSecret
+    );
+    const now = new Date().toISOString();
+
+    db.automationEvents.push({
+      id: ++db.lastAutomationEventId,
+      project_id: projectId,
+      event_type: "mention",
+      room_id: roomId,
+      payload: JSON.stringify({ messageId: 1 }),
+      created_at: now,
+    });
+    db.webhookDeliveries.push({
+      id: "whd_1",
+      project_id: projectId,
+      webhook_id: "wh_1",
+      webhook_url: "https://example.com/hook",
+      event_type: "message.created",
+      payload: JSON.stringify({ roomId }),
+      status: "delivered",
+      attempt_count: 1,
+      next_attempt_at: now,
+      created_at: now,
+      updated_at: now,
+    });
+    db.agentRuns.push({
+      id: "run_1",
+      project_id: projectId,
+      agent_id: "agent_1",
+      room_id: roomId,
+      status: "completed",
+      latency_ms: 120,
+      created_at: now,
+    });
+
+    const res = await callWorker({
+      env,
+      url: `https://fluxy.local/activities?roomId=${encodeURIComponent(roomId)}&limit=10`,
+      method: "GET",
+      token: adminToken,
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.activities.length).toBeGreaterThanOrEqual(3);
+    const kinds = new Set(body.activities.map((a) => a.kind));
+    expect(kinds.has("automation")).toBe(true);
+    expect(kinds.has("webhook")).toBe(true);
+    expect(kinds.has("agent_run")).toBe(true);
   });
 
   it("persists outbound attachments + @mention rows on POST /messages (REST parity)", async () => {
