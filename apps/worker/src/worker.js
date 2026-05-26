@@ -409,6 +409,7 @@ export default {
       signJwtHs256,
       maxRoomNameLength: MAX_ROOM_NAME_LENGTH,
       projectId,
+      checkAndConsumeRateLimit,
     };
     const publicRes = await dispatchPublicRoutes(request, url, publicDeps);
     if (publicRes) return publicRes;

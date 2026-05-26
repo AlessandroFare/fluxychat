@@ -27,6 +27,7 @@ export async function dispatchPublicRoutes(request, url, h) {
     signJwtHs256,
     maxRoomNameLength,
     projectId,
+    checkAndConsumeRateLimit,
   } = pickRouteDeps(h, [
     "env",
     "ctx",
@@ -48,6 +49,7 @@ export async function dispatchPublicRoutes(request, url, h) {
     "signJwtHs256",
     "maxRoomNameLength",
     "projectId",
+    "checkAndConsumeRateLimit",
   ]);
 
   if (url.pathname === "/health") {
@@ -333,7 +335,8 @@ export async function dispatchPublicRoutes(request, url, h) {
       headers: { "X-Fluxy-Api-Key": apiKey },
     });
     const demoProjectId = await resolveProjectId(keyRequest, env);
-    if (!demoProjectId) {
+    const defaultProjectId = env.DEFAULT_PROJECT_ID || "default";
+    if (!demoProjectId || demoProjectId === defaultProjectId) {
       return json({ error: "demo_api_key_invalid" }, { status: 401 });
     }
     const room = await env.DB.prepare(
