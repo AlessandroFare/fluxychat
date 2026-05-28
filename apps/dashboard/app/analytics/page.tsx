@@ -336,65 +336,60 @@ export default function AnalyticsPage() {
           </Button>
         }
       >
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: 12,
-            alignItems: "center",
-          }}
-        >
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="min-w-0 flex-1">
             <RoomPicker token={readToken} value={roomId} onChange={setRoomId} placeholder="Select room" />
           </div>
-          <Button
-            variant="primary"
-            onClick={async () => {
-              try {
-                const res = await fetchWorker(
-                  `${WORKER_URL}/export/messages.csv?roomId=${encodeURIComponent(roomId)}`,
-                  { headers: authHeader(readToken) }
-                );
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `messages-${roomId}.csv`;
-                a.click();
-                URL.revokeObjectURL(url);
-                setNotice("CSV export downloaded.");
-              } catch {
-                setError("Failed to export CSV.");
-              }
-            }}
-            disabled={!readToken}
-          >
-            Export CSV
-          </Button>
-          <Button
-            variant="neutral"
-            onClick={async () => {
-              try {
-                const res = await fetchWorker(
-                  `${WORKER_URL}/export/messages.json?roomId=${encodeURIComponent(roomId)}`,
-                  { headers: authHeader(readToken) }
-                );
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `messages-${roomId}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-                setNotice("JSON export downloaded.");
-              } catch {
-                setError("Failed to export JSON.");
-              }
-            }}
-            disabled={!readToken}
-          >
-            Export JSON
-          </Button>
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            <Button
+              variant="primary"
+              onClick={async () => {
+                try {
+                  const res = await fetchWorker(
+                    `${WORKER_URL}/export/messages.csv?roomId=${encodeURIComponent(roomId)}`,
+                    { headers: authHeader(readToken) }
+                  );
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `messages-${roomId}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  setNotice("CSV export downloaded.");
+                } catch {
+                  setError("Failed to export CSV.");
+                }
+              }}
+              disabled={!readToken}
+            >
+              Export CSV
+            </Button>
+            <Button
+              variant="neutral"
+              onClick={async () => {
+                try {
+                  const res = await fetchWorker(
+                    `${WORKER_URL}/export/messages.json?roomId=${encodeURIComponent(roomId)}`,
+                    { headers: authHeader(readToken) }
+                  );
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `messages-${roomId}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  setNotice("JSON export downloaded.");
+                } catch {
+                  setError("Failed to export JSON.");
+                }
+              }}
+              disabled={!readToken}
+            >
+              Export JSON
+            </Button>
+          </div>
         </div>
 
         {roomStats ? (

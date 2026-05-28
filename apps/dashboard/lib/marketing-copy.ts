@@ -33,6 +33,12 @@ export const PAGE_METADATA = {
       "JWT auth, SDK setup, webhooks, operator console, and self-hosting on Cloudflare Workers.",
     path: "/docs",
   }),
+  cloudflareWorkersChatGuide: buildPageMetadata({
+    title: "Cloudflare Workers chat with Durable Objects",
+    description:
+      "Build instant messaging on Cloudflare Workers: WebSockets, Durable Objects, D1 — Pusher alternative without a VPS. Vercel front + edge chat.",
+    path: "/guides/cloudflare-workers-chat",
+  }),
   onboarding: buildPageMetadata({
     title: "Quickstart wizard",
     description:

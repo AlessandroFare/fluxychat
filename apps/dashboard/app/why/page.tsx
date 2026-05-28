@@ -6,6 +6,7 @@ import { MarketingShell } from "../components/marketing-shell";
 import { GetStartedAuthCta } from "../components/get-started-auth-cta";
 import { HOSTED_COPY, HOSTED_PATHS } from "@/lib/hosted-product";
 import { PAGE_METADATA } from "@/lib/marketing-copy";
+import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { WHY_CTA, WHY_FAQ, WHY_SECTIONS, WHY_THESIS } from "@/lib/why-copy";
 
 export const metadata: Metadata = PAGE_METADATA.why;
@@ -83,6 +84,14 @@ export default function WhyPage() {
               {HOSTED_COPY.viewDocs}
               <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
             </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/compare">Compare alternatives</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <a href={DEVTO_SOCKET_FLEET_ARTICLE.href} target="_blank" rel="noreferrer">
+              Dev.to guide
+            </a>
           </Button>
           <Button asChild variant="outline">
             <a href="https://github.com/AlessandroFare/fluxychat" target="_blank" rel="noreferrer">

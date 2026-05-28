@@ -163,6 +163,14 @@ stream.end();
 
 See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/bot-streaming-fluxy-message-stream.md) in the monorepo.
 
+## Product links
+
+- [Hosted quickstart](https://fluxychat.com/get-started)
+- [Guest demo room](https://fluxychat.com/demo)
+- [Compare vs Stream / Ably / Pusher](https://fluxychat.com/compare)
+- [Cloudflare Workers chat guide](https://fluxychat.com/guides/cloudflare-workers-chat)
+- [Dev.to: build chat on Workers without a socket fleet](https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh)
+
 ## Support
 
 Questions: [fluxychat@outlook.com](mailto:fluxychat@outlook.com) · Issues: [github.com/AlessandroFare/fluxychat/issues](https://github.com/AlessandroFare/fluxychat/issues)

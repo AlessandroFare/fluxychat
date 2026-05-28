@@ -77,7 +77,10 @@ export default function DemoRoomPage() {
       <p className="mt-2 text-sm text-muted-foreground">
         Read-only or guest chat when the operator configures{" "}
         <code className="text-xs">DEMO_ROOM_ID</code> and{" "}
-        <code className="text-xs">DEMO_API_KEY</code> on the Worker. No Clerk signup.
+        <code className="text-xs">DEMO_API_KEY</code> on the Worker. No Clerk signup.{" "}
+        <Link href="/guides/agent-events-same-websocket-stream" className="text-brand hover:underline">
+          Agent events on the same stream →
+        </Link>
       </p>
 
       {error ? (
@@ -115,7 +118,7 @@ export default function DemoRoomPage() {
           </div>
           {!readOnly ? (
             <form
-              className="flex gap-2"
+              className="flex flex-col gap-2 sm:flex-row"
               onSubmit={(e) => {
                 e.preventDefault();
                 const text = draft.trim();
@@ -130,7 +133,7 @@ export default function DemoRoomPage() {
                 placeholder="Say hello…"
                 disabled={!connected}
               />
-              <Button type="submit" disabled={!connected || !draft.trim()}>
+              <Button type="submit" className="sm:w-auto" disabled={!connected || !draft.trim()}>
                 Send
               </Button>
             </form>

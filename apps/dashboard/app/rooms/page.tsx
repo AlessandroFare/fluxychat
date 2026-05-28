@@ -250,21 +250,13 @@ export default function RoomsPage() {
         </div>
       </Section>
 
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "280px 1fr",
-          gap: 16,
-          alignItems: "start",
-          marginTop: 16,
-        }}
-      >
+      <section className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
         <div className="rounded-xl border border-black/[0.06] bg-white/90 p-4 shadow-[var(--shadow-subtle-2)] backdrop-blur-sm">
           <h2 className="font-heading mb-2 text-lg font-semibold text-foreground">Your rooms</h2>
           {rooms.length === 0 ? (
             <p className="text-sm text-muted-foreground">No rooms loaded.</p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="flex flex-col gap-1.5">
               {rooms.map((r) => (
                 <button
                   key={r.id}

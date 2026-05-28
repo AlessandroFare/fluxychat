@@ -35,6 +35,8 @@ import { PillarsBento, type PillarBentoItem } from "~/components/marketing/pilla
 import { MiddlewarePipelineViz } from "~/components/marketing/middleware-pipeline-viz";
 import { MessageLifecycleSection } from "~/components/marketing/message-lifecycle-section";
 import { COMPARE_ROWS } from "@/lib/compare-providers";
+import { LANDING_FAQ } from "@/lib/marketing-faq";
+import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { ConsoleEntryLink } from "../components/console-entry-link";
 import { LandingHeroAuthCta, LandingNavAuthCta } from "../components/landing-auth-cta";
 import { FluxychatIcon, FluxychatLogotype } from "@/components/FluxychatLogo";
@@ -59,6 +61,26 @@ const STACK_LOGOS = [
   "Fastify",
 ] as const;
 
+const BADGES = [
+  {
+    id: "product-hunt",
+    href: "https://www.producthunt.com/products/fluxychat?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-fluxychat",
+    imgSrc:
+      "https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1155224&theme=dark&t=1779972380375",
+    alt: "Fluxychat - Realtime chat API on Cloudflare — hosted or self-host | Product Hunt",
+    width: 250,
+    height: 54,
+  },
+  {
+    id: "saashub",
+    href: "https://www.saashub.com/fluxychat?utm_source=badge&utm_campaign=badge&utm_content=fluxychat&badge_variant=color&badge_kind=approved",
+    imgSrc: "https://cdn-b.saashub.com/img/badges/approved-color.png?v=1",
+    alt: "Fluxychat badge (SaaSHub approved)",
+    width: 150,
+    height: 45,
+  },
+] as const;
+
 const PILLARS: readonly PillarBentoItem[] = [
   {
     icon: Zap,
@@ -75,8 +97,8 @@ const PILLARS: readonly PillarBentoItem[] = [
   {
     icon: Sparkles,
     label: "Automate",
-    title: "Agents and webhooks",
-    body: "Invoke AI in rooms, retry webhook delivery, and fall back to SSE when WebSockets are blocked.",
+    title: "Shared human + agent workspace",
+    body: "tool_call and tool_result on the same room WebSocket as user messages — copilots and agentic SaaS without a second realtime pipe.",
   },
 ];
 
@@ -84,7 +106,7 @@ const LANDING_STATS = [
   {
     icon: Globe,
     value: "Edge-first",
-    label: "Workers, Durable Objects, and D1 keep chat logic next to your data.",
+    label: "Cloudflare bang-for-buck without a second realtime vendor or a socket VPS fleet.",
   },
   {
     icon: Cpu,
@@ -111,29 +133,6 @@ const USE_CASE_ROWS = [
   {
     title: "SaaS in-app messaging",
     body: "Install the SDK, mint JWTs, open a room, and keep your own UI components.",
-  },
-] as const;
-
-const FAQ_ITEMS = [
-  {
-    q: "What is the chat API vs the SDK?",
-    a: "Your backend calls the Worker over HTTP. The browser uses @fluxy-chat/sdk to subscribe, send, and render. Same product, two surfaces.",
-  },
-  {
-    q: "How is this different from a fully managed vendor?",
-    a: "You can run the Worker and D1 in your Cloudflare account. Data stays where you deploy it, and you control upgrades. Hosted cloud is there when you want to skip infra on day one.",
-  },
-  {
-    q: "Can I add moderation and webhooks?",
-    a: "Yes. Run middleware on the edge, sign webhooks for downstream systems, and use the console for admin tasks.",
-  },
-  {
-    q: "Where should I start?",
-    a: "Copy the install command, run the quickstart wizard for a JWT and first room, then use the console for projects, agents, and billing.",
-  },
-  {
-    q: "Does a public dashboard mean public spend?",
-    a: "No. Billable calls need your JWTs and API keys on the Worker. Enable DASHBOARD_ACCESS_MODE=ack (and optional CONSOLE_GATE_SECRET) so console routes require a one-time acknowledgment first.",
   },
 ] as const;
 
@@ -202,8 +201,14 @@ export function LandingView() {
             <a href="#pricing" className={navDocked ? navLinkClassDock : navLinkClass}>
               Pricing
             </a>
-            <Link href="/compare" className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}>
+            <Link href={HOSTED_PATHS.compare} className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}>
               Compare
+            </Link>
+            <Link
+              href={HOSTED_PATHS.guides}
+              className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}
+            >
+              Guides
             </Link>
             <a href="#lifecycle" className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}>
               Lifecycle
@@ -355,7 +360,7 @@ export function LandingView() {
      </Link>
 
      <p className="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-       In-app chat for Cloudflare
+       Discord-style rooms on Cloudflare — no VPS socket fleet
      </p>
 
      {/* Headline */}
@@ -366,13 +371,27 @@ export function LandingView() {
      </h1>
 
      <p className="mt-5 max-w-2xl text-balance text-lg text-slate-600 sm:text-xl">
-       Sign up, add @fluxy-chat/sdk, and run rooms, agents, and webhooks on hosted cloud. No Worker deploy required to
-       start.
+       Sign up, add @fluxy-chat/sdk, and run rooms, agents, and webhooks on hosted cloud — no socket VPS and no second
+       vendor for WebSockets on Vercel or Netlify.
      </p>
      <p className="mt-2 max-w-2xl text-balance text-sm text-slate-500 sm:text-base">
        Later, deploy the Worker in your own Cloudflare account from the monorepo.{" "}
        <Link href={HOSTED_PATHS.why} className="font-medium text-slate-700 underline-offset-2 hover:underline">
          Why we built it
+       </Link>
+       {" · "}
+       <Link
+         href={HOSTED_PATHS.guidesVercelRealtime}
+         className="font-medium text-slate-700 underline-offset-2 hover:underline"
+       >
+         Vercel without Pusher
+       </Link>
+       {" · "}
+       <Link
+         href={HOSTED_PATHS.guides}
+         className="font-medium text-slate-700 underline-offset-2 hover:underline"
+       >
+         All guides
        </Link>
        .
      </p>
@@ -440,6 +459,31 @@ export function LandingView() {
                     </span>
                   ))}
                 </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Featured on
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {BADGES.map((badge) => (
+                <a
+                  key={badge.id}
+                  href={badge.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                >
+                  <img
+                    src={badge.imgSrc}
+                    alt={badge.alt}
+                    width={badge.width}
+                    height={badge.height}
+                    loading="lazy"
+                    className="h-9 w-auto"
+                  />
+                </a>
               ))}
             </div>
           </div>
@@ -697,7 +741,15 @@ export function LandingView() {
         <div className="mx-auto max-w-6xl">
           <h2 className="text-center font-heading text-3xl font-bold tracking-tight">Why Fluxychat</h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-muted-foreground">
-            Rough positioning, not a shootout. Check each row against what you actually need.
+            Rough positioning, not a shootout.             PartyKit, DIY DO repos, Vercel+Pusher paths —{" "}
+            <Link href={HOSTED_PATHS.compare} className="text-brand hover:underline">
+              compare
+            </Link>
+            {" · "}
+            <Link href={HOSTED_PATHS.guides} className="text-brand hover:underline">
+              guides
+            </Link>
+            .
           </p>
           <div className="mt-10 overflow-x-auto rounded-2xl border border-border shadow-sm">
             <table className="w-full min-w-[640px] border-collapse text-left text-sm leading-relaxed">
@@ -734,7 +786,7 @@ export function LandingView() {
             Questions we hear when teams compare hosted chat APIs and edge deployments.
           </p>
           <div className="space-y-3">
-            {FAQ_ITEMS.map((item) => (
+            {LANDING_FAQ.map((item) => (
               <details
                 key={item.q}
                 className="group rounded-xl border border-border bg-card px-4 py-3 shadow-sm open:shadow-md"
@@ -784,12 +836,13 @@ export function LandingView() {
       </section>
 
       <footer className="border-t border-border bg-[#111111] px-4 py-12 text-slate-400 sm:px-6">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-white">
-            <FluxychatIcon size={28} />
-            <span className="font-heading text-sm font-semibold">Fluxychat</span>
-          </div>
-          <nav className="flex flex-wrap gap-6 text-sm">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:gap-6">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-white">
+              <FluxychatIcon size={28} />
+              <span className="font-heading text-sm font-semibold">Fluxychat</span>
+            </div>
+            <nav className="flex flex-wrap gap-6 text-sm">
             <ConsoleEntryLink className="hover:text-white">
               {HOSTED_COPY.console}
             </ConsoleEntryLink>
@@ -802,14 +855,55 @@ export function LandingView() {
             <Link href={HOSTED_PATHS.why} className="hover:text-white">
               Why
             </Link>
+            <Link href={HOSTED_PATHS.compare} className="hover:text-white">
+              Compare
+            </Link>
+            <Link href={HOSTED_PATHS.guides} className="hover:text-white">
+              Guides
+            </Link>
+            <a
+              href={DEVTO_SOCKET_FLEET_ARTICLE.href}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-white"
+            >
+              Dev.to
+            </a>
             <a href="mailto:fluxychat@outlook.com" className="hover:text-white">
               fluxychat@outlook.com
             </a>
             <a href="https://github.com/AlessandroFare/fluxychat" target="_blank" rel="noreferrer" className="hover:text-white">
               GitHub
             </a>
-          </nav>
-          <p className="text-xs">© {new Date().getFullYear()} Fluxychat</p>
+            </nav>
+            <p className="text-xs">© {new Date().getFullYear()} Fluxychat</p>
+          </div>
+
+          <div className="flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center">
+            <p className="text-xs text-slate-500">
+              Approved listings help teams trust the docs and demo.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              {BADGES.map((badge) => (
+                <a
+                  key={`footer-${badge.id}`}
+                  href={badge.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111]"
+                >
+                  <img
+                    src={badge.imgSrc}
+                    alt={badge.alt}
+                    width={badge.width}
+                    height={badge.height}
+                    loading="lazy"
+                    className="h-8 w-auto"
+                  />
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
       </footer>
     </div>

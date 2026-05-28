@@ -58,7 +58,7 @@ export default function RootLayout({
 
   const docsLlmsUrl =
     process.env.NEXT_PUBLIC_LLM_DOCS_URL?.trim() ||
-    `${(process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://fluxychat.vercel.app").replace(/\/$/, "")}/docs/llms.txt`;
+    `${(process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://fluxychat.com").replace(/\/$/, "")}/docs/llms.txt`;
 
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>

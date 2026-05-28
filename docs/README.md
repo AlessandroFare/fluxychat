@@ -46,6 +46,11 @@ Use-case oriented documentation.
 
 - [SPEC §5 / §6 endpoint map ↔ Worker](./spec-implementation-map.md)
 
+## Marketing & distribution
+
+- [Distribution index (live Dev.to, compare, guide URLs)](./distribution/README.md)
+- [Dev.to article source draft](./distribution/devto-realtime-chat-cloudflare-workers.md)
+
 ## Snippets
 
 - [Next.js end-to-end (App Router)](./snippets/nextjs-end-to-end.md)

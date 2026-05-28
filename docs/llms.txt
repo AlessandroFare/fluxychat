@@ -21,7 +21,14 @@
 
 ## Product URLs
 
-- Beta: https://www.fluxychat.com/get-started
+- Beta: https://fluxychat.com/get-started
+- Compare: https://fluxychat.com/compare
+- Guides index: https://fluxychat.com/guides
+- CF Workers chat guide: https://fluxychat.com/guides/cloudflare-workers-chat
+- Durable Objects for chat rooms: https://fluxychat.com/guides/durable-objects-for-chat-rooms
+- Vercel without Pusher/Ably: https://fluxychat.com/guides/vercel-realtime-without-pusher
+- Reconnect & DO hibernation: https://fluxychat.com/guides/reconnect-durable-objects-hibernation
+- Dev.to walkthrough: https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh
 - GitHub: https://github.com/AlessandroFare/fluxychat
 - npm SDK: https://www.npmjs.com/package/@fluxy-chat/sdk
 

@@ -312,7 +312,7 @@ export default function BillingPage() {
           </Section>
 
           <Section title="Plan Comparison">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {Object.entries(PLAN_DETAILS).map(([key, detail]) => (
                 <Panel
                   key={key}
