@@ -1,14 +1,18 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { isMarketingRoute } from "@/lib/is-marketing-route";
 import Header from "./Header";
+import { MarketingTopNav } from "./marketing-top-nav";
 
 /**
- * Marketing routes ship their own sticky header inside the page so we avoid
- * stacking two global navbars (e.g. old home mini-nav + layout Header).
+ * Landing/why/enter/auth ship their own header.
+ * Compare/guides/demo/docs use MarketingTopNav.
+ * Console routes use Header (auth controls).
  */
 export default function ConditionalHeader() {
   const pathname = usePathname();
+
   if (
     pathname === "/landing" ||
     pathname?.startsWith("/landing/") ||
@@ -23,5 +27,10 @@ export default function ConditionalHeader() {
   ) {
     return null;
   }
+
+  if (isMarketingRoute(pathname)) {
+    return <MarketingTopNav />;
+  }
+
   return <Header />;
 }

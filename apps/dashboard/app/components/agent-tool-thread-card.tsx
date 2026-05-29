@@ -18,11 +18,12 @@ const KIND_LABEL = {
 export function AgentToolThreadCard({ event, className }: AgentToolThreadCardProps) {
   const isError = event.kind === "tool_error";
   const isResult = event.kind === "tool_result";
+  const hasDetails = Boolean(event.arguments || event.resultPreview || event.error);
 
   return (
-    <div
+    <details
       className={cn(
-        "mx-6 rounded-md border px-2.5 py-2 text-xs",
+        "group mx-6 rounded-md border text-xs",
         isError
           ? "border-red-200/80 bg-red-50/80"
           : isResult
@@ -31,31 +32,35 @@ export function AgentToolThreadCard({ event, className }: AgentToolThreadCardPro
         className,
       )}
       data-testid={`agent-tool-${event.kind}`}
+      open={!hasDetails ? true : undefined}
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 px-2.5 py-2 [&::-webkit-details-marker]:hidden">
         {isError ? (
-          <AlertCircle className="h-3 w-3 text-red-600" aria-hidden />
+          <AlertCircle className="h-3 w-3 shrink-0 text-red-600" aria-hidden />
         ) : isResult ? (
-          <CheckCircle2 className="h-3 w-3 text-emerald-700" aria-hidden />
+          <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-700" aria-hidden />
         ) : (
-          <Wrench className="h-3 w-3 text-muted-foreground" aria-hidden />
+          <Wrench className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
         )}
         <span className="font-medium text-muted-foreground">{KIND_LABEL[event.kind]}</span>
         <code className="font-semibold text-foreground">{event.name}</code>
-      </div>
+        {hasDetails ? (
+          <span className="ml-auto text-[10px] text-muted-foreground group-open:hidden">Show</span>
+        ) : null}
+      </summary>
       {event.arguments ? (
-        <pre className="mt-1 max-h-16 overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] text-muted-foreground">
+        <pre className="mx-2.5 mb-2 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded border border-border/50 bg-background/60 p-2 font-mono text-[10px] text-muted-foreground">
           {event.arguments}
         </pre>
       ) : null}
       {event.resultPreview ? (
-        <p className="mt-1 font-mono text-[10px] text-muted-foreground">→ {event.resultPreview}</p>
+        <p className="mx-2.5 mb-2 font-mono text-[10px] text-muted-foreground">→ {event.resultPreview}</p>
       ) : null}
       {event.error ? (
-        <p className="mt-1 text-[10px] text-red-700" role="alert">
+        <p className="mx-2.5 mb-2 text-[10px] text-red-700" role="alert">
           {event.error}
         </p>
       ) : null}
-    </div>
+    </details>
   );
 }

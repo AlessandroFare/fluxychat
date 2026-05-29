@@ -124,6 +124,12 @@ export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
     fluxyAngle: "FluxyChat is the chat layer (rooms, D1 history, console) on Workers + DO, not generic channels.",
   },
   {
+    name: "Chatsemble (GPL workspace app)",
+    bestFor: "Self-hosted team chat + in-room agents + workflows/MCP in one React app (one DO per org, SQLite inside the DO).",
+    tradeoff: "GPL-3.0; not a headless API — you adopt their product shape or fork the monolith.",
+    fluxyAngle: "FluxyChat is MIT chat infrastructure: room-per-DO, D1, SDK, operator console — embed in your SaaS without their UI.",
+  },
+  {
     name: "Vask (Pusher-compatible on Cloudflare)",
     bestFor: "Teams wanting Pusher-shaped APIs on CF with “no fan-out fees” positioning.",
     tradeoff: "Compare their Pusher-compat surface vs your need for D1 history, agent timeline, MIT self-host console.",

@@ -39,6 +39,12 @@ import { LANDING_FAQ } from "@/lib/marketing-faq";
 import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { ConsoleEntryLink } from "../components/console-entry-link";
 import { LandingHeroAuthCta, LandingNavAuthCta } from "../components/landing-auth-cta";
+import {
+  TopNavMobileMenuButton,
+  TopNavMobileMenuPanel,
+  useTopNavMobileMenu,
+  type TopNavLink,
+} from "../components/top-nav-mobile-menu";
 import { FluxychatIcon, FluxychatLogotype } from "@/components/FluxychatLogo";
 import { HOSTED_COPY, HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
 import { formatNumber } from "@/lib/format-number";
@@ -79,7 +85,28 @@ const BADGES = [
     width: 150,
     height: 45,
   },
+  {
+    id: "sideprojectors",
+    href: "https://www.sideprojectors.com/project/80991/fluxychat",
+    imgSrc: "https://www.sideprojectors.com/img/badges/badge_show_black.png",
+    alt: "Check out Fluxychat at SideProjectors",
+    width: 200,
+    height: 40,
+  },
 ] as const;
+
+const LANDING_NAV_LINKS: readonly TopNavLink[] = [
+  { href: HOSTED_PATHS.docs, label: "Docs" },
+  { href: HOSTED_PATHS.why, label: "Why" },
+  { href: "#pricing", label: "Pricing" },
+  { href: HOSTED_PATHS.compare, label: "Compare" },
+  { href: HOSTED_PATHS.guides, label: "Guides" },
+  { href: "#lifecycle", label: "Lifecycle" },
+  { href: "/demo", label: "Demo" },
+  { href: "#faq", label: "FAQ" },
+];
+
+const LANDING_MOBILE_MENU_ID = "landing-mobile-menu";
 
 const PILLARS: readonly PillarBentoItem[] = [
   {
@@ -97,8 +124,8 @@ const PILLARS: readonly PillarBentoItem[] = [
   {
     icon: Sparkles,
     label: "Automate",
-    title: "Shared human + agent workspace",
-    body: "tool_call and tool_result on the same room WebSocket as user messages — copilots and agentic SaaS without a second realtime pipe.",
+    title: "Humans and agents, one stream",
+    body: "Tool events sit on the same room WebSocket as user messages. You debug copilots without a second realtime pipe.",
   },
 ];
 
@@ -106,7 +133,7 @@ const LANDING_STATS = [
   {
     icon: Globe,
     value: "Edge-first",
-    label: "Cloudflare bang-for-buck without a second realtime vendor or a socket VPS fleet.",
+    label: "Pay Cloudflare for the edge slice, not a second realtime vendor and not a socket VPS.",
   },
   {
     icon: Cpu,
@@ -139,6 +166,7 @@ const USE_CASE_ROWS = [
 export function LandingView() {
   const [navDocked, setNavDocked] = useState(false);
   const [copied, setCopied] = useState(false);
+  const mobileNav = useTopNavMobileMenu();
 
   useEffect(() => {
     function onScroll() {
@@ -166,18 +194,24 @@ export function LandingView() {
       <header
         className={cn(
           "fixed z-50 transition-[top,left,right,width,transform,border-radius,box-shadow,padding,border-width] duration-300 ease-out",
+          mobileNav.open && "overflow-hidden",
           navDocked
-            ? "left-1/2 right-auto top-3 w-[min(calc(100vw-1.5rem),72rem)] -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/90 py-2 pl-3 pr-2 shadow-[0_12px_40px_-8px_rgba(17,17,17,0.16)] backdrop-blur-xl sm:top-5 sm:pl-4 sm:pr-3"
+            ? cn(
+                "left-1/2 right-auto top-3 w-[min(calc(100vw-1.5rem),72rem)] -translate-x-1/2 border border-black/[0.06] py-2 pl-3 pr-2 shadow-[0_12px_40px_-8px_rgba(17,17,17,0.16)] sm:top-5 sm:pl-4 sm:pr-3",
+                mobileNav.open
+                  ? "rounded-2xl bg-white backdrop-blur-xl"
+                  : "rounded-full bg-white/90 backdrop-blur-xl",
+              )
             : "left-0 right-0 top-0 border-b border-black/[0.06] bg-white/90 py-0 backdrop-blur-md",
         )}
       >
         <div
           className={cn(
-            "mx-auto grid w-full max-w-6xl items-center gap-2 sm:gap-3 md:grid-cols-[auto_1fr_auto]",
-            navDocked ? "px-2 sm:px-3" : "h-16 px-4 sm:px-6",
+            "mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-3 md:grid-cols-[auto_1fr_auto]",
+            navDocked ? "px-2 sm:px-3" : "h-14 px-4 sm:h-16 sm:px-6",
           )}
         >
-          <div className="flex min-w-0 shrink-0 items-center">
+          <div className="flex min-w-0 items-center md:col-start-1">
             <Link
               href="/landing"
               className={cn("text-slate-900", navDocked ? "scale-[0.92] sm:scale-100" : "")}
@@ -188,45 +222,43 @@ export function LandingView() {
           </div>
           <nav
             className={cn(
-              "hidden min-w-0 justify-center overflow-x-auto font-medium scrollbar-none md:flex md:flex-nowrap",
+              "hidden min-w-0 justify-center font-medium md:col-start-2 md:flex md:flex-nowrap",
               navDocked ? "gap-2.5 px-2 text-xs lg:gap-3 lg:text-sm" : "gap-5 text-sm lg:gap-6",
             )}
+            aria-label="Top links"
           >
-            <Link href={HOSTED_PATHS.docs} className={navDocked ? navLinkClassDock : navLinkClass}>
-              Docs
-            </Link>
-            <Link href={HOSTED_PATHS.why} className={navDocked ? navLinkClassDock : navLinkClass}>
-              Why
-            </Link>
-            <a href="#pricing" className={navDocked ? navLinkClassDock : navLinkClass}>
-              Pricing
-            </a>
-            <Link href={HOSTED_PATHS.compare} className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}>
-              Compare
-            </Link>
-            <Link
-              href={HOSTED_PATHS.guides}
-              className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}
-            >
-              Guides
-            </Link>
-            <a href="#lifecycle" className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}>
-              Lifecycle
-            </a>
-            <Link href="/demo" className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}>
-              Demo
-            </Link>
-            <a href="#faq" className={navDocked ? navLinkClassDock : navLinkClass}>
-              FAQ
-            </a>
+            {LANDING_NAV_LINKS.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
-          <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
+          <div className="col-start-2 flex shrink-0 items-center justify-end gap-1.5 sm:gap-2 md:col-start-3">
             <LandingNavAuthCta navDocked={navDocked} />
+            <TopNavMobileMenuButton
+              open={mobileNav.open}
+              onToggle={mobileNav.toggle}
+              menuId={LANDING_MOBILE_MENU_ID}
+            />
           </div>
         </div>
+        <TopNavMobileMenuPanel
+          open={mobileNav.open}
+          onClose={mobileNav.close}
+          links={LANDING_NAV_LINKS}
+          menuId={LANDING_MOBILE_MENU_ID}
+          panelClassName={cn(
+            navDocked && "border-black/[0.06] bg-white",
+            !navDocked && "bg-white",
+          )}
+        />
       </header>
 
-      <section className="relative min-h-[min(92svh,880px)] overflow-hidden border-b border-border pt-24 pb-16 sm:pb-24">
+      <section className="relative min-h-[min(92svh,880px)] overflow-x-hidden border-b border-border pt-16 pb-12 sm:pt-24 sm:pb-16 md:pb-24">
  
  {/* Grainient — base neutra; tinta lavanda (sx) e pesca (dx); centro chiaro */}
  <Grainient
@@ -255,9 +287,9 @@ export function LandingView() {
      className="landing-hero-blob landing-hero-blob--b absolute"
      style={{
        top: "8%",
-       left: "-12%",
-       width: "clamp(320px, 42vw, 560px)",
-       height: "clamp(280px, 38vw, 480px)",
+       left: "-8%",
+       width: "clamp(200px, 42vw, 560px)",
+       height: "clamp(200px, 38vw, 480px)",
        borderRadius: "50%",
        background:
          "radial-gradient(circle at 55% 45%, rgba(196,181,253,0.42) 0%, rgba(226,221,253,0.22) 38%, transparent 72%)",
@@ -268,9 +300,9 @@ export function LandingView() {
      className="landing-hero-blob landing-hero-blob--c absolute"
      style={{
        top: "12%",
-       right: "-10%",
-       width: "clamp(300px, 40vw, 520px)",
-       height: "clamp(260px, 36vw, 440px)",
+       right: "-8%",
+       width: "clamp(200px, 40vw, 520px)",
+       height: "clamp(200px, 36vw, 440px)",
        borderRadius: "50%",
        background:
          "radial-gradient(circle at 45% 50%, rgba(255,200,175,0.38) 0%, rgba(255,228,210,0.18) 42%, transparent 70%)",
@@ -359,8 +391,8 @@ export function LandingView() {
        </span>
      </Link>
 
-     <p className="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-       Discord-style rooms on Cloudflare — no VPS socket fleet
+     <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 sm:tracking-[0.22em]">
+       Realtime rooms on Cloudflare — no socket VPS
      </p>
 
      {/* Headline */}
@@ -371,8 +403,8 @@ export function LandingView() {
      </h1>
 
      <p className="mt-5 max-w-2xl text-balance text-lg text-slate-600 sm:text-xl">
-       Sign up, add @fluxy-chat/sdk, and run rooms, agents, and webhooks on hosted cloud — no socket VPS and no second
-       vendor for WebSockets on Vercel or Netlify.
+       Sign up, add @fluxy-chat/sdk, and run rooms on hosted cloud. Keep Next on Vercel if you want — chat stays on
+       Workers and Durable Objects.
      </p>
      <p className="mt-2 max-w-2xl text-balance text-sm text-slate-500 sm:text-base">
        Later, deploy the Worker in your own Cloudflare account from the monorepo.{" "}
@@ -517,14 +549,13 @@ export function LandingView() {
           <h2 className="mb-2 text-center font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl">
             Messaging basics, on the edge
           </h2>
-          <p className="mx-auto max-w-2xl text-center text-sm text-zinc-400 sm:text-base">
-            Hover a row to preview it. Channels, presence, mentions, webhooks, and AI hooks without a separate
-            realtime stack.
+          <p className="mx-auto max-w-2xl px-2 text-center text-sm text-zinc-400 sm:text-base">
+            Tap or hover a row on desktop. Channels, presence, mentions, and webhooks without bolting on another
+            realtime vendor.
           </p>
         </div>
  
-        {/* 7 items × 64px each = 448px */}
-        <div style={{ height: "448px", position: "relative" }}>
+        <div className="relative h-[min(448px,70svh)] min-h-[280px] w-full overflow-hidden">
           <FlowingMenu
             items={MESSAGING_FLOW_ITEMS}
             speed={18}
@@ -610,7 +641,9 @@ export function LandingView() {
             <h3 id="where-teams-start" className="relative z-10 font-heading text-xl font-semibold tracking-tight">
               Where teams start
             </h3>
-            <TeamsStartFlow />
+            <div className="relative z-0 w-full max-w-full overflow-x-auto">
+              <TeamsStartFlow />
+            </div>
             <div className="mt-1 grid w-full gap-6 md:grid-cols-3">
                 {USE_CASE_ROWS.map((u) => (
                   <Card

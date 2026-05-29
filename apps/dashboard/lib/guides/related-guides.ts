@@ -46,6 +46,14 @@ export const ALL_GUIDES: readonly RelatedGuide[] = [
     href: MARKETING_GUIDE_PATHS.buildChatNextjsFluxychat,
     label: "Build chat with Next.js + FluxyChat",
   },
+  {
+    href: MARKETING_GUIDE_PATHS.pusherAlternativeSaas,
+    label: "Pusher alternative for SaaS chat",
+  },
+  {
+    href: MARKETING_GUIDE_PATHS.llmMemoryVsRoomState,
+    label: "LLM memory vs room state",
+  },
 ] as const;
 
 export function relatedGuidesExcept(currentPath: string): readonly RelatedGuide[] {

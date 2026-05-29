@@ -41,4 +41,6 @@ export const MARKETING_GUIDE_PATHS = {
   durableObjectsHibernationCost: "/guides/durable-objects-hibernation-cost",
   durableObjectsChatTradeoffs: "/guides/durable-objects-chat-tradeoffs",
   buildChatNextjsFluxychat: "/guides/build-chat-nextjs-fluxychat",
+  pusherAlternativeSaas: "/guides/pusher-alternative-saas",
+  llmMemoryVsRoomState: "/guides/llm-memory-vs-room-state",
 } as const;

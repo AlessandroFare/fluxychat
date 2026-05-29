@@ -175,8 +175,8 @@ export function ProductStoryReel() {
             "border border-orange-500/25 bg-slate-950 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.5)]",
           )}
           style={{
-            minHeight: "clamp(300px, 42vw, 460px)",
-            height: "clamp(300px, 42vw, 460px)",
+            minHeight: "clamp(260px, 65svh, 460px)",
+            height: "clamp(260px, 62svh, 420px)",
           }}
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_85%_65%_at_50%_-8%,rgba(255,115,94,0.38),rgba(255,115,94,0.12)_42%,transparent_58%)]" />
@@ -194,13 +194,13 @@ export function ProductStoryReel() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-400 sm:text-sm">
                 {scene.kicker}
               </p>
-              <h3 className="mt-2 font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              <h3 className="mt-2 font-heading text-xl font-bold tracking-tight text-white sm:text-3xl">
                 {scene.title}
               </h3>
               <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-300 sm:text-base">
                 {scene.body}
               </p>
-              <div className="mt-6 w-full max-w-lg">{scene.visual}</div>
+              <div className="mt-4 w-full max-w-lg sm:mt-6">{scene.visual}</div>
               <div className="mt-5 flex gap-1.5" aria-hidden>
                 {SCENES.map((_, dot) => (
                   <span
