@@ -1,13 +1,26 @@
 name = "fluxychat-worker"
 main = "src/worker.js"
-compatibility_date = "2025-01-01"
+# Browser Run quickAction() requires 2026-03-24+
+compatibility_date = "2026-03-24"
+
+[vars]
+# When true, cron jobs run via FluxyScheduledWorkflow (P12-L); Worker `scheduled` is a no-op.
+WORKFLOW_SCHEDULES_ENABLED = "true"
 
 # Local optional vars/secrets: see `.dev.vars.example` (copy to `.dev.vars` for `wrangler dev`).
 # Runtime env/secrets checklist:
-# - Optional automatic AI room summaries (requires AI_BASE_URL + AI_API_KEY):
+# - AI: Cloudflare AI Gateway (P12-I) preferred — AI_GATEWAY_ACCOUNT_ID + AI_GATEWAY_ID + AI_GATEWAY_TOKEN
+#   (+ AI_GATEWAY_PROVIDER_KEY or AI_API_KEY for upstream). Legacy fallback: AI_BASE_URL + AI_API_KEY.
+# - Optional automatic AI room summaries (requires AI configured via gateway or AI_BASE_URL):
 #   AUTO_ROOM_SUMMARY_ENABLED=true
 #   AUTO_ROOM_SUMMARY_EVERY_N=50   # fire when message count is a multiple of N (per room)
 #   AUTO_ROOM_SUMMARY_COOLDOWN_MINUTES=120   # skip if a manual or auto summary ran recently
+# - P12-F daily AI digest (requires migration 0051 + AI_BASE_URL):
+#   DAILY_DIGEST_ENABLED=true
+#   DIGEST_EMAIL_FROM=digest@yourdomain.com   # optional; or RESEND_API_KEY / EMAIL binding
+# - P13-T1 inbound SMS/WhatsApp → room (requires migration 0054):
+#   TELCO_INBOUND_ENABLED=true
+#   TELCO_INBOUND_DEFAULT_ROOM_ID=support   # fallback when no delivery/DM mapping
 # - Optional built-in substring moderation (webhook event moderation.auto_flag):
 #   BUILTIN_MODERATION_ENABLED=true
 #   BUILTIN_MODERATION_BLOCKED_SUBSTRINGS=badword1,badword2
@@ -25,6 +38,15 @@ compatibility_date = "2025-01-01"
 [[durable_objects.bindings]]
 name = "ROOM"
 class_name = "RoomDurableObject"
+
+[[durable_objects.bindings]]
+name = "USER"
+class_name = "UserDurableObject"
+
+# Optional per-IP WS connect rate limit (one DO per IP scope). Falls back to RATE_LIMIT_KV when unset.
+[[durable_objects.bindings]]
+name = "IP_RATE_LIMITER"
+class_name = "IpRateLimiterDurableObject"
 
 [[d1_databases]]
 binding = "DB"
@@ -53,9 +75,31 @@ bucket_name = "fluxychat-attachments"
 tag = "v1"
 new_sqlite_classes = ["RoomDurableObject"]
 
-# Daily retention cleanup at 03:00 UTC (worker scheduled handler)
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["IpRateLimiterDurableObject"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["UserDurableObject"]
+
+# P12-L: scheduled jobs via Workflows (set WORKFLOW_SCHEDULES_ENABLED=false + uncomment triggers for legacy cron)
 [triggers]
-crons = ["0 3 * * *"]
+crons = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *"]
+
+[browser]
+binding = "BROWSER"
+
+# P12-J: Flagship feature flags — set app_id from Cloudflare dashboard (Compute > Flagship)
+# [[flagship]]
+# binding = "FLAGS"
+# app_id = "<FLAGSHIP_APP_ID>"
+
+# [[workflows]]
+# name = "fluxychat-scheduled"
+# binding = "FLUXY_SCHEDULED_WORKFLOW"
+# class_name = "FluxyScheduledWorkflow"
+# schedules = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *"]
 
 
 

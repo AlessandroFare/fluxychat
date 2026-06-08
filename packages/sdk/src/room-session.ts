@@ -17,6 +17,7 @@ import {
   sortMessagesChronological,
 } from "./message-history";
 import { FluxyChatRoomConnection } from "./room-connection";
+import { createStreamingEditBatcher } from "./streaming-edit-batcher";
 import type {
   FluxyChatAttachment,
   FluxyChatClient,
@@ -25,6 +26,11 @@ import type {
 } from "./index";
 import type { FluxySendMessageOptions } from "./message-template";
 import type { UseChatHistoryReplay } from "./use-chat";
+import {
+  decryptE2eContent,
+  encryptE2eContent,
+  isE2eContentEnvelope,
+} from "./room-e2e";
 
 export interface StartFluxyRoomSessionOptions {
   roomId: string;
@@ -33,6 +39,15 @@ export interface StartFluxyRoomSessionOptions {
   historyLimit?: number;
   replay?: UseChatHistoryReplay;
   replayHistoryOnReconnect?: boolean;
+  markReadLatest?: boolean;
+  presenceInfo?: Record<string, unknown>;
+  /** Pusher-style cache channel: `cache=1` on WS connect. */
+  wsCache?: "on" | "off";
+  /** Optional E2E encryption for message bodies (requires room `e2eEnabled`). */
+  e2eKey?: string;
+  /** When true, fetch GET /rooms/:id/e2e-key on session start if e2eKey is unset. */
+  e2eAutoFetch?: boolean;
+  onAnyEvent?: (event: FluxyChatEvent) => void;
   onRefreshSession?: () => void;
 }
 
@@ -47,6 +62,12 @@ export function startFluxyRoomSession(
     historyLimit = 50,
     replay = "connect",
     replayHistoryOnReconnect = true,
+    markReadLatest = false,
+    presenceInfo,
+    wsCache,
+    e2eKey: e2eKeyOption,
+    e2eAutoFetch = false,
+    onAnyEvent,
     onRefreshSession,
   } = options;
 
@@ -55,6 +76,7 @@ export function startFluxyRoomSession(
 
   let active = true;
   const trimmedRoomId = roomId.trim();
+  let e2eKeyRef = e2eKeyOption?.trim() || null;
   const MAX_WS_RECONNECT_ATTEMPTS = 6;
   const POLL_INTERVAL_MS = 4000;
 
@@ -69,12 +91,47 @@ export function startFluxyRoomSession(
     setState(syncRoomConnectionState(patch, current));
   };
 
+  async function maybeDecryptContent(content: string): Promise<string> {
+    if (!e2eKeyRef || !isE2eContentEnvelope(content)) return content;
+    try {
+      return await decryptE2eContent(content, e2eKeyRef);
+    } catch {
+      return content;
+    }
+  }
+
+  async function maybeEncryptContent(content: string): Promise<string> {
+    if (!e2eKeyRef) return content;
+    return encryptE2eContent(content, e2eKeyRef);
+  }
+
   const appendToolThreadEvent = (entry: FluxyToolThreadEvent) => {
     setState((s) => {
       if (s.toolThreadEvents.some((e) => e.key === entry.key)) return s;
       return { toolThreadEvents: [...s.toolThreadEvents, entry] };
     });
   };
+
+  let scheduleMarkLatest: () => void = () => {};
+
+  const streamEditBatcher = createStreamingEditBatcher((updates) => {
+    setState((s) => {
+      let messages = s.messages;
+      for (const data of updates) {
+        messages = messages.map((m) =>
+          m.id === data.id
+            ? {
+                ...m,
+                content: data.content,
+                editedAt: data.editedAt,
+                streaming: data.streaming ?? false,
+              }
+            : m,
+        );
+      }
+      return { messages };
+    });
+  });
 
   const handleEvent = (data: FluxyChatEvent) => {
     if (data.type === "history") {
@@ -86,47 +143,108 @@ export function startFluxyRoomSession(
         ),
         historyLoaded: true,
       }));
-    } else if (data.type === "message") {
+      scheduleMarkLatest();
+    } else if (data.type === "streamState") {
       setState((s) => {
         const normalized = {
-          ...data,
-          userId:
-            data.userId ??
-            ("senderId" in data && typeof data.senderId === "string"
-              ? data.senderId
-              : undefined) ??
-            s.messages.find((m) => m.id === data.id)?.userId,
+          id: data.messageId,
+          roomId: data.roomId,
+          userId: data.userId,
+          content: data.content,
+          createdAt: data.createdAt,
+          parentId: data.parentId ?? null,
+          streaming: data.streaming,
         };
-        const withPending =
-          client && normalized.userId === client.userId
-            ? tryMatchPendingByInbound(s.messages, normalized, client.userId)
-            : s.messages;
-        const idx = withPending.findIndex((m) => m.id === data.id);
+        const idx = s.messages.findIndex((m) => m.id === normalized.id);
         if (idx >= 0) {
-          const next = [...withPending];
-          next[idx] = {
-            ...next[idx],
-            ...normalized,
-            deliveryStatus: "sent",
-            deliveryError: undefined,
-          };
+          const next = [...s.messages];
+          next[idx] = { ...next[idx], ...normalized };
           return { messages: sortMessagesChronological(next) };
         }
         return {
-          messages: sortMessagesChronological([
-            ...withPending,
-            { ...normalized, deliveryStatus: "sent" },
-          ]),
+          messages: sortMessagesChronological([...s.messages, normalized]),
         };
       });
+    } else if (data.type === "message") {
+      void (async () => {
+        const decrypted = await maybeDecryptContent(data.content ?? "");
+        const payload = { ...data, content: decrypted };
+        setState((s) => {
+          const normalized = {
+            ...payload,
+            userId:
+              payload.userId ??
+              ("senderId" in payload && typeof payload.senderId === "string"
+                ? payload.senderId
+                : undefined) ??
+              s.messages.find((m) => m.id === payload.id)?.userId,
+          };
+          const withPending =
+            client && normalized.userId === client.userId
+              ? tryMatchPendingByInbound(s.messages, normalized, client.userId)
+              : s.messages;
+          const idx = withPending.findIndex((m) => m.id === payload.id);
+          if (idx >= 0) {
+            const next = [...withPending];
+            next[idx] = {
+              ...next[idx],
+              ...normalized,
+              deliveryStatus: "sent",
+              deliveryError: undefined,
+            };
+            return { messages: sortMessagesChronological(next) };
+          }
+          return {
+            messages: sortMessagesChronological([
+              ...withPending,
+              { ...normalized, deliveryStatus: "sent" },
+            ]),
+          };
+        });
+        scheduleMarkLatest();
+      })();
     } else if (data.type === "presence") {
       setState({
         online: data.online,
         ...(data.users ? { onlineUsers: data.users } : {}),
+        ...(data.members ? { presenceMembers: data.members } : {}),
       });
+    } else if (data.type === "subscription_succeeded") {
+      setState({
+        subscriptionCount: data.subscriptionCount,
+        presenceMembers: data.members ?? [],
+        socketId: data.socketId ?? null,
+      });
+    } else if (data.type === "subscription_count") {
+      setState({ subscriptionCount: data.subscriptionCount });
+    } else if (data.type === "member_joined") {
+      setState((s) => {
+        const existing = s.presenceMembers.filter((m) => m.userId !== data.userId);
+        return {
+          presenceMembers: [
+            ...existing,
+            { userId: data.userId, userInfo: data.userInfo },
+          ],
+        };
+      });
+    } else if (data.type === "member_left") {
+      setState((s) => ({
+        presenceMembers: s.presenceMembers.filter((m) => m.userId !== data.userId),
+      }));
+    } else if (data.type === "cache_snapshot") {
+      const inner = data.event;
+      if (inner && typeof inner === "object" && inner.type === "message") {
+        handleEvent(inner as FluxyChatEvent);
+      }
+    } else if (data.type === "server_event") {
+      /* app-level handlers can listen on connection; no default store mutation */
     } else if (data.type === "typing") {
       setState((s) => ({
         typingUsers: { ...s.typingUsers, [data.userId]: data.isTyping },
+        typingIntents: {
+          ...s.typingIntents,
+          [data.userId]: data.intent ?? (data.isTyping ? "composing" : "idle"),
+        },
       }));
     } else if (data.type === "agentTyping") {
       setState({
@@ -170,6 +288,16 @@ export function startFluxyRoomSession(
     } else if (data.type === "agentRun") {
       setState({ lastAgentRun: data.run });
     } else if (data.type === "edit") {
+      if (data.streaming) {
+        streamEditBatcher.push({
+          id: data.id,
+          content: data.content,
+          editedAt: data.editedAt,
+          streaming: true,
+        });
+        return;
+      }
+      streamEditBatcher.flush();
       setState((s) => ({
         messages: s.messages.map((m) =>
           m.id === data.id
@@ -209,6 +337,19 @@ export function startFluxyRoomSession(
           },
         };
       });
+    } else if (data.type === "message_expired") {
+      setState((s) => ({
+        messages: s.messages.map((m) =>
+          m.id === data.id
+            ? {
+                ...m,
+                content: "[expired]",
+                deletedAt: data.expiredAt ?? data.deletedAt,
+                expiresAt: data.expiredAt ?? m.expiresAt,
+              }
+            : m,
+        ),
+      }));
     } else if (data.type === "delete") {
       if (data.hard) {
         setState((s) => ({
@@ -223,6 +364,25 @@ export function startFluxyRoomSession(
           ),
         }));
       }
+    } else if (data.type === "message_updated") {
+      setState((s) => {
+        let found = false;
+        const next = s.messages.map((m) => {
+          if (m.id !== data.id || (data.roomId && m.roomId && m.roomId !== data.roomId)) {
+            return m;
+          }
+          found = true;
+          const patch: Partial<FluxyChatMessage> = {};
+          if (data.kind !== undefined) patch.kind = data.kind;
+          if (data.transcription !== undefined) patch.transcription = data.transcription;
+          if (data.transcriptionStatus !== undefined) {
+            patch.transcriptionStatus = data.transcriptionStatus;
+          }
+          return { ...m, ...patch };
+        });
+        if (!found) return s;
+        return { messages: sortMessagesChronological(next) };
+      });
     }
   };
 
@@ -299,35 +459,40 @@ export function startFluxyRoomSession(
   ) => {
     if (!client || !trimmedRoomId) return;
 
-    const clientMessageId = createClientMessageId();
-    const displayContent = options?.templateId
-      ? content || `[template:${options.templateId}]`
-      : content;
-    const optimistic = createOptimisticMessage({
-      roomId: trimmedRoomId,
-      userId: client.userId,
-      content: displayContent,
-      clientMessageId,
-      parentId: replyTo ?? null,
-      attachments,
-    });
-    setState((s) => ({
-      messages: sortMessagesChronological([...s.messages, optimistic]),
-    }));
-
-    const failOptimistic = (errorMessage: string) => {
+    void (async () => {
+      const outboundContent = await maybeEncryptContent(content);
+      const clientMessageId = createClientMessageId();
+      const displayContent = options?.templateId
+        ? content || `[template:${options.templateId}]`
+        : content;
+      const optimistic = createOptimisticMessage({
+        roomId: trimmedRoomId,
+        userId: client.userId,
+        content: displayContent,
+        clientMessageId,
+        parentId: replyTo ?? null,
+        attachments,
+      });
       setState((s) => ({
-        messages: markMessageDeliveryFailed(s.messages, clientMessageId, errorMessage),
+        messages: sortMessagesChronological([...s.messages, optimistic]),
       }));
-    };
 
-    if (client.isAuthenticated()) {
-      void client
-        .createMessage(trimmedRoomId, content, replyTo, attachments, clientMessageId, {
-          templateId: options?.templateId,
-          templateVars: options?.templateVars,
-        })
-        .then((serverMessage) => {
+      const failOptimistic = (errorMessage: string) => {
+        setState((s) => ({
+          messages: markMessageDeliveryFailed(s.messages, clientMessageId, errorMessage),
+        }));
+      };
+
+      if (client.isAuthenticated()) {
+        try {
+          const serverMessage = await client.createMessage(
+            trimmedRoomId,
+            outboundContent,
+            replyTo,
+            attachments,
+            clientMessageId,
+            options,
+          );
           if (!serverMessage) {
             failOptimistic("empty_response");
             return;
@@ -336,40 +501,52 @@ export function startFluxyRoomSession(
           setState((s) => ({
             messages: applyServerMessageAck(s.messages, serverMessage, ackId),
           }));
-        })
-        .catch((err) => {
+        } catch (err) {
           const message = err instanceof Error ? err.message : "send_failed";
           try {
             connectionRef?.sendJson({
               type: "message",
               userId: client.userId,
-              content,
+              content: outboundContent,
               parentId: replyTo ?? null,
               attachments: attachments ?? [],
+              ...(options?.expiresInSeconds != null
+                ? { expiresInSeconds: options.expiresInSeconds }
+                : {}),
+              ...(options?.expiresAt ? { expiresAt: options.expiresAt } : {}),
+              ...(options?.visibility ? { visibility: options.visibility } : {}),
+              ...(options?.visibleTo?.length ? { visibleTo: options.visibleTo } : {}),
             });
           } catch (wsErr) {
             failOptimistic(message);
             if (!(wsErr instanceof FluxySendError)) throw wsErr;
           }
-        });
-      return;
-    }
-
-    try {
-      connectionRef?.sendJson({
-        type: "message",
-        userId: client.userId,
-        content,
-        parentId: replyTo ?? null,
-        attachments: attachments ?? [],
-      });
-    } catch (err) {
-      if (err instanceof FluxySendError) {
-        failOptimistic("not_connected");
+        }
         return;
       }
-      throw err;
-    }
+
+      try {
+        connectionRef?.sendJson({
+          type: "message",
+          userId: client.userId,
+          content: outboundContent,
+          parentId: replyTo ?? null,
+          attachments: attachments ?? [],
+          ...(options?.expiresInSeconds != null
+            ? { expiresInSeconds: options.expiresInSeconds }
+            : {}),
+          ...(options?.expiresAt ? { expiresAt: options.expiresAt } : {}),
+          ...(options?.visibility ? { visibility: options.visibility } : {}),
+          ...(options?.visibleTo?.length ? { visibleTo: options.visibleTo } : {}),
+        });
+      } catch (err) {
+        if (err instanceof FluxySendError) {
+          failOptimistic("not_connected");
+          return;
+        }
+        throw err;
+      }
+    })();
   };
 
   const retryMessage = (clientMessageId: string) => {
@@ -393,6 +570,7 @@ export function startFluxyRoomSession(
         hasMore: initial.length >= historyLimit,
         historyLoaded: true,
       });
+      scheduleMarkLatest();
     } catch {
       /* best-effort */
     }
@@ -418,6 +596,16 @@ export function startFluxyRoomSession(
       }));
     } catch {
       setState({ isLoadingMore: false });
+    }
+  };
+
+  const loadLive = async () => {
+    if (!client || !trimmedRoomId) return;
+    try {
+      const snapshot = await client.getRoomLive(trimmedRoomId);
+      setState({ liveSnapshot: snapshot });
+    } catch {
+      /* live snapshot is best-effort; DO may be cold */
     }
   };
 
@@ -490,6 +678,8 @@ export function startFluxyRoomSession(
     }
   };
 
+  let lastMarkedReadId = 0;
+
   const sendReadReceipt = (messageId: number) => {
     if (!client) return;
     if (client.isAuthenticated()) {
@@ -558,11 +748,42 @@ export function startFluxyRoomSession(
     setState({ toolThreadEvents: [], lastAgentRun: null });
   };
 
+  const sendClientEvent = (eventName: string, data: unknown) => {
+    if (!client) return;
+    const name = eventName.startsWith("client-") ? eventName : `client-${eventName}`;
+    try {
+      connectionRef?.sendJson({
+        type: "client_event",
+        eventName: name,
+        data,
+      });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const maybeMarkLatestRead = (messages: FluxyChatMessage[]) => {
+    if (!markReadLatest || !client) return;
+    const sorted = [...messages]
+      .filter((m) => typeof m.id === "number" && !m.deletedAt)
+      .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+    const latest = sorted.length > 0 ? sorted[sorted.length - 1] : undefined;
+    if (!latest?.id || latest.id <= lastMarkedReadId) return;
+    lastMarkedReadId = latest.id;
+    sendReadReceipt(latest.id);
+  };
+
+  scheduleMarkLatest = () => {
+    if (!markReadLatest) return;
+    queueMicrotask(() => maybeMarkLatestRead(getState().messages));
+  };
+
   setState({
     sendMessage,
     retryMessage,
     loadHistory,
     loadMore,
+    loadLive,
     setTyping,
     editMessage,
     sendReaction,
@@ -570,6 +791,7 @@ export function startFluxyRoomSession(
     deleteMessage,
     invokeAgent,
     clearToolThread,
+    sendClientEvent,
   });
 
   if (!client || !trimmedRoomId || !client.isAuthenticated()) {
@@ -589,10 +811,16 @@ export function startFluxyRoomSession(
   if (historyOnConnect) {
     void client
       .fetchMessages(trimmedRoomId, { limit: historyLimit })
-      .then((initial) => {
+      .then(async (initial) => {
         if (!active) return;
+        const decrypted = await Promise.all(
+          initial.map(async (m) => ({
+            ...m,
+            content: await maybeDecryptContent(m.content ?? ""),
+          })),
+        );
         setState({
-          messages: initial,
+          messages: decrypted,
           hasMore: initial.length >= historyLimit,
           historyLoaded: true,
         });
@@ -602,75 +830,104 @@ export function startFluxyRoomSession(
     setState({ messages: [], hasMore: false, historyLoaded: false });
   }
 
-  const connection = client.connectRoom(trimmedRoomId, {
-    maxReconnectAttempts: MAX_WS_RECONNECT_ATTEMPTS,
-    historyLimit,
-    replayHistoryOnReconnect: historyOnConnect && replayHistoryOnReconnect,
-    onStatusChange: (status) => {
-      if (!active) return;
-      if (status === "connected") {
-        stopPollingFallback();
-        stopSSEFallback();
-        patchConnection({
-          connectionStatus: "connected",
-          connected: true,
-          reconnectAttempt: 0,
-          connectionError: null,
-          reconnectDelayMs: 0,
-        });
-      } else if (status === "connecting") {
-        patchConnection({
-          connectionStatus: "connecting",
-          connected: false,
-        });
-      } else if (status === "reconnecting") {
-        patchConnection({
-          connectionStatus: "reconnecting",
-          connected: false,
-          reconnectAttempt: connection.reconnectAttempts,
-          reconnectDelayMs: connection.getScheduledReconnectDelayMs(),
-        });
-      } else if (status === "disconnected") {
+  if (e2eAutoFetch && client?.isAuthenticated() && !e2eKeyRef) {
+    void client.getRoomE2eKey(trimmedRoomId).then((res) => {
+      if (res?.e2eKey) e2eKeyRef = res.e2eKey;
+    });
+  }
+
+  let connection: FluxyChatRoomConnection | null = null;
+
+  void (async () => {
+    let reconnectBackoff: { baseBackoffMs?: number; maxBackoffMs?: number } = {};
+    try {
+      const flags = await client.getFeatureFlags();
+      reconnectBackoff = flags.reconnectBackoff;
+    } catch {
+      /* keep SDK defaults */
+    }
+    if (!active) return;
+
+    connection = client.connectRoom(trimmedRoomId, {
+      ...reconnectBackoff,
+      maxReconnectAttempts: MAX_WS_RECONNECT_ATTEMPTS,
+      historyLimit,
+      presenceInfo,
+      wsCache,
+      wsReplay: historyOnConnect ? "connect" : "off",
+      replayHistoryOnReconnect: historyOnConnect && replayHistoryOnReconnect,
+      onStatusChange: (status) => {
+        if (!active || !connection) return;
+        if (status === "connected") {
+          stopPollingFallback();
+          stopSSEFallback();
+          patchConnection({
+            connectionStatus: "connected",
+            connected: true,
+            reconnectAttempt: 0,
+            connectionError: null,
+            reconnectDelayMs: 0,
+          });
+        } else if (status === "connecting") {
+          patchConnection({
+            connectionStatus: "connecting",
+            connected: false,
+          });
+        } else if (status === "reconnecting") {
+          patchConnection({
+            connectionStatus: "reconnecting",
+            connected: false,
+            reconnectAttempt: connection.reconnectAttempts,
+            reconnectDelayMs: connection.getScheduledReconnectDelayMs(),
+          });
+        } else if (status === "disconnected") {
+          patchConnection({
+            connectionStatus: "disconnected",
+            connected: false,
+          });
+        }
+      },
+      onAuthError: (err) => {
+        if (!active) return;
         patchConnection({
           connectionStatus: "disconnected",
           connected: false,
+          connectionError: err,
         });
-      }
-    },
-    onAuthError: (err) => {
-      if (!active) return;
-      patchConnection({
-        connectionStatus: "disconnected",
-        connected: false,
-        connectionError: err,
-      });
-      onRefreshSession?.();
-    },
-    onConnectionError: (err) => {
-      if (!active || err instanceof FluxyAuthError) return;
-      patchConnection({ connectionError: err });
-    },
-    onReconnectFailed: () => {
-      if (!active) return;
-      patchConnection({
-        reconnectAttempt: connection.reconnectAttempts,
-      });
-      if (client.isAuthenticated()) startSSEFallback();
-      else startPollingFallback();
-    },
-  });
+        onRefreshSession?.();
+      },
+      onConnectionError: (err) => {
+        if (!active || err instanceof FluxyAuthError) return;
+        patchConnection({ connectionError: err });
+      },
+      onReconnectFailed: () => {
+        if (!active || !connection) return;
+        patchConnection({
+          reconnectAttempt: connection.reconnectAttempts,
+        });
+        if (client.isAuthenticated()) startSSEFallback();
+        else startPollingFallback();
+      },
+    });
 
-  connection.addEventListener("message", (data) => {
-    if (active) handleEvent(data);
-  });
-  connectionRef = connection;
-  connection.connect();
+    connection.addEventListener("message", (data) => {
+      if (active) handleEvent(data);
+    });
+    if (onAnyEvent) {
+      connection.onAnyEvent((data) => {
+        if (active) onAnyEvent(data);
+      });
+    }
+    connectionRef = connection;
+    connection.connect();
+  })();
 
   return () => {
     active = false;
+    streamEditBatcher.flush();
     stopPollingFallback();
     stopSSEFallback();
-    connection.close();
+    connection?.close();
     connectionRef = null;
     patchConnection({ connectionStatus: "disconnected", connected: false });
   };

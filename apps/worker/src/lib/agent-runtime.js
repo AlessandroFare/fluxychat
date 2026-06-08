@@ -22,6 +22,7 @@ import {
   validateMessageContent,
 } from "./message-validation.js";
 import { schedulePostMessageAutomations } from "./post-message-automations.js";
+import { isHumanHandoffActive } from "./room-handoff.js";
 
 /** Best-effort realtime tool/run events for connected room clients. */
 async function announceRoomEvent(env, roomId, payload) {
@@ -157,6 +158,11 @@ export async function invokeMentionedAgents(
     ...new Set(agentHandles.map((h) => normalizeMentionHandle(h)).filter(Boolean)),
   ];
   if (!normalized.length) return;
+
+  if (await isHumanHandoffActive(env, projectId, roomId)) {
+    logInfo("agent.mention_invoke_skipped_handoff", { projectId, roomId });
+    return;
+  }
 
   const placeholders = normalized.map(() => "?").join(",");
   const agentRows = await env.DB.prepare(
@@ -380,7 +386,12 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
             connection.apiKey,
             connection.model,
             messages,
-            { maxTokens: 1024, temperature: 0.7 },
+            {
+              maxTokens: 1024,
+              temperature: 0.7,
+              chatCompletionsUrl: connection.chatCompletionsUrl,
+              gatewayHeaders: connection.gatewayHeaders,
+            },
             async (delta, fullContent) => {
               await streamHooks.onDelta(delta, fullContent);
             }

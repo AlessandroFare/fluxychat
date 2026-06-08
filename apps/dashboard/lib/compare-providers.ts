@@ -36,13 +36,6 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     fluxy: "tool_call / tool_result on same timeline",
   },
   {
-    label: "MIT self-host on your Cloudflare account",
-    stream: "Proprietary",
-    ably: "Managed-first",
-    pusher: "Managed-first",
-    fluxy: "Full monorepo, wrangler deploy",
-  },
-  {
     label: "Message templates + member preferences API",
     stream: "Varies",
     ably: "N/A",
@@ -55,6 +48,41 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     ably: "SDK features vary",
     pusher: "Channels SDK",
     fluxy: "connectionState, loadMore, clientMessageId idempotency",
+  },
+  {
+    label: "Read receipts / unread badges",
+    stream: "Product features vary",
+    ably: "Varies by product",
+    pusher: "Not first-class in Channels",
+    fluxy: "markReadLatest + room list unread in SDK/console",
+  },
+  {
+    label: "In-app notifications (mentions, DMs)",
+    stream: "Separate notification products",
+    ably: "Separate products",
+    pusher: "Beams (separate SKU)",
+    fluxy: "REST + SDK useNotifications on same Worker",
+  },
+  {
+    label: "Message middleware (validate / filter / enrich)",
+    stream: "Varies",
+    ably: "N/A",
+    pusher: "Webhooks only",
+    fluxy: "Edge pipeline before persist + broadcast",
+  },
+  {
+    label: "Pricing surprises at scale",
+    stream: "Enterprise / usage tiers",
+    ably: "Usage-based",
+    pusher: "Free tier small; connections add up",
+    fluxy: "Cloudflare pricing you can read; MIT self-host option",
+  },
+  {
+    label: "Self-host / on your own account",
+    stream: "Proprietary cloud",
+    ably: "Managed-first",
+    pusher: "Managed-first",
+    fluxy: "Full MIT monorepo — deploy Worker + D1 in your CF account",
   },
   {
     label: "Socket fleet / VPS to operate",
@@ -225,6 +253,51 @@ export const DIY_DO_COMPARISON: readonly DiyComparisonRow[] = [
     fluxy: "Dashboard + Worker enforcement",
   },
 ];
+
+export const PUSHER_BILL_SHOCK = {
+  title: "When the Pusher bill catches up",
+  intro:
+    "Same story in every thread: the free tier is fine for a demo, then connection and message pricing climbs faster than the app. FluxyChat is not a flat-fee miracle — you still pay Cloudflare — but you can self-host on your account, read the MIT source, and drop a second vendor's connection counter.",
+  bullets: [
+    "Try hosted beta first; self-host when pricing starts to matter in the evaluation.",
+    "One Durable Object per room keeps cost and failure scoped to that room, not one global socket server.",
+    "D1 history and REST pagination instead of cache-only channel events you stitch back together.",
+    "Same SDK for hosted and self-host — swap Worker URL and keys, not your client code.",
+  ],
+} as const;
+
+export const SELF_HOST_POSITIONING = {
+  title: "Self-host on your Cloudflare account",
+  intro:
+    "A lot of teams shopping Pusher or Ably alternatives ask the same thing: can we run it ourselves? With FluxyChat, yes — that is the default story, not a footnote in the pricing page.",
+  bullets: [
+    "Deploy apps/worker and run D1 migrations on your Cloudflare account (MIT monorepo).",
+    "Same console and @fluxy-chat/sdk as hosted beta; you wire Clerk and Stripe if you want them.",
+    "JWT tenants, webhooks, GDPR export, and message middleware all run on your Worker.",
+  ],
+} as const;
+
+export const BUILD_VS_BUY = {
+  title: "Build vs buy",
+  intro:
+    "Pusher vs Socket.IO is really build vs buy. FluxyChat is the middle path: less ops than rolling your own socket cluster, more control than a closed channels vendor.",
+  bullets: [
+    "DIY Socket.IO on a VM: you own reconnect, history, multi-tenant auth, and on-call.",
+    "Pusher / Ably / Stream: fast start, usage pricing, less say over schema and retention.",
+    "FluxyChat: room DO + D1 + SDK + console wired up; MIT self-host when lock-in or bill shock is the objection.",
+  ],
+} as const;
+
+export const PRODUCT_CHAT_VS_SUPPORT = {
+  title: "In-app chat, not a support desk",
+  intro:
+    "Most live-chat listicles are written for support teams: inbox, macros, CSAT. FluxyChat is for chat inside your product — tenant rooms, SDK embed, agent events on the same timeline. Wire Salesforce or HubSpot through your own integration layer; we handle the room.",
+  bullets: [
+    "Helpdesk products sell ticketing and agent assignment. We sell transport, history, JWT rooms, and webhooks.",
+    "User messages and agent tool_call / tool_result share one WebSocket stream, so you can replay what happened.",
+    "Middleware and webhooks can call external systems; message state stays in your D1.",
+  ],
+} as const;
 
 export const PUSHER_ON_VERCEL = {
   title: "FluxyChat vs Pusher on Vercel",

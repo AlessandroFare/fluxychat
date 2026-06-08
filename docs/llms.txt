@@ -8,6 +8,7 @@
 - [Full LLM bundle](https://github.com/AlessandroFare/fluxychat/blob/main/docs/llms-full.txt)
 - [SDK README](https://github.com/AlessandroFare/fluxychat/blob/main/packages/sdk/README.md)
 - [SPEC](https://github.com/AlessandroFare/fluxychat/blob/main/SPEC.md)
+- [Competitive parity P10 (Sendbird, Sent.dm, Pusher gaps)](https://github.com/AlessandroFare/fluxychat/blob/main/docs/competitive-parity-p10.md)
 - [Auth / JWT cookbook](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/auth-jwt.md)
 - [Next.js end-to-end](https://github.com/AlessandroFare/fluxychat/blob/main/docs/snippets/nextjs-end-to-end.md)
 - [Support chat use case](https://github.com/AlessandroFare/fluxychat/blob/main/docs/use-cases/support-chat.md)

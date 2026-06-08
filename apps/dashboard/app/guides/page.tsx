@@ -8,7 +8,7 @@ import { HOSTED_PATHS } from "@/lib/hosted-product";
 export const metadata = buildPageMetadata({
   title: "Guides — edge chat on Cloudflare",
   description:
-    "Guides for durable objects chat, Vercel + Workers split, reconnect after DO hibernation, and DIY vs FluxyChat — cloudflare workers websocket without a VPS.",
+    "Guides for Workers chat, Vercel + Cloudflare split, leaving Pusher, reconnect after DO hibernation, and in-app chat vs support desk.",
   path: "/guides",
 });
 

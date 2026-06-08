@@ -2,6 +2,7 @@
  * Split from worker fetch handler (original lines 2347-2973).
  * @returns {Promise<Response|null>}
  */
+import { isAiConfigured } from "../lib/ai-chat-completion.js";
 import { pickRouteDeps } from "./route-http-deps.js";
 
 export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
@@ -322,20 +323,22 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
       }
     }
 
+    const { messageVisibilitySql } = await import("../lib/message-visibility.js");
+    const vis = messageVisibilitySql(auth.userId);
     let sql;
     const params = [`%${escapeLike(query)}%`];
     if (roomId) {
       sql =
-        "SELECT id, room_id, user_id, content, created_at FROM messages WHERE deleted_at IS NULL AND content LIKE ? ESCAPE '\\' AND room_id = ? AND project_id = ? ORDER BY created_at DESC LIMIT ?";
-      params.push(roomId, auth.projectId, limit);
+        `SELECT id, room_id, user_id, content, created_at FROM messages WHERE deleted_at IS NULL AND content LIKE ? ESCAPE '\\' AND room_id = ? AND project_id = ?${vis.sql} ORDER BY created_at DESC LIMIT ?`;
+      params.push(roomId, auth.projectId, ...vis.binds, limit);
     } else if (canBypassRoomMembership(auth.roles)) {
       sql =
-        "SELECT id, room_id, user_id, content, created_at FROM messages WHERE deleted_at IS NULL AND content LIKE ? ESCAPE '\\' AND project_id = ? ORDER BY created_at DESC LIMIT ?";
-      params.push(auth.projectId, limit);
+        `SELECT id, room_id, user_id, content, created_at FROM messages WHERE deleted_at IS NULL AND content LIKE ? ESCAPE '\\' AND project_id = ?${vis.sql} ORDER BY created_at DESC LIMIT ?`;
+      params.push(auth.projectId, ...vis.binds, limit);
     } else {
       sql =
-        "SELECT id, room_id, user_id, content, created_at FROM messages WHERE deleted_at IS NULL AND content LIKE ? ESCAPE '\\' AND project_id = ? AND room_id IN (SELECT room_id FROM room_members WHERE user_id = ?) ORDER BY created_at DESC LIMIT ?";
-      params.push(auth.projectId, auth.userId, limit);
+        `SELECT id, room_id, user_id, content, created_at FROM messages WHERE deleted_at IS NULL AND content LIKE ? ESCAPE '\\' AND project_id = ? AND room_id IN (SELECT room_id FROM room_members WHERE user_id = ?)${vis.sql} ORDER BY created_at DESC LIMIT ?`;
+      params.push(auth.projectId, auth.userId, ...vis.binds, limit);
     }
 
     try {
@@ -665,7 +668,7 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
       );
     }
 
-    if (body.eventType === "room_summary" && body.roomId && env.AI_BASE_URL) {
+    if (body.eventType === "room_summary" && body.roomId && isAiConfigured(env)) {
       ctx.waitUntil(
         generateRoomSummaryAndAnnounce(env, auth.projectId, body.roomId).catch(
           (err) => console.error("AI summary error", err)

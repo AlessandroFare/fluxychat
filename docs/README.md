@@ -10,12 +10,30 @@ Use-case oriented documentation.
 - [Team chat](./use-cases/team-chat.md)
 - [Assistant room (AI agent)](./use-cases/assistant-room.md)
 
+## Quickstart
+
+- [Ship in-app chat in one afternoon](./quickstart-afternoon.md)
+- [Message middleware (validate / filter / enrich)](./message-middleware.md)
+
+## Realtime parity
+
+- [Pusher Channels parity (P9)](./pusher-channels-parity.md) — rooms, presence, user channel, E2E, webhooks, public channels
+- [Competitive parity P10 (Sendbird, Sent.dm, Pusher gaps)](./competitive-parity-p10.md)
+- [Twilio inspiration map (Messaging, Verify, Conversations)](./twilio-parity-inspiration.md)
+- [Daily AI digest (P12-F)](./daily-ai-digest.md)
+- [AI agent + human handoff (P12-H)](./ai-agent-handoff.md)
+- [Custom domain white-label (P12-G)](./custom-domain-white-label.md)
+- [Web Push (VAPID) + Pusher Beams parity](./web-push-vapid.md) — self-hosted browser push, RFC 8292 / 8188 / 8291, no Pusher dependency
+
 ## Cookbooks
 
 - [Auth / Token / JWT (role-based)](./cookbook/auth-jwt.md)
 - [Node bot streaming with FluxyMessageStream](./cookbook/bot-streaming-fluxy-message-stream.md)
 - [Transport fallback (WS → SSE → polling)](./cookbook/transport-fallback.md)
 - [Message templates & member preferences](./cookbook/message-templates.md)
+- [Offline notify: in-app + Sent.dm SMS/WhatsApp](./cookbook/offline-notify-sent-dm.md)
+- [US SMS compliance playbook (10DLC, STOP, opt-in)](./operations/us-sms-compliance-playbook.md)
+- [Public demo & guest token hardening](./cookbook/public-demo-hardening.md)
 
 ### Beta console features (open beta)
 
@@ -38,6 +56,25 @@ Use-case oriented documentation.
 
 - [Performance verification & benchmark](./performance-benchmark.md)
 
+## Operations
+
+- [**Open beta deploy guide** (commit → D1 → Worker → env → Vercel → smoke)](./operations/open-beta-deploy-guide.md)
+- [Production: demo Turnstile + Sent.dm SMS](./operations/production-demo-and-sms.md)
+- [US SMS compliance (10DLC, STOP)](./operations/us-sms-compliance-playbook.md)
+
+## P12 / P13 feature docs
+
+- [Daily AI digest (P12-F)](./daily-ai-digest.md)
+- [Embed widget (P12-A)](./embed-widget.md)
+- [Thread TL;DR (P12-M)](./thread-summary.md)
+- [Quiet hours (P12-N)](./quiet-hours-notifications.md)
+- [Room export (P12-O)](./room-export.md)
+- [AI Gateway (P12-I)](./ai-gateway.md)
+- [Feature flags (P12-J)](./feature-flags.md)
+- [Browser Run OG (P12-K)](./browser-run.md)
+- [Scheduled Workflows (P12-L)](./scheduled-workflows.md)
+- [Twilio inspiration / P13](./twilio-parity-inspiration.md)
+
 ## M6 rollout & pilot
 
 - [Checklist deploy, smoke, pilot, benchmark (M6-A / M6-D)](./m6-operational-checklist.md)
@@ -50,6 +87,13 @@ Use-case oriented documentation.
 
 - [Distribution index (live Dev.to, compare, guide URLs)](./distribution/README.md)
 - [Dev.to article source draft](./distribution/devto-realtime-chat-cloudflare-workers.md)
+
+## Research (local clones, not shipped)
+
+- [Research index & cloned repos](./research/README.md)
+- [Synthesis + prioritized backlog](./research/fluxychat-research-synthesis.md)
+- [WS client benchmark (Fluxy-bot vs SDK)](./research/ws-client-benchmark-fluxy.md)
+- [Chatsemble concepts (GPL, no import)](./research/chatsemble-concepts.md)
 
 ## Snippets
 

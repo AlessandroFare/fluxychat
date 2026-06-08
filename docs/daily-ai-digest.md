@@ -1,0 +1,51 @@
+# Daily AI digest (P12-F)
+
+Cron-driven recap of yesterday’s chat activity: three AI-generated highlights per opted-in user, delivered via in-app notification, web push, and optional email.
+
+## Enable in production
+
+1. Apply migration `0051_daily_digest.sql`.
+2. Set Worker env:
+   - `DAILY_DIGEST_ENABLED=true`
+   - `AI_BASE_URL` + `AI_API_KEY` (same as P12-D reply suggestions)
+   - Optional: `AI_DIGEST_MODEL`, `DIGEST_EMAIL_FROM`, `RESEND_API_KEY`, or Cloudflare Email binding (`env.EMAIL.send`)
+   - `PUBLIC_APP_URL` for links in email/push
+3. Cron `0 8 * * *` is registered in `wrangler.toml` (08:00 UTC daily).
+4. Deploy: `wrangler deploy`
+
+## User opt-in
+
+Users enable digest via:
+
+- `PATCH /digest/preferences` with `{ "enabled": true, "email": "you@co.com", ... }`
+- Dashboard **Notifications → Daily AI digest** card
+
+Default when no row exists: **disabled** (explicit opt-in).
+
+## Channels
+
+| Channel | Requirement |
+|---------|-------------|
+| In-app | `in_app_enabled` (default on) → `in_app_notifications` kind `digest` |
+| Web push | `web_push_enabled` + active `web_push_subscriptions` (P10-ext) |
+| Email | `email_enabled` + valid `email` + `RESEND_API_KEY` or `EMAIL` binding |
+
+Deliveries are idempotent per `(project, user, digest_date, channel)` in `digest_deliveries`.
+
+## Manual run (admin)
+
+```http
+POST /admin/digest/run
+Authorization: Bearer <admin JWT>
+Content-Type: application/json
+
+{ "digestDate": "2026-06-07", "maxUsers": 50 }
+```
+
+Bypasses `DAILY_DIGEST_ENABLED` for staging verification.
+
+## Related
+
+- Reply suggestions (same AI stack): [competitive-parity-p10.md](./competitive-parity-p10.md)
+- Web push: [web-push-vapid.md](./web-push-vapid.md)
+- Roadmap: `ROADMAP_EXECUTION.md` § P12-F

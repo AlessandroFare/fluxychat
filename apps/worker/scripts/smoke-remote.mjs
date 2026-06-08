@@ -63,6 +63,17 @@ async function main() {
   if (h.body?.degraded) {
     console.warn("Warning: health reports degraded (KV/R2 optional bindings).");
   }
+  if (h.body?.platformBindings) {
+    console.log("Platform bindings:", JSON.stringify(h.body.platformBindings));
+  }
+
+  const flagsUrl = `${baseUrl}/client/feature-flags`;
+  const flags = await fetchJson(flagsUrl, authHeaders);
+  console.log(`GET ${flagsUrl} -> ${flags.res.status}`);
+  if (!flags.res.ok) failures.push(`/client/feature-flags status ${flags.res.status}`);
+  if (flags.res.ok && typeof flags.body?.flags !== "object") {
+    failures.push("/client/feature-flags missing flags object");
+  }
 
   const statPaths = [
     "/stats/slo?minutes=15",

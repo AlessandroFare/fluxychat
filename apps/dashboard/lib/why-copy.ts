@@ -63,6 +63,20 @@ export const WHY_SECTIONS: readonly WhySection[] = [
     ],
   },
   {
+    id: "product-chat",
+    title: "In-app chat vs support desk",
+    paragraphs: [
+      "Most live-chat listicles target support teams: inbox, ticketing, CSAT. FluxyChat is different. It is the room layer for chat inside your SaaS UI — tenant-scoped rooms, @fluxy-chat/sdk, D1 history, operator console.",
+      "You can still build a support experience on top (see docs/use-cases/support-chat.md). I am not trying to replace Intercom. I am trying to replace the part where you either rent generic channels or run your own socket cluster.",
+      "Agentic products fit here too: user messages and agent tool_call / tool_result share one WebSocket timeline, so you can see what happened before wiring Salesforce, HubSpot, or whatever integration runner you use.",
+    ],
+    bullets: [
+      "Onboarding and retention language from support marketing still applies to in-product chat — just do not claim to be a helpdesk.",
+      "Chat transport here; CRM and long-tail connectors on your side.",
+      "More on /compare and /guides/in-app-chat-vs-support-desk.",
+    ],
+  },
+  {
     id: "not",
     title: "What we are not",
     bullets: [

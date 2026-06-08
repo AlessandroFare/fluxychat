@@ -9,6 +9,28 @@ import {
   renderMessageTemplate,
 } from "../lib/message-template.js";
 import { pickRouteDeps } from "./route-http-deps.js";
+import { runInboundMessageMiddleware } from "../lib/message-middleware.js";
+import {
+  notifyDmRecipient,
+  notifyMentionedUsers,
+} from "../lib/in-app-notifications.js";
+import { isBlockedBetween, filterBlockedUserIds } from "../lib/user-blocks.js";
+import { assertGuestCanWrite } from "../lib/guest-auth.js";
+import {
+  parsePollCreateInput,
+  insertMessagePoll,
+  getMessagePoll,
+  castPollVote,
+} from "../lib/message-polls.js";
+import { translateMessageContent } from "../lib/message-translation.js";
+import {
+  upsertMessageDelivery,
+  listMessageDeliveries,
+} from "../lib/message-deliveries.js";
+import {
+  fanoutRoomInternal,
+  getRoomStubForProject,
+} from "../lib/room-shard.js";
 
 export async function dispatchMessagesRoutes(request, url, h) {
   const {
@@ -34,6 +56,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
     deliverWebhooks,
     invokeMentionedAgents,
     schedulePostMessageAutomations,
+    canAccessRoom,
   } = pickRouteDeps(h, [
     "env",
     "ctx",
@@ -57,6 +80,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
     "deliverWebhooks",
     "invokeMentionedAgents",
     "schedulePostMessageAutomations",
+    "canAccessRoom",
   ]);
 
   // Authenticated REST message create endpoint
@@ -73,6 +97,11 @@ export async function dispatchMessagesRoutes(request, url, h) {
       });
     }
 
+    const guestWrite = assertGuestCanWrite(env, auth);
+    if (!guestWrite.ok) {
+      return json({ error: guestWrite.error }, { status: guestWrite.status });
+    }
+
     const body = await request.json().catch(() => null);
     if (!body || !body.roomId || !isValidId(body.roomId)) {
       return json(
@@ -83,10 +112,44 @@ export async function dispatchMessagesRoutes(request, url, h) {
     const { userId: authUserId, projectId: authProjectId } = auth;
     const roomId = body.roomId;
 
+    const allowed = await canAccessRoom(env, auth, roomId);
+    if (!allowed) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+
+    const roomAccessRow = await env.DB.prepare(
+      "SELECT type FROM rooms WHERE project_id = ? AND id = ? LIMIT 1",
+    )
+      .bind(authProjectId, roomId)
+      .first();
+    if (!roomAccessRow) {
+      return json({ error: "room not found" }, { status: 404 });
+    }
+    if (roomAccessRow.type === "dm") {
+      const dmMembers = await env.DB.prepare(
+        "SELECT user_id FROM room_members WHERE room_id = ?",
+      )
+        .bind(roomId)
+        .all();
+      for (const row of dmMembers.results || []) {
+        if (!row.user_id || row.user_id === authUserId) continue;
+        if (await isBlockedBetween(env, authProjectId, authUserId, row.user_id)) {
+          return json({ error: "user_blocked" }, { status: 403 });
+        }
+      }
+    }
+
+    let pollCreate = null;
     let content = "";
     const templateId =
       typeof body.templateId === "string" ? body.templateId.trim() : "";
-    if (templateId) {
+    if (body.poll) {
+      pollCreate = parsePollCreateInput(body.poll);
+      if (!pollCreate.ok) {
+        return json({ error: pollCreate.error }, { status: 400 });
+      }
+      content = pollCreate.question;
+    } else if (templateId) {
       const tpl = await env.DB.prepare(
         `SELECT body FROM message_templates WHERE id = ? AND project_id = ?`
       )
@@ -105,11 +168,28 @@ export async function dispatchMessagesRoutes(request, url, h) {
       content = contentValidation.content;
     }
 
-    const contentValidation = validateMessageContent(content);
-    if (!contentValidation.valid) {
-      return json({ error: contentValidation.error }, { status: 400 });
+    const middlewareResult = await runInboundMessageMiddleware(env, { content });
+    if (!middlewareResult.ok) {
+      return json(
+        { error: middlewareResult.error, code: middlewareResult.code },
+        { status: middlewareResult.code === "content_blocked" ? 403 : 400 },
+      );
     }
-    content = contentValidation.content;
+    content = middlewareResult.content;
+    const { resolveMessageExpiry } = await import("../lib/message-ttl.js");
+    const expiryResult = resolveMessageExpiry(body, env);
+    if (!expiryResult.ok) {
+      return json({ error: expiryResult.error }, { status: 400 });
+    }
+    const messageExpiresAt = expiryResult.expiresAt;
+    const { resolveMessageVisibility } = await import("../lib/message-visibility.js");
+    const visibilityResult = resolveMessageVisibility(body);
+    if (!visibilityResult.ok) {
+      return json({ error: visibilityResult.error }, { status: 400 });
+    }
+    const { visibility, visibleTo } = visibilityResult;
+    const visibleToJson =
+      visibility === "whisper" ? JSON.stringify(visibleTo) : null;
     const parentId = body.replyTo ? Number(body.replyTo) || null : null;
     const clientMessageId = normalizeClientMessageId(body.clientMessageId);
     const createdAt = new Date().toISOString();
@@ -172,7 +252,13 @@ export async function dispatchMessagesRoutes(request, url, h) {
       );
     }
 
-    const mentions = extractMentions(content);
+    const mentionsRaw = extractMentions(content);
+    const mentions = await filterBlockedUserIds(
+      env,
+      authProjectId,
+      authUserId,
+      mentionsRaw,
+    );
     const firstUrl = extractFirstUrl(content);
     let preview = null;
     if (firstUrl && env.OG_PREVIEW_ENABLED !== "false") {
@@ -182,8 +268,9 @@ export async function dispatchMessagesRoutes(request, url, h) {
     const insertRes = await env.DB.prepare(
       `INSERT INTO messages (
         project_id, room_id, user_id, content, created_at, parent_id,
-        mentions, og_title, og_description, og_image, og_url, client_message_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        mentions, og_title, og_description, og_image, og_url, client_message_id, expires_at,
+        visibility, visible_to_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         authProjectId,
@@ -197,7 +284,10 @@ export async function dispatchMessagesRoutes(request, url, h) {
         preview?.description || null,
         preview?.imageUrl || null,
         preview?.url || null,
-        clientMessageId
+        clientMessageId,
+        messageExpiresAt,
+        visibility === "room" ? null : visibility,
+        visibleToJson,
       )
       .run();
     ctx.waitUntil(
@@ -209,6 +299,18 @@ export async function dispatchMessagesRoutes(request, url, h) {
     );
 
     const messageId = insertRes.meta.last_row_id;
+
+    let pollSnapshot = null;
+    if (pollCreate?.ok) {
+      pollSnapshot = await insertMessagePoll(env, {
+        messageId,
+        projectId: authProjectId,
+        roomId,
+        question: pollCreate.question,
+        options: pollCreate.options,
+        allowMultiple: pollCreate.allowMultiple,
+      });
+    }
 
     const sanitizedAttachments = sanitizeMessageAttachments(body.attachments);
 
@@ -266,11 +368,48 @@ export async function dispatchMessagesRoutes(request, url, h) {
           logError("webhook.mention_delivery_failed", err, requestLogCtx)
         )
       );
+
+      ctx.waitUntil(
+        notifyMentionedUsers(env, {
+          projectId: authProjectId,
+          roomId,
+          fromUserId: authUserId,
+          toUserIds: mentions,
+          messageId,
+          preview: content,
+        }).catch((err) =>
+          logError("notifications.mention_failed", err, requestLogCtx),
+        ),
+      );
     }
 
-    const id = env.ROOM.idFromName(roomId);
-    const stub = env.ROOM.get(id);
-    await stub.fetch("https://internal/announce", {
+    const roomRow = await env.DB.prepare(
+      "SELECT type FROM rooms WHERE project_id = ? AND id = ?",
+    )
+      .bind(authProjectId, roomId)
+      .first();
+    if (roomRow?.type === "dm") {
+      ctx.waitUntil(
+        notifyDmRecipient(env, {
+          projectId: authProjectId,
+          roomId,
+          fromUserId: authUserId,
+          messageId,
+          preview: content,
+        }).catch((err) =>
+          logError("notifications.dm_failed", err, requestLogCtx),
+        ),
+      );
+    }
+
+    const roomStub = await getRoomStubForProject(env, authProjectId, roomId, authUserId);
+    ctx.waitUntil(
+      roomStub
+        .fetch("https://internal/schedule-expiry", { method: "POST" })
+        .catch((err) => logError("message.expiry_schedule_failed", err, requestLogCtx)),
+    );
+
+    await fanoutRoomInternal(env, authProjectId, roomId, "/announce", {
       method: "POST",
       body: JSON.stringify({
         roomId,
@@ -280,6 +419,9 @@ export async function dispatchMessagesRoutes(request, url, h) {
         senderId: authUserId,
         createdAt,
         parentId,
+        ...(messageExpiresAt ? { expiresAt: messageExpiresAt } : {}),
+        ...(visibility === "whisper" ? { visibility, visibleTo } : {}),
+        ...(pollSnapshot ? { poll: pollSnapshot, contentType: "poll" } : {}),
         clientMessageId: clientMessageId ?? undefined,
         mentions,
         preview,
@@ -333,7 +475,10 @@ export async function dispatchMessagesRoutes(request, url, h) {
         messageId,
         content,
         traceId,
-      })
+        mentionedUserIds: mentions,
+        roomType: roomRow?.type ?? null,
+        attachments: sanitizedAttachments,
+      }),
     );
 
     return json({
@@ -355,14 +500,190 @@ export async function dispatchMessagesRoutes(request, url, h) {
           sizeBytes: a.sizeBytes ?? undefined,
           contentType: a.contentType ?? undefined,
         })),
+        ...(messageExpiresAt ? { expiresAt: messageExpiresAt } : {}),
+        ...(visibility === "whisper" ? { visibility, visibleTo } : {}),
+        ...(pollSnapshot ? { poll: pollSnapshot } : {}),
       },
     });
+  }
+
+  const pollGetMatch = url.pathname.match(/^\/messages\/([^/]+)\/poll$/);
+  if (pollGetMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(pollGetMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const poll = await getMessagePoll(env, messageId, auth.projectId);
+    if (!poll) return json({ error: "poll not found" }, { status: 404 });
+    return json({ poll });
+  }
+
+  const pollVoteMatch = url.pathname.match(/^\/messages\/([^/]+)\/vote$/);
+  if (pollVoteMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(pollVoteMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const body = await request.json().catch(() => null);
+    const optionIndex = Number(body?.optionIndex ?? body?.option_index);
+    const msgRow = await env.DB.prepare(
+      "SELECT room_id FROM messages WHERE id = ? AND project_id = ? AND deleted_at IS NULL LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!msgRow) return json({ error: "message not found" }, { status: 404 });
+
+    const result = await castPollVote(env, {
+      messageId,
+      projectId: auth.projectId,
+      roomId: msgRow.room_id,
+      userId: auth.userId,
+      optionIndex,
+    });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: result.status || 400 });
+    }
+
+    const roomId = msgRow.room_id;
+    await fanoutRoomInternal(env, auth.projectId, roomId, "/announce", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "poll_updated",
+        roomId,
+        messageId,
+        poll: result.poll,
+        userId: auth.userId,
+      }),
+    });
+
+    return json({ ok: true, poll: result.poll });
+  }
+
+  const translateMatch = url.pathname.match(/^\/messages\/([^/]+)\/translate$/);
+  if (translateMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(translateMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const body = await request.json().catch(() => null);
+    const targetLang = body?.targetLang ?? body?.target_lang;
+    const msgRow = await env.DB.prepare(
+      `SELECT id, room_id, content FROM messages
+       WHERE id = ? AND project_id = ? AND deleted_at IS NULL LIMIT 1`,
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!msgRow) return json({ error: "message not found" }, { status: 404 });
+    const allowed = await canAccessRoom(env, auth, msgRow.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+
+    const result = await translateMessageContent(env, {
+      projectId: auth.projectId,
+      messageId,
+      content: msgRow.content,
+      targetLang,
+      sourceLang: body?.sourceLang ?? body?.source_lang,
+    });
+    if (!result.ok) {
+      return json({ error: result.error, detail: result.detail }, { status: result.status || 500 });
+    }
+    return json({
+      messageId,
+      cached: result.cached,
+      translation: result.translation,
+    });
+  }
+
+  const deliveredMatch = url.pathname.match(/^\/messages\/([^/]+)\/delivered$/);
+  if (deliveredMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(deliveredMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const msgRow = await env.DB.prepare(
+      "SELECT room_id, user_id FROM messages WHERE id = ? AND project_id = ? AND deleted_at IS NULL LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!msgRow) return json({ error: "message not found" }, { status: 404 });
+    const allowed = await canAccessRoom(env, auth, msgRow.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+    if (msgRow.user_id === auth.userId) {
+      return json({ error: "cannot_mark_own_message_delivered" }, { status: 400 });
+    }
+
+    await upsertMessageDelivery(env, {
+      messageId,
+      userId: auth.userId,
+      status: "delivered",
+    });
+
+    await fanoutRoomInternal(env, auth.projectId, msgRow.room_id, "/announce", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "delivery_updated",
+        roomId: msgRow.room_id,
+        messageId,
+        userId: auth.userId,
+        status: "delivered",
+      }),
+    });
+
+    return json({ ok: true, messageId, userId: auth.userId, status: "delivered" });
+  }
+
+  const deliveriesMatch = url.pathname.match(/^\/messages\/([^/]+)\/deliveries$/);
+  if (deliveriesMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(deliveriesMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const msgRow = await env.DB.prepare(
+      "SELECT room_id, user_id FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!msgRow) return json({ error: "message not found" }, { status: 404 });
+    const allowed = await canAccessRoom(env, auth, msgRow.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+
+    const deliveries = await listMessageDeliveries(env, messageId);
+    return json({ messageId, deliveries });
   }
 
   // Authenticated message edit endpoint: PATCH /messages/:id
   if (
     url.pathname.startsWith("/messages/") &&
     !url.pathname.endsWith("/reactions") &&
+    !url.pathname.endsWith("/translate") &&
+    !url.pathname.endsWith("/delivered") &&
+    !url.pathname.endsWith("/deliveries") &&
+    !url.pathname.endsWith("/poll") &&
+    !url.pathname.endsWith("/vote") &&
     request.method === "PATCH"
   ) {
     const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
@@ -412,9 +733,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
 
     // Broadcast edit event to room via DO
     const roomId = existing.room_id;
-    const id = env.ROOM.idFromName(roomId);
-    const stub = env.ROOM.get(id);
-    await stub.fetch("https://internal/announce", {
+    await fanoutRoomInternal(env, authProjectId, roomId, "/announce", {
       method: "POST",
       body: JSON.stringify({
         type: "edit",
@@ -497,9 +816,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
 
     // Broadcast delete event to room via DO
     const roomId = existing.room_id;
-    const id = env.ROOM.idFromName(roomId);
-    const stub = env.ROOM.get(id);
-    await stub.fetch("https://internal/announce", {
+    await fanoutRoomInternal(env, authProjectId, roomId, "/announce", {
       method: "POST",
       body: JSON.stringify({
         type: "delete",
@@ -577,9 +894,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
     const op = request.method === "DELETE" ? "remove" : "add";
 
     // Broadcast reaction event to room via DO
-    const id = env.ROOM.idFromName(roomId);
-    const stub = env.ROOM.get(id);
-    await stub.fetch("https://internal/announce", {
+    await fanoutRoomInternal(env, authProjectId, roomId, "/announce", {
       method: "POST",
       body: JSON.stringify({
         type: "reaction",

@@ -103,6 +103,24 @@ describe("resolveLlmConnection", () => {
   });
 });
 
+describe("resolveLlmConnection gateway overrides", () => {
+  it("injects gateway URLs for shared openai worker fallback", async () => {
+    const env = {
+      AI_API_KEY: "sk-openai",
+      AI_GATEWAY_ACCOUNT_ID: "acc_test",
+      AI_GATEWAY_ID: "fluxy",
+      AI_GATEWAY_TOKEN: "cf-token",
+    };
+    const conn = await resolveLlmConnection(env, {
+      provider: "openai",
+      model: "gpt-4o-mini",
+    });
+    expect(conn.ok).toBe(true);
+    expect(conn.chatCompletionsUrl).toContain("gateway.ai.cloudflare.com");
+    expect(conn.gatewayHeaders?.Authorization).toBe("Bearer cf-token");
+  });
+});
+
 describe("resolveLlmConnectionWithFallback", () => {
   it("uses agent config fallback provider when set", async () => {
     const env = {

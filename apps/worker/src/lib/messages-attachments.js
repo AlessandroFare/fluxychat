@@ -9,6 +9,17 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
     parentId: r.parent_id,
     editedAt: r.edited_at ?? null,
     deletedAt: r.deleted_at ?? null,
+    expiresAt: r.expires_at ?? null,
+    visibility: r.visibility ?? "room",
+    visibleTo: (() => {
+      if (!r.visible_to_json) return undefined;
+      try {
+        const parsed = JSON.parse(r.visible_to_json);
+        return Array.isArray(parsed) ? parsed : undefined;
+      } catch {
+        return undefined;
+      }
+    })(),
     clientMessageId: r.client_message_id ?? undefined,
     mentions: r.mentions ? JSON.parse(r.mentions) : [],
     preview: r.og_url

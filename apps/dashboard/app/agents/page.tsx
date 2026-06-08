@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Bot,
   History,
@@ -191,6 +192,15 @@ export default function AgentsPage() {
   const [invokeText, setInvokeText] = useState("");
   const [chatRoomId, setChatRoomId] = useState(ASSISTANT_ROOM_ID);
   const [preparingChat, setPreparingChat] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const room = searchParams.get("room")?.trim();
+    if (room) {
+      setChatRoomId(room);
+      setPanel("chat");
+    }
+  }, [searchParams]);
 
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [loadingRuns, setLoadingRuns] = useState(false);
@@ -683,6 +693,8 @@ export default function AgentsPage() {
                 agentName={selectedAgent.name}
                 agentHandle={selectedAgent.handle}
                 adminJwt={adminJwt}
+                memberJwt={memberJwt}
+                memberUserId={memberUserId}
               />
             </Panel>
           ) : null}

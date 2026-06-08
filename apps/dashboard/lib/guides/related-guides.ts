@@ -51,8 +51,16 @@ export const ALL_GUIDES: readonly RelatedGuide[] = [
     label: "Pusher alternative for SaaS chat",
   },
   {
+    href: MARKETING_GUIDE_PATHS.inAppChatVsSupportDesk,
+    label: "In-app chat vs support desk",
+  },
+  {
     href: MARKETING_GUIDE_PATHS.llmMemoryVsRoomState,
     label: "LLM memory vs room state",
+  },
+  {
+    href: MARKETING_GUIDE_PATHS.offlineNotifyInAppPlusSms,
+    label: "In-app chat + SMS when offline",
   },
 ] as const;
 

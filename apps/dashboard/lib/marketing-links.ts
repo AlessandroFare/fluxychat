@@ -42,5 +42,7 @@ export const MARKETING_GUIDE_PATHS = {
   durableObjectsChatTradeoffs: "/guides/durable-objects-chat-tradeoffs",
   buildChatNextjsFluxychat: "/guides/build-chat-nextjs-fluxychat",
   pusherAlternativeSaas: "/guides/pusher-alternative-saas",
+  inAppChatVsSupportDesk: "/guides/in-app-chat-vs-support-desk",
   llmMemoryVsRoomState: "/guides/llm-memory-vs-room-state",
+  offlineNotifyInAppPlusSms: "/guides/offline-notify-in-app-plus-sms",
 } as const;

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2, X } from "lucide-react";
-import { useChat } from "@fluxy-chat/sdk";
+import { useChat, useFluxyChatOptional } from "@fluxy-chat/sdk";
 import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { mentionPrefixForAgent, normalizeAgentHandle } from "@/lib/assistant-room";
@@ -22,7 +23,16 @@ import {
   type AgentRoomTemplateSelection,
 } from "./agent-room-template-picker";
 import { AgentRunStatus } from "./agent-run-status";
+import { RoomOfflineNotifySettings } from "./room-offline-notify-settings";
+import { ChatCatchUpBanner } from "./chat-catch-up-banner";
+import { ChatPresenceStrip } from "./chat-presence-strip";
+import { AgentCopilotConfirm } from "./agent-copilot-confirm";
+import { useRoomDraftSync } from "@/lib/use-room-draft-sync";
+import type { FluxySendMessageOptions } from "@fluxy-chat/sdk";
 import { Button, Input } from "./ui";
+import { VoiceRecorder } from "~/components/voice/voice-recorder";
+import { ReplySuggestions } from "./reply-suggestions";
+import { AgentHandoffBanner } from "./agent-handoff-banner";
 import { cn } from "@/lib/utils";
 
 const WORKER_URL = getPublicWorkerUrl();
@@ -41,7 +51,22 @@ export interface AgentRoomChatProps {
   agentHandle?: string | null;
   /** Admin JWT to poll /agents/:id/runs after @mention invoke. */
   adminJwt?: string;
+  /** Member JWT for per-room SMS / notify preferences. */
+  memberJwt?: string;
+  memberUserId?: string;
+  /** When true (default), show preview and require confirm before send/invoke. */
+  coPilotConfirm?: boolean;
+  /** Override history/replay limit (e.g. deep link `replayLimit`). */
+  deepLinkHistoryLimit?: number;
+  /** Scroll to message after history loads (deep link `messageId`). */
+  scrollToMessageId?: number;
   className?: string;
+}
+
+interface PendingComposePayload {
+  templateSend: AgentRoomTemplateSelection | null;
+  text: string;
+  parentId: number | null;
 }
 
 export function AgentRoomChat({
@@ -50,10 +75,31 @@ export function AgentRoomChat({
   agentName,
   agentHandle,
   adminJwt = "",
+  memberJwt = "",
+  memberUserId,
+  coPilotConfirm: coPilotConfirmDefault = true,
+  deepLinkHistoryLimit: deepLinkHistoryLimitProp,
+  scrollToMessageId: scrollToMessageIdProp,
   className,
 }: AgentRoomChatProps) {
+  const searchParams = useSearchParams();
+  const deepLinkHistoryLimit =
+    deepLinkHistoryLimitProp ??
+    (Number(searchParams.get("replayLimit")) || undefined);
+  const scrollToMessageId =
+    scrollToMessageIdProp ?? (Number(searchParams.get("messageId")) || undefined);
+  const deepLinkReplay = searchParams.get("replay") === "1";
+  const [confirmBeforeSend, setConfirmBeforeSend] = useState(coPilotConfirmDefault);
   const [draft, setDraft] = useState("");
   const [replyToId, setReplyToId] = useState<number | null>(null);
+  const [ephemeralTtlSeconds, setEphemeralTtlSeconds] = useState(0);
+  const [whisperMode, setWhisperMode] = useState(false);
+  const [whisperTo, setWhisperTo] = useState("");
+  const [pendingCompose, setPendingCompose] = useState<{
+    previewText: string;
+    modeLabel: string;
+    payload: PendingComposePayload;
+  } | null>(null);
   const [inputError, setInputError] = useState<string | null>(null);
   const [invokeError, setInvokeError] = useState<string | null>(null);
   const [latestRun, setLatestRun] = useState<AgentRunDisplay | null>(null);
@@ -66,6 +112,8 @@ export function AgentRoomChat({
   const runFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const { user: clerkUser } = useClerkUser();
+  const realtime = useFluxyChatOptional();
+  const fluxyClient = realtime?.client ?? null;
 
   const localUserId = clerkUser?.id
     ? fluxyUserIdFromClerk(clerkUser.id)
@@ -83,7 +131,11 @@ export function AgentRoomChat({
     }
   }, []);
 
-  const replay: UseChatHistoryReplay = skipHistoryOnConnect ? "request" : "connect";
+  const replay: UseChatHistoryReplay = skipHistoryOnConnect
+    ? "request"
+    : deepLinkReplay
+      ? "connect"
+      : "connect";
 
   const {
     messages,
@@ -92,17 +144,49 @@ export function AgentRoomChat({
     connectionStatus,
     connectionState,
     agentTyping,
+    typingUsers,
+    typingIntents,
     connected,
     toolThreadEvents,
     clearToolThread,
     lastAgentRun,
     historyLoaded,
     loadHistory,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    sendReadReceipt,
     retryMessage,
+    presenceMembers,
+    subscriptionCount,
   } = useChat({
     roomId: trimmedRoomId,
     agentId,
     replay,
+    replayLimit: deepLinkHistoryLimit,
+    historyLimit: deepLinkHistoryLimit ?? 50,
+    markReadLatest: false,
+    presenceInfo: localUserId ? { name: localUserId } : undefined,
+  });
+
+  useEffect(() => {
+    if (!scrollToMessageId || !historyLoaded) return;
+    const el = listRef.current?.querySelector(
+      `[data-message-id="${scrollToMessageId}"]`,
+    );
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [scrollToMessageId, historyLoaded, messages.length]);
+
+  useRoomDraftSync({
+    client: fluxyClient,
+    roomId: trimmedRoomId,
+    content: draft,
+    replyToId: replyToId,
+    enabled: Boolean(fluxyClient?.isAuthenticated()),
+    onRestore: ({ content, replyToId: restoredReply }) => {
+      setDraft((prev) => (prev.trim() ? prev : content));
+      if (restoredReply != null) setReplyToId(restoredReply);
+    },
   });
 
   const streamingCount = useMemo(
@@ -116,6 +200,16 @@ export function AgentRoomChat({
       if (m.id != null) map.set(m.id, m);
     }
     return map;
+  }, [messages]);
+
+  const replyCountByParent = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const m of messages) {
+      if (m.parentId != null) {
+        counts.set(m.parentId, (counts.get(m.parentId) ?? 0) + 1);
+      }
+    }
+    return counts;
   }, [messages]);
 
   const replyTarget = replyToId != null ? messagesById.get(replyToId) : null;
@@ -243,21 +337,39 @@ export function AgentRoomChat({
     }
   }
 
-  async function askAgent() {
-    const templateSend = templateSelection;
-    const text = templateSend ? templateSend.renderedPreview.trim() : draft.trim();
-    if (!text || !trimmedRoomId) return;
+  function messageSendOptions(
+    templateSend: AgentRoomTemplateSelection | null,
+  ): FluxySendMessageOptions | undefined {
+    const base: FluxySendMessageOptions = {};
+    if (templateSend) {
+      base.templateId = templateSend.templateId;
+      base.templateVars = templateSend.vars;
+    }
+    if (ephemeralTtlSeconds > 0) {
+      base.expiresInSeconds = ephemeralTtlSeconds;
+    }
+    if (whisperMode && whisperTo.trim()) {
+      base.visibility = "whisper";
+      base.visibleTo = [whisperTo.trim()];
+    }
+    return Object.keys(base).length ? base : undefined;
+  }
+
+  async function executeSend(payload: PendingComposePayload) {
+    const { templateSend, text, parentId } = payload;
+    if (!trimmedRoomId) return;
     setInputError(null);
     beginRunTracking();
-    const parentId = replyToId;
+    const sendOpts = messageSendOptions(templateSend);
 
     try {
       if (usesMentionInvoke) {
-        const payload = templateSend
+        const mentionPayload = templateSend
           ? `${mentionPrefixForAgent(agentHandle)}${templateSend.renderedPreview}`.trim()
           : `${mentionPrefixForAgent(agentHandle)}${text}`.trim();
-        await sendMessage(payload, parentId);
+        await sendMessage(mentionPayload, parentId, undefined, sendOpts);
         setDraft("");
+        void fluxyClient?.putRoomDraft(trimmedRoomId, { content: "", replyToId: null });
         setTemplateSelection(null);
         setReplyToId(null);
         if (!adminJwt.trim()) {
@@ -269,14 +381,12 @@ export function AgentRoomChat({
       }
 
       if (templateSend) {
-        await sendMessage("", parentId, undefined, {
-          templateId: templateSend.templateId,
-          templateVars: templateSend.vars,
-        });
+        await sendMessage("", parentId, undefined, sendOpts);
       } else {
-        await sendMessage(text, parentId);
+        await sendMessage(text, parentId, undefined, sendOpts);
       }
       setDraft("");
+      void fluxyClient?.putRoomDraft(trimmedRoomId, { content: "", replyToId: null });
       setTemplateSelection(null);
       setReplyToId(null);
       try {
@@ -291,9 +401,39 @@ export function AgentRoomChat({
     }
   }
 
+  function requestSend() {
+    const templateSend = templateSelection;
+    const text = templateSend ? templateSend.renderedPreview.trim() : draft.trim();
+    if (!text || !trimmedRoomId) return;
+
+    const previewText = usesMentionInvoke
+      ? templateSend
+        ? `${mentionPrefixForAgent(agentHandle)}${templateSend.renderedPreview}`.trim()
+        : `${mentionPrefixForAgent(agentHandle)}${text}`.trim()
+      : text;
+
+    const payload: PendingComposePayload = {
+      templateSend,
+      text,
+      parentId: replyToId,
+    };
+
+    if (confirmBeforeSend) {
+      setPendingCompose({
+        previewText,
+        modeLabel: usesMentionInvoke ? `@${mentionHandle} mention` : "REST invoke",
+        payload,
+      });
+      return;
+    }
+
+    void executeSend(payload);
+  }
+
   const canSend = Boolean(
     trimmedRoomId &&
       !isAgentBusy &&
+      !pendingCompose &&
       (templateSelection?.renderedPreview.trim() || draft.trim()),
   );
 
@@ -343,6 +483,16 @@ export function AgentRoomChat({
           {connectionState.transport === "sse" ? " · SSE" : ""}
           {connectionState.transport === "polling" ? " · polling" : ""}
           {connected ? " · live" : ""}
+          {Object.entries(typingUsers)
+            .filter(([, v]) => v)
+            .map(([uid]) => {
+              const intent = typingIntents[uid] ?? "composing";
+              return (
+                <span key={uid} className="ml-2 text-brand">
+                  · {uid} ({intent})
+                </span>
+              );
+            })}
           {skipHistoryOnConnect && !historyLoaded ? (
             <button
               type="button"
@@ -378,6 +528,29 @@ export function AgentRoomChat({
 
       <AgentRunStatus run={latestRun} pending={runPending} />
 
+      <AgentHandoffBanner
+        roomId={trimmedRoomId}
+        agentId={agentId}
+        agentName={agentName}
+        operatorJwt={adminJwt}
+      />
+
+      <ChatPresenceStrip
+        members={presenceMembers}
+        subscriptionCount={subscriptionCount}
+      />
+
+      <ChatCatchUpBanner
+        client={fluxyClient}
+        roomId={trimmedRoomId}
+        messages={messages}
+        listRef={listRef}
+        loadMore={loadMore}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
+        onMarkRead={sendReadReceipt}
+      />
+
       <div
         ref={listRef}
         className="flex h-[min(420px,50vh)] flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-muted/30 p-3"
@@ -395,6 +568,8 @@ export function AgentRoomChat({
               }
               agentId={agentId}
               localUserId={localUserId}
+              roomId={trimmedRoomId}
+              replyCount={m.id != null ? replyCountByParent.get(m.id) ?? 0 : 0}
               parentMessage={
                 m.parentId != null ? messagesById.get(m.parentId) ?? null : null
               }
@@ -446,6 +621,73 @@ export function AgentRoomChat({
         onChange={setTemplateSelection}
       />
 
+      {pendingCompose ? (
+        <AgentCopilotConfirm
+          previewText={pendingCompose.previewText}
+          modeLabel={pendingCompose.modeLabel}
+          busy={isAgentBusy}
+          onEdit={() => setPendingCompose(null)}
+          onConfirm={() => {
+            const payload = pendingCompose.payload;
+            setPendingCompose(null);
+            void executeSend(payload);
+          }}
+        />
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <label className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            className="h-3 w-3 rounded border-border"
+            checked={confirmBeforeSend}
+            onChange={(e) => setConfirmBeforeSend(e.target.checked)}
+            disabled={Boolean(pendingCompose)}
+          />
+          Confirm before send
+        </label>
+        <label className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            className="h-3 w-3 rounded border-border"
+            checked={whisperMode}
+            onChange={(e) => setWhisperMode(e.target.checked)}
+          />
+          Whisper to
+          <Input
+            value={whisperTo}
+            onChange={(e) => setWhisperTo(e.target.value)}
+            placeholder="user id"
+            className="h-7 w-28 px-1.5 text-xs"
+            disabled={!whisperMode}
+          />
+        </label>
+        <label className="flex items-center gap-1.5">
+          Ephemeral
+          <select
+            className="rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+            value={ephemeralTtlSeconds}
+            onChange={(e) => setEphemeralTtlSeconds(Number(e.target.value))}
+            disabled={isAgentBusy}
+          >
+            <option value={0}>Off</option>
+            <option value={3600}>1 hour</option>
+            <option value={86400}>24 hours</option>
+          </select>
+        </label>
+      </div>
+
+      {!draft.trim() && messages.length > 0 && trimmedRoomId && !isAgentBusy ? (
+        <ReplySuggestions
+          roomId={trimmedRoomId}
+          parentId={replyToId}
+          onSelect={(s) => {
+            setDraft(s);
+            setReplyToId(null);
+          }}
+        />
+      ) : null}
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Input
           value={draft}
@@ -463,16 +705,44 @@ export function AgentRoomChat({
             if (e.key !== "Enter" || e.shiftKey) return;
             e.preventDefault();
             if (!canSend) return;
-            void askAgent();
+            void requestSend();
           }}
         />
-        <Button
-          variant="primary"
-          onClick={() => void askAgent()}
-          disabled={!canSend}
-        >
-          {isAgentBusy ? "Waiting…" : "Send"}
-        </Button>
+        <div className="flex items-end gap-1.5">
+          <VoiceRecorder
+            disabled={!trimmedRoomId || isAgentBusy || Boolean(templateSelection)}
+            onSend={async (audio, durationMs) => {
+              if (!fluxyClient || !trimmedRoomId) return;
+              setInputError(null);
+              try {
+                const sent = await fluxyClient.sendVoiceMessage(trimmedRoomId, audio, {
+                  durationMs,
+                  parentId: replyToId,
+                });
+                if (!sent) {
+                  setInputError("Voice message not sent — check authentication.");
+                  return;
+                }
+                setReplyToId(null);
+                void fluxyClient?.putRoomDraft(trimmedRoomId, {
+                  content: "",
+                  replyToId: null,
+                });
+              } catch (err: unknown) {
+                setInputError(
+                  err instanceof Error ? err.message : "Failed to send voice message",
+                );
+              }
+            }}
+          />
+          <Button
+            variant="primary"
+            onClick={() => requestSend()}
+            disabled={!canSend}
+          >
+            {isAgentBusy ? "Waiting…" : "Send"}
+          </Button>
+        </div>
       </div>
 
       {inputError ? (
@@ -484,6 +754,15 @@ export function AgentRoomChat({
         <p className="text-xs text-amber-800" role="alert">
           {invokeError}
         </p>
+      ) : null}
+
+      {memberJwt.trim() && trimmedRoomId ? (
+        <RoomOfflineNotifySettings
+          compact
+          roomId={trimmedRoomId}
+          memberJwt={memberJwt}
+          memberUserId={memberUserId}
+        />
       ) : null}
 
       <p className="text-xs text-muted-foreground">

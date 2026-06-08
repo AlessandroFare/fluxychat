@@ -1,12 +1,16 @@
 import Link from "next/link";
 import {
   ALTERNATIVE_APPROACHES,
+  BUILD_VS_BUY,
   BUYING_FAQ,
   COMPARE_ROWS,
   DECISION_FLOW,
   ABLY_ON_VERCEL,
   DIY_DO_COMPARISON,
+  PRODUCT_CHAT_VS_SUPPORT,
+  PUSHER_BILL_SHOCK,
   PUSHER_ON_VERCEL,
+  SELF_HOST_POSITIONING,
 } from "@/lib/compare-providers";
 import { MARKETING_GUIDE_PATHS } from "@/lib/marketing-links";
 import { buildPageMetadata } from "@/lib/site-metadata";
@@ -15,9 +19,9 @@ import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 export const metadata = buildPageMetadata({
-  title: "Compare FluxyChat",
+  title: "Pusher alternative — compare FluxyChat",
   description:
-    "FluxyChat vs Stream, Ably, Pusher, Vercel WebSocket workarounds, and DIY edge chat — room-per-DO on Cloudflare, Pusher alternative without a VPS.",
+    "How FluxyChat compares to Pusher, Ably, Stream, and DIY Workers chat — in-app rooms on Cloudflare, optional self-host, no helpdesk lock-in.",
   path: "/compare",
 });
 
@@ -83,16 +87,51 @@ export default function ComparePage() {
         Compare FluxyChat
       </h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">
-        Rough positioning for teams evaluating Stream, Ably, Pusher, PartyKit, or
-        DIY Workers stacks — not a feature shootout. FluxyChat is a{" "}
-        <strong className="font-medium text-foreground">chat layer only</strong> on
-        Cloudflare (one Durable Object per room + D1), MIT self-host, or hosted beta.
-        Not SMS/WhatsApp; pair telco APIs when you need both.{" "}
-        <Link href={HOSTED_PATHS.guidesCloudflareChat} className="text-brand hover:underline">
-          Cloudflare Workers chat guide
+        Rough positioning for teams looking at Stream, Ably, Pusher, TalkJS, Firebase, or a DIY
+        Workers stack. FluxyChat is in-app chat on Cloudflare (one Durable Object per room + D1),
+        MIT self-host or hosted beta — not a helpdesk widget.{" "}
+        <Link href={MARKETING_GUIDE_PATHS.pusherAlternativeSaas} className="text-brand hover:underline">
+          Pusher alternative guide →
         </Link>
-        .
       </p>
+
+      <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-4 text-sm">
+        <p className="font-medium">{PUSHER_BILL_SHOCK.title}</p>
+        <p className="mt-1 text-muted-foreground">{PUSHER_BILL_SHOCK.intro}</p>
+        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-muted-foreground">
+          {PUSHER_BILL_SHOCK.bullets.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-border bg-muted/30 px-4 py-4 text-sm">
+        <p className="font-medium">{SELF_HOST_POSITIONING.title}</p>
+        <p className="mt-1 text-muted-foreground">{SELF_HOST_POSITIONING.intro}</p>
+        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-muted-foreground">
+          {SELF_HOST_POSITIONING.bullets.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-border bg-muted/30 px-4 py-4 text-sm">
+        <p className="font-medium">{PRODUCT_CHAT_VS_SUPPORT.title}</p>
+        <p className="mt-1 text-muted-foreground">{PRODUCT_CHAT_VS_SUPPORT.intro}</p>
+        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-muted-foreground">
+          {PRODUCT_CHAT_VS_SUPPORT.bullets.map((item) => (
+            <li key={item.slice(0, 40)}>{item}</li>
+          ))}
+        </ul>
+        <p className="mt-3">
+          <Link
+            href={MARKETING_GUIDE_PATHS.inAppChatVsSupportDesk}
+            className="font-medium text-brand hover:underline"
+          >
+            Product chat vs support desk guide →
+          </Link>
+        </p>
+      </div>
 
       <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-4 text-sm">
         <p className="font-medium">Walkthrough on Dev.to</p>
@@ -122,7 +161,17 @@ export default function ComparePage() {
         </p>
       </div>
 
-      <h2 className="mt-12 font-heading text-xl font-bold sm:text-2xl">
+      <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">
+        {BUILD_VS_BUY.title}
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{BUILD_VS_BUY.intro}</p>
+      <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+        {BUILD_VS_BUY.bullets.map((item) => (
+          <li key={item.slice(0, 48)}>{item}</li>
+        ))}
+      </ul>
+
+      <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">
         Managed chat APIs
       </h2>
       <div className="mt-4">

@@ -1,9 +1,15 @@
 ﻿import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
 import { logInfo, logError } from "../lib/worker-log.js";
-import { isRoomMember } from "../lib/room-access.js";
+import { isRoomMember, canAccessRoom } from "../lib/room-access.js";
+import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
 import { attachAttachmentsToMessages } from "../lib/messages-attachments.js";
 import { checkAndConsumeProjectQuota } from "../lib/project-plan-quota.js";
 import { validateMessageContent } from "../lib/message-validation.js";
+import { runInboundMessageMiddleware } from "../lib/message-middleware.js";
+import {
+  notifyDmRecipient,
+  notifyMentionedUsers,
+} from "../lib/in-app-notifications.js";
 import {
   quotaResetInfo,
   extractMentions,
@@ -13,6 +19,87 @@ import {
 import { deliverWebhooks } from "../lib/webhook-delivery.js";
 import { schedulePostMessageAutomations } from "../lib/post-message-automations.js";
 import { invokeMentionedAgents } from "../lib/agent-runtime.js";
+import {
+  buildPresenceMembers,
+  listActivePresenceUserIds,
+  normalizeClientEventName,
+  parsePresenceInfoParam,
+  CLIENT_EVENT_MAX_PER_MINUTE,
+} from "../lib/room-presence.js";
+import {
+  ROOM_CACHE_STORAGE_KEY,
+  isCacheableBroadcast,
+  buildCacheEntry,
+  parseStoredCacheEntry,
+  parseCacheConnectParam,
+} from "../lib/room-cache.js";
+import {
+  fanoutWatchlistForTarget,
+  WATCHLIST_ROOM_EVENT_TYPES,
+} from "../lib/user-watchlist.js";
+import { runStorageMigrations } from "../lib/do-sql-migrations.js";
+
+/**
+ * Ordered list of migrations applied to the Room DO's `ctx.storage`.
+ *
+ * P11-A1 scaffolding: a single no-op v1 registers the baseline. Future
+ * shape changes (e.g. moving hot state into `ctx.storage.sql`, adding
+ * new presence fields, changing the cache key encoding) append new
+ * entries with monotonically increasing versions. The runner is
+ * idempotent and re-entrant — see `lib/do-sql-migrations.js`.
+ *
+ * @type {Array<{ version: number, name: string, up: (ctx: { state: import("@cloudflare/workers-types").DurableObjectState }) => Promise<void> | void }>}
+ */
+export const ROOM_DO_MIGRATIONS = [
+  {
+    version: 1,
+    name: "baseline_storage_shape",
+    up: async () => {
+      // No-op baseline: register the version counter on first hydration.
+      // Future migrations can rely on `state.storage` already containing
+      // the documented v1 shape.
+    },
+  },
+];
+
+export const DEFAULT_WS_HISTORY_LIMIT = 50;
+export const MAX_WS_HISTORY_LIMIT = 500;
+
+/**
+ * @param {Request} request
+ * @returns {{ replay: "default" | "off" | "connect", limit: number, cache: boolean }}
+ */
+export function parseWsConnectOptions(request) {
+  let replay = "default";
+  let limit = DEFAULT_WS_HISTORY_LIMIT;
+  let cache = false;
+  try {
+    const url = new URL(request.url);
+    cache = parseCacheConnectParam(url.searchParams.get("cache"));
+    const replayParam = url.searchParams.get("replay")?.toLowerCase();
+    if (replayParam === "off" || replayParam === "false" || replayParam === "0") {
+      replay = "off";
+    } else if (
+      replayParam === "connect" ||
+      replayParam === "true" ||
+      replayParam === "1"
+    ) {
+      replay = "connect";
+    }
+    const limitRaw =
+      url.searchParams.get("replayLimit") ?? url.searchParams.get("historyLimit");
+    if (limitRaw) {
+      const n = Number(limitRaw);
+      if (Number.isFinite(n) && n > 0) {
+        limit = Math.min(Math.floor(n), MAX_WS_HISTORY_LIMIT);
+      }
+    }
+  } catch {
+    /* keep defaults */
+  }
+  return { replay, limit, cache };
+}
+
 export class RoomDurableObject {
   constructor(state, env) {
     this.state = state;
@@ -26,9 +113,22 @@ export class RoomDurableObject {
     this.wsRateLimitStore = new Map();
     /** @type {Map<string, { messageId: number, lastFlushMs: number }>} */
     this.activeStreams = new Map();
+    /** @type {Map<WebSocket, MessageEvent[]>} */
+    this.wsInboundQueues = new Map();
+    /** Active WS connections per user (Pusher-style presence). */
+    this.userConnectionCounts = new Map();
+    /** Optional profile payload from `presenceInfo` WS query param. */
+    this.userInfoByUserId = new Map();
+    /** Per-connection id (exclude-sender / debugging). */
+    this.socketIds = new Map();
+    /** @type {{ event: Record<string, unknown>; cachedAt: string } | null} */
+    this.lastCacheEntry = null;
 
     if (typeof this.state.blockConcurrencyWhile === "function" && this.state.storage) {
       this._storageHydrated = this.state.blockConcurrencyWhile(async () => {
+        // Run pending migrations BEFORE reading state so that any shape
+        // changes from `up()` are visible to the hydration below.
+        await runStorageMigrations(this.state, ROOM_DO_MIGRATIONS);
         const storedProjectId = await this.state.storage.get("projectId");
         const storedRoomId = await this.state.storage.get("roomId");
         if (typeof storedProjectId === "string" && storedProjectId) {
@@ -37,6 +137,8 @@ export class RoomDurableObject {
         if (typeof storedRoomId === "string" && storedRoomId) {
           this.roomId = storedRoomId;
         }
+        const storedCache = await this.state.storage.get(ROOM_CACHE_STORAGE_KEY);
+        this.lastCacheEntry = parseStoredCacheEntry(storedCache);
       });
     } else {
       this._storageHydrated = Promise.resolve();
@@ -45,6 +147,114 @@ export class RoomDurableObject {
 
   async ensureStorageHydrated() {
     await this._storageHydrated;
+  }
+
+  getActiveUserIds() {
+    return listActivePresenceUserIds(this.userIds, this.userConnectionCounts);
+  }
+
+  getPresenceSnapshot() {
+    const userIds = this.getActiveUserIds();
+    return {
+      online: this.clients.size,
+      subscriptionCount: this.clients.size,
+      users: userIds,
+      members: buildPresenceMembers(userIds, this.userInfoByUserId),
+    };
+  }
+
+  broadcastSubscriptionCount() {
+    const roomIdStr = this.roomId || this.state.id.toString();
+    const count = this.clients.size;
+    this.broadcast({
+      type: "subscription_count",
+      roomId: roomIdStr,
+      subscriptionCount: count,
+    });
+    void this.notifyPresenceWebhook("subscription_count", {
+      roomId: roomIdStr,
+      subscriptionCount: count,
+      at: new Date().toISOString(),
+    });
+  }
+
+  async notifyPresenceWebhook(eventType, payload) {
+    const projectId = this.projectId;
+    if (!projectId) return;
+    void deliverWebhooks(this.env, projectId, eventType, payload).catch((err) =>
+      logError("webhook.presence_failed", err, { eventType, roomId: payload?.roomId }),
+    );
+  }
+
+  async notifyRoomOccupancyWebhook(eventType) {
+    const projectId = this.projectId;
+    const roomId = this.roomId || this.state.id.toString();
+    if (!projectId || !roomId) return;
+    void deliverWebhooks(this.env, projectId, eventType, {
+      roomId,
+      at: new Date().toISOString(),
+    }).catch((err) => logError("webhook.room_lifecycle_failed", err, { roomId, eventType }));
+  }
+
+  async notifyCacheMissWebhook() {
+    const projectId = this.projectId;
+    const roomId = this.roomId || this.state.id.toString();
+    if (!projectId || !roomId) return;
+    void deliverWebhooks(this.env, projectId, "cache_miss", {
+      roomId,
+      at: new Date().toISOString(),
+    }).catch((err) => logError("webhook.cache_miss_failed", err, { roomId }));
+  }
+
+  async persistLastCacheEvent(message) {
+    if (!isCacheableBroadcast(message)) return;
+    const entry = buildCacheEntry(message);
+    this.lastCacheEntry = entry;
+    if (this.state.storage) {
+      await this.state.storage.put(ROOM_CACHE_STORAGE_KEY, entry);
+    }
+  }
+
+  /**
+   * @param {WebSocket} webSocket
+   */
+  async sendCacheOnConnect(webSocket) {
+    let entry = this.lastCacheEntry;
+    if (!entry && this.state.storage) {
+      const stored = await this.state.storage.get(ROOM_CACHE_STORAGE_KEY);
+      entry = parseStoredCacheEntry(stored);
+      if (entry) this.lastCacheEntry = entry;
+    }
+    const roomIdStr = this.roomId || this.state.id.toString();
+    if (entry) {
+      webSocket.send(
+        JSON.stringify({
+          type: "cache_snapshot",
+          roomId: roomIdStr,
+          event: entry.event,
+          cachedAt: entry.cachedAt,
+        }),
+      );
+      return;
+    }
+    void this.notifyCacheMissWebhook();
+  }
+
+  incrementUserConnection(userId) {
+    const next = (this.userConnectionCounts.get(userId) || 0) + 1;
+    this.userConnectionCounts.set(userId, next);
+    return next;
+  }
+
+  decrementUserConnection(userId) {
+    const current = this.userConnectionCounts.get(userId) || 0;
+    if (current <= 1) {
+      this.userConnectionCounts.delete(userId);
+      return 0;
+    }
+    const next = current - 1;
+    this.userConnectionCounts.set(userId, next);
+    return next;
   }
 
   async persistRoomContext(projectId, roomId) {
@@ -81,11 +291,18 @@ export class RoomDurableObject {
     }
     const roomId = this.getRoomIdFromRequest(request) || this.roomId || this.state.id.toString();
     await this.persistRoomContext(auth.projectId, roomId);
-    const isMember = await isRoomMember(this.env, auth.projectId, roomId, auth.userId);
+    const isMember = await canAccessRoom(this.env, auth, roomId);
     if (!isMember) {
       webSocket.close(1008, "Forbidden");
       return;
     }
+    await ensurePublicRoomMembership(
+      this.env,
+      auth.projectId,
+      roomId,
+      auth.userId,
+      guestMemberRoleForJoin(auth),
+    );
 
     this.clients.add(webSocket);
     logInfo("do.client_count", {
@@ -95,6 +312,24 @@ export class RoomDurableObject {
     });
     const userId = auth.userId;
     this.userIds.set(webSocket, userId);
+    const socketId = crypto.randomUUID();
+    this.socketIds.set(webSocket, socketId);
+
+    try {
+      const connectUrl = new URL(request.url);
+      const presenceInfo = parsePresenceInfoParam(
+        connectUrl.searchParams.get("presenceInfo"),
+      );
+      if (Object.keys(presenceInfo).length) {
+        this.userInfoByUserId.set(userId, presenceInfo);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    const wasVacant = this.clients.size === 1;
+    const userConnCount = this.incrementUserConnection(userId);
+    const roomIdStr = roomId;
 
     // Presence recovery: on DO wake after hibernation, reconstruct online user list
     // from D1 read_receipts so the presence broadcast reflects recent activity rather
@@ -119,9 +354,15 @@ export class RoomDurableObject {
       this.userIds.set(`recovered:${uid}`, uid);
     }
 
-    webSocket.addEventListener("message", (event) =>
-      this.onMessage(webSocket, event)
-    );
+    const inboundQueue = [];
+    this.wsInboundQueues.set(webSocket, inboundQueue);
+    webSocket.addEventListener("message", (event) => {
+      if (this.wsInboundQueues.has(webSocket)) {
+        inboundQueue.push(event);
+        return;
+      }
+      void this.onMessage(webSocket, event);
+    });
     webSocket.addEventListener("close", () =>
       this.onClose(webSocket)
     );
@@ -129,12 +370,97 @@ export class RoomDurableObject {
       this.onClose(webSocket)
     );
 
-    // Optionally restore recent history and send to new client
     const projectId = this.projectId;
+    const connectOpts = parseWsConnectOptions(request);
+    if (connectOpts.cache) {
+      await this.sendCacheOnConnect(webSocket);
+    }
+    if (connectOpts.replay !== "off") {
+      await this.sendConnectSnapshot(webSocket, {
+        projectId,
+        roomId,
+        limit: connectOpts.limit,
+        envelopeType: connectOpts.replay === "connect" ? "replay" : "history",
+        viewerUserId: userId,
+      });
+    }
+
+    await this.sendActiveStreamState(webSocket, {
+      projectId,
+      roomId,
+      userId,
+    });
+
+    this.wsInboundQueues.delete(webSocket);
+    for (const queued of inboundQueue) {
+      void this.onMessage(webSocket, queued);
+    }
+
+    const presence = this.getPresenceSnapshot();
+    webSocket.send(
+      JSON.stringify({
+        type: "subscription_succeeded",
+        roomId: roomIdStr,
+        socketId,
+        subscriptionCount: presence.subscriptionCount,
+        members: presence.members,
+      }),
+    );
+
+    if (userConnCount === 1) {
+      const joinPayload = {
+        type: "member_joined",
+        roomId: roomIdStr,
+        userId,
+        userInfo: this.userInfoByUserId.get(userId) ?? {},
+        socketId,
+      };
+      this.broadcast(joinPayload, { excludeWebSocket: webSocket });
+      void this.notifyPresenceWebhook("member_joined", {
+        roomId: roomIdStr,
+        userId,
+        userInfo: joinPayload.userInfo,
+        socketId,
+        subscriptionCount: presence.subscriptionCount,
+        at: new Date().toISOString(),
+      });
+    }
+
+    this.broadcast({
+      type: "presence",
+      online: presence.online,
+      users: presence.users,
+      members: presence.members,
+    });
+    this.broadcastSubscriptionCount();
+
+    if (wasVacant) {
+      void this.notifyRoomOccupancyWebhook("room.occupied");
+    }
+  }
+
+  /**
+   * @param {WebSocket} webSocket
+   * @param {{ projectId: string, roomId: string, limit: number, envelopeType: "history" | "replay" }} opts
+   */
+  async sendConnectSnapshot(webSocket, {
+    projectId,
+    roomId,
+    limit,
+    envelopeType,
+    viewerUserId,
+  }) {
+    const { messageVisibilitySql } = await import("../lib/message-visibility.js");
+    const vis = messageVisibilitySql(viewerUserId || "");
     const result = await this.env.DB.prepare(
-      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50"
+      `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
+              mentions, og_title, og_description, og_image, og_url, client_message_id,
+              visibility, visible_to_json
+       FROM messages
+       WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL${vis.sql}
+       ORDER BY created_at DESC LIMIT ?`,
     )
-      .bind(projectId, roomId)
+      .bind(projectId, roomId, ...vis.binds, limit)
       .all();
 
     const rows = result.results || [];
@@ -147,16 +473,39 @@ export class RoomDurableObject {
 
     webSocket.send(
       JSON.stringify({
-        type: "history",
+        type: envelopeType,
         messages: mapped.reverse(),
       })
     );
+  }
 
-    this.broadcast({
-      type: "presence",
-      online: this.clients.size,
-      users: Array.from(this.userIds.values()),
-    });
+  /**
+   * @param {WebSocket} webSocket
+   * @param {{ projectId: string, roomId: string, userId: string }} opts
+   */
+  async sendActiveStreamState(webSocket, { projectId, roomId, userId }) {
+    const stream = this.activeStreams.get(userId);
+    if (!stream?.messageId) return;
+
+    const row = await this.env.DB.prepare(
+      "SELECT id, user_id, content, created_at, parent_id FROM messages WHERE id = ? AND project_id = ? AND room_id = ? AND deleted_at IS NULL"
+    )
+      .bind(stream.messageId, projectId, roomId)
+      .first();
+    if (!row) return;
+
+    webSocket.send(
+      JSON.stringify({
+        type: "streamState",
+        messageId: row.id,
+        roomId,
+        userId: row.user_id,
+        content: row.content ?? "",
+        createdAt: row.created_at,
+        parentId: row.parent_id ? Number(row.parent_id) || null : null,
+        streaming: true,
+      })
+    );
   }
 
   async processStreamOp({ projectId, roomId, userId, op, content, messageId, parentId }) {
@@ -332,19 +681,42 @@ export class RoomDurableObject {
       if (msg.type === "message") {
         const roomId = this.roomId || this.state.id.toString();
         const { id, userId, content, parentId, attachments } = msg;
+        const { resolveMessageExpiry } = await import("../lib/message-ttl.js");
+        const expiryResult = resolveMessageExpiry(msg, this.env);
+        if (!expiryResult.ok) {
+          webSocket.send(
+            JSON.stringify({ type: "error", message: expiryResult.error }),
+          );
+          return;
+        }
+        const messageExpiresAt = expiryResult.expiresAt;
+        const { resolveMessageVisibility, whisperRecipientSet } = await import(
+          "../lib/message-visibility.js"
+        );
+        const visibilityResult = resolveMessageVisibility(msg);
+        if (!visibilityResult.ok) {
+          webSocket.send(
+            JSON.stringify({ type: "error", message: visibilityResult.error }),
+          );
+          return;
+        }
+        const { visibility, visibleTo } = visibilityResult;
+        const visibleToJson =
+          visibility === "whisper" ? JSON.stringify(visibleTo) : null;
 
-        // Validate message content before processing
-        const contentValidation = validateMessageContent(content);
-        if (!contentValidation.valid) {
+        const middlewareResult = await runInboundMessageMiddleware(this.env, {
+          content,
+        });
+        if (!middlewareResult.ok) {
           webSocket.send(
             JSON.stringify({
               type: "error",
-              message: `invalid_content: ${contentValidation.error}`,
+              message: `${middlewareResult.code}: ${middlewareResult.error}`,
             })
           );
           return;
         }
-        const validatedContent = contentValidation.content;
+        const validatedContent = middlewareResult.content;
 
         const quotaResult = await checkAndConsumeProjectQuota(this.env, {
           projectId: this.projectId,
@@ -417,7 +789,7 @@ export class RoomDurableObject {
         let messageId = id;
         if (!messageId) {
           const result = await this.env.DB.prepare(
-            "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url, expires_at, visibility, visible_to_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
           )
             .bind(
               projectId,
@@ -430,10 +802,16 @@ export class RoomDurableObject {
               preview?.title || null,
               preview?.description || null,
               preview?.imageUrl || null,
-              preview?.url || null
+              preview?.url || null,
+              messageExpiresAt,
+              visibility === "room" ? null : visibility,
+              visibleToJson,
             )
             .run();
           messageId = result.meta.last_row_id;
+          if (messageExpiresAt) {
+            void this.scheduleMessageExpiryAlarm();
+          }
         }
 
         if (Array.isArray(attachments) && attachments.length) {
@@ -502,6 +880,17 @@ export class RoomDurableObject {
           ).catch((err) =>
             logError("agent.mention_invoke_error", err, { projectId, roomId }),
           );
+
+          void notifyMentionedUsers(this.env, {
+            projectId,
+            roomId,
+            fromUserId: userId,
+            toUserIds: mentions,
+            messageId,
+            preview: validatedContent,
+          }).catch((err) =>
+            logError("notifications.mention_failed", err, { projectId, roomId }),
+          );
         }
 
         const roomRow = await this.env.DB.prepare(
@@ -524,6 +913,15 @@ export class RoomDurableObject {
               createdAt
             )
             .run();
+          void notifyDmRecipient(this.env, {
+            projectId,
+            roomId,
+            fromUserId: userId,
+            messageId,
+            preview: validatedContent,
+          }).catch((err) =>
+            logError("notifications.dm_failed", err, { projectId, roomId }),
+          );
         }
 
         const payload = {
@@ -538,9 +936,18 @@ export class RoomDurableObject {
           mentions,
           preview,
           attachments: Array.isArray(attachments) ? attachments : [],
+          ...(messageExpiresAt ? { expiresAt: messageExpiresAt } : {}),
+          ...(visibility === "whisper"
+            ? { visibility, visibleTo }
+            : {}),
+          ...(middlewareResult.meta ? { middleware: middlewareResult.meta } : {}),
         };
 
-        this.broadcast(payload);
+        const whisperRecipients = whisperRecipientSet(visibility, visibleTo, userId);
+        this.broadcast(
+          payload,
+          whisperRecipients ? { recipientUserIds: whisperRecipients } : {},
+        );
 
         void schedulePostMessageAutomations(this.env, {
           projectId,
@@ -549,6 +956,9 @@ export class RoomDurableObject {
           messageId,
           content: validatedContent,
           traceId: undefined,
+          mentionedUserIds: mentions,
+          roomType: roomRow?.type ?? null,
+          attachments: Array.isArray(attachments) ? attachments : [],
         });
 
         return;
@@ -721,11 +1131,61 @@ export class RoomDurableObject {
         return;
       }
 
+      if (msg.type === "client_event") {
+        const roomId = this.roomId || this.state.id.toString();
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(
+            JSON.stringify({ type: "error", message: "client_event_requires_auth" }),
+          );
+          return;
+        }
+        const normalized = normalizeClientEventName(msg.eventName);
+        if (!normalized.ok) {
+          webSocket.send(JSON.stringify({ type: "error", message: normalized.error }));
+          return;
+        }
+        const clientEventRate = this.consumeWsRateLimit(
+          `client-ev:${this.projectId}:${roomId}:${userId}`,
+          CLIENT_EVENT_MAX_PER_MINUTE,
+          60_000,
+        );
+        if (!clientEventRate.allowed) {
+          webSocket.send(
+            JSON.stringify({
+              type: "error",
+              message: `rate_limit_exceeded: retry in ${clientEventRate.retryAfterSeconds}s`,
+            }),
+          );
+          return;
+        }
+        this.broadcast(
+          {
+            type: "client_event",
+            roomId,
+            userId,
+            eventName: normalized.eventName,
+            data: msg.data ?? null,
+          },
+          { excludeWebSocket: webSocket },
+        );
+        void deliverWebhooks(this.env, this.projectId, "client_event", {
+          roomId,
+          userId,
+          eventName: normalized.eventName,
+          data: msg.data ?? null,
+        }).catch((err) => logError("webhook.client_event_failed", err, { roomId }));
+        return;
+      }
+
       if (msg.type === "typing") {
+        const { normalizePresenceIntent } = await import("../lib/presence-intent.js");
+        const isTyping = !!msg.isTyping;
         const payload = {
           type: "typing",
           userId: msg.userId,
-          isTyping: !!msg.isTyping,
+          isTyping,
+          intent: normalizePresenceIntent(msg.intent, isTyping),
         };
         this.broadcast(payload);
         return;
@@ -755,21 +1215,48 @@ export class RoomDurableObject {
   }
 
   onClose(webSocket) {
+    const userId = this.userIds.get(webSocket);
     this.clients.delete(webSocket);
     this.userIds.delete(webSocket);
-    // Exclude recovered-presence entries (prefix "recovered:") — they are not
-    // active WebSocket connections and should not appear in presence counts.
-    const activeUserIds = Array.from(this.userIds.values()).filter(
-      (uid) => !String(uid).startsWith("recovered:")
-    );
+    this.socketIds.delete(webSocket);
+    this.wsInboundQueues.delete(webSocket);
+
+    const roomIdStr = this.roomId || this.state.id.toString();
+    let memberLeft = false;
+    if (userId && !String(userId).startsWith("recovered:")) {
+      const remaining = this.decrementUserConnection(userId);
+      if (remaining === 0) {
+        memberLeft = true;
+        const leftPayload = {
+          type: "member_left",
+          roomId: roomIdStr,
+          userId,
+        };
+        this.broadcast(leftPayload);
+        void this.notifyPresenceWebhook("member_left", {
+          roomId: roomIdStr,
+          userId,
+          subscriptionCount: this.clients.size,
+          at: new Date().toISOString(),
+        });
+      }
+    }
+
+    const presence = this.getPresenceSnapshot();
     this.broadcast({
       type: "presence",
-      online: this.clients.size,
-      users: activeUserIds,
+      online: presence.online,
+      users: presence.users,
+      members: presence.members,
     });
+    this.broadcastSubscriptionCount();
+
+    if (this.clients.size === 0) {
+      void this.notifyRoomOccupancyWebhook("room.vacated");
+    }
   }
 
-  async broadcast(message) {
+  async broadcast(message, options = {}) {
     // Always broadcast presence with only the currently active WS connections
     // (recovered-presence entries are not real clients and are excluded from counts).
     if (message.type === "presence") {
@@ -778,9 +1265,25 @@ export class RoomDurableObject {
       );
       message = { ...message, online: this.clients.size, users: activeUserIds };
     }
+    if (isCacheableBroadcast(message)) {
+      void this.persistLastCacheEvent(message);
+    }
+
     const payload = JSON.stringify(message);
+    const recipientUserIds = options.recipientUserIds;
+    const excludeWebSocket = options.excludeWebSocket;
+    const excludeSocketId = options.excludeSocketId;
     const deadClients = [];
     for (const client of this.clients) {
+      if (excludeWebSocket && client === excludeWebSocket) continue;
+      if (excludeSocketId) {
+        const sid = this.socketIds.get(client);
+        if (sid === excludeSocketId) continue;
+      }
+      if (recipientUserIds) {
+        const uid = this.userIds.get(client);
+        if (!uid || !recipientUserIds.has(uid)) continue;
+      }
       try {
         client.send(payload);
       } catch {
@@ -793,6 +1296,7 @@ export class RoomDurableObject {
     const sseData = `data: ${payload}\n\n`;
     const deadWriters = [];
     for (const writer of [...this.sseClients]) {
+      if (recipientUserIds) continue;
       try {
         await writer.write(new TextEncoder().encode(sseData));
       } catch {
@@ -810,6 +1314,89 @@ export class RoomDurableObject {
         // writer already dead — ignore
       }
     }
+
+    const projectId = this.projectId;
+    const roomIdStr = this.roomId || this.state.id.toString();
+    if (projectId && roomIdStr && WATCHLIST_ROOM_EVENT_TYPES.has(message.type)) {
+      void fanoutWatchlistForTarget(this.env, {
+        projectId,
+        targetType: "room",
+        targetId: roomIdStr,
+        event: message,
+        excludeUserId:
+          typeof message.userId === "string" ? message.userId : undefined,
+      });
+    }
+    if (projectId && message.type === "member_joined" && message.userId) {
+      void fanoutWatchlistForTarget(this.env, {
+        projectId,
+        targetType: "user",
+        targetId: message.userId,
+        event: message,
+        excludeUserId: message.userId,
+      });
+    }
+    if (projectId && message.type === "member_left" && message.userId) {
+      void fanoutWatchlistForTarget(this.env, {
+        projectId,
+        targetType: "user",
+        targetId: message.userId,
+        event: message,
+        excludeUserId: message.userId,
+      });
+    }
+  }
+
+  /**
+   * @param {string} userId
+   * @param {number} [code]
+   * @param {string} [reason]
+   * @returns {number}
+   */
+  terminateUserConnections(userId, code = 4001, reason = "terminated") {
+    if (!userId) return 0;
+    let closed = 0;
+    for (const client of [...this.clients]) {
+      const uid = this.userIds.get(client);
+      if (!uid || uid !== userId || String(uid).startsWith("recovered:")) continue;
+      try {
+        client.close(code, reason);
+        closed += 1;
+      } catch {
+        /* ignore */
+      }
+      this.clients.delete(client);
+      this.userIds.delete(client);
+      this.socketIds.delete(client);
+      this.wsInboundQueues.delete(client);
+    }
+    return closed;
+  }
+
+  /**
+   * @param {string} socketId
+   * @param {number} [code]
+   * @param {string} [reason]
+   * @returns {number}
+   */
+  terminateSocketConnection(socketId, code = 4001, reason = "terminated") {
+    if (!socketId) return 0;
+    let closed = 0;
+    for (const client of [...this.clients]) {
+      const sid = this.socketIds.get(client);
+      if (sid !== socketId) continue;
+      try {
+        client.close(code, reason);
+        closed += 1;
+      } catch {
+        /* ignore */
+      }
+      this.clients.delete(client);
+      this.userIds.delete(client);
+      this.socketIds.delete(client);
+      this.wsInboundQueues.delete(client);
+    }
+    return closed;
   }
 
   consumeWsRateLimit(key, limit, windowMs) {
@@ -823,6 +1410,7 @@ export class RoomDurableObject {
     const bucket = this.wsRateLimitStore.get(key);
     if (!bucket || bucket.expiresAt <= now) {
       this.wsRateLimitStore.set(key, { count: 1, expiresAt: now + windowMs });
+      void this.scheduleEphemeralCleanup();
       return { allowed: true, retryAfterSeconds: 0 };
     }
     if (bucket.count >= limit) {
@@ -833,7 +1421,102 @@ export class RoomDurableObject {
     }
     bucket.count += 1;
     this.wsRateLimitStore.set(key, bucket);
+    void this.scheduleEphemeralCleanup();
     return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  pruneEphemeralState() {
+    const now = Date.now();
+    for (const [key, bucket] of this.wsRateLimitStore) {
+      if (!bucket || bucket.expiresAt <= now) {
+        this.wsRateLimitStore.delete(key);
+      }
+    }
+    for (const [key, entry] of this.moderationCache) {
+      if (!entry || entry.expires <= now) {
+        this.moderationCache.delete(key);
+      }
+    }
+  }
+
+  async scheduleEphemeralCleanup(delayMs = 60_000) {
+    if (typeof this.state.storage?.setAlarm !== "function") return;
+    if (this.wsRateLimitStore.size === 0 && this.moderationCache.size === 0) {
+      if (typeof this.state.storage.deleteAlarm === "function") {
+        await this.state.storage.deleteAlarm();
+      }
+      return;
+    }
+    const when = Date.now() + delayMs;
+    const current = await this.state.storage.getAlarm();
+    if (!current || current > when) {
+      await this.state.storage.setAlarm(when);
+    }
+  }
+
+  async scheduleMessageExpiryAlarm() {
+    const projectId = this.projectId;
+    const roomId = this.roomId || this.state.id.toString();
+    if (!projectId || !roomId) return;
+    const { scheduleRoomMessageExpiryAlarm } = await import(
+      "../lib/expire-room-messages.js"
+    );
+    await scheduleRoomMessageExpiryAlarm(this.state.storage, this.env.DB, {
+      projectId,
+      roomId,
+    });
+  }
+
+  async expireDueMessagesInRoom() {
+    const projectId = this.projectId;
+    const roomId = this.roomId || this.state.id.toString();
+    if (!projectId || !roomId) return;
+    const { findAndExpireDueMessages } = await import("../lib/expire-room-messages.js");
+    const expired = await findAndExpireDueMessages(this.env.DB, {
+      projectId,
+      roomId,
+    });
+    for (const row of expired) {
+      this.broadcast({
+        type: "message_expired",
+        id: row.id,
+        roomId,
+        userId: row.userId,
+        expiredAt: row.expiredAt,
+      });
+      this.broadcast({
+        type: "delete",
+        id: row.id,
+        roomId,
+        userId: row.userId,
+        deletedAt: row.expiredAt,
+        hard: false,
+      });
+    }
+    if (expired.length) {
+      await this.scheduleMessageExpiryAlarm();
+    }
+  }
+
+  async alarm() {
+    await this.expireDueMessagesInRoom();
+    const projectId = this.projectId;
+    const roomId = this.roomId || this.state.id.toString();
+    if (projectId && roomId) {
+      const { processDueScheduledMessages } = await import(
+        "../lib/scheduled-messages.js"
+      );
+      await processDueScheduledMessages(this.env, {
+        projectId,
+        roomId,
+        broadcast: (payload) => this.broadcast(payload),
+      });
+    }
+    this.pruneEphemeralState();
+    if (this.wsRateLimitStore.size > 0 || this.moderationCache.size > 0) {
+      await this.scheduleEphemeralCleanup(60_000);
+    }
+    await this.scheduleMessageExpiryAlarm();
   }
 
   async checkModeration(roomId, userId) {
@@ -858,6 +1541,7 @@ export class RoomDurableObject {
       state,
       expires: Date.now() + 10_000, // cache 10s
     });
+    void this.scheduleEphemeralCleanup();
     return state;
   }
 
@@ -877,7 +1561,7 @@ export class RoomDurableObject {
       }
       const roomId = this.roomId || this.state.id.toString();
       await this.persistRoomContext(auth.projectId, roomId);
-      const isMember = await isRoomMember(this.env, auth.projectId, roomId, auth.userId);
+      const isMember = await canAccessRoom(this.env, auth, roomId);
       if (!isMember) {
         return new Response("Forbidden", { status: 403 });
       }
@@ -943,15 +1627,126 @@ export class RoomDurableObject {
       });
     }
 
+    if (
+      new URL(request.url).pathname === "/live-stats" &&
+      request.method === "GET"
+    ) {
+      const snapshot = this.getPresenceSnapshot();
+      return new Response(
+        JSON.stringify({
+          occupied: this.clients.size > 0,
+          online: snapshot.online,
+          subscriptionCount: snapshot.subscriptionCount,
+          userCount: this.getActiveUserIds().length,
+          users: snapshot.users,
+          members: snapshot.members,
+          socketIds: [...this.socketIds.values()],
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    if (
+      new URL(request.url).pathname === "/schedule-expiry" &&
+      request.method === "POST"
+    ) {
+      await this.scheduleMessageExpiryAlarm();
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (new URL(request.url).pathname === "/terminate-socket" && request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      const socketId =
+        typeof body.socketId === "string"
+          ? body.socketId
+          : typeof body.socket_id === "string"
+            ? body.socket_id
+            : "";
+      if (!socketId) {
+        return new Response(JSON.stringify({ error: "socketId_required" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const code = Number(body.code) || 4001;
+      const reason =
+        typeof body.reason === "string" && body.reason
+          ? body.reason.slice(0, 120)
+          : "terminated";
+      const closed = this.terminateSocketConnection(socketId, code, reason);
+      return new Response(JSON.stringify({ ok: true, closed, socketId }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (new URL(request.url).pathname === "/terminate-user" && request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      const userId = typeof body.userId === "string" ? body.userId : "";
+      if (!userId) {
+        return new Response(JSON.stringify({ error: "userId_required" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const code = Number(body.code) || 4001;
+      const reason =
+        typeof body.reason === "string" && body.reason
+          ? body.reason.slice(0, 120)
+          : "terminated";
+      const closed = this.terminateUserConnections(userId, code, reason);
+      return new Response(JSON.stringify({ ok: true, closed }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (new URL(request.url).pathname === "/announce" && request.method === "POST") {
       const body = await request.json();
       const roomIdStr = this.state.id.toString();
-      if (body.type === "agentTyping") {
-        this.broadcast({
-          type: "agentTyping",
-          agentId: body.agentId || body.userId,
-          isTyping: !!body.isTyping,
-        });
+      const broadcastOpts = {};
+      if (typeof body.excludeSocketId === "string" && body.excludeSocketId) {
+        broadcastOpts.excludeSocketId = body.excludeSocketId;
+      } else if (typeof body.socket_id === "string" && body.socket_id) {
+        broadcastOpts.excludeSocketId = body.socket_id;
+      }
+      if (Array.isArray(body.recipientUserIds) && body.recipientUserIds.length) {
+        broadcastOpts.recipientUserIds = new Set(
+          body.recipientUserIds.filter((id) => typeof id === "string" && id),
+        );
+      }
+      if (body.type === "user_event") {
+        this.broadcast(
+          {
+            type: "user_event",
+            roomId: body.roomId || roomIdStr,
+            userId: body.userId,
+            name: body.name,
+            data: body.data ?? {},
+            at: body.at || new Date().toISOString(),
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "agentTyping") {
+        this.broadcast(
+          {
+            type: "agentTyping",
+            agentId: body.agentId || body.userId,
+            isTyping: !!body.isTyping,
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "server_event") {
+        this.broadcast(
+          {
+            type: "server_event",
+            roomId: body.roomId || roomIdStr,
+            name: body.name,
+            data: body.data ?? {},
+            userId: body.userId || "system",
+          },
+          broadcastOpts,
+        );
       } else if (body.type === "edit") {
         this.broadcast({
           type: "edit",
@@ -960,47 +1755,105 @@ export class RoomDurableObject {
           userId: body.userId,
           content: body.content,
           editedAt: body.editedAt,
-        });
+        }, broadcastOpts);
       } else if (body.type === "delete") {
-        this.broadcast({
-          type: "delete",
-          id: body.id,
-          roomId: body.roomId || roomIdStr,
-          userId: body.userId,
-          deletedAt: body.deletedAt,
-          ...(body.hard !== undefined ? { hard: !!body.hard } : {}),
-        });
+        this.broadcast(
+          {
+            type: "delete",
+            id: body.id,
+            roomId: body.roomId || roomIdStr,
+            userId: body.userId,
+            deletedAt: body.deletedAt,
+            ...(body.hard !== undefined ? { hard: !!body.hard } : {}),
+          },
+          broadcastOpts,
+        );
       } else if (body.type === "reaction") {
-        this.broadcast({
-          type: "reaction",
-          roomId: body.roomId || roomIdStr,
-          userId: body.userId,
-          messageId: body.messageId,
-          emoji: body.emoji,
-          op: body.op,
-        });
+        this.broadcast(
+          {
+            type: "reaction",
+            roomId: body.roomId || roomIdStr,
+            userId: body.userId,
+            messageId: body.messageId,
+            emoji: body.emoji,
+            op: body.op,
+          },
+          broadcastOpts,
+        );
       } else if (
         body.type === "tool_call" ||
         body.type === "tool_result" ||
         body.type === "tool_error"
       ) {
-        this.broadcast({
-          type: body.type,
-          roomId: body.roomId || roomIdStr,
-          runId: body.runId,
-          agentId: body.agentId,
-          toolCallId: body.toolCallId,
-          name: body.name,
-          arguments: body.arguments,
-          result: body.result,
-          error: body.error,
-        });
+        this.broadcast(
+          {
+            type: body.type,
+            roomId: body.roomId || roomIdStr,
+            runId: body.runId,
+            agentId: body.agentId,
+            toolCallId: body.toolCallId,
+            name: body.name,
+            arguments: body.arguments,
+            result: body.result,
+            error: body.error,
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "delivery_updated") {
+        this.broadcast(
+          {
+            type: "delivery_updated",
+            roomId: body.roomId || roomIdStr,
+            messageId: body.messageId,
+            userId: body.userId,
+            status: body.status,
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "poll_updated") {
+        this.broadcast(
+          {
+            type: "poll_updated",
+            roomId: body.roomId || roomIdStr,
+            messageId: body.messageId,
+            poll: body.poll,
+            userId: body.userId,
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "message_pinned") {
+        this.broadcast(
+          {
+            type: "message_pinned",
+            roomId: body.roomId || roomIdStr,
+            messageId: body.messageId ?? null,
+            pinnedBy: body.pinnedBy,
+            pinnedAt: body.pinnedAt ?? null,
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "message_updated") {
+        this.broadcast(
+          {
+            type: "message_updated",
+            roomId: body.roomId || roomIdStr,
+            id: body.id,
+            kind: body.kind,
+            transcription: body.transcription ?? null,
+            transcriptionStatus: body.transcriptionStatus ?? null,
+            transcriptionModel: body.transcriptionModel,
+          },
+          broadcastOpts,
+        );
       } else if (body.type === "agentRun" && body.run) {
-        this.broadcast({
-          type: "agentRun",
-          roomId: body.roomId || roomIdStr,
-          run: body.run,
-        });
+        this.broadcast(
+          {
+            type: "agentRun",
+            roomId: body.roomId || roomIdStr,
+            run: body.run,
+          },
+          broadcastOpts,
+        );
       } else {
         const messageId = body.id || Date.now();
         const rid = typeof body.roomId === "string" ? body.roomId : roomIdStr;
@@ -1023,7 +1876,7 @@ export class RoomDurableObject {
           attachments: Array.isArray(body.attachments) ? body.attachments : [],
           ...(body.clientMessageId ? { clientMessageId: body.clientMessageId } : {}),
         };
-        this.broadcast(payload);
+        this.broadcast(payload, broadcastOpts);
       }
       return new Response(JSON.stringify({ ok: true }), {
         headers: { "Content-Type": "application/json" },

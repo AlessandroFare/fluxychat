@@ -392,7 +392,7 @@ export function LandingView() {
      </Link>
 
      <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 sm:tracking-[0.22em]">
-       Realtime rooms on Cloudflare — no socket VPS
+       Room chat on Cloudflare · self-host or hosted
      </p>
 
      {/* Headline */}
@@ -403,11 +403,15 @@ export function LandingView() {
      </h1>
 
      <p className="mt-5 max-w-2xl text-balance text-lg text-slate-600 sm:text-xl">
-       Sign up, add @fluxy-chat/sdk, and run rooms on hosted cloud. Keep Next on Vercel if you want — chat stays on
-       Workers and Durable Objects.
+       Sign up, add @fluxy-chat/sdk, and run rooms on hosted cloud. Or deploy the Worker in your
+       Cloudflare account from the monorepo. Next can stay on Vercel; chat runs on Workers and Durable Objects.
      </p>
      <p className="mt-2 max-w-2xl text-balance text-sm text-slate-500 sm:text-base">
-       Later, deploy the Worker in your own Cloudflare account from the monorepo.{" "}
+       Chat infrastructure inside your product, not a helpdesk.{" "}
+       <Link href={HOSTED_PATHS.compare} className="font-medium text-slate-700 underline-offset-2 hover:underline">
+         Compare vs Pusher/Ably
+       </Link>
+       {" · "}
        <Link href={HOSTED_PATHS.why} className="font-medium text-slate-700 underline-offset-2 hover:underline">
          Why we built it
        </Link>
@@ -420,10 +424,10 @@ export function LandingView() {
        </Link>
        {" · "}
        <Link
-         href={HOSTED_PATHS.guides}
+         href="/guides/in-app-chat-vs-support-desk"
          className="font-medium text-slate-700 underline-offset-2 hover:underline"
        >
-         All guides
+         Product chat vs support
        </Link>
        .
      </p>
@@ -772,15 +776,17 @@ export function LandingView() {
         className="scroll-mt-20 border-b border-border bg-white px-4 py-20 sm:px-6"
       >
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-center font-heading text-3xl font-bold tracking-tight">Why Fluxychat</h2>
+          <h2 className="text-center font-heading text-3xl font-bold tracking-tight">
+            How we compare
+          </h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-muted-foreground">
-            Rough positioning, not a shootout.             PartyKit, DIY DO repos, Vercel+Pusher paths —{" "}
+            Not a feature shootout — rough fit vs Stream, Ably, Pusher, and DIY DO repos.{" "}
             <Link href={HOSTED_PATHS.compare} className="text-brand hover:underline">
-              compare
+              Full compare
             </Link>
             {" · "}
-            <Link href={HOSTED_PATHS.guides} className="text-brand hover:underline">
-              guides
+            <Link href="/guides/pusher-alternative-saas" className="text-brand hover:underline">
+              Leaving Pusher
             </Link>
             .
           </p>

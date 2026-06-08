@@ -370,6 +370,54 @@ export default function AnalyticsPage() {
               onClick={async () => {
                 try {
                   const res = await fetchWorker(
+                    `${WORKER_URL}/export/rooms/${encodeURIComponent(roomId)}.markdown`,
+                    { headers: authHeader(readToken) }
+                  );
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `room-${roomId}.md`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  setNotice("Markdown export downloaded.");
+                } catch {
+                  setError("Failed to export Markdown.");
+                }
+              }}
+              disabled={!readToken || !roomId.trim()}
+            >
+              Export Markdown
+            </Button>
+            <Button
+              variant="neutral"
+              onClick={async () => {
+                try {
+                  const res = await fetchWorker(
+                    `${WORKER_URL}/export/rooms/${encodeURIComponent(roomId)}.pdf`,
+                    { headers: authHeader(readToken) }
+                  );
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `room-${roomId}.pdf`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  setNotice("PDF export downloaded.");
+                } catch {
+                  setError("Failed to export PDF.");
+                }
+              }}
+              disabled={!readToken || !roomId.trim()}
+            >
+              Export PDF
+            </Button>
+            <Button
+              variant="neutral"
+              onClick={async () => {
+                try {
+                  const res = await fetchWorker(
                     `${WORKER_URL}/export/messages.json?roomId=${encodeURIComponent(roomId)}`,
                     { headers: authHeader(readToken) }
                   );

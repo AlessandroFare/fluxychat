@@ -13,6 +13,20 @@ REST on Vercel is trivial; stateful WebSockets still push teams toward another v
 - **React / JS SDK (`useChat(roomId)`)** and lightweight UI kit.
 - **Next.js 16** dashboard for analytics, moderation, and cost insights.
 
+### What's new (open beta — since May 2026)
+
+Shipped in repo (deploy separately): see **[open beta deploy guide](docs/operations/open-beta-deploy-guide.md)**.
+
+| Area | Highlights |
+|------|------------|
+| **SDK** | Outbound WS queue, heartbeat, replay on connect, delivery receipts, `getFeatureFlags()`, voice `sendVoiceMessage`, inbox/search/export APIs |
+| **P9–P10** | Pusher parity, web push VAPID, FCM devices, polls, blocks, supergroup shards, Sent.dm contacts + SMS OTP |
+| **P12 killer** | Voice + transcription, AI reply suggestions, daily digest, FTS search, unified inbox, custom domains, embed widget, AI handoff, thread TL;DR, quiet hours, room export PDF/MD |
+| **P12 platform** | AI Gateway path, Flagship feature flags, Browser Run OG preview, Workflow scheduled jobs |
+| **P13 telco** | Inbound SMS/WA → room, outbound media in SMS, agent queue + dispositions, US SMS playbook |
+
+Full feature docs: [`docs/README.md`](docs/README.md) · SDK API tables: [`packages/sdk/README.md`](packages/sdk/README.md)
+
 ### Monorepo layout
 
 - `apps/dashboard` – Next.js 16 app: marketing **`/landing`**, operator home **`/`**, guided **`/onboarding`**, analytics, rooms, admin, billing.
@@ -70,6 +84,7 @@ Use case guides, auth cookbook, troubleshooting, and dashboard integration notes
 
 ### Operations
 
+- **Open beta deploy (step-by-step + env):** [`docs/operations/open-beta-deploy-guide.md`](docs/operations/open-beta-deploy-guide.md)
 - Deploy/rollback runbook: `RUNBOOK_DEPLOY_ROLLBACK.md`
 - Tenant recovery drill script: `apps/worker/scripts/tenant-recovery-drill.mjs`
 - Post-deploy smoke (health + stats): `cd apps/worker && pnpm run smoke:remote -- --base-url … --admin-jwt …` (see `docs/m6-operational-checklist.md`)

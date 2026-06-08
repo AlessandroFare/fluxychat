@@ -12,12 +12,22 @@ export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts
     stream_options: { include_usage: true },
   };
 
-  const res = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/chat/completions`, {
+  const url =
+    opts.chatCompletionsUrl || `${baseUrl.replace(/\/$/, "")}/v1/chat/completions`;
+  const headers = {
+    "Content-Type": "application/json",
+    ...(opts.gatewayHeaders || {}),
+  };
+  if (
+    apiKey &&
+    !headers.Authorization &&
+    !headers["cf-aig-authorization"]
+  ) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+  const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
+    headers,
     body: JSON.stringify(body),
   });
 

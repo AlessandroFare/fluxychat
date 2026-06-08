@@ -9,16 +9,16 @@ export const LANDING_FAQ = [
     a: "Yes. Lots of teams leave Next on Vercel or Netlify and run chat on Workers + Durable Objects. You skip the platform WebSocket limits and a second Pusher-style bill.",
   },
   {
+    q: "Is this Intercom, Zendesk, or a live-chat widget?",
+    a: "No. Those are support desks. FluxyChat is the room layer for chat inside your app — SDK, webhooks, agent timeline. You build the UI. Guide: /guides/in-app-chat-vs-support-desk.",
+  },
+  {
     q: "Is this a Pusher or Ably replacement?",
     a: "For tenant-scoped in-app chat on the edge, usually yes: rooms, history, reconnect, operator tools. For generic pub/sub or SMS/WhatsApp, keep those products and use FluxyChat for the chat slice.",
   },
   {
     q: "How is this different from a fully managed vendor?",
     a: "You can run the Worker and D1 in your Cloudflare account, read the MIT source, and control upgrades. Hosted cloud is there when you do not want to wire infra on day one.",
-  },
-  {
-    q: "Is this Intercom or Zendesk?",
-    a: "No. This is the plumbing for rooms, SDK, and webhooks. You build the support UI or in-app inbox on top.",
   },
   {
     q: "Can I add moderation and webhooks?",

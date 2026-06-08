@@ -4,11 +4,15 @@ import type { FluxyChatMessage } from "@fluxy-chat/sdk";
 import { CornerDownRight, Reply } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui";
+import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
+import { ThreadSummary } from "./thread-summary";
 
 export interface AgentRoomMessageProps {
   message: FluxyChatMessage;
   agentId: string;
   localUserId?: string;
+  roomId?: string;
+  replyCount?: number;
   /** Parent message when this row is a reply. */
   parentMessage?: FluxyChatMessage | null;
   onReply?: (messageId: number) => void;
@@ -29,6 +33,8 @@ export function AgentRoomMessage({
   message,
   agentId,
   localUserId,
+  roomId,
+  replyCount = 0,
   parentMessage,
   onReply,
   onRetry,
@@ -48,6 +54,7 @@ export function AgentRoomMessage({
         isAgent && "mr-4",
       )}
       data-streaming={isStreaming ? "true" : undefined}
+      data-message-id={message.id != null ? String(message.id) : undefined}
       data-testid={isStreaming ? "agent-message-streaming" : "agent-message"}
     >
       {parentId && parentMessage ? (
@@ -118,15 +125,30 @@ export function AgentRoomMessage({
           </Button>
         ) : null}
       </div>
-      <p className="whitespace-pre-wrap break-words text-foreground">
-        {message.content || (isStreaming ? "" : "…")}
-        {isStreaming ? (
-          <span
-            className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-brand align-middle"
-            aria-hidden
-          />
-        ) : null}
-      </p>
+      {message.kind === "voice" ? (
+        <VoiceMessageBubble
+          message={message}
+          className={isSelf ? "items-end" : "items-start"}
+        />
+      ) : (
+        <p className="whitespace-pre-wrap break-words text-foreground">
+          {message.content || (isStreaming ? "" : "…")}
+          {isStreaming ? (
+            <span
+              className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-brand align-middle"
+              aria-hidden
+            />
+          ) : null}
+        </p>
+      )}
+      {roomId && message.id && !parentId && !isStreaming ? (
+        <ThreadSummary
+          roomId={roomId}
+          messageId={message.id}
+          replyCount={replyCount}
+          className="mt-2"
+        />
+      ) : null}
     </div>
   );
 }

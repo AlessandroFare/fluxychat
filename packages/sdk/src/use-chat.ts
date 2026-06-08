@@ -23,6 +23,16 @@ export interface UseChatOptions {
   replay?: UseChatHistoryReplay;
   /** Refetch REST history after WebSocket reconnect (default true). */
   replayHistoryOnReconnect?: boolean;
+  /** Cap for WS replay snapshot (passed to room connection as historyLimit). */
+  replayLimit?: number;
+  /** Mark the latest visible message read when the message list updates (default false). */
+  markReadLatest?: boolean;
+  /** Presence profile on WS connect (Pusher-style `user_info`). */
+  presenceInfo?: Record<string, unknown>;
+  wsCache?: "on" | "off";
+  e2eKey?: string;
+  e2eAutoFetch?: boolean;
+  onAnyEvent?: (event: import("./index").FluxyChatEvent) => void;
 }
 
 export function useChat({
@@ -32,7 +42,15 @@ export function useChat({
   historyLimit = 50,
   replay = "connect",
   replayHistoryOnReconnect = true,
+  replayLimit,
+  markReadLatest = false,
+  presenceInfo,
+  wsCache,
+  e2eKey,
+  e2eAutoFetch,
+  onAnyEvent,
 }: UseChatOptions) {
+  const effectiveHistoryLimit = replayLimit ?? historyLimit;
   const realtime = useFluxyChatOptional();
   const client = clientProp ?? realtime?.client ?? null;
 
@@ -46,9 +64,15 @@ export function useChat({
       roomId,
       client,
       agentId,
-      historyLimit,
+      historyLimit: effectiveHistoryLimit,
       replay,
       replayHistoryOnReconnect,
+      markReadLatest,
+      presenceInfo,
+      wsCache,
+      e2eKey,
+      e2eAutoFetch,
+      onAnyEvent,
       onRefreshSession: realtime?.refreshSession,
     });
   }, [
@@ -56,9 +80,15 @@ export function useChat({
     roomId,
     client,
     agentId,
-    historyLimit,
+    effectiveHistoryLimit,
     replay,
     replayHistoryOnReconnect,
+    markReadLatest,
+    presenceInfo,
+    wsCache,
+    e2eKey,
+    e2eAutoFetch,
+    onAnyEvent,
     realtime?.refreshSession,
   ]);
 
@@ -71,8 +101,11 @@ export function useChat({
     historyLoaded: state.historyLoaded,
     loadHistory: state.loadHistory,
     loadMore: state.loadMore,
+    loadLive: state.loadLive,
+    live: state.liveSnapshot,
     online: state.online,
     typingUsers: state.typingUsers,
+    typingIntents: state.typingIntents,
     seenBy: state.seenBy,
     onlineUsers: state.onlineUsers,
     connected: state.connected,
@@ -93,6 +126,10 @@ export function useChat({
     invokeAgent: state.invokeAgent,
     toolThreadEvents: state.toolThreadEvents,
     clearToolThread: state.clearToolThread,
+    sendClientEvent: state.sendClientEvent,
+    presenceMembers: state.presenceMembers,
+    subscriptionCount: state.subscriptionCount,
+    socketId: state.socketId,
     lastAgentRun: state.lastAgentRun,
     /** Vanilla store for non-React consumers (Vue, Solid, etc.). */
     store,

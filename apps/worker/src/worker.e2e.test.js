@@ -25,7 +25,9 @@ class FakeDB {
     this.messageTemplates = [];
     this.attachments = [];
     this.stripeWebhookEvents = [];
+    this.inAppNotifications = [];
     this.lastMessageId = 0;
+    this.lastNotificationId = 0;
     this.lastModerationEventId = 0;
     this.lastAutomationEventId = 0;
   }
@@ -263,6 +265,53 @@ class FakeDB {
         });
       }
       return { meta: { changes: exists ? 0 : 1 } };
+    }
+
+    if (sql.includes("INSERT INTO in_app_notifications")) {
+      const [
+        projectId,
+        userId,
+        kind,
+        title,
+        body,
+        roomId,
+        messageId,
+        createdAt,
+      ] = args;
+      const id = ++this.lastNotificationId;
+      this.inAppNotifications.push({
+        id,
+        project_id: projectId,
+        user_id: userId,
+        kind,
+        title,
+        body,
+        room_id: roomId,
+        message_id: messageId,
+        read_at: null,
+        created_at: createdAt,
+      });
+      return { meta: { last_row_id: id, changes: 1 } };
+    }
+
+    if (sql.includes("UPDATE in_app_notifications SET read_at")) {
+      if (sql.includes("read_at IS NULL")) {
+        const [readAt, projectId, userId] = args;
+        let changes = 0;
+        for (const n of this.inAppNotifications) {
+          if (n.project_id === projectId && n.user_id === userId && !n.read_at) {
+            n.read_at = readAt;
+            changes++;
+          }
+        }
+        return { meta: { changes } };
+      }
+      const [readAt, id, projectId, userId] = args;
+      const row = this.inAppNotifications.find(
+        (n) => n.id === id && n.project_id === projectId && n.user_id === userId,
+      );
+      if (row) row.read_at = readAt;
+      return { meta: { changes: row ? 1 : 0 } };
     }
 
     if (sql.includes("INSERT INTO moderation_events")) {
@@ -874,6 +923,14 @@ class FakeDB {
       return row || null;
     }
 
+    if (sql.includes("SELECT type FROM rooms WHERE project_id = ? AND id = ?")) {
+      const [projectId, roomId] = args;
+      const row = this.rooms.find(
+        (r) => r.project_id === projectId && r.id === roomId
+      );
+      return row ? { type: row.type } : null;
+    }
+
     if (
       sql.includes(
         "SELECT id, type FROM rooms WHERE id = ? AND project_id = ? LIMIT 1"
@@ -1011,6 +1068,23 @@ class FakeDB {
   }
 
   async #all(sql, args) {
+    if (sql.includes("FROM in_app_notifications")) {
+      const projectId = args[0];
+      const userId = args[1];
+      const limit = Number(args[args.length - 1]) || 50;
+      let rows = this.inAppNotifications.filter(
+        (n) => n.project_id === projectId && n.user_id === userId,
+      );
+      if (sql.includes("read_at IS NULL")) {
+        rows = rows.filter((n) => !n.read_at);
+      }
+      rows = rows
+        .slice()
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, limit);
+      return { results: rows };
+    }
+
     if (sql.includes("SELECT id, name, created_at FROM projects WHERE id = ?")) {
       const [id] = args;
       const row = this.projects.find((p) => p.id === id);
@@ -1337,6 +1411,8 @@ describe("worker integration flows", () => {
   beforeEach(() => {
     db = new FakeDB();
     db.projectSecrets.push({ project_id: projectId, jwt_secret: jwtSecret });
+    db.rooms.push({ id: roomId, project_id: projectId, type: "group" });
+    db.roomMembers.push({ room_id: roomId, user_id: userId, project_id: projectId });
     env = createEnv(db);
   });
 
@@ -1764,6 +1840,9 @@ describe("worker integration flows", () => {
   });
 
   it("rejects websocket connect when user is not room member", async () => {
+    db.roomMembers = db.roomMembers.filter(
+      (m) => !(m.room_id === roomId && m.user_id === userId),
+    );
     db.rooms.push({
       id: roomId,
       project_id: projectId,
@@ -2117,6 +2196,11 @@ describe("worker integration flows", () => {
   });
 
   it("uses project-specific plan limits for quota enforcement", async () => {
+    db.roomMembers.push({
+      room_id: roomId,
+      user_id: "user_a",
+      project_id: projectId,
+    });
     db.projectPlans.push({
       project_id: projectId,
       plan_name: "starter",

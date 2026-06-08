@@ -110,6 +110,455 @@ paths:
         "401":
           description: Missing or invalid API key
 
+  /auth/signin:
+    post:
+      summary: Sign in user (JWT + user channel paths)
+      description: |
+        Same as `/auth/token` but includes `userChannel` paths for Pusher-style per-user events
+        (`/ws/user/:userId` and `POST /users/:userId/events`).
+      security:
+        - fluxyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, roles]
+              properties:
+                userId:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+                ttlSeconds:
+                  type: integer
+      responses:
+        "200":
+          description: JWT plus user channel metadata
+
+  /auth/sms-otp/send:
+    post:
+      summary: Send SMS OTP via Sent.dm AUTHENTICATION template
+      security:
+        - fluxyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, e164]
+              properties:
+                userId:
+                  type: string
+                e164:
+                  type: string
+      responses:
+        "200":
+          description: OTP sent
+
+  /auth/sms-otp/verify:
+    post:
+      summary: Verify SMS OTP and mint JWT
+      security:
+        - fluxyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, e164, code]
+              properties:
+                userId:
+                  type: string
+                e164:
+                  type: string
+                code:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: JWT with sms_verified claim
+
+  /auth/channel:
+    post:
+      summary: Pusher-compatible channel auth
+      description: |
+        Returns `{ auth, channel_data? }` for private/presence channel subscription during Pusher migration.
+        Requires Bearer JWT. Accepts `socket_id` + `channel_name` or `roomId`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [socket_id]
+              properties:
+                socket_id:
+                  type: string
+                socketId:
+                  type: string
+                channel_name:
+                  type: string
+                channelName:
+                  type: string
+                roomId:
+                  type: string
+                presenceInfo:
+                  type: object
+      responses:
+        "200":
+          description: Signed channel auth string
+        "403":
+          description: Not allowed to access room
+
+  /client/feature-flags:
+    get:
+      summary: Client feature flags (P12-J)
+      description: |
+        Public endpoint. Pass optional Bearer JWT for user/project targeting via Flagship.
+        Falls back to env vars when `env.FLAGS` is not bound.
+      security: []
+      responses:
+        "200":
+          description: Boolean flags + reconnect backoff profile for SDK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flags:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                  flagship:
+                    type: boolean
+                  reconnectBackoff:
+                    type: object
+                    properties:
+                      baseBackoffMs:
+                        type: integer
+                      maxBackoffMs:
+                        type: integer
+
+  /public/host-config:
+    get:
+      summary: White-label host → project config (P12-G)
+      description: Returns project branding when the request Host matches an active custom domain.
+      security: []
+      responses:
+        "200":
+          description: Host config or `{ configured: false }`
+
+  /public/embed-config:
+    get:
+      summary: Public embed widget metadata (P12-A)
+      security: []
+      responses:
+        "200":
+          description: Enabled flag, default room, theme, z-index
+
+  /embed.js:
+    get:
+      summary: Embeddable widget loader IIFE (P12-A)
+      security: []
+      responses:
+        "200":
+          description: JavaScript loader for chat bubble + iframe
+
+  /embed/frame:
+    get:
+      summary: Embed iframe chat shell (P12-A)
+      security: []
+      parameters:
+        - name: roomId
+          in: query
+          schema:
+            type: string
+        - name: parentOrigin
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: HTML chat frame
+
+  /admin/embed-config:
+    get:
+      summary: Read embed widget config + install snippet
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Config and HTML snippet
+    patch:
+      summary: Update embed widget config
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                defaultRoomId:
+                  type: string
+                  nullable: true
+                allowedOrigins:
+                  type: array
+                  items:
+                    type: string
+                zIndex:
+                  type: integer
+                launcherTitle:
+                  type: string
+                theme:
+                  type: object
+                  properties:
+                    primaryColor:
+                      type: string
+                    position:
+                      type: string
+                      enum: [bottom-right, bottom-left]
+      responses:
+        "200":
+          description: Updated config
+
+  /admin/custom-domains:
+    get:
+      summary: List custom domains for the project
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Domain list
+    post:
+      summary: Register a custom hostname
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hostname]
+              properties:
+                hostname:
+                  type: string
+                defaultRoomId:
+                  type: string
+                brandName:
+                  type: string
+                brandLogoUrl:
+                  type: string
+                allowedOrigins:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "201":
+          description: Created
+
+  /admin/custom-domains/{id}:
+    patch:
+      summary: Update domain status or branding
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, active, disabled]
+                defaultRoomId:
+                  type: string
+                brandName:
+                  type: string
+      responses:
+        "200":
+          description: Updated
+    delete:
+      summary: Remove custom domain
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+
+  /public/rooms/{roomId}/guest-session:
+    post:
+      summary: Anonymous guest JWT for a public room
+      description: |
+        Sendbird-style open channel join. Requires `PUBLIC_GUEST_ENABLED=true` on the Worker.
+        Returns a short-lived JWT with role `guest` (read-only by default).
+      security: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                turnstileToken:
+                  type: string
+      responses:
+        "200":
+          description: Guest session token
+        "403":
+          description: Room is not public
+        "404":
+          description: Feature disabled or room not found
+
+  /users/{userId}/events:
+    post:
+      summary: Trigger user-targeted event
+      description: |
+        Delivers to the user's dedicated channel (User Durable Object) and optionally fans out
+        to room WebSockets where the user is a member. JWT required; caller must be the user or admin/owner.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                data:
+                  description: Event payload
+                excludeSocketId:
+                  type: string
+                fanoutRooms:
+                  type: boolean
+                  default: true
+      responses:
+        "200":
+          description: Delivery counts
+        "403":
+          description: Forbidden
+
+  /users/{userId}/connections:
+    delete:
+      summary: Terminate user WebSocket connections
+      description: |
+        Closes all connections on the user channel and in rooms where the user is a member.
+        Admin/owner can terminate any user; members can terminate their own connections.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Count of closed sockets
+
+  /users/{userId}/watchlist:
+    get:
+      summary: List watchlist targets
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Watchlist entries
+    post:
+      summary: Add watchlist target (room or user)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, targetId]
+              properties:
+                type:
+                  type: string
+                  enum: [room, user]
+                targetId:
+                  type: string
+      responses:
+        "200":
+          description: Target added
+    delete:
+      summary: Remove watchlist target
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: targetId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Target removed
+
   /billing/checkout:
     post:
       summary: Create Stripe Checkout session
@@ -284,8 +733,88 @@ paths:
                     type: object
                     additionalProperties:
                       type: string
+                  platformBindings:
+                    type: object
+                    description: P12-J/K/L platform binding status
+                    additionalProperties:
+                      type: string
         "503":
           description: Critical dependency missing (e.g. database)
+
+  /admin/scheduled/run:
+    post:
+      summary: Run a scheduled cron job manually (P12-L ops)
+      description: |
+        Owner/admin only. Triggers digest, notification batch flush, retention purge,
+        or webhook delivery flush without waiting for Workflow schedules.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cron]
+              properties:
+                cron:
+                  type: string
+                  enum:
+                    - "0 8 * * *"
+                    - "*/15 * * * *"
+                    - "0 3 * * *"
+                    - "*/5 * * * *"
+      responses:
+        "200":
+          description: Job completed
+        "400":
+          description: Invalid cron expression
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /events:
+    post:
+      summary: Trigger events (multi-room)
+      description: |
+        Pusher-style HTTP trigger. Broadcast a custom or built-in event to up to 50 rooms.
+        JWT required; caller must be a member of each room (or project admin/owner).
+        Pass `excludeSocketId` (or `socket_id`) to skip the originating WebSocket connection.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomIds]
+              properties:
+                roomIds:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 50
+                name:
+                  type: string
+                  description: Custom event name (broadcast as server_event)
+                data:
+                  description: Payload for custom events
+                event:
+                  type: object
+                  description: Full announce payload (type message, edit, etc.)
+                excludeSocketId:
+                  type: string
+                socket_id:
+                  type: string
+      responses:
+        "200":
+          description: Trigger result
+        "401":
+          description: Unauthorized
+        "403":
+          description: Not a member of one or more rooms
 
   /messages:
     post:
@@ -357,6 +886,647 @@ paths:
                     example: rate_limit_exceeded
                   retryAfterSeconds:
                     type: integer
+        "403":
+          description: Caller is not allowed to post in this room
+
+  /messages/voice:
+    post:
+      summary: Upload a voice message (multipart audio)
+      description: |
+        Records audio via multipart upload, stores in R2, inserts a `kind=voice` message,
+        and asynchronously transcribes via the configured AI provider (`message_updated` on completion).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [audio, roomId]
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                roomId:
+                  type: string
+                parentId:
+                  type: string
+                durationMs:
+                  type: string
+                clientMessageId:
+                  type: string
+      responses:
+        "201":
+          description: Voice message accepted (transcription pending)
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+        "402":
+          description: Quota exceeded
+        "403":
+          description: Forbidden (not a room member or guest write disabled)
+        "404":
+          description: Room not found
+        "413":
+          description: Audio too large or too long
+        "415":
+          description: Unsupported audio format
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: R2 or AI provider failure
+        "503":
+          description: R2 or AI not configured
+
+  /messages/suggest-replies:
+    post:
+      summary: AI reply suggestions for a room
+      description: Returns up to three short reply suggestions based on the last messages in the room.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId]
+              properties:
+                roomId:
+                  type: string
+                parentId:
+                  type: integer
+                  nullable: true
+      responses:
+        "200":
+          description: Suggestion list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+        "402":
+          description: Quota exceeded
+        "403":
+          description: Caller cannot access the room
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: AI provider failure
+        "503":
+          description: AI not configured
+
+  /messages/{messageId}/summary:
+    post:
+      summary: Thread TL;DR on demand (P12-M)
+      description: Summarizes a reply thread anchored at the given message.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId]
+              properties:
+                roomId:
+                  type: string
+      responses:
+        "200":
+          description: Thread summary
+        "400":
+          description: Thread too short or invalid input
+        "401":
+          description: Unauthorized
+        "402":
+          description: Quota exceeded
+        "403":
+          description: Forbidden
+        "404":
+          description: Message not found
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: AI provider failure
+        "503":
+          description: AI not configured
+
+  /notifications/quiet-hours:
+    get:
+      summary: Quiet hours preferences (P12-N)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Preferences, pending batch count, inQuietHours flag
+    patch:
+      summary: Update quiet hours preferences
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                timezone:
+                  type: string
+                quietStart:
+                  type: string
+                quietEnd:
+                  type: string
+                batchPush:
+                  type: boolean
+                batchInApp:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated preferences
+
+  /notifications/flush-batch:
+    post:
+      summary: Flush batched notifications (outside quiet hours)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Flush result
+        "409":
+          description: Still in quiet hours
+
+  /export/rooms/{roomId}.markdown:
+    get:
+      summary: Export room history as Markdown (P12-O)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Markdown attachment
+
+  /export/rooms/{roomId}.pdf:
+    get:
+      summary: Export room history as PDF (P12-O)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PDF attachment
+
+  /digest/preferences:
+    get:
+      summary: Get daily digest preferences (P12-F)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Digest opt-in and channel toggles
+        "401":
+          description: Unauthorized
+    patch:
+      summary: Update daily digest preferences
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                email:
+                  type: string
+                  nullable: true
+                emailEnabled:
+                  type: boolean
+                webPushEnabled:
+                  type: boolean
+                inAppEnabled:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated preferences
+        "400":
+          description: Invalid email or body
+        "401":
+          description: Unauthorized
+
+  /admin/digest/run:
+    post:
+      summary: Manually run daily digest (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                digestDate:
+                  type: string
+                  description: YYYY-MM-DD UTC day to summarize
+                maxUsers:
+                  type: integer
+      responses:
+        "200":
+          description: Run summary
+        "403":
+          description: Admin role required
+
+  /search/messages:
+    get:
+      summary: Full-text search messages (P12-E FTS5)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: roomId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            maximum: 50
+      responses:
+        "200":
+          description: Search hits with snippets
+        "400":
+          description: Missing or invalid query
+        "401":
+          description: Unauthorized
+        "403":
+          description: Room access denied
+
+  /inbox:
+    get:
+      summary: Unified inbox summary (P12-C)
+      description: Mentions of the caller, unread rooms, snoozed rooms, and open follow-ups.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Inbox sections and counts
+        "401":
+          description: Unauthorized
+
+  /inbox/rooms/{roomId}/snooze:
+    put:
+      summary: Snooze a room in the inbox
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                until:
+                  type: string
+                  format: date-time
+                minutes:
+                  type: integer
+                hours:
+                  type: integer
+      responses:
+        "200":
+          description: Snooze recorded
+        "403":
+          description: Forbidden
+    delete:
+      summary: Clear room snooze
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Snooze cleared
+
+  /inbox/follow-ups:
+    post:
+      summary: Create an inbox follow-up flag
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId]
+              properties:
+                roomId:
+                  type: string
+                messageId:
+                  type: integer
+                note:
+                  type: string
+                dueAt:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: Follow-up created
+
+  /inbox/follow-ups/{id}:
+    patch:
+      summary: Update follow-up status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [open, done]
+      responses:
+        "200":
+          description: Updated
+    delete:
+      summary: Delete a follow-up
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+
+  /agent-queue:
+    get:
+      summary: List agent tasks (P13-T4)
+      description: Open and claimed tasks for operators (moderator, admin, owner roles).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: assignee
+          in: query
+          schema:
+            type: string
+            enum: [me, all]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [resolved, cancelled]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task list with SLA metadata
+        "403":
+          description: Forbidden
+    post:
+      summary: Enqueue a room for agent handling
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId]
+              properties:
+                roomId:
+                  type: string
+                note:
+                  type: string
+                priority:
+                  type: integer
+                slaMinutes:
+                  type: integer
+      responses:
+        "201":
+          description: Task created
+        "409":
+          description: Room already queued
+
+  /agent-queue/{taskId}/claim:
+    post:
+      summary: Claim an open task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Claimed
+        "409":
+          description: Not claimable
+
+  /agent-queue/{taskId}/release:
+    post:
+      summary: Release a claimed task back to the queue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Released
+
+  /agent-queue/dispositions:
+    get:
+      summary: List canonical wrap-up disposition codes (P13-T5)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Disposition taxonomy
+
+  /admin/agent-queue/stats:
+    get:
+      summary: Resolved task counts by disposition
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Breakdown stats
+
+  /agent-queue/{taskId}:
+    patch:
+      summary: Resolve or cancel a task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [resolved, cancelled]
+                disposition:
+                  type: string
+      responses:
+        "200":
+          description: Closed
+
+  /rooms/{roomId}/handoff:
+    get:
+      summary: Room AI ↔ human handoff state (P12-H)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Handoff state and optional disposition list
+    post:
+      summary: Human takeover from AI agent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agentId:
+                  type: string
+                note:
+                  type: string
+      responses:
+        "201":
+          description: Handoff started
+    patch:
+      summary: Complete handoff with disposition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [disposition]
+              properties:
+                disposition:
+                  type: string
+      responses:
+        "200":
+          description: Handoff resolved
 
   /messages/{id}:
     patch:
@@ -425,6 +1595,276 @@ paths:
           description: Forbidden
         "404":
           description: Not found
+
+  /messages/{id}/poll:
+    get:
+      summary: Get poll results for a poll message
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Poll snapshot with vote counts
+
+  /messages/{id}/vote:
+    post:
+      summary: Cast a vote on a poll message
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [optionIndex]
+              properties:
+                optionIndex:
+                  type: integer
+      responses:
+        "200":
+          description: Updated poll; broadcasts poll_updated on WS
+
+  /messages/{id}/translate:
+    post:
+      summary: Translate message text to target language (cached in D1)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetLang]
+              properties:
+                targetLang:
+                  type: string
+                sourceLang:
+                  type: string
+      responses:
+        "200":
+          description: Translation result (cached flag + translated text)
+
+  /messages/{id}/delivered:
+    post:
+      summary: Mark message delivered for the caller (broadcasts delivery_updated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Delivery recorded
+
+  /messages/{id}/deliveries:
+    get:
+      summary: List per-recipient delivery status for a message
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Delivery list for message author or room member
+
+  /push/devices:
+    get:
+      summary: List registered push devices for caller
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Device list (token preview only)
+    post:
+      summary: Register FCM or web push device token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [platform, token]
+              properties:
+                platform:
+                  type: string
+                  enum: [fcm, web]
+                token:
+                  type: string
+      responses:
+        "200":
+          description: Device registered
+
+  /push/devices/{id}:
+    delete:
+      summary: Unregister a push device
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Device removed
+
+  /push/web/vapid-public-key:
+    get:
+      summary: VAPID public key for web push subscription
+      description: Public endpoint (no JWT). Clients need this key before `pushManager.subscribe`.
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: VAPID public key and subject
+        "400":
+          description: projectId required
+        "503":
+          description: VAPID not configured
+
+  /push/web/subscribe:
+    post:
+      summary: Register a web push subscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, keys]
+              properties:
+                endpoint:
+                  type: string
+                keys:
+                  type: object
+                  required: [p256dh, auth]
+                  properties:
+                    p256dh:
+                      type: string
+                    auth:
+                      type: string
+                userAgent:
+                  type: string
+      responses:
+        "200":
+          description: Subscription stored
+        "400":
+          description: Invalid subscription payload
+        "401":
+          description: Unauthorized
+
+  /push/web/subscriptions:
+    get:
+      summary: List web push subscriptions for the caller
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Subscription list (endpoint previews)
+        "401":
+          description: Unauthorized
+
+  /push/web/subscribe/{endpointId}:
+    delete:
+      summary: Unregister a web push subscription
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: endpointId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subscription removed
+        "400":
+          description: Invalid endpoint id
+        "401":
+          description: Unauthorized
+
+  /blocks:
+    get:
+      summary: List users blocked by the caller
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blocks:
+                    type: array
+                    items:
+                      type: object
+    post:
+      summary: Block a user (global, project-scoped)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: string
+      responses:
+        "200":
+          description: User blocked
+
+  /blocks/{userId}:
+    delete:
+      summary: Unblock a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unblocked
 
   /messages/{id}/reactions:
     post:
@@ -753,6 +2193,52 @@ paths:
                 properties:
                   unreadCount:
                     type: integer
+                  lastReadMessageId:
+                    type: integer
+                  firstUnreadMessageId:
+                    type: integer
+                    nullable: true
+
+  /rooms/{id}/draft:
+    get:
+      summary: Get room compose draft for current member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Draft payload (null when empty)
+    put:
+      summary: Save room compose draft for current member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                replyToId:
+                  type: integer
+                  nullable: true
+      responses:
+        "200":
+          description: Saved draft
 
   /rooms/{id}/members:
     get:
@@ -1805,6 +3291,55 @@ paths:
                   valid:
                     type: boolean
 
+  /webhooks/verify-batch:
+    post:
+      summary: Verify webhook batch HMAC (Pusher-compatible)
+      description: |
+        Verifies `X-Fluxy-Signature` or `X-Pusher-Signature` over a raw body string, or over
+        `JSON.stringify(events)` for batched deliveries (max 50 events). Provide `secret` in the body.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [secret]
+              properties:
+                secret:
+                  type: string
+                body:
+                  type: string
+                  description: Raw request body used for signing
+                signature:
+                  type: string
+                events:
+                  type: array
+                  maxItems: 50
+                  items: {}
+                batchSignature:
+                  type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  mode:
+                    type: string
+                    enum: [raw_body, batch]
+                  batchSignatureValid:
+                    type: boolean
+                  results:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          description: Missing events or body+signature
+
   /webhooks/stripe:
     post:
       summary: Stripe webhook ingress
@@ -2030,6 +3565,9 @@ paths:
                 type:
                   type: string
                   enum: [dm, group, public]
+                shardCount:
+                  type: integer
+                  description: Room DO shards for supergroup fan-out (1-16)
       responses:
         "200":
           content:
@@ -2061,6 +3599,197 @@ paths:
                     type: boolean
                   roomId:
                     type: string
+
+  /rooms/{id}/live:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Live channel stats (Pusher-style)
+      description: Returns occupied, subscriptionCount, userCount, and connected user ids from Room DO.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roomId:
+                    type: string
+                  shardCount:
+                    type: integer
+                  occupied:
+                    type: boolean
+                  subscriptionCount:
+                    type: integer
+                  userCount:
+                    type: integer
+                  online:
+                    type: integer
+                  users:
+                    type: array
+                    items:
+                      type: string
+                  socketIds:
+                    type: array
+                    items:
+                      type: string
+
+  /rooms/{id}/pin:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      summary: Pin or unpin a message (Sendbird-style)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messageId:
+                  type: integer
+                  nullable: true
+      responses:
+        "200":
+          description: Pin updated; broadcasts message_pinned on WS
+
+  /rooms/{id}/terminate-connection:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Terminate a WebSocket by socketId (moderator)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [socketId]
+              properties:
+                socketId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Connection closed count
+
+  /integrations/sent/webhook:
+    post:
+      summary: Sent.dm delivery status webhook
+      description: Updates sent_dm_deliveries when Sent reports delivery/failure. Optional HMAC via SENT_DM_WEBHOOK_SECRET.
+      security: []
+      responses:
+        "200":
+          description: Event processed
+
+  /admin/integrations/sent/deliveries:
+    get:
+      summary: List Sent.dm outbound delivery records
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deliveries:
+                    type: array
+                    items:
+                      type: object
+
+  /integrations/sent/contacts/sync:
+    post:
+      summary: Sync Sent.dm contact opt-out status into D1 mirror
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [e164]
+              properties:
+                e164:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        "200":
+          description: Contact mirror updated
+
+  /admin/integrations/sent/contacts:
+    get:
+      summary: List mirrored Sent.dm contacts
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Contact rows with opt_out flag
+
+  /rooms/{id}/e2e-key:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Fetch room E2E encryption key (members only)
+      description: |
+        Returns `{ e2eEnabled, roomId, e2eKey? }` when the room has end-to-end encryption enabled.
+        Enable via `PATCH /rooms/{id}` with `{ "e2eEnabled": true }` (owner/admin).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  e2eEnabled:
+                    type: boolean
+                  roomId:
+                    type: string
+                  e2eKey:
+                    type: string
+                    description: Base64 AES-GCM key material for SDK envelopes
+        "403":
+          description: Forbidden
+        "404":
+          description: Room not found
 
   /rooms/{id}/stream:
     parameters:

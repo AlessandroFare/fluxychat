@@ -4,6 +4,19 @@
  * @returns {Promise<Response|null>}
  */
 import { pickRouteDeps } from "./route-http-deps.js";
+import { guardDemoSessionRequest } from "../lib/demo-guard.js";
+import { issueDemoSession } from "../lib/demo-session.js";
+import { issuePublicGuestSession } from "../lib/guest-public-session.js";
+import {
+  parseRoomIdFromChannelName,
+  buildChannelAuthResponse,
+} from "../lib/channel-auth.js";
+import { clientIpFromRequest } from "../lib/client-ip.js";
+import { checkAndConsumeIpRateLimit } from "../lib/ip-rate-limit.js";
+import { requestSmsOtp, verifySmsOtp } from "../lib/sms-otp-auth.js";
+import { isBrowserRunConfigured } from "../lib/browser-run.js";
+import { getPublicHostConfig } from "../lib/custom-domains.js";
+import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flags.js";
 
 export async function dispatchPublicRoutes(request, url, h) {
   const {
@@ -28,6 +41,8 @@ export async function dispatchPublicRoutes(request, url, h) {
     maxRoomNameLength,
     projectId,
     checkAndConsumeRateLimit,
+    canAccessRoom,
+    customDomain,
   } = pickRouteDeps(h, [
     "env",
     "ctx",
@@ -50,7 +65,42 @@ export async function dispatchPublicRoutes(request, url, h) {
     "maxRoomNameLength",
     "projectId",
     "checkAndConsumeRateLimit",
+    "canAccessRoom",
+    "customDomain",
   ]);
+
+  if (url.pathname === "/client/feature-flags" && request.method === "GET") {
+    let context = {};
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (auth) {
+      context = {
+        userId: auth.userId,
+        projectId: auth.projectId,
+        email: auth.email,
+      };
+    }
+    const flags = await getClientFeatureFlags(env, context);
+    return json(
+      {
+        flags,
+        flagship: isFlagshipConfigured(env),
+        reconnectBackoff:
+          flags.reconnect_backoff_fluxy === true
+            ? { baseBackoffMs: 1_000, maxBackoffMs: 8_000 }
+            : { baseBackoffMs: 500, maxBackoffMs: 20_000 },
+      },
+      { headers: corsHeaders },
+    );
+  }
+
+  if (url.pathname === "/public/host-config" && request.method === "GET") {
+    const hostname = new URL(request.url).hostname;
+    const config = await getPublicHostConfig(env, hostname);
+    if (!config) {
+      return json({ configured: false }, { headers: corsHeaders });
+    }
+    return json({ configured: true, ...config }, { headers: corsHeaders });
+  }
 
   if (url.pathname === "/health") {
     const criticalChecks = {
@@ -63,6 +113,8 @@ export async function dispatchPublicRoutes(request, url, h) {
     };
     const criticalOk = Object.values(criticalChecks).every((v) => v === "connected");
     const degraded = !env.RATE_LIMIT_KV || !env.ATTACHMENTS;
+    const workflowSchedulesEnabled =
+      env.WORKFLOW_SCHEDULES_ENABLED !== "false" && env.WORKFLOW_SCHEDULES_ENABLED !== "0";
     const healthData = {
       ok: criticalOk,
       degraded: degraded || undefined,
@@ -70,9 +122,16 @@ export async function dispatchPublicRoutes(request, url, h) {
       projectId,
       version: "0.2.0",
       checks: { ...criticalChecks, ...optionalChecks },
+      platformBindings: {
+        flagship: isFlagshipConfigured(env) ? "connected" : "env-fallback",
+        browserRun: isBrowserRunConfigured(env) ? "connected" : "unavailable",
+        workflowSchedules: workflowSchedulesEnabled ? "workflows" : "worker-cron",
+      },
       degradedFeatures: {
         rateLimiting: env.RATE_LIMIT_KV ? "kv" : "local-fallback",
         fileStorage: env.ATTACHMENTS ? "r2" : "unavailable",
+        featureFlags: isFlagshipConfigured(env) ? "flagship" : "env-fallback",
+        ogPreview: isBrowserRunConfigured(env) ? "browser-run" : "html-fetch",
       },
       paymentsEnabled: Boolean(env.STRIPE_SECRET_KEY),
     };
@@ -305,89 +364,166 @@ export async function dispatchPublicRoutes(request, url, h) {
     }
   }
 
-  if (url.pathname === "/demo/session" && request.method === "GET") {
+  if (
+    url.pathname === "/demo/session" &&
+    (request.method === "GET" || request.method === "POST")
+  ) {
     if (env.DEMO_ENABLED !== "true") {
       return json({ enabled: false, error: "demo_disabled" }, { status: 404 });
     }
-    const roomId = (env.DEMO_ROOM_ID || "").trim();
-    const apiKey = (env.DEMO_API_KEY || "").trim();
-    if (!roomId || !apiKey) {
-      return json({ enabled: false, error: "demo_not_configured" }, { status: 404 });
+
+    let turnstileToken;
+    if (request.method === "POST") {
+      const body = await request.json().catch(() => null);
+      turnstileToken =
+        body && typeof body.turnstileToken === "string"
+          ? body.turnstileToken
+          : undefined;
     }
 
-    const ip = request.headers.get("CF-Connecting-IP") || request.headers.get("x-forwarded-for") || "unknown";
-    const demoRate = await checkAndConsumeRateLimit(env, {
-      key: `demo:${ip}`,
-      limit: Number(env.RATE_LIMIT_DEMO_SESSIONS_PER_MINUTE || 20),
-      windowSeconds: 60,
+    const guard = await guardDemoSessionRequest(env, request, { turnstileToken });
+    if (!guard.ok) {
+      const headers =
+        guard.retryAfterSeconds != null
+          ? { "Retry-After": String(guard.retryAfterSeconds) }
+          : undefined;
+      return json({ error: guard.error, retryAfterSeconds: guard.retryAfterSeconds }, {
+        status: guard.status,
+        headers,
+      });
+    }
+
+    const issued = await issueDemoSession(env, {
+      resolveProjectId,
+      isValidId,
+      signJwtHs256,
     });
-    if (!demoRate.allowed) {
-      return json(
-        { error: "rate_limit_exceeded", retryAfterSeconds: demoRate.retryAfterSeconds },
-        { status: 429, headers: { "Retry-After": String(demoRate.retryAfterSeconds) } },
-      );
+    if (!issued.ok) {
+      return json(issued.body, { status: issued.status });
     }
-    const demoUserId = (env.DEMO_USER_ID || "demo-guest").trim();
-    if (!isValidId(demoUserId) || !isValidId(roomId)) {
-      return json({ error: "demo_misconfigured" }, { status: 500 });
-    }
-    const keyRequest = new Request(request.url, {
-      headers: { "X-Fluxy-Api-Key": apiKey },
-    });
-    const demoProjectId = await resolveProjectId(keyRequest, env);
-    const defaultProjectId = env.DEFAULT_PROJECT_ID || "default";
-    if (!demoProjectId || demoProjectId === defaultProjectId) {
-      return json({ error: "demo_api_key_invalid" }, { status: 401 });
-    }
-    const room = await env.DB.prepare(
-      "SELECT id FROM rooms WHERE id = ? AND project_id = ?"
-    )
-      .bind(roomId, demoProjectId)
-      .first();
-    if (!room) {
-      return json({ error: "demo_room_not_found" }, { status: 404 });
-    }
-    const now = new Date().toISOString();
-    await env.DB.prepare(
-      "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)"
-    )
-      .bind(roomId, demoUserId, "guest", now)
-      .run();
-    const row = await env.DB.prepare(
-      "SELECT jwt_secret FROM project_secrets WHERE project_id = ?"
-    )
-      .bind(demoProjectId)
-      .first();
-    if (!row?.jwt_secret) {
-      return json({ error: "demo_project_secret_missing" }, { status: 500 });
-    }
-    const ttlSeconds = Math.min(
-      3600,
-      Math.max(300, Number(env.DEMO_TOKEN_TTL_SECONDS || 1800)),
-    );
-    const token = await signJwtHs256(row.jwt_secret, {
-      sub: demoUserId,
-      tid: demoProjectId,
-      roles: ["member"],
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + ttlSeconds,
-    });
-    return json({
-      enabled: true,
-      roomId,
-      userId: demoUserId,
-      token,
-      expiresIn: ttlSeconds,
-      readOnly: env.DEMO_READ_ONLY === "true",
-    });
+    return json(issued.body);
   }
 
-  if (url.pathname === "/auth/token" && request.method === "POST") {
+  const guestSessionMatch = url.pathname.match(/^\/public\/rooms\/([^/]+)\/guest-session$/);
+  if (
+    guestSessionMatch &&
+    (request.method === "GET" || request.method === "POST")
+  ) {
+    const roomId = decodeURIComponent(guestSessionMatch[1]);
+    if (customDomain?.projectId) {
+      const roomRow = await env.DB.prepare(
+        "SELECT project_id FROM rooms WHERE id = ? LIMIT 1",
+      )
+        .bind(roomId)
+        .first();
+      if (!roomRow || roomRow.project_id !== customDomain.projectId) {
+        return json({ error: "room_not_in_project" }, { status: 403 });
+      }
+    }
+    let body = null;
+    if (request.method === "POST") {
+      body = await request.json().catch(() => null);
+    }
+    const issued = await issuePublicGuestSession(
+      env,
+      { signJwtHs256, isValidId },
+      {
+        roomId,
+        displayName: body?.displayName ?? body?.name,
+        turnstileToken: body?.turnstileToken,
+        embedParentOrigin:
+          typeof body?.embedParentOrigin === "string"
+            ? body.embedParentOrigin
+            : undefined,
+      },
+      request,
+    );
+    if (!issued.ok) {
+      return json(issued.body, { status: issued.status });
+    }
+    return json(issued.body);
+  }
+
+  if (url.pathname === "/auth/channel" && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const body = await request.json().catch(() => null);
+    const socketId =
+      typeof body?.socket_id === "string"
+        ? body.socket_id
+        : typeof body?.socketId === "string"
+          ? body.socketId
+          : "";
+    const channelName =
+      typeof body?.channel_name === "string"
+        ? body.channel_name
+        : typeof body?.channelName === "string"
+          ? body.channelName
+          : "";
+    const roomId =
+      (typeof body?.roomId === "string" && body.roomId) ||
+      parseRoomIdFromChannelName(channelName) ||
+      "";
+    if (!socketId || !roomId || !isValidId(roomId)) {
+      return json({ error: "socket_id and roomId (or channel_name) required" }, { status: 400 });
+    }
+    const allowed = await canAccessRoom(env, auth, roomId);
+    if (!allowed) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const presenceInfo =
+      body?.channel_data && typeof body.channel_data === "object"
+        ? body.channel_data.user_info ?? body.channel_data
+        : body?.presenceInfo;
+    const result = await buildChannelAuthResponse(env, {
+      projectId: auth.projectId,
+      userId: auth.userId,
+      socketId,
+      roomId,
+      channelName: channelName || undefined,
+      presenceInfo:
+        presenceInfo && typeof presenceInfo === "object" ? presenceInfo : undefined,
+    });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: result.status || 500 });
+    }
+    return json(result);
+  }
+
+  if (
+    (url.pathname === "/auth/token" || url.pathname === "/auth/signin") &&
+    request.method === "POST"
+  ) {
+    const isSignin = url.pathname === "/auth/signin";
     const apiKey =
       request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
     if (!apiKey) {
       return json({ error: "api key required" }, { status: 401 });
     }
+
+    const ip = clientIpFromRequest(request);
+    const keyFingerprint = `${apiKey.length}:${apiKey.slice(0, 12)}`;
+    const tokenRate = await checkAndConsumeIpRateLimit(env, {
+      request,
+      scope: `auth-token:${keyFingerprint}`,
+      limit: Number(env.RATE_LIMIT_AUTH_TOKEN_PER_MINUTE || 30),
+      windowSeconds: 60,
+    });
+    if (!tokenRate.allowed) {
+      return json(
+        {
+          error: "rate_limit_exceeded",
+          retryAfterSeconds: tokenRate.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(tokenRate.retryAfterSeconds) },
+        },
+      );
+    }
+
     const resolvedProjectId = await resolveProjectId(request, env);
     if (!resolvedProjectId || resolvedProjectId === (env.DEFAULT_PROJECT_ID || "default")) {
       return json({ error: "invalid api key" }, { status: 401 });
@@ -417,10 +553,105 @@ export async function dispatchPublicRoutes(request, url, h) {
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + ttlSeconds,
     });
-    return json({
+    const base = {
       token,
       expiresIn: ttlSeconds,
       claims: { sub: body.userId, tid: resolvedProjectId, roles },
+    };
+    if (!isSignin) {
+      return json(base);
+    }
+    const encodedUser = encodeURIComponent(body.userId);
+    return json({
+      ...base,
+      signin: true,
+      userId: body.userId,
+      projectId: resolvedProjectId,
+      userChannel: {
+        websocketPath: `/ws/user/${encodedUser}`,
+        eventsPath: `/users/${encodedUser}/events`,
+      },
+    });
+  }
+
+  if (
+    (url.pathname === "/auth/sms-otp/send" || url.pathname === "/auth/sms-otp/request") &&
+    request.method === "POST"
+  ) {
+    const apiKey =
+      request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
+    if (!apiKey) return json({ error: "api key required" }, { status: 401 });
+    const resolvedProjectId = await resolveProjectId(request, env);
+    if (!resolvedProjectId || resolvedProjectId === (env.DEFAULT_PROJECT_ID || "default")) {
+      return json({ error: "invalid api key" }, { status: 401 });
+    }
+    const body = await request.json().catch(() => null);
+    if (!body?.userId || !isValidId(body.userId)) {
+      return json({ error: "userId required" }, { status: 400 });
+    }
+    const e164 = typeof body.e164 === "string" ? body.e164.trim() : "";
+    const result = await requestSmsOtp(env, request, {
+      projectId: resolvedProjectId,
+      userId: body.userId,
+      e164,
+    });
+    if (!result.ok) {
+      return json(
+        { error: result.error, detail: result.detail, retryAfterSeconds: result.retryAfterSeconds },
+        { status: result.status || 500 },
+      );
+    }
+    return json(result);
+  }
+
+  if (url.pathname === "/auth/sms-otp/verify" && request.method === "POST") {
+    const apiKey =
+      request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
+    if (!apiKey) return json({ error: "api key required" }, { status: 401 });
+    const resolvedProjectId = await resolveProjectId(request, env);
+    if (!resolvedProjectId || resolvedProjectId === (env.DEFAULT_PROJECT_ID || "default")) {
+      return json({ error: "invalid api key" }, { status: 401 });
+    }
+    const body = await request.json().catch(() => null);
+    if (!body?.userId || !isValidId(body.userId)) {
+      return json({ error: "userId required" }, { status: 400 });
+    }
+    const e164 = typeof body.e164 === "string" ? body.e164.trim() : "";
+    const code = typeof body.code === "string" ? body.code.trim() : "";
+    const verified = await verifySmsOtp(env, {
+      projectId: resolvedProjectId,
+      userId: body.userId,
+      e164,
+      code,
+    });
+    if (!verified.ok) {
+      return json({ error: verified.error }, { status: verified.status || 401 });
+    }
+    const row = await env.DB.prepare(
+      "SELECT jwt_secret FROM project_secrets WHERE project_id = ?",
+    )
+      .bind(resolvedProjectId)
+      .first();
+    if (!row?.jwt_secret) {
+      return json({ error: "project secret not configured" }, { status: 400 });
+    }
+    const rolesValidation = validateRoles(body.roles);
+    const roles = rolesValidation.roles;
+    const ttlSeconds = Math.max(60, Math.min(Number(body.ttlSeconds || 3600), 86_400));
+    const token = await signJwtHs256(row.jwt_secret, {
+      sub: body.userId,
+      tid: resolvedProjectId,
+      roles,
+      sms_verified: e164,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + ttlSeconds,
+    });
+    return json({
+      token,
+      expiresIn: ttlSeconds,
+      verified: true,
+      e164,
+      claims: { sub: body.userId, tid: resolvedProjectId, roles, sms_verified: e164 },
     });
   }
 

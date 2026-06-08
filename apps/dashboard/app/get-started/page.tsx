@@ -63,6 +63,19 @@ export default function GetStartedPage() {
 
       <QuickstartSdkSnippet />
 
+      <p className="mt-4 text-sm text-muted-foreground">
+        Step-by-step afternoon guide in the repo:{" "}
+        <a
+          href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/quickstart-afternoon.md"
+          className="font-medium text-primary underline-offset-2 hover:underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          docs/quickstart-afternoon.md
+        </a>
+        .
+      </p>
+
       <ol className="mt-10 space-y-6">
         {HOSTED_STEPS.map((step, index) => (
           <li

@@ -12,7 +12,14 @@ export interface FluxyMessageTemplate {
 export interface FluxySendMessageOptions {
   templateId?: string;
   templateVars?: Record<string, string | number | boolean | null | undefined>;
+  /** Ephemeral message TTL in seconds (server max applies, default cap 7 days). */
+  expiresInSeconds?: number;
+  expiresAt?: string;
+  visibility?: "room" | "whisper";
+  visibleTo?: string[];
 }
+
+export type FluxyPresenceIntent = "composing" | "away" | "viewing_thread" | "idle";
 
 export interface FluxyProjectActivity {
   id: string;

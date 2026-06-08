@@ -28,6 +28,18 @@ export const RECONNECT_HIBERNATION_GUIDE: GuideContent = {
       ],
     },
     {
+      id: "jwt-refresh",
+      title: "JWT refresh before expiry (partysocket-style)",
+      paragraphs: [
+        "Long-lived sessions need the JWT refreshed before `exp` to avoid a 1008 close mid-session. The SDK passes the token on the WS URL — re-connecting with a fresh JWT keeps the user online without an explicit reconnect trigger.",
+      ],
+      bullets: [
+        "Use `decodeFluxyJwtPayload(token)` and `jwtRefreshDelayMs(payload)` (from `@fluxy-chat/sdk`) to schedule a refresh ~60s before `exp`.",
+        "On `onAuthError` (close 1008), mint a new JWT server-side and call `client.connectRoom(roomId, …)` again with the new token. The previous `FluxyChatRoomConnection` instance is already in the disconnected state, so the new connect is a clean re-handshake.",
+        "The room DO does not store the JWT — every connect re-validates the token + room membership, so token rotation is safe.",
+      ],
+    },
+    {
       id: "react",
       title: "React example (useChat)",
       code: `import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";

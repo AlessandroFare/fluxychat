@@ -37,7 +37,8 @@ pnpm run smoke:remote
 
 Implicit checks:
 
-- [ ] `GET /health` → `200`, `ok: true` (if `degraded`, verify KV/R2 when you can).
+- [ ] `GET /health` → `200`, `ok: true` (if `degraded`, verify KV/R2 when you can; check `platformBindings` for Flagship/Browser/Workflows).
+- [ ] `GET /client/feature-flags` → `200` with `flags` object (smoke script checks this).
 - [ ] `GET /stats/slo`, `/stats/costs`, `/stats/launch-kpis` → `200` without `error` in JSON.
 
 Combine with runbook **§3** curl smoke (webhook deliveries, auth/token, test message) for full coverage.

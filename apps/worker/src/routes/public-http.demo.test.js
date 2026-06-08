@@ -8,6 +8,7 @@ function buildDemoHandlerDeps(overrides = {}) {
       DEMO_ROOM_ID: "public-demo",
       DEMO_API_KEY: "fc_demo_key",
       DEMO_USER_ID: "demo-guest",
+      RATE_LIMIT_FALLBACK_ALLOW: "true",
       DB: {
         prepare(sql) {
           return {
@@ -53,6 +54,8 @@ function buildDemoHandlerDeps(overrides = {}) {
     maxRoomNameLength: 128,
     projectId: "default",
     checkAndConsumeRateLimit: async () => ({ allowed: true, retryAfterSeconds: 0 }),
+    canAccessRoom: async () => true,
+    customDomain: null,
     ...overrides,
   };
 }

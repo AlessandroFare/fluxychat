@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useClerkUser } from "@/lib/clerk-user";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { useChat } from "@fluxy-chat/sdk";
+import { useChat, useFluxyChatOptional } from "@fluxy-chat/sdk";
 import { Button as ShadcnButton } from "~/components/ui/button";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
@@ -30,6 +30,8 @@ import {
 import { ASSISTANT_ROOM_ID } from "@/lib/assistant-room";
 import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
 import { AgentRoomChat } from "../components/agent-room-chat";
+import { VoiceRecorder } from "~/components/voice/voice-recorder";
+import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
 import type { UseChatHistoryReplay } from "@fluxy-chat/sdk";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -202,6 +204,8 @@ export default function OnboardingPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [stepInitialized, setStepInitialized] = useState(false);
   const { user: clerkUser, isSignedIn: clerkSignedIn } = useClerkUser();
+  const realtime = useFluxyChatOptional();
+  const fluxyClient = realtime?.client ?? null;
 
   useEffect(() => {
     if (!isClerkClientConfigured() || !clerkSignedIn || !clerkUser?.id) return;
@@ -233,6 +237,7 @@ export default function OnboardingPage() {
   const { messages, sendMessage, connectionStatus, historyLoaded, loadHistory } = useChat({
     roomId: activeRoomId,
     replay: onboardingReplay,
+    markReadLatest: Boolean(activeRoomId),
   });
 
   const furthest = useMemo(
@@ -845,14 +850,19 @@ export default function OnboardingPage() {
             {messages.length ? (
               messages.map((m) => (
                 <div key={m.id} className="py-1 text-sm">
-                  <b>{m.userId}</b>: {m.content}
+                  <b>{m.userId}</b>:{" "}
+                  {m.kind === "voice" ? (
+                    <VoiceMessageBubble message={m} className="mt-1 inline-block" />
+                  ) : (
+                    m.content
+                  )}
                 </div>
               ))
             ) : (
               <p className="text-sm text-muted-foreground">No messages yet.</p>
             )}
           </div>
-          <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               placeholder="Type and press Enter"
               className="sm:flex-1"
@@ -862,6 +872,18 @@ export default function OnboardingPage() {
                 if (!value) return;
                 sendMessage(value);
                 (e.target as HTMLInputElement).value = "";
+              }}
+            />
+            <VoiceRecorder
+              disabled={!memberJwt}
+              onSend={async (audio, durationMs) => {
+                if (!fluxyClient || !room) return;
+                try {
+                  await fluxyClient.sendVoiceMessage(room.id, audio, { durationMs });
+                } catch (err: unknown) {
+                  // Surface failure to the input error area below.
+                  console.error("voice send failed", err);
+                }
               }}
             />
             <Button

@@ -3,6 +3,7 @@
  * @returns {Promise<Response|null>}
  */
 import { pickRouteDeps } from "./route-http-deps.js";
+import { isHumanHandoffActive } from "../lib/room-handoff.js";
 
 export async function dispatchAgentsRoutes(request, url, h) {
   const {
@@ -360,6 +361,16 @@ export async function dispatchAgentsRoutes(request, url, h) {
           retryAfterSeconds: reset.retryAfterSeconds,
         },
         { status: 402, headers: { "Retry-After": String(reset.retryAfterSeconds) } }
+      );
+    }
+
+    if (await isHumanHandoffActive(env, auth.projectId, body.roomId)) {
+      return json(
+        {
+          error: "human_handoff_active",
+          message: "AI invoke is paused while a human agent handles this room.",
+        },
+        { status: 409 },
       );
     }
 

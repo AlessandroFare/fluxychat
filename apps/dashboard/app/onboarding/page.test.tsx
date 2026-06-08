@@ -32,6 +32,7 @@ vi.mock("@fluxy-chat/sdk", () => ({
     sendMessage: vi.fn(),
     connectionStatus: "disconnected",
   }),
+  useFluxyChatOptional: () => null,
 }));
 
 const SESSION_KEY = scopedStorageKey("fluxychat.dashboard.session.v1", CLERK_USER_ID);

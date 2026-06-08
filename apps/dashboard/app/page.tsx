@@ -7,6 +7,7 @@ import { ArrowRight, CheckCircle2, Circle, KeyRound } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { ConsoleShell } from "./components/console-shell";
 import { ConsolePageHeader } from "./components/console-page-header";
+import { NotificationsOverviewCard } from "./components/notifications-overview-card";
 import { useConsoleSetupPhase, useDashboardSession } from "./components/dashboard-session";
 import { CONSOLE_NAV_MAIN } from "./components/console-nav";
 import { HOSTED_COPY, HOSTED_PATHS } from "@/lib/hosted-product";
@@ -162,6 +163,8 @@ export default function HomePage() {
           does not replace API keys or JWTs.
         </p>
       </section>
+
+      <NotificationsOverviewCard />
 
       <section>
         <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Quick links</h2>

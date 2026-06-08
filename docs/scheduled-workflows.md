@@ -1,0 +1,40 @@
+# Scheduled Workflows (P12-L)
+
+Cron jobs run through `FluxyScheduledWorkflow` with Cloudflare Workflows scheduled bindings instead of the Worker `scheduled` handler.
+
+## Jobs
+
+| Cron | Task |
+|------|------|
+| `0 8 * * *` | Daily AI digest (`runDailyDigest`) |
+| `*/15 * * * *` | Quiet-hours notification batch flush |
+| `0 3 * * *` | Data retention purge |
+| `*/5 * * * *` | Pending webhook delivery flush |
+
+## Wrangler
+
+```toml
+[vars]
+WORKFLOW_SCHEDULES_ENABLED = "true"
+
+[[workflows]]
+name = "fluxychat-scheduled"
+binding = "FLUXY_SCHEDULED_WORKFLOW"
+class_name = "FluxyScheduledWorkflow"
+schedules = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *"]
+```
+
+When `WORKFLOW_SCHEDULES_ENABLED` is true (default), the Worker `scheduled` handler is a no-op.
+
+## Local dev
+
+Set `WORKFLOW_SCHEDULES_ENABLED=false` in `.dev.vars` and uncomment `[triggers] crons` in `wrangler.toml`, or trigger jobs manually:
+
+```bash
+POST /admin/scheduled/run
+{ "cron": "0 8 * * *" }
+```
+
+Allowed crons: `0 8 * * *` (digest), `*/15 * * * *` (notification batch), `0 3 * * *` (retention), `*/5 * * * *` (webhook flush). Owner/admin JWT required.
+
+Shared logic lives in `apps/worker/src/lib/scheduled-runners.js`.

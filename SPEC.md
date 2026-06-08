@@ -199,7 +199,9 @@ Claims: `sub` (userId), `tid` (projectId), `roles`, `exp`.
 | `/rooms/dm` | POST | Create or fetch DM between two users `{ a, b }` |
 | `/rooms/{id}/members` | GET | List members with roles |
 | `/rooms/{id}/read` | POST | Update read receipt `{ messageId }` |
-| `/rooms/{id}/unread` | GET | `{ unreadCount }` per userId |
+| `/rooms/{id}/unread` | GET | `{ unreadCount, lastReadMessageId, firstUnreadMessageId }` (JWT; catch-up) |
+| `/rooms/{id}/draft` | GET, PUT | Room-scoped compose draft in member `preferences_json` |
+| `POST /messages` | POST | Optional `expiresInSeconds` / `expiresAt` for ephemeral messages (soft-delete at expiry) |
 
 ### Search & Export
 

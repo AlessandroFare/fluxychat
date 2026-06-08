@@ -82,6 +82,10 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
     throw new Response("Unauthorized", { status: 401 });
   }
 
+  if (opts.expectedProjectId && projectId !== opts.expectedProjectId) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
+
   // Constant-time crypto before DB lookup (P1-2): unknown vs known project both verify once.
   await verifyHs256Signature(headerB64, payloadB64, sigB64, JWT_DUMMY_KEY_BYTES);
 
@@ -117,7 +121,12 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
       );
       if (prevOk) {
         logInfo("jwt.legacy_secret_used", { userId, projectId });
-        return { userId, projectId, roles };
+        return {
+          userId,
+          projectId,
+          roles,
+          ...(payloadJson.roomId ? { roomId: payloadJson.roomId } : {}),
+        };
       }
     } catch {
       // fall through to generic rejection
@@ -128,5 +137,10 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
     throw new Response("Unauthorized", { status: 401 });
   }
 
-  return { userId, projectId, roles };
+  return {
+    userId,
+    projectId,
+    roles,
+    ...(payloadJson.roomId ? { roomId: payloadJson.roomId } : {}),
+  };
 }

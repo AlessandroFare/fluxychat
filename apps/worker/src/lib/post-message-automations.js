@@ -1,12 +1,17 @@
 import { logError } from "./worker-log.js";
 import { deliverWebhooks } from "./webhook-delivery.js";
 import { workerSharedLlmAllowed } from "./hosted-saas-policy.js";
+import { maybeNotifyOfflineSms } from "./offline-notify-sent.js";
+import { maybePushNotifyOnMessage } from "./push-notifications.js";
+import { fanoutRoomInternal } from "./room-shard.js";
 
 export async function schedulePostMessageAutomations(env, detail) {
   try {
     await Promise.all([
       maybeTriggerAutoRoomSummary(env, detail.projectId, detail.roomId),
       maybeRunBuiltinModerationScan(env, detail),
+      maybeNotifyOfflineSms(env, detail),
+      maybePushNotifyOnMessage(env, detail),
     ]);
   } catch (err) {
     logError("post_message_automations_failed", err, {
@@ -108,7 +113,8 @@ async function maybeTriggerAutoRoomSummary(env, projectId, roomId) {
     ) {
       return;
     }
-    if (!env.AI_BASE_URL) return;
+    const { isAiConfigured } = await import("./ai-gateway.js");
+    if (!isAiConfigured(env)) return;
     const everyN = Number(env.AUTO_ROOM_SUMMARY_EVERY_N || 0);
     if (!Number.isFinite(everyN) || everyN <= 0) return;
 
@@ -164,7 +170,9 @@ export async function generateRoomSummaryAndAnnounce(env, projectId, roomId) {
   if (!workerSharedLlmAllowed(env, projectId)) {
     return;
   }
-  if (!env.AI_BASE_URL?.trim()) {
+  const { isAiConfigured } = await import("./ai-gateway.js");
+  const { chatCompletion } = await import("./ai-chat-completion.js");
+  if (!isAiConfigured(env)) {
     return;
   }
 
@@ -187,8 +195,11 @@ export async function generateRoomSummaryAndAnnounce(env, projectId, roomId) {
   const systemPrompt =
     "You are a concise system assistant for a developer chat product called fluxychat. Summarize the recent conversation in 2–4 bullet points and optionally suggest one helpful follow-up action.";
 
-  const body = {
+  const ai = await chatCompletion(env, {
     model: env.AI_MODEL || "openai/gpt-4o-mini",
+    maxTokens: 256,
+    temperature: 0.3,
+    logContext: { projectId, roomId, feature: "room_summary" },
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -196,32 +207,16 @@ export async function generateRoomSummaryAndAnnounce(env, projectId, roomId) {
         content: `Here is the recent transcript for room "${roomId}":\n\n${transcript}`,
       },
     ],
-    max_tokens: 256,
-    temperature: 0.3,
-  };
-
-  const res = await fetch(`${env.AI_BASE_URL}/v1/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(env.AI_API_KEY ? { Authorization: `Bearer ${env.AI_API_KEY}` } : {}),
-    },
-    body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    console.error("AI API error", res.status, await res.text());
+  if (!ai.ok) {
+    console.error("AI API error", ai.error);
     return;
   }
 
-  const json = await res.json();
-  const content =
-    json.choices?.[0]?.message?.content ||
-    "System summary unavailable due to an AI provider issue.";
+  const content = ai.content || "System summary unavailable due to an AI provider issue.";
 
-  const id = env.ROOM.idFromName(roomId);
-  const stub = env.ROOM.get(id);
-  await stub.fetch("https://internal/announce", {
+  await fanoutRoomInternal(env, projectId, roomId, "/announce", {
     method: "POST",
     body: JSON.stringify({
       id: Date.now(),

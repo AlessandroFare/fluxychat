@@ -3,7 +3,11 @@
  * @returns {Promise<Response|null>}
  */
 import { pickRouteDeps } from "./route-http-deps.js";
-import { prepareWebhookSecretForStorage } from "../lib/webhook-signing.js";
+import { prepareWebhookSecretForStorage, signWebhookPayload } from "../lib/webhook-signing.js";
+import {
+  verifyWebhookSignature,
+  verifyWebhookEventBatch,
+} from "../lib/webhook-batch-verify.js";
 
 export async function dispatchReportsWebhooksRoutes(request, url, h) {
   const {
@@ -326,6 +330,45 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
     const receivedHex = receivedSig.replace("sha256=", "");
     const isValid = await timingSafeEqual(expectedHex, receivedHex);
     return json({ valid: isValid });
+  }
+
+  if (url.pathname === "/webhooks/verify-batch" && request.method === "POST") {
+    const body = await request.json().catch(() => null);
+    if (!body?.secret) {
+      return json({ error: "secret required" }, { status: 400 });
+    }
+    const secret = String(body.secret);
+
+    if (typeof body.body === "string" && body.signature) {
+      const result = await verifyWebhookSignature(
+        secret,
+        body.body,
+        body.signature || body["X-Pusher-Signature"] || body["X-Fluxy-Signature"],
+      );
+      return json({
+        valid: result.valid,
+        mode: "raw_body",
+        expected: result.expected,
+      });
+    }
+
+    const events = body.events ?? body.deliveries;
+    if (!Array.isArray(events)) {
+      return json({ error: "events array or body+signature required" }, { status: 400 });
+    }
+    const batchSig =
+      body.signature ||
+      body.batchSignature ||
+      body["X-Pusher-Signature"] ||
+      body["X-Fluxy-Signature"];
+    const result = await verifyWebhookEventBatch(secret, events, batchSig);
+    return json({
+      valid: result.valid,
+      mode: "batch",
+      batchSignatureValid: result.batchSignatureValid,
+      results: result.results,
+      ...(result.error ? { error: result.error } : {}),
+    });
   }
 
   return null;

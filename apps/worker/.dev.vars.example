@@ -24,8 +24,28 @@ REQUIRE_ADMIN_AUTH=true
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 
+# --- Feature flags (P12-J) — optional Flagship app; falls back to env vars below ---
+# FLAGSHIP_APP_ID=          # wrangler [[flagship]] app_id
+# FEATURE_VOICE_MESSAGES=true
+# FEATURE_REPLY_SUGGESTIONS=true
+# FEATURE_RECONNECT_BACKOFF_FLUXY=false   # SDK: 1s/8s backoff when true via GET /client/feature-flags
+
+# --- Scheduled jobs (P12-L) ---
+# Local dev: disable workflow schedules and use legacy Worker cron (uncomment [triggers] in wrangler.toml)
+# WORKFLOW_SCHEDULES_ENABLED=false
+
 # --- AI (agents, optional auto room summary) ---
-# OpenAI-compatible default (also used when provider=openai or custom without override)
+# Prefer Cloudflare AI Gateway (P12-I) — routes chat, Whisper, embeddings with caching/rate limits.
+# Set AI_GATEWAY_URL OR both AI_GATEWAY_ACCOUNT_ID + AI_GATEWAY_ID (provider segment defaults to openai).
+# AI_GATEWAY_ACCOUNT_ID=
+# AI_GATEWAY_ID=fluxychat
+# AI_GATEWAY_URL=https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/openai
+# AI_GATEWAY_TOKEN=          # Cloudflare API token (or CLOUDFLARE_API_TOKEN)
+# AI_GATEWAY_PROVIDER_KEY=     # upstream OpenAI key (cf-aig-authorization); falls back to AI_API_KEY
+# AI_GATEWAY_CACHE_TTL=3600    # optional response cache TTL (seconds)
+# AI_GATEWAY_PROVIDER=openai   # gateway path segment (openai, anthropic, workers-ai, …)
+# AI_GATEWAY_ENABLED=false     # kill switch — force legacy AI_BASE_URL even if gateway vars are set
+# Legacy direct OpenAI-compatible fallback when gateway is unset:
 AI_BASE_URL=
 AI_API_KEY=
 ANTHROPIC_API_KEY=
@@ -74,11 +94,53 @@ ALLOW_PLAINTEXT_WEBHOOK_SECRETS=true
 # AUTO_ROOM_SUMMARY_EVERY_N=50
 # AUTO_ROOM_SUMMARY_COOLDOWN_MINUTES=120
 
-# --- Public demo room (GET /demo/session, dashboard /demo) ---
+# --- Public demo room (GET|POST /demo/session, dashboard /demo) ---
 # DEMO_ROOM_ID=public-demo-room
 # DEMO_API_KEY=fc_your_project_key
 # DEMO_USER_ID=demo-guest
 # DEMO_TOKEN_TTL_SECONDS=1800
 # DEMO_READ_ONLY=false
 # DEMO_ENABLED=true
+# DEMO_ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
+# TURNSTILE_SECRET_KEY=          # wrangler secret; requires POST /demo/session from UI
+# DEMO_ALLOW_GET_WITHOUT_TURNSTILE=true   # local dev only when Turnstile secret is set
 # RATE_LIMIT_DEMO_SESSIONS_PER_MINUTE=20
+# RATE_LIMIT_AUTH_TOKEN_PER_MINUTE=30     # POST /auth/token per IP + api key
+# RATE_LIMIT_WS_CONNECTIONS_PER_MINUTE=30   # per-IP WS upgrades (/ws/room/*); 0 = disabled
+# RATE_LIMIT_PUBLIC_WS_CONNECTIONS_PER_MINUTE=60  # public rooms only; falls back to WS limit above
+# PUBLIC_GUEST_ENABLED=true
+# PUBLIC_GUEST_READ_ONLY=true
+# PUBLIC_GUEST_TOKEN_TTL_SECONDS=3600
+# PUBLIC_GUEST_ALLOWED_ORIGINS=https://app.example.com
+# PUBLIC_GUEST_TURNSTILE_REQUIRED=false
+# FCM_SERVER_KEY=...   # legacy FCM HTTP API for mobile push (P10-SB7)
+# SMS_OTP_ENABLED=true
+# SENT_DM_OTP_TEMPLATE_NAME=authentication
+# RATE_LIMIT_SMS_OTP_PER_MINUTE=5
+# SMS_OTP_DEBUG_CODE=false   # dev only: return code in API response
+# PUSH_ENABLED=true    # optional flag when using non-FCM bridge later
+# AI_TRANSLATE_MODEL=openai/gpt-4o-mini
+# RATE_LIMIT_PUBLIC_GUEST_PER_MINUTE=30
+# RATE_LIMIT_WS_MESSAGES_PER_MINUTE=60      # per-user WS message sends (Room DO)
+
+# --- Offline SMS via Sent.dm (optional built-in — see docs/cookbook/offline-notify-sent-dm.md) ---
+# OFFLINE_SMS_ENABLED=true
+# SENT_DM_API_KEY=
+# SENT_DM_PROFILE_ID=
+# OFFLINE_SMS_TEMPLATE_NAME=chat_notify
+# OFFLINE_SMS_CHANNELS=sms,whatsapp
+# OFFLINE_SMS_IDLE_MINUTES=5
+# OFFLINE_SMS_PER_USER_PER_HOUR=6
+# SENT_DM_WEBHOOK_SECRET=whsec_...   # verify POST /integrations/sent/webhook
+# PUBLIC_APP_URL=https://app.example.com   # room_url + media_url (relative /attachments/*) in Sent template params
+# OFFLINE_SMS_MEDIA_ENABLED=true   # default on; set false to omit media_url from offline notify (P13-T3)
+# Members opt in via PATCH /rooms/:id/members/me/preferences → preferences.smsE164 + smsOptIn
+# Sent template chat_notify: add media variables media_url, media_name, media_type (WhatsApp/MMS)
+
+# --- Custom domains (P12-G) ---
+# WORKER_PLATFORM_HOSTS=api.fluxychat.com,localhost
+# Comma-separated hostnames that use API-key/default project routing (not white-label lookup)
+
+# --- Agent task queue (P13-T4) ---
+# AGENT_QUEUE_SLA_MINUTES=15
+# AGENT_QUEUE_AUTO_INBOUND=true   # enqueue on inbound SMS/WA (requires TELCO_INBOUND_ENABLED)

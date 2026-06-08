@@ -15,12 +15,22 @@ export async function callLlmOpenAI(baseUrl, apiKey, model, messages, tools, opt
     temperature: opts.temperature ?? 0.7,
   };
   if (tools && tools.length) body.tools = tools;
-  const res = await fetch(`${baseUrl}/v1/chat/completions`, {
+  const url =
+    opts.chatCompletionsUrl || `${baseUrl.replace(/\/$/, "")}/v1/chat/completions`;
+  const headers = {
+    "Content-Type": "application/json",
+    ...(opts.gatewayHeaders || {}),
+  };
+  if (
+    apiKey &&
+    !headers.Authorization &&
+    !headers["cf-aig-authorization"]
+  ) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+  const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -84,7 +94,11 @@ export async function callLlmForConnection(connection, messages, tools, systemPr
     connection.model,
     messages,
     tools,
-    opts
+    {
+      ...opts,
+      chatCompletionsUrl: connection.chatCompletionsUrl,
+      gatewayHeaders: connection.gatewayHeaders,
+    },
   );
 }
 

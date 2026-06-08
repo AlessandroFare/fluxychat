@@ -35,7 +35,17 @@ import { dispatchReportsWebhooksRoutes } from "./routes/reports-webhooks-http.js
 import { dispatchAdminSearchAutomationRoutes } from "./routes/admin-search-automation-http.js";
 import { dispatchRoomsListExportRoutes } from "./routes/rooms-list-export-http.js";
 import { dispatchRoomsMutationsRoutes } from "./routes/rooms-mutations-http.js";
+import { dispatchNotificationsRoutes } from "./routes/notifications-http.js";
+import { dispatchDigestRoutes } from "./routes/digest-http.js";
+import { dispatchScheduledAdminRoutes } from "./routes/scheduled-admin-http.js";
+import { dispatchSearchRoutes } from "./routes/search-http.js";
+import { dispatchInboxRoutes } from "./routes/inbox-http.js";
+import { dispatchAgentQueueRoutes } from "./routes/agent-queue-http.js";
+import { dispatchHandoffRoutes } from "./routes/handoff-http.js";
 import { dispatchAdminProjectsRoutes } from "./routes/admin-projects-http.js";
+import { dispatchIntegrationsSentRoutes } from "./routes/integrations-sent-http.js";
+import { dispatchUserBlocksRoutes } from "./routes/user-blocks-http.js";
+import { dispatchPushRoutes } from "./routes/push-http.js";
 import { listLlmProvidersForApi } from "./lib/llm-providers.js";
 import { createAgentStreamHooks } from "./lib/room-stream.js";
 import {
@@ -45,7 +55,15 @@ import {
   executeAgentRun,
 } from "./lib/agent-runtime.js";
 import { logInfo, logError } from "./lib/worker-log.js";
+import { runScheduledCronJob } from "./lib/scheduled-runners.js";
 import { verifyJwtAndGetContext } from "./lib/jwt-request.js";
+import {
+  buildAllowedOriginsList,
+  lookupActiveCustomDomain,
+  normalizeHostname,
+} from "./lib/custom-domains.js";
+import { dispatchCustomDomainsRoutes } from "./routes/custom-domains-http.js";
+import { dispatchEmbedRoutes } from "./routes/embed-http.js";
 import {
   MAX_MESSAGE_LENGTH,
   validateMessageContent,
@@ -57,7 +75,7 @@ import {
   fetchOgPreview,
 } from "./lib/message-enrichment.js";
 import { attachAttachmentsToMessages } from "./lib/messages-attachments.js";
-import { isRoomMember } from "./lib/room-access.js";
+import { isRoomMember, canAccessRoom } from "./lib/room-access.js";
 import {
   deliverWebhooks,
   processPendingWebhookDeliveries,
@@ -73,8 +91,12 @@ import {
 } from "./lib/operational-metrics.js";
 import { createJsonResponder } from "./lib/http-json.js";
 import { handleFetchThrownError } from "./lib/http-cors.js";
+import { checkAndConsumeRateLimit } from "./lib/rate-limit.js";
 
 export { RoomDurableObject } from "./durable-objects/room-do.js";
+export { UserDurableObject } from "./durable-objects/user-do.js";
+export { IpRateLimiterDurableObject } from "./durable-objects/ip-rate-limiter-do.js";
+export { FluxyScheduledWorkflow } from "./workflows/fluxy-scheduled-workflow.js";
 export { retryDelayMsForAttempt } from "./lib/webhook-delivery.js";
 export { truncateForStorage } from "./lib/storage-utils.js";
 
@@ -304,13 +326,18 @@ export default {
     const traceId = getOrCreateTraceId(request);
     let resolvedProjectIdForMetrics = env.DEFAULT_PROJECT_ID || "default";
 
-    // CORS: configurable allowed origins via ALLOWED_ORIGINS env var
-    // Format: "https://domain1.com,https://domain2.com"
-    // Fallback to "*" only in dev (not recommended for production)
-    const allowedOrigins = (env.ALLOWED_ORIGINS || "*")
-      .split(",")
-      .map((o) => o.trim())
-      .filter(Boolean);
+    const customHostCtx = await lookupActiveCustomDomain(
+      env,
+      normalizeHostname(url.hostname),
+    ).catch(() => null);
+
+    const boundVerifyJwt = (req) =>
+      verifyJwtAndGetContext(req, env, {
+        expectedProjectId: customHostCtx?.projectId,
+      });
+
+    // CORS: ALLOWED_ORIGINS + per-domain origins (P12-G)
+    const allowedOrigins = buildAllowedOriginsList(env, customHostCtx);
     const requestOrigin = request.headers.get("Origin") || "";
     const corsOrigin = allowedOrigins.includes("*")
       ? "*"
@@ -364,7 +391,9 @@ export default {
     }
 
     try {
-    const projectId = await resolveProjectId(request, env);
+    const projectId = customHostCtx?.projectId
+      ? customHostCtx.projectId
+      : await resolveProjectId(request, env);
     resolvedProjectIdForMetrics = projectId;
     ctx.waitUntil(
       incrementOperationalMetric(env, {
@@ -395,7 +424,7 @@ export default {
       json,
       corsHeaders,
       requestLogCtx,
-      verifyJwtAndGetContext,
+      verifyJwtAndGetContext: boundVerifyJwt,
       hasAnyRole,
       logError,
       writeAuditEvent,
@@ -409,6 +438,8 @@ export default {
       signJwtHs256,
       maxRoomNameLength: MAX_ROOM_NAME_LENGTH,
       projectId,
+      customDomain: customHostCtx,
+      canAccessRoom,
       checkAndConsumeRateLimit,
     };
     const publicRes = await dispatchPublicRoutes(request, url, publicDeps);
@@ -423,12 +454,13 @@ export default {
       corsHeaders,
       json,
       requestLogCtx,
-      verifyJwtAndGetContext,
+      verifyJwtAndGetContext: boundVerifyJwt,
       hasAnyRole,
       logError,
       logInfo,
       requireAdminAuth,
       projectId,
+      customDomain: customHostCtx,
       MAX_MESSAGE_LENGTH,
       checkAndConsumeProjectQuota,
       quotaResetInfo,
@@ -514,12 +546,43 @@ export default {
     );
     if (drRoomsListExport) return drRoomsListExport;
 
+    const drNotifications = await dispatchNotificationsRoutes(
+      request,
+      url,
+      routeDeps,
+    );
+    if (drNotifications) return drNotifications;
+
+    const drDigest = await dispatchDigestRoutes(request, url, routeDeps);
+    if (drDigest) return drDigest;
+
+    const drScheduledAdmin = await dispatchScheduledAdminRoutes(request, url, routeDeps);
+    if (drScheduledAdmin) return drScheduledAdmin;
+
+    const drSearch = await dispatchSearchRoutes(request, url, routeDeps);
+    if (drSearch) return drSearch;
+
+    const drInbox = await dispatchInboxRoutes(request, url, routeDeps);
+    if (drInbox) return drInbox;
+
+    const drAgentQueue = await dispatchAgentQueueRoutes(request, url, routeDeps);
+    if (drAgentQueue) return drAgentQueue;
+
+    const drHandoff = await dispatchHandoffRoutes(request, url, routeDeps);
+    if (drHandoff) return drHandoff;
+
+    const drCustomDomains = await dispatchCustomDomainsRoutes(request, url, routeDeps);
+    if (drCustomDomains) return drCustomDomains;
+
+    const drEmbed = await dispatchEmbedRoutes(request, url, routeDeps);
+    if (drEmbed) return drEmbed;
+
     const privacyBillingDeps = {
       env,
       corsHeaders,
       json,
       requestLogCtx,
-      verifyJwt: (req) => verifyJwtAndGetContext(req, env),
+      verifyJwt: boundVerifyJwt,
       writeAuditEvent,
       hasAnyRole,
       logError,
@@ -546,6 +609,23 @@ export default {
     );
     if (drAdminProjects) return drAdminProjects;
 
+    const drIntegrationsSent = await dispatchIntegrationsSentRoutes(
+      request,
+      url,
+      routeDeps,
+    );
+    if (drIntegrationsSent) return drIntegrationsSent;
+
+    const drUserBlocks = await dispatchUserBlocksRoutes(
+      request,
+      url,
+      routeDeps,
+    );
+    if (drUserBlocks) return drUserBlocks;
+
+    const drPush = await dispatchPushRoutes(request, url, routeDeps);
+    if (drPush) return drPush;
+
     const stripeRes = await dispatchStripeWebhookRoutes(request, url, routeDeps);
     if (stripeRes) return stripeRes;
 
@@ -564,9 +644,16 @@ export default {
     const cron = event.cron || "";
     logInfo("scheduled.triggered", { scheduledTime: event.scheduledTime, cron });
 
-    if (cron === "0 3 * * *" || cron === "") {
-      ctx.waitUntil(purgeExpiredData(env));
+    if (env.WORKFLOW_SCHEDULES_ENABLED !== "false" && env.WORKFLOW_SCHEDULES_ENABLED !== "0") {
+      logInfo("scheduled.skipped_workflow_mode", { cron });
+      return;
     }
+
+    ctx.waitUntil(
+      runScheduledCronJob(env, cron).catch((err) =>
+        logError("scheduled.cron_failed", err, { cron }),
+      ),
+    );
   },
 };
 
@@ -599,71 +686,6 @@ async function provisionBuiltinAgents(env, projectId) {
     )
   );
   if (stmts.length) await env.DB.batch(stmts); // perf: N+1
-}
-
-async function purgeExpiredData(env) {
-  if (!env?.DB) return;
-  const now = new Date();
-  const nowIso = now.toISOString();
-
-  const policies = await env.DB.prepare(
-    "SELECT project_id, data_type, retention_days, auto_purge FROM data_retention_policies WHERE auto_purge = 1"
-  ).all();
-
-  for (const policy of policies.results || []) {
-    const cutoff = new Date(now.getTime() - policy.retention_days * 86400000).toISOString();
-
-    if (policy.data_type === "messages") {
-      const result = await env.DB.prepare(
-        "DELETE FROM messages WHERE project_id = ? AND created_at < ? AND deleted_at IS NOT NULL"
-      )
-        .bind(policy.project_id, cutoff)
-        .run();
-      logInfo("retention.purge.messages", { projectId: policy.project_id, cutoff, changes: result.meta?.changes || 0 });
-    }
-
-    if (policy.data_type === "audit_events") {
-      const result = await env.DB.prepare(
-        "DELETE FROM operational_audit_events WHERE project_id = ? AND created_at < ?"
-      )
-        .bind(policy.project_id, cutoff)
-        .run();
-      logInfo("retention.purge.audit_events", { projectId: policy.project_id, cutoff, changes: result.meta?.changes || 0 });
-    }
-
-    if (policy.data_type === "agent_runs") {
-      const result = await env.DB.prepare(
-        "DELETE FROM agent_runs WHERE project_id = ? AND created_at < ?"
-      )
-        .bind(policy.project_id, cutoff)
-        .run();
-      logInfo("retention.purge.agent_runs", { projectId: policy.project_id, cutoff, changes: result.meta?.changes || 0 });
-    }
-
-    if (policy.data_type === "usage_monthly") {
-      const result = await env.DB.prepare(
-        "DELETE FROM project_usage_monthly WHERE project_id = ? AND month_key < ?"
-      )
-        .bind(policy.project_id, cutoff.slice(0, 7))
-        .run();
-      logInfo("retention.purge.usage_monthly", { projectId: policy.project_id, cutoff: cutoff.slice(0, 7), changes: result.meta?.changes || 0 });
-    }
-
-    if (policy.data_type === "webhook_deliveries") {
-      const result = await env.DB.prepare(
-        "DELETE FROM webhook_delivery_queue WHERE project_id = ? AND created_at < ?"
-      )
-        .bind(policy.project_id, cutoff)
-        .run();
-      logInfo("retention.purge.webhook_deliveries", { projectId: policy.project_id, cutoff, changes: result.meta?.changes || 0 });
-    }
-
-    await env.DB.prepare(
-      "UPDATE data_retention_policies SET last_purged_at = ? WHERE project_id = ? AND data_type = ?"
-    )
-      .bind(nowIso, policy.project_id, policy.data_type)
-      .run();
-  }
 }
 
 // ---------- Hosted SaaS: platform vs tenant project scope ----------
@@ -786,19 +808,6 @@ function canBypassRoomMembership(roles) {
   return hasAnyRole(roles, ["owner", "admin", "moderator", "bot"]);
 }
 
-async function canAccessRoom(env, auth, roomId) {
-  if (!auth?.projectId || !auth?.userId || !roomId) return false;
-  if (canBypassRoomMembership(auth.roles)) {
-    const room = await env.DB.prepare(
-      "SELECT id FROM rooms WHERE id = ? AND project_id = ? LIMIT 1"
-    )
-      .bind(roomId, auth.projectId)
-      .first();
-    return !!room?.id;
-  }
-  return isRoomMember(env, auth.projectId, roomId, auth.userId);
-}
-
 export function hasAnyRole(roles, allowedRoles) {
   if (!Array.isArray(roles) || roles.length === 0) return false;
   return roles.some((role) => allowedRoles.includes(role));
@@ -845,67 +854,7 @@ async function hashWebhookSecret(secret) {
     .join("");
 }
 
-const localRateLimitStore = new Map();
-
-export async function checkAndConsumeRateLimit(env, options) {
-  const { key, limit, windowSeconds } = options;
-  if (!key || !Number.isFinite(limit) || limit <= 0) {
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
-  const windowMs = Math.max(1, Number(windowSeconds || 60) * 1000);
-  const now = Date.now();
-  const allowFallback = env.RATE_LIMIT_FALLBACK_ALLOW === "true" || env.ECC_HOOK_PROFILE === "minimal";
-
-  // Preferred path: KV-backed counter for cross-isolate consistency.
-  if (env.RATE_LIMIT_KV) {
-    try {
-      const bucketTs = Math.floor(now / windowMs) * windowMs;
-      const storageKey = `rl:${key}:${bucketTs}`;
-      const existingRaw = await env.RATE_LIMIT_KV.get(storageKey);
-      const existing = Number(existingRaw || "0");
-      if (existing >= limit) {
-        const retryAfterSeconds = Math.ceil((bucketTs + windowMs - now) / 1000);
-        return { allowed: false, retryAfterSeconds };
-      }
-      await env.RATE_LIMIT_KV.put(storageKey, String(existing + 1), {
-        expirationTtl: Math.ceil(windowMs / 1000) + 5,
-      });
-      return { allowed: true, retryAfterSeconds: 0 };
-    } catch (err) {
-      logError("rate_limit.kv_error", err, { key, traceId: options.traceId });
-      return {
-        allowed: false,
-        retryAfterSeconds: 5,
-        reason: "kv_error",
-      };
-    }
-  }
-
-  // No KV binding: warn but allow unless fallback is explicitly locked down.
-  if (!allowFallback) {
-    logInfo("rate_limit.no_kv_denied", {
-      key,
-      reason: "RATE_LIMIT_KV not configured and fallback is disabled",
-    });
-    return { allowed: false, retryAfterSeconds: 5, reason: "kv_unavailable" };
-  }
-
-  // Fallback: module-level Map is per-isolate — only use when explicitly enabled.
-  const entry = localRateLimitStore.get(key);
-  if (!entry || entry.expiresAt <= now) {
-    localRateLimitStore.set(key, { count: 1, expiresAt: now + windowMs });
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
-  if (entry.count >= limit) {
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.max(1, Math.ceil((entry.expiresAt - now) / 1000)),
-    };
-  }
-  entry.count += 1;
-  localRateLimitStore.set(key, entry);
-  return { allowed: true, retryAfterSeconds: 0 };
-}
+export { checkAndConsumeRateLimit } from "./lib/rate-limit.js";
 
 function escapeLike(input) {
   return input.replace(/([%_\\])/g, "\\$1");

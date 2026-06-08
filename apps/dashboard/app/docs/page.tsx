@@ -66,7 +66,15 @@ export default function DocsPage() {
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Documentation</p>
       <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900">Guides and reference</h1>
       <p className="mt-3 text-slate-600">
-        Auth, SDK, and deployment notes for Fluxychat. For source and self-host details, use the GitHub monorepo.
+        Auth, SDK, and deployment notes for Fluxychat. Long-form guides live under{" "}
+        <Link href={HOSTED_PATHS.guides} className="text-primary underline-offset-2 hover:underline">
+          /guides
+        </Link>
+        . This page is public — no account required (same as{" "}
+        <Link href={HOSTED_PATHS.compare} className="text-primary underline-offset-2 hover:underline">
+          /compare
+        </Link>
+        ).
       </p>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -120,6 +128,26 @@ export default function DocsPage() {
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Configure outbound webhooks per project in the console. Stripe checkout and usage quotas are enforced on the
           Worker — upgrade plans from <Link href="/billing" className="text-primary underline-offset-2 hover:underline">Billing</Link> after you connect an account.
+        </p>
+      </section>
+
+      <section id="web-push" className="mt-12 scroll-mt-24">
+        <h2 className="font-heading text-xl font-semibold text-slate-900">Web Push (browser notifications)</h2>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          VAPID + RFC 8188 encrypted browser push, self-hosted — wire-compatible with Pusher Beams. Fetch the project
+          public key from <code className="font-mono text-xs">GET /push/web/vapid-public-key</code> and register the
+          browser's <code className="font-mono text-xs">PushSubscription</code> via{" "}
+          <code className="font-mono text-xs">POST /push/web/subscribe</code>. No third-party push service required.
+          Full protocol notes, SDK usage, and service worker snippet in{" "}
+          <a
+            href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/web-push-vapid.md"
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            docs/web-push-vapid.md
+          </a>
+          .
         </p>
       </section>
 

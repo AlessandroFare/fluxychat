@@ -6,6 +6,7 @@
  * @see https://ai-sdk.dev/docs/foundations/providers-and-models
  */
 
+import { getAiGatewayConnectionOverrides } from "./ai-gateway.js";
 import { buildModelCatalogEntry, fetchLiveOpenRouterModels } from "./llm-model-catalog.js";
 import { getProjectLlmCredential } from "./project-llm-credentials.js";
 import { workerSharedLlmAllowed } from "./hosted-saas-policy.js";
@@ -474,6 +475,18 @@ export async function resolveLlmConnection(env, { provider: providerField, model
     };
   }
 
+  const gatewayOverrides =
+    sharedLlmOk &&
+    !projectCred?.apiKey &&
+    apiStyle === "openai-compatible" &&
+    id === "openai"
+      ? getAiGatewayConnectionOverrides(env, {
+          useGateway: true,
+          projectId,
+          feature: "agent",
+        })
+      : {};
+
   return {
     ok: true,
     providerId: id,
@@ -487,6 +500,7 @@ export async function resolveLlmConnection(env, { provider: providerField, model
     supportsTools: def.supportsTools,
     apiKeyConfigured: !!apiKey,
     apiKeySource: projectCred?.apiKey ? "project" : apiKey ? "worker" : "none",
+    ...gatewayOverrides,
   };
 }
 

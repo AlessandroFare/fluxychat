@@ -1,4 +1,9 @@
-import type { FluxyChatClient, FluxyChatEvent, FluxyChatMessage } from "./index";
+import type {
+  FluxyChatClient,
+  FluxyChatEvent,
+  FluxyChatMessage,
+  FluxyWebSocketConnectOptions,
+} from "./index";
 import {
   FluxyAuthError,
   FluxyConnectionError,
@@ -26,14 +31,31 @@ export interface FluxyRoomConnectionOptions {
   /** Refetch REST history after each successful reconnect (default true). */
   replayHistoryOnReconnect?: boolean;
   historyLimit?: number;
+  /** WS connect snapshot: `connect` uses `{ type: "replay" }` envelope; `off` skips server snapshot. */
+  wsReplay?: FluxyWebSocketConnectOptions["replay"];
+  /** Profile attached to presence (`presenceInfo` query on WS URL). */
+  presenceInfo?: Record<string, unknown>;
+  /** Pusher-style cache channel snapshot on connect. */
+  wsCache?: FluxyWebSocketConnectOptions["cache"];
+  /** Client ping interval in ms (default 25_000). Set 0 to disable. */
+  heartbeatIntervalMs?: number;
+  /** Force reconnect if no pong within this window (default 45_000). */
+  heartbeatTimeoutMs?: number;
+  /** Max queued outbound frames while socket is not OPEN (default 100). */
+  maxOutboundQueue?: number;
+  /** Drop queued frames older than this (default 5 min). */
+  maxOutboundQueueAgeMs?: number;
   onAuthError?: (error: FluxyAuthError) => void;
   onConnectionError?: (error: Error) => void;
   onStatusChange?: (status: FluxyRoomConnectionStatus) => void;
   /** Called when max reconnect attempts are exhausted (not on auth failure). */
   onReconnectFailed?: () => void;
+  /** Called when outbound queue drops frames (cap or age). */
+  onOutboundQueueDrop?: (droppedCount: number) => void;
 }
 
 type MessageListener = (event: FluxyChatEvent) => void;
+type AnyEventListener = (event: FluxyChatEvent) => void;
 
 export interface FluxyWaitForOptions {
   timeout?: number;
@@ -46,8 +68,19 @@ interface WaitForEntry {
   timer: ReturnType<typeof setTimeout>;
 }
 
+interface OutboundFrame {
+  payload: Record<string, unknown>;
+  enqueuedAt: number;
+}
+
 const SEEN_IDS_MAX = 10_000;
 const DEFAULT_WAIT_TIMEOUT_MS = 30_000;
+const DEFAULT_MAX_OUTBOUND_QUEUE = 100;
+const DEFAULT_MAX_OUTBOUND_QUEUE_AGE_MS = 5 * 60_000;
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 25_000;
+const DEFAULT_HEARTBEAT_TIMEOUT_MS = 45_000;
+/** Application-defined close: heartbeat missed (triggers reconnect). */
+export const FLUXY_WS_CLOSE_HEARTBEAT = 4000;
 
 export class FluxyChatRoomConnection {
   private readonly client: FluxyChatClient;
@@ -60,6 +93,10 @@ export class FluxyChatRoomConnection {
       | "maxBackoffMs"
       | "replayHistoryOnReconnect"
       | "historyLimit"
+      | "heartbeatIntervalMs"
+      | "heartbeatTimeoutMs"
+      | "maxOutboundQueue"
+      | "maxOutboundQueueAgeMs"
     >
   > &
     FluxyRoomConnectionOptions;
@@ -75,9 +112,14 @@ export class FluxyChatRoomConnection {
   private nextReconnectAtMs: number | null = null;
   private scheduledReconnectDelayMs = 0;
   private listeners: MessageListener[] = [];
+  private anyListeners: AnyEventListener[] = [];
   private waitForEntries: WaitForEntry[] = [];
   private seenIds: number[] = [];
   private seenIdsSet = new Set<number>();
+  private outboundQueue: OutboundFrame[] = [];
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private lastPongAtMs = 0;
+  private wsSnapshotReceived = false;
 
   constructor(client: FluxyChatClient, roomId: string, options: FluxyRoomConnectionOptions = {}) {
     this.client = client;
@@ -88,6 +130,10 @@ export class FluxyChatRoomConnection {
       maxBackoffMs: options.maxBackoffMs ?? 20_000,
       replayHistoryOnReconnect: options.replayHistoryOnReconnect ?? true,
       historyLimit: options.historyLimit ?? 50,
+      heartbeatIntervalMs: options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS,
+      heartbeatTimeoutMs: options.heartbeatTimeoutMs ?? DEFAULT_HEARTBEAT_TIMEOUT_MS,
+      maxOutboundQueue: options.maxOutboundQueue ?? DEFAULT_MAX_OUTBOUND_QUEUE,
+      maxOutboundQueueAgeMs: options.maxOutboundQueueAgeMs ?? DEFAULT_MAX_OUTBOUND_QUEUE_AGE_MS,
       ...options,
     };
   }
@@ -102,6 +148,11 @@ export class FluxyChatRoomConnection {
 
   getLastError(): Error | null {
     return this.lastError;
+  }
+
+  /** Frames waiting to send while the socket is connecting or reconnecting. */
+  getOutboundQueueDepth(): number {
+    return this.outboundQueue.length;
   }
 
   /** When reconnecting, time of the next socket open attempt. */
@@ -125,6 +176,15 @@ export class FluxyChatRoomConnection {
     this.listeners = this.listeners.filter((cb) => cb !== listener);
   }
 
+  /** Pusher-style `bind_global`: invoked for every inbound event (including `state_change`). */
+  onAnyEvent(listener: AnyEventListener): void {
+    this.anyListeners.push(listener);
+  }
+
+  offAnyEvent(listener: AnyEventListener): void {
+    this.anyListeners = this.anyListeners.filter((cb) => cb !== listener);
+  }
+
   connect(): void {
     this.intentionallyClosed = false;
     this.openSocket();
@@ -134,6 +194,8 @@ export class FluxyChatRoomConnection {
     this.intentionallyClosed = true;
     this.rejectAllWaitFor(new FluxySendError("Connection closed."));
     this.clearReconnectTimer();
+    this.stopHeartbeat();
+    this.clearOutboundQueue();
     if (this.ws) {
       try {
         this.ws.close(code);
@@ -146,10 +208,19 @@ export class FluxyChatRoomConnection {
   }
 
   sendJson(payload: Record<string, unknown>): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new FluxySendError();
+    if (this.canSendImmediately()) {
+      this.ws!.send(JSON.stringify(payload));
+      return;
     }
-    this.ws.send(JSON.stringify(payload));
+
+    if (this.canQueueOutbound()) {
+      this.enqueueOutbound(payload);
+      return;
+    }
+
+    throw new FluxySendError(
+      "Cannot send: WebSocket is not open. Call connect() and wait until connected.",
+    );
   }
 
   /**
@@ -181,6 +252,49 @@ export class FluxyChatRoomConnection {
     });
   }
 
+  private canSendImmediately(): boolean {
+    return Boolean(this.ws && this.ws.readyState === WebSocket.OPEN);
+  }
+
+  private canQueueOutbound(): boolean {
+    return this.status === "connecting" || this.status === "reconnecting";
+  }
+
+  private enqueueOutbound(payload: Record<string, unknown>): void {
+    const now = Date.now();
+    this.pruneOutboundQueue(now);
+    if (this.outboundQueue.length >= this.options.maxOutboundQueue) {
+      const dropped = this.outboundQueue.shift();
+      if (dropped) {
+        this.options.onOutboundQueueDrop?.(1);
+      }
+    }
+    this.outboundQueue.push({ payload, enqueuedAt: now });
+  }
+
+  private pruneOutboundQueue(now = Date.now()): void {
+    const maxAge = this.options.maxOutboundQueueAgeMs;
+    const before = this.outboundQueue.length;
+    this.outboundQueue = this.outboundQueue.filter((frame) => now - frame.enqueuedAt <= maxAge);
+    const dropped = before - this.outboundQueue.length;
+    if (dropped > 0) {
+      this.options.onOutboundQueueDrop?.(dropped);
+    }
+  }
+
+  private flushOutboundQueue(): void {
+    if (!this.canSendImmediately()) return;
+    this.pruneOutboundQueue();
+    while (this.outboundQueue.length > 0 && this.canSendImmediately()) {
+      const frame = this.outboundQueue.shift()!;
+      this.ws!.send(JSON.stringify(frame.payload));
+    }
+  }
+
+  private clearOutboundQueue(): void {
+    this.outboundQueue = [];
+  }
+
   private rejectAllWaitFor(error: Error): void {
     const entries = [...this.waitForEntries];
     this.waitForEntries = [];
@@ -192,12 +306,19 @@ export class FluxyChatRoomConnection {
 
   private setStatus(next: FluxyRoomConnectionStatus): void {
     if (this.status === next) return;
+    const previous = this.status;
     this.status = next;
     if (next === "connected") {
       this.nextReconnectAtMs = null;
       this.scheduledReconnectDelayMs = 0;
     }
     this.options.onStatusChange?.(next);
+    this.emitAnyOnly({
+      type: "state_change",
+      roomId: this.roomId,
+      previous,
+      current: next,
+    });
   }
 
   private clearReconnectTimer(): void {
@@ -207,42 +328,117 @@ export class FluxyChatRoomConnection {
     }
   }
 
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    const intervalMs = this.options.heartbeatIntervalMs;
+    if (intervalMs <= 0) return;
+
+    this.lastPongAtMs = Date.now();
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.canSendImmediately()) return;
+
+      const timeoutMs = this.options.heartbeatTimeoutMs;
+      if (timeoutMs > 0 && Date.now() - this.lastPongAtMs > timeoutMs) {
+        try {
+          this.ws?.close(FLUXY_WS_CLOSE_HEARTBEAT, "heartbeat_timeout");
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+
+      try {
+        this.ws!.send(JSON.stringify({ type: "ping" }));
+      } catch {
+        /* ignore */
+      }
+    }, intervalMs);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  private handleInboundRaw(raw: string): void {
+    let data: FluxyChatEvent | { type: string; ts?: number };
+    try {
+      data = JSON.parse(raw) as FluxyChatEvent | { type: string; ts?: number };
+    } catch {
+      return;
+    }
+
+    if (data.type === "pong") {
+      this.lastPongAtMs = Date.now();
+      return;
+    }
+
+    if (data.type === "replay") {
+      this.wsSnapshotReceived = true;
+      const replay = data as { type: "replay"; messages: FluxyChatMessage[] };
+      this.deliver({ type: "history", messages: replay.messages });
+      return;
+    }
+
+    if (data.type === "history") {
+      this.wsSnapshotReceived = true;
+    }
+
+    if (data.type === "error") {
+      // eslint-disable-next-line no-console
+      console.error("[fluxychat] worker error:", (data as { message?: string }).message);
+    }
+
+    this.deliver(data as FluxyChatEvent);
+  }
+
   private openSocket(): void {
     this.clearReconnectTimer();
     this.setStatus(
       this.hasConnectedOnce && this.reconnectAttempt > 0 ? "reconnecting" : "connecting",
     );
 
-    const ws = this.client.connect(this.roomId);
+    const wsConnect: FluxyWebSocketConnectOptions = {
+      replay: this.options.wsReplay ?? "connect",
+      replayLimit: this.options.historyLimit,
+      presenceInfo: this.options.presenceInfo,
+      cache: this.options.wsCache,
+    };
+    if (this.options.wsReplay === "off") {
+      wsConnect.replay = "off";
+    }
+    const ws = this.client.connect(this.roomId, wsConnect);
     this.ws = ws;
+    this.wsSnapshotReceived = false;
 
     ws.addEventListener("open", () => {
       this.hasConnectedOnce = true;
       this.reconnectAttempt = 0;
       this.lastError = null;
       this.setStatus("connected");
-      if (this.pendingHistoryReplay && this.options.replayHistoryOnReconnect) {
-        void this.replayHistory();
-      }
+      this.startHeartbeat();
+      this.flushOutboundQueue();
+      const needsRestReplay =
+        this.pendingHistoryReplay && this.options.replayHistoryOnReconnect;
       this.pendingHistoryReplay = false;
+      if (needsRestReplay) {
+        queueMicrotask(() => {
+          if (!this.wsSnapshotReceived) {
+            void this.replayHistory();
+          }
+        });
+      }
     });
 
     ws.addEventListener("message", (event) => {
-      let data: FluxyChatEvent;
-      try {
-        data = JSON.parse(String(event.data)) as FluxyChatEvent;
-      } catch {
-        return;
-      }
-      if (data.type === "error") {
-        // eslint-disable-next-line no-console
-        console.error("[fluxychat] worker error:", data.message);
-      }
-      this.deliver(data);
+      this.handleInboundRaw(String(event.data));
     });
 
     ws.addEventListener("close", (event) => {
       this.ws = null;
+      this.stopHeartbeat();
       if (this.intentionallyClosed) {
         this.setStatus("disconnected");
         return;
@@ -251,6 +447,7 @@ export class FluxyChatRoomConnection {
       const mapped = mapWebSocketCloseToError(event.code, event.reason || "");
       if (mapped instanceof FluxyAuthError) {
         this.lastError = mapped;
+        this.clearOutboundQueue();
         this.options.onAuthError?.(mapped);
         this.options.onConnectionError?.(mapped);
         this.rejectAllWaitFor(mapped);
@@ -345,11 +542,29 @@ export class FluxyChatRoomConnection {
       }
     }
 
+    for (const listener of this.anyListeners) {
+      try {
+        listener(event);
+      } catch {
+        /* ignore */
+      }
+    }
+
     for (const listener of this.listeners) {
       try {
         listener(event);
       } catch {
         /* listener errors must not break the connection */
+      }
+    }
+  }
+
+  private emitAnyOnly(event: FluxyChatEvent): void {
+    for (const listener of this.anyListeners) {
+      try {
+        listener(event);
+      } catch {
+        /* ignore */
       }
     }
   }

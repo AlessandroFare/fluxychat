@@ -3,22 +3,30 @@ import type { GuideContent } from "@/lib/guides/types";
 export const PUSHER_ALTERNATIVE_SAAS_GUIDE: GuideContent = {
   title: "Pusher Channels alternative for SaaS chat",
   subtitle:
-    "Not roll-your-own WebSockets on a VPS, not a full chat suite — a hosted or self-hostable room layer on Cloudflare with history and reconnect.",
+    "Pusher's free tier works until it doesn't. If connection pricing is climbing faster than your app, room chat on Cloudflare with optional self-host is worth a look.",
   sections: [
     {
-      title: "The three-way choice",
+      title: "Why people leave Pusher",
       bullets: [
-        "Roll your own Socket.IO/WS on a VM — max control, max ops.",
-        "Pusher/Ably/Stream — fast start, vendor bill, less schema ownership.",
+        "Demo runs on the free tier; production traffic hits connection and message line items.",
+        "Start on hosted beta; self-host on your Cloudflare account when you want cost control.",
+        "You read Cloudflare DO/D1 pricing instead of guessing at a channels SKU.",
+      ],
+    },
+    {
+      title: "Three paths",
+      bullets: [
+        "Roll your own Socket.IO on a VM — full control, full ops.",
+        "Pusher / Ably / Stream — fast start, vendor bill, less schema ownership.",
         "FluxyChat — room-per-DO on Workers + D1, MIT self-host or hosted beta, SDK with loadMore.",
       ],
     },
     {
-      title: "Where Pusher threads complain",
+      title: "What Pusher threads complain about",
       bullets: [
-        "History and replay need extra work on Channels.",
-        "Pricing surprises at scale (connections, messages).",
-        "Second vendor if the app already lives on Cloudflare.",
+        "History and replay take extra work on Channels.",
+        "Pricing at scale (connections, messages).",
+        "Second vendor when the app already runs on Cloudflare.",
       ],
     },
     {
@@ -32,7 +40,7 @@ export const PUSHER_ALTERNATIVE_SAAS_GUIDE: GuideContent = {
     {
       title: "When to stay on Pusher",
       paragraphs: [
-        "Generic pub/sub, telco-scale fan-out, or you need their dashboard on day one. FluxyChat is for in-app tenant chat where you want D1 history and optional self-host.",
+        "Generic pub/sub, telco-scale fan-out, or you need their dashboard tomorrow. FluxyChat is for tenant in-app chat where you want D1 history and the option to self-host.",
       ],
     },
   ],

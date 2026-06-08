@@ -2,7 +2,12 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import { buildFluxyConnectionState, type FluxyConnectionState } from "./connection-state";
 import type { FluxyRoomConnectionStatus as FluxyWsConnectionStatus } from "./room-connection";
 import type { FluxySendMessageOptions } from "./message-template";
-import type { FluxyChatAgentRun, FluxyChatAttachment, FluxyChatMessage } from "./index";
+import type {
+  FluxyChatAgentRun,
+  FluxyChatAttachment,
+  FluxyChatMessage,
+  FluxyRoomLive,
+} from "./index";
 
 /** WebSocket status plus SSE/polling fallbacks used by {@link useChat}. */
 export type FluxyUseChatConnectionStatus =
@@ -28,8 +33,14 @@ export interface FluxyRoomStoreState {
   historyLoaded: boolean;
   online: number;
   typingUsers: Record<string, boolean>;
+  typingIntents: Record<string, import("./index").FluxyPresenceIntent>;
   seenBy: Record<number, string[]>;
   onlineUsers: string[];
+  presenceMembers: Array<{ userId: string; userInfo?: Record<string, unknown> }>;
+  /** REST snapshot from `GET /rooms/:id/live` (Portal-style getParticipants). */
+  liveSnapshot: FluxyRoomLive | null;
+  subscriptionCount: number;
+  socketId: string | null;
   connected: boolean;
   connectionStatus: FluxyUseChatConnectionStatus;
   connectionState: FluxyConnectionState;
@@ -51,6 +62,8 @@ export interface FluxyRoomStoreState {
   retryMessage: (clientMessageId: string) => void;
   loadHistory: () => Promise<void>;
   loadMore: () => Promise<void>;
+  /** Refresh `liveSnapshot` from `GET /rooms/:id/live` (Portal-style). */
+  loadLive: () => Promise<void>;
   setTyping: (isTyping: boolean) => void;
   editMessage: (messageId: number, content: string) => void;
   sendReaction: (messageId: number, emoji: string, op?: "add" | "remove") => void;
@@ -61,6 +74,7 @@ export interface FluxyRoomStoreState {
     options?: { agentId?: string; replyTo?: number | null },
   ) => Promise<unknown>;
   clearToolThread: () => void;
+  sendClientEvent: (eventName: string, data: unknown) => void;
 }
 
 export type FluxyRoomStore = StoreApi<FluxyRoomStoreState>;
@@ -81,8 +95,13 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     historyLoaded: false,
     online: 0,
     typingUsers: {},
+    typingIntents: {},
     seenBy: {},
     onlineUsers: [],
+    presenceMembers: [],
+    liveSnapshot: null,
+    subscriptionCount: 0,
+    socketId: null,
     connected: false,
     connectionStatus: "connecting",
     connectionState: buildFluxyConnectionState({ status: "connecting" }),
@@ -99,6 +118,7 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     retryMessage: noop,
     loadHistory: async () => {},
     loadMore: async () => {},
+    loadLive: async () => {},
     setTyping: noop,
     editMessage: noop,
     sendReaction: noop,
@@ -106,6 +126,7 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     deleteMessage: noop,
     invokeAgent: async () => notReady(),
     clearToolThread: noop,
+    sendClientEvent: noop,
   }));
 }
 

@@ -3,6 +3,9 @@
  * @returns {Promise<Response|null>}
  */
 import { pickRouteDeps } from "./route-http-deps.js";
+import { getRoomStubForProject } from "../lib/room-shard.js";
+import { ensurePublicRoomMembership } from "../lib/public-room-access.js";
+import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
 
 export async function dispatchRealtimeStatsRoutes(request, url, h) {
   const {
@@ -48,6 +51,54 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
   ]);
 
 
+  if (url.pathname.startsWith("/ws/user/")) {
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return new Response("Expected WebSocket", { status: 400 });
+    }
+
+    const pathUserId = url.pathname.split("/").pop();
+    const wsAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!wsAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    if (!pathUserId || pathUserId !== wsAuth.userId) {
+      return json(
+        { error: "forbidden: token sub must match user channel id" },
+        { status: 403 },
+      );
+    }
+
+    const wsConnectLimit = Number(env.RATE_LIMIT_WS_CONNECTIONS_PER_MINUTE || 0);
+    if (wsConnectLimit > 0) {
+      const ipRate = await checkAndConsumeIpRateLimit(env, {
+        request,
+        scope: "ws-connect",
+        limit: wsConnectLimit,
+        windowSeconds: 60,
+      });
+      if (!ipRate.allowed) {
+        return json(
+          {
+            error: "rate_limit_exceeded",
+            retryAfterSeconds: ipRate.retryAfterSeconds,
+          },
+          {
+            status: 429,
+            headers: { "Retry-After": String(ipRate.retryAfterSeconds) },
+          },
+        );
+      }
+    }
+
+    const id = env.USER.idFromName(`${wsAuth.projectId}__${wsAuth.userId}`);
+    const stub = env.USER.get(id);
+    return stub.fetch(request);
+  }
+
   if (url.pathname.startsWith("/ws/room/")) {
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected WebSocket", { status: 400 });
@@ -62,13 +113,54 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     if (!wsAuth) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
-    const isMember = await isRoomMember(env, wsAuth.projectId, roomId, wsAuth.userId);
-    if (!isMember) {
+    const canAccess = await canAccessRoom(env, wsAuth, roomId);
+    if (!canAccess) {
       return json({ error: "forbidden: user is not a member of this room" }, { status: 403 });
     }
+    await ensurePublicRoomMembership(
+      env,
+      wsAuth.projectId,
+      roomId,
+      wsAuth.userId,
+      guestMemberRoleForJoin(wsAuth),
+    );
 
-    const id = env.ROOM.idFromName(roomId);
-    const stub = env.ROOM.get(id);
+    const roomTypeRow = await env.DB.prepare(
+      "SELECT type FROM rooms WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(roomId, wsAuth.projectId)
+      .first();
+    const isPublicRoom = roomTypeRow?.type === "public";
+
+    const wsConnectLimit = Number(
+      isPublicRoom
+        ? env.RATE_LIMIT_PUBLIC_WS_CONNECTIONS_PER_MINUTE ||
+            env.RATE_LIMIT_WS_CONNECTIONS_PER_MINUTE ||
+            0
+        : env.RATE_LIMIT_WS_CONNECTIONS_PER_MINUTE || 0,
+    );
+    if (wsConnectLimit > 0) {
+      const ipRate = await checkAndConsumeIpRateLimit(env, {
+        request,
+        scope: "ws-connect",
+        limit: wsConnectLimit,
+        windowSeconds: 60,
+      });
+      if (!ipRate.allowed) {
+        return json(
+          {
+            error: "rate_limit_exceeded",
+            retryAfterSeconds: ipRate.retryAfterSeconds,
+          },
+          {
+            status: 429,
+            headers: { "Retry-After": String(ipRate.retryAfterSeconds) },
+          },
+        );
+      }
+    }
+
+    const stub = await getRoomStubForProject(env, wsAuth.projectId, roomId, wsAuth.userId);
     return stub.fetch(request);
   }
 
@@ -91,8 +183,7 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     if (!isMember) {
       return json({ error: "forbidden: user is not a member of this room" }, { status: 403 });
     }
-    const id = env.ROOM.idFromName(roomId);
-    const stub = env.ROOM.get(id);
+    const stub = await getRoomStubForProject(env, sseAuth.projectId, roomId, sseAuth.userId);
     return stub.fetch(request);
   }
 

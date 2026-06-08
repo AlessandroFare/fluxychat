@@ -23,6 +23,11 @@ import { formatDateTime } from "@/lib/format-datetime";
 import { messageFromUnknown } from "@/lib/error-message";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
+import { WebhookPlaygroundCard } from "../components/webhook-playground-card";
+import { SentDeliveriesCard } from "../components/sent-deliveries-card";
+import { SentContactsCard } from "../components/sent-contacts-card";
+import { RealtimeEventInspector } from "../components/realtime-event-inspector";
+import { UserWatchlistCard } from "../components/user-watchlist-card";
 
 const WORKER_URL = getPublicWorkerUrl();
 
@@ -83,7 +88,7 @@ export default function AdminPage() {
   const [loadingReports, setLoadingReports] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookEvents, setWebhookEvents] = useState(
-    "message.created,report.created,moderation.auto_flag"
+    "message.created,report.created,moderation.auto_flag,room.occupied,room.vacated,client_event,cache_miss,user.event,member_joined,member_left,subscription_count"
   );
   const [webhookSecret, setWebhookSecret] = useState("");
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -464,6 +469,18 @@ export default function AdminPage() {
           )}
         </div>
       </Section>
+
+      <WebhookPlaygroundCard />
+      <SentDeliveriesCard adminJwt={adminJwt.trim()} />
+      <SentContactsCard adminJwt={adminJwt.trim()} />
+
+      <RealtimeEventInspector
+        adminJwt={adminJwt.trim()}
+        defaultRoomId={roomId}
+        defaultUserId={userId}
+      />
+
+      <UserWatchlistCard jwt={adminJwt.trim()} userId={userId} />
 
       <Section title="Announcements">
         <Textarea

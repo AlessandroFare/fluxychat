@@ -1,11 +1,16 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { FluxyChatClient, type FluxyChatRoom } from "@fluxy-chat/sdk";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { ConfirmDialog } from "../components/confirm-dialog";
+import { RoomOfflineNotifySettings } from "../components/room-offline-notify-settings";
+import { useClerkUser } from "@/lib/clerk-user";
+import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
+import { readJwtSub } from "@/lib/jwt-claims";
 import { RoomTypeSelect } from "../components/room-type-select";
 import { isRoomType } from "@/lib/room-types";
 import { Banner, Button, Input, Section } from "../components/ui";
@@ -13,15 +18,25 @@ import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
 import { AssistantRoomPanel } from "../components/assistant-room-panel";
+import { RoomHealthCard } from "../components/room-health-card";
+import { RoomScheduledCompose } from "../components/room-scheduled-compose";
 
 const WORKER_URL = getPublicWorkerUrl();
 
 export default function RoomsPage() {
+  const searchParams = useSearchParams();
+  const roomFromQuery = searchParams.get("room")?.trim() || null;
   const { adminJwt, memberJwt, activeProject } = useDashboardSession();
+  const { user: clerkUser } = useClerkUser();
+  const memberToken = memberJwt.trim();
+  const fluxyMemberUserId =
+    (clerkUser?.id ? fluxyUserIdFromClerk(clerkUser.id) : null) ??
+    readJwtSub(memberToken) ??
+    "";
   const token = (adminJwt || memberJwt).trim();
   /** Prefer member JWT for listing — matches quickstart; admin still used for mutations when needed. */
   const listToken = (memberJwt || adminJwt).trim();
-  const [rooms, setRooms] = useState<FluxyChatRoom[]>([]);
+  const [rooms, setRooms] = useState<(FluxyChatRoom & { unreadCount?: number })[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -88,6 +103,11 @@ export default function RoomsPage() {
     if (!listToken) return;
     void loadRooms();
   }, [listToken, loadRooms]);
+
+  useEffect(() => {
+    if (!roomFromQuery) return;
+    setSelectedId(roomFromQuery);
+  }, [roomFromQuery]);
 
   const createRoom = async () => {
     if (!token || !newName.trim()) return;
@@ -269,7 +289,14 @@ export default function RoomsPage() {
                       : "border-border bg-muted/30 text-foreground hover:bg-muted/50",
                   ].join(" ")}
                 >
-                  <div className="font-semibold">{r.name}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{r.name}</span>
+                    {typeof r.unreadCount === "number" && r.unreadCount > 0 ? (
+                      <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                        {r.unreadCount > 99 ? "99+" : r.unreadCount}
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="mt-0.5 text-xs text-muted-foreground">
                     {r.id} · {r.type}
                   </div>
@@ -328,6 +355,65 @@ export default function RoomsPage() {
                 onRemove={(uid) => setMemberToRemove(uid)}
                 memberBusy={memberBusy}
               />
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    const url = `${window.location.origin}/agents?room=${encodeURIComponent(selectedId)}&replay=1&replayLimit=100`;
+                    void navigator.clipboard?.writeText(url);
+                    setNotice("Replay deep link copied.");
+                  }}
+                >
+                  Copy replay link
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  disabled={!listClient.isAuthenticated()}
+                  onClick={async () => {
+                    try {
+                      const pack = await listClient.getRoomComplianceExport(selectedId);
+                      const blob = new Blob([JSON.stringify(pack, null, 2)], {
+                        type: "application/json",
+                      });
+                      const a = document.createElement("a");
+                      a.href = URL.createObjectURL(blob);
+                      a.download = `fluxy-compliance-${selectedId}.json`;
+                      a.click();
+                      setNotice("Compliance pack downloaded.");
+                    } catch (e: unknown) {
+                      setError(messageFromUnknown(e, "Export failed"));
+                    }
+                  }}
+                >
+                  Compliance export
+                </Button>
+              </div>
+
+              {listClient.isAuthenticated() ? (
+                <div className="mt-6 space-y-4">
+                  <RoomHealthCard client={listClient} roomId={selectedId} />
+                  <RoomScheduledCompose client={listClient} roomId={selectedId} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomOfflineNotifySettings
+                    roomId={selectedId}
+                    memberJwt={memberToken}
+                    memberUserId={fluxyMemberUserId || undefined}
+                  />
+                </div>
+              ) : (
+                <p className="mt-4 text-xs text-muted-foreground">
+                  Add a member JWT in Quickstart to configure offline SMS for your user in this room.
+                </p>
+              )}
             </>
           )}
         </div>

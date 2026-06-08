@@ -51,6 +51,13 @@ Relevant to the home demo:
 - The home **`ChatWindow`** passes **`uploadComposerFile` → `FluxyChatClient.uploadFile(roomId, file)`** so image / file / audio icons use a native picker instead of URL prompts.
 - **`POST /messages`** accepts an optional **`attachments`** array (same shape as websocket sends); entries are validated to `http(s)` URLs and persisted to D1 for history.
 
+## Notifications (P7)
+
+- Worker: `GET /notifications`, `POST /notifications/:id/read`, `POST /notifications/read-all`
+- SDK: `client.listNotifications()`, `useNotifications(client)`, `useChat({ markReadLatest: true })`
+- Console: `/notifications` inbox; overview card on `/`; unread badges on `/rooms`
+- Deep link: `/rooms?room=<roomId>` selects a room after load
+
 ## Composer `@mentions`
 
 The home page wires `@fluxychat/ui` **`ChatWindow`** with:

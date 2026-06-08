@@ -1,0 +1,238 @@
+# Pusher Channels parity (P9)
+
+FluxyChat maps [Pusher Channels](https://pusher.com/docs/channels) concepts onto **rooms**, **JWT auth**, **Cloudflare Durable Objects**, and the `@fluxy-chat/sdk`. This document is the operator and integrator reference for P9 (roadmap `ROADMAP_EXECUTION.md`).
+
+## Concept mapping
+
+| Pusher | FluxyChat |
+|--------|-----------|
+| Channel | Room (`rooms.id`) |
+| Public channel | Room `type: "public"` |
+| Private channel | Room `type: "group"` / `dm` + membership |
+| Presence channel | WS presence events on any room |
+| Cache channel | `cache=1` on WS + DO snapshot |
+| Encrypted channel | `e2eEnabled` on room + SDK AES-GCM |
+| User channel | `UserDurableObject` + `/ws/user/:userId` |
+| `socket_id` | `socketId` on subscribe / `excludeSocketId` on publish |
+| HTTP trigger | `POST /events` (multi-room) |
+| Webhooks | Outbound signed webhooks + verify playground |
+
+Authentication is always **JWT** (or project API key for server routes). Public rooms do not mean anonymous access: any signed-in project member may join.
+
+---
+
+## P9 feature reference
+
+### P9-1–2 Publish/subscribe and private auth
+
+- **WS:** connect to `/ws/rooms/:roomId?token=…`
+- **REST:** messages, edits, reactions via standard room APIs
+- **Auth:** JWT with `projectId`, `userId`, `roles`; membership enforced in Worker and Room DO
+
+### P9-3–4 Presence and subscription count
+
+WS events (SDK types in `FluxyChatClient`):
+
+- `subscription_succeeded` — initial presence snapshot
+- `member_joined` / `member_left`
+- `presence` — full member list updates
+- `subscription_count` — connection count for the room
+
+Pass optional `presenceInfo` on connect for `user_info`-style metadata.
+
+### P9-5 Occupied / vacated webhooks
+
+Configure outbound webhooks for:
+
+- `room.occupied` — first subscriber connects
+- `room.vacated` — last subscriber disconnects
+
+Defaults are available in the admin console webhook UI.
+
+### P9-6 Client events
+
+Clients may send `client-*` event names over WS (rate-limited). Server broadcasts to other members and can emit `client_event` webhooks. Use `excludeSocketId` to skip the sender (P9-11).
+
+### P9-7 Cache channels
+
+- Connect with `cache=1` query param to receive the last cached server event immediately
+- Room DO stores a small snapshot; `cache_miss` webhook when cache is empty on subscribe
+
+### P9-8 Encrypted channels (E2E)
+
+1. Owner/admin: `PATCH /rooms/:id` with `{ "e2eEnabled": true }`
+2. Members: `GET /rooms/:id/e2e-key` → `{ e2eKey }` (server-wrapped at rest)
+3. SDK: `getRoomE2eKey(roomId)` and encrypted message envelopes (`room-e2e.ts`)
+
+TLS still applies; E2E protects payload at the application layer.
+
+#### P10-P5 — Trust model vs Pusher encrypted channels
+
+| Aspect | Pusher encrypted channels | FluxyChat room E2E (P9-8) |
+|--------|---------------------------|---------------------------|
+| Key distribution | Client derives/shared secret; Pusher never sees plaintext | Room key via `GET /rooms/:id/e2e-key` (JWT member); key wrapped at rest in D1 |
+| Server visibility | Pusher routes ciphertext only | Worker/DO store ciphertext envelopes; plaintext only on clients after decrypt |
+| Channel auth | `POST /auth` returns signed subscription | Same pattern: `POST /auth/channel` + member JWT; optional `presenceInfo` |
+| Rotation | App-managed master secret | Re-enable E2E on room or rotate via admin `PATCH /rooms/:id` (new wrap) |
+| When to use | Compliance: server must not read message bodies | Same; also pair with `PUBLIC_GUEST_*` off for sensitive rooms |
+
+**E2E test checklist (manual):**
+
+1. Enable E2E on a private room; two members fetch key and exchange encrypted messages — third member without key sees opaque payload in REST/WS.
+2. Disable E2E — new messages are plaintext on the wire (TLS only).
+3. Guest session on a **public** room must not call `/e2e-key` (403) unless promoted to member.
+
+Pusher docs: [Encrypted channels](https://pusher.com/docs/channels/using_channels/encrypted-channels). FluxyChat does not implement Pusher’s shared-secret derivation; use our room key API and SDK `room-e2e.ts` helpers.
+
+### P9-9 User channel
+
+1. `POST /auth/signin` — exchange credentials for a user-scoped session (see OpenAPI)
+2. SDK: `signIn()`, `connectUser()`, `triggerUserEvent(userId, event)`
+3. React: `useUserChannel({ userId })`
+4. Server push: `POST /users/:userId/events` (JWT, same user or admin)
+
+Binding: `USER` Durable Object in `wrangler.toml` (migration v3).
+
+### P9-10 Multi-room HTTP trigger
+
+```bash
+curl -X POST "$WORKER/events" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roomIds": ["room-a", "room-b"],
+    "name": "my-event",
+    "data": { "score": 1 },
+    "excludeSocketId": "abc123"
+  }'
+```
+
+SDK: `client.triggerEvents({ roomIds, name, data, excludeSocketId })`
+
+### P9-11 Exclude sender
+
+On WS connect, server assigns `socketId`. Pass `excludeSocketId` (or `socket_id`) on `POST /events` and room announce paths to omit the originating connection.
+
+### P9-12 Connection state
+
+SDK emits `state_change` and exposes `connectionState` (`connecting`, `connected`, `reconnecting`, `disconnected`, etc.).
+
+### P9-13 Transport fallbacks
+
+Order: WebSocket → SSE (`/rooms/:id/stream`) → polling. See [transport-fallback.md](./cookbook/transport-fallback.md).
+
+### P9-14 Webhook batch verification
+
+Verify inbound or test signatures:
+
+- **Single payload:** `POST /webhooks/verify` (registered webhook) or `POST /webhooks/verify-batch` with `{ secret, body, signature }`
+- **Batch:** `{ secret, events: [...], signature }` where signature is `HMAC-SHA256(secret, JSON.stringify(events))`
+- Headers: `X-Fluxy-Signature` or `X-Pusher-Signature` (alias)
+
+Admin **Webhook playground** supports registered, raw, and batch modes.
+
+### P9-15 Live inspector
+
+Admin console → realtime event inspector (`realtime-event-inspector.tsx`) for debugging WS traffic.
+
+### P9-16 Watchlist
+
+- `GET/POST/DELETE /users/:userId/watchlist`
+- Fanout: room events matching watchlist targets → `watchlist_event` on user channel
+- Dashboard: user watchlist card
+
+Migration: `0042_user_watchlist.sql`
+
+### P9-17 Terminate connections
+
+`DELETE /users/:userId/connections` — closes user channel WS and room connections for that user.
+
+SDK: `terminateUserConnections(userId)`
+
+### P9-18 Global event binding
+
+```ts
+client.onAnyEvent((type, payload) => { /* bind_global */ });
+client.offAnyEvent(handler);
+// useChat({ onAnyEvent: ... })
+```
+
+### P9-19 Public channels
+
+- Create room with `type: "public"` (or patch existing room)
+- Any authenticated project member may connect; first connect **lazy-joins** `room_members`
+- Optional stricter limit: `RATE_LIMIT_PUBLIC_WS_CONNECTIONS_PER_MINUTE` (falls back to `RATE_LIMIT_WS_CONNECTIONS_PER_MINUTE`)
+
+### P9-20 Webhook event types
+
+Register: `client_event`, `member_joined`, `member_left`, `subscription_count`, `cache_miss`, `room.occupied`, `room.vacated`, etc. in webhook configuration.
+
+Member/subscription webhooks are emitted from Room DO when those WS events occur (P10-P1).
+
+---
+
+## SDK quick reference
+
+```ts
+import {
+  FluxyChatClient,
+  useChat,
+  useUserChannel,
+} from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({ baseUrl, userId, token });
+
+// User channel (P9-9)
+await client.signIn({ /* … */ });
+const userConn = client.connectUser();
+userConn.on("notification", (p) => {});
+
+// Multi-room trigger (P9-10)
+await client.triggerEvents({
+  roomIds: ["a", "b"],
+  name: "score-update",
+  data: { n: 1 },
+  excludeSocketId: conn.socketId,
+});
+
+// E2E (P9-8)
+const { e2eKey } = await client.getRoomE2eKey(roomId);
+
+// Watchlist (P9-16)
+await client.addWatchlistTarget(userId, { type: "room", targetId: roomId });
+
+// Global handler (P9-18)
+client.onAnyEvent((type, data) => console.log(type, data));
+
+// Terminate (P9-17)
+await client.terminateUserConnections(userId);
+```
+
+```tsx
+const { messages, connectionState } = useChat({
+  roomId,
+  client,
+  onAnyEvent: (type, data) => {},
+  cache: true, // P9-7
+});
+```
+
+---
+
+## Deploy checklist (P9)
+
+1. Apply D1 migrations through **0042** (`e2e`, `watchlist`, etc.)
+2. Deploy Worker with `USER` binding and DO migration **v3**
+3. Set optional `RATE_LIMIT_PUBLIC_WS_CONNECTIONS_PER_MINUTE` in Worker secrets
+4. Redeploy dashboard for admin inspector + webhook playground
+
+OpenAPI: `apps/worker/openapi.yaml` — `/events`, `/auth/signin`, `/users/*`, `/webhooks/verify-batch`, `/rooms/{id}/e2e-key`.
+
+---
+
+## Related docs
+
+- [Transport fallback](./cookbook/transport-fallback.md)
+- [Auth / JWT](./cookbook/auth-jwt.md)
+- [SDK README](../packages/sdk/README.md)
+- [ROADMAP_EXECUTION.md](../ROADMAP_EXECUTION.md) — P9 status table
