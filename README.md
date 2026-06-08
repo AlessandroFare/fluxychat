@@ -1,6 +1,6 @@
 ## fluxychat
 
-> **Open beta** — [Try hosted cloud](https://fluxychat.com/landing) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Dev.to walkthrough](https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · **Support:** fluxychat@outlook.com
+> **Open beta** — [Try hosted cloud](https://fluxychat.com/landing) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Dev.to walkthrough](https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.0) · **Support:** fluxychat@outlook.com
 
 **Realtime that feels like serverless.** Edge-native chat on Cloudflare Workers + D1 — `@fluxy-chat/sdk`, operator console, MIT self-host or hosted quickstart.
 

@@ -20,7 +20,8 @@ export function ThreadSummary({
   minReplies = 2,
   className,
 }: ThreadSummaryProps) {
-  const fluxyClient = useFluxyChatOptional();
+  const fluxyCtx = useFluxyChatOptional();
+  const fluxyClient = fluxyCtx?.client ?? null;
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

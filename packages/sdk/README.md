@@ -1,5 +1,7 @@
 # @fluxy-chat/sdk
 
+[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.0)
+
 Client for a **Fluxychat Worker** (self-hosted or [Fluxychat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and optional React `useChat`.
 
 The SDK talks to **your** Worker URL. It does **not** include LLM API keys — only your Fluxy **project API key** or **member JWT**.

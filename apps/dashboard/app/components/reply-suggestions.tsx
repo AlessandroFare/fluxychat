@@ -27,7 +27,8 @@ export function ReplySuggestions({
   onSelect,
   className,
 }: ReplySuggestionsProps) {
-  const fluxyClient = useFluxyChatOptional();
+  const fluxyCtx = useFluxyChatOptional();
+  const fluxyClient = fluxyCtx?.client ?? null;
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);

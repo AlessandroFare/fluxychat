@@ -7,7 +7,7 @@ const mockSummarizeThread = vi.fn();
 
 vi.mock("@fluxy-chat/sdk", () => ({
   useFluxyChatOptional: () => ({
-    summarizeThread: mockSummarizeThread,
+    client: { summarizeThread: mockSummarizeThread },
   }),
 }));
 

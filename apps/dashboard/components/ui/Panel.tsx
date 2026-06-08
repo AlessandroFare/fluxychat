@@ -2,10 +2,11 @@ import { cn } from "@/lib/utils";
 
 interface PanelProps {
   children: React.ReactNode;
+  title?: string;
   className?: string;
 }
 
-export function Panel({ children, className }: PanelProps) {
+export function Panel({ children, title, className }: PanelProps) {
   return (
     <div
       className={cn(
@@ -13,6 +14,7 @@ export function Panel({ children, className }: PanelProps) {
         className,
       )}
     >
+      {title ? <h2 className="mb-4 text-sm font-semibold text-foreground">{title}</h2> : null}
       {children}
     </div>
   );

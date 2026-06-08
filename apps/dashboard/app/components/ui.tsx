@@ -113,14 +113,23 @@ export function Textarea({
   );
 }
 
-type ButtonVariant = "primary" | "neutral" | "ghost" | "outline" | "destructive";
+type ButtonVariant =
+  | "primary"
+  | "neutral"
+  | "ghost"
+  | "outline"
+  | "destructive"
+  | "default"
+  | "secondary";
 type ButtonSize = "sm" | "md" | "lg";
 
 const buttonVariantClasses: Record<ButtonVariant, string> = {
   primary: "bg-primary text-white border-transparent hover:opacity-90",
+  default: "bg-primary text-white border-transparent hover:opacity-90",
   neutral: "border-slate-800/15 bg-slate-900 text-white hover:bg-slate-800",
   ghost: "border-transparent bg-transparent text-foreground hover:bg-muted/80",
   outline: "border-border bg-background text-foreground hover:bg-muted/60",
+  secondary: "border-border bg-muted/60 text-foreground hover:bg-muted",
   destructive: "bg-red-600 text-white border-red-600 hover:opacity-90",
 };
 

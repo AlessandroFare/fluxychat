@@ -8,7 +8,7 @@ const mockSuggestReplies = vi.fn();
 
 vi.mock("@fluxy-chat/sdk", () => ({
   useFluxyChatOptional: () => ({
-    suggestReplies: mockSuggestReplies,
+    client: { suggestReplies: mockSuggestReplies },
   }),
 }));
 

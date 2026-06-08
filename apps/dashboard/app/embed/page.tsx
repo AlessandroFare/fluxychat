@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Code2, Copy, RefreshCw } from "lucide-react";
+import { Copy, RefreshCw } from "lucide-react";
 import { FluxyChatClient, type FluxyEmbedConfig } from "@fluxy-chat/sdk";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
@@ -104,7 +104,6 @@ export default function EmbedWidgetPage() {
       <ConsolePageHeader
         title="Embed widget"
         description="Add a chat bubble to any site with one script tag. Origin allowlist protects guest sessions."
-        icon={Code2}
         actions={
           <Button variant="ghost" size="sm" onClick={() => void reload()} disabled={loading}>
             <RefreshCw className="h-4 w-4" />
