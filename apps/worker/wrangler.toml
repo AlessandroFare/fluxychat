@@ -5,7 +5,7 @@ compatibility_date = "2026-03-24"
 
 [vars]
 # When true, cron jobs run via FluxyScheduledWorkflow (P12-L); Worker `scheduled` is a no-op.
-WORKFLOW_SCHEDULES_ENABLED = "true"
+WORKFLOW_SCHEDULES_ENABLED = "false"
 
 # Local optional vars/secrets: see `.dev.vars.example` (copy to `.dev.vars` for `wrangler dev`).
 # Runtime env/secrets checklist:
@@ -100,6 +100,10 @@ binding = "BROWSER"
 # binding = "FLUXY_SCHEDULED_WORKFLOW"
 # class_name = "FluxyScheduledWorkflow"
 # schedules = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *"]
+
+[[routes]]
+pattern = "api.fluxychat.com"
+custom_domain = true
 
 
 

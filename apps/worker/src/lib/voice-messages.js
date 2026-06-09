@@ -95,7 +95,7 @@ export function validateVoiceUpload({ mimeType, sizeBytes, durationMs }) {
       };
     }
   }
-  return { ok: true, ext: MIME_TO_EXT[normalized] };
+  return { ok: true, ext: MIME_TO_EXT[normalized], mimeType: normalized };
 }
 
 /**

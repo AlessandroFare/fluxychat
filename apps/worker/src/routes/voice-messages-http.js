@@ -174,7 +174,7 @@ export async function dispatchVoiceMessagesRoutes(request, url, h) {
   // 6. Quota + rate limit
   const quotaResult = await checkAndConsumeProjectQuota(env, {
     projectId: authProjectId,
-    metric: "messages",
+    metricName: "messages_created",
   });
   if (!quotaResult.allowed) {
     const reset = quotaResetInfo();
@@ -239,7 +239,7 @@ export async function dispatchVoiceMessagesRoutes(request, url, h) {
     roomId,
     messageId,
     audioBytes,
-    mimeType: audioField.type,
+    mimeType: validation.mimeType,
     ext: validation.ext,
   });
   if (!upload.ok) {

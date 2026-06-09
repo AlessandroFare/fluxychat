@@ -9,16 +9,16 @@ import {
 describe("validateVoiceUpload", () => {
   it("accepts webm with a valid size and ext", () => {
     const res = validateVoiceUpload({ mimeType: "audio/webm", sizeBytes: 1024 });
-    expect(res).toEqual({ ok: true, ext: "webm" });
+    expect(res).toEqual({ ok: true, ext: "webm", mimeType: "audio/webm" });
   });
 
   it("accepts codec parameters on webm/ogg (MediaRecorder default)", () => {
     expect(
       validateVoiceUpload({ mimeType: "audio/webm;codecs=opus", sizeBytes: 1024 }),
-    ).toEqual({ ok: true, ext: "webm" });
+    ).toEqual({ ok: true, ext: "webm", mimeType: "audio/webm" });
     expect(
       validateVoiceUpload({ mimeType: "audio/ogg;codecs=opus", sizeBytes: 1024 }),
-    ).toEqual({ ok: true, ext: "ogg" });
+    ).toEqual({ ok: true, ext: "ogg", mimeType: "audio/ogg" });
   });
 
   it("normalises mime casing and picks the right ext for every allowed type", () => {
@@ -35,7 +35,7 @@ describe("validateVoiceUpload", () => {
     ];
     for (const [mime, ext] of samples) {
       const res = validateVoiceUpload({ mimeType: mime, sizeBytes: 100 });
-      expect(res).toEqual({ ok: true, ext });
+      expect(res).toMatchObject({ ok: true, ext, mimeType: mime.toLowerCase().split(";")[0] });
     }
   });
 

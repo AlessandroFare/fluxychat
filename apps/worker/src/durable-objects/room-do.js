@@ -373,23 +373,35 @@ export class RoomDurableObject {
     const projectId = this.projectId;
     const connectOpts = parseWsConnectOptions(request);
     if (connectOpts.cache) {
-      await this.sendCacheOnConnect(webSocket);
+      try {
+        await this.sendCacheOnConnect(webSocket);
+      } catch (err) {
+        logError("do.cache_on_connect_failed", err, { roomId, projectId });
+      }
     }
     if (connectOpts.replay !== "off") {
-      await this.sendConnectSnapshot(webSocket, {
-        projectId,
-        roomId,
-        limit: connectOpts.limit,
-        envelopeType: connectOpts.replay === "connect" ? "replay" : "history",
-        viewerUserId: userId,
-      });
+      try {
+        await this.sendConnectSnapshot(webSocket, {
+          projectId,
+          roomId,
+          limit: connectOpts.limit,
+          envelopeType: connectOpts.replay === "connect" ? "replay" : "history",
+          viewerUserId: userId,
+        });
+      } catch (err) {
+        logError("do.connect_snapshot_send_failed", err, { roomId, projectId });
+      }
     }
 
-    await this.sendActiveStreamState(webSocket, {
-      projectId,
-      roomId,
-      userId,
-    });
+    try {
+      await this.sendActiveStreamState(webSocket, {
+        projectId,
+        roomId,
+        userId,
+      });
+    } catch (err) {
+      logError("do.active_stream_state_failed", err, { roomId, projectId });
+    }
 
     this.wsInboundQueues.delete(webSocket);
     for (const queued of inboundQueue) {
@@ -443,6 +455,31 @@ export class RoomDurableObject {
    * @param {WebSocket} webSocket
    * @param {{ projectId: string, roomId: string, limit: number, envelopeType: "history" | "replay" }} opts
    */
+  async loadConnectSnapshotRows(projectId, roomId, limit, viewerUserId, extendedSchema) {
+    const { messageVisibilitySql } = await import("../lib/message-visibility.js");
+    const vis = messageVisibilitySql(viewerUserId || "");
+    const voiceCols = extendedSchema
+      ? ", kind, audio_url, duration_ms, transcription, transcription_status"
+      : "";
+    const visibilityCols = extendedSchema ? ", visibility, visible_to_json" : "";
+    const result = await this.env.DB.prepare(
+      `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
+              mentions, og_title, og_description, og_image, og_url, client_message_id
+              ${visibilityCols}${voiceCols}
+       FROM messages
+       WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL${extendedSchema ? vis.sql : ""}
+       ORDER BY created_at DESC LIMIT ?`,
+    )
+      .bind(
+        projectId,
+        roomId,
+        ...(extendedSchema ? vis.binds : []),
+        limit,
+      )
+      .all();
+    return result.results || [];
+  }
+
   async sendConnectSnapshot(webSocket, {
     projectId,
     roomId,
@@ -450,32 +487,44 @@ export class RoomDurableObject {
     envelopeType,
     viewerUserId,
   }) {
-    const { messageVisibilitySql } = await import("../lib/message-visibility.js");
-    const vis = messageVisibilitySql(viewerUserId || "");
-    const result = await this.env.DB.prepare(
-      `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
-              mentions, og_title, og_description, og_image, og_url, client_message_id,
-              visibility, visible_to_json
-       FROM messages
-       WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL${vis.sql}
-       ORDER BY created_at DESC LIMIT ?`,
-    )
-      .bind(projectId, roomId, ...vis.binds, limit)
-      .all();
+    let rows = [];
+    try {
+      rows = await this.loadConnectSnapshotRows(
+        projectId,
+        roomId,
+        limit,
+        viewerUserId,
+        true,
+      );
+    } catch (err) {
+      logError("do.connect_snapshot_extended_failed", err, { roomId, projectId });
+      try {
+        rows = await this.loadConnectSnapshotRows(
+          projectId,
+          roomId,
+          limit,
+          viewerUserId,
+          false,
+        );
+      } catch (fallbackErr) {
+        logError("do.connect_snapshot_failed", fallbackErr, { roomId, projectId });
+        rows = [];
+      }
+    }
 
-    const rows = result.results || [];
-    const mapped = await attachAttachmentsToMessages(
-      this.env,
-      projectId,
-      roomId,
-      rows
-    );
+    let mapped = [];
+    try {
+      mapped = await attachAttachmentsToMessages(this.env, projectId, roomId, rows);
+    } catch (err) {
+      logError("do.connect_snapshot_attach_failed", err, { roomId, projectId });
+      mapped = [];
+    }
 
     webSocket.send(
       JSON.stringify({
         type: envelopeType,
         messages: mapped.reverse(),
-      })
+      }),
     );
   }
 
@@ -1549,8 +1598,22 @@ export class RoomDurableObject {
     await this.ensureStorageHydrated();
 
     if (request.headers.get("Upgrade") === "websocket") {
-      const [client, server] = Object.values(new WebSocketPair());
-      await this.handleWebSocket(server, request);
+      const pair = new WebSocketPair();
+      const client = pair[0];
+      const server = pair[1];
+      try {
+        await this.handleWebSocket(server, request);
+      } catch (err) {
+        logError("do.ws_handle_failed", err, {
+          roomId: this.getRoomIdFromRequest(request) || this.roomId,
+        });
+        try {
+          server.close(1011, "websocket_setup_failed");
+        } catch {
+          /* ignore */
+        }
+        throw err;
+      }
       return new Response(null, { status: 101, webSocket: client });
     }
 

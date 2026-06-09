@@ -1,3 +1,13 @@
+function parseMentionsJson(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function attachAttachmentsToMessages(env, projectId, roomId, rows) {
   const mapped = rows.map((r) => ({
     id: r.id,
@@ -10,6 +20,11 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
     editedAt: r.edited_at ?? null,
     deletedAt: r.deleted_at ?? null,
     expiresAt: r.expires_at ?? null,
+    kind: r.kind ?? "text",
+    audioUrl: r.audio_url ?? undefined,
+    durationMs: r.duration_ms ?? undefined,
+    transcription: r.transcription ?? undefined,
+    transcriptionStatus: r.transcription_status ?? undefined,
     visibility: r.visibility ?? "room",
     visibleTo: (() => {
       if (!r.visible_to_json) return undefined;
@@ -21,7 +36,7 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
       }
     })(),
     clientMessageId: r.client_message_id ?? undefined,
-    mentions: r.mentions ? JSON.parse(r.mentions) : [],
+    mentions: parseMentionsJson(r.mentions),
     preview: r.og_url
       ? {
           url: r.og_url,
