@@ -1385,7 +1385,7 @@ export class FluxyChatClient {
     return {
       id: body.messageId,
       roomId: trimmedRoomId,
-      userId: "",
+      userId: this.userId,
       content: "",
       createdAt: body.createdAt,
       parentId: options?.parentId ?? null,

@@ -880,6 +880,7 @@ export default function OnboardingPage() {
                 if (!fluxyClient || !room) return;
                 try {
                   await fluxyClient.sendVoiceMessage(room.id, audio, { durationMs });
+                  void loadHistory();
                 } catch (err: unknown) {
                   // Surface failure to the input error area below.
                   console.error("voice send failed", err);

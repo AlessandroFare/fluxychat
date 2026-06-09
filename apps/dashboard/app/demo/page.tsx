@@ -72,7 +72,7 @@ export default function DemoRoomPage() {
 
   const readOnly = session?.readOnly === true;
 
-  const { messages, sendMessage, connectionState, connected } = useChat({
+  const { messages, sendMessage, connectionState, connected, loadHistory } = useChat({
     roomId: session?.roomId ?? "",
     client: client ?? undefined,
     replay: "connect",
@@ -182,6 +182,7 @@ export default function DemoRoomPage() {
                       durationMs,
                     });
                     if (!sent) setVoiceError("Voice message not sent.");
+                    else void loadHistory();
                   } catch (err: unknown) {
                     setVoiceError(
                       err instanceof Error ? err.message : "Voice send failed",

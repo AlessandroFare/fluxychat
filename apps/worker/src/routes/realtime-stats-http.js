@@ -6,6 +6,8 @@ import { pickRouteDeps } from "./route-http-deps.js";
 import { getRoomStubForProject } from "../lib/room-shard.js";
 import { ensurePublicRoomMembership } from "../lib/public-room-access.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
+import { mergeCorsHeadersOntoResponse } from "../lib/http-cors.js";
+import { checkAndConsumeIpRateLimit } from "../lib/ip-rate-limit.js";
 
 export async function dispatchRealtimeStatsRoutes(request, url, h) {
   const {
@@ -161,14 +163,23 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     }
 
     const stub = await getRoomStubForProject(env, wsAuth.projectId, roomId, wsAuth.userId);
-    return stub.fetch(request);
+    try {
+      const res = await stub.fetch(request);
+      if (res.status !== 101) {
+        return mergeCorsHeadersOntoResponse(res, corsHeaders);
+      }
+      return res;
+    } catch (err) {
+      logError("ws.room_stub_fetch_failed", err, requestLogCtx);
+      return json({ error: "websocket_upgrade_failed" }, { status: 500, headers: corsHeaders });
+    }
   }
 
   // SSE endpoint for rooms (HTTP fallback when WebSocket is unavailable)
   if (url.pathname.match(/^\/rooms\/[^/]+\/stream$/) && request.method === "GET") {
     const acceptHeader = request.headers.get("Accept") || "";
     if (!acceptHeader.includes("text/event-stream") && !acceptHeader.includes("*/*")) {
-      return json({ error: "Accept: text/event-stream required" }, { status: 406 });
+      return json({ error: "Accept: text/event-stream required" }, { status: 406, headers: corsHeaders });
     }
     const roomId = url.pathname.split("/")[2];
     const sseAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
@@ -179,12 +190,32 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     if (!sseAuth) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
-    const isMember = await isRoomMember(env, sseAuth.projectId, roomId, sseAuth.userId);
-    if (!isMember) {
-      return json({ error: "forbidden: user is not a member of this room" }, { status: 403 });
+    const canAccess = await canAccessRoom(env, sseAuth, roomId);
+    if (!canAccess) {
+      return json({ error: "forbidden: user is not a member of this room" }, { status: 403, headers: corsHeaders });
     }
+    await ensurePublicRoomMembership(
+      env,
+      sseAuth.projectId,
+      roomId,
+      sseAuth.userId,
+      guestMemberRoleForJoin(sseAuth),
+    );
     const stub = await getRoomStubForProject(env, sseAuth.projectId, roomId, sseAuth.userId);
-    return stub.fetch(request);
+    const internalUrl = new URL("https://do-internal/sse");
+    internalUrl.search = url.search;
+    const sseRequest = new Request(internalUrl.toString(), {
+      method: "GET",
+      headers: request.headers,
+      signal: request.signal,
+    });
+    try {
+      const res = await stub.fetch(sseRequest);
+      return mergeCorsHeadersOntoResponse(res, corsHeaders);
+    } catch (err) {
+      logError("sse.room_stub_fetch_failed", err, requestLogCtx);
+      return json({ error: "sse_stream_failed" }, { status: 500, headers: corsHeaders });
+    }
   }
 
   // Simple HTTP API for listing messages in a room (paged)

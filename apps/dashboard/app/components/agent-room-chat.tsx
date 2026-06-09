@@ -728,6 +728,7 @@ export function AgentRoomChat({
                   setInputError("Voice message not sent — check authentication.");
                   return;
                 }
+                void loadHistory();
                 setReplyToId(null);
                 void fluxyClient?.putRoomDraft(trimmedRoomId, {
                   content: "",

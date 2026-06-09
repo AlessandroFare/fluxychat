@@ -35,7 +35,7 @@ describe("VoiceMessageBubble (P12-B UI)", () => {
     const player = screen.getByTestId("voice-message-player");
     expect(player).toBeTruthy();
     expect((player as HTMLAudioElement).getAttribute("src")).toBe(
-      "/attachments/voice/p/l/1.webm",
+      "http://127.0.0.1:8787/attachments/voice/p/l/1.webm",
     );
   });
 

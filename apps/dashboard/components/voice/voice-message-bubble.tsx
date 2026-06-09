@@ -3,7 +3,15 @@
 import React from "react";
 import { AudioLines, Loader2, Mic, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import type { FluxyChatMessage } from "@fluxy-chat/sdk";
+
+function resolveMediaUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const base = getPublicWorkerUrl();
+  return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
+}
 
 export interface VoiceMessageBubbleProps {
   message: FluxyChatMessage;
@@ -26,7 +34,7 @@ export function VoiceMessageBubble({
   showTranscription = true,
 }: VoiceMessageBubbleProps) {
   if (message.kind !== "voice") return null;
-  const audioUrl = message.audioUrl ?? null;
+  const audioUrl = resolveMediaUrl(message.audioUrl);
   const mimeType = message.audioMimeType ?? "audio/webm";
   const status = message.transcriptionStatus ?? "pending";
   const transcription = message.transcription ?? null;

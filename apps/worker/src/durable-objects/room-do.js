@@ -1598,9 +1598,7 @@ export class RoomDurableObject {
     await this.ensureStorageHydrated();
 
     if (request.headers.get("Upgrade") === "websocket") {
-      const pair = new WebSocketPair();
-      const client = pair[0];
-      const server = pair[1];
+      const [client, server] = Object.values(new WebSocketPair());
       try {
         await this.handleWebSocket(server, request);
       } catch (err) {
@@ -1612,7 +1610,6 @@ export class RoomDurableObject {
         } catch {
           /* ignore */
         }
-        throw err;
       }
       return new Response(null, { status: 101, webSocket: client });
     }
