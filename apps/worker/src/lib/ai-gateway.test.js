@@ -22,6 +22,13 @@ describe("ai-gateway", () => {
     expect(transport.transcriptionsUrl).toContain("/audio/transcriptions");
   });
 
+  it("strips trailing slashes without regex on legacy base URL", () => {
+    const slashes = "/".repeat(200);
+    const env = { AI_BASE_URL: `https://api.openai.com${slashes}` };
+    const transport = resolveAiTransport(env);
+    expect(transport.chatCompletionsUrl).toBe("https://api.openai.com/v1/chat/completions");
+  });
+
   it("falls back to AI_BASE_URL when gateway unset", () => {
     const env = { AI_BASE_URL: "https://api.openai.com" };
     expect(isAiGatewayEnabled(env)).toBe(false);

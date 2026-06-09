@@ -1,6 +1,6 @@
 # @fluxy-chat/sdk
 
-[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.0)
+[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.2)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.2)
 
 Client for a **Fluxychat Worker** (self-hosted or [Fluxychat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and optional React `useChat`.
 
@@ -9,12 +9,12 @@ The SDK talks to **your** Worker URL. It does **not** include LLM API keys — o
 ## Install
 
 ```bash
-npm install @fluxy-chat/sdk
+npm install @fluxy-chat/sdk zustand
 # or
-pnpm add @fluxy-chat/sdk
+pnpm add @fluxy-chat/sdk zustand
 ```
 
-Requires **React 18+** if you use `useChat` (peer dependency).
+**Peer dependencies:** install `react` (18+) when you use `useChat` / `FluxyRealtimeProvider`, and `zustand` (5+) for `useChat`, `createFluxyRoomSession`, or the room store helpers. The SDK has **no runtime npm dependencies** — only your Worker URL is contacted over the network ([Socket network-access note](https://socket.dev/alerts/networkAccess)).
 
 ### Vanilla store (Vue, Solid, Node)
 

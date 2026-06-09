@@ -24,9 +24,17 @@ async function hashOtp(code, projectId, userId, e164) {
     .join("");
 }
 
+const OTP_SPACE = 1_000_000;
+/** Largest multiple of OTP_SPACE below 2^32 for unbiased rejection sampling. */
+const OTP_RANDOM_LIMIT = Math.floor(0x1_0000_0000 / OTP_SPACE) * OTP_SPACE;
+
 function generateOtpCode() {
-  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000;
-  return String(n).padStart(6, "0");
+  while (true) {
+    const n = crypto.getRandomValues(new Uint32Array(1))[0];
+    if (n < OTP_RANDOM_LIMIT) {
+      return String(n % OTP_SPACE).padStart(6, "0");
+    }
+  }
 }
 
 /**

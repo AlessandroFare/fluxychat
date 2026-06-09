@@ -6,6 +6,13 @@ import { logInfo } from "./worker-log.js";
 
 const GATEWAY_HOST = "https://gateway.ai.cloudflare.com";
 
+/** Strip trailing slashes without regex (avoids ReDoS on hostile URLs). */
+function trimTrailingSlashes(url) {
+  let out = url;
+  while (out.endsWith("/")) out = out.slice(0, -1);
+  return out;
+}
+
 /**
  * @param {*} env
  */
@@ -40,7 +47,7 @@ export function resolveAiTransport(env) {
 
   if (isAiGatewayEnabled(env)) {
     const openAiCompatBase = gatewayUrl
-      ? gatewayUrl.replace(/\/+$/, "")
+      ? trimTrailingSlashes(gatewayUrl)
       : `${GATEWAY_HOST}/v1/${env.AI_GATEWAY_ACCOUNT_ID.trim()}/${env.AI_GATEWAY_ID.trim()}/${provider}`;
     return {
       mode: "gateway",
@@ -62,7 +69,7 @@ export function resolveAiTransport(env) {
     };
   }
 
-  const normalized = legacy.replace(/\/+$/, "");
+  const normalized = trimTrailingSlashes(legacy);
   const openAiCompatBase = normalized.endsWith("/v1")
     ? normalized
     : `${normalized}/v1`;

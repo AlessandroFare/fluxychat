@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/sdk",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Fluxychat JavaScript/TypeScript SDK — WebSocket rooms, REST messages, FluxyRealtimeProvider, useChat with loadMore",
   "license": "MIT",
   "author": "Fluxychat",
@@ -76,18 +76,25 @@
     "test": "pnpm exec vitest run"
   },
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=18",
+    "zustand": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "zustand": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "react": "latest",
-    "react-dom": "latest",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "typescript": "latest",
-    "vitest": "^4.1.5"
-  },
-  "dependencies": {
-    "zustand": "^5.0.13"
+    "vitest": "^4.1.5",
+    "zustand": "^5.0.14"
   }
 }
