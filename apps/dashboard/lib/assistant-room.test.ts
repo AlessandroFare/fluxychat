@@ -26,6 +26,6 @@ describe("assistant-room", () => {
 
   it("mentionPrefixForAgent strips leading @", () => {
     expect(mentionPrefixForAgent("@assistant")).toBe("@assistant ");
-    expect(ASSISTANT_ROOM_ID).toBe("assistant:general");
+    expect(ASSISTANT_ROOM_ID).toBe("assistant-general");
   });
 });

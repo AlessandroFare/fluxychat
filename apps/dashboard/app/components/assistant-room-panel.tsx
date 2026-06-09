@@ -36,6 +36,7 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPa
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [resolvedRoomId, setResolvedRoomId] = useState<string | null>(null);
   const [agent, setAgent] = useState<AgentRow | null>(null);
 
   const memberUserId = clerkUser?.id ? fluxyUserIdFromClerk(clerkUser.id) : "dashboard";
@@ -49,11 +50,13 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPa
     setBusy(true);
     setError(null);
     try {
-      await ensureAssistantRoom({
+      const { room } = await ensureAssistantRoom({
         workerUrl: WORKER_URL,
         memberJwt: token,
         memberUserId,
+        adminJwt: adminJwt.trim() || undefined,
       });
+      setResolvedRoomId(room.id);
       const adminToken = adminJwt.trim() || token;
       const json = await fetchWorkerJson<{ agents?: AgentRow[] }>(
         `${WORKER_URL}/agents`,
@@ -108,7 +111,7 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPa
       ) : agent ? (
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted-foreground">
-            Room <code className="font-mono">{ASSISTANT_ROOM_ID}</code> · agent{" "}
+            Room <code className="font-mono">{resolvedRoomId ?? ASSISTANT_ROOM_ID}</code> · agent{" "}
             <span className="font-medium text-foreground">{agent.name}</span>
             {agent.handle ? (
               <>
@@ -118,7 +121,7 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPa
             ) : null}
           </p>
           <AgentRoomChat
-            roomId={ASSISTANT_ROOM_ID}
+            roomId={resolvedRoomId ?? ASSISTANT_ROOM_ID}
             agentId={agent.id}
             agentName={agent.name}
             agentHandle={agent.handle}

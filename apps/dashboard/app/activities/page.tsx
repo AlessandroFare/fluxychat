@@ -40,7 +40,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 
 export default function ActivitiesPage() {
   const { adminJwt, memberJwt, activeProject } = useDashboardSession();
-  const token = memberJwt.trim() || adminJwt.trim();
+  const token = adminJwt.trim() || memberJwt.trim();
   const [roomId, setRoomId] = useState("");
   const [rows, setRows] = useState<ActivityRow[]>([]);
   const [loading, setLoading] = useState(false);

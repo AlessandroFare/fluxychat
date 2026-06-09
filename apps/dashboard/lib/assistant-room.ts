@@ -1,6 +1,8 @@
-/** Default room for in-console agent chat (Phase 1 beta UX). */
-export const ASSISTANT_ROOM_ID = "assistant:general";
-export const ASSISTANT_ROOM_DISPLAY_NAME = "assistant:general";
+/** Default room for in-console agent chat (Phase 1 beta UX). Must match worker `isValidId`. */
+export const ASSISTANT_ROOM_ID = "assistant-general";
+export const ASSISTANT_ROOM_DISPLAY_NAME = "Assistant (general)";
+/** Legacy id from early betas (colon invalid for worker room ids). */
+export const LEGACY_ASSISTANT_ROOM_ID = "assistant:general";
 
 export interface AssistantRoomRef {
   id: string;

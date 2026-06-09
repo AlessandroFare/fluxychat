@@ -7,7 +7,7 @@ import { getPublicWorkerUrl, isPublicHostedCloud } from "@/lib/worker-url-client
 const INSTALL = "pnpm add @fluxy-chat/sdk";
 
 const USE_CHAT_SNIPPET = `const { messages, sendMessage, loadHistory } = useChat({
-  roomId: "assistant:general",
+  roomId: "assistant-general",
   replay: "connect", // or "request" + loadHistory() for heavy rooms
 });`;
 

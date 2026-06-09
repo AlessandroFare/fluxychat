@@ -1353,7 +1353,12 @@ export class FluxyChatClient {
     const trimmedRoomId = roomId?.trim();
     if (!trimmedRoomId) return null;
     const form = new FormData();
-    form.append("audio", audio, "voice.webm");
+    const baseMime = audio.type?.split(";")[0]?.trim() || "audio/webm";
+    const uploadBlob =
+      audio instanceof File && audio.type === baseMime
+        ? audio
+        : new File([audio], "voice.webm", { type: baseMime });
+    form.append("audio", uploadBlob);
     form.append("roomId", trimmedRoomId);
     if (options?.parentId != null) form.append("parentId", String(options.parentId));
     if (options?.durationMs != null) form.append("durationMs", String(options.durationMs));

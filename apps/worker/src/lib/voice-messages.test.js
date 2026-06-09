@@ -12,6 +12,15 @@ describe("validateVoiceUpload", () => {
     expect(res).toEqual({ ok: true, ext: "webm" });
   });
 
+  it("accepts codec parameters on webm/ogg (MediaRecorder default)", () => {
+    expect(
+      validateVoiceUpload({ mimeType: "audio/webm;codecs=opus", sizeBytes: 1024 }),
+    ).toEqual({ ok: true, ext: "webm" });
+    expect(
+      validateVoiceUpload({ mimeType: "audio/ogg;codecs=opus", sizeBytes: 1024 }),
+    ).toEqual({ ok: true, ext: "ogg" });
+  });
+
   it("normalises mime casing and picks the right ext for every allowed type", () => {
     const samples = [
       ["audio/WEBM", "webm"],

@@ -57,11 +57,15 @@ const MIME_TO_EXT = {
  * @param {{ mimeType: string, sizeBytes: number, durationMs?: number | null }} input
  * @returns {{ ok: true, ext: string } | { ok: false, error: string, status: number }}
  */
+function normalizeAudioMimeType(mimeType) {
+  return String(mimeType).split(";")[0].trim().toLowerCase();
+}
+
 export function validateVoiceUpload({ mimeType, sizeBytes, durationMs }) {
   if (!mimeType || typeof mimeType !== "string") {
     return { ok: false, error: "mimeType required", status: 400 };
   }
-  const normalized = mimeType.toLowerCase();
+  const normalized = normalizeAudioMimeType(mimeType);
   if (!ALLOWED_MIME.has(normalized)) {
     return {
       ok: false,

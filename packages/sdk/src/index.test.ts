@@ -350,6 +350,28 @@ describe("FluxyChatClient", () => {
       expect(headers.Authorization).toBe("Bearer jwt");
     });
 
+    it("normalizes MediaRecorder mime with codec params before upload", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            messageId: 1,
+            kind: "voice",
+            audioUrl: "/a.webm",
+            transcriptionStatus: "pending",
+            createdAt: "2026-06-05T10:00:00.000Z",
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const audio = new Blob([new Uint8Array([1])], { type: "audio/webm;codecs=opus" });
+      await client.sendVoiceMessage("lobby", audio);
+      const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+      const file = body.get("audio") as File;
+      expect(file.type).toBe("audio/webm");
+    });
+
     it("returns null without calling fetch when no JWT is set", async () => {
       const fetchMock = vi.mocked(fetch);
       const client = new FluxyChatClient({ baseUrl, userId: "u" });

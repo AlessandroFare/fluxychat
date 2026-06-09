@@ -137,6 +137,11 @@ export function AgentRoomChat({
       ? "connect"
       : "connect";
 
+  const presenceInfo = useMemo(
+    () => (localUserId ? { name: localUserId } : undefined),
+    [localUserId],
+  );
+
   const {
     messages,
     sendMessage,
@@ -166,7 +171,7 @@ export function AgentRoomChat({
     replayLimit: deepLinkHistoryLimit,
     historyLimit: deepLinkHistoryLimit ?? 50,
     markReadLatest: false,
-    presenceInfo: localUserId ? { name: localUserId } : undefined,
+    presenceInfo,
   });
 
   useEffect(() => {

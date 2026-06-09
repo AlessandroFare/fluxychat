@@ -9,7 +9,7 @@ describe("AgentRoomMessage", () => {
       <AgentRoomMessage
         message={{
           id: 42,
-          roomId: "assistant:general",
+          roomId: "assistant-general",
           userId: "builtin-assistant-p1",
           content: "Hello wor",
           createdAt: "2026-05-01T00:00:00.000Z",
