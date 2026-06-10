@@ -55,7 +55,7 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
 
   if (url.pathname.startsWith("/ws/user/")) {
     if (request.headers.get("Upgrade") !== "websocket") {
-      return new Response("Expected WebSocket", { status: 400 });
+      return new Response("Expected WebSocket", { status: 400, headers: corsHeaders });
     }
 
     const pathUserId = url.pathname.split("/").pop();
@@ -70,7 +70,7 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     if (!pathUserId || pathUserId !== wsAuth.userId) {
       return json(
         { error: "forbidden: token sub must match user channel id" },
-        { status: 403 },
+        { status: 403, headers: corsHeaders },
       );
     }
 
@@ -103,7 +103,7 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
 
   if (url.pathname.startsWith("/ws/room/")) {
     if (request.headers.get("Upgrade") !== "websocket") {
-      return new Response("Expected WebSocket", { status: 400 });
+      return new Response("Expected WebSocket", { status: 400, headers: corsHeaders });
     }
 
     const roomId = url.pathname.split("/").pop();

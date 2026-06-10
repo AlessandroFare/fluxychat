@@ -52,7 +52,7 @@ export async function dispatchEmbedRoutes(request, url, h) {
 
   if (url.pathname === "/embed/frame" && request.method === "GET") {
     if (!(await isEmbedWidgetGloballyEnabled(env))) {
-      return new Response("Embed disabled", { status: 404 });
+      return new Response("Embed disabled", { status: 404, headers: corsHeaders });
     }
 
     const resolvedProjectId = customDomain?.projectId || projectId;
