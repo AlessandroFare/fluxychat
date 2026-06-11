@@ -241,7 +241,7 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     }
 
     let sql =
-      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ";
+      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ";
     const params = [auth.projectId, roomId];
 
     if (before) {
