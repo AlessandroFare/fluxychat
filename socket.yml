@@ -1,0 +1,7 @@
+version: 2
+
+projectIgnorePaths:
+  - "/*"
+  - "!/packages"
+  - "/packages/*"
+  - "!/packages/sdk"

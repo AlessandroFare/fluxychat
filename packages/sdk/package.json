@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/sdk",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "description": "Fluxychat JavaScript/TypeScript SDK — WebSocket rooms, REST messages, FluxyRealtimeProvider, useChat with loadMore",
   "license": "MIT",
   "author": "Fluxychat",
