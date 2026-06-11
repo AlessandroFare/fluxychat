@@ -290,19 +290,32 @@ export class RoomDurableObject {
       return;
     }
     const roomId = this.getRoomIdFromRequest(request) || this.roomId || this.state.id.toString();
-    await this.persistRoomContext(auth.projectId, roomId);
-    const isMember = await canAccessRoom(this.env, auth, roomId);
+    try {
+      await this.persistRoomContext(auth.projectId, roomId);
+    } catch (err) {
+      logError("do.ws_persist_room_context_failed", err, { roomId });
+    }
+    let isMember = false;
+    try {
+      isMember = await canAccessRoom(this.env, auth, roomId);
+    } catch (err) {
+      logError("do.ws_can_access_room_failed", err, { roomId });
+    }
     if (!isMember) {
       webSocket.close(1008, "Forbidden");
       return;
     }
-    await ensurePublicRoomMembership(
-      this.env,
-      auth.projectId,
-      roomId,
-      auth.userId,
-      guestMemberRoleForJoin(auth),
-    );
+    try {
+      await ensurePublicRoomMembership(
+        this.env,
+        auth.projectId,
+        roomId,
+        auth.userId,
+        guestMemberRoleForJoin(auth),
+      );
+    } catch (err) {
+      logError("do.ws_ensure_public_room_membership_failed", err, { roomId });
+    }
 
     this.clients.add(webSocket);
     logInfo("do.client_count", {
@@ -336,18 +349,21 @@ export class RoomDurableObject {
     // than showing empty state. WebSocket connections themselves cannot be restored.
     let recentUsersRows = { results: [] };
     try {
-      // Newer schema may have last_read_at; older schema only has created_at.
       recentUsersRows = await this.env.DB.prepare(
         "SELECT DISTINCT user_id FROM read_receipts WHERE room_id = ? AND project_id = ? ORDER BY last_read_at DESC LIMIT 100"
       )
         .bind(roomId, this.projectId)
         .all();
     } catch {
-      recentUsersRows = await this.env.DB.prepare(
-        "SELECT DISTINCT user_id FROM read_receipts WHERE room_id = ? AND project_id = ? ORDER BY created_at DESC LIMIT 100"
-      )
-        .bind(roomId, this.projectId)
-        .all();
+      try {
+        recentUsersRows = await this.env.DB.prepare(
+          "SELECT DISTINCT user_id FROM read_receipts WHERE room_id = ? AND project_id = ? ORDER BY created_at DESC LIMIT 100"
+        )
+          .bind(roomId, this.projectId)
+          .all();
+      } catch {
+        recentUsersRows = { results: [] };
+      }
     }
     const recoveredUserIds = (recentUsersRows.results || []).map((r) => r.user_id).filter((uid) => uid !== userId);
     for (const uid of recoveredUserIds) {
@@ -409,15 +425,19 @@ export class RoomDurableObject {
     }
 
     const presence = this.getPresenceSnapshot();
-    webSocket.send(
-      JSON.stringify({
-        type: "subscription_succeeded",
-        roomId: roomIdStr,
-        socketId,
-        subscriptionCount: presence.subscriptionCount,
-        members: presence.members,
-      }),
-    );
+    try {
+      webSocket.send(
+        JSON.stringify({
+          type: "subscription_succeeded",
+          roomId: roomIdStr,
+          socketId,
+          subscriptionCount: presence.subscriptionCount,
+          members: presence.members,
+        }),
+      );
+    } catch (err) {
+      logError("do.ws_send_subscription_succeeded_failed", err, { roomId });
+    }
 
     if (userConnCount === 1) {
       const joinPayload = {
@@ -444,7 +464,11 @@ export class RoomDurableObject {
       users: presence.users,
       members: presence.members,
     });
-    this.broadcastSubscriptionCount();
+    try {
+      this.broadcastSubscriptionCount();
+    } catch (err) {
+      logError("do.ws_broadcast_sub_count_failed", err, { roomId });
+    }
 
     if (wasVacant) {
       void this.notifyRoomOccupancyWebhook("room.occupied");
