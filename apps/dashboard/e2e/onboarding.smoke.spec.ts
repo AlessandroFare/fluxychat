@@ -15,19 +15,21 @@ test.describe("onboarding smoke", () => {
     await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
   });
 
-  test("shows quickstart wizard and step rail", async ({ page }) => {
+  test("shows quickstart playground and progress strip", async ({ page }) => {
     await expect(page.getByTestId("onboarding-page")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "Quickstart wizard" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Onboarding steps" })).toBeVisible();
-    await expect(page.getByText("Step 1 of")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Quickstart playground" })).toBeVisible();
+    await expect(page.getByTestId("onboarding-playground")).toBeVisible();
+    await expect(page.getByTestId("onboarding-progress")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Setup" })).toBeVisible();
   });
 
-  test("manual JWT path advances to create project", async ({ page }) => {
+  test("manual JWT path unlocks create project", async ({ page }) => {
     const jwtInput = page.getByTestId("admin-jwt-input");
     test.skip((await jwtInput.count()) === 0, "Clerk hosted auth — manual JWT step not shown");
 
     await jwtInput.fill("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e2e-smoke");
     await page.getByTestId("connect-continue").click();
-    await expect(page.getByRole("heading", { name: "Create project" })).toBeVisible();
+    await expect(page.getByTestId("create-project-btn")).toBeVisible();
+    await expect(page.getByTestId("project-name-input")).toBeEnabled();
   });
 });
