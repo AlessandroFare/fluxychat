@@ -181,7 +181,7 @@ async function handleSummarize(env, { projectId, roomId, args }) {
 
 async function handleBroadcast(env, { projectId, roomId, userId, rawArgs }) {
   if (!rawArgs) return { ok: false, error: "Usage: /broadcast <message>", status: 400 };
-  return { ok: true, action: "broadcast", message: rawArgs, message: `Broadcast sent: ${rawArgs}` };
+  return { ok: true, action: "broadcast", text: rawArgs, message: `Broadcast sent: ${rawArgs}` };
 }
 
 async function handleExport(env, { projectId, roomId, args }) {

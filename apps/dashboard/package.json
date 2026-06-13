@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "pnpm --filter @fluxychat/protocol build && pnpm --filter @fluxy-chat/sdk build && pnpm --filter @fluxychat/ui build && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run --environment jsdom",
@@ -15,6 +15,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.39.3",
     "@fluxy-chat/sdk": "workspace:*",
+    "@fluxychat/protocol": "workspace:*",
     "@fluxychat/ui": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

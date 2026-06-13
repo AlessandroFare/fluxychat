@@ -37,7 +37,16 @@ export function renderMessageTemplate(template: FluxyMessageTemplate, vars: Reco
 }
 
 export function extractTemplateVarNames(body: string): string[] {
-  const matches = body.match(/\{\{\s*(\w+)\s*\}\}/g);
-  if (!matches) return [];
-  return [...new Set(matches.map((m) => m.replace(/\{\{\s*|\s*\}\}/g, '')))];
+  const names: string[] = [];
+  let i = 0;
+  while (i < body.length) {
+    const open = body.indexOf('{{', i);
+    if (open === -1) break;
+    const close = body.indexOf('}}', open + 2);
+    if (close === -1) break;
+    const inner = body.slice(open + 2, close).trim();
+    if (/^\w+$/.test(inner)) names.push(inner);
+    i = close + 2;
+  }
+  return [...new Set(names)];
 }

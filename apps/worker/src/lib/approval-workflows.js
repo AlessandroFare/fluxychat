@@ -112,7 +112,7 @@ export async function castVote(env, { projectId, requestId, voterId, vote, comme
   ).bind(id, requestId, voterId, vote, comment || null).run();
 
   const votes = await getVotesForRequest(env, { projectId, requestId });
-  const workflow = await getWorkflow(env, { projectId, projectId: request.projectId, workflowId: request.workflow_id });
+  const workflow = await getWorkflow(env, { projectId, workflowId: request.workflow_id });
   const decision = evaluateDecision(votes, workflow);
 
   if (decision) {

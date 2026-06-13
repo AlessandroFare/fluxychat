@@ -19,12 +19,6 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@fluxy-chat/sdk": [
-        "../../packages/sdk/src"
-      ],
-      "@fluxychat/ui": [
-        "../../packages/ui/src"
-      ],
       "components/*": ["./components/*"],
       "ui/*": ["./components/ui/*"],
       "lib/*": ["./lib/*"],
