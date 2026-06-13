@@ -29,7 +29,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build workspace packages for dashboard tests
-        run: pnpm --filter @fluxy-chat/sdk build
+        run: pnpm --filter @fluxychat/protocol build && pnpm --filter @fluxy-chat/sdk build
 
       - name: Pricing consistency check (P0-1 / ENG-03)
         run: pnpm run check:pricing

@@ -13,9 +13,9 @@ interface InboundHandlers {
 export function dispatchInboundWsFrame(raw: string, handlers: InboundHandlers): void {
   dispatchFrame(raw, {
     onPong: handlers.onPong,
-    onReplay: (messages) => handlers.onReplay(messages as FluxyChatMessage[]),
+    onReplay: (messages: unknown[]) => handlers.onReplay(messages as FluxyChatMessage[]),
     onHistoryMarker: handlers.onHistoryMarker,
     onWorkerError: handlers.onWorkerError,
-    onEvent: (event) => handlers.onDeliver(event as FluxyChatEvent),
+    onEvent: (event: Record<string, unknown>) => handlers.onDeliver(event as FluxyChatEvent),
   });
 }

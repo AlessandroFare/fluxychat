@@ -69,6 +69,7 @@
     "access": "public"
   },
   "scripts": {
+    "prebuild": "pnpm --filter @fluxychat/protocol build",
     "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
     "prepublishOnly": "pnpm run build",
     "dev": "tsc -w -p tsconfig.json",
