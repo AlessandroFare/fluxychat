@@ -1,4 +1,5 @@
 ﻿import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
+import { isValidClientWsPayload } from "../lib/ws-protocol.js";
 import { logInfo, logError } from "../lib/worker-log.js";
 import { isRoomMember, canAccessRoom } from "../lib/room-access.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
@@ -50,6 +51,9 @@ import { runStorageMigrations } from "../lib/do-sql-migrations.js";
  *
  * @type {Array<{ version: number, name: string, up: (ctx: { state: import("@cloudflare/workers-types").DurableObjectState }) => Promise<void> | void }>}
  */
+export const EPHEMERAL_WS_RATE_LIMIT_KEY = "_ephemeral_ws_rate_limits";
+export const EPHEMERAL_MODERATION_CACHE_KEY = "_ephemeral_moderation_cache";
+
 export const ROOM_DO_MIGRATIONS = [
   {
     version: 1,
@@ -58,6 +62,13 @@ export const ROOM_DO_MIGRATIONS = [
       // No-op baseline: register the version counter on first hydration.
       // Future migrations can rely on `state.storage` already containing
       // the documented v1 shape.
+    },
+  },
+  {
+    version: 2,
+    name: "ephemeral_state_storage_keys",
+    up: async () => {
+      // wsRateLimitStore + moderationCache persist under EPHEMERAL_* keys.
     },
   },
 ];
@@ -129,6 +140,7 @@ export class RoomDurableObject {
         // Run pending migrations BEFORE reading state so that any shape
         // changes from `up()` are visible to the hydration below.
         await runStorageMigrations(this.state, ROOM_DO_MIGRATIONS);
+        await this.loadEphemeralFromStorage();
         const storedProjectId = await this.state.storage.get("projectId");
         const storedRoomId = await this.state.storage.get("roomId");
         if (typeof storedProjectId === "string" && storedProjectId) {
@@ -147,6 +159,39 @@ export class RoomDurableObject {
 
   async ensureStorageHydrated() {
     await this._storageHydrated;
+  }
+
+  async loadEphemeralFromStorage() {
+    if (!this.state.storage) return;
+    const wsRaw = await this.state.storage.get(EPHEMERAL_WS_RATE_LIMIT_KEY);
+    if (wsRaw && typeof wsRaw === "object" && !Array.isArray(wsRaw)) {
+      this.wsRateLimitStore = new Map(Object.entries(wsRaw));
+    }
+    const modRaw = await this.state.storage.get(EPHEMERAL_MODERATION_CACHE_KEY);
+    if (modRaw && typeof modRaw === "object" && !Array.isArray(modRaw)) {
+      this.moderationCache = new Map(Object.entries(modRaw));
+    }
+  }
+
+  async persistEphemeralToStorage() {
+    if (!this.state.storage) return;
+    const now = Date.now();
+    const wsObj = Object.fromEntries(
+      [...this.wsRateLimitStore.entries()].filter(([, bucket]) => bucket && bucket.expiresAt > now),
+    );
+    const modObj = Object.fromEntries(
+      [...this.moderationCache.entries()].filter(([, entry]) => entry && entry.expires > now),
+    );
+    if (Object.keys(wsObj).length) {
+      await this.state.storage.put(EPHEMERAL_WS_RATE_LIMIT_KEY, wsObj);
+    } else {
+      await this.state.storage.delete(EPHEMERAL_WS_RATE_LIMIT_KEY);
+    }
+    if (Object.keys(modObj).length) {
+      await this.state.storage.put(EPHEMERAL_MODERATION_CACHE_KEY, modObj);
+    } else {
+      await this.state.storage.delete(EPHEMERAL_MODERATION_CACHE_KEY);
+    }
   }
 
   getActiveUserIds() {
@@ -745,6 +790,13 @@ export class RoomDurableObject {
     let msg;
     try {
       msg = JSON.parse(event.data);
+
+      if (!isValidClientWsPayload(msg)) {
+        webSocket.send(
+          JSON.stringify({ type: "error", message: "unknown_event_type" }),
+        );
+        return;
+      }
 
       if (msg.type === "ping") {
         webSocket.send(JSON.stringify({ type: "pong", ts: Date.now() }));
@@ -1473,9 +1525,6 @@ export class RoomDurableObject {
   }
 
   consumeWsRateLimit(key, limit, windowMs) {
-    // NOTE: wsRateLimitStore resets on DO hibernation. Rate limit buckets are
-    // in-memory only and lost on wake. Persisting to D1 per message is
-    // prohibitively expensive. Accept this limitation as known behavior.
     if (!key || !Number.isFinite(limit) || limit <= 0) {
       return { allowed: true, retryAfterSeconds: 0 };
     }
@@ -1484,6 +1533,7 @@ export class RoomDurableObject {
     if (!bucket || bucket.expiresAt <= now) {
       this.wsRateLimitStore.set(key, { count: 1, expiresAt: now + windowMs });
       void this.scheduleEphemeralCleanup();
+      void this.persistEphemeralToStorage();
       return { allowed: true, retryAfterSeconds: 0 };
     }
     if (bucket.count >= limit) {
@@ -1495,6 +1545,7 @@ export class RoomDurableObject {
     bucket.count += 1;
     this.wsRateLimitStore.set(key, bucket);
     void this.scheduleEphemeralCleanup();
+    void this.persistEphemeralToStorage();
     return { allowed: true, retryAfterSeconds: 0 };
   }
 
@@ -1510,6 +1561,7 @@ export class RoomDurableObject {
         this.moderationCache.delete(key);
       }
     }
+    void this.persistEphemeralToStorage();
   }
 
   async scheduleEphemeralCleanup(delayMs = 60_000) {
@@ -1615,6 +1667,7 @@ export class RoomDurableObject {
       expires: Date.now() + 10_000, // cache 10s
     });
     void this.scheduleEphemeralCleanup();
+    void this.persistEphemeralToStorage();
     return state;
   }
 
@@ -1688,7 +1741,6 @@ export class RoomDurableObject {
           "Cache-Control": "no-cache",
           "Connection": "keep-alive",
           "X-Accel-Buffering": "no",
-          "Access-Control-Allow-Origin": "*",
         },
       });
     }

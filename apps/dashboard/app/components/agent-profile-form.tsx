@@ -5,7 +5,7 @@ import { Bot, Cpu, Link2, MessageSquareText } from "lucide-react";
 import { FormField } from "./form-field";
 import { AgentPromptTemplatePicker } from "./agent-prompt-template-picker";
 import { LlmProviderModelPicker } from "./llm-provider-model-picker";
-import type { AgentFormValues } from "./agent-form-fields";
+import type { AgentFormValues } from "@/lib/agent-form";
 import type { LlmCatalogResponse } from "@/lib/llm-catalog-client";
 import { Input, Textarea } from "./ui";
 import { cn } from "@/lib/utils";

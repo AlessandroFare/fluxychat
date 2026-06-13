@@ -5,21 +5,9 @@ import { FormField } from "./form-field";
 import { LlmProviderModelPicker } from "./llm-provider-model-picker";
 import { Input, Textarea } from "./ui";
 import type { LlmCatalogResponse } from "@/lib/llm-catalog-client";
+import type { AgentFormValues } from "@/lib/agent-form";
 
-export interface AgentFormValues {
-  name: string;
-  handle: string;
-  provider: string;
-  model: string;
-  capabilities: string;
-  systemPrompt: string;
-  contextFetchUrl: string;
-  toolExecuteUrl: string;
-  llmBaseUrl: string;
-  /** Optional second provider when primary fails (stored in config.llm). */
-  fallbackProvider: string;
-  fallbackModel: string;
-}
+export type { AgentFormValues };
 
 interface AgentFormFieldsProps {
   values: AgentFormValues;

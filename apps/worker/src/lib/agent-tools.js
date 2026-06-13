@@ -1,4 +1,4 @@
-import { isPrivateUrl } from "./url-ssrf.js";
+import { isPrivateUrl, safeOutboundFetch } from "./url-ssrf.js";
 import { logInfo, logError } from "./worker-log.js";
 
 export const CONTEXT_FETCH_TIMEOUT_MS = 5_000;
@@ -24,7 +24,7 @@ export async function executeToolCall(
     } catch {
       args = {};
     }
-    const res = await fetch(toolExecuteUrl, {
+    const res = await safeOutboundFetch(toolExecuteUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -95,7 +95,7 @@ export async function fetchAppContext(
     url.searchParams.set("projectId", projectId);
     url.searchParams.set("roomId", roomId);
     url.searchParams.set("userId", userId);
-    const res = await fetch(url.toString(), {
+    const res = await safeOutboundFetch(url.toString(), {
       headers: {
         "X-Fluxy-Project-Id": projectId,
         "X-Fluxy-Trace-Id": traceId,

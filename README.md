@@ -1,12 +1,35 @@
-## fluxychat
+## FluxyChat
+
+Realtime chat on Cloudflare Workers. One worker, WebSocket rooms, a TypeScript SDK, and an operator console for projects, agents, and compliance.
+
+### Quick links
+
+| What | Where |
+|------|-------|
+| Try hosted | [fluxychat.com/landing](https://fluxychat.com/landing) |
+| Operator console | `apps/dashboard` → start at `/onboarding` |
+| SDK (npm) | [@fluxy-chat/sdk](https://www.npmjs.com/package/@fluxy-chat/sdk) |
+| Worker API | `apps/worker` · deploy with Wrangler |
+| Documentation | [docs/README.md](docs/README.md) · [Features overview](docs/features-overview.md) |
+| Marketing | [docs/marketing/](docs/marketing/) |
+
+### What you get (at a glance)
+
+- **Realtime:** WebSocket rooms, presence, SSE fallback, inbox, notifications
+- **AI:** in-room agents, voice + transcription, suggestions, digest, room memory
+- **Omnichannel:** SMS/WhatsApp, agent queue, handoff, polls and forms
+- **Enterprise:** SSO/SCIM, audit, retention, SOC2/HIPAA checklist, DLP, IP whitelist
+- **Distribution:** embed widget, custom domain, external bridges, MCP
+
+### Get started in 3 steps
+
+1. `pnpm install` and `pnpm run dev:setup` (copy `.dev.vars` / `.env.local` templates), then `pnpm dev`
+2. Open `/onboarding` in the dashboard: project, JWT, first room
+3. Integrate `@fluxy-chat/sdk` in your frontend (see `packages/sdk/README.md`)
+
+---
 
 > **Open beta** — [Try hosted cloud](https://fluxychat.com/landing) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Dev.to walkthrough](https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.2)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.2) · **Support:** fluxychat@outlook.com
-
-**Realtime that feels like serverless.** Edge-native chat on Cloudflare Workers + D1 — `@fluxy-chat/sdk`, operator console, MIT self-host or hosted quickstart.
-
-REST on Vercel is trivial; stateful WebSockets still push teams toward another vendor or ops stack. Fluxychat keeps rooms on **Workers + Durable Objects + D1** so you can start on hosted cloud and fork later without rewriting transport.
-
-**Source:** [github.com/AlessandroFare/fluxychat](https://github.com/AlessandroFare/fluxychat)
 
 - **Cloudflare Workers + Durable Objects** for WebSocket handling and presence.
 - **Cloudflare D1 (SQLite edge)** for messages and metadata.

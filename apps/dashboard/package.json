@@ -9,7 +9,7 @@
     "lint": "next lint",
     "test": "vitest run --environment jsdom",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test e2e/onboarding.smoke.spec.ts",
+    "test:e2e:smoke": "playwright test",
     "test:e2e:integrated": "playwright test -c playwright.integrated.config.ts"
   },
   "dependencies": {
@@ -19,7 +19,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
-    "lucide-react": "^1.14.0",
+    "lucide-react": "^1.18.0",
     "next": "16.2.6",
     "next-themes": "^0.4.6",
     "ogl": "^1.0.11",

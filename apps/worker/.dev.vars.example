@@ -30,6 +30,10 @@ STRIPE_WEBHOOK_SECRET=
 # FEATURE_REPLY_SUGGESTIONS=true
 # FEATURE_RECONNECT_BACKOFF_FLUXY=false   # SDK: 1s/8s backoff when true via GET /client/feature-flags
 
+# --- Browser Run (cost control) ---
+# Binding exists in wrangler.toml but quickAction() is off unless opt-in:
+# BROWSER_ENABLED=true
+
 # --- Scheduled jobs (P12-L) ---
 # Local dev: disable workflow schedules and use legacy Worker cron (uncomment [triggers] in wrangler.toml)
 # WORKFLOW_SCHEDULES_ENABLED=false

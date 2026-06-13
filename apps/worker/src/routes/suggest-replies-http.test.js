@@ -141,15 +141,18 @@ describe("dispatchSuggestRepliesRoutes", () => {
   });
 
   it("returns 402 when quota is exceeded", async () => {
-    const { h } = buildDeps({
-      quota: async () => ({ allowed: false, used: 100, monthKey: "2026-06" }),
-    });
+    const quota = vi.fn(async () => ({ allowed: false, used: 100, monthKey: "2026-06" }));
+    const { h } = buildDeps({ quota });
     const req = makePost({ roomId: "room_1" });
     const url = new URL(req.url);
     const res = await dispatchSuggestRepliesRoutes(req, url, h);
     expect(res.status).toBe(402);
     const body = await res.json();
     expect(body.error).toBe("quota_exceeded");
+    expect(quota).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ metricName: "agent_invokes", projectId: "proj_1" }),
+    );
   });
 
   it("returns 429 when rate limited", async () => {

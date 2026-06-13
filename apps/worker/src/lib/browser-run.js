@@ -7,7 +7,14 @@ import { logInfo } from "./worker-log.js";
 /**
  * @param {*} env
  */
+function isBrowserRunEnabled(env) {
+  const flag = env?.BROWSER_ENABLED;
+  if (flag === "false" || flag === "0" || flag === false) return false;
+  return true;
+}
+
 export function isBrowserRunConfigured(env) {
+  if (!isBrowserRunEnabled(env)) return false;
   return typeof env?.BROWSER?.quickAction === "function";
 }
 

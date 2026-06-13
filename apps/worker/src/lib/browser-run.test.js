@@ -6,11 +6,17 @@ import {
 } from "./browser-run.js";
 
 describe("browser-run", () => {
-  it("detects BROWSER binding", () => {
+  it("detects BROWSER binding when opt-in flag allows", () => {
     expect(isBrowserRunConfigured({})).toBe(false);
     expect(
       isBrowserRunConfigured({ BROWSER: { quickAction: async () => "# Title" } }),
     ).toBe(true);
+    expect(
+      isBrowserRunConfigured({
+        BROWSER_ENABLED: "false",
+        BROWSER: { quickAction: async () => "# Title" },
+      }),
+    ).toBe(false);
   });
 
   it("browserOgPreview parses markdown title and description", async () => {

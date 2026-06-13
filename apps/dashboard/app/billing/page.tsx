@@ -155,7 +155,7 @@ export default function BillingPage() {
   const currentPlanDetail = plan ? PLAN_DETAILS[plan.planName] || PLAN_DETAILS.free : PLAN_DETAILS.free;
 
   return (
-    <ConsoleShell className="max-w-3xl lg:max-w-3xl">
+    <ConsoleShell className="max-w-3xl lg:max-w-3xl" data-testid="billing-page">
       <ConsolePageHeader
         title="Billing & usage"
         description="Plan, monthly usage, and Stripe checkout for the active project."
@@ -170,7 +170,7 @@ export default function BillingPage() {
 
       {!plan && !loading && (
         <Section title="Load plan and usage" description="Pull current plan and this month&apos;s counters from the Worker.">
-          <Button variant="primary" onClick={loadPlan} disabled={!adminJwt.trim() || !activeProject?.id}>
+          <Button variant="primary" onClick={loadPlan} disabled={!adminJwt.trim() || !activeProject?.id} data-testid="billing-load-btn">
             Load plan and usage
           </Button>
           {(!adminJwt.trim() || !activeProject?.id) && (

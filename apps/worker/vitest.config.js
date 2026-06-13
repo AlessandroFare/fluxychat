@@ -12,5 +12,8 @@ export default defineConfig({
     alias: {
       "cloudflare:workers": path.resolve(dir, "src/test-stubs/cloudflare-workers.js"),
     },
+    extensionAlias: {
+      ".js": [".ts", ".js"],
+    },
   },
 });

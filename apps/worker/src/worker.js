@@ -1,7 +1,7 @@
-﻿// fluxychat Cloudflare Worker
+// fluxychat Cloudflare Worker
 // - WebSocket endpoint for rooms using Durable Objects
 // - D1 for message persistence
-// Domain libs: ./lib/*; HTTP: ./routes/*-http.js (incl. billing-stripe-http.js → lib/stripe-billing.js).
+// Domain libs: ./lib/*; HTTP: ./routes/*-http.js (incl. billing-stripe-http.js ? lib/stripe-billing.js).
 
 import { timingSafeEqual } from "./lib/crypto-timing.js";
 import {
@@ -24,28 +24,11 @@ import {
   signWebhookPayload,
   webhookRequiresSigningSecret,
 } from "./lib/webhook-signing.js";
-import { dispatchStripeWebhookRoutes } from "./routes/billing-stripe-http.js";
-import { base64urlEncode } from "./lib/jwt-auth.js";
 import { dispatchPublicRoutes } from "./routes/public-http.js";
-import { dispatchGdprRoutes } from "./routes/gdpr-http.js";
-import { dispatchBillingRoutes } from "./routes/billing-http.js";
-import { dispatchMessagesAgentsRoutes } from "./routes/messages-agents-http.js";
-import { dispatchRealtimeStatsRoutes } from "./routes/realtime-stats-http.js";
-import { dispatchReportsWebhooksRoutes } from "./routes/reports-webhooks-http.js";
-import { dispatchAdminSearchAutomationRoutes } from "./routes/admin-search-automation-http.js";
-import { dispatchRoomsListExportRoutes } from "./routes/rooms-list-export-http.js";
-import { dispatchRoomsMutationsRoutes } from "./routes/rooms-mutations-http.js";
-import { dispatchNotificationsRoutes } from "./routes/notifications-http.js";
-import { dispatchDigestRoutes } from "./routes/digest-http.js";
-import { dispatchScheduledAdminRoutes } from "./routes/scheduled-admin-http.js";
-import { dispatchSearchRoutes } from "./routes/search-http.js";
-import { dispatchInboxRoutes } from "./routes/inbox-http.js";
-import { dispatchAgentQueueRoutes } from "./routes/agent-queue-http.js";
-import { dispatchHandoffRoutes } from "./routes/handoff-http.js";
-import { dispatchAdminProjectsRoutes } from "./routes/admin-projects-http.js";
-import { dispatchIntegrationsSentRoutes } from "./routes/integrations-sent-http.js";
-import { dispatchUserBlocksRoutes } from "./routes/user-blocks-http.js";
-import { dispatchPushRoutes } from "./routes/push-http.js";
+import { dispatchWorkerHttpRoutes } from "./lib/worker-route-dispatch.js";
+import { resolveProjectId } from "./lib/resolve-project-id.js";
+import { hashApiKey } from "./lib/api-key-hash.js";
+import { base64urlEncode } from "./lib/jwt-auth.js";
 import { listLlmProvidersForApi } from "./lib/llm-providers.js";
 import { createAgentStreamHooks } from "./lib/room-stream.js";
 import {
@@ -62,8 +45,6 @@ import {
   lookupActiveCustomDomain,
   normalizeHostname,
 } from "./lib/custom-domains.js";
-import { dispatchCustomDomainsRoutes } from "./routes/custom-domains-http.js";
-import { dispatchEmbedRoutes } from "./routes/embed-http.js";
 import {
   MAX_MESSAGE_LENGTH,
   validateMessageContent,
@@ -89,6 +70,8 @@ import {
   incrementOperationalMetric,
   toMinuteBucketIso,
 } from "./lib/operational-metrics.js";
+import { evaluateOperationalAlerts } from "./lib/operational-alerts.js";
+import { seedDefaultAlertRules } from "./lib/seed-default-alert-rules.js";
 import { createJsonResponder } from "./lib/http-json.js";
 import { handleFetchThrownError } from "./lib/http-cors.js";
 import { checkAndConsumeRateLimit } from "./lib/rate-limit.js";
@@ -329,7 +312,13 @@ export default {
     const customHostCtx = await lookupActiveCustomDomain(
       env,
       normalizeHostname(url.hostname),
-    ).catch(() => null);
+    ).catch((err) => {
+      logError("custom_domain.lookup_failed", err, {
+        traceId,
+        hostname: url.hostname,
+      });
+      return null;
+    });
 
     const boundVerifyJwt = (req) =>
       verifyJwtAndGetContext(req, env, {
@@ -511,72 +500,6 @@ export default {
       hashApiKey,
     };
 
-    const drMessagesAgents = await dispatchMessagesAgentsRoutes(
-      request,
-      url,
-      routeDeps,
-    );
-    if (drMessagesAgents) return drMessagesAgents;
-
-    const drRealtimeStats = await dispatchRealtimeStatsRoutes(
-      request,
-      url,
-      routeDeps,
-    );
-    if (drRealtimeStats) return drRealtimeStats;
-
-    const drReportsWebhooks = await dispatchReportsWebhooksRoutes(
-      request,
-      url,
-      routeDeps,
-    );
-    if (drReportsWebhooks) return drReportsWebhooks;
-
-    const drAdminSearchAutomation = await dispatchAdminSearchAutomationRoutes(
-      request,
-      url,
-      routeDeps,
-    );
-    if (drAdminSearchAutomation) return drAdminSearchAutomation;
-
-    const drRoomsListExport = await dispatchRoomsListExportRoutes(
-      request,
-      url,
-      routeDeps,
-    );
-    if (drRoomsListExport) return drRoomsListExport;
-
-    const drNotifications = await dispatchNotificationsRoutes(
-      request,
-      url,
-      routeDeps,
-    );
-    if (drNotifications) return drNotifications;
-
-    const drDigest = await dispatchDigestRoutes(request, url, routeDeps);
-    if (drDigest) return drDigest;
-
-    const drScheduledAdmin = await dispatchScheduledAdminRoutes(request, url, routeDeps);
-    if (drScheduledAdmin) return drScheduledAdmin;
-
-    const drSearch = await dispatchSearchRoutes(request, url, routeDeps);
-    if (drSearch) return drSearch;
-
-    const drInbox = await dispatchInboxRoutes(request, url, routeDeps);
-    if (drInbox) return drInbox;
-
-    const drAgentQueue = await dispatchAgentQueueRoutes(request, url, routeDeps);
-    if (drAgentQueue) return drAgentQueue;
-
-    const drHandoff = await dispatchHandoffRoutes(request, url, routeDeps);
-    if (drHandoff) return drHandoff;
-
-    const drCustomDomains = await dispatchCustomDomainsRoutes(request, url, routeDeps);
-    if (drCustomDomains) return drCustomDomains;
-
-    const drEmbed = await dispatchEmbedRoutes(request, url, routeDeps);
-    if (drEmbed) return drEmbed;
-
     const privacyBillingDeps = {
       env,
       corsHeaders,
@@ -590,44 +513,14 @@ export default {
       getProjectPlan,
       monthKeyUtc,
     };
-    const gdprRes = await dispatchGdprRoutes(request, url, privacyBillingDeps);
-    if (gdprRes !== null) return gdprRes;
-    const billingRes = await dispatchBillingRoutes(request, url, privacyBillingDeps);
-    if (billingRes !== null) return billingRes;
 
-    const drRoomsMutations = await dispatchRoomsMutationsRoutes(
+    const workerRes = await dispatchWorkerHttpRoutes(
       request,
       url,
       routeDeps,
+      privacyBillingDeps,
     );
-    if (drRoomsMutations) return drRoomsMutations;
-
-    const drAdminProjects = await dispatchAdminProjectsRoutes(
-      request,
-      url,
-      routeDeps,
-    );
-    if (drAdminProjects) return drAdminProjects;
-
-    const drIntegrationsSent = await dispatchIntegrationsSentRoutes(
-      request,
-      url,
-      routeDeps,
-    );
-    if (drIntegrationsSent) return drIntegrationsSent;
-
-    const drUserBlocks = await dispatchUserBlocksRoutes(
-      request,
-      url,
-      routeDeps,
-    );
-    if (drUserBlocks) return drUserBlocks;
-
-    const drPush = await dispatchPushRoutes(request, url, routeDeps);
-    if (drPush) return drPush;
-
-    const stripeRes = await dispatchStripeWebhookRoutes(request, url, routeDeps);
-    if (stripeRes) return stripeRes;
+    if (workerRes) return workerRes;
 
     return notFound();
     } catch (err) {
@@ -772,6 +665,11 @@ async function insertNewProject(env, ctx, name, options = {}) {
       logError("provision_builtin_agents_failed", err, requestLogCtx),
     ),
   );
+  ctx.waitUntil(
+    seedDefaultAlertRules(env, projectId).catch((err) =>
+      logError("seed_default_alert_rules_failed", err, requestLogCtx),
+    ),
+  );
 
   return {
     id: projectId,
@@ -780,28 +678,6 @@ async function insertNewProject(env, ctx, name, options = {}) {
     apiKey,
     plan: await getProjectPlan(env, projectId),
   };
-}
-
-async function resolveProjectId(request, env) {
-  const url = new URL(request.url);
-  const headerKey = request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
-  const fallback = env.DEFAULT_PROJECT_ID || "default";
-  if (!headerKey) return fallback;
-
-  const keyHash = await hashApiKey(headerKey);
-  const row = await env.DB.prepare(
-    "SELECT project_id FROM api_keys WHERE key_hash = ? AND revoked_at IS NULL LIMIT 1"
-  )
-    .bind(keyHash)
-    .first();
-  if (row?.project_id) return row.project_id;
-
-  // Legacy plaintext API key fallback has been removed for security.
-  // All API keys must be looked up via their SHA-256 hash.
-  // If you still have plaintext keys, run a migration to hash them:
-  //   UPDATE api_keys SET key_hash = sha256(secret) WHERE key_hash IS NULL;
-  logInfo("auth.api_key_not_found_hash", { keyHashPrefix: keyHash.slice(0, 8) });
-  return fallback;
 }
 
 function canBypassRoomMembership(roles) {
@@ -832,16 +708,6 @@ async function signJwtHs256(secret, payload) {
   );
   const sigB64 = base64urlEncode(new Uint8Array(sig));
   return `${signingInput}.${sigB64}`;
-}
-
-async function hashApiKey(apiKey) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(apiKey)
-  );
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 async function hashWebhookSecret(secret) {
@@ -885,150 +751,6 @@ function sanitizeLogContext(ctx) {
     }
   }
   return sanitized;
-}
-
-async function evaluateOperationalAlerts(env, projectId) {
-  if (!projectId) return { checkedRules: 0, triggered: 0 };
-  const rulesResult = await env.DB.prepare(
-    "SELECT id, metric_name, window_minutes, threshold_value, comparator, severity, cooldown_minutes FROM operational_alert_rules WHERE project_id = ? AND enabled = 1"
-  )
-    .bind(projectId)
-    .all();
-  const rules = rulesResult.results || [];
-  if (!rules.length) return { checkedRules: 0, triggered: 0 };
-
-  let triggered = 0;
-  for (const rule of rules) {
-    const fromBucket = toMinuteBucketIso(
-      new Date(Date.now() - Number(rule.window_minutes || 5) * 60_000)
-    );
-    const metricRow = await env.DB.prepare(
-      "SELECT COALESCE(SUM(metric_value),0) as total FROM operational_metrics WHERE project_id = ? AND metric_name = ? AND bucket_minute >= ?"
-    )
-      .bind(projectId, rule.metric_name, fromBucket)
-      .first();
-    const observed = Number(metricRow?.total || 0);
-    const threshold = Number(rule.threshold_value || 0);
-    const comparator = String(rule.comparator || "gte");
-    const shouldTrigger =
-      comparator === "gt" ? observed > threshold : observed >= threshold;
-    if (!shouldTrigger) continue;
-
-    const recentOpen = await env.DB.prepare(
-      "SELECT id, created_at FROM operational_alert_events WHERE rule_id = ? AND status = 'open' ORDER BY created_at DESC LIMIT 1"
-    )
-      .bind(rule.id)
-      .first();
-    const cooldownMs = Number(rule.cooldown_minutes || 15) * 60_000;
-    if (recentOpen?.created_at) {
-      const elapsed = Date.now() - Date.parse(recentOpen.created_at);
-      if (elapsed < cooldownMs) continue;
-    }
-
-    const now = new Date().toISOString();
-    const eventId = crypto.randomUUID();
-    const message = `${rule.metric_name} ${comparator} ${threshold} (observed ${observed} in ${rule.window_minutes}m)`;
-    await env.DB.prepare(
-      "INSERT INTO operational_alert_events (id, project_id, rule_id, metric_name, observed_value, threshold_value, status, severity, message, created_at, resolved_at) VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, NULL)"
-    )
-      .bind(
-        eventId,
-        projectId,
-        rule.id,
-        rule.metric_name,
-        observed,
-        threshold,
-        rule.severity || "warning",
-        message,
-        now
-      )
-      .run();
-    await dispatchOperationalAlertEvent(env, {
-      id: eventId,
-      projectId,
-      ruleId: rule.id,
-      metricName: rule.metric_name,
-      observedValue: observed,
-      thresholdValue: threshold,
-      severity: rule.severity || "warning",
-      message,
-      createdAt: now,
-    }).catch((err) =>
-      logError("alerts.dispatch_failed", err, {
-        projectId,
-        ruleId: rule.id,
-        alertEventId: eventId,
-      })
-    );
-    triggered += 1;
-  }
-
-  return { checkedRules: rules.length, triggered };
-}
-
-async function dispatchOperationalAlertEvent(env, event) {
-  const targetUrl = String(env.ALERT_DISPATCH_WEBHOOK_URL || "").trim();
-  if (!targetUrl) return;
-  const now = new Date().toISOString();
-  const dedupeId = `alert-webhook:${event.id}:${targetUrl}`;
-  const existing = await env.DB.prepare(
-    "SELECT id, status FROM operational_alert_dispatches WHERE id = ?"
-  )
-    .bind(dedupeId)
-    .first();
-  if (existing?.status === "dispatched") return;
-
-  if (!existing) {
-    await env.DB.prepare(
-      "INSERT INTO operational_alert_dispatches (id, event_id, project_id, channel, target, status, attempt_count, last_http_status, last_error, created_at, updated_at, dispatched_at) VALUES (?, ?, ?, 'webhook', ?, 'pending', 0, NULL, NULL, ?, ?, NULL)"
-    )
-      .bind(dedupeId, event.id, event.projectId, targetUrl, now, now)
-      .run();
-  }
-
-  const payload = {
-    type: "operational.alert.triggered",
-    source: "fluxychat-worker",
-    ts: now,
-    alert: {
-      id: event.id,
-      projectId: event.projectId,
-      ruleId: event.ruleId,
-      metricName: event.metricName,
-      observedValue: event.observedValue,
-      thresholdValue: event.thresholdValue,
-      severity: event.severity,
-      message: event.message,
-      createdAt: event.createdAt,
-    },
-  };
-  const response = await fetch(targetUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Fluxy-Event": payload.type,
-      "X-Fluxy-Alert-Id": event.id,
-      "X-Fluxy-Project-Id": event.projectId,
-      "X-Fluxy-Dedupe-Id": dedupeId,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const error = `http_${response.status}`;
-    await env.DB.prepare(
-      "UPDATE operational_alert_dispatches SET status = 'failed', attempt_count = attempt_count + 1, last_http_status = ?, last_error = ?, updated_at = ? WHERE id = ?"
-    )
-      .bind(response.status, truncateForStorage(error), now, dedupeId)
-      .run();
-    throw new Error(`alert dispatch failed: ${error}`);
-  }
-
-  await env.DB.prepare(
-    "UPDATE operational_alert_dispatches SET status = 'dispatched', attempt_count = attempt_count + 1, last_http_status = ?, last_error = NULL, updated_at = ?, dispatched_at = ? WHERE id = ?"
-  )
-    .bind(response.status, now, now, dedupeId)
-    .run();
 }
 
 function getOrCreateTraceId(request) {

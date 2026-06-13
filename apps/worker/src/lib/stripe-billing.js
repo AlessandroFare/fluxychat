@@ -232,16 +232,6 @@ export async function handleStripeWebhookPost(request, env, h) {
     const stripeCustomerId = body.data?.object?.customer;
     const stripeSubId = body.data?.object?.subscription;
     if (projectId) {
-      if (eventId) {
-        const gate = await env.DB.prepare(
-          "INSERT OR IGNORE INTO stripe_webhook_events (id, event_type, created_at) VALUES (?, ?, ?)"
-        )
-          .bind(eventId, "checkout.session.completed", new Date().toISOString())
-          .run();
-        if (!Number(gate?.meta?.changes || 0)) {
-          return json({ received: true, duplicate: true, id: eventId, type: eventType });
-        }
-      }
       await upsertProjectPlanFromStripe(env, {
         projectId,
         planName,

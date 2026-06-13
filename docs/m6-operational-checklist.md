@@ -38,6 +38,7 @@ pnpm run smoke:remote
 Implicit checks:
 
 - [ ] `GET /health` → `200`, `ok: true` (if `degraded`, verify KV/R2 when you can; check `platformBindings` for Flagship/Browser/Workflows).
+- [ ] Dashboard **`/status`** shows API health for the configured Worker URL.
 - [ ] `GET /client/feature-flags` → `200` with `flags` object (smoke script checks this).
 - [ ] `GET /stats/slo`, `/stats/costs`, `/stats/launch-kpis` → `200` without `error` in JSON.
 

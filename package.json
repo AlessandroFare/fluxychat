@@ -13,7 +13,13 @@
     "smoke:bundled": "bash scripts/smoke-test.sh",
     "provision:bootstrap": "node scripts/provision-bootstrap.mjs",
     "sanitize:plans": "node scripts/sanitize-project-plans.mjs",
-    "sanitize:plans:apply": "node scripts/sanitize-project-plans.mjs -- --apply"
+    "sanitize:plans:apply": "node scripts/sanitize-project-plans.mjs -- --apply",
+    "check:pricing": "node scripts/check-pricing-consistency.mjs",
+    "check:tenant-scope": "node scripts/audit-tenant-scope.mjs",
+    "check:openapi": "node scripts/check-openapi-routes.mjs",
+    "check:do-bindings": "node scripts/check-do-bindings.mjs",
+    "dev:setup": "node scripts/dev-setup.mjs",
+    "check:env": "node scripts/check-env-readiness.mjs"
   },
   "workspaces": [
     "apps/*",

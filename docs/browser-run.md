@@ -7,9 +7,15 @@ When `env.BROWSER` is bound, FluxyChat uses [Browser Run Quick Actions](https://
 ```toml
 compatibility_date = "2026-03-24"
 
+[vars]
+# Opt-in: quickAction() incurs Browser Run cost (default off in production toml)
+BROWSER_ENABLED = "false"
+
 [browser]
 binding = "BROWSER"
 ```
+
+Set `BROWSER_ENABLED=true` in `.dev.vars` or production secrets when you want SPA-safe OG previews via Browser Run.
 
 Requires compatibility date `2026-03-24` or later.
 
@@ -17,7 +23,7 @@ Requires compatibility date `2026-03-24` or later.
 
 `fetchOgPreview` in `message-enrichment.js`:
 
-1. If `BROWSER` is bound → `quickAction('markdown', { url })` and parse title/description/image.
+1. If `BROWSER_ENABLED` is not false **and** `BROWSER` is bound → `quickAction('markdown', { url })` and parse title/description/image.
 2. Fallback → direct HTML fetch + OG meta tags.
 3. If HTML fetch is empty but browser is bound → retry markdown path.
 

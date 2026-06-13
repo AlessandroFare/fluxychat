@@ -24,7 +24,9 @@ class_name = "FluxyScheduledWorkflow"
 schedules = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *"]
 ```
 
-When `WORKFLOW_SCHEDULES_ENABLED` is true (default), the Worker `scheduled` handler is a no-op.
+When `WORKFLOW_SCHEDULES_ENABLED` is **`false`** (default in `wrangler.toml`), cron runs via the Worker **`scheduled`** handler and `[triggers] crons`.
+
+Set `WORKFLOW_SCHEDULES_ENABLED=true` and uncomment `[[workflows]]` to move jobs to **Cloudflare Workflows**; the Worker `scheduled` handler becomes a no-op.
 
 ## Local dev
 

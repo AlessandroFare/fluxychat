@@ -39,6 +39,7 @@ export function isAiConfigured(env) {
  *   openAiCompatBase: string | null,
  *   chatCompletionsUrl: string | null,
  *   transcriptionsUrl: string | null,
+ *   embeddingsUrl: string | null,
  * }}
  */
 export function resolveAiTransport(env) {
@@ -55,6 +56,7 @@ export function resolveAiTransport(env) {
       openAiCompatBase,
       chatCompletionsUrl: `${openAiCompatBase}/chat/completions`,
       transcriptionsUrl: `${openAiCompatBase}/audio/transcriptions`,
+      embeddingsUrl: `${openAiCompatBase}/embeddings`,
     };
   }
 
@@ -66,6 +68,7 @@ export function resolveAiTransport(env) {
       openAiCompatBase: null,
       chatCompletionsUrl: null,
       transcriptionsUrl: null,
+      embeddingsUrl: null,
     };
   }
 
@@ -80,6 +83,7 @@ export function resolveAiTransport(env) {
     openAiCompatBase,
     chatCompletionsUrl: `${openAiCompatBase}/chat/completions`,
     transcriptionsUrl: `${openAiCompatBase}/audio/transcriptions`,
+    embeddingsUrl: `${openAiCompatBase}/embeddings`,
   };
 }
 

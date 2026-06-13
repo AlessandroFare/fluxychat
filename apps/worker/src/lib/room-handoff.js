@@ -5,6 +5,7 @@ import {
   canAccessAgentQueue,
 } from "./agent-queue.js";
 import { normalizeAgentDisposition } from "./agent-dispositions.js";
+import { buildHandoffContext } from "./handoff-context.js";
 
 const CONTEXT_MESSAGE_LIMIT = 12;
 const CONTEXT_CHAR_LIMIT = 2400;
@@ -49,6 +50,7 @@ function mapHandoffRow(row) {
     handedOffByUserId: row.handed_off_by_user_id ?? null,
     handedOffAt: row.handed_off_at ?? null,
     contextSummary: row.context_summary ?? null,
+    handoffContext: row.handoff_context ? safeParseJson(row.handoff_context) : null,
     disposition: row.disposition ?? null,
     resolvedAt: row.resolved_at ?? null,
     updatedAt: row.updated_at,
@@ -130,6 +132,13 @@ export async function requestHumanHandoff(env, opts) {
   }
 
   const contextSummary = await buildHandoffContextSummary(env, opts.projectId, opts.roomId);
+  let handoffContext = null;
+  try {
+    handoffContext = await buildHandoffContext(env.DB, {
+      projectId: opts.projectId,
+      roomId: opts.roomId,
+    });
+  } catch { /* non-fatal */ }
   const now = new Date().toISOString();
   const handoffId = crypto.randomUUID();
 
@@ -159,8 +168,8 @@ export async function requestHumanHandoff(env, opts) {
     `INSERT INTO room_handoffs
        (id, project_id, room_id, agent_id, status, agent_task_id,
         handed_off_by_user_id, handed_off_at, context_summary,
-        disposition, resolved_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'human_active', ?, ?, ?, ?, NULL, NULL, ?, ?)`,
+        handoff_context, disposition, resolved_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'human_active', ?, ?, ?, ?, ?, NULL, NULL, ?, ?)`,
   )
     .bind(
       handoffId,
@@ -171,6 +180,7 @@ export async function requestHumanHandoff(env, opts) {
       opts.userId,
       now,
       contextSummary,
+      handoffContext ? JSON.stringify(handoffContext) : null,
       now,
       now,
     )
@@ -205,6 +215,7 @@ export async function requestHumanHandoff(env, opts) {
       handedOffByUserId: opts.userId,
       handedOffAt: now,
       contextSummary,
+      handoffContext,
     },
     agentTask: taskResult.ok ? taskResult.task : null,
     agentTaskError: taskResult.ok ? null : taskResult.error,
@@ -295,4 +306,9 @@ export async function closeRoomHandoffForTask(env, opts) {
     .run();
 
   return { ok: true, roomId: row.room_id };
+}
+
+function safeParseJson(str) {
+  if (!str) return null;
+  try { return JSON.parse(str); } catch { return null; }
 }

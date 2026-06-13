@@ -1,6 +1,6 @@
 import { browserOgPreview, isBrowserRunConfigured } from "./browser-run.js";
 import { logInfo } from "./worker-log.js";
-import { isPrivateUrl } from "./url-ssrf.js";
+import { isPrivateUrl, safeOutboundFetch } from "./url-ssrf.js";
 
 export function quotaResetInfo(now = new Date()) {
   const next = new Date(
@@ -61,7 +61,7 @@ export async function fetchOgPreview(url, env) {
       }
     }
 
-    const res = await fetch(url);
+    const res = await safeOutboundFetch(url);
     const html = await res.text();
     const htmlPreview = parseHtmlOgPreview(html, url);
     if (htmlPreview.title || htmlPreview.description || htmlPreview.imageUrl) {

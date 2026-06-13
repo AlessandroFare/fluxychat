@@ -26,11 +26,11 @@ Fluxychat is a SaaS platform + SDK that gives you production-ready real-time cha
 | Self-serve + clear pricing | ✅ | ✅ | ❌ |
 | Generous free tier | ✅ | ❌ | ❌ |
 | Contextual AI agent | ✅ (Starter+) | ❌ | ❌ |
-| Entry price | **£0** | $49/month | "Talk to sales" |
+| Entry price | **$0** | $49/month | "Talk to sales" |
 
 ### Main differentiator
 
-**Price.** £1 per 1 million messages. Free tier of 50k messages/month. No lock-in on DB or stack. Works with any backend — Next.js, Express, Laravel, anything.
+**Price.** $1 per 1 million messages. Free tier of 50k messages/month. No lock-in on DB or stack. Works with any backend — Next.js, Express, Laravel, anything.
 
 AI is available on paid plans as a natural upgrade, not a requirement to get started.
 
@@ -396,11 +396,23 @@ Next.js 16 application for project management.
 
 ## 10. Pricing
 
+Self-serve tiers (enforced by the worker). USD pricing; canonical source of
+truth is `CANONICAL_TIER_LIMITS` in
+`apps/worker/src/lib/plan-tier-limits.ts` (mirrored in
+`apps/dashboard/lib/plan-catalog.ts`). A CI cross-check
+(`scripts/check-pricing-consistency.mjs`) fails the build on drift.
+
+Growth / Business / Enterprise are **sales-led** display tiers (see
+`docs/marketing/pricing-table.md`); the billing system always normalizes
+`plan_name` to `free / starter / pro`.
+
 | | Free | Starter | Pro |
 |---|---|---|---|
-| **Price** | £0 | £29/month | £99/month |
-| Messages | 50k/month | 1M/month | 10M/month |
-| Message overage | — | £1/1M | £1/1M |
+| **Price** | $0/mo | $19.99/mo | $49.99/mo |
+| Messages | 50k/month | 500k/month | 5M/month |
+| Agent invokes | 1k/month | 10k/month | 100k/month |
+| Webhook deliveries | 10k/month | 100k/month | 1M/month |
+| Message overage | — | $1/1M | $1/1M |
 | AI tokens included | — | 500k/month | 3M/month |
 | Custom agents | — | 3 | Unlimited |
 | Built-in agents | — | All | All |
@@ -463,6 +475,6 @@ Next.js 16 application for project management.
 - Alerts on `rate_limit_exceeded` and `agent_error_rate`
 
 ### Infrastructure cost
-- Target: ~£1 per 1M messages (Cloudflare edge infra)
+- Target: ~$1 per 1M messages (Cloudflare edge infra)
 - AI: provider cost pass-through + margin — developer sees real cost
 - No heavy compute in HTTP router: everything in Durable Objects

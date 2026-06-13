@@ -18,7 +18,7 @@ const e2eEnv = {
  */
 export default defineConfig({
   ...base,
-  testMatch: "**/onboarding.integrated.spec.ts",
+  testMatch: "**/*.integrated.spec.ts",
   timeout: 180_000,
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined

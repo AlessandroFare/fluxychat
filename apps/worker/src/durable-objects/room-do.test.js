@@ -53,6 +53,50 @@ describe("RoomDurableObject message handlers", () => {
     vi.restoreAllMocks();
   });
 
+  it("rejects unknown client WS event types with unknown_event_type error", async () => {
+    const { roomDo } = createRoomDo();
+    const ws = createMockWebSocket();
+    roomDo.clients.add(ws);
+    roomDo.userIds.set(ws, userId);
+
+    await roomDo.onMessage(ws, {
+      data: JSON.stringify({ type: "subscribe", channel: "room" }),
+    });
+
+    expect(ws.sent).toHaveLength(1);
+    expect(JSON.parse(ws.sent[0])).toMatchObject({
+      type: "error",
+      message: "unknown_event_type",
+    });
+  });
+
+  it("persists ws rate-limit buckets to DO storage (P0-3)", async () => {
+    const storage = new Map();
+    const { roomDo } = createRoomDo();
+    roomDo.state = {
+      storage: {
+        get: async (k) => storage.get(k),
+        put: async (k, v) => storage.set(k, v),
+        delete: async (k) => storage.delete(k),
+        setAlarm: async () => {},
+        getAlarm: async () => null,
+        deleteAlarm: async () => {},
+      },
+    };
+
+    roomDo.consumeWsRateLimit("ws-msg:test", 2, 60_000);
+    roomDo.consumeWsRateLimit("ws-msg:test", 2, 60_000);
+    await roomDo.persistEphemeralToStorage();
+
+    const { roomDo: roomDo2 } = createRoomDo();
+    roomDo2.state = roomDo.state;
+    roomDo2.wsRateLimitStore = new Map();
+    await roomDo2.loadEphemeralFromStorage();
+
+    const blocked = roomDo2.consumeWsRateLimit("ws-msg:test", 2, 60_000);
+    expect(blocked.allowed).toBe(false);
+  });
+
   it("returns quota_exceeded on WS message when messages_created quota is denied", async () => {
     vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
       allowed: false,

@@ -1,0 +1,61 @@
+# Staging Worker — copy production bindings with staging resource IDs before deploy.
+# Deploy: wrangler deploy src/worker.js --config wrangler.staging.toml
+name = "fluxychat-worker-staging"
+main = "src/worker.js"
+compatibility_date = "2026-03-24"
+
+[vars]
+WORKFLOW_SCHEDULES_ENABLED = "false"
+# Opt-in Browser Run (cost control — see BROWSER_ENABLED in wrangler.toml)
+BROWSER_ENABLED = "false"
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "RoomDurableObject"
+
+[[durable_objects.bindings]]
+name = "USER"
+class_name = "UserDurableObject"
+
+[[durable_objects.bindings]]
+name = "IP_RATE_LIMITER"
+class_name = "IpRateLimiterDurableObject"
+
+# Replace with staging D1 / KV / R2 IDs from `wrangler d1 create` / `kv namespace create`.
+[[d1_databases]]
+binding = "DB"
+database_name = "fluxychat-staging"
+database_id = "REPLACE_WITH_STAGING_D1_ID"
+migrations_dir = "db"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "REPLACE_WITH_STAGING_KV_ID"
+preview_id = "REPLACE_WITH_STAGING_KV_PREVIEW_ID"
+
+[[r2_buckets]]
+binding = "ATTACHMENTS"
+bucket_name = "fluxychat-attachments-staging"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDurableObject"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["IpRateLimiterDurableObject"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["UserDurableObject"]
+
+[triggers]
+crons = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *"]
+
+[browser]
+binding = "BROWSER"
+
+# Uncomment when staging custom domain is ready (e.g. api-staging.fluxychat.com).
+# [[routes]]
+# pattern = "api-staging.fluxychat.com"
+# custom_domain = true

@@ -7,15 +7,22 @@
   "scripts": {
     "dev": "wrangler dev src/worker.js",
     "deploy": "wrangler deploy src/worker.js",
-    "test": "vitest run",
+    "test": "vitest run --exclude '**/worker.e2e.test.js' --exclude '**/push-vapid.e2e.test.js'",
+    "test:e2e": "vitest run src/worker.e2e.test.js src/lib/push-vapid.e2e.test.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:watch": "vitest",
     "drill:tenant-recovery": "node scripts/tenant-recovery-drill.mjs",
     "perf:workload-check": "node scripts/perf-workload-check.mjs",
-    "smoke:remote": "node scripts/smoke-remote.mjs"
+    "smoke:remote": "node scripts/smoke-remote.mjs",
+    "db:export-baseline": "node scripts/export-d1-baseline.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260515.1",
+    "typescript": "^5.9.3",
     "vitest": "^4.1.5",
     "wrangler": "^4.92.0"
+  },
+  "dependencies": {
+    "@fluxychat/protocol": "workspace:*"
   }
 }

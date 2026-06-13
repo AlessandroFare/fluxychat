@@ -13,6 +13,7 @@ import {
   computeReconnectBackoffMs,
   mapWebSocketCloseToError,
 } from "./errors";
+import { dispatchInboundWsFrame } from "./ws-inbound";
 
 export type FluxyRoomConnectionStatus =
   | "idle"
@@ -363,35 +364,25 @@ export class FluxyChatRoomConnection {
   }
 
   private handleInboundRaw(raw: string): void {
-    let data: FluxyChatEvent | { type: string; ts?: number };
-    try {
-      data = JSON.parse(raw) as FluxyChatEvent | { type: string; ts?: number };
-    } catch {
-      return;
-    }
-
-    if (data.type === "pong") {
-      this.lastPongAtMs = Date.now();
-      return;
-    }
-
-    if (data.type === "replay") {
-      this.wsSnapshotReceived = true;
-      const replay = data as { type: "replay"; messages: FluxyChatMessage[] };
-      this.deliver({ type: "history", messages: replay.messages });
-      return;
-    }
-
-    if (data.type === "history") {
-      this.wsSnapshotReceived = true;
-    }
-
-    if (data.type === "error") {
-      // eslint-disable-next-line no-console
-      console.error("[fluxychat] worker error:", (data as { message?: string }).message);
-    }
-
-    this.deliver(data as FluxyChatEvent);
+    dispatchInboundWsFrame(raw, {
+      onPong: () => {
+        this.lastPongAtMs = Date.now();
+      },
+      onReplay: (messages) => {
+        this.wsSnapshotReceived = true;
+        this.deliver({ type: "history", messages });
+      },
+      onHistoryMarker: () => {
+        this.wsSnapshotReceived = true;
+      },
+      onWorkerError: (message) => {
+        // eslint-disable-next-line no-console
+        console.error("[fluxychat] worker error:", message);
+      },
+      onDeliver: (event) => {
+        this.deliver(event);
+      },
+    });
   }
 
   private openSocket(): void {

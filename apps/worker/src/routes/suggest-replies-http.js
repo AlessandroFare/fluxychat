@@ -122,7 +122,7 @@ export async function dispatchSuggestRepliesRoutes(request, url, h) {
   // 4. Quota (reuse agent invocations metric — cheap AI call)
   const quotaResult = await checkAndConsumeProjectQuota(env, {
     projectId: auth.projectId,
-    metric: "agent_invocations",
+    metricName: "agent_invokes",
   });
   if (!quotaResult.allowed) {
     const reset = quotaResetInfo();

@@ -7,9 +7,11 @@ import { ConsolePageHeader } from "../components/console-page-header";
 import { AnalyticsVisualSections } from "../components/analytics/analytics-visual-sections";
 import { StatCard } from "../components/analytics/analytics-charts";
 import { RoomPicker } from "../components/room-picker";
-import { Banner, Button, Section } from "../components/ui";
+import { ConsoleFeedback } from "../components/console-feedback";
+import { Button, Section } from "../components/ui";
 
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
+import { downloadBlob } from "@/lib/download-blob";
 import { formatNumber } from "@/lib/format-number";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchWorker, fetchWorkerJson } from "@/lib/worker-fetch";
@@ -300,12 +302,7 @@ export default function AnalyticsPage() {
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `perf-signal-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `perf-signal-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`);
     setNotice("Performance signal report downloaded.");
   };
 
@@ -325,8 +322,7 @@ export default function AnalyticsPage() {
           </>
         }
       />
-      {error ? <Banner variant="error">Error: {error}</Banner> : null}
-      {notice ? <Banner variant="success">{notice}</Banner> : null}
+      <ConsoleFeedback error={error} notice={notice} className="space-y-3" />
 
       <Section
         title="Room overview"
@@ -350,12 +346,7 @@ export default function AnalyticsPage() {
                     { headers: authHeader(readToken) }
                   );
                   const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `messages-${roomId}.csv`;
-                  a.click();
-                  URL.revokeObjectURL(url);
+                  downloadBlob(blob, `messages-${roomId}.csv`);
                   setNotice("CSV export downloaded.");
                 } catch {
                   setError("Failed to export CSV.");
@@ -374,12 +365,7 @@ export default function AnalyticsPage() {
                     { headers: authHeader(readToken) }
                   );
                   const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `room-${roomId}.md`;
-                  a.click();
-                  URL.revokeObjectURL(url);
+                  downloadBlob(blob, `room-${roomId}.md`);
                   setNotice("Markdown export downloaded.");
                 } catch {
                   setError("Failed to export Markdown.");
@@ -398,12 +384,7 @@ export default function AnalyticsPage() {
                     { headers: authHeader(readToken) }
                   );
                   const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `room-${roomId}.pdf`;
-                  a.click();
-                  URL.revokeObjectURL(url);
+                  downloadBlob(blob, `room-${roomId}.pdf`);
                   setNotice("PDF export downloaded.");
                 } catch {
                   setError("Failed to export PDF.");
@@ -422,12 +403,7 @@ export default function AnalyticsPage() {
                     { headers: authHeader(readToken) }
                   );
                   const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `messages-${roomId}.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
+                  downloadBlob(blob, `messages-${roomId}.json`);
                   setNotice("JSON export downloaded.");
                 } catch {
                   setError("Failed to export JSON.");

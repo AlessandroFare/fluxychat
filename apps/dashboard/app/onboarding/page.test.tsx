@@ -65,7 +65,7 @@ describe("OnboardingPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Step 1 of 6/i)).toBeInTheDocument();
+      expect(screen.getByTestId("onboarding-playground")).toBeInTheDocument();
     });
   });
 });

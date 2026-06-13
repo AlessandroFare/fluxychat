@@ -31,6 +31,27 @@ jobs:
       - name: Build workspace packages for dashboard tests
         run: pnpm --filter @fluxy-chat/sdk build
 
+      - name: Pricing consistency check (P0-1 / ENG-03)
+        run: pnpm run check:pricing
+
+      - name: Tenant-scope audit (P1 ENG-07)
+        run: pnpm run check:tenant-scope
+
+      - name: OpenAPI route smoke (ENG-14)
+        run: pnpm run check:openapi
+
+      - name: DO bindings check (ENG-12)
+        run: pnpm run check:do-bindings
+
+      - name: Environment readiness hints
+        run: pnpm run check:env
+
+      - name: Worker typecheck (ENG-06)
+        run: pnpm --filter @fluxychat/worker typecheck
+
+      - name: Build dashboard
+        run: pnpm --filter @fluxychat/dashboard build
+
       - name: Test
         run: pnpm test
 

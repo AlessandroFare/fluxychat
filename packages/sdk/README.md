@@ -1,6 +1,6 @@
 # @fluxy-chat/sdk
 
-[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.2)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.3.3)
+[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0)
 
 Client for a **Fluxychat Worker** (self-hosted or [Fluxychat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and optional React `useChat`.
 

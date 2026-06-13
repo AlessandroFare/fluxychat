@@ -5,7 +5,7 @@ export function monthKeyUtc(date = new Date()) {
   return `${year}-${month}`;
 }
 
-const DEFAULT_QUOTA_METRICS = {
+export const DEFAULT_QUOTA_METRICS = {
   messages_created: "messageLimitMonthly",
   agent_invokes: "agentInvokeLimitMonthly",
   webhook_deliveries: "webhookDeliveryLimitMonthly",

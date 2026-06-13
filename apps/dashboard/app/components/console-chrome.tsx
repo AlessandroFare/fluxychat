@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { ConsoleSidebar } from "./console-sidebar";
 import { ConsoleMobileNav } from "./console-mobile-nav";
 import { QuickstartGate } from "./quickstart-gate";
+import { SystemStatusBanner } from "./system-status-banner";
+import { ConsoleCommandPaletteProvider } from "./console-command-palette";
 import { isConsoleRoute } from "./console-nav";
 
 export function ConsoleChrome({ children }: { children: React.ReactNode }) {
@@ -16,15 +18,18 @@ export function ConsoleChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <Suspense fallback={null}>
-      <QuickstartGate>
-        <div className="flex min-h-[calc(100dvh-4rem)]">
-          <ConsoleSidebar />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <ConsoleMobileNav />
-            <div className="flex-1">{children}</div>
+      <ConsoleCommandPaletteProvider>
+        <QuickstartGate>
+          <SystemStatusBanner />
+          <div className="flex min-h-[calc(100dvh-4rem)]">
+            <ConsoleSidebar />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <ConsoleMobileNav />
+              <div className="flex-1">{children}</div>
+            </div>
           </div>
-        </div>
-      </QuickstartGate>
+        </QuickstartGate>
+      </ConsoleCommandPaletteProvider>
     </Suspense>
   );
 }

@@ -10,6 +10,15 @@
 } from "./errors";
 
 export {
+  FLUXY_INBOUND_EVENT_TYPES,
+  FLUXY_OUTBOUND_EVENT_TYPES,
+  FLUXY_PROTOCOL_VERSION,
+  isFluxyInboundEvent,
+  parseInboundWsFrame,
+  dispatchInboundWsFrame,
+} from "@fluxychat/protocol";
+
+export {
   FluxyChatRoomConnection,
   type FluxyRoomConnectionOptions,
   type FluxyRoomConnectionStatus,

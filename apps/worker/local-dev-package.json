@@ -1,0 +1,12 @@
+{
+  "name": "fluxychat-dev",
+  "scripts": {
+    "dev": "node local-dev.mjs",
+    "dev:migrate": "node local-dev.mjs --migrate",
+    "dev:reset": "node local-dev.mjs --reset",
+    "dev:seed": "node local-dev.mjs --seed"
+  },
+  "dependencies": {
+    "miniflare": "^3.20260512.0"
+  }
+}

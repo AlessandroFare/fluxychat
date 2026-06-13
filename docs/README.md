@@ -4,6 +4,11 @@ Use-case oriented documentation.
 
 **LLM / agent discovery:** [`llms.txt`](./llms.txt) · [`llms-full.txt`](./llms-full.txt) (index + bundle, Sent-style)
 
+## Overview
+
+- [Features overview (P12–P20)](./features-overview.md)
+- [Marketing: email, landing, pricing, enterprise script](./marketing/)
+
 ## Use cases
 
 - [Support chat](./use-cases/support-chat.md)
@@ -58,9 +63,15 @@ Use-case oriented documentation.
 
 ## Operations
 
-- [**Open beta deploy guide** (commit → D1 → Worker → env → Vercel → smoke)](./operations/open-beta-deploy-guide.md)
+- [**Environment setup**](./operations/environment-setup.md) — **configure local / staging / production**
+- [**Operations index**](./operations/README.md) — deploy, staging, status, multi-tenant, cron
+- [**Open beta deploy guide**](./operations/open-beta-deploy-guide.md)
+- [**Staging & status page**](./operations/staging-and-status.md)
+- [**Hosted multi-tenant**](./operations/hosted-multi-tenant.md)
+- [**Observability & cron**](./operations/observability.md)
 - [Production: demo Turnstile + Sent.dm SMS](./operations/production-demo-and-sms.md)
 - [US SMS compliance (10DLC, STOP)](./operations/us-sms-compliance-playbook.md)
+- [Agent tool exfiltration (tenant admin trust model)](./security/agent-tool-exfiltration.md)
 
 ## P12 / P13 feature docs
 

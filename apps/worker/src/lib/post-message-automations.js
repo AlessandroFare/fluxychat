@@ -10,8 +10,12 @@ export async function schedulePostMessageAutomations(env, detail) {
     await Promise.all([
       maybeTriggerAutoRoomSummary(env, detail.projectId, detail.roomId),
       maybeRunBuiltinModerationScan(env, detail),
+      maybeRunAiModerationScan(env, detail),
       maybeNotifyOfflineSms(env, detail),
       maybePushNotifyOnMessage(env, detail),
+      maybeExtractRoomMemory(env, detail),
+      maybeStoreMessageEmbedding(env, detail),
+      maybeExtractKnowledgeGraph(env, detail),
     ]);
   } catch (err) {
     logError("post_message_automations_failed", err, {
@@ -224,4 +228,236 @@ export async function generateRoomSummaryAndAnnounce(env, projectId, roomId) {
       userId: "fluxychat-bot",
     }),
   });
+}
+
+/**
+ * P15-E: Maybe extract room memory via AI.
+ * Runs every ROOM_MEMORY_EVERY_N messages (default 20) when AI is configured.
+ */
+async function maybeExtractRoomMemory(env, detail) {
+  try {
+    if (env.ROOM_MEMORY_ENABLED !== "true" && env.ROOM_MEMORY_ENABLED !== "1") {
+      return;
+    }
+    if (!workerSharedLlmAllowed(env, detail.projectId)) {
+      return;
+    }
+
+    const countRow = await env.DB.prepare(
+      `SELECT COUNT(*) AS cnt FROM messages
+       WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL`
+    )
+      .bind(detail.projectId, detail.roomId)
+      .first();
+
+    const messageCount = countRow?.cnt || 0;
+    const everyN = Number(env.ROOM_MEMORY_EVERY_N) || 20;
+    if (messageCount === 0 || messageCount % everyN !== 0) {
+      return;
+    }
+
+    const { extractRoomMemory, persistRoomMemory } = await import("./room-memory.js");
+
+    const extracted = await extractRoomMemory(env, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+    });
+
+    if (!extracted.ok || !extracted.entries.length) {
+      return;
+    }
+
+    await persistRoomMemory(env, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      entries: extracted.entries,
+    });
+  } catch (err) {
+    logError("room_memory.extraction_failed", err, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+    });
+  }
+}
+
+/**
+ * P15-F: Maybe generate and store a message embedding for semantic search.
+ * Runs for every message when SEMANTIC_SEARCH_ENABLED=true and AI is configured.
+ */
+async function maybeStoreMessageEmbedding(env, detail) {
+  try {
+    if (env.SEMANTIC_SEARCH_ENABLED !== "true" && env.SEMANTIC_SEARCH_ENABLED !== "1") {
+      return;
+    }
+    if (!workerSharedLlmAllowed(env, detail.projectId)) {
+      return;
+    }
+    if (!detail.content || detail.content.length < 10) {
+      return;
+    }
+    if (!detail.messageId) {
+      return;
+    }
+
+    const { storeMessageEmbedding } = await import("./message-embeddings.js");
+    await storeMessageEmbedding(env, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      messageId: Number(detail.messageId),
+      content: detail.content,
+    });
+  } catch (err) {
+    logError("semantic_search.embedding_failed", err, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      messageId: detail.messageId,
+    });
+  }
+}
+
+/**
+ * P16-B: Maybe extract knowledge graph entities and relations from room.
+ * Runs every KNOWLEDGE_GRAPH_EVERY_N messages (default 30) when KG is enabled.
+ * Incremental extraction — only processes recent messages since last extraction.
+ */
+async function maybeExtractKnowledgeGraph(env, detail) {
+  try {
+    if (env.KNOWLEDGE_GRAPH_ENABLED !== "true" && env.KNOWLEDGE_GRAPH_ENABLED !== "1") {
+      return;
+    }
+    if (!workerSharedLlmAllowed(env, detail.projectId)) {
+      return;
+    }
+
+    const countRow = await env.DB.prepare(
+      `SELECT COUNT(*) AS cnt FROM messages
+       WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL`
+    )
+      .bind(detail.projectId, detail.roomId)
+      .first();
+
+    const messageCount = countRow?.cnt || 0;
+    const everyN = Number(env.KNOWLEDGE_GRAPH_EVERY_N) || 30;
+    if (messageCount === 0 || messageCount % everyN !== 0) {
+      return;
+    }
+
+    const lastEvent = await env.DB.prepare(
+      `SELECT created_at FROM automation_events
+       WHERE project_id = ? AND room_id = ? AND event_type = 'knowledge_graph_extract'
+       ORDER BY id DESC LIMIT 1`
+    )
+      .bind(detail.projectId, detail.roomId)
+      .first();
+
+    const since = lastEvent?.created_at || null;
+
+    const { extractKnowledgeGraph, persistKnowledgeGraph } = await import("./knowledge-graph.js");
+
+    const extracted = await extractKnowledgeGraph(env, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      since,
+    });
+
+    if (!extracted.ok || (!extracted.nodes.length && !extracted.edges.length)) {
+      return;
+    }
+
+    await persistKnowledgeGraph(env, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      nodes: extracted.nodes,
+      edges: extracted.edges,
+    });
+
+    const now = new Date().toISOString();
+    await env.DB.prepare(
+      `INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+      .bind(
+        detail.projectId,
+        "knowledge_graph_extract",
+        detail.roomId,
+        JSON.stringify({
+          nodesExtracted: extracted.nodes.length,
+          edgesExtracted: extracted.edges.length,
+          since,
+        }),
+        now,
+      )
+      .run();
+  } catch (err) {
+    logError("knowledge_graph.extraction_failed", err, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+    });
+  }
+}
+
+/**
+ * P16-E: Maybe run AI semantic moderation scan on message content.
+ * LLM-based toxicity, spam, PII, and harassment detection.
+ * Gated by AI_MODERATION_ENABLED=true + workerSharedLlmAllowed.
+ */
+async function maybeRunAiModerationScan(env, detail) {
+  try {
+    if (env.AI_MODERATION_ENABLED !== "true" && env.AI_MODERATION_ENABLED !== "1") {
+      return;
+    }
+    if (!workerSharedLlmAllowed(env, detail.projectId)) {
+      return;
+    }
+    if (!detail.content || String(detail.content).trim().length < 5) {
+      return;
+    }
+
+    const { analyzeContent, queueModerationEvent, applyAutoAction } = await import("./ai-moderation.js");
+
+    const analysis = await analyzeContent(env, {
+      content: detail.content,
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      userId: detail.authorUserId,
+      messageId: detail.messageId ? Number(detail.messageId) : undefined,
+    });
+
+    if (!analysis.ok || analysis.severity === "none") {
+      return;
+    }
+
+    let autoActionTaken = null;
+    if (analysis.severity !== "none") {
+      const autoResult = await applyAutoAction(env, {
+        projectId: detail.projectId,
+        roomId: detail.roomId,
+        userId: detail.authorUserId,
+        severity: analysis.severity,
+        suggestedAction: analysis.suggestedAction,
+        messageId: detail.messageId ? Number(detail.messageId) : undefined,
+      });
+      autoActionTaken = autoResult.applied;
+    }
+
+    await queueModerationEvent(env, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      userId: detail.authorUserId,
+      messageId: detail.messageId ? Number(detail.messageId) : undefined,
+      content: detail.content,
+      severity: analysis.severity,
+      categories: analysis.categories,
+      reason: analysis.reason,
+      confidence: analysis.confidence,
+      suggestedAction: analysis.suggestedAction,
+      autoActionTaken,
+    });
+  } catch (err) {
+    logError("ai_moderation.scan_failed", err, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      messageId: detail.messageId,
+    });
+  }
 }

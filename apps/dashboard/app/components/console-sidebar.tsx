@@ -6,6 +6,7 @@ import { FluxychatLogotype } from "@/components/FluxychatLogo";
 import { cn } from "@/lib/utils";
 import { CONSOLE_NAV_MAIN, CONSOLE_NAV_TOOLS } from "./console-nav";
 import { QuickstartNavLink } from "./quickstart-nav-link";
+import { CommandPaletteTrigger } from "./console-command-palette";
 
 function NavLink({ href, label, icon: Icon }: (typeof CONSOLE_NAV_MAIN)[number]) {
   const pathname = usePathname();
@@ -66,7 +67,8 @@ export function ConsoleSidebar() {
           </ul>
         </div>
       </nav>
-      <div className="border-t border-black/[0.06] p-3">
+      <div className="space-y-2 border-t border-black/[0.06] p-3">
+        <CommandPaletteTrigger />
         <Link
           href="/landing"
           className="block rounded-lg px-2.5 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"

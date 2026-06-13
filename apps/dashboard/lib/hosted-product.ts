@@ -26,6 +26,7 @@ export const HOSTED_PATHS = {
   signUp: "/sign-up",
   signIn: "/sign-in",
   console: "/",
+  status: "/status",
 } as const;
 
 /** Routes that use marketing layout (no console sidebar). */
@@ -38,6 +39,7 @@ export const MARKETING_PATH_PREFIXES = [
   "/compare",
   "/guides",
   "/demo",
+  "/status",
   "/sign-in",
   "/sign-up",
 ] as const;

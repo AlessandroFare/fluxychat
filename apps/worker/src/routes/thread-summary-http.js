@@ -78,7 +78,7 @@ export async function dispatchThreadSummaryRoutes(request, url, h) {
 
   const quotaResult = await checkAndConsumeProjectQuota(env, {
     projectId: auth.projectId,
-    metric: "agent_invocations",
+    metricName: "agent_invokes",
   });
   if (!quotaResult.allowed) {
     const reset = quotaResetInfo();

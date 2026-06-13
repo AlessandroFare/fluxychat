@@ -4,20 +4,6 @@ import {
   isPlatformOperatorProject,
   workerSharedLlmAllowed,
 } from "./hosted-saas-policy.js";
-import { normalizePlanName, planLimitsForTier } from "./plan-tier-limits.js";
-
-describe("plan-tier-limits", () => {
-  it("normalizes unknown plan names to free", () => {
-    expect(normalizePlanName("enterprise")).toBe("free");
-    expect(normalizePlanName("PRO")).toBe("pro");
-  });
-
-  it("returns tier caps for starter and pro", () => {
-    const env = {};
-    expect(planLimitsForTier(env, "starter").messageLimitMonthly).toBe(500_000);
-    expect(planLimitsForTier(env, "pro").agentInvokeLimitMonthly).toBe(100_000);
-  });
-});
 
 describe("hosted-saas-policy", () => {
   const platformId = "platform-uuid";

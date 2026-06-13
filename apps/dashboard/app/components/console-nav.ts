@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Plug,
   Search,
+  Sparkles,
   Shield,
   ShieldCheck,
 } from "lucide-react";
@@ -41,6 +42,7 @@ export const CONSOLE_NAV_MAIN: ConsoleNavItem[] = [
 ];
 
 export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
+  { href: "/features", label: "Features", icon: Sparkles, description: "P12–P20 capability overview" },
   { href: "/integrations", label: "Integrations", icon: Plug, description: "Turnstile demo + Sent.dm SMS" },
   { href: "/custom-domains", label: "Custom domains", icon: Globe, description: "White-label chat.yourcompany.com" },
   { href: "/embed", label: "Embed widget", icon: Code2, description: "One-line script for your website" },

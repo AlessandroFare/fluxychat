@@ -2,19 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuickstartHref } from "@/lib/use-quickstart-href";
 import { CONSOLE_NAV_MAIN, CONSOLE_NAV_TOOLS } from "./console-nav";
+import { useCommandPalette } from "./console-command-palette";
 
 const MOBILE_LINKS = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS];
 
 export function ConsoleMobileNav() {
   const pathname = usePathname();
   const quickstartHref = useQuickstartHref();
+  const { open: openCommandPalette } = useCommandPalette();
 
   return (
     <div className="border-b border-black/[0.06] bg-white/90 px-3 py-2 lg:hidden">
+      <div className="mb-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={openCommandPalette}
+          className="inline-flex flex-1 items-center gap-2 rounded-lg border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 text-xs text-slate-600"
+          data-testid="command-palette-trigger-mobile"
+        >
+          <Search className="h-3.5 w-3.5" aria-hidden />
+          Search console…
+        </button>
+      </div>
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-2 py-2 text-sm font-medium text-slate-700 marker:hidden [&::-webkit-details-marker]:hidden">
           <span className="inline-flex items-center gap-2">

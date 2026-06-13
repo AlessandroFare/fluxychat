@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "inbound": [
+    "message",
+    "message_edit",
+    "message_delete",
+    "message_expired",
+    "typing",
+    "subscription_succeeded",
+    "subscription_count",
+    "member_joined",
+    "member_left",
+    "client_event",
+    "agentTyping",
+    "tool_call",
+    "tool_result",
+    "tool_error",
+    "agentRun",
+    "presence",
+    "cache_snapshot",
+    "server_event",
+    "user_event",
+    "user_subscription_succeeded",
+    "state_change",
+    "stream",
+    "pong",
+    "error"
+  ],
+  "outbound": [
+    "ping",
+    "message",
+    "stream",
+    "edit",
+    "reaction",
+    "read",
+    "delete",
+    "typing",
+    "client_event",
+    "agentTyping"
+  ]
+}

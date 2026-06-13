@@ -1,3 +1,4 @@
+import { isPrivateUrl, safeOutboundFetch } from "./url-ssrf.js";
 import { checkAndConsumeProjectQuota } from "./project-plan-quota.js";
 import {
   resolveWebhookSigningSecret,
@@ -130,21 +131,25 @@ export async function processPendingWebhookDeliveries(env, maxBatch = 20) {
         headers["X-Fluxy-Event"] = String(payload.type || "unknown");
         headers["X-Fluxy-Project-Id"] = String(payload.projectId || "");
         headers["X-Fluxy-Delivery-Id"] = d.id;
-        const response = await fetch(d.webhook_url, {
-          method: "POST",
-          headers,
-          body: d.payload,
-        });
-        httpStatus = response.status;
-        if (response.ok) {
-          await env.DB.prepare(
-            "UPDATE webhook_deliveries SET status = 'delivered', attempt_count = ?, last_http_status = ?, last_error = NULL, delivered_at = ?, updated_at = ? WHERE id = ?"
-          )
-            .bind(nextAttemptCount, httpStatus, now, now, d.id)
-            .run();
-          return;
+        if (isPrivateUrl(d.webhook_url)) {
+          errorText = "webhook_url_blocked_ssrf";
+        } else {
+          const response = await safeOutboundFetch(d.webhook_url, {
+            method: "POST",
+            headers,
+            body: d.payload,
+          });
+          httpStatus = response.status;
+          if (response.ok) {
+            await env.DB.prepare(
+              "UPDATE webhook_deliveries SET status = 'delivered', attempt_count = ?, last_http_status = ?, last_error = NULL, delivered_at = ?, updated_at = ? WHERE id = ?"
+            )
+              .bind(nextAttemptCount, httpStatus, now, now, d.id)
+              .run();
+            return;
+          }
+          errorText = `http_${response.status}`;
         }
-        errorText = `http_${response.status}`;
       } catch (err) {
         errorText = err instanceof Error ? err.message : "delivery_failed";
       }

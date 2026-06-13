@@ -6,6 +6,8 @@ compatibility_date = "2026-03-24"
 [vars]
 # When true, cron jobs run via FluxyScheduledWorkflow (P12-L); Worker `scheduled` is a no-op.
 WORKFLOW_SCHEDULES_ENABLED = "false"
+# Browser Run quickAction() incurs cost — set "true" only when you need SPA OG previews.
+BROWSER_ENABLED = "false"
 
 # Local optional vars/secrets: see `.dev.vars.example` (copy to `.dev.vars` for `wrangler dev`).
 # Runtime env/secrets checklist:

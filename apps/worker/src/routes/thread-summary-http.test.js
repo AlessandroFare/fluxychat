@@ -153,4 +153,29 @@ describe("dispatchThreadSummaryRoutes", () => {
     expect(body.messageCount).toBe(3);
     expect(body.rootMessageId).toBe(1);
   });
+
+  it("returns 402 when quota is exceeded", async () => {
+    const quota = vi.fn(async () => ({ allowed: false, used: 100, monthKey: "2026-06" }));
+    const { h } = buildDeps({ quota });
+    const req = makePost(1);
+    const res = await dispatchThreadSummaryRoutes(req, new URL(req.url), h);
+    expect(res.status).toBe(402);
+    const body = await res.json();
+    expect(body.error).toBe("quota_exceeded");
+    expect(quota).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ metricName: "agent_invokes", projectId: "proj_1" }),
+    );
+  });
+
+  it("returns 429 when rate limited", async () => {
+    const { h } = buildDeps({
+      rate: async () => ({ allowed: false, retryAfterSeconds: 30 }),
+    });
+    const req = makePost(1);
+    const res = await dispatchThreadSummaryRoutes(req, new URL(req.url), h);
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body.error).toBe("rate_limit_exceeded");
+  });
 });
