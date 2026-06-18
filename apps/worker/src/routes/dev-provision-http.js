@@ -78,28 +78,62 @@ export async function handleDevProvision(request, env) {
       .run();
   }
 
-  // 2. Revoke any active keys and mint a fresh one.
   const now = nowIso();
+
+  // 2. Idempotency: if an active (non-revoked) key already exists, do NOT
+  //    revoke it. Re-running /dev/provision must not invalidate the key the
+  //    caller already pasted into the dashboard .env.local. We only store the
+  //    hash, so we cannot return the original plaintext; report that a key is
+  //    already active so the caller reuses the one they have.
+  const activeKey = await env.DB.prepare(
+    "SELECT key_prefix FROM api_keys WHERE project_id = ? AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1",
+  )
+    .bind(DEV_PROJECT_ID)
+    .first();
+
+  // Ensure the dev jwt secret exists regardless of the key branch.
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO project_secrets (project_id, jwt_secret, created_at) VALUES (?, ?, ?)",
+  )
+    .bind(DEV_PROJECT_ID, "dev-local-jwt-secret-do-not-use-in-prod", now)
+    .run();
+
+  if (activeKey) {
+    return new Response(
+      JSON.stringify({
+        projectId: DEV_PROJECT_ID,
+        apiKey: null,
+        keyPrefix: activeKey.key_prefix,
+        reused: true,
+        workerUrl: "http://127.0.0.1:8787",
+        message:
+          "An active API key already exists for dev-local and was kept valid. " +
+          "Reuse the key from your previous provision (it was not rotated). " +
+          "To force a new key, revoke the existing one first.",
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+      },
+    );
+  }
+
+  // 3. No active key: mint a fresh one.
   const apiKey = `fc_${crypto.randomUUID().replace(/-/g, "")}`;
   const keyPrefix = apiKey.slice(0, 8);
   const keyHash = await hashApiKey(apiKey, env);
 
-  await env.DB.batch([
-    env.DB.prepare(
-      "UPDATE api_keys SET revoked_at = ? WHERE project_id = ? AND revoked_at IS NULL",
-    ).bind(now, DEV_PROJECT_ID),
-    env.DB.prepare(
-      "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-    ).bind(apiKey, DEV_PROJECT_ID, keyPrefix, keyHash, keyHash, now),
-    env.DB.prepare(
-      "INSERT OR IGNORE INTO project_secrets (project_id, jwt_secret, created_at) VALUES (?, ?, ?)",
-    ).bind(DEV_PROJECT_ID, "dev-local-jwt-secret-do-not-use-in-prod", now),
-  ]);
+  await env.DB.prepare(
+    "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+  )
+    .bind(apiKey, DEV_PROJECT_ID, keyPrefix, keyHash, keyHash, now)
+    .run();
 
   return new Response(
     JSON.stringify({
       projectId: DEV_PROJECT_ID,
       apiKey,
+      reused: false,
       workerUrl: "http://127.0.0.1:8787",
     }),
     {
