@@ -16,5 +16,6 @@ export type { MessageListProps } from "./message-list";
 export { PresenceList } from "./presence-list";
 export type { PresenceListProps } from "./presence-list";
 export { renderContentWithMentions } from "./render-content-with-mentions";
+export { safeUrl } from "./safe-url";
 export { TypingUsersIndicator } from "./typing-users-indicator";
 export type { TypingUsersIndicatorProps } from "./typing-users-indicator";
