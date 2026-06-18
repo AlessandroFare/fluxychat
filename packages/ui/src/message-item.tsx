@@ -279,11 +279,22 @@ export function MessageItem({
           }}
         >
           {m.attachments.map((a) => {
+            // Sanitize user-controlled attachment URL (UI-1). Unsafe
+            // schemes (javascript:, data:, ...) are dropped; such an
+            // attachment is shown as a plain, non-clickable label.
+            const safeUrl = safeHttpUrl(a.url);
             if (a.kind === "image") {
+              if (!safeUrl) {
+                return (
+                  <span key={a.url} style={{ fontSize: 12, color: "#9ca3af" }}>
+                    🖼️ {a.name || "image"} (blocked)
+                  </span>
+                );
+              }
               return (
                 <img
                   key={a.url}
-                  src={a.url}
+                  src={safeUrl}
                   alt={a.name}
                   style={{
                     maxWidth: 280,
@@ -294,17 +305,31 @@ export function MessageItem({
               );
             }
             if (a.kind === "audio") {
+              if (!safeUrl) {
+                return (
+                  <span key={a.url} style={{ fontSize: 12, color: "#9ca3af" }}>
+                    🔊 {a.name || "audio"} (blocked)
+                  </span>
+                );
+              }
               return (
-                <audio key={a.url} controls src={a.url} style={{ maxWidth: 280 }}>
+                <audio key={a.url} controls src={safeUrl} style={{ maxWidth: 280 }}>
                   Your browser does not support the audio element.
                 </audio>
+              );
+            }
+            if (!safeUrl) {
+              return (
+                <span key={a.url} style={{ fontSize: 12, color: "#9ca3af" }}>
+                  📎 {a.name || "attachment"} (blocked)
+                </span>
               );
             }
             if (a.kind === "location") {
               return (
                 <a
                   key={a.url}
-                  href={a.url}
+                  href={safeUrl}
                   target="_blank"
                   rel="noreferrer"
                   style={{
@@ -320,7 +345,7 @@ export function MessageItem({
             return (
               <a
                 key={a.url}
-                href={a.url}
+                href={safeUrl}
                 target="_blank"
                 rel="noreferrer"
                 style={{
