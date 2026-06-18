@@ -6,7 +6,7 @@ import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { Button, Input, Panel, Section } from "../components/ui";
+import { Button, Panel, Section } from "../components/ui";
 import { ConsoleFeedback } from "../components/console-feedback";
 import { formatNumber } from "@/lib/format-number";
 import { messageFromUnknown } from "@/lib/error-message";
