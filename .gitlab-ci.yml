@@ -1,0 +1,33 @@
+# GitLab security scanning for FluxyChat.
+#
+# This complements the existing GitHub Actions CI (build/test/lint) by enabling
+# GitLab's managed security scanners, which populate the project Vulnerability
+# Report and surface findings in merge requests.
+#
+# Scanners enabled:
+#   - SAST (static application security testing)
+#   - Dependency Scanning (known-vulnerable npm packages)
+#   - Secret Detection (committed credentials)
+#
+# Docs: https://docs.gitlab.com/ee/user/application_security/
+
+stages:
+  - test
+
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+
+# Run scanners on the default branch and on merge requests.
+variables:
+  SECURE_LOG_LEVEL: "info"
+
+sast:
+  stage: test
+
+dependency_scanning:
+  stage: test
+
+secret_detection:
+  stage: test
