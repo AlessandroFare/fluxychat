@@ -18,7 +18,13 @@ const DEV_PROJECT_NAME = "dev-local";
 const DEV_PROJECT_ID = "dev-local";
 
 function isDevModeEnabled(env) {
-  return env && env.ALLOW_DEV_PROVISION === "true" && env.NODE_ENV !== "production";
+  if (!env || env.ALLOW_DEV_PROVISION !== "true") return false;
+  // Audit M-1: fail closed. Use an allowlist of explicit non-prod
+  // environments instead of a denylist (NODE_ENV !== "production"), so an
+  // unset/misconfigured NODE_ENV cannot accidentally expose an endpoint
+  // that mints API keys without auth.
+  const nodeEnv = String(env.NODE_ENV || "").trim().toLowerCase();
+  return nodeEnv === "development" || nodeEnv === "test";
 }
 
 function nowIso() {
