@@ -41,13 +41,12 @@ let warnedMissingSalt = false;
 function readSalt(env) {
   const explicit = env?.API_KEY_HASH_SALT?.trim();
   if (explicit && explicit.length > 0) return explicit;
-  // Audit M-2: fail closed in hosted multi-tenant deployments. A weak
-  // default salt is only acceptable for local/self-host dev. In hosted
-  // mode a leaked D1 dump would otherwise be crackable, so refuse to
-  // hash with the fallback salt (mirrors webhook-secret policy S-25).
-  if (String(env?.HOSTED_MULTI_TENANT || "").trim() === "true") {
+  // Fail closed in production: a missing salt makes stored key hashes
+  // predictable if D1 is ever dumped. Only the local/dev fallback below is
+  // permitted, and only when NODE_ENV !== "production".
+  if (env?.NODE_ENV === "production") {
     throw new Error(
-      "api_key_hash_salt_required: API_KEY_HASH_SALT must be set when HOSTED_MULTI_TENANT=true",
+      "API_KEY_HASH_SALT is required in production. Set it to 32+ random bytes (base64).",
     );
   }
   if (!warnedMissingSalt) {
