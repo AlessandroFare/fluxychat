@@ -1,11 +1,15 @@
-# Security scanning pipeline for fluxychat
-# Enables GitLab's built-in security scanners so the Vulnerability Report
-# is populated on the default branch and on merge requests.
+# GitLab security scanning for FluxyChat.
 #
-# Docs:
-# - SAST:                https://docs.gitlab.com/ee/user/application_security/sast/
-# - Dependency Scanning: https://docs.gitlab.com/ee/user/application_security/dependency_scanning/
-# - Secret Detection:    https://docs.gitlab.com/ee/user/application_security/secret_detection/
+# This complements the existing GitHub Actions CI (build/test/lint) by enabling
+# GitLab's managed security scanners, which populate the project Vulnerability
+# Report and surface findings in merge requests.
+#
+# Scanners enabled:
+#   - SAST (static application security testing)
+#   - Dependency Scanning (known-vulnerable npm packages)
+#   - Secret Detection (committed credentials)
+#
+# Docs: https://docs.gitlab.com/ee/user/application_security/
 
 stages:
   - test
@@ -15,24 +19,15 @@ include:
   - template: Jobs/Dependency-Scanning.gitlab-ci.yml
   - template: Jobs/Secret-Detection.gitlab-ci.yml
 
-# Run security scans on merge requests and on the default branch.
-# This keeps the Vulnerability Report up to date for triage.
+# Run scanners on the default branch and on merge requests.
 variables:
   SECURE_LOG_LEVEL: "info"
-  # Scan the full history once so existing committed secrets are surfaced.
-  SECRET_DETECTION_HISTORIC_SCAN: "false"
 
 sast:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  stage: test
 
 dependency_scanning:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  stage: test
 
 secret_detection:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  stage: test
