@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useClerkUser } from "@/lib/clerk-user";
-import { ArrowRight, CheckCircle2, Circle, KeyRound } from "lucide-react";
+import { ArrowRight, CheckCircle2, Circle, KeyRound, MinusCircle } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { ConsoleShell } from "./components/console-shell";
 import { ConsolePageHeader } from "./components/console-page-header";
@@ -134,13 +134,12 @@ export default function HomePage() {
                 {done ? (
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
                 ) : unknown ? (
-                  <span
-                    className="h-4 w-4 shrink-0 text-slate-600"
-                    title="We'll mark this done automatically once you do it."
+                  <MinusCircle
+                    className="h-4 w-4 shrink-0 text-slate-400"
                     aria-label="Not yet tracked"
                   >
-                    â‹
-                  </span>
+                    <title>We&apos;ll mark this done automatically once you do it.</title>
+                  </MinusCircle>
                 ) : (
                   <Circle
                     className={cn("h-4 w-4 shrink-0", isCurrent ? "text-primary" : "text-slate-600")}
@@ -207,7 +206,7 @@ export default function HomePage() {
       <section>
         <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Quick links</h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          Use the sidebar on desktop for full navigation.           Evaluating Fluxychat?
+          Use the sidebar on desktop for full navigation. Evaluating Fluxychat?
           <Link href="/landing" className="ml-1 font-medium text-primary underline-offset-4 hover:underline">
             Product and pricing
           </Link>
