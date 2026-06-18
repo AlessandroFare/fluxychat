@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { FluxyChatMessage } from "@fluxy-chat/sdk";
 import { renderContentWithMentions } from "./render-content-with-mentions";
-import { safeHttpUrl } from "./safe-url";
+import { safeUrl } from "./safe-url";
 
 export interface MessageItemProps {
   message: FluxyChatMessage;
@@ -30,9 +30,11 @@ function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["pre
     }
   }
 
+  const previewHref = safeUrl(preview.url);
+  if (!previewHref) return null;
   return (
     <a
-      href={safeUrl}
+      href={previewHref}
       target="_blank"
       rel="noreferrer"
       style={{
@@ -53,9 +55,9 @@ function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["pre
           maxWidth: 320,
         }}
       >
-        {safeImageUrl ? (
+        {safeUrl(preview.imageUrl, { allowData: true }) ? (
           <img
-            src={safeImageUrl}
+            src={safeUrl(preview.imageUrl, { allowData: true })}
             alt={preview.title ?? ""}
             style={{
               width: 48,
@@ -284,17 +286,12 @@ export function MessageItem({
             // attachment is shown as a plain, non-clickable label.
             const safeUrl = safeHttpUrl(a.url);
             if (a.kind === "image") {
-              if (!safeUrl) {
-                return (
-                  <span key={a.url} style={{ fontSize: 12, color: "#9ca3af" }}>
-                    🖼️ {a.name || "image"} (blocked)
-                  </span>
-                );
-              }
+              const imgSrc = safeUrl(a.url, { allowData: true });
+              if (!imgSrc) return null;
               return (
                 <img
                   key={a.url}
-                  src={safeUrl}
+                  src={imgSrc}
                   alt={a.name}
                   style={{
                     maxWidth: 280,
@@ -305,31 +302,21 @@ export function MessageItem({
               );
             }
             if (a.kind === "audio") {
-              if (!safeUrl) {
-                return (
-                  <span key={a.url} style={{ fontSize: 12, color: "#9ca3af" }}>
-                    🔊 {a.name || "audio"} (blocked)
-                  </span>
-                );
-              }
+              const audioSrc = safeUrl(a.url, { allowData: true });
+              if (!audioSrc) return null;
               return (
-                <audio key={a.url} controls src={safeUrl} style={{ maxWidth: 280 }}>
+                <audio key={a.url} controls src={audioSrc} style={{ maxWidth: 280 }}>
                   Your browser does not support the audio element.
                 </audio>
               );
             }
-            if (!safeUrl) {
-              return (
-                <span key={a.url} style={{ fontSize: 12, color: "#9ca3af" }}>
-                  📎 {a.name || "attachment"} (blocked)
-                </span>
-              );
-            }
+            const fileHref = safeUrl(a.url);
+            if (!fileHref) return null;
             if (a.kind === "location") {
               return (
                 <a
                   key={a.url}
-                  href={safeUrl}
+                  href={fileHref}
                   target="_blank"
                   rel="noreferrer"
                   style={{
@@ -345,7 +332,7 @@ export function MessageItem({
             return (
               <a
                 key={a.url}
-                href={safeUrl}
+                href={fileHref}
                 target="_blank"
                 rel="noreferrer"
                 style={{

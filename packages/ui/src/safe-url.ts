@@ -1,38 +1,35 @@
 /**
- * URL sanitization for user-controlled values rendered into `href`/`src`.
+ * Sanitize a user-controlled URL before placing it in href/src.
  *
- * React does not sanitize attribute URLs, so a value like
- * `javascript:alert(1)` rendered into `<a href>` executes on click
- * (stored XSS). This helper allows only safe schemes and relative URLs.
+ * Blocks dangerous schemes such as `javascript:` and `vbscript:` that would
+ * execute script when a link is clicked (stored XSS). Returns `undefined` for
+ * anything that is not an allowed scheme so callers can omit the attribute.
  *
- * Allowed:
- *   - http:  / https:
- *   - mailto:
- *   - relative URLs (no scheme), e.g. `/attachments/abc`, `./x`, `img.png`
- *
- * Everything else (javascript:, data:, vbscript:, file:, etc.) returns
- * `undefined` so callers can omit the attribute / not render the link.
+ * @param raw the untrusted URL
+ * @param opts.allowData allow `data:`/`blob:` (use only for image src, never href)
  */
-const SAFE_ABSOLUTE_SCHEMES = new Set(["http:", "https:", "mailto:"]);
-
-export function safeHttpUrl(raw: unknown): string | undefined {
-  if (typeof raw !== "string") return undefined;
-  const trimmed = raw.trim();
+export function safeUrl(
+  raw: string | undefined | null,
+  opts: { allowData?: boolean } = {},
+): string | undefined {
+  if (!raw) return undefined;
+  const trimmed = String(raw).trim();
   if (!trimmed) return undefined;
 
-  // Reject control characters (incl. NUL, newlines, tabs) that are
-  // sometimes used to smuggle `java\nscript:` past naive checks.
-  // eslint-disable-next-line no-control-regex
-  if (/[\u0000-\u001f\u007f]/.test(trimmed)) return undefined;
+  // Relative URLs (no scheme) are safe — they cannot be javascript:.
+  // A leading "/", "./", "../", "#" or "?" has no scheme.
+  if (/^(?:[/?#.]|$)/.test(trimmed)) return trimmed;
 
-  // Detect an explicit scheme: `scheme:` at the very start. A leading
-  // `//` (protocol-relative) or `/` (root-relative) or a bare path are
-  // treated as relative and allowed.
   const schemeMatch = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(trimmed);
-  if (schemeMatch) {
-    const scheme = schemeMatch[1].toLowerCase() + ":";
-    if (!SAFE_ABSOLUTE_SCHEMES.has(scheme)) return undefined;
+  if (!schemeMatch) {
+    // No recognizable scheme and not clearly relative — treat as relative.
+    return trimmed;
   }
-
-  return trimmed;
+  const scheme = schemeMatch[1].toLowerCase();
+  const allowed = new Set(["http", "https", "mailto", "tel"]);
+  if (opts.allowData) {
+    allowed.add("data");
+    allowed.add("blob");
+  }
+  return allowed.has(scheme) ? trimmed : undefined;
 }
