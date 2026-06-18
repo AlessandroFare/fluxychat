@@ -7,6 +7,7 @@ import { ConsolePageHeader } from "../components/console-page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Button, Input, Panel, Section } from "../components/ui";
+import { ConsoleFeedback } from "../components/console-feedback";
 import { formatNumber } from "@/lib/format-number";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
@@ -161,12 +162,7 @@ export default function BillingPage() {
         description="Plan, monthly usage, and Stripe checkout for the active project."
       />
 
-      {error && (
-        <div className="mb-3 rounded-xl border border-red-200/80 bg-red-50 p-3 text-sm text-red-950">{error}</div>
-      )}
-      {notice && (
-        <div className="mb-3 rounded-xl border border-emerald-200/80 bg-emerald-50 p-3 text-sm text-emerald-950">{notice}</div>
-      )}
+      <ConsoleFeedback error={error} notice={notice} className="mb-3 space-y-3" />
 
       {!plan && !loading && (
         <Section title="Load plan and usage" description="Pull current plan and this month&apos;s counters from the Worker.">
