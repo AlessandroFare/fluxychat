@@ -782,6 +782,18 @@ export class FluxyChatClient {
     return undefined;
   }
 
+  /**
+   * Open a room WebSocket.
+   *
+   * SECURITY (SDK-1): the browser `WebSocket` API cannot send custom
+   * headers, so the JWT is passed as the `token` query parameter. URLs
+   * (including query strings) can be captured in reverse-proxy / CDN /
+   * Cloudflare access logs and browser history. Mitigations:
+   *   - Mint short-lived tokens (the Worker enforces `exp`).
+   *   - Prefer dedicated, single-use connection tickets for the WS
+   *     handshake instead of a long-lived session JWT where possible.
+   * The same limitation applies to `connectSSE()` (EventSource).
+   */
   connect(roomId: string, options?: FluxyWebSocketConnectOptions): WebSocket {
     const wsBase = httpUrlToWebSocketBase(this.baseUrl);
     const url = new URL(
