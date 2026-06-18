@@ -8,7 +8,7 @@ import { checkAndConsumeRateLimit } from "./rate-limit.js";
  */
 export async function checkAndConsumeIpRateLimit(env, options) {
   const { request, scope, limit, windowSeconds = 60 } = options;
-  const ip = clientIpFromRequest(request);
+  const ip = clientIpFromRequest(request, env);
   const scopeKey = scope ? `${scope}:${ip}` : ip;
   const windowMs = Math.max(1, windowSeconds) * 1000;
 
