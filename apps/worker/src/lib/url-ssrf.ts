@@ -182,11 +182,55 @@ export function assertSafeOutboundUrl(urlString: string, env?: unknown): URL {
   return new URL(urlString);
 }
 
+/** Max number of redirect hops we are willing to follow while re-validating each Location. */
+const MAX_SAFE_REDIRECTS = 5;
+
 export async function safeOutboundFetch(
   urlString: string,
   init?: RequestInit,
   env?: unknown,
 ): Promise<Response> {
+  // Validate the initial target.
   assertSafeOutboundUrl(urlString, env);
-  return fetch(urlString, init);
+
+  // SSRF redirect bypass (audit S-15b): the default redirect:"follow" would
+  // let a validated public endpoint respond with a 3xx Location pointing at a
+  // private address (e.g. 169.254.169.254, 127.0.0.1) and fetch would follow
+  // it WITHOUT re-validation. We force manual redirect handling and re-check
+  // every hop through assertSafeOutboundUrl(). Caller-supplied `redirect` is
+  // overridden on purpose - it must not be possible to weaken this from a
+  // call site.
+  let currentUrl = urlString;
+  for (let hop = 0; hop <= MAX_SAFE_REDIRECTS; hop += 1) {
+    const response = await fetch(currentUrl, {
+      ...init,
+      redirect: "manual",
+    });
+
+    const status = response.status;
+    const isRedirect =
+      status >= 300 && status < 400 && response.headers.has("location");
+    if (!isRedirect) {
+      return response;
+    }
+
+    if (hop === MAX_SAFE_REDIRECTS) {
+      throw new Error("ssrf_too_many_redirects");
+    }
+
+    // Resolve the Location relative to the current URL, then re-validate it.
+    const location = response.headers.get("location") || "";
+    let nextUrl: string;
+    try {
+      nextUrl = new URL(location, currentUrl).toString();
+    } catch {
+      throw new Error("ssrf_blocked");
+    }
+    // Throws "ssrf_blocked" if the redirect target is private/disallowed.
+    assertSafeOutboundUrl(nextUrl, env);
+    currentUrl = nextUrl;
+  }
+
+  // Unreachable: the loop either returns a non-redirect response or throws.
+  throw new Error("ssrf_blocked");
 }
