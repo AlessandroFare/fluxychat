@@ -18,11 +18,14 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260515.1",
+    "@xmldom/xmldom": "^0.9.10",
     "typescript": "^5.9.3",
+    "vite": "^8.0.16",
     "vitest": "^4.1.5",
     "wrangler": "^4.92.0"
   },
   "dependencies": {
-    "@fluxychat/protocol": "workspace:*"
+    "@fluxychat/protocol": "workspace:*",
+    "xml-c14n": "^0.0.6"
   }
 }

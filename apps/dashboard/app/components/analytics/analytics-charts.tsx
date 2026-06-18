@@ -1,4 +1,4 @@
-﻿import { formatNumber } from "@/lib/format-number";
+import { formatNumber } from "@/lib/format-number";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {

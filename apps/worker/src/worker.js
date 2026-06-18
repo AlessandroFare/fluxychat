@@ -26,6 +26,7 @@ import {
 } from "./lib/webhook-signing.js";
 import { dispatchPublicRoutes } from "./routes/public-http.js";
 import { dispatchWorkerHttpRoutes } from "./lib/worker-route-dispatch.js";
+import { maybeHandleDevProvision } from "./routes/dev-provision-http.js";
 import { resolveProjectId } from "./lib/resolve-project-id.js";
 import { hashApiKey } from "./lib/api-key-hash.js";
 import { base64urlEncode } from "./lib/jwt-auth.js";
@@ -65,6 +66,7 @@ import {
   schedulePostMessageAutomations,
   generateRoomSummaryAndAnnounce,
 } from "./lib/post-message-automations.js";
+import { safeSchedulePostMessageAutomations } from "./lib/post-message-automations-safe.js";
 import { truncateForStorage } from "./lib/storage-utils.js";
 import {
   incrementOperationalMetric,
@@ -172,9 +174,17 @@ function validateRoomName(name) {
   return { valid: true, name: trimmed };
 }
 
-function validateRoles(roles) {
+function validateRoles(roles, options = {}) {
   if (!Array.isArray(roles)) return { valid: false, error: "roles must be an array" };
-  const validRoles = ["owner", "admin", "member", "guest", "mod"];
+  // Audit fix M-5: when minting tokens via the public /auth/token path
+  // (API-key-authenticated), prevent callers from self-assigning elevated
+  // roles. `owner`/`admin` grant project-wide mutation rights; a leaked API
+  // key must not also yield an admin token. Trusted server-side minting
+  // paths that legitimately need admin tokens use internal helpers directly.
+  const elevateCap = options.capElevated === true;
+  const validRoles = elevateCap
+    ? ["member", "guest", "mod"]
+    : ["owner", "admin", "member", "guest", "mod"];
   const sanitized = roles
     .filter((r) => typeof r === "string")
     .map((r) => r.trim().toLowerCase())
@@ -395,11 +405,11 @@ export default {
       ...requestLogCtx,
       projectId,
     });
-    ctx.waitUntil(
-      processPendingWebhookDeliveries(env).catch((err) =>
-        logError("webhook.process_pending_failed", err, requestLogCtx)
-      )
-    );
+    // P-7: webhook delivery flush is cron-driven (every 5 min via
+    // `scheduled-runners.js`). Previously it was also fired on every
+    // request, which caused 1 D1 read + 1 fan-out per HTTP hit under
+    // load. Operators wanting faster webhook latency can lower the cron
+    // interval in `wrangler.toml`.
     ctx.waitUntil(
       evaluateOperationalAlerts(env, projectId).catch((err) =>
         logError("alerts.evaluate_failed", err, requestLogCtx)
@@ -431,6 +441,12 @@ export default {
       canAccessRoom,
       checkAndConsumeRateLimit,
     };
+    // Dev-only provision endpoint (POST /dev/provision). 404 unless
+    // ALLOW_DEV_PROVISION === "true" AND NODE_ENV !== "production".
+    // Mounted before public routes so it short-circuits cleanly.
+    const devRes = maybeHandleDevProvision(request, url, env);
+    if (devRes) return devRes;
+
     const publicRes = await dispatchPublicRoutes(request, url, publicDeps);
     if (publicRes) return publicRes;
 
@@ -467,6 +483,7 @@ export default {
       deliverWebhooks,
       invokeMentionedAgents,
       schedulePostMessageAutomations,
+      safeSchedulePostMessageAutomations,
       upsertAgentFromBody,
       mapBotRowToAgent,
       listLlmProvidersForApi,
@@ -613,7 +630,8 @@ async function insertNewProject(env, ctx, name, options = {}) {
   const projectId = crypto.randomUUID();
   const apiKey = `fc_${crypto.randomUUID().replace(/-/g, "")}`;
   const keyPrefix = apiKey.slice(0, 8);
-  const keyHash = await hashApiKey(apiKey);
+  const keyHash = await hashApiKey(apiKey, env);
+  const keyHmac = keyHash; // dual-write during migration; both columns identical for new keys.
   const jwtSecret = generateJwtSecret();
   const freeLimits = planLimitsForTier(env, "free");
 
@@ -627,8 +645,8 @@ async function insertNewProject(env, ctx, name, options = {}) {
       "INSERT OR IGNORE INTO project_secrets (project_id, jwt_secret, created_at) VALUES (?, ?, ?)",
     ).bind(projectId, jwtSecret, now),
     env.DB.prepare(
-      "INSERT INTO api_keys (id, project_id, secret, key_prefix, key_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-    ).bind(apiKey, projectId, "", keyPrefix, keyHash, now),
+      "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    ).bind(apiKey, projectId, keyPrefix, keyHash, keyHmac, now),
     env.DB.prepare(
       "INSERT INTO project_plans (project_id, plan_name, billing_status, message_limit_monthly, agent_invoke_limit_monthly, webhook_delivery_limit_monthly, pricing_version, manually_overridden, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).bind(
@@ -670,6 +688,11 @@ async function insertNewProject(env, ctx, name, options = {}) {
       logError("seed_default_alert_rules_failed", err, requestLogCtx),
     ),
   );
+  ctx.waitUntil(
+    seedDemoRoom(env, projectId).catch((err) =>
+      logError("seed_demo_room_failed", err, { projectId }),
+    ),
+  );
 
   return {
     id: projectId,
@@ -680,8 +703,44 @@ async function insertNewProject(env, ctx, name, options = {}) {
   };
 }
 
+/**
+ * Seed a "general" public room with one welcome message so a brand-new
+ * project has something to look at (Area 5.1).
+ */
+async function seedDemoRoom(env, projectId) {
+  const now = new Date().toISOString();
+  const roomId = "general";
+  // INSERT OR IGNORE so re-running provision is safe.
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, 'public', 'general', ?)"
+  )
+    .bind(roomId, projectId, now)
+    .run();
+  // Add the fluxybot system user as a member.
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)"
+  )
+    .bind(roomId, "fluxybot", now)
+    .run();
+  // Welcome message.
+  await env.DB.prepare(
+    `INSERT INTO messages (project_id, room_id, user_id, content, created_at)
+     VALUES (?, ?, ?, ?, ?)`
+  )
+    .bind(
+      projectId,
+      roomId,
+      "fluxybot",
+      "Welcome to FluxyChat! This is your first room. Say hi 👋",
+      now,
+    )
+    .run();
+}
+
 function canBypassRoomMembership(roles) {
-  return hasAnyRole(roles, ["owner", "admin", "moderator", "bot"]);
+  // Audit S-2: only owner/admin can bypass room membership.
+  // moderator and bot must actually be a member of the target room.
+  return hasAnyRole(roles, ["owner", "admin"]);
 }
 
 export function hasAnyRole(roles, allowedRoles) {
@@ -723,17 +782,32 @@ async function hashWebhookSecret(secret) {
 export { checkAndConsumeRateLimit } from "./lib/rate-limit.js";
 
 function escapeLike(input) {
-  return input.replace(/([%_\\])/g, "\\$1");
+  return String(input).replace(/([%_\\])/g, "\\$1");
 }
 
 // Sanitize log context to prevent sensitive data leakage
-// Removes: API keys, tokens, JWT parts, email addresses, long secrets
+// Audit S-24: redact API keys, tokens, JWT parts, message bodies, webhook
+// payloads, email bodies, raw query strings, and any PII-shaped field.
+const REDACTED = "[REDACTED]";
+const PII_SUMMARY_THRESHOLD = 80;
+
+function summarizeString(value) {
+  if (typeof value !== "string") return value;
+  if (value.length <= PII_SUMMARY_THRESHOLD) return value;
+  return `${value.slice(0, 32)}…(${value.length} chars)`;
+}
+
 function sanitizeLogContext(ctx) {
   if (!ctx || typeof ctx !== "object") return ctx;
   const sanitized = { ...ctx };
   const sensitiveKeys = [
-    "apiKey", "api_key", "token", "secret", "password", "jwt", "auth",
-    "authorization", "cookie", "session", "credential", "key",
+    "apikey", "api_key", "token", "secret", "password", "jwt", "auth",
+    "authorization", "cookie", "session", "credential", "key", "sig",
+    "signature", "private", "private_key",
+  ];
+  const piiKeys = [
+    "content", "body", "payload", "text", "message", "preview",
+    "html", "markdown", "subject", "description",
   ];
   for (const key of Object.keys(sanitized)) {
     const lowerKey = key.toLowerCase();
@@ -743,9 +817,20 @@ function sanitizeLogContext(ctx) {
         sanitized[key] = value.slice(0, 4) + "..." + value.slice(-4);
       } else if (typeof value === "string") {
         sanitized[key] = "***";
+      } else {
+        sanitized[key] = REDACTED;
       }
+      continue;
     }
-    // Recursively sanitize nested objects (shallow only)
+    if (piiKeys.some((pk) => lowerKey === pk || lowerKey.endsWith("_" + pk))) {
+      const value = sanitized[key];
+      if (typeof value === "string") {
+        sanitized[key] = summarizeString(value);
+      } else {
+        sanitized[key] = REDACTED;
+      }
+      continue;
+    }
     if (typeof sanitized[key] === "object" && sanitized[key] !== null) {
       sanitized[key] = sanitizeLogContext(sanitized[key]);
     }

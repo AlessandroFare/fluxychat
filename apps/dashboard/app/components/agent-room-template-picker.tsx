@@ -211,7 +211,7 @@ export function AgentRoomTemplatePicker({
               disabled={disabled || templates.length === 0}
               data-testid="agent-room-template-select"
             >
-              <option value="">— Select —</option>
+              <option value=""> Select </option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}

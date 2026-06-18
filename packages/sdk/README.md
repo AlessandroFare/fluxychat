@@ -61,6 +61,28 @@ Use the returned `token` in the browser.
 
 ## Quick start (React)
 
+### Quick smoke test  run this before writing SDK code
+
+```bash
+# Set these in your shell or .env.local first.
+export WORKER_URL=https://your-worker.example.workers.dev
+export JWT=eyJ...                              # member JWT from /auth/token
+export ROOM_ID=general
+
+# 1. Send a message
+curl -sS -X POST "$WORKER_URL/messages" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d "{\"roomId\":\"$ROOM_ID\",\"content\":\"hello from the smoke test\"}"
+
+# 2. Read it back
+curl -sS "$WORKER_URL/api/messages?roomId=$ROOM_ID&limit=1" \
+  -H "Authorization: Bearer $JWT"
+# Verified against @fluxy-chat/sdk@0.4.0  2026-06-17
+```
+
+If both calls return 200 and the message id round-trips, your Worker URL, JWT, and room are wired correctly. Skip to Option A below.
+
 ### Option A — explicit client
 
 ```tsx
@@ -86,6 +108,7 @@ function Room({ roomId }: { roomId: string }) {
   // messages[].deliveryStatus → pending | sent | failed
   // render messages; call loadMore() when the user scrolls to the top
 }
+// Verified against @fluxy-chat/sdk@0.4.0  2026-06-17
 ```
 
 ### Room catch-up + drafts
@@ -261,10 +284,11 @@ For bots outside the built-in agent runtime, stream into one message row over We
 import { FluxyChatClient, FluxyMessageStream } from "@fluxy-chat/sdk";
 
 const connection = client.connectRoom(roomId);
-connection.connect();
+// connectRoom() auto-connects  no .connect() needed
 const stream = new FluxyMessageStream(connection, agentUserId, { parentId: null });
 stream.push("Hello ");
 stream.end();
+// Verified against @fluxy-chat/sdk@0.4.0  2026-06-17
 ```
 
 See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/bot-streaming-fluxy-message-stream.md) in the monorepo.
@@ -299,19 +323,22 @@ FluxyChat maps [Pusher Channels](https://pusher.com/docs/channels) features to r
 | Presence / subscription count | WS events: `subscription_succeeded`, `member_joined`, `member_left`, `subscription_count` |
 | Cache channel | `connect(roomId, { cache: true })` |
 | E2E encrypted room | `getRoomE2eKey(roomId)` + encrypted sends |
-| User channel | `signIn()`, `connectUser()`, `triggerUserEvent()`, `useUserChannel()` |
+| User channel | `signIn({ userId, roles, ttlSeconds })`, `connectUser()`, `triggerUserEvent()`, `useUserChannel()` |
 | Multi-room HTTP trigger | `triggerEvents({ roomIds, name, data, excludeSocketId })` |
-| Exclude sender | `connection.socketId`, `excludeSocketId` on trigger |
+| Exclude sender | `excludeSocketId` on trigger (no `connection.socketId` in the SDK) |
 | Connection state | `connectionState`, `state_change` event |
-| Global binding | `onAnyEvent()` / `offAnyEvent()`, `useChat({ onAnyEvent })` |
+| Global binding | `connection.onAnyEvent()` / `connection.offAnyEvent()`, `useChat({ onAnyEvent })` |
 | Watchlist | `listWatchlist()`, `addWatchlistTarget()`, `removeWatchlistTarget()` |
 | Terminate connections | `terminateUserConnections(userId)` |
 | Public room | Room `type: "public"` — any project member may connect (JWT still required) |
 
 ```ts
-await client.signIn({ email, password }); // or your auth payload
-const user = client.connectUser();
-user.on("watchlist_event", (p) => console.log(p));
+// signIn() mints a member JWT using the apiKey configured on the client
+const signed = await client.signIn({ userId: "alice", roles: ["member"], ttlSeconds: 3600 });
+// For React: prefer the `useUserChannel` hook  it wraps the WS lifecycle.
+// For non-React: use `client.connectUser()` directly (returns a raw WebSocket).
+const userWs = client.connectUser(signed.userId);
+userWs.onmessage = (event) => console.log("user-channel:", event.data);
 
 await client.triggerEvents({
   roomIds: ["lobby", "scores"],
@@ -319,9 +346,12 @@ await client.triggerEvents({
   data: { top: 3 },
 });
 
-client.onAnyEvent((type, payload) => {
+// onAnyEvent lives on the room connection, not the client
+const conn = client.connectRoom("lobby");
+conn.onAnyEvent((type, payload) => {
   if (type.startsWith("client-")) return;
 });
+// Verified against @fluxy-chat/sdk@0.4.0  2026-06-17
 ```
 
 ```tsx
@@ -381,3 +411,4 @@ Questions: [fluxychat@outlook.com](mailto:fluxychat@outlook.com) · Issues: [git
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+

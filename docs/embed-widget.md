@@ -72,3 +72,4 @@ Serve `embed.js` from `https://chat.yourcompany.com` (P12-G) so API, iframe, and
 ## Migration
 
 Apply D1 migration `0058_embed_widget.sql` (`project_embed_configs`).
+

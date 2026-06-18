@@ -68,3 +68,4 @@ export function credentialStatusSummary(
   }
   return { ready: false, label: "No API key — add under LLM keys" };
 }
+

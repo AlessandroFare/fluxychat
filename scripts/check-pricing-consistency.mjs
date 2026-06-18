@@ -21,9 +21,9 @@ const workerPath = resolve(repoRoot, "apps/worker/src/lib/plan-tier-limits.ts");
 const dashboardPath = resolve(repoRoot, "apps/dashboard/lib/plan-catalog.ts");
 
 const EXPECTED_FREE = {
-  messageLimitMonthly: 50_000,
-  agentInvokeLimitMonthly: 1_000,
-  webhookDeliveryLimitMonthly: 10_000,
+  messageLimitMonthly: 200_000,
+  agentInvokeLimitMonthly: 5_000,
+  webhookDeliveryLimitMonthly: 50_000,
 };
 
 const EXPECTED = {
@@ -36,6 +36,16 @@ const EXPECTED = {
     messageLimitMonthly: 5_000_000,
     agentInvokeLimitMonthly: 100_000,
     webhookDeliveryLimitMonthly: 1_000_000,
+  },
+  team: {
+    messageLimitMonthly: 20_000_000,
+    agentInvokeLimitMonthly: 200_000,
+    webhookDeliveryLimitMonthly: 1_000_000,
+  },
+  growth: {
+    messageLimitMonthly: 100_000_000,
+    agentInvokeLimitMonthly: 1_000_000,
+    webhookDeliveryLimitMonthly: 5_000_000,
   },
 };
 

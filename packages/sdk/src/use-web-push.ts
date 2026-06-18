@@ -205,3 +205,4 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   for (let i = 0; i < rawData.length; ++i) out[i] = rawData.charCodeAt(i);
   return out;
 }
+

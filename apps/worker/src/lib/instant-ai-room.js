@@ -192,3 +192,4 @@ function formatConfig(row) {
 function generateEmbedSnippet(roomId, color, title) {
   return `<script src="https://chat.example.com/embed.js" data-room="${roomId}" data-color="${color}" data-title="${title}"></script>`;
 }
+

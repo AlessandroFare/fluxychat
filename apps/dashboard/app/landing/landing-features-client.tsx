@@ -73,12 +73,12 @@ const PILLARS: readonly PillarBentoItem[] = [
 export function LandingFeaturesClient() {
   return (
     <>
-      <section className="border-b border-border" style={{ backgroundColor: "#0e0e0e" }}>
+      <section className="border-b border-border bg-[#0e0e0e]">
         <div className="mx-auto max-w-6xl px-4 pt-14 pb-5 sm:px-6 sm:pt-16">
           <h2 className="mb-2 text-center font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl">
             Messaging basics, on the edge
           </h2>
-          <p className="mx-auto max-w-2xl px-2 text-center text-sm text-zinc-400 sm:text-base">
+          <p className="mx-auto max-w-2xl px-2 text-center text-sm text-zinc-300 sm:text-base">
             Tap or hover a row on desktop. Channels, presence, mentions, and webhooks without bolting on another
             realtime vendor.
           </p>
@@ -99,7 +99,7 @@ export function LandingFeaturesClient() {
         </div>
 
         <div className="mx-auto max-w-6xl px-4 pb-10 pt-4 sm:px-6">
-          <p className="text-center text-xs text-zinc-600">
+          <p className="text-center text-xs text-zinc-400">
             Threads, polls, and translation are up to your product layer. Fluxychat ships the realtime core.
           </p>
         </div>

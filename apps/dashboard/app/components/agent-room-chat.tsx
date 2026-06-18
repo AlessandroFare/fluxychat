@@ -156,6 +156,7 @@ export function AgentRoomChat({
     clearToolThread,
     lastAgentRun,
     historyLoaded,
+    seenBy,
     loadHistory,
     loadMore,
     hasMore,
@@ -252,10 +253,16 @@ export function AgentRoomChat({
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const since = pollSinceRef.current;
+      // Clock-skew tolerance: server `created_at` and client `since` can differ
+      // by seconds. Subtract a buffer so a run created at the invoke moment
+      // isn't filtered out as "too old" on the next poll after a re-subscribe.
+      const sinceWithBuffer = since
+        ? new Date(new Date(since).getTime() - 60_000).toISOString()
+        : null;
       for (const row of json.runs ?? []) {
         const run = normalizeAgentRun(row);
         if (run.room_id && run.room_id !== trimmedRoomId) continue;
-        if (since && run.created_at && run.created_at < since) continue;
+        if (sinceWithBuffer && run.created_at && run.created_at < sinceWithBuffer) continue;
         if (run.status === "completed" || run.status === "failed") return run;
       }
       return null;
@@ -459,7 +466,7 @@ export function AgentRoomChat({
     <div className={cn("flex flex-col gap-3", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>
-          Room <code className="font-mono">{trimmedRoomId || "—"}</code>
+          Room <code className="font-mono">{trimmedRoomId || ""}</code>
           {usesMentionInvoke ? (
             <span className="ml-2 text-brand">· @{mentionHandle} mention invoke</span>
           ) : (
@@ -501,7 +508,7 @@ export function AgentRoomChat({
           {skipHistoryOnConnect && !historyLoaded ? (
             <button
               type="button"
-              className="ml-2 text-brand hover:underline"
+              className="ml-2 text-brand underline underline-offset-2"
               onClick={() => void loadHistory()}
             >
               Load history
@@ -579,6 +586,7 @@ export function AgentRoomChat({
                 m.parentId != null ? messagesById.get(m.parentId) ?? null : null
               }
               onReply={(id) => setReplyToId(id)}
+              seenBy={m.id != null ? seenBy?.[m.id] : undefined}
             />
           ))
         ) : (
@@ -782,3 +790,4 @@ export function AgentRoomChat({
     </div>
   );
 }
+

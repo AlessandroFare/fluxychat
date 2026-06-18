@@ -1,6 +1,7 @@
 import { logError, logInfo } from "./worker-log.js";
 import { shouldBatchNotification } from "./quiet-hours.js";
 import { enqueueBatchedNotification } from "./notification-batch.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 import {
   getOrCreateVapidKeyPair,
   getVapidPublicKeyRaw,
@@ -383,10 +384,15 @@ export async function sendWebPushToUser(env, { projectId, userId, title, body, r
     let sent = 0;
     for (const sub of subs.results) {
       try {
+        // Audit A-1: the subscription endpoint comes from the user's
+        // browser. A malicious user could register an endpoint that
+        // points at internal Cloudflare metadata (169.254.169.254) or
+        // the loopback address, then use web-push to probe internal
+        // services. Guard with safeOutboundFetch.
         const audience = new URL(sub.endpoint).origin;
         const jwt = await buildVapidJwt(privateKey, audience, subject);
         const { ciphertext } = await encryptWebPushPayload(payload, sub.p256dh, sub.auth);
-        const res = await fetch(sub.endpoint, {
+        const res = await safeOutboundFetch(sub.endpoint, {
           method: "POST",
           headers: {
             "Authorization": `vapid t=${jwt}, k=${await getVapidPublicKeyRaw((await getOrCreateVapidKeyPair(env, projectId)).publicKey)}`,
@@ -442,3 +448,4 @@ export async function sendWebPushToUser(env, { projectId, userId, title, body, r
     return { sent: 0 };
   }
 }
+

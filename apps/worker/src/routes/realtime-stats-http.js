@@ -564,7 +564,7 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
 
     const monthlyMessages = Number(monthlyUsageRow?.c || 0);
     const monthlyAgentInvokes = Number(monthlyAgentInvokesRow?.c || 0);
-    const freeMessagesQuota = Number(env.FREE_MESSAGES_QUOTA_PER_MONTH || 50_000);
+    const freeMessagesQuota = Number(env.FREE_MESSAGES_QUOTA_PER_MONTH || 200_000);
     const pricePerMillionMessages = Number(env.PRICE_PER_MILLION_MESSAGES || 1);
     const pricePerAgentInvoke = Number(env.PRICE_PER_AGENT_INVOKE || 0);
     const estimatedMonthlyRevenue =

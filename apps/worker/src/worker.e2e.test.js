@@ -1320,7 +1320,7 @@ function createEnv(db) {
     WEBHOOK_MAX_ATTEMPTS: "5",
     RATE_LIMIT_FALLBACK_ALLOW: "true",
     QUOTAS_ENABLED: "true",
-    QUOTA_MESSAGES_PER_MONTH: "50000",
+    QUOTA_MESSAGES_PER_MONTH: "200000",
     ROOM: {
       idFromName(name) {
         return `room:${name}`;
@@ -2022,9 +2022,9 @@ describe("worker integration flows", () => {
       project_id: tenantId,
       plan_name: "free",
       billing_status: "manual",
-      message_limit_monthly: 50_000,
-      agent_invoke_limit_monthly: 1_000,
-      webhook_delivery_limit_monthly: 10_000,
+      message_limit_monthly: 200_000,
+      agent_invoke_limit_monthly: 5_000,
+      webhook_delivery_limit_monthly: 50_000,
       pricing_version: "v1",
       manually_overridden: 0,
       created_at: new Date().toISOString(),

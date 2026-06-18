@@ -40,3 +40,4 @@ await client.resolveRoomHandoff(roomId, "resolved");
 
 - Agent queue (P13-T4) — `/agent-queue` SLA timers; dispositions (P13-T5) — `GET /agent-queue/dispositions`
 - `ROADMAP_EXECUTION.md` § P12-H exit criteria
+

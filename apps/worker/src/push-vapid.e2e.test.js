@@ -74,7 +74,7 @@ class FakeDB {
     if (sql.includes("INSERT INTO web_push_subscriptions")) {
       const idx = this.lastWebPushId + 1;
       this.lastWebPushId = idx;
-      // On conflict (same project_id+endpoint) — replace existing row
+      // On conflict (same project_id+endpoint)  replace existing row
       // SQL: (id, project_id, user_id, endpoint, p256dh, auth, user_agent, created_at, updated_at, failure_count)
       // bound: bound[0]=id, bound[1]=projectId, bound[2]=userId, bound[3]=endpoint, bound[4]=p256dh, bound[5]=auth, bound[6]=userAgent, bound[7]=createdAt, bound[8]=updatedAt
       const existingIdx = this.webPushSubscriptions.findIndex(
@@ -189,7 +189,7 @@ async function callWorker({ env, url, method = "GET", body, token, headers }) {
   return worker.fetch(request, env, { waitUntil() {} });
 }
 
-describe("Web Push (VAPID) — P10-ext", () => {
+describe("Web Push (VAPID)  P10-ext", () => {
   let db;
   let env;
   const projectId = "proj_1";

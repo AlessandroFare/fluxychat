@@ -32,7 +32,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "shadcn": "^4.7.0",
+    "@axe-core/playwright": "^4.11.3",
     "@playwright/test": "^1.52.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -40,13 +40,16 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.5.0",
+    "axe-core": "^4.12.1",
     "eslint": "latest",
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.0",
     "postcss": "^8.5.10",
     "postcss-preset-env": "^11.2.1",
+    "shadcn": "^4.7.0",
     "tailwindcss": "^3.4.19",
     "typescript": "latest",
+    "vite": "^8.0.16",
     "vitest": "^4.1.5"
   }
 }

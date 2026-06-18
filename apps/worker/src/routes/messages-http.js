@@ -31,6 +31,9 @@ import {
   fanoutRoomInternal,
   getRoomStubForProject,
 } from "../lib/room-shard.js";
+// B-4: hoist dynamic imports to top-level so they run once at module init.
+import { resolveMessageExpiry } from "../lib/message-ttl.js";
+import { resolveMessageVisibility, messageVisibilitySql } from "../lib/message-visibility.js";
 
 export async function dispatchMessagesRoutes(request, url, h) {
   const {
@@ -55,8 +58,9 @@ export async function dispatchMessagesRoutes(request, url, h) {
     sanitizeMessageAttachments,
     deliverWebhooks,
     invokeMentionedAgents,
-    schedulePostMessageAutomations,
+    safeSchedulePostMessageAutomations,
     canAccessRoom,
+    writeAuditEvent,
   } = pickRouteDeps(h, [
     "env",
     "ctx",
@@ -79,8 +83,9 @@ export async function dispatchMessagesRoutes(request, url, h) {
     "sanitizeMessageAttachments",
     "deliverWebhooks",
     "invokeMentionedAgents",
-    "schedulePostMessageAutomations",
+    "safeSchedulePostMessageAutomations",
     "canAccessRoom",
+    "writeAuditEvent",
   ]);
 
   // Authenticated REST message create endpoint
@@ -176,13 +181,11 @@ export async function dispatchMessagesRoutes(request, url, h) {
       );
     }
     content = middlewareResult.content;
-    const { resolveMessageExpiry } = await import("../lib/message-ttl.js");
     const expiryResult = resolveMessageExpiry(body, env);
     if (!expiryResult.ok) {
       return json({ error: expiryResult.error }, { status: 400 });
     }
     const messageExpiresAt = expiryResult.expiresAt;
-    const { resolveMessageVisibility } = await import("../lib/message-visibility.js");
     const visibilityResult = resolveMessageVisibility(body);
     if (!visibilityResult.ok) {
       return json({ error: visibilityResult.error }, { status: 400 });
@@ -342,7 +345,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
       await env.DB.batch(mentionStmts);
 
       await env.DB.prepare(
-        "INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at) VALUES (?, ?, ?, ?, ?)"
+        "INSERT OR IGNORE INTO automation_events (project_id, event_type, room_id, payload, created_at, idempotency_key) VALUES (?, ?, ?, ?, ?, ?)"
       )
         .bind(
           authProjectId,
@@ -353,7 +356,10 @@ export async function dispatchMessagesRoutes(request, url, h) {
             toUserIds: mentions,
             messageId,
           }),
-          createdAt
+          createdAt,
+          // Audit B-7: deterministic key for `(project, event_type, messageId)`.
+          // A retry of the same message-create handler will be a no-op.
+          `mention:${authProjectId}:${messageId}`
         )
         .run();
 
@@ -468,7 +474,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     ctx.waitUntil(
-      schedulePostMessageAutomations(env, {
+      safeSchedulePostMessageAutomations(env, {
         projectId: authProjectId,
         roomId,
         authorUserId: authUserId,
@@ -478,6 +484,31 @@ export async function dispatchMessagesRoutes(request, url, h) {
         mentionedUserIds: mentions,
         roomType: roomRow?.type ?? null,
         attachments: sanitizedAttachments,
+      }).catch(async (err) => {
+        // Audit S-41: surface automation failures to the operator.
+        // Without this, exceptions thrown inside `ctx.waitUntil` are
+        // silently dropped, which means a broken automation looks
+        // identical to "no automation was configured".
+        logError("automation.schedule_failed", err, {
+          traceId,
+          projectId: authProjectId,
+          roomId,
+          authorUserId: authUserId,
+          messageId,
+        });
+        try {
+          await writeAuditEvent(env, {
+            projectId: authProjectId,
+            actorUserId: authUserId,
+            action: "automation.schedule_failed",
+            targetType: "message",
+            targetId: String(messageId),
+            traceId,
+            metadata: { error: String(err?.message || err) },
+          });
+        } catch {
+          // audit log failure must not surface to the client
+        }
       }),
     );
 
@@ -712,13 +743,16 @@ export async function dispatchMessagesRoutes(request, url, h) {
 
     // Ensure message exists and belongs to this user + project
     const existing = await env.DB.prepare(
-      "SELECT id, room_id, user_id FROM messages WHERE id = ? AND project_id = ?"
+      "SELECT id, room_id, user_id, deleted_at FROM messages WHERE id = ? AND project_id = ?"
     )
       .bind(messageId, authProjectId)
       .first();
 
     if (!existing) {
       return json({ error: "message not found" }, { status: 404 });
+    }
+    if (existing.deleted_at) {
+      return json({ error: "message deleted" }, { status: 409 });
     }
     if (existing.user_id !== userId) {
       return json({ error: "forbidden" }, { status: 403 });
@@ -801,11 +835,24 @@ export async function dispatchMessagesRoutes(request, url, h) {
       if (!hasAnyRole(roles, ["owner", "admin"])) {
         return json({ error: "forbidden_hard_delete_requires_admin" }, { status: 403 });
       }
-      await env.DB.prepare(
-        "DELETE FROM messages WHERE id = ? AND project_id = ?"
-      )
-        .bind(messageId, authProjectId)
-        .run();
+      // B-6: cascade to dependent rows to prevent orphan FK-like state.
+      await env.DB.batch([
+        env.DB.prepare(
+          "DELETE FROM message_reactions WHERE message_id = ? AND project_id = ?"
+        ).bind(messageId, authProjectId),
+        env.DB.prepare(
+          "DELETE FROM message_mentions WHERE message_id = ? AND project_id = ?"
+        ).bind(messageId, authProjectId),
+        env.DB.prepare(
+          "DELETE FROM attachments WHERE message_id = ? AND project_id = ?"
+        ).bind(messageId, authProjectId),
+        env.DB.prepare(
+          "DELETE FROM message_deliveries WHERE message_id = ?"
+        ).bind(messageId),
+        env.DB.prepare(
+          "DELETE FROM messages WHERE id = ? AND project_id = ?"
+        ).bind(messageId, authProjectId),
+      ]);
     } else {
       await env.DB.prepare(
         "UPDATE messages SET deleted_at = ?, content = ? WHERE id = ? AND project_id = ? AND user_id = ?"

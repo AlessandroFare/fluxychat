@@ -16,7 +16,7 @@ export default function GuidesIndexPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <p className="text-sm text-muted-foreground">
-        <Link href={HOSTED_PATHS.landing} className="text-brand hover:underline">
+        <Link href={HOSTED_PATHS.landing} className="text-brand underline underline-offset-2">
           ← Back to home
         </Link>
       </p>
@@ -52,7 +52,7 @@ export default function GuidesIndexPage() {
             href={DEVTO_SOCKET_FLEET_ARTICLE.href}
             target="_blank"
             rel="noreferrer"
-            className="text-brand hover:underline"
+            className="text-brand underline underline-offset-2"
           >
             {DEVTO_SOCKET_FLEET_ARTICLE.title}
           </a>
@@ -70,3 +70,4 @@ export default function GuidesIndexPage() {
     </div>
   );
 }
+

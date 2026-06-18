@@ -17,6 +17,8 @@ export interface AgentRoomMessageProps {
   parentMessage?: FluxyChatMessage | null;
   onReply?: (messageId: number) => void;
   onRetry?: (clientMessageId: string) => void;
+  /** User IDs that have read this message (Area 5.5). */
+  seenBy?: string[];
 }
 
 function displayUserId(message: FluxyChatMessage): string {
@@ -38,12 +40,18 @@ export function AgentRoomMessage({
   parentMessage,
   onReply,
   onRetry,
+  seenBy,
 }: AgentRoomMessageProps) {
   const author = displayUserId(message);
   const isAgent = author === agentId;
   const isSelf = Boolean(localUserId && author === localUserId);
   const isStreaming = Boolean(message.streaming);
   const parentId = message.parentId ?? null;
+
+  // Area 5.5: "seen by N"  only show for messages the local user sent.
+  const seenByOthers = isSelf
+    ? (seenBy ?? []).filter((uid) => uid && uid !== localUserId)
+    : [];
 
   return (
     <div
@@ -148,6 +156,14 @@ export function AgentRoomMessage({
           replyCount={replyCount}
           className="mt-2"
         />
+      ) : null}
+      {seenByOthers.length > 0 ? (
+        <p
+          className="mt-1 text-right text-[10px] text-muted-foreground"
+          title={seenByOthers.length <= 3 ? `Seen by ${seenByOthers.join(", ")}` : undefined}
+        >
+          Seen by {seenByOthers.length <= 3 ? seenByOthers.join(", ") : `${seenByOthers.length} people`}
+        </p>
       ) : null}
     </div>
   );

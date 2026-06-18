@@ -43,6 +43,7 @@ export const ROUTE_DEP_KEY_CATALOG = [
   "deliverWebhooks",
   "invokeMentionedAgents",
   "schedulePostMessageAutomations",
+  "safeSchedulePostMessageAutomations",
   "upsertAgentFromBody",
   "mapBotRowToAgent",
   "listLlmProvidersForApi",

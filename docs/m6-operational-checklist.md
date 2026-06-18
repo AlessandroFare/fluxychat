@@ -99,3 +99,4 @@ Minimum gates before opening to external users:
 | §9 Dashboard | Stripe prod verified + optional hosted docs site. |
 | §10 Pricing | M6-B production exit. |
 | §12 / §15 NFR | After pilot: tune `COST_*` / `PRICE_*` from real traffic (`/stats/costs`). |
+

@@ -157,7 +157,7 @@ export default function InboxPage() {
                         <p className="text-sm text-foreground">{m.preview}</p>
                         <p className="mt-2 text-[11px] text-muted-foreground">
                           {m.authorId} in{" "}
-                          <Link href={`/rooms?room=${encodeURIComponent(m.roomId)}`} className="text-brand hover:underline">
+                          <Link href={`/rooms?room=${encodeURIComponent(m.roomId)}`} className="text-brand underline underline-offset-2">
                             {m.roomName}
                           </Link>{" "}
                           · {formatDateTime(m.createdAt)}
@@ -217,7 +217,7 @@ export default function InboxPage() {
                         <div>
                           <span className="font-medium">{r.roomName}</span>
                           <p className="text-xs text-muted-foreground">
-                            Until {r.snoozedUntil ? formatDateTime(r.snoozedUntil) : "—"}
+                            Until {r.snoozedUntil ? formatDateTime(r.snoozedUntil) : ""}
                           </p>
                         </div>
                         <Button type="button" size="sm" variant="outline" onClick={() => void handleUnsnooze(r.roomId)}>

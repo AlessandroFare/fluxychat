@@ -70,3 +70,4 @@ function formatOverlay(row) {
     createdAt: row.created_at,
   };
 }
+

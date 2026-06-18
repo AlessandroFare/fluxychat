@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Headphones, RefreshCw, Timer, UserCheck } from "lucide-react";
 import {
   FluxyChatClient,
@@ -14,12 +14,13 @@ import { ConsolePageHeader } from "../components/console-page-header";
 import { Banner, Button, EmptyState, Panel, SkeletonCard } from "../components/ui";
 import { formatDateTime } from "@/lib/format-datetime";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
+import { messageFromUnknown } from "@/lib/error-message";
 import { cn } from "@/lib/utils";
 
 function formatSla(task: FluxyAgentTask): string {
   if (task.slaBreached) return "SLA breached";
   const sec = task.secondsToSla;
-  if (sec == null) return "—";
+  if (sec == null) return "";
   if (sec < 60) return `${sec}s`;
   const min = Math.floor(sec / 60);
   return `${min}m`;
@@ -41,6 +42,9 @@ export default function AgentQueuePage() {
     breakdown: Array<{ code: string; label: string; count: number }>;
   } | null>(null);
 
+  // Generation counter for stale-response suppression in `reload`.
+  const reloadGenRef = useRef(0);
+
   const client = useMemo(() => {
     if (!token) return null;
     return new FluxyChatClient({
@@ -54,6 +58,11 @@ export default function AgentQueuePage() {
     if (!client) return;
     setLoading(true);
     setError(null);
+    // Stale-response guard: bump a generation counter; if a newer reload
+    // starts before this one resolves, ignore the result. Prevents rapid
+    // filter toggles from landing out-of-order data. (Audit P2 fix — SDK
+    // methods don't accept an AbortSignal today.)
+    const gen = ++reloadGenRef.current;
     try {
       const [summary, dispositionList, dispositionStats] = await Promise.all([
         client.getAgentQueue({
@@ -62,13 +71,15 @@ export default function AgentQueuePage() {
         client.getAgentDispositions(),
         client.getAgentQueueStats(),
       ]);
+      if (gen !== reloadGenRef.current) return;
       setData(summary);
       setDispositions(dispositionList?.dispositions ?? []);
       setStats(dispositionStats);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load agent queue");
+      if (gen !== reloadGenRef.current) return;
+      setError(messageFromUnknown(err, "Failed to load agent queue"));
     } finally {
-      setLoading(false);
+      if (gen === reloadGenRef.current) setLoading(false);
     }
   }, [client, filter]);
 

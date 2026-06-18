@@ -30,10 +30,25 @@ export function buildPresenceMembers(userIds, userInfoByUserId) {
  */
 export function parsePresenceInfoParam(raw) {
   if (raw == null || raw === "") return {};
+  if (typeof raw !== "string") return {};
+  if (raw.length > 2048) return {};
   try {
-    const parsed = JSON.parse(String(raw));
+    const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-    return parsed;
+    // Audit S-22: only accept a small, well-typed allowlist of presence
+    // fields. This prevents an attacker from broadcasting arbitrary
+    // attacker-controlled strings (e.g. with HTML) to every room member.
+    const out = {};
+    if (typeof parsed.name === "string" && parsed.name.length <= 64) {
+      out.name = parsed.name;
+    }
+    if (typeof parsed.avatar_url === "string" && /^https?:\/\//.test(parsed.avatar_url)) {
+      out.avatar_url = parsed.avatar_url;
+    }
+    if (typeof parsed.role === "string" && parsed.role.length <= 32) {
+      out.role = parsed.role;
+    }
+    return out;
   } catch {
     return {};
   }

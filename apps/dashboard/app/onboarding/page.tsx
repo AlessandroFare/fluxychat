@@ -14,44 +14,41 @@ export default function OnboardingPage() {
   return (
     <ConsoleShell data-testid="onboarding-page">
       <ConsolePageHeader
-        title="Quickstart playground"
-        description={
-          <>
-            Connect, project, member JWT, room, and message — in one panel. Worker URL:{" "}
-            <code className="rounded border border-border bg-muted/50 px-1 font-mono text-xs">
-              {wizard.workerUrl}
-            </code>
-          </>
-        }
+        title="Get started in 5 steps"
+        description="You will send a real message over a live WebSocket. Each step builds on the last."
       />
-      <p className="mb-6 text-xs text-muted-foreground">
-        Active project:{" "}
-        <code className="rounded border border-border bg-muted/50 px-1 py-0.5">
-          {wizard.project?.name || "none yet"}
-        </code>{" "}
-        ·
-        <Link href="/" className="ml-2 font-medium text-foreground underline-offset-4 hover:underline">
-          Console home
-        </Link>
-      </p>
 
-      {wizard.error ? <Banner variant="error">Error: {wizard.error}</Banner> : null}
-      {wizard.notice ? <Banner variant="success">{wizard.notice}</Banner> : null}
+      {wizard.notice && !wizard.error ? (
+        <div className="mb-4">
+          <Banner variant="success">{wizard.notice}</Banner>
+        </div>
+      ) : null}
 
       {wizard.isReviewMode ? (
         <div className="mb-4">
           <Banner variant="info">
-            Review mode: you are already set up. Repeat any section below, or return to the{" "}
+            You are already set up. Send another message below, or head to the{" "}
             <Link href="/" className="font-medium underline underline-offset-2">
-              overview
+              console home
             </Link>
             .
           </Banner>
         </div>
       ) : null}
 
-      <OnboardingProgressStrip stepContext={wizard.stepContext} />
+      <OnboardingProgressStrip stepContext={wizard.stepContext} activeStep={wizard.activeStep} />
       <OnboardingPlayground wizard={wizard} />
+
+      <p className="mt-6 text-xs text-muted-foreground">
+        Your messages are stored on the Worker running at{" "}
+        <code className="rounded border border-border bg-muted/50 px-1 font-mono text-[10px] text-slate-700">
+          {wizard.workerUrl}
+        </code>{" "}
+        &middot; Need a different Worker?{" "}
+        <Link href="/projects" className="font-medium text-foreground underline-offset-4 hover:underline">
+          Switch project
+        </Link>
+      </p>
     </ConsoleShell>
   );
 }

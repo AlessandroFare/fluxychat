@@ -80,3 +80,4 @@ export const PRICING_FAQ = [
     a: "Same worker and SDK. Hosted is fastest to start; self-host gives full control on your Cloudflare account with MIT source.",
   },
 ] as const;
+

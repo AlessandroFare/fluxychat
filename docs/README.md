@@ -4,6 +4,12 @@ Use-case oriented documentation.
 
 **LLM / agent discovery:** [`llms.txt`](./llms.txt) · [`llms-full.txt`](./llms-full.txt) (index + bundle, Sent-style)
 
+## Security & audit
+
+- [Production due diligence audit (2026-06-15)](./audit/production-due-diligence-2026-06-15.md)
+- [Remediation tracker](./audit/REMEDIATION.md)
+- [M6 security review](./security-review-m6.md)
+
 ## Overview
 
 - [Features overview (P12–P20)](./features-overview.md)
@@ -136,3 +142,4 @@ curl -X POST "$FLUXY_BASE_URL/auth/token" \
     "ttlSeconds": 3600
   }'
 ```
+

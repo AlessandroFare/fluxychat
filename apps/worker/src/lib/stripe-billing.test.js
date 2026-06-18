@@ -1,10 +1,32 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { CANONICAL_TIER_LIMITS } from "./plan-tier-limits.js";
 import {
   handleStripeWebhookPost,
   resolveStripeProjectId,
   upsertProjectPlanFromStripe,
+  verifyStripeWebhookSignatureAsync,
 } from "./stripe-billing.js";
-import { CANONICAL_TIER_LIMITS } from "./plan-tier-limits.js";
+
+async function buildStripeSignature(payload, secret) {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signedPayload = `${timestamp}.${payload}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(signedPayload),
+  );
+  const hex = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return `t=${timestamp},v1=${hex}`;
+}
 
 function createMockDb() {
   const projectPlans = new Map();
@@ -101,6 +123,30 @@ describe("stripe-billing (P1 ENG-10)", () => {
     vi.restoreAllMocks();
   });
 
+  it("handleStripeWebhookPost rejects when STRIPE_WEBHOOK_SECRET is missing", async () => {
+    const store = createMockDb();
+    const env = { ...store, DEFAULT_PRICING_VERSION: "v1" };
+    const h = {
+      json: (body, init) =>
+        new Response(JSON.stringify(body), {
+          status: init?.status || 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      logError: vi.fn(),
+      logInfo: vi.fn(),
+    };
+
+    const res = await handleStripeWebhookPost(
+      new Request("https://worker.example/webhooks/stripe", {
+        method: "POST",
+        body: JSON.stringify({ type: "checkout.session.completed" }),
+      }),
+      env,
+      h,
+    );
+    expect(res.status).toBe(503);
+  });
+
   it("resolveStripeProjectId prefers direct projectId", async () => {
     const { DB } = createMockDb();
     await expect(
@@ -132,7 +178,8 @@ describe("stripe-billing (P1 ENG-10)", () => {
 
   it("handleStripeWebhookPost upserts plan on checkout.session.completed", async () => {
     const store = createMockDb();
-    const env = { ...store, DEFAULT_PRICING_VERSION: "v1" };
+    const webhookSecret = "whsec_test_secret";
+    const env = { ...store, DEFAULT_PRICING_VERSION: "v1", STRIPE_WEBHOOK_SECRET: webhookSecret };
     const h = {
       json: (body, init) =>
         new Response(JSON.stringify(body), {
@@ -156,10 +203,14 @@ describe("stripe-billing (P1 ENG-10)", () => {
       },
     };
 
+    const eventBody = JSON.stringify(event);
+    const signature = await buildStripeSignature(eventBody, webhookSecret);
+
     const res = await handleStripeWebhookPost(
       new Request("https://worker.example/webhooks/stripe", {
         method: "POST",
-        body: JSON.stringify(event),
+        headers: { "Stripe-Signature": signature },
+        body: eventBody,
       }),
       env,
       h,
@@ -179,7 +230,8 @@ describe("stripe-billing (P1 ENG-10)", () => {
 
   it("handleStripeWebhookPost is idempotent for duplicate event ids", async () => {
     const store = createMockDb();
-    const env = { ...store, DEFAULT_PRICING_VERSION: "v1" };
+    const webhookSecret = "whsec_test_secret_dup";
+    const env = { ...store, DEFAULT_PRICING_VERSION: "v1", STRIPE_WEBHOOK_SECRET: webhookSecret };
     const h = {
       json: (body, init) =>
         new Response(JSON.stringify(body), {
@@ -203,10 +255,14 @@ describe("stripe-billing (P1 ENG-10)", () => {
       },
     };
 
+    const eventBody = JSON.stringify(event);
+    const signature = await buildStripeSignature(eventBody, webhookSecret);
+
     const req = () =>
       new Request("https://worker.example/webhooks/stripe", {
         method: "POST",
-        body: JSON.stringify(event),
+        headers: { "Stripe-Signature": signature },
+        body: eventBody,
       });
 
     await handleStripeWebhookPost(req(), env, h);

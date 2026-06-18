@@ -74,3 +74,4 @@ curl -sS "$FLUXY_BASE_URL/agents/$AGENT_ID/runs?limit=20" \
 curl -sS "$FLUXY_BASE_URL/stats/ai?minutes=60" \
   -H "Authorization: Bearer $ADMIN_JWT"
 ```
+

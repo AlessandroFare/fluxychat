@@ -174,3 +174,4 @@ Log FluxyChat `webhook_deliveries` id alongside Sent message id in your support 
 - [In-app notifications](../../apps/worker/src/lib/in-app-notifications.js) — mention/DM rows in D1
 - [Transport fallback](./transport-fallback.md) — WS → SSE when mobile backgrounded
 - [Compare: telco vs in-app](https://fluxychat.com/compare) — positioning
+

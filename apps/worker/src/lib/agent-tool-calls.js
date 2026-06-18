@@ -3,6 +3,32 @@
  */
 
 /**
+ * Audit A-5: parse the AGENT_TOOL_ALLOWLIST env var (comma-separated) into
+ * a Set. Returns:
+ *   - null when the env var is not set at all (operator not opted in;
+ *     fall through to the project-level / DB-level allow-list)
+ *   - an empty Set when the env var is set to "" (fail-closed: deny all)
+ *   - a Set of trimmed tool names when the env var is set to a
+ *     non-empty value (deny anything not in the list)
+ *
+ * Critically: we use `in env` (or hasOwnProperty) to distinguish
+ * "env var set to empty string" from "env var absent"  the brief
+ * requires fail-closed on empty string but legacy behaviour
+ * (no enforcement) when absent, so existing deployments are not
+ * silently broken.
+ */
+export function parseAgentToolAllowListFromEnv(env) {
+  if (!env || !Object.prototype.hasOwnProperty.call(env, "AGENT_TOOL_ALLOWLIST")) {
+    return null;
+  }
+  const raw = env.AGENT_TOOL_ALLOWLIST;
+  if (typeof raw !== "string") return new Set();
+  if (raw.length === 0) return new Set();
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return new Set(parts);
+}
+
+/**
  * @param {unknown} toolCallRaw
  * @returns {{ id: string, name: string, arguments: unknown } | null}
  */
@@ -26,9 +52,17 @@ export function normalizeToolCallShape(toolCallRaw) {
  * @param {unknown} toolCallRaw
  * @param {Array<{ function?: { name?: string } }>|null} registeredTools
  * @param {string} runId
+ * @param {Set<string>|null} [projectAllowList]  project-curated tool names.
+ *   When non-null, the LLM's tool name must be in BOTH `registeredTools` and
+ *   this set. An empty set denies all tool calls. A `null` set means the
+ *   operator has not opted into a project allow-list (legacy behaviour).
+ * @param {Set<string>|null} [envAllowList]  global env-driven allow-list
+ *   (AGENT_TOOL_ALLOWLIST). When non-null (including empty), the tool name
+ *   must be in this set. A `null` set means the env var is absent and the
+ *   global gate is skipped.
  * @returns {{ valid: boolean, toolCall: { id: string, name: string, arguments: string }|null, warning: string|null }}
  */
-export function validateToolCall(toolCallRaw, registeredTools, runId) {
+export function validateToolCall(toolCallRaw, registeredTools, runId, projectAllowList = null, envAllowList = null) {
   const normalized = normalizeToolCallShape(toolCallRaw);
   if (!normalized) {
     return {
@@ -83,6 +117,22 @@ export function validateToolCall(toolCallRaw, registeredTools, runId) {
     };
   }
 
+  // Audit A-5: global env-driven allow-list gate. When the env var is
+  // present (even as empty string), it is the highest-priority gate 
+  // we check it FIRST so the operator can be confident that the env
+  // var alone is sufficient to lock down tool access without needing
+  // to also configure every project.
+  if (envAllowList !== null && !envAllowList.has(name)) {
+    return {
+      valid: false,
+      toolCall: null,
+      warning: `tool_call_blocked_by_env_allowlist runId=${runId} name=${name}`,
+    };
+  }
+
+  // S-35 / audit: even if `registeredTools` is the schema the LLM was told
+  // about, the LLM can still hallucinate a tool name we did not intend. The
+  // project allow-list is a hard second gate.
   if (registeredTools) {
     const nameOk = registeredTools.some((t) => t.function?.name === name);
     if (!nameOk) {
@@ -92,6 +142,13 @@ export function validateToolCall(toolCallRaw, registeredTools, runId) {
         warning: `tool_call_unknown_name runId=${runId} name=${name}`,
       };
     }
+  }
+  if (projectAllowList && !projectAllowList.has(name)) {
+    return {
+      valid: false,
+      toolCall: null,
+      warning: `tool_call_blocked_by_project_allowlist runId=${runId} name=${name}`,
+    };
   }
 
   return {
@@ -105,8 +162,10 @@ export function validateToolCall(toolCallRaw, registeredTools, runId) {
  * @param {object} response - OpenAI chat completion JSON
  * @param {Array<object>|null} registeredTools
  * @param {string} runId
+ * @param {Set<string>|null} [projectAllowList]
+ * @param {Set<string>|null} [envAllowList]
  */
-export function extractOpenAIToolCalls(response, registeredTools, runId) {
+export function extractOpenAIToolCalls(response, registeredTools, runId, projectAllowList = null, envAllowList = null) {
   const choice = response.choices?.[0];
   if (!choice) return { content: null, toolCalls: [], finishReason: null, invalidWarnings: [] };
   const content = choice.message?.content || null;
@@ -114,7 +173,7 @@ export function extractOpenAIToolCalls(response, registeredTools, runId) {
   const toolCalls = [];
   const invalidWarnings = [];
   for (const tc of rawToolCalls) {
-    const validated = validateToolCall(tc, registeredTools, runId);
+    const validated = validateToolCall(tc, registeredTools, runId, projectAllowList, envAllowList);
     if (validated.valid && validated.toolCall) {
       toolCalls.push(validated.toolCall);
     }
@@ -129,8 +188,10 @@ export function extractOpenAIToolCalls(response, registeredTools, runId) {
  * @param {object} response - Anthropic messages JSON
  * @param {Array<object>|null} registeredTools
  * @param {string} runId
+ * @param {Set<string>|null} [projectAllowList]
+ * @param {Set<string>|null} [envAllowList]
  */
-export function extractAnthropicToolCalls(response, registeredTools, runId) {
+export function extractAnthropicToolCalls(response, registeredTools, runId, projectAllowList = null, envAllowList = null) {
   let content = null;
   const toolCalls = [];
   const invalidWarnings = [];
@@ -140,7 +201,9 @@ export function extractAnthropicToolCalls(response, registeredTools, runId) {
       const validated = validateToolCall(
         { id: block.id, name: block.name, arguments: block.input },
         registeredTools,
-        runId
+        runId,
+        projectAllowList,
+        envAllowList,
       );
       if (validated.valid && validated.toolCall) {
         toolCalls.push(validated.toolCall);

@@ -7,10 +7,29 @@ import { depsEnv } from "../lib/deps-env.js";
 import { parseSamlAssertion, validateSamlTiming, createSsoSession, getSamlConfig, upsertSamlConfig, generateSpMetadata } from '../lib/sso-saml.js';
 import { createScimUser, getScimUser, listScimUsers, updateScimUser, deleteScimUser, createScimGroup, listScimGroups, createScimToken, listScimTokens, deleteScimToken, verifyScimToken } from '../lib/scim.js';
 import { enrollTotp, verifyAndEnableTotp, verifyAdminTotp, isTotpEnabled, getTotpStatus, disableTotp } from '../lib/totp-2fa.js';
+import { buildAllowedOriginsList } from "../lib/custom-domains.js";
 
-const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS", "Access-Control-Allow-Headers": "Content-Type,Authorization" };
+function resolveCorsHeaders(request, env, h) {
+  // Audit S-9: identity routes (SAML/SCIM/TOTP) must NEVER inherit a wildcard
+  // CORS from the worker entry. Always compute a project-scoped allowlist.
+  void h;
+  const allowedOrigins = buildAllowedOriginsList(env, null);
+  // Identity endpoints are server-to-server or admin-console; never use `*`
+  // even if the project allows it, because the response body can include
+  // tokens, SAML configs, and 2FA state.
+  const safeOrigins = allowedOrigins.filter((o) => o !== "*");
+  const requestOrigin = request.headers.get("Origin") || "";
+  const corsOrigin =
+    requestOrigin && safeOrigins.includes(requestOrigin) ? requestOrigin : null;
+  return {
+    ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Fluxy-Api-Key,X-Project-Id",
+    "Vary": "Origin",
+  };
+}
 
-function json(data, status = 200) {
+function json(data, status = 200, corsHeaders) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -24,6 +43,8 @@ function hasAnyRole(roles, allowed) {
 
 export async function dispatchIdentityRoutes(request, url, h) {
   const env = depsEnv(h);
+  const corsHeaders = resolveCorsHeaders(request, env, h);
+  const respond = (data, status = 200) => json(data, status, corsHeaders);
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
 
   const path = url.pathname;
@@ -32,11 +53,11 @@ export async function dispatchIdentityRoutes(request, url, h) {
 
   if (path === "/saml/config" && request.method === "GET") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const config = await getSamlConfig(env, auth.projectId);
-    if (!config) return json({ configured: false });
-    return json({
+    if (!config) return respond({ configured: false });
+    return respond({
       configured: true,
       idp_entity_id: config.idp_entity_id,
       idp_sso_url: config.idp_sso_url,
@@ -50,23 +71,23 @@ export async function dispatchIdentityRoutes(request, url, h) {
 
   if (path === "/saml/config" && request.method === "POST") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const body = await request.json();
     if (!body.idp_entity_id || !body.idp_sso_url || !body.idp_certificate || !body.sp_acs_url) {
-      return json({ error: 'Missing required SAML fields: idp_entity_id, idp_sso_url, idp_certificate, sp_acs_url' }, 400);
+      return respond({ error: 'Missing required SAML fields: idp_entity_id, idp_sso_url, idp_certificate, sp_acs_url' }, 400);
     }
 
     const result = await upsertSamlConfig(env, auth.projectId, body);
-    return json({ ok: true, id: result.id });
+    return respond({ ok: true, id: result.id });
   }
 
   if (path === "/saml/metadata" && request.method === "GET") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const config = await getSamlConfig(env, auth.projectId);
-    if (!config) return json({ error: 'SAML not configured' }, 404);
+    if (!config) return respond({ error: 'SAML not configured' }, 404);
 
     const xml = generateSpMetadata(config.sp_entity_id, config.sp_acs_url);
     return new Response(xml, { status: 200, headers: { "Content-Type": "application/xml", ...corsHeaders } });
@@ -75,7 +96,7 @@ export async function dispatchIdentityRoutes(request, url, h) {
   if (path === "/saml/acs" && request.method === "POST") {
     const form = await request.formData();
     const samlResponse = form.get('SAMLResponse');
-    if (!samlResponse) return json({ error: 'Missing SAMLResponse' }, 400);
+    if (!samlResponse) return respond({ error: 'Missing SAMLResponse' }, 400);
 
     const relayState = form.get('RelayState');
     let projectId;
@@ -83,18 +104,25 @@ export async function dispatchIdentityRoutes(request, url, h) {
       const relay = JSON.parse(relayState || '{}');
       projectId = relay.projectId;
     } catch {
-      return json({ error: 'Invalid RelayState' }, 400);
+      return respond({ error: 'Invalid RelayState' }, 400);
     }
-    if (!projectId) return json({ error: 'Missing projectId in RelayState' }, 400);
+    if (!projectId) return respond({ error: 'Missing projectId in RelayState' }, 400);
 
     const config = await getSamlConfig(env, projectId);
-    if (!config) return json({ error: 'SAML not configured' }, 400);
+    if (!config) return respond({ error: 'SAML not configured' }, 400);
 
     const assertion = parseSamlAssertion(samlResponse, config);
-    if (!assertion.isValid) return json({ error: 'Invalid SAML assertion issuer' }, 401);
+    if (!assertion.isValid) {
+      // Audit S-21: surface the specific reason so operators can diagnose
+      // misconfiguration, but never accept the assertion anyway.
+      return respond(
+        { error: 'Invalid SAML assertion', reason: assertion.reason || 'invalid' },
+        401,
+      );
+    }
 
     const timing = validateSamlTiming(assertion);
-    if (!timing.valid) return json({ error: timing.reason }, 401);
+    if (!timing.valid) return respond({ error: timing.reason }, 401);
 
     const mapping = JSON.parse(config.attribute_mapping || '{}');
     const email = assertion.attributes[mapping.email || 'email'] || assertion.nameId;
@@ -103,14 +131,14 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const totpEnabled = await isTotpEnabled(env, projectId, email);
     if (totpEnabled) {
       const ssoSession = await createSsoSession(env, projectId, config.id, assertion, null);
-      return json({ requires2fa: true, ssoSessionId: ssoSession.id, email });
+      return respond({ requires2fa: true, ssoSessionId: ssoSession.id, email });
     }
 
     // Mint JWT directly
     const secretRow = await env.DB.prepare(
       `SELECT jwt_secret FROM project_secrets WHERE project_id = ?`
     ).bind(projectId).first();
-    if (!secretRow) return json({ error: 'Project not configured' }, 500);
+    if (!secretRow) return respond({ error: 'Project not configured' }, 500);
 
     const now = Math.floor(Date.now() / 1000);
     const jwt = await signJwtLocal(secretRow.jwt_secret, {
@@ -118,25 +146,25 @@ export async function dispatchIdentityRoutes(request, url, h) {
     });
 
     const ssoSession = await createSsoSession(env, projectId, config.id, assertion, jwt);
-    return json({ ok: true, token: jwt, userId: email, projectId, ssoSessionId: ssoSession.id });
+    return respond({ ok: true, token: jwt, userId: email, projectId, ssoSessionId: ssoSession.id });
   }
 
   if (path === "/saml/acs/verify-2fa" && request.method === "POST") {
     const body = await request.json();
-    if (!body.ssoSessionId || !body.code) return json({ error: 'Missing ssoSessionId or code' }, 400);
+    if (!body.ssoSessionId || !body.code) return respond({ error: 'Missing ssoSessionId or code' }, 400);
 
     const session = await env.DB.prepare(
       `SELECT * FROM sso_sessions WHERE id = ? AND expires_at > datetime('now')`
     ).bind(body.ssoSessionId).first();
-    if (!session) return json({ error: 'Invalid or expired SSO session' }, 401);
+    if (!session) return respond({ error: 'Invalid or expired SSO session' }, 401);
 
     const totpResult = await verifyAdminTotp(env, session.project_id, session.name_id, body.code);
-    if (!totpResult.verified) return json({ error: 'Invalid 2FA code' }, 401);
+    if (!totpResult.verified) return respond({ error: 'Invalid 2FA code' }, 401);
 
     const secretRow = await env.DB.prepare(
       `SELECT jwt_secret FROM project_secrets WHERE project_id = ?`
     ).bind(session.project_id).first();
-    if (!secretRow) return json({ error: 'Project not configured' }, 500);
+    if (!secretRow) return respond({ error: 'Project not configured' }, 500);
 
     const now = Math.floor(Date.now() / 1000);
     const jwt = await signJwtLocal(secretRow.jwt_secret, {
@@ -144,118 +172,118 @@ export async function dispatchIdentityRoutes(request, url, h) {
     });
 
     await env.DB.prepare(`UPDATE sso_sessions SET jwt_token = ? WHERE id = ?`).bind(jwt, body.ssoSessionId).run();
-    return json({ ok: true, token: jwt, userId: session.name_id, projectId: session.project_id });
+    return respond({ ok: true, token: jwt, userId: session.name_id, projectId: session.project_id });
   }
 
   // ─── SCIM Provisioning ───
 
   if (path === "/scim/v2/Users" && request.method === "GET") {
     const projectId = url.searchParams.get('projectId');
-    if (!projectId) return json({ error: 'projectId required' }, 400);
+    if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
-    if (!tokenResult) return json({ error: 'Unauthorized' }, 401);
+    if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const startIndex = parseInt(url.searchParams.get('startIndex') || '1');
     const count = parseInt(url.searchParams.get('count') || '25');
     const result = await listScimUsers(env, projectId, startIndex, count);
-    return json(result);
+    return respond(result);
   }
 
   if (path === "/scim/v2/Users" && request.method === "POST") {
     const projectId = url.searchParams.get('projectId');
-    if (!projectId) return json({ error: 'projectId required' }, 400);
+    if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
-    if (!tokenResult) return json({ error: 'Unauthorized' }, 401);
+    if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const body = await request.json();
     const user = await createScimUser(env, projectId, body);
-    return json(user, 201);
+    return respond(user, 201);
   }
 
   const scimUserMatch = path.match(/^\/scim\/v2\/Users\/(.+)$/);
   if (scimUserMatch && request.method === "GET") {
     const projectId = url.searchParams.get('projectId');
-    if (!projectId) return json({ error: 'projectId required' }, 400);
+    if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
-    if (!tokenResult) return json({ error: 'Unauthorized' }, 401);
+    if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const user = await getScimUser(env, projectId, scimUserMatch[1]);
-    if (!user) return json({ error: 'User not found' }, 404);
-    return json(user);
+    if (!user) return respond({ error: 'User not found' }, 404);
+    return respond(user);
   }
 
   if (scimUserMatch && request.method === "PUT") {
     const projectId = url.searchParams.get('projectId');
-    if (!projectId) return json({ error: 'projectId required' }, 400);
+    if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
-    if (!tokenResult) return json({ error: 'Unauthorized' }, 401);
+    if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const body = await request.json();
     const user = await updateScimUser(env, projectId, scimUserMatch[1], body);
-    if (!user) return json({ error: 'User not found' }, 404);
-    return json(user);
+    if (!user) return respond({ error: 'User not found' }, 404);
+    return respond(user);
   }
 
   if (scimUserMatch && request.method === "DELETE") {
     const projectId = url.searchParams.get('projectId');
-    if (!projectId) return json({ error: 'projectId required' }, 400);
+    if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
-    if (!tokenResult) return json({ error: 'Unauthorized' }, 401);
+    if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const deleted = await deleteScimUser(env, projectId, scimUserMatch[1]);
-    if (!deleted) return json({ error: 'User not found' }, 404);
+    if (!deleted) return respond({ error: 'User not found' }, 404);
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (path === "/scim/v2/Groups" && request.method === "GET") {
     const projectId = url.searchParams.get('projectId');
-    if (!projectId) return json({ error: 'projectId required' }, 400);
+    if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
-    if (!tokenResult) return json({ error: 'Unauthorized' }, 401);
+    if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const startIndex = parseInt(url.searchParams.get('startIndex') || '1');
     const count = parseInt(url.searchParams.get('count') || '25');
     const result = await listScimGroups(env, projectId, startIndex, count);
-    return json(result);
+    return respond(result);
   }
 
   if (path === "/scim/v2/Groups" && request.method === "POST") {
     const projectId = url.searchParams.get('projectId');
-    if (!projectId) return json({ error: 'projectId required' }, 400);
+    if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
-    if (!tokenResult) return json({ error: 'Unauthorized' }, 401);
+    if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const body = await request.json();
     const group = await createScimGroup(env, projectId, body);
-    return json(group, 201);
+    return respond(group, 201);
   }
 
   // ─── SCIM Token Management (admin) ───
 
   if (path === "/admin/scim/tokens" && request.method === "POST") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const body = await request.json();
     const result = await createScimToken(env, auth.projectId, body.description, body.scopes);
-    return json(result, 201);
+    return respond(result, 201);
   }
 
   if (path === "/admin/scim/tokens" && request.method === "GET") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const tokens = await listScimTokens(env, auth.projectId);
-    return json({ tokens });
+    return respond({ tokens });
   }
 
   const scimTokenMatch = path.match(/^\/admin\/scim\/tokens\/(.+)$/);
   if (scimTokenMatch && request.method === "DELETE") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const deleted = await deleteScimToken(env, auth.projectId, scimTokenMatch[1]);
-    if (!deleted) return json({ error: 'Token not found' }, 404);
+    if (!deleted) return respond({ error: 'Token not found' }, 404);
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
@@ -263,49 +291,49 @@ export async function dispatchIdentityRoutes(request, url, h) {
 
   if (path === "/admin/2fa/enroll" && request.method === "POST") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const result = await enrollTotp(env, auth.projectId, auth.userId);
     const uri = `otpauth://totp/FluxyChat:${encodeURIComponent(auth.userId)}?secret=${result.secret}&issuer=FluxyChat&algorithm=SHA1&digits=6&period=30`;
-    return json({ secret: result.secret, uri, format: 'totp' });
+    return respond({ secret: result.secret, uri, format: 'totp' });
   }
 
   if (path === "/admin/2fa/verify" && request.method === "POST") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const body = await request.json();
-    if (!body.code) return json({ error: 'Missing code' }, 400);
+    if (!body.code) return respond({ error: 'Missing code' }, 400);
 
     const result = await verifyAndEnableTotp(env, auth.projectId, auth.userId, body.code);
-    if (!result.success) return json({ error: result.reason }, 400);
-    return json({ ok: true, backupCodes: result.backupCodes });
+    if (!result.success) return respond({ error: result.reason }, 400);
+    return respond({ ok: true, backupCodes: result.backupCodes });
   }
 
   if (path === "/admin/2fa/status" && request.method === "GET") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const status = await getTotpStatus(env, auth.projectId, auth.userId);
-    return json(status);
+    return respond(status);
   }
 
   if (path === "/admin/2fa/disable" && request.method === "POST") {
     const auth = await verifyAdmin(request, env);
-    if (auth.error) return json({ error: auth.error }, auth.status);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
 
     await disableTotp(env, auth.projectId, auth.userId);
-    return json({ ok: true });
+    return respond({ ok: true });
   }
 
   if (path === "/auth/admin/2fa-verify" && request.method === "POST") {
     const body = await request.json();
     if (!body.projectId || !body.userId || !body.code) {
-      return json({ error: 'Missing projectId, userId, or code' }, 400);
+      return respond({ error: 'Missing projectId, userId, or code' }, 400);
     }
     const result = await verifyAdminTotp(env, body.projectId, body.userId, body.code);
-    if (!result.verified) return json({ error: 'Invalid 2FA code' }, 401);
-    return json({ ok: true, method: result.method });
+    if (!result.verified) return respond({ error: 'Invalid 2FA code' }, 401);
+    return respond({ ok: true, method: result.method });
   }
 
   return null; // Not handled by this dispatcher
@@ -358,3 +386,4 @@ async function signJwtLocal(secret, payload) {
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   return `${data}.${btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`;
 }
+

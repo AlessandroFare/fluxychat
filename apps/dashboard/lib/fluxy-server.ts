@@ -80,6 +80,38 @@ export async function createWorkerProject(adminJwt: string, name: string): Promi
   return json.project;
 }
 
+export async function mintMemberTokenWithAdminJwt(
+  adminJwt: string,
+  input: MintTokenInput,
+): Promise<MintTokenResult> {
+  const res = await fetch(`${getWorkerUrl()}/admin/member-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${adminJwt.trim()}`,
+    },
+    body: JSON.stringify({
+      userId: input.userId,
+      roles: input.roles,
+      ttlSeconds: input.ttlSeconds ?? 3600,
+    }),
+  });
+
+  const json = (await res.json().catch(() => ({}))) as MintTokenResult & { error?: string; token?: string };
+  if (!res.ok) {
+    throw new Error(json.error || `Worker /admin/member-token failed (${res.status})`);
+  }
+  const token = json.token;
+  if (!token) {
+    throw new Error("Worker did not return a token.");
+  }
+  return {
+    token,
+    expiresIn: json.expiresIn,
+    claims: json.claims,
+  };
+}
+
 export async function listWorkerProjects(adminJwt: string) {
   const res = await fetch(`${getWorkerUrl()}/admin/projects`, {
     headers: { Authorization: `Bearer ${adminJwt}` },

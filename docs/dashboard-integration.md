@@ -81,3 +81,4 @@ Configure on the Worker (see `apps/worker/wrangler.toml` comments):
 - **`NEXT_PUBLIC_FLUXYCHAT_WORKER_URL`** — Worker base URL (default `http://127.0.0.1:8787` in dev).
 
 See also: [Auth cookbook](./cookbook/auth-jwt.md), [Troubleshooting](./troubleshooting.md).
+

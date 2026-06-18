@@ -46,7 +46,7 @@ export function AgentRunStatus({ run, pending, compact, className }: AgentRunSta
         </div>
       ) : run ? (
         <p className="text-xs text-muted-foreground">
-          Room <span className="font-mono">{run.room_id || "—"}</span>
+          Room <span className="font-mono">{run.room_id || ""}</span>
         </p>
       ) : null}
 
@@ -60,7 +60,7 @@ export function AgentRunStatus({ run, pending, compact, className }: AgentRunSta
         <>
           <p className="mt-2 font-mono text-[10px] text-muted-foreground">{run.id}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {run.latency_ms != null ? `${run.latency_ms}ms` : "—"}
+            {run.latency_ms != null ? `${run.latency_ms}ms` : ""}
             {run.input_tokens != null || run.output_tokens != null
               ? ` · tokens ${run.input_tokens ?? 0}/${run.output_tokens ?? 0}`
               : ""}

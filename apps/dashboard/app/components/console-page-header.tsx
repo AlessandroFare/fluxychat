@@ -29,17 +29,24 @@ export function ConsolePageHeader({
 
   return (
     <header className="mb-6 border-b border-black/[0.06] pb-5">
-      <nav className="mb-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground" aria-label="Breadcrumb">
-        <Link href="/" className="hover:text-foreground">
-          Console
-        </Link>
+      {/*
+        Breadcrumb rendered as a plain <ol> (not a <nav>) so it does not
+        become a nested navigation landmark inside the root layout's
+        <main>. axe `landmark-no-duplicate` / nested-nav rules.
+      */}
+      <ol className="mb-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+        <li>
+          <Link href="/" className="hover:text-foreground">
+            Console
+          </Link>
+        </li>
         {pathname !== "/" ? (
-          <>
+          <li className="flex items-center gap-1 font-medium text-foreground">
             <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
-            <span className="font-medium text-foreground">{pageTitle}</span>
-          </>
+            <span aria-current="page">{pageTitle}</span>
+          </li>
         ) : null}
-      </nav>
+      </ol>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{pageTitle}</h1>

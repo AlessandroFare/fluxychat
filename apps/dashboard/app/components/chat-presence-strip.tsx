@@ -31,7 +31,7 @@ export function ChatPresenceStrip({
     >
       <span className="font-medium text-foreground/80">Online</span>
       {members.length === 0 ? (
-        <span>—</span>
+        <span></span>
       ) : (
         members.map((m) => (
           <span

@@ -34,8 +34,8 @@ export function ConsoleMobileNav() {
             <Menu className="h-4 w-4" aria-hidden />
             Sections
           </span>
-          <span className="text-xs text-slate-400 group-open:hidden">Menu</span>
-          <span className="hidden text-xs text-slate-400 group-open:inline">Close</span>
+          <span className="text-xs text-slate-600 group-open:hidden">Menu</span>
+          <span className="hidden text-xs text-slate-600 group-open:inline">Close</span>
         </summary>
         <nav className="mt-2 grid grid-cols-2 gap-1 pb-1 sm:grid-cols-3" aria-label="Console mobile">
           {MOBILE_LINKS.map((item) => {

@@ -74,3 +74,4 @@ Index of major FluxyChat capabilities. Follow the links for technical detail.
 | Room DO unknown WS events | Done — `room-do.test.js` + `ws-protocol.js` |
 
 See [`packages/protocol/README.md`](../packages/protocol/README.md).
+

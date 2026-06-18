@@ -20,27 +20,38 @@ export interface CanonicalTierLimits {
  * `free` is intentionally absent; the free tier uses environment defaults
  * (see `planLimitsForTier` in the worker module).
  */
-export const CANONICAL_TIER_LIMITS: Readonly<Record<"starter" | "pro", CanonicalTierLimits>> =
-  Object.freeze({
-    starter: Object.freeze({
-      messageLimitMonthly: 500_000,
-      agentInvokeLimitMonthly: 10_000,
-      webhookDeliveryLimitMonthly: 100_000,
-    }),
-    pro: Object.freeze({
-      messageLimitMonthly: 5_000_000,
-      agentInvokeLimitMonthly: 100_000,
-      webhookDeliveryLimitMonthly: 1_000_000,
-    }),
-  });
+export const CANONICAL_TIER_LIMITS: Readonly<
+  Record<"starter" | "pro" | "team" | "growth", CanonicalTierLimits>
+> = Object.freeze({
+  starter: Object.freeze({
+    messageLimitMonthly: 500_000,
+    agentInvokeLimitMonthly: 10_000,
+    webhookDeliveryLimitMonthly: 100_000,
+  }),
+  pro: Object.freeze({
+    messageLimitMonthly: 5_000_000,
+    agentInvokeLimitMonthly: 100_000,
+    webhookDeliveryLimitMonthly: 1_000_000,
+  }),
+  team: Object.freeze({
+    messageLimitMonthly: 20_000_000,
+    agentInvokeLimitMonthly: 200_000,
+    webhookDeliveryLimitMonthly: 1_000_000,
+  }),
+  growth: Object.freeze({
+    messageLimitMonthly: 100_000_000,
+    agentInvokeLimitMonthly: 1_000_000,
+    webhookDeliveryLimitMonthly: 5_000_000,
+  }),
+});
 
 /** Default free-tier limits. Mirrors the worker's `getDefaultQuotaLimit` defaults
- *  (50k messages, 1k agent invokes, 10k webhook deliveries). Kept here so the
+ *  (200k messages, 5k agent invokes, 50k webhook deliveries). Kept here so the
  *  dashboard renders a faithful preview when no env is available. */
 export const FREE_TIER_LIMITS: CanonicalTierLimits = Object.freeze({
-  messageLimitMonthly: 50_000,
-  agentInvokeLimitMonthly: 1_000,
-  webhookDeliveryLimitMonthly: 10_000,
+  messageLimitMonthly: 200_000,
+  agentInvokeLimitMonthly: 5_000,
+  webhookDeliveryLimitMonthly: 50_000,
 });
 
 export interface PublicPlanRow {
@@ -66,19 +77,6 @@ export interface SalesPlanRow {
 }
 
 export const SALES_PLAN_CATALOG: SalesPlanRow[] = [
-  {
-    label: "Growth",
-    price: "From $199/mo",
-    tagline: "Small B2B SaaS with omnichannel and analytics.",
-    bullets: [
-      "Multiple projects",
-      "Omnichannel inbox (base)",
-      "AI memory and FTS search",
-      "Light moderation tooling",
-    ],
-    cta: "Contact sales",
-    href: "mailto:fluxychat@outlook.com?subject=FluxyChat%20Growth",
-  },
   {
     label: "Business",
     price: "From $699/mo",
@@ -117,14 +115,15 @@ export const PUBLIC_PLAN_CATALOG: Record<string, PublicPlanRow> = {
     tagline: "Try the stack without a card.",
     bullets: [
       "SDK and dashboard access",
-      "Help via GitHub issues",
+      // TODO: replace with real Discord invite URL before launch
+      "Community support (GitHub + Discord: https://discord.gg/fluxychat)",
       "One project, fair-use limits",
       "Upgrade without migrating data",
     ],
   },
   starter: {
     label: "Starter",
-    price: "$19.99/mo",
+    price: "$20/mo",
     messages: CANONICAL_TIER_LIMITS.starter.messageLimitMonthly,
     agents: CANONICAL_TIER_LIMITS.starter.agentInvokeLimitMonthly,
     webhooks: CANONICAL_TIER_LIMITS.starter.webhookDeliveryLimitMonthly,
@@ -138,7 +137,7 @@ export const PUBLIC_PLAN_CATALOG: Record<string, PublicPlanRow> = {
   },
   pro: {
     label: "Pro",
-    price: "$49.99/mo",
+    price: "$50/mo",
     messages: CANONICAL_TIER_LIMITS.pro.messageLimitMonthly,
     agents: CANONICAL_TIER_LIMITS.pro.agentInvokeLimitMonthly,
     webhooks: CANONICAL_TIER_LIMITS.pro.webhookDeliveryLimitMonthly,
@@ -150,4 +149,33 @@ export const PUBLIC_PLAN_CATALOG: Record<string, PublicPlanRow> = {
       "Annual invoicing on request",
     ],
   },
+  team: {
+    label: "Team",
+    price: "$99/mo",
+    messages: CANONICAL_TIER_LIMITS.team.messageLimitMonthly,
+    agents: CANONICAL_TIER_LIMITS.team.agentInvokeLimitMonthly,
+    webhooks: CANONICAL_TIER_LIMITS.team.webhookDeliveryLimitMonthly,
+    tagline: "Multiple projects, more seats, same compliance posture as Pro.",
+    bullets: [
+      "20M messages, 200k agent invokes, 1M webhook deliveries per month",
+      "Up to 5 projects and 5 team seats",
+      "Team member management and RBAC",
+      "Priority support, annual invoicing on request",
+    ],
+  },
+  growth: {
+    label: "Growth",
+    price: "From $199/mo",
+    messages: CANONICAL_TIER_LIMITS.growth.messageLimitMonthly,
+    agents: CANONICAL_TIER_LIMITS.growth.agentInvokeLimitMonthly,
+    webhooks: CANONICAL_TIER_LIMITS.growth.webhookDeliveryLimitMonthly,
+    tagline: "B2B SaaS with omnichannel, AI memory, and FTS search.",
+    bullets: [
+      "Multiple projects, omnichannel inbox (base)",
+      "AI memory and full-text search",
+      "Light moderation tooling",
+      "Annual invoicing on request",
+    ],
+  },
 };
+

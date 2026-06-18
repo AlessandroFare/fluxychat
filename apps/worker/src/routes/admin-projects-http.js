@@ -27,6 +27,9 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
     tenantScopeForbidden,
     writeAuditEvent,
     hashApiKey,
+    signJwtHs256,
+    validateRoles,
+    isValidId,
   } = pickRouteDeps(h, [
     "env",
     "ctx",
@@ -47,8 +50,70 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
     "tenantScopeForbidden",
     "writeAuditEvent",
     "hashApiKey",
+    "signJwtHs256",
+    "validateRoles",
+    "isValidId",
   ]);
 
+
+  if (url.pathname === "/admin/member-token" && request.method === "POST") {
+    if (!requireAdminAuth) {
+      return json({ error: "not_available" }, { status: 404 });
+    }
+    const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!adminAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    if (!hasAnyRole(adminAuth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => null);
+    if (!body?.userId || !isValidId(body.userId)) {
+      return json(
+        { error: "userId required: must be 1-128 chars, alphanumeric with _ -" },
+        { status: 400 },
+      );
+    }
+
+    const rolesValidation = validateRoles(body.roles ?? ["member"]);
+    if (!rolesValidation.valid) {
+      return json({ error: rolesValidation.error || "invalid roles" }, { status: 400 });
+    }
+    const roles = rolesValidation.roles;
+    const elevated = ["owner", "admin", "moderator", "mod"];
+    if (roles.some((role) => elevated.includes(role))) {
+      return json({ error: "cannot mint elevated roles via this endpoint" }, { status: 403 });
+    }
+
+    const ttlSeconds = Math.max(60, Math.min(Number(body.ttlSeconds || 3600), 86_400));
+    const row = await env.DB.prepare(
+      "SELECT jwt_secret FROM project_secrets WHERE project_id = ?",
+    )
+      .bind(adminAuth.projectId)
+      .first();
+    if (!row?.jwt_secret) {
+      return json({ error: "project secret not configured" }, { status: 400 });
+    }
+
+    const token = await signJwtHs256(row.jwt_secret, {
+      sub: body.userId,
+      tid: adminAuth.projectId,
+      roles,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + ttlSeconds,
+    });
+
+    return json({
+      token,
+      expiresIn: ttlSeconds,
+      claims: { sub: body.userId, tid: adminAuth.projectId, roles },
+    });
+  }
 
   if (url.pathname === "/admin/projects" && request.method === "GET") {
     let adminAuth = null;
@@ -271,15 +336,15 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
       const now = new Date().toISOString();
       const apiKey = `fc_${crypto.randomUUID().replace(/-/g, "")}`;
       const keyPrefix = apiKey.slice(0, 8);
-      const keyHash = await hashApiKey(apiKey);
+      const keyHash = await hashApiKey(apiKey, env);
 
       await env.DB.batch([
         env.DB.prepare(
           "UPDATE api_keys SET revoked_at = ? WHERE project_id = ? AND revoked_at IS NULL"
         ).bind(now, targetProjectId),
         env.DB.prepare(
-          "INSERT INTO api_keys (id, project_id, secret, key_prefix, key_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-        ).bind(apiKey, targetProjectId, "", keyPrefix, keyHash, now),
+          "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(apiKey, targetProjectId, keyPrefix, keyHash, keyHash, now),
       ]);
 
       ctx.waitUntil(

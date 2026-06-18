@@ -432,3 +432,4 @@ export async function deleteFolder(env, input) {
   await env.DB.prepare("DELETE FROM search_folders WHERE id = ?").bind(folderId).run();
   return { ok: true };
 }
+

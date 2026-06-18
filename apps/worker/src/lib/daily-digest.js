@@ -494,3 +494,4 @@ export async function runDailyDigest(env, options = {}) {
   logInfo("digest.run_finished", { digestDate, processed, sent, skipped, failed });
   return { ok: true, digestDate, processed, sent, skipped, failed };
 }
+

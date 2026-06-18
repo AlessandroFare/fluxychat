@@ -195,3 +195,4 @@ function formatDelivery(row) {
     readAt: row.read_at, error: row.error, createdAt: row.created_at,
   };
 }
+

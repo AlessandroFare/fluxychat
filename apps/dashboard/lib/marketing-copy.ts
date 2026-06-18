@@ -72,3 +72,4 @@ export const PAGE_METADATA = {
     path: "/sign-up",
   }),
 } satisfies Record<string, Metadata>;
+

@@ -57,3 +57,4 @@ export async function runInboundMessageMiddleware(env, ctx) {
 
   return { ok: true, content, meta: Object.keys(meta).length ? meta : undefined };
 }
+

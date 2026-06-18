@@ -92,3 +92,4 @@ export function isQuickstartComplete(
     Boolean(progress.firstMessageSent)
   );
 }
+

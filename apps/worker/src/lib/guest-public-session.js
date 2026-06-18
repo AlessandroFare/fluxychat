@@ -64,11 +64,8 @@ export async function issuePublicGuestSession(env, deps, input, request) {
     return { ok: false, status: 403, body: { error: "room_not_public" } };
   }
 
-  let guestUserId =
-    typeof input.userId === "string" && input.userId.trim()
-      ? input.userId.trim()
-      : `guest_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-
+  // Never trust client-supplied userId  prevents impersonation of real members (audit S-6).
+  let guestUserId = `guest_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
   if (!isValidId(guestUserId)) {
     guestUserId = `guest_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
   }

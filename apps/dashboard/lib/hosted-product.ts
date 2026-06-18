@@ -72,3 +72,4 @@ export function hostedSignupRedirect(): string {
 export function hostedQuickstartReviewHref(): string {
   return `${HOSTED_PATHS.onboarding}?review=1`;
 }
+

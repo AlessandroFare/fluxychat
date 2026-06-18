@@ -441,7 +441,7 @@ export interface FluxyRoomMember {
 
 export interface FetchMessagesOptions {
   limit?: number;
-  /** ISO `createdAt` cursor â€” returns messages older than this timestamp. */
+  /** ISO `createdAt` cursor  returns messages older than this timestamp. */
   before?: string;
 }
 
@@ -2924,3 +2924,4 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   for (let i = 0; i < rawData.length; ++i) out[i] = rawData.charCodeAt(i);
   return out;
 }
+

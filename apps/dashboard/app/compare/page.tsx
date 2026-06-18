@@ -15,6 +15,7 @@ import {
 import { MARKETING_GUIDE_PATHS } from "@/lib/marketing-links";
 import { buildPageMetadata } from "@/lib/site-metadata";
 import { Button } from "~/components/ui/button";
+import { CloudflareCostTable } from "~/components/marketing/cloudflare-cost-table";
 import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
@@ -79,7 +80,7 @@ export default function ComparePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
       <p className="text-sm text-muted-foreground">
-        <Link href="/landing" className="text-brand hover:underline">
+        <Link href="/landing" className="text-brand underline underline-offset-2">
           ← Back to landing
         </Link>
       </p>
@@ -90,7 +91,7 @@ export default function ComparePage() {
         Rough positioning for teams looking at Stream, Ably, Pusher, TalkJS, Firebase, or a DIY
         Workers stack. FluxyChat is in-app chat on Cloudflare (one Durable Object per room + D1),
         MIT self-host or hosted beta — not a helpdesk widget.{" "}
-        <Link href={MARKETING_GUIDE_PATHS.pusherAlternativeSaas} className="text-brand hover:underline">
+        <Link href={MARKETING_GUIDE_PATHS.pusherAlternativeSaas} className="text-brand underline underline-offset-2">
           Pusher alternative guide →
         </Link>
       </p>
@@ -126,7 +127,7 @@ export default function ComparePage() {
         <p className="mt-3">
           <Link
             href={MARKETING_GUIDE_PATHS.inAppChatVsSupportDesk}
-            className="font-medium text-brand hover:underline"
+            className="font-medium text-brand underline underline-offset-2"
           >
             Product chat vs support desk guide →
           </Link>
@@ -136,12 +137,12 @@ export default function ComparePage() {
       <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-4 text-sm">
         <p className="font-medium">Walkthrough on Dev.to</p>
         <p className="mt-1 text-muted-foreground">
-          Architecture, RoomDurableObject, SDK reconnect, and self-host steps —{" "}
+          Architecture, RoomDurableObject, SDK reconnect, and self-host steps {" "}
           <a
             href={DEVTO_SOCKET_FLEET_ARTICLE.href}
             target="_blank"
             rel="noreferrer"
-            className="font-medium text-brand hover:underline"
+            className="font-medium text-brand underline underline-offset-2"
           >
             {DEVTO_SOCKET_FLEET_ARTICLE.title}
           </a>
@@ -155,7 +156,7 @@ export default function ComparePage() {
           If you need auth, RBAC, uploads, and AI in one mega-starter, a full Cloudflare
           framework may fit. If the product is tenant-scoped in-app messaging with history
           and operator tools, FluxyChat is the slice.{" "}
-          <Link href="/why#not" className="text-brand hover:underline">
+          <Link href="/why#not" className="text-brand underline underline-offset-2">
             What we are not →
           </Link>
         </p>
@@ -196,7 +197,7 @@ export default function ComparePage() {
         {ABLY_ON_VERCEL.intro}{" "}
         <Link
           href={MARKETING_GUIDE_PATHS.nextjsVercelRealtimeChat}
-          className="text-brand hover:underline"
+          className="text-brand underline underline-offset-2"
         >
           Next.js on Vercel guide →
         </Link>
@@ -214,7 +215,7 @@ export default function ComparePage() {
         {PUSHER_ON_VERCEL.intro}{" "}
         <Link
           href={MARKETING_GUIDE_PATHS.vercelRealtimeWithoutPusher}
-          className="text-brand hover:underline"
+          className="text-brand underline underline-offset-2"
         >
           Full Vercel guide →
         </Link>
@@ -232,7 +233,7 @@ export default function ComparePage() {
         GitHub examples are excellent teachers; production SaaS usually needs the rows below.{" "}
         <Link
           href={MARKETING_GUIDE_PATHS.reconnectDurableObjectsHibernation}
-          className="text-brand hover:underline"
+          className="text-brand underline underline-offset-2"
         >
           Reconnect & hibernation guide →
         </Link>
@@ -270,6 +271,18 @@ export default function ComparePage() {
           tenant-scoped in-app messaging with history, JWT, and operator tooling — see the PartyKit
           row in the table below.
         </p>
+      </div>
+
+      <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">
+        Running costs on Cloudflare
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        Both options ship the same Worker. The Free tier is generous for early
+        apps; the Paid tier scales with usage; self-hosting is just your own
+        Cloudflare bill.
+      </p>
+      <div className="mt-6">
+        <CloudflareCostTable variant="light" />
       </div>
 
       <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">
@@ -331,7 +344,7 @@ export default function ComparePage() {
       </dl>
       <p className="mt-4 text-sm text-muted-foreground">
         Cost guardrails, operator console, and DO capacity:{" "}
-        <Link href="/why#cost" className="text-brand hover:underline">
+        <Link href="/why#cost" className="text-brand underline underline-offset-2">
           /why — cost & architecture
         </Link>
       </p>
@@ -374,3 +387,4 @@ export default function ComparePage() {
     </div>
   );
 }
+

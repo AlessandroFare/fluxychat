@@ -15,3 +15,4 @@ export function getDashboardAccessMode(): "open" | "ack" {
   const v = process.env.DASHBOARD_ACCESS_MODE?.trim().toLowerCase();
   return v === "ack" ? "ack" : "open";
 }
+

@@ -153,3 +153,10 @@ export async function resolveProjectApiKeyForClerkUser(clerkUserId: string): Pro
   if (stored) return stored;
   return getConsoleApiKey();
 }
+
+/** Tenant-scoped API key only  never falls back to platform bootstrap key (audit S-1). */
+export async function resolveTenantProjectApiKeyForClerkUser(
+  clerkUserId: string,
+): Promise<string | null> {
+  return readFluxyPrivateApiKey(clerkUserId);
+}

@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { getWorkerUrl } from "@/lib/fluxy-server";
-import { messageFromUnknown } from "@/lib/error-message";
+import { apiError, apiErrorFromUnknown } from "@/lib/api-response";
 
 /**
  * GET /api/gdpr/export — proxy GDPR JSON download (avoids browser CORS to Worker).
+ *
+ * Success path streams the Worker's raw body (it may be a file download with a
+ * Content-Disposition header, so it cannot use the JSON envelope). Error paths
+ * use the shared envelope. The Worker URL is never leaked in error bodies
+ * (audit P2). All responses set `Cache-Control: no-store`.
  */
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization")?.trim();
   if (!auth) {
-    return NextResponse.json({ error: "Authorization header required" }, { status: 401 });
+    return apiError("Authorization header required", 401);
   }
 
   const workerBase = getWorkerUrl().replace(/\/$/, "");
@@ -18,12 +23,7 @@ export async function GET(request: Request) {
       headers: { Authorization: auth },
     });
   } catch (err: unknown) {
-    return NextResponse.json(
-      {
-        error: `GDPR export proxy failed: ${messageFromUnknown(err, "Worker unreachable")}. Check Worker URL (${workerBase}).`,
-      },
-      { status: 502 },
-    );
+    return apiErrorFromUnknown(err, "GDPR export proxy failed: Worker unreachable");
   }
 
   if (!workerRes.ok) {
@@ -33,15 +33,12 @@ export async function GET(request: Request) {
       const detail = json.error || json.message || `Worker returned ${workerRes.status}`;
       const hint =
         workerRes.status === 404
-          ? ` Endpoint not found on ${workerBase}. Redeploy the Worker (includes GET /gdpr/export) and confirm FLUXYCHAT_WORKER_URL / NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL on Vercel.`
+          ? " Endpoint not found on the Worker. Redeploy the Worker (includes GET /gdpr/export) and confirm FLUXYCHAT_WORKER_URL / NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL on Vercel."
           : "";
-      return NextResponse.json({ error: `${detail}.${hint}` }, { status: workerRes.status });
+      return apiError(`${detail}.${hint}`, workerRes.status);
     }
     const text = await workerRes.text();
-    return NextResponse.json(
-      { error: text || `Worker returned ${workerRes.status}` },
-      { status: workerRes.status },
-    );
+    return apiError(text || `Worker returned ${workerRes.status}`, workerRes.status);
   }
 
   const body = await workerRes.arrayBuffer();
@@ -49,6 +46,7 @@ export async function GET(request: Request) {
   const headers = new Headers();
   headers.set("Content-Type", workerRes.headers.get("Content-Type") || "application/json");
   if (cd) headers.set("Content-Disposition", cd);
+  headers.set("Cache-Control", "no-store");
 
   return new NextResponse(body, { status: 200, headers });
 }

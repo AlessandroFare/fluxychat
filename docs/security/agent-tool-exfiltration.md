@@ -35,3 +35,4 @@ This is intentional: agents integrate with the tenant's own systems. Fluxychat d
 - `apps/worker/src/lib/agent-runtime.js` — mention invoke, tool dispatch
 - `apps/worker/src/lib/agent-tools.js` — POST to `tool_execute_url`
 - `apps/worker/src/lib/url-ssrf.ts` — outbound URL policy
+

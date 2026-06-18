@@ -22,13 +22,13 @@ export function IntegrationsConsolePage() {
 
       <p className="mt-6 text-xs text-muted-foreground">
         Full checklists:{" "}
-        <Link href="/guides/offline-notify-in-app-plus-sms" className="text-brand hover:underline">
+        <Link href="/guides/offline-notify-in-app-plus-sms" className="text-brand underline underline-offset-2">
           in-app + SMS guide
         </Link>
         {" · "}
         <a
           href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/operations/production-demo-and-sms.md"
-          className="text-brand hover:underline"
+          className="text-brand underline underline-offset-2"
           target="_blank"
           rel="noreferrer"
         >
@@ -38,3 +38,4 @@ export function IntegrationsConsolePage() {
     </ConsoleShell>
   );
 }
+

@@ -49,3 +49,4 @@ const client = new FluxyChatClient({
     "reconnecting connections chat",
   ],
 };
+

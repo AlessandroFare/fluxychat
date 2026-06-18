@@ -12,7 +12,7 @@ function statusLabel(ok: boolean | undefined, degraded?: boolean): string {
 }
 
 function statusTone(ok: boolean | undefined, degraded?: boolean): string {
-  if (ok === undefined) return "text-slate-500";
+  if (ok === undefined) return "text-slate-600";
   if (!ok) return "text-red-600";
   if (degraded) return "text-amber-600";
   return "text-emerald-600";
@@ -43,7 +43,7 @@ export default async function StatusPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 className="font-heading text-3xl font-bold tracking-tight">System status</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Public health for the chat API. Project-scoped operational alerts appear in the console
@@ -124,7 +124,7 @@ export default async function StatusPage() {
           </Link>{" "}
           in the console after connecting your project.
         </p>
-      </main>
+      </div>
     </div>
   );
 }

@@ -56,3 +56,4 @@ export const IN_APP_CHAT_VS_SUPPORT_DESK_GUIDE: GuideContent = {
     "not a helpdesk",
   ],
 };
+

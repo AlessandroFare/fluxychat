@@ -93,3 +93,4 @@ console.log(`\n${checks.filter((c) => c.level === "ok").length} ok, ${warnings} 
 console.log("\nFull guide: docs/operations/environment-setup.md\n");
 
 if (failures > 0) process.exit(1);
+

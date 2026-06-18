@@ -53,8 +53,11 @@ export function BetaBanner() {
 
   return (
     <div
-      role="region"
-      aria-label="Beta notice"
+      // role="status"  assistive tech announces this when content
+      // changes. We avoid `role="region"` so the banner doesn't
+      // become a landmark inside the root layout's <main> (axe
+      // `region` rule would flag it as content not in a landmark).
+      role="status"
       className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950"
     >
       <span>{message}</span>{" "}
@@ -68,3 +71,4 @@ export function BetaBanner() {
     </div>
   );
 }
+

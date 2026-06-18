@@ -123,3 +123,4 @@ function formatShift(row) {
     status: row.status, createdAt: row.created_at,
   };
 }
+

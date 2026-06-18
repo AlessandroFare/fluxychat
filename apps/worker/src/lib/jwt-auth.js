@@ -73,7 +73,13 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
     throw new Response("Invalid token", { status: 401 });
   }
 
-  if (payloadJson.exp && Date.now() / 1000 > payloadJson.exp) {
+  // Audit fix M-3: reject tokens without an `exp` claim (infinite lifetime).
+  // All legitimate minting paths (/auth/token, API key flow) set exp; a token
+  // without exp is either misconfigured or adversarial.
+  if (!payloadJson.exp) {
+    throw new Response("Token missing exp claim", { status: 401 });
+  }
+  if (Date.now() / 1000 > payloadJson.exp) {
     throw new Response("Token expired", { status: 401 });
   }
 
@@ -113,20 +119,38 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
 
   if (!ok && env.JWT_SECRET_PREVIOUS) {
     try {
-      const prevOk = await verifyHs256Signature(
-        headerB64,
-        payloadB64,
-        sigB64,
-        new TextEncoder().encode(env.JWT_SECRET_PREVIOUS)
-      );
-      if (prevOk) {
-        logInfo("jwt.legacy_secret_used", { userId, projectId });
-        return {
-          userId,
-          projectId,
-          roles,
-          ...(payloadJson.roomId ? { roomId: payloadJson.roomId } : {}),
-        };
+      // Audit S-31: enforce a max age for the previous secret. Without
+      // this, a leaked old key remains usable forever. Operators should
+      // set JWT_SECRET_PREVIOUS_EXPIRES_AT (ISO timestamp); after that
+      // point the previous secret is no longer accepted.
+      const retireAt = env.JWT_SECRET_PREVIOUS_EXPIRES_AT;
+      const ts = retireAt ? Date.parse(String(retireAt)) : NaN;
+      const expired = Number.isFinite(ts) && Date.now() > ts;
+      if (retireAt && expired) {
+        logInfo("jwt.legacy_secret_expired", { userId, projectId, retireAt });
+        // fall through to generic rejection below
+      } else {
+        const prevOk = await verifyHs256Signature(
+          headerB64,
+          payloadB64,
+          sigB64,
+          new TextEncoder().encode(env.JWT_SECRET_PREVIOUS),
+        );
+        if (prevOk) {
+          if (retireAt && !expired) {
+            logInfo("jwt.legacy_secret_used", { userId, projectId, retireAt });
+          } else {
+            // No expiration set  accept but log a warning so operators
+            // see it in their logs.
+            logInfo("jwt.legacy_secret_used_no_expire_at", { userId, projectId });
+          }
+          return {
+            userId,
+            projectId,
+            roles,
+            ...(payloadJson.roomId ? { roomId: payloadJson.roomId } : {}),
+          };
+        }
       }
     } catch {
       // fall through to generic rejection

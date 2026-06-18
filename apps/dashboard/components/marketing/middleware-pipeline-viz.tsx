@@ -75,7 +75,7 @@ export function MiddlewarePipelineViz({ className }: { className?: string }) {
       )}
     >
       <div className="mb-4 flex items-center justify-between gap-2 border-b border-white/[0.06] pb-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">edge middleware</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-300">edge middleware</span>
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] text-emerald-400/90">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
           live
@@ -139,9 +139,10 @@ export function MiddlewarePipelineViz({ className }: { className?: string }) {
         </div>
       </div>
 
-      <p className="mt-3 font-mono text-[10px] leading-relaxed text-zinc-500 sm:text-xs">
+      <p className="mt-3 font-mono text-[10px] leading-relaxed text-zinc-300 sm:text-xs">
         <span className="text-zinc-400">//</span> hooks run on your Worker before delivery — policy stays on the edge.
       </p>
     </div>
   );
 }
+

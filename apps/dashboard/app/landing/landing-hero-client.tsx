@@ -150,7 +150,7 @@ export function LandingHeroClient() {
             </span>
           </Link>
 
-          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 sm:tracking-[0.22em]">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 sm:tracking-[0.22em]">
             {MARKETING_HERO.eyebrow}
           </p>
 
@@ -233,3 +233,4 @@ export function LandingHeroClient() {
     </section>
   );
 }
+

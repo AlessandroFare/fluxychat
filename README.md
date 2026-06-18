@@ -27,6 +27,20 @@ Realtime chat on Cloudflare Workers. One worker, WebSocket rooms, a TypeScript S
 2. Open `/onboarding` in the dashboard: project, JWT, first room
 3. Integrate `@fluxy-chat/sdk` in your frontend (see `packages/sdk/README.md`)
 
+### Quickstart (90 seconds)
+
+Skip the dashboard and verify the stack end-to-end from the terminal:
+
+```bash
+git clone https://github.com/fluxychat/fluxychat
+cd fluxychat
+pnpm install
+pnpm run first-message
+```
+
+The script starts a local Worker, provisions a project, and lands your first message.
+It prints a JWT you can use immediately with the SDK.
+
 ---
 
 > **Open beta** — [Try hosted cloud](https://fluxychat.com/landing) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Dev.to walkthrough](https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0) · **Support:** fluxychat@outlook.com
@@ -102,6 +116,7 @@ Use case guides, auth cookbook, troubleshooting, and dashboard integration notes
 ### Docs
 
 - Docs home: `docs/README.md`
+- **Local dev setup (env vars, ports, Clerk, first message):** [`docs/local-development.md`](docs/local-development.md)
 - Dashboard (JWT session, `/rooms`, `/admin` webhooks, Privacy/GDPR, `useChat` transport): `docs/dashboard-integration.md`
 - Distribution assets (published Dev.to, InsightScout replies): `docs/distribution/README.md`
 

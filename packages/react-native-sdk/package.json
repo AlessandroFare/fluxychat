@@ -2,9 +2,19 @@
   "name": "@fluxychat/react-native-sdk",
   "version": "1.0.0",
   "description": "React Native SDK for FluxyChat - realtime chat infrastructure",
-  "main": "src/index.js",
-  "types": "src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -w -p tsconfig.json",
+    "prepublishOnly": "pnpm run build",
     "test": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit"
@@ -16,8 +26,17 @@
     "react-native",
     "fluxychat"
   ],
-  "author": "FluxyChat",
+  "author": "Fluxychat",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlessandroFare/fluxychat.git",
+    "directory": "packages/react-native-sdk"
+  },
+  "homepage": "https://github.com/AlessandroFare/fluxychat/tree/main/packages/react-native-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/AlessandroFare/fluxychat/issues"
+  },
   "peerDependencies": {
     "react": ">=18.0.0",
     "react-native": ">=0.72.0"
@@ -26,13 +45,15 @@
     "@types/react": "^18.2.0",
     "@types/react-native": "^0.72.0",
     "typescript": "^5.3.0",
+    "vite": "^8.0.16",
     "vitest": "^4.1.5"
   },
   "dependencies": {
     "@fluxychat/protocol": "workspace:*"
   },
   "files": [
-    "src/",
-    "README.md"
+    "dist/",
+    "README.md",
+    "LICENSE"
   ]
 }

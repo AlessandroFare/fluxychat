@@ -36,7 +36,7 @@ export function RoomHealthCard({ client, roomId }: RoomHealthCardProps) {
   }, [load]);
 
   const score = Number((health as { score?: number })?.score ?? 0);
-  const status = String((health as { status?: string })?.status ?? "—");
+  const status = String((health as { status?: string })?.status ?? "");
   const metrics = (health as { metrics?: Record<string, number> })?.metrics ?? {};
   const live = (health as { live?: { online?: number } })?.live;
   const signals = ((health as { signals?: { level: string; detail: string }[] })?.signals ??

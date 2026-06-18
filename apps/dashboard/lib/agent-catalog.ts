@@ -216,3 +216,4 @@ export function applyModelInput(provider: string, modelInput: string): {
   const parsed = parseModelRef(provider, modelInput);
   return { provider: parsed.providerId, model: parsed.modelId };
 }
+

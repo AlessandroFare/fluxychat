@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClerkUser } from "@/lib/clerk-user";
 import { useChat, useFluxyChatOptional, type UseChatHistoryReplay } from "@fluxy-chat/sdk";
@@ -39,7 +39,11 @@ export function useOnboardingWizard() {
     setLastRoom,
   } = useDashboardSession();
 
-  const [projectName, setProjectName] = useState("My first project");
+  // Initialize empty so the placeholder ("Project name (e.g. Acme Support)")
+  // shows and the "Use default name" helper button has a real effect on first
+  // interaction. Previously this defaulted to "My first project", making the
+  // button a no-op until the user manually cleared the field. (Audit UX fix.)
+  const [projectName, setProjectName] = useState("");
   const [creatingProject, setCreatingProject] = useState(false);
   const [provisioningCloud, setProvisioningCloud] = useState(false);
   const [userId, setUserId] = useState("alice");
@@ -60,6 +64,8 @@ export function useOnboardingWizard() {
   const [notice, setNotice] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [skipHistoryOnConnect, setSkipHistoryOnConnect] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const projectNameInputRef = useRef<HTMLInputElement>(null);
 
   const { user: clerkUser, isSignedIn: clerkSignedIn } = useClerkUser();
   const fluxyClient = useFluxyChatOptional()?.client ?? null;
@@ -67,11 +73,39 @@ export function useOnboardingWizard() {
   const activeRoomId = room?.id ?? "";
   const onboardingReplay: UseChatHistoryReplay = skipHistoryOnConnect ? "request" : "connect";
 
-  const { messages, sendMessage, connectionStatus, historyLoaded, loadHistory } = useChat({
+  const { messages, sendMessage: rawSendMessage, connectionStatus, historyLoaded, loadHistory } = useChat({
     roomId: activeRoomId,
     replay: onboardingReplay,
     markReadLatest: Boolean(activeRoomId),
   });
+
+  // Track whether the *current user* has sent a message during this onboarding
+  // session. This is deliberately separate from `messages.length` because
+  // history replay and inbound messages from other members would otherwise
+  // auto-complete onboarding and re-trigger the celebration banner on every
+  // reconnect. Only an actual user-initiated send counts. (Audit fix.)
+  const [userSentMessage, setUserSentMessage] = useState(false);
+  const handleSendMessage = useCallback(
+    (...args: Parameters<typeof rawSendMessage>) => {
+      setUserSentMessage(true);
+      const key = clerkUser?.id ?? `self-host-${userId.trim() || "owner"}`;
+      markQuickstartFirstMessage(key);
+      return rawSendMessage(...args);
+    },
+    [rawSendMessage, clerkUser?.id, userId],
+  );
+
+  // Celebrate + advance to step 4 ONLY when the user sends their first message.
+  // Previously this reacted to any messages.length change, which fired on
+  // history replay and on transient reconnects (length briefly drops to 0 then
+  // back up), yanking users back from step 5 and re-showing the banner.
+  const celebratedRef = useRef(false);
+  useEffect(() => {
+    if (!userSentMessage || celebratedRef.current) return;
+    celebratedRef.current = true;
+    setShowCelebration(true);
+    setActiveStep(4);
+  }, [userSentMessage]);
 
   useEffect(() => {
     setIsReviewMode(new URLSearchParams(window.location.search).get("review") === "1");
@@ -79,7 +113,7 @@ export function useOnboardingWizard() {
 
   useEffect(() => {
     if (!isClerkClientConfigured() || !clerkSignedIn || !clerkUser?.id) return;
-    setUserId(fluxyUserIdFromClerk(clerkUser.id));
+    setUserId(fluxyUserIdFromClerk(clerkUser?.id));
   }, [clerkSignedIn, clerkUser?.id]);
 
   useEffect(() => {
@@ -98,18 +132,26 @@ export function useOnboardingWizard() {
     setRoomName(ASSISTANT_ROOM_ID);
   }, [activeStep, roomMode, roomName]);
 
+  // Auto-advance to first incomplete step on mount.
   useEffect(() => {
-    if (messages.length < 1 || !clerkUser?.id) return;
-    markQuickstartFirstMessage(clerkUser.id);
-  }, [messages.length, clerkUser?.id]);
+    const first = firstIncompleteOnboardingStep({ adminJwt, activeProject: project, memberJwt, room, messageCount: messages.length, userSentMessage });
+    if (first > 0) setActiveStep(first);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const autoMintMemberRef = useRef(false);
+  // Auto-mint member JWT the first time we have a project + admin JWT.
+  // Reset the latch whenever the project changes so a new project gets
+  // its own member token; previously the ref was latched once and
+  // never reset, so a second project in the same session would
+  // never auto-mint. (Audit fix; root cause was in this hook.)
+  const autoMintMemberKeyRef = useRef("");
   useEffect(() => {
     if (!isClerkClientConfigured() || !clerkSignedIn) return;
-    if (!adminJwt.trim() || !project?.id || memberJwt.trim() || autoMintMemberRef.current) return;
-    autoMintMemberRef.current = true;
+    if (!adminJwt.trim() || !project?.id || memberJwt.trim()) return;
+    const key = `${clerkUser?.id ?? "self-host"}:${project.id}`;
+    if (autoMintMemberKeyRef.current === key) return;
+    autoMintMemberKeyRef.current = key;
     void mintMemberJwt();
-  }, [clerkSignedIn, adminJwt, project?.id, memberJwt]);
+  }, [clerkSignedIn, adminJwt, project?.id, memberJwt, clerkUser?.id]);
 
   const furthest = useMemo(
     () =>
@@ -119,8 +161,9 @@ export function useOnboardingWizard() {
         memberJwt,
         room,
         messageCount: messages.length,
+        userSentMessage,
       }),
-    [adminJwt, project, memberJwt, room, messages.length],
+    [adminJwt, project, memberJwt, room, messages.length, userSentMessage],
   );
 
   const stepContext = useMemo(
@@ -130,8 +173,9 @@ export function useOnboardingWizard() {
       memberJwt,
       room,
       messageCount: messages.length,
+      userSentMessage,
     }),
-    [adminJwt, project, memberJwt, room, messages.length],
+    [adminJwt, project, memberJwt, room, messages.length, userSentMessage],
   );
 
   function goNext() {
@@ -233,16 +277,20 @@ export function useOnboardingWizard() {
     try {
       const res = await fetch("/api/fluxy/mint-member", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminJwt.trim() ? { Authorization: `Bearer ${adminJwt.trim()}` } : {}),
+        },
         body: JSON.stringify({
           memberUserId: userId.trim() || "alice",
           ttlSeconds: 3600,
-          ...(project?.apiKey ? { projectApiKey: project.apiKey } : {}),
         }),
       });
-      const json = (await res.json()) as { memberJwt?: string; error?: string };
-      if (!res.ok) throw new Error(json.error || "Failed to mint JWT");
-      setMemberJwt(json.memberJwt || "");
+      const json = (await res.json()) as
+        | { ok: true; data: { memberJwt?: string } }
+        | { ok: false; error?: string };
+      if (!res.ok || !json.ok) throw new Error((!json.ok && json.error) || "Failed to mint JWT");
+      setMemberJwt(json.data.memberJwt || "");
       setNotice("Member JWT minted (server-side — API key not exposed to the browser).");
       setActiveStep(3);
     } catch (err: unknown) {
@@ -438,11 +486,15 @@ export function useOnboardingWizard() {
     skipHistoryOnConnect,
     setSkipHistoryOnConnect,
     messages,
-    sendMessage,
+    sendMessage: handleSendMessage,
+    userSentMessage,
     connectionStatus,
     historyLoaded,
     loadHistory,
     setLastRoom,
+    showCelebration,
+    setShowCelebration,
+    projectNameInputRef,
     goNext,
     goBack,
     provisionHostedProject,
@@ -456,3 +508,4 @@ export function useOnboardingWizard() {
 }
 
 export type OnboardingWizard = ReturnType<typeof useOnboardingWizard>;
+

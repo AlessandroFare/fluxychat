@@ -62,3 +62,4 @@ export function OnboardingStepsStrip({ className }: OnboardingStepsStripProps) {
     </ol>
   );
 }
+

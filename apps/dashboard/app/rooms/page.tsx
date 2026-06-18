@@ -246,7 +246,11 @@ export default function RoomsPage() {
         </Button>
       </Section>
 
-      <Section title="Create room" description="Name is shown in the UI; type controls join and visibility rules on the Worker.">
+      <div id="create-room-form">
+        <Section
+          title="Create a room"
+          description="Pick a name and a type. Public rooms anyone with the link can join; group rooms are invitation-only."
+        >
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1">
             <label htmlFor="new-room-name" className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -268,13 +272,32 @@ export default function RoomsPage() {
             {creating ? "Creating…" : "Create"}
           </Button>
         </div>
-      </Section>
+        </Section>
+      </div>
 
       <section className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
         <div className="rounded-xl border border-black/[0.06] bg-white/90 p-4 shadow-[var(--shadow-subtle-2)] backdrop-blur-sm">
           <h2 className="font-heading mb-2 text-lg font-semibold text-foreground">Your rooms</h2>
           {rooms.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No rooms loaded.</p>
+            <div className="rounded-md border border-dashed border-border bg-muted/30 p-3">
+              <p className="text-sm font-medium text-foreground">No rooms yet</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Create your first room to start chatting. Each room holds its own history and members.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => {
+                  // Scroll to the create form (it's the first card in the page).
+                  document
+                    .getElementById("create-room-form")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
+                Create a room
+              </Button>
+            </div>
           ) : (
             <div className="flex flex-col gap-1.5">
               {rooms.map((r) => (
@@ -497,7 +520,16 @@ function MemberList({
     );
   }
   if (loading) return <p className="text-sm text-muted-foreground">Loading members…</p>;
-  if (members.length === 0) return <p className="text-sm text-muted-foreground">No members or empty.</p>;
+  if (members.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed border-border bg-muted/30 p-3">
+        <p className="text-sm font-medium text-foreground">No members yet</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Add people by their userId above. They can also join public rooms via an invite link.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <ul className="list-none p-0 m-0">
@@ -522,3 +554,4 @@ function MemberList({
     </ul>
   );
 }
+

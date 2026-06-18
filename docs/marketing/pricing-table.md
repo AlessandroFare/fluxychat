@@ -79,3 +79,4 @@ on Cloudflare.
 The single source of truth is `CANONICAL_TIER_LIMITS` in
 `apps/worker/src/lib/plan-tier-limits.ts` (mirrored in
 `apps/dashboard/lib/plan-catalog.ts`). Drift between the two fails CI.
+

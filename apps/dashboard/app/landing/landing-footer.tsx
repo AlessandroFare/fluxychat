@@ -9,14 +9,14 @@ export function LandingFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-border bg-[#111111] px-4 py-12 text-slate-400 sm:px-6">
+    <footer className="border-t border-border bg-[#111111] px-4 py-12 text-slate-300 sm:px-6">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:gap-6">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-white">
             <FluxychatIcon size={28} />
             <span className="font-heading text-sm font-semibold">Fluxychat</span>
           </div>
-          <nav className="flex flex-wrap gap-6 text-sm">
+          <nav aria-label="Footer" className="flex flex-wrap gap-6 text-sm">
             <ConsoleEntryLink className="hover:text-white">{HOSTED_COPY.console}</ConsoleEntryLink>
             <a href="#pricing" className="hover:text-white">Pricing</a>
             <a href="#faq" className="hover:text-white">FAQ</a>
@@ -32,7 +32,7 @@ export function LandingFooter() {
             >
               Dev.to
             </a>
-            <a href="mailto:fluxychat@outlook.com" className="hover:text-white">
+            <a href="mailto:fluxychat@outlook.com" className="underline underline-offset-2 hover:text-white">
               fluxychat@outlook.com
             </a>
             <a
@@ -48,7 +48,7 @@ export function LandingFooter() {
         </div>
 
         <div className="flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center">
-          <p className="text-xs text-slate-500">Approved listings help teams trust the docs and demo.</p>
+          <p className="text-xs text-slate-300">Approved listings help teams trust the docs and demo.</p>
           <div className="flex flex-wrap items-center gap-3">
             {LANDING_BADGES.map((badge) => (
               <a

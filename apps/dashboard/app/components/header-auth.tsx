@@ -38,7 +38,7 @@ export function HeaderAuth() {
       <button
         type="button"
         onClick={clearSession}
-        className="hidden text-xs text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline sm:inline"
+        className="hidden text-xs text-slate-600 underline-offset-2 hover:text-slate-800 hover:underline sm:inline"
       >
         Clear session
       </button>
@@ -76,12 +76,22 @@ function ClerkHeaderAuth({
           <Button asChild size="sm" className="shrink-0 text-xs sm:text-sm">
             <Link href={cta.href}>{cta.label}</Link>
           </Button>
-          <UserButton afterSignOutUrl="/landing" />
+          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full">
+              <UserButton
+                afterSignOutUrl="/landing"
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: "h-8 w-8",
+                    userButtonTrigger: "h-8 w-8 rounded-full",
+                  },
+                }}
+              />
+            </div>
           {adminJwt.trim().length >= 12 ? (
             <button
               type="button"
               onClick={clearSession}
-              className="hidden text-xs text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline sm:inline"
+              className="hidden text-xs text-slate-600 underline-offset-2 hover:text-slate-800 hover:underline sm:inline"
               title="Clear operator JWTs in this tab (Clerk account stays signed in)"
             >
               Clear JWTs

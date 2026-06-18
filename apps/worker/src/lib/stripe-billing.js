@@ -162,37 +162,38 @@ export async function handleStripeWebhookPost(request, env, h) {
   const webhookSecret = env.STRIPE_WEBHOOK_SECRET || "";
   const rawBody = await request.text();
 
-  if (webhookSecret) {
-    if (!signatureHeader) {
-      logError("billing.stripe_missing_signature", "No Stripe-Signature header");
-      return json({ error: "missing signature" }, { status: 401 });
-    }
-    const verification = await verifyStripeWebhookSignatureAsync(
-      rawBody,
-      signatureHeader,
-      webhookSecret
-    );
-    if (!verification.valid) {
-      logError(
-        "billing.stripe_invalid_signature",
-        verification.error || "Signature mismatch"
-      );
-      return json({ error: "invalid signature" }, { status: 401 });
-    }
-    if (
-      verification.timestamp &&
-      Math.abs(Date.now() / 1000 - verification.timestamp) > 300
-    ) {
-      logError("billing.stripe_replay", "Timestamp too old");
-      return json({ error: "stale webhook" }, { status: 401 });
-    }
-    logInfo("billing.stripe_webhook_verified", { timestamp: verification.timestamp });
-  } else {
-    logInfo(
+  if (!webhookSecret) {
+    logError(
       "billing.stripe_webhook_no_secret",
-      "STRIPE_WEBHOOK_SECRET not configured, skipping verification"
+      "STRIPE_WEBHOOK_SECRET not configured  rejecting webhook",
     );
+    return json({ error: "webhook verification not configured" }, { status: 503 });
   }
+
+  if (!signatureHeader) {
+    logError("billing.stripe_missing_signature", "No Stripe-Signature header");
+    return json({ error: "missing signature" }, { status: 401 });
+  }
+  const verification = await verifyStripeWebhookSignatureAsync(
+    rawBody,
+    signatureHeader,
+    webhookSecret
+  );
+  if (!verification.valid) {
+    logError(
+      "billing.stripe_invalid_signature",
+      verification.error || "Signature mismatch"
+    );
+    return json({ error: "invalid signature" }, { status: 401 });
+  }
+  if (
+    verification.timestamp &&
+    Math.abs(Date.now() / 1000 - verification.timestamp) > 300
+  ) {
+    logError("billing.stripe_replay", "Timestamp too old");
+    return json({ error: "stale webhook" }, { status: 401 });
+  }
+  logInfo("billing.stripe_webhook_verified", { timestamp: verification.timestamp });
 
   const body = safeJsonParse(rawBody);
   if (!body?.type) {

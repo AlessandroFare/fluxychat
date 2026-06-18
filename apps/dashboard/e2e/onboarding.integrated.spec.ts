@@ -47,3 +47,4 @@ test.describe("onboarding integrated", () => {
     await sendSampleAndWaitForEcho(page, "alice");
   });
 });
+

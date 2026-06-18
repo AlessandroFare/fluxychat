@@ -35,3 +35,4 @@ export const clerkAuthAppearance = {
     footerActionLink: "text-[#ff725e] hover:text-[#e8614d]",
   },
 } as const;
+

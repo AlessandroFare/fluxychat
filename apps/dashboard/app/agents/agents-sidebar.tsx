@@ -2,19 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Plus } from "lucide-react";
+import { Bot, Plus, Sparkles } from "lucide-react";
 import { Button, EmptyState, SkeletonCard } from "@/app/components/ui";
 import { formatModelRef } from "@/lib/agent-catalog";
 import { cn } from "@/lib/utils";
 import { useAgentsConsole } from "./agents-console-context";
+
+const FIRST_RUN_KEY = "fluxychat.agents.firstRunDismissed.v1";
 
 export function AgentsSidebar() {
   const pathname = usePathname();
   const { visibleAgents, loadingAgents, activeProject } = useAgentsConsole();
   const isNew = pathname === "/agents/new";
 
+  // Area 5.2: first-run hint. If the user has agents but hasn't dismissed
+  // the hint, show a small banner. Dismissed state is per-browser.
+  const dismissed =
+    typeof window !== "undefined" &&
+    window.localStorage.getItem(FIRST_RUN_KEY) === "1";
+  const showFirstRun =
+    !dismissed && visibleAgents.length > 0 && !isNew;
+
+  function dismissFirstRun() {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(FIRST_RUN_KEY, "1");
+    }
+  }
+
   return (
-    <aside className="flex flex-col gap-3">
+    // <div> not <aside>: the root layout already provides <main>, and
+    // nested <aside> inside <main> is a "landmark nested inside another
+    // landmark" violation (axe `landmark-unique` / `region`).
+    <div className="flex flex-col gap-3" aria-label="Agents sidebar">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Agents</h2>
       <Link
         href="/agents/new"
@@ -29,6 +48,23 @@ export function AgentsSidebar() {
         <Plus className="mr-2 h-4 w-4" />
         New agent
       </Link>
+
+      {showFirstRun ? (
+        <div className="relative rounded-lg border border-amber-200/70 bg-amber-50 p-3 text-xs text-amber-900">
+          <Sparkles className="absolute right-2 top-2 h-3.5 w-3.5 text-amber-500" aria-hidden />
+          <p className="pr-4 font-medium">Your agent is ready.</p>
+          <p className="mt-0.5 pr-4 text-amber-800/80">
+            Mention <code className="rounded bg-white/60 px-1">@{visibleAgents[0]?.handle || "agent"}</code> in any room to activate it.
+          </p>
+          <button
+            type="button"
+            onClick={dismissFirstRun}
+            className="mt-2 text-[11px] font-medium text-amber-900/70 underline-offset-2 hover:underline"
+          >
+            Got it
+          </button>
+        </div>
+      ) : null}
 
       {loadingAgents && visibleAgents.length === 0 ? (
         <div className="flex flex-col gap-2">
@@ -76,6 +112,6 @@ export function AgentsSidebar() {
           );
         })}
       </ul>
-    </aside>
+    </div>
   );
 }

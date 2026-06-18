@@ -23,3 +23,4 @@ test.describe("saml worker smoke", () => {
     expect(body.error).toBe("unauthorized");
   });
 });
+

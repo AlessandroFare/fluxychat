@@ -169,4 +169,71 @@ describe("extractAnthropicToolCalls", () => {
       out.invalidWarnings.some((w) => w.includes("invalid_arguments_json"))
     ).toBe(true);
   });
+
+  it("blocks tool names not in the project allow-list (audit S-35)", () => {
+    const registered = [
+      { type: "function", function: { name: "search_docs" } },
+      { type: "function", function: { name: "delete_user" } },
+    ];
+    // Project only allows `search_docs`. The LLM tries `delete_user`,
+    // which is in the declared schema but blocked by the allow-list.
+    const allowSet = new Set(["search_docs"]);
+    const out = extractOpenAIToolCalls(
+      {
+        choices: [
+          {
+            message: {
+              tool_calls: [
+                {
+                  id: "call_x",
+                  type: "function",
+                  function: { name: "search_docs", arguments: '{"q":"hello"}' },
+                },
+                {
+                  id: "call_y",
+                  type: "function",
+                  function: { name: "delete_user", arguments: '{"id":1}' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      registered,
+      "run-s35-1",
+      allowSet
+    );
+    expect(out.toolCalls.map((t) => t.name)).toEqual(["search_docs"]);
+    expect(
+      out.invalidWarnings.some((w) =>
+        w.includes("blocked_by_project_allowlist")
+      )
+    ).toBe(true);
+  });
+
+  it("denies all tool calls when the allow-list is empty (audit S-35)", () => {
+    const registered = [{ type: "function", function: { name: "search_docs" } }];
+    const allowSet = new Set(); // empty → deny all
+    const out = extractOpenAIToolCalls(
+      {
+        choices: [
+          {
+            message: {
+              tool_calls: [
+                {
+                  id: "call_z",
+                  type: "function",
+                  function: { name: "search_docs", arguments: "{}" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      registered,
+      "run-s35-2",
+      allowSet
+    );
+    expect(out.toolCalls).toHaveLength(0);
+  });
 });

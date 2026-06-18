@@ -139,3 +139,4 @@ function formatValue(row) {
     metadata: JSON.parse(row.metadata || "{}"), recordedAt: row.recorded_at,
   };
 }
+

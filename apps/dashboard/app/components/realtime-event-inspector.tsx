@@ -194,7 +194,7 @@ export function RealtimeEventInspector({
                 {live.online} · users {live.userCount}
                 {live.shardCount && live.shardCount > 1 ? ` · shards ${live.shardCount}` : null}
               </li>
-              <li>Users: {live.users.length ? live.users.join(", ") : "—"}</li>
+              <li>Users: {live.users.length ? live.users.join(", ") : ""}</li>
             </ul>
           ) : (
             <p className="text-muted-foreground">No stats yet.</p>

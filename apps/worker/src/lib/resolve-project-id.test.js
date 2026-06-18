@@ -12,10 +12,20 @@ describe("resolveProjectId (P0-4 hosted multi-tenant)", () => {
     await expect(resolveProjectId(req, env)).resolves.toBeNull();
   });
 
-  it("falls back to default in self-host mode when API key is missing", async () => {
-    const env = { DEFAULT_PROJECT_ID: "proj_local", DB: { prepare: () => ({ bind: () => ({ first: async () => null }) }) } };
+  it("falls back to default in self-host mode when API key is missing and ALLOW_LEGACY_DEFAULT_PROJECT=true (audit S-14)", async () => {
+    const env = {
+      DEFAULT_PROJECT_ID: "proj_local",
+      ALLOW_LEGACY_DEFAULT_PROJECT: "true",
+      DB: { prepare: () => ({ bind: () => ({ first: async () => null }) }) },
+    };
     const req = new Request("https://worker.example/rooms");
     await expect(resolveProjectId(req, env)).resolves.toBe("proj_local");
+  });
+
+  it("returns null in self-host mode when ALLOW_LEGACY_DEFAULT_PROJECT is not set", async () => {
+    const env = { DEFAULT_PROJECT_ID: "proj_local", DB: { prepare: () => ({ bind: () => ({ first: async () => null }) }) } };
+    const req = new Request("https://worker.example/rooms");
+    await expect(resolveProjectId(req, env)).resolves.toBeNull();
   });
 
   it("returns null in hosted mode when API key hash is unknown", async () => {

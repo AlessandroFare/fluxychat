@@ -20,25 +20,25 @@ export function LandingPricingSection() {
     >
       <div className="mx-auto max-w-6xl">
         <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-white">Pricing</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-slate-400">
+        <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
           Self-serve tiers with monthly message, agent, and webhook quotas. Platform fee today; usage add-ons on
           Growth and above when you outgrow included limits.
         </p>
-        <p className="mx-auto mt-2 max-w-xl text-center text-xs text-slate-500">
+        <p className="mx-auto mt-2 max-w-xl text-center text-xs text-slate-400">
           Console routes can require a one-time ack on your dashboard host. Billable usage still needs your Worker
           credentials.
         </p>
         <p className="mx-auto mt-8 max-w-xl text-center text-sm font-medium text-slate-300">
           Self-serve — checkout today
         </p>
-        <div className="mt-6 grid gap-8 lg:grid-cols-3">
+        <div className="mt-6 grid gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {planEntries.map(([key, plan]) => {
             const isFeatured = key === "starter";
             return (
               <div
                 key={key}
                 className={cn(
-                  "relative flex flex-col rounded-2xl border p-8",
+                  "relative flex flex-col overflow-hidden rounded-2xl border p-6 min-w-0",
                   isFeatured
                     ? "border-primary bg-slate-900/80 shadow-[0_0_0_1px_rgba(255,115,94,0.35)]"
                     : "border-white/10 bg-slate-900/40",
@@ -46,12 +46,12 @@ export function LandingPricingSection() {
               >
                 {isFeatured ? (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
-                    Most popular
+                    Most teams start here
                   </Badge>
                 ) : null}
                 <h3 className="font-heading text-xl font-semibold text-white">{plan.label}</h3>
                 <div className="mt-2 text-4xl font-bold text-white">{plan.price}</div>
-                <p className="mt-3 text-sm text-slate-400">{plan.tagline}</p>
+                <p className="mt-3 text-sm text-slate-300">{plan.tagline}</p>
                 <div className="mt-6 flex flex-1 flex-col">
                   <ul className="flex flex-col gap-3 text-sm text-slate-300">
                     <li className="flex gap-2">
@@ -77,7 +77,7 @@ export function LandingPricingSection() {
                     {plan.bullets.map((b) => (
                       <li key={b} className="flex gap-2">
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-                        {b}
+                        <span className="break-words">{b}</span>
                       </li>
                     ))}
                   </ul>
@@ -87,16 +87,31 @@ export function LandingPricingSection() {
                   className={cn("mt-8 w-full", isFeatured ? "" : "bg-white/10 text-white hover:bg-white/20")}
                   variant={isFeatured ? "default" : "secondary"}
                 >
-                  <Link href={clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}>
-                    {key === "free"
-                      ? HOSTED_COPY.startFree
-                      : clerkOn
-                        ? key === "starter"
-                          ? "Choose Starter"
-                          : "Choose Pro"
-                        : HOSTED_COPY.connectAccount}
-                  </Link>
+                  {key === "growth" ? (
+                    <Link href="/contact?plan=growth">
+                      {/* TODO: wire Stripe price ID for Growth when self-serve
+                          checkout is ready. Currently routes to contact form. */}
+                      Choose Growth
+                    </Link>
+                  ) : (
+                    <Link href={clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}>
+                      {key === "free"
+                        ? HOSTED_COPY.startFree
+                        : clerkOn
+                          ? key === "starter"
+                            ? "Choose Starter"
+                            : key === "pro"
+                              ? "Choose Pro"
+                              : `Choose ${plan.label}`
+                          : HOSTED_COPY.connectAccount}
+                    </Link>
+                  )}
                 </Button>
+                {key === "growth" ? (
+                  <p className="mt-3 text-center text-xs text-slate-400">
+                    or <Link href="/contact" className="text-slate-300 underline underline-offset-2 hover:text-white">talk to us first →</Link>
+                  </p>
+                ) : null}
               </div>
             );
           })}
@@ -105,20 +120,20 @@ export function LandingPricingSection() {
         <p className="mx-auto mt-14 max-w-xl text-center text-sm font-medium text-slate-300">
           Sales-led — governance and higher limits
         </p>
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
           {SALES_PLAN_CATALOG.map((plan) => (
             <div
               key={plan.label}
-              className="flex flex-col rounded-2xl border border-white/10 bg-slate-900/30 p-6"
+              className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/30 p-6"
             >
               <h3 className="font-heading text-lg font-semibold text-white">{plan.label}</h3>
               <div className="mt-1 text-2xl font-bold text-white">{plan.price}</div>
-              <p className="mt-2 text-sm text-slate-400">{plan.tagline}</p>
+              <p className="mt-2 text-sm text-slate-300">{plan.tagline}</p>
               <ul className="mt-5 flex flex-1 flex-col gap-2 text-sm text-slate-300">
                 {plan.bullets.map((b) => (
                   <li key={b} className="flex gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-                    {b}
+                    <span className="break-words">{b}</span>
                   </li>
                 ))}
               </ul>
@@ -142,17 +157,17 @@ export function LandingPricingSection() {
               <summary className="cursor-pointer list-none text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center justify-between gap-3">
                   {item.q}
-                  <span className="text-slate-500 transition group-open:rotate-180">▾</span>
+                  <span className="text-slate-400 transition group-open:rotate-180">▾</span>
                 </span>
               </summary>
-              <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-slate-400">
+              <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-slate-300">
                 {item.a}
               </p>
             </details>
           ))}
         </div>
 
-        <p className="mt-10 text-center text-xs text-slate-500">
+        <p className="mt-10 text-center text-xs text-slate-400">
           Need enterprise SSO, VPC-style isolation, or custom SLOs? Email{" "}
           <a className="text-slate-300 underline underline-offset-2" href="mailto:fluxychat@outlook.com">
             fluxychat@outlook.com
@@ -163,3 +178,4 @@ export function LandingPricingSection() {
     </section>
   );
 }
+

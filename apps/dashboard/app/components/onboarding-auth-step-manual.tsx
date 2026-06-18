@@ -21,7 +21,7 @@ export function ManualJwtFields({
     <div className={className}>
       <p className="mb-3 text-sm text-muted-foreground">
         Mint with{" "}
-        <code className="rounded bg-muted px-1 font-mono text-xs">POST /auth/token</code> and your project API key, or
+        <code className="rounded bg-muted px-1 font-mono text-xs text-slate-700">POST /auth/token</code> and your project API key, or
         paste a bootstrap token from ops. See{" "}
         <Link href="/get-started" className="font-medium text-primary underline-offset-2 hover:underline">
           get started

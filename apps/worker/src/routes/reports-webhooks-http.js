@@ -305,8 +305,18 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
     return json({ ok: true });
   }
 
-  // Webhook signature verification endpoint
+  // Webhook signature verification endpoint — requires admin JWT
+  // (audit fix H-1/H-2: previously unauthenticated, leaked webhook existence)
   if (url.pathname === "/webhooks/verify" && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!auth || !hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    }
+
     const body = await request.json().catch(() => null);
     if (!body || !body.signature || !body.payload) {
       return json({ error: "signature and payload required" }, { status: 400 });
@@ -332,7 +342,17 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
     return json({ valid: isValid });
   }
 
+  // Batch verification — also requires admin JWT
   if (url.pathname === "/webhooks/verify-batch" && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!auth || !hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    }
+
     const body = await request.json().catch(() => null);
     if (!body?.secret) {
       return json({ error: "secret required" }, { status: 400 });

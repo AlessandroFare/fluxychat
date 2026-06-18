@@ -41,7 +41,7 @@ function buildDb(overrides = {}) {
   };
 }
 
-describe("dispatchIdentityRoutes — SAML", () => {
+describe("dispatchIdentityRoutes  SAML", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });

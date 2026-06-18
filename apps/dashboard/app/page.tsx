@@ -20,11 +20,12 @@ import {
 import { cn } from "@/lib/utils";
 
 const CHECKLIST = [
-  { key: "jwt", label: "Admin JWT saved" },
-  { key: "project", label: "Project selected" },
-  { key: "member", label: "Member JWT minted" },
-  { key: "room", label: "Room created" },
-  { key: "message", label: "First message sent" },
+  { key: "project", label: "Create your first project" },
+  { key: "member", label: "Mint a member token" },
+  { key: "room", label: "Create or open a room" },
+  { key: "message", label: "Send your first message" },
+  { key: "install", label: "Install the SDK in your app" },
+  { key: "invite", label: "Invite a teammate" },
 ] as const;
 
 export default function HomePage() {
@@ -60,13 +61,14 @@ export default function HomePage() {
     );
 
   const checklistDone = {
-    jwt: adminJwt.trim().length >= 12,
     project: Boolean(activeProject?.id),
     member: memberJwt.trim().length >= 12,
     room: Boolean(lastRoom?.id),
     message:
       Boolean(progress.firstMessageSent || progress.completedAt) &&
       progress.clerkUserId === activeClerkId,
+    install: false, // cannot detect from the dashboard alone; shown as "?"
+    invite: false, // cannot detect from the dashboard alone; shown as "?"
   };
 
   const primaryCta = quickstartComplete
@@ -118,24 +120,60 @@ export default function HomePage() {
         <ul className="mt-5 space-y-2 border-t border-black/[0.06] pt-4">
           {CHECKLIST.map((item) => {
             const done = checklistDone[item.key];
-            const firstOpenIndex = CHECKLIST.findIndex((c) => !checklistDone[c.key]);
+            const unknown = item.key === "install" || item.key === "invite";
+            const firstOpenIndex = CHECKLIST.findIndex(
+              (c) => !checklistDone[c.key] && c.key !== "install" && c.key !== "invite",
+            );
             const isCurrent =
               !quickstartComplete &&
               !done &&
+              !unknown &&
               CHECKLIST.findIndex((c) => c.key === item.key) === firstOpenIndex;
             return (
               <li key={item.key} className="flex items-center gap-2 text-sm">
                 {done ? (
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                ) : unknown ? (
+                  <span
+                    className="h-4 w-4 shrink-0 text-slate-600"
+                    title="We'll mark this done automatically once you do it."
+                    aria-label="Not yet tracked"
+                  >
+                    â‹
+                  </span>
                 ) : (
                   <Circle
-                    className={cn("h-4 w-4 shrink-0", isCurrent ? "text-primary" : "text-slate-300")}
+                    className={cn("h-4 w-4 shrink-0", isCurrent ? "text-primary" : "text-slate-600")}
                     aria-hidden
                   />
                 )}
-                <span className={cn(done ? "text-slate-700" : isCurrent ? "font-medium text-slate-900" : "text-slate-400")}>
+                <span
+                  className={cn(
+                    done
+                      ? "text-slate-700"
+                      : isCurrent
+                        ? "font-medium text-slate-900"
+                        : "text-slate-600",
+                  )}
+                >
                   {item.label}
                 </span>
+                {item.key === "install" ? (
+                  <Link
+                    href="https://www.npmjs.com/package/@fluxy-chat/sdk"
+                    className="ml-auto text-xs text-primary underline-offset-2 hover:underline"
+                  >
+                    npm
+                  </Link>
+                ) : null}
+                {item.key === "invite" ? (
+                  <Link
+                    href={`${HOSTED_PATHS.onboarding}`}
+                    className="ml-auto text-xs text-primary underline-offset-2 hover:underline"
+                  >
+                    Invite link
+                  </Link>
+                ) : null}
               </li>
             );
           })}
@@ -157,7 +195,7 @@ export default function HomePage() {
           </p>
         )}
         <p className="mt-4 flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          <KeyRound className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+          <KeyRound className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-600" aria-hidden />
           Requests use Bearer JWTs to your Worker. The optional{" "}
           <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px]">/enter</code> screen is an ack only; it
           does not replace API keys or JWTs.
@@ -193,3 +231,4 @@ export default function HomePage() {
     </ConsoleShell>
   );
 }
+

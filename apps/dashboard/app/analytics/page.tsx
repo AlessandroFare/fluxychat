@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
@@ -223,6 +223,8 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Generation counter for stale-response suppression in `fetchStats`.
+  const fetchGenRef = useRef(0);
 
   const fetchStats = useCallback(async () => {
     if (!readToken) {
@@ -236,6 +238,9 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
     setNotice(null);
+    // Stale-response guard: if the user changes room while the previous
+    // fetch is in flight, ignore the old result. (Audit P2 fix.)
+    const gen = ++fetchGenRef.current;
     try {
       const [roomJson, costJson, kpiJson, sloJson, alertsJson, benchmarkJson] =
         await Promise.all([
@@ -265,6 +270,7 @@ export default function AnalyticsPage() {
           }),
         ]);
 
+      if (gen !== fetchGenRef.current) return;
       setRoomStats(roomJson);
       setCosts(costJson);
       setKpis(kpiJson);
@@ -273,9 +279,10 @@ export default function AnalyticsPage() {
       setBenchmark(benchmarkJson);
       setNotice("Analytics refreshed.");
     } catch (err: unknown) {
+      if (gen !== fetchGenRef.current) return;
       setError(messageFromUnknown(err, "Failed to load analytics"));
     } finally {
-      setLoading(false);
+      if (gen === fetchGenRef.current) setLoading(false);
     }
   }, [readToken, roomId, authHeader, adminJwt]);
 

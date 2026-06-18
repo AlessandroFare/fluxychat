@@ -323,8 +323,12 @@ export default function ProjectsPage() {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(240px,300px)_1fr]">
-        {/* —— Project list —— */}
-        <aside className="flex flex-col gap-3">
+        {/*  Project list  */}
+        {/* <div> not <aside>: the root layout already provides <main>,
+            and nested <aside> inside <main> is a "landmark nested
+            inside another landmark" violation (axe `landmark-unique` /
+            `region`). The aria-label keeps it discoverable. */}
+        <div className="flex flex-col gap-3" aria-label="Your projects">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Your projects
@@ -407,10 +411,13 @@ export default function ProjectsPage() {
               );
             })}
           </ul>
-        </aside>
+        </div>
 
-        {/* —— Detail / editor —— */}
-        <main className="min-w-0">
+        {/*  Detail / editor  */}
+        {/* <div> not <main>: the root layout already provides the single
+            <main> landmark; nesting another <main> violates
+            `landmark-main-is-top-level`. */}
+        <div className="min-w-0">
           {panel === "create" ? (
             <Panel className="rounded-2xl border border-border/80 p-6">
               <div className="mb-5 flex items-start justify-between gap-3">
@@ -568,7 +575,7 @@ export default function ProjectsPage() {
                     Created{" "}
                     {selectedProject.created_at
                       ? formatDateTime(selectedProject.created_at)
-                      : "—"}
+                      : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -660,7 +667,7 @@ export default function ProjectsPage() {
                       />
                     </>
                   ) : (
-                    <p className="text-sm text-muted-foreground">—</p>
+                    <p className="text-sm text-muted-foreground"></p>
                   )}
                 </div>
               </div>
@@ -703,8 +710,9 @@ export default function ProjectsPage() {
               ) : null}
             </Panel>
           ) : null}
-        </main>
+        </div>
       </div>
     </ConsoleShell>
   );
 }
+

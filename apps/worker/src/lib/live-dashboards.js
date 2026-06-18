@@ -246,3 +246,4 @@ function formatDataPoint(row) {
     metadata: JSON.parse(row.metadata || "{}"), createdAt: row.created_at,
   };
 }
+

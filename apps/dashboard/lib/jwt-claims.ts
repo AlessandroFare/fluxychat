@@ -30,3 +30,4 @@ export function readJwtTenantId(token: string): string | null {
     return null;
   }
 }
+

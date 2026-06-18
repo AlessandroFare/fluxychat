@@ -67,3 +67,4 @@ export async function dispatchMcpRoutes(request, url, h) {
 
   return json(result, { headers: corsHeaders });
 }
+

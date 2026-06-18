@@ -104,7 +104,7 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPa
               </>
             )}
           </Button>
-          <Link href="/agents" className="text-sm text-brand hover:underline">
+          <Link href="/agents" className="text-sm text-brand underline underline-offset-2">
             Configure agents →
           </Link>
         </div>
@@ -127,7 +127,7 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPa
             agentHandle={agent.handle}
             adminJwt={adminJwt}
           />
-          <Link href="/agents" className="text-xs text-brand hover:underline">
+          <Link href="/agents" className="text-xs text-brand underline underline-offset-2">
             Full agent console →
           </Link>
         </div>

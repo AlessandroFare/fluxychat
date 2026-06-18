@@ -48,3 +48,4 @@ if (created > 0) {
   console.log("Do not commit .dev.vars or .env.local — they may contain secrets.");
 }
 console.log("Staging/production: docs/operations/environment-setup.md — run `pnpm run check:env` for a checklist.");
+

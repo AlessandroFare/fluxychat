@@ -13,9 +13,9 @@ export const DEFAULT_QUOTA_METRICS = {
 
 export function getDefaultQuotaLimit(env, metricName) {
   const defaults = {
-    messages_created: Number(env.QUOTA_MESSAGES_PER_MONTH || 50_000),
-    agent_invokes: Number(env.QUOTA_AGENT_INVOKES_PER_MONTH || 1_000),
-    webhook_deliveries: Number(env.QUOTA_WEBHOOK_DELIVERIES_PER_MONTH || 10_000),
+    messages_created: Number(env.QUOTA_MESSAGES_PER_MONTH || 200_000),
+    agent_invokes: Number(env.QUOTA_AGENT_INVOKES_PER_MONTH || 5_000),
+    webhook_deliveries: Number(env.QUOTA_WEBHOOK_DELIVERIES_PER_MONTH || 50_000),
   };
   const val = defaults[metricName];
   return Number.isFinite(val) && val > 0 ? val : null;

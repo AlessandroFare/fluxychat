@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { highlightSearchSnippet } from "@/lib/escape-html";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
@@ -113,8 +114,14 @@ export default function SearchPage() {
           ) : results.length === 0 ? (
             <EmptyState
               icon={Search}
-              title="No results yet"
-              description="Run a search to find messages across your rooms."
+              title={query.trim() ? `No matches for "${query.trim()}"` : "No results yet"}
+              description={
+                query.trim().startsWith("@")
+                  ? "That looks like a user handle. Try browsing members from the room sidebar instead."
+                  : query.trim().match(/\b(20\d{2}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i)
+                    ? "No messages matched in the current time range. Try a wider date filter or different words."
+                    : "Try a shorter query, or check your spelling. Searches are matched as whole words."
+              }
             />
           ) : (
             <ul className="space-y-2">
@@ -123,11 +130,11 @@ export default function SearchPage() {
                   <Panel className="p-4">
                     <p
                       className="text-sm text-foreground"
-                      dangerouslySetInnerHTML={{ __html: row.snippet.replace(/\[\[/g, "<mark>").replace(/\]\]/g, "</mark>") }}
+                      dangerouslySetInnerHTML={{ __html: highlightSearchSnippet(row.snippet) }}
                     />
                     <p className="mt-2 text-[11px] text-muted-foreground">
                       {row.userId} · room{" "}
-                      <Link href={`/rooms?room=${encodeURIComponent(row.roomId)}`} className="text-brand hover:underline">
+                      <Link href={`/rooms?room=${encodeURIComponent(row.roomId)}`} className="text-brand underline underline-offset-2">
                         {row.roomId}
                       </Link>{" "}
                       · {formatDateTime(row.createdAt)}

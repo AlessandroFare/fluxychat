@@ -79,6 +79,12 @@ describe("rich-previews", () => {
       expect(renderMarkdown("~~deleted~~")).toContain("<del>deleted</del>");
     });
 
+    it("escapes raw HTML in user content", () => {
+      const html = renderMarkdown('<img src=x onerror=alert(1)>');
+      expect(html).not.toContain("<img");
+      expect(html).toContain("&lt;img");
+    });
+
     it("escapes HTML in code blocks", () => {
       const html = renderMarkdown("```\n<script>alert(1)</script>\n```");
       expect(html).toContain("&lt;script&gt;");

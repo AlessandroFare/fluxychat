@@ -1,3 +1,7 @@
+import type { ComponentType } from "react";
+import type { LucideProps } from "lucide-react";
+import { UserPlus, Layers, Key, MessageSquare, Send, Bot } from "lucide-react";
+
 export interface CreatedProject {
   id: string;
   name: string;
@@ -17,30 +21,42 @@ export interface CreatedAgent {
   name: string;
 }
 
-export const ONBOARDING_STEPS = [
+export interface OnboardingStepDef {
+  title: string;
+  short: string;
+  icon: ComponentType<LucideProps>;
+}
+
+export const ONBOARDING_STEPS: readonly OnboardingStepDef[] = [
   {
     title: "Connect account",
-    short: "Sign in on hosted cloud, or paste an admin JWT if you self-host.",
+    short: "Authenticate with Clerk or paste your admin JWT.",
+    icon: UserPlus,
   },
   {
     title: "Create project",
-    short: "Gets API keys and quotas on your Worker. On hosted cloud this often already exists after sign-in.",
+    short: "Your isolated namespace. All traffic, quotas, and keys live here.",
+    icon: Layers,
   },
   {
     title: "Mint member JWT",
-    short: "Browser token for rooms. Minted server-side so the API key never hits the client.",
+    short: "Browser-safe token minted server-side so your API key is never exposed.",
+    icon: Key,
   },
   {
     title: "Create room",
-    short: "A channel your SDK can join with that member JWT.",
+    short: "A channel your SDK joins with the member JWT.",
+    icon: MessageSquare,
   },
   {
     title: "First message",
     short: "Send one message over WebSocket to confirm delivery works.",
+    icon: Send,
   },
   {
     title: "Try an agent (optional)",
-    short: "Register a bot and invoke it once. Custom streaming bots: docs/cookbook/bot-streaming-fluxy-message-stream.md",
+    short: "Register a bot and invoke it once.",
+    icon: Bot,
   },
 ] as const;
 
@@ -50,17 +66,26 @@ export interface OnboardingStepContext {
   memberJwt: string;
   room: CreatedRoom | null;
   messageCount: number;
+  /**
+   * True only when the *current user* has sent at least one message during
+   * this onboarding session. History replay and inbound messages from other
+   * members do NOT count — otherwise onboarding auto-completes when a user
+   * revisits a room that already has messages. (Audit fix.)
+   */
+  userSentMessage?: boolean;
 }
 
 export function isOnboardingStepComplete(step: number, args: OnboardingStepContext): boolean {
-  const { adminJwt, activeProject, memberJwt, room, messageCount } = args;
+  const { adminJwt, activeProject, memberJwt, room, userSentMessage } = args;
   const hasMember = Boolean(memberJwt.trim());
   if (step === 0) return adminJwt.trim().length >= 12;
   if (step === 1) return Boolean(activeProject?.id);
   if (step === 2) return hasMember;
   if (step >= 3 && !hasMember) return false;
   if (step === 3) return Boolean(room?.id);
-  if (step === 4) return messageCount >= 1;
+  // Step 4 (first message) requires the user to have actually sent a message,
+  // not merely that messages exist in the room (history replay / inbound).
+  if (step === 4) return Boolean(userSentMessage);
   return true;
 }
 

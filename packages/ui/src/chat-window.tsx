@@ -237,3 +237,4 @@ export function ChatWindow({
     </div>
   );
 }
+

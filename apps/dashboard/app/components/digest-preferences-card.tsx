@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { Banner, Button, Panel } from "./ui";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
+import { messageFromUnknown } from "@/lib/error-message";
 
 interface DigestPreferencesCardProps {
   token: string;
@@ -46,7 +47,7 @@ export function DigestPreferencesCard({ token, className }: DigestPreferencesCar
         setInAppEnabled(prefs.inAppEnabled);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load digest settings");
+        if (!cancelled) setError(messageFromUnknown(err, "Failed to load digest settings"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -70,7 +71,7 @@ export function DigestPreferencesCard({ token, className }: DigestPreferencesCar
       });
       setNotice("Digest preferences saved.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(messageFromUnknown(err, "Save failed"));
     } finally {
       setSaving(false);
     }
@@ -156,3 +157,4 @@ export function DigestPreferencesCard({ token, className }: DigestPreferencesCar
     </Panel>
   );
 }
+

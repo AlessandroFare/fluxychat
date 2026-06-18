@@ -384,7 +384,7 @@ export function HeroCodeInboxDemo() {
     <div className="w-full">
       <div className="mb-3 flex flex-col gap-1 border-b border-black/[0.06] pb-3 sm:flex-row sm:items-end sm:justify-between">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Your app</p>
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 sm:text-right">Live preview</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 sm:text-right">Live preview</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 md:gap-8">
@@ -399,7 +399,7 @@ export function HeroCodeInboxDemo() {
               <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-              <span className="ml-auto text-[10px] text-zinc-600">app/chat/page.tsx</span>
+              <span className="ml-auto text-[10px] text-zinc-400">app/chat/page.tsx</span>
             </div>
             <pre className="flex-1 overflow-y-auto overflow-x-hidden p-4 font-mono text-[11px] leading-relaxed sm:text-xs">
               <code>{buildCodeDisplay(codeLen)}</code>
@@ -549,3 +549,4 @@ export function HeroCodeInboxDemo() {
     </div>
   );
 }
+

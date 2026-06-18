@@ -14,7 +14,7 @@ const alertVariants = cva(
         info: "bg-card border border-primary/30 text-foreground *:data-[slot=alert-description]:text-muted-foreground *:[svg]:text-primary",
         success: "bg-success/10 text-success *:data-[slot=alert-description]:text-success/80 *:[svg]:text-success",
         warning: "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 *:data-[slot=alert-description]:text-amber-700 dark:*:data-[slot=alert-description]:text-amber-400 *:[svg]:text-amber-600 dark:*:[svg]:text-amber-400",
-        muted: "bg-muted text-muted-foreground *:data-[slot=alert-description]:text-muted-foreground/80 *:[svg]:text-current",
+        muted: "bg-muted text-muted-foreground *:data-[slot=alert-description]:text-muted-foreground *:[svg]:text-current",
       },
     },
     defaultVariants: {

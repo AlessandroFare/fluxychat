@@ -109,3 +109,4 @@ function formatUpdate(row) {
     createdAt: row.created_at,
   };
 }
+

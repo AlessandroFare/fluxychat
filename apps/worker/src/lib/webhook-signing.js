@@ -31,7 +31,16 @@ export async function getWebhookEncryptionKey(env) {
 
 /** Local/dev only — set ALLOW_PLAINTEXT_WEBHOOK_SECRETS=true in .dev.vars. */
 export function isPlaintextWebhookSecretAllowed(env) {
-  return String(env.ALLOW_PLAINTEXT_WEBHOOK_SECRETS || "").trim() === "true";
+  if (String(env.ALLOW_PLAINTEXT_WEBHOOK_SECRETS || "").trim() !== "true") {
+    return false;
+  }
+  // Audit S-25: refuse plaintext webhook secrets in hosted multi-tenant
+  // deployments even if the env var is set. Operators must configure
+  // WEBHOOK_SECRET_ENCRYPTION_KEY.
+  if (String(env.HOSTED_MULTI_TENANT || "").trim() === "true") {
+    return false;
+  }
+  return true;
 }
 
 /** When true, webhook register/update with a secret requires WEBHOOK_SECRET_ENCRYPTION_KEY. */
@@ -173,3 +182,4 @@ export async function signWebhookPayload(secret, payload) {
     .join("");
   return `sha256=${hex}`;
 }
+

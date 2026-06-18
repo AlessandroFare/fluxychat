@@ -3,11 +3,12 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-type BannerVariant = "info" | "success" | "error";
+type BannerVariant = "info" | "success" | "warn" | "error";
 
 const bannerVariantClass: Record<BannerVariant, string> = {
   info: "border-border bg-muted/60 text-foreground",
   success: "border-emerald-200/80 bg-emerald-50 text-emerald-950",
+  warn: "border-amber-200/80 bg-amber-50 text-amber-950",
   error: "border-red-200/80 bg-red-50 text-red-950",
 };
 

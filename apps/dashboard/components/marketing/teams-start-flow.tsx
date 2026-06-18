@@ -4,8 +4,8 @@ import { useId, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
 /**
- * T-connector from the section title into three cards (block layout, no overlap).
- * viewBox 0 0 1000 88 — stems align with 3× grid column centers (≈16.67%, 50%, 83.33%).
+ * T-connector from the section title into four cards (block layout, no overlap).
+ * viewBox 0 0 1000 88  stems align with 4× grid column centers (12.5%, 37.5%, 62.5%, 87.5%).
  */
 export function TeamsStartFlow() {
   const uid = useId().replace(/:/g, "");
@@ -15,7 +15,7 @@ export function TeamsStartFlow() {
   const pathRef = useRef<SVGPathElement>(null);
   const dotRef = useRef<SVGCircleElement>(null);
 
-  const pathD = "M 500 4 L 500 32 L 167 32 L 167 84 M 500 32 L 500 84 M 500 32 L 833 32 L 833 84";
+  const pathD = "M 500 4 L 500 32 L 125 32 L 875 32 M 125 32 L 125 84 M 375 32 L 375 84 M 625 32 L 625 84 M 875 32 L 875 84";
 
   useLayoutEffect(() => {
     const path = pathRef.current;

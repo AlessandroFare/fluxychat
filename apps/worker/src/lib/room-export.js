@@ -248,3 +248,4 @@ export function buildRoomPdf(input) {
   ];
   return buildSimplePdf([...header, ...lines]);
 }
+

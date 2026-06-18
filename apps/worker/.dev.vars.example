@@ -2,9 +2,48 @@
 # Do not commit real secrets. Lines are KEY=value (no quotes needed for simple values).
 
 # --- CORS / auth (local dashboard) ---
+# Local dev: explicit loopback origins. Production must list every dashboard
+# origin it serves (do NOT set "*"). To opt into wildcard CORS for a
+# self-hosted dev only, use ALLOWED_ORIGINS=*.
 ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 # Set to "false" only for local experiments (keep true in shared/staging/prod).
 REQUIRE_ADMIN_AUTH=true
+# API key hashing salt (audit S-11). Generate 32+ random bytes, base64-encode.
+# Without this, a weak default is used and a warning is logged.
+# API_KEY_HASH_SALT=base64-32-bytes-here
+
+# --- JWT key rotation (audit S-31) ---
+# When rotating jwt_secret in D1 project_secrets, set the previous secret here
+# and schedule its expiration. After JWT_SECRET_PREVIOUS_EXPIRES_AT (ISO
+# timestamp), tokens signed with the previous secret will be rejected, even if
+# still configured. Leave unset to accept the previous secret indefinitely
+# (legacy behaviour — a warning is logged on every use).
+# JWT_SECRET_PREVIOUS=...old-jwt-secret-base64...
+# JWT_SECRET_PREVIOUS_EXPIRES_AT=2026-12-31T00:00:00Z
+
+# --- Agent tool allow-list (audit A-5) ---
+# Comma-separated global list of tool names the LLM is permitted to invoke.
+# - If set to a non-empty list (e.g. "search,calculator"): only those tools
+#   reach the LLM. Every other tool name is stripped at extraction time
+#   and logged at WARN level.
+# - If set to empty string (""): all tools are stripped (fail-closed).
+#   Use this as an emergency kill switch.
+# - If the env var is absent entirely: the global gate is skipped and
+#   the per-bot (bots.allowed_tools) and per-project default
+#   (projects.default_allowed_tools) allow-lists apply instead. This is
+#   the legacy behaviour and is the default for existing deployments.
+#
+# Note: tool names are trimmed of whitespace before comparison. A single
+# space character "" in the list is treated as a literal tool name (and
+# will never match a real tool), not as a separator.
+# AGENT_TOOL_ALLOWLIST=search,calculator
+
+# --- Self-host fallback (audit S-14) ---
+# In self-host mode (HOSTED_MULTI_TENANT unset/false), the worker previously
+# fell back to DEFAULT_PROJECT_ID for any request without a valid API key.
+# That is a footgun. Set this to "true" only if you intentionally want the
+# legacy single-tenant behaviour. Leave unset / "false" in shared/staging/prod.
+# ALLOW_LEGACY_DEFAULT_PROJECT=true
 
 # --- Hosted SaaS (multi-tenant cloud) ---
 # Local dev tip: after `pnpm provision:bootstrap`, copy BOTH fc_... key AND project UUID
@@ -70,22 +109,27 @@ ANTHROPIC_API_KEY=
 # MOONSHOT_API_KEY=
 # OLLAMA_BASE_URL=http://127.0.0.1:11434/v1
 
+# --- SSRF allowlist (audit S-15) ---
+# Comma-separated hostnames or suffix domains that bypass the SSRF blocklist.
+# Use for self-hosted webhooks that point at internal services.
+# ALLOWED_SSRF_HOSTS=internal.acme.com,*.staging.acme.com
+
 # --- Webhook signing secrets at rest ---
-# Base64-encoded 32-byte AES key (required in prod; generate once and store in Wrangler secrets).
-# WEBHOOK_SECRET_ENCRYPTION_KEY=
-# Local dev without encryption key: allow one-time plaintext storage (never in production).
-ALLOW_PLAINTEXT_WEBHOOK_SECRETS=true
-# Force encryption even when ALLOW_PLAINTEXT is unset (staging/prod should set WEBHOOK_SECRET_ENCRYPTION_KEY).
-# REQUIRE_WEBHOOK_SECRET_ENCRYPTION=true
+# Base64-encoded 32-byte AES key. Generate once and store in Wrangler secrets.
+# In production, this MUST be set; setting ALLOW_PLAINTEXT_WEBHOOK_SECRETS
+# is forbidden (audit S-25).
+# WEBHOOK_SECRET_ENCRYPTION_KEY=...base64(32bytes)...
+# Only set this to "true" in local dev (audit S-25).
+# ALLOW_PLAINTEXT_WEBHOOK_SECRETS=true
 
 # --- Optional: dispatch operational alerts ---
 # ALERT_DISPATCH_WEBHOOK_URL=
 
 # --- Quotas & pricing assumptions (defaults match README) ---
 # QUOTAS_ENABLED=true
-# QUOTA_MESSAGES_PER_MONTH=50000
-# QUOTA_AGENT_INVOKES_PER_MONTH=1000
-# QUOTA_WEBHOOK_DELIVERIES_PER_MONTH=10000
+# QUOTA_MESSAGES_PER_MONTH=200000
+# QUOTA_AGENT_INVOKES_PER_MONTH=5000
+# QUOTA_WEBHOOK_DELIVERIES_PER_MONTH=50000
 # COST_MESSAGES_PER_MILLION=1
 # COST_REQUESTS_PER_MILLION=0.2
 # PRICE_PER_MILLION_MESSAGES=1
@@ -127,6 +171,13 @@ ALLOW_PLAINTEXT_WEBHOOK_SECRETS=true
 # RATE_LIMIT_PUBLIC_GUEST_PER_MINUTE=30
 # RATE_LIMIT_WS_MESSAGES_PER_MINUTE=60      # per-user WS message sends (Room DO)
 
+# --- Security contact (used in /.well-known/security.txt) ---
+# SECURITY_CONTACT_EMAIL=security@fluxychat.com
+# Point this to a DEDICATED, MONITORED inbox before going public.
+# It will receive third-party vulnerability reports; an autoresponder
+# that issues CVE-style ticket IDs and pages a human is the
+# minimum bar. See RUNBOOK_DEPLOY_ROLLBACK.md §8 for rotation.
+
 # --- Offline SMS via Sent.dm (optional built-in — see docs/cookbook/offline-notify-sent-dm.md) ---
 # OFFLINE_SMS_ENABLED=true
 # SENT_DM_API_KEY=
@@ -148,3 +199,11 @@ ALLOW_PLAINTEXT_WEBHOOK_SECRETS=true
 # --- Agent task queue (P13-T4) ---
 # AGENT_QUEUE_SLA_MINUTES=15
 # AGENT_QUEUE_AUTO_INBOUND=true   # enqueue on inbound SMS/WA (requires TELCO_INBOUND_ENABLED)
+
+# --- Dev-only provision endpoint (POST /dev/provision) ---
+# Enables the local first-message script (pnpm run first-message).
+# Mounted only when this is exactly "true" AND NODE_ENV !== "production".
+# NEVER set this in any non-local environment — it lets anyone mint a
+# project API key with no auth.
+ALLOW_DEV_PROVISION=true
+# --- /dev/provision ---

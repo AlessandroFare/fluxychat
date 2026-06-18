@@ -45,7 +45,7 @@ export function QuickstartSdkSnippet() {
 
   return (
     <div className="mt-8 space-y-3 rounded-2xl border border-black/[0.06] bg-[#111111] p-4 text-slate-100 shadow-md">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">SDK quickstart</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">SDK quickstart</p>
       <div className="flex items-center gap-2 font-mono text-sm">
         <code className="min-w-0 flex-1 truncate">{INSTALL}</code>
         <button
@@ -79,7 +79,8 @@ export function QuickstartSdkSnippet() {
         {copied === "hook" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
         Copy useChat
       </button>
-      <p className="text-xs text-slate-400">{STREAM_BOT_HINT}</p>
+      <p className="text-xs text-slate-300">{STREAM_BOT_HINT}</p>
     </div>
   );
 }
+

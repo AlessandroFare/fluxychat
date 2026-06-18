@@ -1011,7 +1011,7 @@ SDK Review Findings: packages/sdk/src/index.ts
   ---
   1. API key is invisible after creating a project on the Projects page
 
-  Current state: projects/page.tsx (lines 76–105) creates a project via POST /admin/projects and shows setNotice("Project created and selected."). The response object only includes { id, name, created_at } —
+  Current state: projects/page.tsx (lines 76–105) creates a project via POST /admin/projects and shows setNotice("Project created and selected."). The response object only includes { id, name, created_at } 
   no apiKey field. The projects list (lines 256–269) shows p.apiKey only when p.apiKey is truthy, but since the creation response never populates it, the field never appears.
 
   Confusion: A developer creates a project, sees "Project created," but the project card shows no API key. They check the Onboarding page, which has a separate create-project button that does surface the key
@@ -1403,3 +1403,4 @@ Runbook Gap Analysis
   attempt JWT_SECRET first; if it fails with a signature mismatch, fall back to JWT_SECRET_V2. When the rotation is complete (all users have re-authenticated with the new secret), remove JWT_SECRET_V2. This
   is the standard blue-green secret rotation pattern — the current worker.js does not implement it. Until implemented, plan JWT rotations during low-traffic windows and communicate the brief disruption in
   advance.
+

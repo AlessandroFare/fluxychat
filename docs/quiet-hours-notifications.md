@@ -63,3 +63,4 @@ Apply D1 migration `0059_quiet_hours.sql`.
 ## Wrangler
 
 Cron trigger added: `*/15 * * * *` for batch flush.
+

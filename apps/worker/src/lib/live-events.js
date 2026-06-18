@@ -239,3 +239,4 @@ function formatSpeaker(row) {
     joinedAt: row.joined_at, leftAt: row.left_at, createdAt: row.created_at,
   };
 }
+

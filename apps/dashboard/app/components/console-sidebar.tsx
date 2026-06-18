@@ -39,7 +39,7 @@ export function ConsoleSidebar() {
       </div>
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-4" aria-label="Console">
         <div>
-          <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+          <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
             Operate
           </p>
           <ul className="space-y-0.5">
@@ -55,7 +55,7 @@ export function ConsoleSidebar() {
           </ul>
         </div>
         <div>
-          <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+          <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
             Tools
           </p>
           <ul className="space-y-0.5">
@@ -70,8 +70,14 @@ export function ConsoleSidebar() {
       <div className="space-y-2 border-t border-black/[0.06] p-3">
         <CommandPaletteTrigger />
         <Link
+          href="/settings"
+          className="block rounded-lg px-2.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800"
+        >
+          Settings
+        </Link>
+        <Link
           href="/landing"
-          className="block rounded-lg px-2.5 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+          className="block rounded-lg px-2.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800"
         >
           ← Product &amp; pricing
         </Link>

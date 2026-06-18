@@ -49,3 +49,4 @@ export const LANDING_FAQ = [
     a: "No. Billable calls need your JWTs and API keys. Turn on DASHBOARD_ACCESS_MODE=ack (and optional CONSOLE_GATE_SECRET) so console routes need a one-time ack first.",
   },
 ] as const;
+

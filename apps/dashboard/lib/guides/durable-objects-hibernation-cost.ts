@@ -59,3 +59,4 @@ export const DO_HIBERNATION_COST_GUIDE: GuideContent = {
     "room per durable object",
   ],
 };
+

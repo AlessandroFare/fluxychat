@@ -127,3 +127,4 @@ function formatEvent(row) {
     metadata: JSON.parse(row.metadata || "{}"), timestamp: row.timestamp, createdAt: row.created_at,
   };
 }
+

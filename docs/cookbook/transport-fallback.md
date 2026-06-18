@@ -55,3 +55,4 @@ store.subscribe((state) => {
 
 - [`packages/sdk/src/room-session.ts`](../../packages/sdk/src/room-session.ts) — fallback implementation
 - [`packages/sdk/README.md`](../../packages/sdk/README.md) — optimistic sends + `retryMessage`
+

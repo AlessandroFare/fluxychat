@@ -246,6 +246,81 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
     return json({ deliveries: rows.results || [] });
   }
 
+  // Webhooks dashboard summary (Area 5.4): one row per webhook with
+  // last delivery status and a consecutive-failure count for the badge.
+  if (url.pathname === "/admin/webhooks/summary" && request.method === "GET") {
+    if (requireAdminAuth) {
+      const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+        if (err instanceof Response) throw err;
+        console.error("JWT verify error", err);
+        return null;
+      });
+      if (!adminAuth) {
+        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      }
+      if (!hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
+        return json({ error: "forbidden" }, { status: 403 });
+      }
+    }
+    const adminAuth = await verifyJwtAndGetContext(request, env);
+    // Per-webhook aggregate. SQLite has no window functions in older
+    // versions; we read the last 50 deliveries per webhook and
+    // compute the consecutive failure count in JS. The cardinality is
+    // small (typically < 100 webhooks per project) so this is fine.
+    const rows = await env.DB.prepare(
+      `SELECT w.id AS webhook_id, w.url, w.event_types, w.created_at AS webhook_created_at,
+              d.id AS delivery_id, d.status, d.last_http_status, d.last_error, d.delivered_at, d.created_at AS delivery_created_at
+       FROM webhooks w
+       LEFT JOIN webhook_deliveries d ON d.id = (
+         SELECT id FROM webhook_deliveries
+         WHERE webhook_id = w.id
+         ORDER BY created_at DESC LIMIT 1
+       )
+       WHERE w.project_id = ?
+       ORDER BY w.created_at DESC`
+    )
+      .bind(adminAuth.projectId)
+      .all();
+    const ids = (rows.results || []).map((r) => r.webhook_id);
+    let failureCounts = new Map();
+    if (ids.length) {
+      const placeholders = ids.map(() => "?").join(",");
+      const recent = await env.DB.prepare(
+        `SELECT webhook_id, status FROM webhook_deliveries
+         WHERE project_id = ? AND webhook_id IN (${placeholders})
+         ORDER BY created_at DESC LIMIT ?`
+      )
+        .bind(adminAuth.projectId, ...ids, ids.length * 50)
+        .all();
+      for (const r of recent.results || []) {
+        if (failureCounts.has(r.webhook_id)) continue;
+        if (r.status === "failed" || r.status === "cancelled") {
+          failureCounts.set(r.webhook_id, (failureCounts.get(r.webhook_id) || 0) + 1);
+        } else if (r.status === "delivered") {
+          // stop counting
+        }
+      }
+    }
+    const summary = (rows.results || []).map((r) => ({
+      webhookId: r.webhook_id,
+      url: r.url,
+      eventTypes: r.event_types,
+      webhookCreatedAt: r.webhook_created_at,
+      lastDelivery: r.delivery_id
+        ? {
+            id: r.delivery_id,
+            status: r.status,
+            lastHttpStatus: r.last_http_status,
+            lastError: r.last_error,
+            deliveredAt: r.delivered_at,
+            createdAt: r.delivery_created_at,
+          }
+        : null,
+      consecutiveFailures: failureCounts.get(r.webhook_id) || 0,
+    }));
+    return json({ webhooks: summary });
+  }
+
   if (
     url.pathname.startsWith("/admin/webhooks/deliveries/") &&
     url.pathname.endsWith("/replay") &&
@@ -681,3 +756,4 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
 
   return null;
 }
+

@@ -27,3 +27,4 @@ Rejected messages return:
 - Wired in `room-do.js` and `routes/messages-http.js`
 
 Post-persist moderation (auto-flag to `moderation_events`) remains in `post-message-automations.js` when block-on-match is **off**.
+

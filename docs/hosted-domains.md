@@ -110,3 +110,4 @@ If Vercel is set to **307 apex → www**, use:
 - Bookmarks and marketing links → `https://www.fluxychat.com`
 
 This avoids duplicate SEO and cookie edge cases between apex and `www`.
+

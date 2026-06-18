@@ -38,3 +38,4 @@ const pdf = await client.exportRoomPdf("room_support", { from: "2026-06-01T00:00
 ## Future (P12-K)
 
 Rich HTML→PDF via Cloudflare Browser Run Quick Actions can replace the minimal text PDF generator for branded exports with screenshots and OG previews.
+

@@ -110,13 +110,20 @@ export async function resolveCustomDomainContext(env, hostname) {
  * @param {import('./custom-domains.js').ReturnType<typeof mapCustomDomainRow> | null} hostCtx
  */
 export function buildAllowedOriginsList(env, hostCtx) {
-  const base = (env.ALLOWED_ORIGINS || "*")
+  const hosted = env.HOSTED_MULTI_TENANT === "true";
+  const configured = env.ALLOWED_ORIGINS?.trim();
+  // Audit S-10: never default to "*". The previous fallback to "*" for
+  // self-hosted dev was a footgun  it allowed any browser origin to call
+  // the API. Operators must now explicitly opt in with ALLOWED_ORIGINS=*
+  // if they want wildcard CORS.
+  const fallback = "";
+  const rawList = (configured && configured.length > 0 ? configured : fallback)
     .split(",")
     .map((o) => o.trim())
     .filter(Boolean);
-  if (base.includes("*")) return ["*"];
+  if (rawList.includes("*")) return ["*"];
 
-  const merged = new Set(base);
+  const merged = new Set(rawList);
   if (hostCtx?.hostname) {
     merged.add(`https://${hostCtx.hostname}`);
     for (const origin of hostCtx.allowedOrigins || []) merged.add(origin);

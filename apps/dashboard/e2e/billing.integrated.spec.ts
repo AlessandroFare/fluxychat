@@ -36,3 +36,4 @@ test.describe("billing integrated", () => {
     await expect(page.getByText("Free")).toBeVisible();
   });
 });
+

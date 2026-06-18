@@ -116,3 +116,4 @@ function formatCheckIn(row) {
     checkedInAt: row.checked_in_at, checkedOutAt: row.checked_out_at,
   };
 }
+

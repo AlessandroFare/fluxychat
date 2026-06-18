@@ -1,7 +1,7 @@
 name: fluxychat_sdk
 description: Flutter SDK for FluxyChat - realtime chat infrastructure for SaaS.
 version: 1.0.0
-homepage: https://github.com/fluxychat/flutter-sdk
+homepage: https://github.com/AlessandroFare/fluxychat/tree/main/packages/flutter-sdk
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
@@ -20,3 +20,5 @@ dev_dependencies:
   flutter_lints: ^3.0.1
   mockito: ^5.4.4
   build_runner: ^2.4.8
+
+flutter:

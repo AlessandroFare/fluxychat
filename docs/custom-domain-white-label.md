@@ -62,3 +62,4 @@ await client.updateCustomDomain(id, { status: "active" });
 
 - [Hosted domains (fluxychat.com setup)](./hosted-domains.md)
 - P12-A embed widget (next) — uses `getPublicHostConfig()` + default room
+

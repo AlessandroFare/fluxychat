@@ -201,3 +201,4 @@ function hasRequiredRole(userRole, required) {
   const hierarchy = { owner: 5, admin: 4, mod: 3, member: 2, guest: 1 };
   return (hierarchy[userRole] || 0) >= (hierarchy[required] || 0);
 }
+

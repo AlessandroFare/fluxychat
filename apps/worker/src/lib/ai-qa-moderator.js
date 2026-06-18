@@ -207,3 +207,4 @@ function formatQuestion(row) {
     moderatedAt: row.moderated_at, createdAt: row.created_at,
   };
 }
+

@@ -242,3 +242,4 @@ function formatSpamRule(row) {
     action: row.action, enabled: row.enabled === 1, createdAt: row.created_at,
   };
 }
+

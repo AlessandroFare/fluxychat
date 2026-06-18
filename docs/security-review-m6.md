@@ -1300,7 +1300,7 @@ Security Review: Webhook Secret Handling — apps/worker/src/worker.js
     return result === 0;
   }
 
-  The length check at line 5609 creates a timing oracle. An attacker can distinguish length === 32 from length !== 32 with ~100 samples via statistical timing analysis —
+  The length check at line 5609 creates a timing oracle. An attacker can distinguish length === 32 from length !== 32 with ~100 samples via statistical timing analysis 
   the branch misprediction cost is measurable (~1–2ns per sample, detectable with 100× amplification). Knowing the signature length narrows brute-force from 2^256 to 2^n
   where n is the remaining bits.
 
@@ -1469,7 +1469,7 @@ Security Review: Webhook Secret Handling — apps/worker/src/worker.js
     return result === 0;
   }
 
-  The length check at line 5609 creates a timing oracle. An attacker can distinguish length === 32 from length !== 32 with ~100 samples via statistical timing analysis —
+  The length check at line 5609 creates a timing oracle. An attacker can distinguish length === 32 from length !== 32 with ~100 samples via statistical timing analysis 
   the branch misprediction cost is measurable (~1–2ns per sample, detectable with 100× amplification). Knowing the signature length narrows brute-force from 2^256 to 2^n
   where n is the remaining bits.
 
@@ -1615,12 +1615,12 @@ Security Review: Webhook Secret Handling — apps/worker/src/worker.js
   Severity: MEDIUM
   Finding: JSON.stringify(toolResult.result) — no size guard, could exceed context or degrade LLM response quality
   ────────────────────────────────────────
-  #: —
+  #: 
   Area: ai-agent HMAC compare
   Severity: LOW
   Finding: Plain === in verifyWebhookSignature — not timing-safe, inconsistent with main worker
   ────────────────────────────────────────
-  #: —
+  #: 
   Area: ai-agent JWT expiry
   Severity: LOW
   Finding: Hardcoded 1h JWT with no refresh — potential mid-operation expiry in long-running workers

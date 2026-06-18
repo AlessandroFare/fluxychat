@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
+  Loader2,
   MessageSquare,
   Pencil,
   Play,
+  RefreshCw,
   Trash2,
 } from "lucide-react";
 import { ModelCapabilityBadges } from "@/app/components/model-capability-badges";
@@ -32,13 +34,33 @@ export default function AgentDetailPage() {
     preparingChat,
     deleteAgent,
     deleting,
+    loadingAgents,
+    loadAgents,
   } = useAgentsConsole();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   if (!selectedAgent || selectedAgent.id !== agentId) {
+    // Distinguish loading from genuine not-found so a slow Worker doesn't
+    // show "not found" with no recourse. (Audit P2 fix.)
+    if (loadingAgents) {
+      return (
+        <Panel className="rounded-2xl border border-dashed border-border/80 p-8 text-center text-sm text-muted-foreground">
+          <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin text-muted-foreground" />
+          Loading agent…
+        </Panel>
+      );
+    }
     return (
       <Panel className="rounded-2xl border border-dashed border-border/80 p-8 text-center text-sm text-muted-foreground">
-        Agent not found or still loading.
+        <p className="mb-4">Agent not found. It may have been deleted, or the session needs to refresh.</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void loadAgents()}
+        >
+          <RefreshCw className="mr-1.5 h-4 w-4" />
+          Reload agents
+        </Button>
       </Panel>
     );
   }
@@ -112,7 +134,7 @@ export default function AgentDetailPage() {
                   })()}
                 </span>
               ) : (
-                "—"
+                ""
               )
             }
           />
@@ -167,7 +189,7 @@ export default function AgentDetailPage() {
                   {selectedAgent.contextFetchUrl}
                 </span>
               ) : (
-                "—"
+                ""
               )
             }
           />
@@ -179,7 +201,7 @@ export default function AgentDetailPage() {
                   {selectedAgent.toolExecuteUrl}
                 </span>
               ) : (
-                "—"
+                ""
               )
             }
           />
@@ -188,7 +210,7 @@ export default function AgentDetailPage() {
             value={
               selectedAgent.toolsSchema?.length
                 ? `${selectedAgent.toolsSchema.length} tool(s)`
-                : "—"
+                : ""
             }
           />
         </div>

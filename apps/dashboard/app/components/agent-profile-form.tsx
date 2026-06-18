@@ -143,7 +143,10 @@ export function AgentProfileForm({
           className="mb-4"
           onApply={(patch) => onChange(patch)}
         />
-        <FormField label="System prompt">
+        <FormField
+          label="System prompt (agent instructions)"
+          hint="What the agent is told about itself and its job. Sent on every invoke."
+        >
           <Textarea
             value={values.systemPrompt}
             onChange={(e) => onChange({ systemPrompt: e.target.value })}

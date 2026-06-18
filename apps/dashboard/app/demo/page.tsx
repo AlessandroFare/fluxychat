@@ -82,11 +82,11 @@ export default function DemoRoomPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
       <p className="text-sm text-muted-foreground">
-        <Link href="/landing" className="text-brand hover:underline">
+        <Link href="/landing" className="text-brand underline underline-offset-2">
           ← Landing
         </Link>
         {" · "}
-        <Link href="/compare" className="text-brand hover:underline">
+        <Link href="/compare" className="text-brand underline underline-offset-2">
           Compare
         </Link>
       </p>
@@ -95,11 +95,11 @@ export default function DemoRoomPage() {
         Read-only or guest chat when the operator configures{" "}
         <code className="text-xs">DEMO_ROOM_ID</code> and{" "}
         <code className="text-xs">DEMO_API_KEY</code> on the Worker. No Clerk signup.{" "}
-        <Link href="/guides/agent-events-same-websocket-stream" className="text-brand hover:underline">
+        <Link href="/guides/agent-events-same-websocket-stream" className="text-brand underline underline-offset-2">
           Agent events on the same stream
         </Link>
         {" · "}
-        <Link href="/guides/offline-notify-in-app-plus-sms" className="text-brand hover:underline">
+        <Link href="/guides/offline-notify-in-app-plus-sms" className="text-brand underline underline-offset-2">
           In-app + SMS offline →
         </Link>
       </p>

@@ -66,3 +66,4 @@ Legend: **✓** = present as in SPEC; **+** = extension beyond SPEC v3 table.
 ## Maintenance
 
 When adding a new public endpoint: update this table and, when possible, `openapi.yaml`.
+

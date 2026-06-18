@@ -1,0 +1,177 @@
+# FluxyChat  Production due diligence audit (2026-06-15)
+
+**Auditor role:** Senior Staff Engineer / Security / QA / DevOps / PM / UX / Architect  
+**Scope:** Read-only review of monorepo `C:\Users\alefare\Chat`  
+**Production readiness score:** 47 / 100 (functional alpha, not production-grade)  
+**Verdict:** Do not launch as-is  2–3 week P0 security sprint, then 4–8 week debt programme.
+
+> **Remediation:** Track closure in [REMEDIATION.md](./REMEDIATION.md).  
+> **Env note:** Audit reviewed `.env.example` / `.dev.vars.example`; production may differ  verify live Wrangler/Vercel secrets against [docs/operations/environment-setup.md](../operations/environment-setup.md).
+
+---
+
+## 1. Executive summary
+
+FluxyChat is multi-tenant realtime chat on Cloudflare Workers + Durable Objects + D1, Next.js 16 dashboard, npm SDK, separate AI-agent Worker. Feature surface is large (WS rooms, agents, omnichannel, voice, SSO/SCIM, billing, GDPR tooling).
+
+**Strengths:** Edge-first design, secret hygiene (timing-safe JWT verify, webhook encryption), quotas, GDPR endpoints, extensive docs/tests scaffolding.
+
+**Critical gaps:** Dashboard mint-member bypass (S-1), role bypass room access (S-2), guest userId impersonation (S-6), stored XSS in search/markdown (S-4/S-5), wildcard CORS on identity routes (S-9), Stripe webhook optional verify (S-8), sequential 100+ route dispatchers (P-1), FTS rowid bug.
+
+---
+
+## 2. Project understanding
+
+- **Monorepo:** pnpm + Turborepo  `apps/worker`, `apps/dashboard`, `apps/ai-agent`, `packages/*`
+- **Routing:** `worker.js` → `dispatchPublicRoutes` → 100+ dispatchers in `lib/worker-route-dispatch.js`
+- **Auth:** Bearer JWT (HS256 per project) or `X-Fluxy-Api-Key`; roles owner/admin/moderator/member/guest/bot
+- **Deploy:** Wrangler + Vercel; secrets via Wrangler; staging `wrangler.staging.toml`
+
+---
+
+## 3. Architecture assessment
+
+| Strengths | Weaknesses |
+|-------------|------------|
+| DO hibernation-aware WS | O(routes) dispatcher chain every request |
+| Message TTL / visibility model | 800+ line `worker.js` partial split |
+| Webhook secret encryption | 95% worker JS untyped |
+| Tenant-scope audit script | 50-key deps bag per route |
+
+**Risks:** D1 on every WS connect; `ctx.waitUntil` webhook drain; no circuit breakers.
+
+---
+
+## 4. Security findings (prioritized)
+
+### CRITICAL (S-1 … S-13)
+
+| ID | Location | Issue |
+|----|----------|-------|
+| S-1 | `mint-member/route.ts` | Body `projectApiKey` + console fallback → arbitrary member JWT mint |
+| S-2 | `room-access.js` | owner/admin/moderator/bot bypass room membership |
+| S-3 | `room-access.js` | Any member reads any public room in project |
+| S-4 | `search/page.tsx` | `dangerouslySetInnerHTML` on unescaped FTS snippet → XSS |
+| S-5 | `rich-previews.js` | Markdown renders unescaped user HTML |
+| S-6 | `guest-public-session.js` | Client-supplied `userId` impersonation |
+| S-7 | `middleware.ts` | No auth when Clerk disabled (ack-only gate) |
+| S-8 | `stripe-billing.js` | Webhook proceeds without `STRIPE_WEBHOOK_SECRET` |
+| S-9 | `identity-access-http.js` | Hardcoded CORS `*` |
+| S-10 | CORS defaults | `ALLOWED_ORIGINS=*` |
+| S-11 | `api-key-hash.js` | SHA-256 only, no salt/work factor |
+| S-12 | `messages-http.js` PATCH | No role check; mint bypass enables edit forgery |
+| S-13 | `crypto-timing.js` | Length leak in hex compare |
+
+### HIGH / MEDIUM / LOW
+
+See full tables in auditor report sections 4–4 (OWASP mapping included in source review).
+
+---
+
+## 5. Code quality (Q-1 … Q-20)
+
+Dispatcher chain, monolithic `room-do.js`, mixed TS/JS, swallowed errors, dynamic imports in hot paths, stub routes advertised in OpenAPI, 2745-line SDK barrel.
+
+---
+
+## 6. Performance (P-1 … P-13)
+
+Dispatcher latency, D1 on WS connect/snapshot, per-message OG fetch, webhook drain on every request, D1 counter writes at RPS scale.
+
+---
+
+## 7. Database
+
+200+ tables, 136 migrations, missing FKs, **FTS5 rowid join bug** (`messages_fts.rowid` ≠ `messages.id`), partial indexes on hot paths.
+
+---
+
+## 8. Infrastructure & DevOps
+
+Good CI (unit, smoke e2e, tenant-scope audit); missing SAST/SBOM/DAST, no staging gate in deploy, alerts not wired to PagerDuty/Slack, no PR preview env.
+
+---
+
+## 9. Dependencies
+
+Generally current; `react: "latest"` non-reproducible in package.json; pnpm overrides for known CVEs; no `pnpm audit` in CI.
+
+---
+
+## 10. Testing
+
+162 worker vitest specs; sparse dashboard tests; critical paths (mint-member, SAML, guest impersonation, search XSS) untested at audit time.
+
+---
+
+## 11. UX & product
+
+Strong onboarding/playground; dense console; ack-mode weak auth; GDPR UI present; accessibility unverified.
+
+---
+
+## 12. E2E user flow simulation
+
+Sign-up → provision → mint → room → message path works with Clerk; malicious path via mint-member + role bypass; search XSS; guest impersonation; Stripe unsigned webhook.
+
+---
+
+## 13. Bug hunt (B-1 … B-15)
+
+Stream op ordering, PATCH deleted messages, hard-delete orphans, quota typo fail-open, embed secret rotation, scheduled message drift, GDPR LIKE escape gaps.
+
+---
+
+## 14. Critical issues (launch blockers)
+
+1. S-1, S-2, S-3  auth / room access  
+2. S-4, S-5  XSS  
+3. S-6  guest impersonation  
+4. S-8  Stripe  
+5. S-9, S-10  CORS  
+6. S-7  dashboard auth  
+7. S-11, S-25, S-28  crypto at rest  
+8. FTS rowid functional bug  
+9. P-1  router perf  
+10. S-15  SSRF DNS  
+
+---
+
+## 15. Quick wins (QW-1 … QW-15)
+
+Listed in [REMEDIATION.md](./REMEDIATION.md). **Batch 1 (2026-06-15)** started in code: QW-3, QW-4, QW-5, QW-6, QW-7, QW-8, QW-1 partial, S-7 partial.
+
+---
+
+## 16. Long-term improvements
+
+Hono router, full TS worker, request-scoped services, Argon2 API keys, Analytics Engine metrics, httpOnly sessions, OpenAPI contract tests, pentest before GA.
+
+---
+
+## 17. Production readiness scores
+
+| Category | Score |
+|----------|-------|
+| Security | 30 |
+| Code quality | 55 |
+| Performance | 50 |
+| Database | 60 |
+| Infra | 65 |
+| Dependencies | 75 |
+| Testing | 60 |
+| UX | 70 |
+| Accessibility | 40 |
+| Documentation | 85 |
+| Compliance scaffolding | 60 |
+| **Overall** | **47** |
+
+---
+
+## 18. Final verdict
+
+Do not approve production deployment today. Execute P0 + quick wins, third-party pentest, staged rollout (closed beta → open beta → GA).
+
+---
+
+*Full verbatim auditor narrative (all subsection prose) was supplied in the 2026-06-15 review session; this file is the canonical structured index. Update [REMEDIATION.md](./REMEDIATION.md) as each ID closes.*

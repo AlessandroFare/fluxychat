@@ -223,3 +223,64 @@ Run in this order before each closed rollout:
 8. Send first message
 9. First agent invoke
 10. Verify `stats/ops`, `stats/slo`, `stats/costs`, `stats/launch-kpis`
+
+## 8) Secrets rotation
+
+Periodic rotation of cryptographic and provider secrets. Cadence: every
+90 days for JWT, Clerk, and Stripe secrets; immediately on any
+compromise suspicion. Each rotation has a grace window so in-flight
+requests don't fail.
+
+### 8.1) `JWT_SECRET` (worker)
+
+The Worker accepts a previous secret during a 24h overlap window so
+clients that haven't yet refreshed their token still verify.
+
+1. Generate a new 256-bit secret:
+   ```bash
+   openssl rand -base64 32
+   ```
+2. Set `JWT_SECRET_PREVIOUS` to the current `JWT_SECRET` value.
+3. Set `JWT_SECRET_PREVIOUS_EXPIRES_AT` to `now() + 24h` (ISO 8601, UTC).
+4. Update `JWT_SECRET` to the new value.
+5. Deploy the worker (`pnpm --filter @fluxychat/worker deploy`).
+6. Wait 24h. Remove `JWT_SECRET_PREVIOUS` and `JWT_SECRET_PREVIOUS_EXPIRES_AT`.
+7. Re-deploy.
+
+In a compromise: skip the 24h window — set `JWT_SECRET_PREVIOUS_EXPIRES_AT` to a past timestamp so the previous secret is rejected immediately after deploy.
+
+### 8.2) Clerk keys (dashboard + worker)
+
+1. Roll the key in the Clerk dashboard: **API Keys → Roll key**.
+2. Update `CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` in:
+   - Cloudflare Workers secrets (per env): `wrangler secret put CLERK_SECRET_KEY`
+   - Vercel/Next.js env vars: dashboard or `vercel env rm` + `vercel env add`
+3. Deploy both the worker and the dashboard in the same maintenance
+   window. There is **no overlap window** for Clerk — the old key is
+   invalidated the moment Clerk issues the new one.
+4. Notify the team 15 minutes in advance; pause any automated test
+   runs that depend on the Clerk test keys.
+
+### 8.3) `STRIPE_WEBHOOK_SECRET` (worker)
+
+1. Roll the secret in the Stripe dashboard: **Webhooks → endpoint → Roll secret**.
+2. Stripe stops accepting signatures from the old secret immediately.
+3. Update `STRIPE_WEBHOOK_SECRET` in the worker secrets:
+   `wrangler secret put STRIPE_WEBHOOK_SECRET`.
+4. Deploy the worker.
+5. Verify by replaying one recent webhook from the Stripe dashboard
+   (Webhooks → endpoint → Send test event) and confirming
+   `200 OK` with `verified: true` in the response.
+
+### 8.4) `WORKFLOW_SIGNING_SECRET` (worker, if enabled)
+
+Treat identically to `STRIPE_WEBHOOK_SECRET`: roll the secret in
+`secrets-crypto.js` rotation flow, redeploy, verify with a signed
+request.
+
+### 8.5) Per-tenant `project_secrets.jwt_secret`
+
+The `admin/jwt-rotate` endpoint handles this for individual tenants.
+Run only when a tenant reports a leak or on the tenant's request —
+do not rotate globally.
+

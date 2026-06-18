@@ -15,11 +15,11 @@ export function LandingCompareSection() {
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-muted-foreground">
           Not a feature shootout — rough fit vs Stream, Ably, Pusher, and DIY DO repos.{" "}
-          <Link href={HOSTED_PATHS.compare} className="text-brand hover:underline">
+          <Link href={HOSTED_PATHS.compare} className="text-brand underline underline-offset-2">
             Full compare
           </Link>
           {" · "}
-          <Link href="/guides/pusher-alternative-saas" className="text-brand hover:underline">
+          <Link href="/guides/pusher-alternative-saas" className="text-brand underline underline-offset-2">
             Leaving Pusher
           </Link>
           .
@@ -58,3 +58,4 @@ export function LandingCompareSection() {
     </section>
   );
 }
+

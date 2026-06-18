@@ -77,3 +77,4 @@ export function PillarsBento({ items, className }: PillarsBentoProps) {
     </div>
   );
 }
+

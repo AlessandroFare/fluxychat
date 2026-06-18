@@ -53,3 +53,4 @@ wrangler d1 execute fluxychat --local --command "SELECT COUNT(*) AS tables FROM 
 ```
 
 Expect **100+** tables after 0136 (exact count grows with feature migrations).
+

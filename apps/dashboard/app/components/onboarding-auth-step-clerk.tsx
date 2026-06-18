@@ -48,7 +48,7 @@ export function OnboardingAuthStepClerk({
               <p className="font-medium">Connected to Fluxychat Cloud</p>
               <p className="mt-1 text-emerald-900/80">
                 {activeProject?.name
-                  ? `Project “${activeProject.name}” is ready. Continue to the next step.`
+                  ? `Project "${activeProject.name}" is ready. Continue to the next step.`
                   : "Operator JWT is in this browser session. Continue to the next step."}
               </p>
             </div>

@@ -13,14 +13,16 @@ describe("plan-tier-limits", () => {
     expect(normalizePlanName("PRO")).toBe("pro");
   });
 
-  it("returns tier caps for starter and pro", () => {
+  it("returns tier caps for starter, pro, team, and growth", () => {
     const env = {};
     expect(planLimitsForTier(env, "starter").messageLimitMonthly).toBe(500_000);
     expect(planLimitsForTier(env, "pro").agentInvokeLimitMonthly).toBe(100_000);
+    expect(planLimitsForTier(env, "team").messageLimitMonthly).toBe(20_000_000);
+    expect(planLimitsForTier(env, "growth").messageLimitMonthly).toBe(100_000_000);
   });
 
   it("exposes frozen canonical tier limits (P0-1 source of truth)", () => {
-    expect(ALLOWED_PLAN_NAMES).toEqual(new Set(["free", "starter", "pro"]));
+    expect(ALLOWED_PLAN_NAMES).toEqual(new Set(["free", "starter", "pro", "team", "growth"]));
     expect(CANONICAL_TIER_LIMITS.starter).toEqual({
       messageLimitMonthly: 500_000,
       agentInvokeLimitMonthly: 10_000,
@@ -31,12 +33,24 @@ describe("plan-tier-limits", () => {
       agentInvokeLimitMonthly: 100_000,
       webhookDeliveryLimitMonthly: 1_000_000,
     });
+    expect(CANONICAL_TIER_LIMITS.team).toEqual({
+      messageLimitMonthly: 20_000_000,
+      agentInvokeLimitMonthly: 200_000,
+      webhookDeliveryLimitMonthly: 1_000_000,
+    });
+    expect(CANONICAL_TIER_LIMITS.growth).toEqual({
+      messageLimitMonthly: 100_000_000,
+      agentInvokeLimitMonthly: 1_000_000,
+      webhookDeliveryLimitMonthly: 5_000_000,
+    });
     expect(() => {
       CANONICAL_TIER_LIMITS.starter.messageLimitMonthly = 1;
     }).toThrow();
     const env = {};
     expect(planLimitsForTier(env, "starter")).toEqual(CANONICAL_TIER_LIMITS.starter);
     expect(planLimitsForTier(env, "pro")).toEqual(CANONICAL_TIER_LIMITS.pro);
+    expect(planLimitsForTier(env, "team")).toEqual(CANONICAL_TIER_LIMITS.team);
+    expect(planLimitsForTier(env, "growth")).toEqual(CANONICAL_TIER_LIMITS.growth);
   });
 
   it("uses audited free-tier defaults when env overrides are absent", () => {

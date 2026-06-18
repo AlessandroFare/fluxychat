@@ -11,3 +11,4 @@ export const metadata = buildPageMetadata({
 export default function IntegrationsPage() {
   return <IntegrationsConsolePage />;
 }
+

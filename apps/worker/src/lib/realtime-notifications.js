@@ -191,3 +191,4 @@ function formatDelivery(row) {
     status: row.status, deliveredAt: row.delivered_at, readAt: row.read_at, createdAt: row.created_at,
   };
 }
+

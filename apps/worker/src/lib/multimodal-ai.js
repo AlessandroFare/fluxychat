@@ -185,3 +185,4 @@ function formatAnalysis(row) {
     createdAt: row.created_at,
   };
 }
+

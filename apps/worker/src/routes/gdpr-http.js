@@ -4,7 +4,7 @@
  */
 import { pickRouteDeps } from "./route-http-deps.js";
 import { deleteUserAttachmentObjects } from "../lib/attachment-storage.js";
-import { redactUserPayloadsInTable } from "../lib/gdpr-payload-redaction.js";
+import { redactUserPayloadsInTable, escapeLike } from "../lib/gdpr-payload-redaction.js";
 
 export async function dispatchGdprRoutes(request, url, h) {
   const {
@@ -209,9 +209,9 @@ export async function dispatchGdprRoutes(request, url, h) {
 
     const erasureNow = new Date().toISOString();
     await env.DB.prepare(
-      "UPDATE webhook_deliveries SET status = 'cancelled', last_error = 'gdpr_erasure', updated_at = ? WHERE project_id = ? AND status IN ('pending', 'retrying') AND payload LIKE ?"
+      "UPDATE webhook_deliveries SET status = 'cancelled', last_error = 'gdpr_erasure', updated_at = ? WHERE project_id = ? AND status IN ('pending', 'retrying') AND payload LIKE ? ESCAPE '\\'"
     )
-      .bind(erasureNow, projectId, `%${userId}%`)
+      .bind(erasureNow, projectId, `%${escapeLike(userId)}%`)
       .run();
 
     const [automationRedaction, deliveryRedaction] = await Promise.all([
@@ -391,3 +391,4 @@ export async function dispatchGdprRoutes(request, url, h) {
 
   return null;
 }
+

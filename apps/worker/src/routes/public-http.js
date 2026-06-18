@@ -17,6 +17,7 @@ import { requestSmsOtp, verifySmsOtp } from "../lib/sms-otp-auth.js";
 import { isBrowserRunConfigured } from "../lib/browser-run.js";
 import { getPublicHostConfig } from "../lib/custom-domains.js";
 import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flags.js";
+import { isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
 
 export async function dispatchPublicRoutes(request, url, h) {
   const {
@@ -288,7 +289,14 @@ export async function dispatchPublicRoutes(request, url, h) {
   if (url.pathname === "/platform/bootstrap" && request.method === "POST") {
     const secret = request.headers.get("X-Fluxy-Bootstrap-Secret")?.trim();
     const expected = env.PLATFORM_BOOTSTRAP_SECRET?.trim();
-    if (!expected || !secret || secret !== expected) {
+    if (!expected || !secret) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    // Audit fix C-1: use timing-safe comparison to prevent timing side-channel
+    // enumeration of the bootstrap secret. The `timingSafeEqual` helper is
+    // available via publicDeps.
+    const equal = await timingSafeEqual(secret, expected);
+    if (!equal) {
       return json({ error: "forbidden" }, { status: 403 });
     }
     const countRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM projects").first();
@@ -329,7 +337,11 @@ export async function dispatchPublicRoutes(request, url, h) {
   if (url.pathname === "/platform/sanitize-plans" && request.method === "POST") {
     const secret = request.headers.get("X-Fluxy-Bootstrap-Secret")?.trim();
     const expected = env.PLATFORM_BOOTSTRAP_SECRET?.trim();
-    if (!expected || !secret || secret !== expected) {
+    if (!expected || !secret) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const equal = await timingSafeEqual(secret, expected);
+    if (!equal) {
       return json({ error: "forbidden" }, { status: 403 });
     }
     const dryRun =
@@ -535,7 +547,10 @@ export async function dispatchPublicRoutes(request, url, h) {
         { status: 400 }
       );
     }
-    const rolesValidation = validateRoles(body.roles);
+    // Audit fix M-5: cap to non-elevated roles on the public token-mint path,
+    // UNLESS the caller is the platform operator (trusted server-side bootstrap key).
+    const capForTenant = isPlatformOperatorProject(resolvedProjectId, env) ? false : true;
+    const rolesValidation = validateRoles(body.roles, { capElevated: capForTenant });
     const roles = rolesValidation.roles;
     const ttlSeconds = Math.max(60, Math.min(Number(body.ttlSeconds || 3600), 86_400));
     const row = await env.DB.prepare(
@@ -544,7 +559,7 @@ export async function dispatchPublicRoutes(request, url, h) {
       .bind(resolvedProjectId)
       .first();
     if (!row?.jwt_secret) {
-      return json({ error: "project secret not configured" }, { status: 400 });
+      return json({ error: "project secret not configured", projectId: resolvedProjectId, debug: "no_secret_row" }, { status: 400 });
     }
     const token = await signJwtHs256(row.jwt_secret, {
       sub: body.userId,
@@ -635,7 +650,10 @@ export async function dispatchPublicRoutes(request, url, h) {
     if (!row?.jwt_secret) {
       return json({ error: "project secret not configured" }, { status: 400 });
     }
-    const rolesValidation = validateRoles(body.roles);
+    // Audit fix M-5: cap to non-elevated roles on the public token-mint path,
+    // UNLESS the caller is the platform operator (trusted server-side bootstrap key).
+    const capForTenant = isPlatformOperatorProject(resolvedProjectId, env) ? false : true;
+    const rolesValidation = validateRoles(body.roles, { capElevated: capForTenant });
     const roles = rolesValidation.roles;
     const ttlSeconds = Math.max(60, Math.min(Number(body.ttlSeconds || 3600), 86_400));
     const token = await signJwtHs256(row.jwt_secret, {

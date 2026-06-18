@@ -13,6 +13,7 @@
  */
 
 import { logInfo, logError } from "./worker-log.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 const ACTION_HANDLERS = {
   webhook: executeWebhook,
@@ -251,7 +252,12 @@ async function executeWebhook(env, { action, input }) {
   const headers = { "Content-Type": "application/json", ...config.headers };
   const body = JSON.stringify(input.payload || input);
 
-  const res = await fetch(url, { method, headers, body, redirect: "follow" });
+  // Audit A-1: webhook URL is operator-configured via the agent
+  // config. A malicious operator (or a compromised dashboard session)
+  // could point it at internal Cloudflare metadata
+  // (169.254.169.254) or the loopback to exfiltrate. Guard at
+  // execution time. The IP check passes only public IPs.
+  const res = await safeOutboundFetch(url, { method, headers, body, redirect: "follow" }, env);
   const text = await res.text();
   let data;
   try {
@@ -330,7 +336,10 @@ async function executeCustom(env, { action, input }) {
   const url = action.config.toolExecuteUrl || action.config.url;
   if (!url) throw new Error("custom action requires config.url");
 
-  const res = await fetch(url, {
+  // Audit A-1: same guard as executeWebhook. Custom tool execution
+  // URLs are operator-configured and must not be allowed to point
+  // at internal services.
+  const res = await safeOutboundFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

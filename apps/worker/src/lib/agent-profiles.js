@@ -3,6 +3,8 @@
  * Configurable tone, verbosity, policy constraints, and A/B testing.
  */
 
+import { AGENT_BASE_BEHAVIOR } from "./agent-base-behavior.js";
+
 const PROFILE_ROLES = ["owner", "admin"];
 const VALID_TONES = ["professional", "friendly", "formal", "casual", "empathetic", "technical"];
 const VALID_VERBOSITY = ["concise", "balanced", "detailed"];
@@ -180,6 +182,13 @@ export function buildProfilePrompt(profile) {
   if (!profile) return null;
 
   const parts = [];
+
+  // Fable-frame base behavior layer (fable-frame SKILL.md Section 1).
+  // Prepended to every profile so all agents share a consistent behavioral
+  // baseline (lead with the answer, ground claims, no invented identifiers,
+  // escalate only for irreversible actions). Profile-specific tone/policy
+  // constraints below refine — not replace — this layer.
+  parts.push(AGENT_BASE_BEHAVIOR);
 
   parts.push(`Tone: ${profile.tone}.`);
   parts.push(`Verbosity: ${profile.verbosity}.`);

@@ -103,7 +103,7 @@ export default function WhyPage() {
 
       <p className="mt-8 text-center text-xs text-muted-foreground">
         Questions or feedback:{" "}
-        <a href="mailto:fluxychat@outlook.com" className="text-primary underline-offset-2 hover:underline">
+        <a href="mailto:fluxychat@outlook.com" className="text-primary underline underline-offset-2">
           fluxychat@outlook.com
         </a>
       </p>

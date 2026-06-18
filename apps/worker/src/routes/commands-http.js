@@ -77,3 +77,4 @@ export async function dispatchCommandRoutes(request, url, h) {
 
   return null;
 }
+

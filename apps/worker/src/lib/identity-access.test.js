@@ -174,7 +174,7 @@ describe('SCIM', () => {
     const result = await listScimUsers(env, 'proj-1', 1, 3);
     expect(result.totalResults).toBe(5);
     expect(result.itemsPerPage).toBe(3);
-    // Mock DB doesn't apply LIMIT, so Resources may have all 5 — the important thing is totalResults is correct
+    // Mock DB doesn't apply LIMIT, so Resources may have all 5  the important thing is totalResults is correct
     expect(result.Resources.length).toBeGreaterThanOrEqual(1);
   });
 

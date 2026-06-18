@@ -171,7 +171,7 @@ function CommandPaletteDialog({
           <DialogDescription>Search console pages and actions</DialogDescription>
         </DialogHeader>
         <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2">
-          <Search className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+          <Search className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
           <Input
             ref={inputRef}
             value={query}
@@ -183,7 +183,7 @@ function CommandPaletteDialog({
             autoComplete="off"
             spellCheck={false}
           />
-          <kbd className="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 sm:inline">
+          <kbd className="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 sm:inline">
             esc
           </kbd>
         </div>
@@ -192,11 +192,11 @@ function CommandPaletteDialog({
           {notice ? (
             <p className="px-2 py-6 text-center text-sm text-emerald-700">{notice}</p>
           ) : flatItems.length === 0 ? (
-            <p className="px-2 py-6 text-center text-sm text-slate-500">No matches.</p>
+            <p className="px-2 py-6 text-center text-sm text-slate-600">No matches.</p>
           ) : (
             grouped.map((section) => (
               <div key={section.group} className="mb-2 last:mb-0">
-                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
                   {section.group}
                 </p>
                 <ul className="space-y-0.5">
@@ -228,7 +228,7 @@ function CommandPaletteDialog({
                           <span className="min-w-0 flex-1">
                             <span className="block font-medium">{item.label}</span>
                             {item.description ? (
-                              <span className="mt-0.5 block text-xs text-slate-500">
+                              <span className="mt-0.5 block text-xs text-slate-600">
                                 {item.description}
                               </span>
                             ) : null}
@@ -243,7 +243,7 @@ function CommandPaletteDialog({
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50/80 px-3 py-2 text-[11px] text-slate-500">
+        <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50/80 px-3 py-2 text-[11px] text-slate-600">
           <span>Navigate console faster</span>
           <span className="hidden sm:inline">
             <kbd className="rounded border border-slate-200 bg-white px-1">↑</kbd>{" "}
@@ -307,7 +307,7 @@ export function CommandPaletteTrigger({
         <Search className="h-3.5 w-3.5 opacity-70" aria-hidden />
         Search…
       </span>
-      <kbd className="rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-500">
+      <kbd className="rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-600">
         {isMac ? "⌘K" : "Ctrl+K"}
       </kbd>
     </button>

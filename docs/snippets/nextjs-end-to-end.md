@@ -153,3 +153,4 @@ export default function FluxyDemoPage() {
 
 - The room must exist and the user must be a member, otherwise WS may fail with `403`.
 - In production, your backend should decide roles (not the client).
+

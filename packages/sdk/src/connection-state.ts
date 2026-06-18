@@ -64,3 +64,4 @@ function transportFromStatus(status: FluxyConnectionStateStatus): FluxyChatTrans
   }
   return "none";
 }
+

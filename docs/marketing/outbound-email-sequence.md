@@ -72,3 +72,4 @@ More direct tone:
 - TypeScript SDK, React hooks, MCP
 - chat + AI agents without running a socket fleet
 - quickstart in about 15 minutes
+

@@ -194,7 +194,7 @@ export function RoomOfflineNotifySettings({
 
       <p className="mt-3 flex items-center gap-1 text-[10px] text-muted-foreground">
         <MessageSquare className="h-3 w-3" aria-hidden />
-        Member <code className="font-mono">{userId || "—"}</code>
+        Member <code className="font-mono">{userId || ""}</code>
       </p>
     </Panel>
   );

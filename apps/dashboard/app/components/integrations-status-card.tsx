@@ -62,7 +62,7 @@ export function IntegrationsStatusCard({ className }: { className?: string }) {
             href="https://developers.cloudflare.com/turnstile/"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-brand hover:underline"
+            className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-brand underline underline-offset-2"
           >
             Cloudflare docs
             <ExternalLink className="h-3 w-3" aria-hidden />

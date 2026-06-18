@@ -97,3 +97,4 @@ Pass `parentId` in `FluxyMessageStreamOptions` to thread under an existing messa
 
 - [Assistant room use case](../use-cases/assistant-room.md)
 - [Dashboard integration](../dashboard-integration.md) — `useChat` replay modes
+

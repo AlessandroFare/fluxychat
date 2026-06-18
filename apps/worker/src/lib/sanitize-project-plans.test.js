@@ -96,7 +96,7 @@ describe("sanitizeProjectPlans", () => {
     expect(result.scanned).toBe(1);
     expect(result.updated).toBe(1);
     expect(result.changes[0].after.planName).toBe("free");
-    expect(result.changes[0].after.messageLimitMonthly).toBe(50_000);
+    expect(result.changes[0].after.messageLimitMonthly).toBe(200_000);
     expect(plans[0].message_limit_monthly).toBe(9_999_999);
   });
 

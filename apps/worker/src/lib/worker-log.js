@@ -24,3 +24,14 @@ export function logError(event, error, context = {}) {
     })
   );
 }
+
+export function logWarn(event, context = {}) {
+  console.warn(
+    JSON.stringify({
+      level: "warn",
+      event,
+      ts: new Date().toISOString(),
+      ...context,
+    })
+  );
+}

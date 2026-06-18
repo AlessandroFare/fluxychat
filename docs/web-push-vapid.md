@@ -214,3 +214,4 @@ For iOS Safari < 16.4, fall back to FCM (`POST /push/devices` with `platform: "f
 - Subscription endpoints are bound to the JWT user — one user cannot see another user's subscriptions via the API.
 - The subject (`mailto:` or `https://`) is **required** by RFC 8292; push services may refuse requests with a missing or invalid subject.
 - VAPID JWT TTL defaults to 12 hours (per RFC 8292 recommendation) and is regenerated on every push.
+

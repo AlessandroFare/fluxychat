@@ -58,7 +58,7 @@ export function LlmProviderRegistryOverview({
                 ) : null}
               </div>
               <p className="mt-1 text-[10px] text-muted-foreground">
-                {full?.models.length ?? 0} preset models · {full?.apiStyle ?? "—"}
+                {full?.models.length ?? 0} preset models · {full?.apiStyle ?? ""}
               </p>
             </div>
           );
@@ -80,3 +80,4 @@ export function LlmProviderRegistryOverview({
     </div>
   );
 }
+

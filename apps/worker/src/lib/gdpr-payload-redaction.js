@@ -1,6 +1,16 @@
 /** Marker stored in JSON payloads after GDPR erasure (not a real user id). */
 export const GDPR_REDACTED_USER_MARKER = "[deleted]";
 
+/** Audit B-13: escape user-controlled strings before they go into a LIKE
+ *  pattern. SQLite's LIKE understands `%` (any) and `_` (one), so a user
+ *  with id `foo%bar` would otherwise match any row containing
+ *  `foo<anything>bar`. We ESCAPE on `\\` so the literal backslash can
+ *  still appear in user input (e.g. `c:\path` is a legal userId).
+ */
+export function escapeLike(input) {
+  return String(input).replace(/([%_\\])/g, "\\$1");
+}
+
 /** JSON object keys that may hold a single user identifier. */
 export const GDPR_USER_ID_FIELD_KEYS = new Set([
   "userId",
@@ -94,9 +104,9 @@ export async function redactUserPayloadsInTable(db, { projectId, userId, table, 
   while (true) {
     const page = await db
       .prepare(
-        `SELECT ${idColumn} AS row_id, payload FROM ${table} WHERE project_id = ? AND payload LIKE ? LIMIT ? OFFSET ?`
+        `SELECT ${idColumn} AS row_id, payload FROM ${table} WHERE project_id = ? AND payload LIKE ? ESCAPE '\\' LIMIT ? OFFSET ?`
       )
-      .bind(projectId, `%${userId}%`, pageSize, offset)
+      .bind(projectId, `%${escapeLike(userId)}%`, pageSize, offset)
       .all();
 
     const rows = page.results || [];

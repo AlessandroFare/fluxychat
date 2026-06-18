@@ -33,7 +33,7 @@ export function MessageLifecycleSection() {
           <li>
             <code className="rounded bg-muted px-1.5 py-0.5">nextRetryAt</code>
           </li>
-          <li className="text-muted-foreground/80">WS → SSE → polling</li>
+          <li className="text-muted-foreground">WS → SSE → polling</li>
         </ul>
         <div className="mt-12 grid gap-6 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch md:gap-3">
           {STEPS.map((step, index) => (

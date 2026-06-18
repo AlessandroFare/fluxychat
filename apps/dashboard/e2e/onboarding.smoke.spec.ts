@@ -33,3 +33,4 @@ test.describe("onboarding smoke", () => {
     await expect(page.getByTestId("project-name-input")).toBeEnabled();
   });
 });
+

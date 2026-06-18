@@ -198,3 +198,4 @@ function formatVote(row) {
     vote: row.vote, comment: row.comment, votedAt: row.voted_at,
   };
 }
+

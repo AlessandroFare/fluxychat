@@ -80,7 +80,7 @@ function EnterConsoleBody() {
             <Link href="/landing">Back to product page</Link>
           </Button>
         </div>
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-slate-600">
           If <code className="font-mono">CONSOLE_GATE_SECRET</code> is set on the server, enter it below. The main button returns 401 until the
           code matches.
         </p>

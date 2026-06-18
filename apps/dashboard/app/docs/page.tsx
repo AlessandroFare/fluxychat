@@ -67,11 +67,11 @@ export default function DocsPage() {
       <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900">Guides and reference</h1>
       <p className="mt-3 text-slate-600">
         Auth, SDK, and deployment notes for Fluxychat. Long-form guides live under{" "}
-        <Link href={HOSTED_PATHS.guides} className="text-primary underline-offset-2 hover:underline">
+        <Link href={HOSTED_PATHS.guides} className="text-primary underline underline-offset-2">
           /guides
         </Link>
         . This page is public — no account required (same as{" "}
-        <Link href={HOSTED_PATHS.compare} className="text-primary underline-offset-2 hover:underline">
+        <Link href={HOSTED_PATHS.compare} className="text-primary underline underline-offset-2">
           /compare
         </Link>
         ).
@@ -127,7 +127,7 @@ export default function DocsPage() {
         <h2 className="font-heading text-xl font-semibold text-slate-900">Webhooks & billing</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Configure outbound webhooks per project in the console. Stripe checkout and usage quotas are enforced on the
-          Worker — upgrade plans from <Link href="/billing" className="text-primary underline-offset-2 hover:underline">Billing</Link> after you connect an account.
+          Worker  upgrade plans from <Link href="/billing" className="text-primary underline underline-offset-2">Billing</Link> after you connect an account.
         </p>
       </section>
 
@@ -143,7 +143,7 @@ export default function DocsPage() {
             href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/web-push-vapid.md"
             target="_blank"
             rel="noreferrer"
-            className="text-primary underline-offset-2 hover:underline"
+            className="text-primary underline underline-offset-2"
           >
             docs/web-push-vapid.md
           </a>
@@ -164,3 +164,4 @@ export default function DocsPage() {
     </MarketingShell>
   );
 }
+

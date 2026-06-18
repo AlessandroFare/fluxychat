@@ -56,21 +56,41 @@ export function renderMarkdown(markdown) {
     return `\x00INLINECODE_${idx}\x00`;
   });
 
-  // Tables
-  text = text.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)*)/gm, (_, header, sep, body) => {
-    const headers = header.split("|").filter((c) => c.trim()).map((c) => `<th>${c.trim()}</th>`);
-    const rows = body.trim().split("\n").map((row) => {
-      const cells = row.split("|").filter((c) => c.trim()).map((c) => `<td>${c.trim()}</td>`);
-      return `<tr>${cells.join("")}</tr>`;
-    });
-    return `<table class="md-table"><thead><tr>${headers.join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`;
+  // Blockquotes  extract before global escape
+  const blockquotes = [];
+  text = text.replace(/^(?:>\s?.+\n?)+/gm, (match) => {
+    const inner = escapeHtml(match.replace(/^>\s?/gm, "").trim());
+    const idx = blockquotes.length;
+    blockquotes.push(`<blockquote>${inner}</blockquote>`);
+    return `\x00BLOCKQUOTE_${idx}\x00`;
   });
 
-  // Blockquotes
-  text = text.replace(/^(?:>\s?.+\n?)+/gm, (match) => {
-    const inner = match.replace(/^>\s?/gm, "").trim();
-    return `<blockquote>${inner}</blockquote>`;
+  // Tables  extract before global escape
+  const tables = [];
+  text = text.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)*)/gm, (_, header, sep, body) => {
+    const headers = header.split("|").filter((c) => c.trim()).map((c) => `<th>${escapeHtml(c.trim())}</th>`);
+    const rows = body.trim().split("\n").map((row) => {
+      const cells = row.split("|").filter((c) => c.trim()).map((c) => `<td>${escapeHtml(c.trim())}</td>`);
+      return `<tr>${cells.join("")}</tr>`;
+    });
+    const idx = tables.length;
+    tables.push(
+      `<table class="md-table"><thead><tr>${headers.join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`,
+    );
+    return `\x00TABLE_${idx}\x00`;
   });
+
+  text = escapeHtml(text);
+
+  // Audit S-5: allowlist http(s) URLs for any rendered link/image.
+  // (After escapeHtml, the URL itself is already HTML-safe, but the protocol
+  //  could be `javascript:`, `data:`, `vbscript:` etc.)
+  const safeUrl = (raw) => {
+    if (!raw) return null;
+    const trimmed = String(raw).trim();
+    if (!/^https?:\/\//i.test(trimmed)) return null;
+    return trimmed;
+  };
 
   // Horizontal rules
   text = text.replace(/^---+$/gm, "<hr>");
@@ -84,13 +104,25 @@ export function renderMarkdown(markdown) {
   text = text.replace(/^#\s+(.+)$/gm, "<h1>$1</h1>");
 
   // Images (before links to avoid conflict)
-  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="md-image">');
+  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => {
+    const safe = safeUrl(url);
+    if (!safe) return escapeHtml(alt || "");
+    return `<img src="${safe}" alt="${alt || ""}" class="md-image">`;
+  });
 
   // Links
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="md-link">$1</a>');
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+    const safe = safeUrl(url);
+    if (!safe) return label;
+    return `<a href="${safe}" target="_blank" rel="noopener" class="md-link">${label}</a>`;
+  });
 
   // Bare URLs (not already in tags)
-  text = text.replace(/(?<!["\(=])(https?:\/\/[^\s<>]+)/g, '<a href="$1" target="_blank" rel="noopener" class="md-link">$1</a>');
+  text = text.replace(/(?<!["\(=])(https?:\/\/[^\s<>]+)/g, (url) => {
+    const safe = safeUrl(url);
+    if (!safe) return escapeHtml(url);
+    return `<a href="${safe}" target="_blank" rel="noopener" class="md-link">${safe}</a>`;
+  });
 
   // Bold + italic
   text = text.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
@@ -125,6 +157,9 @@ export function renderMarkdown(markdown) {
   text = text.replace(/\x00INLINECODE_(\d+)\x00/g, (_, idx) => {
     return `<code class="md-inline-code">${inlineCodes[Number(idx)]}</code>`;
   });
+
+  text = text.replace(/\x00BLOCKQUOTE_(\d+)\x00/g, (_, idx) => blockquotes[Number(idx)] ?? "");
+  text = text.replace(/\x00TABLE_(\d+)\x00/g, (_, idx) => tables[Number(idx)] ?? "");
 
   return text;
 }
@@ -404,3 +439,4 @@ function isPreviewableType(mime, ext) {
   if ([".json", ".xml", ".yaml", ".yml", ".py", ".js", ".ts", ".go", ".rs", ".c", ".cpp", ".java", ".sh", ".css", ".md", ".csv"].includes(ext)) return true;
   return false;
 }
+

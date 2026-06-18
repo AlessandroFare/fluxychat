@@ -225,3 +225,4 @@ function formatAlert(row) {
     createdAt: row.created_at,
   };
 }
+

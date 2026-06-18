@@ -293,3 +293,4 @@ export async function clearQueryCache(env, { projectId }) {
   ).bind(projectId).run();
   return info.meta?.changes || 0;
 }
+

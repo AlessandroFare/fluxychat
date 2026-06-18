@@ -53,7 +53,7 @@ export default function AgentInvokePage() {
         One-shot REST invoke. For live streaming, tools in-thread, and run feedback use{" "}
         <button
           type="button"
-          className="font-medium text-brand hover:underline"
+          className="font-medium text-brand underline underline-offset-2"
           onClick={() => void openAgentChat(agentId)}
           disabled={preparingChat}
         >

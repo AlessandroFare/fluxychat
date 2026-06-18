@@ -29,7 +29,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
     extractMentions,
     extractFirstUrl,
     fetchOgPreview,
-    schedulePostMessageAutomations,
+    safeSchedulePostMessageAutomations,
     upsertAgentFromBody,
     mapBotRowToAgent,
     executeAgentRun,
@@ -58,7 +58,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
     "extractMentions",
     "extractFirstUrl",
     "fetchOgPreview",
-    "schedulePostMessageAutomations",
+    "safeSchedulePostMessageAutomations",
     "upsertAgentFromBody",
     "mapBotRowToAgent",
     "executeAgentRun",
@@ -312,6 +312,16 @@ export async function dispatchAgentsRoutes(request, url, h) {
     if (!agentId || !body?.roomId || !body?.content) {
       return json({ error: "agentId, roomId and content required" }, { status: 400 });
     }
+    // Q-20: hard ceiling on recursion depth. A self-invoking tool that
+    // posts a message back through this endpoint cannot drive an
+    // unbounded agent chain. Caller may pass `depth`; we reject any
+    // request at depth > 3. This is a coarse safety; an attacker with
+    // an admin JWT could still POST depth=0 explicitly, so the real
+    // defence is a per-agent concurrency cap, which is out of scope.
+    const depth = Number(body?.depth ?? 0);
+    if (depth > 3) {
+      return json({ error: "max_recursion_depth_exceeded" }, { status: 422 });
+    }
     const contentValidation = validateMessageContent(body.content);
     if (!contentValidation.valid) {
       return json({ error: contentValidation.error }, { status: 400 });
@@ -464,7 +474,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
 
       if (!streamHooks) {
         ctx.waitUntil(
-          schedulePostMessageAutomations(env, {
+          safeSchedulePostMessageAutomations(env, {
             projectId: auth.projectId,
             roomId: body.roomId,
             authorUserId: agentId,
@@ -632,7 +642,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
     });
 
     ctx.waitUntil(
-      schedulePostMessageAutomations(env, {
+      safeSchedulePostMessageAutomations(env, {
         projectId: authProjectId,
         roomId,
         authorUserId: body.botId,

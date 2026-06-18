@@ -83,7 +83,7 @@ export function RoomScheduledCompose({ client, roomId }: RoomScheduledComposePro
             return (
               <li key={id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-2 py-1.5">
                 <span>
-                  #{id} · {formatDateTime(String(row.send_at ?? ""))} —{" "}
+                  #{id} · {formatDateTime(String(row.send_at ?? ""))} {" "}
                   {String(row.content ?? "").slice(0, 60)}
                 </span>
                 <Button type="button" variant="ghost" className="h-7 text-xs" onClick={() => void cancel(id)}>

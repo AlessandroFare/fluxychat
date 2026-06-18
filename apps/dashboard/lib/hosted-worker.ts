@@ -24,3 +24,4 @@ export function getHostedWorkerConfig() {
     cloudUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL?.trim() || null,
   };
 }
+

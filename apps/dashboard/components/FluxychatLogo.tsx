@@ -76,3 +76,4 @@ export function FluxychatLogotype({ size = 32, color = DEFAULT_COLOR, className 
     </span>
   );
 }
+

@@ -1,4 +1,5 @@
 import { isGuestOnlyAuth } from "./guest-auth.js";
+import { logInfo } from "./worker-log.js";
 
 export async function isRoomMember(env, projectId, roomId, userId) {
   const row = await env.DB.prepare(
@@ -20,9 +21,11 @@ export async function isRoomMember(env, projectId, roomId, userId) {
   return false;
 }
 
+// Audit S-2: only `owner` / `admin` roles can bypass room-membership checks.
+// `moderator` and `bot` must actually be a member of the room they're accessing.
 function canBypassRoomMembership(roles) {
   if (!Array.isArray(roles)) return false;
-  return roles.some((r) => ["owner", "admin", "moderator", "bot"].includes(r));
+  return roles.some((r) => r === "owner" || r === "admin");
 }
 
 /**
@@ -46,6 +49,17 @@ export async function canAccessRoom(env, auth, roomId) {
   }
 
   if (canBypassRoomMembership(auth.roles)) {
+    // Audit S-2: log every owner/admin bypass so abuse is visible.
+    try {
+      logInfo("room.access_bypass", {
+        projectId: auth.projectId,
+        userId: auth.userId,
+        roomId,
+        roles: auth.roles,
+      });
+    } catch {
+      /* logging must not block access */
+    }
     const room = await env.DB.prepare(
       "SELECT id FROM rooms WHERE id = ? AND project_id = ? LIMIT 1",
     )

@@ -151,3 +151,4 @@ export async function POST(request: Request) {
 - **401 token expired**: `exp` passed — mint a new JWT (shorter TTL and rotation in your app)
 - **403 forbidden**: token role insufficient for admin endpoint
 - **403 WS**: user is not a room member (membership check)
+

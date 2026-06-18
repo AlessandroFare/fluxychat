@@ -10,7 +10,7 @@ export function GetStartedSelfHostSection() {
       className="mt-12 scroll-mt-24 rounded-2xl border border-dashed border-black/[0.12] bg-slate-50/80 p-5 sm:p-6"
     >
       <div className="flex gap-3">
-        <Server className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" aria-hidden />
+        <Server className="mt-0.5 h-5 w-5 shrink-0 text-slate-600" aria-hidden />
         <div>
           <h2 className="font-heading text-lg font-semibold text-slate-900">Self-host on Cloudflare (advanced)</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -41,3 +41,4 @@ export function GetStartedSelfHostSection() {
     </section>
   );
 }
+

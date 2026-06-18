@@ -3,6 +3,7 @@ import {
   extractAnthropicToolCalls,
   extractOpenAIToolCalls,
 } from "./agent-tool-calls.js";
+import { assertSafeOutboundUrl } from "./url-ssrf.js";
 import { logInfo } from "./worker-log.js";
 
 export const MAX_TOOL_ITERATIONS = 5;
@@ -28,6 +29,15 @@ export async function callLlmOpenAI(baseUrl, apiKey, model, messages, tools, opt
   ) {
     headers.Authorization = `Bearer ${apiKey}`;
   }
+  // SECURITY: SSRF_RESIDUAL  `url` is derived from `baseUrl`, which
+  // comes from env.AI_BASE_URL (or a Cloudflare AI Gateway URL set by
+  // the operator). It is NOT user-supplied per request. DNS rebinding
+  // is the only residual concern because Workers cannot resolve DNS
+  // before `fetch()`. We also assert the URL is not RFC1918 / loopback
+  // at request time so a misconfigured env.AI_BASE_URL pointing at
+  // 10.0.0.0/8 or 127.0.0.1 fails fast instead of silently probing the
+  // worker's local network.
+  assertSafeOutboundUrl(url);
   const res = await fetch(url, {
     method: "POST",
     headers,
@@ -102,10 +112,10 @@ export async function callLlmForConnection(connection, messages, tools, systemPr
   );
 }
 
-export function extractLlmResponse(connection, response, registeredTools, runId) {
+export function extractLlmResponse(connection, response, registeredTools, runId, projectAllowList = null, envAllowList = null) {
   const extracted = isAnthropicConnection(connection)
-    ? extractAnthropicToolCalls(response, registeredTools, runId)
-    : extractOpenAIToolCalls(response, registeredTools, runId);
+    ? extractAnthropicToolCalls(response, registeredTools, runId, projectAllowList, envAllowList)
+    : extractOpenAIToolCalls(response, registeredTools, runId, projectAllowList, envAllowList);
   for (const warning of extracted.invalidWarnings || []) {
     logInfo(warning);
   }

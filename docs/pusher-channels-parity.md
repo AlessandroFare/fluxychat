@@ -236,3 +236,4 @@ OpenAPI: `apps/worker/openapi.yaml` — `/events`, `/auth/signin`, `/users/*`, `
 - [Auth / JWT](./cookbook/auth-jwt.md)
 - [SDK README](../packages/sdk/README.md)
 - [ROADMAP_EXECUTION.md](../ROADMAP_EXECUTION.md) — P9 status table
+

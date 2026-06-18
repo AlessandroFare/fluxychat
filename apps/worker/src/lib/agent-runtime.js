@@ -15,13 +15,14 @@ import {
   buildToolResultMessage,
   estimateCost,
 } from "./agent-llm.js";
+import { parseAgentToolAllowListFromEnv } from "./agent-tool-calls.js";
 import { executeToolCall, fetchAppContext } from "./agent-tools.js";
 import { safeJsonParse, truncateForStorage } from "./storage-utils.js";
 import {
   MAX_MESSAGE_LENGTH,
   validateMessageContent,
 } from "./message-validation.js";
-import { schedulePostMessageAutomations } from "./post-message-automations.js";
+import { safeSchedulePostMessageAutomations } from "./post-message-automations-safe.js";
 import { isHumanHandoffActive } from "./room-handoff.js";
 
 /** Best-effort realtime tool/run events for connected room clients. */
@@ -166,7 +167,7 @@ export async function invokeMentionedAgents(
 
   const placeholders = normalized.map(() => "?").join(",");
   const agentRows = await env.DB.prepare(
-    `SELECT id, name, handle, provider, model, config, system_prompt, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm FROM bots WHERE project_id = ? AND LOWER(REPLACE(handle, '@', '')) IN (${placeholders})`
+    `SELECT id, name, handle, provider, model, config, system_prompt, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm, allowed_tools FROM bots WHERE project_id = ? AND LOWER(REPLACE(handle, '@', '')) IN (${placeholders})`
   )
     .bind(projectId, ...normalized)
     .all();
@@ -239,7 +240,7 @@ export async function invokeMentionedAgents(
             }),
           }).catch(() => {});
 
-          await schedulePostMessageAutomations(env, {
+          await safeSchedulePostMessageAutomations(env, {
             projectId,
             roomId,
             authorUserId: agentRow.id,
@@ -343,6 +344,29 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   const toolExecuteUrl = agentRow.tool_execute_url;
   const toolsSchema = toolsSchemaRaw ? safeJsonParse(toolsSchemaRaw) : null;
   const tools = Array.isArray(toolsSchema) && toolsSchema.length > 0 ? toolsSchema : null;
+  // Audit S-35: agent-level tool allow-list. NULL means "not set" (legacy
+  // behaviour: trust the declared schema); an empty array means "deny all";
+  // a non-empty array means "allow exactly these names". The list is
+  // enforced at extraction time so an LLM that hallucinates a tool name
+  // outside the allow-list is silently dropped.
+  const allowedToolsRaw = agentRow.allowed_tools;
+  const allowedToolsParsed = allowedToolsRaw != null ? safeJsonParse(allowedToolsRaw) : null;
+  const toolAllowSet = Array.isArray(allowedToolsParsed)
+    ? new Set(allowedToolsParsed.filter((n) => typeof n === "string"))
+    : null;
+
+  // Audit A-5: global env-driven allow-list. When the env var is set
+  // (including to empty string), it is the highest-priority gate.
+  // When the env var is absent, this is null and we fall through to
+  // the DB-level `toolAllowSet` only.
+  const envAllowList = parseAgentToolAllowListFromEnv(env);
+  if (envAllowList !== null) {
+    logInfo("tool-allowlist.env_active", {
+      projectId,
+      agentId: agentRow.id,
+      allowListSize: envAllowList.size,
+    });
+  }
 
   const allToolCalls = [];
   let contextFetched = 0;
@@ -449,7 +473,19 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           throw primaryErr;
         }
       }
-      const extracted = extractLlmResponse(connection, response, tools, runId);
+      const extracted = extractLlmResponse(connection, response, tools, runId, toolAllowSet, envAllowList);
+      // Audit A-5: log every stripped tool so operators can correlate
+      // dropped tool calls to specific runs.
+      for (const w of extracted.invalidWarnings || []) {
+        if (w.includes("blocked_by_env_allowlist")) {
+          const m = w.match(/name=([^\s]+)/);
+          logInfo(`[tool-allowlist] stripped tool "${m ? m[1] : "unknown"}" (not in AGENT_TOOL_ALLOWLIST)`, {
+            projectId,
+            runId,
+            agentId: agentRow.id,
+          });
+        }
+      }
       lastContent = extracted.content;
 
       if (isAnthropicConnection(connection)) {

@@ -61,3 +61,4 @@ const header = `-- FluxyChat D1 baseline schema (migration 0136)
 
 writeFileSync(outFile, header + statements.join("\n\n") + "\n", "utf8");
 console.log(`Wrote ${statements.length} DDL statements to ${outFile}`);
+

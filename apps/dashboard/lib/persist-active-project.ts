@@ -12,3 +12,4 @@ export async function persistActiveProjectToClerk(project: Pick<DashboardProject
     // Non-blocking — sessionStorage remains source of truth in-tab
   }
 }
+

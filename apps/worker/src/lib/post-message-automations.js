@@ -5,7 +5,57 @@ import { maybeNotifyOfflineSms } from "./offline-notify-sent.js";
 import { maybePushNotifyOnMessage } from "./push-notifications.js";
 import { fanoutRoomInternal } from "./room-shard.js";
 
+/** Audit C-3: max allowed depth for nested automations. */
+export const AUTOMATION_MAX_DEPTH = 3;
+
 export async function schedulePostMessageAutomations(env, detail) {
+  // Audit C-3: refuse to run if the depth exceeds the limit. This
+  // prevents an automation that posts a message from triggering
+  // another automation that posts a message, ad infinitum, which
+  // would amplify a single user message into an unbounded cascade.
+  const depth = Number(detail?.depth ?? 0);
+  if (depth > AUTOMATION_MAX_DEPTH) {
+    logError("automation.depth_exceeded", new Error("automation_depth_exceeded"), {
+      projectId: detail?.projectId,
+      roomId: detail?.roomId,
+      messageId: detail?.messageId,
+      depth,
+      maxDepth: AUTOMATION_MAX_DEPTH,
+    });
+    try {
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS operational_audit_events (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id TEXT NOT NULL,
+          event_type TEXT NOT NULL,
+          message_id TEXT,
+          room_id TEXT,
+          user_id TEXT,
+          error_message TEXT,
+          error_stack TEXT,
+          details TEXT,
+          created_at TEXT NOT NULL
+        )
+      `).run();
+      await env.DB.prepare(
+        `INSERT INTO operational_audit_events
+           (project_id, event_type, message_id, room_id, details, created_at)
+         VALUES (?, 'AUTOMATION_DEPTH_EXCEEDED', ?, ?, ?, ?)`
+      )
+        .bind(
+          detail?.projectId || null,
+          detail?.messageId != null ? String(detail.messageId) : null,
+          detail?.roomId || null,
+          JSON.stringify({ depth, maxDepth: AUTOMATION_MAX_DEPTH }),
+          new Date().toISOString(),
+        )
+        .run();
+    } catch {
+      // best effort; never throw from this path
+    }
+    return;
+  }
+
   try {
     await Promise.all([
       maybeTriggerAutoRoomSummary(env, detail.projectId, detail.roomId),
@@ -74,8 +124,13 @@ async function maybeRunBuiltinModerationScan(env, opts) {
 
     const moderationEventId = insert.meta.last_row_id;
 
+    // Audit B-2: use the idempotency_key from migration 0141 to dedup
+    // re-enqueues from ctx.waitUntil re-fires or cron replays.
+    const idempotencyKey = `moderation_builtin_flag:${projectId}:${mid}`;
     await env.DB.prepare(
-      "INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at) VALUES (?, ?, ?, ?, ?)"
+      `INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at, idempotency_key)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(project_id, idempotency_key) DO NOTHING`
     )
       .bind(
         projectId,
@@ -88,7 +143,8 @@ async function maybeRunBuiltinModerationScan(env, opts) {
           authorUserId,
           traceId: traceId || null,
         }),
-        now
+        now,
+        idempotencyKey,
       )
       .run();
 
@@ -148,8 +204,13 @@ async function maybeTriggerAutoRoomSummary(env, projectId, roomId) {
     }
 
     const createdAt = new Date().toISOString();
+    // Audit B-2: idempotency key dedups re-enqueues from
+    // ctx.waitUntil re-fires or cron replays.
+    const idempotencyKey = `room_summary_auto:${projectId}:${roomId}:${createdAt}`;
     await env.DB.prepare(
-      "INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at) VALUES (?, ?, ?, ?, ?)"
+      `INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at, idempotency_key)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(project_id, idempotency_key) DO NOTHING`
     )
       .bind(
         projectId,
@@ -160,7 +221,8 @@ async function maybeTriggerAutoRoomSummary(env, projectId, roomId) {
           everyN,
           totalMessages: total,
         }),
-        createdAt
+        createdAt,
+        idempotencyKey,
       )
       .run();
 
@@ -372,9 +434,12 @@ async function maybeExtractKnowledgeGraph(env, detail) {
     });
 
     const now = new Date().toISOString();
+    // Audit B-2: idempotency key dedups re-enqueues.
+    const idempotencyKey = `knowledge_graph_extract:${detail.projectId}:${detail.roomId}:${now}`;
     await env.DB.prepare(
-      `INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at, idempotency_key)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(project_id, idempotency_key) DO NOTHING`
     )
       .bind(
         detail.projectId,
@@ -386,6 +451,7 @@ async function maybeExtractKnowledgeGraph(env, detail) {
           since,
         }),
         now,
+        idempotencyKey,
       )
       .run();
   } catch (err) {
@@ -461,3 +527,4 @@ async function maybeRunAiModerationScan(env, detail) {
     });
   }
 }
+

@@ -44,7 +44,7 @@ function AgentsLayoutInner({
         title="Agents"
         description={
           <>
-            Bots for project <code className="text-xs">{activeProject?.name || "—"}</code>. Pick one
+            Bots for project <code className="text-xs">{activeProject?.name || ""}</code>. Pick one
             from the list, then create, edit profile, test invoke, or chat in the assistant room.
           </>
         }
@@ -67,7 +67,9 @@ function AgentsLayoutInner({
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(240px,300px)_1fr]">
           <AgentsSidebar />
-          <main className="min-w-0">{children}</main>
+          {/* Inner pane is a <div>, not a <main>, because the root
+              layout already provides the single <main> landmark. */}
+          <div className="min-w-0">{children}</div>
         </div>
       )}
     </ConsoleShell>

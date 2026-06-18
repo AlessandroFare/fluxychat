@@ -63,7 +63,11 @@ export function AgentFormFields({
           placeholder="chat"
         />
       </FormField>
-      <FormField label="System prompt" className="sm:col-span-2">
+      <FormField
+        label="System prompt (agent instructions)"
+        hint="What the agent is told about itself and its job. Sent on every invoke."
+        className="sm:col-span-2"
+      >
         <Textarea
           value={values.systemPrompt}
           onChange={(e) => onChange({ systemPrompt: e.target.value })}

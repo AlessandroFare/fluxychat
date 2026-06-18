@@ -18,7 +18,7 @@ import {
   fetchOgPreview,
 } from "../lib/message-enrichment.js";
 import { deliverWebhooks } from "../lib/webhook-delivery.js";
-import { schedulePostMessageAutomations } from "../lib/post-message-automations.js";
+import { safeSchedulePostMessageAutomations } from "../lib/post-message-automations-safe.js";
 import { invokeMentionedAgents } from "../lib/agent-runtime.js";
 import {
   buildPresenceMembers,
@@ -746,7 +746,7 @@ export class RoomDurableObject {
 
       if (isFinal) {
         this.activeStreams.delete(userId);
-        void schedulePostMessageAutomations(this.env, {
+        void safeSchedulePostMessageAutomations(this.env, {
           projectId,
           roomId,
           authorUserId: userId,
@@ -1074,7 +1074,7 @@ export class RoomDurableObject {
           whisperRecipients ? { recipientUserIds: whisperRecipients } : {},
         );
 
-        void schedulePostMessageAutomations(this.env, {
+        void safeSchedulePostMessageAutomations(this.env, {
           projectId,
           roomId,
           authorUserId: userId,
