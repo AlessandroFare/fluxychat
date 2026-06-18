@@ -31,7 +31,7 @@ export function LandingPricingSection() {
         <p className="mx-auto mt-8 max-w-xl text-center text-sm font-medium text-slate-300">
           Self-serve — checkout today
         </p>
-        <div className="mt-6 grid gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {planEntries.map(([key, plan]) => {
             const isFeatured = key === "starter";
             return (

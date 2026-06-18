@@ -41,6 +41,14 @@ let warnedMissingSalt = false;
 function readSalt(env) {
   const explicit = env?.API_KEY_HASH_SALT?.trim();
   if (explicit && explicit.length > 0) return explicit;
+  // Fail closed in production: a missing salt makes stored key hashes
+  // predictable if D1 is ever dumped. Only the local/dev fallback below is
+  // permitted, and only when NODE_ENV !== "production".
+  if (env?.NODE_ENV === "production") {
+    throw new Error(
+      "API_KEY_HASH_SALT is required in production. Set it to 32+ random bytes (base64).",
+    );
+  }
   if (!warnedMissingSalt) {
     warnedMissingSalt = true;
     try {
