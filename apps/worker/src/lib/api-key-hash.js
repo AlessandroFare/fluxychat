@@ -41,6 +41,15 @@ let warnedMissingSalt = false;
 function readSalt(env) {
   const explicit = env?.API_KEY_HASH_SALT?.trim();
   if (explicit && explicit.length > 0) return explicit;
+  // Audit M-2: fail closed in hosted multi-tenant deployments. A weak
+  // default salt is only acceptable for local/self-host dev. In hosted
+  // mode a leaked D1 dump would otherwise be crackable, so refuse to
+  // hash with the fallback salt (mirrors webhook-secret policy S-25).
+  if (String(env?.HOSTED_MULTI_TENANT || "").trim() === "true") {
+    throw new Error(
+      "api_key_hash_salt_required: API_KEY_HASH_SALT must be set when HOSTED_MULTI_TENANT=true",
+    );
+  }
   if (!warnedMissingSalt) {
     warnedMissingSalt = true;
     try {
