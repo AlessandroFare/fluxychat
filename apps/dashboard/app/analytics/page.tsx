@@ -466,10 +466,20 @@ export default function AnalyticsPage() {
         kpis={kpis}
         perfChecks={perfSummary?.checks ?? null}
         perfOverallOk={perfSummary?.overallOk ?? null}
+        perfLoading={benchmarkLoading}
         perfExportAction={
-          <Button variant="neutral" onClick={downloadPerfSignalReport} disabled={!benchmark || !slo}>
-            Export perf signal JSON
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="neutral"
+              onClick={runBenchmark}
+              disabled={benchmarkLoading || !adminJwt.trim()}
+            >
+              {benchmarkLoading ? "Running benchmark..." : "Run benchmark"}
+            </Button>
+            <Button variant="neutral" onClick={downloadPerfSignalReport} disabled={!benchmark || !slo}>
+              Export perf signal JSON
+            </Button>
+          </div>
         }
       />
     </ConsoleShell>
