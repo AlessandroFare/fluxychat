@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { FluxyChatMessage } from "@fluxy-chat/sdk";
 import { renderContentWithMentions } from "./render-content-with-mentions";
+import { safeHttpUrl } from "./safe-url";
 
 export interface MessageItemProps {
   message: FluxyChatMessage;
@@ -15,16 +16,23 @@ export interface MessageItemProps {
 }
 
 function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["preview"]> }) {
-  let hostname = preview.url;
-  try {
-    hostname = new URL(preview.url).hostname;
-  } catch {
-    /* keep raw */
+  // Sanitize the user-controlled preview URL (UI-1): never render an
+  // unsafe scheme (javascript:, data:, ...) into href. If the URL is
+  // unsafe we render the card without a link.
+  const safeUrl = safeHttpUrl(preview.url);
+  const safeImageUrl = safeHttpUrl(preview.imageUrl);
+  let hostname = safeUrl ?? "";
+  if (safeUrl) {
+    try {
+      hostname = new URL(safeUrl).hostname;
+    } catch {
+      /* keep raw */
+    }
   }
 
   return (
     <a
-      href={preview.url}
+      href={safeUrl}
       target="_blank"
       rel="noreferrer"
       style={{
@@ -45,9 +53,9 @@ function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["pre
           maxWidth: 320,
         }}
       >
-        {preview.imageUrl ? (
+        {safeImageUrl ? (
           <img
-            src={preview.imageUrl}
+            src={safeImageUrl}
             alt={preview.title ?? ""}
             style={{
               width: 48,
@@ -271,11 +279,22 @@ export function MessageItem({
           }}
         >
           {m.attachments.map((a) => {
+            // Sanitize user-controlled attachment URL (UI-1). Unsafe
+            // schemes (javascript:, data:, ...) are dropped; such an
+            // attachment is shown as a plain, non-clickable label.
+            const safeUrl = safeHttpUrl(a.url);
             if (a.kind === "image") {
+              if (!safeUrl) {
+                return (
+                  <span key={a.url} style={{ fontSize: 12, color: "#9ca3af" }}>
+                    🖼️ {a.name || "image"} (blocked)
+                  </span>
+                );
+              }
               return (
                 <img
                   key={a.url}
-                  src={a.url}
+                  src={safeUrl}
                   alt={a.name}
                   style={{
                     maxWidth: 280,
@@ -286,17 +305,31 @@ export function MessageItem({
               );
             }
             if (a.kind === "audio") {
+              if (!safeUrl) {
+                return (
+                  <span key={a.url} style={{ fontSize: 12, color: "#9ca3af" }}>
+                    🔊 {a.name || "audio"} (blocked)
+                  </span>
+                );
+              }
               return (
-                <audio key={a.url} controls src={a.url} style={{ maxWidth: 280 }}>
+                <audio key={a.url} controls src={safeUrl} style={{ maxWidth: 280 }}>
                   Your browser does not support the audio element.
                 </audio>
+              );
+            }
+            if (!safeUrl) {
+              return (
+                <span key={a.url} style={{ fontSize: 12, color: "#9ca3af" }}>
+                  📎 {a.name || "attachment"} (blocked)
+                </span>
               );
             }
             if (a.kind === "location") {
               return (
                 <a
                   key={a.url}
-                  href={a.url}
+                  href={safeUrl}
                   target="_blank"
                   rel="noreferrer"
                   style={{
@@ -312,7 +345,7 @@ export function MessageItem({
             return (
               <a
                 key={a.url}
-                href={a.url}
+                href={safeUrl}
                 target="_blank"
                 rel="noreferrer"
                 style={{
