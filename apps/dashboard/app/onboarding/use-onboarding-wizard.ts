@@ -258,7 +258,7 @@ export function useOnboardingWizard() {
       const message = messageFromUnknown(err, "Failed to create project");
       setError(
         message.includes("forbidden")
-          ? `${message}. On hosted multi-tenant mode, use "Provision via Clerk" instead of manual create — or set HOSTED_MULTI_TENANT=false in apps/worker/.dev.vars for local-only dev.`
+          ? `${message} (likely HOSTED_MULTI_TENANT=true with FLUXY_PLATFORM_PROJECT_ID not matching this project). On hosted multi-tenant mode, use "Provision via Clerk" instead of manual create — or set HOSTED_MULTI_TENANT=false in apps/worker/.dev.vars for local-only dev.`
           : message,
       );
     } finally {
