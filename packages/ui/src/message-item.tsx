@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { FluxyChatMessage } from "@fluxy-chat/sdk";
 import { renderContentWithMentions } from "./render-content-with-mentions";
+import { safeHttpUrl } from "./safe-url";
 
 export interface MessageItemProps {
   message: FluxyChatMessage;
@@ -15,16 +16,23 @@ export interface MessageItemProps {
 }
 
 function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["preview"]> }) {
-  let hostname = preview.url;
-  try {
-    hostname = new URL(preview.url).hostname;
-  } catch {
-    /* keep raw */
+  // Sanitize the user-controlled preview URL (UI-1): never render an
+  // unsafe scheme (javascript:, data:, ...) into href. If the URL is
+  // unsafe we render the card without a link.
+  const safeUrl = safeHttpUrl(preview.url);
+  const safeImageUrl = safeHttpUrl(preview.imageUrl);
+  let hostname = safeUrl ?? "";
+  if (safeUrl) {
+    try {
+      hostname = new URL(safeUrl).hostname;
+    } catch {
+      /* keep raw */
+    }
   }
 
   return (
     <a
-      href={preview.url}
+      href={safeUrl}
       target="_blank"
       rel="noreferrer"
       style={{
@@ -45,9 +53,9 @@ function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["pre
           maxWidth: 320,
         }}
       >
-        {preview.imageUrl ? (
+        {safeImageUrl ? (
           <img
-            src={preview.imageUrl}
+            src={safeImageUrl}
             alt={preview.title ?? ""}
             style={{
               width: 48,
