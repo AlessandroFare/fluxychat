@@ -221,10 +221,37 @@ export default function AnalyticsPage() {
   const [alerts, setAlerts] = useState<AlertsStats | null>(null);
   const [benchmark, setBenchmark] = useState<BenchmarkStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [benchmarkLoading, setBenchmarkLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  // Generation counter for stale-response suppression in `fetchStats`.
+  // Generation counters for stale-response suppression. The benchmark has its
+  // own generation so a slow benchmark response can never overwrite fresh
+  // fast-stats state. (Audit P2 fix.)
   const fetchGenRef = useRef(0);
+  const benchGenRef = useRef(0);
+
+  // The benchmark runs 200 server-side DB round-trips and is the slowest call
+  // on this page. Run it on its own, non-blocking, so the main dashboard does
+  // not wait for it.
+  const runBenchmark = useCallback(async () => {
+    if (!adminJwt.trim()) return;
+    setBenchmarkLoading(true);
+    const gen = ++benchGenRef.current;
+    try {
+      const benchmarkJson = await fetchWorkerJson<BenchmarkStats>(`${WORKER_URL}/benchmark`, {
+        method: "POST",
+        headers: { ...authHeader(adminJwt), "Content-Type": "application/json" },
+        body: JSON.stringify({ iterations: 200 }),
+      });
+      if (gen !== benchGenRef.current) return;
+      setBenchmark(benchmarkJson);
+    } catch {
+      // Benchmark is non-critical; do not surface as a page-level error.
+      if (gen === benchGenRef.current) setBenchmark(null);
+    } finally {
+      if (gen === benchGenRef.current) setBenchmarkLoading(false);
+    }
+  }, [adminJwt, authHeader]);
 
   const fetchStats = useCallback(async () => {
     if (!readToken) {
@@ -241,8 +268,10 @@ export default function AnalyticsPage() {
     // Stale-response guard: if the user changes room while the previous
     // fetch is in flight, ignore the old result. (Audit P2 fix.)
     const gen = ++fetchGenRef.current;
+    // Kick off the slow benchmark in parallel but do NOT await it here.
+    void runBenchmark();
     try {
-      const [roomJson, costJson, kpiJson, sloJson, alertsJson, benchmarkJson] =
+      const [roomJson, costJson, kpiJson, sloJson, alertsJson] =
         await Promise.all([
           fetchWorkerJson<RoomStats>(
             `${WORKER_URL}/stats/rooms/${encodeURIComponent(roomId)}`,
@@ -260,14 +289,6 @@ export default function AnalyticsPage() {
           fetchWorkerJson<AlertsStats>(`${WORKER_URL}/stats/alerts?limit=10`, {
             headers: authHeader(adminJwt),
           }),
-          fetchWorkerJson<BenchmarkStats>(`${WORKER_URL}/benchmark`, {
-            method: "POST",
-            headers: {
-              ...authHeader(adminJwt),
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ iterations: 200 }),
-          }),
         ]);
 
       if (gen !== fetchGenRef.current) return;
@@ -276,7 +297,6 @@ export default function AnalyticsPage() {
       setKpis(kpiJson);
       setSlo(sloJson);
       setAlerts(alertsJson);
-      setBenchmark(benchmarkJson);
       setNotice("Analytics refreshed.");
     } catch (err: unknown) {
       if (gen !== fetchGenRef.current) return;
@@ -284,7 +304,7 @@ export default function AnalyticsPage() {
     } finally {
       if (gen === fetchGenRef.current) setLoading(false);
     }
-  }, [readToken, roomId, authHeader, adminJwt]);
+  }, [readToken, roomId, authHeader, adminJwt, runBenchmark]);
 
   useEffect(() => {
     if (!readToken || !roomId.trim()) return;
