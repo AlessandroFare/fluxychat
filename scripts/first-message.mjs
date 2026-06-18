@@ -62,6 +62,21 @@ function ok(msg) {
 function info(msg) {
   console.log(`  ${dim("·")} ${msg}`);
 }
+// Never print full secrets to stdout/logs. CodeQL flags any data derived from
+// the provisioned apiKey as clear-text logging of sensitive information, so we
+// mask every secret before it reaches console.* (logs are often persisted and
+// shared — e.g. CI artifacts — and a leaked apiKey lets anyone mint JWTs).
+function maskKey(secret) {
+  if (!secret) return "<unset>";
+  const s = String(secret);
+  if (s.length <= 12) return `${s.slice(0, 4)}…${s.slice(-2)}`;
+  return `${s.slice(0, 12)}…(${s.length} chars)`;
+}
+function maskJwt(token) {
+  if (!token) return "<unset>";
+  const s = String(token);
+  return `${s.slice(0, 10)}…${s.slice(-4)} (${s.length} chars)`;
+}
 function warn(msg) {
   console.warn(`  ${yellow("!")} ${msg}`);
 }
@@ -260,12 +275,14 @@ async function main() {
   step(2, "Provision a dev project (POST /dev/provision)");
   const provision = await postJson("/dev/provision", {});
   if (!provision.apiKey || !provision.projectId) {
-    fail(`/dev/provision did not return apiKey/projectId: ${JSON.stringify(provision)}`);
+    fail(
+      `/dev/provision did not return apiKey/projectId (projectId=${provision.projectId ?? "<missing>"}, apiKey=${maskKey(provision.apiKey)}, reused=${provision.reused ?? "<missing>"})`,
+    );
     cleanupAndExit(1);
     return;
   }
   ok(`projectId = ${provision.projectId}`);
-  ok(`apiKey    = ${provision.apiKey.slice(0, 12)}…`);
+  ok(`apiKey    = ${maskKey(provision.apiKey)}`);
 
   step(3, "Mint a JWT (POST /auth/token)");
   const auth = await postJson(
@@ -306,18 +323,23 @@ async function main() {
   ok(`messageId = ${messageId}`);
 
   step(5, "All set");
+  // Secrets are masked (CodeQL js/clear-text-logging). The full apiKey was
+  // already printed once by /dev/provision in the previous step; printing it
+  // again here into a persistent log box is the exposure risk. To copy the real
+  // values, re-run `curl -X POST http://127.0.0.1:8787/dev/provision` (the key
+  // is kept valid across re-runs) or read them from apps/worker/.dev.vars.
   box(
     [
       green(bold("First message sent.")),
       "",
       `${dim("projectId")}   ${provision.projectId}`,
-      `${dim("apiKey")}      ${provision.apiKey}`,
-      `${dim("JWT")}         ${auth.token}`,
+      `${dim("apiKey")}      ${maskKey(provision.apiKey)}`,
+      `${dim("JWT")}         ${maskJwt(auth.token)}`,
       `${dim("messageId")}   ${messageId}`,
       `${dim("room")}       general`,
       "",
-      dim("Use the JWT with the SDK:  new FluxyChatClient({ baseUrl, token })"),
-      dim("Or with curl:              Authorization: Bearer <JWT>"),
+      dim("Secrets are masked in logs. Reuse the values from /dev/provision output"),
+      dim("or apps/worker/.dev.vars. SDK: new FluxyChatClient({ baseUrl, token })"),
     ],
     { color: "green" },
   );

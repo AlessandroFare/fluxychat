@@ -48,7 +48,8 @@
       "vite": "^8.0.16",
       "launch-editor": ">=2.10.1",
       "@babel/core": ">=7.29.6",
-      "js-yaml": ">=4.2.0"
+      "js-yaml": ">=4.2.0",
+      "undici": ">=7.28.0"
     }
   },
   "devDependencies": {

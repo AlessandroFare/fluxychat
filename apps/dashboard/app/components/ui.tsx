@@ -71,13 +71,17 @@ const inputSizeClasses: Record<InputSize, string> = {
   lg: "h-10 px-3 text-base",
 };
 
-export const Input = React.forwardRef<
-  HTMLInputElement,
-  Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
-    size?: InputSize;
-    className?: string;
-  }
->(function Input({ size = "md", className, style, ...props }, ref) {
+type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
+  size?: InputSize;
+  className?: string;
+  // React 19: ref is a regular prop (not a magic forwardRef arg). Declaring it
+  // here keeps <Input ref={...} /> assignable without forwardRef, which under
+  // @types/react 19.2.x no longer surfaces `ref` on the forwardRef return type
+  // and broke the production type-check in CI.
+  ref?: React.Ref<HTMLInputElement>;
+};
+
+export function Input({ size = "md", className, style, ref, ...props }: InputProps) {
   return (
     <input
       ref={ref}
@@ -93,7 +97,7 @@ export const Input = React.forwardRef<
       style={style}
     />
   );
-});
+}
 
 export function Textarea({
   className,

@@ -19,22 +19,21 @@ function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["pre
   // Sanitize the user-controlled preview URL (UI-1): never render an
   // unsafe scheme (javascript:, data:, ...) into href. If the URL is
   // unsafe we render the card without a link.
-  const safeUrl = safeHttpUrl(preview.url);
-  const safeImageUrl = safeHttpUrl(preview.imageUrl);
-  let hostname = safeUrl ?? "";
-  if (safeUrl) {
+  const safeHref = safeUrl(preview.url);
+  const safeImageHref = safeUrl(preview.imageUrl, { allowData: true });
+  let hostname = safeHref ?? "";
+  if (safeHref) {
     try {
-      hostname = new URL(safeUrl).hostname;
+      hostname = new URL(safeHref).hostname;
     } catch {
       /* keep raw */
     }
   }
 
-  const previewHref = safeUrl(preview.url);
-  if (!previewHref) return null;
+  if (!safeHref) return null;
   return (
     <a
-      href={previewHref}
+      href={safeHref}
       target="_blank"
       rel="noreferrer"
       style={{
@@ -55,9 +54,9 @@ function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["pre
           maxWidth: 320,
         }}
       >
-        {safeUrl(preview.imageUrl, { allowData: true }) ? (
+        {safeImageHref ? (
           <img
-            src={safeUrl(preview.imageUrl, { allowData: true })}
+            src={safeImageHref}
             alt={preview.title ?? ""}
             style={{
               width: 48,
@@ -284,7 +283,6 @@ export function MessageItem({
             // Sanitize user-controlled attachment URL (UI-1). Unsafe
             // schemes (javascript:, data:, ...) are dropped; such an
             // attachment is shown as a plain, non-clickable label.
-            const safeUrl = safeHttpUrl(a.url);
             if (a.kind === "image") {
               const imgSrc = safeUrl(a.url, { allowData: true });
               if (!imgSrc) return null;

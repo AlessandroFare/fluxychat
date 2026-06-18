@@ -194,7 +194,7 @@ export default isClerkEnabled()
       }
       return handleConsoleAck(request);
     })
-  : function middleware(request: NextRequest) {
+  : function proxy(request: NextRequest) {
       return handleConsoleAck(request);
     };
 
