@@ -71,17 +71,16 @@ const inputSizeClasses: Record<InputSize, string> = {
   lg: "h-10 px-3 text-base",
 };
 
-export function Input({
-  size = "md",
-  className,
-  style,
-  ...props
-}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
-  size?: InputSize;
-  className?: string;
-}) {
+export const Input = React.forwardRef<
+  HTMLInputElement,
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
+    size?: InputSize;
+    className?: string;
+  }
+>(function Input({ size = "md", className, style, ...props }, ref) {
   return (
     <input
+      ref={ref}
       {...props}
       className={cn(
         "w-full rounded-md border border-border bg-background text-foreground",
@@ -94,7 +93,7 @@ export function Input({
       style={style}
     />
   );
-}
+});
 
 export function Textarea({
   className,
