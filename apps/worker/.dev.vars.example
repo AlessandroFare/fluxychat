@@ -8,6 +8,11 @@
 ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 # Set to "false" only for local experiments (keep true in shared/staging/prod).
 REQUIRE_ADMIN_AUTH=true
+# IP rate-limit source (audit M-4). CF-Connecting-IP is always trusted. The
+# client-controlled X-Forwarded-For header is only used when this is exactly
+# "true" — set it ONLY if the Worker sits behind a proxy that rewrites/strips
+# inbound XFF. Leaving it unset/false prevents rate-limit bypass via spoofed XFF.
+# TRUST_FORWARDED_FOR=false
 # API key hashing salt (audit S-11). Generate 32+ random bytes, base64-encode.
 # Without this, a weak default is used and a warning is logged.
 # API_KEY_HASH_SALT=base64-32-bytes-here
