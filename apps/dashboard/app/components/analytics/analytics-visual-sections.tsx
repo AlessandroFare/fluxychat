@@ -88,6 +88,7 @@ interface AnalyticsVisualSectionsProps {
   kpis: LaunchKpis | null;
   perfChecks: PerfSignalCheck[] | null;
   perfOverallOk: boolean | null;
+  perfLoading?: boolean;
   perfExportAction: React.ReactNode;
 }
 
@@ -98,6 +99,7 @@ export function AnalyticsVisualSections({
   kpis,
   perfChecks,
   perfOverallOk,
+  perfLoading = false,
   perfExportAction,
 }: AnalyticsVisualSectionsProps) {
   return (
@@ -258,7 +260,12 @@ export function AnalyticsVisualSections({
         description="Compared to internal v1 thresholds."
         actions={perfExportAction}
       >
-        {perfChecks && perfOverallOk !== null ? (
+        {perfLoading && !perfChecks ? (
+          <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" aria-hidden />
+            Running benchmark (200 DB iterations)... this can take a few seconds.
+          </div>
+        ) : perfChecks && perfOverallOk !== null ? (
           <div className="space-y-4">
             <StatCard
               label="Overall"
