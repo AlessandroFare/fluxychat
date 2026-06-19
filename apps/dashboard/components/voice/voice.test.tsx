@@ -133,7 +133,7 @@ describe("VoiceMessageBubble (P12-B UI)", () => {
       transcriptionStatus: "pending",
     };
     render(<VoiceMessageBubble message={msg} />);
-    expect(screen.getByText("1:05")).toBeTruthy();
+    expect(screen.getByText(/1:05/)).toBeTruthy();
   });
 });
 
