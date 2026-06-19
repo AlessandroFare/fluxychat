@@ -95,6 +95,7 @@ export default function AdminPage() {
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [webhookRows, setWebhookRows] = useState<WebhookRow[]>([]);
+  const [webhookListLoading, setWebhookListLoading] = useState(false);
   const watchlistUserId = userId.trim() || readJwtSub(adminJwt) || "";
 
   const loadWebhooks = useCallback(async () => {

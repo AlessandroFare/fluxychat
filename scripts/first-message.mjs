@@ -276,13 +276,13 @@ async function main() {
   const provision = await postJson("/dev/provision", {});
   if (!provision.apiKey || !provision.projectId) {
     fail(
-      `/dev/provision did not return apiKey/projectId (projectId=${provision.projectId ?? "<missing>"}, apiKey=${maskKey(provision.apiKey)}, reused=${provision.reused ?? "<missing>"})`,
+      `/dev/provision did not return apiKey/projectId (projectId=${provision.projectId ?? "<missing>"}, reused=${provision.reused ?? "<missing>"})`,
     );
     cleanupAndExit(1);
     return;
   }
   ok(`projectId = ${provision.projectId}`);
-  ok(`apiKey    = ${maskKey(provision.apiKey)}`);
+  ok("apiKey provisioned (not logged — use /dev/provision or apps/worker/.dev.vars to copy)");
 
   step(3, "Mint a JWT (POST /auth/token)");
   const auth = await postJson(
@@ -333,7 +333,7 @@ async function main() {
       green(bold("First message sent.")),
       "",
       `${dim("projectId")}   ${provision.projectId}`,
-      `${dim("apiKey")}      ${maskKey(provision.apiKey)}`,
+      `${dim("apiKey")}      (redacted — re-run /dev/provision or read .dev.vars)`,
       `${dim("JWT")}         ${maskJwt(auth.token)}`,
       `${dim("messageId")}   ${messageId}`,
       `${dim("room")}       general`,
