@@ -76,17 +76,15 @@ function ClerkHeaderAuth({
           <Button asChild size="sm" className="shrink-0 text-xs sm:text-sm">
             <Link href={cta.href}>{cta.label}</Link>
           </Button>
-          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full">
-              <UserButton
-                afterSignOutUrl="/landing"
-                appearance={{
-                  elements: {
-                    userButtonAvatarBox: "h-8 w-8",
-                    userButtonTrigger: "h-8 w-8 rounded-full",
-                  },
-                }}
-              />
-            </div>
+          <UserButton
+            afterSignOutUrl="/landing"
+            appearance={{
+              elements: {
+                userButtonAvatarBox: "h-8 w-8",
+                userButtonTrigger: "h-8 w-8 rounded-full",
+              },
+            }}
+          />
           {adminJwt.trim().length >= 12 ? (
             <button
               type="button"

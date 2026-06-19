@@ -505,7 +505,13 @@ export default function ProjectsPage() {
                 </Button>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <FormField label="Plan tier">
+                <FormField
+                  label="Plan tier"
+                  hint={
+                    PLAN_NAME_OPTIONS.find((o) => o.value === planName)?.description ??
+                    "Sets monthly message, agent, and webhook quotas."
+                  }
+                >
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={planName}
@@ -516,12 +522,18 @@ export default function ProjectsPage() {
                     ) : null}
                     {PLAN_NAME_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {opt.label} — {opt.description}
                       </option>
                     ))}
                   </select>
                 </FormField>
-                <FormField label="Billing status">
+                <FormField
+                  label="Billing status"
+                  hint={
+                    BILLING_STATUS_OPTIONS.find((o) => o.value === billingStatus)?.description ??
+                    "How this tenant is billed."
+                  }
+                >
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={billingStatus}
@@ -533,11 +545,23 @@ export default function ProjectsPage() {
                     ) : null}
                     {BILLING_STATUS_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {opt.label} — {opt.description}
                       </option>
                     ))}
                   </select>
                 </FormField>
+                <p className="sm:col-span-2 text-xs text-muted-foreground">
+                  In production, upgrades go through{" "}
+                  <a href="/billing" className="font-medium text-primary underline-offset-2 hover:underline">
+                    Billing (Stripe)
+                  </a>
+                  . This form is an operator override for self-hosted or dev tenants — it does not charge a card.
+                  Compare tiers on{" "}
+                  <a href="/landing#pricing" className="font-medium text-primary underline-offset-2 hover:underline">
+                    pricing
+                  </a>
+                  .
+                </p>
                 <div className="sm:col-span-2 rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
                   <p className="font-medium text-foreground">{selectedPlanCatalog.label} limits</p>
                   <ul className="mt-2 space-y-1">

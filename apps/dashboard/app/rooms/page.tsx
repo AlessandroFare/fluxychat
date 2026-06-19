@@ -76,6 +76,16 @@ export default function RoomsPage() {
     [listToken]
   );
 
+  const adminClient = useMemo(
+    () =>
+      new FluxyChatClient({
+        baseUrl: WORKER_URL,
+        userId: "dashboard-admin",
+        token: adminJwt.trim() || undefined,
+      }),
+    [adminJwt]
+  );
+
   const loadRooms = useCallback(async () => {
     if (!listToken) {
       setError("JWT required (member or admin from Projects / Onboarding).");
@@ -251,8 +261,8 @@ export default function RoomsPage() {
           title="Create a room"
           description="Pick a name and a type. Public rooms anyone with the link can join; group rooms are invitation-only."
         >
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1">
+        <div className="grid gap-3 sm:grid-cols-[minmax(12rem,1fr)_minmax(10rem,auto)_auto] sm:items-end">
+          <div>
             <label htmlFor="new-room-name" className="mb-1 block text-xs font-medium text-muted-foreground">
               Display name
             </label>
@@ -263,7 +273,7 @@ export default function RoomsPage() {
               placeholder="e.g. support"
             />
           </div>
-          <RoomTypeSelect value={newType} onChange={setNewType} disabled={creating || !token} />
+          <RoomTypeSelect value={newType} onChange={setNewType} disabled={creating || !token} className="gap-1" />
           <Button
             variant="primary"
             onClick={createRoom}
@@ -396,10 +406,11 @@ export default function RoomsPage() {
                   type="button"
                   variant="outline"
                   className="h-8 text-xs"
-                  disabled={!listClient.isAuthenticated()}
+                  disabled={!adminClient.isAuthenticated()}
+                  title={!adminJwt.trim() ? "Admin JWT required (owner/admin/moderator role)" : undefined}
                   onClick={async () => {
                     try {
-                      const pack = await listClient.getRoomComplianceExport(selectedId);
+                      const pack = await adminClient.getRoomComplianceExport(selectedId);
                       const blob = new Blob([JSON.stringify(pack, null, 2)], {
                         type: "application/json",
                       });

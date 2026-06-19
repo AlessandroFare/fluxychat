@@ -71,9 +71,22 @@ export default function EmbedWidgetPage() {
         .split(/[\n,]/)
         .map((o) => o.trim())
         .filter(Boolean);
+      const trimmedRoom = defaultRoomId.trim();
+      let roomIdPayload: string | null = null;
+      if (trimmedRoom) {
+        const rooms = await client.listRooms();
+        const exists = rooms.some((r) => r.id === trimmedRoom);
+        if (!exists) {
+          setError(
+            `Room "${trimmedRoom}" not found in this project. Pick an existing room ID from Rooms, or leave blank.`,
+          );
+          return;
+        }
+        roomIdPayload = trimmedRoom;
+      }
       const data = await client.updateEmbedConfig({
         enabled: true,
-        defaultRoomId: defaultRoomId.trim() || null,
+        defaultRoomId: roomIdPayload,
         allowedOrigins: origins,
         launcherTitle: launcherTitle.trim() || "Chat",
         zIndex: Number(zIndex) || 2147483000,
@@ -82,7 +95,8 @@ export default function EmbedWidgetPage() {
       setConfig(data?.config ?? null);
       setSnippet(data?.snippet ?? "");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      const msg = err instanceof Error ? err.message : "Failed to save";
+      setError(msg.includes("400") ? `${msg} — check the default room exists and origins are valid.` : msg);
     }
   }
 
@@ -123,7 +137,10 @@ export default function EmbedWidgetPage() {
           <Panel title="Configuration">
             <div className="space-y-4">
               <label className="block text-sm">
-                <span className="mb-1 block text-muted-foreground">Default public room ID</span>
+                <span className="mb-1 block text-muted-foreground">
+                  Default public room ID
+                  <span className="ml-1 font-normal text-xs">(must exist — see Rooms)</span>
+                </span>
                 <input
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                   value={defaultRoomId}

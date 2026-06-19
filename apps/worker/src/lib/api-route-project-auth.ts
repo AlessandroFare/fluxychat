@@ -8,6 +8,10 @@ interface RouteAuthHandlers {
     env: unknown,
   ) => Promise<{ auth?: { projectId: string }; response?: Response }>;
   hasAnyRole?: (auth: unknown, roles: string[]) => boolean;
+  json?: (
+    data: unknown,
+    init?: number | { status?: number; headers?: Record<string, string> },
+  ) => Response;
 }
 
 /**
@@ -17,14 +21,15 @@ export async function requireApiProjectAdmin(request: Request, h: RouteAuthHandl
   const env = depsEnv(h);
   const verifyJwtAndGetContext = h?.verifyJwtAndGetContext;
   const hasAnyRole = h?.hasAnyRole;
+  const respond = h?.json ?? json;
   if (!verifyJwtAndGetContext || !hasAnyRole) {
-    return { response: json({ error: "misconfigured_route_auth" }, { status: 500 }) };
+    return { response: respond({ error: "misconfigured_route_auth" }, { status: 500 }) };
   }
   const gate = await requireAdminJwt(
     request,
     verifyJwtAndGetContext,
     env,
-    json,
+    respond,
     hasAnyRole,
   );
   if (gate.response) return gate;

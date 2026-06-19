@@ -1,12 +1,12 @@
 /**
  * P19-H: Room Templates HTTP Routes.
  *
- * GET  /templates                 — list templates
- * GET  /templates/:id            — get template
- * POST /templates                — create custom template
- * PATCH /templates/:id           — update custom template
- * DELETE /templates/:id          — delete custom template
- * POST /templates/:id/install    — install template
+ * GET  /room-templates                 — list room templates
+ * GET  /room-templates/:id            — get template
+ * POST /room-templates                — create custom template
+ * PATCH /room-templates/:id           — update custom template
+ * DELETE /room-templates/:id          — delete custom template
+ * POST /room-templates/:id/install    — install template
  */
 import { pickRouteDeps } from "./route-http-deps.js";
 import {
@@ -33,8 +33,8 @@ export async function dispatchTemplatesRoutes(request, url, h) {
     return a;
   }
 
-  // GET /templates
-  if (url.pathname === "/templates" && request.method === "GET") {
+  // GET /room-templates
+  if (url.pathname === "/room-templates" && request.method === "GET") {
     const a = await auth();
     if (!a) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const category = url.searchParams.get("category") || undefined;
@@ -43,7 +43,7 @@ export async function dispatchTemplatesRoutes(request, url, h) {
   }
 
   // POST /templates/:id/install
-  const installMatch = url.pathname.match(/^\/templates\/([^/]+)\/install$/);
+  const installMatch = url.pathname.match(/^\/room-templates\/([^/]+)\/install$/);
   if (installMatch && request.method === "POST") {
     const a = await auth();
     if (!a) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
@@ -54,7 +54,7 @@ export async function dispatchTemplatesRoutes(request, url, h) {
   }
 
   // GET /templates/:id
-  const idMatch = url.pathname.match(/^\/templates\/([^/]+)$/);
+  const idMatch = url.pathname.match(/^\/room-templates\/([^/]+)$/);
   if (idMatch && request.method === "GET") {
     const a = await auth();
     if (!a) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
@@ -65,7 +65,7 @@ export async function dispatchTemplatesRoutes(request, url, h) {
   }
 
   // POST /templates
-  if (url.pathname === "/templates" && request.method === "POST") {
+  if (url.pathname === "/room-templates" && request.method === "POST") {
     const a = await auth();
     if (!a) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     if (!hasAnyRole(a, ["owner", "admin"])) return new Response("Forbidden", { status: 403, headers: corsHeaders });

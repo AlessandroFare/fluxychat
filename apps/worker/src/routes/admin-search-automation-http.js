@@ -499,7 +499,7 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
         "INSERT INTO moderation_events (project_id, room_id, user_id, action, reason, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
       )
         .bind(
-          projectId,
+          adminAuth.projectId,
           body.roomId,
           body.userId,
           "mute",
@@ -545,7 +545,7 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
         "INSERT INTO moderation_events (project_id, room_id, user_id, action, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)"
       )
         .bind(
-          projectId,
+          adminAuth.projectId,
           body.roomId,
           body.userId,
           "ban",
@@ -590,7 +590,7 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
         "INSERT INTO moderation_events (project_id, room_id, user_id, action, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)"
       )
         .bind(
-          projectId,
+          adminAuth.projectId,
           body.roomId,
           body.userId,
           "unmute",
@@ -635,7 +635,7 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
         "INSERT INTO moderation_events (project_id, room_id, user_id, action, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)"
       )
         .bind(
-          projectId,
+          adminAuth.projectId,
           body.roomId,
           body.userId,
           "unban",

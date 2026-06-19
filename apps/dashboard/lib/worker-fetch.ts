@@ -68,7 +68,7 @@ function enrichNetworkFetchError(err: unknown, input: RequestInfo | URL): Error 
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const base =
     err instanceof TypeError
-      ? `Cannot reach Worker at ${url}. Usually CORS (ALLOWED_ORIGINS on Cloudflare) or wrong NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL on Vercel.`
+      ? `Cannot reach Worker at ${url}. Check the worker is running (pnpm dev in apps/worker), NEXT_PUBLIC_FLUXYCHAT_WORKER_URL in .env.local, dashboard CSP connect-src, and Worker ALLOWED_ORIGINS (include your dashboard origin, e.g. http://localhost:3000).`
       : messageFromUnknown(err, "Failed to fetch");
   return new Error(base);
 }

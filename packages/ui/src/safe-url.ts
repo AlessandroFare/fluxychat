@@ -13,7 +13,16 @@ export function safeUrl(
   opts: { allowData?: boolean } = {},
 ): string | undefined {
   if (!raw) return undefined;
-  const trimmed = String(raw).trim();
+  // Reject non-string input (numbers, objects, etc.) outright rather than
+  // coercing via String(). This prevents `safeUrl(123)` from returning "123".
+  if (typeof raw !== "string") return undefined;
+  // Strip control characters (null bytes, tabs, newlines, etc.) to defeat
+  // scheme obfuscation like "java\x00script:alert(1)".  If stripping changed
+  // the string, reject even if the cleaned result looks like a safe scheme —
+  // the control characters are a strong signal of a bypass attempt.
+  const cleaned = raw.replace(/[\x00-\x1f\x7f]/g, "");
+  if (cleaned !== raw) return undefined;
+  const trimmed = cleaned.trim();
   if (!trimmed) return undefined;
 
   // Relative URLs (no scheme) are safe — they cannot be javascript:.

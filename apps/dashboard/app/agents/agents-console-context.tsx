@@ -144,10 +144,7 @@ export function AgentsConsoleProvider({
     [adminJwt],
   );
 
-  const visibleAgents = useMemo(() => {
-    if (!activeProject?.id) return agents;
-    return agents.filter((a) => a.projectId === activeProject.id);
-  }, [agents, activeProject?.id]);
+  const visibleAgents = useMemo(() => agents, [agents]);
 
   const selectedAgent = useMemo(
     () => visibleAgents.find((a) => a.id === selectedId) ?? null,
@@ -262,8 +259,11 @@ export function AgentsConsoleProvider({
         body: JSON.stringify(agentFormToPayload(createForm)),
       });
       await loadAgents();
-      if (json.agent && activeProject?.id) {
-        const agent = agentFromApiResponse(json.agent, activeProject.id);
+      if (json.agent) {
+        const agent = agentFromApiResponse(
+          json.agent,
+          json.agent.projectId ?? activeProject?.id ?? "",
+        );
         setNotice(`Created “${json.agent.name}”.`);
         router.push(`/agents/${agent.id}`);
       }

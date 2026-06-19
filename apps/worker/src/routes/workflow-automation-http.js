@@ -6,10 +6,12 @@ import {
 } from "../lib/api-route-project-auth.js";
 
 export async function dispatchWorkflowAutomationRoutes(request, url, h) {
+  const path = url.pathname;
+  if (!path.startsWith("/api/workflows")) return null;
+
   const gate = await requireApiProjectAdmin(request, h);
   if (gate.response) return gate.response;
   const { env, projectId } = gate;
-  const path = url.pathname;
 
   if (path === "/api/workflows" && request.method === "POST") {
     const body = withAuthProjectId(await request.json(), projectId);

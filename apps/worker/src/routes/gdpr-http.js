@@ -179,7 +179,9 @@ export async function dispatchGdprRoutes(request, url, h) {
       .run();
 
     const attachmentRows = await env.DB.prepare(
-      "SELECT id, url FROM attachments WHERE project_id = ? AND user_id = ?"
+      `SELECT a.id, a.url FROM attachments a
+       INNER JOIN messages m ON m.id = a.message_id
+       WHERE a.project_id = ? AND m.user_id = ?`
     )
       .bind(projectId, userId)
       .all();
@@ -195,7 +197,11 @@ export async function dispatchGdprRoutes(request, url, h) {
     }
     if ((attachmentRows.results || []).length) {
       await env.DB.prepare(
-        "DELETE FROM attachments WHERE project_id = ? AND user_id = ?"
+        `DELETE FROM attachments WHERE id IN (
+           SELECT a.id FROM attachments a
+           INNER JOIN messages m ON m.id = a.message_id
+           WHERE a.project_id = ? AND m.user_id = ?
+         )`
       )
         .bind(projectId, userId)
         .run();

@@ -72,7 +72,7 @@ export function AgentProfileForm({
               placeholder="Support bot"
             />
           </FormField>
-          <FormField label="Handle" hint="Mention in chat: @handle triggers this agent (streaming).">
+          <FormField label="Handle" hint="Optional @mention id: letters, numbers, _ and - only (e.g. support → @support).">
             <Input
               value={values.handle}
               onChange={(e) => onChange({ handle: e.target.value })}

@@ -1,4 +1,4 @@
-import { hashApiKey } from "./api-key-hash.js";
+import { hashApiKey, legacyHashApiKey } from "./api-key-hash.js";
 import { isHostedMultiTenantMode } from "./hosted-saas-policy.js";
 import { logInfo } from "./worker-log.js";
 
@@ -40,16 +40,26 @@ export async function resolveProjectId(
     return null;
   }
 
-  const keyHash = await hashApiKey(headerKey, env);
-  // Audit S-11: try the new HMAC column first, then fall back to legacy SHA-256.
+  const hmacHash = await hashApiKey(headerKey, env);
+  const legacyHash = await legacyHashApiKey(headerKey);
+  // Audit S-11: prefer key_hmac (HMAC), then key_hash with HMAC or legacy SHA-256.
   const row = await env.DB.prepare(
-    "SELECT project_id FROM api_keys WHERE (key_hmac = ? OR key_hash = ?) AND revoked_at IS NULL ORDER BY (key_hmac = ?) DESC LIMIT 1"
+    `SELECT project_id FROM api_keys
+     WHERE revoked_at IS NULL
+       AND (key_hmac = ? OR key_hash = ? OR key_hash = ?)
+     ORDER BY
+       CASE
+         WHEN key_hmac = ? THEN 0
+         WHEN key_hash = ? THEN 1
+         ELSE 2
+       END
+     LIMIT 1`,
   )
-    .bind(keyHash, keyHash, keyHash)
+    .bind(hmacHash, hmacHash, legacyHash, hmacHash, hmacHash)
     .first<{ project_id?: string }>();
   if (row?.project_id) return row.project_id;
 
-  logInfo("auth.api_key_not_found_hash", { keyHashPrefix: keyHash.slice(0, 8) });
+  logInfo("auth.api_key_not_found_hash", { keyHashPrefix: hmacHash.slice(0, 8) });
   if (isHostedMultiTenantMode(env)) return null;
   if (legacyDefaultProjectAllowed(env)) {
     return env.DEFAULT_PROJECT_ID || "default";

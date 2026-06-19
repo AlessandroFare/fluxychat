@@ -207,8 +207,9 @@ ANTHROPIC_API_KEY=
 
 # --- Dev-only provision endpoint (POST /dev/provision) ---
 # Enables the local first-message script (pnpm run first-message).
-# Mounted only when this is exactly "true" AND NODE_ENV !== "production".
+# Mounted only when ALLOW_DEV_PROVISION=true AND NODE_ENV is development|test.
 # NEVER set this in any non-local environment — it lets anyone mint a
 # project API key with no auth.
+NODE_ENV=development
 ALLOW_DEV_PROVISION=true
 # --- /dev/provision ---

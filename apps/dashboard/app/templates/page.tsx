@@ -58,7 +58,7 @@ export default function TemplatesPage() {
           id: t.id,
           name: t.name,
           body: t.body,
-          updatedAt: t.updatedAt,
+          updatedAt: t.updatedAt ?? (t as { updated_at?: string }).updated_at ?? "",
         })),
       );
     } catch (err: unknown) {
@@ -201,7 +201,7 @@ export default function TemplatesPage() {
                   >
                     <div className="font-medium">{t.name}</div>
                     <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-                      {t.id} · {formatDateTime(t.updatedAt)}
+                      {t.id} · {t.updatedAt ? formatDateTime(t.updatedAt) : "—"}
                     </div>
                   </button>
                 </li>

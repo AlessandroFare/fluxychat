@@ -381,7 +381,11 @@ export function AgentRoomChat({
           : `${mentionPrefixForAgent(agentHandle)}${text}`.trim();
         await sendMessage(mentionPayload, parentId, undefined, sendOpts);
         setDraft("");
-        void fluxyClient?.putRoomDraft(trimmedRoomId, { content: "", replyToId: null });
+        try {
+          await fluxyClient?.putRoomDraft(trimmedRoomId, { content: "", replyToId: null });
+        } catch {
+          /* draft sync is best-effort */
+        }
         setTemplateSelection(null);
         setReplyToId(null);
         if (!adminJwt.trim()) {
@@ -393,12 +397,17 @@ export function AgentRoomChat({
       }
 
       if (templateSend) {
-        await sendMessage("", parentId, undefined, sendOpts);
+        const rendered = templateSend.renderedPreview.trim();
+        await sendMessage(rendered, parentId, undefined, sendOpts);
       } else {
         await sendMessage(text, parentId, undefined, sendOpts);
       }
       setDraft("");
-      void fluxyClient?.putRoomDraft(trimmedRoomId, { content: "", replyToId: null });
+      try {
+        await fluxyClient?.putRoomDraft(trimmedRoomId, { content: "", replyToId: null });
+      } catch {
+        /* draft sync is best-effort */
+      }
       setTemplateSelection(null);
       setReplyToId(null);
       try {
@@ -738,10 +747,14 @@ export function AgentRoomChat({
                 }
                 void loadHistory();
                 setReplyToId(null);
-                void fluxyClient?.putRoomDraft(trimmedRoomId, {
-                  content: "",
-                  replyToId: null,
-                });
+                try {
+                  await fluxyClient?.putRoomDraft(trimmedRoomId, {
+                    content: "",
+                    replyToId: null,
+                  });
+                } catch {
+                  /* draft sync is best-effort */
+                }
               } catch (err: unknown) {
                 setInputError(
                   err instanceof Error ? err.message : "Failed to send voice message",

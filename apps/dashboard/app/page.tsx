@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useClerkUser } from "@/lib/clerk-user";
-import { ArrowRight, CheckCircle2, Circle, KeyRound, MinusCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Circle, ExternalLink, KeyRound, MinusCircle, UserPlus } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { ConsoleShell } from "./components/console-shell";
 import { ConsolePageHeader } from "./components/console-page-header";
@@ -130,48 +130,55 @@ export default function HomePage() {
               !unknown &&
               CHECKLIST.findIndex((c) => c.key === item.key) === firstOpenIndex;
             return (
-              <li key={item.key} className="flex items-center gap-2 text-sm">
-                {done ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
-                ) : unknown ? (
-                  <MinusCircle
-                    className="h-4 w-4 shrink-0 text-slate-400"
-                    aria-label="Not yet tracked"
-                  >
-                    <title>We&apos;ll mark this done automatically once you do it.</title>
-                  </MinusCircle>
-                ) : (
-                  <Circle
-                    className={cn("h-4 w-4 shrink-0", isCurrent ? "text-primary" : "text-slate-600")}
-                    aria-hidden
-                  />
+              <li
+                key={item.key}
+                className={cn(
+                  "flex flex-col gap-2 rounded-lg border border-transparent px-2 py-1.5 sm:flex-row sm:items-center sm:justify-between",
+                  unknown && "border-black/[0.04] bg-slate-50/80",
                 )}
-                <span
-                  className={cn(
-                    done
-                      ? "text-slate-700"
-                      : isCurrent
-                        ? "font-medium text-slate-900"
-                        : "text-slate-600",
+              >
+                <div className="flex min-w-0 items-center gap-2 text-sm">
+                  {done ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                  ) : unknown ? (
+                    <MinusCircle className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+                  ) : (
+                    <Circle
+                      className={cn("h-4 w-4 shrink-0", isCurrent ? "text-primary" : "text-slate-600")}
+                      aria-hidden
+                    />
                   )}
-                >
-                  {item.label}
-                </span>
-                {item.key === "install" ? (
-                  <Link
-                    href="https://www.npmjs.com/package/@fluxy-chat/sdk"
-                    className="ml-auto text-xs text-primary underline-offset-2 hover:underline"
+                  <span
+                    className={cn(
+                      done
+                        ? "text-slate-700"
+                        : isCurrent
+                          ? "font-medium text-slate-900"
+                          : "text-slate-600",
+                    )}
                   >
-                    npm
-                  </Link>
+                    {item.label}
+                  </span>
+                </div>
+                {item.key === "install" ? (
+                  <Button asChild variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 text-xs">
+                    <a
+                      href="https://www.npmjs.com/package/@fluxy-chat/sdk"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Install SDK
+                      <ExternalLink className="h-3 w-3" aria-hidden />
+                    </a>
+                  </Button>
                 ) : null}
                 {item.key === "invite" ? (
-                  <Link
-                    href={`${HOSTED_PATHS.onboarding}`}
-                    className="ml-auto text-xs text-primary underline-offset-2 hover:underline"
-                  >
-                    Invite link
-                  </Link>
+                  <Button asChild variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 text-xs">
+                    <Link href="/projects" title="Invite teammates via Clerk organization members">
+                      <UserPlus className="h-3 w-3" aria-hidden />
+                      Invite teammate
+                    </Link>
+                  </Button>
                 ) : null}
               </li>
             );

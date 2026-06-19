@@ -3,6 +3,11 @@ import { canAccessRoom } from "./room-access.js";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 
+function isProjectWideSearchRole(roles) {
+  if (!Array.isArray(roles)) return false;
+  return roles.some((r) => r === "owner" || r === "admin" || r === "moderator");
+}
+
 export function sanitizeFtsQuery(raw) {
   const trimmed = String(raw || "").trim();
   if (!trimmed) return "";
@@ -52,6 +57,13 @@ export async function searchMessages(env, input) {
         AND m.deleted_at IS NULL
     `;
     params.push(q, input.projectId, input.roomId);
+  } else if (isProjectWideSearchRole(input.roles)) {
+    sql += `
+      WHERE messages_fts MATCH ?
+        AND m.project_id = ?
+        AND m.deleted_at IS NULL
+    `;
+    params.push(q, input.projectId);
   } else {
     sql += `
       JOIN room_members rm ON rm.room_id = m.room_id AND rm.user_id = ?

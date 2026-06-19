@@ -381,17 +381,17 @@ export function HeroCodeInboxDemo() {
   }, []);
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0 max-w-full overflow-x-hidden">
       <div className="mb-3 flex flex-col gap-1 border-b border-black/[0.06] pb-3 sm:flex-row sm:items-end sm:justify-between">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Your app</p>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 sm:text-right">Live preview</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 md:gap-8">
-        <div className={cn("flex flex-col", CARD_H)}>
+      <div className="grid min-w-0 gap-6 md:grid-cols-2 md:gap-8">
+        <div className={cn("flex min-w-0 flex-col", CARD_H)}>
           <div
             className={cn(
-              "flex flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d1117] shadow-inner",
+              "flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d1117] shadow-inner",
               CARD_H,
             )}
           >
@@ -401,15 +401,18 @@ export function HeroCodeInboxDemo() {
               <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
               <span className="ml-auto text-[10px] text-zinc-400">app/chat/page.tsx</span>
             </div>
-            <pre className="flex-1 overflow-y-auto overflow-x-hidden p-4 font-mono text-[11px] leading-relaxed sm:text-xs">
-              <code>{buildCodeDisplay(codeLen)}</code>
+            <pre className="flex-1 overflow-y-auto overflow-x-auto p-4 font-mono text-[11px] leading-relaxed sm:text-xs">
+              <code className="block min-w-0 max-w-full whitespace-pre-wrap break-all">{buildCodeDisplay(codeLen)}</code>
             </pre>
           </div>
         </div>
 
-        <div className={cn("flex flex-col", CARD_H)}>
+        <div className={cn("flex min-w-0 flex-col", CARD_H)}>
           <div
-            className={cn("isolate flex flex-1 flex-col overflow-hidden rounded-2xl shadow-[var(--shadow-subtle-3)]", CARD_H)}
+            className={cn(
+              "isolate flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl shadow-[var(--shadow-subtle-3)]",
+              CARD_H,
+            )}
             style={{
               backgroundColor: preview.shellBg,
               color: preview.shellText,

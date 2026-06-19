@@ -100,6 +100,10 @@ export function UserWatchlistCard({ jwt, userId }: UserWatchlistCardProps) {
       {error ? <Banner variant="error">{error}</Banner> : null}
       {!jwt ? (
         <p className="text-sm text-muted-foreground">JWT required.</p>
+      ) : !userId.trim() ? (
+        <p className="text-sm text-muted-foreground">
+          Enter a User ID above (or use your JWT subject) to manage watchlist targets.
+        </p>
       ) : (
         <>
           <div className="flex flex-wrap gap-2">
@@ -112,7 +116,7 @@ export function UserWatchlistCard({ jwt, userId }: UserWatchlistCardProps) {
             <Button
               type="button"
               variant="outline"
-              disabled={busy}
+              disabled={busy || !client}
               onClick={() => void addTarget("room", roomTarget)}
             >
               Follow room
@@ -126,7 +130,7 @@ export function UserWatchlistCard({ jwt, userId }: UserWatchlistCardProps) {
             <Button
               type="button"
               variant="outline"
-              disabled={busy}
+              disabled={busy || !client}
               onClick={() => void addTarget("user", userTarget)}
             >
               Follow user
@@ -134,7 +138,7 @@ export function UserWatchlistCard({ jwt, userId }: UserWatchlistCardProps) {
             <Button
               type="button"
               variant="outline"
-              disabled={busy}
+              disabled={busy || !client}
               onClick={() => void terminateConnections()}
             >
               Terminate connections

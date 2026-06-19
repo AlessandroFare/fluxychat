@@ -6,8 +6,8 @@ import Header from "./Header";
 import { MarketingTopNav } from "./marketing-top-nav";
 
 /**
- * Landing/why/enter/auth ship their own header.
- * Compare/guides/demo/docs use MarketingTopNav.
+ * Landing/why/enter ship their own header.
+ * Compare/guides/demo/docs/status/sign-in use MarketingTopNav.
  * Console routes use Header (auth controls).
  */
 export default function ConditionalHeader() {
@@ -19,11 +19,7 @@ export default function ConditionalHeader() {
     pathname === "/why" ||
     pathname?.startsWith("/why/") ||
     pathname === "/enter" ||
-    pathname?.startsWith("/enter/") ||
-    pathname === "/sign-in" ||
-    pathname?.startsWith("/sign-in/") ||
-    pathname === "/sign-up" ||
-    pathname?.startsWith("/sign-up/")
+    pathname?.startsWith("/enter/")
   ) {
     return null;
   }

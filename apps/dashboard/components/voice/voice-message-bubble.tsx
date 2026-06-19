@@ -210,7 +210,7 @@ function TranscriptionView({
         data-testid="voice-transcription-pending"
       >
         <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-        Transcribing…
+        Transcribing… (requires LLM keys in Agents → LLM keys)
       </p>
     );
   }

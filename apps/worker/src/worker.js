@@ -350,7 +350,7 @@ export default {
 
     const corsHeaders = {
       ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
-      "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
+      "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Trace-Id,X-Fluxy-Api-Key,X-Project-Id",
       "Access-Control-Expose-Headers": "X-Trace-Id,Retry-After",
       "X-Trace-Id": traceId,
@@ -515,6 +515,7 @@ export default {
       tenantScopeForbidden,
       writeAuditEvent,
       hashApiKey,
+      signJwtHs256,
     };
 
     const privacyBillingDeps = {

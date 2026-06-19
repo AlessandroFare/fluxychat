@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { fetchWorkerHealth } from "@/lib/worker-health";
-import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 export const dynamic = "force-dynamic";
 
@@ -27,22 +26,6 @@ export default async function StatusPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-          <Link href={HOSTED_PATHS.landing} className="font-heading text-sm font-semibold">
-            Fluxychat
-          </Link>
-          <nav className="flex gap-4 text-sm text-muted-foreground">
-            <Link href={HOSTED_PATHS.docs} className="hover:text-foreground">
-              Docs
-            </Link>
-            <Link href={HOSTED_PATHS.console} className="hover:text-foreground">
-              Console
-            </Link>
-          </nav>
-        </div>
-      </header>
-
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 className="font-heading text-3xl font-bold tracking-tight">System status</h1>
         <p className="mt-2 text-sm text-muted-foreground">

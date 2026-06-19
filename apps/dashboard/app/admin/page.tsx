@@ -21,6 +21,7 @@ import {
 
 import { formatDateTime } from "@/lib/format-datetime";
 import { messageFromUnknown } from "@/lib/error-message";
+import { readJwtSub } from "@/lib/jwt-claims";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
 import { WebhookPlaygroundCard } from "../components/webhook-playground-card";
@@ -94,7 +95,7 @@ export default function AdminPage() {
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [webhookRows, setWebhookRows] = useState<WebhookRow[]>([]);
-  const [webhookListLoading, setWebhookListLoading] = useState(false);
+  const watchlistUserId = userId.trim() || readJwtSub(adminJwt) || "";
 
   const loadWebhooks = useCallback(async () => {
     if (!adminJwt.trim()) return;
@@ -121,18 +122,26 @@ export default function AdminPage() {
     if (adminJwt.trim()) void loadWebhooks();
   }, [adminJwt, loadWebhooks]);
 
-  const runAction = async (action: AdminAction) => {
+  const runAction = async (
+    action: AdminAction,
+    overrides?: { roomId?: string; userId?: string },
+  ) => {
     if (!adminJwt.trim()) {
       setLog((logs) => ["Admin JWT required", ...logs]);
       return;
     }
-    if (!roomId || !userId) {
+    const targetRoomId = overrides?.roomId ?? roomId;
+    const targetUserId = overrides?.userId ?? userId;
+    if (!targetRoomId || !targetUserId) {
       setLog((logs) => ["roomId and userId required", ...logs]);
       return;
     }
     try {
       setNotice(null);
-      const payload: Record<string, unknown> = { roomId, userId };
+      const payload: Record<string, unknown> = {
+        roomId: targetRoomId,
+        userId: targetUserId,
+      };
       if (action === "mute") payload.durationSeconds = duration;
       await callAdminEndpoint(action, payload, adminJwt.trim());
       setLog((logs) => [`${action.toUpperCase()} succeeded`, ...logs]);
@@ -313,18 +322,14 @@ export default function AdminPage() {
                 <div className="mt-1 flex gap-2">
                   <Button
                     onClick={() => {
-                      setRoomId(r.room_id);
-                      setUserId(r.user_id);
-                      void runAction("mute");
+                      void runAction("mute", { roomId: r.room_id, userId: r.user_id });
                     }}
                   >
                     Mute user
                   </Button>
                   <Button
                     onClick={() => {
-                      setRoomId(r.room_id);
-                      setUserId(r.user_id);
-                      void runAction("ban");
+                      void runAction("ban", { roomId: r.room_id, userId: r.user_id });
                     }}
                   >
                     Ban user
@@ -480,7 +485,7 @@ export default function AdminPage() {
         defaultUserId={userId}
       />
 
-      <UserWatchlistCard jwt={adminJwt.trim()} userId={userId} />
+      <UserWatchlistCard jwt={adminJwt.trim()} userId={watchlistUserId} />
 
       <Section title="Announcements">
         <Textarea

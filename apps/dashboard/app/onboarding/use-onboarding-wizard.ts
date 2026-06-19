@@ -221,7 +221,7 @@ export function useOnboardingWizard() {
       setNotice("Tenant project provisioned via hosted connect.");
     } catch (err: unknown) {
       setError(
-        `${messageFromUnknown(err, "Hosted provisioning failed")}. Ensure FLUXY_CONSOLE_API_KEY and FLUXY_PLATFORM_PROJECT_ID in apps/dashboard/.env.local match the same pnpm provision:bootstrap run as apps/worker/.dev.vars.`,
+        `${messageFromUnknown(err, "Hosted provisioning failed")}. For local dev: use the same FLUXY_CONSOLE_API_KEY in apps/dashboard/.env.local and apps/worker/.dev.vars (the full fc_… key from POST /dev/provision, not the key_prefix). FLUXY_PLATFORM_PROJECT_ID is the project id (dev-local), not the API key.`,
       );
     } finally {
       setProvisioningCloud(false);

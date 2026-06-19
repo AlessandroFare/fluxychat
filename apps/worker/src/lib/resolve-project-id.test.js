@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { legacyHashApiKey } from "./api-key-hash.js";
 import { resolveProjectId } from "./resolve-project-id.js";
 
 describe("resolveProjectId (P0-4 hosted multi-tenant)", () => {
@@ -45,5 +46,35 @@ describe("resolveProjectId (P0-4 hosted multi-tenant)", () => {
       headers: { "X-Fluxy-Api-Key": "fluxy_test_unknown" },
     });
     await expect(resolveProjectId(req, env)).resolves.toBeNull();
+  });
+
+  it("resolves legacy SHA-256 key_hash rows (audit S-11 migration)", async () => {
+    const apiKey = "fc_legacy_test_key_abc123";
+    const legacyHash = await legacyHashApiKey(apiKey);
+    const env = {
+      DB: {
+        prepare(sql) {
+          return {
+            bind(...params) {
+              return {
+                first: async () => {
+                  if (
+                    sql.includes("key_hmac") &&
+                    params.includes(legacyHash)
+                  ) {
+                    return { project_id: "dev-local" };
+                  }
+                  return null;
+                },
+              };
+            },
+          };
+        },
+      },
+    };
+    const req = new Request("https://worker.example/auth/token", {
+      headers: { "X-Fluxy-Api-Key": apiKey },
+    });
+    await expect(resolveProjectId(req, env)).resolves.toBe("dev-local");
   });
 });

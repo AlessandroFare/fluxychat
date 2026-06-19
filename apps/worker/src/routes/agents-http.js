@@ -112,23 +112,6 @@ export async function dispatchAgentsRoutes(request, url, h) {
     if (!auth) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
-    const quotaResult = await checkAndConsumeProjectQuota(env, {
-      projectId: auth.projectId,
-      metricName: "agent_invokes",
-      amount: 1,
-    }).catch(() => ({ allowed: true }));
-    if (!quotaResult.allowed) {
-      return json(
-        {
-          error: "quota_exceeded",
-          metric: quotaResult.metricName,
-          limit: quotaResult.limit,
-          used: quotaResult.used,
-          month: quotaResult.monthKey,
-        },
-        { status: 402 }
-      );
-    }
     const rows = await env.DB.prepare(
       "SELECT id, project_id, name, handle, provider, model, capabilities, config, created_at FROM bots WHERE project_id = ? ORDER BY created_at DESC LIMIT 100" // perf: unbounded
     )
@@ -149,11 +132,9 @@ export async function dispatchAgentsRoutes(request, url, h) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
     const body = await request.json().catch(() => null);
-    if (!body?.name || !isValidId(body.name)) {
-      return json(
-        { error: "name required: must be 1-128 chars, alphanumeric with _ -" },
-        { status: 400 }
-      );
+    const name = typeof body?.name === "string" ? body.name.trim() : "";
+    if (!name || name.length > 128) {
+      return json({ error: "name required (1–128 characters)" }, { status: 400 });
     }
     if (body.handle && !isValidHandle(body.handle)) {
       return json(

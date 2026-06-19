@@ -224,6 +224,7 @@ export default function AnalyticsPage() {
   const [benchmarkLoading, setBenchmarkLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [exportFormat, setExportFormat] = useState<"csv" | "markdown" | "pdf" | "json">("csv");
   // Generation counters for stale-response suppression. The benchmark has its
   // own generation so a slow benchmark response can never overwrite fresh
   // fast-stats state. (Audit P2 fix.)
@@ -311,6 +312,39 @@ export default function AnalyticsPage() {
     void fetchStats();
   }, [roomId, readToken, fetchStats]);
 
+  async function exportRoomData(format: "csv" | "markdown" | "pdf" | "json") {
+    if (!readToken) return;
+    const needsRoom = format !== "csv" && format !== "json";
+    if (needsRoom && !roomId.trim()) {
+      setError("Select a room for this export format.");
+      return;
+    }
+    try {
+      setError(null);
+      let url: string;
+      let filename: string;
+      if (format === "csv") {
+        url = `${WORKER_URL}/export/messages.csv?roomId=${encodeURIComponent(roomId)}`;
+        filename = `messages-${roomId || "all"}.csv`;
+      } else if (format === "json") {
+        url = `${WORKER_URL}/export/messages.json?roomId=${encodeURIComponent(roomId)}`;
+        filename = `messages-${roomId || "all"}.json`;
+      } else if (format === "markdown") {
+        url = `${WORKER_URL}/export/rooms/${encodeURIComponent(roomId)}.markdown`;
+        filename = `room-${roomId}.md`;
+      } else {
+        url = `${WORKER_URL}/export/rooms/${encodeURIComponent(roomId)}.pdf`;
+        filename = `room-${roomId}.pdf`;
+      }
+      const res = await fetchWorker(url, { headers: authHeader(readToken) });
+      const blob = await res.blob();
+      downloadBlob(blob, filename);
+      setNotice(`${format.toUpperCase()} export downloaded.`);
+    } catch {
+      setError(`Failed to export ${format.toUpperCase()}.`);
+    }
+  }
+
   const downloadPerfSignalReport = () => {
     if (!benchmark || !slo) return;
     const openAlerts = alerts?.openAlerts || 0;
@@ -363,82 +397,29 @@ export default function AnalyticsPage() {
           <div className="min-w-0 flex-1">
             <RoomPicker token={readToken} value={roomId} onChange={setRoomId} placeholder="Select room" />
           </div>
-          <div className="flex flex-wrap gap-2 sm:justify-end">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <select
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              value={exportFormat}
+              onChange={(e) =>
+                setExportFormat(e.target.value as "csv" | "markdown" | "pdf" | "json")
+              }
+              aria-label="Export format"
+            >
+              <option value="csv">CSV (messages)</option>
+              <option value="json">JSON (messages)</option>
+              <option value="markdown">Markdown (room)</option>
+              <option value="pdf">PDF (room)</option>
+            </select>
             <Button
               variant="primary"
-              onClick={async () => {
-                try {
-                  const res = await fetchWorker(
-                    `${WORKER_URL}/export/messages.csv?roomId=${encodeURIComponent(roomId)}`,
-                    { headers: authHeader(readToken) }
-                  );
-                  const blob = await res.blob();
-                  downloadBlob(blob, `messages-${roomId}.csv`);
-                  setNotice("CSV export downloaded.");
-                } catch {
-                  setError("Failed to export CSV.");
-                }
-              }}
-              disabled={!readToken}
+              onClick={() => void exportRoomData(exportFormat)}
+              disabled={
+                !readToken ||
+                ((exportFormat === "markdown" || exportFormat === "pdf") && !roomId.trim())
+              }
             >
-              Export CSV
-            </Button>
-            <Button
-              variant="neutral"
-              onClick={async () => {
-                try {
-                  const res = await fetchWorker(
-                    `${WORKER_URL}/export/rooms/${encodeURIComponent(roomId)}.markdown`,
-                    { headers: authHeader(readToken) }
-                  );
-                  const blob = await res.blob();
-                  downloadBlob(blob, `room-${roomId}.md`);
-                  setNotice("Markdown export downloaded.");
-                } catch {
-                  setError("Failed to export Markdown.");
-                }
-              }}
-              disabled={!readToken || !roomId.trim()}
-            >
-              Export Markdown
-            </Button>
-            <Button
-              variant="neutral"
-              onClick={async () => {
-                try {
-                  const res = await fetchWorker(
-                    `${WORKER_URL}/export/rooms/${encodeURIComponent(roomId)}.pdf`,
-                    { headers: authHeader(readToken) }
-                  );
-                  const blob = await res.blob();
-                  downloadBlob(blob, `room-${roomId}.pdf`);
-                  setNotice("PDF export downloaded.");
-                } catch {
-                  setError("Failed to export PDF.");
-                }
-              }}
-              disabled={!readToken || !roomId.trim()}
-            >
-              Export PDF
-            </Button>
-            <Button
-              variant="neutral"
-              onClick={async () => {
-                try {
-                  const res = await fetchWorker(
-                    `${WORKER_URL}/export/messages.json?roomId=${encodeURIComponent(roomId)}`,
-                    { headers: authHeader(readToken) }
-                  );
-                  const blob = await res.blob();
-                  downloadBlob(blob, `messages-${roomId}.json`);
-                  setNotice("JSON export downloaded.");
-                } catch {
-                  setError("Failed to export JSON.");
-                }
-              }}
-              disabled={!readToken}
-            >
-              Export JSON
+              Export
             </Button>
           </div>
         </div>

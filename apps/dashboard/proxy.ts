@@ -52,16 +52,10 @@ function isStaticAsset(pathname: string): boolean {
 }
 
 /**
- * Build a CSP header. We use a per-request nonce so the RSC streaming
- * runtime can ship inline boot styles / scripts without falling back to
- * `'unsafe-inline'`. The nonce is forwarded to the React tree via the
- * `x-nonce` request header; layouts read it with `headers().get('x-nonce')`
- * and pass it to <Script nonce={...}> and styled-jsx.
- *
- * Why `strict-dynamic` on `script-src`: with nonces, browsers ignore
- * `'self'` and the host-allowlist; they trust whatever the nonced
- * script dynamically injects. This is the modern CSP recommendation
- * (https://csp.withgoogle.com).
+ * Build a CSP header. We use a per-request nonce on script-src so the RSC
+ * streaming runtime can ship inline boot scripts. The nonce is forwarded via
+ * `x-nonce`; do not put it on style-src — that disables 'unsafe-inline' and
+ * breaks Clerk-injected styles.
  */
 function buildContentSecurityPolicy(nonce: string): string {
   const workerConnect = (
@@ -70,20 +64,41 @@ function buildContentSecurityPolicy(nonce: string): string {
     ""
   ).trim();
   const clerkHosts = "https://*.clerk.accounts.dev https://*.clerk.com";
-  const connectSrc = ["'self'", workerConnect, clerkHosts].filter(Boolean).join(" ");
+  const isDev = process.env.NODE_ENV === "development";
+  const devWorkerConnect = isDev
+    ? "http://localhost:8787 http://127.0.0.1:8787 ws://localhost:8787 ws://127.0.0.1:8787"
+    : "";
+  const connectSrc = [
+    "'self'",
+    workerConnect,
+    devWorkerConnect,
+    clerkHosts,
+    "https://clerk-telemetry.com",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  // Both script and style use the per-request nonce. Next.js 16 honours
-  // the nonce on <head>/<body> elements and propagates it to all
-  // framework-injected <script> and <style> tags (RSC streaming + Tailwind
-  // JIT). This replaces the previous `'unsafe-inline'` fallback on
-  // style-src, which was the last soft spot in our CSP posture.
+  const mediaSrc = ["'self'", "blob:", workerConnect, devWorkerConnect].filter(Boolean).join(" ");
+
+  // Next.js uses the per-request nonce on framework scripts. Clerk injects
+  // <style> tags without that nonce — do NOT put a nonce on style-src: when
+  // present, browsers ignore 'unsafe-inline' and Clerk UI renders unstyled.
+  // In dev, omit nonce from script-src: nonce + 'unsafe-inline' causes browsers
+  // to ignore inline scripts (Next dev boot, HMR).
+  const scriptSrc = isDev
+    ? ["'self'", clerkHosts, "'unsafe-eval'", "'unsafe-inline'"].join(" ")
+    : ["'self'", `'nonce-${nonce}'`, clerkHosts].join(" ");
+
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
-    `style-src 'self' 'nonce-${nonce}'`,
-    "img-src 'self' data: https:",
-    "font-src 'self' data:",
+    `script-src ${scriptSrc}`,
+    `style-src 'self' 'unsafe-inline' ${clerkHosts} https://cdn.jsdelivr.net`,
+    "img-src 'self' data: https: blob:",
+    `media-src ${mediaSrc}`,
+    `font-src 'self' data: ${clerkHosts}`,
     `connect-src ${connectSrc}`,
+    `frame-src 'self' ${clerkHosts}`,
+    "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

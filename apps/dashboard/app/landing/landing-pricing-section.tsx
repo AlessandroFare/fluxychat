@@ -38,14 +38,14 @@ export function LandingPricingSection() {
               <div
                 key={key}
                 className={cn(
-                  "relative flex flex-col overflow-hidden rounded-2xl border p-6 min-w-0",
+                  "relative flex min-w-0 flex-col rounded-2xl border p-6 pt-8",
                   isFeatured
-                    ? "border-primary bg-slate-900/80 shadow-[0_0_0_1px_rgba(255,115,94,0.35)]"
+                    ? "z-[1] border-primary bg-slate-900/80 shadow-[0_0_0_1px_rgba(255,115,94,0.35)]"
                     : "border-white/10 bg-slate-900/40",
                 )}
               >
                 {isFeatured ? (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
+                  <Badge className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap bg-primary text-primary-foreground shadow-md">
                     Most teams start here
                   </Badge>
                 ) : null}
@@ -54,23 +54,29 @@ export function LandingPricingSection() {
                 <p className="mt-3 text-sm text-slate-300">{plan.tagline}</p>
                 <div className="mt-6 flex flex-1 flex-col">
                   <ul className="flex flex-col gap-3 text-sm text-slate-300">
-                    <li className="flex gap-2">
+                    <li className="flex min-w-0 gap-2">
                       <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-                      {plan.messages === -1
-                        ? "Unlimited messages (fair use)"
-                        : `${formatNumber(plan.messages)} messages / month`}
+                      <span className="min-w-0 break-words">
+                        {plan.messages === -1
+                          ? "Unlimited messages (fair use)"
+                          : `${formatNumber(plan.messages)} messages / month`}
+                      </span>
                     </li>
-                    <li className="flex gap-2">
+                    <li className="flex min-w-0 gap-2">
                       <Bot className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-                      {plan.agents === -1
-                        ? "Unlimited agent invokes (fair use)"
-                        : `${formatNumber(plan.agents)} agent invokes / month`}
+                      <span className="min-w-0 break-words">
+                        {plan.agents === -1
+                          ? "Unlimited agent invokes (fair use)"
+                          : `${formatNumber(plan.agents)} agent invokes / month`}
+                      </span>
                     </li>
-                    <li className="flex gap-2">
+                    <li className="flex min-w-0 gap-2">
                       <Webhook className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-                      {plan.webhooks === -1
-                        ? "Unlimited webhook deliveries (fair use)"
-                        : `${formatNumber(plan.webhooks)} webhook deliveries / month`}
+                      <span className="min-w-0 break-words">
+                        {plan.webhooks === -1
+                          ? "Unlimited webhook deliveries (fair use)"
+                          : `${formatNumber(plan.webhooks)} webhook deliveries / month`}
+                      </span>
                     </li>
                   </ul>
                   <ul className="mt-4 space-y-3 border-t border-white/10 pt-4 text-sm text-slate-300">
