@@ -56,6 +56,7 @@ function buildDemoHandlerDeps(overrides = {}) {
     checkAndConsumeRateLimit: async () => ({ allowed: true, retryAfterSeconds: 0 }),
     canAccessRoom: async () => true,
     customDomain: null,
+    timingSafeEqual: async (a, b) => a === b,
     ...overrides,
   };
 }

@@ -44,6 +44,7 @@ export async function dispatchPublicRoutes(request, url, h) {
     checkAndConsumeRateLimit,
     canAccessRoom,
     customDomain,
+    timingSafeEqual,
   } = pickRouteDeps(h, [
     "env",
     "ctx",
@@ -68,6 +69,7 @@ export async function dispatchPublicRoutes(request, url, h) {
     "checkAndConsumeRateLimit",
     "canAccessRoom",
     "customDomain",
+    "timingSafeEqual",
   ]);
 
   if (url.pathname === "/client/feature-flags" && request.method === "GET") {
@@ -197,6 +199,11 @@ export async function dispatchPublicRoutes(request, url, h) {
     );
     const roomId = sanitizeString(request.headers.get("X-Room-Id") || "", 128);
 
+    const contentLength = parseInt(request.headers.get("Content-Length") || "0", 10);
+    if (contentLength > 0 && !validateFileUpload(null, contentType, contentLength).valid) {
+      return json({ error: "file too large or invalid content type" }, { status: 400 });
+    }
+
     const fileData = await request.arrayBuffer();
     const validation = validateFileUpload(fileData, contentType, fileData.byteLength);
     if (!validation.valid) {
@@ -256,6 +263,18 @@ export async function dispatchPublicRoutes(request, url, h) {
     const fileKey = url.pathname.slice("/attachments/".length);
     if (!fileKey || fileKey.includes("..") || fileKey.startsWith("/")) {
       return json({ error: "invalid file key" }, { status: 400 });
+    }
+
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const keyPrefix = fileKey.split("/")[0];
+    if (keyPrefix !== auth.projectId) {
+      return json({ error: "forbidden" }, { status: 403 });
     }
 
     if (!env.ATTACHMENTS) {

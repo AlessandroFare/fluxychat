@@ -4,7 +4,8 @@
  */
 
 import { depsEnv } from "../lib/deps-env.js";
-import { parseSamlAssertion, validateSamlTiming, createSsoSession, getSamlConfig, upsertSamlConfig, generateSpMetadata } from '../lib/sso-saml.js';
+import { verifyJwtAndGetContext } from "../lib/jwt-auth.js";
+import { parseSamlAssertion, validateSamlTiming, validateSamlAudience, createSsoSession, getSamlConfig, upsertSamlConfig, generateSpMetadata } from '../lib/sso-saml.js';
 import { createScimUser, getScimUser, listScimUsers, updateScimUser, deleteScimUser, createScimGroup, listScimGroups, createScimToken, listScimTokens, deleteScimToken, verifyScimToken } from '../lib/scim.js';
 import { enrollTotp, verifyAndEnableTotp, verifyAdminTotp, isTotpEnabled, getTotpStatus, disableTotp } from '../lib/totp-2fa.js';
 import { buildAllowedOriginsList } from "../lib/custom-domains.js";
@@ -111,7 +112,19 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const config = await getSamlConfig(env, projectId);
     if (!config) return respond({ error: 'SAML not configured' }, 400);
 
-    const assertion = parseSamlAssertion(samlResponse, config);
+    // Audit CRITICAL #1: parseSamlAssertion is async — it was previously called
+    // WITHOUT await, so `assertion` was a Promise and `assertion.isValid` was
+    // undefined. (`getSamlConfig` also returns snake_case columns, so we map to
+    // the camelCase shape parseSamlAssertion expects, otherwise it short-circuits
+    // to `saml_not_configured` regardless of the signature.)
+    const samlConfig = {
+      idpEntityId: config.idp_entity_id,
+      idpCertificate: config.idp_certificate,
+      wantAssertionsSigned: config.want_assertions_signed === 1,
+      spEntityId: config.sp_entity_id,
+      spAcsUrl: config.sp_acs_url,
+    };
+    const assertion = await parseSamlAssertion(samlResponse, samlConfig);
     if (!assertion.isValid) {
       // Audit S-21: surface the specific reason so operators can diagnose
       // misconfiguration, but never accept the assertion anyway.
@@ -123,6 +136,12 @@ export async function dispatchIdentityRoutes(request, url, h) {
 
     const timing = validateSamlTiming(assertion);
     if (!timing.valid) return respond({ error: timing.reason }, 401);
+
+    // Audit #16: validate AudienceRestriction == SP entityID and Recipient ==
+    // configured ACS URL so a validly-signed assertion minted for another SP
+    // cannot be replayed here (audience confusion / token reuse).
+    const audience = validateSamlAudience(assertion, samlConfig);
+    if (!audience.valid) return respond({ error: 'Invalid SAML audience', reason: audience.reason }, 401);
 
     const mapping = JSON.parse(config.attribute_mapping || '{}');
     const email = assertion.attributes[mapping.email || 'email'] || assertion.nameId;
@@ -342,27 +361,23 @@ export async function dispatchIdentityRoutes(request, url, h) {
 // --- Auth helpers ---
 
 async function verifyAdmin(request, env) {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) return { error: "unauthorized", status: 401 };
-
-  const token = authHeader.slice(7);
-  // Decode JWT payload (no verification needed for admin check — verifyJwt handles it elsewhere)
+  // Audit CRITICAL #2: previously this decoded the JWT payload with `atob`
+  // and NEVER verified the HMAC signature ("no verification needed for admin
+  // check"), so any attacker could forge {tid, roles:["owner"]} and gain full
+  // admin on SAML config / SCIM / 2FA for any tenant. We now verify the
+  // signature via the canonical project-secret path before trusting roles.
+  let ctx;
   try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return { error: "invalid token", status: 401 };
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-      return { error: "token expired", status: 401 };
+    ctx = await verifyJwtAndGetContext(request, env);
+  } catch (e) {
+    if (e instanceof Response) {
+      return { error: e.status === 403 ? "forbidden" : "unauthorized", status: e.status };
     }
-
-    if (!payload.tid || !payload.sub) return { error: "invalid token payload", status: 401 };
-    if (!hasAnyRole(payload.roles, ['owner', 'admin'])) return { error: "forbidden", status: 403 };
-
-    return { projectId: payload.tid, userId: payload.sub, roles: payload.roles };
-  } catch {
-    return { error: "invalid token", status: 401 };
+    throw e;
   }
+  if (!ctx) return { error: "unauthorized", status: 401 };
+  if (!hasAnyRole(ctx.roles, ['owner', 'admin'])) return { error: "forbidden", status: 403 };
+  return { projectId: ctx.projectId, userId: ctx.userId, roles: ctx.roles };
 }
 
 async function verifyScimBearer(request, env, projectId) {

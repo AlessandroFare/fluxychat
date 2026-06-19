@@ -4,8 +4,12 @@
 export async function verifyJwtOrNull(request, verifyJwtAndGetContext, env) {
   try {
     return await verifyJwtAndGetContext(request, env);
-  } catch {
-    return null;
+  } catch (e) {
+    // Audit LOW: only treat thrown auth Responses (401/403) as "unauthenticated".
+    // A non-Response error (e.g. a transient DB failure during secret lookup)
+    // must propagate as a 5xx rather than being masked as a silent 401.
+    if (e instanceof Response) return null;
+    throw e;
   }
 }
 

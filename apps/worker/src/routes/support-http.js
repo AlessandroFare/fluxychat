@@ -29,28 +29,28 @@ export async function dispatchSupportRoutes(request, url, h) {
 
   if (path.match(/^\/api\/support\/tickets\/[a-z0-9]+$/) && request.method === "GET") {
     const ticketId = path.split("/").pop();
-    const result = await Support.getTicket(env, { ticketId });
+    const result = await Support.getTicket(env, { ticketId, projectId });
     return result ? json(result) : json({ error: "not_found" }, 404);
   }
 
   if (path.match(/^\/api\/support\/tickets\/[a-z0-9]+$/) && request.method === "PATCH") {
     const ticketId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.updateTicket(env, { ticketId, ...body });
+    const result = await Support.updateTicket(env, { ticketId, projectId, ...body });
     return json(result);
   }
 
   if (path.match(/^\/api\/support\/tickets\/[a-z0-9]+\/messages$/) && request.method === "POST") {
     const ticketId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.addTicketMessage(env, { ticketId, ...body });
+    const result = await Support.addTicketMessage(env, { ticketId, projectId, ...body });
     return json(result);
   }
 
   if (path.match(/^\/api\/support\/tickets\/[a-z0-9]+\/messages$/) && request.method === "GET") {
     const ticketId = path.split("/")[4];
     const result = await Support.listTicketMessages(env, {
-      ticketId, includeInternal: url.searchParams.get("includeInternal") === "true",
+      ticketId, projectId, includeInternal: url.searchParams.get("includeInternal") === "true",
     });
     return json(result);
   }
@@ -94,14 +94,14 @@ export async function dispatchSupportRoutes(request, url, h) {
   if (path.match(/^\/api\/support\/kb\/[a-z0-9]+$/) && request.method === "PATCH") {
     const articleId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.updateKBArticle(env, { articleId, ...body });
+    const result = await Support.updateKBArticle(env, { articleId, projectId, ...body });
     return json(result);
   }
 
   if (path.match(/^\/api\/support\/kb\/[a-z0-9]+\/impression$/) && request.method === "POST") {
     const articleId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.recordKBImpression(env, { articleId, ...body });
+    const result = await Support.recordKBImpression(env, { articleId, projectId, ...body });
     return json(result);
   }
 
@@ -114,7 +114,7 @@ export async function dispatchSupportRoutes(request, url, h) {
   if (path.match(/^\/api\/support\/surveys\/[a-z0-9]+\/respond$/) && request.method === "POST") {
     const surveyId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.respondToSurvey(env, { surveyId, ...body });
+    const result = await Support.respondToSurvey(env, { surveyId, projectId, ...body });
     return json(result);
   }
 

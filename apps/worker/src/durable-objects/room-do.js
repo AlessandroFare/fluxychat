@@ -1170,7 +1170,7 @@ export class RoomDurableObject {
             .run();
         } else {
           await this.env.DB.prepare(
-            "INSERT INTO message_reactions (project_id, message_id, room_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO message_reactions (project_id, message_id, room_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?, ?, ?)"
           )
             .bind(projectId, messageId, roomId, userId, emoji, now)
             .run();
@@ -1532,11 +1532,17 @@ export class RoomDurableObject {
     const bucket = this.wsRateLimitStore.get(key);
     if (!bucket || bucket.expiresAt <= now) {
       this.wsRateLimitStore.set(key, { count: 1, expiresAt: now + windowMs });
+      if (1 > limit) {
+        return {
+          allowed: false,
+          retryAfterSeconds: Math.max(1, Math.ceil((now + windowMs - now) / 1000)),
+        };
+      }
       void this.scheduleEphemeralCleanup();
       void this.persistEphemeralToStorage();
       return { allowed: true, retryAfterSeconds: 0 };
     }
-    if (bucket.count >= limit) {
+    if (bucket.count + 1 > limit) {
       return {
         allowed: false,
         retryAfterSeconds: Math.max(1, Math.ceil((bucket.expiresAt - now) / 1000)),

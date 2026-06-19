@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { dispatchIdentityRoutes } from "./identity-access-http.js";
 
+const TEST_JWT_SECRET = "test-jwt-secret-for-identity-access";
+
+function b64url(bytes) {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 1) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 function encodeJwtPayload(payload) {
   return btoa(JSON.stringify(payload))
     .replace(/\+/g, "-")
@@ -8,7 +16,10 @@ function encodeJwtPayload(payload) {
     .replace(/=+$/, "");
 }
 
-function adminJwt(overrides = {}) {
+// Audit CRITICAL #2: verifyAdmin now verifies the HMAC signature, so tests
+// must mint a properly-signed HS256 token (the old ".sig" forgery is exactly
+// what the fix rejects).
+async function adminJwt(overrides = {}) {
   const payload = {
     sub: "user_admin",
     tid: "proj_1",
@@ -16,7 +27,18 @@ function adminJwt(overrides = {}) {
     exp: Math.floor(Date.now() / 1000) + 3600,
     ...overrides,
   };
-  return `eyJhbGciOiJIUzI1NiJ9.${encodeJwtPayload(payload)}.sig`;
+  const header = encodeJwtPayload({ alg: "HS256", typ: "JWT" });
+  const body = encodeJwtPayload(payload);
+  const data = `${header}.${body}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(TEST_JWT_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
+  return `${data}.${b64url(new Uint8Array(sig))}`;
 }
 
 function buildDb(overrides = {}) {
@@ -27,6 +49,9 @@ function buildDb(overrides = {}) {
         bind() {
           return {
             first: async () => {
+              if (sql.includes("project_secrets")) {
+                return { jwt_secret: TEST_JWT_SECRET };
+              }
               if (sql.includes("FROM saml_configurations") && sql.includes("project_id")) {
                 return samlConfig;
               }
@@ -63,7 +88,7 @@ describe("dispatchIdentityRoutes  SAML", () => {
   it("GET /saml/config returns 403 for member role", async () => {
     const req = new Request("http://127.0.0.1:8787/saml/config", {
       method: "GET",
-      headers: { Authorization: `Bearer ${adminJwt({ roles: ["member"] })}` },
+      headers: { Authorization: `Bearer ${await adminJwt({ roles: ["member"] })}` },
     });
     const res = await dispatchIdentityRoutes(req, new URL(req.url), { env: { DB: buildDb() } });
     expect(res.status).toBe(403);
@@ -74,7 +99,7 @@ describe("dispatchIdentityRoutes  SAML", () => {
   it("GET /saml/config returns configured:false when no row", async () => {
     const req = new Request("http://127.0.0.1:8787/saml/config", {
       method: "GET",
-      headers: { Authorization: `Bearer ${adminJwt()}` },
+      headers: { Authorization: `Bearer ${await adminJwt()}` },
     });
     const res = await dispatchIdentityRoutes(req, new URL(req.url), {
       env: { DB: buildDb({ samlConfig: null }) },
@@ -87,7 +112,7 @@ describe("dispatchIdentityRoutes  SAML", () => {
   it("GET /saml/config returns config summary when configured", async () => {
     const req = new Request("http://127.0.0.1:8787/saml/config", {
       method: "GET",
-      headers: { Authorization: `Bearer ${adminJwt()}` },
+      headers: { Authorization: `Bearer ${await adminJwt()}` },
     });
     const res = await dispatchIdentityRoutes(req, new URL(req.url), {
       env: {

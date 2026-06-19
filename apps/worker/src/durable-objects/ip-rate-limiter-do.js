@@ -31,11 +31,17 @@ export class IpRateLimiterDurableObject {
     let bucket = await this.state.storage.get("bucket");
     if (!bucket || bucket.expiresAt <= now) {
       bucket = { count: 1, expiresAt: now + safeWindowMs };
+      if (bucket.count > limit) {
+        return {
+          allowed: false,
+          retryAfterSeconds: Math.max(1, Math.ceil((bucket.expiresAt - now) / 1000)),
+        };
+      }
       await this.state.storage.put("bucket", bucket);
       await this.scheduleAlarm(bucket.expiresAt);
       return { allowed: true, retryAfterSeconds: 0 };
     }
-    if (bucket.count >= limit) {
+    if (bucket.count + 1 > limit) {
       return {
         allowed: false,
         retryAfterSeconds: Math.max(1, Math.ceil((bucket.expiresAt - now) / 1000)),

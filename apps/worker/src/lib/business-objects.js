@@ -60,10 +60,11 @@ export async function getObject(env, id) {
   return row ? mapObjectRow(row) : null;
 }
 
-export async function getObjectsByRoom(env, { roomId, objectType, state, limit = 50 }) {
+export async function getObjectsByRoom(env, { roomId, projectId, objectType, state, limit = 50 }) {
   let query = "SELECT * FROM business_objects WHERE room_id = ?";
   const params = [roomId];
 
+  if (projectId) { query += " AND project_id = ?"; params.push(projectId); }
   if (objectType) { query += " AND object_type = ?"; params.push(objectType); }
   if (state) { query += " AND state = ?"; params.push(state); }
   query += " ORDER BY updated_at DESC LIMIT ?";
@@ -117,11 +118,12 @@ export async function subscribeToObjectEvents(env, { projectId, roomId, userId, 
   return { id, created: true };
 }
 
-export async function getSubscriptions(env, { roomId }) {
-  const rows = await env.DB.prepare(
-    "SELECT * FROM business_object_subscriptions WHERE room_id = ? AND enabled = 1"
-  )
-    .bind(roomId)
+export async function getSubscriptions(env, { roomId, projectId }) {
+  let sql = "SELECT * FROM business_object_subscriptions WHERE room_id = ? AND enabled = 1";
+  const params = [roomId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  const rows = await env.DB.prepare(sql)
+    .bind(...params)
     .all();
 
   return (rows.results || []).map((r) => ({

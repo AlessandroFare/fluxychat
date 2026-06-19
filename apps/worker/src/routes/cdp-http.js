@@ -31,14 +31,14 @@ export async function dispatchCDPRoutes(request, url, h) {
 
   if (path.match(/^\/api\/cdp\/customers\/[a-z0-9]+$/) && request.method === "GET") {
     const customerId = path.split("/").pop();
-    const result = await CDP.getCustomerById(env, { customerId });
+    const result = await CDP.getCustomerById(env, { customerId, projectId });
     return result ? json(result) : json({ error: "not_found" }, 404);
   }
 
   if (path.match(/^\/api\/cdp\/customers\/[a-z0-9]+\/score$/) && request.method === "POST") {
     const customerId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.updateCustomerScore(env, { customerId, ...body });
+    const result = await CDP.updateCustomerScore(env, { customerId, projectId, ...body });
     return json(result);
   }
 
@@ -51,6 +51,7 @@ export async function dispatchCDPRoutes(request, url, h) {
   if (path === "/api/cdp/events" && request.method === "GET") {
     const result = await CDP.listCustomerEvents(env, {
       customerId: url.searchParams.get("customerId"),
+      projectId,
       eventType: url.searchParams.get("eventType"),
       eventName: url.searchParams.get("eventName"),
       limit: parseInt(url.searchParams.get("limit") || "50"),
@@ -79,34 +80,34 @@ export async function dispatchCDPRoutes(request, url, h) {
 
   if (path.match(/^\/api\/cdp\/segments\/[a-z0-9]+$/) && request.method === "GET") {
     const segmentId = path.split("/").pop();
-    const result = await CDP.getSegment(env, { segmentId });
+    const result = await CDP.getSegment(env, { segmentId, projectId });
     return result ? json(result) : json({ error: "not_found" }, 404);
   }
 
   if (path.match(/^\/api\/cdp\/segments\/[a-z0-9]+$/) && request.method === "PATCH") {
     const segmentId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.updateSegment(env, { segmentId, ...body });
+    const result = await CDP.updateSegment(env, { segmentId, projectId, ...body });
     return json(result);
   }
 
   if (path.match(/^\/api\/cdp\/segments\/[a-z0-9]+\/members$/) && request.method === "POST") {
     const segmentId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.addSegmentMember(env, { segmentId, ...body });
+    const result = await CDP.addSegmentMember(env, { segmentId, projectId, ...body });
     return json(result);
   }
 
   if (path.match(/^\/api\/cdp\/segments\/[a-z0-9]+\/members$/) && request.method === "GET") {
     const segmentId = path.split("/")[4];
-    const result = await CDP.listSegmentMembers(env, { segmentId, limit: parseInt(url.searchParams.get("limit") || "100") });
+    const result = await CDP.listSegmentMembers(env, { segmentId, projectId, limit: parseInt(url.searchParams.get("limit") || "100") });
     return json(result);
   }
 
   if (path.match(/^\/api\/cdp\/segments\/[a-z0-9]+\/members\/remove$/) && request.method === "POST") {
     const segmentId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.removeSegmentMember(env, { segmentId, ...body });
+    const result = await CDP.removeSegmentMember(env, { segmentId, projectId, ...body });
     return json(result);
   }
 
@@ -124,7 +125,7 @@ export async function dispatchCDPRoutes(request, url, h) {
   if (path.match(/^\/api\/cdp\/broadcasts\/[a-z0-9]+$/) && request.method === "PATCH") {
     const broadcastId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.updateBroadcast(env, { broadcastId, ...body });
+    const result = await CDP.updateBroadcast(env, { broadcastId, projectId, ...body });
     return json(result);
   }
 

@@ -73,7 +73,7 @@ describe("enterprise-support", () => {
   });
 
   it("creates satisfaction survey", async () => {
-    const db = mockDB([]);
+    const db = mockDB([{ id: "st_1" }]);
     env.DB = { prepare: vi.fn().mockReturnValue(db) };
     const { createSatisfactionSurvey } = await import("../lib/enterprise-support.js");
     const result = await createSatisfactionSurvey(env, { projectId: "p1", ticketId: "st_1" });

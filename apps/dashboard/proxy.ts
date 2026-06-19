@@ -52,10 +52,11 @@ function isStaticAsset(pathname: string): boolean {
 }
 
 /**
- * Build a CSP header. We use a per-request nonce on script-src so the RSC
- * streaming runtime can ship inline boot scripts. The nonce is forwarded via
- * `x-nonce`; do not put it on style-src — that disables 'unsafe-inline' and
- * breaks Clerk-injected styles.
+ * Build a CSP header. Production uses 'unsafe-inline' because the x-nonce
+ * header isn't reliably propagated to the RSC streaming runtime on all
+ * platforms (Vercel Edge). The nonce is still generated and forwarded via
+ * `x-nonce` for when this is fixed. Do not put a nonce on style-src — that
+ * disables 'unsafe-inline' and breaks Clerk-injected styles.
  */
 function buildContentSecurityPolicy(nonce: string): string {
   const workerConnect = (
@@ -87,7 +88,7 @@ function buildContentSecurityPolicy(nonce: string): string {
   // to ignore inline scripts (Next dev boot, HMR).
   const scriptSrc = isDev
     ? ["'self'", clerkHosts, "'unsafe-eval'", "'unsafe-inline'"].join(" ")
-    : ["'self'", `'nonce-${nonce}'`, clerkHosts].join(" ");
+    : ["'self'", clerkHosts, "'unsafe-inline'"].join(" ");
 
   return [
     "default-src 'self'",

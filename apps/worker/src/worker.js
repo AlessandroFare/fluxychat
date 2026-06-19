@@ -440,6 +440,7 @@ export default {
       customDomain: customHostCtx,
       canAccessRoom,
       checkAndConsumeRateLimit,
+      timingSafeEqual,
     };
     // Dev-only provision endpoint (POST /dev/provision). 404 unless
     // ALLOW_DEV_PROVISION === "true" AND NODE_ENV !== "production".

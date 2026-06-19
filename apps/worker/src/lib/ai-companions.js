@@ -16,7 +16,7 @@ export async function createCompanion(env, { projectId, name, avatarUrl, descrip
   return { id, status: "active" };
 }
 
-export async function updateCompanion(env, { companionId, name, description, systemPrompt, personality, skills, triggerMode, triggerKeywords, temperature, maxTokens, model, status }) {
+export async function updateCompanion(env, { companionId, projectId, name, description, systemPrompt, personality, skills, triggerMode, triggerKeywords, temperature, maxTokens, model, status }) {
   const sets = [];
   const params = [];
   const now = new Date().toISOString();
@@ -38,12 +38,19 @@ export async function updateCompanion(env, { companionId, name, description, sys
   params.push(now);
   params.push(companionId);
 
-  const result = await env.DB.prepare(`UPDATE ai_companions SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  // Audit CRITICAL #3: scope by project_id so an admin of project A cannot
+  // modify project B's companion by guessing/enumerating the id.
+  let where = "WHERE id = ?";
+  if (projectId) { where += " AND project_id = ?"; params.push(projectId); }
+  const result = await env.DB.prepare(`UPDATE ai_companions SET ${sets.join(", ")} ${where}`).bind(...params).run();
   return { updated: result.meta?.changes || 0 };
 }
 
-export async function getCompanion(env, { companionId }) {
-  const row = await env.DB.prepare("SELECT * FROM ai_companions WHERE id = ?").bind(companionId).first();
+export async function getCompanion(env, { companionId, projectId }) {
+  let sql = "SELECT * FROM ai_companions WHERE id = ?";
+  const params = [companionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  const row = await env.DB.prepare(sql).bind(...params).first();
   return row ? mapCompanionRow(row) : null;
 }
 
@@ -56,11 +63,20 @@ export async function listCompanions(env, { projectId, status }) {
   return (rows.results || []).map(mapCompanionRow);
 }
 
-export async function deleteCompanion(env, { companionId }) {
+export async function deleteCompanion(env, { companionId, projectId }) {
+  // Audit CRITICAL #3: verify the companion belongs to the caller's project
+  // before deleting it or any of its child rows.
+  if (projectId) {
+    const owned = await env.DB.prepare("SELECT id FROM ai_companions WHERE id = ? AND project_id = ?").bind(companionId, projectId).first();
+    if (!owned) return { deleted: 0 };
+  }
   await env.DB.prepare("DELETE FROM ai_companion_rooms WHERE companion_id = ?").bind(companionId).run();
   await env.DB.prepare("DELETE FROM ai_companion_interactions WHERE companion_id = ?").bind(companionId).run();
   await env.DB.prepare("DELETE FROM ai_companion_memory WHERE companion_id = ?").bind(companionId).run();
-  const result = await env.DB.prepare("DELETE FROM ai_companions WHERE id = ?").bind(companionId).run();
+  let sql = "DELETE FROM ai_companions WHERE id = ?";
+  const params = [companionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  const result = await env.DB.prepare(sql).bind(...params).run();
   return { deleted: result.meta?.changes || 0 };
 }
 
@@ -88,10 +104,12 @@ export async function unassignFromRoom(env, { companionId, roomId }) {
   return { removed: result.meta?.changes || 0 };
 }
 
-export async function listCompanionRooms(env, { companionId }) {
-  const rows = await env.DB.prepare(
-    "SELECT * FROM ai_companion_rooms WHERE companion_id = ? ORDER BY created_at ASC"
-  ).bind(companionId).all();
+export async function listCompanionRooms(env, { companionId, projectId }) {
+  let sql = "SELECT * FROM ai_companion_rooms WHERE companion_id = ?";
+  const params = [companionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  sql += " ORDER BY created_at ASC";
+  const rows = await env.DB.prepare(sql).bind(...params).all();
   return (rows.results || []).map(mapRoomRow);
 }
 
@@ -114,9 +132,10 @@ export async function recordInteraction(env, { companionId, projectId, roomId, u
   return { id };
 }
 
-export async function listInteractions(env, { companionId, roomId, limit = 25 }) {
+export async function listInteractions(env, { companionId, projectId, roomId, limit = 25 }) {
   let sql = "SELECT * FROM ai_companion_interactions WHERE companion_id = ?";
   const params = [companionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
   if (roomId) { sql += " AND room_id = ?"; params.push(roomId); }
   sql += " ORDER BY created_at DESC LIMIT ?";
   params.push(limit);
@@ -136,9 +155,10 @@ export async function addMemory(env, { companionId, projectId, roomId, memoryTyp
   return { id };
 }
 
-export async function searchMemory(env, { companionId, roomId, query, limit = 10 }) {
+export async function searchMemory(env, { companionId, projectId, roomId, query, limit = 10 }) {
   let sql = "SELECT * FROM ai_companion_memory WHERE companion_id = ?";
   const params = [companionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
   if (roomId) { sql += " AND room_id = ?"; params.push(roomId); }
   sql += " AND content LIKE ?";
   params.push(`%${query}%`);

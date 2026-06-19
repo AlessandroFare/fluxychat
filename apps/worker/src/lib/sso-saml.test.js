@@ -149,10 +149,11 @@ describe("sso-saml", () => {
       wantAssertionsSigned: true,
       wantResponseSigned: false,
     });
-    // want_assertions_signed=true will fail because we did not
-    // implement per-element digest verification (documented residual).
+    // Audit CRITICAL #6: per-element digest verification is now implemented.
+    // The test's <ds:DigestValue> is the literal "fake", so verification must
+    // reject it with a digest mismatch (fail closed against XML Sig Wrapping).
     expect(result.isValid).toBe(false);
-    expect(result.reason).toBe("assertion_signature_unverified");
+    expect(result.reason).toBe("reference_digest_digest_mismatch");
 
     // Same response, but with want_assertions_signed=false. The
     // SignedInfo verifies, the issuer matches, nameId is extracted.

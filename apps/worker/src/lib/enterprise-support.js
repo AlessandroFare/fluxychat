@@ -22,7 +22,7 @@ export async function createTicket(env, { projectId, subject, description, prior
   return { id, ticketNumber };
 }
 
-export async function updateTicket(env, { ticketId, status, priority, severity, assignedTo, assignedGroup, satisfactionRating, satisfactionComment }) {
+export async function updateTicket(env, { ticketId, projectId, status, priority, severity, assignedTo, assignedGroup, satisfactionRating, satisfactionComment }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
@@ -33,13 +33,18 @@ export async function updateTicket(env, { ticketId, status, priority, severity, 
   if (assignedGroup) { sets.push("assigned_group = ?"); params.push(assignedGroup); }
   if (satisfactionRating !== undefined) { sets.push("satisfaction_rating = ?"); params.push(satisfactionRating); }
   if (satisfactionComment) { sets.push("satisfaction_comment = ?"); params.push(satisfactionComment); }
+  let where = "WHERE id = ?";
   params.push(ticketId);
-  await env.DB.prepare(`UPDATE support_tickets SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  if (projectId) { where += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(`UPDATE support_tickets SET ${sets.join(", ")} ${where}`).bind(...params).run();
   return { updated: true };
 }
 
-export async function getTicket(env, { ticketId }) {
-  const row = await env.DB.prepare("SELECT * FROM support_tickets WHERE id = ?").bind(ticketId).first();
+export async function getTicket(env, { ticketId, projectId }) {
+  let sql = "SELECT * FROM support_tickets WHERE id = ?";
+  const params = [ticketId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  const row = await env.DB.prepare(sql).bind(...params).first();
   return row ? mapTicketRow(row) : null;
 }
 
@@ -64,7 +69,11 @@ export async function listTickets(env, { projectId, status, priority, assignedTo
 
 // --- Messages ---
 
-export async function addTicketMessage(env, { ticketId, senderType, senderId, content, isInternal, attachments }) {
+export async function addTicketMessage(env, { ticketId, projectId, senderType, senderId, content, isInternal, attachments }) {
+  if (projectId) {
+    const tkt = await env.DB.prepare("SELECT id FROM support_tickets WHERE id = ? AND project_id = ?").bind(ticketId, projectId).first();
+    if (!tkt) return { error: "ticket_not_found" };
+  }
   const id = `stm_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
   await env.DB.prepare(
@@ -82,11 +91,14 @@ export async function addTicketMessage(env, { ticketId, senderType, senderId, co
   return { id };
 }
 
-export async function listTicketMessages(env, { ticketId, includeInternal = false }) {
-  let sql = "SELECT * FROM support_ticket_messages WHERE ticket_id = ?";
+export async function listTicketMessages(env, { ticketId, projectId, includeInternal = false }) {
+  let sql = `SELECT m.* FROM support_ticket_messages m
+     JOIN support_tickets t ON t.id = m.ticket_id
+     WHERE m.ticket_id = ?`;
   const params = [ticketId];
-  if (!includeInternal) { sql += " AND is_internal = 0"; }
-  sql += " ORDER BY created_at ASC";
+  if (projectId) { sql += " AND t.project_id = ?"; params.push(projectId); }
+  if (!includeInternal) { sql += " AND m.is_internal = 0"; }
+  sql += " ORDER BY m.created_at ASC";
   const rows = await env.DB.prepare(sql).bind(...params).all();
   return (rows.results || []).map(mapMessageRow);
 }
@@ -141,7 +153,7 @@ export async function createKBArticle(env, { projectId, title, content, category
   return { id };
 }
 
-export async function updateKBArticle(env, { articleId, title, content, category, tags, status }) {
+export async function updateKBArticle(env, { articleId, projectId, title, content, category, tags, status }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
@@ -150,8 +162,10 @@ export async function updateKBArticle(env, { articleId, title, content, category
   if (category !== undefined) { sets.push("category = ?"); params.push(category); }
   if (tags) { sets.push("tags = ?"); params.push(JSON.stringify(tags)); }
   if (status) { sets.push("status = ?"); params.push(status); }
+  let where = "WHERE id = ?";
   params.push(articleId);
-  await env.DB.prepare(`UPDATE support_knowledge_base SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  if (projectId) { where += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(`UPDATE support_knowledge_base SET ${sets.join(", ")} ${where}`).bind(...params).run();
   return { updated: true };
 }
 
@@ -166,7 +180,11 @@ export async function listKBArticles(env, { projectId, category, status, search 
   return (rows.results || []).map(mapKBRow);
 }
 
-export async function recordKBImpression(env, { articleId, helpful }) {
+export async function recordKBImpression(env, { articleId, projectId, helpful }) {
+  if (projectId) {
+    const art = await env.DB.prepare("SELECT id FROM support_knowledge_base WHERE id = ? AND project_id = ?").bind(articleId, projectId).first();
+    if (!art) return { recorded: false };
+  }
   const field = helpful ? "helpful_count" : "not_helpful_count";
   await env.DB.prepare(`UPDATE support_knowledge_base SET ${field} = ${field} + 1 WHERE id = ?`).bind(articleId).run();
   return { recorded: true };
@@ -175,6 +193,10 @@ export async function recordKBImpression(env, { articleId, helpful }) {
 // --- Satisfaction ---
 
 export async function createSatisfactionSurvey(env, { projectId, ticketId, surveyType }) {
+  if (projectId) {
+    const tkt = await env.DB.prepare("SELECT id FROM support_tickets WHERE id = ? AND project_id = ?").bind(ticketId, projectId).first();
+    if (!tkt) return { error: "ticket_not_found" };
+  }
   const id = `sss_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
   await env.DB.prepare(
@@ -184,7 +206,15 @@ export async function createSatisfactionSurvey(env, { projectId, ticketId, surve
   return { id };
 }
 
-export async function respondToSurvey(env, { surveyId, rating, feedback }) {
+export async function respondToSurvey(env, { surveyId, projectId, rating, feedback }) {
+  let where = "WHERE id = ?";
+  const params = [surveyId];
+  if (projectId) {
+    const svy = await env.DB.prepare(
+      "SELECT s.id FROM support_satisfaction_surveys s JOIN support_tickets t ON t.id = s.ticket_id WHERE s.id = ? AND t.project_id = ?"
+    ).bind(surveyId, projectId).first();
+    if (!svy) return { responded: false };
+  }
   const now = new Date().toISOString();
   await env.DB.prepare(
     "UPDATE support_satisfaction_surveys SET rating = ?, feedback = ?, responded_at = ? WHERE id = ?"

@@ -42,8 +42,11 @@ export async function getCustomer(env, { projectId, externalId }) {
   return row ? mapProfileRow(row) : null;
 }
 
-export async function getCustomerById(env, { customerId }) {
-  const row = await env.DB.prepare("SELECT * FROM customer_profiles WHERE id = ?").bind(customerId).first();
+export async function getCustomerById(env, { customerId, projectId }) {
+  let sql = "SELECT * FROM customer_profiles WHERE id = ?";
+  const params = [customerId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  const row = await env.DB.prepare(sql).bind(...params).first();
   return row ? mapProfileRow(row) : null;
 }
 
@@ -58,9 +61,12 @@ export async function listCustomers(env, { projectId, lifecycleStage, search, li
   return (rows.results || []).map(mapProfileRow);
 }
 
-export async function updateCustomerScore(env, { customerId, score }) {
+export async function updateCustomerScore(env, { customerId, projectId, score }) {
   const now = new Date().toISOString();
-  await env.DB.prepare("UPDATE customer_profiles SET score = ?, updated_at = ? WHERE id = ?").bind(score, now, customerId).run();
+  let sql = "UPDATE customer_profiles SET score = ?, updated_at = ? WHERE id = ?";
+  const params = [score, now, customerId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(sql).bind(...params).run();
   return { updated: true };
 }
 
@@ -78,9 +84,10 @@ export async function trackEvent(env, { projectId, customerId, eventType, eventN
   return { id };
 }
 
-export async function listCustomerEvents(env, { customerId, eventType, eventName, limit = 50 }) {
+export async function listCustomerEvents(env, { customerId, projectId, eventType, eventName, limit = 50 }) {
   let sql = "SELECT * FROM customer_events WHERE customer_id = ?";
   const params = [customerId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
   if (eventType) { sql += " AND event_type = ?"; params.push(eventType); }
   if (eventName) { sql += " AND event_name = ?"; params.push(eventName); }
   sql += " ORDER BY created_at DESC LIMIT ?";
@@ -109,7 +116,7 @@ export async function createSegment(env, { projectId, name, description, segment
   return { id };
 }
 
-export async function updateSegment(env, { segmentId, name, description, rules, status }) {
+export async function updateSegment(env, { segmentId, projectId, name, description, rules, status }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
@@ -117,13 +124,18 @@ export async function updateSegment(env, { segmentId, name, description, rules, 
   if (description !== undefined) { sets.push("description = ?"); params.push(description); }
   if (rules) { sets.push("rules = ?"); params.push(JSON.stringify(rules)); }
   if (status) { sets.push("status = ?"); params.push(status); }
+  let where = "WHERE id = ?";
   params.push(segmentId);
-  await env.DB.prepare(`UPDATE customer_segments SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  if (projectId) { where += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(`UPDATE customer_segments SET ${sets.join(", ")} ${where}`).bind(...params).run();
   return { updated: true };
 }
 
-export async function getSegment(env, { segmentId }) {
-  const row = await env.DB.prepare("SELECT * FROM customer_segments WHERE id = ?").bind(segmentId).first();
+export async function getSegment(env, { segmentId, projectId }) {
+  let sql = "SELECT * FROM customer_segments WHERE id = ?";
+  const params = [segmentId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  const row = await env.DB.prepare(sql).bind(...params).first();
   return row ? mapSegmentRow(row) : null;
 }
 
@@ -136,7 +148,11 @@ export async function listSegments(env, { projectId, status }) {
   return (rows.results || []).map(mapSegmentRow);
 }
 
-export async function addSegmentMember(env, { segmentId, customerId }) {
+export async function addSegmentMember(env, { segmentId, projectId, customerId }) {
+  if (projectId) {
+    const seg = await env.DB.prepare("SELECT id FROM customer_segments WHERE id = ? AND project_id = ?").bind(segmentId, projectId).first();
+    if (!seg) return { error: "segment_not_found" };
+  }
   const id = `csm_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
   await env.DB.prepare(
@@ -150,7 +166,11 @@ export async function addSegmentMember(env, { segmentId, customerId }) {
   return { id };
 }
 
-export async function removeSegmentMember(env, { segmentId, customerId }) {
+export async function removeSegmentMember(env, { segmentId, projectId, customerId }) {
+  if (projectId) {
+    const seg = await env.DB.prepare("SELECT id FROM customer_segments WHERE id = ? AND project_id = ?").bind(segmentId, projectId).first();
+    if (!seg) return { removed: 0 };
+  }
   const now = new Date().toISOString();
   const result = await env.DB.prepare(
     "DELETE FROM customer_segment_members WHERE segment_id = ? AND customer_id = ?"
@@ -165,12 +185,15 @@ export async function removeSegmentMember(env, { segmentId, customerId }) {
   return { removed: result.meta?.changes || 0 };
 }
 
-export async function listSegmentMembers(env, { segmentId, limit = 100 }) {
-  const rows = await env.DB.prepare(
-    `SELECT p.* FROM customer_profiles p
+export async function listSegmentMembers(env, { segmentId, projectId, limit = 100 }) {
+  let sql = `SELECT p.* FROM customer_profiles p
      JOIN customer_segment_members m ON p.id = m.customer_id
-     WHERE m.segment_id = ? ORDER BY m.added_at DESC LIMIT ?`
-  ).bind(segmentId, limit).all();
+     WHERE m.segment_id = ?`;
+  const params = [segmentId];
+  if (projectId) { sql += " AND p.project_id = ?"; params.push(projectId); }
+  sql += " ORDER BY m.added_at DESC LIMIT ?";
+  params.push(limit);
+  const rows = await env.DB.prepare(sql).bind(...params).all();
   return (rows.results || []).map(mapProfileRow);
 }
 
@@ -186,14 +209,16 @@ export async function createBroadcast(env, { projectId, name, segmentId, channel
   return { id };
 }
 
-export async function updateBroadcast(env, { broadcastId, status, scheduledAt }) {
+export async function updateBroadcast(env, { broadcastId, projectId, status, scheduledAt }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
   if (status) { sets.push("status = ?"); params.push(status); if (status === "sent") { sets.push("sent_at = ?"); params.push(now); } }
   if (scheduledAt) { sets.push("scheduled_at = ?"); params.push(scheduledAt); }
+  let where = "WHERE id = ?";
   params.push(broadcastId);
-  await env.DB.prepare(`UPDATE customer_broadcasts SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  if (projectId) { where += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(`UPDATE customer_broadcasts SET ${sets.join(", ")} ${where}`).bind(...params).run();
   return { updated: true };
 }
 
