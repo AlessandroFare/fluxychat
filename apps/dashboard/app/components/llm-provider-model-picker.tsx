@@ -46,8 +46,8 @@ export function LlmProviderModelPicker({
   onConfigureKeys,
 }: LlmProviderModelPickerProps) {
   const { provider, model } = values;
-  const [catalogModels, setCatalogModels] = useState([]);
-  const [catalogProviders, setCatalogProviders] = useState([]);
+  const [catalogModels, setCatalogModels] = useState<Array<{ id: string; providerId: string; displayName?: string }>>([]);
+  const [catalogProviders, setCatalogProviders] = useState<Array<{ id: string; name: string; logoUrl?: string }>>([]);
   const [customModel, setCustomModel] = useState(false);
   useEffect(() => {
     let cancelled = false;

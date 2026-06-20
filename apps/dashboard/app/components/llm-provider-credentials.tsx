@@ -79,7 +79,7 @@ export function LlmProviderCredentials({
   const [draftUrls, setDraftUrls] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [providerSearch, setProviderSearch] = useState("");
-  const [modelsDevProviders, setModelsDevProviders] = useState([]);
+  const [modelsDevProviders, setModelsDevProviders] = useState<Array<{ id: string; name: string; logoUrl?: string }>>([]);
   const focusCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
