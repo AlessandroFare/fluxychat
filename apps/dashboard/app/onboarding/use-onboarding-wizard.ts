@@ -495,6 +495,7 @@ export function useOnboardingWizard() {
     showCelebration,
     setShowCelebration,
     projectNameInputRef,
+    activeProject: project,
     goNext,
     goBack,
     provisionHostedProject,

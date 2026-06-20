@@ -27,7 +27,6 @@ import {
   type AgentFormValues,
   type AgentRecord,
 } from "@/lib/agent-form";
-import { assistantRoomId } from "@/lib/assistant-room";
 import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
 
 const WORKER_URL = getPublicWorkerUrl();

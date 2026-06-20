@@ -10,7 +10,6 @@ import { Button, Input } from "../components/ui";
 import { VoiceRecorder } from "~/components/voice/voice-recorder";
 import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
-import { assistantRoomId } from "@/lib/assistant-room";
 import { cn } from "@/lib/utils";
 import type { AgentFormValues } from "@/lib/agent-form";
 import { copyToClipboard, ONBOARDING_STEPS } from "./onboarding-shared";
