@@ -47,19 +47,36 @@ export function LlmProviderModelPicker({
 }: LlmProviderModelPickerProps) {
   const { provider, model } = values;
   const [catalogModels, setCatalogModels] = useState([]);
+  const [catalogProviders, setCatalogProviders] = useState([]);
   useEffect(() => {
     let cancelled = false;
-    fetch(`${getPublicWorkerUrl()}/llm-models?limit=200`)
-      .then((r) => r.json())
-      .then((data) => { if (!cancelled) setCatalogModels(data.models || []); })
+    const base = getPublicWorkerUrl();
+    Promise.all([
+      fetch(`${base}/llm-models?limit=200`).then((r) => r.json()),
+      fetch(`${base}/llm-models/providers`).then((r) => r.json()),
+    ])
+      .then(([modelsData, provData]) => {
+        if (!cancelled) {
+          setCatalogModels(modelsData.models || []);
+          setCatalogProviders(provData.providers || []);
+        }
+      })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
-  const providerOptions = useMemo(
-    () => listProviderOptions(llmCatalog),
-    [llmCatalog],
-  );
+  const providerOptions = useMemo(() => {
+    const fromCatalog = listProviderOptions(llmCatalog);
+    const existingIds = new Set(fromCatalog.map((p) => p.id));
+    const fromModelsDev = catalogProviders
+      .filter((p) => !existingIds.has(p.id))
+      .map((p) => ({
+        id: p.id,
+        label: p.name,
+        logoUrl: p.logoUrl,
+      }));
+    return [...fromCatalog, ...fromModelsDev];
+  }, [llmCatalog, catalogProviders]);
   const catalogProvider = findCatalogProvider(llmCatalog, provider);
   const resolvedModelRef = useMemo(
     () => parseModelRef(provider, model).modelRef,

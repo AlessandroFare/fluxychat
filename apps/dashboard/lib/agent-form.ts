@@ -12,6 +12,12 @@ export interface AgentFormValues {
   llmBaseUrl: string;
   fallbackProvider: string;
   fallbackModel: string;
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
+  stopSequences: string;
 }
 
 export interface AgentRecord {
@@ -44,13 +50,28 @@ export function emptyAgentForm(): AgentFormValues {
     llmBaseUrl: "",
     fallbackProvider: "",
     fallbackModel: "",
+    temperature: 0.7,
+    maxTokens: 1024,
+    topP: 1,
+    frequencyPenalty: 0,
+    presencePenalty: 0,
+    stopSequences: "",
   };
 }
 
 export function agentToFormValues(agent: AgentRecord): AgentFormValues {
   const cfg = agent.config as {
     llm?: { baseUrl?: string; fallbackProvider?: string; fallbackModel?: string };
+    modelParams?: {
+      temperature?: number;
+      maxTokens?: number;
+      topP?: number;
+      frequencyPenalty?: number;
+      presencePenalty?: number;
+      stopSequences?: string;
+    };
   } | null | undefined;
+  const mp = cfg?.modelParams;
   return {
     name: agent.name,
     handle: agent.handle || "",
@@ -63,6 +84,12 @@ export function agentToFormValues(agent: AgentRecord): AgentFormValues {
     llmBaseUrl: cfg?.llm?.baseUrl || "",
     fallbackProvider: cfg?.llm?.fallbackProvider || "",
     fallbackModel: cfg?.llm?.fallbackModel || "",
+    temperature: mp?.temperature ?? 0.7,
+    maxTokens: mp?.maxTokens ?? 1024,
+    topP: mp?.topP ?? 1,
+    frequencyPenalty: mp?.frequencyPenalty ?? 0,
+    presencePenalty: mp?.presencePenalty ?? 0,
+    stopSequences: mp?.stopSequences ?? "",
   };
 }
 
@@ -106,6 +133,12 @@ export function agentFormToPayload(form: AgentFormValues) {
       llmBaseUrl: form.llmBaseUrl,
       fallbackProvider: form.fallbackProvider,
       fallbackModel: form.fallbackModel,
+      temperature: form.temperature,
+      maxTokens: form.maxTokens,
+      topP: form.topP,
+      frequencyPenalty: form.frequencyPenalty,
+      presencePenalty: form.presencePenalty,
+      stopSequences: form.stopSequences,
     }),
   };
 }

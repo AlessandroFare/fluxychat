@@ -189,11 +189,17 @@ export interface AgentLlmConfigInput {
   llmBaseUrl: string;
   fallbackProvider?: string;
   fallbackModel?: string;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  stopSequences?: string;
 }
 
 export function buildAgentLlmConfig(
   input: AgentLlmConfigInput,
-): { llm: Record<string, string> } | undefined {
+): { llm: Record<string, string>; modelParams?: Record<string, unknown> } | undefined {
   const llm: Record<string, string> = {};
   const trimmedBase = input.llmBaseUrl.trim();
   if (trimmedBase && providerAllowsCustomBaseUrl(input.provider)) {
@@ -205,7 +211,19 @@ export function buildAgentLlmConfig(
     llm.fallbackProvider = fbProvider;
     if (fbModel) llm.fallbackModel = fbModel;
   }
-  return Object.keys(llm).length ? { llm } : undefined;
+
+  const modelParams: Record<string, unknown> = {};
+  if (input.temperature !== undefined && input.temperature !== 0.7) modelParams.temperature = input.temperature;
+  if (input.maxTokens !== undefined && input.maxTokens !== 1024) modelParams.maxTokens = input.maxTokens;
+  if (input.topP !== undefined && input.topP !== 1) modelParams.topP = input.topP;
+  if (input.frequencyPenalty !== undefined && input.frequencyPenalty !== 0) modelParams.frequencyPenalty = input.frequencyPenalty;
+  if (input.presencePenalty !== undefined && input.presencePenalty !== 0) modelParams.presencePenalty = input.presencePenalty;
+  if (input.stopSequences?.trim()) modelParams.stopSequences = input.stopSequences.trim();
+
+  const result: Record<string, unknown> = {};
+  if (Object.keys(llm).length) result.llm = llm;
+  if (Object.keys(modelParams).length) result.modelParams = modelParams;
+  return Object.keys(result).length ? result as any : undefined;
 }
 
 /** When user types a composite ref, sync provider + model fields. */

@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { FormField } from "./form-field";
 import { LlmProviderModelPicker } from "./llm-provider-model-picker";
+import { ModelParamsPanel } from "./model-params-panel";
 import { Input, Textarea } from "./ui";
 import type { LlmCatalogResponse } from "@/lib/llm-catalog-client";
 import type { AgentFormValues } from "@/lib/agent-form";
@@ -25,22 +26,43 @@ export function AgentFormFields({
   idPrefix = "agent",
   onConfigureKeys,
 }: AgentFormFieldsProps) {
+  const [showParams, setShowParams] = useState(false);
+
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <FormField label="Display name" hint="Shown in the console and agent list.">
-        <Input
-          value={values.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="Support bot"
-        />
-      </FormField>
-      <FormField label="Handle" hint="Optional @mention (e.g. support → @support).">
-        <Input
-          value={values.handle}
-          onChange={(e) => onChange({ handle: e.target.value })}
-          placeholder="support"
-        />
-      </FormField>
+      <div className="sm:col-span-2 flex items-start justify-between gap-4">
+        <div className="flex-1 space-y-4">
+          <FormField label="Display name" hint="Shown in the console and agent list.">
+            <Input
+              value={values.name}
+              onChange={(e) => onChange({ name: e.target.value })}
+              placeholder="Support bot"
+            />
+          </FormField>
+          <FormField label="Handle" hint="Optional @mention (e.g. support → @support).">
+            <Input
+              value={values.handle}
+              onChange={(e) => onChange({ handle: e.target.value })}
+              placeholder="support"
+            />
+          </FormField>
+        </div>
+        <div className="shrink-0 pt-1">
+          <ModelParamsPanel
+            open={showParams}
+            onOpenChange={setShowParams}
+            params={{
+              temperature: values.temperature,
+              maxTokens: values.maxTokens,
+              topP: values.topP,
+              frequencyPenalty: values.frequencyPenalty,
+              presencePenalty: values.presencePenalty,
+              stopSequences: values.stopSequences,
+            }}
+            onChange={(patch) => onChange(patch)}
+          />
+        </div>
+      </div>
 
       <div className="sm:col-span-2">
         <LlmProviderModelPicker
