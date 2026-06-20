@@ -67,15 +67,20 @@ export function LlmProviderModelPicker({
 
   const providerOptions = useMemo(() => {
     const fromCatalog = listProviderOptions(llmCatalog);
-    const existingIds = new Set(fromCatalog.map((p) => p.id));
-    const fromModelsDev = catalogProviders
-      .filter((p) => !existingIds.has(p.id))
-      .map((p) => ({
-        id: p.id,
-        label: p.name,
-        logoUrl: p.logoUrl,
-      }));
-    return [...fromCatalog, ...fromModelsDev];
+    const catalogMap = new Map(fromCatalog.map((p) => [p.id, p]));
+    // Merge models.dev providers on top — they are the authoritative full list.
+    const merged = catalogProviders.map((md) => {
+      const existing = catalogMap.get(md.id);
+      return existing
+        ? { ...existing, logoUrl: md.logoUrl }
+        : { id: md.id, label: md.name, logoUrl: md.logoUrl };
+    });
+    // Add any catalog-only providers not in models.dev.
+    const mdIds = new Set(catalogProviders.map((p) => p.id));
+    for (const cp of fromCatalog) {
+      if (!mdIds.has(cp.id)) merged.push(cp);
+    }
+    return merged;
   }, [llmCatalog, catalogProviders]);
   const catalogProvider = findCatalogProvider(llmCatalog, provider);
   const resolvedModelRef = useMemo(
