@@ -36,7 +36,11 @@ export default function OnboardingPage() {
         </div>
       ) : null}
 
-      <OnboardingProgressStrip stepContext={wizard.stepContext} activeStep={wizard.activeStep} />
+      <OnboardingProgressStrip
+        stepContext={wizard.stepContext}
+        activeStep={wizard.activeStep}
+        onStepClick={(s) => wizard.setActiveStep(s)}
+      />
       <OnboardingPlayground wizard={wizard} />
 
       <p className="mt-6 text-xs text-muted-foreground">

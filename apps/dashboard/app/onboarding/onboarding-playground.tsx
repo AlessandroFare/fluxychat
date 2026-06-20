@@ -451,18 +451,15 @@ export function OnboardingPlayground({ wizard: w }: OnboardingPlaygroundProps) {
               })()
             ) : null}
             {step === 4 ? (
-              <>
-                {canFinish ? (
-                  <Button variant="primary" onClick={handleOpenConsole}>
-                    Open console
-                    <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button variant="primary" disabled>
-                    Send a message first
-                  </Button>
-                )}
-              </>
+              <Button
+                variant="primary"
+                onClick={() => w.goNext()}
+                disabled={!canFinish}
+                title={!canFinish ? "Send a message first" : undefined}
+              >
+                Continue
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
             ) : null}
             {step === 5 ? (
               <Button variant="primary" onClick={handleOpenConsole}>

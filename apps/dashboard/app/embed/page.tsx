@@ -220,7 +220,7 @@ export default function EmbedWidgetPage() {
           <Panel title="Install snippet">
             {snippet ? (
               <div className="space-y-3">
-                <pre className="overflow-x-auto rounded-md bg-muted p-4 text-xs">{snippet}</pre>
+                <pre className="overflow-x-auto break-all whitespace-pre-wrap rounded-md bg-muted p-4 text-xs">{snippet}</pre>
                 <Button variant="secondary" size="sm" onClick={() => void copySnippet()}>
                   <Copy className="mr-2 h-4 w-4" />
                   {copied ? "Copied" : "Copy snippet"}

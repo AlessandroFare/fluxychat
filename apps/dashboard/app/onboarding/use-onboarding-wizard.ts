@@ -10,7 +10,7 @@ import {
 } from "@/lib/agent-catalog";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
-import { markQuickstartFirstMessage } from "@/lib/quickstart-progress";
+import { loadQuickstartProgress, markQuickstartFirstMessage } from "@/lib/quickstart-progress";
 import { assistantRoomId } from "@/lib/assistant-room";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -114,6 +114,8 @@ export function useOnboardingWizard() {
   useEffect(() => {
     if (!isClerkClientConfigured() || !clerkSignedIn || !clerkUser?.id) return;
     setUserId(fluxyUserIdFromClerk(clerkUser?.id));
+    const progress = loadQuickstartProgress(clerkUser.id);
+    if (progress.firstMessageSent && !userSentMessage) setUserSentMessage(true);
   }, [clerkSignedIn, clerkUser?.id]);
 
   useEffect(() => {

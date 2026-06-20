@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 interface OnboardingProgressStripProps {
   stepContext: OnboardingWizard["stepContext"];
   activeStep: number;
+  onStepClick?: (step: number) => void;
 }
 
-export function OnboardingProgressStrip({ stepContext, activeStep }: OnboardingProgressStripProps) {
+export function OnboardingProgressStrip({ stepContext, activeStep, onStepClick }: OnboardingProgressStripProps) {
   const total = ONBOARDING_STEPS.length;
   const coreSteps = total - 1;
   const counterLabel =
@@ -31,7 +32,11 @@ export function OnboardingProgressStrip({ stepContext, activeStep }: OnboardingP
 
           return (
             <li key={step.title} className="flex items-center">
-              <div className="flex flex-col items-center">
+              <button
+                type="button"
+                onClick={() => onStepClick?.(index)}
+                className="flex flex-col items-center transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-md px-1"
+              >
                 <div
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-200",
@@ -60,7 +65,7 @@ export function OnboardingProgressStrip({ stepContext, activeStep }: OnboardingP
                 >
                   {step.title}
                 </span>
-              </div>
+              </button>
               {index < total - 1 ? (
                 <div
                   className={cn(

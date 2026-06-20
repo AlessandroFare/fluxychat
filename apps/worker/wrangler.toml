@@ -87,7 +87,7 @@ new_sqlite_classes = ["UserDurableObject"]
 
 # P12-L: scheduled jobs via Workflows (set WORKFLOW_SCHEDULES_ENABLED=false + uncomment triggers for legacy cron)
 [triggers]
-crons = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *"]
+crons = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *", "0 */6 * * *"]
 
 [browser]
 binding = "BROWSER"

@@ -260,7 +260,7 @@ export default function ProjectsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Projects"
-        description="One project = one tenant. Select on the left, then create or edit when something changes."
+        description="One project = one tenant. Select a project, then create or edit when something changes."
         actions={
           <Button
             variant="ghost"

@@ -6,11 +6,13 @@ import { logInfo } from "./worker-log.js";
 import { runDailyDigest } from "./daily-digest.js";
 import { flushDueNotificationBatches } from "./notification-batch.js";
 import { processPendingWebhookDeliveries } from "./webhook-delivery.js";
+import { syncModelsCatalog } from "./llm-models-catalog.js";
 
 export const SCHEDULED_CRON_DIGEST = "0 8 * * *";
 export const SCHEDULED_CRON_NOTIFICATION_BATCH = "*/15 * * * *";
 export const SCHEDULED_CRON_RETENTION = "0 3 * * *";
 export const SCHEDULED_CRON_WEBHOOK_FLUSH = "*/5 * * * *";
+export const SCHEDULED_CRON_MODELS_SYNC = "0 */6 * * *";
 
 /**
  * @param {*} env
@@ -121,6 +123,9 @@ export async function runScheduledCronJob(env, cron) {
     case SCHEDULED_CRON_WEBHOOK_FLUSH:
       await processPendingWebhookDeliveries(env);
       return { job: "webhook_flush" };
+    case SCHEDULED_CRON_MODELS_SYNC:
+      await syncModelsCatalog(env);
+      return { job: "models_sync" };
     default:
       if (!normalized) {
         await purgeExpiredData(env);

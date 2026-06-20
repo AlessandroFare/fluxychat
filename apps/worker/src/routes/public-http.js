@@ -18,6 +18,7 @@ import { isBrowserRunConfigured } from "../lib/browser-run.js";
 import { getPublicHostConfig } from "../lib/custom-domains.js";
 import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flags.js";
 import { isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
+import { queryModelsCatalog, getModelById, listModelProviders } from "../lib/llm-models-catalog.js";
 
 export async function dispatchPublicRoutes(request, url, h) {
   const {
@@ -94,6 +95,19 @@ export async function dispatchPublicRoutes(request, url, h) {
       },
       { headers: corsHeaders },
     );
+  }
+
+  if (url.pathname === "/llm-models" && request.method === "GET") {
+    const search = url.searchParams.get("search") || undefined;
+    const provider = url.searchParams.get("provider") || undefined;
+    const capability = url.searchParams.get("capability") || undefined;
+    const id = url.searchParams.get("id") || undefined;
+    if (id) {
+      const model = await getModelById(env, id);
+      return json(model ? { model } : { error: "not_found" }, { status: model ? 200 : 404 });
+    }
+    const models = await queryModelsCatalog(env, { search, provider, capability });
+    return json({ models });
   }
 
   if (url.pathname === "/public/host-config" && request.method === "GET") {

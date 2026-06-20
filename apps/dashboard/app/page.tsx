@@ -213,7 +213,7 @@ export default function HomePage() {
       <section>
         <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Quick links</h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          Use the sidebar on desktop for full navigation. Evaluating Fluxychat?
+          Use the navigation menu for full console access. Evaluating Fluxychat?
           <Link href="/landing" className="ml-1 font-medium text-primary underline-offset-4 hover:underline">
             Product and pricing
           </Link>

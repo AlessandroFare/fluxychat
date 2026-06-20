@@ -15,6 +15,7 @@ export async function finishQuickstartAndOpenConsole(
     projectId: string;
     setLastRoom: (room: CreatedRoom) => void;
   },
+  destination = "/",
 ) {
   markQuickstartComplete(args.clerkUserId);
   if (args.memberJwt.trim() && args.memberUserId.trim()) {
@@ -35,5 +36,5 @@ export async function finishQuickstartAndOpenConsole(
       // Non-blocking: user may already have a room from step 3.
     }
   }
-  router.push("/");
+  router.push(destination);
 }

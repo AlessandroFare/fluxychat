@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { KeyRound, Wrench, Zap } from "lucide-react";
 import { FormField } from "./form-field";
 import { ModelCapabilityBadges } from "./model-capability-badges";
 import { LlmCredentialStatus } from "./llm-credential-status";
 import { Button, Input } from "./ui";
+import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import type { LlmCatalogResponse } from "@/lib/llm-catalog-client";
 import {
   applyModelInput,
@@ -45,6 +46,16 @@ export function LlmProviderModelPicker({
   onConfigureKeys,
 }: LlmProviderModelPickerProps) {
   const { provider, model } = values;
+  const [catalogModels, setCatalogModels] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${getPublicWorkerUrl()}/llm-models?limit=200`)
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled) setCatalogModels(data.models || []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   const providerOptions = useMemo(
     () => listProviderOptions(llmCatalog),
     [llmCatalog],
@@ -66,8 +77,11 @@ export function LlmProviderModelPicker({
       provider === "openrouter" && llmCatalog?.liveModels
         ? llmCatalog.liveModels.models.slice(0, 40).map((m) => m.id)
         : [];
-    return [...new Set([...local, ...fromCatalog, ...live])];
-  }, [catalogProvider, llmCatalog, provider]);
+    const fromModelsDev = catalogModels
+      .filter((m) => !provider || m.providerId === provider || m.id.includes(`${provider}/`))
+      .map((m) => m.id);
+    return [...new Set([...local, ...fromCatalog, ...live, ...fromModelsDev])];
+  }, [catalogProvider, llmCatalog, provider, catalogModels]);
 
   const allowBaseUrl =
     catalogProvider?.allowCustomBaseUrl ?? providerAllowsCustomBaseUrl(provider);
