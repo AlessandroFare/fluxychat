@@ -99,17 +99,18 @@ export function ModelParamsPanel({ open, onOpenChange, params, onChange }: Model
   );
 }
 
-function ParamSlider({ label, hint, min, max, step, value, onChange }) {
+function ParamSlider({ label, hint, min, max, step, value = 0, onChange }) {
+  const display = typeof value === "number" ? value.toFixed(step < 0.1 ? 1 : 2) : String(value ?? 0);
   return (
     <label className="block">
       <span className="mb-1 flex items-baseline justify-between text-sm font-medium">
         <span>{label}</span>
-        <span className="font-mono text-xs text-muted-foreground">{value.toFixed(step < 0.1 ? 1 : 2)}</span>
+        <span className="font-mono text-xs text-muted-foreground">{display}</span>
       </span>
       <input
         type="range"
         min={min} max={max} step={step}
-        value={value}
+        value={value ?? 0}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="w-full accent-primary"
       />

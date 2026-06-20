@@ -95,7 +95,7 @@ export function LlmProviderModelPicker({
         ? llmCatalog.liveModels.models.slice(0, 40).map((m) => m.id)
         : [];
     const fromModelsDev = catalogModels
-      .filter((m) => !provider || m.providerId === provider || m.id.includes(`${provider}/`))
+      .filter((m) => m.providerId === provider)
       .map((m) => m.id);
     return [...new Set([...local, ...fromCatalog, ...live, ...fromModelsDev])];
   }, [catalogProvider, llmCatalog, provider, catalogModels]);

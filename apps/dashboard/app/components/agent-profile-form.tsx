@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Bot, Cpu, Link2, MessageSquareText } from "lucide-react";
 import { FormField } from "./form-field";
 import { AgentPromptTemplatePicker } from "./agent-prompt-template-picker";
 import { LlmProviderModelPicker } from "./llm-provider-model-picker";
+import { ModelParamsPanel } from "./model-params-panel";
 import type { AgentFormValues } from "@/lib/agent-form";
 import type { LlmCatalogResponse } from "@/lib/llm-catalog-client";
 import { Input, Textarea } from "./ui";
@@ -57,11 +58,13 @@ export function AgentProfileForm({
   onConfigureKeys,
   className,
 }: AgentProfileFormProps) {
+  const [showParams, setShowParams] = useState(false);
+
   return (
-    <div className={cn("flex flex-col gap-5", className)}>
+    <div className="space-y-6">
       <AgentProfileSection
         title="Identity"
-        description="Display name and @mention handle for room invoke."
+        description="Display name and optional @mention handle."
         icon={<Bot className="h-4 w-4" aria-hidden />}
       >
         <div className="grid gap-4 sm:grid-cols-2">
@@ -121,17 +124,34 @@ export function AgentProfileForm({
             onConfigureKeys={onConfigureKeys}
           />
         </div>
-        <FormField
-          label="Capabilities"
-          hint="Comma-separated (chat, summarize, moderate…)."
-          className="mt-4"
-        >
-          <Input
-            value={values.capabilities}
-            onChange={(e) => onChange({ capabilities: e.target.value })}
-            placeholder="chat"
-          />
-        </FormField>
+        <div className="mt-4 flex items-start justify-between gap-4">
+          <FormField
+            label="Capabilities"
+            hint="Comma-separated (chat, summarize, moderate…)."
+            className="flex-1 mb-0"
+          >
+            <Input
+              value={values.capabilities}
+              onChange={(e) => onChange({ capabilities: e.target.value })}
+              placeholder="chat"
+            />
+          </FormField>
+          <div className="shrink-0 pt-1">
+            <ModelParamsPanel
+              open={showParams}
+              onOpenChange={setShowParams}
+              params={{
+                temperature: values.temperature,
+                maxTokens: values.maxTokens,
+                topP: values.topP,
+                frequencyPenalty: values.frequencyPenalty,
+                presencePenalty: values.presencePenalty,
+                stopSequences: values.stopSequences,
+              }}
+              onChange={(patch) => onChange(patch)}
+            />
+          </div>
+        </div>
       </AgentProfileSection>
 
       <AgentProfileSection
