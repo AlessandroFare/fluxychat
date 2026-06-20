@@ -48,6 +48,7 @@ export function LlmProviderModelPicker({
   const { provider, model } = values;
   const [catalogModels, setCatalogModels] = useState([]);
   const [catalogProviders, setCatalogProviders] = useState([]);
+  const [customModel, setCustomModel] = useState(false);
   useEffect(() => {
     let cancelled = false;
     const base = getPublicWorkerUrl();
@@ -130,6 +131,7 @@ export function LlmProviderModelPicker({
             const firstModel =
               prov?.models[0]?.id ?? modelSuggestionsForProvider(next)[0] ?? "";
             onChange({ provider: next, model: firstModel });
+            setCustomModel(false);
           }}
         >
           {providerOptions.map((p) => (
@@ -204,24 +206,52 @@ export function LlmProviderModelPicker({
 
       <FormField
         label="Model"
-        hint="Model id, provider/model, or shortcut (minimax-free, claude-sonnet)."
+        hint="Select a model for the chosen provider."
         className={allowBaseUrl ? "sm:col-span-2" : "sm:col-span-2"}
       >
-        <Input
-          value={model}
+        <select
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          value={modelDatalistOptions.includes(model) ? model : "__custom__"}
           onChange={(e) => {
-            const raw = e.target.value;
-            const expanded = expandModelShortcut(raw);
-            if (raw.includes("/") || expanded !== raw.trim()) {
-              const applied = applyModelInput(provider, raw);
-              onChange({ provider: applied.provider, model: applied.model });
+            const val = e.target.value;
+            if (val === "__custom__") {
+              setCustomModel(true);
             } else {
-              onChange({ model: raw });
+              setCustomModel(false);
+              onChange({ model: val });
             }
           }}
-          placeholder="zencode/minimax-m2.5-free"
-          list={datalistId}
-        />
+        >
+          {modelDatalistOptions.length > 0 ? (
+            modelDatalistOptions.slice(0, 60).map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))
+          ) : (
+            <option value="" disabled>No models found for this provider</option>
+          )}
+          {modelDatalistOptions.length > 60 ? (
+            <option value="" disabled>── {modelDatalistOptions.length - 60} more models available ──</option>
+          ) : null}
+          <option value="__custom__">{model && !modelDatalistOptions.includes(model) ? `Custom: ${model}` : "Type custom model ID…"}</option>
+        </select>
+        {customModel || (model && !modelDatalistOptions.includes(model)) ? (
+          <Input
+            value={model}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const expanded = expandModelShortcut(raw);
+              if (raw.includes("/") || expanded !== raw.trim()) {
+                const applied = applyModelInput(provider, raw);
+                onChange({ provider: applied.provider, model: applied.model });
+              } else {
+                onChange({ model: raw });
+              }
+            }}
+            placeholder="zencode/minimax-m2.5-free"
+            list={datalistId}
+            className="mt-2"
+          />
+        ) : null}
         <datalist id={datalistId}>
           {modelDatalistOptions.map((m) => (
             <option key={m} value={m} />
