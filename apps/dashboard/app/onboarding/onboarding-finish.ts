@@ -12,6 +12,7 @@ export async function finishQuickstartAndOpenConsole(
     clerkUserId: string;
     memberJwt: string;
     memberUserId: string;
+    projectId: string;
     setLastRoom: (room: CreatedRoom) => void;
   },
 ) {
@@ -22,6 +23,7 @@ export async function finishQuickstartAndOpenConsole(
         workerUrl: WORKER_URL,
         memberJwt: args.memberJwt.trim(),
         memberUserId: args.memberUserId.trim(),
+        projectId: args.projectId,
       });
       args.setLastRoom({
         id: room.id,

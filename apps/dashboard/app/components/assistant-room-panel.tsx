@@ -7,7 +7,7 @@ import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import {
   ASSISTANT_ROOM_DISPLAY_NAME,
-  ASSISTANT_ROOM_ID,
+  assistantRoomId,
   pickDefaultAssistantAgent,
 } from "@/lib/assistant-room";
 import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
@@ -28,10 +28,11 @@ interface AgentRow {
 export interface AssistantRoomPanelProps {
   memberJwt: string;
   adminJwt?: string;
+  projectId: string;
 }
 
-/** Ensures `assistant:general` and embeds agent chat (Rooms page CTA). */
-export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPanelProps) {
+/** Ensures per-project assistant room and embeds agent chat (Rooms page CTA). */
+export function AssistantRoomPanel({ memberJwt, adminJwt = "", projectId }: AssistantRoomPanelProps) {
   const { user: clerkUser } = useClerkUser();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,7 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPa
         workerUrl: WORKER_URL,
         memberJwt: token,
         memberUserId,
+        projectId,
         adminJwt: adminJwt.trim() || undefined,
       });
       setResolvedRoomId(room.id);
@@ -111,7 +113,7 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPa
       ) : agent ? (
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted-foreground">
-            Room <code className="font-mono">{resolvedRoomId ?? ASSISTANT_ROOM_ID}</code> · agent{" "}
+            Room <code className="font-mono">{resolvedRoomId ?? assistantRoomId(projectId)}</code> · agent{" "}
             <span className="font-medium text-foreground">{agent.name}</span>
             {agent.handle ? (
               <>
@@ -121,7 +123,7 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "" }: AssistantRoomPa
             ) : null}
           </p>
           <AgentRoomChat
-            roomId={resolvedRoomId ?? ASSISTANT_ROOM_ID}
+            roomId={resolvedRoomId ?? assistantRoomId(projectId)}
             agentId={agent.id}
             agentName={agent.name}
             agentHandle={agent.handle}

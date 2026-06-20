@@ -3,7 +3,7 @@
  * @returns {Promise<Response|null>}
  */
 import { pickRouteDeps } from "./route-http-deps.js";
-import { hostedTenantPlanMutationForbidden } from "../lib/hosted-saas-policy.js";
+import { hostedTenantPlanMutationForbidden, isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
 import { normalizePlanName, planLimitsForTier } from "../lib/plan-tier-limits.js";
 
 export async function dispatchAdminProjectsRoutes(request, url, h) {
@@ -87,14 +87,19 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
     const roles = rolesValidation.roles;
     const elevated = ["owner", "admin", "moderator", "mod"];
     if (roles.some((role) => elevated.includes(role))) {
-      return json({ error: "cannot mint elevated roles via this endpoint" }, { status: 403 });
+      // Audit multi-tenant: allow the platform operator to mint elevated
+      // tokens for a target tenant project (used by the connect flow).
+      if (!body.projectId || !isPlatformOperatorProject(adminAuth.projectId, env)) {
+        return json({ error: "cannot mint elevated roles via this endpoint" }, { status: 403 });
+      }
     }
 
     const ttlSeconds = Math.max(60, Math.min(Number(body.ttlSeconds || 3600), 86_400));
+    const targetProjectId = body.projectId || adminAuth.projectId;
     const row = await env.DB.prepare(
       "SELECT jwt_secret FROM project_secrets WHERE project_id = ?",
     )
-      .bind(adminAuth.projectId)
+      .bind(targetProjectId)
       .first();
     if (!row?.jwt_secret) {
       return json({ error: "project secret not configured" }, { status: 400 });
@@ -102,7 +107,7 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
 
     const token = await signJwtHs256(row.jwt_secret, {
       sub: body.userId,
-      tid: adminAuth.projectId,
+      tid: targetProjectId,
       roles,
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + ttlSeconds,
@@ -111,7 +116,7 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
     return json({
       token,
       expiresIn: ttlSeconds,
-      claims: { sub: body.userId, tid: adminAuth.projectId, roles },
+      claims: { sub: body.userId, tid: targetProjectId, roles },
     });
   }
 

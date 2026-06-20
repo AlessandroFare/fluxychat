@@ -10,7 +10,7 @@ import { Button, Input } from "../components/ui";
 import { VoiceRecorder } from "~/components/voice/voice-recorder";
 import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
-import { ASSISTANT_ROOM_ID } from "@/lib/assistant-room";
+import { assistantRoomId } from "@/lib/assistant-room";
 import { cn } from "@/lib/utils";
 import type { AgentFormValues } from "@/lib/agent-form";
 import { copyToClipboard, ONBOARDING_STEPS } from "./onboarding-shared";
@@ -52,6 +52,7 @@ export function OnboardingPlayground({ wizard: w }: OnboardingPlaygroundProps) {
       clerkUserId,
       memberJwt: w.memberJwt,
       memberUserId: w.userId.trim() || "alice",
+      projectId: w.activeProject?.id ?? "",
       setLastRoom: w.setLastRoom,
     });
   }
@@ -239,7 +240,7 @@ export function OnboardingPlayground({ wizard: w }: OnboardingPlaygroundProps) {
                   data-testid="room-id-input"
                   value={w.roomName}
                   onChange={(e) => w.setRoomName(e.target.value)}
-                  placeholder={`room id (e.g. ${ASSISTANT_ROOM_ID})`}
+                  placeholder={`room id (e.g. assistant-your-project)`}
                   disabled={!w.memberJwt}
                 />
                 <Button

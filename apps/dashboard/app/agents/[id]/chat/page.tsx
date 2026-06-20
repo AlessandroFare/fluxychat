@@ -6,7 +6,6 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AgentRoomChat } from "@/app/components/agent-room-chat";
 import { ConsolePanelHeader } from "@/app/components/console-panel-header";
 import { Panel } from "@/app/components/ui";
-import { ASSISTANT_ROOM_ID } from "@/lib/assistant-room";
 import { useAgentsConsole } from "../../agents-console-context";
 
 export default function AgentChatPage() {
@@ -36,7 +35,7 @@ export default function AgentChatPage() {
     );
   }
 
-  const roomId = roomFromQuery || chatRoomId || ASSISTANT_ROOM_ID;
+  const roomId = roomFromQuery || chatRoomId;
 
   return (
     <Panel className="rounded-2xl border border-border/80 p-6">

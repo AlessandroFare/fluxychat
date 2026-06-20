@@ -11,7 +11,7 @@ import {
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
 import { markQuickstartFirstMessage } from "@/lib/quickstart-progress";
-import { ASSISTANT_ROOM_ID } from "@/lib/assistant-room";
+import { assistantRoomId } from "@/lib/assistant-room";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
@@ -129,7 +129,7 @@ export function useOnboardingWizard() {
 
   useEffect(() => {
     if (activeStep !== 3 || roomMode !== "create" || roomName.trim()) return;
-    setRoomName(ASSISTANT_ROOM_ID);
+    setRoomName(project?.id ? assistantRoomId(project.id) : "assistant-general");
   }, [activeStep, roomMode, roomName]);
 
   // Auto-advance to first incomplete step on mount.
@@ -349,7 +349,7 @@ export function useOnboardingWizard() {
       setRoom(json.room);
       setLastRoom(json.room);
       setNotice(
-        json.room.id === ASSISTANT_ROOM_ID
+        json.room.id === (project?.id ? assistantRoomId(project.id) : "assistant-general")
           ? "Assistant room ready — you can chat with built-in agents from the Agents page."
           : "Room created.",
       );

@@ -27,7 +27,7 @@ import {
   type AgentFormValues,
   type AgentRecord,
 } from "@/lib/agent-form";
-import { ASSISTANT_ROOM_ID } from "@/lib/assistant-room";
+import { assistantRoomId } from "@/lib/assistant-room";
 import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
 
 const WORKER_URL = getPublicWorkerUrl();
@@ -121,9 +121,9 @@ export function AgentsConsoleProvider({
   const [editForm, setEditForm] = useState<AgentFormValues>(emptyAgentForm);
   const [llmCatalog, setLlmCatalog] = useState<LlmCatalogResponse | null>(null);
   const [loadLiveModels, setLoadLiveModels] = useState(false);
-  const [invokeRoomId, setInvokeRoomId] = useState(ASSISTANT_ROOM_ID);
+  const [invokeRoomId, setInvokeRoomId] = useState("");
   const [invokeText, setInvokeText] = useState("");
-  const [chatRoomId, setChatRoomId] = useState(ASSISTANT_ROOM_ID);
+  const [chatRoomId, setChatRoomId] = useState("");
   const [preparingChat, setPreparingChat] = useState(false);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [loadingRuns, setLoadingRuns] = useState(false);
@@ -328,6 +328,7 @@ export function AgentsConsoleProvider({
           workerUrl: WORKER_URL,
           memberJwt: jwt,
           memberUserId,
+          projectId: activeProject?.id ?? "",
         });
         setChatRoomId(room.id);
         setInvokeRoomId(room.id);

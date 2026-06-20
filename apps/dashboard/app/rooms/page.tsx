@@ -248,7 +248,7 @@ export default function RoomsPage() {
       {error ? <Banner variant="error">Error: {error}</Banner> : null}
       {notice ? <Banner variant="success">{notice}</Banner> : null}
 
-      <AssistantRoomPanel memberJwt={memberJwt} adminJwt={adminJwt} />
+      <AssistantRoomPanel memberJwt={memberJwt} adminJwt={adminJwt} projectId={activeProject?.id ?? ""} />
 
       <Section title="Session">
         <Button onClick={loadRooms} disabled={loading || !token}>

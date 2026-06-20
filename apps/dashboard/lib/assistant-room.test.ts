@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ASSISTANT_ROOM_ID,
+  assistantRoomId,
   mentionPrefixForAgent,
   pickDefaultAssistantAgent,
 } from "./assistant-room";
@@ -26,6 +26,6 @@ describe("assistant-room", () => {
 
   it("mentionPrefixForAgent strips leading @", () => {
     expect(mentionPrefixForAgent("@assistant")).toBe("@assistant ");
-    expect(ASSISTANT_ROOM_ID).toBe("assistant-general");
+    expect(assistantRoomId("general")).toBe("assistant-general");
   });
 });

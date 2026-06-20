@@ -112,6 +112,43 @@ export async function mintMemberTokenWithAdminJwt(
   };
 }
 
+/**
+ * Mint an elevated (owner/admin) token for a target project.
+ * Only works when called with a platform operator admin JWT.
+ */
+export async function mintElevatedTokenWithAdminJwt(
+  adminJwt: string,
+  input: MintTokenInput & { projectId: string },
+): Promise<MintTokenResult> {
+  const res = await fetch(`${getWorkerUrl()}/admin/member-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${adminJwt.trim()}`,
+    },
+    body: JSON.stringify({
+      userId: input.userId,
+      roles: input.roles,
+      projectId: input.projectId,
+      ttlSeconds: input.ttlSeconds ?? 7200,
+    }),
+  });
+
+  const json = (await res.json().catch(() => ({}))) as MintTokenResult & { error?: string; token?: string };
+  if (!res.ok) {
+    throw new Error(json.error || `Worker /admin/member-token failed (${res.status})`);
+  }
+  const token = json.token;
+  if (!token) {
+    throw new Error("Worker did not return a token.");
+  }
+  return {
+    token,
+    expiresIn: json.expiresIn,
+    claims: json.claims,
+  };
+}
+
 export async function listWorkerProjects(adminJwt: string) {
   const res = await fetch(`${getWorkerUrl()}/admin/projects`, {
     headers: { Authorization: `Bearer ${adminJwt}` },

@@ -9,6 +9,7 @@ import {
   createWorkerProject,
   getConsoleApiKey,
   listWorkerProjects,
+  mintElevatedTokenWithAdminJwt,
   mintWorkerToken,
 } from "@/lib/fluxy-server";
 
@@ -73,12 +74,22 @@ export async function provisionFluxyForClerkUser(
   const storedApiKey = await readFluxyPrivateApiKey(clerkUserId);
   const pinnedProjectId = process.env.FLUXY_CONSOLE_PROJECT_ID?.trim();
 
+  // Mint a platform operator admin JWT (needed for mintElevatedTokenWithAdminJwt).
+  const bootstrapMint = await mintAdminForProject(clerkUserId, bootstrapKey);
+  const platformAdminJwt = bootstrapMint.token;
+
   if (storedApiKey && publicMeta.fluxyProjectId) {
-    const minted = await mintAdminForProject(clerkUserId, storedApiKey);
+    // Use the platform operator JWT to mint an elevated token for the tenant project.
+    const tenantMint = await mintElevatedTokenWithAdminJwt(platformAdminJwt, {
+      userId: fluxyUserIdFromClerk(clerkUserId),
+      roles: ["owner", "admin"],
+      projectId: publicMeta.fluxyProjectId,
+      ttlSeconds: 7200,
+    });
     return {
-      adminJwt: minted.token,
-      expiresIn: minted.expiresIn,
-      projectId: minted.projectId,
+      adminJwt: tenantMint.token,
+      expiresIn: tenantMint.expiresIn,
+      projectId: tenantMint.claims.tid,
       activeProject: {
         id: publicMeta.fluxyProjectId,
         name: publicMeta.fluxyProjectName || "My project",
@@ -91,15 +102,14 @@ export async function provisionFluxyForClerkUser(
   const shouldCreate = options?.createProject !== false;
 
   if (!shouldCreate) {
-    const bootstrapMint = await mintAdminForProject(clerkUserId, bootstrapKey);
-    const projects = await listWorkerProjects(bootstrapMint.token);
+    const projects = await listWorkerProjects(platformAdminJwt);
     const pick = pinnedProjectId
       ? projects.find((p) => p.id === pinnedProjectId) ?? null
       : projects[0] ?? null;
 
     if (!pick) {
       return {
-        adminJwt: bootstrapMint.token,
+        adminJwt: platformAdminJwt,
         expiresIn: bootstrapMint.expiresIn,
         projectId: bootstrapMint.projectId,
         activeProject: null,
@@ -107,10 +117,16 @@ export async function provisionFluxyForClerkUser(
       };
     }
 
+    const tenantMint = await mintElevatedTokenWithAdminJwt(platformAdminJwt, {
+      userId: fluxyUserIdFromClerk(clerkUserId),
+      roles: ["owner", "admin"],
+      projectId: pick.id,
+      ttlSeconds: 7200,
+    });
     return {
-      adminJwt: bootstrapMint.token,
-      expiresIn: bootstrapMint.expiresIn,
-      projectId: bootstrapMint.projectId,
+      adminJwt: tenantMint.token,
+      expiresIn: tenantMint.expiresIn,
+      projectId: tenantMint.claims.tid,
       activeProject: {
         id: pick.id,
         name: pick.name,
@@ -120,9 +136,8 @@ export async function provisionFluxyForClerkUser(
     };
   }
 
-  const bootstrapMint = await mintAdminForProject(clerkUserId, bootstrapKey);
   const created = await createWorkerProject(
-    bootstrapMint.token,
+    platformAdminJwt,
     options?.projectName?.trim() || defaultProjectName(user),
   );
 
@@ -132,12 +147,17 @@ export async function provisionFluxyForClerkUser(
     apiKey: created.apiKey,
   });
 
-  const tenantMint = await mintAdminForProject(clerkUserId, created.apiKey);
+  const tenantMint = await mintElevatedTokenWithAdminJwt(platformAdminJwt, {
+    userId: fluxyUserIdFromClerk(clerkUserId),
+    roles: ["owner", "admin"],
+    projectId: created.id,
+    ttlSeconds: 7200,
+  });
 
   return {
     adminJwt: tenantMint.token,
     expiresIn: tenantMint.expiresIn,
-    projectId: tenantMint.projectId,
+    projectId: tenantMint.claims.tid,
     activeProject: {
       id: created.id,
       name: created.name,
