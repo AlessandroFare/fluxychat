@@ -79,7 +79,7 @@ export function LlmProviderModelPicker({
     // Add any catalog-only providers not in models.dev.
     const mdIds = new Set(catalogProviders.map((p) => p.id));
     for (const cp of fromCatalog) {
-      if (!mdIds.has(cp.id)) merged.push(cp);
+      if (!mdIds.has(cp.id)) merged.push({ ...cp, logoUrl: undefined });
     }
     return merged;
   }, [llmCatalog, catalogProviders]);

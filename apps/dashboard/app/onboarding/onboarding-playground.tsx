@@ -37,6 +37,12 @@ export function OnboardingPlayground({ wizard: w }: OnboardingPlaygroundProps) {
     llmBaseUrl: "",
     fallbackProvider: "",
     fallbackModel: "",
+    temperature: 0.7,
+    maxTokens: 1024,
+    topP: 1,
+    frequencyPenalty: 0,
+    presencePenalty: 0,
+    stopSequences: "",
   };
 
   function onAgentFormChange(patch: Partial<AgentFormValues>) {

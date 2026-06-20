@@ -99,7 +99,10 @@ export function ModelParamsPanel({ open, onOpenChange, params, onChange }: Model
   );
 }
 
-function ParamSlider({ label, hint, min, max, step, value = 0, onChange }) {
+function ParamSlider({ label, hint, min, max, step, value = 0, onChange }: {
+  label: string; hint?: string; min: number; max: number; step: number;
+  value?: number; onChange: (v: number) => void;
+}) {
   const display = typeof value === "number" ? value.toFixed(step < 0.1 ? 1 : 2) : String(value ?? 0);
   return (
     <label className="block">
@@ -119,7 +122,9 @@ function ParamSlider({ label, hint, min, max, step, value = 0, onChange }) {
   );
 }
 
-function ParamInput({ label, hint, type, value, onChange }) {
+function ParamInput({ label, hint, type, value, onChange }: {
+  label: string; hint?: string; type: string; value: string; onChange: (v: string) => void;
+}) {
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-medium">{label}</span>
