@@ -14,6 +14,10 @@ export async function callLlmOpenAI(baseUrl, apiKey, model, messages, tools, opt
     messages,
     max_tokens: opts.maxTokens || 1024,
     temperature: opts.temperature ?? 0.7,
+    ...(opts.topP !== undefined ? { top_p: opts.topP } : {}),
+    ...(opts.frequencyPenalty !== undefined ? { frequency_penalty: opts.frequencyPenalty } : {}),
+    ...(opts.presencePenalty !== undefined ? { presence_penalty: opts.presencePenalty } : {}),
+    ...(opts.stopSequences ? { stop: opts.stopSequences.split(",").map((s) => s.trim()).filter(Boolean) } : {}),
   };
   if (tools && tools.length) body.tools = tools;
   const url =

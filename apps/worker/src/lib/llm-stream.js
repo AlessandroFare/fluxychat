@@ -8,6 +8,10 @@ export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts
     messages,
     max_tokens: opts.maxTokens || 1024,
     temperature: opts.temperature ?? 0.7,
+    ...(opts.topP !== undefined ? { top_p: opts.topP } : {}),
+    ...(opts.frequencyPenalty !== undefined ? { frequency_penalty: opts.frequencyPenalty } : {}),
+    ...(opts.presencePenalty !== undefined ? { presence_penalty: opts.presencePenalty } : {}),
+    ...(opts.stopSequences ? { stop: opts.stopSequences.split(",").map((s) => s.trim()).filter(Boolean) } : {}),
     stream: true,
     stream_options: { include_usage: true },
   };

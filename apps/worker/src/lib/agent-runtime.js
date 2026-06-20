@@ -297,6 +297,15 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       ? safeJsonParse(agentRow.config)
       : agentRow.config
     : null;
+  const modelParams = agentConfig?.modelParams || {};
+  const llmOpts = {
+    maxTokens: modelParams.maxTokens || 1024,
+    temperature: modelParams.temperature ?? 0.7,
+    topP: modelParams.topP,
+    frequencyPenalty: modelParams.frequencyPenalty,
+    presencePenalty: modelParams.presencePenalty,
+    stopSequences: modelParams.stopSequences,
+  };
   const { primary: primaryResolved, fallback: fallbackResolved } = await resolveLlmConnectionWithFallback(env, {
     provider: agentRow.provider || null,
     model: agentRow.model || null,
@@ -411,8 +420,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
             connection.model,
             messages,
             {
-              maxTokens: 1024,
-              temperature: 0.7,
+              ...llmOpts,
               chatCompletionsUrl: connection.chatCompletionsUrl,
               gatewayHeaders: connection.gatewayHeaders,
             },
@@ -453,7 +461,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
       let response;
       try {
-        response = await callLlmForConnection(connection, messages, tools, systemPrompt, { maxTokens: 1024, temperature: 0.7 });
+        response = await callLlmForConnection(connection, messages, tools, systemPrompt, llmOpts);
       } catch (primaryErr) {
         if (hasFallback && i === 0 && fallbackResolved?.ok) {
           logInfo("agent.provider_fallback", {
@@ -465,7 +473,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           });
           connection = fallbackResolved;
           try {
-            response = await callLlmForConnection(connection, messages, tools, systemPrompt, { maxTokens: 1024, temperature: 0.7 });
+            response = await callLlmForConnection(connection, messages, tools, systemPrompt, llmOpts);
           } catch (fallbackErr) {
             return { runId, status: "failed", content: null, latencyMs: performance.now() - startTime, inputTokens: 0, outputTokens: 0, estimatedCost: 0, toolCalls: allToolCalls, contextFetched, iterations, error: `primary: ${primaryErr.message}; fallback: ${fallbackErr.message}` };
           }
