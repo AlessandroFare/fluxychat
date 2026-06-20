@@ -34,6 +34,7 @@ function providersForCredentialForm(
     .map((p) => ({
       id: p.id,
       label: p.name,
+      models: [],
       allowCustomBaseUrl: true,
       hint: "OpenAI-compatible",
     }));
