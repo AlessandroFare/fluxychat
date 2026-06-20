@@ -11,23 +11,40 @@ export async function syncModelsCatalog(env) {
   const res = await fetch(MODELS_DEV_URL);
   if (!res.ok) throw new Error(`models.dev returned ${res.status}`);
 
-  const data = await res.json();
-  const providers = data.providers || data.data || [];
+  const providers = await res.json();
   let synced = 0;
   const now = new Date().toISOString();
 
-  for (const provider of Object.values(providers)) {
+  for (const [providerId, provider] of Object.entries(providers)) {
     const p = /** @type {any} */ (provider);
-    const providerId = p.id || p.provider_id;
-    const providerName = p.name || providerId;
-    if (!providerId) continue;
+    const pid = p.id || providerId;
+    if (!pid) continue;
 
+    // Upsert provider
+    const logoUrl = `https://models.dev/logos/${pid}.svg`;
+    await env.DB.prepare(
+      `INSERT OR REPLACE INTO llm_providers (id, name, env, npm, doc, api, logo_url, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        pid,
+        p.name || pid,
+        p.env ? JSON.stringify(p.env) : null,
+        p.npm || null,
+        p.doc || null,
+        p.api || null,
+        logoUrl,
+        now,
+      )
+      .run();
+
+    // Upsert models
     const models = p.models || {};
-    for (const [modelKey, model] of Object.entries(/** @type {any} */ (models))) {
+    for (const [modelKey, model] of Object.entries(models)) {
       const m = /** @type {any} */ (model);
       const modelId = m.id || modelKey;
       if (!modelId) continue;
-      const id = `${providerId}/${modelId}`;
+      const id = `${pid}/${modelId}`;
       const displayName = m.name || modelId;
 
       const caps = {
@@ -45,20 +62,23 @@ export async function syncModelsCatalog(env) {
       const status = m.status || "active";
       const openWeights = m.open_weights ? 1 : 0;
 
+      // Store full model data as JSON for complete fidelity
+      const fullData = JSON.stringify(m);
+
       await env.DB.prepare(
         `INSERT OR REPLACE INTO llm_models
-         (id, provider_id, model_id, provider_name, display_name, capabilities, cost,
+         (id, provider_id, model_id, display_name, capabilities, cost,
           context_limit, input_limit, output_limit, modalities, status,
-          release_date, knowledge_cutoff, open_weights, updated_at)
+          release_date, knowledge_cutoff, open_weights, data, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
-          id, providerId, modelId, providerName, displayName,
+          id, pid, modelId, displayName,
           JSON.stringify(caps), cost,
           lim.context ?? null, lim.input ?? null, lim.output ?? null,
           modals, status,
           m.release_date || null, m.knowledge || null,
-          openWeights, now,
+          openWeights, fullData, now,
         )
         .run();
       synced += 1;
@@ -109,14 +129,14 @@ export async function getModelById(env, id) {
 }
 
 /**
- * List unique provider IDs and names.
+ * List providers from llm_providers.
  */
 export async function listModelProviders(env) {
   if (!env?.DB) return [];
   const rows = await env.DB.prepare(
-    "SELECT DISTINCT provider_id, provider_name FROM llm_models WHERE status != 'deprecated' ORDER BY provider_name ASC",
+    "SELECT * FROM llm_providers ORDER BY name ASC",
   ).all();
-  return (rows.results || []).map((r) => ({ id: r.provider_id, name: r.provider_name }));
+  return (rows.results || []).map(mapProviderRow);
 }
 
 function mapModelRow(row) {
@@ -124,7 +144,6 @@ function mapModelRow(row) {
     id: row.id,
     providerId: row.provider_id,
     modelId: row.model_id,
-    providerName: row.provider_name,
     displayName: row.display_name,
     capabilities: safeJson(row.capabilities, {}),
     cost: safeJson(row.cost, null),
@@ -136,6 +155,19 @@ function mapModelRow(row) {
     releaseDate: row.release_date,
     knowledgeCutoff: row.knowledge_cutoff,
     openWeights: row.open_weights === 1,
+    data: safeJson(row.data, null),
+  };
+}
+
+function mapProviderRow(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    env: safeJson(row.env, []),
+    npm: row.npm,
+    doc: row.doc,
+    api: row.api,
+    logoUrl: row.logo_url,
   };
 }
 

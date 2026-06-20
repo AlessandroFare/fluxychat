@@ -1,10 +1,20 @@
+CREATE TABLE IF NOT EXISTS llm_providers (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  env TEXT,
+  npm TEXT,
+  doc TEXT,
+  api TEXT,
+  logo_url TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS llm_models (
   id TEXT PRIMARY KEY,
   provider_id TEXT NOT NULL,
   model_id TEXT NOT NULL,
-  provider_name TEXT,
   display_name TEXT NOT NULL,
-  description TEXT,
   capabilities TEXT NOT NULL DEFAULT '{}',
   cost TEXT,
   context_limit INTEGER,
@@ -15,8 +25,10 @@ CREATE TABLE IF NOT EXISTS llm_models (
   release_date TEXT,
   knowledge_cutoff TEXT,
   open_weights INTEGER DEFAULT 0,
+  data TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (provider_id) REFERENCES llm_providers(id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_llm_models_provider

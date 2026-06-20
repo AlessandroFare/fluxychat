@@ -18,7 +18,7 @@ import { isBrowserRunConfigured } from "../lib/browser-run.js";
 import { getPublicHostConfig } from "../lib/custom-domains.js";
 import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flags.js";
 import { isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
-import { queryModelsCatalog, getModelById, listModelProviders } from "../lib/llm-models-catalog.js";
+import { queryModelsCatalog, getModelById, listModelProviders, syncModelsCatalog } from "../lib/llm-models-catalog.js";
 
 export async function dispatchPublicRoutes(request, url, h) {
   const {
@@ -97,6 +97,15 @@ export async function dispatchPublicRoutes(request, url, h) {
     );
   }
 
+  if (url.pathname === "/llm-models/sync" && request.method === "POST") {
+    const secret = request.headers.get("X-Sync-Secret");
+    if (secret !== env.PLATFORM_BOOTSTRAP_SECRET) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const result = await syncModelsCatalog(env);
+    return json(result);
+  }
+
   if (url.pathname === "/llm-models" && request.method === "GET") {
     const search = url.searchParams.get("search") || undefined;
     const provider = url.searchParams.get("provider") || undefined;
@@ -108,6 +117,11 @@ export async function dispatchPublicRoutes(request, url, h) {
     }
     const models = await queryModelsCatalog(env, { search, provider, capability });
     return json({ models });
+  }
+
+  if (url.pathname === "/llm-models/providers" && request.method === "GET") {
+    const providers = await listModelProviders(env);
+    return json({ providers });
   }
 
   if (url.pathname === "/public/host-config" && request.method === "GET") {
