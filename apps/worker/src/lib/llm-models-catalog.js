@@ -15,6 +15,10 @@ export async function syncModelsCatalog(env) {
   let synced = 0;
   const now = new Date().toISOString();
 
+  // Clear existing data first to avoid duplicates with manually inserted entries.
+  await env.DB.prepare("DELETE FROM llm_models").run();
+  await env.DB.prepare("DELETE FROM llm_providers").run();
+
   for (const [providerId, provider] of Object.entries(providers)) {
     const p = /** @type {any} */ (provider);
     const pid = p.id || providerId;
