@@ -35,10 +35,7 @@ test.describe("cloudflare cost table", () => {
       page.getByRole("heading", { name: "Running costs on Cloudflare" }),
     ).toBeVisible({ timeout: 15_000 });
 
-    const table = page.getByRole("heading", { name: "Running costs on Cloudflare" })
-      .locator("..")
-      .locator("..")
-      .locator("table");
+    const table = page.getByTestId("cloudflare-cost-table");
     const tableRows = table.locator("tbody tr");
     await expect(tableRows).toHaveCount(3);
   });

@@ -58,7 +58,7 @@ export function CloudflareCostTable({ variant = "dark" }: { variant?: "dark" | "
         path.
       </p>
       <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+        <table data-testid="cloudflare-cost-table" className="w-full min-w-[640px] border-collapse text-left text-sm">
           <thead>
             <tr className={`border-b ${isDark ? "border-white/10" : "border-border"}`}>
               <th className={`px-4 py-3 font-semibold ${isDark ? "text-white" : "text-foreground"}`}>Plan</th>

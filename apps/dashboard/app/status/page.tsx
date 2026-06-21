@@ -27,7 +27,7 @@ export default async function StatusPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-        <h1 className="font-heading text-3xl font-bold tracking-tight">System status</h1>
+        <h1 data-testid="status-heading" className="font-heading text-3xl font-bold tracking-tight">System status</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Public health for the chat API. Project-scoped operational alerts appear in the console
           when you are signed in.
