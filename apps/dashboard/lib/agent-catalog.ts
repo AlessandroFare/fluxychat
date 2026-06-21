@@ -18,57 +18,11 @@ export const LLM_MODEL_SHORTCUTS: Record<string, string> = {
 
 /** Keep in sync with apps/worker/src/lib/llm-providers.js */
 export const AGENT_PROVIDER_OPTIONS: AgentProviderOption[] = [
-  {
-    id: "openai",
-    label: "OpenAI",
-    models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o3-mini"],
-  },
-  {
-    id: "anthropic",
-    label: "Anthropic",
-    models: ["claude-3-5-haiku-latest", "claude-sonnet-4-20250514"],
-  },
-  {
-    id: "minimax",
-    label: "MiniMax",
-    models: ["minimax-m2.5-free", "MiniMax-Text-01", "abab6.5s-chat"],
-    allowCustomBaseUrl: true,
-    hint: "MINIMAX_API_KEY, optional MINIMAX_BASE_URL",
-  },
-  {
-    id: "zencode",
-    label: "ZenCode (gateway)",
-    models: ["minimax-m2.5-free"],
-    allowCustomBaseUrl: true,
-    hint: "ZENCODE_API_KEY + ZENCODE_BASE_URL — or shortcut minimax-free",
-  },
-  {
-    id: "openrouter",
-    label: "OpenRouter",
-    models: ["openai/gpt-4o-mini", "anthropic/claude-sonnet-4", "google/gemini-2.0-flash"],
-    allowCustomBaseUrl: true,
-    hint: "Model field keeps vendor/id (e.g. openai/gpt-4o-mini)",
-  },
-  { id: "groq", label: "Groq", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"] },
-  { id: "deepseek", label: "DeepSeek", models: ["deepseek-chat", "deepseek-reasoner"] },
-  {
-    id: "together",
-    label: "Together AI",
-    models: ["meta-llama/Llama-3.3-70B-Instruct-Turbo"],
-  },
-  {
-    id: "fireworks",
-    label: "Fireworks AI",
-    models: ["accounts/fireworks/models/llama-v3p3-70b-instruct"],
-  },
-  { id: "cerebras", label: "Cerebras", models: ["llama-3.3-70b"] },
-  { id: "mistral", label: "Mistral", models: ["mistral-small-latest", "mistral-large-latest"] },
-  { id: "xai", label: "xAI (Grok)", models: ["grok-2-latest"] },
-  { id: "moonshot", label: "Moonshot AI", models: ["moonshot-v1-8k"] },
+  // Local/custom providers not available on models.dev:
   {
     id: "ollama",
     label: "Ollama (local)",
-    models: ["llama3.2", "qwen2.5"],
+    models: [],
     allowCustomBaseUrl: true,
   },
   {
