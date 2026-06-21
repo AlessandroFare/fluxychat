@@ -18,26 +18,6 @@ export const LLM_MODEL_SHORTCUTS: Record<string, string> = {
 
 /** Keep in sync with apps/worker/src/lib/llm-providers.js */
 export const AGENT_PROVIDER_OPTIONS: AgentProviderOption[] = [
-  // Local/custom providers not available on models.dev:
-  {
-    id: "ollama",
-    label: "Ollama (local)",
-    models: [],
-    allowCustomBaseUrl: true,
-  },
-  {
-    id: "lmstudio",
-    label: "LM Studio (local)",
-    models: [],
-    allowCustomBaseUrl: true,
-  },
-  {
-    id: "cloudflare-ai-gateway",
-    label: "Cloudflare AI Gateway",
-    models: [],
-    allowCustomBaseUrl: true,
-    hint: "CLOUDFLARE_AI_GATEWAY_BASE_URL",
-  },
   {
     id: "custom",
     label: "Custom (OpenAI-compatible)",
