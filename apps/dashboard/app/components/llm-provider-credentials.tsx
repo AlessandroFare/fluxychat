@@ -13,14 +13,6 @@ import { messageFromUnknown } from "@/lib/error-message";
 import { Button, Input, Section } from "./ui";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_CREDENTIAL_PROVIDER_IDS = new Set([
-  "openai",
-  "anthropic",
-  "zencode",
-  "minimax",
-  "openrouter",
-]);
-
 function providersForCredentialForm(
   focusProviderId: string | null | undefined,
   search: string,
@@ -49,9 +41,7 @@ function providersForCredentialForm(
     );
   }
 
-  const base = all.filter(
-    (p) => p.allowCustomBaseUrl || DEFAULT_CREDENTIAL_PROVIDER_IDS.has(p.id),
-  );
+  const base = all;
   if (!focusProviderId || base.some((p) => p.id === focusProviderId)) {
     return base;
   }

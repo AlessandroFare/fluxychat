@@ -100,15 +100,11 @@ export function LlmProviderModelPicker({
 
   const modelDatalistOptions = useMemo(() => {
     const fromCatalog = (catalogProvider?.models ?? []).map((m) => m.id);
-    const live =
-      provider === "openrouter" && llmCatalog?.liveModels
-        ? llmCatalog.liveModels.models.slice(0, 40).map((m) => m.id)
-        : [];
     const fromModelsDev = catalogModels
       .filter((m) => m.providerId === provider)
       .map((m) => m.id);
-    return [...new Set([...fromCatalog, ...live, ...fromModelsDev])];
-  }, [catalogProvider, llmCatalog, provider, catalogModels]);
+    return [...new Set([...fromCatalog, ...fromModelsDev])];
+  }, [catalogProvider, provider, catalogModels]);
 
   const allowBaseUrl =
     catalogProvider?.allowCustomBaseUrl ?? providerAllowsCustomBaseUrl(provider);

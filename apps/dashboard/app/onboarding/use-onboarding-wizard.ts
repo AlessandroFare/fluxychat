@@ -54,8 +54,8 @@ export function useOnboardingWizard() {
   const [room, setRoom] = useState<CreatedRoom | null>(null);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [agentName, setAgentName] = useState("Assistant");
-  const [agentProvider, setAgentProvider] = useState("zencode");
-  const [agentModel, setAgentModel] = useState("minimax-free");
+  const [agentProvider, setAgentProvider] = useState("openai");
+  const [agentModel, setAgentModel] = useState("gpt-4o-mini");
   const [agent, setAgent] = useState<CreatedAgent | null>(null);
   const [creatingAgent, setCreatingAgent] = useState(false);
   const [agentPrompt, setAgentPrompt] = useState("Summarize the last messages in 3 bullets");
@@ -373,8 +373,8 @@ export function useOnboardingWizard() {
     setNotice(null);
     try {
       const applied = applyModelInput(
-        agentProvider.trim() || "zencode",
-        agentModel.trim() || "minimax-free",
+        agentProvider.trim() || "openai",
+        agentModel.trim() || "gpt-4o-mini",
       );
       const json = await fetchWorkerJson<{ agent: { id: string; name: string } }>(
         `${WORKER_URL}/agents`,

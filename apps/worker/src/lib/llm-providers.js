@@ -6,7 +6,6 @@
  * @see https://ai-sdk.dev/docs/foundations/providers-and-models
  */
 
-import { getAiGatewayConnectionOverrides } from "./ai-gateway.js";
 import { buildModelCatalogEntry } from "./llm-model-catalog.js";
 import { getProjectLlmCredential } from "./project-llm-credentials.js";
 import { workerSharedLlmAllowed } from "./hosted-saas-policy.js";
@@ -160,10 +159,8 @@ export async function resolveLlmConnection(env, { provider: providerField, model
     readEnv(env, def.baseUrlEnv) ||
     def.defaultBaseUrl;
 
-  if (!baseUrl && id === "openai") {
-    baseUrl = readEnv(env, "AI_BASE_URL") || def.defaultBaseUrl || "https://api.openai.com";
-  } else if (!baseUrl && apiStyle === "openai-compatible" && !def.allowCustomBaseUrl) {
-    baseUrl = readEnv(env, "AI_BASE_URL") || def.defaultBaseUrl || "https://api.openai.com";
+  if (!baseUrl && apiStyle === "openai-compatible") {
+    baseUrl = readEnv(env, "AI_BASE_URL") || def.defaultBaseUrl;
   }
 
   baseUrl = normalizeBaseUrl(baseUrl);
@@ -177,37 +174,13 @@ export async function resolveLlmConnection(env, { provider: providerField, model
 
   const resolvedModel = modelId || "";
 
-  const needsBaseUrl = def.allowCustomBaseUrl || id === "custom" || id === "zencode";
-  if (apiStyle === "openai-compatible" && needsBaseUrl && !baseUrl) {
+  if (!baseUrl && apiStyle === "openai-compatible") {
     return {
       ok: false,
       error: `provider_${id}_requires_base_url`,
-      hint:
-        id === "zencode"
-          ? "Set ZENCODE_BASE_URL or agent config.llm.baseUrl to your ZenCode OpenAI-compatible endpoint."
-          : "Set config.llm.baseUrl on the agent or the provider BASE_URL env var.",
+      hint: "Set config.llm.baseUrl on the agent or configure a base URL via LLM keys.",
     };
   }
-
-  if (apiStyle === "anthropic" && !apiKey) {
-    return {
-      ok: false,
-      error: "anthropic_api_key_missing",
-      hint: "Set ANTHROPIC_API_KEY on the Worker.",
-    };
-  }
-
-  const gatewayOverrides =
-    sharedLlmOk &&
-    !projectCred?.apiKey &&
-    apiStyle === "openai-compatible" &&
-    id === "openai"
-      ? getAiGatewayConnectionOverrides(env, {
-          useGateway: true,
-          projectId,
-          feature: "agent",
-        })
-      : {};
 
   return {
     ok: true,
@@ -222,7 +195,6 @@ export async function resolveLlmConnection(env, { provider: providerField, model
     supportsTools: def.supportsTools,
     apiKeyConfigured: !!apiKey,
     apiKeySource: projectCred?.apiKey ? "project" : apiKey ? "worker" : "none",
-    ...gatewayOverrides,
   };
 }
 

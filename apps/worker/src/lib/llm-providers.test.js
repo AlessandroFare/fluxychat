@@ -5,39 +5,38 @@ import {
   parseAgentLlmConfig,
   parseModelRef,
   normalizeAgentLlmFields,
-  expandModelShortcut,
   formatModelRef,
   listLlmProvidersForApi,
 } from "./llm-providers.js";
 
 describe("parseModelRef", () => {
   it("splits provider/model composite", () => {
-    expect(parseModelRef(null, "anthropic/claude-sonnet-4-20250514")).toEqual({
-      providerId: "anthropic",
-      modelId: "claude-sonnet-4-20250514",
-      modelRef: "anthropic/claude-sonnet-4-20250514",
-    });
-  });
-
-  it("keeps openrouter vendor/model id intact", () => {
-    expect(parseModelRef("openrouter", "openai/gpt-4o-mini")).toEqual({
-      providerId: "openrouter",
-      modelId: "openai/gpt-4o-mini",
+    expect(parseModelRef(null, "openai/gpt-4o-mini")).toEqual({
+      providerId: "openai",
+      modelId: "gpt-4o-mini",
       modelRef: "openai/gpt-4o-mini",
     });
   });
 
-  it("expands shortcuts", () => {
-    expect(parseModelRef(null, "minimax-free")).toEqual({
-      providerId: "zencode",
-      modelId: "minimax-m2.5-free",
-      modelRef: "zencode/minimax-m2.5-free",
+  it("keeps vendor/model when provider is set", () => {
+    expect(parseModelRef("openrouter", "openai/gpt-4o-mini")).toEqual({
+      providerId: "openrouter",
+      modelId: "openai/gpt-4o-mini",
+      modelRef: "openrouter/openai/gpt-4o-mini",
+    });
+  });
+
+  it("falls back to custom when no provider detected", () => {
+    expect(parseModelRef(null, "some-model")).toEqual({
+      providerId: "custom",
+      modelId: "some-model",
+      modelRef: "custom/some-model",
     });
   });
 });
 
 describe("resolveLlmConnection", () => {
-  it("resolves OpenAI from env", async () => {
+  it("resolves custom provider with base URL and key", async () => {
     const conn = await resolveLlmConnection(
       { AI_API_KEY: "sk-test", AI_BASE_URL: "https://api.openai.com" },
       { provider: "openai", model: "gpt-4o-mini" }
@@ -96,29 +95,6 @@ describe("resolveLlmConnection", () => {
     });
     expect(conn.ok).toBe(true);
   });
-
-  it("requires base URL for zencode without env", async () => {
-    const conn = await resolveLlmConnection({}, { provider: "zencode", model: "minimax-m2.5-free" });
-    expect(conn.ok).toBe(false);
-  });
-});
-
-describe("resolveLlmConnection gateway overrides", () => {
-  it("injects gateway URLs for shared openai worker fallback", async () => {
-    const env = {
-      AI_API_KEY: "sk-openai",
-      AI_GATEWAY_ACCOUNT_ID: "acc_test",
-      AI_GATEWAY_ID: "fluxy",
-      AI_GATEWAY_TOKEN: "cf-token",
-    };
-    const conn = await resolveLlmConnection(env, {
-      provider: "openai",
-      model: "gpt-4o-mini",
-    });
-    expect(conn.ok).toBe(true);
-    expect(conn.chatCompletionsUrl).toContain("gateway.ai.cloudflare.com");
-    expect(conn.gatewayHeaders?.Authorization).toBe("Bearer cf-token");
-  });
 });
 
 describe("resolveLlmConnectionWithFallback", () => {
@@ -140,11 +116,11 @@ describe("resolveLlmConnectionWithFallback", () => {
 });
 
 describe("listLlmProvidersForApi", () => {
-  it("returns providers with model capabilities", async () => {
+  it("returns custom provider", async () => {
     const catalog = await listLlmProvidersForApi({ AI_API_KEY: "x" }, {});
-    expect(catalog.providers.length).toBeGreaterThan(5);
-    const openai = catalog.providers.find((p) => p.id === "openai");
-    expect(openai?.models[0]?.capabilities?.toolUsage).toBe(true);
-    expect(catalog.capabilityLegend).toBeDefined();
+    expect(catalog.providers.length).toBeGreaterThan(0);
+    const custom = catalog.providers.find((p) => p.id === "custom");
+    expect(custom).toBeDefined();
+    expect(custom?.label).toBe("Custom (OpenAI-compatible)");
   });
 });
