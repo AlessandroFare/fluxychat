@@ -100,7 +100,9 @@ export async function dispatchPublicRoutes(request, url, h) {
   if (url.pathname === "/llm-models/sync" && request.method === "POST") {
     const secret = request.headers.get("X-Sync-Secret");
     const expected = env.PLATFORM_BOOTSTRAP_SECRET || "dev-sync-secret";
-    if (secret !== expected) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    const isAdmin = auth && hasAnyRole(auth.roles, ["owner", "admin"]);
+    if (secret !== expected && !isAdmin) {
       return json({ error: "forbidden" }, { status: 403 });
     }
     const result = await syncModelsCatalog(env);
