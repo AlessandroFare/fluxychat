@@ -105,7 +105,13 @@ export async function dispatchPublicRoutes(request, url, h) {
     if (secret !== expected && !isAdmin) {
       return json({ error: "forbidden" }, { status: 403 });
     }
-    const result = await syncModelsCatalog(env);
+    let result;
+    try {
+      result = await syncModelsCatalog(env);
+    } catch (err) {
+      logError("llm_models.sync_failed", err, requestLogCtx);
+      return json({ error: err instanceof Error ? err.message : "sync_failed", traceId }, { status: 500 });
+    }
     return json(result);
   }
 

@@ -8,10 +8,16 @@ const MODELS_DEV_URL = "https://models.dev/api.json";
  */
 export async function syncModelsCatalog(env) {
   if (!env?.DB) return { synced: 0, error: "no DB" };
-  const res = await fetch(MODELS_DEV_URL);
+  const res = await fetch(MODELS_DEV_URL, { signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error(`models.dev returned ${res.status}`);
 
-  const providers = await res.json();
+  const text = await res.text();
+  let providers;
+  try {
+    providers = JSON.parse(text);
+  } catch {
+    throw new Error("models.dev returned invalid JSON");
+  }
   let synced = 0;
   const now = new Date().toISOString();
 
