@@ -21,6 +21,9 @@ export async function syncModelsCatalog(env) {
   let synced = 0;
   const now = new Date().toISOString();
 
+  const providerStmts = [];
+  const modelStmts = [];
+
   for (const [providerId, provider] of Object.entries(providers)) {
     const p = /** @type {any} */ (provider);
     const pid = p.id || providerId;
@@ -28,11 +31,11 @@ export async function syncModelsCatalog(env) {
 
     // Upsert provider
     const logoUrl = `https://models.dev/logos/${pid}.svg`;
-    await env.DB.prepare(
-      `INSERT OR REPLACE INTO llm_providers (id, name, env, npm, doc, api, logo_url, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-      .bind(
+    providerStmts.push(
+      env.DB.prepare(
+        `INSERT OR REPLACE INTO llm_providers (id, name, env, npm, doc, api, logo_url, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
         pid,
         p.name || pid,
         p.env ? JSON.stringify(p.env) : null,
@@ -41,8 +44,8 @@ export async function syncModelsCatalog(env) {
         p.api || null,
         logoUrl,
         now,
-      )
-      .run();
+      ),
+    );
 
     // Upsert models
     const models = p.models || {};
@@ -67,29 +70,30 @@ export async function syncModelsCatalog(env) {
       const modals = m.modalities ? JSON.stringify(m.modalities) : null;
       const status = m.status || "active";
       const openWeights = m.open_weights ? 1 : 0;
-
-      // Store full model data as JSON for complete fidelity
       const fullData = JSON.stringify(m);
 
-      await env.DB.prepare(
-        `INSERT OR REPLACE INTO llm_models
-         (id, provider_id, model_id, display_name, capabilities, cost,
-          context_limit, input_limit, output_limit, modalities, status,
-          release_date, knowledge_cutoff, open_weights, data, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-        .bind(
+      modelStmts.push(
+        env.DB.prepare(
+          `INSERT OR REPLACE INTO llm_models
+           (id, provider_id, model_id, display_name, capabilities, cost,
+            context_limit, input_limit, output_limit, modalities, status,
+            release_date, knowledge_cutoff, open_weights, data, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
           id, pid, modelId, displayName,
           JSON.stringify(caps), cost,
           lim.context ?? null, lim.input ?? null, lim.output ?? null,
           modals, status,
           m.release_date || null, m.knowledge || null,
           openWeights, fullData, now,
-        )
-        .run();
+        ),
+      );
       synced += 1;
     }
   }
+
+  // Batch all statements to stay under the free-plan subrequest limit.
+  await env.DB.batch([...providerStmts, ...modelStmts]);
 
   return { synced, at: now };
 }
