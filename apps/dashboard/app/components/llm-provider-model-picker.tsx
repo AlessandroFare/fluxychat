@@ -49,21 +49,27 @@ export function LlmProviderModelPicker({
   const [catalogModels, setCatalogModels] = useState<Array<{ id: string; providerId: string; displayName?: string }>>([]);
   const [catalogProviders, setCatalogProviders] = useState<Array<{ id: string; name: string; logoUrl?: string }>>([]);
   const [customModel, setCustomModel] = useState(false);
+
+  // Fetch models for the current provider whenever it changes.
   useEffect(() => {
     let cancelled = false;
     const base = getPublicWorkerUrl();
-    Promise.all([
-      fetch(`${base}/llm-models?limit=200`).then((r) => r.json()),
-      fetch(`${base}/llm-models/providers`).then((r) => r.json()),
-    ])
-      .then(([modelsData, provData]) => {
-        if (!cancelled) {
-          setCatalogModels(modelsData.models || []);
-          setCatalogProviders(provData.providers || []);
-        }
-      })
+    const params = new URLSearchParams();
+    if (provider) params.set("provider", provider);
+    params.set("limit", "200");
+    fetch(`${base}/llm-models?${params}`)
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled) setCatalogModels(data.models || []); })
       .catch(() => {});
     return () => { cancelled = true; };
+  }, [provider]);
+
+  // Fetch provider list once on mount.
+  useEffect(() => {
+    fetch(`${getPublicWorkerUrl()}/llm-models/providers`)
+      .then((r) => r.json())
+      .then((data) => { if (data?.providers) setCatalogProviders(data.providers); })
+      .catch(() => {});
   }, []);
 
   const providerOptions = useMemo(() => {
