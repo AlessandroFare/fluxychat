@@ -2,10 +2,9 @@ import { test, expect } from "@playwright/test";
 
 test.describe("status smoke", () => {
   test("renders public status page", async ({ page }) => {
-    await page.goto("/status", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("status-heading")).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(page.getByRole("heading", { name: "Chat API" })).toBeVisible();
+    const response = await page.goto("/status", { waitUntil: "domcontentloaded" });
+    expect(response?.status()).toBe(200);
+    await expect(page.getByText("System status")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Chat API")).toBeVisible();
   });
 });
