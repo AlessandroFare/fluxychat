@@ -51,10 +51,11 @@ export function parseModelRef(
 
   if (!providerId) providerId = "custom";
 
+  const resolvedModel = modelRaw || "";
   return {
     providerId,
-    modelId: modelRaw || "",
-    modelRef: formatModelRef(providerId, modelId || ""),
+    modelId: resolvedModel,
+    modelRef: formatModelRef(providerId, resolvedModel),
   };
 }
 
