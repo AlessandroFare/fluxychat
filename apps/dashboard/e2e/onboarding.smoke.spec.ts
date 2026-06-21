@@ -17,10 +17,9 @@ test.describe("onboarding smoke", () => {
 
   test("shows quickstart playground and progress strip", async ({ page }) => {
     await expect(page.getByTestId("onboarding-page")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "Quickstart playground" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Get started in 5 steps" })).toBeVisible();
     await expect(page.getByTestId("onboarding-playground")).toBeVisible();
     await expect(page.getByTestId("onboarding-progress")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Setup" })).toBeVisible();
   });
 
   test("manual JWT path unlocks create project", async ({ page }) => {

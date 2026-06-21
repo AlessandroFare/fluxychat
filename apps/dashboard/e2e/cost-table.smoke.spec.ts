@@ -35,10 +35,11 @@ test.describe("cloudflare cost table", () => {
       page.getByRole("heading", { name: "Running costs on Cloudflare" }),
     ).toBeVisible({ timeout: 15_000 });
 
-    // Find the table that contains "Workers Free"  should be 3 body rows.
-    const costHeading = page.getByRole("heading", { name: "Running costs on Cloudflare" });
-    const sectionRoot = costHeading.locator("xpath=ancestor::div[1]");
-    const tableRows = sectionRoot.locator("tbody tr");
+    const table = page.getByRole("heading", { name: "Running costs on Cloudflare" })
+      .locator("..")
+      .locator("..")
+      .locator("table");
+    const tableRows = table.locator("tbody tr");
     await expect(tableRows).toHaveCount(3);
   });
 });
