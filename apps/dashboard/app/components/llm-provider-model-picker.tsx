@@ -128,8 +128,14 @@ export function LlmProviderModelPicker({
           onChange={(e) => {
             const next = e.target.value;
             const prov = findCatalogProvider(llmCatalog, next);
+            const fromModelsDev = catalogModels
+              .filter((m) => m.providerId === next)
+              .map((m) => m.id);
             const firstModel =
-              prov?.models[0]?.id ?? modelSuggestionsForProvider(next)[0] ?? "";
+              prov?.models[0]?.id ??
+              fromModelsDev[0] ??
+              modelSuggestionsForProvider(next)[0] ??
+              "";
             onChange({ provider: next, model: firstModel });
             setCustomModel(false);
           }}
