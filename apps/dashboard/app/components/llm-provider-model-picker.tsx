@@ -10,8 +10,6 @@ import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import type { LlmCatalogResponse } from "@/lib/llm-catalog-client";
 import {
   applyModelInput,
-  expandModelShortcut,
-  modelSuggestionsForProvider,
   parseModelRef,
   providerAllowsCustomBaseUrl,
   providerHint,
@@ -100,7 +98,6 @@ export function LlmProviderModelPicker({
   );
 
   const modelDatalistOptions = useMemo(() => {
-    const local = modelSuggestionsForProvider(provider);
     const fromCatalog = (catalogProvider?.models ?? []).map((m) => m.id);
     const live =
       provider === "openrouter" && llmCatalog?.liveModels
@@ -109,7 +106,7 @@ export function LlmProviderModelPicker({
     const fromModelsDev = catalogModels
       .filter((m) => m.providerId === provider)
       .map((m) => m.id);
-    return [...new Set([...local, ...fromCatalog, ...live, ...fromModelsDev])];
+    return [...new Set([...fromCatalog, ...live, ...fromModelsDev])];
   }, [catalogProvider, llmCatalog, provider, catalogModels]);
 
   const allowBaseUrl =
@@ -140,7 +137,6 @@ export function LlmProviderModelPicker({
             const firstModel =
               prov?.models[0]?.id ??
               fromModelsDev[0] ??
-              modelSuggestionsForProvider(next)[0] ??
               "";
             onChange({ provider: next, model: firstModel });
             setCustomModel(false);
