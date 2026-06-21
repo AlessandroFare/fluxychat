@@ -5,6 +5,7 @@ import { KeyRound, Wrench, Zap } from "lucide-react";
 import { FormField } from "./form-field";
 import { ModelCapabilityBadges } from "./model-capability-badges";
 import { LlmCredentialStatus } from "./llm-credential-status";
+import { SearchableSelect } from "./searchable-select";
 import { Button, Input } from "./ui";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import type { LlmCatalogResponse } from "@/lib/llm-catalog-client";
@@ -125,11 +126,10 @@ export function LlmProviderModelPicker({
         }
         className="sm:col-span-2"
       >
-        <select
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        <SearchableSelect
           value={provider}
-          onChange={(e) => {
-            const next = e.target.value;
+          options={providerOptions}
+          onChange={(next) => {
             const prov = findCatalogProvider(llmCatalog, next);
             const fromModelsDev = catalogModels
               .filter((m) => m.providerId === next)
@@ -141,13 +141,8 @@ export function LlmProviderModelPicker({
             onChange({ provider: next, model: firstModel });
             setCustomModel(false);
           }}
-        >
-          {providerOptions.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-            </option>
-          ))}
-        </select>
+          placeholder="Select a provider"
+        />
         {catalogProvider ? (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <LlmCredentialStatus status={catalogProvider.credentialStatus} />
@@ -217,31 +212,25 @@ export function LlmProviderModelPicker({
         hint="Select a model for the chosen provider."
         className={allowBaseUrl ? "sm:col-span-2" : "sm:col-span-2"}
       >
-        <select
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        <SearchableSelect
           value={modelDatalistOptions.includes(model) ? model : "__custom__"}
-          onChange={(e) => {
-            const val = e.target.value;
-            if (val === "__custom__") {
+          options={[
+            ...modelDatalistOptions.slice(0, 60).map((m) => ({ id: m, label: m })),
+            ...(modelDatalistOptions.length > 60
+              ? [{ id: "__more__", label: `── ${modelDatalistOptions.length - 60} more models ──` }]
+              : []),
+            { id: "__custom__", label: model && !modelDatalistOptions.includes(model) ? `Custom: ${model}` : "Type custom model ID…" },
+          ]}
+          onChange={(val) => {
+            if (val === "__custom__" || val === "__more__") {
               setCustomModel(true);
             } else {
               setCustomModel(false);
               onChange({ model: val });
             }
           }}
-        >
-          {modelDatalistOptions.length > 0 ? (
-            modelDatalistOptions.slice(0, 60).map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))
-          ) : (
-            <option value="" disabled>No models found for this provider</option>
-          )}
-          {modelDatalistOptions.length > 60 ? (
-            <option value="" disabled>── {modelDatalistOptions.length - 60} more models available ──</option>
-          ) : null}
-          <option value="__custom__">{model && !modelDatalistOptions.includes(model) ? `Custom: ${model}` : "Type custom model ID…"}</option>
-        </select>
+          placeholder="Select a model"
+        />
         {customModel || (model && !modelDatalistOptions.includes(model)) ? (
           <Input
             value={model}
