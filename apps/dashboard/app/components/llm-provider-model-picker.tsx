@@ -247,8 +247,7 @@ export function LlmProviderModelPicker({
             value={model}
             onChange={(e) => {
               const raw = e.target.value;
-              const expanded = expandModelShortcut(raw);
-              if (raw.includes("/") || expanded !== raw.trim()) {
+              if (raw.includes("/")) {
                 const applied = applyModelInput(provider, raw);
                 onChange({ provider: applied.provider, model: applied.model });
               } else {
