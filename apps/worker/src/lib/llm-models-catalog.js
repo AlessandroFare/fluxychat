@@ -4,7 +4,7 @@
 const MODELS_DEV_URL = "https://models.dev/api.json";
 
 /**
- * Fetch models.dev and upsert into D1.
+ * Fetch models.dev and insert only new providers/models — no overwrites.
  */
 export async function syncModelsCatalog(env) {
   if (!env?.DB) return { synced: 0, error: "no DB" };
@@ -18,42 +18,59 @@ export async function syncModelsCatalog(env) {
   } catch {
     throw new Error("models.dev returned invalid JSON");
   }
-  let synced = 0;
-  const now = new Date().toISOString();
 
-  const providerStmts = [];
-  const modelStmts = [];
+  const now = new Date().toISOString();
+  const stmts = [];
+
+  // Pre-load existing provider IDs so we only insert new ones.
+  const existingProviders = new Set(
+    (await env.DB.prepare("SELECT id FROM llm_providers").all()).results?.map(r => r.id) || [],
+  );
+
+  // Pre-load all existing model compound IDs (e.g. "openai/gpt-4o")
+  // so we can insert only truly new models even for existing providers.
+  const existingModels = new Set(
+    (await env.DB.prepare("SELECT id FROM llm_models").all()).results?.map(r => r.id) || [],
+  );
+
+  let synced = 0;
 
   for (const [providerId, provider] of Object.entries(providers)) {
     const p = /** @type {any} */ (provider);
     const pid = p.id || providerId;
     if (!pid) continue;
 
-    // Upsert provider
-    const logoUrl = `https://models.dev/logos/${pid}.svg`;
-    providerStmts.push(
-      env.DB.prepare(
-        `INSERT OR REPLACE INTO llm_providers (id, name, env, npm, doc, api, logo_url, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).bind(
-        pid,
-        p.name || pid,
-        p.env ? JSON.stringify(p.env) : null,
-        p.npm || null,
-        p.doc || null,
-        p.api || null,
-        logoUrl,
-        now,
-      ),
-    );
+    // Insert provider only if it doesn't exist yet.
+    if (!existingProviders.has(pid)) {
+      const logoUrl = `https://models.dev/logos/${pid}.svg`;
+      stmts.push(
+        env.DB.prepare(
+          `INSERT INTO llm_providers (id, name, env, npm, doc, api, logo_url, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          pid,
+          p.name || pid,
+          p.env ? JSON.stringify(p.env) : null,
+          p.npm || null,
+          p.doc || null,
+          p.api || null,
+          logoUrl,
+          now,
+        ),
+      );
+      synced += 1;
+    }
 
-    // Upsert models
+    // Model check: insert only models whose compound ID doesn't exist yet.
     const models = p.models || {};
     for (const [modelKey, model] of Object.entries(models)) {
       const m = /** @type {any} */ (model);
       const modelId = m.id || modelKey;
       if (!modelId) continue;
       const id = `${pid}/${modelId}`;
+
+      if (existingModels.has(id)) continue;
+
       const displayName = m.name || modelId;
 
       const caps = {
@@ -72,9 +89,9 @@ export async function syncModelsCatalog(env) {
       const openWeights = m.open_weights ? 1 : 0;
       const fullData = JSON.stringify(m);
 
-      modelStmts.push(
+      stmts.push(
         env.DB.prepare(
-          `INSERT OR REPLACE INTO llm_models
+          `INSERT INTO llm_models
            (id, provider_id, model_id, display_name, capabilities, cost,
             context_limit, input_limit, output_limit, modalities, status,
             release_date, knowledge_cutoff, open_weights, data, updated_at)
@@ -92,8 +109,9 @@ export async function syncModelsCatalog(env) {
     }
   }
 
-  // Batch all statements to stay under the free-plan subrequest limit.
-  await env.DB.batch([...providerStmts, ...modelStmts]);
+  if (stmts.length > 0) {
+    await env.DB.batch(stmts);
+  }
 
   return { synced, at: now };
 }
