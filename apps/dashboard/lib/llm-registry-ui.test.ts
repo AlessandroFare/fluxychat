@@ -16,6 +16,6 @@ describe("llm-registry-ui", () => {
 
   it("listProviderOptions falls back to static registry", () => {
     const opts = listProviderOptions(null);
-    expect(opts.some((p) => p.id === "openai")).toBe(true);
+    expect(opts.some((p) => p.id === "custom")).toBe(true);
   });
 });
