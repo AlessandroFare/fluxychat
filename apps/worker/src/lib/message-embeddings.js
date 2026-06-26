@@ -13,7 +13,7 @@
  */
 
 import { logError } from "./worker-log.js";
-import { isAiConfigured, resolveAiTransport, buildAiAuthHeaders } from "./ai-gateway.js";
+import { resolveEmbeddingsTransport, buildEmbeddingsAuthHeaders } from "./ai-gateway.js";
 
 const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
 const DEFAULT_DIMENSIONS = 1536;
@@ -31,8 +31,8 @@ const DEFAULT_DIMENSIONS = 1536;
  * @returns {Promise<{ ok: true, embeddings: number[][], model: string, dimensions: number } | { ok: false, error: string }>}
  */
 export async function generateEmbeddings(env, opts) {
-  const transport = resolveAiTransport(env);
-  if (!transport.configured || !transport.embeddingsUrl) {
+  const embTransport = resolveEmbeddingsTransport(env);
+  if (!embTransport.configured || !embTransport.embeddingsUrl) {
     return { ok: false, error: "ai_not_configured" };
   }
 
@@ -49,14 +49,10 @@ export async function generateEmbeddings(env, opts) {
     body.dimensions = opts.dimensions;
   }
 
-  const res = await fetch(transport.embeddingsUrl, {
+  const res = await fetch(embTransport.embeddingsUrl, {
     method: "POST",
-    headers: buildAiAuthHeaders(env, {
+    headers: buildEmbeddingsAuthHeaders(env, {
       contentType: "application/json",
-      metadata: {
-        ...(opts.logContext || {}),
-        feature: opts.logContext?.feature || "embeddings",
-      },
     }),
     body: JSON.stringify(body),
   });
@@ -67,7 +63,6 @@ export async function generateEmbeddings(env, opts) {
       ...(opts.logContext || {}),
       aiStatus: res.status,
       aiBody: text.slice(0, 200),
-      aiMode: transport.mode,
       model,
     });
     return { ok: false, error: "ai_provider_failed" };

@@ -175,62 +175,67 @@ export async function deleteInsight(env, { projectId, id }) {
  * Gather analytics data from existing operational_metrics and messages tables.
  */
 async function gatherAnalyticsData(env, { projectId, insightType, periodStart, periodEnd }) {
-  const periodClause = periodStart ? `AND created_at >= '${periodStart}'` : "";
-  const periodClauseEnd = periodEnd ? `AND created_at <= '${periodEnd}'` : "";
+  // Build parameterized WHERE clause to prevent SQL injection.
+  // periodStart/periodEnd are user-controlled ISO date strings.
+  const conditions = [];
+  const params = [projectId];
+  if (periodStart) { conditions.push("created_at >= ?"); params.push(periodStart); }
+  if (periodEnd) { conditions.push("created_at <= ?"); params.push(periodEnd); }
+  const periodClause = conditions.length ? "AND " + conditions.join(" AND ") : "";
 
   const data = {};
 
   try {
     // Message volume
     const msgCount = await env.DB.prepare(
-      `SELECT COUNT(*) as count FROM messages WHERE project_id = ? ${periodClause} ${periodClauseEnd}`
-    ).bind(projectId).first();
+      `SELECT COUNT(*) as count FROM messages WHERE project_id = ? ${periodClause}`
+    ).bind(...params).first();
     data.messageCount = msgCount?.count || 0;
 
     // Messages by hour
     const byHour = await env.DB.prepare(
       `SELECT CAST(strftime('%H', created_at) AS INTEGER) as hour, COUNT(*) as count
-       FROM messages WHERE project_id = ? ${periodClause} ${periodClauseEnd}
+       FROM messages WHERE project_id = ? ${periodClause}
        GROUP BY hour ORDER BY count DESC`
-    ).bind(projectId).all();
+    ).bind(...params).all();
     data.messagesByHour = byHour?.results || [];
 
     // Messages by day
     const byDay = await env.DB.prepare(
       `SELECT strftime('%w', created_at) as day, COUNT(*) as count
-       FROM messages WHERE project_id = ? ${periodClause} ${periodClauseEnd}
+       FROM messages WHERE project_id = ? ${periodClause}
        GROUP BY day ORDER BY count DESC`
-    ).bind(projectId).all();
+    ).bind(...params).all();
     data.messagesByDay = byDay?.results || [];
 
     // Active rooms
     const activeRooms = await env.DB.prepare(
-      `SELECT COUNT(DISTINCT room_id) as count FROM messages WHERE project_id = ? ${periodClause} ${periodClauseEnd}`
-    ).bind(projectId).first();
+      `SELECT COUNT(DISTINCT room_id) as count FROM messages WHERE project_id = ? ${periodClause}`
+    ).bind(...params).first();
     data.activeRooms = activeRooms?.count || 0;
 
     // Active users
     const activeUsers = await env.DB.prepare(
-      `SELECT COUNT(DISTINCT sender_id) as count FROM messages WHERE project_id = ? ${periodClause} ${periodClauseEnd}`
-    ).bind(projectId).first();
+      `SELECT COUNT(DISTINCT sender_id) as count FROM messages WHERE project_id = ? ${periodClause}`
+    ).bind(...params).first();
     data.activeUsers = activeUsers?.count || 0;
 
     // Voice messages ratio
     const voiceCount = await env.DB.prepare(
-      `SELECT COUNT(*) as count FROM messages WHERE project_id = ? AND kind = 'voice' ${periodClause} ${periodClauseEnd}`
-    ).bind(projectId).first();
+      `SELECT COUNT(*) as count FROM messages WHERE project_id = ? AND kind = 'voice' ${periodClause}`
+    ).bind(...params).first();
     data.voiceMessageCount = voiceCount?.count || 0;
 
     // Agent runs
     const agentRuns = await env.DB.prepare(
-      `SELECT COUNT(*) as count FROM agent_runs WHERE project_id = ? ${periodClause} ${periodClauseEnd}`
-    ).bind(projectId).first();
+      `SELECT COUNT(*) as count FROM agent_runs WHERE project_id = ? ${periodClause}`
+    ).bind(...params).first();
     data.agentRunCount = agentRuns?.count || 0;
 
     // Agent failures
     const agentFails = await env.DB.prepare(
-      `SELECT COUNT(*) as count FROM agent_runs WHERE project_id = ? AND status = 'failed' ${periodClause} ${periodClauseEnd}`
-    ).bind(projectId).first();
+      `SELECT COUNT(*) as count FROM agent_runs WHERE project_id = ? AND status = 'failed' ${periodClause}`
+    ).bind(...params).first();
     data.agentFailureCount = agentFails?.count || 0;
 
   } catch (_) { /* tables may not exist */ }

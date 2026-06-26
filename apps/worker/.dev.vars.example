@@ -98,6 +98,13 @@ AI_BASE_URL=
 AI_API_KEY=
 ANTHROPIC_API_KEY=
 # AI_MODEL=
+# AI_TRANSCRIBE_MODEL=whisper-large-v3-turbo  # override default whisper-1
+
+# Dedicated embeddings provider (optional; falls back to AI_BASE_URL / AI_API_KEY).
+# Use this when your main LLM provider (e.g. Groq) does not support embeddings,
+# and you want a separate provider (e.g. OpenCode Zen) just for vector generation.
+# AI_EMBEDDINGS_BASE_URL=
+# AI_EMBEDDINGS_API_KEY=
 
 # Optional per-provider keys / base URLs (see apps/worker/src/lib/llm-providers.js)
 # MINIMAX_API_KEY=

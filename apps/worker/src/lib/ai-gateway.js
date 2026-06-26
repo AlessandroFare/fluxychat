@@ -157,6 +157,45 @@ export function getAiGatewayConnectionOverrides(env, options = {}) {
 }
 
 /**
+ * Resolve a dedicated transport for embeddings (may differ from the main LLM transport).
+ * When AI_EMBEDDINGS_BASE_URL is set it takes priority; otherwise falls back to the
+ * main AI transport (gateway or direct).
+ *
+ * @param {*} env
+ * @returns {{ configured: boolean, embeddingsUrl: string | null }}
+ */
+export function resolveEmbeddingsTransport(env) {
+  const dedicatedUrl = env.AI_EMBEDDINGS_BASE_URL?.trim();
+  if (dedicatedUrl) {
+    const normalized = trimTrailingSlashes(dedicatedUrl);
+    const base = normalized.endsWith("/v1") ? normalized : `${normalized}/v1`;
+    return { configured: true, embeddingsUrl: `${base}/embeddings` };
+  }
+
+  const main = resolveAiTransport(env);
+  return { configured: main.configured, embeddingsUrl: main.embeddingsUrl };
+}
+
+/**
+ * Build auth headers for the dedicated embeddings transport.
+ * Uses AI_EMBEDDINGS_API_KEY when set, otherwise falls back to main AI auth.
+ *
+ * @param {*} env
+ * @param {{ metadata?: Record<string, unknown>, contentType?: string }} [options]
+ */
+export function buildEmbeddingsAuthHeaders(env, options = {}) {
+  const dedicatedKey = env.AI_EMBEDDINGS_API_KEY?.trim();
+  if (dedicatedKey) {
+    const headers = {
+      ...(options.contentType ? { "Content-Type": options.contentType } : {}),
+      Authorization: `Bearer ${dedicatedKey}`,
+    };
+    return headers;
+  }
+  return buildAiAuthHeaders(env, options);
+}
+
+/**
  * @param {*} env
  * @param {{ projectId?: string, feature?: string }} [context]
  */

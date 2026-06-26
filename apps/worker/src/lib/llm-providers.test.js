@@ -76,6 +76,7 @@ describe("resolveLlmConnection", () => {
   it("prefers project credential over worker env", async () => {
     const env = {
       AI_API_KEY: "worker-key",
+      AI_BASE_URL: "https://api.openai.com",
       DB: {
         prepare: () => ({
           bind: () => ({

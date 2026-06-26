@@ -65,9 +65,23 @@ async function runPool(total, concurrency, taskFn) {
   await Promise.all(workers);
 }
 
+/**
+ * Resolve and validate the thresholds file path to prevent path traversal.
+ * Only allows files within the current working directory tree.
+ */
+function resolveSafePath(filePath) {
+  const resolved = path.resolve(filePath);
+  const cwd = path.resolve(process.cwd());
+  if (!resolved.startsWith(cwd + path.sep) && resolved !== cwd) {
+    throw new Error(`thresholds-file must be within the current working directory: ${filePath}`);
+  }
+  return resolved;
+}
+
 async function loadThresholds(filePath) {
   if (!filePath) return null;
-  const raw = await fs.readFile(filePath, "utf8");
+  const safePath = resolveSafePath(filePath);
+  const raw = await fs.readFile(safePath, "utf8");
   const parsed = JSON.parse(raw);
   const t = parsed?.thresholds || {};
   return {

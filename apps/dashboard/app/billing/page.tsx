@@ -17,6 +17,19 @@ import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 
 const WORKER_URL = getPublicWorkerUrl();
 
+/** Validate that a redirect URL points to an allowed domain (e.g. Stripe). */
+function isAllowedRedirectUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "https:" &&
+      (parsed.hostname.endsWith(".stripe.com") || parsed.hostname === "localhost")
+    );
+  } catch {
+    return false;
+  }
+}
+
 interface PlanInfo {
   projectId: string;
   planName: string;
@@ -106,6 +119,9 @@ export default function BillingPage() {
         }
       );
       if (data.url) {
+        if (!isAllowedRedirectUrl(data.url)) {
+          throw new Error("Invalid checkout URL: untrusted domain");
+        }
         window.location.href = data.url;
       } else {
         throw new Error(data.error || "Checkout failed");
@@ -142,6 +158,9 @@ export default function BillingPage() {
         }
       );
       if (data.url) {
+        if (!isAllowedRedirectUrl(data.url)) {
+          throw new Error("Invalid portal URL: untrusted domain");
+        }
         window.location.href = data.url;
       } else {
         throw new Error(data.error || "Portal failed");
