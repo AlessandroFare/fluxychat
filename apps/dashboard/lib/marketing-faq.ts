@@ -30,7 +30,23 @@ export const LANDING_FAQ = [
   },
   {
     q: "Humans and AI agents in the same room?",
-    a: "tool_call and tool_result ride the same WebSocket as user messages, so you replay one timeline instead of guessing what the agent did. Guide: /guides/agent-events-same-websocket-stream.",
+    a: "tool_call and tool_result ride the same WebSocket as user messages, so you replay one timeline instead of guessing what the agent did. Streaming markdown with table buffering and code fence tracking renders cleanly during AI responses. Guide: /guides/agent-events-same-websocket-stream.",
+  },
+  {
+    q: "What platforms do the multi-platform adapters support?",
+    a: "14 platforms behind a unified interface: Slack, Discord, Telegram, WhatsApp, Microsoft Teams, Email, SMS, Webhook, Matrix, and more. Each adapter handles platform-specific formatting, and the card builder renders Slack Block Kit and Teams Adaptive Cards natively.",
+  },
+  {
+    q: "What is MCP and how does FluxyChat use it?",
+    a: "Model Context Protocol lets your agents consume external tool servers. FluxyChat acts as an MCP client — auto-converting tools to LLM function-calling format. Point your agent at any MCP-compatible server and it just works.",
+  },
+  {
+    q: "Can I add guardrails or RAG to AI responses?",
+    a: "Yes. The LLM middleware pipeline supports wrapGenerate, wrapStream, and transformParams hooks. Plug in guardrails, caching, RAG injection, PII redaction, or logging — all on the edge, before responses reach users.",
+  },
+  {
+    q: "Does WorkflowAgent survive deploys?",
+    a: "Yes. WorkflowAgent persists state to D1 after each step. If the Worker restarts or you deploy a new version, the agent resumes from the last completed step — no lost work.",
   },
   {
     q: "I finished Cloudflare's chat tutorial — now what?",

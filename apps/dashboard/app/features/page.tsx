@@ -21,20 +21,48 @@ interface FeatureGroup {
 
 const GROUPS: FeatureGroup[] = [
   {
-    title: "AI & memory",
-    intro: "In-room assistants, persistent context, and AI-driven automations.",
+    title: "AI & agents",
+    intro: "In-room assistants, streaming AI, MCP tools, and durable agent execution.",
     items: [
       {
-        title: "In-room agents",
-        description: "Mention an agent and get replies on the same WebSocket stream as chat.",
+        title: "In-room AI agents",
+        description: "Mention an agent and get streaming markdown replies on the same WebSocket stream as chat. Tool calling with HITL approval gates.",
         href: "/agents",
         hrefLabel: "Configure agents",
       },
       {
-        title: "Voice messages & transcription",
-        description: "Record audio in chat; the worker stores it on R2 and updates transcription asynchronously.",
-        href: "/rooms",
-        hrefLabel: "Try in a room",
+        title: "MCP client",
+        description: "Consume any MCP-compatible tool server. Auto-convert tools to LLM function-calling format.",
+      },
+      {
+        title: "LLM middleware pipeline",
+        description: "Pluggable hooks: guardrails, caching, RAG injection, PII redaction, logging — wrapGenerate / wrapStream / transformParams.",
+      },
+      {
+        title: "WorkflowAgent",
+        description: "Durable agent execution that survives deploys and restarts. State persisted to D1, automatic resume from last step.",
+      },
+      {
+        title: "Streaming markdown",
+        description: "Table buffering, code fence tracking, and inline marker healing for clean partial renders during AI streaming.",
+      },
+      {
+        title: "Stream resumption",
+        description: "Reconnect to in-progress AI responses after page refresh or network drop — no lost tokens.",
+      },
+      {
+        title: "Realtime voice",
+        description: "Bidirectional voice-to-voice AI conversations with real-time tool calling and provider-agnostic abstraction.",
+      },
+      {
+        title: "AI tool presets",
+        description: "Reader, messenger, and moderator tool groups with per-tool approval gates for enterprise governance.",
+        href: "/admin",
+        hrefLabel: "Admin",
+      },
+      {
+        title: "Room memory & knowledge graph",
+        description: "Persistent room context and links between conversations (worker API).",
       },
       {
         title: "AI suggestions & digest",
@@ -42,22 +70,22 @@ const GROUPS: FeatureGroup[] = [
         href: "/activities",
         hrefLabel: "Automations",
       },
-      {
-        title: "Room memory & knowledge graph",
-        description: "Persistent room context and links between conversations (worker API).",
-      },
-      {
-        title: "AI actions & moderation",
-        description: "Automatic message actions and an assisted moderation queue.",
-        href: "/admin",
-        hrefLabel: "Admin",
-      },
     ],
   },
   {
-    title: "Omnichannel & inbox",
-    intro: "Unify in-app chat, SMS, WhatsApp, and operator queues.",
+    title: "Multi-platform & messaging",
+    intro: "14 platform adapters, card builder, and unified messaging across channels.",
     items: [
+      {
+        title: "14 platform adapters",
+        description: "Slack, Discord, Telegram, WhatsApp, Teams, Email, SMS, Webhook, Matrix, and 5 more — one unified interface.",
+        href: "/integrations",
+        hrefLabel: "Integrations",
+      },
+      {
+        title: "Card element builder",
+        description: "Compose rich interactive messages with buttons, tables, and sections — JSX or function API, Slack Block Kit & Teams Adaptive Cards.",
+      },
       {
         title: "Unified inbox",
         description: "Mentions, unread, snooze, and follow-ups in one view.",
@@ -141,9 +169,21 @@ const GROUPS: FeatureGroup[] = [
     ],
   },
   {
-    title: "Integrations & distribution",
-    intro: "Put chat where you need it: website, custom domain, external bridges.",
+    title: "Developer experience",
+    intro: "CLI scaffolding, SDK, DevTools, and sandbox for building fast.",
     items: [
+      {
+        title: "create-fluxy-chat CLI",
+        description: "Scaffold a new FluxyChat project with one command. Worker, SDK, and config wired up.",
+      },
+      {
+        title: "DevTools web UI",
+        description: "Visual inspector for LLM calls, tool executions, and token usage. OpenTelemetry with GenAI semantic conventions.",
+      },
+      {
+        title: "Sandbox support",
+        description: "Safely execute untrusted code in isolated environments with portable command execution.",
+      },
       {
         title: "Embed widget",
         description: "One-line script for your site; configurable themes and flows.",
@@ -161,12 +201,6 @@ const GROUPS: FeatureGroup[] = [
         description: "Sync external channels with FluxyChat rooms (admin config).",
         href: "/integrations",
         hrefLabel: "Integrations",
-      },
-      {
-        title: "MCP & workflow automation",
-        description: "MCP server and scheduled automations on the worker.",
-        href: "/activities",
-        hrefLabel: "Activities",
       },
     ],
   },

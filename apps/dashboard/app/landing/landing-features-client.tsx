@@ -54,19 +54,19 @@ const PILLARS: readonly PillarBentoItem[] = [
     icon: Zap,
     label: "Realtime",
     title: "Runs on your edge",
-    body: "WebSockets and Durable Objects handle presence, typing, and delivery. No socket fleet to babysit.",
+    body: "WebSockets and Durable Objects handle presence, typing, and delivery. One Room DO per room — no socket fleet to babysit.",
   },
   {
     icon: Shield,
     label: "Trust",
-    title: "GDPR tools included",
-    body: "Export, erasure, audit trails, and signed webhooks when you need to answer security questionnaires.",
+    title: "GDPR & compliance tools included",
+    body: "Export, erasure, audit trails, retention policies, and signed webhooks when you need to answer security questionnaires.",
   },
   {
     icon: Sparkles,
-    label: "Automate",
-    title: "Humans and agents, one stream",
-    body: "Tool events sit on the same room WebSocket as user messages. You debug copilots without a second realtime pipe.",
+    label: "AI-native",
+    title: "Agents and humans, one stream",
+    body: "Tool events, streaming markdown, and MCP calls ride the same room WebSocket as user messages. Debug copilots without a second realtime pipe.",
   },
 ];
 
@@ -79,8 +79,7 @@ export function LandingFeaturesClient() {
             Messaging basics, on the edge
           </h2>
           <p className="mx-auto max-w-2xl px-2 text-center text-sm text-zinc-300 sm:text-base">
-            Tap or hover a row on desktop. Channels, presence, mentions, and webhooks without bolting on another
-            realtime vendor.
+            Channels, presence, mentions, and webhooks without bolting on another realtime vendor. Tap or hover a row on desktop.
           </p>
         </div>
 
@@ -100,7 +99,7 @@ export function LandingFeaturesClient() {
 
         <div className="mx-auto max-w-6xl px-4 pb-10 pt-4 sm:px-6">
           <p className="text-center text-xs text-zinc-400">
-            Threads, polls, and translation are up to your product layer. Fluxychat ships the realtime core.
+            Threads, polls, and translation are up to your product layer. FluxyChat ships the realtime core — rooms, presence, typing, delivery, and AI agent events.
           </p>
         </div>
       </section>
@@ -118,8 +117,7 @@ export function LandingFeaturesClient() {
             What ships in the box
           </h2>
           <p className="mx-auto mb-4 max-w-2xl text-center text-base text-muted-foreground">
-            Edge delivery, clear quotas, and a console for the day-two work. You own the UI; we handle rooms, delivery,
-            and ops hooks.
+            Edge delivery, AI-native streaming, 14 platform adapters, and a console for day-two work. You own the UI; we handle rooms, delivery, agents, and ops hooks.
           </p>
           <p className="mx-auto mb-6 max-w-2xl text-center text-sm text-muted-foreground">{MARKETING_WHY.body}</p>
           <ul className="mx-auto mb-10 flex max-w-3xl flex-wrap justify-center gap-2">
@@ -145,16 +143,36 @@ export function LandingFeaturesClient() {
         </div>
       </section>
 
+      <section className="border-b border-border bg-[#0e0e0e] px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-6xl">
+          <p className="mb-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+            Built-in architecture
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "14 platform adapters", desc: "Slack, Discord, Telegram, WhatsApp, Teams, Email, SMS, Webhook, Matrix, and 5 more — one unified interface" },
+              { label: "Streaming markdown", desc: "Table buffering, code fence tracking, inline marker healing — clean partial renders during AI streaming" },
+              { label: "MCP client + tool calling", desc: "Consume any MCP-compatible tool server. Auto-convert to LLM function-calling format with HITL approval gates" },
+              { label: "Card builder", desc: "Composable rich messaging with JSX or function API — Slack Block Kit and Teams Adaptive Card renderers built in" },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 px-5 py-4">
+                <p className="text-sm font-semibold text-white">{item.label}</p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-400">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="border-b border-border bg-white px-4 py-20 sm:px-6">
         <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-2 lg:items-center">
           <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Middleware</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Middleware pipeline</p>
             <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
-              Transform messages before they land
+              Transform messages and AI responses before they land
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Moderate, validate, enrich, and fan out from the edge. Policy code stays on the data path, not in a
-              sidecar you forget to deploy.
+              Moderate, validate, enrich, and fan out from the edge. LLM middleware supports guardrails, caching, RAG injection, PII redaction, and logging via wrapGenerate / wrapStream / transformParams. Policy code stays on the data path, not in a sidecar you forget to deploy.
             </p>
           </div>
           <Suspense fallback={<SectionFallback className="h-72 w-full" />}>
@@ -168,11 +186,10 @@ export function LandingFeaturesClient() {
           <div className="mb-12 rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-sm)] sm:p-10">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Developers</p>
             <h2 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
-              SDK, docs, and console in one repo
+              SDK, CLI, docs, and console in one repo
             </h2>
             <p className="mt-3 max-w-3xl text-muted-foreground">
-              Auth, rooms, and retries sit behind hooks and route handlers. When you need keys, quotas, or billing, open
-              the operator UI instead of wiring another admin surface.
+              Auth, rooms, and retries sit behind hooks and route handlers. Scaffold a new project with create-fluxy-chat CLI. When you need keys, quotas, or billing, open the operator UI instead of wiring another admin surface.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild>

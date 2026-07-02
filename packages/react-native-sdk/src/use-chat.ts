@@ -76,34 +76,35 @@ export function useChat({
     conn.addEventListener("message", (event: FluxyChatEvent) => {
       const s = store.getState();
       if (event.type === "history") {
-        store.setState({ messages: mergeMessagesChronological(s.messages, sortMessagesChronological(event.messages)), historyLoaded: true });
+        store.setState({ messages: mergeMessagesChronological(s.messages as any, sortMessagesChronological((event as any).messages as any)) as any, historyLoaded: true });
       } else if (event.type === "message") {
-        const normalized = { ...event, userId: event.userId ?? (event as any).senderId };
-        const withPending = client.userId === normalized.userId ? tryMatchPendingByInbound(s.messages, normalized, client.userId) : s.messages;
-        const idx = withPending.findIndex((m: any) => m.id === event.id);
+        const normalized = { ...event, userId: event.userId ?? (event as any).senderId } as any;
+        const withPending = client.userId === normalized.userId ? tryMatchPendingByInbound(s.messages as any, normalized, client.userId) as any : s.messages;
+        const idx = withPending.findIndex((m: any) => m.id === (event as any).id);
         if (idx >= 0) {
           const next = [...withPending]; next[idx] = { ...next[idx], ...normalized, deliveryStatus: "sent" };
-          store.setState({ messages: sortMessagesChronological(next) });
+          store.setState({ messages: sortMessagesChronological(next) as any });
         } else {
-          store.setState({ messages: sortMessagesChronological([...withPending, { ...normalized, deliveryStatus: "sent" }]) });
+          store.setState({ messages: sortMessagesChronological([...withPending, { ...normalized, deliveryStatus: "sent" }]) as any });
         }
       } else if (event.type === "presence") {
-        store.setState({ online: event.online, onlineUsers: event.users ?? [] });
+        store.setState({ online: (event as any).online, onlineUsers: (event as any).users ?? [] });
       } else if (event.type === "typing") {
-        store.setState({ typingUsers: { ...s.typingUsers, [event.userId]: event.isTyping } });
+        store.setState({ typingUsers: { ...s.typingUsers, [event.userId as string]: (event as any).isTyping } });
       } else if (event.type === "edit") {
-        store.setState({ messages: s.messages.map((m: any) => m.id === event.id ? { ...m, content: event.content, editedAt: event.editedAt, streaming: event.streaming ?? false } : m) });
+        store.setState({ messages: s.messages.map((m: any) => m.id === (event as any).id ? { ...m, content: (event as any).content, editedAt: (event as any).editedAt, streaming: (event as any).streaming ?? false } : m) });
       } else if (event.type === "reaction") {
         const byMessage = { ...s.reactions };
-        const current = { ...(byMessage[event.messageId] || {}) };
-        current[event.emoji] = (current[event.emoji] || 0) + (event.op === "remove" ? -1 : 1);
-        if (current[event.emoji] <= 0) delete current[event.emoji];
-        byMessage[event.messageId] = current;
+        const mid = String((event as any).messageId);
+        const current = { ...(byMessage[mid] || {}) };
+        current[event.emoji as string] = (current[event.emoji as string] || 0) + ((event as any).op === "remove" ? -1 : 1);
+        if (current[event.emoji as string] <= 0) delete current[event.emoji as string];
+        byMessage[mid] = current;
         store.setState({ reactions: byMessage });
       } else if (event.type === "delete") {
-        store.setState({ messages: event.hard ? s.messages.filter((m: any) => m.id !== event.id) : s.messages.map((m: any) => m.id === event.id ? { ...m, content: "[deleted]", deletedAt: event.deletedAt } : m) });
+        store.setState({ messages: (event as any).hard ? s.messages.filter((m: any) => m.id !== (event as any).id) : s.messages.map((m: any) => m.id === (event as any).id ? { ...m, content: "[deleted]", deletedAt: (event as any).deletedAt } : m) });
       } else if (event.type === "agentTyping") {
-        store.setState({ agentTyping: event.isTyping });
+        store.setState({ agentTyping: (event as any).isTyping });
       }
       onAnyEvent?.(event);
     });
@@ -113,7 +114,7 @@ export function useChat({
 
     if (replay === "connect") {
       client.fetchMessages(trimmedRoomId, { limit: historyLimit }).then((initial) => {
-        store.setState({ messages: initial, hasMore: initial.length >= historyLimit, historyLoaded: true });
+        store.setState({ messages: initial as any, hasMore: initial.length >= historyLimit, historyLoaded: true });
       }).catch(() => {});
     }
 
@@ -125,14 +126,14 @@ export function useChat({
     const clientMessageId = createClientMessageId();
     const optimistic = createOptimisticMessage({ roomId: roomIdRef.current, userId: client.userId, content, clientMessageId, parentId: replyTo ?? null });
     const s = storeRef.current?.getState();
-    if (s) storeRef.current?.setState({ messages: sortMessagesChronological([...s.messages, optimistic]) });
+    if (s) storeRef.current?.setState({ messages: sortMessagesChronological([...s.messages, optimistic] as any) as any });
 
     if (client.isAuthenticated()) {
-      client.createMessage(roomIdRef.current, content, replyTo, attachments, clientMessageId, options).then((serverMessage) => {
+      client.createMessage(roomIdRef.current, content, replyTo ?? null).then((serverMessage: any) => {
         if (!serverMessage) return;
         const ackId = serverMessage.clientMessageId ?? clientMessageId;
         const curr = storeRef.current?.getState();
-        if (curr) storeRef.current?.setState({ messages: applyServerMessageAck(curr.messages, serverMessage, ackId) });
+        if (curr) storeRef.current?.setState({ messages: applyServerMessageAck(curr.messages as any, serverMessage as any, ackId) as any });
       }).catch(() => {
         try { connRef.current?.sendJson({ type: "message", userId: client.userId, content, parentId: replyTo ?? null, attachments: attachments ?? [] }); } catch {}
       });
@@ -149,8 +150,8 @@ export function useChat({
     if (!oldest?.createdAt) return;
     storeRef.current.setState({ isLoadingMore: true });
     try {
-      const older = await client.fetchMessages(roomIdRef.current, { limit: historyLimit, before: oldest.createdAt });
-      storeRef.current.setState((prev: any) => ({ messages: mergeMessagesChronological(prev.messages, older), hasMore: older.length >= historyLimit, isLoadingMore: false }));
+      const older = await client.fetchMessages(roomIdRef.current, { limit: historyLimit, before: oldest.createdAt }) as any;
+      storeRef.current.setState((prev: any) => ({ messages: mergeMessagesChronological(prev.messages, older as any) as any, hasMore: older.length >= historyLimit, isLoadingMore: false }));
     } catch { storeRef.current.setState({ isLoadingMore: false }); }
   }, [client, historyLimit]);
 

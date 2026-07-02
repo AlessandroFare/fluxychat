@@ -1,4 +1,5 @@
 import { pickRouteDeps } from "./route-http-deps.js";
+import { validateLimit } from "../lib/validation.js";
 
 /**
  * Unified project activity feed (messages automation, webhooks, agent runs).
@@ -20,7 +21,9 @@ export async function dispatchActivitiesRoutes(request, url, h) {
     return json({ error: "forbidden" }, { status: 403 });
   }
 
-  const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || "60"), 1), 200);
+  const limitResult = validateLimit(url.searchParams.get("limit"), { defaultValue: 60, max: 200 });
+  if (limitResult.error) return json({ error: "bad_request", message: limitResult.error }, { status: 400 });
+  const limit = limitResult.value;
   const roomId = url.searchParams.get("roomId")?.trim() || "";
   const { projectId: authProjectId } = auth;
   const perSource = Math.min(limit, 80);

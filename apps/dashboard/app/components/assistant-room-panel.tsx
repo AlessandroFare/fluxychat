@@ -14,7 +14,7 @@ import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
 import { messageFromUnknown } from "@/lib/error-message";
-import { AgentRoomChat } from "./agent-room-chat";
+import { FluxyChat as AgentRoomChat } from "@/components/chat";
 import { Banner, Button, Section } from "./ui";
 
 const WORKER_URL = getPublicWorkerUrl();

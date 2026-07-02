@@ -20,23 +20,23 @@ const HOSTED_STEPS = [
   },
   {
     icon: Package,
-    title: "Install the SDK",
-    body: "Run pnpm add @fluxy-chat/sdk in your app and set baseUrl to the hosted API URL from the console.",
+    title: "Install the SDK or use the CLI",
+    body: "Run pnpm add @fluxy-chat/sdk in your app, or use create-fluxy-chat to scaffold a full project with Worker, SDK, and config pre-wired.",
   },
   {
     icon: Code2,
     title: "Send your first message",
-    body: "Mint a member JWT on your backend (or use the wizard), join a room, and render chat with useChat.",
+    body: "Mint a member JWT on your backend (or use the wizard), join a room, and render chat with useChat. Streaming markdown and tool calling work out of the box.",
   },
   {
     icon: LayoutDashboard,
     title: "Open the console for ops",
-    body: "Manage rooms, agents, quotas, and billing once you are signed in.",
+    body: "Manage rooms, agents, MCP tools, quotas, and billing once you are signed in.",
   },
   {
     icon: KeyRound,
     title: "Upgrade when you need more",
-    body: "Start on the free tier. Move to a paid plan in the console when quotas or agents become a bottleneck.",
+    body: "Start on the free tier. Move to a paid plan in the console when quotas or AI agent invokes become a bottleneck.",
   },
 ] as const;
 

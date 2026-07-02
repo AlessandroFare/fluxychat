@@ -2486,6 +2486,8 @@ CREATE TABLE project_plans (
 CREATE TABLE project_secrets (
   project_id TEXT PRIMARY KEY,
   jwt_secret TEXT NOT NULL,        
+  jwt_secret_previous TEXT,        -- previous HS256 secret accepted during rotation
+  jwt_secret_previous_expires_at TEXT, -- ISO wall-clock cutoff for the previous secret
   created_at TEXT NOT NULL
 );
 

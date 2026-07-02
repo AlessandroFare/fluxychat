@@ -39,10 +39,6 @@ export function useOnboardingWizard() {
     setLastRoom,
   } = useDashboardSession();
 
-  // Initialize empty so the placeholder ("Project name (e.g. Acme Support)")
-  // shows and the "Use default name" helper button has a real effect on first
-  // interaction. Previously this defaulted to "My first project", making the
-  // button a no-op until the user manually cleared the field. (Audit UX fix.)
   const [projectName, setProjectName] = useState("");
   const [creatingProject, setCreatingProject] = useState(false);
   const [provisioningCloud, setProvisioningCloud] = useState(false);
@@ -80,10 +76,7 @@ export function useOnboardingWizard() {
   });
 
   // Track whether the *current user* has sent a message during this onboarding
-  // session. This is deliberately separate from `messages.length` because
-  // history replay and inbound messages from other members would otherwise
-  // auto-complete onboarding and re-trigger the celebration banner on every
-  // reconnect. Only an actual user-initiated send counts. (Audit fix.)
+  // session.
   const [userSentMessage, setUserSentMessage] = useState(false);
   const handleSendMessage = useCallback(
     (...args: Parameters<typeof rawSendMessage>) => {
@@ -95,16 +88,13 @@ export function useOnboardingWizard() {
     [rawSendMessage, clerkUser?.id, userId],
   );
 
-  // Celebrate + advance to step 4 ONLY when the user sends their first message.
-  // Previously this reacted to any messages.length change, which fired on
-  // history replay and on transient reconnects (length briefly drops to 0 then
-  // back up), yanking users back from step 5 and re-showing the banner.
+  // Celebrate + advance to step 3 (Explore Features) when user sends first message.
   const celebratedRef = useRef(false);
   useEffect(() => {
     if (!userSentMessage || celebratedRef.current) return;
     celebratedRef.current = true;
     setShowCelebration(true);
-    setActiveStep(4);
+    // Stay on the chat step so the user can see the response
   }, [userSentMessage]);
 
   useEffect(() => {
@@ -129,22 +119,15 @@ export function useOnboardingWizard() {
     setExistingRoomId(lastRoom.id);
   }, [lastRoom, room?.id]);
 
-  useEffect(() => {
-    if (activeStep !== 3 || roomMode !== "create" || roomName.trim()) return;
-    setRoomName(project?.id ? assistantRoomId(project.id) : "assistant-general");
-  }, [activeStep, roomMode, roomName]);
-
-  // Auto-advance to first incomplete step on mount.
+  // Auto-advance to first incomplete step on mount — but if the user hasn't
+  // even connected yet, start at the Welcome screen (step 0).
   useEffect(() => {
     const first = firstIncompleteOnboardingStep({ adminJwt, activeProject: project, memberJwt, room, messageCount: messages.length, userSentMessage });
-    if (first > 0) setActiveStep(first);
+    // Only auto-advance past welcome if there's real progress
+    if (first > 1) setActiveStep(first);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-mint member JWT the first time we have a project + admin JWT.
-  // Reset the latch whenever the project changes so a new project gets
-  // its own member token; previously the ref was latched once and
-  // never reset, so a second project in the same session would
-  // never auto-mint. (Audit fix; root cause was in this hook.)
   const autoMintMemberKeyRef = useRef("");
   useEffect(() => {
     if (!isClerkClientConfigured() || !clerkSignedIn) return;
@@ -154,6 +137,18 @@ export function useOnboardingWizard() {
     autoMintMemberKeyRef.current = key;
     void mintMemberJwt();
   }, [clerkSignedIn, adminJwt, project?.id, memberJwt, clerkUser?.id]);
+
+  // Auto-create room when we have a member JWT but no room yet
+  const autoRoomKeyRef = useRef("");
+  useEffect(() => {
+    if (!memberJwt.trim() || room?.id) return;
+    const key = `${memberJwt.slice(0, 20)}:${project?.id ?? ""}`;
+    if (autoRoomKeyRef.current === key) return;
+    autoRoomKeyRef.current = key;
+    const defaultRoomName = project?.id ? assistantRoomId(project.id) : "assistant-general";
+    setRoomName(defaultRoomName);
+    void createRoom(defaultRoomName);
+  }, [memberJwt, room?.id, project?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const furthest = useMemo(
     () =>
@@ -190,7 +185,7 @@ export function useOnboardingWizard() {
 
   async function provisionHostedProject() {
     if (!isClerkClientConfigured() || !clerkSignedIn) {
-      setError("Sign in with Clerk first (step 1), then use hosted provisioning.");
+      setError("Sign in with Clerk first, then use hosted provisioning.");
       return;
     }
     if (project?.id) {
@@ -232,7 +227,7 @@ export function useOnboardingWizard() {
 
   async function createProject() {
     if (project?.id) {
-      setNotice("Your cloud project is already provisioned. Continue to mint a member JWT.");
+      setNotice("Your cloud project is already provisioned. Continue to the next step.");
       setError(null);
       return;
     }
@@ -255,7 +250,6 @@ export function useOnboardingWizard() {
       });
       setActiveProject(json.project);
       setNotice("Project created.");
-      setActiveStep(2);
     } catch (err: unknown) {
       const message = messageFromUnknown(err, "Failed to create project");
       setError(
@@ -294,7 +288,6 @@ export function useOnboardingWizard() {
       if (!res.ok || !json.ok) throw new Error((!json.ok && json.error) || "Failed to mint JWT");
       setMemberJwt(json.data.memberJwt || "");
       setNotice("Member JWT minted (server-side — API key not exposed to the browser).");
-      setActiveStep(3);
     } catch (err: unknown) {
       setError(messageFromUnknown(err, "Failed to mint JWT"));
     } finally {
@@ -322,12 +315,13 @@ export function useOnboardingWizard() {
     setError(null);
   }
 
-  async function createRoom() {
+  async function createRoom(overrideName?: string) {
     if (!memberJwt) {
       setError("Mint a member JWT first.");
       return;
     }
-    if (!roomName.trim()) {
+    const name = (overrideName ?? roomName).trim();
+    if (!name) {
       setError("Enter a room id.");
       return;
     }
@@ -342,9 +336,9 @@ export function useOnboardingWizard() {
           Authorization: `Bearer ${memberJwt}`,
         },
         body: JSON.stringify({
-          id: roomName.trim(),
+          id: name,
           type: "group",
-          name: roomName.trim(),
+          name: name,
           members: [{ userId: userId.trim() || "alice", role: "member" }],
         }),
       });
@@ -355,7 +349,6 @@ export function useOnboardingWizard() {
           ? "Assistant room ready — you can chat with built-in agents from the Agents page."
           : "Room created.",
       );
-      setActiveStep(4);
     } catch (err: unknown) {
       setError(messageFromUnknown(err, "Failed to create room"));
     } finally {
@@ -511,4 +504,3 @@ export function useOnboardingWizard() {
 }
 
 export type OnboardingWizard = ReturnType<typeof useOnboardingWizard>;
-

@@ -23,7 +23,6 @@ export interface ProvisionResult {
     id: string;
     name: string;
     created_at: string;
-    apiKey?: string;
   } | null;
   createdNewProject: boolean;
 }
@@ -162,7 +161,6 @@ export async function provisionFluxyForClerkUser(
       id: created.id,
       name: created.name,
       created_at: created.created_at,
-      apiKey: created.apiKey,
     },
     createdNewProject: true,
   };

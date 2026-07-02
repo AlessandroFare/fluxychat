@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { AgentRoomChat } from "@/app/components/agent-room-chat";
+import { FluxyChat } from "@/components/chat";
 import { ConsolePanelHeader } from "@/app/components/console-panel-header";
 import { Panel } from "@/app/components/ui";
 import { useAgentsConsole } from "../../agents-console-context";
@@ -44,7 +44,7 @@ export default function AgentChatPage() {
         description={`Live room chat with ${selectedAgent.name} in ${roomId}. Built-in agents are provisioned when you create a project.`}
         onClose={() => router.push(`/agents/${agentId}`)}
       />
-      <AgentRoomChat
+      <FluxyChat
         roomId={roomId}
         agentId={selectedAgent.id}
         agentName={selectedAgent.name}

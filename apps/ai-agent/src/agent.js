@@ -16,23 +16,30 @@ export default {
     const url = new URL(request.url);
     // CORS: configurable allowed origins via ALLOWED_ORIGINS env var
     // Format: "https://domain1.com,https://domain2.com"
-    // Fallback to "*" only in dev (not recommended for production)
-    const allowedOrigins = (env.ALLOWED_ORIGINS || "*")
+    // Wildcard fallback is allowed only in development; production never
+    // sends "Access-Control-Allow-Origin: *".
+    const isDevelopment =
+      env.ENVIRONMENT === "development" || env.NODE_ENV === "development";
+    const allowedOrigins = (env.ALLOWED_ORIGINS || (isDevelopment ? "*" : ""))
       .split(",")
       .map((o) => o.trim())
       .filter(Boolean);
     const requestOrigin = request.headers.get("Origin") || "";
-    const corsOrigin = allowedOrigins.includes(requestOrigin)
-      ? requestOrigin
-      : allowedOrigins.includes("*")
-        ? "*"
-        : allowedOrigins[0] || "*";
+
+    let corsOrigin = "";
+    if (allowedOrigins.includes(requestOrigin)) {
+      corsOrigin = requestOrigin;
+    } else if (allowedOrigins.includes("*") && isDevelopment) {
+      corsOrigin = "*";
+    }
 
     const corsHeaders = {
-      "Access-Control-Allow-Origin": corsOrigin,
       "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Fluxy-Event,X-Fluxy-Project-Id,X-Fluxy-Signature",
     };
+    if (corsOrigin) {
+      corsHeaders["Access-Control-Allow-Origin"] = corsOrigin;
+    }
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders });

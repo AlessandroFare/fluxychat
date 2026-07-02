@@ -195,7 +195,6 @@ export function ChatWindow({
       ) : null}
       <MessageList
         messages={messages}
-        virtualization={messageListVirtualization}
         renderMessage={(m) => (
           <MessageItem
             message={m}

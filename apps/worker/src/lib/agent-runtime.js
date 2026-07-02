@@ -8,6 +8,8 @@ import {
 import { createAgentStreamHooks, roomStreamOp } from "./room-stream.js";
 import { isPrivateUrl } from "./url-ssrf.js";
 import { logInfo, logError } from "./worker-log.js";
+import { createLogger } from "./logger.js";
+const agentLog = createLogger("agent-runtime");
 import {
   MAX_TOOL_ITERATIONS,
   callLlmForConnection,
@@ -18,6 +20,14 @@ import {
 import { parseAgentToolAllowListFromEnv } from "./agent-tool-calls.js";
 import { executeToolCall, fetchAppContext } from "./agent-tools.js";
 import { safeJsonParse, truncateForStorage } from "./storage-utils.js";
+import { buildToolsWithOverrides } from "./tool-overrides.js";
+import { createPlan, addTask, updateTaskStatus, getPlanProgress } from "./plan.js";
+import { cardToFallbackText } from "./cards.js";
+import { createSentMessage } from "./sent-message.js";
+import { createThreadStateStore } from "./thread-state.js";
+import { createLLMMiddleware, wrapLanguageModel, createLoggingMiddleware } from "./llm-middleware.js";
+import { createLoopController, LOOP_PRESETS } from "./loop-control.js";
+import { createApprovalStore, createApprovalGate } from "./hitl-approval.js";
 import {
   MAX_MESSAGE_LENGTH,
   validateMessageContent,
@@ -292,6 +302,19 @@ export async function invokeMentionedAgents(
 export async function executeAgentRun(env, { agentRow, projectId, roomId, userMessage, userId, traceId, streamHooks }) {
   const startTime = performance.now();
   const runId = crypto.randomUUID();
+
+  // P22-F10: Track thread state for this agent run
+  const threadStateStore = env.KV ? createThreadStateStore(env.KV) : null;
+  const threadKey = `${projectId}:${roomId}`;
+  if (threadStateStore) {
+    await threadStateStore.set(threadKey, {
+      agentId: agentRow.id,
+      runId,
+      status: "running",
+      startedAt: new Date().toISOString(),
+    }, 300_000); // 5 min TTL
+  }
+
   const agentConfig = agentRow.config
     ? typeof agentRow.config === "string"
       ? safeJsonParse(agentRow.config)
@@ -352,7 +375,25 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   const contextFetchUrl = agentRow.context_fetch_url;
   const toolExecuteUrl = agentRow.tool_execute_url;
   const toolsSchema = toolsSchemaRaw ? safeJsonParse(toolsSchemaRaw) : null;
-  const tools = Array.isArray(toolsSchema) && toolsSchema.length > 0 ? toolsSchema : null;
+  let tools = Array.isArray(toolsSchema) && toolsSchema.length > 0 ? toolsSchema : null;
+
+  // P22-D1: AI Tool Preset fallback — if no custom toolsSchema,
+  // build from preset + overrides.
+  if (!tools) {
+    const preset = agentRow.config?.toolPreset || "reader";
+    const overrides = agentRow.config?.toolOverrides || {};
+    const presetTools = buildToolsWithOverrides(preset, overrides);
+    if (presetTools.length > 0) {
+      tools = presetTools.map((t) => ({
+        type: "function",
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: t.inputSchema,
+        },
+      }));
+    }
+  }
   // Audit S-35: agent-level tool allow-list. NULL means "not set" (legacy
   // behaviour: trust the declared schema); an empty array means "deny all";
   // a non-empty array means "allow exactly these names". The list is
@@ -384,6 +425,25 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   let iterations = 0;
   let lastContent = null;
 
+  // P24-2: Loop control — configurable stop conditions per agent
+  const loopPreset = agentRow.config?.loopPreset || "standard";
+  const loopConfig = LOOP_PRESETS[loopPreset] || LOOP_PRESETS.standard;
+  const loopController = createLoopController({
+    ...loopConfig,
+    ...(agentRow.config?.loopControl || {}),
+  });
+
+  // P23-2: HITL approval — gate sensitive tool calls
+  const approvalStore = env.KV ? createApprovalStore(env.KV) : null;
+  const approvalGate = agentRow.config?.approvalGate
+    ? createApprovalGate(agentRow.config.approvalGate)
+    : null;
+
+  // P22-F6: Track multi-step agent run with plan
+  const agentPlan = createPlan(`Agent run: ${agentRow.name}`);
+  const planTask = addTask(agentPlan, "Execute agent run");
+  updateTaskStatus(agentPlan, planTask.id, "in_progress");
+
   try {
     const contextRows = await env.DB.prepare(
       "SELECT user_id, content, created_at FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 30"
@@ -408,6 +468,23 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       iterations++;
+      loopController.nextStep();
+
+      // P24-2: Check loop stop conditions
+      const loopContext = {
+        step: iterations,
+        maxSteps: loopConfig.maxSteps || MAX_TOOL_ITERATIONS,
+        content: lastContent || "",
+        toolCalls: allToolCalls.map((tc) => ({ id: tc.id, name: tc.name, arguments: tc.arguments })),
+        toolResults: allToolCalls.map((tc) => ({ toolCallId: tc.id, result: tc.result, success: tc.success })),
+        totalTokens: { input: totalInputTokens, output: totalOutputTokens },
+        startTime,
+      };
+      if (iterations > 1 && !loopController.shouldContinue(loopContext)) {
+        const stopReason = loopController.getStopReason(loopContext);
+        agentLog.info("agent_run_loop_stop", { projectId, agentId: agentRow.id, runId, stopReason, iterations });
+        break;
+      }
       const canStreamFinal =
         streamHooks && !tools && connection.supportsStreaming;
 
@@ -535,6 +612,44 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       }
 
       for (const tc of extracted.toolCalls) {
+        // P23-2: HITL approval — check if tool call needs approval
+        if (approvalStore && approvalGate) {
+          let input = {};
+          try { input = JSON.parse(tc.arguments); } catch { input = {}; }
+          const needsApproval = await approvalGate.needsApproval(tc.name, input, { userId, roomId });
+          if (needsApproval) {
+            const request = await approvalStore.create({
+              toolName: tc.name,
+              toolInput: input,
+              roomId,
+              userId,
+              agentId: agentRow.id,
+              runId,
+              reason: `Tool "${tc.name}" requires human approval`,
+            });
+            await announceRoomEvent(env, roomId, {
+              type: "approval_request",
+              runId,
+              agentId: agentRow.id,
+              requestId: request.id,
+              toolName: tc.name,
+              arguments: tc.arguments,
+            });
+            agentLog.info("agent_run_approval_required", { projectId, agentId: agentRow.id, runId, toolName: tc.name, requestId: request.id });
+            allToolCalls.push({
+              id: tc.id,
+              name: tc.name,
+              arguments: tc.arguments,
+              success: false,
+              result: undefined,
+              error: "approval_required",
+            });
+            const resultMsg = buildToolResultMessage(connection, tc, { success: false, error: "Tool call requires human approval and was not approved" });
+            messages.push(resultMsg);
+            continue;
+          }
+        }
+
         await announceRoomEvent(env, roomId, {
           type: "tool_call",
           runId,
@@ -569,6 +684,29 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
     const latencyMs = Math.round(performance.now() - startTime);
     const finalContent = lastContent || "I was unable to generate a response.";
+
+    // P22-F6: Mark plan as complete
+    updateTaskStatus(agentPlan, planTask.id, "complete", {
+      output: `Completed in ${latencyMs}ms, ${allToolCalls.length} tool calls`,
+    });
+    agentLog.info("agent_run_completed", {
+      projectId,
+      agentId: agentRow.id,
+      runId,
+      latencyMs,
+      planProgress: getPlanProgress(agentPlan),
+    });
+
+    // P22-F10: Update thread state on completion
+    if (threadStateStore) {
+      await threadStateStore.set(threadKey, {
+        agentId: agentRow.id,
+        runId,
+        status: "completed",
+        latencyMs,
+        completedAt: new Date().toISOString(),
+      }, 300_000);
+    }
 
     await announceRoomEvent(env, roomId, {
       type: "agentRun",

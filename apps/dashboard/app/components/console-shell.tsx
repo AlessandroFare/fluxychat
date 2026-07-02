@@ -11,7 +11,7 @@ export function ConsoleShell({
   return (
     <div
       className={cn(
-        "mx-auto w-full max-w-[1200px] px-4 py-6 pb-14 sm:px-6 sm:py-8",
+        "mx-auto w-full max-w-[1200px] overflow-x-hidden px-4 py-6 pb-14 sm:px-6 sm:py-8",
         className,
       )}
       {...props}

@@ -1,5 +1,6 @@
 import { json } from "../lib/http-json.js";
 import { verifyJwtOrNull } from "../lib/route-jwt-auth.js";
+import { validateLimit } from "../lib/validation.js";
 import {
   createObject,
   updateObject,
@@ -12,8 +13,6 @@ import {
   unsubscribeFromObjectEvents,
   getObjectStats,
 } from "../lib/business-objects.js";
-
-const clampLimit = (v, d = 50) => Math.min(Math.max(parseInt(v || String(d), 10) || d, 1), 100);
 
 export async function dispatchBusinessObjectRoutes(request, url, h) {
   const path = url.pathname;
@@ -56,8 +55,9 @@ export async function dispatchBusinessObjectRoutes(request, url, h) {
   if (request.method === "GET" && path.match(/^\/rooms\/[^/]+\/objects$/)) {
     const type = url.searchParams.get("type") || undefined;
     const state = url.searchParams.get("state") || undefined;
-    const limit = clampLimit(url.searchParams.get("limit"));
-    const objects = await getObjectsByRoom(h.env, { roomId, projectId, objectType: type, state, limit });
+    const limitResult = validateLimit(url.searchParams.get("limit"), { defaultValue: 50, max: 100 });
+    if (limitResult.error) return json({ error: "bad_request", message: limitResult.error }, h, 400);
+    const objects = await getObjectsByRoom(h.env, { roomId, projectId, objectType: type, state, limit: limitResult.value });
     return json({ objects }, h);
   }
 
@@ -93,8 +93,9 @@ export async function dispatchBusinessObjectRoutes(request, url, h) {
     const objectId = path.split("/")[4];
     const obj = await loadOwnedObject(objectId);
     if (!obj) return json({ error: "not_found" }, h, 404);
-    const limit = clampLimit(url.searchParams.get("limit"));
-    const events = await getEvents(h.env, { roomId, objectId, limit });
+    const limitResult = validateLimit(url.searchParams.get("limit"), { defaultValue: 50, max: 100 });
+    if (limitResult.error) return json({ error: "bad_request", message: limitResult.error }, h, 400);
+    const events = await getEvents(h.env, { roomId, objectId, limit: limitResult.value });
     return json({ events }, h);
   }
 

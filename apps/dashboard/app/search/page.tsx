@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { highlightSearchSnippet } from "@/lib/escape-html";
+import { SearchSnippet } from "./search-snippet";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
@@ -128,10 +128,7 @@ export default function SearchPage() {
               {results.map((row) => (
                 <li key={row.id}>
                   <Panel className="p-4">
-                    <p
-                      className="text-sm text-foreground"
-                      dangerouslySetInnerHTML={{ __html: highlightSearchSnippet(row.snippet) }}
-                    />
+                    <SearchSnippet snippet={row.snippet} />
                     <p className="mt-2 text-[11px] text-muted-foreground">
                       {row.userId} · room{" "}
                       <Link href={`/rooms?room=${encodeURIComponent(row.roomId)}`} className="text-brand underline underline-offset-2">

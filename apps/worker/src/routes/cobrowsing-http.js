@@ -1,6 +1,7 @@
 import { resolveMemberContext } from "../lib/admin-route-context.js";
 import { rolesInclude } from "../lib/route-jwt-auth.js";
 import { pickRouteDeps } from "./route-http-deps.js";
+import { validateLimit } from "../lib/validation.js";
 import {
   createSession, endSession, pauseSession, resumeSession, getSession, listActiveSessions,
   joinSession, leaveSession, updateCursor, addAnnotation, listAnnotations,
@@ -114,8 +115,9 @@ export async function dispatchCobrowsingRoutes(request, url, h) {
 
   if (request.method === "GET" && path === "/admin/cobrowsing/annotations") {
     const sessionId = url.searchParams.get("sessionId");
-    const limit = parseInt(url.searchParams.get("limit") || "50", 10);
-    const annotations = await listAnnotations(env, { sessionId, limit });
+    const limitResult = validateLimit(url.searchParams.get("limit"), { defaultValue: 50, max: 1000 });
+    if (limitResult.error) return respond({ error: "bad_request", message: limitResult.error }, h, 400);
+    const annotations = await listAnnotations(env, { sessionId, limit: limitResult.value });
     return respond({ annotations }, h);
   }
 

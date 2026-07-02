@@ -24,7 +24,6 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
     canBypassRoomMembership,
     generateRoomSummaryAndAnnounce,
     canCreateTenantProjects,
-    tenantScopeForbidden,
     writeAuditEvent,
   } = pickRouteDeps(h, [
     "env",
@@ -44,80 +43,72 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
     "canBypassRoomMembership",
     "generateRoomSummaryAndAnnounce",
     "canCreateTenantProjects",
-    "tenantScopeForbidden",
     "writeAuditEvent",
   ]);
 
 
   // Admin: list recent reports
   if (url.pathname === "/admin/reports" && request.method === "GET") {
-    if (requireAdminAuth) {
-      const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
-        if (err instanceof Response) throw err;
-        console.error("JWT verify error", err);
-        return null;
-      });
-      if (!adminAuth) {
-        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-      }
-      if (!hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
-        return json({ error: "forbidden" }, { status: 403 });
-      }
+    const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!adminAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    if (!hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
+      return json({ error: "forbidden" }, { status: 403 });
     }
     const limit = Number(url.searchParams.get("limit") || "50");
     const rows = await env.DB.prepare(
       "SELECT id, project_id, room_id, user_id, action, reason, target_message_id, created_at FROM moderation_events WHERE project_id = ? AND action IN ('report', 'auto_flag') ORDER BY created_at DESC LIMIT ?"
     )
-      .bind((await verifyJwtAndGetContext(request, env)).projectId, limit)
+      .bind(adminAuth.projectId, limit)
       .all();
     return json({ reports: rows.results || [] });
   }
 
   if (url.pathname === "/admin/audit/events" && request.method === "GET") {
-    if (requireAdminAuth) {
-      const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
-        if (err instanceof Response) throw err;
-        logError("auth.jwt_verify_failed", err, requestLogCtx);
-        return null;
-      });
-      if (!adminAuth) {
-        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-      }
-      if (!hasAnyRole(adminAuth.roles, ["owner", "admin"])) {
-        return json({ error: "forbidden" }, { status: 403 });
-      }
-      const limit = Math.min(200, Number(url.searchParams.get("limit") || "100"));
-      const action = url.searchParams.get("action");
-      let sql =
-        "SELECT id, project_id, actor_user_id, actor_roles, action, target_type, target_id, trace_id, metadata_json, created_at FROM operational_audit_events WHERE project_id = ?";
-      const params = [adminAuth.projectId];
-      if (action) {
-        sql += " AND action = ?";
-        params.push(action);
-      }
-      sql += " ORDER BY created_at DESC LIMIT ?";
-      params.push(limit);
-      const rows = await env.DB.prepare(sql).bind(...params).all();
-      return json({ events: rows.results || [] });
+    const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!adminAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
+    if (!hasAnyRole(adminAuth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const limit = Math.min(200, Number(url.searchParams.get("limit") || "100"));
+    const action = url.searchParams.get("action");
+    let sql =
+      "SELECT id, project_id, actor_user_id, actor_roles, action, target_type, target_id, trace_id, metadata_json, created_at FROM operational_audit_events WHERE project_id = ?";
+    const params = [adminAuth.projectId];
+    if (action) {
+      sql += " AND action = ?";
+      params.push(action);
+    }
+    sql += " ORDER BY created_at DESC LIMIT ?";
+    params.push(limit);
+    const rows = await env.DB.prepare(sql).bind(...params).all();
+    return json({ events: rows.results || [] });
   }
 
   // Admin: list webhooks
   if (url.pathname === "/admin/webhooks" && request.method === "GET") {
-    if (requireAdminAuth) {
-      const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
-        if (err instanceof Response) throw err;
-        console.error("JWT verify error", err);
-        return null;
-      });
-      if (!adminAuth) {
-        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-      }
-      if (!hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
-        return json({ error: "forbidden" }, { status: 403 });
-      }
+    const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!adminAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
-    const adminAuth = await verifyJwtAndGetContext(request, env);
+    if (!hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
     const rows = await env.DB.prepare(
       "SELECT id, project_id, url, event_types, created_at FROM webhooks WHERE project_id = ? ORDER BY created_at DESC"
     )
@@ -223,20 +214,17 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
   }
 
   if (url.pathname === "/admin/webhooks/deliveries" && request.method === "GET") {
-    if (requireAdminAuth) {
-      const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
-        if (err instanceof Response) throw err;
-        console.error("JWT verify error", err);
-        return null;
-      });
-      if (!adminAuth) {
-        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-      }
-      if (!hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
-        return json({ error: "forbidden" }, { status: 403 });
-      }
+    const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!adminAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
-    const adminAuth = await verifyJwtAndGetContext(request, env);
+    if (requireAdminAuth && !hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
     const limit = Number(url.searchParams.get("limit") || "100");
     const rows = await env.DB.prepare(
       "SELECT id, project_id, webhook_id, event_type, status, attempt_count, next_attempt_at, last_http_status, last_error, delivered_at, created_at, updated_at FROM webhook_deliveries WHERE project_id = ? ORDER BY created_at DESC LIMIT ?"
@@ -249,20 +237,17 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
   // Webhooks dashboard summary (Area 5.4): one row per webhook with
   // last delivery status and a consecutive-failure count for the badge.
   if (url.pathname === "/admin/webhooks/summary" && request.method === "GET") {
-    if (requireAdminAuth) {
-      const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
-        if (err instanceof Response) throw err;
-        console.error("JWT verify error", err);
-        return null;
-      });
-      if (!adminAuth) {
-        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-      }
-      if (!hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
-        return json({ error: "forbidden" }, { status: 403 });
-      }
+    const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!adminAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
-    const adminAuth = await verifyJwtAndGetContext(request, env);
+    if (requireAdminAuth && !hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
     // Per-webhook aggregate. SQLite has no window functions in older
     // versions; we read the last 50 deliveries per webhook and
     // compute the consecutive failure count in JS. The cardinality is
@@ -326,31 +311,16 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
     url.pathname.endsWith("/replay") &&
     request.method === "POST"
   ) {
-    if (requireAdminAuth) {
-      const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
-        if (err instanceof Response) throw err;
-        console.error("JWT verify error", err);
-        return null;
-      });
-      if (!adminAuth) {
-        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-      }
-      if (!hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
-        return json({ error: "forbidden" }, { status: 403 });
-      }
-
-      ctx.waitUntil(
-        writeAuditEvent(env, {
-          projectId: adminAuth.projectId,
-          actorUserId: adminAuth.userId,
-          actorRoles: adminAuth.roles,
-          action: "admin.webhook_delivery.replay",
-          targetType: "webhook_delivery",
-          targetId: url.pathname.split("/")[4] || null,
-          traceId,
-          metadata: {},
-        }).catch(() => {})
-      );
+    const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!adminAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    if (requireAdminAuth && !hasAnyRole(adminAuth.roles, ["owner", "admin", "moderator"])) {
+      return json({ error: "forbidden" }, { status: 403 });
     }
     const parts = url.pathname.split("/");
     const deliveryId = parts[4];
@@ -358,7 +328,20 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
       return json({ error: "delivery id required" }, { status: 400 });
     }
     const now = new Date().toISOString();
-    const adminAuth = await verifyJwtAndGetContext(request, env);
+    if (requireAdminAuth) {
+      ctx.waitUntil(
+        writeAuditEvent(env, {
+          projectId: adminAuth.projectId,
+          actorUserId: adminAuth.userId,
+          actorRoles: adminAuth.roles,
+          action: "admin.webhook_delivery.replay",
+          targetType: "webhook_delivery",
+          targetId: deliveryId,
+          traceId,
+          metadata: {},
+        }).catch(() => {})
+      );
+    }
     const res = await env.DB.prepare(
       "UPDATE webhook_deliveries SET status = 'pending', attempt_count = 0, next_attempt_at = ?, last_http_status = NULL, last_error = NULL, delivered_at = NULL, updated_at = ? WHERE id = ? AND project_id = ?"
     )

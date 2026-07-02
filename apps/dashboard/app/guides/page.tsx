@@ -51,7 +51,7 @@ export default function GuidesIndexPage() {
           <a
             href={DEVTO_SOCKET_FLEET_ARTICLE.href}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="text-brand underline underline-offset-2"
           >
             {DEVTO_SOCKET_FLEET_ARTICLE.title}

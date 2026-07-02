@@ -7,8 +7,8 @@ import {
 
 describe("worker-route-dispatch (P0-2)", () => {
   it("registers the expected number of route handlers", () => {
-    expect(WORKER_ROUTE_DISPATCHER_COUNT).toBe(98);
-    expect(WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY.length).toBe(90);
+    expect(WORKER_ROUTE_DISPATCHER_COUNT).toBe(99);
+    expect(WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY.length).toBe(91);
     expect(WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY.length).toBe(6);
   });
 

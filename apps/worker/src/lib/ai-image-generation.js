@@ -10,16 +10,20 @@
  *   • Generation history and stats
  */
 
+import { resolveImageTransport } from "./ai-gateway.js";
+
 const ALLOWED_SIZES = ["1024x1024", "1024x1792", "1792x1024"];
 const ALLOWED_QUALITIES = ["standard", "hd"];
 const ALLOWED_STYLESS = ["vivid", "natural"];
 
 function getDefaultModel(env) {
+  if (env.AI_IMAGE_PROVIDER === "pollinations") return "flux";
   return env.AI_IMAGE_MODEL || "dall-e-3";
 }
 
 function isImageGenerationEnabled(env) {
-  return env.AI_IMAGE_GENERATION_ENABLED === "true" && !!env.AI_BASE_URL;
+  if (env.AI_IMAGE_PROVIDER === "pollinations") return env.AI_IMAGE_GENERATION_ENABLED === "true";
+  return env.AI_IMAGE_GENERATION_ENABLED === "true" && (!!env.AI_BASE_URL || !!env.AI_IMAGE_BASE_URL);
 }
 
 /**
@@ -62,44 +66,66 @@ export async function generateImage(env, {
     .run();
 
   try {
-    // Call AI image generation API (OpenAI-compatible /v1/images/generations)
-    const transport = resolveAiTransportForImages(env);
-    const response = await fetch(transport.imagesUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...transport.headers,
-      },
-      body: JSON.stringify({
-        model: selectedModel,
-        prompt,
-        n: 1,
-        size: selectedSize,
-        quality: selectedQuality,
-        style: selectedStyle,
-        response_format: "b64_json",
-      }),
-    });
+    let b64 = null;
+    let revisedPrompt = prompt;
 
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "unknown");
-      await env.DB.prepare(
-        `UPDATE ai_image_generations SET status = 'failed', error = ?, processing_time_ms = ? WHERE id = ?`
-      ).bind(`api_error_${response.status}: ${errText.slice(0, 200)}`, Date.now() - startTime, id).run();
-      return { ok: false, error: "ai_api_error", details: errText.slice(0, 200), status: 502 };
+    if (env.AI_IMAGE_PROVIDER === "pollinations") {
+      // Pollinations.ai: simple GET, returns image bytes directly
+      const [w, h] = selectedSize.split("x");
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&model=${selectedModel}&nologo=true`;
+      const pollRes = await fetch(pollinationsUrl);
+      if (!pollRes.ok) {
+        const errText = await pollRes.text().catch(() => "unknown");
+        await env.DB.prepare(
+          `UPDATE ai_image_generations SET status = 'failed', error = ?, processing_time_ms = ? WHERE id = ?`
+        ).bind(`pollinations_error_${pollRes.status}: ${errText.slice(0, 200)}`, Date.now() - startTime, id).run();
+        return { ok: false, error: "ai_api_error", details: errText.slice(0, 200), status: 502 };
+      }
+      const imgBuf = await pollRes.arrayBuffer();
+      const bytes = new Uint8Array(imgBuf);
+      // Convert to base64
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      b64 = btoa(binary);
+    } else {
+      // OpenAI-compatible /v1/images/generations
+      const transport = resolveImageTransport(env);
+      const response = await fetch(transport.imagesUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...transport.headers,
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          prompt,
+          n: 1,
+          size: selectedSize,
+          quality: selectedQuality,
+          style: selectedStyle,
+          response_format: "b64_json",
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "unknown");
+        await env.DB.prepare(
+          `UPDATE ai_image_generations SET status = 'failed', error = ?, processing_time_ms = ? WHERE id = ?`
+        ).bind(`api_error_${response.status}: ${errText.slice(0, 200)}`, Date.now() - startTime, id).run();
+        return { ok: false, error: "ai_api_error", details: errText.slice(0, 200), status: 502 };
+      }
+
+      const data = await response.json();
+      const imageData = data.data?.[0];
+      if (!imageData) {
+        await env.DB.prepare(
+          `UPDATE ai_image_generations SET status = 'failed', error = 'no_image_data', processing_time_ms = ? WHERE id = ?`
+        ).bind(Date.now() - startTime, id).run();
+        return { ok: false, error: "no_image_data", status: 502 };
+      }
+      b64 = imageData.b64_json;
+      revisedPrompt = imageData.revised_prompt || prompt;
     }
-
-    const data = await response.json();
-    const imageData = data.data?.[0];
-    if (!imageData) {
-      await env.DB.prepare(
-        `UPDATE ai_image_generations SET status = 'failed', error = 'no_image_data', processing_time_ms = ? WHERE id = ?`
-      ).bind(Date.now() - startTime, id).run();
-      return { ok: false, error: "no_image_data", status: 502 };
-    }
-
-    const b64 = imageData.b64_json;
-    const revisedPrompt = imageData.revised_prompt || prompt;
 
     // Upload to R2 if binding available
     let imageUrl = null;
@@ -229,16 +255,4 @@ function checkContentPolicy(prompt) {
 /**
  * Resolve AI transport for image generation.
  */
-function resolveAiTransportForImages(env) {
-  const baseUrl = env.AI_BASE_URL?.trim();
-  if (!baseUrl) {
-    return { configured: false, imagesUrl: null, headers: {} };
-  }
-  const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-  const apiKey = env.AI_API_KEY || "";
-  return {
-    configured: true,
-    imagesUrl: `${base}/v1/images/generations`,
-    headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-  };
-}
+  // resolveImageTransport is now imported from ai-gateway.js

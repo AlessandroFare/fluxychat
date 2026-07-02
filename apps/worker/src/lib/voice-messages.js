@@ -23,7 +23,7 @@
  * Failure modes are surfaced as `{ ok: false, error, status }` so the route
  * can map them to HTTP responses and metrics without throwing.
  */
-import { buildAiAuthHeaders, resolveAiTransport } from "./ai-gateway.js";
+import { buildTranscriptionAuthHeaders, resolveTranscriptionTransport } from "./ai-gateway.js";
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_DURATION_MS = 10 * 60 * 1000;   // 10 minutes
@@ -152,7 +152,7 @@ export async function uploadVoiceToR2(env, { projectId, roomId, messageId, audio
  * @returns {Promise<{ ok: true, text: string, model: string } | { ok: false, error: string, status: number }>}
  */
 export async function transcribeAudio(env, { audioBytes, mimeType, filename, language, model }) {
-  const transport = resolveAiTransport(env);
+  const transport = resolveTranscriptionTransport(env);
   if (!transport.configured || !transport.transcriptionsUrl) {
     return { ok: false, error: "ai_not_configured", status: 503 };
   }
@@ -178,7 +178,7 @@ export async function transcribeAudio(env, { audioBytes, mimeType, filename, lan
   try {
     res = await fetch(transport.transcriptionsUrl, {
       method: "POST",
-      headers: buildAiAuthHeaders(env, {
+      headers: buildTranscriptionAuthHeaders(env, {
         extra: { "content-type": `multipart/form-data; boundary=${boundary}` },
         metadata: { feature: "voice_transcription" },
       }),

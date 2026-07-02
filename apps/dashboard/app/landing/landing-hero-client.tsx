@@ -9,7 +9,6 @@ import { HeroCodeInboxDemo } from "~/components/marketing/hero-code-inbox-demo";
 import { SpotlightCard } from "~/components/marketing/spotlight-card";
 import { LandingHeroAuthCta } from "../components/landing-auth-cta";
 import { HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
-import { cn } from "@/lib/utils";
 import { INSTALL_CMD } from "./landing-shared";
 
 const Grainient = dynamic(
@@ -165,62 +164,39 @@ export function LandingHeroClient() {
           <p className="mt-5 max-w-2xl text-balance text-lg text-slate-600 sm:text-xl">
             {MARKETING_HERO.subhead}
           </p>
-          <p className="mt-3 max-w-2xl text-balance text-sm text-slate-500 sm:text-base">
-            {MARKETING_HERO.platformNote}
-          </p>
-          <p className="mt-2 max-w-2xl text-balance text-sm text-slate-500 sm:text-base">
-            Chat infrastructure inside your product, not a helpdesk.{" "}
-            <Link href={HOSTED_PATHS.compare} className="font-medium text-slate-700 underline-offset-2 hover:underline">
-              Compare vs Pusher/Ably
-            </Link>
-            {" · "}
-            <Link href={HOSTED_PATHS.why} className="font-medium text-slate-700 underline-offset-2 hover:underline">
-              Why we built it
-            </Link>
-            {" · "}
-            <Link
-              href={HOSTED_PATHS.guidesVercelRealtime}
-              className="font-medium text-slate-700 underline-offset-2 hover:underline"
-            >
-              Vercel without Pusher
-            </Link>
-            {" · "}
-            <Link
-              href="/guides/in-app-chat-vs-support-desk"
-              className="font-medium text-slate-700 underline-offset-2 hover:underline"
-            >
-              Product chat vs support
-            </Link>
-            .
-          </p>
 
-          <div className="mt-8 flex w-full max-w-2xl flex-col gap-3 sm:flex-row sm:items-stretch">
-            <div
-              className={cn(
-                "flex min-h-[52px] flex-1 items-center gap-2 rounded-xl border px-4 py-2.5 font-mono text-sm sm:text-base",
-                "border-[#111]/80 bg-[#111111] text-slate-100 shadow-md",
-              )}
-            >
-              <span className="min-w-0 flex-1 truncate text-left">{INSTALL_CMD}</span>
-              <button
-                type="button"
-                onClick={onCopy}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-white/20 sm:text-sm"
-              >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
+          <div className="mt-8 flex w-full max-w-2xl flex-col gap-3 sm:flex-row items-center justify-center">
             <LandingHeroAuthCta />
+            <div
+              data-testid="install-chip"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-[#1A1A1A] px-3 py-1.5 h-[52px] text-xs font-medium shadow-sm"
+            >
+              <code className="font-mono text-slate-100">{INSTALL_CMD}</code>
+              {copied ? (
+                <span data-testid="copy-check" className="inline-flex items-center gap-1 text-green-400">
+                  <Check className="h-3 w-3" />
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onCopy}
+                  data-testid="copy-button"
+                  className="inline-flex items-center gap-0.5 text-slate-400 hover:text-white transition-colors"
+                  aria-label="Copy install command"
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           </div>
 
-          <p className="mt-4 max-w-xl text-xs text-slate-500 sm:text-sm">
-            Works with npm and yarn too — same package name{" "}
-            <code className="rounded border border-black/[0.06] bg-white/85 px-1.5 py-0.5 font-mono text-slate-700">
-              @fluxy-chat/sdk
-            </code>
-            .
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-500">
+            <span>Self-host on Cloudflare</span>
+            <span aria-hidden="true">·</span>
+            <span>MIT licensed</span>
+            <span aria-hidden="true">·</span>
+            <span>npm &amp; pnpm</span>
+          </div>
         </div>
 
         <SpotlightCard

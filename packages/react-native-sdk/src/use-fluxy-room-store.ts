@@ -5,9 +5,11 @@ import { useStore } from "zustand";
 import type { FluxyRoomStore, FluxyRoomStoreState } from "./room-store";
 
 export function useFluxyRoomStore<T>(store: FluxyRoomStore, selector: (state: FluxyRoomStoreState) => T): T {
-  return useStore(store, selector);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return useStore(store as any, selector);
 }
 
 export function useFluxyRoomStoreState(store: FluxyRoomStore): FluxyRoomStoreState {
-  return useStore(store);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return useStore(store as any) as FluxyRoomStoreState;
 }

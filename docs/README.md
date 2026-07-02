@@ -79,6 +79,17 @@ Use-case oriented documentation.
 - [US SMS compliance (10DLC, STOP)](./operations/us-sms-compliance-playbook.md)
 - [Agent tool exfiltration (tenant admin trust model)](./security/agent-tool-exfiltration.md)
 
+## P22–P25 guides (AI-native architecture)
+
+- [Adapter pattern (P22-A)](./guides/adapter-pattern.md) — Multi-platform adapter interface (14 platforms)
+- [Streaming markdown (P22-B)](./guides/streaming-markdown.md) — Table buffering, code fence tracking, inline marker healing
+- [Card builder (P22-C)](./guides/card-builder.md) — JSX + function API for rich interactive messages
+- [AI tool presets (P22-D)](./guides/ai-tool-presets.md) — Reader/messenger/moderator presets with approval gates
+- [Stream resumption (P23-1)](./guides/stream-resumption.md) — Reconnect to in-progress AI streams
+- [LLM middleware (P23-4)](./guides/llm-middleware.md) — Pluggable pipeline for guardrails, caching, RAG
+- [MCP client (P23-3)](./guides/mcp-client.md) — Consume external MCP tool servers
+- [WorkflowAgent (P23-6)](./guides/workflow-agent.md) — Durable agent execution that survives restarts
+
 ## P12 / P13 feature docs
 
 - [Daily AI digest (P12-F)](./daily-ai-digest.md)

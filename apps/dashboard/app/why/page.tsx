@@ -89,12 +89,12 @@ export default function WhyPage() {
             <Link href="/compare">Compare alternatives</Link>
           </Button>
           <Button asChild variant="outline">
-            <a href={DEVTO_SOCKET_FLEET_ARTICLE.href} target="_blank" rel="noreferrer">
+            <a href={DEVTO_SOCKET_FLEET_ARTICLE.href} target="_blank" rel="noopener noreferrer">
               Dev.to guide
             </a>
           </Button>
           <Button asChild variant="outline">
-            <a href="https://github.com/AlessandroFare/fluxychat" target="_blank" rel="noreferrer">
+            <a href="https://github.com/AlessandroFare/fluxychat" target="_blank" rel="noopener noreferrer">
               GitHub
             </a>
           </Button>

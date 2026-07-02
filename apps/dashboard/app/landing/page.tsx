@@ -13,6 +13,7 @@ import { LandingLogoStrip } from "./landing-logo-strip";
 import { LandingPricingSection } from "./landing-pricing-section";
 import { LandingShell } from "./landing-shell";
 import { LandingStatsSection } from "./landing-stats-section";
+import { LandingWhatsNewSection } from "./landing-whats-new-section";
 
 export const metadata: Metadata = PAGE_METADATA.landing;
 
@@ -24,6 +25,7 @@ export default function LandingPage() {
       <LandingLogoStrip />
       <LandingStatsSection />
       <LandingFeaturesClient />
+      <LandingWhatsNewSection />
       <LandingEnterpriseSection />
       <LandingPricingSection />
       <LandingLifecycleSection />
@@ -39,7 +41,7 @@ export default function LandingPage() {
           <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
             Real numbers, not vague &quot;contact sales&quot; ranges. The free tier is
             generous; the paid tier scales with usage; self-host is just your
-            Cloudflare bill.
+            Cloudflare bill. No per-connection pricing surprises.
           </p>
           <div className="mt-10">
             <CloudflareCostTable />

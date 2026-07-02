@@ -141,7 +141,7 @@ export default function ComparePage() {
           <a
             href={DEVTO_SOCKET_FLEET_ARTICLE.href}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="font-medium text-brand underline underline-offset-2"
           >
             {DEVTO_SOCKET_FLEET_ARTICLE.title}
@@ -379,7 +379,7 @@ export default function ComparePage() {
           <Link href="/guides">All guides</Link>
         </Button>
         <Button asChild variant="outline">
-          <a href={DEVTO_SOCKET_FLEET_ARTICLE.href} target="_blank" rel="noreferrer">
+          <a href={DEVTO_SOCKET_FLEET_ARTICLE.href} target="_blank" rel="noopener noreferrer">
             Dev.to article
           </a>
         </Button>

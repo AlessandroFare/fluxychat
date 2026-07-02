@@ -7,6 +7,7 @@ import { attachAttachmentsToMessages } from "../lib/messages-attachments.js";
 import { checkAndConsumeProjectQuota } from "../lib/project-plan-quota.js";
 import { validateMessageContent } from "../lib/message-validation.js";
 import { runInboundMessageMiddleware } from "../lib/message-middleware.js";
+import { serializeMessage } from "../lib/message-serialization.js";
 import {
   notifyDmRecipient,
   notifyMentionedUsers,
@@ -589,10 +590,31 @@ export class RoomDurableObject {
       mapped = [];
     }
 
+    // Fetch reactions for the loaded messages
+    let reactionsMap = {};
+    try {
+      const messageIds = mapped.map((m) => m.id).filter(Boolean);
+      if (messageIds.length > 0) {
+        const placeholders = messageIds.map(() => "?").join(",");
+        const reactionRows = await this.env.DB.prepare(
+          `SELECT message_id, emoji, COUNT(*) as count FROM message_reactions WHERE project_id = ? AND message_id IN (${placeholders}) GROUP BY message_id, emoji`
+        )
+          .bind(projectId, ...messageIds)
+          .all();
+        for (const r of reactionRows.results || []) {
+          if (!reactionsMap[r.message_id]) reactionsMap[r.message_id] = {};
+          reactionsMap[r.message_id][r.emoji] = r.count;
+        }
+      }
+    } catch (err) {
+      logError("do.connect_snapshot_reactions_failed", err, { roomId, projectId });
+    }
+
     webSocket.send(
       JSON.stringify({
         type: envelopeType,
         messages: mapped.reverse(),
+        reactions: reactionsMap,
       }),
     );
   }
@@ -1394,7 +1416,9 @@ export class RoomDurableObject {
       void this.persistLastCacheEvent(message);
     }
 
-    const payload = JSON.stringify(message);
+    // P22-E3: Add _type discriminator for cross-system identification
+    const typedMessage = message.type ? message : serializeMessage(message);
+    const payload = JSON.stringify(typedMessage);
     const recipientUserIds = options.recipientUserIds;
     const excludeWebSocket = options.excludeWebSocket;
     const excludeSocketId = options.excludeSocketId;

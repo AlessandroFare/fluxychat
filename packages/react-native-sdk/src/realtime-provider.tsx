@@ -94,7 +94,7 @@ export function FluxyRealtimeProvider({
 
   const client = React.useMemo(() => {
     if (!token?.trim() || !userId.trim()) return null;
-    return new FluxyChatClient({ baseUrl: trimTrailingSlashes(workerUrl), userId, token });
+    return new FluxyChatClient({ apiUrl: trimTrailingSlashes(workerUrl), wsUrl: trimTrailingSlashes(workerUrl).replace('http', 'ws'), baseUrl: trimTrailingSlashes(workerUrl), userId, token } as any);
   }, [workerUrl, userId, token]);
 
   const value = React.useMemo<FluxyRealtimeContextValue>(

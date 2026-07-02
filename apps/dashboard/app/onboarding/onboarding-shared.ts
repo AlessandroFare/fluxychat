@@ -1,12 +1,11 @@
 import type { ComponentType } from "react";
 import type { LucideProps } from "lucide-react";
-import { UserPlus, Layers, Key, MessageSquare, Send, Bot } from "lucide-react";
+import { Sparkles, Layers, MessageSquare, Compass, CheckCircle2 } from "lucide-react";
 
 export interface CreatedProject {
   id: string;
   name: string;
   created_at: string;
-  apiKey: string;
 }
 
 export interface CreatedRoom {
@@ -27,36 +26,40 @@ export interface OnboardingStepDef {
   icon: ComponentType<LucideProps>;
 }
 
+/**
+ * Redesigned 5-step onboarding flow.
+ *
+ * 0 — Welcome: hero screen with value props
+ * 1 — Create Project: name, description, auto API key
+ * 2 — First Chat: live chat with the AI agent
+ * 3 — Explore Features: cards linking to key areas
+ * 4 — You're all set: summary and next steps
+ */
 export const ONBOARDING_STEPS: readonly OnboardingStepDef[] = [
   {
-    title: "Connect account",
-    short: "Authenticate with Clerk or paste your admin JWT.",
-    icon: UserPlus,
+    title: "Welcome",
+    short: "AI-native chat that runs on your edge.",
+    icon: Sparkles,
   },
   {
-    title: "Create project",
+    title: "Create Project",
     short: "Your isolated namespace. All traffic, quotas, and keys live here.",
     icon: Layers,
   },
   {
-    title: "Mint member JWT",
-    short: "Browser-safe token minted server-side so your API key is never exposed.",
-    icon: Key,
-  },
-  {
-    title: "Create room",
-    short: "A channel your SDK joins with the member JWT.",
+    title: "First Chat",
+    short: "Send a message and see the AI respond in real time.",
     icon: MessageSquare,
   },
   {
-    title: "First message",
-    short: "Send one message over WebSocket to confirm delivery works.",
-    icon: Send,
+    title: "Explore Features",
+    short: "Discover Card Builder, DevTools, CLI, and Security.",
+    icon: Compass,
   },
   {
-    title: "Try an agent (optional)",
-    short: "Register a bot and invoke it once.",
-    icon: Bot,
+    title: "You're all set",
+    short: "Everything is ready. Go build something great.",
+    icon: CheckCircle2,
   },
 ] as const;
 
@@ -66,26 +69,17 @@ export interface OnboardingStepContext {
   memberJwt: string;
   room: CreatedRoom | null;
   messageCount: number;
-  /**
-   * True only when the *current user* has sent at least one message during
-   * this onboarding session. History replay and inbound messages from other
-   * members do NOT count — otherwise onboarding auto-completes when a user
-   * revisits a room that already has messages. (Audit fix.)
-   */
   userSentMessage?: boolean;
 }
 
 export function isOnboardingStepComplete(step: number, args: OnboardingStepContext): boolean {
   const { adminJwt, activeProject, memberJwt, room, userSentMessage } = args;
   const hasMember = Boolean(memberJwt.trim());
-  if (step === 0) return adminJwt.trim().length >= 12;
+  if (step === 0) return true; // Welcome is always "complete" (it's a landing screen)
   if (step === 1) return Boolean(activeProject?.id);
-  if (step === 2) return hasMember;
-  if (step >= 3 && !hasMember) return false;
-  if (step === 3) return Boolean(room?.id);
-  // Step 4 (first message) requires the user to have actually sent a message,
-  // not merely that messages exist in the room (history replay / inbound).
-  if (step === 4) return Boolean(userSentMessage);
+  if (step >= 2 && !hasMember) return false;
+  if (step === 2) return Boolean(userSentMessage);
+  if (step === 3) return true; // Explore is optional — always passable
   return true;
 }
 

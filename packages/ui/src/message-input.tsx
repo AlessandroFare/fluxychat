@@ -36,6 +36,13 @@ export interface MessageInputProps {
     file: File,
     kindHint: "image" | "file" | "audio"
   ) => Promise<FluxyChatAttachment | null | void>;
+  /** Optional pending AI tool rendered as a dismissible composer chip. */
+  pendingTool?:
+    | null
+    | { type: "image"; prompt: string }
+    | { type: "deep-research"; topic: string }
+    | { type: "web-search"; topic: string };
+  onClearPendingTool?: () => void;
 }
 
 function compareMentionsForAutocomplete(
@@ -107,6 +114,8 @@ export function MessageInput({
   mentionMaxSuggestions = 8,
   mentionPrioritizeHandles = [],
   uploadComposerFile,
+  pendingTool,
+  onClearPendingTool,
 }: MessageInputProps) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const uploadInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -396,6 +405,46 @@ export function MessageInput({
               </button>
             </div>
           ))}
+        </div>
+      ) : null}
+      {pendingTool ? (
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "4px 10px",
+            borderRadius: 999,
+            background: "#eef2ff",
+            color: "#111827",
+            fontSize: 12,
+            fontWeight: 500,
+            width: "fit-content",
+          }}
+        >
+          <span>
+            {pendingTool.type === "image"
+              ? "🖼️ Create Image"
+              : pendingTool.type === "deep-research"
+                ? "🧠 Deep Research"
+                : "🔎 Web Search"}
+          </span>
+          <button
+            type="button"
+            onClick={() => onClearPendingTool?.()}
+            aria-label="Remove tool"
+            style={{
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              fontSize: 13,
+              lineHeight: 1,
+              color: "#4b5563",
+              padding: 0,
+            }}
+          >
+            ×
+          </button>
         </div>
       ) : null}
       {replyToId !== null ? (

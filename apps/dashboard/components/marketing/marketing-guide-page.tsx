@@ -68,7 +68,7 @@ export function MarketingGuidePage({
                 <a
                   href={section.link.href}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="font-medium text-brand hover:underline"
                 >
                   {section.link.title} →
@@ -108,7 +108,7 @@ export function MarketingGuidePage({
             <Link href={HOSTED_PATHS.compare}>Compare vendors</Link>
           </Button>
           <Button asChild variant="outline">
-            <a href={DEVTO_SOCKET_FLEET_ARTICLE.href} target="_blank" rel="noreferrer">
+            <a href={DEVTO_SOCKET_FLEET_ARTICLE.href} target="_blank" rel="noopener noreferrer">
               Dev.to walkthrough
             </a>
           </Button>

@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, Mic, AlertTriangle, Play, Pause } from "lucide-react";
+import { Mic, AlertTriangle, Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
+import { Marker, MarkerContent } from "@/components/ui/marker";
 import type { FluxyChatMessage } from "@fluxy-chat/sdk";
 
 function resolveMediaUrl(url: string | null | undefined): string | null {
@@ -18,6 +19,10 @@ export interface VoiceMessageBubbleProps {
   className?: string;
   /** When true, render the inline transcription BELOW the player (default true). */
   showTranscription?: boolean;
+  /** When true, text inherits white color for sent (orange) bubbles */
+  inheritColor?: boolean;
+  /** JWT token for authenticated audio fetch */
+  authToken?: string | null;
 }
 
 function formatDuration(ms: number | null | undefined): string {
@@ -39,6 +44,8 @@ export function VoiceMessageBubble({
   message,
   className,
   showTranscription = true,
+  inheritColor = false,
+  authToken,
 }: VoiceMessageBubbleProps) {
   if (message.kind !== "voice") return null;
   const audioUrl = resolveMediaUrl(message.audioUrl);
@@ -48,11 +55,12 @@ export function VoiceMessageBubble({
   return (
     <div
       className={cn("flex max-w-full flex-col gap-1 text-sm", className)}
+      style={inheritColor ? { color: "rgba(255,255,255,0.85)" } : undefined}
       data-testid="voice-message-bubble"
       data-voice-status={status}
     >
-      <VoicePlayer audioUrl={audioUrl} durationMs={message.durationMs} />
-      {showTranscription ? <TranscriptionView status={status} text={transcription} /> : null}
+      <VoicePlayer audioUrl={audioUrl} durationMs={message.durationMs} authToken={authToken} />
+      {showTranscription ? <TranscriptionView status={status} text={transcription} inheritColor={inheritColor} /> : null}
       {!audioUrl ? (
         <p
           className="inline-flex items-center gap-1 text-[11px] text-destructive"
@@ -76,9 +84,11 @@ export function VoiceMessageBubble({
 function VoicePlayer({
   audioUrl,
   durationMs,
+  authToken,
 }: {
   audioUrl: string | null;
   durationMs: number | null | undefined;
+  authToken?: string | null;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -86,6 +96,32 @@ function VoicePlayer({
   const [totalSec, setTotalSec] = useState<number | null>(
     durationMs ? durationMs / 1000 : null,
   );
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  // Fetch audio with JWT auth and create blob URL
+  useEffect(() => {
+    if (!audioUrl) return;
+    let revoke: string | null = null;
+    if (authToken && audioUrl.startsWith("http")) {
+      fetch(audioUrl, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+        .then((res) => res.ok ? res.blob() : null)
+        .then((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            revoke = url;
+            setBlobUrl(url);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [audioUrl, authToken]);
+
+  const effectiveSrc = blobUrl ?? audioUrl;
 
   // Keep playing state in sync with the element (handles end + external pause).
   useEffect(() => {
@@ -115,7 +151,7 @@ function VoicePlayer({
       el.removeEventListener("play", onPlay);
       el.removeEventListener("pause", onPause);
     };
-  }, [audioUrl]);
+  }, [effectiveSrc]);
 
   function toggle() {
     const el = audioRef.current;
@@ -152,7 +188,7 @@ function VoicePlayer({
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
         ref={audioRef}
-        src={audioUrl ?? undefined}
+        src={effectiveSrc ?? undefined}
         preload="metadata"
         className="hidden"
         data-testid="voice-message-player"
@@ -199,28 +235,42 @@ function VoicePlayer({
 function TranscriptionView({
   status,
   text,
+  inheritColor = false,
 }: {
   status: "pending" | "done" | "failed" | null | undefined;
   text: string | null;
+  inheritColor?: boolean;
 }) {
-  if (status === "pending" || status == null) {
+  const isTranscribing = status === "pending" || status == null;
+  const hasLlmKeys = status !== "pending" && status != null;
+
+  if (isTranscribing) {
     return (
-      <p
-        className="inline-flex items-center gap-1.5 text-[11px] italic text-muted-foreground"
-        data-testid="voice-transcription-pending"
-      >
-        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-        Transcribing… (requires LLM keys in Agents → LLM keys)
-      </p>
+      <div className="flex flex-col gap-1">
+        <Marker className="shimmer">
+          <MarkerContent>Transcribing…</MarkerContent>
+        </Marker>
+        {!hasLlmKeys ? (
+          <a href="/agents/llm-keys" className="text-[12px] text-[#C2410C] underline">
+            Set up LLM keys to enable transcription →
+          </a>
+        ) : null}
+      </div>
     );
   }
   if (status === "failed") {
     return (
       <p
-        className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
+        className={cn(
+          "inline-flex items-center gap-1.5 text-[11px] font-bold",
+          inheritColor ? "text-white/80" : "text-muted-foreground",
+        )}
         data-testid="voice-transcription-failed"
       >
-        <AlertTriangle className="h-3 w-3 text-amber-600" aria-hidden />
+        <AlertTriangle
+          className={cn("h-3 w-3", inheritColor ? "text-white/80" : "text-amber-600")}
+          aria-hidden
+        />
         Transcript unavailable.
       </p>
     );

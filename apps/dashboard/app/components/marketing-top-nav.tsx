@@ -14,11 +14,11 @@ import {
 
 const LINKS: readonly TopNavLink[] = [
   { href: HOSTED_PATHS.landing, label: "Product" },
-  { href: HOSTED_PATHS.compare, label: "Compare" },
-  { href: HOSTED_PATHS.guides, label: "Guides" },
-  { href: "/demo", label: "Demo" },
-  { href: HOSTED_PATHS.getStarted, label: "Get started" },
+  { href: "/devtools", label: "DevTools" },
+  { href: "/playground", label: "Playground" },
   { href: HOSTED_PATHS.docs, label: "Docs" },
+  { href: HOSTED_PATHS.guides, label: "Guides" },
+  { href: HOSTED_PATHS.getStarted, label: "Get started" },
 ];
 
 const MENU_ID = "marketing-mobile-menu";

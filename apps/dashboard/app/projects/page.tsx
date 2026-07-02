@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ChevronRight,
   FolderOpen,
-  KeyRound,
   Pencil,
   Plus,
   RefreshCw,
@@ -39,7 +38,6 @@ interface Project {
   id: string;
   name: string;
   created_at?: string;
-  apiKey?: string;
   plan?: {
     planName: string;
     billingStatus: string;
@@ -696,21 +694,6 @@ export default function ProjectsPage() {
                 </div>
               </div>
 
-              {selectedProject.apiKey ? (
-                <div className="mt-6 rounded-xl border border-dashed border-border/80 bg-background p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                    <KeyRound className="h-4 w-4 text-muted-foreground" />
-                    Bootstrap API key
-                  </div>
-                  <p className="mb-2 text-xs text-muted-foreground">
-                    Shown once at creation. Use it on your backend to mint member JWTs — never ship
-                    admin tokens to browsers.
-                  </p>
-                  <code className="block break-all rounded-md border border-border bg-[#0d1117] px-3 py-2 font-mono text-xs text-[#e6edf3]">
-                    {selectedProject.apiKey}
-                  </code>
-                </div>
-              ) : null}
             </Panel>
           ) : null}
 

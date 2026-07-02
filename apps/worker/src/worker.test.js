@@ -191,7 +191,23 @@ describe("webhook signing", () => {
     expect(prep.warning).toBe("webhook_secret_stored_plaintext");
   });
 
+  it("rejects plaintext webhook secrets in production even when ALLOW_PLAINTEXT_WEBHOOK_SECRETS=true", async () => {
+    const env = {
+      NODE_ENV: "production",
+      ALLOW_PLAINTEXT_WEBHOOK_SECRETS: "true",
+    };
+    expect(isPlaintextWebhookSecretAllowed(env)).toBe(false);
+    const prep = await prepareWebhookSecretForStorage(
+      env,
+      "prod-secret",
+      async (s) => `hash:${s}`
+    );
+    expect(prep.ok).toBe(false);
+    expect(prep.error).toBe("webhook_secret_encryption_required");
+  });
+
   it("round-trips encrypted webhook secrets when WEBHOOK_SECRET_ENCRYPTION_KEY is set", async () => {
+
     const rawKey = new Uint8Array(32);
     crypto.getRandomValues(rawKey);
     const WEBHOOK_SECRET_ENCRYPTION_KEY = Buffer.from(rawKey).toString("base64");

@@ -163,6 +163,45 @@ describe("MessageInput", () => {
     });
   });
 
+  it("renders a Create Image pending tool chip with dismiss button", async () => {
+    const user = userEvent.setup();
+    const onClear = vi.fn();
+    const { container } = render(
+      <StatefulMessageInput
+        pendingTool={{ type: "image", prompt: "a cat" }}
+        onClearPendingTool={onClear}
+      />
+    );
+    const view = within(container);
+
+    expect(view.getByText("🖼️ Create Image")).toBeInTheDocument();
+    await user.click(view.getByRole("button", { name: "Remove tool" }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders a Deep Research pending tool chip", () => {
+    const { container } = render(
+      <StatefulMessageInput
+        pendingTool={{ type: "deep-research", topic: "quantum computing" }}
+      />
+    );
+    expect(within(container).getByText("🧠 Deep Research")).toBeInTheDocument();
+  });
+
+  it("renders a Web Search pending tool chip", () => {
+    const { container } = render(
+      <StatefulMessageInput
+        pendingTool={{ type: "web-search", topic: "weather" }}
+      />
+    );
+    expect(within(container).getByText("🔎 Web Search")).toBeInTheDocument();
+  });
+
+  it("does not render a tool chip when pendingTool is null", () => {
+    const { container } = render(<StatefulMessageInput pendingTool={null} />);
+    expect(within(container).queryByLabelText("Remove tool")).not.toBeInTheDocument();
+  });
+
   describe("without uploadComposerFile", () => {
     beforeEach(() => {
       vi.spyOn(window, "prompt").mockReturnValue("https://cdn.example/p.jpg");

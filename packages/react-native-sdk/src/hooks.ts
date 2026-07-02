@@ -43,12 +43,12 @@ export function useChat(client: FluxyChatClient, options: UseChatOptions): UseCh
       if (mountedRef.current) setConnectionStatus(status);
     });
 
-    const unsubMessage = client.onMessage((event) => {
-      if (event.roomId === roomId && mountedRef.current) {
+    const unsubMessage = client.onMessage((msg: Message) => {
+      if (msg.roomId === roomId && mountedRef.current) {
         setMessages((prev) => {
-          const exists = prev.some((m) => m.id === event.data.id);
+          const exists = prev.some((m) => m.id === msg.id);
           if (exists) return prev;
-          return [...prev, event.data as Message];
+          return [...prev, msg];
         });
       }
     });

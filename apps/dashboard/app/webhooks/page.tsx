@@ -141,7 +141,7 @@ export default function WebhooksPage() {
                           <AlertTriangle className="h-3 w-3" aria-hidden />
                         ) : null}
                         {badge.label}
-                        {failing ? ` · ${w.consecutiveFailures}Ã` : ""}
+                        {failing ? ` · ${w.consecutiveFailures}x` : ""}
                       </span>
                     </div>
                     <p className="mt-1 truncate text-xs text-muted-foreground">

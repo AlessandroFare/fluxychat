@@ -1,0 +1,76 @@
+# Stream Resumption
+
+FluxyChat's stream resumption (P23-1) lets users reconnect to in-progress AI responses after a page refresh, network drop, or tab switch — without losing the partial output.
+
+## The Problem
+
+When an AI agent streams a long response (e.g., a detailed code review), and the user refreshes the page or briefly loses connectivity, the stream breaks. Without resumption:
+
+- The partial response is lost
+- The user must re-trigger the agent
+- Tokens already generated are wasted
+
+## How It Works
+
+1. **Stream start:** When an AI stream begins, the worker assigns it a `streamId` and persists chunks to D1 as they arrive
+2. **Disconnection:** The WebSocket drops; the stream continues server-side
+3. **Reconnection:** The client reconnects and requests stream resume with the `streamId`
+4. **Resume:** The worker replays buffered chunks, then switches to live streaming for remaining content
+5. **Completion:** Stream finalizes normally; the full message is persisted
+
+## SDK Usage
+
+```ts
+import { useChat } from "@fluxy-chat/sdk";
+
+const { messages, resumeStream } = useChat({ roomId, client });
+
+// On reconnect, the SDK automatically attempts to resume active streams
+// You can also manually trigger resume:
+await resumeStream(streamId);
+```
+
+### Manual Stream Resume
+
+```ts
+// After reconnecting, check for active streams
+const activeStreams = await client.getActiveStreams(roomId);
+
+for (const stream of activeStreams) {
+  await client.resumeStream(stream.id);
+}
+```
+
+## WebSocket Events
+
+During stream resumption, the following events flow over WebSocket:
+
+| Event | Description |
+|-------|-------------|
+| `stream_start` | New stream initiated with `streamId` |
+| `stream_chunk` | Text delta or tool call update |
+| `stream_state` | Full current state of the stream (sent on resume) |
+| `stream_finish` | Stream completed, final message persisted |
+| `stream_error` | Stream failed, partial content saved |
+
+## Worker Configuration
+
+Stream resumption is enabled by default. Configure via environment variables:
+
+```env
+STREAM_RESUMPTION_ENABLED=true          # default: true
+STREAM_RESUMPTION_TTL_SECONDS=300        # how long to keep stream state (default: 5 min)
+STREAM_RESUMPTION_MAX_CONCURRENT=10      # max concurrent resumable streams per room
+```
+
+## Integration with Existing Features
+
+- **SSE fallback:** Stream resumption works across transport fallbacks (WS → SSE → polling)
+- **Agent runtime:** The `agent-runtime.js` module checks for resumable streams on agent start
+- **Room DO:** The Durable Object tracks `activeStreams` and sends `streamState` on WS reconnect (P11-B1)
+- **DevTools:** The DevTools UI (P23-5) shows active streams and their resume status
+
+## See Also
+
+- [LLM Middleware Guide](./llm-middleware.md) — Intercept and modify stream behavior
+- [Workflow Agent Guide](./workflow-agent.md) — Durable agent execution that survives restarts

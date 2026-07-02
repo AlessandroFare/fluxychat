@@ -1,0 +1,151 @@
+# WorkflowAgent — Durable Execution
+
+FluxyChat's `WorkflowAgent` (P23-6) runs long-lived AI agents that survive deploys, restarts, and interruptions. State is persisted to D1/KV, so agents resume exactly where they left off.
+
+## Overview
+
+Standard agent invocations are ephemeral — if the Worker restarts mid-run, the agent's state is lost. `WorkflowAgent` wraps agent execution in a durable layer:
+
+- **State persistence:** Every step, tool call, and intermediate result is saved to D1
+- **Automatic resume:** On restart, the agent picks up from the last completed step
+- **Typed context:** Shared typed context across steps, tools, and calls (P23-6a)
+- **Step boundaries:** Each step is atomic — either completes fully or doesn't start
+
+## When to Use
+
+| Scenario | Use WorkflowAgent? |
+|----------|-------------------|
+| Quick Q&A (< 5s) | No — standard invoke is fine |
+| Multi-step research (30s+) | Yes — survives timeouts |
+| Code review with tool calls | Yes — durable tool execution |
+| File processing pipeline | Yes — atomic steps |
+| Scheduled recurring agent | Yes — durable scheduling |
+
+## Basic Usage
+
+```ts
+import { WorkflowAgent } from "@fluxy-chat/sdk";
+
+const workflow = new WorkflowAgent({
+  agentId: "research-agent",
+  roomId: "research-room",
+  model: "gpt-4o",
+  tools: messengerPreset,
+});
+
+// Define steps
+workflow.step("gather", async (ctx) => {
+  const messages = await ctx.searchRoom("pricing discussion");
+  ctx.set("findings", messages);
+});
+
+workflow.step("analyze", async (ctx) => {
+  const findings = ctx.get("findings");
+  const analysis = await ctx.llm({
+    prompt: `Analyze these messages: ${JSON.stringify(findings)}`,
+  });
+  ctx.set("analysis", analysis);
+});
+
+workflow.step("report", async (ctx) => {
+  const analysis = ctx.get("analysis");
+  await ctx.postMessage(`## Analysis\n\n${analysis}`);
+});
+
+// Run — survives restarts
+const run = await workflow.run({ maxSteps: 10 });
+```
+
+## Typed Runtime Context (P23-6a)
+
+Define a typed context schema for type-safe data sharing across steps:
+
+```ts
+import { WorkflowAgent, defineContext } from "@fluxy-chat/sdk";
+
+const ResearchContext = defineContext({
+  findings: { type: "array", required: true },
+  analysis: { type: "string", required: false },
+  confidence: { type: "number", default: 0 },
+});
+
+const workflow = new WorkflowAgent({
+  context: ResearchContext,
+  // ...
+});
+
+workflow.step("analyze", async (ctx) => {
+  const findings = ctx.get("findings"); // typed as array
+  ctx.set("confidence", 0.85);           // type-checked
+  // ctx.set("typo", "value");           // TypeScript error!
+});
+```
+
+## Durable Execution
+
+State is persisted after each step completion:
+
+```
+Step 1: gather    → ✅ persisted
+Step 2: analyze   → ✅ persisted
+Step 3: report    → 💥 Worker restart
+                  → 🔄 Resume from Step 3 (state from Step 2 is loaded)
+Step 3: report    → ✅ completed
+```
+
+## Multi-Step Loop Control (P24-2)
+
+Configure stop conditions for agent loops:
+
+```ts
+const workflow = new WorkflowAgent({
+  maxSteps: 20,
+  stopWhen: (ctx) => ctx.get("confidence") > 0.9,
+  // or: stopWhen: hasToolCall("final_answer")
+  // or: stopWhen: isStepCount(10)
+  // or: stopWhen: isLoopFinished()
+});
+```
+
+## Tool Execution
+
+Tools called within a workflow are also durable. If a tool call is interrupted:
+
+1. The tool call is logged in D1 with `status: "pending"`
+2. On resume, the workflow checks for pending tool calls
+3. If the tool is idempotent, it re-executes
+4. If not, it waits for manual resolution
+
+## Monitoring
+
+Track workflow progress via the DevTools UI or API:
+
+```ts
+const status = await client.getWorkflowStatus(runId);
+// {
+//   step: "analyze",
+//   completedSteps: ["gather"],
+//   pendingSteps: ["analyze", "report"],
+//   startedAt: "2026-07-01T12:00:00Z",
+//   lastCheckpoint: "2026-07-01T12:01:30Z",
+//   context: { findings: [...] }
+// }
+```
+
+## Integration with Cloudflare Workflows
+
+`WorkflowAgent` integrates with Cloudflare's `Workflows` binding (P12-L) for native durable execution:
+
+```ts
+export class FluxyScheduledWorkflow extends Workflow {
+  async run(event, step) {
+    const agent = new WorkflowAgent({ /* ... */ });
+    await agent.runWithWorkflow(step);
+  }
+}
+```
+
+## See Also
+
+- [Stream Resumption Guide](./stream-resumption.md) — Reconnecting to active AI streams
+- [AI Tool Presets Guide](./ai-tool-presets.md) — Tool governance for workflow agents

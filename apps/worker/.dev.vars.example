@@ -100,6 +100,25 @@ ANTHROPIC_API_KEY=
 # AI_MODEL=
 # AI_TRANSCRIBE_MODEL=whisper-large-v3-turbo  # override default whisper-1
 
+# Dedicated transcription provider (optional; falls back to AI_BASE_URL / AI_API_KEY).
+# Use this when your main LLM provider (e.g. OpenCode Zen) does not support audio transcription,
+# and you want a separate provider (e.g. Groq) just for voice messages.
+# AI_TRANSCRIBE_BASE_URL=https://api.groq.com/openai/v1
+# AI_TRANSCRIBE_API_KEY=gsk_your_groq_key
+# AI_TRANSCRIBE_MODEL=whisper-large-v3-turbo
+
+# Dedicated image generation provider (optional; falls back to AI_BASE_URL / AI_API_KEY).
+# Use this when your main LLM provider does not support image generation.
+# AI_IMAGE_BASE_URL=
+# AI_IMAGE_API_KEY=
+# AI_IMAGE_MODEL=dall-e-3
+# AI_IMAGE_GENERATION_ENABLED=false
+
+# Pollinations.ai — free, no API key required (set provider to "pollinations")
+# AI_IMAGE_PROVIDER=pollinations
+# AI_IMAGE_MODEL=flux  # also: flux-realism, sdxl, playground
+# AI_IMAGE_GENERATION_ENABLED=true
+
 # Dedicated embeddings provider (optional; falls back to AI_BASE_URL / AI_API_KEY).
 # Use this when your main LLM provider (e.g. Groq) does not support embeddings,
 # and you want a separate provider (e.g. OpenCode Zen) just for vector generation.

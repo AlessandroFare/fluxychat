@@ -1,0 +1,9 @@
+name = "fluxy-bot-basic"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[vars]
+FLUXY_BASE_URL = "https://your-fluxychat-worker.example.com"
+
+# Set these via `wrangler secret put` for production
+# wrangler secret put FLUXY_API_KEY

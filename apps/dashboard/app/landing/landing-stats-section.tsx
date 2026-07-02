@@ -1,20 +1,35 @@
-import { Cpu, Globe, Layers } from "lucide-react";
+import { Boxes, Cpu, Globe, Layers, Mic, Workflow } from "lucide-react";
 
 const LANDING_STATS = [
   {
     icon: Globe,
-    value: "Edge-first",
-    label: "Pay Cloudflare for the edge slice, not a second realtime vendor and not a socket VPS.",
+    value: "14 platforms",
+    label: "Slack, Discord, Telegram, WhatsApp, Teams, and 9 more — one unified adapter interface.",
   },
   {
     icon: Cpu,
-    value: "Hooks + REST",
-    label: "Build UI with @fluxy-chat/sdk. Manage keys and quotas in the dashboard.",
+    value: "AI-native",
+    label: "Streaming markdown, tool calling, MCP client, and LLM middleware pipeline built in.",
   },
   {
     icon: Layers,
-    value: "Multi-tenant",
-    label: "Many projects and rooms on one deployment, with per-project billing hooks.",
+    value: "30+ SDK modules",
+    label: "Rooms, presence, typing, history, agents, webhooks, cards, and more — all on @fluxy-chat/sdk.",
+  },
+  {
+    icon: Workflow,
+    value: "Durable agents",
+    label: "WorkflowAgent persists to D1, survives deploys, and resumes from the last step.",
+  },
+  {
+    icon: Mic,
+    value: "Realtime voice",
+    label: "Bidirectional voice-to-voice AI with provider-agnostic abstraction.",
+  },
+  {
+    icon: Boxes,
+    value: "MIT self-host",
+    label: "Deploy the Worker + D1 in your Cloudflare account. Read every line of source.",
   },
 ] as const;
 

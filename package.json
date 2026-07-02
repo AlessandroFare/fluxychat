@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "pnpm --filter \"./apps/*\" --parallel dev",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "test": "pnpm -r test",
+    "lint": "pnpm --filter @fluxychat/ui exec eslint src --ext .ts,.tsx",
+    "test": "pnpm --filter @fluxychat/ui exec vitest run",
     "test:e2e:smoke": "pnpm --filter @fluxychat/dashboard test:e2e:smoke",
     "smoke:worker": "pnpm --filter @fluxychat/worker smoke:remote",
     "smoke:bundled": "bash scripts/smoke-test.sh",

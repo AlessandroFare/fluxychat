@@ -1,98 +1,112 @@
 import * as React from "react";
 import type { FluxyChatMessage } from "@fluxy-chat/sdk";
+import {
+  MessageScroller,
+  MessageScrollerProvider,
+  MessageScrollerButton,
+  MessageScrollerViewport,
+  MessageScrollerContent,
+  MessageScrollerItem,
+} from "./primitives/message-scroller";
+import { Marker, MarkerContent } from "./primitives/marker";
+import { cn } from "./lib/utils";
+
+/** Extract the calendar date (YYYY-MM-DD) from an ISO timestamp. */
+function toDay(iso: string): string {
+  try {
+    return iso.slice(0, 10);
+  } catch {
+    return "";
+  }
+}
+
+/** Format a date string for display in a separator (e.g. "Jun 28, 2026"). */
+function formatDay(dateStr: string): string {
+  try {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
 
 export interface MessageListProps {
   messages: FluxyChatMessage[];
-  /** Per-row estimate (px); tune with your bubble density. Default 92. */
-  estimatedRowHeight?: number;
-  overscan?: number;
-  /** When false, renders all rows (tiny lists); when true, windowed slice. Default: messages.length > 24 */
-  virtualization?: boolean;
-  renderMessage: (message: FluxyChatMessage) => React.ReactNode;
-  /** Typing dots, AgentTypingIndicator, etc. */
+  /** Render function for each message row. */
+  renderMessage: (message: FluxyChatMessage, index: number) => React.ReactNode;
+  /** Typing indicator, AgentTypingIndicator, or other trailing content. */
   footer?: React.ReactNode;
-  listStyle?: React.CSSProperties;
-  onScrollNearTop?: () => void;
+  /** Show date separators between messages on different calendar days. Default: true. */
+  showDateSeparators?: boolean;
+  /** className forwarded to the outer MessageScroller. */
+  className?: string;
+  /** Extra attributes forwarded to the outer MessageScroller. */
+  "data-testid"?: string;
 }
 
 /**
- * Vertical list with lightweight windowing for long transcripts.
- * No extra deps — uses estimated row heights (best for roughly uniform bubbles).
+ * Scrollable message list built on shadcn `MessageScroller` primitives.
+ * Features:
+ *  - Smart auto-follow (stick-to-bottom while near the end)
+ *  - Date separators between messages on different calendar days
+ *  - Content-visibility optimization via MessageScrollerItem
+ *  - Scroll-fade edge effect
  */
 export function MessageList({
   messages,
-  estimatedRowHeight = 92,
-  overscan = 5,
-  virtualization = messages.length > 24,
   renderMessage,
   footer,
-  listStyle,
-  onScrollNearTop,
+  showDateSeparators = true,
+  className,
+  "data-testid": testId,
 }: MessageListProps) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = React.useState(0);
-  const [viewportH, setViewportH] = React.useState(400);
-
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setViewportH(el.clientHeight || 400));
-    ro.observe(el);
-    setViewportH(el.clientHeight || 400);
-    return () => ro.disconnect();
-  }, []);
-
-  const handleScroll = () => {
-    const el = ref.current;
-    if (!el) return;
-    const st = el.scrollTop;
-    setScrollTop(st);
-    if (onScrollNearTop && st < estimatedRowHeight) onScrollNearTop();
-  };
-
-  const rowH = estimatedRowHeight;
-
-  let body: React.ReactNode;
-
-  if (!virtualization) {
-    body = messages.map((m) => (
-      <div key={m.id} data-fc-msg-id={m.id}>
-        {renderMessage(m)}
-      </div>
-    ));
-  } else {
-    const total = messages.length;
-    const start = Math.max(0, Math.floor(scrollTop / rowH) - overscan);
-    const end = Math.min(total, Math.ceil((scrollTop + viewportH) / rowH) + overscan);
-    const padTop = start * rowH;
-    const padBottom = Math.max(0, (total - end) * rowH);
-
-    body = (
-      <div style={{ paddingTop: padTop, paddingBottom: padBottom }}>
-        {messages.slice(start, end).map((m) => (
-          <div key={m.id} data-fc-msg-id={m.id} style={{ minHeight: rowH }}>
-            {renderMessage(m)}
-          </div>
-        ))}
-      </div>
-    );
-  }
+  let lastDay = "";
 
   return (
-    <div
-      ref={ref}
-      onScroll={handleScroll}
-      style={{
-        flex: 1,
-        overflowY: "auto",
-        padding: "12px 12px",
-        background: "#0b1120",
-        ...listStyle,
-      }}
-    >
-      {body}
-      {footer}
-    </div>
+    <MessageScrollerProvider autoScroll scrollPreviousItemPeek={64}>
+      <MessageScroller className={cn("flex-1 scroll-fade-b", className)} data-testid={testId}>
+        <MessageScrollerViewport className="p-3">
+          <MessageScrollerContent className="gap-2">
+            {messages.flatMap((m, idx) => {
+              const elements: React.ReactNode[] = [];
+
+              // Date separator
+              if (showDateSeparators) {
+                const day = toDay(m.createdAt);
+                if (day && day !== lastDay) {
+                  lastDay = day;
+                  elements.push(
+                    <MessageScrollerItem key={`date-${day}-${idx}`}>
+                      <Marker variant="separator" className="my-1">
+                        <MarkerContent>{formatDay(day)}</MarkerContent>
+                      </Marker>
+                    </MessageScrollerItem>
+                  );
+                }
+              }
+
+              // Message row
+              elements.push(
+                <MessageScrollerItem
+                  key={m.id ?? m.clientMessageId ?? idx}
+                  messageId={m.id != null ? String(m.id) : undefined}
+                  scrollAnchor={Boolean(m.userId)}
+                  className={cn(m.streaming && "animate-in fade-in-0 duration-300")}
+                >
+                  {renderMessage(m, idx)}
+                </MessageScrollerItem>
+              );
+
+              return elements;
+            })}
+
+            {footer ? (
+              <MessageScrollerItem className="mt-2">{footer}</MessageScrollerItem>
+            ) : null}
+          </MessageScrollerContent>
+        </MessageScrollerViewport>
+        <MessageScrollerButton />
+      </MessageScroller>
+    </MessageScrollerProvider>
   );
 }
-

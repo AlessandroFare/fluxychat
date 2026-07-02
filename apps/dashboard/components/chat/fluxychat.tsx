@@ -1,0 +1,2043 @@
+"use client";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useSearchParams } from "next/navigation";
+import {
+  BookOpen,
+  BrainCircuit,
+  FileImage,
+  Globe,
+  Loader2,
+  Paperclip,
+  Reply,
+  Search,
+  Send,
+  Smile,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { useChat, useFluxyChatOptional } from "@fluxy-chat/sdk";
+import {
+  buildDeepResearchPrompt,
+  buildImageGenerationCaption,
+  buildWebSearchPrompt,
+} from "@fluxy-chat/sdk";
+import { useClerkUser } from "@/lib/clerk-user";
+import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
+import { mentionPrefixForAgent, normalizeAgentHandle } from "@/lib/assistant-room";
+import {
+  normalizeAgentRun,
+  type AgentRunDisplay,
+} from "@/lib/agent-run-display";
+import { toolCallsToThreadEvents } from "@/lib/agent-tool-thread";
+import type { UseChatHistoryReplay, FluxyChatAttachment } from "@fluxy-chat/sdk";
+import { AgentToolThreadCard } from "@/app/components/agent-tool-thread-card";
+import { getPublicWorkerUrl } from "@/lib/worker-url-client";
+import { fetchWorkerJson } from "@/lib/worker-fetch";
+import { messageFromUnknown } from "@/lib/error-message";
+import {
+  AgentRoomTemplatePicker,
+  type AgentRoomTemplateSelection,
+} from "@/app/components/agent-room-template-picker";
+import { AgentRunStatus } from "@/app/components/agent-run-status";
+import { RoomOfflineNotifySettings } from "@/app/components/room-offline-notify-settings";
+import { ChatCatchUpBanner } from "@/app/components/chat-catch-up-banner";
+import { ChatPresenceStrip } from "@/app/components/chat-presence-strip";
+import { AgentCopilotConfirm } from "@/app/components/agent-copilot-confirm";
+import { useRoomDraftSync } from "@/lib/use-room-draft-sync";
+import type { FluxySendMessageOptions, FluxyChatClient } from "@fluxy-chat/sdk";
+import { Button, Input } from "@/app/components/ui";
+import { VoiceRecorder } from "~/components/voice/voice-recorder";
+import { ReplySuggestions } from "@/app/components/reply-suggestions";
+import { AgentHandoffBanner } from "@/app/components/agent-handoff-banner";
+import { cn } from "@/lib/utils";
+
+// shadcn UI primitives
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+  MessageHeader,
+  MessageFooter,
+  MessageTimestamp,
+  MessageActions,
+  MessageAction,
+} from "@/components/ui/message";
+import {
+  Bubble,
+  BubbleContent,
+} from "@/components/ui/bubble";
+import {
+  MessageScrollerProvider,
+  MessageScroller,
+  MessageScrollerViewport,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerButton,
+  MessageScrollerDate,
+} from "@/components/ui/message-scroller";
+import { Marker, MarkerIcon, MarkerContent } from "@/components/ui/marker";
+import {
+  Composer,
+  ComposerTextarea,
+  ComposerToolbar,
+  ComposerToolbarLeft,
+  ComposerToolbarRight,
+  ComposerSubmitButton,
+} from "@/components/ui/composer";
+import { TypingIndicator } from "@/components/ui/typing-indicator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { ReactionPicker } from "@/components/ui/reaction-picker";
+import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
+import { ThreadSummary } from "@/app/components/thread-summary";
+
+const WORKER_URL = getPublicWorkerUrl();
+const RUN_POLL_MS = 2000;
+const RUN_POLL_TIMEOUT_MS = 60_000;
+const SKIP_HISTORY_STORAGE_KEY = "fluxychat.agentChat.skipHistory";
+
+// ─── Helper functions ───
+
+function displayUserId(message: { userId?: string | null }): string {
+  return message.userId?.trim() || "unknown";
+}
+
+function isSameDay(a: string, b: string): boolean {
+  const da = new Date(a);
+  const db = new Date(b);
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+}
+
+function formatDateLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+// ─── Types ───
+
+export type FluxyChatVariant = "full" | "demo" | "onboarding" | "minimal";
+
+export interface FluxyChatProps {
+  roomId: string;
+  agentId?: string;
+  agentName?: string;
+  agentHandle?: string | null;
+  adminJwt?: string;
+  memberJwt?: string;
+  memberUserId?: string;
+  /** Override the FluxyChatClient (e.g. demo guest session). When omitted, uses FluxyRealtimeProvider context. */
+  client?: FluxyChatClient | null;
+  coPilotConfirm?: boolean;
+  deepLinkHistoryLimit?: number;
+  scrollToMessageId?: number;
+  /** Called after a message is successfully sent (for onboarding tracking, etc.). */
+  onMessageSent?: () => void;
+  className?: string;
+  /** Page-specific variant. Controls which UI elements are shown. */
+  variant?: FluxyChatVariant;
+  /** Suggested prompts shown above the composer when there are no messages or draft. */
+  suggestedPrompts?: string[];
+}
+
+type PendingTool =
+  | null
+  | { type: "image" }
+  | { type: "deep-research" }
+  | { type: "web-search" };
+
+interface PendingComposePayload {
+  templateSend: AgentRoomTemplateSelection | null;
+  text: string;
+  parentId: number | null;
+  attachments: FluxyChatAttachment[];
+  tool: PendingTool;
+}
+
+// ─── Bubble styling constants ───
+
+const sentBubbleClass = "ml-auto max-w-[72%] rounded-[18px] rounded-br-[4px] [padding:10px_14px]";
+const receivedBubbleClass = "mr-auto max-w-[72%] rounded-[18px] rounded-bl-[4px] [padding:10px_14px]";
+
+// ─── Component ───
+
+export function FluxyChat({
+  roomId,
+  agentId = "",
+  agentName = "Agent",
+  agentHandle,
+  adminJwt = "",
+  memberJwt = "",
+  memberUserId,
+  client: clientProp,
+  coPilotConfirm: coPilotConfirmDefault = true,
+  deepLinkHistoryLimit: deepLinkHistoryLimitProp,
+  scrollToMessageId: scrollToMessageIdProp,
+  onMessageSent,
+  className,
+  variant = "full",
+  suggestedPrompts,
+}: FluxyChatProps) {
+  // Variant-based feature flags
+  const showPlusMenu = variant === "full" || variant === "demo" || variant === "onboarding";
+  const showVoiceRecorder = variant === "full" || variant === "demo" || variant === "onboarding";
+  const showTemplates = variant === "full";
+  const showCopilotConfirm = variant === "full";
+  const showPresenceStrip = variant === "full";
+  const showHandoffBanner = variant === "full";
+  const showCatchUpBanner = variant === "full";
+  const showReplySuggestions = variant === "full";
+  const showOfflineNotify = variant === "full";
+  const showDeepResearch = variant === "full" || variant === "demo" || variant === "onboarding";
+  const showWebSearch = variant === "full" || variant === "demo" || variant === "onboarding";
+  const showImageGen = variant === "full" || variant === "demo" || variant === "onboarding";
+  const showRoomDraftSync = variant === "full";
+  const showSuggestedPrompts = (variant === "demo" || variant === "onboarding") && suggestedPrompts && suggestedPrompts.length > 0;
+  const searchParams = useSearchParams();
+  const deepLinkHistoryLimit =
+    deepLinkHistoryLimitProp ??
+    (Number(searchParams.get("replayLimit")) || undefined);
+  const scrollToMessageId =
+    scrollToMessageIdProp ?? (Number(searchParams.get("messageId")) || undefined);
+  const deepLinkReplay = searchParams.get("replay") === "1";
+  const [confirmBeforeSend, setConfirmBeforeSend] = useState(showCopilotConfirm ? coPilotConfirmDefault : false);
+  const [draft, setDraft] = useState("");
+  const [replyToId, setReplyToId] = useState<number | null>(null);
+  const [ephemeralTtlSeconds, setEphemeralTtlSeconds] = useState(0);
+  const [whisperMode, setWhisperMode] = useState(false);
+  const [whisperTo, setWhisperTo] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [imageGenerating, setImageGenerating] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<
+    Array<{ attachment: FluxyChatAttachment; uploading: boolean; error?: string }>
+  >([]);
+  const [pendingTool, setPendingTool] = useState<PendingTool>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingCompose, setPendingCompose] = useState<{
+    previewText: string;
+    modeLabel: string;
+    payload: PendingComposePayload;
+  } | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [invokeError, setInvokeError] = useState<string | null>(null);
+  const [latestRun, setLatestRun] = useState<AgentRunDisplay | null>(null);
+  const [runPending, setRunPending] = useState(false);
+  const [runFeedback, setRunFeedback] = useState<string | null>(null);
+  const [skipHistoryOnConnect, setSkipHistoryOnConnect] = useState(false);
+  const [templateSelection, setTemplateSelection] =
+    useState<AgentRoomTemplateSelection | null>(null);
+  // Image generation dialog
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [imagePrompt, setImagePrompt] = useState("");
+  // + menu open state
+  const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const plusMenuRef = useRef<HTMLDivElement>(null);
+  // Reaction picker state
+  const [reactionPickerMessageId, setReactionPickerMessageId] = useState<number | null>(null);
+  const [reactionPickerAnchor, setReactionPickerAnchor] = useState<DOMRect | null>(null);
+
+  const pollSinceRef = useRef<string | null>(null);
+  const runFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const { user: clerkUser } = useClerkUser();
+  const realtime = useFluxyChatOptional();
+  const fluxyClient = clientProp ?? realtime?.client ?? null;
+
+  const localUserId = clerkUser?.id
+    ? fluxyUserIdFromClerk(clerkUser.id)
+    : undefined;
+
+  const trimmedRoomId = roomId.trim();
+  const mentionHandle = normalizeAgentHandle(agentHandle);
+  const usesMentionInvoke = Boolean(mentionHandle);
+
+  useEffect(() => {
+    try {
+      setSkipHistoryOnConnect(localStorage.getItem(SKIP_HISTORY_STORAGE_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const replay: UseChatHistoryReplay = skipHistoryOnConnect
+    ? "request"
+    : deepLinkReplay
+      ? "connect"
+      : "connect";
+
+  const presenceInfo = useMemo(
+    () => (localUserId ? { name: localUserId } : undefined),
+    [localUserId],
+  );
+
+  const {
+    messages,
+    sendMessage,
+    invokeAgent,
+    connectionStatus,
+    connectionState,
+    agentTyping,
+    typingUsers,
+    typingIntents,
+    connected,
+    toolThreadEvents,
+    clearToolThread,
+    lastAgentRun,
+    historyLoaded,
+    seenBy,
+    loadHistory,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    sendReadReceipt,
+    retryMessage,
+    presenceMembers,
+    subscriptionCount,
+    reactions,
+    sendReaction,
+  } = useChat({
+    roomId: trimmedRoomId,
+    agentId,
+    client: clientProp ?? undefined,
+    replay,
+    replayLimit: deepLinkHistoryLimit,
+    historyLimit: deepLinkHistoryLimit ?? 50,
+    markReadLatest: false,
+    presenceInfo,
+  });
+
+  useEffect(() => {
+    if (!scrollToMessageId || !historyLoaded) return;
+    const el = listRef.current?.querySelector(
+      `[data-message-id="${scrollToMessageId}"]`,
+    );
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [scrollToMessageId, historyLoaded, messages.length]);
+
+  useRoomDraftSync({
+    client: fluxyClient,
+    roomId: trimmedRoomId,
+    content: draft,
+    replyToId: replyToId,
+    enabled: showRoomDraftSync && Boolean(fluxyClient?.isAuthenticated()),
+    onRestore: ({ content, replyToId: restoredReply }) => {
+      setDraft((prev) => (prev.trim() ? prev : content));
+      if (restoredReply != null) setReplyToId(restoredReply);
+    },
+  });
+
+  const streamingCount = useMemo(
+    () => messages.filter((m) => m.streaming).length,
+    [messages],
+  );
+
+  const messagesById = useMemo(() => {
+    const map = new Map<number, (typeof messages)[number]>();
+    for (const m of messages) {
+      if (m.id != null) map.set(m.id, m);
+    }
+    return map;
+  }, [messages]);
+
+  const replyCountByParent = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const m of messages) {
+      if (m.parentId != null) {
+        counts.set(m.parentId, (counts.get(m.parentId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [messages]);
+
+  const replyTarget = replyToId != null ? messagesById.get(replyToId) : null;
+
+  function scrollToMessage(messageId: number) {
+    const el = listRef.current?.querySelector(`[data-message-id="${messageId}"]`);
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  function toggleReaction(messageId: number, emoji: string) {
+    // Check if user already reacted with this emoji
+    const currentReactions = reactions[messageId];
+    const hasReaction = currentReactions && currentReactions[emoji] > 0;
+    sendReaction(messageId, emoji, hasReaction ? "remove" : "add");
+  }
+
+  function openReactionPicker(e: React.MouseEvent, messageId: number) {
+    const target = e.currentTarget as HTMLElement;
+    setReactionPickerAnchor(target.getBoundingClientRect());
+    setReactionPickerMessageId(messageId);
+  }
+
+  const displayToolEvents = useMemo(() => {
+    if (toolThreadEvents.length > 0) return toolThreadEvents;
+    if (latestRun?.tool_calls?.length) {
+      return toolCallsToThreadEvents(latestRun.id, latestRun.tool_calls);
+    }
+    return [];
+  }, [toolThreadEvents, latestRun]);
+
+  const isAgentBusy = agentTyping || streamingCount > 0 || runPending;
+
+  // ─── Run feedback ───
+
+  function showRunFeedback(run: AgentRunDisplay) {
+    const parts: string[] = [];
+    if (run.id) parts.push(`run ${run.id.slice(0, 8)}…`);
+    if (run.latency_ms != null) parts.push(`${run.latency_ms}ms`);
+    if (run.input_tokens != null || run.output_tokens != null) {
+      parts.push(`tokens ${run.input_tokens ?? 0}/${run.output_tokens ?? 0}`);
+    }
+    if (run.status === "failed" && run.error) parts.push(run.error);
+    else if (run.status === "completed") parts.push("completed");
+    setRunFeedback(parts.join(" · "));
+    if (runFeedbackTimerRef.current) clearTimeout(runFeedbackTimerRef.current);
+    runFeedbackTimerRef.current = setTimeout(() => setRunFeedback(null), 8_000);
+  }
+
+  const fetchLatestRunForRoom = useCallback(async (): Promise<AgentRunDisplay | null> => {
+    const token = adminJwt.trim();
+    if (!token || !agentId) return null;
+    try {
+      const json = await fetchWorkerJson<{ runs?: Record<string, unknown>[] }>(
+        `${WORKER_URL}/agents/${encodeURIComponent(agentId)}/runs?limit=8`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const since = pollSinceRef.current;
+      const sinceWithBuffer = since
+        ? new Date(new Date(since).getTime() - 60_000).toISOString()
+        : null;
+      for (const row of json.runs ?? []) {
+        const run = normalizeAgentRun(row);
+        if (run.room_id && run.room_id !== trimmedRoomId) continue;
+        if (sinceWithBuffer && run.created_at && run.created_at < sinceWithBuffer) continue;
+        if (run.status === "completed" || run.status === "failed") return run;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, [adminJwt, agentId, trimmedRoomId]);
+
+  useEffect(() => {
+    if (!runPending || !adminJwt.trim()) return;
+    let cancelled = false;
+
+    const tick = async () => {
+      const run = await fetchLatestRunForRoom();
+      if (cancelled || !run) return;
+      setLatestRun(run);
+      setRunPending(false);
+      if (run.status === "failed") {
+        setInvokeError(run.error || "Agent run failed");
+      }
+      showRunFeedback(run);
+    };
+
+    void tick();
+    const intervalId = window.setInterval(() => void tick(), RUN_POLL_MS);
+    const timeoutId = window.setTimeout(() => {
+      if (!cancelled) setRunPending(false);
+    }, RUN_POLL_TIMEOUT_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [runPending, adminJwt, fetchLatestRunForRoom]);
+
+  useEffect(() => {
+    if (!lastAgentRun) return;
+    if (lastAgentRun.room_id && lastAgentRun.room_id !== trimmedRoomId) return;
+    const run = normalizeAgentRun(lastAgentRun as unknown as Record<string, unknown>);
+    setLatestRun(run);
+    setRunPending(false);
+    if (run.status === "failed") {
+      setInvokeError(run.error || "Agent run failed");
+    }
+    showRunFeedback(run);
+  }, [lastAgentRun, trimmedRoomId]);
+
+  useEffect(
+    () => () => {
+      if (runFeedbackTimerRef.current) clearTimeout(runFeedbackTimerRef.current);
+    },
+    [],
+  );
+
+  // ─── + menu close on outside click ───
+
+  useEffect(() => {
+    if (!plusMenuOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (plusMenuRef.current && !plusMenuRef.current.contains(e.target as Node)) {
+        setPlusMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [plusMenuOpen]);
+
+  // ─── Send logic ───
+
+  function sendResearchPrompt(mode: "deep-research" | "web-search") {
+    if (!trimmedRoomId || isAgentBusy) return;
+    setInputError(null);
+    setPendingTool({ type: mode });
+    setPlusMenuOpen(false);
+  }
+
+  function prepareImageGeneration() {
+    if (!trimmedRoomId || isAgentBusy) return;
+    setInputError(null);
+    setImageDialogOpen(true);
+    setPlusMenuOpen(false);
+  }
+
+  function beginRunTracking() {
+    pollSinceRef.current = new Date().toISOString();
+    setLatestRun(null);
+    setInvokeError(null);
+    clearToolThread();
+    if (usesMentionInvoke && adminJwt.trim()) {
+      setRunPending(true);
+    }
+  }
+
+  function applyInvokeResult(payload: unknown) {
+    if (!payload || typeof payload !== "object") return;
+    const row = payload as Record<string, unknown>;
+    const runRaw = row.run ?? row;
+    if (runRaw && typeof runRaw === "object") {
+      setLatestRun(normalizeAgentRun(runRaw as Record<string, unknown>));
+      const status = String((runRaw as Record<string, unknown>).status ?? "");
+      if (status === "failed") {
+        const err = (runRaw as Record<string, unknown>).error;
+        setInvokeError(err != null ? String(err) : "Agent run failed");
+      }
+      showRunFeedback(normalizeAgentRun(runRaw as Record<string, unknown>));
+    }
+  }
+
+  function messageSendOptions(
+    templateSend: AgentRoomTemplateSelection | null,
+  ): FluxySendMessageOptions | undefined {
+    const base: FluxySendMessageOptions = {};
+    if (templateSend) {
+      base.templateId = templateSend.templateId;
+      base.templateVars = templateSend.vars;
+    }
+    if (ephemeralTtlSeconds > 0) {
+      base.expiresInSeconds = ephemeralTtlSeconds;
+    }
+    if (whisperMode && whisperTo.trim()) {
+      base.visibility = "whisper";
+      base.visibleTo = [whisperTo.trim()];
+    }
+    return Object.keys(base).length ? base : undefined;
+  }
+
+  async function executeSend(payload: PendingComposePayload) {
+    const { templateSend, text, parentId, attachments, tool } = payload;
+    if (!trimmedRoomId) return;
+    setInputError(null);
+    beginRunTracking();
+    const sendOpts = messageSendOptions(templateSend);
+
+    function clearComposer() {
+      setDraft("");
+      setPendingAttachments([]);
+      setPendingTool(null);
+      setTemplateSelection(null);
+      setReplyToId(null);
+      try {
+        void fluxyClient?.putRoomDraft(trimmedRoomId, { content: "", replyToId: null });
+      } catch {
+        /* draft sync is best-effort */
+      }
+    }
+
+    try {
+      if (tool?.type === "image") {
+        if (!fluxyClient) return;
+        if (!text) {
+          setInputError("Enter an image description before sending.");
+          setRunPending(false);
+          return;
+        }
+        setImageGenerating(true);
+        try {
+          const result = await fluxyClient.generateAiImage(trimmedRoomId, text);
+          if (!result.ok || !result.attachment) {
+            if (result.error === "image_generation_disabled") {
+              setInputError(
+                "Image generation is disabled on this deployment. Set AI_IMAGE_GENERATION_ENABLED and AI_BASE_URL on the Worker.",
+              );
+            } else {
+              setInputError(result.error || result.details || "Image generation failed");
+            }
+            setRunPending(false);
+            return;
+          }
+          await sendMessage(
+            buildImageGenerationCaption(text),
+            parentId,
+            [result.attachment],
+            sendOpts,
+          );
+          clearComposer();
+          onMessageSent?.();
+        } catch (err: unknown) {
+          setInputError(messageFromUnknown(err, "Image generation failed"));
+          setRunPending(false);
+        } finally {
+          setImageGenerating(false);
+        }
+        return;
+      }
+
+      const resolvedText =
+        tool?.type === "deep-research"
+          ? buildDeepResearchPrompt({ topic: text, agentHandle: mentionHandle })
+          : tool?.type === "web-search"
+            ? buildWebSearchPrompt({ topic: text, agentHandle: mentionHandle })
+            : text;
+
+      if (usesMentionInvoke) {
+        const mentionPayload = templateSend
+          ? `${mentionPrefixForAgent(agentHandle)}${templateSend.renderedPreview}`.trim()
+          : `${mentionPrefixForAgent(agentHandle)}${resolvedText}`.trim();
+        await sendMessage(
+          mentionPayload,
+          parentId,
+          attachments.length ? attachments : undefined,
+          sendOpts,
+        );
+        clearComposer();
+        onMessageSent?.();
+        if (!adminJwt.trim()) {
+          setInvokeError(
+            "Admin JWT required to show run status after @mention. Paste one in Projects or use REST invoke.",
+          );
+        }
+        return;
+      }
+
+      if (templateSend) {
+        const rendered = templateSend.renderedPreview.trim();
+        await sendMessage(rendered, parentId, attachments.length ? attachments : undefined, sendOpts);
+      } else {
+        await sendMessage(
+          resolvedText,
+          parentId,
+          attachments.length ? attachments : undefined,
+          sendOpts,
+        );
+      }
+      clearComposer();
+      onMessageSent?.();
+
+      if (!templateSend) {
+        try {
+          const result = await invokeAgent(resolvedText, { replyTo: parentId });
+          applyInvokeResult(result);
+        } catch (err: unknown) {
+          setInvokeError(messageFromUnknown(err, "Agent invoke failed"));
+        }
+      }
+    } catch (err: unknown) {
+      setRunPending(false);
+      setInputError(messageFromUnknown(err, "Failed to send message"));
+    }
+  }
+
+  function requestSend() {
+    const templateSend = templateSelection;
+    const text = templateSend ? templateSend.renderedPreview.trim() : draft.trim();
+    const readyAttachments = pendingAttachments
+      .filter((p) => !p.uploading && !p.error)
+      .map((p) => p.attachment);
+    if ((!text && readyAttachments.length === 0 && !pendingTool) || !trimmedRoomId) return;
+
+    const resolvedText =
+      pendingTool?.type === "deep-research"
+        ? buildDeepResearchPrompt({ topic: text, agentHandle: mentionHandle })
+        : pendingTool?.type === "web-search"
+          ? buildWebSearchPrompt({ topic: text, agentHandle: mentionHandle })
+          : text;
+
+    const previewText =
+      pendingTool?.type === "image"
+        ? `Create image: ${text}`
+        : usesMentionInvoke
+          ? templateSend
+            ? `${mentionPrefixForAgent(agentHandle)}${templateSend.renderedPreview}`.trim()
+            : `${mentionPrefixForAgent(agentHandle)}${resolvedText}`.trim()
+          : resolvedText;
+
+    const modeLabel = pendingTool
+      ? pendingTool.type === "image"
+        ? "Create image"
+        : pendingTool.type === "deep-research"
+          ? "Deep research"
+          : "Web search"
+      : usesMentionInvoke
+        ? `@${mentionHandle} mention`
+        : "REST invoke";
+
+    const payload: PendingComposePayload = {
+      templateSend,
+      text,
+      parentId: replyToId,
+      attachments: readyAttachments,
+      tool: pendingTool,
+    };
+
+    if (confirmBeforeSend) {
+      setPendingCompose({
+        previewText,
+        modeLabel,
+        payload,
+      });
+      return;
+    }
+
+    void executeSend(payload);
+  }
+
+  async function uploadPendingFile(file: File) {
+    if (!fluxyClient || !trimmedRoomId) return;
+    setUploadError(null);
+    const localId = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const kindHint: FluxyChatAttachment["kind"] = file.type.startsWith("image/")
+      ? "image"
+      : file.type.startsWith("audio/")
+        ? "audio"
+        : "file";
+    const placeholder = {
+      attachment: {
+        kind: kindHint,
+        url: localId,
+        name: file.name,
+        sizeBytes: file.size,
+      } as FluxyChatAttachment,
+      uploading: true,
+    };
+    setPendingAttachments((prev) => [...prev, placeholder]);
+    try {
+      const attachment = await fluxyClient.uploadFile(trimmedRoomId, file);
+      setPendingAttachments((prev) =>
+        prev.map((p) =>
+          p.attachment.url === localId ? { attachment, uploading: false } : p,
+        ),
+      );
+    } catch (err: unknown) {
+      const msg = messageFromUnknown(err, "Upload failed");
+      setPendingAttachments((prev) =>
+        prev.map((p) =>
+          p.attachment.url === localId
+            ? { ...p, uploading: false, error: msg }
+            : p,
+        ),
+      );
+    }
+  }
+
+  // ─── Derived state ───
+
+  const hasUploading = pendingAttachments.some((p) => p.uploading);
+  const hasReadyAttachments = pendingAttachments.some((p) => !p.uploading && !p.error);
+  const canSend = Boolean(
+    trimmedRoomId &&
+      !isAgentBusy &&
+      !pendingCompose &&
+      !hasUploading &&
+      !imageGenerating &&
+      (templateSelection?.renderedPreview.trim() ||
+        draft.trim() ||
+        hasReadyAttachments) &&
+      (!pendingTool || draft.trim()),
+  );
+
+  const reconnectHint = (() => {
+    if (connectionState.status !== "reconnecting" || !connectionState.nextRetryAt) {
+      return null;
+    }
+    const seconds = Math.max(
+      0,
+      Math.ceil(
+        (new Date(connectionState.nextRetryAt).getTime() - Date.now()) / 1000,
+      ),
+    );
+    return `Reconnecting in ${seconds}s…`;
+  })();
+
+  // ─── Render ───
+
+  return (
+    <div className={cn("flex flex-col gap-3", className)}>
+      {/* Status bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span>
+          Room <code className="font-mono">{trimmedRoomId || ""}</code>
+          {usesMentionInvoke ? (
+            <span className="ml-2 text-brand">· @{mentionHandle} mention invoke</span>
+          ) : (
+            <span className="ml-2">· REST invoke</span>
+          )}
+        </span>
+        <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-[10px]">
+          <input
+            type="checkbox"
+            className="h-3 w-3 rounded border-border"
+            checked={skipHistoryOnConnect}
+            onChange={(e) => {
+              const next = e.target.checked;
+              setSkipHistoryOnConnect(next);
+              try {
+                localStorage.setItem(SKIP_HISTORY_STORAGE_KEY, next ? "1" : "0");
+              } catch {
+                /* ignore */
+              }
+            }}
+          />
+          Skip history on connect
+        </label>
+        <span>
+          {reconnectHint ?? connectionStatus}
+          {connectionState.transport === "sse" ? " · SSE" : ""}
+          {connectionState.transport === "polling" ? " · polling" : ""}
+          {connected ? " · live" : ""}
+          {Object.entries(typingUsers)
+            .filter(([, v]) => v)
+            .map(([uid]) => {
+              const intent = typingIntents[uid] ?? "composing";
+              return (
+                <span key={uid} className="ml-2 text-brand">
+                  · {uid} ({intent})
+                </span>
+              );
+            })}
+          {skipHistoryOnConnect && !historyLoaded ? (
+            <button
+              type="button"
+              className="ml-2 text-brand underline underline-offset-2"
+              onClick={() => void loadHistory()}
+            >
+              Load history
+            </button>
+          ) : null}
+          {isAgentBusy ? (
+            <span className="ml-2 inline-flex items-center gap-1 text-brand">
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+              {agentName}
+              {streamingCount > 0
+                ? " streaming…"
+                : runPending
+                  ? " running…"
+                  : " thinking…"}
+            </span>
+          ) : null}
+        </span>
+      </div>
+
+      {runFeedback ? (
+        <div
+          className="rounded-lg border border-brand/25 bg-brand/10 px-3 py-2 text-xs text-foreground"
+          role="status"
+          data-testid="agent-run-feedback"
+        >
+          {runFeedback}
+        </div>
+      ) : null}
+
+      <AgentRunStatus run={latestRun} pending={runPending} />
+
+      {showHandoffBanner ? (
+        <AgentHandoffBanner
+          roomId={trimmedRoomId}
+          agentId={agentId}
+          agentName={agentName}
+          operatorJwt={adminJwt}
+        />
+      ) : null}
+
+      {showPresenceStrip ? (
+        <ChatPresenceStrip
+          members={presenceMembers}
+          subscriptionCount={subscriptionCount}
+        />
+      ) : null}
+
+      {showCatchUpBanner ? (
+        <ChatCatchUpBanner
+          client={fluxyClient}
+          roomId={trimmedRoomId}
+          messages={messages}
+          listRef={listRef}
+          loadMore={loadMore}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          onMarkRead={sendReadReceipt}
+        />
+      ) : null}
+
+      {/* ─── Message scroller ─── */}
+      <MessageScrollerProvider autoScroll scrollPreviousItemPeek={64}>
+        <MessageScroller
+          className="h-[min(420px,50vh)] scroll-fade-b rounded-xl border border-border bg-muted/30"
+          data-testid="fluxychat-message-list"
+        >
+          <MessageScrollerViewport className="p-3 scroll-fade" ref={listRef}>
+            <MessageScrollerContent className="gap-2">
+              {messages.length ? (
+                messages.map((m, idx) => {
+                  const prev = idx > 0 ? messages[idx - 1] : null;
+                  const mTime = (m as { createdAt?: string }).createdAt;
+                  const prevTime = prev ? (prev as { createdAt?: string }).createdAt : undefined;
+                  const showDate = !prevTime || !mTime || !isSameDay(prevTime, mTime);
+
+                  const author = m.userId?.trim() || "unknown";
+                  const isAgent = author === agentId;
+                  const isSelf = Boolean(localUserId && m.userId === localUserId);
+                  const isStreaming = Boolean(m.streaming);
+                  const isVoice = m.kind === "voice";
+                  const parentId = m.parentId ?? null;
+                  const align: "start" | "end" = isSelf ? "end" : "start";
+                  const bubbleVariant = isSelf ? "default" : "tinted";
+                  const parentMessage = m.parentId != null ? messagesById.get(m.parentId) ?? null : null;
+
+                  return (
+                    <React.Fragment key={m.id}>
+                      {showDate && mTime ? (
+                        <MessageScrollerItem>
+                          <Marker variant="separator">
+                            <MarkerContent>{formatDateLabel(mTime)}</MarkerContent>
+                          </Marker>
+                        </MessageScrollerItem>
+                      ) : null}
+                      <MessageScrollerItem
+                        messageId={String(m.id)}
+                        scrollAnchor={isSelf}
+                        className={isStreaming ? "animate-in fade-in-0 duration-300" : undefined}
+                      >
+                        <div
+                          data-testid={isStreaming ? "agent-message-streaming" : "agent-message"}
+                          data-streaming={isStreaming ? "true" : undefined}
+                          data-message-id={m.id != null ? String(m.id) : undefined}
+                        >
+                          <Message align={align} className="gap-2">
+                            {/* Avatar */}
+                            <MessageAvatar
+                              status={isAgent ? "online" : null}
+                              className="size-8 items-center justify-center bg-muted text-xs font-semibold"
+                            >
+                              {isAgent ? agentName.charAt(0).toUpperCase() : author.charAt(0).toUpperCase()}
+                            </MessageAvatar>
+
+                            <MessageContent>
+                              {/* Header */}
+                              <MessageHeader
+                                className="px-0"
+                                style={{ fontSize: "11px" }}
+                              >
+                                <span className="text-muted-foreground">
+                                  {isAgent ? agentName : author}
+                                </span>
+                                {isAgent ? (
+                                  <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand ring-1 ring-brand/20">
+                                    agent
+                                  </span>
+                                ) : null}
+                                {isStreaming ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60 opacity-75" />
+                                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+                                    </span>
+                                    streaming
+                                  </span>
+                                ) : null}
+                              </MessageHeader>
+
+                              {/* Floating reply/reaction toolbar — outside bubble */}
+                              {m.id != null && !isStreaming ? (
+                                <div className="absolute -top-4 right-2 z-[9999] opacity-0 transition-opacity group-hover/message:opacity-100">
+                                  <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 shadow-sm">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => openReactionPicker(e, m.id!)}
+                                      className="rounded-full p-1 hover:bg-gray-100"
+                                      aria-label="Add reaction"
+                                    >
+                                      <Smile className="size-3.5 text-gray-500" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setReplyToId(m.id!)}
+                                      className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-gray-600 hover:bg-gray-100"
+                                    >
+                                      <Reply className="size-3" />
+                                      Reply
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {/* Reply quote — inside bubble, before message text */}
+                              {parentId && parentMessage ? (
+                                <Bubble
+                                  variant={bubbleVariant}
+                                  align={align}
+                                  className={isSelf ? sentBubbleClass : receivedBubbleClass}
+                                >
+                                  <BubbleContent>
+                                    {(() => {
+                                      const replyMsg = parentMessage;
+                                      const replyText = replyMsg.content || "";
+                                      const replyUser = replyMsg.userId || "unknown";
+                                      return (
+                                        <div
+                                          onClick={() => replyMsg.id != null && scrollToMessage(replyMsg.id)}
+                                          className="mb-2 cursor-pointer overflow-hidden rounded-md p-1.5 text-xs"
+                                          style={{
+                                            background: isSelf ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.06)",
+                                            borderLeft: `3px solid ${isSelf ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.15)"}`,
+                                            borderRadius: "6px",
+                                            padding: "6px 10px",
+                                            marginBottom: "8px",
+                                            fontSize: "12px",
+                                            color: isSelf ? "rgba(255,255,255,0.85)" : undefined,
+                                            textOverflow: "ellipsis",
+                                          }}
+                                        >
+                                          <span
+                                            className="mb-0.5 block text-[11px] font-semibold"
+                                            style={{ color: isSelf ? "rgba(255,255,255,0.95)" : undefined, fontWeight: 600, fontSize: "11px", display: "block", marginBottom: "2px" }}
+                                          >
+                                            {replyUser}
+                                          </span>
+                                          <span className="line-clamp-2 overflow-hidden text-ellipsis">
+                                            {replyText}
+                                          </span>
+                                        </div>
+                                      );
+                                    })()}
+
+                                    {/* Tool badge in bubble */}
+                                    {pendingTool?.type === "deep-research" && m.content?.includes("[deep-research]") ? (
+                                      <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#FF6A1A]/10 px-2 py-0.5 text-[10px] font-medium text-[#FF6A1A]">
+                                        <BrainCircuit className="size-3" /> Deep Research
+                                      </span>
+                                    ) : null}
+                                    {pendingTool?.type === "web-search" && m.content?.includes("[web-search]") ? (
+                                      <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#FF6A1A]/10 px-2 py-0.5 text-[10px] font-medium text-[#FF6A1A]">
+                                        <Globe className="size-3" /> Web Search
+                                      </span>
+                                    ) : null}
+
+                                    {/* Voice message */}
+                                    {isVoice ? (
+                                      <VoiceMessageBubble
+                                        message={m}
+                                        className={isSelf ? "items-end" : "items-start"}
+                                        inheritColor={isSelf}
+                                        authToken={adminJwt.trim() || memberJwt.trim() || null}
+                                      />
+                                    ) : (
+                                      <p className="whitespace-pre-wrap break-words" style={{ color: isSelf ? "#FFFFFF" : undefined }}>
+                                        {m.content}
+                                        {!m.content && isStreaming ? "…" : null}
+                                        {isStreaming ? (
+                                          <span
+                                            className="ml-0.5 inline-block h-4 w-0.5 animate-pulse align-middle"
+                                            style={{ backgroundColor: isSelf ? "rgba(255,255,255,0.7)" : undefined }}
+                                            aria-hidden
+                                          />
+                                        ) : null}
+                                      </p>
+                                    )}
+
+                                    {/* Delivery status */}
+                                    {m.deliveryStatus === "pending" ? (
+                                      <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.7)" : undefined }}>Sending…</div>
+                                    ) : null}
+                                    {m.deliveryStatus === "failed" ? (
+                                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-destructive">
+                                        Failed to send
+                                        {m.clientMessageId ? (
+                                          <button
+                                            type="button"
+                                            className="ml-0.5 rounded px-1 text-[10px] text-destructive hover:bg-destructive/10"
+                                            onClick={() => retryMessage(m.clientMessageId!)}
+                                          >
+                                            Retry
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
+
+                                    {/* Edited */}
+                                    {m.editedAt && !isStreaming ? (
+                                      <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.6)" : undefined }}>edited</div>
+                                    ) : null}
+                                  </BubbleContent>
+
+                                  {/* Reactions below bubble */}
+                                  {m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0 ? (
+                                    <div className={`mt-1 flex flex-wrap gap-1 ${isSelf ? "justify-end" : "justify-start"}`}>
+                                      {Object.entries(reactions[m.id]).map(([emoji, count]) => (
+                                        <button
+                                          key={emoji}
+                                          type="button"
+                                          onClick={() => m.id != null && toggleReaction(m.id, emoji)}
+                                          className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[13px] transition-colors"
+                                          style={{
+                                            background: "white",
+                                            borderColor: "#e5e7eb",
+                                          }}
+                                        >
+                                          <span>{emoji}</span>
+                                          <span className="text-gray-600">{count}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </Bubble>
+                              ) : (
+                                /* Bubble without reply quote */
+                                <Bubble
+                                  variant={bubbleVariant}
+                                  align={align}
+                                  className={isSelf ? sentBubbleClass : receivedBubbleClass}
+                                >
+                                  <BubbleContent>
+                                    {/* Tool badge in bubble */}
+                                    {pendingTool?.type === "deep-research" && m.content?.includes("[deep-research]") ? (
+                                      <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#FF6A1A]/10 px-2 py-0.5 text-[10px] font-medium text-[#FF6A1A]">
+                                        <BrainCircuit className="size-3" /> Deep Research
+                                      </span>
+                                    ) : null}
+                                    {pendingTool?.type === "web-search" && m.content?.includes("[web-search]") ? (
+                                      <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#FF6A1A]/10 px-2 py-0.5 text-[10px] font-medium text-[#FF6A1A]">
+                                        <Globe className="size-3" /> Web Search
+                                      </span>
+                                    ) : null}
+
+                                    {/* Voice message */}
+                                    {isVoice ? (
+                                      <VoiceMessageBubble
+                                        message={m}
+                                        className={isSelf ? "items-end" : "items-start"}
+                                        inheritColor={isSelf}
+                                        authToken={adminJwt.trim() || memberJwt.trim() || null}
+                                      />
+                                    ) : (
+                                      <p className="whitespace-pre-wrap break-words" style={{ color: isSelf ? "#FFFFFF" : undefined }}>
+                                        {m.content}
+                                        {!m.content && isStreaming ? "…" : null}
+                                        {isStreaming ? (
+                                          <span
+                                            className="ml-0.5 inline-block h-4 w-0.5 animate-pulse align-middle"
+                                            style={{ backgroundColor: isSelf ? "rgba(255,255,255,0.7)" : undefined }}
+                                            aria-hidden
+                                          />
+                                        ) : null}
+                                      </p>
+                                    )}
+
+                                    {/* Delivery status */}
+                                    {m.deliveryStatus === "pending" ? (
+                                      <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.7)" : undefined }}>Sending…</div>
+                                    ) : null}
+                                    {m.deliveryStatus === "failed" ? (
+                                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-destructive">
+                                        Failed to send
+                                        {m.clientMessageId ? (
+                                          <button
+                                            type="button"
+                                            className="ml-0.5 rounded px-1 text-[10px] text-destructive hover:bg-destructive/10"
+                                            onClick={() => retryMessage(m.clientMessageId!)}
+                                          >
+                                            Retry
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
+
+                                    {/* Edited */}
+                                    {m.editedAt && !isStreaming ? (
+                                      <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.6)" : undefined }}>edited</div>
+                                    ) : null}
+                                  </BubbleContent>
+
+                                  {/* Reactions below bubble */}
+                                  {m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0 ? (
+                                    <div className={`mt-1 flex flex-wrap gap-1 ${isSelf ? "justify-end" : "justify-start"}`}>
+                                      {Object.entries(reactions[m.id]).map(([emoji, count]) => (
+                                        <button
+                                          key={emoji}
+                                          type="button"
+                                          onClick={() => m.id != null && toggleReaction(m.id, emoji)}
+                                          className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[13px] transition-colors"
+                                          style={{
+                                            background: "white",
+                                            borderColor: "#e5e7eb",
+                                          }}
+                                        >
+                                          <span>{emoji}</span>
+                                          <span className="text-gray-600">{count}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </Bubble>
+                              )}
+
+                              {/* Attachments */}
+                              {m.attachments && m.attachments.length > 0 ? (
+                                <div className="mt-1 flex flex-col gap-2">
+                                  {m.attachments.map((a) => (
+                                    <FluxyAttachment
+                                      key={a.url}
+                                      attachment={a}
+                                      mediaBaseUrl={WORKER_URL}
+                                      authToken={adminJwt.trim() || memberJwt.trim() || null}
+                                    />
+                                  ))}
+                                </div>
+                              ) : null}
+
+                              {/* Footer */}
+                              <MessageFooter
+                                className="px-0"
+                                style={{ fontSize: "11px", marginTop: "2px" }}
+                              >
+                                {mTime ? (
+                                  <MessageTimestamp timestamp={mTime} size="sm" />
+                                ) : null}
+                              </MessageFooter>
+
+                              {/* Thread summary */}
+                              {trimmedRoomId && m.id && !parentId && !isStreaming ? (
+                                <ThreadSummary
+                                  roomId={trimmedRoomId}
+                                  messageId={m.id}
+                                  replyCount={m.id != null ? replyCountByParent.get(m.id) ?? 0 : 0}
+                                  className="mt-2"
+                                />
+                              ) : null}
+                            </MessageContent>
+                          </Message>
+                        </div>
+                      </MessageScrollerItem>
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                <MessageScrollerItem>
+                  <Marker>
+                    <MarkerIcon>
+                      <Loader2 className="size-3 animate-spin" />
+                    </MarkerIcon>
+                    <MarkerContent>
+                      Ask {agentName} — replies stream over WebSocket; tool calls appear inline when
+                      the agent uses tools.
+                    </MarkerContent>
+                  </Marker>
+                </MessageScrollerItem>
+              )}
+
+              {/* Tool events */}
+              {displayToolEvents.map((ev) => (
+                <MessageScrollerItem key={ev.key}>
+                  <AgentToolThreadCard event={ev} />
+                </MessageScrollerItem>
+              ))}
+
+              {/* Streaming status markers */}
+              {runPending && displayToolEvents.length === 0 ? (
+                <MessageScrollerItem>
+                  <Marker role="status">
+                    <MarkerIcon>
+                      <Loader2 className="size-3 animate-spin" />
+                    </MarkerIcon>
+                    <MarkerContent className="shimmer">Waiting for agent tool rounds…</MarkerContent>
+                  </Marker>
+                </MessageScrollerItem>
+              ) : null}
+
+              {pendingTool?.type === "deep-research" && isAgentBusy ? (
+                <MessageScrollerItem>
+                  <Marker role="status">
+                    <MarkerIcon>
+                      <BrainCircuit className="size-3 text-[#C2410C]" />
+                    </MarkerIcon>
+                    <MarkerContent className="shimmer">Researching…</MarkerContent>
+                  </Marker>
+                </MessageScrollerItem>
+              ) : null}
+
+              {pendingTool?.type === "web-search" && isAgentBusy ? (
+                <MessageScrollerItem>
+                  <Marker role="status">
+                    <MarkerIcon>
+                      <Globe className="size-3 text-[#C2410C]" />
+                    </MarkerIcon>
+                    <MarkerContent className="shimmer">Searching…</MarkerContent>
+                  </Marker>
+                </MessageScrollerItem>
+              ) : null}
+
+              {/* Typing indicator */}
+              <MessageScrollerItem>
+                <TypingIndicator
+                  visible={Boolean(agentTyping && !isAgentBusy)}
+                  name={agentName}
+                  avatar={
+                    <div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                      {agentName.charAt(0).toUpperCase()}
+                    </div>
+                  }
+                />
+              </MessageScrollerItem>
+            </MessageScrollerContent>
+          </MessageScrollerViewport>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+            <MessageScrollerButton />
+          </div>
+        </MessageScroller>
+      </MessageScrollerProvider>
+
+      {/* ─── Reply banner ─── */}
+      {replyToId != null ? (
+        <div
+          className="flex items-start gap-2 rounded-lg border border-brand/20 bg-brand/5 px-3 py-2 text-xs"
+          data-testid="reply-compose-banner"
+        >
+          <div className="min-w-0 flex-1">
+            <span className="font-medium text-brand">Replying to</span>{" "}
+            <span className="text-muted-foreground">
+              {replyTarget
+                ? `${displayUserId(replyTarget)}: ${(replyTarget.content || "").slice(0, 80)}`
+                : `#${replyToId}`}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            onClick={() => setReplyToId(null)}
+            aria-label="Cancel reply"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
+      ) : null}
+
+      {/* ─── Template picker ─── */}
+      {showTemplates ? (
+        <AgentRoomTemplatePicker
+          adminJwt={adminJwt}
+          disabled={!trimmedRoomId || isAgentBusy}
+          value={templateSelection}
+          onChange={setTemplateSelection}
+        />
+      ) : null}
+
+      {/* ─── Co-pilot confirm ─── */}
+      {showCopilotConfirm && pendingCompose ? (
+        <AgentCopilotConfirm
+          previewText={pendingCompose.previewText}
+          modeLabel={pendingCompose.modeLabel}
+          busy={isAgentBusy}
+          onEdit={() => setPendingCompose(null)}
+          onConfirm={() => {
+            const payload = pendingCompose.payload;
+            setPendingCompose(null);
+            void executeSend(payload);
+          }}
+        />
+      ) : null}
+
+      {/* ─── Options row ─── */}
+      {showCopilotConfirm ? (
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <label className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            className="h-3 w-3 rounded border-border"
+            checked={confirmBeforeSend}
+            onChange={(e) => setConfirmBeforeSend(e.target.checked)}
+            disabled={Boolean(pendingCompose)}
+          />
+          Confirm before send
+        </label>
+        <label className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            className="h-3 w-3 rounded border-border"
+            checked={whisperMode}
+            onChange={(e) => setWhisperMode(e.target.checked)}
+          />
+          Whisper to
+          <Input
+            value={whisperTo}
+            onChange={(e) => setWhisperTo(e.target.value)}
+            placeholder="user id"
+            className="h-7 w-28 px-1.5 text-xs"
+            disabled={!whisperMode}
+          />
+        </label>
+        <label className="flex items-center gap-1.5">
+          Ephemeral
+          <select
+            className="rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+            value={ephemeralTtlSeconds}
+            onChange={(e) => setEphemeralTtlSeconds(Number(e.target.value))}
+            disabled={isAgentBusy}
+          >
+            <option value={0}>Off</option>
+            <option value={3600}>1 hour</option>
+            <option value={86400}>24 hours</option>
+          </select>
+        </label>
+      </div>
+      ) : null}
+
+      {/* ─── Reply suggestions ─── */}
+      {showReplySuggestions && !draft.trim() && messages.length > 0 && trimmedRoomId && !isAgentBusy ? (
+        <ReplySuggestions
+          roomId={trimmedRoomId}
+          parentId={replyToId}
+          onSelect={(s) => {
+            setDraft(s);
+            setReplyToId(null);
+          }}
+        />
+      ) : null}
+
+      {/* ─── Hidden file input ─── */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*,.pdf,.doc,.docx,.txt,.zip"
+        className="hidden"
+        onChange={async (e) => {
+          const files = Array.from(e.target.files ?? []);
+          e.target.value = "";
+          await Promise.all(files.map((file) => uploadPendingFile(file)));
+        }}
+      />
+
+      {/* ─── Pending attachments / tool chips ─── */}
+      {(pendingAttachments.length > 0 || pendingTool) && !pendingCompose ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+          {pendingTool ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6A1A]/10 px-2.5 py-1 text-xs font-medium text-[#FF6A1A]">
+              {pendingTool.type === "image" ? (
+                <FileImage className="size-3.5" aria-hidden />
+              ) : pendingTool.type === "deep-research" ? (
+                <BrainCircuit className="size-3.5" aria-hidden />
+              ) : (
+                <Globe className="size-3.5" aria-hidden />
+              )}
+              {pendingTool.type === "image"
+                ? "Create image"
+                : pendingTool.type === "deep-research"
+                  ? "Deep Research active"
+                  : "Web Search active"}
+              <button
+                type="button"
+                className="rounded p-0.5 hover:bg-[#FF6A1A]/20"
+                onClick={() => setPendingTool(null)}
+                aria-label="Remove tool"
+              >
+                <X className="size-3" aria-hidden />
+              </button>
+            </span>
+          ) : null}
+          {pendingAttachments.map((p, idx) => (
+            <span
+              key={p.attachment.url}
+              className={cn(
+                "inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+                p.error
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-muted text-foreground",
+              )}
+              title={p.error}
+            >
+              {p.uploading ? (
+                <Loader2 className="size-3 animate-spin" aria-hidden />
+              ) : p.attachment.kind === "image" ? (
+                <FileImage className="size-3" aria-hidden />
+              ) : (
+                <Paperclip className="size-3" aria-hidden />
+              )}
+              <span className="truncate">{p.attachment.name}</span>
+              {!p.uploading ? (
+                <button
+                  type="button"
+                  className="rounded p-0.5 hover:bg-muted-foreground/20"
+                  onClick={() =>
+                    setPendingAttachments((prev) => prev.filter((_, i) => i !== idx))
+                  }
+                  aria-label="Remove attachment"
+                >
+                  <X className="size-3" aria-hidden />
+                </button>
+              ) : null}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {/* ─── Composer with + menu ─── */}
+      <Composer
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!canSend) return;
+          void requestSend();
+        }}
+      >
+        {/* Deep Research / Web Search chips above textarea */}
+        {pendingTool?.type === "deep-research" || pendingTool?.type === "web-search" ? (
+          <div className="flex items-center gap-2 px-1 pb-1">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+              style={{ color: "#FF6A1A", backgroundColor: "rgba(255, 106, 26, 0.1)" }}
+            >
+              {pendingTool.type === "deep-research" ? (
+                <>
+                  <BookOpen className="size-3" />
+                  Deep Research active
+                </>
+              ) : (
+                <>
+                  <Globe className="size-3" />
+                  Web Search active
+                </>
+              )}
+              <button
+                type="button"
+                className="rounded p-0.5 hover:bg-[#FF6A1A]/20"
+                onClick={() => setPendingTool(null)}
+                aria-label="Remove tool"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          </div>
+        ) : null}
+
+        <ComposerTextarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={
+            templateSelection
+              ? "Optional note (template message will be sent)"
+              : usesMentionInvoke
+                ? `Message @${mentionHandle}…`
+                : `Ask ${agentName}…`
+          }
+          disabled={!trimmedRoomId || isAgentBusy || Boolean(templateSelection)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || e.shiftKey) return;
+            e.preventDefault();
+            if (!canSend) return;
+            void requestSend();
+          }}
+        />
+        <ComposerToolbar>
+          <ComposerToolbarLeft>
+            {/* + button menu */}
+            {showPlusMenu ? (
+            <div ref={plusMenuRef} className="relative shrink-0 self-stretch">
+              <button
+                type="button"
+                className="flex h-full items-center rounded-md border border-border bg-background px-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
+                disabled={!trimmedRoomId || isAgentBusy || Boolean(templateSelection) || imageGenerating}
+                onClick={() => setPlusMenuOpen((prev) => !prev)}
+                aria-label="Attach files or use tools"
+                aria-expanded={plusMenuOpen}
+                aria-haspopup="menu"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-4"
+                  aria-hidden
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </button>
+              {plusMenuOpen ? (
+                <div
+                  className="absolute bottom-full left-0 z-[9999] mb-2 w-56 rounded-lg border border-border bg-popover p-1 shadow-xl ring-1 ring-border"
+                  style={{ backgroundColor: "white" }}
+                  role="menu"
+                >
+                  {/* Add Photos & Files */}
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+                    role="menuitem"
+                    onClick={() => {
+                      setPlusMenuOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    <Paperclip className="size-4 text-muted-foreground" aria-hidden />
+                    <div className="flex flex-col">
+                      <span>Add photos & files</span>
+                      <span className="text-[10px] text-muted-foreground">Up to 25 MB</span>
+                    </div>
+                  </button>
+                  {showImageGen ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+                    role="menuitem"
+                    onClick={() => prepareImageGeneration()}
+                  >
+                    <Sparkles className="size-4" style={{ color: "#C2410C" }} aria-hidden />
+                    <div className="flex flex-col">
+                      <span>Create image</span>
+                      <span className="text-[10px] text-muted-foreground">AI generated</span>
+                    </div>
+                  </button>
+                  ) : null}
+                  {showDeepResearch ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+                    role="menuitem"
+                    onClick={() => sendResearchPrompt("deep-research")}
+                  >
+                    <BookOpen className="size-4" style={{ color: "#C2410C" }} aria-hidden />
+                    <div className="flex flex-col">
+                      <span>Deep Research</span>
+                      <span className="text-[10px] text-muted-foreground">Multi-step agent</span>
+                    </div>
+                  </button>
+                  ) : null}
+                  {showWebSearch ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+                    role="menuitem"
+                    onClick={() => sendResearchPrompt("web-search")}
+                  >
+                    <Globe className="size-4" style={{ color: "#C2410C" }} aria-hidden />
+                    <div className="flex flex-col">
+                      <span>Web search</span>
+                      <span className="text-[10px] text-muted-foreground">Live results</span>
+                    </div>
+                  </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            ) : null}
+
+            {showVoiceRecorder ? (
+            <VoiceRecorder
+              disabled={!trimmedRoomId || isAgentBusy || Boolean(templateSelection)}
+              onSend={async (audio, durationMs) => {
+                if (!fluxyClient || !trimmedRoomId) return;
+                setInputError(null);
+                try {
+                  const sent = await fluxyClient.sendVoiceMessage(trimmedRoomId, audio, {
+                    durationMs,
+                    parentId: replyToId,
+                  });
+                  if (!sent) {
+                    setInputError("Voice message not sent — check authentication.");
+                    return;
+                  }
+                  void loadHistory();
+                  setReplyToId(null);
+                  try {
+                    await fluxyClient?.putRoomDraft(trimmedRoomId, {
+                      content: "",
+                      replyToId: null,
+                    });
+                  } catch {
+                    /* draft sync is best-effort */
+                  }
+                } catch (err: unknown) {
+                  setInputError(
+                    err instanceof Error ? err.message : "Failed to send voice message",
+                  );
+                }
+              }}
+            />
+            ) : null}
+          </ComposerToolbarLeft>
+          <ComposerToolbarRight>
+            <ComposerSubmitButton
+              loading={isAgentBusy}
+              disabled={!canSend}
+            />
+          </ComposerToolbarRight>
+        </ComposerToolbar>
+      </Composer>
+
+      {/* ─── Errors ─── */}
+      {inputError || uploadError ? (
+        <p className="text-xs text-red-600" role="alert">
+          {inputError || uploadError}
+        </p>
+      ) : null}
+      {imageGenerating ? (
+        <p className="text-xs text-muted-foreground" role="status">
+          Generating image…
+        </p>
+      ) : null}
+      {invokeError ? (
+        <p className="text-xs text-amber-800" role="alert">
+          {invokeError}
+        </p>
+      ) : null}
+
+      {/* ─── Offline notify settings ─── */}
+      {showOfflineNotify && memberJwt.trim() && trimmedRoomId ? (
+        <RoomOfflineNotifySettings
+          compact
+          roomId={trimmedRoomId}
+          memberJwt={memberJwt}
+          memberUserId={memberUserId}
+        />
+      ) : null}
+
+      <p className="text-xs text-muted-foreground">
+        {usesMentionInvoke
+          ? "Sends @mention; tools stream in-thread over WebSocket. Run banner polls every 2s (admin JWT)."
+          : "REST invoke: tools stream live when connected; run summary in the banner above."}{" "}
+        Set <code className="text-xs">toolExecuteUrl</code> on the agent profile for tool rounds.
+      </p>
+
+      {/* ─── Reaction Picker ─── */}
+      <ReactionPicker
+        open={reactionPickerMessageId !== null}
+        anchorRect={reactionPickerAnchor}
+        onClose={() => {
+          setReactionPickerMessageId(null);
+          setReactionPickerAnchor(null);
+        }}
+        onReact={(emoji) => {
+          if (reactionPickerMessageId != null) {
+            toggleReaction(reactionPickerMessageId, emoji);
+          }
+          setReactionPickerMessageId(null);
+          setReactionPickerAnchor(null);
+        }}
+      />
+
+      {/* ─── Image Generation Dialog ─── */}
+      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create image with AI</DialogTitle>
+            <DialogDescription>
+              Enter a prompt and Pollinations will generate an image for you.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            className="min-h-[80px] w-full resize-none rounded-lg border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring/30"
+            placeholder="Describe the image you want to generate…"
+            value={imagePrompt}
+            onChange={(e) => setImagePrompt(e.target.value)}
+            rows={3}
+          />
+          <DialogFooter>
+            <Button
+              variant="primary"
+              style={{ backgroundColor: "#C2410C" }}
+              disabled={!imagePrompt.trim() || imageGenerating}
+              onClick={() => {
+                if (!imagePrompt.trim() || isAgentBusy) return;
+                setImageDialogOpen(false);
+                setDraft(imagePrompt);
+                setPendingTool({ type: "image" });
+                setImagePrompt("");
+              }}
+            >
+              {imageGenerating ? "Generating…" : "Generate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ─── Attachment renderer ───
+
+function AuthedImage({
+  src,
+  alt,
+  authToken,
+  className,
+}: {
+  src: string;
+  alt?: string;
+  authToken?: string | null;
+  className?: string;
+}) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!src) return;
+    let revoke: string | null = null;
+    if (authToken && src.startsWith("http")) {
+      fetch(src, { headers: { Authorization: `Bearer ${authToken}` } })
+        .then((res) => (res.ok ? res.blob() : null))
+        .then((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            revoke = url;
+            setBlobUrl(url);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [src, authToken]);
+
+  // Don't render the raw http URL — CSP blocks it and it would 401 anyway.
+  // Show a placeholder until the blob URL is ready.
+  if (authToken && src.startsWith("http") && !blobUrl) {
+    return (
+      <div
+        className={cn(className, "flex items-center justify-center bg-muted/50")}
+        style={{ minHeight: 120 }}
+      >
+        <span className="text-xs text-muted-foreground">Loading image…</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={blobUrl ?? src}
+      alt={alt}
+      className={className}
+    />
+  );
+}
+
+function ImagePreviewDialog({
+  src,
+  alt,
+  authToken,
+  fileName,
+  onClose,
+}: {
+  src: string;
+  alt?: string;
+  authToken?: string | null;
+  fileName?: string;
+  onClose: () => void;
+}) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!src) return;
+    let revoke: string | null = null;
+    if (authToken && src.startsWith("http")) {
+      fetch(src, { headers: { Authorization: `Bearer ${authToken}` } })
+        .then((res) => (res.ok ? res.blob() : null))
+        .then((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            revoke = url;
+            setBlobUrl(url);
+          }
+        })
+        .catch(() => {});
+    } else if (src.startsWith("blob:") || src.startsWith("data:")) {
+      setBlobUrl(src);
+    }
+    return () => {
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [src, authToken]);
+
+  function handleDownload() {
+    if (!blobUrl) return;
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = fileName || "image.png";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex max-h-[90vh] max-w-3xl flex-col items-center gap-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {blobUrl ? (
+          <img
+            src={blobUrl}
+            alt={alt}
+            className="max-h-[75vh] max-w-full rounded-lg object-contain"
+          />
+        ) : (
+          <div className="flex h-48 items-center justify-center text-white/60">
+            Loading image…
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          {fileName ? (
+            <span className="text-sm text-white/70">{fileName}</span>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/20"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            Download
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/20"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function FluxyAttachment({
+  attachment,
+  mediaBaseUrl,
+  authToken,
+}: {
+  attachment: FluxyChatAttachment;
+  mediaBaseUrl?: string;
+  authToken?: string | null;
+}) {
+  const kind = attachment.kind as string;
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  if (kind === "image") {
+    const src = attachment.url;
+    if (!src) return null;
+    const fullSrc = src.startsWith("http") ? src : `${mediaBaseUrl}${src}`;
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="mt-2 block overflow-hidden rounded-lg transition-opacity hover:opacity-90"
+        >
+          <AuthedImage
+                       src={fullSrc}
+            alt={attachment.name}
+            authToken={authToken}
+            className="max-h-64 max-w-xs rounded-lg object-cover"
+          />
+        </button>
+        {attachment.name ? (
+          <div className="mt-1 text-[10px] text-muted-foreground">{attachment.name}</div>
+        ) : null}
+        {previewOpen ? (
+          <ImagePreviewDialog
+            src={fullSrc}
+            alt={attachment.name}
+            authToken={authToken}
+            fileName={attachment.name}
+            onClose={() => setPreviewOpen(false)}
+          />
+        ) : null}
+      </>
+    );
+  }
+
+  if (kind === "audio") {
+    const src = attachment.url;
+    if (!src) return null;
+    const fullSrc = src.startsWith("http") ? src : `${mediaBaseUrl}${src}`;
+    return (
+      <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-card p-2">
+        <button
+          type="button"
+          className="flex size-8 items-center justify-center rounded-full text-white"
+          style={{ backgroundColor: "#C2410C" }}
+          onClick={() => {
+            const audio = new Audio(fullSrc);
+            void audio.play();
+          }}
+          aria-label="Play audio"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" className="size-4">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs font-medium">{attachment.name}</div>
+          <audio controls src={fullSrc} className="mt-1 max-w-full" style={{ maxHeight: "28px" }} />
+        </div>
+      </div>
+    );
+  }
+
+  // Generic file
+  const href = attachment.url;
+  if (!href) return null;
+  const fullHref = href.startsWith("http") ? href : `${mediaBaseUrl}${href}`;
+  return (
+    <a
+      href={fullHref}
+      target="_blank"
+      rel="noreferrer"
+      className="mt-2 inline-flex items-center gap-2 rounded-lg border border-border bg-card p-2 text-xs hover:bg-muted/50"
+    >
+      <Paperclip className="size-4 text-muted-foreground" />
+      <div className="min-w-0">
+        <div className="truncate font-medium">{attachment.name}</div>
+        {attachment.sizeBytes ? (
+          <div className="text-[10px] text-muted-foreground">
+            {(attachment.sizeBytes / 1024).toFixed(0)} KB
+          </div>
+        ) : null}
+      </div>
+    </a>
+  );
+}

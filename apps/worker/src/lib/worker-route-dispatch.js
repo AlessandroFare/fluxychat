@@ -101,6 +101,7 @@ import { dispatchEscalationRoutes } from "../routes/escalation-http.js";
 import { dispatchIntelligenceRoutes } from "../routes/intelligence-http.js";
 import { dispatchModerationQueueRoutes } from "../routes/moderation-queue-http.js";
 import { dispatchAgentProfilesRoutes } from "../routes/agent-profiles-http.js";
+import { dispatchAdaptersRoutes } from "../routes/adapters-http.js";
 
 /** @type {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} */
 export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
@@ -193,6 +194,7 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchEscalationRoutes,
   dispatchIntelligenceRoutes,
   dispatchModerationQueueRoutes,
+  dispatchAdaptersRoutes,
   dispatchAgentProfilesRoutes,
 ];
 

@@ -53,9 +53,6 @@ export async function POST(request: Request) {
           id: result.activeProject.id,
           name: result.activeProject.name,
           created_at: result.activeProject.created_at,
-          ...(result.createdNewProject && result.activeProject.apiKey
-            ? { apiKey: result.activeProject.apiKey }
-            : {}),
         }
       : null;
 

@@ -26,6 +26,10 @@
   },
   "dependencies": {
     "@fluxychat/protocol": "workspace:*",
+    "remend": "^1.0.0",
+    "remark": "^15.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-stringify": "^11.0.0",
     "xml-c14n": "^0.0.6"
   }
 }

@@ -190,7 +190,7 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
         metadata: { url: body.url, eventTypes: body.eventTypes },
       }).catch(() => {})
     );
-    return json({ webhook: { id, projectId: authProjectId, url: body.url, secret: body.secret, secretHash, warning: "The secret is shown only once. Store it securely." } });
+    return json({ webhook: { id, projectId: authProjectId, url: body.url, secretSet: secretPrep.secretHash ? true : secretPrep.enc ? true : true, warning: "The secret is shown only once. Store it securely." } });
   }
 
   if (

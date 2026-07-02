@@ -52,7 +52,6 @@ describe("OnboardingPage", () => {
         activeProject: {
           id: "proj_1",
           name: "Demo Project",
-          apiKey: "fc_demo",
         },
       }),
     );

@@ -1,4 +1,5 @@
 import { pickRouteDeps } from "./route-http-deps.js";
+import { validateLimit } from "../lib/validation.js";
 import { searchMessages } from "../lib/message-search.js";
 import { searchSemanticMessages, backfillEmbeddings } from "../lib/message-embeddings.js";
 import { workerSharedLlmAllowed } from "../lib/hosted-saas-policy.js";
@@ -52,7 +53,10 @@ async function dispatchKeywordSearch(request, url, h) {
 
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
-  const limit = url.searchParams.get("limit");
+  const limitResult = validateLimit(url.searchParams.get("limit"), { defaultValue: 100, max: 1000, allowUndefined: true });
+  if (limitResult.error) {
+    return json({ error: "bad_request", message: limitResult.error }, { status: 400, headers: corsHeaders });
+  }
 
   const result = await searchMessages(env, {
     projectId: auth.projectId,
@@ -62,7 +66,7 @@ async function dispatchKeywordSearch(request, url, h) {
     roomId,
     from: from || null,
     to: to || null,
-    limit: limit ? Number(limit) : undefined,
+    limit: limitResult.value,
   });
 
   if (!result.ok) {
@@ -132,6 +136,11 @@ async function dispatchSemanticSearch(request, url, h) {
     return json({ error: "invalid_mode" }, { status: 400, headers: corsHeaders });
   }
 
+  const limitResult = validateLimit(body.limit, { defaultValue: 100, max: 1000, allowUndefined: true });
+  if (limitResult.error) {
+    return json({ error: "bad_request", message: limitResult.error }, { status: 400, headers: corsHeaders });
+  }
+
   const result = await searchSemanticMessages(env, {
     query,
     projectId: auth.projectId,
@@ -140,7 +149,7 @@ async function dispatchSemanticSearch(request, url, h) {
     roomId,
     from: body.from || null,
     to: body.to || null,
-    limit: body.limit ? Number(body.limit) : undefined,
+    limit: limitResult.value,
     mode,
   });
 

@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { AgentRoomMessage } from "./agent-room-message";
+import { AgentRoomMessage } from "./agent-room-message-adapter";
 
 describe("AgentRoomMessage", () => {
   it("shows streaming badge and pulse cursor while streaming", () => {

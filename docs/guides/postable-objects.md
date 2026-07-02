@@ -1,0 +1,145 @@
+# PostableObject Interface
+
+FluxyChat's `PostableObject` formal interface (P26-C2) defines a contract for objects that can be passed to `thread.post()` and rendered by adapters. This enables third-party extensions to create custom postable types.
+
+## Overview
+
+A `PostableObject` is any object that implements the `$$typeof`, `kind`, `isSupported()`, `getPostData()`, `getFallbackText()`, and `onPosted()` interface. When posted, the adapter checks if it supports the object natively; if not, it falls back to the text representation.
+
+**Source:** `apps/worker/src/lib/postable-object.js`
+
+## Interface
+
+```ts
+interface PostableObject {
+  $$typeof: symbol;          // Must equal POSTABLE_OBJECT
+  kind: string;              // Object kind (e.g. "card", "plan", "poll")
+  isSupported(adapter): boolean;   // Can this adapter render it natively?
+  getPostData(): object;     // Data to send to adapter.postObject()
+  getFallbackText(): string; // Text for unsupported adapters
+  onPosted(context): void;   // Callback after posting (e.g. store messageId)
+}
+```
+
+## Built-in Postable Objects
+
+FluxyChat's `Card` builder produces objects that implement the `PostableObject` interface:
+
+- **Card** — Rich interactive messages with buttons, tables, sections
+- **Plan** — Streaming plan objects with task/step updates
+
+## Creating a Custom PostableObject
+
+### Using a class
+
+```js
+import { POSTABLE_OBJECT, isPostableObject } from "@fluxy-chat/sdk";
+
+class Poll {
+  constructor(question, options) {
+    this.question = question;
+    this.options = options;
+  }
+
+  get $$typeof() { return POSTABLE_OBJECT; }
+  get kind() { return "poll"; }
+
+  isSupported(adapter) {
+    // Only supported on web and Slack
+    return ["web", "slack"].includes(adapter.slug);
+  }
+
+  getFallbackText() {
+    return `${this.question}\n${this.options.map((o, i) => `${i + 1}. ${o}`).join("\n")}`;
+  }
+
+  getPostData() {
+    return {
+      question: this.question,
+      options: this.options,
+    };
+  }
+
+  onPosted(context) {
+    this.messageId = context.messageId;
+    this.threadId = context.threadId;
+  }
+}
+```
+
+### Using the mixin helper
+
+```js
+import { withPostable } from "@fluxy-chat/sdk";
+
+class MyObject extends withPostable(BaseClass) {
+  kind = "my-object";
+
+  getFallbackText() {
+    return "Custom object (not supported here)";
+  }
+
+  getPostData() {
+    return { /* ... */ };
+  }
+
+  // isSupported() defaults to true, onPosted() defaults to no-op
+}
+```
+
+## Posting
+
+The `postPostableObject` helper handles the adapter negotiation:
+
+```js
+import { postPostableObject } from "@fluxy-chat/sdk";
+
+const poll = new Poll("Lunch?", ["Pizza", "Sushi", "Tacos"]);
+
+await postPostableObject(
+  poll,                    // The PostableObject
+  adapter,                 // Target adapter (or null for web)
+  threadId,                // Thread ID
+  postFn,                  // Fallback: (threadId, message) => Promise<{id}>
+  logger                   // Optional logger
+);
+```
+
+Flow:
+1. Check `poll.isSupported(adapter)` → if true and adapter has `postObject()`, use native rendering.
+2. Otherwise, call `postFn(threadId, poll.getFallbackText())` for text fallback.
+3. Call `poll.onPosted(context)` with the result.
+
+## Type Guard
+
+```js
+import { isPostableObject } from "@fluxy-chat/sdk";
+
+function handleContent(content) {
+  if (isPostableObject(content)) {
+    console.log(`PostableObject of kind: ${content.kind}`);
+    // Use postPostableObject()
+  } else if (typeof content === "string") {
+    // Regular text message
+  }
+}
+```
+
+## Context
+
+The `onPosted` callback receives a context object:
+
+```ts
+interface PostableObjectContext {
+  adapter: Adapter;    // Adapter instance that posted
+  messageId: string;   // ID of the sent message
+  threadId: string;    // Thread ID where it was posted
+  logger?: Logger;     // Optional logger
+}
+```
+
+## See Also
+
+- [Card Builder](./card-builder.md) — Built-in PostableObject for rich messages
+- [Unified Chat API](./unified-chat-api.md) — Thread posting methods
+- [Adapter Pattern](./adapter-pattern.md) — How adapters handle PostableObjects

@@ -1,6 +1,6 @@
 # @fluxy-chat/sdk
 
-[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0)
+[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.2)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.2)
 
 Client for a **Fluxychat Worker** (self-hosted or [Fluxychat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and optional React `useChat`.
 
@@ -78,7 +78,7 @@ curl -sS -X POST "$WORKER_URL/messages" \
 # 2. Read it back
 curl -sS "$WORKER_URL/api/messages?roomId=$ROOM_ID&limit=1" \
   -H "Authorization: Bearer $JWT"
-# Verified against @fluxy-chat/sdk@0.4.0  2026-06-17
+# Verified against @fluxy-chat/sdk@0.4.2  2026-06-26
 ```
 
 If both calls return 200 and the message id round-trips, your Worker URL, JWT, and room are wired correctly. Skip to Option A below.
@@ -108,7 +108,7 @@ function Room({ roomId }: { roomId: string }) {
   // messages[].deliveryStatus → pending | sent | failed
   // render messages; call loadMore() when the user scrolls to the top
 }
-// Verified against @fluxy-chat/sdk@0.4.0  2026-06-17
+// Verified against @fluxy-chat/sdk@0.4.2  2026-06-26
 ```
 
 ### Room catch-up + drafts
@@ -288,7 +288,7 @@ const connection = client.connectRoom(roomId);
 const stream = new FluxyMessageStream(connection, agentUserId, { parentId: null });
 stream.push("Hello ");
 stream.end();
-// Verified against @fluxy-chat/sdk@0.4.0  2026-06-17
+// Verified against @fluxy-chat/sdk@0.4.2  2026-06-26
 ```
 
 See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/bot-streaming-fluxy-message-stream.md) in the monorepo.
@@ -297,7 +297,8 @@ See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/Ale
 
 | Feature | SDK method |
 |---------|------------|
-| Voice message upload | `sendVoiceMessage(roomId, audioBlob, opts?)` |
+| AI image generation | `generateAiImage(roomId, prompt, opts?)` — requires `AI_IMAGE_GENERATION_ENABLED` on Worker |
+| Composer tool prompts | `buildDeepResearchPrompt()`, `buildWebSearchPrompt()`, `buildImageGenerationCaption()` |
 | AI reply suggestions | `suggestReplies(roomId, parentId?)` |
 | Thread TL;DR | `summarizeThread(messageId)` |
 | Full-text search | `searchMessages({ q, roomId?, from?, to? })` |
@@ -351,7 +352,7 @@ const conn = client.connectRoom("lobby");
 conn.onAnyEvent((type, payload) => {
   if (type.startsWith("client-")) return;
 });
-// Verified against @fluxy-chat/sdk@0.4.0  2026-06-17
+// Verified against @fluxy-chat/sdk@0.4.2  2026-06-26
 ```
 
 ```tsx
@@ -395,6 +396,122 @@ await client.translateMessage(messageId, "it");
 await client.markMessageDelivered(messageId);
 await client.registerPushDevice("fcm", fcmToken);
 ```
+
+## Architecture features
+
+FluxyChat includes a full-stack adapter system, streaming markdown renderer, card builder, and AI tool presets — all designed for multi-platform chat deployments.
+
+| Feature | What it does |
+|---------|-------------|
+| **Multi-platform adapters** | Pluggable adapter system (Web, WhatsApp, Telegram, Slack, Discord, Teams, Email, SMS, Webhook, Matrix) with unified thread ID encoding and channel mapping |
+| **Streaming markdown** | Real-time markdown rendering with table buffering, code fence tracking, and inline marker healing for partial bold/strikethrough/backtick sequences |
+| **Card builder** | Composable card elements (Text, Button, Image, Divider, Table, Fields) with renderers for fallback text, Markdown, Slack Block Kit, and Teams Adaptive Cards |
+| **AI tool presets** | Pre-configured tool groups (reader, messenger, moderator) with per-tool approval gates for enterprise governance |
+| **Tool overrides** | Customize tool descriptions, titles, and approval requirements per agent profile without duplicating tool code |
+| **Message format** | Canonical mdast AST format for messages, with serialization/deserialization and typed stream chunks (markdown_text, task_update, plan_update) |
+| **SentMessage factory** | Post methods return objects with `.edit()`, `.delete()`, `.addReaction()`, `.removeReaction()` for cleaner message lifecycle management |
+
+```ts
+// Multi-platform adapter example
+import { getAdapter, dispatchThreadEvent, dispatchMessageEvent } from "@fluxy-chat/sdk";
+
+const adapter = getAdapter("web");
+const threadId = adapter.encodeThreadId({ userId, roomId }); // "web:{userId}:{roomId}"
+
+// Streaming markdown
+import { StreamingMarkdownRenderer } from "@fluxy-chat/sdk";
+const renderer = new StreamingMarkdownRenderer();
+renderer.push("**bold** and `code`");
+const html = renderer.getHtml(); // renders incrementally
+
+// Card builder
+import { Card, Text, Button, cardToMarkdown } from "@fluxy-chat/sdk";
+const card = Card(Text("Hello"), Button("Click me", "https://example.com"));
+const markdown = cardToMarkdown(card);
+```
+
+## P22–P25: AI-Native Architecture (2026-07)
+
+Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai) architecture. See [ROADMAP_EXECUTION.md](../../ROADMAP_EXECUTION.md) for full details.
+
+### P22 — Adapter Pattern, Streaming Markdown, Cards, Tool Presets
+
+| Feature | SDK export |
+|---------|------------|
+| Multi-platform adapters | `getAdapter(slug)`, `listAdapters()`, `BaseAdapter` |
+| WebAdapter | Registered by default in worker |
+| FormatConverter | `toAst(text)`, `fromAst(ast)`, `renderPostable(message)` |
+| StreamingMarkdownRenderer | `new StreamingMarkdownRenderer()` — `.push()`, `.getHtml()`, `.finish()` |
+| Card builder (function API) | `Card`, `Section`, `Text`, `Button`, `LinkButton`, `Actions`, `Image`, `Divider`, `Field`, `Fields`, `Table`, `CardLink` |
+| Card builder (JSX) | `/** @jsxImportSource @fluxy-chat/sdk */` — custom JSX runtime, no React needed |
+| Card rendering | `cardToMarkdown(card)`, `cardToFallbackText(card)` |
+| AI tool presets | `getToolPreset("reader" \| "messenger" \| "moderator")` |
+| Tool overrides | `applyToolOverrides(tools, overrides)` |
+| Concurrency strategies | `drop`, `queue`, `debounce`, `burst`, `concurrent` |
+| Message format | mdast AST canonical format, `StreamChunk` union type |
+| Serialization | `toJSON()` / `fromJSON()` with `_type` discriminator |
+| SentMessage factory | `.edit()`, `.delete()`, `.addReaction()`, `.removeReaction()` |
+| Transcripts API | `append()`, `list()`, `count()`, `delete()` |
+| Custom emoji | `createEmoji()`, `getEmoji()` with platform-specific maps |
+| Callback URLs | Encode callback tokens in button values for server-side routing |
+| Errors | `ChatError`, `RateLimitError`, `LockError`, `NotImplementedError` |
+| Logger | `ConsoleLogger` with child loggers and log levels |
+| Thread state | Per-thread key-value with TTL |
+| Mock adapter | `MockAdapter` for testing |
+
+### P23 — AI SDK Core Features
+
+| Feature | SDK export |
+|---------|------------|
+| Stream resumption | `client.resumeStream(streamId)`, `client.getActiveStreams(roomId)` |
+| Human-in-the-loop approval | `needsApproval` flag, approval workflow UI cards |
+| MCP client | `createMcpClient({ transport, url })` — `.listTools()`, `.listResources()`, `.readResource()` |
+| MCP tool conversion | `convertMcpTools(mcpTools)` → FluxyChat tool definitions |
+| LLM middleware | `wrapLanguageModel()`, `transformParams()`, `wrapGenerate()`, `wrapStream()` |
+| Middleware composition | `composeMiddleware([mw1, mw2, ...])` |
+| DevTools web UI | Visual inspector for LLM calls, tool calls, token usage |
+| OpenTelemetry | GenAI semantic conventions, `@ai-sdk/otel` compatible |
+| Per-step performance | Model output timing, streaming speed, tool execution time |
+| WorkflowAgent | `new WorkflowAgent({ agentId, model, tools })` — `.step()`, `.run()` |
+| Typed runtime context | `defineContext(schema)` for type-safe cross-step data |
+| Sandbox sessions | `SandboxSession` for isolated code execution |
+| Realtime voice | Bidirectional voice-to-voice AI with tool calling |
+| Scoped tool context | Per-tool secret/config isolation via `contextSchema` |
+
+### P24 — AI SDK Medium Features
+
+| Feature | SDK export |
+|---------|------------|
+| Tool call streaming | `onInputStart` / `onInputDelta` / `onInputAvailable` callbacks |
+| Multi-step loop control | `maxSteps`, `stopWhen`, `isStepCount`, `hasToolCall`, `isLoopFinished` |
+| Provider-defined tools | Provider supplies schema, developer provides `execute` |
+| Provider-executed tools | Server-side tools (web search, code execution) |
+| Pluggable transport | `DefaultChatTransport`, `ChatTransport` interface |
+| Typed UIMessage | Generic type parameter for end-to-end type safety |
+| Data parts | Stream arbitrary typed data alongside text |
+| extractReasoningMiddleware | `extractReasoningMiddleware()` |
+| RAG middleware | `createRagMiddleware({ retrieve })` |
+| Provider-level middleware | `wrapProvider(provider, [middleware])` |
+| Image generation | `generateImage()` API |
+| Speech generation | `generateSpeech()` (TTS) |
+| useObject hook | `useObject()` — stream structured JSON from LLM |
+| Structured output | `generateObject()`, `streamObject()` with Zod schemas |
+| MCP Apps | Sandboxed iframe rendering of tool UIs |
+| Slash commands | Cross-platform `/command` handling |
+
+### P25 — AI SDK Low Features
+
+| Feature | SDK export |
+|---------|------------|
+| experimental_throttle | Configurable render throttle for streaming |
+| smoothStream | Flicker-free text streaming |
+| Ephemeral messages | User-only visible with DM fallback |
+| Cosine similarity | `cosineSimilarity(a, b)` utility |
+| Strict tool calling | `strict: true` schema enforcement |
+| sendAutomaticallyWhen | Auto-submit when all tool results available |
+| Sensitive context controls | Prevent secrets in telemetry |
+
+Guides with examples: [`docs/guides/`](https://github.com/AlessandroFare/fluxychat/blob/main/docs/guides/)
 
 ## Product links
 

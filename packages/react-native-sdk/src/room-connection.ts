@@ -186,18 +186,18 @@ export class FluxyRoomConnection {
       onPong: () => { this.lastPongAtMs = Date.now(); },
       onReplay: (messages) => {
         this.wsSnapshotReceived = true;
-        this.deliver({ type: 'history', messages: messages as FluxyChatMessage[] });
+        this.deliver({ type: 'history', messages: messages as unknown as FluxyChatMessage[] } as unknown as FluxyChatEvent);
       },
       onHistoryMarker: () => { this.wsSnapshotReceived = true; },
       onWorkerError: () => {},
-      onEvent: (event) => { this.deliver(event as FluxyChatEvent); },
+      onEvent: (event) => { this.deliver(event as unknown as FluxyChatEvent); },
     });
   }
 
   private openSocket(): void {
     this.clearReconnectTimer();
     this.setStatus(this.hasConnectedOnce && this.reconnectAttempt > 0 ? 'reconnecting' : 'connecting');
-    const wsConnect: FluxyWebSocketConnectOptions = { replay: this.options.wsReplay ?? 'connect', replayLimit: this.options.historyLimit, presenceInfo: this.options.presenceInfo, cache: this.options.wsCache };
+    const wsConnect: Record<string, unknown> = { roomId: this.roomId, token: '', replay: this.options.wsReplay ?? 'connect', replayLimit: this.options.historyLimit, presenceInfo: this.options.presenceInfo, cache: this.options.wsCache };
     if (this.options.wsReplay === 'off') wsConnect.replay = 'off';
     const ws = this.client.connect(this.roomId, wsConnect);
     this.ws = ws;
@@ -246,7 +246,7 @@ export class FluxyRoomConnection {
   }
 
   private async replayHistory(): Promise<void> {
-    try { const messages = await this.client.fetchMessages(this.roomId, this.options.historyLimit); this.deliver({ type: 'history', messages }); } catch {}
+    try { const messages = await this.client.fetchMessages(this.roomId, { limit: this.options.historyLimit }); this.deliver({ type: 'history', messages: messages as unknown as FluxyChatMessage[] } as unknown as FluxyChatEvent); } catch {}
   }
 
   private trackMessageId(id: number): void {
@@ -272,7 +272,7 @@ export class FluxyRoomConnection {
       this.waitForEntries = this.waitForEntries.filter((e) => !satisfied.includes(e));
       for (const entry of satisfied) {
         clearTimeout(entry.timer);
-        if (event.type === 'message') entry.resolve(event as FluxyChatMessage);
+        if (event.type === 'message') entry.resolve(event as unknown as FluxyChatMessage);
         else entry.reject(new Error(`waitFor matched non-message event type "${event.type}"`));
       }
     }

@@ -20,6 +20,22 @@ import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flag
 import { isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
 import { queryModelsCatalog, getModelById, listModelProviders, syncModelsCatalog } from "../lib/llm-models-catalog.js";
 
+/**
+ * Validate an attachment file key for R2 storage.
+ * Rejects empty keys, path traversal patterns (..), leading /, and null bytes.
+ * @param {string} fileKey
+ * @returns {boolean}
+ */
+function isValidAttachmentKey(fileKey) {
+  if (!fileKey || fileKey === "") return false;
+  if (fileKey.includes("..")) return false;
+  if (fileKey.startsWith("/")) return false;
+  // Reject null bytes (\x00 / %00) to prevent path injection in Workers KV/R2
+  // Check both the actual null byte character and URL-encoded form (%00)
+  if (fileKey.includes("\x00") || fileKey.includes("%00")) return false;
+  return true;
+}
+
 export async function dispatchPublicRoutes(request, url, h) {
   const {
     env,
@@ -253,6 +269,11 @@ export async function dispatchPublicRoutes(request, url, h) {
 
     const ext = getFileExtension(contentType, fileName);
     const fileKey = `${auth.projectId}/${auth.userId}/${Date.now()}_${crypto.randomUUID()}.${ext}`;
+    if (!isValidAttachmentKey(fileKey)) {
+      // This should never happen with well-formed inputs, but guard against
+      // unexpected null bytes in environment variables or edge cases.
+      return json({ error: "invalid file key" }, { status: 400 });
+    }
 
     try {
       await env.ATTACHMENTS.put(fileKey, fileData, {
@@ -298,7 +319,7 @@ export async function dispatchPublicRoutes(request, url, h) {
 
   if (url.pathname.startsWith("/attachments/") && request.method === "GET") {
     const fileKey = url.pathname.slice("/attachments/".length);
-    if (!fileKey || fileKey.includes("..") || fileKey.startsWith("/")) {
+    if (!isValidAttachmentKey(fileKey)) {
       return json({ error: "invalid file key" }, { status: 400 });
     }
 
@@ -310,7 +331,11 @@ export async function dispatchPublicRoutes(request, url, h) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
     const keyPrefix = fileKey.split("/")[0];
-    if (keyPrefix !== auth.projectId) {
+    // AI-generated images use "ai-images/<projectId>/..." prefix
+    // Voice messages use "voice/<projectId>/..." prefix
+    const knownPrefixes = new Set(["ai-images", "voice"]);
+    const expectedPrefix = knownPrefixes.has(keyPrefix) ? fileKey.split("/")[1] : keyPrefix;
+    if (expectedPrefix !== auth.projectId) {
       return json({ error: "forbidden" }, { status: 403 });
     }
 
@@ -331,13 +356,87 @@ export async function dispatchPublicRoutes(request, url, h) {
 
     const metadata = object.httpMetadata || {};
     const customMetadata = object.customMetadata || {};
+    const fileName = customMetadata.fileName || fileKey.split("/").pop() || "download";
+
+    // Sanitize filename to remove path separators and control characters
+    const safeFileName = fileName.replace(/[/\\\x00-\x1f\x7f]/g, "_");
+
+    // Validate and sanitize the content-type
+    const rawContentType = metadata.contentType || "";
+    const VALID_MIME_RE = /^[a-zA-Z0-9!#$&^._+-]+\/[a-zA-Z0-9!#$&^._+-]+$/;
+    const safeContentType = VALID_MIME_RE.test(rawContentType)
+      ? rawContentType
+      : "application/octet-stream";
+
+    // List of known-risky MIME types that should always be served as attachment
+    const RISKY_TYPES = new Set([
+      "text/html",
+      "text/xhtml",
+      "application/xhtml+xml",
+      "text/javascript",
+      "application/javascript",
+      "application/x-javascript",
+      "text/ecmascript",
+      "application/ecmascript",
+      "image/svg+xml",
+      "text/xml",
+      "application/xml",
+      "application/x-xml",
+      "text/xsl",
+      "application/xsl+xml",
+      "application/vnd.syncml+xml",
+      "application/rss+xml",
+      "application/atom+xml",
+      "application/soap+xml",
+      "application/xhtml+xml",
+      "text/markdown",
+      "text/csv",
+      "application/json",
+      "application/ld+json",
+      "application/vnd.api+json",
+      "text/x-python",
+    ]);
+
+    // Safe types that can be served inline
+    const SAFE_INLINE_TYPES = new Set([
+      "image/",
+      "video/",
+      "audio/",
+      "application/pdf",
+      "text/plain",
+      "text/css",
+      "font/",
+    ]);
+
+    // Determine disposition: risky types forced to attachment; safe types inline
+    const isRisky = RISKY_TYPES.has(safeContentType);
+    const isSafeInline = [...SAFE_INLINE_TYPES].some((t) => safeContentType.startsWith(t));
 
     const headers = new Headers();
-    headers.set("Content-Type", metadata.contentType || "application/octet-stream");
+    headers.set("Content-Type", safeContentType);
     headers.set("Content-Length", object.size.toString());
     headers.set("X-Uploaded-At", customMetadata.uploadedAt || "");
     headers.set("Cache-Control", "public, max-age=86400");
     headers.set("X-Content-Type-Options", "nosniff");
+
+    // CORS: allow dashboard origins to fetch attachments with auth headers
+    for (const [k, v] of Object.entries(corsHeaders)) {
+      headers.set(k, v);
+    }
+
+    if (isRisky || !isSafeInline) {
+      // Force attachment for risky or unknown types
+      headers.set(
+        "Content-Disposition",
+        `attachment; filename="${safeFileName}"`
+      );
+    } else if (isSafeInline) {
+      // Allow inline for known-safe types
+      headers.set(
+        "Content-Disposition",
+        `inline; filename="${safeFileName}"`
+      );
+    }
 
     return new Response(object.body, { headers });
   }

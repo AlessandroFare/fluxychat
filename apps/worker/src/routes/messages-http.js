@@ -16,6 +16,7 @@ import {
 } from "../lib/in-app-notifications.js";
 import { isBlockedBetween, filterBlockedUserIds } from "../lib/user-blocks.js";
 import { assertGuestCanWrite } from "../lib/guest-auth.js";
+import { isValidEmoji, normalizeEmoji } from "../lib/emoji.js";
 import {
   parsePollCreateInput,
   insertMessagePoll,
@@ -905,9 +906,13 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     const body = await request.json().catch(() => null);
-    const emoji = body?.emoji;
-    if (!emoji) {
+    const rawEmoji = body?.emoji;
+    if (!rawEmoji) {
       return json({ error: "emoji required" }, { status: 400 });
+    }
+    const emoji = normalizeEmoji(rawEmoji);
+    if (!isValidEmoji(emoji)) {
+      return json({ error: "invalid emoji" }, { status: 400 });
     }
 
     const { userId, projectId: authProjectId } = auth;

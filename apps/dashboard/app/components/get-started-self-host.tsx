@@ -27,7 +27,7 @@ export function GetStartedSelfHostSection() {
               href="https://github.com/AlessandroFare/fluxychat/tree/main/apps/worker"
               className="font-medium text-primary underline-offset-2 hover:underline"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               Worker README on GitHub
             </Link>

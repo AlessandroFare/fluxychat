@@ -50,19 +50,18 @@ It prints a JWT you can use immediately with the SDK.
 - **React / JS SDK (`useChat(roomId)`)** and lightweight UI kit.
 - **Next.js 16** dashboard for analytics, moderation, and cost insights.
 
-### What's new (open beta — since May 2026)
+### What's new (P22–P25 — AI-native architecture overhaul)
 
-Shipped in repo (deploy separately): see **[open beta deploy guide](docs/operations/open-beta-deploy-guide.md)**.
+Inspired by the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai) architecture. Full roadmap: [`ROADMAP_EXECUTION.md`](ROADMAP_EXECUTION.md).
 
 | Area | Highlights |
 |------|------------|
-| **SDK** | Outbound WS queue, heartbeat, replay on connect, delivery receipts, `getFeatureFlags()`, voice `sendVoiceMessage`, inbox/search/export APIs |
-| **P9–P10** | Pusher parity, web push VAPID, FCM devices, polls, blocks, supergroup shards, Sent.dm contacts + SMS OTP |
-| **P12 killer** | Voice + transcription, AI reply suggestions, daily digest, FTS search, unified inbox, custom domains, embed widget, AI handoff, thread TL;DR, quiet hours, room export PDF/MD |
-| **P12 platform** | AI Gateway path, Flagship feature flags, Browser Run OG preview, Workflow scheduled jobs |
-| **P13 telco** | Inbound SMS/WA → room, outbound media in SMS, agent queue + dispositions, US SMS playbook |
+| **P22 adapters** | Multi-platform adapter pattern (14 platforms: Slack, Teams, Discord, Telegram, WhatsApp, Google Chat, GitHub, Linear, Matrix, Resend, IRC, Twitch, Line, API); streaming markdown renderer with table buffering + code fence tracking + inline marker healing; card element builder (JSX + function API) with Slack Block Kit / Teams Adaptive Cards rendering; AI tool presets (reader/messenger/moderator) with per-tool approval gates; concurrency strategies (drop/queue/debounce/burst/concurrent); mdast canonical message format; transcripts API; custom emoji; callback URLs; modal context; lock scope; identity resolver; streaming plan |
+| **P23 AI core** | Stream resumption (reconnect to in-progress AI responses); human-in-the-loop approval workflow; MCP client integration (HTTP/SSE/stdio transports + tool conversion + resources); LLM middleware pipeline (transformParams / wrapGenerate / wrapStream); DevTools web UI for inspecting LLM calls + token usage; OpenTelemetry with GenAI semantic conventions; WorkflowAgent for durable agent execution; sandbox support for untrusted code; bidirectional realtime voice (voice-to-voice AI with tool calling); scoped tool context per-tool secret isolation |
+| **P24 AI medium** | Tool call streaming (progressive input rendering); multi-step loop control (maxSteps / stopWhen); provider-defined & provider-executed tools; pluggable transport architecture; typed UIMessage generics; data parts streaming; extractReasoningMiddleware; RAG middleware; provider-level middleware; image generation; speech generation (TTS); useObject hook for structured JSON streaming; generateObject/streamObject with schema validation; MCP Apps (sandboxed tool UIs); slash commands |
+| **P25 AI low** | experimental_throttle for render throttling; smoothStream for flicker-free text; ephemeral messages with DM fallback; cosine similarity utility; strict tool calling; sendAutomaticallyWhen auto-submit; sensitive context controls for telemetry |
 
-Full feature docs: [`docs/README.md`](docs/README.md) · SDK API tables: [`packages/sdk/README.md`](packages/sdk/README.md)
+Full feature docs: [`docs/README.md`](docs/README.md) · SDK API tables: [`packages/sdk/README.md`](packages/sdk/README.md) · Guides: [`docs/guides/`](docs/guides/)
 
 ### Monorepo layout
 

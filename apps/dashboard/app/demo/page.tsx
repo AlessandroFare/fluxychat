@@ -2,17 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import {
   DemoTurnstile,
   isDemoTurnstileEnabled,
 } from "@/components/demo-turnstile";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { VoiceRecorder } from "~/components/voice/voice-recorder";
-import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
+import { FluxyChat } from "@/components/chat";
 
 interface DemoSession {
   enabled: boolean;
@@ -27,8 +24,6 @@ export default function DemoRoomPage() {
   const workerUrl = getPublicWorkerUrl();
   const [session, setSession] = useState<DemoSession | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-  const [voiceError, setVoiceError] = useState<string | null>(null);
 
   const loadDemoSession = useCallback(
     async (turnstileToken?: string) => {
@@ -71,13 +66,6 @@ export default function DemoRoomPage() {
   }, [session, workerUrl]);
 
   const readOnly = session?.readOnly === true;
-
-  const { messages, sendMessage, connectionState, connected, loadHistory } = useChat({
-    roomId: session?.roomId ?? "",
-    client: client ?? undefined,
-    replay: "connect",
-    markReadLatest: Boolean(session && !session.readOnly),
-  });
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
@@ -131,79 +119,19 @@ export default function DemoRoomPage() {
 
       {session?.enabled ? (
         <div className="mt-8 space-y-4">
-          <p className="text-xs text-muted-foreground">
-            Room <code className="font-mono">{session.roomId}</code> ·{" "}
-            {connectionState.status}
-            {connected ? " · live" : ""}
-            {readOnly ? " · read-only" : ""}
-          </p>
-          <div className="max-h-80 space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3">
-            {messages.map((m) => (
-              <div key={`${m.id}-${m.clientMessageId ?? ""}`} className="text-sm">
-                <span className="font-medium">{m.userId}</span>:{" "}
-                {m.kind === "voice" ? (
-                  <VoiceMessageBubble message={m} className="mt-1 inline-block" />
-                ) : (
-                  m.content
-                )}
-                {m.deliveryStatus ? (
-                  <span className="ml-2 text-[10px] text-muted-foreground">
-                    ({m.deliveryStatus})
-                  </span>
-                ) : null}
-              </div>
-            ))}
-          </div>
-          {!readOnly ? (
-            <form
-              className="flex flex-col gap-2 sm:flex-row"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const text = draft.trim();
-                if (!text) return;
-                sendMessage(text);
-                setDraft("");
-              }}
-            >
-              <Input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Say hello…"
-                disabled={!connected}
-                className="sm:flex-1"
-              />
-              <VoiceRecorder
-                disabled={!connected}
-                onSend={async (audio, durationMs) => {
-                  if (!client) return;
-                  setVoiceError(null);
-                  try {
-                    const sent = await client.sendVoiceMessage(session?.roomId ?? "", audio, {
-                      durationMs,
-                    });
-                    if (!sent) setVoiceError("Voice message not sent.");
-                    else void loadHistory();
-                  } catch (err: unknown) {
-                    setVoiceError(
-                      err instanceof Error ? err.message : "Voice send failed",
-                    );
-                  }
-                }}
-              />
-              <Button type="submit" className="sm:w-auto" disabled={!connected || !draft.trim()}>
-                Send
-              </Button>
-            </form>
-          ) : (
+          {readOnly ? (
             <p className="text-xs text-muted-foreground">
               Demo is read-only. Sign up for a full account to send messages.
             </p>
+          ) : (
+            <FluxyChat
+              roomId={session.roomId}
+              agentId=""
+              agentName="Agent"
+              client={client}
+              className="mt-4"
+            />
           )}
-          {voiceError ? (
-            <p className="text-xs text-red-600" role="alert">
-              {voiceError}
-            </p>
-          ) : null}
         </div>
       ) : null}
     </div>

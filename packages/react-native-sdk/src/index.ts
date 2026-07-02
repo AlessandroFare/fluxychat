@@ -116,11 +116,18 @@ export { WebSocketClient, type ConnectionStatus } from './websocket-client';
 export type {
   FluxyChatConfig,
   Message,
+  FluxyChatMessage,
   Room,
+  FluxyChatRoom,
   User,
   PresenceState,
   ChatEvent,
+  FluxyChatEvent,
   EventHandler,
   SendMessageOptions,
   PaginationOptions,
+  FluxyInAppNotification,
+  FluxyChatAgentRun,
+  FluxyChatAttachment,
+  FluxyWebSocketConnectOptions,
 } from './types';

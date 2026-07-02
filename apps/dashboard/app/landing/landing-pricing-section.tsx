@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bot, Check, MessageSquare, Webhook } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { PUBLIC_PLAN_CATALOG, SALES_PLAN_CATALOG } from "~/lib/plan-catalog";
+import { PUBLIC_PLAN_CATALOG, SALES_PLAN_CATALOG, FREE_TIER_LIMITS } from "~/lib/plan-catalog";
 import { PRICING_FAQ } from "@/lib/marketing-landing";
 import { HOSTED_COPY, HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
 import { formatNumber } from "@/lib/format-number";
@@ -31,6 +31,33 @@ export function LandingPricingSection() {
         <p className="mx-auto mt-8 max-w-xl text-center text-sm font-medium text-slate-300">
           Self-serve — checkout today
         </p>
+
+        {/* Free vs Pro summary card — qualifies traffic before the detailed grid */}
+        <div className="mx-auto mt-4 max-w-lg rounded-xl border border-white/15 bg-slate-900/60 p-4 text-center">
+          <p className="text-sm text-slate-200">
+            <span className="font-semibold text-white">Free</span>
+            {" "}includes{" "}
+            <span className="font-semibold text-slate-200">
+              {Intl.NumberFormat("en-US").format(FREE_TIER_LIMITS.messageLimitMonthly)}
+            </span>
+            {" "}messages,{" "}
+            <span className="font-semibold text-slate-200">
+              {Intl.NumberFormat("en-US").format(FREE_TIER_LIMITS.agentInvokeLimitMonthly)}
+            </span>
+            {" "}agent invokes, and{" "}
+            <span className="font-semibold text-slate-200">
+              {Intl.NumberFormat("en-US").format(FREE_TIER_LIMITS.webhookDeliveryLimitMonthly)}
+            </span>
+            {" "}webhook deliveries{" "}
+            <span className="text-slate-400">/mo</span>.{" "}
+            <span className="text-primary">Pro</span>{" "}
+            <span className="text-slate-300">raises each to{" "}
+              <span className="font-semibold text-slate-200">10×</span>{" "}for{" "}
+              <span className="text-white">$50/mo</span>{" "}
+              — ideal for production rooms with active agents.</span>
+          </p>
+        </div>
+
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {planEntries.map(([key, plan]) => {
             const isFeatured = key === "starter";

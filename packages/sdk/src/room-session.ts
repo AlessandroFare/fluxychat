@@ -134,14 +134,15 @@ export function startFluxyRoomSession(
   });
 
   const handleEvent = (data: FluxyChatEvent) => {
-    if (data.type === "history") {
-      if (!historyOnConnect) return;
+    if (data.type === "history" || data.type === "replay") {
+      if (!historyOnConnect && data.type === "history") return;
       setState((s) => ({
         messages: mergeMessagesChronological(
           s.messages,
           sortMessagesChronological(data.messages),
         ),
         historyLoaded: true,
+        ...(data.reactions ? { reactions: { ...s.reactions, ...data.reactions } } : {}),
       }));
       scheduleMarkLatest();
     } else if (data.type === "streamState") {

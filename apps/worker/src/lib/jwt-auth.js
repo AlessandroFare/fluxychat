@@ -96,7 +96,7 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
   await verifyHs256Signature(headerB64, payloadB64, sigB64, JWT_DUMMY_KEY_BYTES);
 
   const row = await env.DB.prepare(
-    "SELECT jwt_secret FROM project_secrets WHERE project_id = ?"
+    "SELECT jwt_secret, jwt_secret_previous, jwt_secret_previous_expires_at FROM project_secrets WHERE project_id = ?"
   )
     .bind(projectId)
     .first();
@@ -117,32 +117,33 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
     new TextEncoder().encode(row.jwt_secret)
   );
 
-  if (!ok && env.JWT_SECRET_PREVIOUS) {
+  if (!ok && row.jwt_secret_previous) {
     try {
       // Audit S-31: enforce a max age for the previous secret. Without
       // this, a leaked old key remains usable forever. Operators should
-      // set JWT_SECRET_PREVIOUS_EXPIRES_AT (ISO timestamp); after that
-      // point the previous secret is no longer accepted.
-      const retireAt = env.JWT_SECRET_PREVIOUS_EXPIRES_AT;
+      // set jwt_secret_previous_expires_at on the project_secrets row
+      // (ISO timestamp); after that point the previous secret is no
+      // longer accepted.
+      const retireAt = row.jwt_secret_previous_expires_at;
       const ts = retireAt ? Date.parse(String(retireAt)) : NaN;
       const expired = Number.isFinite(ts) && Date.now() > ts;
       if (retireAt && expired) {
-        logInfo("jwt.legacy_secret_expired", { userId, projectId, retireAt });
+        logInfo("jwt.previous_secret_expired", { userId, projectId, retireAt });
         // fall through to generic rejection below
       } else {
         const prevOk = await verifyHs256Signature(
           headerB64,
           payloadB64,
           sigB64,
-          new TextEncoder().encode(env.JWT_SECRET_PREVIOUS),
+          new TextEncoder().encode(row.jwt_secret_previous),
         );
         if (prevOk) {
           if (retireAt && !expired) {
-            logInfo("jwt.legacy_secret_used", { userId, projectId, retireAt });
+            logInfo("jwt.previous_secret_used", { userId, projectId, retireAt });
           } else {
             // No expiration set  accept but log a warning so operators
             // see it in their logs.
-            logInfo("jwt.legacy_secret_used_no_expire_at", { userId, projectId });
+            logInfo("jwt.previous_secret_used_no_expire_at", { userId, projectId });
           }
           return {
             userId,

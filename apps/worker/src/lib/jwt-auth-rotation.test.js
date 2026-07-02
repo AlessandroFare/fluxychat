@@ -1,10 +1,10 @@
 /**
- * Audit S-31  JWT_SECRET_PREVIOUS_EXPIRES_AT enforcement.
+ * Audit S-31  per-project previous secret expiration enforcement.
  *
  * Verifies that when rotating jwt_secret in D1 project_secrets, the
- * previous secret (set via env.JWT_SECRET_PREVIOUS) is rejected after
- * its configured wall-clock expiration, even when the token's own `exp`
- * claim is still in the future.
+ * per-project previous secret (stored in project_secrets.jwt_secret_previous)
+ * is rejected after its configured wall-clock expiration, even when the
+ * token's own `exp` claim is still in the future.
  *
  * Critical security property: the expiry is tied to wall-clock time of
  * the request (Date.now()), NOT to the JWT's iat or exp claim. A user
@@ -36,9 +36,9 @@ async function signHs256Jwt(payload, secret) {
 
 /**
  * Mock the minimum surface of env used by verifyJwtAndGetContext:
- *   - env.DB.prepare(...).bind(...).first()  looks up jwt_secret
- *   - env.JWT_SECRET_PREVIOUS               optional previous secret
- *   - env.JWT_SECRET_PREVIOUS_EXPIRES_AT    optional ISO wall-clock cutoff
+ *   - env.DB.prepare(...).bind(...).first() looks up project_secrets
+ *   - row.jwt_secret_previous               optional previous secret
+ *   - row.jwt_secret_previous_expires_at    optional ISO wall-clock cutoff
  */
 function mockEnvWithSecretAndPrev(currentSecret, previousSecret, retireAt) {
   return {
@@ -48,24 +48,29 @@ function mockEnvWithSecretAndPrev(currentSecret, previousSecret, retireAt) {
           bind() {
             return {
               async first() {
-                return currentSecret === null
-                  ? null
-                  : { jwt_secret: currentSecret };
+                if (currentSecret === null) return null;
+                return {
+                  jwt_secret: currentSecret,
+                  ...(previousSecret
+                    ? { jwt_secret_previous: previousSecret }
+                    : {}),
+                  ...(retireAt
+                    ? { jwt_secret_previous_expires_at: retireAt }
+                    : {}),
+                };
               },
             };
           },
         };
       },
     },
-    ...(previousSecret ? { JWT_SECRET_PREVIOUS: previousSecret } : {}),
-    ...(retireAt ? { JWT_SECRET_PREVIOUS_EXPIRES_AT: retireAt } : {}),
   };
 }
 
 const PROJECT_ID = "proj_rotation";
 const USER_ID = "user_rotation";
 
-describe("verifyJwtAndGetContext  JWT_SECRET_PREVIOUS rotation expiry", () => {
+describe("verifyJwtAndGetContext  per-project previous-secret rotation expiry", () => {
   it("rejects a token signed with the previous secret after JWT_SECRET_PREVIOUS_EXPIRES_AT has passed (401)", async () => {
     // Token's own exp is one hour in the future  clearly valid.
     // But the previous secret was retired one minute ago (wall clock).

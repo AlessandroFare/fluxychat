@@ -1,0 +1,45 @@
+﻿{
+    "name":  "@fluxy-chat/create-fluxy-chat",
+    "version":  "0.1.0",
+    "type":  "module",
+    "main":  "./dist/index.js",
+    "bin":  {
+                "create-fluxy-chat":  "./dist/index.js"
+            },
+    "engines":  {
+                    "node":  "\u003e=20.12"
+                },
+    "files":  [
+                  "dist",
+                  "templates",
+                  "README.md"
+              ],
+    "scripts":  {
+                    "build":  "tsup src/index.ts --format esm --dts",
+                    "dev":  "tsup src/index.ts --format esm --watch",
+                    "typecheck":  "tsc --noEmit",
+                    "prepublishOnly":  "pnpm run build"
+                },
+    "dependencies":  {
+                         "@clack/prompts":  "^0.7.0",
+                         "picocolors":  "^1.1.1"
+                     },
+    "devDependencies":  {
+                            "@types/node":  "^22.0.0",
+                            "tsup":  "^8.3.5",
+                            "typescript":  "^5.6.0"
+                        },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/AlessandroFare/fluxychat.git",
+                       "directory":  "packages/create-fluxy-chat"
+                   },
+    "homepage":  "https://github.com/AlessandroFare/fluxychat/tree/main/packages/create-fluxy-chat#readme",
+    "bugs":  {
+                 "url":  "https://github.com/AlessandroFare/fluxychat/issues"
+             },
+    "publishConfig":  {
+                          "access":  "public"
+                      },
+    "license":  "MIT"
+}

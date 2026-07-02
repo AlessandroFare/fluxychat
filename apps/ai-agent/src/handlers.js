@@ -159,19 +159,24 @@ export async function lookupAgentConfig(env, projectId, handle) {
     };
   }
 
-  // Strategy 3: Default OpenAI config for development (if OPENAI_API_KEY is set)
-  if (handle === "chatgpt" && env.OPENAI_API_KEY) {
-    return {
-      projectId,
-      handle: "chatgpt",
-      botId: env.CHATGPT_BOT_ID || "bot_chatgpt",
-      provider: "openai",
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
-      defaultMode: "chat",
-      capabilities: ["chat"],
-      systemPrompt: env.OPENAI_SYSTEM_PROMPT || "You are a helpful assistant in a chat application.",
-      apiKey: env.OPENAI_API_KEY,
-    };
+  // Strategy 3: Development-only project-scoped fallback.
+  // Never use a global OPENAI_API_KEY here; that would let one tenant's key service another tenant.
+  const projectCred = env.OPENAI_API_KEY ? null : null; // placeholder to keep projectCred in scope
+  if (handle === "chatgpt" && env.ENVIRONMENT === "development") {
+    const devKey = env[`AGENT_${projectId.replace(/[^a-zA-Z0-9]/g, "_")}_chatgpt_API_KEY`];
+    if (devKey) {
+      return {
+        projectId,
+        handle: "chatgpt",
+        botId: env.CHATGPT_BOT_ID || "bot_chatgpt",
+        provider: "openai",
+        model: env.OPENAI_MODEL || "gpt-4o-mini",
+        defaultMode: "chat",
+        capabilities: ["chat"],
+        systemPrompt: env.OPENAI_SYSTEM_PROMPT || "You are a helpful assistant in a chat application.",
+        apiKey: devKey,
+      };
+    }
   }
 
   return null;
@@ -221,7 +226,7 @@ export function decideMode(content, defaultMode) {
  */
 export async function callProvider(env, { agent, context }) {
   const { provider, model, systemPrompt, apiKey } = agent;
-  const apiKeyToUse = apiKey || env.OPENAI_API_KEY || env[`${provider.toUpperCase()}_API_KEY`];
+  const apiKeyToUse = apiKey;
 
   if (!apiKeyToUse) {
     throw new Error(`No API key found for provider: ${provider}`);
@@ -400,15 +405,43 @@ export async function postReply(env, projectId, roomId, request) {
 }
 
 /**
- * Generate service JWT for authenticating with Fluxychat
- * Uses project-specific JWT secret from environment
+ * Generate service JWT for authenticating with Fluxychat.
+ * Fetches the project JWT secret from D1 first; only falls back to the global
+ * JWT_SECRET environment variable in development environments. Production
+ * callers must store secrets in D1.
  */
 export async function generateServiceJWT(env, projectId) {
-  // Get JWT secret for this project
-  const secretKey =
-    env[`JWT_SECRET_${projectId.replace(/[^a-zA-Z0-9]/g, "_")}`] || env.JWT_SECRET;
+  let secretKey = null;
+
+  if (env.DB) {
+    try {
+      const row = await env.DB.prepare(
+        "SELECT jwt_secret FROM project_secrets WHERE project_id = ?"
+      )
+        .bind(projectId)
+        .first();
+      if (row && typeof row.jwt_secret === "string" && row.jwt_secret.length > 0) {
+        secretKey = row.jwt_secret;
+      }
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          event: "jwt.d1_lookup_failed",
+          projectId,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      );
+    }
+  }
+
+  const isDevelopment = env.ENVIRONMENT === "development";
   if (!secretKey) {
-    throw new Error(`Missing JWT secret for project ${projectId}`);
+    const { JWT_SECRET } = env;
+    if (isDevelopment && JWT_SECRET) {
+      secretKey = JWT_SECRET;
+    } else {
+      throw new Error(`Missing JWT secret for project ${projectId}`);
+    }
   }
 
   const header = {

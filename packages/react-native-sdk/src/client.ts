@@ -18,6 +18,18 @@ export class FluxyChatClient {
   private userWs: WebSocket | null = null;
   private userHandlers: Map<string, Set<EventHandler>> = new Map();
 
+  isAuthenticated(): boolean {
+    return !!this.config.token;
+  }
+
+  get userId(): string | undefined {
+    return this.config.userId;
+  }
+
+  fetchMessages(roomId: string, options?: { limit?: number; before?: string }): Promise<Message[]> {
+    return Promise.resolve(this.getMessages(roomId));
+  }
+
   constructor(config: FluxyChatConfig) {
     this.config = config;
     this.api = new ApiClient(config);
@@ -25,9 +37,9 @@ export class FluxyChatClient {
   }
 
   // Connection
-  async connect(roomId: string): Promise<void> {
+  connect(roomId: string, options?: Record<string, unknown>): WebSocket {
     this.currentRoomId = roomId;
-    this.ws.connect(roomId);
+    return this.ws.connect(roomId);
   }
 
   disconnect(): void {
@@ -125,7 +137,7 @@ export class FluxyChatClient {
     const limit = clampHistoryLimit(options?.limit);
     const messages = await this.api.listMessages(roomId, { ...options, limit });
     const existing = this.messages.get(roomId) || [];
-    this.messages.set(roomId, mergeMessagesChronological(existing, messages as any));
+    this.messages.set(roomId, mergeMessagesChronological(existing as any, messages as any) as any);
     return messages;
   }
 
@@ -894,7 +906,8 @@ export class FluxyChatClient {
   }
 
   // --- Polls ---
-  async createPoll(roomId: string, question: string, options: string[], { expiresAt, multipleChoice, anonymous }?: { expiresAt?: string; multipleChoice?: boolean; anonymous?: boolean }): Promise<{ messageId: number; pollId: number } | null> {
+  async createPoll(roomId: string, question: string, options: string[], opts?: { expiresAt?: string; multipleChoice?: boolean; anonymous?: boolean }): Promise<{ messageId: number; pollId: number } | null> {
+    const { expiresAt, multipleChoice, anonymous } = opts ?? {};
     const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/polls`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.config.token}` },

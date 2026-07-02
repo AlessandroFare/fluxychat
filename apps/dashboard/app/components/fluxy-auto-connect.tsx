@@ -49,7 +49,7 @@ export function FluxyAutoConnect() {
         const json = (await res.json()) as {
           adminJwt?: string;
           memberJwt?: string;
-          activeProject?: { id: string; name: string; created_at: string; apiKey?: string };
+          activeProject?: { id: string; name: string; created_at: string };
           error?: string;
         };
 

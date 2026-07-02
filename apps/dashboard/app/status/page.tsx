@@ -1,5 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { fetchWorkerHealth } from "@/lib/worker-health";
+import { buildPageMetadata } from "@/lib/site-metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "System status — FluxyChat",
+  description:
+    "Public health endpoint for the FluxyChat chat API. Check operational status, bindings, and feature modes.",
+  path: "/status",
+});
 
 export const dynamic = "force-dynamic";
 

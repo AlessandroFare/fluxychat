@@ -1,4 +1,5 @@
 import { pickRouteDeps } from "./route-http-deps.js";
+import { validateLimit, validatePositiveInteger } from "../lib/validation.js";
 import { canModerateQueue } from "../lib/moderation-queue.js";
 import {
   getPriorityQueue,
@@ -33,9 +34,10 @@ export async function dispatchModerationQueueRoutes(request, url, h) {
     const roomId = params.get("room_id") || undefined;
     const severity = params.get("severity") || undefined;
     const pending = params.get("pending") === "true";
-    const limit = Math.min(200, Math.max(1, parseInt(params.get("limit") || "20", 10)));
+    const limitResult = validateLimit(params.get("limit"), { defaultValue: 20, max: 200 });
+    if (limitResult.error) return json({ error: "bad_request", message: limitResult.error }, { status: 400, headers: corsHeaders });
     const offset = Math.max(0, parseInt(params.get("offset") || "0", 10));
-    const result = await getPriorityQueue(env, { projectId: auth.projectId, roomId, severity, pending, limit, offset });
+    const result = await getPriorityQueue(env, { projectId: auth.projectId, roomId, severity, pending, limit: limitResult.value, offset });
     return json(result, { headers: corsHeaders });
   }
 
@@ -89,7 +91,9 @@ export async function dispatchModerationQueueRoutes(request, url, h) {
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     if (!canModerateQueue(auth.roles)) return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
 
-    const days = Math.min(90, Math.max(1, parseInt(url.searchParams.get("days") || "30", 10)));
+    const daysResult = validatePositiveInteger(url.searchParams.get("days") || "30", { fieldName: "days" });
+    if (daysResult.error) return json({ error: "bad_request", message: daysResult.error }, { status: 400, headers: corsHeaders });
+    const days = Math.min(90, daysResult.value);
     const result = await getFeedbackStats(env, { projectId: auth.projectId, days });
     return json(result, { headers: corsHeaders });
   }
@@ -181,9 +185,10 @@ export async function dispatchModerationQueueRoutes(request, url, h) {
 
     const params = url.searchParams;
     const moderatorId = params.get("moderator_id") || undefined;
-    const limit = Math.min(200, Math.max(1, parseInt(params.get("limit") || "50", 10)));
+    const limitResult = validateLimit(params.get("limit"), { defaultValue: 50, max: 200 });
+    if (limitResult.error) return json({ error: "bad_request", message: limitResult.error }, { status: 400, headers: corsHeaders });
     const offset = Math.max(0, parseInt(params.get("offset") || "0", 10));
-    const history = await getReviewHistory(env, { projectId: auth.projectId, moderatorId, limit, offset });
+    const history = await getReviewHistory(env, { projectId: auth.projectId, moderatorId, limit: limitResult.value, offset });
     return json({ history }, { headers: corsHeaders });
   }
 

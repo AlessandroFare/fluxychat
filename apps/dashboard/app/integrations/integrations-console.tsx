@@ -30,7 +30,7 @@ export function IntegrationsConsolePage() {
           href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/operations/production-demo-and-sms.md"
           className="text-brand underline underline-offset-2"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
         >
           Production checklist (docs)
         </a>

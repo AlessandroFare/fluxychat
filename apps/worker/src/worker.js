@@ -77,6 +77,9 @@ import { seedDefaultAlertRules } from "./lib/seed-default-alert-rules.js";
 import { createJsonResponder } from "./lib/http-json.js";
 import { handleFetchThrownError } from "./lib/http-cors.js";
 import { checkAndConsumeRateLimit } from "./lib/rate-limit.js";
+import "./lib/adapter-web.js"; // P22-A2: Register web adapter on startup
+import { registerMockAdapter } from "./lib/mock-adapter.js"; // P22-F11: Register mock adapter for testing
+registerMockAdapter();
 
 export { RoomDurableObject } from "./durable-objects/room-do.js";
 export { UserDurableObject } from "./durable-objects/user-do.js";

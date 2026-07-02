@@ -1,0 +1,117 @@
+# MCP Client Integration
+
+FluxyChat's MCP (Model Context Protocol) client (P23-3) lets AI agents consume tools and resources from any MCP-compatible server — expanding agent capabilities without writing custom integrations.
+
+## Overview
+
+MCP is the de-facto protocol for AI↔app communication, adopted by OpenAI, Google, Microsoft, and Anthropic (~97M SDK downloads/month). FluxyChat acts as both an MCP **server** (P15-A, exposing rooms/messages as tools) and an MCP **client** (P23-3, consuming external tools).
+
+## Supported Transports
+
+| Transport | Use case |
+|-----------|----------|
+| **HTTP** | Remote MCP servers (production) |
+| **SSE** | Server-Sent Events streaming |
+| **stdio** | Local development, CLI tools |
+
+## Connecting to an MCP Server
+
+```ts
+import { createMcpClient } from "@fluxy-chat/sdk";
+
+const mcp = createMcpClient({
+  transport: "http",
+  url: "https://mcp.example.com/sse",
+  // or stdio: { command: "npx", args: ["-y", "@modelcontextprotocol/server-git"] }
+});
+
+// List available tools
+const tools = await mcp.listTools();
+// [{ name: "git_status", description: "...", inputSchema: {...} }, ...]
+
+// List resources
+const resources = await mcp.listResources();
+```
+
+## Tool Conversion (P23-3a)
+
+MCP tools are auto-converted to FluxyChat tool definitions, ready for LLM function calling:
+
+```ts
+import { convertMcpTools } from "@fluxy-chat/sdk";
+
+const mcpTools = await mcp.listTools();
+const fluxyTools = convertMcpTools(mcpTools);
+// Each MCP tool becomes a FluxyChat tool with execute(), description, inputSchema
+
+// Use with agent
+const agent = createAgent({
+  model: "gpt-4o",
+  tools: [...fluxyTools, ...builtInTools],
+});
+```
+
+## Resources (P23-3b)
+
+MCP resources provide application-driven data that's passed as context to the LLM:
+
+```ts
+const resources = await mcp.listResources();
+
+// Resources can be:
+// - File contents (e.g., "file:///repo/README.md")
+// - Database queries (e.g., "postgres://.../query/users")
+// - API responses (e.g., "https://api.github.com/repos/...")
+
+for (const resource of resources) {
+  const content = await mcp.readResource(resource.uri);
+  // Inject as context in the agent's system prompt
+}
+```
+
+## Configuration
+
+MCP servers are configured per-project via the admin API:
+
+```bash
+# Register an MCP server
+curl -X POST "$WORKER_URL/admin/mcp-servers" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "github",
+    "transport": "http",
+    "url": "https://mcp.github.com/sse",
+    "toolFilter": ["git_status", "git_diff", "create_issue"]
+  }'
+```
+
+## MCP Apps (P24-14)
+
+MCP Apps render sandboxed iframes for tool UIs — letting tools show interactive interfaces inside the chat:
+
+- **Model-visible tools:** AI calls them and reads results
+- **App-only tools:** UI renders for humans, AI doesn't see them
+- **Sandboxed:** Iframe isolation prevents unauthorized access
+
+## Security
+
+- MCP server URLs are validated against an allowlist
+- Tool execution respects FluxyChat's approval gates (P22-D2)
+- Resource content is filtered through the DLP pipeline (P18-D) before reaching the LLM
+- Per-project tool filtering (`toolFilter`) limits which MCP tools are exposed
+
+## Common MCP Servers
+
+| Server | Tools |
+|--------|-------|
+| `@modelcontextprotocol/server-git` | Git status, diff, log, commit |
+| `@modelcontextprotocol/server-github` | Issues, PRs, search |
+| `@modelcontextprotocol/server-filesystem` | File read/write/search |
+| `@modelcontextprotocol/server-postgres` | SQL queries |
+| `@modelcontextprotocol/server-brave-search` | Web search |
+
+## See Also
+
+- [AI Tool Presets Guide](./ai-tool-presets.md) — Approval gates for MCP tools
+- [LLM Middleware Guide](./llm-middleware.md) — Intercept MCP tool calls

@@ -13,14 +13,10 @@ interface OnboardingProgressStripProps {
 
 export function OnboardingProgressStrip({ stepContext, activeStep, onStepClick }: OnboardingProgressStripProps) {
   const total = ONBOARDING_STEPS.length;
-  const coreSteps = total - 1;
-  const counterLabel =
-    activeStep < coreSteps
-      ? `Step ${activeStep + 1} of ${coreSteps}`
-      : `Step ${activeStep + 1} (optional)`;
+  const counterLabel = `Step ${activeStep + 1} of ${total}`;
 
   return (
-    <div className="mb-8" aria-label="Setup progress" data-testid="onboarding-progress">
+    <div className="mx-auto mb-8" aria-label="Setup progress" data-testid="onboarding-progress">
       <p className="mb-4 text-center text-xs font-medium text-muted-foreground">
         {counterLabel}
       </p>
@@ -28,14 +24,20 @@ export function OnboardingProgressStrip({ stepContext, activeStep, onStepClick }
         {ONBOARDING_STEPS.map((step, index) => {
           const done = isOnboardingStepComplete(index, stepContext);
           const current = index === activeStep;
+          const canNavigate = index <= activeStep || done;
           const Icon = step.icon;
 
           return (
             <li key={step.title} className="flex items-center">
               <button
                 type="button"
-                onClick={() => onStepClick?.(index)}
-                className="flex flex-col items-center transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-md px-1"
+                onClick={() => canNavigate && onStepClick?.(index)}
+                disabled={!canNavigate}
+                className={cn(
+                  "flex flex-col items-center transition-opacity rounded-md px-1",
+                  canNavigate ? "hover:opacity-80 cursor-pointer" : "cursor-not-allowed",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                )}
               >
                 <div
                   className={cn(

@@ -142,7 +142,7 @@ export default function DocsPage() {
           <a
             href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/web-push-vapid.md"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="text-primary underline underline-offset-2"
           >
             docs/web-push-vapid.md
@@ -156,7 +156,7 @@ export default function DocsPage() {
           <Link href={HOSTED_PATHS.signUp}>{HOSTED_COPY.startFree}</Link>
         </Button>
         <Button asChild variant="outline">
-          <a href="https://github.com/AlessandroFare/fluxychat" target="_blank" rel="noreferrer">
+          <a href="https://github.com/AlessandroFare/fluxychat" target="_blank" rel="noopener noreferrer">
             View monorepo on GitHub
           </a>
         </Button>

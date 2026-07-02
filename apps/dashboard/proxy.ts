@@ -51,14 +51,22 @@ function isStaticAsset(pathname: string): boolean {
   );
 }
 
+function isNonceBasedCspEnabled(): boolean {
+  return process.env.DASHBOARD_CSP_NONCE === "true";
+}
+
 /**
- * Build a CSP header. Production uses 'unsafe-inline' because the x-nonce
- * header isn't reliably propagated to the RSC streaming runtime on all
+ * Build a CSP header. By default production uses 'unsafe-inline' because the
+ * x-nonce header isn't reliably propagated to the RSC streaming runtime on all
  * platforms (Vercel Edge). The nonce is still generated and forwarded via
- * `x-nonce` for when this is fixed. Do not put a nonce on style-src — that
- * disables 'unsafe-inline' and breaks Clerk-injected styles.
+ * `x-nonce` for when this is fixed.
+ *
+ * When a nonce is explicitly provided, the CSP switches to a nonce-based
+ * policy: `script-src 'nonce-<value>'` and `style-src 'nonce-<value>'` are
+ * emitted and 'unsafe-inline' is omitted. Callers that are not ready for
+ * strict nonce-based CSP should pass `undefined`.
  */
-function buildContentSecurityPolicy(nonce: string): string {
+export function buildContentSecurityPolicy(nonce?: string): string {
   const workerConnect = (
     process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL ||
     process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL ||
@@ -81,19 +89,28 @@ function buildContentSecurityPolicy(nonce: string): string {
 
   const mediaSrc = ["'self'", "blob:", workerConnect, devWorkerConnect].filter(Boolean).join(" ");
 
+  const useNonce = Boolean(nonce);
+
   // Next.js uses the per-request nonce on framework scripts. Clerk injects
-  // <style> tags without that nonce — do NOT put a nonce on style-src: when
-  // present, browsers ignore 'unsafe-inline' and Clerk UI renders unstyled.
-  // In dev, omit nonce from script-src: nonce + 'unsafe-inline' causes browsers
-  // to ignore inline scripts (Next dev boot, HMR).
-  const scriptSrc = isDev
-    ? ["'self'", clerkHosts, "'unsafe-eval'", "'unsafe-inline'"].join(" ")
-    : ["'self'", clerkHosts, "'unsafe-inline'"].join(" ");
+  // <style> tags without that nonce — do NOT put a nonce on style-src when
+  // Clerk styles are present: browsers ignore 'unsafe-inline' once a nonce is
+  // present and Clerk UI renders unstyled. Only enable nonce-based style-src
+  // when the application propagates the nonce to all inline styles.
+  // In dev, keep 'unsafe-eval' for Next.js dev boot / HMR.
+  const scriptSrc = useNonce
+    ? ["'self'", clerkHosts, isDev ? "'unsafe-eval'" : "", `'nonce-${nonce}'`].filter(Boolean).join(" ")
+    : isDev
+      ? ["'self'", clerkHosts, "'unsafe-eval'", "'unsafe-inline'"].join(" ")
+      : ["'self'", clerkHosts, "'unsafe-inline'"].join(" ");
+
+  const styleSrc = useNonce
+    ? ["'self'", `'nonce-${nonce}'`, clerkHosts, "https://cdn.jsdelivr.net"].join(" ")
+    : ["'self'", "'unsafe-inline'", clerkHosts, "https://cdn.jsdelivr.net"].join(" ");
 
   return [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
-    `style-src 'self' 'unsafe-inline' ${clerkHosts} https://cdn.jsdelivr.net`,
+    `style-src ${styleSrc}`,
     "img-src 'self' data: https: blob:",
     `media-src ${mediaSrc}`,
     `font-src 'self' data: ${clerkHosts}`,
@@ -145,7 +162,10 @@ function applyDashboardSecurityHeaders(request: NextRequest): NextResponse {
   // CSP is now always-on (was gated on DASHBOARD_CSP_ENABLED). Operators
   // who need to disable it temporarily can set DASHBOARD_CSP_ENABLED=false.
   if (process.env.DASHBOARD_CSP_ENABLED !== "false") {
-    response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
+    response.headers.set(
+      "Content-Security-Policy",
+      buildContentSecurityPolicy(isNonceBasedCspEnabled() ? nonce : undefined),
+    );
   }
 
   return response;
@@ -197,7 +217,7 @@ function handleConsoleAck(request: NextRequest): NextResponse {
     const redirectNonce = btoa(String.fromCharCode(...redirectNonceBytes));
     redirectResponse.headers.set(
       "Content-Security-Policy",
-      buildContentSecurityPolicy(redirectNonce),
+      buildContentSecurityPolicy(isNonceBasedCspEnabled() ? redirectNonce : undefined),
     );
   }
   return redirectResponse;

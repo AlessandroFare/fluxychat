@@ -1,6 +1,8 @@
 /** Throttle DO stream deltas (lower = snappier live UI; DO still batches DB writes). */
 const STREAM_PUSH_FLUSH_MS = 80;
 
+import { markdownTextChunk } from "./stream-chunks.js";
+
 export async function roomStreamOp(env, roomId, body) {
   const id = env.ROOM.idFromName(roomId);
   const res = await env.ROOM.get(id).fetch("https://internal/stream", {
@@ -42,12 +44,15 @@ export function createAgentStreamHooks(env, { projectId, roomId, userId, parentI
       const now = Date.now();
       if (now - lastPushMs < STREAM_PUSH_FLUSH_MS) return;
       lastPushMs = now;
+      // P22-E2: Wrap delta as structured stream chunk
+      const chunk = markdownTextChunk(fullContent);
       await roomStreamOp(env, roomId, {
         projectId,
         userId,
         op: "delta",
         messageId,
         content: fullContent,
+        chunk,
       });
     },
     async onEnd(fullContent) {

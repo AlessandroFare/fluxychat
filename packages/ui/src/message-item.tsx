@@ -1,381 +1,426 @@
 import * as React from "react";
-import type { FluxyChatMessage } from "@fluxy-chat/sdk";
+import type { FluxyChatAttachment, FluxyChatMessage } from "@fluxy-chat/sdk";
+import {
+  Message,
+  MessageHeader,
+  MessageContent,
+  MessageFooter,
+} from "./primitives/message";
+import {
+  Bubble,
+  BubbleContent,
+  BubbleReactions,
+} from "./primitives/bubble";
+import { Attachment, AttachmentMedia, AttachmentContent, AttachmentTitle, AttachmentDescription } from "./primitives/attachment";
+import { Marker, MarkerIcon, MarkerContent } from "./primitives/marker";
+import { cn } from "./lib/utils";
 import { renderContentWithMentions } from "./render-content-with-mentions";
 import { safeUrl } from "./safe-url";
+import { resolveMediaUrl } from "./resolve-media-url";
 
-export interface MessageItemProps {
-  message: FluxyChatMessage;
-  variant?: "user" | "agent";
-  agentLabel?: string;
-  reactions?: Record<string, number>;
-  seenByUserIds?: string[];
-  onReply?: () => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  onReact?: (emoji: string) => void;
+// ─── Icon helpers (avoid a hard dependency on lucide-react at the primitive level) ───
+
+/** Small file icon SVG — used when lucide-react is not in the bundle. */
+function FileIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+    </svg>
+  );
 }
 
+function ImageIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    </svg>
+  );
+}
+
+function ReplyIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="9 17 4 12 9 7" />
+      <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+    </svg>
+  );
+}
+
+function PencilIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    </svg>
+  );
+}
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    </svg>
+  );
+}
+
+function CornerDownRightIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="9 10 4 15 9 20" />
+      <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+    </svg>
+  );
+}
+
+// ─── OG Preview card ───
+
 function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["preview"]> }) {
-  // Sanitize the user-controlled preview URL (UI-1): never render an
-  // unsafe scheme (javascript:, data:, ...) into href. If the URL is
-  // unsafe we render the card without a link.
   const safeHref = safeUrl(preview.url);
   const safeImageHref = safeUrl(preview.imageUrl, { allowData: true });
   let hostname = safeHref ?? "";
   if (safeHref) {
-    try {
-      hostname = new URL(safeHref).hostname;
-    } catch {
-      /* keep raw */
-    }
+    try { hostname = new URL(safeHref).hostname; } catch { /* keep raw */ }
   }
-
   if (!safeHref) return null;
   return (
     <a
       href={safeHref}
       target="_blank"
       rel="noreferrer"
-      style={{
-        display: "block",
-        marginTop: 4,
-        textDecoration: "none",
-        color: "#111827",
-      }}
+      className="mt-2 block max-w-xs rounded-lg border border-border bg-card p-1.5 no-underline text-foreground transition-colors hover:bg-muted/50"
     >
-      <div
-        style={{
-          borderRadius: 6,
-          border: "1px solid #e5e7eb",
-          background: "white",
-          padding: 6,
-          display: "flex",
-          gap: 8,
-          maxWidth: 320,
-        }}
-      >
+      <div className="flex gap-2">
         {safeImageHref ? (
-          <img
-            src={safeImageHref}
-            alt={preview.title ?? ""}
-            style={{
-              width: 48,
-              height: 48,
-              objectFit: "cover",
-              borderRadius: 4,
-            }}
-          />
+          <img src={safeImageHref} alt={preview.title ?? ""} className="h-12 w-12 shrink-0 rounded-md object-cover" />
         ) : null}
-        <div style={{ flex: 1 }}>
-          {preview.title ? (
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                marginBottom: 2,
-                color: "#111827",
-              }}
-            >
-              {preview.title}
-            </div>
-          ) : null}
-          {preview.description ? (
-            <div
-              style={{
-                fontSize: 11,
-                color: "#6b7280",
-                maxHeight: 32,
-                overflow: "hidden",
-              }}
-            >
-              {preview.description}
-            </div>
-          ) : null}
-          <div
-            style={{
-              fontSize: 10,
-              color: "#9ca3af",
-              marginTop: 2,
-            }}
-          >
-            {hostname}
-          </div>
+        <div className="min-w-0 flex-1">
+          {preview.title ? <div className="truncate text-xs font-semibold">{preview.title}</div> : null}
+          {preview.description ? <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{preview.description}</div> : null}
+          <div className="mt-0.5 text-[10px] text-muted-foreground">{hostname}</div>
         </div>
       </div>
     </a>
   );
 }
 
-/** Single bubble: threading, OG preview, reactions, read receipts; optional AI badge. */
+// ─── Attachment renderer ───
+
+function AttachmentCard({
+  attachment,
+  mediaBaseUrl,
+}: {
+  attachment: FluxyChatAttachment;
+  mediaBaseUrl?: string;
+}) {
+  const kind = attachment.kind as string;
+  if (kind === "image") {
+    const src = safeUrl(resolveMediaUrl(attachment.url, mediaBaseUrl), { allowData: true });
+    if (!src) return null;
+    return (
+      <Attachment size="sm" className="mt-2">
+        <AttachmentMedia variant="image">
+          <img src={src} alt={attachment.name} className="aspect-square w-full object-cover" />
+        </AttachmentMedia>
+        <AttachmentContent>
+          <AttachmentTitle>{attachment.name}</AttachmentTitle>
+          {attachment.sizeBytes ? (
+            <AttachmentDescription>{(attachment.sizeBytes / 1024).toFixed(0)} KB</AttachmentDescription>
+          ) : null}
+        </AttachmentContent>
+      </Attachment>
+    );
+  }
+  if (kind === "audio") {
+    const src = safeUrl(resolveMediaUrl(attachment.url, mediaBaseUrl), { allowData: true });
+    if (!src) return null;
+    return (
+      <Attachment size="sm" className="mt-2">
+        <AttachmentMedia variant="icon">🎵</AttachmentMedia>
+        <AttachmentContent>
+          <AttachmentTitle>{attachment.name}</AttachmentTitle>
+          <audio controls src={src} className="mt-1 max-w-full" />
+        </AttachmentContent>
+      </Attachment>
+    );
+  }
+  if (kind === "location") {
+    const href = safeUrl(resolveMediaUrl(attachment.url, mediaBaseUrl));
+    if (!href) return null;
+    return (
+      <a href={href} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-primary underline underline-offset-2">
+        📍 {attachment.name || "View location"}
+      </a>
+    );
+  }
+  // Generic file
+  const href = safeUrl(resolveMediaUrl(attachment.url, mediaBaseUrl));
+  if (!href) return null;
+  return (
+    <Attachment size="sm" className="mt-2" state="done">
+      <AttachmentMedia>
+        <FileIcon className="size-4" />
+      </AttachmentMedia>
+      <AttachmentContent>
+        <AttachmentTitle>{attachment.name}</AttachmentTitle>
+        {attachment.sizeBytes ? (
+          <AttachmentDescription>{(attachment.sizeBytes / 1024).toFixed(0)} KB</AttachmentDescription>
+        ) : null}
+      </AttachmentContent>
+    </Attachment>
+  );
+}
+
+// ─── Reply quote ───
+
+function quoteSnippet(content: string, maxLen = 120): string {
+  const oneLine = content.replace(/\s+/g, " ").trim();
+  if (oneLine.length <= maxLen) return oneLine;
+  return `${oneLine.slice(0, maxLen)}…`;
+}
+
+// ─── Main MessageItem ───
+
+export interface MessageItemProps {
+  message: FluxyChatMessage;
+  /** When "agent" or when senderId !== userId, renders agent chrome (label + variant). */
+  variant?: "user" | "agent";
+  /** Label shown on agent badge (default: "agent"). */
+  agentLabel?: string;
+  /** Custom display name for the message author. Defaults to `message.userId`. */
+  authorName?: string;
+  /** Resolved parent message — rendered as a styled quote block when present. */
+  parentMessage?: FluxyChatMessage | null;
+  /** Emoji reaction tallies keyed by emoji. */
+  reactions?: Record<string, number>;
+  /** User IDs that have read this message. */
+  seenByUserIds?: string[];
+  /** Local user ID — used to detect "self" for alignment and seen-by filtering. */
+  localUserId?: string;
+  /** Base URL for resolving relative attachment paths (Worker origin). */
+  mediaBaseUrl?: string;
+  // ── Action callbacks ──
+  onReply?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onReact?: (emoji: string) => void;
+  /** Retry sending a failed optimistic message. Receives the clientMessageId. */
+  onRetry?: (clientMessageId: string) => void;
+  // ── Custom class names ──
+  className?: string;
+  /** Extra data attributes forwarded to the outermost element (e.g. data-testid). */
+  "data-testid"?: string;
+  /** Extra data-streaming attribute forwarded to the outermost element. */
+  "data-streaming"?: string;
+  /** Extra data-message-id attribute forwarded to the outermost element. */
+  "data-message-id"?: string;
+}
+
+/**
+ * Single chat message bubble built on shadcn `Message` + `Bubble` primitives.
+ * Supports: reply threading (resolved parent), streaming indicator (pulse+cursor),
+ * delivery status (pending/failed/retry), attachments, OG preview, reactions,
+ * seen-by, edit/delete actions, mention rendering, and agent/user alignment.
+ */
 export function MessageItem({
   message: m,
   variant = "user",
-  agentLabel = "AI",
+  agentLabel = "agent",
+  authorName,
+  parentMessage,
   reactions,
   seenByUserIds,
+  localUserId,
+  mediaBaseUrl,
   onReply,
   onEdit,
   onDelete,
   onReact,
+  onRetry,
+  className,
+  "data-testid": testId,
+  "data-streaming": dataStreaming,
+  "data-message-id": dataMessageId,
 }: MessageItemProps) {
-  const resolvedVariant =
-    variant === "agent"
-      ? "agent"
-      : m.senderId && m.senderId !== m.userId
-        ? "agent"
-        : "user";
+  const isAgent =
+    variant === "agent" || (m.senderId != null && m.senderId !== m.userId);
+  const isSelf = Boolean(localUserId && m.userId === localUserId);
+  const isStreaming = Boolean(m.streaming);
+  const parentId = m.parentId ?? null;
+
+  // Agent rooms: user on the right, agent + others on the left.
+  const align: "start" | "end" = isSelf ? "end" : "start";
+  const bubbleVariant = isSelf ? "sent" : isAgent ? "secondary" : "received";
+
+  // Seen-by: filter out local user (only meaningful for messages you sent)
+  const seenByOthers = isSelf
+    ? (seenByUserIds ?? []).filter((uid) => uid && uid !== localUserId)
+    : [];
+
+  // Header: author name + agent badge + delivery status
+  const displayName = authorName || m.userId;
 
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ fontSize: 11, color: "#777", display: "flex", gap: 6, alignItems: "center" }}>
-        <span>{m.userId}</span>
-        {resolvedVariant === "agent" ? (
-          <span
-            style={{
-              fontSize: 9,
-              textTransform: "uppercase",
-              letterSpacing: 0.06,
-              padding: "1px 6px",
-              borderRadius: 4,
-              background: "#312e81",
-              color: "#e0e7ff",
-            }}
-          >
-            {agentLabel}
+    <Message align={align} className={cn("gap-1", className)} data-testid={testId} data-streaming={dataStreaming} data-message-id={dataMessageId}>
+      <MessageContent>
+        <MessageHeader className={cn("px-0", align === "end" ? "justify-end text-right" : "justify-start")}>
+          <span className={cn("text-xs font-medium", isAgent ? "text-brand" : "text-muted-foreground")}>
+            {displayName}
           </span>
-        ) : null}
-      </div>
-      <div
-        style={{
-          display: "inline-flex",
-          alignItems: "flex-end",
-          gap: 6,
-        }}
-      >
-        <div
-          style={{
-            display: "inline-block",
-            padding: "8px 10px",
-            borderRadius: 14,
-            background: resolvedVariant === "agent" ? "#1e293b" : "#f3f4f6",
-            boxShadow: "0 1px 2px rgba(15,23,42,0.18)",
-            maxWidth: 320,
-            color: resolvedVariant === "agent" ? "#e5e7eb" : "#111827",
-            fontSize: 14,
-            lineHeight: 1.4,
-            border:
-              resolvedVariant === "agent" ? "1px solid rgba(99,102,241,0.35)" : undefined,
-          }}
-        >
-          {m.parentId ? (
-            <div
-              style={{
-                fontSize: 10,
-                color: "#9ca3af",
-                marginBottom: 2,
-              }}
-            >
-              Replying to #{m.parentId}
-            </div>
-          ) : null}
-          <div>
-            {renderContentWithMentions(m.content)}
-            {m.streaming ? (
-              <span
-                aria-hidden
-                style={{
-                  display: "inline-block",
-                  width: 6,
-                  height: 14,
-                  marginLeft: 4,
-                  verticalAlign: "text-bottom",
-                  borderRadius: 2,
-                  background: "currentColor",
-                  opacity: 0.55,
-                }}
-              />
-            ) : null}
-          </div>
-          {m.editedAt && !m.streaming ? (
-            <div
-              style={{
-                fontSize: 10,
-                color: "#9ca3af",
-                marginTop: 4,
-              }}
-            >
-              edited
-            </div>
-          ) : null}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {onReact ? (
-            <button
-              type="button"
-              onClick={() => onReact("👍")}
-              style={{
-                border: "none",
-                background: "transparent",
-                fontSize: 14,
-                cursor: "pointer",
-              }}
-            >
-              👍
-            </button>
-          ) : null}
-          {onReply ? (
-            <button
-              type="button"
-              onClick={onReply}
-              style={{
-                border: "none",
-                background: "transparent",
-                fontSize: 10,
-                color: "#6b7280",
-                cursor: "pointer",
-              }}
-            >
-              reply
-            </button>
-          ) : null}
-          {onEdit ? (
-            <button
-              type="button"
-              onClick={onEdit}
-              style={{
-                border: "none",
-                background: "transparent",
-                fontSize: 10,
-                color: "#6b7280",
-                cursor: "pointer",
-              }}
-            >
-              edit
-            </button>
-          ) : null}
-          {onDelete ? (
-            <button
-              type="button"
-              onClick={onDelete}
-              style={{
-                border: "none",
-                background: "transparent",
-                fontSize: 10,
-                color: "#b91c1c",
-                cursor: "pointer",
-              }}
-            >
-              delete
-            </button>
-          ) : null}
-        </div>
-      </div>
-      {m.attachments && m.attachments.length > 0 ? (
-        <div
-          style={{
-            marginTop: 4,
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
-        >
-          {m.attachments.map((a) => {
-            // Sanitize user-controlled attachment URL (UI-1). Unsafe
-            // schemes (javascript:, data:, ...) are dropped; such an
-            // attachment is shown as a plain, non-clickable label.
-            if (a.kind === "image") {
-              const imgSrc = safeUrl(a.url, { allowData: true });
-              if (!imgSrc) return null;
-              return (
-                <img
-                  key={a.url}
-                  src={imgSrc}
-                  alt={a.name}
-                  style={{
-                    maxWidth: 280,
-                    borderRadius: 12,
-                    border: "1px solid #e5e7eb",
-                  }}
-                />
-              );
-            }
-            if (a.kind === "audio") {
-              const audioSrc = safeUrl(a.url, { allowData: true });
-              if (!audioSrc) return null;
-              return (
-                <audio key={a.url} controls src={audioSrc} style={{ maxWidth: 280 }}>
-                  Your browser does not support the audio element.
-                </audio>
-              );
-            }
-            const fileHref = safeUrl(a.url);
-            if (!fileHref) return null;
-            if (a.kind === "location") {
-              return (
-                <a
-                  key={a.url}
-                  href={fileHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    fontSize: 12,
-                    color: "#2563eb",
-                    textDecoration: "none",
-                  }}
-                >
-                  📍 {a.name || "View location"}
-                </a>
-              );
-            }
-            return (
-              <a
-                key={a.url}
-                href={fileHref}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  fontSize: 12,
-                  color: "#2563eb",
-                  textDecoration: "none",
-                }}
-              >
-                📎 {a.name}
-              </a>
-            );
-          })}
-        </div>
-      ) : null}
-      {m.preview ? <OgPreviewCard preview={m.preview} /> : null}
-      {reactions ? (
-        <div
-          style={{
-            marginTop: 4,
-            display: "flex",
-            gap: 4,
-            flexWrap: "wrap",
-          }}
-        >
-          {Object.entries(reactions).map(([emoji, count]) => (
-            <span
-              key={emoji}
-              style={{
-                fontSize: 11,
-                background: "rgba(15,23,42,0.6)",
-                color: "#e5e7eb",
-                borderRadius: 999,
-                padding: "2px 6px",
-              }}
-            >
-              {emoji} {count}
+          {isAgent ? (
+            <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand ring-1 ring-brand/20">
+              {agentLabel}
             </span>
-          ))}
-        </div>
+          ) : null}
+          {m.deliveryStatus === "pending" ? (
+            <span className="text-[10px] text-muted-foreground">Sending…</span>
+          ) : null}
+          {m.deliveryStatus === "failed" ? (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive">
+              Failed to send
+              {m.clientMessageId && onRetry ? (
+                <button
+                  type="button"
+                  className="ml-0.5 rounded px-1 text-[10px] text-destructive hover:bg-destructive/10"
+                  onClick={() => onRetry(m.clientMessageId!)}
+                >
+                  Retry
+                </button>
+              ) : null}
+            </span>
+          ) : null}
+          {isStreaming ? (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+              </span>
+              streaming
+            </span>
+          ) : null}
+        </MessageHeader>
+
+        {/* ── Reply quote ── */}
+        {parentId && parentMessage ? (
+          <Marker variant="default" className="mb-1.5 rounded-md bg-muted/40 px-2.5 py-1.5" data-testid="message-reply-quote">
+            <MarkerIcon className="mt-0.5 shrink-0 text-primary">
+              <CornerDownRightIcon className="size-3" />
+            </MarkerIcon>
+            <MarkerContent>
+              <span className="font-medium text-foreground">{authorName || parentMessage.userId || parentMessage.userId}</span>
+              {": "}
+              {quoteSnippet(parentMessage.content || "")}
+            </MarkerContent>
+          </Marker>
+        ) : null}
+
+        {/* ── Bubble ── */}
+        <Bubble variant={bubbleVariant} align={align}>
+          <BubbleContent>
+            {/* Reply button (visible on hover, hidden while streaming) */}
+            {onReply && m.id && !isStreaming ? (
+              <div className={cn("mb-1 flex", align === "end" ? "justify-end" : "justify-start")}>
+                <button
+                  type="button"
+                  className="inline-flex h-6 items-center gap-1 rounded px-1.5 text-[10px] text-muted-foreground opacity-0 transition-opacity hover:bg-muted/60 hover:text-foreground group-hover/message:opacity-100"
+                  onClick={onReply}
+                  aria-label="Reply to message"
+                >
+                  <ReplyIcon className="size-3" />
+                  Reply
+                </button>
+              </div>
+            ) : null}
+
+            {/* ── Message body ── */}
+            <p className={cn("whitespace-pre-wrap break-words", isSelf ? "text-primary-foreground" : "text-foreground")}>
+              {renderContentWithMentions(m.content)}
+              {m.content || isStreaming ? null : "…"}
+              {isStreaming ? (
+                <span
+                  className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-primary align-middle"
+                  aria-hidden
+                />
+              ) : null}
+            </p>
+
+            {/* ── Edited label ── */}
+            {m.editedAt && !isStreaming ? (
+              <div className="mt-1 text-[10px] text-muted-foreground">edited</div>
+            ) : null}
+          </BubbleContent>
+
+          {/* ── Reactions ── */}
+          {reactions && Object.keys(reactions).length > 0 ? (
+            <BubbleReactions align={align} side="bottom">
+              {Object.entries(reactions).map(([emoji, count]) => (
+                <span key={emoji} className="text-sm">{emoji} {count}</span>
+              ))}
+            </BubbleReactions>
+          ) : null}
+        </Bubble>
+
+        {/* ── Attachments ── */}
+        {m.attachments && m.attachments.length > 0 ? (
+          <div className="mt-1 flex flex-col gap-2">
+            {m.attachments.map((a) => (
+              <AttachmentCard key={a.url} attachment={a} mediaBaseUrl={mediaBaseUrl} />
+            ))}
+          </div>
+        ) : null}
+
+        {/* ── OG preview ── */}
+        {m.preview ? <OgPreviewCard preview={m.preview} /> : null}
+      </MessageContent>
+
+      {/* ── Footer: seen-by + action buttons ── */}
+      {(seenByOthers.length > 0 || onEdit || onDelete || onReact) ? (
+        <MessageFooter className="mt-0.5 flex-wrap items-center gap-2">
+          {/* Edit / Delete / React */}
+          <span className="inline-flex items-center gap-1">
+            {onReact ? (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => onReact("👍")}
+                aria-label="React"
+              >
+                👍
+              </button>
+            ) : null}
+            {onEdit ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-0.5 rounded px-1 text-[10px] text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                onClick={onEdit}
+              >
+                <PencilIcon className="size-3" />
+                edit
+              </button>
+            ) : null}
+            {onDelete ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-0.5 rounded px-1 text-[10px] text-destructive hover:bg-destructive/10"
+                onClick={onDelete}
+              >
+                <TrashIcon className="size-3" />
+                delete
+              </button>
+            ) : null}
+          </span>
+
+          {/* Seen-by */}
+          {seenByOthers.length > 0 ? (
+            <span className="ml-auto text-[10px] text-muted-foreground" title={seenByOthers.length <= 3 ? `Seen by ${seenByOthers.join(", ")}` : undefined}>
+              Seen by {seenByOthers.length <= 3 ? seenByOthers.join(", ") : `${seenByOthers.length} people`}
+            </span>
+          ) : null}
+        </MessageFooter>
       ) : null}
-      {seenByUserIds && seenByUserIds.length > 0 ? (
-        <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>
-          Seen by {seenByUserIds.join(", ")}
-        </div>
-      ) : null}
-    </div>
+    </Message>
   );
 }

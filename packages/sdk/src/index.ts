@@ -10,6 +10,354 @@
 } from "./errors";
 
 export {
+  ChatError,
+  RateLimitError,
+  LockError,
+  NotImplementedError,
+} from "./structured-errors";
+
+export {
+  createLogger,
+  type Logger,
+} from "./logger";
+
+export type {
+  StreamingMarkdownRenderer,
+  StreamingMarkdownRendererOptions,
+} from "./streaming-markdown";
+
+export type {
+  LockScope,
+  ChannelVisibility,
+  Author,
+  UserInfo,
+  MessageMetadata,
+  RawMessage,
+  FormattedMessage,
+  FormatConverter,
+  ThreadAdapter,
+} from "./adapter-types";
+
+export type {
+  ButtonStyle,
+  TextStyle,
+  TableAlignment,
+  ActionType,
+  ButtonElement,
+  LinkButtonElement,
+  TextElement,
+  ImageElement,
+  DividerElement,
+  ActionsElement,
+  SectionElement,
+  FieldElement,
+  FieldsElement,
+  LinkElement,
+  TableElement,
+  CardChild,
+  CardElement,
+  AnyCardElement,
+} from "./cards";
+
+export type {
+  ToolPreset,
+  ToolName,
+  ToolDefinition,
+  PresetConfig,
+} from "./ai-tools";
+
+export type {
+  ToolOverride,
+  ToolOverridesConfig,
+  ToolWithOverrides,
+} from "./tool-overrides";
+
+export {
+  normalizeEmoji,
+  isValidEmoji,
+  getEmojiCategory,
+  EMOJI_CATEGORIES,
+} from "./emoji";
+
+export {
+  createPlan,
+  addTask,
+  updateTaskStatus,
+  getPlanProgress,
+  type Plan,
+  type PlanTask,
+  type TaskStatus,
+} from "./plan";
+
+export {
+  createMockAdapter,
+  MockAdapter,
+} from "./mock-adapter";
+
+export {
+  encryptToken,
+  decryptToken,
+  deriveKey,
+  isEncryptedTokenData,
+  TokenCrypto,
+} from "./token-crypto";
+
+export {
+  createThreadState,
+  createThreadStateStore,
+  type ThreadState,
+  type ThreadStateStore,
+} from "./thread-state";
+
+export {
+  useStreamingMarkdown,
+  type UseStreamingMarkdownResult,
+} from "./use-streaming-markdown";
+
+export {
+  createLLMMiddleware,
+  wrapLanguageModel,
+  composeMiddlewares,
+  type LLMCallParams,
+  type LLMCallResult,
+  type LLMStreamChunk,
+  type LLMMiddleware,
+  type TransformParamsFn,
+  type WrapGenerateFn,
+  type WrapStreamFn,
+} from "./llm-middleware";
+
+export {
+  createToolContextManager,
+  createScopedToolContext,
+  type ToolContext,
+  type ScopedToolContext,
+  type ToolContextScope,
+  type ToolContextManager,
+} from "./tool-context";
+
+export {
+  createStreamResumptionStore,
+  type StreamResumptionEntry,
+  type StreamResumptionStore,
+} from "./stream-resumption";
+
+export {
+  createApprovalStore,
+  createApprovalGate,
+  type ApprovalRequest,
+  type ApprovalStatus,
+  type ApprovalStore,
+  type ApprovalGate,
+} from "./hitl-approval";
+
+export {
+  streamToolCalls,
+  type ToolCallStreamChunk,
+  type ToolCallStreamOptions,
+} from "./tool-call-streaming";
+
+export {
+  createLoopController,
+  LOOP_PRESETS,
+  type LoopControlConfig,
+  type LoopController,
+  type LoopContext,
+} from "./loop-control";
+
+export {
+  mcpToolsToFluxyChat,
+  fluxyChatResultToMcp,
+  createMcpClient,
+  createMcpRegistry,
+  type McpServerConfig,
+  type McpToolDefinition,
+  type McpToolCall,
+  type McpToolResult,
+  type McpClient,
+  type McpRegistry,
+} from "./mcp-integration";
+
+export {
+  createDevTools,
+  spansToOtlp,
+  type DevToolsConfig,
+  type DevToolsSpanCollector,
+  type Span,
+  type SpanEvent,
+  type SpanAttributes,
+  type TraceExporter,
+  type OtlpTracePayload,
+} from "./devtools";
+
+export {
+  createWorkflowAgent,
+  createMemoryWorkflowStore,
+  type WorkflowStatus,
+  type StepStatus,
+  type WorkflowStep,
+  type WorkflowDefinition,
+  type WorkflowState,
+  type WorkflowStore,
+  type WorkflowAgent,
+} from "./workflow-agent";
+
+export {
+  createSandboxManager,
+  executeInSandbox,
+  type SandboxStatus,
+  type SandboxConfig,
+  type SandboxExecutionResult,
+  type Sandbox,
+  type SandboxManager,
+} from "./sandbox";
+
+export {
+  createPlatformAdapter,
+  createBotDeploymentManager,
+  type Platform,
+  type PlatformMessage,
+  type PlatformReply,
+  type PlatformAdapter,
+  type BotDeploymentConfig,
+  type BotDeployment,
+  type BotDeploymentManager,
+} from "./cross-platform";
+
+export {
+  createVoiceManager,
+  audioToBase64,
+  base64ToAudio,
+  type VoiceStatus,
+  type VoiceConfig,
+  type VoiceChunk,
+  type VoiceSession,
+  type VoiceManager,
+} from "./voice";
+
+export {
+  createProviderToolRegistry,
+  PROVIDER_TOOL_SETS,
+  providerToolsToSchema,
+  type ProviderDefinedTool,
+  type ProviderToolContext,
+  type ProviderToolSet,
+  type ProviderToolRegistry,
+} from "./provider-tools";
+
+export {
+  createHTTPTransport,
+  createSSETransport,
+  createWebSocketTransport,
+  createTransportRegistry,
+  type TransportConfig,
+  type TransportRequest,
+  type TransportResponse,
+  type Transport,
+  type TransportFactory,
+  type TransportRegistry,
+} from "./transport";
+
+export {
+  createDataPartRegistry,
+  BUILTIN_PARSERS,
+  parsePartialJSON,
+  useObject,
+  type DataPart,
+  type StreamPart,
+  type DataPartParser,
+  type DataPartRegistry,
+  type UseObjectOptions,
+  type UseObjectResult,
+} from "./data-parts";
+
+export {
+  structuredOutputPrompt,
+  parseStructuredOutput,
+  validateAgainstSchema,
+  withStructuredOutput,
+  type StructuredOutputConfig,
+  type StructuredOutputResult,
+} from "./structured-output";
+
+export {
+  createImageGenerator,
+  IMAGE_GENERATION_TOOL,
+  type ImageSize,
+  type ImageQuality,
+  type ImageStyle,
+  type ImageGenerationConfig,
+  type ImageGenerationRequest,
+  type ImageGenerationResult,
+  type ImageGenerator,
+} from "./image-generation";
+
+export {
+  createTextToSpeech,
+  TTS_TOOL,
+  type TTSVoice,
+  type TTSConfig,
+  type TTSRequest,
+  type TTSResult,
+  type TextToSpeech,
+} from "./tts";
+
+export {
+  createSlashCommandRegistry,
+  BUILTIN_COMMANDS,
+  type SlashCommand,
+  type ParsedArgs,
+  type CommandContext,
+  type CommandResult,
+  type SlashCommandRegistry,
+} from "./slash-commands";
+
+export {
+  createAgentCommunicationBus,
+  delegateToAgent,
+  type AgentMessage,
+  type AgentMessageHandler,
+  type AgentCommunicationBus,
+} from "./agent-to-agent";
+
+export {
+  createPromptRenderer,
+  createPromptTemplateRegistry,
+  BUILTIN_PROMPT_TEMPLATES,
+  type PromptTemplate,
+  type PromptRenderer,
+  type PromptTemplateRegistry,
+} from "./dynamic-prompts";
+
+export {
+  createToolCallAnnotationStore,
+  createStatusAnnotation,
+  createProgressAnnotation,
+  createResultAnnotation,
+  createErrorAnnotation,
+  type ToolCallAnnotation,
+  type ToolCallAnnotationStore,
+} from "./tool-annotations";
+
+export {
+  createMetadataStore,
+  METADATA_KEYS,
+  type MessageMetadataMap,
+  type MetadataStore,
+} from "./message-metadata";
+
+export {
+  createAttachmentManager,
+  mimeToAttachmentType,
+  formatFileSize,
+  type AttachmentType,
+  type AttachmentConfig,
+  type Attachment,
+  type AttachmentUploadResult,
+  type AttachmentManager,
+} from "./attachments";
+
+export {
   FLUXY_INBOUND_EVENT_TYPES,
   FLUXY_OUTBOUND_EVENT_TYPES,
   FLUXY_PROTOCOL_VERSION,
@@ -76,6 +424,13 @@ export {
   decryptE2eContent,
   type FluxyE2eEnvelope,
 } from "./room-e2e";
+
+export {
+  buildDeepResearchPrompt,
+  buildWebSearchPrompt,
+  buildImageGenerationCaption,
+  type ComposerToolPromptOptions,
+} from "./composer-prompts";
 
 export {
   createFluxyRoomStore,
@@ -166,6 +521,12 @@ export interface FluxyChatMessage {
   expiresAt?: string | null;
   visibility?: "room" | "whisper";
   visibleTo?: string[];
+  /**
+   * Reaction tallies keyed by emoji (e.g. `{ "👍": 2 }`). Client-side for now;
+   * the Worker does not persist these yet, so the map is assembled by the UI
+   * from local interactions. Optional — absent means "no reactions".
+   */
+  reactions?: Record<string, number>;
   /** Message kind. `text` is the default and is implicit; `voice` is set
    *  by `POST /messages/voice` and carries audio metadata + a possibly
    *  pending transcription. */
@@ -192,7 +553,10 @@ export interface FluxyChatMessage {
 
 export interface FluxyChatAttachment {
   id?: number;
-  kind: string; // 'image' | 'file' | 'audio' | etc.
+  /** Attachment category. The known kinds drive rendering (`image`, `file`,
+   *  `audio`, `location`); the `string & {}` tail keeps the type open so
+   *  callers can pass custom kinds without a cast. */
+  kind: "image" | "file" | "audio" | "location" | (string & {});
   url: string;
   name: string;
   sizeBytes?: number;
@@ -526,8 +890,8 @@ export interface FluxyRoomLive {
 }
 
 export type FluxyChatEvent =
-  | { type: "history"; messages: FluxyChatMessage[] }
-  | { type: "replay"; messages: FluxyChatMessage[] }
+  | { type: "history"; messages: FluxyChatMessage[]; reactions?: Record<number, Record<string, number>> }
+  | { type: "replay"; messages: FluxyChatMessage[]; reactions?: Record<number, Record<string, number>> }
   | {
       type: "streamState";
       messageId: number;
@@ -2008,6 +2372,79 @@ export class FluxyChatClient {
     };
   }
 
+  /**
+   * Generate an image via Worker `POST /ai-images/generate` (requires JWT).
+   * Returns attachment fields suitable for composing a chat message when successful.
+   */
+  async generateAiImage(
+    roomId: string,
+    prompt: string,
+    options?: {
+      size?: string;
+      quality?: string;
+      style?: string;
+      model?: string;
+      messageId?: number;
+    },
+  ): Promise<{
+    ok: boolean;
+    attachment?: FluxyChatAttachment;
+    id?: string;
+    revisedPrompt?: string;
+    error?: string;
+    details?: string;
+  }> {
+    if (!this.token) {
+      throw new Error("JWT is required for image generation");
+    }
+    const url = new URL("/ai-images/generate", this.baseUrl).toString();
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify({
+        roomId,
+        prompt,
+        size: options?.size,
+        quality: options?.quality,
+        style: options?.style,
+        model: options?.model,
+        messageId: options?.messageId,
+      }),
+    });
+    const json = (await res.json()) as {
+      ok?: boolean;
+      error?: string;
+      details?: string;
+      id?: string;
+      imageUrl?: string;
+      revisedPrompt?: string;
+    };
+    if (!res.ok || !json.ok || !json.imageUrl) {
+      return {
+        ok: false,
+        error: json.error || `Image generation failed (${res.status})`,
+        details: json.details,
+      };
+    }
+    const imageUrl = json.imageUrl.startsWith("http")
+      ? json.imageUrl
+      : new URL(json.imageUrl, this.baseUrl).toString();
+    return {
+      ok: true,
+      id: json.id,
+      revisedPrompt: json.revisedPrompt,
+      attachment: {
+        kind: "image",
+        url: imageUrl,
+        name: `generated-${json.id?.slice(0, 8) || "image"}.png`,
+        contentType: "image/png",
+      },
+    };
+  }
+
   async editMessageRest(messageId: number, content: string): Promise<void> {
     if (!this.token) return;
     const url = new URL(`/messages/${messageId}`, this.baseUrl);
@@ -2927,6 +3364,69 @@ export async function enableWebPushInBrowser(
   if (!result.ok) return { ok: false, error: "register_failed" };
   return { ok: true, subscription: sub };
 }
+
+// P22-D3: Concurrency Strategy
+export type {
+  ConcurrencyStrategy,
+  ConcurrencyConfig,
+  QueueEntry,
+  ConcurrencyStrategyInstance,
+} from "./concurrency";
+
+// P22-F1: Transcripts API
+export type {
+  TranscriptRole,
+  TranscriptEntry,
+  AppendInput,
+  AppendOptions,
+  ListQuery,
+  DeleteTarget,
+  TranscriptsApi,
+} from "./transcripts";
+
+// P22-F3: Callback URL
+export type {
+  StoredCallback,
+  ProcessedButton,
+  CallbackUrlApi,
+} from "./callback-url";
+
+// P22-F4: Modal Context
+export type {
+  ModalStep,
+  ModalDefinition,
+  ModalState,
+} from "./modal-context";
+
+// P22-F5: Lock Scope
+export type {
+  LockScopeType,
+  LockPlatform,
+  LockResource,
+  LockScopeHandle,
+} from "./lock-scope";
+
+// P22-F6: Identity Resolver
+export type {
+  PlatformIdentity,
+  UnifiedIdentity,
+} from "./identity-resolver";
+
+// P22-F7: StreamingPlan
+export type {
+  StreamingPlanTaskStatus,
+  StreamingPlanTask,
+  StreamingPlanModel,
+  StreamingPlanModelTask,
+  StreamingPlanContent,
+  StartStreamingPlanOptions,
+  AddStreamingPlanTaskOptions,
+  UpdateStreamingPlanTaskInput,
+  CompleteStreamingPlanOptions,
+  StreamingPlanOptions,
+  StreamingPlanApi,
+  StreamingPlanWrapper,
+} from "./streaming-plan";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);

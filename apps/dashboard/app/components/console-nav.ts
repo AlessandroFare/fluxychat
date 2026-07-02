@@ -13,12 +13,15 @@ import {
   Headphones,
   Inbox,
   LayoutDashboard,
+  LayoutTemplate,
   MessageSquare,
   Plug,
   Search,
+  Settings2,
   Sparkles,
   Shield,
   ShieldCheck,
+  Terminal,
 } from "lucide-react";
 import { MARKETING_PATH_PREFIXES } from "@/lib/hosted-product";
 
@@ -43,6 +46,11 @@ export const CONSOLE_NAV_MAIN: ConsoleNavItem[] = [
 
 export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
   { href: "/features", label: "Features", icon: Sparkles, description: "P12–P20 capability overview" },
+  { href: "/devtools", label: "DevTools", icon: Terminal, description: "AI DevTools playground — stream inspector, tool calls, token stats" },
+  { href: "/playground", label: "Card Builder", icon: LayoutTemplate, description: "Visually compose rich message cards" },
+  { href: "/cli", label: "CLI", icon: Code2, description: "Scaffold new projects with create-fluxy-chat" },
+  { href: "/security", label: "Security", icon: Shield, description: "Error hierarchy, token encryption, security checklist" },
+  { href: "/middleware", label: "Middleware", icon: Settings2, description: "Configure LLM middleware pipeline stages" },
   { href: "/integrations", label: "Integrations", icon: Plug, description: "Turnstile demo + Sent.dm SMS" },
   { href: "/custom-domains", label: "Custom domains", icon: Globe, description: "White-label chat.yourcompany.com" },
   { href: "/embed", label: "Embed widget", icon: Code2, description: "One-line script for your website" },

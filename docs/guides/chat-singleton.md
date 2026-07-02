@@ -1,0 +1,127 @@
+# Chat Singleton for Thread Deserialization
+
+FluxyChat's chat singleton (P26-C3) provides a global registry so that `ThreadRef.fromJSON()` can resolve adapters without an explicit `Chat` instance being passed through every call.
+
+## Overview
+
+When serialized threads are stored in D1, KV, or passed through workflow engines, deserializing them back into usable `ThreadRef` objects requires access to the adapter registry. The singleton pattern avoids threading a `Chat` instance through every serialization boundary.
+
+**Source:** `apps/worker/src/lib/chat-singleton.js`
+
+## Registration
+
+Register a Chat instance at application startup. The first registered instance becomes the default.
+
+```js
+import { registerChatInstance } from "@fluxy-chat/sdk";
+
+// During worker initialization
+const api = createChatApi({ env, db, roomStub });
+registerChatInstance("default", api);
+
+// Or register multiple instances (e.g., multi-tenant)
+registerChatInstance("project-123", projectApi);
+registerChatInstance("project-456", otherProjectApi);
+```
+
+## Resolution
+
+### Resolve an adapter
+
+```js
+import { resolveAdapter } from "@fluxy-chat/sdk";
+
+// Uses the default instance
+const slack = resolveAdapter("slack");
+await slack.postMessage(threadId, "Hello!");
+```
+
+### Get a specific instance
+
+```js
+import { getChatInstance } from "@fluxy-chat/sdk";
+
+const api = getChatInstance("project-123");
+const thread = api.thread("slack:C123:1234567890.123456");
+```
+
+### Get the default instance
+
+```js
+import { getChatInstance } from "@fluxy-chat/sdk";
+
+const api = getChatInstance(); // no name → default instance
+```
+
+## Introspection
+
+```js
+import {
+  hasChatInstance,
+  listChatInstances,
+  getDefaultChatInstanceName,
+} from "@fluxy-chat/sdk";
+
+console.log(hasChatInstance());                    // true
+console.log(listChatInstances());                  // ["default", "project-123"]
+console.log(getDefaultChatInstanceName());         // "default"
+```
+
+## Changing the Default
+
+```js
+import { setDefaultChatInstance } from "@fluxy-chat/sdk";
+
+// Switch the default to a different instance
+setDefaultChatInstance("project-456");
+```
+
+## Cleanup
+
+```js
+import { unregisterChatInstance, clearChatInstances } from "@fluxy-chat/sdk";
+
+// Remove one instance
+unregisterChatInstance("project-123");
+// If it was the default, the next remaining instance becomes default
+
+// Clear all (useful in tests)
+clearChatInstances();
+```
+
+## Use Case: D1 Round-Trip with Reviver
+
+The singleton enables the `reviver()` to deserialize threads from JSON stored in D1:
+
+```js
+import { registerChatInstance, parseChatJSON } from "@fluxy-chat/sdk";
+
+// 1. Register at startup
+registerChatInstance("default", createChatApi({ env, db }));
+
+// 2. Store a thread in D1
+const thread = chat.thread("slack:C123:1234567890.123456");
+await db.prepare("INSERT INTO workflow_state (id, data) VALUES (?, ?)")
+  .bind("wf-1", JSON.stringify(thread))
+  .run();
+
+// 3. Retrieve and deserialize — no explicit Chat instance needed
+const row = await db.prepare("SELECT data FROM workflow_state WHERE id = ?").bind("wf-1").first();
+const data = parseChatJSON(row.data);
+// data is a ThreadRef with adapterSlug resolved via the singleton
+```
+
+## Multi-Tenant Pattern
+
+For multi-tenant deployments, register one instance per project:
+
+```js
+// On each request, set the default to the current project
+setDefaultChatInstance(`project-${request.projectId}`);
+// Now all singleton calls resolve to this project's adapters
+```
+
+## See Also
+
+- [Unified Chat API](./unified-chat-api.md) — `chat.thread()`, `chat.openDM()`, `chat.getUser()`
+- [Postable Objects](./postable-objects.md) — Objects that can be posted to threads

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ConsoleShell } from "../components/console-shell";
-import { ConsolePageHeader } from "../components/console-page-header";
 import { Banner } from "../components/ui";
 import { OnboardingPlayground } from "./onboarding-playground";
 import { OnboardingProgressStrip } from "./onboarding-progress-strip";
@@ -13,10 +12,14 @@ export default function OnboardingPage() {
 
   return (
     <ConsoleShell data-testid="onboarding-page">
-      <ConsolePageHeader
-        title="Get started in 5 steps"
-        description="You will send a real message over a live WebSocket. Each step builds on the last."
-      />
+      {/* Hide progress strip on the Welcome step (step 0) — it has its own full-screen hero */}
+      {wizard.activeStep > 0 && (
+        <OnboardingProgressStrip
+          stepContext={wizard.stepContext}
+          activeStep={wizard.activeStep}
+          onStepClick={(s) => wizard.setActiveStep(s)}
+        />
+      )}
 
       {wizard.notice && !wizard.error ? (
         <div className="mb-4">
@@ -36,23 +39,24 @@ export default function OnboardingPage() {
         </div>
       ) : null}
 
-      <OnboardingProgressStrip
-        stepContext={wizard.stepContext}
-        activeStep={wizard.activeStep}
-        onStepClick={(s) => wizard.setActiveStep(s)}
-      />
       <OnboardingPlayground wizard={wizard} />
 
-      <p className="mt-6 text-xs text-muted-foreground">
-        Your messages are stored on the Worker running at{" "}
-        <code className="rounded border border-border bg-muted/50 px-1 font-mono text-[10px] text-slate-700">
-          {wizard.workerUrl}
-        </code>{" "}
-        &middot; Need a different Worker?{" "}
-        <Link href="/projects" className="font-medium text-foreground underline-offset-4 hover:underline">
-          Switch project
-        </Link>
-      </p>
+      {/* Footer with worker URL — hidden on Welcome step */}
+      {wizard.activeStep > 0 && (
+        <p className="mt-6 text-xs text-muted-foreground">
+          Your messages are stored on the Worker running at{" "}
+          <code className="rounded border border-border bg-muted/50 px-1 font-mono text-[10px] text-slate-700">
+            {wizard.workerUrl}
+          </code>{" "}
+          &middot; Need a different Worker?{" "}
+          <Link
+            href="/projects"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Switch project
+          </Link>
+        </p>
+      )}
     </ConsoleShell>
   );
 }

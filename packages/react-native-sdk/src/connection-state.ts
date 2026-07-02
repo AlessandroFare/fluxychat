@@ -1,7 +1,7 @@
 import { computeReconnectBackoffMs } from './errors';
 
 export type FluxyChatTransport = 'websocket' | 'sse' | 'polling' | 'none';
-export type FluxyConnectionStateStatus = 'connected' | 'connecting' | 'reconnecting' | 'polling' | 'sse' | 'disconnected';
+export type FluxyConnectionStateStatus = 'connected' | 'connecting' | 'reconnecting' | 'polling' | 'sse' | 'disconnected' | 'idle';
 
 export interface FluxyConnectionState {
   status: FluxyConnectionStateStatus;

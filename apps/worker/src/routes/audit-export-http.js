@@ -1,4 +1,5 @@
 import { resolveAdminContext } from "../lib/admin-route-context.js";
+import { validateLimit } from "../lib/validation.js";
 import {
   createExportSchedule,
   listExportSchedules,
@@ -57,6 +58,8 @@ export async function dispatchAuditExportRoutes(request, url, h) {
   }
 
   if (request.method === "GET" && path === "/admin/audit-export/events") {
+    const limitResult = validateLimit(url.searchParams.get("limit"), { defaultValue: 5000, max: 5000 });
+    if (limitResult.error) return respond({ error: "bad_request", message: limitResult.error }, h, 400);
     const events = await queryFilteredAuditEvents(env, {
       projectId,
       startTime: url.searchParams.get("startTime"),
@@ -65,7 +68,7 @@ export async function dispatchAuditExportRoutes(request, url, h) {
       action: url.searchParams.get("action"),
       resourceType: url.searchParams.get("resourceType"),
       severity: url.searchParams.get("severity"),
-      limit: parseInt(url.searchParams.get("limit") || "5000", 10),
+      limit: limitResult.value,
     });
     return respond({ events }, h);
   }
@@ -80,8 +83,9 @@ export async function dispatchAuditExportRoutes(request, url, h) {
   }
 
   if (request.method === "GET" && path === "/admin/audit-export/runs") {
-    const limit = parseInt(url.searchParams.get("limit") || "20", 10);
-    const runs = await getExportRuns(env, { projectId, limit });
+    const limitResult = validateLimit(url.searchParams.get("limit"), { defaultValue: 20, max: 1000 });
+    if (limitResult.error) return respond({ error: "bad_request", message: limitResult.error }, h, 400);
+    const runs = await getExportRuns(env, { projectId, limit: limitResult.value });
     return respond({ runs }, h);
   }
 

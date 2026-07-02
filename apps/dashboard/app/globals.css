@@ -44,6 +44,34 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08);
   --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+
+  /* FLUXYCHAT — BUBBLE COLOR SYSTEM */
+  --fluxy-logo-color: #FF6A1A;
+  --fluxy-cta-color: #C2410C;
+
+  /* Sent bubble: full brand orange */
+  --fluxy-bubble-sent-bg: #FF6A1A;
+  --fluxy-bubble-sent-text: #FFFFFF;
+
+  /* Received bubble: light warm tint */
+  --fluxy-bubble-received-bg: rgba(255, 106, 26, 0.08);
+  --fluxy-bubble-received-border: rgba(255, 106, 26, 0.15);
+  --fluxy-bubble-received-text: #1A1A1A;
+
+  --fluxy-mention-bg: rgba(255, 106, 26, 0.18);
+  --fluxy-mention-text: #C2410C;
+
+  --fluxy-header-bg: #C2410C;
+  --fluxy-header-text: #FFFFFF;
+  --fluxy-header-subtext: rgba(255, 255, 255, 0.75);
+
+  --fluxy-btn-primary-bg: #C2410C;
+  --fluxy-btn-primary-text: #FFFFFF;
+  --fluxy-btn-primary-hover-bg: #9A3A0A;
+
+  --fluxy-banner-bg: rgba(194, 65, 12, 0.05);
+  --fluxy-banner-border: rgba(194, 65, 12, 0.15);
+  --fluxy-banner-text: #C2410C;
 }
 
 .dark {
@@ -477,5 +505,87 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .fluxy-pillar-bento--glow::after {
     display: none;
+  }
+}
+
+/* ─── shadcn chat component utilities (MessageScroller / Attachment / Marker) ───
+   These are referenced by the shadcn-generated primitives (message-scroller.tsx,
+   attachment.tsx) but not provided by `shadcn/dist/tailwind.css` or
+   `tw-animate-css`. Defined here as plain utilities so they work without
+   requiring the tailwind plugins shadcn assumes. */
+
+/* Edge-fade mask for scroll containers (bottom edge). */
+.scroll-fade-b {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+}
+
+/* Edge-fade mask for horizontal scrollers (both edges). */
+.scroll-fade-x {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+}
+
+/* Thin scrollbar styling for the message scroller viewport. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Stable scrollbar gutter so content doesn't shift when a scrollbar appears. */
+.scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+
+/* Hide scrollbar entirely (used while auto-scrolling). */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Shimmer — a moving gradient sweep used by "thinking…" / uploading states.
+   Applied as a background overlay via the `.shimmer` class on the element. */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0,
+    color-mix(in oklab, var(--foreground) 8%, transparent) 50%,
+    transparent 100%
+  );
+  animation: fc-shimmer 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes fc-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer::after {
+    animation: none;
+    opacity: 0.4;
   }
 }

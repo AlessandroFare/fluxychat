@@ -101,7 +101,7 @@ export function CloudflareCostTable({ variant = "dark" }: { variant?: "dark" | "
               : "text-foreground underline underline-offset-2 hover:text-primary"
           }
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
         >
           Cloudflare&apos;s current pricing
         </Link>{" "}

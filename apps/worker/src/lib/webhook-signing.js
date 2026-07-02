@@ -40,6 +40,11 @@ export function isPlaintextWebhookSecretAllowed(env) {
   if (String(env.HOSTED_MULTI_TENANT || "").trim() === "true") {
     return false;
   }
+  // Phase-4: In production, plaintext secrets are never allowed.
+  // An operator must configure WEBHOOK_SECRET_ENCRYPTION_KEY.
+  if (String(env.NODE_ENV || "").trim().toLowerCase() === "production") {
+    return false;
+  }
   return true;
 }
 

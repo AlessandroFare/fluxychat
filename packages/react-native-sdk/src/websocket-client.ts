@@ -27,7 +27,7 @@ export class WebSocketClient {
     return this._status;
   }
 
-  connect(roomId: string): void {
+  connect(roomId: string): WebSocket {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.disconnect();
     }
@@ -57,20 +57,23 @@ export class WebSocketClient {
       this.ws.onclose = (event) => {
         this.log('WebSocket closed', event.code, event.reason);
         this.stopPing();
+
+        this.ws = null;
+        this.setStatus('disconnected');
         if (event.code !== 1000) {
           this.attemptReconnect(roomId);
-        } else {
-          this.setStatus('disconnected');
         }
       };
 
       this.ws.onerror = (error) => {
         this.log('WebSocket error', error);
-        this.ws?.close();
       };
+
+      return this.ws;
     } catch (e) {
       this.log('Failed to create WebSocket', e);
       this.attemptReconnect(roomId);
+      throw e;
     }
   }
 

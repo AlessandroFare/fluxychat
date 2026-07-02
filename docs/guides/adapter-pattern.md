@@ -1,0 +1,97 @@
+# Multi-Platform Adapter Pattern
+
+FluxyChat's adapter system lets you connect any messaging platform through a unified interface. Each adapter handles webhook parsing, message posting, threading, and format conversion for its platform.
+
+## Overview
+
+The adapter pattern (P22-A) abstracts platform-specific concerns behind a common `Adapter<TRawMessage>` interface. This lets you add new platforms without modifying core worker code.
+
+**14 platforms supported:** Web, Slack, Microsoft Teams, Discord, Telegram, WhatsApp, Google Chat, GitHub, Linear, Matrix, Resend (Email), IRC, Twitch, Line, and a generic API adapter.
+
+## Adapter Interface
+
+Every adapter implements:
+
+```ts
+interface Adapter<TRawMessage> {
+  handleWebhook(raw: Request): Promise<TRawMessage>;
+  parseMessage(raw: TRawMessage): ParsedMessage;
+  postMessage(threadId: string, content: string): Promise<void>;
+  editMessage(threadId: string, messageId: string, content: string): Promise<void>;
+  deleteMessage(threadId: string, messageId: string): Promise<void>;
+  stream(threadId: string, content: ReadableStream): Promise<void>;
+  encodeThreadId(parts: ThreadIdParts): string;
+  decodeThreadId(threadId: string): ThreadIdParts;
+  formatConverter: FormatConverter;
+  lockScope: "thread" | "channel";
+}
+```
+
+## Format Converter
+
+Each adapter includes a `FormatConverter` that translates between canonical mdast (Markdown Abstract Syntax Tree) and the platform's native format:
+
+- **Slack:** mrkdwn with Block Kit
+- **Teams:** Adaptive Cards
+- **Discord:** Markdown with embeds
+- **Telegram:** MarkdownV2 with inline keyboards
+- **WhatsApp:** Plain text with formatting shortcuts
+- **Web:** Full markdown rendering
+
+```ts
+import { getAdapter } from "@fluxy-chat/sdk";
+
+const slack = getAdapter("slack");
+const threadId = slack.encodeThreadId({ channelId: "C123", ts: "1234" });
+// "slack:C123:1234"
+
+const parsed = slack.parseMessage(rawWebhookBody);
+await slack.postMessage(threadId, "Hello from FluxyChat!");
+```
+
+## WebAdapter
+
+The `WebAdapter` wraps FluxyChat's native WebSocket + REST flow into the adapter interface. It's the default adapter and is registered at worker startup.
+
+```ts
+import { getAdapter } from "@fluxy-chat/sdk";
+
+const web = getAdapter("web");
+const threadId = web.encodeThreadId({ userId: "alice", roomId: "general" });
+// "web:alice:general"
+```
+
+## Adding a Custom Adapter
+
+```ts
+import { BaseAdapter } from "@fluxy-chat/sdk";
+
+class MyAdapter extends BaseAdapter {
+  slug = "myapp" as const;
+
+  async handleWebhook(req: Request) { /* ... */ }
+  parseMessage(raw: MyRawMessage) { /* ... */ }
+  async postMessage(threadId: string, content: string) { /* ... */ }
+  // ... implement remaining methods
+}
+```
+
+## Adapter Catalog
+
+The static adapter registry (`adapters-http.js`) provides metadata for discovery and onboarding UIs:
+
+```ts
+import { listAdapters } from "@fluxy-chat/sdk";
+
+const adapters = listAdapters();
+// [{ slug: "web", name: "Web", packageName: "@fluxy-chat/adapter-web" }, ...]
+```
+
+## Lock Scope
+
+Adapters declare whether they lock at the **thread** level (Slack, Discord) or **channel** level (WhatsApp, Telegram). This prevents concurrent message processing conflicts per platform's threading model.
+
+## See Also
+
+- [Streaming Markdown Guide](./streaming-markdown.md) — How markdown renders during streaming
+- [Card Builder Guide](./card-builder.md) — Rich message elements across platforms

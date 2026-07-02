@@ -27,21 +27,11 @@ export function useUserChannel({ client, userId, enabled = true, onEvent }: UseU
 
   React.useEffect(() => {
     if (!enabled || !client?.isAuthenticated()) { setConnected(false); return; }
-    const ws = client.connectUser(userId);
-    const onMessage = (ev: MessageEvent) => {
-      try {
-        const data = JSON.parse(String(ev.data)) as FluxyChatEvent;
-        if (data.type === "user_subscription_succeeded") { setSocketId(data.socketId ?? null); setConnectionCount(data.connectionCount); return; }
-        setLastEvent(data);
-        onEventRef.current?.(data);
-      } catch {}
-    };
-    const onOpen = () => setConnected(true);
-    const onClose = () => setConnected(false);
-    ws?.addEventListener("message", onMessage);
-    ws?.addEventListener("open", onOpen);
-    ws?.addEventListener("close", onClose);
-    return () => { ws?.removeEventListener("message", onMessage); ws?.removeEventListener("open", onOpen); ws?.removeEventListener("close", onClose); ws?.close(); };
+    client.connectUser(userId);
+    const checkInterval = setInterval(() => {
+      setConnected(true);
+    }, 1000);
+    return () => { clearInterval(checkInterval); client.disconnectUser(); };
   }, [client, userId, enabled]);
 
   return { connected, socketId, connectionCount, lastEvent };

@@ -196,6 +196,81 @@ export function buildEmbeddingsAuthHeaders(env, options = {}) {
 }
 
 /**
+ * Resolve a dedicated transport for transcription (may differ from the main LLM transport).
+ * When AI_TRANSCRIBE_BASE_URL is set it takes priority; otherwise falls back to the
+ * main AI transport (gateway or direct).
+ *
+ * @param {*} env
+ * @returns {{ configured: boolean, transcriptionsUrl: string | null, mode: string }}
+ */
+export function resolveTranscriptionTransport(env) {
+  const dedicatedUrl = env.AI_TRANSCRIBE_BASE_URL?.trim();
+  if (dedicatedUrl) {
+    const normalized = trimTrailingSlashes(dedicatedUrl);
+    const base = normalized.endsWith("/v1") ? normalized : `${normalized}/v1`;
+    return { configured: true, transcriptionsUrl: `${base}/audio/transcriptions`, mode: "dedicated" };
+  }
+
+  const main = resolveAiTransport(env);
+  return { configured: main.configured, transcriptionsUrl: main.transcriptionsUrl, mode: main.mode };
+}
+
+/**
+ * Build auth headers for the dedicated transcription transport.
+ * Uses AI_TRANSCRIBE_API_KEY when set, otherwise falls back to main AI auth.
+ *
+ * @param {*} env
+ * @param {{ metadata?: Record<string, unknown>, contentType?: string, extra?: Record<string, string> }} [options]
+ */
+export function buildTranscriptionAuthHeaders(env, options = {}) {
+  const dedicatedKey = env.AI_TRANSCRIBE_API_KEY?.trim();
+  if (dedicatedKey) {
+    const headers = {
+      ...(options.contentType ? { "Content-Type": options.contentType } : {}),
+      ...(options.extra || {}),
+      Authorization: `Bearer ${dedicatedKey}`,
+    };
+    return headers;
+  }
+  return buildAiAuthHeaders(env, options);
+}
+
+/**
+ * Resolve a dedicated transport for image generation (may differ from the main LLM transport).
+ * When AI_IMAGE_BASE_URL is set it takes priority; otherwise falls back to the
+ * main AI transport.
+ *
+ * @param {*} env
+ * @returns {{ configured: boolean, imagesUrl: string | null, headers: Record<string, string> }}
+ */
+export function resolveImageTransport(env) {
+  const dedicatedUrl = env.AI_IMAGE_BASE_URL?.trim();
+  if (dedicatedUrl) {
+    const normalized = trimTrailingSlashes(dedicatedUrl);
+    const base = normalized.endsWith("/v1") ? normalized : `${normalized}/v1`;
+    const dedicatedKey = env.AI_IMAGE_API_KEY?.trim() || env.AI_API_KEY?.trim() || "";
+    return {
+      configured: true,
+      imagesUrl: `${base}/images/generations`,
+      headers: dedicatedKey ? { Authorization: `Bearer ${dedicatedKey}` } : {},
+    };
+  }
+
+  const baseUrl = env.AI_BASE_URL?.trim();
+  if (!baseUrl) {
+    return { configured: false, imagesUrl: null, headers: {} };
+  }
+  const normalized = trimTrailingSlashes(baseUrl);
+  const base = normalized.endsWith("/v1") ? normalized : `${normalized}/v1`;
+  const apiKey = env.AI_API_KEY || "";
+  return {
+    configured: true,
+    imagesUrl: `${base}/images/generations`,
+    headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+  };
+}
+
+/**
  * @param {*} env
  * @param {{ projectId?: string, feature?: string }} [context]
  */

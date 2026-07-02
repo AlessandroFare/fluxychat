@@ -8,6 +8,7 @@
  * DELETE /ai-images/:id              — delete generation
  */
 import { pickRouteDeps } from "./route-http-deps.js";
+import { validateLimit } from "../lib/validation.js";
 import {
   generateImage,
   getImageGeneration,
@@ -68,9 +69,10 @@ export async function dispatchAiImageRoutes(request, url, h) {
     const a = await auth();
     if (!a) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const roomId = decodeURIComponent(roomMatch[1]);
-    const limit = parseInt(url.searchParams.get("limit") || "20", 10);
+    const limitResult = validateLimit(url.searchParams.get("limit"), { defaultValue: 20, max: 1000 });
+    if (limitResult.error) return json({ error: "bad_request", message: limitResult.error }, { status: 400 });
     const offset = parseInt(url.searchParams.get("offset") || "0", 10);
-    const items = await listRoomImageGenerations(env, { projectId: a.projectId, roomId, limit, offset });
+    const items = await listRoomImageGenerations(env, { projectId: a.projectId, roomId, limit: limitResult.value, offset });
     return json({ items });
   }
 

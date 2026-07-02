@@ -1,0 +1,155 @@
+# Adapter Error Hierarchy
+
+FluxyChat's adapter error system (P26-B1) provides a standardized error hierarchy for consistent error handling across all adapter implementations.
+
+## Overview
+
+All adapter errors extend `AdapterError`, which includes `adapter` (the platform name) and `code` (a machine-readable error code) fields. This lets you handle errors programmatically without parsing error messages.
+
+**Source:** `apps/worker/src/lib/errors.js`
+
+## Error Classes
+
+### AdapterError (base)
+
+```js
+import { AdapterError } from "@fluxy-chat/sdk";
+
+try {
+  await adapter.postMessage(threadId, text);
+} catch (err) {
+  if (err instanceof AdapterError) {
+    console.log(err.adapter); // "slack"
+    console.log(err.code);    // "RATE_LIMITED"
+  }
+}
+```
+
+### Full hierarchy
+
+| Class | Code | Key fields | When to use |
+|-------|------|------------|-------------|
+| `AdapterError` | varies | `adapter`, `code` | Base class — catch-all |
+| `AdapterRateLimitError` | `RATE_LIMITED` | `retryAfter` (seconds) | Platform API rate limit hit |
+| `AuthenticationError` | `AUTH_FAILED` | — | Invalid or expired credentials |
+| `ResourceNotFoundError` | `NOT_FOUND` | `resourceType`, `resourceId` | Requested resource doesn't exist |
+| `PermissionError` | `PERMISSION_DENIED` | `action`, `requiredScope` | Bot lacks required permissions |
+| `ValidationError` | `VALIDATION_ERROR` | — | Invalid input data |
+| `NetworkError` | `NETWORK_ERROR` | `originalError` | Connectivity issues |
+| `AdapterNotFoundError` | `ADAPTER_NOT_FOUND` | — | Adapter slug not registered |
+| `ThreadNotFoundError` | `THREAD_NOT_FOUND` | `threadId` | Thread doesn't exist |
+| `MessageNotFoundError` | `MESSAGE_NOT_FOUND` | `messageId` | Message doesn't exist |
+
+## Usage Examples
+
+### Rate limit handling with backoff
+
+```js
+import { AdapterRateLimitError } from "@fluxy-chat/sdk";
+
+try {
+  await slackAdapter.postMessage(threadId, "Hello!");
+} catch (err) {
+  if (err instanceof AdapterRateLimitError) {
+    console.log(`Rate limited by ${err.adapter}. Retry after ${err.retryAfter}s.`);
+    await sleep(err.retryAfter * 1000);
+    return retry();
+  }
+  throw err;
+}
+```
+
+### Permission errors with user feedback
+
+```js
+import { PermissionError } from "@fluxy-chat/sdk";
+
+try {
+  await teamsAdapter.postMessage(threadId, "Hello!");
+} catch (err) {
+  if (err instanceof PermissionError) {
+    // Show the user which scope is missing
+    showPermissionError(
+      `Cannot ${err.action} in ${err.adapter}`,
+      err.requiredScope
+    );
+    return;
+  }
+  throw err;
+}
+```
+
+### Resource not found
+
+```js
+import { ResourceNotFoundError, ThreadNotFoundError } from "@fluxy-chat/sdk";
+
+try {
+  await adapter.fetchThread(threadId);
+} catch (err) {
+  if (err instanceof ThreadNotFoundError) {
+    console.log(`Thread ${err.threadId} not found in ${err.adapter}`);
+    // Clean up local references
+    return;
+  }
+  if (err instanceof ResourceNotFoundError) {
+    console.log(`${err.resourceType} ${err.resourceId} not found`);
+    return;
+  }
+  throw err;
+}
+```
+
+### Network errors with original error
+
+```js
+import { NetworkError } from "@fluxy-chat/sdk";
+
+try {
+  await adapter.postMessage(threadId, text);
+} catch (err) {
+  if (err instanceof NetworkError) {
+    console.error(`Network error for ${err.adapter}:`, err.originalError);
+    // Implement fallback or queue for later
+  }
+}
+```
+
+## Creating Custom Adapter Errors
+
+When building a custom adapter, throw the appropriate error class:
+
+```js
+import {
+  AdapterRateLimitError,
+  AuthenticationError,
+  ValidationError,
+} from "@fluxy-chat/sdk";
+
+class MyAdapter extends BaseAdapter {
+  async postMessage(threadId, content) {
+    if (!this.token) {
+      throw new AuthenticationError(this.slug, "No OAuth token configured");
+    }
+    if (!content) {
+      throw new ValidationError(this.slug, "Content is required");
+    }
+
+    const res = await fetch(this.apiUrl, { /* ... */ });
+    if (res.status === 429) {
+      const retryAfter = parseInt(res.headers.get("Retry-After") || "60");
+      throw new AdapterRateLimitError(this.slug, retryAfter);
+    }
+  }
+}
+```
+
+## Relationship to SDK Errors
+
+The SDK also exports `ChatError`, `RateLimitError`, `LockError`, and `NotImplementedError` from the structured errors module (P22-F9). These are client-side errors for SDK operations, while the `Adapter*` errors are for adapter-level operations.
+
+## See Also
+
+- [Unified Chat API](./unified-chat-api.md) — Top-level chat methods
+- [Adapter Lifecycle](./adapter-lifecycle.md) — disconnect, postEphemeral, rehydrateAttachment, waitUntil
+- [Adapter Pattern](./adapter-pattern.md) — Multi-platform adapter interface
