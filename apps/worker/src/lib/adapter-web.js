@@ -15,7 +15,7 @@ import { StreamingMarkdownRenderer } from "./streaming-markdown.js";
 
 /**
  * Format converter for the Web adapter.
- * The Web "platform format" is markdown — the browser renders mdast directly.
+ * The Web "platform format" is markdown â€” the browser renders mdast directly.
  * No platform-specific markup translation is needed.
  */
 export class WebFormatConverter extends BaseFormatConverter {
@@ -67,7 +67,7 @@ export class WebAdapter extends Adapter {
   /** @type {string} */
   displayName = "Web (REST + WebSocket)";
   /** @type {string} */
-  packageName = "@fluxychat/adapter-web";
+  packageName = "@fluxy-chat/adapter-web";
 
   /** @type {string[]} */
   envVars = [];
@@ -118,7 +118,7 @@ export class WebAdapter extends Adapter {
    * @returns {Promise<Response>}
    */
   async handleWebhook(request, options) {
-    // Web adapter doesn't use webhooks — messages come via REST/WebSocket.
+    // Web adapter doesn't use webhooks â€” messages come via REST/WebSocket.
     // This is called for compatibility; actual routing happens in messages-http.js.
     return new Response(JSON.stringify({ ok: true, adapter: "web" }), {
       status: 200,
@@ -163,7 +163,7 @@ export class WebAdapter extends Adapter {
    * @returns {Promise<import('./adapter.js').RawMessage>}
    */
   async postMessage(threadId, message) {
-    // This is a stub — actual posting happens in messages-http.js
+    // This is a stub â€” actual posting happens in messages-http.js
     // The adapter interface exists for uniformity across platforms
     const id = crypto.randomUUID();
     return {
@@ -259,7 +259,7 @@ export class WebAdapter extends Adapter {
 
   /**
    * Derive channel ID from thread ID.
-   * Web has no separate "channel" concept — each room is its own thread.
+   * Web has no separate "channel" concept â€” each room is its own thread.
    * @param {string} threadId
    * @returns {string}
    */
@@ -289,7 +289,7 @@ export class WebAdapter extends Adapter {
 
   /**
    * Render formatted content to web format.
-   * Web uses markdown directly — no conversion needed.
+   * Web uses markdown directly â€” no conversion needed.
    * @param {Object} content - mdast AST
    * @returns {string}
    */

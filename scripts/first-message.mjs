@@ -7,12 +7,12 @@
  * What it does:
  *   1. Sanity-checks the local worker dev env (`apps/worker/.dev.vars` exists,
  *      ALLOW_DEV_PROVISION=true is set). Adds the line idempotently if missing.
- *   2. Starts the local worker (`pnpm --filter @fluxychat/worker dev`) if it's
+ *   2. Starts the local worker (`pnpm --filter @fluxy-chat/worker dev`) if it's
  *      not already running on 127.0.0.1:8787. Polls /health until ready.
- *   3. POST /dev/provision → mints a fresh project + API key (idempotent on
+ *   3. POST /dev/provision â†’ mints a fresh project + API key (idempotent on
  *      the dev-local project).
- *   4. POST /auth/token with that API key → JWT for the SDK.
- *   5. POST /messages into the seeded `general` room → your first message.
+ *   4. POST /auth/token with that API key â†’ JWT for the SDK.
+ *   5. POST /messages into the seeded `general` room â†’ your first message.
  *   6. Prints a green success box with project id, API key, JWT, message id.
  *   7. Stops the worker it spawned (leaves a pre-existing one running).
  *
@@ -44,7 +44,7 @@ const POLL_INTERVAL_MS = 500;
 const POLL_TIMEOUT_MS = 90_000; // 90 s  wrangler cold start on big monorepos can take a while
 const POST_TIMEOUT_MS = 15_000;
 
-// ── ANSI colors (auto-disabled when stdout is not a TTY, e.g. CI) ──
+// â”€â”€ ANSI colors (auto-disabled when stdout is not a TTY, e.g. CI) â”€â”€
 const useColor = process.stdout.isTTY && !process.env.NO_COLOR;
 const c = (code, s) => (useColor ? `\x1b[${code}m${s}\x1b[0m` : s);
 const green = (s) => c("32", s);
@@ -57,31 +57,31 @@ function step(n, label) {
   console.log(`\n${bold(`Step ${n}`)}  ${label}`);
 }
 function ok(msg) {
-  console.log(`  ${green("✓")} ${msg}`);
+  console.log(`  ${green("âœ“")} ${msg}`);
 }
 function info(msg) {
-  console.log(`  ${dim("·")} ${msg}`);
+  console.log(`  ${dim("Â·")} ${msg}`);
 }
 // Never print full secrets to stdout/logs. CodeQL flags any data derived from
 // the provisioned apiKey as clear-text logging of sensitive information, so we
 // mask every secret before it reaches console.* (logs are often persisted and
-// shared — e.g. CI artifacts — and a leaked apiKey lets anyone mint JWTs).
+// shared â€” e.g. CI artifacts â€” and a leaked apiKey lets anyone mint JWTs).
 function maskKey(secret) {
   if (!secret) return "<unset>";
   const s = String(secret);
-  if (s.length <= 12) return `${s.slice(0, 4)}…${s.slice(-2)}`;
-  return `${s.slice(0, 12)}…(${s.length} chars)`;
+  if (s.length <= 12) return `${s.slice(0, 4)}â€¦${s.slice(-2)}`;
+  return `${s.slice(0, 12)}â€¦(${s.length} chars)`;
 }
 function maskJwt(token) {
   if (!token) return "<unset>";
   const s = String(token);
-  return `${s.slice(0, 10)}…${s.slice(-4)} (${s.length} chars)`;
+  return `${s.slice(0, 10)}â€¦${s.slice(-4)} (${s.length} chars)`;
 }
 function warn(msg) {
   console.warn(`  ${yellow("!")} ${msg}`);
 }
 function fail(msg) {
-  console.error(`\n${red("✗")} ${red(bold(msg))}`);
+  console.error(`\n${red("âœ—")} ${red(bold(msg))}`);
 }
 
 function box(lines, { color = "green" } = {}) {
@@ -91,10 +91,10 @@ function box(lines, { color = "green" } = {}) {
     const visible = stripAnsi(l).length;
     return l + " ".repeat(Math.max(0, width - visible));
   };
-  const top = `╭${"─".repeat(width + 2)}╮`;
-  const bot = `╰${"─".repeat(width + 2)}╯`;
+  const top = `â•­${"â”€".repeat(width + 2)}â•®`;
+  const bot = `â•°${"â”€".repeat(width + 2)}â•¯`;
   console.log(palette(top));
-  for (const l of lines) console.log(palette("│ ") + pad(l) + palette(" │"));
+  for (const l of lines) console.log(palette("â”‚ ") + pad(l) + palette(" â”‚"));
   console.log(palette(bot));
 }
 
@@ -112,7 +112,7 @@ function fetchWithTimeout(url, init = {}, timeoutMs = POST_TIMEOUT_MS) {
   return fetch(url, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(t));
 }
 
-// ── Pre-flight: env files ────────────────────────────────────────
+// â”€â”€ Pre-flight: env files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ensureDevVars() {
   if (!existsSync(devVarsPath)) {
     if (existsSync(devVarsExamplePath)) {
@@ -141,7 +141,7 @@ function ensureDevVars() {
   ok(`added ALLOW_DEV_PROVISION=true to apps/worker/.dev.vars`);
 }
 
-// ── Worker lifecycle ─────────────────────────────────────────────
+// â”€â”€ Worker lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function isWorkerUp() {
   try {
     const r = await fetchWithTimeout(`${WORKER_URL}/health`, { method: "GET" }, 1500);
@@ -154,8 +154,8 @@ async function isWorkerUp() {
 function spawnWorker() {
   // Use pnpm with the workspace filter so we inherit the right cwd and node_modules.
   // shell:true so Windows resolves pnpm.cmd / wrangler.cmd correctly.
-  info("starting wrangler dev (first run can take 30-60 s)…");
-  const child = spawn("pnpm", ["--filter", "@fluxychat/worker", "dev"], {
+  info("starting wrangler dev (first run can take 30-60 s)â€¦");
+  const child = spawn("pnpm", ["--filter", "@fluxy-chat/worker", "dev"], {
     cwd: root,
     shell: true,
     stdio: ["ignore", "pipe", "pipe"],
@@ -213,7 +213,7 @@ async function waitForWorker() {
   while (Date.now() - start < POLL_TIMEOUT_MS) {
     if (await isWorkerUp()) return true;
     if (Date.now() - lastLog > 5_000) {
-      info(`waiting for ${WORKER_URL}/health… (${Math.round((Date.now() - start) / 1000)}s)`);
+      info(`waiting for ${WORKER_URL}/healthâ€¦ (${Math.round((Date.now() - start) / 1000)}s)`);
       lastLog = Date.now();
     }
     await sleep(POLL_INTERVAL_MS);
@@ -221,7 +221,7 @@ async function waitForWorker() {
   return false;
 }
 
-// ── HTTP calls (with tiny error helper) ──────────────────────────
+// â”€â”€ HTTP calls (with tiny error helper) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function postJson(path, body, headers = {}) {
   const res = await fetchWithTimeout(`${WORKER_URL}${path}`, {
     method: "POST",
@@ -237,18 +237,18 @@ async function postJson(path, body, headers = {}) {
   }
   if (!res.ok) {
     const detail = json?.error || text || res.statusText;
-    throw new Error(`${path} → HTTP ${res.status}: ${detail}`);
+    throw new Error(`${path} â†’ HTTP ${res.status}: ${detail}`);
   }
   return json ?? {};
 }
 
-// ── Main ─────────────────────────────────────────────────────────
+// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let shuttingDown = false;
 let spawnedWorker = null;
 
 async function main() {
   console.log(bold("FluxyChat  first message in 90 seconds"));
-  console.log(dim("────────────────────────────────────────"));
+  console.log(dim("â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€"));
 
   step(0, "Pre-flight");
   ensureDevVars();
@@ -263,7 +263,7 @@ async function main() {
     if (!up) {
       fail(
         `worker did not become ready within ${POLL_TIMEOUT_MS / 1000}s.\n` +
-          `    Run it manually: pnpm --filter @fluxychat/worker dev\n` +
+          `    Run it manually: pnpm --filter @fluxy-chat/worker dev\n` +
           `    Then re-run:     pnpm run first-message`,
       );
       if (spawnedWorker && !spawnedWorker.killed) spawnedWorker.kill("SIGTERM");
@@ -282,7 +282,7 @@ async function main() {
     return;
   }
   ok(`projectId = ${provision.projectId}`);
-  ok("apiKey provisioned (not logged — use /dev/provision or apps/worker/.dev.vars to copy)");
+  ok("apiKey provisioned (not logged â€” use /dev/provision or apps/worker/.dev.vars to copy)");
 
   step(3, "Mint a JWT (POST /auth/token)");
   const auth = await postJson(
@@ -301,12 +301,12 @@ async function main() {
   }
   ok(`JWT minted (${auth.token.length} chars, expires in ${auth.expiresIn}s)`);
 
-  step(4, "Send the first message (POST /messages → room `general`)");
+  step(4, "Send the first message (POST /messages â†’ room `general`)");
   const msgRes = await postJson(
     "/messages",
     {
       roomId: "general",
-      content: `Hello from the first-message script! 🎉 (${new Date().toISOString()})`,
+      content: `Hello from the first-message script! ðŸŽ‰ (${new Date().toISOString()})`,
     },
     { Authorization: `Bearer ${auth.token}` },
   );
@@ -333,7 +333,7 @@ async function main() {
       green(bold("First message sent.")),
       "",
       `${dim("projectId")}   ${provision.projectId}`,
-      `${dim("apiKey")}      (redacted — re-run /dev/provision or read .dev.vars)`,
+      `${dim("apiKey")}      (redacted â€” re-run /dev/provision or read .dev.vars)`,
       `${dim("JWT")}         ${maskJwt(auth.token)}`,
       `${dim("messageId")}   ${messageId}`,
       `${dim("room")}       general`,

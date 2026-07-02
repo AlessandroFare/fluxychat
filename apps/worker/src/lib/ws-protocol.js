@@ -1,4 +1,4 @@
-import { isKnownOutboundClientEvent } from "@fluxychat/protocol";
+import { isKnownOutboundClientEvent } from "@fluxy-chat/protocol";
 
 /**
  * Reject unknown client WebSocket payloads before Room DO handlers run.

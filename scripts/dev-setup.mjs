@@ -12,7 +12,7 @@ const copies = [
   {
     from: "apps/worker/.dev.vars.example",
     to: "apps/worker/.dev.vars",
-    hint: "Edit ALLOWED_ORIGINS and optional Stripe / hosted SaaS vars before `pnpm --filter @fluxychat/worker dev`.",
+    hint: "Edit ALLOWED_ORIGINS and optional Stripe / hosted SaaS vars before `pnpm --filter @fluxy-chat/worker dev`.",
   },
   {
     from: "apps/dashboard/.env.example",
@@ -39,13 +39,13 @@ for (const { from, to, hint } of copies) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
   console.log(`created: ${to}`);
-  console.log(`  → ${hint}`);
+  console.log(`  â†’ ${hint}`);
   created += 1;
 }
 
 console.log(`\ndev-setup: ${created} created, ${skipped} skipped.`);
 if (created > 0) {
-  console.log("Do not commit .dev.vars or .env.local — they may contain secrets.");
+  console.log("Do not commit .dev.vars or .env.local â€” they may contain secrets.");
 }
-console.log("Staging/production: docs/operations/environment-setup.md — run `pnpm run check:env` for a checklist.");
+console.log("Staging/production: docs/operations/environment-setup.md â€” run `pnpm run check:env` for a checklist.");
 

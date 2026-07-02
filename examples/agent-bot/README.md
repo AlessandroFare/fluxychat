@@ -1,12 +1,12 @@
 # Agent bot example
 
-Server-side bot using `@fluxychat/agent` with **streaming** (`FluxyMessageStream`).
+Server-side bot using `@fluxy-chat/agent` with **streaming** (`FluxyMessageStream`).
 
 ```bash
-# Terminal 1 — Worker
+# Terminal 1 â€” Worker
 cd apps/worker && npx wrangler dev
 
-# Terminal 2 — example
+# Terminal 2 â€” example
 cd examples/agent-bot
 export FLUXY_API_KEY=fc_your_key
 export FLUXY_AGENT_ID=my-agent

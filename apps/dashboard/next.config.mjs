@@ -6,7 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@fluxy-chat/sdk", "@fluxychat/protocol", "@fluxychat/ui"],
+  transpilePackages: ["@fluxy-chat/sdk", "@fluxy-chat/protocol", "@fluxy-chat/ui"],
   // Turbopack auto-detects the monorepo root by walking up for lockfiles.
   // A stray `C:\Users\alefare\package-lock.json` above the workspace makes it
   // pick the home directory as root, which forces it to scan the entire home

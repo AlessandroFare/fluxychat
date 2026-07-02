@@ -10,7 +10,7 @@ export default defineConfig({
       "@": dirname,
       "~": dirname,
       "@fluxy-chat/sdk": path.resolve(dirname, "../../packages/sdk/src/index.ts"),
-      "@fluxychat/ui": path.resolve(dirname, "../../packages/ui/src/index.tsx"),
+      "@fluxy-chat/ui": path.resolve(dirname, "../../packages/ui/src/index.tsx"),
     },
   },
   test: {

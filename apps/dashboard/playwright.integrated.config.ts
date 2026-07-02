@@ -24,7 +24,7 @@ export default defineConfig({
     ? undefined
     : [
         {
-          command: "pnpm --filter @fluxychat/worker exec wrangler dev src/worker.js --port 8787",
+          command: "pnpm --filter @fluxy-chat/worker exec wrangler dev src/worker.js --port 8787",
           url: `${workerUrl.replace(/\/$/, "")}/health`,
           reuseExistingServer: !process.env.CI,
           timeout: 180_000,

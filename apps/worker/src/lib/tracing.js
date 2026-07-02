@@ -6,7 +6,7 @@
  * a custom Event-based tracing system that mimics the diagnostics channel behavior.
  * 
  * Usage:
- *   import { tracing } from '@fluxychat/worker/lib/tracing';
+ *   import { tracing } from '@fluxy-chat/worker/lib/tracing';
  * 
  *   // Producer
  *   tracing.publish('ai.tool.start', { toolName: 'weather', callId: '123' });

@@ -2,7 +2,7 @@
 
 Index of major FluxyChat capabilities. Follow the links for technical detail.
 
-## Chat & realtime (P9–P12)
+## Chat & realtime (P9â€“P12)
 
 | Feature | Documentation |
 |---------|----------------|
@@ -13,7 +13,7 @@ Index of major FluxyChat capabilities. Follow the links for technical detail.
 | Custom domain | [custom-domain-white-label](custom-domain-white-label.md) |
 | Embed widget | [embed-widget](embed-widget.md) |
 
-## AI & automation (P12–P15)
+## AI & automation (P12â€“P15)
 
 | Feature | Documentation |
 |---------|----------------|
@@ -34,7 +34,7 @@ Index of major FluxyChat capabilities. Follow the links for technical detail.
 | FTS search | [competitive-parity-p10](competitive-parity-p10.md) |
 | Quiet hours | [quiet-hours-notifications](quiet-hours-notifications.md) |
 
-## Enterprise & compliance (P18–P20)
+## Enterprise & compliance (P18â€“P20)
 
 | Feature | Documentation |
 |---------|----------------|
@@ -44,7 +44,7 @@ Index of major FluxyChat capabilities. Follow the links for technical detail.
 | Audit / eDiscovery | `/audit-export`, `/ediscovery` |
 | Incident response | `/incidents` API |
 
-## Integrations (P19–P20)
+## Integrations (P19â€“P20)
 
 | Feature | Documentation |
 |---------|----------------|
@@ -64,14 +64,14 @@ Index of major FluxyChat capabilities. Follow the links for technical detail.
 
 | Item | Status |
 |------|--------|
-| Shared `@fluxychat/protocol` package | Done — event registry, parse/dispatch, contract tests |
-| SDK + RN wired to protocol | Done — shared `dispatchInboundWsFrame`, worker validates outbound |
+| Shared `@fluxy-chat/protocol` package | Done â€” event registry, parse/dispatch, contract tests |
+| SDK + RN wired to protocol | Done â€” shared `dispatchInboundWsFrame`, worker validates outbound |
 | Cross-SDK contract tests | Done in `packages/protocol` + RN parity test |
-| RN SDK tests (vitest) | Done — protocol contract test |
-| D1 schema consolidation | Baseline exported — [`db/baseline/0136_schema.sql`](../apps/worker/db/baseline/0136_schema.sql), [`db/README.md`](../apps/worker/db/README.md) |
-| Flutter SDK tests | Done — `test/protocol_contract_test.dart` (requires Flutter SDK) |
-| Observability and alerting | Done — [`docs/operations/observability.md`](operations/observability.md), `operational-alerts` unit tests |
-| Room DO unknown WS events | Done — `room-do.test.js` + `ws-protocol.js` |
+| RN SDK tests (vitest) | Done â€” protocol contract test |
+| D1 schema consolidation | Baseline exported â€” [`db/baseline/0136_schema.sql`](../apps/worker/db/baseline/0136_schema.sql), [`db/README.md`](../apps/worker/db/README.md) |
+| Flutter SDK tests | Done â€” `test/protocol_contract_test.dart` (requires Flutter SDK) |
+| Observability and alerting | Done â€” [`docs/operations/observability.md`](operations/observability.md), `operational-alerts` unit tests |
+| Room DO unknown WS events | Done â€” `room-do.test.js` + `ws-protocol.js` |
 
 See [`packages/protocol/README.md`](../packages/protocol/README.md).
 

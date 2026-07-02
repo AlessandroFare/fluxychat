@@ -1,13 +1,13 @@
 "use client";
 
 import type { FluxyChatMessage } from "@fluxy-chat/sdk";
-import { MessageItem } from "@fluxychat/ui";
+import { MessageItem } from "@fluxy-chat/ui";
 import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
 import { ThreadSummary } from "./thread-summary";
 
 /**
  * Dashboard-specific adapter that maps the AgentRoomChat's prop contract onto
- * the shared `MessageItem` from `@fluxychat/ui`.
+ * the shared `MessageItem` from `@fluxy-chat/ui`.
  *
  * The public props mirror the legacy AgentRoomMessage exactly, so callers
  * (agent-room-chat.tsx) and tests (agent-room-message.test.tsx) don't change.
@@ -84,7 +84,7 @@ export function AgentRoomMessage({
         </div>
       ) : null}
 
-      {/* Thread TL;DR — only for top-level, non-streaming messages with an id */}
+      {/* Thread TL;DR â€” only for top-level, non-streaming messages with an id */}
       {roomId && message.id && !parentId && !isStreaming ? (
         <ThreadSummary
           roomId={roomId}

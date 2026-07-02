@@ -1,5 +1,5 @@
 import { FluxyAuthError, FluxyConnectionError, FluxySendError, FluxyTimeoutError, computeReconnectBackoffMs, mapWebSocketCloseToError } from './errors';
-import { dispatchInboundWsFrame } from '@fluxychat/protocol';
+import { dispatchInboundWsFrame } from '@fluxy-chat/protocol';
 import type { FluxyChatClient, FluxyChatEvent, FluxyChatMessage, FluxyWebSocketConnectOptions } from './index';
 
 export type FluxyRoomConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';

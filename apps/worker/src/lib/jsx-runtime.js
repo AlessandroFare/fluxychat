@@ -9,16 +9,16 @@
  * {
  *   "compilerOptions": {
  *     "jsx": "react-jsx",
- *     "jsxImportSource": "@fluxychat/worker"
+ *     "jsxImportSource": "@fluxy-chat/worker"
  *   }
  * }
  *
  * Or per-file:
- * /** @jsxImportSource @fluxychat/worker *\/
+ * /** @jsxImportSource @fluxy-chat/worker *\/
  *
  * Usage:
  * ```jsx
- * import { Card, Text, Button, Actions } from "@fluxychat/worker/lib/jsx-runtime.js";
+ * import { Card, Text, Button, Actions } from "@fluxy-chat/worker/lib/jsx-runtime.js";
  *
  * const card = (
  *   <Card title="Order #1234">

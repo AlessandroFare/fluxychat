@@ -62,7 +62,7 @@ curl -sS -H "Authorization: Bearer <ADMIN_JWT>" \
 ### Run it
 
 ```bash
-pnpm --filter @fluxychat/worker perf:workload-check -- \
+pnpm --filter @fluxy-chat/worker perf:workload-check -- \
   --base-url http://127.0.0.1:8787 \
   --member-token "<MEMBER_JWT>" \
   --admin-token "<ADMIN_JWT>" \

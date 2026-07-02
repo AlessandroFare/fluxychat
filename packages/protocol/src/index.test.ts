@@ -8,7 +8,7 @@ import {
   isFluxyOutboundEvent,
 } from "./index.js";
 
-describe("@fluxychat/protocol", () => {
+describe("@fluxy-chat/protocol", () => {
   it("exposes a stable protocol version", () => {
     expect(FLUXY_PROTOCOL_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
   });

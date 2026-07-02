@@ -1,13 +1,13 @@
 /**
- * Minimal server-side agent using @fluxychat/agent.
+ * Minimal server-side agent using @fluxy-chat/agent.
  *
  * Env:
- *   FLUXY_API_KEY      — project API key (fc_…)
- *   FLUXY_AGENT_ID     — agent id registered in Worker
- *   FLUXY_ROOM_ID      — room to join
- *   FLUXY_WORKER_URL   — default http://127.0.0.1:8787
+ *   FLUXY_API_KEY      â€” project API key (fc_â€¦)
+ *   FLUXY_AGENT_ID     â€” agent id registered in Worker
+ *   FLUXY_ROOM_ID      â€” room to join
+ *   FLUXY_WORKER_URL   â€” default http://127.0.0.1:8787
  */
-import { createFluxyAgent } from "@fluxychat/agent";
+import { createFluxyAgent } from "@fluxy-chat/agent";
 
 const apiKey = process.env.FLUXY_API_KEY?.trim();
 const agentId = process.env.FLUXY_AGENT_ID?.trim() || "demo-agent";

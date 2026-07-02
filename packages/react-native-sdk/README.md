@@ -1,19 +1,19 @@
-# @fluxychat/react-native-sdk
+# @fluxy-chat/react-native-sdk
 
 React Native SDK for FluxyChat - realtime chat infrastructure for SaaS.
 
 ## Installation
 
 ```bash
-npm install @fluxychat/react-native-sdk
+npm install @fluxy-chat/react-native-sdk
 # or
-yarn add @fluxychat/react-native-sdk
+yarn add @fluxy-chat/react-native-sdk
 ```
 
 ## Quick Start
 
 ```tsx
-import { FluxyChatClient, useChat, useRooms } from '@fluxychat/react-native-sdk';
+import { FluxyChatClient, useChat, useRooms } from '@fluxy-chat/react-native-sdk';
 
 const client = new FluxyChatClient({
   apiUrl: 'https://your-worker.workers.dev',

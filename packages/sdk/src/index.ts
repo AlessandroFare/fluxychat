@@ -1,4 +1,4 @@
-﻿export {
+export {
   FluxyAuthError,
   FluxyConnectionError,
   FluxySendError,
@@ -364,7 +364,7 @@ export {
   isFluxyInboundEvent,
   parseInboundWsFrame,
   dispatchInboundWsFrame,
-} from "@fluxychat/protocol";
+} from "@fluxy-chat/protocol";
 
 export {
   FluxyChatRoomConnection,
@@ -522,9 +522,9 @@ export interface FluxyChatMessage {
   visibility?: "room" | "whisper";
   visibleTo?: string[];
   /**
-   * Reaction tallies keyed by emoji (e.g. `{ "👍": 2 }`). Client-side for now;
+   * Reaction tallies keyed by emoji (e.g. `{ "ðŸ‘": 2 }`). Client-side for now;
    * the Worker does not persist these yet, so the map is assembled by the UI
-   * from local interactions. Optional — absent means "no reactions".
+   * from local interactions. Optional â€” absent means "no reactions".
    */
   reactions?: Record<string, number>;
   /** Message kind. `text` is the default and is implicit; `voice` is set
@@ -1652,7 +1652,7 @@ export class FluxyChatClient {
     return res.json() as Promise<{ e2eEnabled: boolean; e2eKey?: string }>;
   }
 
-  /** Alias for {@link fetchMessages} — chronological room history via REST. */
+  /** Alias for {@link fetchMessages} â€” chronological room history via REST. */
   fetchRoomHistory(
     roomId: string,
     options?: FetchMessagesOptions,
@@ -2083,7 +2083,7 @@ export class FluxyChatClient {
     return (await res.json()) as { ok: boolean };
   }
 
-  /** Agent task queue (P13-T4) — requires moderator/admin/owner JWT. */
+  /** Agent task queue (P13-T4) â€” requires moderator/admin/owner JWT. */
   async getAgentQueue(options?: {
     status?: "resolved" | "cancelled";
     assignee?: "me" | "all";
@@ -2274,7 +2274,7 @@ export class FluxyChatClient {
     return (await res.json()) as FluxyPublicHostConfig;
   }
 
-  /** P12-J — Flagship flags with env fallback; optional JWT for user targeting. */
+  /** P12-J â€” Flagship flags with env fallback; optional JWT for user targeting. */
   async getFeatureFlags(): Promise<FluxyClientFeatureFlags> {
     const headers: Record<string, string> = {};
     if (this.token) headers.Authorization = `Bearer ${this.token}`;

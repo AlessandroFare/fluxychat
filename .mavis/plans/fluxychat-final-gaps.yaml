@@ -1,6 +1,6 @@
 version: 1
 plan:
-  name: 'FluxyChat — close remaining security/bug/a11y/doc gaps (72 → 85+ PRS)'
+  name: 'FluxyChat â€” close remaining security/bug/a11y/doc gaps (72 â†’ 85+ PRS)'
   max_concurrency: 4
   max_consecutive_failures: 2
   max_cycles: 8
@@ -15,7 +15,7 @@ plan:
 # - SSRF guard exists (apps/worker/src/lib/url-ssrf.js + url-ssrf.test.js, 60+ lines).
 #   Confirm every user-supplied fetch() callsite is wired through it.
 # - SAML parseSamlAssertion (apps/worker/src/lib/sso-saml.js:205) hard-returns
-#   isValid:false with reason "saml_signature_verification_unimplemented" — this
+#   isValid:false with reason "saml_signature_verification_unimplemented" â€” this
 #   is the one real SAML gap left.
 # - JWT_SECRET_PREVIOUS_EXPIRES_AT enforcement exists (lib/jwt-auth.js:120) and
 #   is documented in .dev.vars.example.
@@ -29,7 +29,7 @@ plan:
 #   (walks back to a valid pair). DO NOT regress this.
 # - incrementOperationalMetric: already uses ON CONFLICT DO UPDATE single
 #   round-trip (lib/operational-metrics.js:25). The "batch via DO alarm" pattern
-#   in the brief is therefore NOT applicable as written — keep the current
+#   in the brief is therefore NOT applicable as written â€” keep the current
 #   atomic upsert and only add a small client-side accumulator if a real
 #   measurement shows >1 increment per request on the hot path.
 # - Webhook delivery flush: P-7 already moved out of per-request waitUntil
@@ -41,7 +41,7 @@ plan:
 tasks:
 
   # --------------------------------------------------------------------------
-  # BLOCK A — Security (concrete remaining gaps only)
+  # BLOCK A â€” Security (concrete remaining gaps only)
   # --------------------------------------------------------------------------
 
   - id: a-saml-signature
@@ -79,7 +79,7 @@ tasks:
          `parseSamlAssertion(encodedResponse, config)`. The caller in
          `apps/worker/src/routes/identity-access-http.js` consumes
          `{ isValid, reason, issuer, ...assertionFields }`.
-      6. Do NOT add an `@xmldsig/xmldsig` or `xml-crypto` dependency — use
+      6. Do NOT add an `@xmldsig/xmldsig` or `xml-crypto` dependency â€” use
          the Workers-native `crypto.subtle` only. If full XML canonicalization
          (c14n) is impractical without a dependency, do a targeted
          re-serialization of the SignedInfo block and document that residual
@@ -94,13 +94,13 @@ tasks:
            `isValid: false, reason: "assertion_signature_required"`
       8. Generate a self-signed RSA cert + a valid signed SAML response for
          the test using Node's `crypto.generateKeyPairSync` + a hand-rolled
-         SignedInfo — commit the cert (PEM) and the response as test
+         SignedInfo â€” commit the cert (PEM) and the response as test
          fixtures in `apps/worker/src/lib/__fixtures__/saml/`. Do NOT
          commit a real IdP cert.
       9. If you discover that crypto.subtle on Workers cannot import a raw
          RSA public key (only SPKI), use `importKey("spki", ...)` and
          wrap the PEM cert body accordingly.
-      10. Re-run `pnpm --filter @fluxychat/worker test` and report the
+      10. Re-run `pnpm --filter @fluxy-chat/worker test` and report the
           pass/fail count delta.
 
       DO NOT TOUCH:
@@ -133,9 +133,9 @@ tasks:
          image-proxy / link-preview route.
       3. For EACH callsite that takes a user-controlled URL:
          - If it already calls `assertSafeOutboundUrl` or
-           `safeOutboundFetch` → no change, just verify and note in the
+           `safeOutboundFetch` â†’ no change, just verify and note in the
            report.
-         - If it does a raw `fetch(userUrl)` → wrap it.
+         - If it does a raw `fetch(userUrl)` â†’ wrap it.
          - For every callsite that does a raw `fetch()` to a non-user
            URL (e.g. LLM provider baseUrl from env), add a single
            `// SECURITY: SSRF_RESIDUAL` comment block above the call
@@ -148,14 +148,14 @@ tasks:
          HTTP 400. Confirm the existing helper throws that; if not,
          adjust the caller to wrap.
       5. Add tests in `apps/worker/src/lib/url-ssrf.test.js` (or extend
-         if it exists — it does, at apps/worker/src/lib/url-ssrf.test.js):
+         if it exists â€” it does, at apps/worker/src/lib/url-ssrf.test.js):
          - `http://127.0.0.1/` blocked
          - `http://10.0.0.1/` blocked
          - `file:///etc/passwd` blocked
          - `https://example.com/foo` allowed
          - the helper throws with `error: "SSRF_BLOCKED"` on the
            blocked cases
-      6. Do NOT add a `dns.resolve` polyfill — Workers cannot do DNS
+      6. Do NOT add a `dns.resolve` polyfill â€” Workers cannot do DNS
          resolution before `fetch()`. Document that once in the helper
          file's top comment if it isn't already.
 
@@ -163,7 +163,7 @@ tasks:
       and line number, in the deliverable.md.
 
   - id: a-jwt-rotation-verify
-    title: 'A-4 JWT_SECRET_PREVIOUS expiry — verify and harden'
+    title: 'A-4 JWT_SECRET_PREVIOUS expiry â€” verify and harden'
     assigned_to: coder
     verified_by: verifier
     timeout_ms: 1500000
@@ -189,13 +189,13 @@ tasks:
       4. Add a test in a new file
          `apps/worker/src/lib/jwt-auth-rotation.test.js`:
          - token signed with `JWT_SECRET_PREVIOUS` + `exp` in the future,
-           `JWT_SECRET_PREVIOUS_EXPIRES_AT` in the past → REJECT
+           `JWT_SECRET_PREVIOUS_EXPIRES_AT` in the past â†’ REJECT
          - token signed with `JWT_SECRET_PREVIOUS` + `exp` in the future,
-           `JWT_SECRET_PREVIOUS_EXPIRES_AT` in the future → ACCEPT
-         - token signed with `JWT_SECRET` (current) → ACCEPT regardless
+           `JWT_SECRET_PREVIOUS_EXPIRES_AT` in the future â†’ ACCEPT
+         - token signed with `JWT_SECRET` (current) â†’ ACCEPT regardless
       5. Verify `.dev.vars.example` includes the line. If it already
          does, no change.
-      6. Run `pnpm --filter @fluxychat/worker test` and report results.
+      6. Run `pnpm --filter @fluxy-chat/worker test` and report results.
 
   - id: a-agent-allowlist-runtime
     title: 'A-5 Agent tool allow-list runtime enforcement'
@@ -216,17 +216,17 @@ tasks:
       1. Read `apps/worker/src/lib/agent-tool-calls.js` and find the
          function that takes the LLM's tool_calls response and decides
          which tools to actually execute.
-      2. Read `env.AGENT_TOOL_ALLOWLIST` (comma-separated) — this is the
+      2. Read `env.AGENT_TOOL_ALLOWLIST` (comma-separated) â€” this is the
          brief's spec. The migration 0140 column is per-bot/per-project,
          but the brief asks for a global env var. Reconcile:
-         - If `AGENT_TOOL_ALLOWLIST` is set in env → it is the global
+         - If `AGENT_TOOL_ALLOWLIST` is set in env â†’ it is the global
            allow-list applied to every agent.
-         - Else if a bot has `allowed_tools` → use that.
-         - Else if a project has `default_allowed_tools` → use that.
-         - Else → allow-list is empty (deny ALL tools, fail-closed).
+         - Else if a bot has `allowed_tools` â†’ use that.
+         - Else if a project has `default_allowed_tools` â†’ use that.
+         - Else â†’ allow-list is empty (deny ALL tools, fail-closed).
       3. Strip any tool not in the resolved allow-list BEFORE the LLM
          invocation so the model never sees a tool it can't use.
-         Alternatively strip after the LLM returns — the brief allows
+         Alternatively strip after the LLM returns â€” the brief allows
          either, but stripping before is more secure (the LLM cannot
          hallucinate a name that's not in the schema).
       4. Log every stripped tool at WARN level with the agent id and
@@ -235,7 +235,7 @@ tasks:
          - in-list tool passes through
          - out-of-list tool stripped + logged
          - empty `AGENT_TOOL_ALLOWLIST` AND no per-bot list AND no
-           project default → all tools stripped (fail-closed)
+           project default â†’ all tools stripped (fail-closed)
       6. Do NOT add new dependencies.
 
   - id: a-automation-exception
@@ -285,7 +285,7 @@ tasks:
       5. Run the full worker test suite and report results.
 
   # --------------------------------------------------------------------------
-  # BLOCK B — Bug fixes
+  # BLOCK B â€” Bug fixes
   # --------------------------------------------------------------------------
 
   - id: b-cascade-deletes
@@ -296,7 +296,7 @@ tasks:
     prompt: |
       GOAL: Migration `apps/worker/db/0142_cascade_deletes.sql` that adds
       ON DELETE CASCADE foreign keys on attachments, message_mentions,
-      message_reactions, read_receipts, agent_runs → messages.
+      message_reactions, read_receipts, agent_runs â†’ messages.
 
       SQLite does not support `ALTER TABLE ... ADD CONSTRAINT` directly.
       Use the standard SQLite 12-step recipe:
@@ -313,7 +313,7 @@ tasks:
            `db-reference/schema-snapshot.sql` or `baseline/0136_schema.sql`).
       4. `COMMIT;`
       5. `PRAGMA foreign_keys=ON;` (in the application at connection
-         time — DO NOT toggle in migration; document the requirement
+         time â€” DO NOT toggle in migration; document the requirement
          in a comment in the migration file).
       6. Make it idempotent: check `sqlite_master` for the new FK
          constraint name before recreating each table. Use a pattern
@@ -326,7 +326,7 @@ tasks:
       7. The migration file must be a single `db.execute(sql)`-style
          string of SQL statements separated by `;\n` (check
          0141_automation_idempotency.sql for the project's convention).
-      8. Run `pnpm --filter @fluxychat/worker test` and confirm no
+      8. Run `pnpm --filter @fluxy-chat/worker test` and confirm no
          regression.
       9. Verify the cascade actually fires by adding a one-off Node
          script `scripts/verify-cascade-deletes.mjs` that creates a
@@ -337,7 +337,7 @@ tasks:
       DO NOT change any application code. This is a schema-only task.
 
   - id: b-automation-idempotency-app
-    title: 'B-2 automation idempotency — verify INSERT OR IGNORE in app code'
+    title: 'B-2 automation idempotency â€” verify INSERT OR IGNORE in app code'
     assigned_to: coder
     verified_by: verifier
     timeout_ms: 1500000
@@ -362,9 +362,9 @@ tasks:
       3. Add a test
          `apps/worker/src/lib/automation-idempotency.test.js`:
          - call the enqueue function twice with the same
-           (project_id, event_type, message_id, kind) → exactly one
+           (project_id, event_type, message_id, kind) â†’ exactly one
            row exists in the in-memory mock DB after both calls
-         - call with different message_id → two rows
+         - call with different message_id â†’ two rows
       4. If you discover the function does not yet write
          `idempotency_key` at all, add that as part of the fix and
          document it.
@@ -391,18 +391,18 @@ tasks:
          apps/worker/src/routes/gdpr-*.js` to enumerate every LIKE.
       2. For each, confirm the bound parameter has been passed through
          `escapeLike`. If not, fix the call (do NOT add a second copy
-         of escapeLike — use the existing one).
+         of escapeLike â€” use the existing one).
       3. Add tests in
          `apps/worker/src/lib/gdpr-escape.test.js`:
-         - input `"abc%def"` → escaped to `"abc\\%def"` and the query
+         - input `"abc%def"` â†’ escaped to `"abc\\%def"` and the query
            does not match an unintended row
-         - input `"abc_def"` → escaped to `"abc\\_def"`
-         - input with no special chars → returned unchanged
+         - input `"abc_def"` â†’ escaped to `"abc\\_def"`
+         - input with no special chars â†’ returned unchanged
       4. Do NOT change the escapeLike implementation itself unless you
          find a concrete bug.
 
   - id: b-utf8-truncation
-    title: 'B-4 Unicode-safe truncation — verify and extend'
+    title: 'B-4 Unicode-safe truncation â€” verify and extend'
     assigned_to: coder
     verified_by: verifier
     timeout_ms: 1500000
@@ -428,7 +428,7 @@ tasks:
          - truncate at maxBytes
          - walk back to a valid UTF-8 sequence start (the first byte of
            a multi-byte sequence has the high bit pattern
-           0xxxxxxx, 110xxxxx, 1110xxxx, or 11110xxx — anything
+           0xxxxxxx, 110xxxxx, 1110xxxx, or 11110xxx â€” anything
            else is a continuation byte 10xxxxxx and must be discarded)
          - decode the remaining bytes back to a string via `TextDecoder`
            with `fatal: true` to catch invalid sequences
@@ -445,11 +445,11 @@ tasks:
          - input that fits is returned unchanged
          - a string that contains invalid UTF-8 (pass a Uint8Array
            directly) is handled without throwing
-      5. Do NOT regress the existing `truncateForStorage` — keep it
+      5. Do NOT regress the existing `truncateForStorage` â€” keep it
          for the 500-char use cases. The new function is additive.
 
   # --------------------------------------------------------------------------
-  # BLOCK C — Architecture
+  # BLOCK C â€” Architecture
   # --------------------------------------------------------------------------
 
   - id: c-webhook-out-of-waituntil
@@ -477,7 +477,7 @@ tasks:
          `[triggers] crons = ["..."]` entry includes a schedule that
          fires at most every 5 min (`*/5 * * * *`).
       4. The brief asks for `"* * * * *"` (every minute). DO NOT
-         change the cron schedule to every-minute — that's a 5×
+         change the cron schedule to every-minute â€” that's a 5Ã—
          increase in Worker invocations. The session-3 decision
          (every 5 min) is correct. Document that decision in a
          comment in the deliverable.md.
@@ -489,7 +489,7 @@ tasks:
       NO SCHEMA OR APP CODE CHANGES outside tests.
 
   - id: c-batch-metrics
-    title: 'C-2 batch operational metric writes — confirm current design is optimal'
+    title: 'C-2 batch operational metric writes â€” confirm current design is optimal'
     assigned_to: coder
     verified_by: verifier
     timeout_ms: 1500000
@@ -503,11 +503,11 @@ tasks:
       metric_value + excluded.metric_value` in a single round-trip.
       The brief's proposed "JS Map accumulator in the DO, flush every
       10s" pattern would actually make things WORSE here because:
-      (a) `incrementOperationalMetric` is not called from a DO — it
+      (a) `incrementOperationalMetric` is not called from a DO â€” it
       uses D1 directly.
       (b) the existing per-minute bucketing means 100 increments in a
       minute collapse to 1 row + N updates, not 100 rows.
-      (c) the brief's "100 increments → 1 DB write" claim is already
+      (c) the brief's "100 increments â†’ 1 DB write" claim is already
       true for same-bucket increments.
 
       WHAT TO DO:
@@ -544,8 +544,8 @@ tasks:
       2. Add a `depth` field to the `detail` object (or a separate
          context object) with a default of 0.
       3. The dispatcher increments `depth` when an automation enqueues
-         another automation. Find the chain — likely
-         `schedulePostMessageAutomations` → cron / webhook
+         another automation. Find the chain â€” likely
+         `schedulePostMessageAutomations` â†’ cron / webhook
          re-enqueue.
       4. If `depth > 3`: do not call the inner execution function,
          log at WARN, insert audit row, return.
@@ -553,15 +553,15 @@ tasks:
          `apps/worker/src/lib/automation-depth.test.js`:
          - depth 0, 1, 2, 3 all execute normally
          - depth 4 bails (no inner call), audit row inserted
-         - the test does not require a real DB — use the same mock
+         - the test does not require a real DB â€” use the same mock
            D1 binding pattern the other tests use
 
   # --------------------------------------------------------------------------
-  # BLOCK D — Accessibility
+  # BLOCK D â€” Accessibility
   # --------------------------------------------------------------------------
 
   - id: d-axe-a11y
-    title: 'D — axe-core a11y audit on onboarding, rooms, search'
+    title: 'D â€” axe-core a11y audit on onboarding, rooms, search'
     assigned_to: coder
     verified_by: verifier
     timeout_ms: 1800000
@@ -575,7 +575,7 @@ tasks:
       PROCESS:
       1. From `apps/dashboard/`, run
          `pnpm add -D axe-core @axe-core/playwright` (or use the
-         existing `devDependencies` if axe-core is already present —
+         existing `devDependencies` if axe-core is already present â€”
          search first).
       2. Read `apps/dashboard/playwright.config.ts` (already exists).
          Add a new spec file `apps/dashboard/e2e/a11y.axe.spec.ts`
@@ -596,23 +596,23 @@ tasks:
            the existing `fullyParallel: false` setting in the config
       3. For each Critical or Serious violation you find, fix the
          React source under `apps/dashboard/app/...`. Common fixes:
-         - missing `alt` text on `<img>` → add it
-         - `<button>` with no accessible name → add `aria-label` or
+         - missing `alt` text on `<img>` â†’ add it
+         - `<button>` with no accessible name â†’ add `aria-label` or
            visible text
-         - missing form labels → wrap with `<label>` or add
+         - missing form labels â†’ wrap with `<label>` or add
            `htmlFor`
-         - color contrast failures → adjust the Tailwind classes
-         - landmark / heading hierarchy → add `<h1>`, `<main>`,
+         - color contrast failures â†’ adjust the Tailwind classes
+         - landmark / heading hierarchy â†’ add `<h1>`, `<main>`,
            `<nav aria-label=...>` where missing
       4. Do NOT add tests that require Clerk auth to be configured
-         — if a page redirects to /sign-in without auth, mark the
+         â€” if a page redirects to /sign-in without auth, mark the
          test `test.skip()` and add a `// TODO: enable when
          test-mode auth is wired` comment.
       5. Add the new spec to the `playwright.config.ts` `testMatch`
          so it runs in non-CI mode too. (Current config: in CI only
          `*.smoke.spec.ts` runs. Add a11y.axe.spec.ts to the CI list
          so it ships green.)
-      6. Run `pnpm --filter @fluxychat/dashboard test:e2e:smoke` to
+      6. Run `pnpm --filter @fluxy-chat/dashboard test:e2e:smoke` to
          confirm no regression in existing specs, then run the new
          spec with `pnpm exec playwright test e2e/a11y.axe.spec.ts`.
       7. Report every violation you found (Critical/Serious AND
@@ -620,18 +620,18 @@ tasks:
          Critical/Serious.
 
   # --------------------------------------------------------------------------
-  # BLOCK E — Documentation
+  # BLOCK E â€” Documentation
   # --------------------------------------------------------------------------
 
   - id: e-docs
-    title: 'E — docs pass: TODOs, broken links, outdated examples'
+    title: 'E â€” docs pass: TODOs, broken links, outdated examples'
     assigned_to: coder
     verified_by: verifier
     timeout_ms: 1500000
     prompt: |
       GOAL: For every markdown file in `docs/` and `README.md`,
       fix ONLY:
-      1. TODO / "coming soon" / "insert X here" / placeholder text →
+      1. TODO / "coming soon" / "insert X here" / placeholder text â†’
          fill in or delete.
       2. Broken internal links (target file or heading does not
          exist). Verify by reading the link target.
@@ -639,7 +639,7 @@ tasks:
          current SDK exports. Read
          `packages/sdk/src/index.ts` (or `.js`) to confirm
          exports; update the example if it drifted.
-      4. Quickstarts with more than 5 steps to "hello world" —
+      4. Quickstarts with more than 5 steps to "hello world" â€”
          combine or remove implicit steps.
 
       PROCESS:
@@ -647,7 +647,7 @@ tasks:
          `Get-ChildItem -Path C:\Users\alefare\Chat\docs -Recurse -Filter *.md`
          + `C:\Users\alefare\Chat\README.md`.
       2. For each file, read it end-to-end. Use the Read tool, not
-         grep — you need to see the prose, not just patterns.
+         grep â€” you need to see the prose, not just patterns.
       3. Apply fixes minimally. Do NOT rewrite sections that are
          merely imperfect.
       4. For SDK code examples: cross-check against the top 5
@@ -689,13 +689,13 @@ tasks:
       Run the full validation pipeline and produce a single
       `deliverable.md` with:
 
-      1. `cd C:\Users\alefare\Chat && pnpm -r test` — report
+      1. `cd C:\Users\alefare\Chat && pnpm -r test` â€” report
          pass/fail counts and any NEW failures (failures that did
          not exist before this plan started).
-      2. `pnpm -r exec tsc --noEmit` — report any NEW type errors.
-      3. `pnpm audit --prod --json` (in the root) — report any
+      2. `pnpm -r exec tsc --noEmit` â€” report any NEW type errors.
+      3. `pnpm audit --prod --json` (in the root) â€” report any
          remaining high/critical advisories.
-      4. `node scripts/audit-tenant-scope.mjs` — confirm no
+      4. `node scripts/audit-tenant-scope.mjs` â€” confirm no
          unscoped queries remain. Paste the summary line.
       5. Confirm all 14 producer tasks above committed their
          changes (run `git status` and `git log -15 --oneline`).
@@ -708,7 +708,7 @@ tasks:
          for closed gaps, subtract for newly-discovered gaps).
       9. Run the `CODE-REVIEW` template from the `fable-frame`
          skill against every file changed in blocks A and B. Report
-         any new issues found. Do NOT fix them — just list them.
+         any new issues found. Do NOT fix them â€” just list them.
       10. One honest sentence: what this product is right now and
           whether you would soft-launch it this week.
 

@@ -57,17 +57,17 @@ Operational runbook for production releases of the edge backend (`apps/worker`) 
 
 Run from the monorepo root.
 
-### Step A — Local sanity check
+### Step A â€” Local sanity check
 
 ```bash
 pnpm install
-pnpm --filter @fluxychat/ai-agent test
-pnpm --filter @fluxychat/dashboard test
-pnpm --filter @fluxychat/worker test
-pnpm --filter @fluxychat/dashboard build
+pnpm --filter @fluxy-chat/ai-agent test
+pnpm --filter @fluxy-chat/dashboard test
+pnpm --filter @fluxy-chat/worker test
+pnpm --filter @fluxy-chat/dashboard build
 ```
 
-### Step B — Apply D1 migrations
+### Step B â€” Apply D1 migrations
 
 ```bash
 cd apps/worker
@@ -76,18 +76,18 @@ pnpm exec wrangler d1 migrations apply fluxychat --remote
 
 If the deploy introduces no new migrations, this command should be a no-op.
 
-### Step C — Deploy realtime Worker API
+### Step C â€” Deploy realtime Worker API
 
 ```bash
-pnpm --filter @fluxychat/worker deploy
+pnpm --filter @fluxy-chat/worker deploy
 ```
 
-**Note on `wrangler deploy --env production`:** only use it if `apps/worker/wrangler.toml` defines an `[env.production]` section (or the target env) with consistent bindings/vars. While you use only the top-level block, the standard command is `pnpm --filter @fluxychat/worker deploy` (equivalent to `wrangler deploy` in the worker folder **without** `--env`).
+**Note on `wrangler deploy --env production`:** only use it if `apps/worker/wrangler.toml` defines an `[env.production]` section (or the target env) with consistent bindings/vars. While you use only the top-level block, the standard command is `pnpm --filter @fluxy-chat/worker deploy` (equivalent to `wrangler deploy` in the worker folder **without** `--env`).
 
-### Step D — Deploy AI Agent service
+### Step D â€” Deploy AI Agent service
 
 ```bash
-pnpm --filter @fluxychat/ai-agent deploy
+pnpm --filter @fluxy-chat/ai-agent deploy
 ```
 
 ## 3) Post-deploy smoke checks (within 10 minutes)
@@ -133,22 +133,22 @@ Minimum validations:
 
 Trigger rollback if:
 
-- persistent error-rate increase above SLO target for more than 5–10 minutes;
+- persistent error-rate increase above SLO target for more than 5â€“10 minutes;
 - auth/authz regression;
 - widespread webhook delivery failure;
 - message send/read incidents on pilot tenants.
 
-### Step A — Stop escalation
+### Step A â€” Stop escalation
 
 - Freeze new deploys.
 - Open an incident with `trace_id` and time window.
 
-### Step B — Restore previous version
+### Step B â€” Restore previous version
 
 Use the Cloudflare dashboard or CLI with a known previous version.
 For DB rollback, avoid destructive downgrades: prefer fix-forward or disabling a feature flag.
 
-### Step C — Immediate mitigation
+### Step C â€” Immediate mitigation
 
 - Temporarily disable the impacted feature (e.g. agent invoke, custom webhooks) if possible.
 - Confirm recovery with section 3 smoke checks.
@@ -169,10 +169,10 @@ For every rollback record:
 Recommended frequency: once per month.
 
 - Drill A: full deploy + smoke checks.
-- Drill B: simulated rollback with recovery within ≤ 15 minutes.
+- Drill B: simulated rollback with recovery within â‰¤ 15 minutes.
 - Drill C: validated restore of a test tenant from backup.
 
-### Drill C — Practical procedure (tenant backup/restore)
+### Drill C â€” Practical procedure (tenant backup/restore)
 
 Prerequisites:
 
@@ -213,12 +213,12 @@ Expected outcomes:
 
 Run in this order before each closed rollout:
 
-1. `pnpm --filter @fluxychat/worker test`
-2. `pnpm --filter @fluxychat/ai-agent test`
-3. `pnpm --filter @fluxychat/dashboard test`
-4. `pnpm --filter @fluxychat/dashboard build`
-5. `pnpm --filter @fluxychat/worker deploy`
-6. `pnpm --filter @fluxychat/ai-agent deploy`
+1. `pnpm --filter @fluxy-chat/worker test`
+2. `pnpm --filter @fluxy-chat/ai-agent test`
+3. `pnpm --filter @fluxy-chat/dashboard test`
+4. `pnpm --filter @fluxy-chat/dashboard build`
+5. `pnpm --filter @fluxy-chat/worker deploy`
+6. `pnpm --filter @fluxy-chat/ai-agent deploy`
 7. Real onboarding from the dashboard
 8. Send first message
 9. First agent invoke
@@ -243,33 +243,33 @@ clients that haven't yet refreshed their token still verify.
 2. Set `JWT_SECRET_PREVIOUS` to the current `JWT_SECRET` value.
 3. Set `JWT_SECRET_PREVIOUS_EXPIRES_AT` to `now() + 24h` (ISO 8601, UTC).
 4. Update `JWT_SECRET` to the new value.
-5. Deploy the worker (`pnpm --filter @fluxychat/worker deploy`).
+5. Deploy the worker (`pnpm --filter @fluxy-chat/worker deploy`).
 6. Wait 24h. Remove `JWT_SECRET_PREVIOUS` and `JWT_SECRET_PREVIOUS_EXPIRES_AT`.
 7. Re-deploy.
 
-In a compromise: skip the 24h window — set `JWT_SECRET_PREVIOUS_EXPIRES_AT` to a past timestamp so the previous secret is rejected immediately after deploy.
+In a compromise: skip the 24h window â€” set `JWT_SECRET_PREVIOUS_EXPIRES_AT` to a past timestamp so the previous secret is rejected immediately after deploy.
 
 ### 8.2) Clerk keys (dashboard + worker)
 
-1. Roll the key in the Clerk dashboard: **API Keys → Roll key**.
+1. Roll the key in the Clerk dashboard: **API Keys â†’ Roll key**.
 2. Update `CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` in:
    - Cloudflare Workers secrets (per env): `wrangler secret put CLERK_SECRET_KEY`
    - Vercel/Next.js env vars: dashboard or `vercel env rm` + `vercel env add`
 3. Deploy both the worker and the dashboard in the same maintenance
-   window. There is **no overlap window** for Clerk — the old key is
+   window. There is **no overlap window** for Clerk â€” the old key is
    invalidated the moment Clerk issues the new one.
 4. Notify the team 15 minutes in advance; pause any automated test
    runs that depend on the Clerk test keys.
 
 ### 8.3) `STRIPE_WEBHOOK_SECRET` (worker)
 
-1. Roll the secret in the Stripe dashboard: **Webhooks → endpoint → Roll secret**.
+1. Roll the secret in the Stripe dashboard: **Webhooks â†’ endpoint â†’ Roll secret**.
 2. Stripe stops accepting signatures from the old secret immediately.
 3. Update `STRIPE_WEBHOOK_SECRET` in the worker secrets:
    `wrangler secret put STRIPE_WEBHOOK_SECRET`.
 4. Deploy the worker.
 5. Verify by replaying one recent webhook from the Stripe dashboard
-   (Webhooks → endpoint → Send test event) and confirming
+   (Webhooks â†’ endpoint â†’ Send test event) and confirming
    `200 OK` with `verified: true` in the response.
 
 ### 8.4) `WORKFLOW_SIGNING_SECRET` (worker, if enabled)
@@ -281,6 +281,6 @@ request.
 ### 8.5) Per-tenant `project_secrets.jwt_secret`
 
 The `admin/jwt-rotate` endpoint handles this for individual tenants.
-Run only when a tenant reports a leak or on the tenant's request —
+Run only when a tenant reports a leak or on the tenant's request â€”
 do not rotate globally.
 

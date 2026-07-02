@@ -7,10 +7,10 @@ Realtime chat on Cloudflare Workers. One worker, WebSocket rooms, a TypeScript S
 | What | Where |
 |------|-------|
 | Try hosted | [fluxychat.com/landing](https://fluxychat.com/landing) |
-| Operator console | `apps/dashboard` → start at `/onboarding` |
+| Operator console | `apps/dashboard` â†’ start at `/onboarding` |
 | SDK (npm) | [@fluxy-chat/sdk](https://www.npmjs.com/package/@fluxy-chat/sdk) |
-| Worker API | `apps/worker` · deploy with Wrangler |
-| Documentation | [docs/README.md](docs/README.md) · [Features overview](docs/features-overview.md) |
+| Worker API | `apps/worker` Â· deploy with Wrangler |
+| Documentation | [docs/README.md](docs/README.md) Â· [Features overview](docs/features-overview.md) |
 | Marketing | [docs/marketing/](docs/marketing/) |
 
 ### What you get (at a glance)
@@ -43,14 +43,14 @@ It prints a JWT you can use immediately with the SDK.
 
 ---
 
-> **Open beta** — [Try hosted cloud](https://fluxychat.com/landing) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Dev.to walkthrough](https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0) · **Support:** fluxychat@outlook.com
+> **Open beta** â€” [Try hosted cloud](https://fluxychat.com/landing) Â· [Guides](https://fluxychat.com/guides) Â· [Compare](https://fluxychat.com/compare) Â· [Dev.to walkthrough](https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh) Â· [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) Â· [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0) Â· **Support:** fluxychat@outlook.com
 
 - **Cloudflare Workers + Durable Objects** for WebSocket handling and presence.
 - **Cloudflare D1 (SQLite edge)** for messages and metadata.
 - **React / JS SDK (`useChat(roomId)`)** and lightweight UI kit.
 - **Next.js 16** dashboard for analytics, moderation, and cost insights.
 
-### What's new (P22–P25 — AI-native architecture overhaul)
+### What's new (P22â€“P25 â€” AI-native architecture overhaul)
 
 Inspired by the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai) architecture. Full roadmap: [`ROADMAP_EXECUTION.md`](ROADMAP_EXECUTION.md).
 
@@ -61,32 +61,32 @@ Inspired by the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk
 | **P24 AI medium** | Tool call streaming (progressive input rendering); multi-step loop control (maxSteps / stopWhen); provider-defined & provider-executed tools; pluggable transport architecture; typed UIMessage generics; data parts streaming; extractReasoningMiddleware; RAG middleware; provider-level middleware; image generation; speech generation (TTS); useObject hook for structured JSON streaming; generateObject/streamObject with schema validation; MCP Apps (sandboxed tool UIs); slash commands |
 | **P25 AI low** | experimental_throttle for render throttling; smoothStream for flicker-free text; ephemeral messages with DM fallback; cosine similarity utility; strict tool calling; sendAutomaticallyWhen auto-submit; sensitive context controls for telemetry |
 
-Full feature docs: [`docs/README.md`](docs/README.md) · SDK API tables: [`packages/sdk/README.md`](packages/sdk/README.md) · Guides: [`docs/guides/`](docs/guides/)
+Full feature docs: [`docs/README.md`](docs/README.md) Â· SDK API tables: [`packages/sdk/README.md`](packages/sdk/README.md) Â· Guides: [`docs/guides/`](docs/guides/)
 
 ### Monorepo layout
 
-- `apps/dashboard` – Next.js 16 app: marketing **`/landing`**, operator home **`/`**, guided **`/onboarding`**, analytics, rooms, admin, billing.
-- `apps/worker` – Cloudflare Worker entry (WebSocket, APIs, Durable Objects).
-- `apps/ai-agent` – AI Agent Service (processes mention webhooks, calls LLM providers, posts replies).
-- `packages/sdk` – TypeScript client SDK (`useChat`, low-level client).
-- `packages/ui` – Headless, themeable chat UI components.
+- `apps/dashboard` â€“ Next.js 16 app: marketing **`/landing`**, operator home **`/`**, guided **`/onboarding`**, analytics, rooms, admin, billing.
+- `apps/worker` â€“ Cloudflare Worker entry (WebSocket, APIs, Durable Objects).
+- `apps/ai-agent` â€“ AI Agent Service (processes mention webhooks, calls LLM providers, posts replies).
+- `packages/sdk` â€“ TypeScript client SDK (`useChat`, low-level client).
+- `packages/ui` â€“ Headless, themeable chat UI components.
 
 ### What the hosted app does
 
-1. **Sign up** (Clerk) → provisions a Worker project + admin JWT.
-2. **Quickstart** (`/onboarding`) → member JWT, room, first message, optional agent.
-3. **Console** → rooms, agents, webhooks, billing, analytics, GDPR tools.
+1. **Sign up** (Clerk) â†’ provisions a Worker project + admin JWT.
+2. **Quickstart** (`/onboarding`) â†’ member JWT, room, first message, optional agent.
+3. **Console** â†’ rooms, agents, webhooks, billing, analytics, GDPR tools.
 
 Backend: your messages and metadata live on **your Cloudflare Worker + D1** (multi-tenant hosted cloud or self-host).
 
 ### Publish `@fluxy-chat/sdk` to npm
 
-1. npm org **`fluxy-chat`** (scope `@fluxy-chat`) — already created for publish.
+1. npm org **`fluxy-chat`** (scope `@fluxy-chat`) â€” already created for publish.
 2. `cd packages/sdk && pnpm run build && pnpm test`
 3. `npm login` then `npm publish --access public` (from `packages/sdk`).
-4. Consumers set `baseUrl` to their Worker and mint JWTs server-side — see `packages/sdk/README.md`.
+4. Consumers set `baseUrl` to their Worker and mint JWTs server-side â€” see `packages/sdk/README.md`.
 
-`@fluxychat/ui` and `@fluxychat/agent` are workspace packages today (not published yet).
+`@fluxy-chat/ui` and `@fluxy-chat/agent` are workspace packages today (not published yet).
 
 ### Getting started
 
@@ -104,9 +104,9 @@ pnpm dev
 
 3. Individual apps:
 
-- `cd apps/dashboard` – `pnpm dev`
-- `cd apps/worker` – `pnpm dev` (via `wrangler dev`)
-- `cd apps/ai-agent` – `pnpm dev` (via `wrangler dev`)
+- `cd apps/dashboard` â€“ `pnpm dev`
+- `cd apps/worker` â€“ `pnpm dev` (via `wrangler dev`)
+- `cd apps/ai-agent` â€“ `pnpm dev` (via `wrangler dev`)
 
 For the Worker, optional local secrets and toggles: copy `apps/worker/.dev.vars.example` to `apps/worker/.dev.vars` (gitignored) and fill only what you need.
 
@@ -124,8 +124,8 @@ Use case guides, auth cookbook, troubleshooting, and dashboard integration notes
 - **Open beta deploy (step-by-step + env):** [`docs/operations/open-beta-deploy-guide.md`](docs/operations/open-beta-deploy-guide.md)
 - Deploy/rollback runbook: `RUNBOOK_DEPLOY_ROLLBACK.md`
 - Tenant recovery drill script: `apps/worker/scripts/tenant-recovery-drill.mjs`
-- Post-deploy smoke (health + stats): `cd apps/worker && pnpm run smoke:remote -- --base-url … --admin-jwt …` (see `docs/m6-operational-checklist.md`)
-- End-to-end HTTP smoke (auth → room → message → GDPR): `export TEST_API_KEY=fc_...` then `pnpm smoke:bundled` from repo root (`scripts/smoke-test.sh`; requires `bash` + `curl`)
+- Post-deploy smoke (health + stats): `cd apps/worker && pnpm run smoke:remote -- --base-url â€¦ --admin-jwt â€¦` (see `docs/m6-operational-checklist.md`)
+- End-to-end HTTP smoke (auth â†’ room â†’ message â†’ GDPR): `export TEST_API_KEY=fc_...` then `pnpm smoke:bundled` from repo root (`scripts/smoke-test.sh`; requires `bash` + `curl`)
 
 ### API contract (M3)
 

@@ -27,8 +27,8 @@ Use **Onboarding** or **Projects** to mint or paste tokens. The SDK client on th
 
 ## GDPR API (Worker)
 
-- **`GET /gdpr/export`** — Right of access / portability. Returns JSON attachment for the **`sub`** in the JWT.
-- **`DELETE /gdpr/delete`** — Erasure for the **`sub`** in the JWT within the project; requires **`owner`** or **`admin`** roles. Redacts messages and removes related rows per Worker implementation.
+- **`GET /gdpr/export`** â€” Right of access / portability. Returns JSON attachment for the **`sub`** in the JWT.
+- **`DELETE /gdpr/delete`** â€” Erasure for the **`sub`** in the JWT within the project; requires **`owner`** or **`admin`** roles. Redacts messages and removes related rows per Worker implementation.
 
 The Privacy page calls these endpoints using the stored session tokens.
 
@@ -40,15 +40,15 @@ Relevant to the home demo:
 - **Edit / delete message**: REST when authenticated; on failure, **WebSocket fallback** for the same operation.
 - **Reconnect**: exponential backoff; after repeated failures the hook falls back to **SSE** (`GET /rooms/:id/stream` via `connectSSE`), then **REST polling** if SSE is unavailable.
 - **`useChat` history replay** (Portal-style):
-  - `replay: "connect"` (default) — REST fetch on mount + apply WS `history` events.
-  - `replay: "request"` — skip auto-load for heavy rooms; call `loadHistory()` when the UI needs messages.
-  - `replayHistoryOnReconnect` — passed to `connectRoom` (default `true` when `replay` is `"connect"`).
+  - `replay: "connect"` (default) â€” REST fetch on mount + apply WS `history` events.
+  - `replay: "request"` â€” skip auto-load for heavy rooms; call `loadHistory()` when the UI needs messages.
+  - `replayHistoryOnReconnect` â€” passed to `connectRoom` (default `true` when `replay` is `"connect"`).
 - **`connectionStatus`**: `connected` | `connecting` | `reconnecting` | `disconnected` | `sse` | `polling`.
 
 ## File uploads & composed attachments
 
 - Worker endpoint **`POST /upload`** (JWT) stores bytes in **R2** when `ATTACHMENTS` is bound; response returns a public **`/attachments/...`** URL.
-- The home **`ChatWindow`** passes **`uploadComposerFile` → `FluxyChatClient.uploadFile(roomId, file)`** so image / file / audio icons use a native picker instead of URL prompts.
+- The home **`ChatWindow`** passes **`uploadComposerFile` â†’ `FluxyChatClient.uploadFile(roomId, file)`** so image / file / audio icons use a native picker instead of URL prompts.
 - **`POST /messages`** accepts an optional **`attachments`** array (same shape as websocket sends); entries are validated to `http(s)` URLs and persisted to D1 for history.
 
 ## Notifications (P7)
@@ -60,10 +60,10 @@ Relevant to the home demo:
 
 ## Composer `@mentions`
 
-The home page wires `@fluxychat/ui` **`ChatWindow`** with:
+The home page wires `@fluxy-chat/ui` **`ChatWindow`** with:
 
-- **`mentionSuggestions`** — built by loading **`client.listAgents()`** and passing `{ handle, label, agentId }` per bot (handle falls back to a slug derived from name).
-- **`typingAgentId`** — from **`useChat().typingAgentId`**, which merges websocket **`agentTyping`** events (includes `agentId`) with an in-flight id while **`invokeAgent`** runs.
+- **`mentionSuggestions`** â€” built by loading **`client.listAgents()`** and passing `{ handle, label, agentId }` per bot (handle falls back to a slug derived from name).
+- **`typingAgentId`** â€” from **`useChat().typingAgentId`**, which merges websocket **`agentTyping`** events (includes `agentId`) with an in-flight id while **`invokeAgent`** runs.
 
 `ChatWindow` merges those rows with **`onlineUsers`** IDs and **`@handles`** parsed from recent message text so the dropdown stays useful outside the Agents list alone. Matching is prefix on handle or substring on display **label**.
 
@@ -74,11 +74,11 @@ Configure on the Worker (see `apps/worker/wrangler.toml` comments):
 | Env prefix | Behaviour |
 |------------|-----------|
 | **`AUTO_ROOM_SUMMARY_*`** | After new messages (REST, WS, bot, agent paths), enqueue an automatic **`room_summary`** when AI is configured and thresholds/cooldowns pass. Webhook **`room.summary`** fires when summaries are persisted. |
-| **`BUILTIN_MODERATION_*`** | Substring blocklist match → moderation row (**`auto_flag`**), **`automation_events`**, webhook **`moderation.auto_flag`**; surfaced alongside user reports under admin reports filters. |
+| **`BUILTIN_MODERATION_*`** | Substring blocklist match â†’ moderation row (**`auto_flag`**), **`automation_events`**, webhook **`moderation.auto_flag`**; surfaced alongside user reports under admin reports filters. |
 
 ## Environment
 
-- **`NEXT_PUBLIC_FLUXYCHAT_WORKER_URL`** — Worker base URL (default `http://127.0.0.1:8787` in dev).
+- **`NEXT_PUBLIC_FLUXYCHAT_WORKER_URL`** â€” Worker base URL (default `http://127.0.0.1:8787` in dev).
 
 See also: [Auth cookbook](./cookbook/auth-jwt.md), [Troubleshooting](./troubleshooting.md).
 

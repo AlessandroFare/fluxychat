@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { FLUXY_OUTBOUND_EVENT_TYPES, isFluxyInboundEvent } from "@fluxychat/protocol";
+import { FLUXY_OUTBOUND_EVENT_TYPES, isFluxyInboundEvent } from "@fluxy-chat/protocol";
 
-describe("@fluxychat/react-native-sdk protocol parity", () => {
+describe("@fluxy-chat/react-native-sdk protocol parity", () => {
   it("shares outbound event registry with worker Room DO", () => {
     expect(FLUXY_OUTBOUND_EVENT_TYPES).toContain("message");
     expect(FLUXY_OUTBOUND_EVENT_TYPES).toContain("edit");

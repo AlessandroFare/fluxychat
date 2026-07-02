@@ -1,4 +1,4 @@
-import { dispatchInboundWsFrame as dispatchFrame } from "@fluxychat/protocol";
+import { dispatchInboundWsFrame as dispatchFrame } from "@fluxy-chat/protocol";
 import type { FluxyChatEvent, FluxyChatMessage } from "./index";
 
 interface InboundHandlers {
@@ -9,7 +9,7 @@ interface InboundHandlers {
   onDeliver: (event: FluxyChatEvent) => void;
 }
 
-/** Typed wrapper around @fluxychat/protocol dispatch. */
+/** Typed wrapper around @fluxy-chat/protocol dispatch. */
 export function dispatchInboundWsFrame(raw: string, handlers: InboundHandlers): void {
   dispatchFrame(raw, {
     onPong: handlers.onPong,
