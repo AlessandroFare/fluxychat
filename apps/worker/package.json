@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@fluxy-chat/worker",
   "version": "0.1.0",
   "description": "Fluxychat Cloudflare Worker â€“ WebSocket, Durable Objects, D1",

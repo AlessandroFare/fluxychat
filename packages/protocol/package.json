@@ -1,4 +1,4 @@
-﻿{
+{
     "name":  "@fluxy-chat/protocol",
     "version":  "0.1.0",
     "description":  "Shared FluxyChat wire protocol â€” WebSocket event types and validators for SDKs and the worker",

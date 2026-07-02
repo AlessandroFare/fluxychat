@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@fluxy-chat/sdk",
   "version": "0.4.2",
   "description": "Fluxychat JavaScript/TypeScript SDK â€” WebSocket rooms, REST messages, FluxyRealtimeProvider, useChat with loadMore",

@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@fluxy-chat/ai-agent",
   "version": "0.1.0",
   "description": "Fluxychat AI Agent Service â€“ processes mention webhooks and calls LLM providers",

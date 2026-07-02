@@ -1,4 +1,4 @@
-﻿{
+{
     "name":  "@fluxy-chat/agent",
     "version":  "0.1.0",
     "description":  "Fluxychat server-side agent SDK (WebSocket bots, streaming, waitFor)",
