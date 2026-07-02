@@ -56,13 +56,13 @@ importers:
       '@clerk/nextjs':
         specifier: ^6.39.3
         version: 6.39.3(next@16.2.6(@babel/core@8.0.0)(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@fluxy-chat/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
       '@fluxy-chat/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
-      '@fluxychat/protocol':
-        specifier: workspace:*
-        version: link:../../packages/protocol
-      '@fluxychat/ui':
+      '@fluxy-chat/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@shadcn/react':
@@ -168,7 +168,7 @@ importers:
 
   apps/worker:
     dependencies:
-      '@fluxychat/protocol':
+      '@fluxy-chat/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
       remark:
@@ -258,7 +258,7 @@ importers:
 
   packages/react-native-sdk:
     dependencies:
-      '@fluxychat/protocol':
+      '@fluxy-chat/protocol':
         specifier: workspace:*
         version: link:../protocol
       react:
@@ -286,7 +286,7 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@fluxychat/protocol':
+      '@fluxy-chat/protocol':
         specifier: workspace:*
         version: link:../protocol
       remend:

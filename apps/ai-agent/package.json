@@ -1,7 +1,7 @@
-{
-  "name": "@fluxychat/ai-agent",
+﻿{
+  "name": "@fluxy-chat/ai-agent",
   "version": "0.1.0",
-  "description": "Fluxychat AI Agent Service – processes mention webhooks and calls LLM providers",
+  "description": "Fluxychat AI Agent Service â€“ processes mention webhooks and calls LLM providers",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,3 +16,4 @@
     "wrangler": "^4.92.0"
   }
 }
+

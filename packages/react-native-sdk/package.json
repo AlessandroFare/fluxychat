@@ -49,7 +49,7 @@
                             "vitest":  "^4.1.5"
                         },
     "dependencies":  {
-                         "@fluxychat/protocol":  "workspace:*"
+                         "@fluxy-chat/protocol":  "workspace:*"
                      },
     "files":  [
                   "dist/",
@@ -57,3 +57,4 @@
                   "LICENSE"
               ]
 }
+
