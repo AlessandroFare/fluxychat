@@ -45,5 +45,11 @@ export const MARKETING_GUIDE_PATHS = {
   inAppChatVsSupportDesk: "/guides/in-app-chat-vs-support-desk",
   llmMemoryVsRoomState: "/guides/llm-memory-vs-room-state",
   offlineNotifyInAppPlusSms: "/guides/offline-notify-in-app-plus-sms",
+  jwtAuth: "/guides/jwt-auth",
+  webhookSigning: "/guides/webhook-signing",
+  apiKeyManagement: "/guides/api-key-management",
+  sessionSecurity: "/guides/session-security",
+  oauthEncryption: "/guides/oauth-encryption",
+  gdprCompliance: "/guides/gdpr-compliance",
 } as const;
 
