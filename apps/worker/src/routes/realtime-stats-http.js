@@ -261,7 +261,29 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
       rows
     );
 
-    return json({ messages: mapped });
+    // Fetch reactions for the returned messages
+    let reactionsMap = {};
+    if (mapped.length > 0) {
+      const messageIds = mapped.map((m) => m.id).filter(Boolean);
+      if (messageIds.length > 0) {
+        const placeholders = messageIds.map(() => "?").join(",");
+        try {
+          const reactionRows = await env.DB.prepare(
+            `SELECT message_id, emoji, COUNT(*) as count FROM message_reactions WHERE project_id = ? AND message_id IN (${placeholders}) GROUP BY message_id, emoji`
+          )
+            .bind(auth.projectId, ...messageIds)
+            .all();
+          for (const r of reactionRows.results || []) {
+            if (!reactionsMap[r.message_id]) reactionsMap[r.message_id] = {};
+            reactionsMap[r.message_id][r.emoji] = r.count;
+          }
+        } catch (err) {
+          logError("api_messages_reactions_failed", err, requestLogCtx);
+        }
+      }
+    }
+
+    return json({ messages: mapped, reactions: reactionsMap });
   }
 
   // Room stats: message volume & active users (simple version)

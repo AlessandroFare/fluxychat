@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   BookOpen,
   BrainCircuit,
@@ -67,6 +67,7 @@ import {
 import {
   Bubble,
   BubbleContent,
+  BubbleReactions,
 } from "@/components/ui/bubble";
 import {
   MessageScrollerProvider,
@@ -108,6 +109,83 @@ const SKIP_HISTORY_STORAGE_KEY = "fluxychat.agentChat.skipHistory";
 
 function displayUserId(message: { userId?: string | null }): string {
   return message.userId?.trim() || "unknown";
+}
+
+function stringToColor(str: string): string {
+  const palette = [
+    "#F97316", "#8B5CF6", "#06B6D4", "#10B981", "#F59E0B",
+    "#EF4444", "#3B82F6", "#EC4899", "#14B8A6", "#6366F1",
+  ];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash;
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
+const UserPlaceholder = ({ bg }: { bg: string }) => (
+  <div
+    className="flex size-full items-center justify-center overflow-hidden rounded-full"
+    style={{ backgroundColor: bg }}
+  >
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="size-full">
+      <rect width="24" height="24" fill={bg} />
+      <circle cx="12" cy="8" r="3.5" fill="white" opacity="0.85" />
+      <path d="M4 20 C4 15 8 13 12 13 C16 13 20 15 20 20" fill="white" opacity="0.75" />
+    </svg>
+  </div>
+);
+
+const AgentAvatar = () => (
+  <div
+    className="flex size-full items-center justify-center rounded-full"
+    style={{ backgroundColor: "#C2410C" }}
+  >
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="size-5">
+      <line x1="12" y1="2" x2="12" y2="5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="12" cy="1.5" r="1" fill="white" />
+      <rect x="5" y="5" width="14" height="10" rx="2" fill="white" opacity="0.95" />
+      <circle cx="9" cy="10" r="1.5" fill="#C2410C" />
+      <circle cx="15" cy="10" r="1.5" fill="#C2410C" />
+      <rect x="9" y="12.5" width="6" height="1" rx="0.5" fill="#C2410C" />
+      <rect x="8" y="16" width="8" height="5" rx="1.5" fill="white" opacity="0.85" />
+      <rect x="3" y="16.5" width="4" height="2.5" rx="1" fill="white" opacity="0.75" />
+      <rect x="17" y="16.5" width="4" height="2.5" rx="1" fill="white" opacity="0.75" />
+      <rect x="3.5" y="8" width="1.5" height="4" rx="0.75" fill="white" opacity="0.7" />
+      <rect x="19" y="8" width="1.5" height="4" rx="0.75" fill="white" opacity="0.7" />
+    </svg>
+  </div>
+);
+
+function ChatAvatar({
+  isAgent,
+  isSelf,
+  displayName,
+  clerkImageUrl,
+  userId,
+}: {
+  isAgent: boolean;
+  isSelf: boolean;
+  displayName: string;
+  clerkImageUrl?: string | null;
+  userId?: string | null;
+}) {
+  if (isAgent) return <AgentAvatar />;
+  if (isSelf && clerkImageUrl) {
+    return (
+      <img
+        src={clerkImageUrl}
+        alt={displayName}
+        className="size-full rounded-full object-cover"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+  if (isSelf) return <UserPlaceholder bg="#D1D5DB" />;
+  const seed = userId || displayName || "?";
+  return <UserPlaceholder bg={stringToColor(seed)} />;
 }
 
 function isSameDay(a: string, b: string): boolean {
@@ -206,6 +284,7 @@ export function FluxyChat({
   const showRoomDraftSync = variant === "full";
   const showSuggestedPrompts = (variant === "demo" || variant === "onboarding") && suggestedPrompts && suggestedPrompts.length > 0;
   const searchParams = useSearchParams();
+  const router = useRouter();
   const deepLinkHistoryLimit =
     deepLinkHistoryLimitProp ??
     (Number(searchParams.get("replayLimit")) || undefined);
@@ -916,9 +995,46 @@ export function FluxyChat({
                   const isStreaming = Boolean(m.streaming);
                   const isVoice = m.kind === "voice";
                   const parentId = m.parentId ?? null;
+
+                  // Display name: Clerk user for self, truncated ID for others, agentName for agent
+                  const displayName = isAgent
+                    ? agentName
+                    : isSelf
+                      ? (clerkUser?.fullName || clerkUser?.username || clerkUser?.primaryEmailAddress?.emailAddress?.split("@")[0] || "You")
+                      : (author.length > 10 ? author.slice(0, 10) + "…" : author);
                   const align: "start" | "end" = isSelf ? "end" : "start";
                   const bubbleVariant = isSelf ? "default" : "tinted";
                   const parentMessage = m.parentId != null ? messagesById.get(m.parentId) ?? null : null;
+                  const showHeader = !prev || prev.userId !== m.userId || showDate;
+                  const hasReactions = m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0;
+
+                  const floatingToolbar = m.id != null && !isStreaming ? (
+                    <div
+                      className={cn(
+                        "absolute top-1/2 -translate-y-1/2 z-[9999] opacity-0 transition-opacity group-hover/message:opacity-100",
+                        isSelf ? "right-[calc(100%+8px)]" : "left-[calc(100%+8px)]"
+                      )}
+                    >
+                      <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 shadow-sm">
+                        <button
+                          type="button"
+                          onClick={(e) => openReactionPicker(e, m.id!)}
+                          className="rounded-full p-1 hover:bg-gray-100"
+                          aria-label="Add reaction"
+                        >
+                          <Smile className="size-3.5 text-gray-500" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setReplyToId(m.id!)}
+                          className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-gray-600 hover:bg-gray-100"
+                        >
+                          <Reply className="size-3" />
+                          Reply
+                        </button>
+                      </div>
+                    </div>
+                  ) : null;
 
                   return (
                     <React.Fragment key={m.id}>
@@ -940,25 +1056,35 @@ export function FluxyChat({
                           data-message-id={m.id != null ? String(m.id) : undefined}
                         >
                           <Message align={align} className="gap-2">
-                            {/* Avatar */}
+                            {/* Avatar — top-aligned, beside bubble, clickable for non-agent */}
                             <MessageAvatar
                               status={isAgent ? "online" : null}
-                              className="size-8 items-center justify-center bg-muted text-xs font-semibold"
+                              className={cn(
+                                "size-8 shrink-0 self-start overflow-hidden rounded-full",
+                                !isAgent && "cursor-pointer",
+                              )}
+                              {...(!isAgent && m.userId ? { onClick: () => router.push(`/users/${encodeURIComponent(m.userId!)}`) } : {})}
                             >
-                              {isAgent ? agentName.charAt(0).toUpperCase() : author.charAt(0).toUpperCase()}
+                              <ChatAvatar
+                                isAgent={isAgent}
+                                isSelf={isSelf}
+                                displayName={displayName}
+                                clerkImageUrl={isSelf ? clerkUser?.imageUrl : null}
+                                userId={m.userId}
+                              />
                             </MessageAvatar>
 
                             <MessageContent>
-                              {/* Header */}
+                              {/* Header — hidden for consecutive messages from same user */}
+                              {showHeader ? (
                               <MessageHeader
-                                className="px-0"
-                                style={{ fontSize: "11px" }}
+                                className={cn("px-0 mb-1", isSelf && "justify-end")}
                               >
-                                <span className="text-muted-foreground">
-                                  {isAgent ? agentName : author}
+                                <span className="text-sm font-semibold text-foreground">
+                                  {displayName}
                                 </span>
                                 {isAgent ? (
-                                  <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand ring-1 ring-brand/20">
+                                  <span className="ml-1.5 rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand ring-1 ring-brand/20">
                                     agent
                                   </span>
                                 ) : null}
@@ -972,29 +1098,6 @@ export function FluxyChat({
                                   </span>
                                 ) : null}
                               </MessageHeader>
-
-                              {/* Floating reply/reaction toolbar — outside bubble */}
-                              {m.id != null && !isStreaming ? (
-                                <div className="absolute -top-4 right-2 z-[9999] opacity-0 transition-opacity group-hover/message:opacity-100">
-                                  <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 shadow-sm">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => openReactionPicker(e, m.id!)}
-                                      className="rounded-full p-1 hover:bg-gray-100"
-                                      aria-label="Add reaction"
-                                    >
-                                      <Smile className="size-3.5 text-gray-500" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setReplyToId(m.id!)}
-                                      className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-gray-600 hover:bg-gray-100"
-                                    >
-                                      <Reply className="size-3" />
-                                      Reply
-                                    </button>
-                                  </div>
-                                </div>
                               ) : null}
 
                               {/* Reply quote — inside bubble, before message text */}
@@ -1002,13 +1105,21 @@ export function FluxyChat({
                                 <Bubble
                                   variant={bubbleVariant}
                                   align={align}
-                                  className={isSelf ? sentBubbleClass : receivedBubbleClass}
+                                  className={cn(isSelf ? sentBubbleClass : receivedBubbleClass, hasReactions && "mb-3")}
                                 >
+                                  {floatingToolbar}
                                   <BubbleContent>
                                     {(() => {
                                       const replyMsg = parentMessage;
                                       const replyText = replyMsg.content || "";
-                                      const replyUser = replyMsg.userId || "unknown";
+                                      const replyUser = (() => {
+                                        const uid = replyMsg.userId || "";
+                                        if (uid === agentId) return agentName;
+                                        if (localUserId && uid === localUserId) {
+                                          return clerkUser?.fullName || clerkUser?.username || clerkUser?.primaryEmailAddress?.emailAddress?.split("@")[0] || "You";
+                                        }
+                                        return uid.length > 12 ? uid.slice(0, 12) + "…" : uid || "unknown";
+                                      })();
                                       return (
                                         <div
                                           onClick={() => replyMsg.id != null && scrollToMessage(replyMsg.id)}
@@ -1094,27 +1205,53 @@ export function FluxyChat({
                                     {m.editedAt && !isStreaming ? (
                                       <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.6)" : undefined }}>edited</div>
                                     ) : null}
+
+                                    {/* Timestamp + read receipt — inside bubble, WhatsApp style */}
+                                    <div className="mt-1 flex items-center justify-end gap-1" style={{ marginTop: "4px" }}>
+                                      {mTime ? (
+                                        <time
+                                          dateTime={mTime}
+                                          className="select-none tabular-nums"
+                                          style={{
+                                            fontSize: "10px",
+                                            color: isSelf ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.40)",
+                                            lineHeight: 1,
+                                          }}
+                                        >
+                                          {new Date(mTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })}
+                                        </time>
+                                      ) : null}
+                                      {isSelf ? (
+                                        <span
+                                          style={{
+                                            fontSize: "10px",
+                                            color: m.deliveryStatus === "pending" ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.65)",
+                                            lineHeight: 1,
+                                            letterSpacing: "-1px",
+                                          }}
+                                          aria-label={m.deliveryStatus === "pending" ? "Sending" : "Sent"}
+                                        >
+                                          {m.deliveryStatus === "pending" ? "○" : "✓"}
+                                        </span>
+                                      ) : null}
+                                    </div>
                                   </BubbleContent>
 
-                                  {/* Reactions below bubble */}
+                                  {/* Reactions — using shadcn BubbleReactions */}
                                   {m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0 ? (
-                                    <div className={`mt-1 flex flex-wrap gap-1 ${isSelf ? "justify-end" : "justify-start"}`}>
+                                    <BubbleReactions side="bottom" align={isSelf ? "end" : "start"}>
                                       {Object.entries(reactions[m.id]).map(([emoji, count]) => (
                                         <button
                                           key={emoji}
                                           type="button"
                                           onClick={() => m.id != null && toggleReaction(m.id, emoji)}
-                                          className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[13px] transition-colors"
-                                          style={{
-                                            background: "white",
-                                            borderColor: "#e5e7eb",
-                                          }}
+                                          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[13px] transition-colors hover:bg-muted-foreground/10"
                                         >
                                           <span>{emoji}</span>
-                                          <span className="text-gray-600">{count}</span>
+                                          <span className="text-muted-foreground">{count}</span>
                                         </button>
                                       ))}
-                                    </div>
+                                    </BubbleReactions>
                                   ) : null}
                                 </Bubble>
                               ) : (
@@ -1122,8 +1259,9 @@ export function FluxyChat({
                                 <Bubble
                                   variant={bubbleVariant}
                                   align={align}
-                                  className={isSelf ? sentBubbleClass : receivedBubbleClass}
+                                  className={cn(isSelf ? sentBubbleClass : receivedBubbleClass, hasReactions && "mb-3")}
                                 >
+                                  {floatingToolbar}
                                   <BubbleContent>
                                     {/* Tool badge in bubble */}
                                     {pendingTool?.type === "deep-research" && m.content?.includes("[deep-research]") ? (
@@ -1182,27 +1320,53 @@ export function FluxyChat({
                                     {m.editedAt && !isStreaming ? (
                                       <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.6)" : undefined }}>edited</div>
                                     ) : null}
+
+                                    {/* Timestamp + read receipt — inside bubble, WhatsApp style */}
+                                    <div className="mt-1 flex items-center justify-end gap-1" style={{ marginTop: "4px" }}>
+                                      {mTime ? (
+                                        <time
+                                          dateTime={mTime}
+                                          className="select-none tabular-nums"
+                                          style={{
+                                            fontSize: "10px",
+                                            color: isSelf ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.40)",
+                                            lineHeight: 1,
+                                          }}
+                                        >
+                                          {new Date(mTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })}
+                                        </time>
+                                      ) : null}
+                                      {isSelf ? (
+                                        <span
+                                          style={{
+                                            fontSize: "10px",
+                                            color: m.deliveryStatus === "pending" ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.65)",
+                                            lineHeight: 1,
+                                            letterSpacing: "-1px",
+                                          }}
+                                          aria-label={m.deliveryStatus === "pending" ? "Sending" : "Sent"}
+                                        >
+                                          {m.deliveryStatus === "pending" ? "○" : "✓"}
+                                        </span>
+                                      ) : null}
+                                    </div>
                                   </BubbleContent>
 
-                                  {/* Reactions below bubble */}
+                                  {/* Reactions — using shadcn BubbleReactions */}
                                   {m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0 ? (
-                                    <div className={`mt-1 flex flex-wrap gap-1 ${isSelf ? "justify-end" : "justify-start"}`}>
+                                    <BubbleReactions side="bottom" align={isSelf ? "end" : "start"}>
                                       {Object.entries(reactions[m.id]).map(([emoji, count]) => (
                                         <button
                                           key={emoji}
                                           type="button"
                                           onClick={() => m.id != null && toggleReaction(m.id, emoji)}
-                                          className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[13px] transition-colors"
-                                          style={{
-                                            background: "white",
-                                            borderColor: "#e5e7eb",
-                                          }}
+                                          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[13px] transition-colors hover:bg-muted-foreground/10"
                                         >
                                           <span>{emoji}</span>
-                                          <span className="text-gray-600">{count}</span>
+                                          <span className="text-muted-foreground">{count}</span>
                                         </button>
                                       ))}
-                                    </div>
+                                    </BubbleReactions>
                                   ) : null}
                                 </Bubble>
                               )}
@@ -1220,16 +1384,6 @@ export function FluxyChat({
                                   ))}
                                 </div>
                               ) : null}
-
-                              {/* Footer */}
-                              <MessageFooter
-                                className="px-0"
-                                style={{ fontSize: "11px", marginTop: "2px" }}
-                              >
-                                {mTime ? (
-                                  <MessageTimestamp timestamp={mTime} size="sm" />
-                                ) : null}
-                              </MessageFooter>
 
                               {/* Thread summary */}
                               {trimmedRoomId && m.id && !parentId && !isStreaming ? (

@@ -38,7 +38,7 @@ export default function SettingsPage() {
         <SettingsCard
           title="Profile"
           description="Name, email, password, and connected accounts are managed by Clerk."
-          cta={{ label: "Open profile →", href: "/dashboard" }}
+          cta={{ label: "Open profile →", href: "/profile" }}
         >
           {user ? (
             <p className="text-sm text-muted-foreground">

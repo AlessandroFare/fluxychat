@@ -36,7 +36,7 @@ export function FirstChatStep({ wizard: w }: FirstChatStepProps) {
       <div className="text-center">
         <h3 className="text-lg font-semibold text-foreground">Try your first chat</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Type a message or tap a suggestion below. The AI responds with streaming markdown.
+          Type a message below and press Enter. The AI will respond automatically — no setup needed.
         </p>
       </div>
 
@@ -79,9 +79,7 @@ export function FirstChatStep({ wizard: w }: FirstChatStepProps) {
           client={w.fluxyClient}
           coPilotConfirm={false}
           onMessageSent={() => {
-            // The wizard's sendMessage wrapper already tracks userSentMessage,
-            // but FluxyChat manages its own send. We rely on the wizard's
-            // connection to the same room to see the message appear.
+            w.markMessageSent();
           }}
           className="mt-2"
         />
@@ -124,9 +122,18 @@ export function FirstChatStep({ wizard: w }: FirstChatStepProps) {
 
       {/* First message checklist */}
       {canChat && !w.userSentMessage && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
-          Send a message to continue
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
+            Send a message to continue
+          </div>
+          <button
+            type="button"
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            onClick={() => w.goNext()}
+          >
+            Skip for now
+          </button>
         </div>
       )}
       {w.userSentMessage && (

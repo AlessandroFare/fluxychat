@@ -22,6 +22,7 @@ import {
   Shield,
   ShieldCheck,
   Terminal,
+  UserCircle,
 } from "lucide-react";
 import { MARKETING_PATH_PREFIXES } from "@/lib/hosted-product";
 
@@ -42,6 +43,7 @@ export const CONSOLE_NAV_MAIN: ConsoleNavItem[] = [
   { href: "/notifications", label: "Notifications", icon: Bell, description: "Mentions, DMs, and read state" },
   { href: "/agents", label: "Agents", icon: Bot, description: "Configure in-room AI" },
   { href: "/billing", label: "Billing", icon: CreditCard, description: "Usage and plan changes" },
+  { href: "/profile", label: "Profile", icon: UserCircle, description: "Your user profile" },
 ];
 
 export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [

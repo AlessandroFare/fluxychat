@@ -77,6 +77,9 @@ export function startFluxyRoomSession(
   let active = true;
   const trimmedRoomId = roomId.trim();
   let e2eKeyRef = e2eKeyOption?.trim() || null;
+
+  // Track pending optimistic reactions to avoid double-counting WS echoes
+  const pendingReactions = new Set<string>();
   const MAX_WS_RECONNECT_ATTEMPTS = 6;
   const POLL_INTERVAL_MS = 4000;
 
@@ -312,6 +315,12 @@ export function startFluxyRoomSession(
         ),
       }));
     } else if (data.type === "reaction") {
+      // Skip WS echo for reactions we already applied optimistically
+      const reactionKey = `${data.messageId}:${data.emoji}:${data.op}`;
+      if (pendingReactions.has(reactionKey)) {
+        pendingReactions.delete(reactionKey);
+        return;
+      }
       setState((s) => {
         const byMessage = { ...s.reactions };
         const current = { ...(byMessage[data.messageId] || {}) };
@@ -650,6 +659,27 @@ export function startFluxyRoomSession(
     op: "add" | "remove" = "add",
   ) => {
     if (!client) return;
+
+    const reactionKey = `${messageId}:${emoji}:${op}`;
+    pendingReactions.add(reactionKey);
+
+    // Optimistic local update — apply immediately, WS broadcast will confirm
+    setState((s) => {
+      const byMessage = { ...s.reactions };
+      const current = { ...(byMessage[messageId] || {}) };
+      const existingCount = current[emoji] || 0;
+      if (op === "remove") {
+        const nextCount = Math.max(existingCount - 1, 0);
+        if (nextCount === 0) delete current[emoji];
+        else current[emoji] = nextCount;
+      } else {
+        current[emoji] = existingCount + 1;
+      }
+      if (Object.keys(current).length === 0) delete byMessage[messageId];
+      else byMessage[messageId] = current;
+      return { reactions: byMessage };
+    });
+
     if (client.isAuthenticated()) {
       void client.sendReactionRest(messageId, emoji, op).catch(() => {
         try {
@@ -820,11 +850,16 @@ export function startFluxyRoomSession(
             content: await maybeDecryptContent(m.content ?? ""),
           })),
         );
-        setState({
+        // Merge reactions from REST response into state
+        const restReactions = client?.lastFetchReactions ?? {};
+        setState((s) => ({
           messages: decrypted,
           hasMore: initial.length >= historyLimit,
           historyLoaded: true,
-        });
+          reactions: Object.keys(restReactions).length > 0
+            ? { ...s.reactions, ...restReactions }
+            : s.reactions,
+        }));
       })
       .catch(() => {});
   } else {

@@ -10,6 +10,7 @@ import { dispatchActivitiesRoutes } from "./activities-http.js";
 import { dispatchVoiceMessagesRoutes } from "./voice-messages-http.js";
 import { dispatchSuggestRepliesRoutes } from "./suggest-replies-http.js";
 import { dispatchThreadSummaryRoutes } from "./thread-summary-http.js";
+import { dispatchUsersRoutes } from "./users-http.js";
 
 /**
  * Messages, LLM credentials, and agents (composite dispatch).
@@ -32,6 +33,8 @@ export async function dispatchMessagesAgentsRoutes(request, url, h) {
   if (resSuggest) return resSuggest;
   const resThreadSummary = await dispatchThreadSummaryRoutes(request, url, h);
   if (resThreadSummary) return resThreadSummary;
+  const resUsers = await dispatchUsersRoutes(request, url, h);
+  if (resUsers) return resUsers;
   const resVoice = await dispatchVoiceMessagesRoutes(request, url, h);
   if (resVoice) return resVoice;
   const resMessages = await dispatchMessagesRoutes(request, url, h);

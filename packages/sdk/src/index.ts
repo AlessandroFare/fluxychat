@@ -1286,7 +1286,17 @@ export class FluxyChatClient {
     });
     if (!res.ok) throw new Error(`Failed to fetch messages: ${res.status}`);
     const body = await res.json();
+    // Store reactions from response for later access via getLastFetchReactions()
+    if (body.reactions && typeof body.reactions === "object") {
+      this._lastFetchReactions = body.reactions;
+    }
     return sortMessagesChronological((body.messages ?? []) as FluxyChatMessage[]);
+  }
+
+  /** Reactions map from the most recent fetchMessages call. */
+  private _lastFetchReactions: Record<number, Record<string, number>> = {};
+  get lastFetchReactions(): Record<number, Record<string, number>> {
+    return this._lastFetchReactions;
   }
 
   /**

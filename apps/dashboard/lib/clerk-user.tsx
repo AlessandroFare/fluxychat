@@ -16,6 +16,7 @@ export interface ClerkUserSnapshot {
         id: string;
         fullName?: string | null;
         username?: string | null;
+        imageUrl?: string | null;
         primaryEmailAddress?: { emailAddress: string } | null;
       }
     | null;
@@ -40,6 +41,7 @@ function ClerkUserBridgeInner({ children }: { children: React.ReactNode }) {
             id: user.id,
             fullName: user.fullName ?? null,
             username: user.username ?? null,
+            imageUrl: user.imageUrl ?? null,
             primaryEmailAddress: user.primaryEmailAddress
               ? { emailAddress: user.primaryEmailAddress.emailAddress }
               : null,
@@ -48,7 +50,7 @@ function ClerkUserBridgeInner({ children }: { children: React.ReactNode }) {
       isSignedIn: Boolean(isSignedIn),
       isLoaded: Boolean(isLoaded),
     }),
-    [user?.id, user?.fullName, user?.username, user?.primaryEmailAddress, isSignedIn, isLoaded],
+    [user?.id, user?.fullName, user?.username, user?.imageUrl, user?.primaryEmailAddress, isSignedIn, isLoaded],
   );
   return <ClerkUserContext.Provider value={value}>{children}</ClerkUserContext.Provider>;
 }

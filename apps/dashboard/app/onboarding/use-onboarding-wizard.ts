@@ -78,18 +78,27 @@ export function useOnboardingWizard() {
   // Track whether the *current user* has sent a message during this onboarding
   // session.
   const [userSentMessage, setUserSentMessage] = useState(false);
+  const celebratedRef = useRef(false);
+
+  const markMessageSent = useCallback(() => {
+    setUserSentMessage(true);
+    const key = clerkUser?.id ?? `self-host-${userId.trim() || "owner"}`;
+    markQuickstartFirstMessage(key);
+    if (!celebratedRef.current) {
+      celebratedRef.current = true;
+      setShowCelebration(true);
+    }
+  }, [clerkUser?.id, userId]);
+
   const handleSendMessage = useCallback(
     (...args: Parameters<typeof rawSendMessage>) => {
-      setUserSentMessage(true);
-      const key = clerkUser?.id ?? `self-host-${userId.trim() || "owner"}`;
-      markQuickstartFirstMessage(key);
+      markMessageSent();
       return rawSendMessage(...args);
     },
-    [rawSendMessage, clerkUser?.id, userId],
+    [rawSendMessage, markMessageSent],
   );
 
   // Celebrate + advance to step 3 (Explore Features) when user sends first message.
-  const celebratedRef = useRef(false);
   useEffect(() => {
     if (!userSentMessage || celebratedRef.current) return;
     celebratedRef.current = true;
@@ -350,7 +359,22 @@ export function useOnboardingWizard() {
           : "Room created.",
       );
     } catch (err: unknown) {
-      setError(messageFromUnknown(err, "Failed to create room"));
+      const msg = messageFromUnknown(err, "Failed to create room");
+      // If room already exists, reuse it instead of erroring
+      if (msg.includes("already") || msg.includes("exists") || msg.includes("409") || msg.includes("conflict")) {
+        const existingRoom: CreatedRoom = {
+          id: name,
+          type: "group",
+          name: name,
+          created_at: new Date().toISOString(),
+        };
+        setRoom(existingRoom);
+        setLastRoom(existingRoom);
+        setNotice("Room already exists — reusing it.");
+        setError(null);
+      } else {
+        setError(msg);
+      }
     } finally {
       setCreatingRoom(false);
     }
@@ -482,6 +506,7 @@ export function useOnboardingWizard() {
     setSkipHistoryOnConnect,
     messages,
     sendMessage: handleSendMessage,
+    markMessageSent,
     userSentMessage,
     connectionStatus,
     historyLoaded,

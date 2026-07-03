@@ -56,7 +56,7 @@ function MessageAvatar({
   status?: "online" | "offline" | "away" | null
 }) {
   return (
-    <div className="relative shrink-0 self-end">
+    <div className="relative shrink-0 self-start">
       <div
         data-slot="message-avatar"
         className={cn(
