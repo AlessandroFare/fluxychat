@@ -63,11 +63,15 @@ export interface WorkflowAgent {
   listWorkflows(filter?: { status?: WorkflowStatus; limit?: number }): Promise<WorkflowState[]>;
 }
 
-export declare function createWorkflowAgent(opts: {
+export function createWorkflowAgent(opts: {
   store: WorkflowStore;
   executeStep: (step: WorkflowStep, state: WorkflowState) => Promise<unknown>;
   onStepComplete?: (step: WorkflowStep, state: WorkflowState) => void | Promise<void>;
   onWorkflowComplete?: (state: WorkflowState) => void | Promise<void>;
-}): WorkflowAgent;
+}): WorkflowAgent {
+  throw new Error("createWorkflowAgent not implemented in SDK - use worker runtime");
+}
 
-export declare function createMemoryWorkflowStore(): WorkflowStore;
+export function createMemoryWorkflowStore(): WorkflowStore {
+  throw new Error("createMemoryWorkflowStore not implemented in SDK - use worker runtime");
+}

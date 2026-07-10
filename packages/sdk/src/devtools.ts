@@ -52,7 +52,9 @@ export interface DevToolsSpanCollector {
   flush(): Promise<void>;
 }
 
-export declare function createDevTools(config?: DevToolsConfig): DevToolsSpanCollector;
+export function createDevTools(config?: DevToolsConfig): DevToolsSpanCollector {
+  throw new Error("createDevTools not implemented in SDK - use worker runtime");
+}
 
 /**
  * OTLP trace payload for exporting to external observability backends.
@@ -82,4 +84,6 @@ export interface OtlpTracePayload {
   }>;
 }
 
-export declare function spansToOtlp(spans: Span[], serviceName?: string): OtlpTracePayload;
+export function spansToOtlp(spans: Span[], serviceName?: string): OtlpTracePayload {
+  throw new Error("spansToOtlp not implemented in SDK - use worker runtime");
+}

@@ -245,9 +245,13 @@ interface PendingComposePayload {
 }
 
 // ─── Bubble styling constants ───
+// Rounding, background, and text color come from the Bubble `sent` / `received`
+// variants (driven by the --fluxy-bubble-* design tokens in globals.css).
+// These classes only handle alignment and width.
 
-const sentBubbleClass = "ml-auto max-w-[72%] rounded-[18px] rounded-br-[4px] [padding:10px_14px]";
-const receivedBubbleClass = "mr-auto max-w-[72%] rounded-[18px] rounded-bl-[4px] [padding:10px_14px]";
+const sentBubbleClass = "ml-auto max-w-[72%]";
+const receivedBubbleClass = "mr-auto max-w-[72%]";
+const bubbleContentPadding = "px-3.5 py-2.5";
 
 // ─── Component ───
 
@@ -290,7 +294,6 @@ export function FluxyChat({
     (Number(searchParams.get("replayLimit")) || undefined);
   const scrollToMessageId =
     scrollToMessageIdProp ?? (Number(searchParams.get("messageId")) || undefined);
-  const deepLinkReplay = searchParams.get("replay") === "1";
   const [confirmBeforeSend, setConfirmBeforeSend] = useState(showCopilotConfirm ? coPilotConfirmDefault : false);
   const [draft, setDraft] = useState("");
   const [replyToId, setReplyToId] = useState<number | null>(null);
@@ -350,11 +353,9 @@ export function FluxyChat({
     }
   }, []);
 
-  const replay: UseChatHistoryReplay = skipHistoryOnConnect
-    ? "request"
-    : deepLinkReplay
-      ? "connect"
-      : "connect";
+  // Deep-link replay and default connect behavior are identical ("connect");
+  // the only meaningful switch is the user's "skip history" preference.
+  const replay: UseChatHistoryReplay = skipHistoryOnConnect ? "request" : "connect";
 
   const presenceInfo = useMemo(
     () => (localUserId ? { name: localUserId } : undefined),
@@ -864,6 +865,22 @@ export function FluxyChat({
     return `Reconnecting in ${seconds}s…`;
   })();
 
+  /** Single source of truth for author display names (message header + reply quotes). */
+  function resolveDisplayName(uid: string | null | undefined, maxLen = 12): string {
+    const id = uid?.trim() || "";
+    if (id && id === agentId) return agentName;
+    if (localUserId && id === localUserId) {
+      return (
+        clerkUser?.fullName ||
+        clerkUser?.username ||
+        clerkUser?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+        "You"
+      );
+    }
+    if (!id) return "unknown";
+    return id.length > maxLen ? id.slice(0, maxLen) + "…" : id;
+  }
+
   // ─── Render ───
 
   return (
@@ -997,13 +1014,9 @@ export function FluxyChat({
                   const parentId = m.parentId ?? null;
 
                   // Display name: Clerk user for self, truncated ID for others, agentName for agent
-                  const displayName = isAgent
-                    ? agentName
-                    : isSelf
-                      ? (clerkUser?.fullName || clerkUser?.username || clerkUser?.primaryEmailAddress?.emailAddress?.split("@")[0] || "You")
-                      : (author.length > 10 ? author.slice(0, 10) + "…" : author);
+                  const displayName = resolveDisplayName(author, 10);
                   const align: "start" | "end" = isSelf ? "end" : "start";
-                  const bubbleVariant = isSelf ? "default" : "tinted";
+                  const bubbleVariant = isSelf ? ("sent" as const) : ("received" as const);
                   const parentMessage = m.parentId != null ? messagesById.get(m.parentId) ?? null : null;
                   const showHeader = !prev || prev.userId !== m.userId || showDate;
                   const hasReactions = m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0;
@@ -1011,23 +1024,23 @@ export function FluxyChat({
                   const floatingToolbar = m.id != null && !isStreaming ? (
                     <div
                       className={cn(
-                        "absolute top-1/2 -translate-y-1/2 z-[9999] opacity-0 transition-opacity group-hover/message:opacity-100",
+                        "absolute top-1/2 z-20 -translate-y-1/2 opacity-0 transition-opacity group-hover/message:opacity-100",
                         isSelf ? "right-[calc(100%+8px)]" : "left-[calc(100%+8px)]"
                       )}
                     >
-                      <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 shadow-sm">
+                      <div className="flex items-center gap-1 rounded-full border border-border bg-popover px-2 py-1 shadow-sm">
                         <button
                           type="button"
                           onClick={(e) => openReactionPicker(e, m.id!)}
-                          className="rounded-full p-1 hover:bg-gray-100"
+                          className="rounded-full p-1 hover:bg-muted"
                           aria-label="Add reaction"
                         >
-                          <Smile className="size-3.5 text-gray-500" />
+                          <Smile className="size-3.5 text-muted-foreground" />
                         </button>
                         <button
                           type="button"
                           onClick={() => setReplyToId(m.id!)}
-                          className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-gray-600 hover:bg-gray-100"
+                          className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                         >
                           <Reply className="size-3" />
                           Reply
@@ -1100,62 +1113,57 @@ export function FluxyChat({
                               </MessageHeader>
                               ) : null}
 
-                              {/* Reply quote — inside bubble, before message text */}
-                              {parentId && parentMessage ? (
-                                <Bubble
-                                  variant={bubbleVariant}
-                                  align={align}
-                                  className={cn(isSelf ? sentBubbleClass : receivedBubbleClass, hasReactions && "mb-3")}
-                                >
-                                  {floatingToolbar}
-                                  <BubbleContent>
-                                    {(() => {
-                                      const replyMsg = parentMessage;
-                                      const replyText = replyMsg.content || "";
-                                      const replyUser = (() => {
-                                        const uid = replyMsg.userId || "";
-                                        if (uid === agentId) return agentName;
-                                        if (localUserId && uid === localUserId) {
-                                          return clerkUser?.fullName || clerkUser?.username || clerkUser?.primaryEmailAddress?.emailAddress?.split("@")[0] || "You";
-                                        }
-                                        return uid.length > 12 ? uid.slice(0, 12) + "…" : uid || "unknown";
-                                      })();
-                                      return (
-                                        <div
-                                          onClick={() => replyMsg.id != null && scrollToMessage(replyMsg.id)}
-                                          className="mb-2 cursor-pointer overflow-hidden rounded-md p-1.5 text-xs"
-                                          style={{
-                                            background: isSelf ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.06)",
-                                            borderLeft: `3px solid ${isSelf ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.15)"}`,
-                                            borderRadius: "6px",
-                                            padding: "6px 10px",
-                                            marginBottom: "8px",
-                                            fontSize: "12px",
-                                            color: isSelf ? "rgba(255,255,255,0.85)" : undefined,
-                                            textOverflow: "ellipsis",
-                                          }}
-                                        >
-                                          <span
-                                            className="mb-0.5 block text-[11px] font-semibold"
-                                            style={{ color: isSelf ? "rgba(255,255,255,0.95)" : undefined, fontWeight: 600, fontSize: "11px", display: "block", marginBottom: "2px" }}
-                                          >
-                                            {replyUser}
-                                          </span>
-                                          <span className="line-clamp-2 overflow-hidden text-ellipsis">
-                                            {replyText}
-                                          </span>
-                                        </div>
-                                      );
-                                    })()}
+                              <Bubble
+                                variant={bubbleVariant}
+                                align={align}
+                                className={cn(isSelf ? sentBubbleClass : receivedBubbleClass, hasReactions && "mb-3")}
+                              >
+                                {floatingToolbar}
+                                <BubbleContent className={bubbleContentPadding}>
+                                  {/* Reply quote — inside bubble, before message text */}
+                                  {parentMessage ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => parentMessage.id != null && scrollToMessage(parentMessage.id)}
+                                      className={cn(
+                                        "mb-2 block w-full overflow-hidden rounded-md border-l-[3px] px-2.5 py-1.5 text-left text-xs",
+                                        isSelf
+                                          ? "border-white/60 bg-black/15 text-white/85"
+                                          : "border-border bg-foreground/5 text-foreground/80",
+                                      )}
+                                    >
+                                      <span
+                                        className={cn(
+                                          "mb-0.5 block text-[11px] font-semibold",
+                                          isSelf ? "text-white/95" : "text-foreground",
+                                        )}
+                                      >
+                                        {resolveDisplayName(parentMessage.userId)}
+                                      </span>
+                                      <span className="line-clamp-2">{parentMessage.content || ""}</span>
+                                    </button>
+                                  ) : null}
 
-                                    {/* Tool badge in bubble */}
-                                    {pendingTool?.type === "deep-research" && m.content?.includes("[deep-research]") ? (
-                                      <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#FF6A1A]/10 px-2 py-0.5 text-[10px] font-medium text-[#FF6A1A]">
+                                    {/* Tool badge — derived from the message content itself, not the
+                                        live composer state (the old check made badges on historical
+                                        messages appear/disappear as the composer tool changed) */}
+                                    {m.content?.includes("[deep-research]") ? (
+                                      <span
+                                        className={cn(
+                                          "mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                                          isSelf ? "bg-white/15 text-white" : "bg-[var(--fluxy-mention-bg)] text-[var(--fluxy-mention-text)]",
+                                        )}
+                                      >
                                         <BrainCircuit className="size-3" /> Deep Research
                                       </span>
                                     ) : null}
-                                    {pendingTool?.type === "web-search" && m.content?.includes("[web-search]") ? (
-                                      <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#FF6A1A]/10 px-2 py-0.5 text-[10px] font-medium text-[#FF6A1A]">
+                                    {m.content?.includes("[web-search]") ? (
+                                      <span
+                                        className={cn(
+                                          "mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                                          isSelf ? "bg-white/15 text-white" : "bg-[var(--fluxy-mention-bg)] text-[var(--fluxy-mention-text)]",
+                                        )}
+                                      >
                                         <Globe className="size-3" /> Web Search
                                       </span>
                                     ) : null}
@@ -1169,13 +1177,16 @@ export function FluxyChat({
                                         authToken={adminJwt.trim() || memberJwt.trim() || null}
                                       />
                                     ) : (
-                                      <p className="whitespace-pre-wrap break-words" style={{ color: isSelf ? "#FFFFFF" : undefined }}>
+                                      // Text color inherits from the sent/received bubble variant tokens
+                                      <p className="whitespace-pre-wrap break-words">
                                         {m.content}
                                         {!m.content && isStreaming ? "…" : null}
                                         {isStreaming ? (
                                           <span
-                                            className="ml-0.5 inline-block h-4 w-0.5 animate-pulse align-middle"
-                                            style={{ backgroundColor: isSelf ? "rgba(255,255,255,0.7)" : undefined }}
+                                            className={cn(
+                                              "ml-0.5 inline-block h-4 w-0.5 animate-pulse align-middle",
+                                              isSelf ? "bg-white/70" : "bg-foreground/50",
+                                            )}
                                             aria-hidden
                                           />
                                         ) : null}
@@ -1184,7 +1195,9 @@ export function FluxyChat({
 
                                     {/* Delivery status */}
                                     {m.deliveryStatus === "pending" ? (
-                                      <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.7)" : undefined }}>Sending…</div>
+                                      <div className={cn("mt-1 text-[10px]", isSelf ? "text-white/70" : "text-muted-foreground")}>
+                                        Sending…
+                                      </div>
                                     ) : null}
                                     {m.deliveryStatus === "failed" ? (
                                       <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-destructive">
@@ -1203,32 +1216,30 @@ export function FluxyChat({
 
                                     {/* Edited */}
                                     {m.editedAt && !isStreaming ? (
-                                      <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.6)" : undefined }}>edited</div>
+                                      <div className={cn("mt-1 text-[10px]", isSelf ? "text-white/60" : "text-muted-foreground")}>
+                                        edited
+                                      </div>
                                     ) : null}
 
                                     {/* Timestamp + read receipt — inside bubble, WhatsApp style */}
-                                    <div className="mt-1 flex items-center justify-end gap-1" style={{ marginTop: "4px" }}>
+                                    <div className="mt-1 flex items-center justify-end gap-1">
                                       {mTime ? (
                                         <time
                                           dateTime={mTime}
-                                          className="select-none tabular-nums"
-                                          style={{
-                                            fontSize: "10px",
-                                            color: isSelf ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.40)",
-                                            lineHeight: 1,
-                                          }}
+                                          className={cn(
+                                            "select-none text-[10px] leading-none tabular-nums",
+                                            isSelf ? "text-white/65" : "text-muted-foreground",
+                                          )}
                                         >
                                           {new Date(mTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })}
                                         </time>
                                       ) : null}
                                       {isSelf ? (
                                         <span
-                                          style={{
-                                            fontSize: "10px",
-                                            color: m.deliveryStatus === "pending" ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.65)",
-                                            lineHeight: 1,
-                                            letterSpacing: "-1px",
-                                          }}
+                                          className={cn(
+                                            "text-[10px] leading-none -tracking-[1px]",
+                                            m.deliveryStatus === "pending" ? "text-white/35" : "text-white/65",
+                                          )}
                                           aria-label={m.deliveryStatus === "pending" ? "Sending" : "Sent"}
                                         >
                                           {m.deliveryStatus === "pending" ? "○" : "✓"}
@@ -1253,123 +1264,7 @@ export function FluxyChat({
                                       ))}
                                     </BubbleReactions>
                                   ) : null}
-                                </Bubble>
-                              ) : (
-                                /* Bubble without reply quote */
-                                <Bubble
-                                  variant={bubbleVariant}
-                                  align={align}
-                                  className={cn(isSelf ? sentBubbleClass : receivedBubbleClass, hasReactions && "mb-3")}
-                                >
-                                  {floatingToolbar}
-                                  <BubbleContent>
-                                    {/* Tool badge in bubble */}
-                                    {pendingTool?.type === "deep-research" && m.content?.includes("[deep-research]") ? (
-                                      <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#FF6A1A]/10 px-2 py-0.5 text-[10px] font-medium text-[#FF6A1A]">
-                                        <BrainCircuit className="size-3" /> Deep Research
-                                      </span>
-                                    ) : null}
-                                    {pendingTool?.type === "web-search" && m.content?.includes("[web-search]") ? (
-                                      <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#FF6A1A]/10 px-2 py-0.5 text-[10px] font-medium text-[#FF6A1A]">
-                                        <Globe className="size-3" /> Web Search
-                                      </span>
-                                    ) : null}
-
-                                    {/* Voice message */}
-                                    {isVoice ? (
-                                      <VoiceMessageBubble
-                                        message={m}
-                                        className={isSelf ? "items-end" : "items-start"}
-                                        inheritColor={isSelf}
-                                        authToken={adminJwt.trim() || memberJwt.trim() || null}
-                                      />
-                                    ) : (
-                                      <p className="whitespace-pre-wrap break-words" style={{ color: isSelf ? "#FFFFFF" : undefined }}>
-                                        {m.content}
-                                        {!m.content && isStreaming ? "…" : null}
-                                        {isStreaming ? (
-                                          <span
-                                            className="ml-0.5 inline-block h-4 w-0.5 animate-pulse align-middle"
-                                            style={{ backgroundColor: isSelf ? "rgba(255,255,255,0.7)" : undefined }}
-                                            aria-hidden
-                                          />
-                                        ) : null}
-                                      </p>
-                                    )}
-
-                                    {/* Delivery status */}
-                                    {m.deliveryStatus === "pending" ? (
-                                      <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.7)" : undefined }}>Sending…</div>
-                                    ) : null}
-                                    {m.deliveryStatus === "failed" ? (
-                                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-destructive">
-                                        Failed to send
-                                        {m.clientMessageId ? (
-                                          <button
-                                            type="button"
-                                            className="ml-0.5 rounded px-1 text-[10px] text-destructive hover:bg-destructive/10"
-                                            onClick={() => retryMessage(m.clientMessageId!)}
-                                          >
-                                            Retry
-                                          </button>
-                                        ) : null}
-                                      </div>
-                                    ) : null}
-
-                                    {/* Edited */}
-                                    {m.editedAt && !isStreaming ? (
-                                      <div className="mt-1 text-[10px]" style={{ color: isSelf ? "rgba(255,255,255,0.6)" : undefined }}>edited</div>
-                                    ) : null}
-
-                                    {/* Timestamp + read receipt — inside bubble, WhatsApp style */}
-                                    <div className="mt-1 flex items-center justify-end gap-1" style={{ marginTop: "4px" }}>
-                                      {mTime ? (
-                                        <time
-                                          dateTime={mTime}
-                                          className="select-none tabular-nums"
-                                          style={{
-                                            fontSize: "10px",
-                                            color: isSelf ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.40)",
-                                            lineHeight: 1,
-                                          }}
-                                        >
-                                          {new Date(mTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })}
-                                        </time>
-                                      ) : null}
-                                      {isSelf ? (
-                                        <span
-                                          style={{
-                                            fontSize: "10px",
-                                            color: m.deliveryStatus === "pending" ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.65)",
-                                            lineHeight: 1,
-                                            letterSpacing: "-1px",
-                                          }}
-                                          aria-label={m.deliveryStatus === "pending" ? "Sending" : "Sent"}
-                                        >
-                                          {m.deliveryStatus === "pending" ? "○" : "✓"}
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                  </BubbleContent>
-
-                                  {/* Reactions — using shadcn BubbleReactions */}
-                                  {m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0 ? (
-                                    <BubbleReactions side="bottom" align={isSelf ? "end" : "start"}>
-                                      {Object.entries(reactions[m.id]).map(([emoji, count]) => (
-                                        <button
-                                          key={emoji}
-                                          type="button"
-                                          onClick={() => m.id != null && toggleReaction(m.id, emoji)}
-                                          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[13px] transition-colors hover:bg-muted-foreground/10"
-                                        >
-                                          <span>{emoji}</span>
-                                          <span className="text-muted-foreground">{count}</span>
-                                        </button>
-                                      ))}
-                                    </BubbleReactions>
-                                  ) : null}
-                                </Bubble>
-                              )}
+                              </Bubble>
 
                               {/* Attachments */}
                               {m.attachments && m.attachments.length > 0 ? (
@@ -1438,7 +1333,7 @@ export function FluxyChat({
                 <MessageScrollerItem>
                   <Marker role="status">
                     <MarkerIcon>
-                      <BrainCircuit className="size-3 text-[#C2410C]" />
+                      <BrainCircuit className="size-3 text-[var(--fluxy-cta-color)]" />
                     </MarkerIcon>
                     <MarkerContent className="shimmer">Researching…</MarkerContent>
                   </Marker>
@@ -1449,7 +1344,7 @@ export function FluxyChat({
                 <MessageScrollerItem>
                   <Marker role="status">
                     <MarkerIcon>
-                      <Globe className="size-3 text-[#C2410C]" />
+                      <Globe className="size-3 text-[var(--fluxy-cta-color)]" />
                     </MarkerIcon>
                     <MarkerContent className="shimmer">Searching…</MarkerContent>
                   </Marker>
@@ -1601,7 +1496,7 @@ export function FluxyChat({
       {(pendingAttachments.length > 0 || pendingTool) && !pendingCompose ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
           {pendingTool ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6A1A]/10 px-2.5 py-1 text-xs font-medium text-[#FF6A1A]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--fluxy-mention-bg)] px-2.5 py-1 text-xs font-medium text-[var(--fluxy-mention-text)]">
               {pendingTool.type === "image" ? (
                 <FileImage className="size-3.5" aria-hidden />
               ) : pendingTool.type === "deep-research" ? (
@@ -1616,7 +1511,7 @@ export function FluxyChat({
                   : "Web Search active"}
               <button
                 type="button"
-                className="rounded p-0.5 hover:bg-[#FF6A1A]/20"
+                className="rounded p-0.5 hover:bg-[var(--fluxy-mention-bg)]"
                 onClick={() => setPendingTool(null)}
                 aria-label="Remove tool"
               >
@@ -1671,10 +1566,7 @@ export function FluxyChat({
         {/* Deep Research / Web Search chips above textarea */}
         {pendingTool?.type === "deep-research" || pendingTool?.type === "web-search" ? (
           <div className="flex items-center gap-2 px-1 pb-1">
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-              style={{ color: "#FF6A1A", backgroundColor: "rgba(255, 106, 26, 0.1)" }}
-            >
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--fluxy-mention-bg)] px-2.5 py-1 text-xs font-medium text-[var(--fluxy-mention-text)]">
               {pendingTool.type === "deep-research" ? (
                 <>
                   <BookOpen className="size-3" />
@@ -1688,7 +1580,7 @@ export function FluxyChat({
               )}
               <button
                 type="button"
-                className="rounded p-0.5 hover:bg-[#FF6A1A]/20"
+                className="rounded p-0.5 hover:bg-[var(--fluxy-mention-bg)]"
                 onClick={() => setPendingTool(null)}
                 aria-label="Remove tool"
               >
@@ -1747,8 +1639,7 @@ export function FluxyChat({
               </button>
               {plusMenuOpen ? (
                 <div
-                  className="absolute bottom-full left-0 z-[9999] mb-2 w-56 rounded-lg border border-border bg-popover p-1 shadow-xl ring-1 ring-border"
-                  style={{ backgroundColor: "white" }}
+                  className="absolute bottom-full left-0 z-50 mb-2 w-56 rounded-lg border border-border bg-popover p-1 shadow-xl"
                   role="menu"
                 >
                   {/* Add Photos & Files */}
@@ -1774,7 +1665,7 @@ export function FluxyChat({
                     role="menuitem"
                     onClick={() => prepareImageGeneration()}
                   >
-                    <Sparkles className="size-4" style={{ color: "#C2410C" }} aria-hidden />
+                    <Sparkles className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
                     <div className="flex flex-col">
                       <span>Create image</span>
                       <span className="text-[10px] text-muted-foreground">AI generated</span>
@@ -1788,7 +1679,7 @@ export function FluxyChat({
                     role="menuitem"
                     onClick={() => sendResearchPrompt("deep-research")}
                   >
-                    <BookOpen className="size-4" style={{ color: "#C2410C" }} aria-hidden />
+                    <BookOpen className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
                     <div className="flex flex-col">
                       <span>Deep Research</span>
                       <span className="text-[10px] text-muted-foreground">Multi-step agent</span>
@@ -1802,7 +1693,7 @@ export function FluxyChat({
                     role="menuitem"
                     onClick={() => sendResearchPrompt("web-search")}
                   >
-                    <Globe className="size-4" style={{ color: "#C2410C" }} aria-hidden />
+                    <Globe className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
                     <div className="flex flex-col">
                       <span>Web search</span>
                       <span className="text-[10px] text-muted-foreground">Live results</span>
@@ -1927,7 +1818,7 @@ export function FluxyChat({
           <DialogFooter>
             <Button
               variant="primary"
-              style={{ backgroundColor: "#C2410C" }}
+              className="bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] hover:bg-[var(--fluxy-btn-primary-hover-bg)]"
               disabled={!imagePrompt.trim() || imageGenerating}
               onClick={() => {
                 if (!imagePrompt.trim() || isAgentBusy) return;
@@ -2052,7 +1943,7 @@ function ImagePreviewDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
       onClick={onClose}
     >
       <div
@@ -2122,7 +2013,7 @@ function FluxyAttachment({
           className="mt-2 block overflow-hidden rounded-lg transition-opacity hover:opacity-90"
         >
           <AuthedImage
-                       src={fullSrc}
+            src={fullSrc}
             alt={attachment.name}
             authToken={authToken}
             className="max-h-64 max-w-xs rounded-lg object-cover"
@@ -2152,8 +2043,7 @@ function FluxyAttachment({
       <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-card p-2">
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-full text-white"
-          style={{ backgroundColor: "#C2410C" }}
+          className="flex size-8 items-center justify-center rounded-full bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] hover:bg-[var(--fluxy-btn-primary-hover-bg)]"
           onClick={() => {
             const audio = new Audio(fullSrc);
             void audio.play();

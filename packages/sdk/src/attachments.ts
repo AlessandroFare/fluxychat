@@ -66,14 +66,20 @@ export interface AttachmentManager {
   validate(file: { size: number; type: string }): { valid: boolean; error?: string };
 }
 
-export declare function createAttachmentManager(config?: AttachmentConfig): AttachmentManager;
+export function createAttachmentManager(config?: AttachmentConfig): AttachmentManager {
+  throw new Error("createAttachmentManager not implemented in SDK - use worker runtime");
+}
 
 /**
  * Determine attachment type from MIME type.
  */
-export declare function mimeToAttachmentType(mimeType: string): AttachmentType;
+export function mimeToAttachmentType(mimeType: string): AttachmentType {
+  throw new Error("mimeToAttachmentType not implemented in SDK - use worker runtime");
+}
 
 /**
  * Format file size for display.
  */
-export declare function formatFileSize(bytes: number): string;
+export function formatFileSize(bytes: number): string {
+  throw new Error("formatFileSize not implemented in SDK - use worker runtime");
+}

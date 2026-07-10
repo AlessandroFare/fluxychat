@@ -37,12 +37,22 @@ export interface ToolCallAnnotationStore {
   clearAll(): void;
 }
 
-export declare function createToolCallAnnotationStore(): ToolCallAnnotationStore;
+export function createToolCallAnnotationStore(): ToolCallAnnotationStore {
+  throw new Error("createToolCallAnnotationStore not implemented in SDK - use worker runtime");
+}
 
 /**
  * Built-in annotation helpers.
  */
-export declare function createStatusAnnotation(toolCallId: string, status: string): ToolCallAnnotation;
-export declare function createProgressAnnotation(toolCallId: string, progress: number, message?: string): ToolCallAnnotation;
-export declare function createResultAnnotation(toolCallId: string, summary: string): ToolCallAnnotation;
-export declare function createErrorAnnotation(toolCallId: string, error: string): ToolCallAnnotation;
+export function createStatusAnnotation(toolCallId: string, status: string): ToolCallAnnotation {
+  throw new Error("createStatusAnnotation not implemented in SDK - use worker runtime");
+}
+export function createProgressAnnotation(toolCallId: string, progress: number, message?: string): ToolCallAnnotation {
+  throw new Error("createProgressAnnotation not implemented in SDK - use worker runtime");
+}
+export function createResultAnnotation(toolCallId: string, summary: string): ToolCallAnnotation {
+  throw new Error("createResultAnnotation not implemented in SDK - use worker runtime");
+}
+export function createErrorAnnotation(toolCallId: string, error: string): ToolCallAnnotation {
+  throw new Error("createErrorAnnotation not implemented in SDK - use worker runtime");
+}

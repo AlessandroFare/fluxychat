@@ -39,12 +39,14 @@ export interface AgentCommunicationBus {
   getHistory(roomId: string, limit?: number): Promise<AgentMessage[]>;
 }
 
-export declare function createAgentCommunicationBus(): AgentCommunicationBus;
+export function createAgentCommunicationBus(): AgentCommunicationBus {
+  throw new Error("createAgentCommunicationBus not implemented in SDK - use worker runtime");
+}
 
 /**
  * Delegate a task to another agent.
  */
-export declare function delegateToAgent(
+export function delegateToAgent(
   bus: AgentCommunicationBus,
   fromAgentId: string,
   toAgentId: string,
@@ -52,4 +54,6 @@ export declare function delegateToAgent(
   projectId: string,
   task: string,
   options?: { priority?: string; ttlMs?: number; metadata?: Record<string, unknown> },
-): Promise<string>;
+): Promise<string> {
+  throw new Error("delegateToAgent not implemented in SDK - use worker runtime");
+}

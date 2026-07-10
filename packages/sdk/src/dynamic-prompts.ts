@@ -44,10 +44,14 @@ export interface PromptTemplateRegistry {
   delete(name: string): void;
 }
 
-export declare function createPromptRenderer(): PromptRenderer;
-export declare function createPromptTemplateRegistry(): PromptTemplateRegistry;
+export function createPromptRenderer(): PromptRenderer {
+  throw new Error("createPromptRenderer not implemented in SDK - use worker runtime");
+}
+export function createPromptTemplateRegistry(): PromptTemplateRegistry {
+  throw new Error("createPromptTemplateRegistry not implemented in SDK - use worker runtime");
+}
 
 /**
  * Built-in prompt templates.
  */
-export declare const BUILTIN_PROMPT_TEMPLATES: PromptTemplate[];
+export const BUILTIN_PROMPT_TEMPLATES: PromptTemplate[] = [];

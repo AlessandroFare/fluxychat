@@ -52,23 +52,29 @@ export interface McpClient {
 /**
  * Convert MCP tool definitions to FluxyChat tool format.
  */
-export declare function mcpToolsToFluxyChat(tools: McpToolDefinition[]): Array<{
+export function mcpToolsToFluxyChat(tools: McpToolDefinition[]): Array<{
   type: "function";
   function: { name: string; description: string; parameters: Record<string, unknown> };
-}>;
+}> {
+  throw new Error("mcpToolsToFluxyChat not implemented in SDK - use worker runtime");
+}
 
 /**
  * Convert FluxyChat tool result to MCP format.
  */
-export declare function fluxyChatResultToMcp(result: unknown): McpToolResult;
+export function fluxyChatResultToMcp(result: unknown): McpToolResult {
+  throw new Error("fluxyChatResultToMcp not implemented in SDK - use worker runtime");
+}
 
 /**
  * Create an MCP client with retry logic.
  */
-export declare function createMcpClient(config: McpServerConfig, opts?: {
+export function createMcpClient(config: McpServerConfig, opts?: {
   maxRetries?: number;
   timeoutMs?: number;
-}): McpClient;
+}): McpClient {
+  throw new Error("createMcpClient not implemented in SDK - use worker runtime");
+}
 
 /**
  * MCP tool registry — manages multiple MCP servers.
@@ -88,4 +94,6 @@ export interface McpRegistry {
   getStatus(): Array<{ name: string; connected: boolean; toolCount: number }>;
 }
 
-export declare function createMcpRegistry(): McpRegistry;
+export function createMcpRegistry(): McpRegistry {
+  throw new Error("createMcpRegistry not implemented in SDK - use worker runtime");
+}

@@ -1,0 +1,197 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import React from "react";
+import { Loader2, LocateFixed, MapPin, Navigation, Square } from "lucide-react";
+import {
+  locationTrack,
+  useLocation,
+  type LocationTrackController,
+  type LocationTrackState,
+} from "@fluxy-chat/sdk";
+import { Button } from "@/components/ui/button";
+import {
+  FeatureCodePanel,
+  FeaturePreviewFrame,
+  ShowcaseUnavailable,
+} from "./feature-code-panel";
+import { getRealtimeFeature } from "./realtime-feature-content";
+import type { ShowcaseSession } from "./use-showcase-session";
+
+const feature = getRealtimeFeature("location");
+
+const LocationMap = dynamic(
+  () => import("./realtime-location-map").then((module) => module.RealtimeLocationMap),
+  { ssr: false },
+);
+
+export function RealTimeLocationShowcase({ session }: { session: ShowcaseSession }) {
+  return (
+    <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+      <FeatureCodePanel feature={feature} />
+
+      <FeaturePreviewFrame label="Real-time location preview" className="min-h-[28rem]">
+        {session.status === "loading" ? (
+          <div className="flex min-h-64 items-center justify-center">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
+            <span className="sr-only">Connecting to the live location room</span>
+          </div>
+        ) : session.status === "unavailable" || !session.client || !session.roomId ? (
+          <ShowcaseUnavailable error={session.error} onRetry={session.retry} />
+        ) : (
+          <LocationPanel session={session} />
+        )}
+      </FeaturePreviewFrame>
+    </div>
+  );
+}
+
+function LocationPanel({ session }: { session: ShowcaseSession }) {
+  const { tracks, activeTracks, connected, status } = useLocation({
+    roomId: session.roomId as string,
+    client: session.client ?? undefined,
+  });
+  const [controller, setController] = React.useState<LocationTrackController | null>(null);
+  const [permission, setPermission] = React.useState<PermissionState | "unsupported">("prompt");
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      setPermission("unsupported");
+      return;
+    }
+    if (!("permissions" in navigator)) return;
+    let cancelled = false;
+    void navigator.permissions.query({ name: "geolocation" }).then((result) => {
+      if (!cancelled) setPermission(result.state);
+      result.addEventListener("change", () => setPermission(result.state));
+    }).catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  React.useEffect(() => () => controller?.stop(), [controller]);
+
+  const start = () => {
+    if (!session.client || !session.roomId) return;
+    setError(null);
+    try {
+      const next = locationTrack(session.client, session.roomId, {
+        trackId: `showcase-${session.client.userId}`,
+        onError: (nextError) => {
+          setError(nextError.message || "Location access failed.");
+          if ("code" in nextError && nextError.code === 1) setPermission("denied");
+        },
+      });
+      setController(next);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Location access failed.");
+    }
+  };
+
+  const stop = () => {
+    controller?.stop();
+    setController(null);
+  };
+
+  const trackList = [...tracks.values()];
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="relative min-h-64 flex-1 overflow-hidden bg-muted">
+        <div key={trackList.length ? "map" : "empty"} className="animate-in fade-in-0 duration-300 h-full">
+          {trackList.length ? (
+            <LocationMap tracks={trackList} />
+          ) : (
+            <div className="flex min-h-64 flex-col items-center justify-center gap-3 px-6 text-center">
+              <span className="flex size-11 items-center justify-center rounded-full border border-border bg-card">
+                <MapPin className="size-5 text-primary" aria-hidden />
+              </span>
+              <div className="flex max-w-64 flex-col gap-1">
+                <p className="text-sm font-semibold text-foreground">No active tracks yet</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Share this device&apos;s foreground location, or open the demo in another tab to watch positions update.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+        <span
+          key={activeTracks.length}
+          className="absolute left-3 top-3 animate-in fade-in-0 zoom-in-95 duration-200 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground shadow-sm"
+        >
+          {connected ? `${activeTracks.length} active` : status}
+        </span>
+      </div>
+
+      <TrackList tracks={trackList} />
+
+      <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-3">
+        {controller ? (
+          <Button size="sm" variant="outline" onClick={stop} className="active:scale-95 transition-transform">
+            <Square data-icon="inline-start" />
+            Stop sharing
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            onClick={start}
+            disabled={permission === "denied" || permission === "unsupported"}
+            className="active:scale-95 transition-transform"
+          >
+            <Navigation data-icon="inline-start" className={controller ? "animate-pulse" : ""} />
+            Share live location
+          </Button>
+        )}
+        <span className="text-[11px] text-muted-foreground">
+          {permission === "denied"
+            ? "Location is blocked in browser settings."
+            : permission === "unsupported"
+              ? "Geolocation is unavailable in this browser."
+              : "Foreground only · expires after 30 seconds"}
+        </span>
+        {error ? <p className="basis-full text-[11px] text-destructive">{error}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+function TrackList({ tracks }: { tracks: LocationTrackState[] }) {
+  if (!tracks.length) return null;
+  return (
+    <ul className="flex max-h-36 flex-col overflow-y-auto border-t border-border" aria-label="Location tracks">
+      {tracks.map((track, idx) => (
+        <li
+          key={track.trackId}
+          style={{ animationDelay: `${idx * 60}ms` }}
+          className="animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-300 flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+            <LocateFixed className="size-4 text-primary" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-foreground">{track.trackId}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {track.accuracy ? `Accurate to ${Math.round(track.accuracy)} m · ` : ""}
+              {new Date(track.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+            <span className="relative flex size-1.5">
+              {!track.stale ? (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--fluxy-cta-color)]/70 opacity-75 motion-reduce:animate-none" />
+              ) : null}
+              <span
+                className={`relative inline-flex size-1.5 rounded-full ${
+                  track.stale ? "bg-muted-foreground/50" : "bg-[var(--fluxy-cta-color)]"
+                }`}
+              />
+            </span>
+            {track.stale ? "Stale" : "Live"}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}

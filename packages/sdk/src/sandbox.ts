@@ -65,12 +65,16 @@ export interface SandboxManager {
   stopAll(): Promise<void>;
 }
 
-export declare function createSandboxManager(): SandboxManager;
+export function createSandboxManager(): SandboxManager {
+  throw new Error("createSandboxManager not implemented in SDK - use worker runtime");
+}
 
 /**
  * Execute code in a temporary sandbox (convenience function).
  */
-export declare function executeInSandbox(
+export function executeInSandbox(
   code: string,
   opts?: { language?: string; timeoutMs?: number; config?: SandboxConfig },
-): Promise<SandboxExecutionResult>;
+): Promise<SandboxExecutionResult> {
+  throw new Error("executeInSandbox not implemented in SDK - use worker runtime");
+}

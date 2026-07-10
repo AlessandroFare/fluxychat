@@ -29,24 +29,32 @@ export interface ToolWithOverrides {
   needsApproval: boolean;
 }
 
-export declare function buildToolsWithOverrides(
+export function buildToolsWithOverrides(
   preset: ToolPreset,
   overrides?: Record<string, ToolOverride>,
-): ToolWithOverrides[];
+): ToolWithOverrides[] {
+  throw new Error("buildToolsWithOverrides not implemented in SDK - use worker runtime");
+}
 
-export declare function getEffectiveApproval(
-  preset: ToolPreset,
-  toolName: string,
-  overrides?: Record<string, ToolOverride>,
-): boolean;
-
-export declare function isToolEnabled(
+export function getEffectiveApproval(
   preset: ToolPreset,
   toolName: string,
   overrides?: Record<string, ToolOverride>,
-): boolean;
+): boolean {
+  throw new Error("getEffectiveApproval not implemented in SDK - use worker runtime");
+}
 
-export declare function validateOverride(
+export function isToolEnabled(
+  preset: ToolPreset,
+  toolName: string,
+  overrides?: Record<string, ToolOverride>,
+): boolean {
+  throw new Error("isToolEnabled not implemented in SDK - use worker runtime");
+}
+
+export function validateOverride(
   toolName: string,
   override: ToolOverride,
-): { valid: boolean; error?: string };
+): { valid: boolean; error?: string } {
+  throw new Error("validateOverride not implemented in SDK - use worker runtime");
+}

@@ -51,8 +51,10 @@ export interface ApprovalGate {
   shouldApprove?(toolName: string, input: Record<string, unknown>, context: { userId: string; roomId: string }): boolean | Promise<boolean>;
 }
 
-export declare function createApprovalStore(kv: KVNamespace): ApprovalStore;
-export declare function createApprovalGate(opts: {
+export function createApprovalStore(kv: KVNamespace): ApprovalStore {
+  throw new Error("createApprovalStore not implemented in SDK - use worker runtime");
+}
+export function createApprovalGate(opts: {
   /** Tools that always need approval */
   alwaysRequire?: string[];
   /** Tools that never need approval */
@@ -61,7 +63,9 @@ export declare function createApprovalGate(opts: {
   gates?: Record<string, ApprovalGate>;
   /** Approval timeout in milliseconds (default: 5 minutes) */
   timeoutMs?: number;
-}): ApprovalGate;
+}): ApprovalGate {
+  throw new Error("createApprovalGate not implemented in SDK - use worker runtime");
+}
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;

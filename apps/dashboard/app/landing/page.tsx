@@ -11,6 +11,7 @@ import { LandingHeroClient } from "./landing-hero-client";
 import { LandingLifecycleSection } from "./landing-lifecycle-section";
 import { LandingLogoStrip } from "./landing-logo-strip";
 import { LandingPricingSection } from "./landing-pricing-section";
+import { LandingRealtimeSection } from "./landing-realtime-section";
 import { LandingShell } from "./landing-shell";
 import { LandingStatsSection } from "./landing-stats-section";
 import { LandingWhatsNewSection } from "./landing-whats-new-section";
@@ -26,6 +27,7 @@ export default function LandingPage() {
       <LandingStatsSection />
       <LandingFeaturesClient />
       <LandingWhatsNewSection />
+      <LandingRealtimeSection />
       <LandingEnterpriseSection />
       <LandingPricingSection />
       <LandingLifecycleSection />

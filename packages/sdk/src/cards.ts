@@ -102,19 +102,23 @@ export interface CardElement {
 
 export type AnyCardElement = CardElement | CardChild;
 
-export declare function Card(opts: {
+export function Card(opts: {
   title?: string;
   subtitle?: string;
   imageUrl?: string;
   children: CardChild[];
-}): CardElement;
+}): CardElement {
+  throw new Error("Card not implemented in SDK - use worker runtime");
+}
 
-export declare function Text(opts: {
+export function Text(opts: {
   content: string;
   style?: TextStyle;
-}): TextElement;
+}): TextElement {
+  throw new Error("Text not implemented in SDK - use worker runtime");
+}
 
-export declare function Button(opts: {
+export function Button(opts: {
   id: string;
   label: string;
   style?: ButtonStyle;
@@ -122,50 +126,74 @@ export declare function Button(opts: {
   value?: string;
   callbackUrl?: string;
   disabled?: boolean;
-}): ButtonElement;
+}): ButtonElement {
+  throw new Error("Button not implemented in SDK - use worker runtime");
+}
 
-export declare function LinkButton(opts: {
+export function LinkButton(opts: {
   url: string;
   label: string;
   style?: ButtonStyle;
   id?: string;
-}): LinkButtonElement;
+}): LinkButtonElement {
+  throw new Error("LinkButton not implemented in SDK - use worker runtime");
+}
 
-export declare function Image(opts: {
+export function Image(opts: {
   url: string;
   alt?: string;
-}): ImageElement;
+}): ImageElement {
+  throw new Error("Image not implemented in SDK - use worker runtime");
+}
 
-export declare function Divider(): DividerElement;
+export function Divider(): DividerElement {
+  throw new Error("Divider not implemented in SDK - use worker runtime");
+}
 
-export declare function Actions(opts: {
+export function Actions(opts: {
   children: Array<ButtonElement | LinkButtonElement>;
-}): ActionsElement;
+}): ActionsElement {
+  throw new Error("Actions not implemented in SDK - use worker runtime");
+}
 
-export declare function Section(opts: {
+export function Section(opts: {
   children: CardChild[];
-}): SectionElement;
+}): SectionElement {
+  throw new Error("Section not implemented in SDK - use worker runtime");
+}
 
-export declare function Field(opts: {
+export function Field(opts: {
   label: string;
   value: string;
-}): FieldElement;
+}): FieldElement {
+  throw new Error("Field not implemented in SDK - use worker runtime");
+}
 
-export declare function Fields(opts: {
+export function Fields(opts: {
   fields: FieldElement[];
   alignment?: TableAlignment;
-}): FieldsElement;
+}): FieldsElement {
+  throw new Error("Fields not implemented in SDK - use worker runtime");
+}
 
-export declare function Link(opts: {
+export function Link(opts: {
   url: string;
   text?: string;
-}): LinkElement;
+}): LinkElement {
+  throw new Error("Link not implemented in SDK - use worker runtime");
+}
 
-export declare function Table(opts: {
+export function Table(opts: {
   headers: string[];
   rows: string[][];
   alignment?: TableAlignment[];
-}): TableElement;
+}): TableElement {
+  throw new Error("Table not implemented in SDK - use worker runtime");
+}
 
-export declare function cardToFallbackText(element: AnyCardElement): string;
-export declare function cardToMarkdown(element: AnyCardElement): string;
+export function cardToFallbackText(element: AnyCardElement): string {
+  throw new Error("cardToFallbackText not implemented in SDK - use worker runtime");
+}
+export function cardToMarkdown(element: AnyCardElement): string {
+  throw new Error("cardToMarkdown not implemented in SDK - use worker runtime");
+}

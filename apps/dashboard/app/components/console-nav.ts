@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Terminal,
   UserCircle,
+  Zap,
 } from "lucide-react";
 import { MARKETING_PATH_PREFIXES } from "@/lib/hosted-product";
 
@@ -48,6 +49,7 @@ export const CONSOLE_NAV_MAIN: ConsoleNavItem[] = [
 
 export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
   { href: "/features", label: "Features", icon: Sparkles, description: "P12–P20 capability overview" },
+  { href: "/features/realtime", label: "Realtime demos", icon: Zap, description: "Live SDK demos — chat, streaming, location, push" },
   { href: "/devtools", label: "DevTools", icon: Terminal, description: "AI DevTools playground — stream inspector, tool calls, token stats" },
   { href: "/playground", label: "Card Builder", icon: LayoutTemplate, description: "Visually compose rich message cards" },
   { href: "/cli", label: "CLI", icon: Code2, description: "Scaffold new projects with create-fluxy-chat" },
@@ -63,6 +65,21 @@ export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
   { href: "/admin", label: "Admin", icon: Shield, description: "Mute, ban, webhooks" },
   { href: "/privacy", label: "Privacy", icon: ShieldCheck, description: "GDPR export and retention" },
 ];
+
+/** Selects only the deepest configured route that contains the current pathname. */
+export function isConsoleNavItemActive(href: string, pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (href === "/") return pathname === "/";
+  if (pathname !== href && !pathname.startsWith(`${href}/`)) return false;
+
+  const allHrefs = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS].map((item) => item.href);
+  return !allHrefs.some(
+    (other) =>
+      other !== href &&
+      other.startsWith(`${href}/`) &&
+      (pathname === other || pathname.startsWith(`${other}/`)),
+  );
+}
 
 function isMarketingPath(pathname: string): boolean {
   return MARKETING_PATH_PREFIXES.some(

@@ -22,6 +22,9 @@ export const FLUXY_INBOUND_EVENT_TYPES = [
   "user_subscription_succeeded",
   "state_change",
   "stream",
+  "location_update",
+  "location_snapshot",
+  "location_track_ended",
   "pong",
   "error",
 ] as const;
@@ -37,6 +40,8 @@ export const FLUXY_OUTBOUND_EVENT_TYPES = [
   "delete",
   "typing",
   "client_event",
+  "location_update",
+  "location_track_ended",
   "agentTyping",
 ] as const;
 

@@ -48,16 +48,22 @@ export interface LLMMiddleware {
   wrapStream?: WrapStreamFn;
 }
 
-export declare function createLLMMiddleware(opts: {
+export function createLLMMiddleware(opts: {
   name: string;
   transformParams?: TransformParamsFn;
   wrapGenerate?: WrapGenerateFn;
   wrapStream?: WrapStreamFn;
-}): LLMMiddleware;
+}): LLMMiddleware {
+  throw new Error("createLLMMiddleware not implemented in SDK - use worker runtime");
+}
 
-export declare function wrapLanguageModel(
+export function wrapLanguageModel(
   model: { generate: (params: LLMCallParams) => Promise<LLMCallResult>; stream: (params: LLMCallParams) => AsyncGenerator<LLMStreamChunk> },
   middlewares: LLMMiddleware[],
-): { generate: (params: LLMCallParams) => Promise<LLMCallResult>; stream: (params: LLMCallParams) => AsyncGenerator<LLMStreamChunk> };
+): { generate: (params: LLMCallParams) => Promise<LLMCallResult>; stream: (params: LLMCallParams) => AsyncGenerator<LLMStreamChunk> } {
+  throw new Error("wrapLanguageModel not implemented in SDK - use worker runtime");
+}
 
-export declare function composeMiddlewares(...middlewares: LLMMiddleware[]): LLMMiddleware;
+export function composeMiddlewares(...middlewares: LLMMiddleware[]): LLMMiddleware {
+  throw new Error("composeMiddlewares not implemented in SDK - use worker runtime");
+}

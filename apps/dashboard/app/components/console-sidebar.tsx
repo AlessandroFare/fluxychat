@@ -4,14 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FluxychatLogotype } from "@/components/FluxychatLogo";
 import { cn } from "@/lib/utils";
-import { CONSOLE_NAV_MAIN, CONSOLE_NAV_TOOLS } from "./console-nav";
+import {
+  CONSOLE_NAV_MAIN,
+  CONSOLE_NAV_TOOLS,
+  isConsoleNavItemActive,
+} from "./console-nav";
 import { QuickstartNavLink } from "./quickstart-nav-link";
 import { CommandPaletteTrigger } from "./console-command-palette";
 
 function NavLink({ href, label, icon: Icon }: (typeof CONSOLE_NAV_MAIN)[number]) {
   const pathname = usePathname();
-  const isActive =
-    href === "/" ? pathname === "/" : pathname === href || pathname?.startsWith(`${href}/`);
+  const isActive = isConsoleNavItemActive(href, pathname);
 
   return (
     <Link

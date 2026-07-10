@@ -41,7 +41,9 @@ export interface StreamResumptionStore {
   cleanup(maxAgeMs?: number): Promise<number>;
 }
 
-export declare function createStreamResumptionStore(kv: KVNamespace): StreamResumptionStore;
+export function createStreamResumptionStore(kv: KVNamespace): StreamResumptionStore {
+  throw new Error("createStreamResumptionStore not implemented in SDK - use worker runtime");
+}
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;

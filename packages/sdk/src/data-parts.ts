@@ -72,18 +72,20 @@ export interface DataPartRegistry {
   serialize(type: string, data: unknown): unknown | null;
 }
 
-export declare function createDataPartRegistry(): DataPartRegistry;
+export function createDataPartRegistry(): DataPartRegistry {
+  throw new Error("not implemented in SDK - use worker runtime");
+}
 
 /**
  * Built-in data part parsers.
  */
-export declare const BUILTIN_PARSERS: {
+export const BUILTIN_PARSERS: {
   text: DataPartParser<string>;
   "tool-call": DataPartParser<{ toolCallId: string; toolName: string; args: Record<string, unknown> }>;
   "tool-result": DataPartParser<{ toolCallId: string; result: unknown; success: boolean }>;
   json: DataPartParser<unknown>;
   image: DataPartParser<{ url: string; mimeType?: string; alt?: string }>;
-};
+} = {} as any;
 
 /**
  * useObject — streaming structured object from LLM.
@@ -115,9 +117,13 @@ export interface UseObjectResult<T> {
   abort: () => void;
 }
 
-export declare function useObject<T>(options: UseObjectOptions<T>): UseObjectResult<T>;
+export function useObject<T>(options: UseObjectOptions<T>): UseObjectResult<T> {
+  throw new Error("useObject not implemented in SDK - use worker runtime");
+}
 
 /**
  * Parse a partial JSON string and return what can be parsed.
  */
-export declare function parsePartialJSON<T>(partial: string): T | null;
+export function parsePartialJSON<T>(partial: string): T | null {
+  throw new Error("parsePartialJSON not implemented in SDK - use worker runtime");
+}
