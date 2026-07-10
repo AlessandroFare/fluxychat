@@ -165,7 +165,7 @@ function LiveRoomPanel({ session }: { session: ShowcaseSession }) {
           {floating.map((r) => (
             <span
               key={r.id}
-              className="absolute bottom-2 animate-[fluxy-float-up_1.8s_ease-out_forwards] text-xl"
+              className="absolute bottom-2 animate-[fluxy-float-up_1.8s_ease-out_forwards] text-xl motion-reduce:animate-none motion-reduce:opacity-0"
               style={{ left: `${r.left}%` }}
             >
               {r.emoji}

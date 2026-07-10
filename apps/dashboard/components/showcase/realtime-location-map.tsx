@@ -4,8 +4,37 @@ import React from "react";
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import type { LatLngBoundsExpression } from "leaflet";
 import type { LocationTrackState } from "@fluxy-chat/sdk";
+// react-leaflet ships no styles of its own; without Leaflet's stylesheet the
+// tile panes and zoom controls are unpositioned and the map renders broken.
+import "leaflet/dist/leaflet.css";
+
+/**
+ * Leaflet writes path colors as SVG *presentation attributes*
+ * (`stroke="…"`), which do not resolve CSS `var()`. Read the concrete
+ * values off the theme once on the client so markers pick up the brand
+ * palette instead of falling back to Leaflet's default blue.
+ */
+function useThemeColors() {
+  const [colors, setColors] = React.useState({
+    live: "#f0501e",
+    liveFill: "#1f2937",
+    stale: "#9ca3af",
+  });
+  React.useEffect(() => {
+    const styles = getComputedStyle(document.documentElement);
+    const read = (name: string, fallback: string) =>
+      styles.getPropertyValue(name).trim() || fallback;
+    setColors({
+      live: read("--fluxy-cta-color", "#f0501e"),
+      liveFill: read("--fluxy-logo-color", "#1f2937"),
+      stale: read("--muted-foreground", "#9ca3af"),
+    });
+  }, []);
+  return colors;
+}
 
 export function RealtimeLocationMap({ tracks }: { tracks: LocationTrackState[] }) {
+  const colors = useThemeColors();
   const bounds = React.useMemo<LatLngBoundsExpression>(
     () => tracks.map((track) => [track.latitude, track.longitude]),
     [tracks],
@@ -31,8 +60,8 @@ export function RealtimeLocationMap({ tracks }: { tracks: LocationTrackState[] }
           center={[track.latitude, track.longitude]}
           radius={track.stale ? 6 : 8}
           pathOptions={{
-            color: track.stale ? "var(--muted-foreground)" : "var(--fluxy-cta-color)",
-            fillColor: track.stale ? "var(--muted-foreground)" : "var(--fluxy-logo-color)",
+            color: track.stale ? colors.stale : colors.live,
+            fillColor: track.stale ? colors.stale : colors.liveFill,
             fillOpacity: 0.9,
             weight: 3,
           }}
