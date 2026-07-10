@@ -15,8 +15,12 @@ export interface ThreadStateStore {
   delete(threadId: string): Promise<void>;
 }
 
-export declare function createThreadState(threadId: string, ttlMs?: number): ThreadState;
-export declare function createThreadStateStore(kv: KVNamespace): ThreadStateStore;
+export function createThreadState(threadId: string, ttlMs?: number): ThreadState {
+  throw new Error("createThreadState not implemented in SDK - use worker runtime");
+}
+export function createThreadStateStore(kv: KVNamespace): ThreadStateStore {
+  throw new Error("createThreadStateStore not implemented in SDK - use worker runtime");
+}
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;

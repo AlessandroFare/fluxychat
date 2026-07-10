@@ -22,35 +22,26 @@ export interface MetadataStore {
   query(projectId: string, key: string, value: unknown): Promise<string[]>;
 }
 
-export declare function createMetadataStore(kv: KVNamespace): MetadataStore;
+export function createMetadataStore(kv: KVNamespace): MetadataStore {
+  throw new Error("createMetadataStore not implemented in SDK - use worker runtime");
+}
 
 /**
  * Common metadata keys used by FluxyChat.
  */
-export declare const METADATA_KEYS: {
-  /** Whether the message was AI-generated */
-  AI_GENERATED: "fluxy_ai_generated";
-  /** Agent ID that generated the message */
-  AGENT_ID: "fluxy_agent_id";
-  /** Tool calls in the message */
-  TOOL_CALLS: "fluxy_tool_calls";
-  /** Token usage */
-  TOKEN_USAGE: "fluxy_token_usage";
-  /** Message source (web, mobile, api, etc.) */
-  SOURCE: "fluxy_source";
-  /** Thread/topic */
-  THREAD_ID: "fluxy_thread_id";
-  /** Reactions summary */
-  REACTIONS: "fluxy_reactions";
-  /** Read receipts */
-  READ_BY: "fluxy_read_by";
-  /** Edit history */
-  EDIT_HISTORY: "fluxy_edit_history";
-  /** Priority */
-  PRIORITY: "fluxy_priority";
-  /** Custom tags */
-  TAGS: "fluxy_tags";
-};
+export const METADATA_KEYS = {
+  AI_GENERATED: "fluxy_ai_generated",
+  AGENT_ID: "fluxy_agent_id",
+  TOOL_CALLS: "fluxy_tool_calls",
+  TOKEN_USAGE: "fluxy_token_usage",
+  SOURCE: "fluxy_source",
+  THREAD_ID: "fluxy_thread_id",
+  REACTIONS: "fluxy_reactions",
+  READ_BY: "fluxy_read_by",
+  EDIT_HISTORY: "fluxy_edit_history",
+  PRIORITY: "fluxy_priority",
+  TAGS: "fluxy_tags",
+} as const;
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;

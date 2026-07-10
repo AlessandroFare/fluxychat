@@ -66,14 +66,20 @@ export interface VoiceManager {
   stopAll(): Promise<void>;
 }
 
-export declare function createVoiceManager(): VoiceManager;
+export function createVoiceManager(): VoiceManager {
+  throw new Error("createVoiceManager not implemented in SDK - use worker runtime");
+}
 
 /**
  * Convert audio ArrayBuffer to base64.
  */
-export declare function audioToBase64(audio: ArrayBuffer): string;
+export function audioToBase64(audio: ArrayBuffer): string {
+  throw new Error("audioToBase64 not implemented in SDK - use worker runtime");
+}
 
 /**
  * Convert base64 to audio ArrayBuffer.
  */
-export declare function base64ToAudio(base64: string): ArrayBuffer;
+export function base64ToAudio(base64: string): ArrayBuffer {
+  throw new Error("base64ToAudio not implemented in SDK - use worker runtime");
+}

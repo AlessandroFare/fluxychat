@@ -56,17 +56,23 @@ export interface TransportFactory {
 /**
  * HTTP transport using fetch.
  */
-export declare function createHTTPTransport(config: TransportConfig): Transport;
+export function createHTTPTransport(config: TransportConfig): Transport {
+  throw new Error("createHTTPTransport not implemented in SDK - use worker runtime");
+}
 
 /**
  * SSE transport for streaming responses.
  */
-export declare function createSSETransport(config: TransportConfig): Transport;
+export function createSSETransport(config: TransportConfig): Transport {
+  throw new Error("createSSETransport not implemented in SDK - use worker runtime");
+}
 
 /**
  * WebSocket transport for bidirectional communication.
  */
-export declare function createWebSocketTransport(config: TransportConfig): Transport;
+export function createWebSocketTransport(config: TransportConfig): Transport {
+  throw new Error("createWebSocketTransport not implemented in SDK - use worker runtime");
+}
 
 /**
  * Transport registry — manages multiple transports with fallback.
@@ -84,4 +90,6 @@ export interface TransportRegistry {
   list(): Array<{ name: string; type: TransportType; healthy: boolean }>;
 }
 
-export declare function createTransportRegistry(): TransportRegistry;
+export function createTransportRegistry(): TransportRegistry {
+  throw new Error("createTransportRegistry not implemented in SDK - use worker runtime");
+}

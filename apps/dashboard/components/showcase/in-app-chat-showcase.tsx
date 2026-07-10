@@ -12,11 +12,6 @@ import type { ShowcaseSession } from "./use-showcase-session";
 
 const feature = getRealtimeFeature("chat");
 
-/**
- * In-App Chat showcase — embeds the real FluxyChat widget connected to the
- * live Worker demo room over WebSocket. Messages, presence, reactions,
- * read receipts, and streaming replies are all live SDK behavior.
- */
 export function InAppChatShowcase({ session }: { session: ShowcaseSession }) {
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
@@ -31,7 +26,16 @@ export function InAppChatShowcase({ session }: { session: ShowcaseSession }) {
         ) : session.status === "unavailable" || !session.client || !session.roomId ? (
           <ShowcaseUnavailable error={session.error} onRetry={session.retry} />
         ) : (
-          <div className="p-3">
+          <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300 p-3">
+            <div className="mb-2 flex items-center gap-1.5 px-1">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--fluxy-cta-color)]/60 opacity-75 motion-reduce:animate-none" />
+                <span className="relative inline-flex size-2 rounded-full bg-[var(--fluxy-cta-color)]" />
+              </span>
+              <span className="text-[11px] font-medium text-muted-foreground">
+                Live · Worker demo room
+              </span>
+            </div>
             <FluxyChat
               roomId={session.roomId}
               agentId=""

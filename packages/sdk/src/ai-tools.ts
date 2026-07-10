@@ -78,28 +78,40 @@ export interface ChatTool {
   needsApproval?: boolean;
 }
 
-export declare const TOOL_NAMES: Record<ToolName, ToolName>;
-export declare const PRESETS: Record<ToolPreset, PresetConfig>;
-export declare const TOOL_DEFINITIONS: Record<ToolName, ToolDefinition>;
-export declare function getPresetTools(preset: ToolPreset): ToolName[];
-export declare function needsApproval(preset: ToolPreset, toolName: string): boolean;
-export declare function getToolDefinition(toolName: string): ToolDefinition | undefined;
-export declare function listPresets(): Array<{
+export const TOOL_NAMES: Record<ToolName, ToolName> = {} as any;
+export const PRESETS: Record<ToolPreset, PresetConfig> = {} as any;
+export const TOOL_DEFINITIONS: Record<ToolName, ToolDefinition> = {} as any;
+export function getPresetTools(preset: ToolPreset): ToolName[] {
+  throw new Error("getPresetTools not implemented in SDK - use worker runtime");
+}
+export function needsApproval(preset: ToolPreset, toolName: string): boolean {
+  throw new Error("needsApproval not implemented in SDK - use worker runtime");
+}
+export function getToolDefinition(toolName: string): ToolDefinition | undefined {
+  throw new Error("getToolDefinition not implemented in SDK - use worker runtime");
+}
+export function listPresets(): Array<{
   name: string;
   description: string;
   toolCount: number;
-}>;
-export declare function buildToolList(
+}> {
+  throw new Error("listPresets not implemented in SDK - use worker runtime");
+}
+export function buildToolList(
   preset: ToolPreset,
   overrides?: {
     needsApproval?: Record<string, boolean>;
     description?: Record<string, string>;
     title?: Record<string, string>;
   },
-): Array<ToolDefinition & { needsApproval: boolean; title: string }>;
+): Array<ToolDefinition & { needsApproval: boolean; title: string }> {
+  throw new Error("buildToolList not implemented in SDK - use worker runtime");
+}
 
 /**
  * Create a set of Chat tools for the Vercel AI SDK.
  * Returns a map of tool name to AI SDK tool definition with execute functions.
  */
-export declare function createChatTools(options: ChatToolsOptions): Partial<Record<ToolName, ChatTool>>;
+export function createChatTools(options: ChatToolsOptions): Partial<Record<ToolName, ChatTool>> {
+  throw new Error("createChatTools not implemented in SDK - use worker runtime");
+}

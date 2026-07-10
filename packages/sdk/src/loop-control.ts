@@ -47,12 +47,14 @@ export interface LoopController {
   nextStep(): void;
 }
 
-export declare function createLoopController(config?: LoopControlConfig): LoopController;
+export function createLoopController(config?: LoopControlConfig): LoopController {
+  throw new Error("createLoopController not implemented in SDK - use worker runtime");
+}
 
 /**
  * Default loop control config for different presets.
  */
-export declare const LOOP_PRESETS: {
+export const LOOP_PRESETS: {
   /** Simple one-shot: single step, no tool calls */
   singleStep: LoopControlConfig;
   /** Standard agent: up to 10 steps, stops on certain tools */
@@ -61,4 +63,4 @@ export declare const LOOP_PRESETS: {
   deepResearch: LoopControlConfig;
   /** Autonomous: up to 50 steps, stops only on custom conditions */
   autonomous: LoopControlConfig;
-};
+} = {} as any;

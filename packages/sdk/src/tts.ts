@@ -33,14 +33,16 @@ export interface TextToSpeech {
   listVoices(): Promise<Array<{ id: string; name: string; language?: string }>>;
 }
 
-export declare function createTextToSpeech(config?: TTSConfig): TextToSpeech;
+export function createTextToSpeech(config?: TTSConfig): TextToSpeech {
+  throw new Error("createTextToSpeech not implemented in SDK - use worker runtime");
+}
 
 /**
  * Tool definition for TTS.
  */
-export declare const TTS_TOOL: {
+export const TTS_TOOL: {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
   execute: (input: Record<string, unknown>) => Promise<TTSResult>;
-};
+} = {} as any;

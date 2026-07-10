@@ -36,9 +36,13 @@ export interface ToolContextManager {
   getScopes(): ToolContextScope[];
 }
 
-export declare function createToolContextManager(): ToolContextManager;
-export declare function createScopedToolContext(
+export function createToolContextManager(): ToolContextManager {
+  throw new Error("createToolContextManager not implemented in SDK - use worker runtime");
+}
+export function createScopedToolContext(
   toolName: string,
   baseContext: ToolContext,
   scope?: ToolContextScope,
-): ScopedToolContext;
+): ScopedToolContext {
+  throw new Error("createScopedToolContext not implemented in SDK - use worker runtime");
+}

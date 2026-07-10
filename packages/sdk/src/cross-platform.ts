@@ -120,5 +120,9 @@ export interface BotDeploymentManager {
   getAdapter(id: string): PlatformAdapter | null;
 }
 
-export declare function createPlatformAdapter(platform: Platform): PlatformAdapter;
-export declare function createBotDeploymentManager(): BotDeploymentManager;
+export function createPlatformAdapter(platform: Platform): PlatformAdapter {
+  throw new Error("createPlatformAdapter not implemented in SDK - use worker runtime");
+}
+export function createBotDeploymentManager(): BotDeploymentManager {
+  throw new Error("createBotDeploymentManager not implemented in SDK - use worker runtime");
+}

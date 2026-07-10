@@ -1,19 +1,12 @@
 "use client";
 
 import React from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
 import type { LatLngBoundsExpression } from "leaflet";
 import type { LocationTrackState } from "@fluxy-chat/sdk";
-// react-leaflet ships no styles of its own; without Leaflet's stylesheet the
-// tile panes and zoom controls are unpositioned and the map renders broken.
 import "leaflet/dist/leaflet.css";
 
-/**
- * Leaflet writes path colors as SVG *presentation attributes*
- * (`stroke="…"`), which do not resolve CSS `var()`. Read the concrete
- * values off the theme once on the client so markers pick up the brand
- * palette instead of falling back to Leaflet's default blue.
- */
 function useThemeColors() {
   const [colors, setColors] = React.useState({
     live: "#f0501e",
@@ -33,8 +26,28 @@ function useThemeColors() {
   return colors;
 }
 
+function useLiveIcon(colors: ReturnType<typeof useThemeColors>) {
+  return React.useMemo(
+    () =>
+      L.divIcon({
+        className: "fluxy-marker-live",
+        html: `
+          <span class="fluxy-marker-live__wrap">
+            <span class="fluxy-marker-live__ping" style="background:${colors.live}"></span>
+            <span class="fluxy-marker-live__dot" style="background:${colors.liveFill};border-color:${colors.live}"></span>
+          </span>
+        `,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+        popupAnchor: [0, -11],
+      }),
+    [colors],
+  );
+}
+
 export function RealtimeLocationMap({ tracks }: { tracks: LocationTrackState[] }) {
   const colors = useThemeColors();
+  const liveIcon = useLiveIcon(colors);
   const bounds = React.useMemo<LatLngBoundsExpression>(
     () => tracks.map((track) => [track.latitude, track.longitude]),
     [tracks],
@@ -46,7 +59,7 @@ export function RealtimeLocationMap({ tracks }: { tracks: LocationTrackState[] }
       center={[first.latitude, first.longitude]}
       zoom={15}
       scrollWheelZoom={false}
-      className="min-h-64 w-full"
+      className="fluxy-location-map min-h-64 w-full"
       aria-label="Live location map"
     >
       <TileLayer
@@ -54,25 +67,72 @@ export function RealtimeLocationMap({ tracks }: { tracks: LocationTrackState[] }
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <FitTracks bounds={bounds} />
-      {tracks.map((track) => (
-        <CircleMarker
-          key={track.trackId}
-          center={[track.latitude, track.longitude]}
-          radius={track.stale ? 6 : 8}
-          pathOptions={{
-            color: track.stale ? colors.stale : colors.live,
-            fillColor: track.stale ? colors.stale : colors.liveFill,
-            fillOpacity: 0.9,
-            weight: 3,
-          }}
-        >
-          <Popup>
-            <strong>{track.trackId}</strong>
-            <br />
-            Updated {new Date(track.updatedAt).toLocaleTimeString()}
-          </Popup>
-        </CircleMarker>
-      ))}
+      {tracks.map((track) =>
+        track.stale ? (
+          <CircleMarker
+            key={track.trackId}
+            center={[track.latitude, track.longitude]}
+            radius={6}
+            pathOptions={{
+              color: colors.stale,
+              fillColor: colors.stale,
+              fillOpacity: 0.7,
+              weight: 2,
+            }}
+          >
+            <Popup>
+              <strong>{track.trackId}</strong>
+              <br />
+              Last seen {new Date(track.updatedAt).toLocaleTimeString()}
+            </Popup>
+          </CircleMarker>
+        ) : (
+          <Marker key={track.trackId} position={[track.latitude, track.longitude]} icon={liveIcon}>
+            <Popup>
+              <strong>{track.trackId}</strong>
+              <br />
+              Updated {new Date(track.updatedAt).toLocaleTimeString()}
+            </Popup>
+          </Marker>
+        ),
+      )}
+
+      <style>{`
+        .fluxy-marker-live__wrap {
+          position: relative;
+          width: 22px;
+          height: 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .fluxy-marker-live__ping {
+          position: absolute;
+          inset: 0;
+          border-radius: 9999px;
+          opacity: 0.55;
+          animation: fluxy-marker-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        .fluxy-marker-live__dot {
+          position: relative;
+          width: 12px;
+          height: 12px;
+          border-radius: 9999px;
+          border: 2px solid;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+        }
+        @keyframes fluxy-marker-ping {
+          0% { transform: scale(0.6); opacity: 0.6; }
+          75%, 100% { transform: scale(2.1); opacity: 0; }
+        }
+        .fluxy-location-map .leaflet-marker-icon {
+          transition: transform 0.6s ease-out;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .fluxy-marker-live__ping { animation: none; opacity: 0; }
+          .fluxy-location-map .leaflet-marker-icon { transition: none; }
+        }
+      `}</style>
     </MapContainer>
   );
 }

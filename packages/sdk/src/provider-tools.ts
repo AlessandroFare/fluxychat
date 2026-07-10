@@ -58,22 +58,26 @@ export interface ProviderToolRegistry {
   has(name: string): boolean;
 }
 
-export declare function createProviderToolRegistry(): ProviderToolRegistry;
+export function createProviderToolRegistry(): ProviderToolRegistry {
+  throw new Error("createProviderToolRegistry not implemented in SDK - use worker runtime");
+}
 
 /**
  * Built-in provider tool sets.
  */
-export declare const PROVIDER_TOOL_SETS: {
+export const PROVIDER_TOOL_SETS: {
   webSearch: ProviderToolSet;
   codeExecution: ProviderToolSet;
   fileOperations: ProviderToolSet;
   dataAnalysis: ProviderToolSet;
-};
+} = {} as any;
 
 /**
  * Convert provider-defined tools to FluxyChat tool schema format.
  */
-export declare function providerToolsToSchema(tools: ProviderDefinedTool[]): Array<{
+export function providerToolsToSchema(tools: ProviderDefinedTool[]): Array<{
   type: "function";
   function: { name: string; description: string; parameters: Record<string, unknown> };
-}>;
+}> {
+  throw new Error("providerToolsToSchema not implemented in SDK - use worker runtime");
+}

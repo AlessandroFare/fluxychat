@@ -100,22 +100,27 @@ function LocationPanel({ session }: { session: ShowcaseSession }) {
   return (
     <div className="flex h-full flex-col">
       <div className="relative min-h-64 flex-1 overflow-hidden bg-muted">
-        {trackList.length ? (
-          <LocationMap tracks={trackList} />
-        ) : (
-          <div className="flex min-h-64 flex-col items-center justify-center gap-3 px-6 text-center">
-            <span className="flex size-11 items-center justify-center rounded-full border border-border bg-card">
-              <MapPin className="size-5 text-primary" aria-hidden />
-            </span>
-            <div className="flex max-w-64 flex-col gap-1">
-              <p className="text-sm font-semibold text-foreground">No active tracks yet</p>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Share this device&apos;s foreground location, or open the demo in another tab to watch positions update.
-              </p>
+        <div key={trackList.length ? "map" : "empty"} className="animate-in fade-in-0 duration-300 h-full">
+          {trackList.length ? (
+            <LocationMap tracks={trackList} />
+          ) : (
+            <div className="flex min-h-64 flex-col items-center justify-center gap-3 px-6 text-center">
+              <span className="flex size-11 items-center justify-center rounded-full border border-border bg-card">
+                <MapPin className="size-5 text-primary" aria-hidden />
+              </span>
+              <div className="flex max-w-64 flex-col gap-1">
+                <p className="text-sm font-semibold text-foreground">No active tracks yet</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Share this device&apos;s foreground location, or open the demo in another tab to watch positions update.
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-        <span className="absolute left-3 top-3 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground shadow-sm">
+          )}
+        </div>
+        <span
+          key={activeTracks.length}
+          className="absolute left-3 top-3 animate-in fade-in-0 zoom-in-95 duration-200 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground shadow-sm"
+        >
           {connected ? `${activeTracks.length} active` : status}
         </span>
       </div>
@@ -124,13 +129,18 @@ function LocationPanel({ session }: { session: ShowcaseSession }) {
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-3">
         {controller ? (
-          <Button size="sm" variant="outline" onClick={stop}>
+          <Button size="sm" variant="outline" onClick={stop} className="active:scale-95 transition-transform">
             <Square data-icon="inline-start" />
             Stop sharing
           </Button>
         ) : (
-          <Button size="sm" onClick={start} disabled={permission === "denied" || permission === "unsupported"}>
-            <Navigation data-icon="inline-start" />
+          <Button
+            size="sm"
+            onClick={start}
+            disabled={permission === "denied" || permission === "unsupported"}
+            className="active:scale-95 transition-transform"
+          >
+            <Navigation data-icon="inline-start" className={controller ? "animate-pulse" : ""} />
             Share live location
           </Button>
         )}
@@ -151,8 +161,12 @@ function TrackList({ tracks }: { tracks: LocationTrackState[] }) {
   if (!tracks.length) return null;
   return (
     <ul className="flex max-h-36 flex-col overflow-y-auto border-t border-border" aria-label="Location tracks">
-      {tracks.map((track) => (
-        <li key={track.trackId} className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0">
+      {tracks.map((track, idx) => (
+        <li
+          key={track.trackId}
+          style={{ animationDelay: `${idx * 60}ms` }}
+          className="animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-300 flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0"
+        >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
             <LocateFixed className="size-4 text-primary" aria-hidden />
           </span>
@@ -163,7 +177,19 @@ function TrackList({ tracks }: { tracks: LocationTrackState[] }) {
               {new Date(track.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </p>
           </div>
-          <span className="text-[11px] font-medium text-muted-foreground">{track.stale ? "Stale" : "Live"}</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+            <span className="relative flex size-1.5">
+              {!track.stale ? (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--fluxy-cta-color)]/70 opacity-75 motion-reduce:animate-none" />
+              ) : null}
+              <span
+                className={`relative inline-flex size-1.5 rounded-full ${
+                  track.stale ? "bg-muted-foreground/50" : "bg-[var(--fluxy-cta-color)]"
+                }`}
+              />
+            </span>
+            {track.stale ? "Stale" : "Live"}
+          </span>
         </li>
       ))}
     </ul>

@@ -38,14 +38,16 @@ export interface ImageGenerator {
   generate(request: ImageGenerationRequest): Promise<ImageGenerationResult>;
 }
 
-export declare function createImageGenerator(config?: ImageGenerationConfig): ImageGenerator;
+export function createImageGenerator(config?: ImageGenerationConfig): ImageGenerator {
+  throw new Error("createImageGenerator not implemented in SDK - use worker runtime");
+}
 
 /**
  * Tool definition for image generation.
  */
-export declare const IMAGE_GENERATION_TOOL: {
+export const IMAGE_GENERATION_TOOL: {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
   execute: (input: Record<string, unknown>) => Promise<ImageGenerationResult>;
-};
+} = {} as any;

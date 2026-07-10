@@ -24,22 +24,32 @@ export interface StreamingMarkdownRendererOptions {
  * Uses length comparison because remend may trim trailing whitespace
  * from otherwise clean text.
  */
-export declare function isClean(text: string): boolean;
+export function isClean(text: string): boolean {
+  throw new Error("isClean not implemented in SDK - use worker runtime");
+}
 
 /**
  * Returns the longest prefix of text where all inline markers are balanced.
  * Uses the `remend` library for robust marker detection.
  */
-export declare function findCleanPrefix(text: string): string;
+export function findCleanPrefix(text: string): string {
+  throw new Error("findCleanPrefix not implemented in SDK - use worker runtime");
+}
 
 /** Returns the prefix of text that can be safely rendered, holding back unconfirmed table headers. */
-export declare function getCommittablePrefix(text: string): string;
+export function getCommittablePrefix(text: string): string {
+  throw new Error("getCommittablePrefix not implemented in SDK - use worker runtime");
+}
 
 /** Check if the text ends inside an unclosed code fence. */
-export declare function isInsideCodeFence(text: string): boolean;
+export function isInsideCodeFence(text: string): boolean {
+  throw new Error("isInsideCodeFence not implemented in SDK - use worker runtime");
+}
 
 /** Wraps confirmed GFM table blocks in code fences for append-only streaming. */
-export declare function wrapTablesForAppend(
+export function wrapTablesForAppend(
   text: string,
   closeFences?: boolean,
-): string;
+): string {
+  throw new Error("wrapTablesForAppend not implemented in SDK - use worker runtime");
+}

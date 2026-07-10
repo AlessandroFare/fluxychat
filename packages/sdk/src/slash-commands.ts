@@ -69,9 +69,11 @@ export interface SlashCommandRegistry {
   getCommand(name: string): SlashCommand | null;
 }
 
-export declare function createSlashCommandRegistry(): SlashCommandRegistry;
+export function createSlashCommandRegistry(): SlashCommandRegistry {
+  throw new Error("createSlashCommandRegistry not implemented in SDK - use worker runtime");
+}
 
 /**
  * Built-in slash commands.
  */
-export declare const BUILTIN_COMMANDS: SlashCommand[];
+export const BUILTIN_COMMANDS: SlashCommand[] = [];
