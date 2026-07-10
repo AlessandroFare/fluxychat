@@ -35,7 +35,15 @@ describe("@fluxy-chat/protocol", () => {
     const overlap = FLUXY_INBOUND_EVENT_TYPES.filter((t) =>
       (FLUXY_OUTBOUND_EVENT_TYPES as readonly string[]).includes(t),
     );
-    expect(overlap.sort()).toEqual(["agentTyping", "client_event", "message", "stream", "typing"]);
+    expect(overlap.sort()).toEqual([
+      "agentTyping",
+      "client_event",
+      "location_track_ended",
+      "location_update",
+      "message",
+      "stream",
+      "typing",
+    ]);
   });
 });
 
@@ -50,6 +58,8 @@ describe("outbound client events", () => {
       "read",
       "delete",
       "client_event",
+      "location_update",
+      "location_track_ended",
       "typing",
       "agentTyping",
     ];

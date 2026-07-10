@@ -1,4 +1,10 @@
-import { isKnownOutboundClientEvent } from "@fluxy-chat/protocol";
+import {
+  isKnownOutboundClientEvent,
+  isValidLocationTrackEnded,
+  isValidLocationUpdate,
+} from "@fluxy-chat/protocol";
+
+export { isValidLocationTrackEnded, isValidLocationUpdate };
 
 /**
  * Reject unknown client WebSocket payloads before Room DO handlers run.

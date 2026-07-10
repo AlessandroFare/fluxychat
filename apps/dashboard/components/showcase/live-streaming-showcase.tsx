@@ -26,10 +26,9 @@ const REACTION_EMOJI: Record<string, string> = {
 };
 
 /**
- * Live Streaming showcase — real high fan-out pub/sub. One `sendClientEvent`
- * publish is delivered to every connected subscriber of the room in
- * milliseconds; `presenceMembers` / `subscriptionCount` are the live
- * presence counts from the Worker. Nothing here is mocked.
+ * Live Streaming showcase — room-scoped ephemeral pub/sub. One
+ * `sendClientEvent` publish is delivered by the room Durable Object to its
+ * connected subscribers; presence counts come from the same live room.
  */
 export function LiveStreamingShowcase({ session }: { session: ShowcaseSession }) {
   return (

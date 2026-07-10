@@ -53,3 +53,16 @@ export {
   dispatchInboundWsFrame,
   type InboundDispatchHandlers,
 } from "./dispatch-inbound-frame.js";
+
+export {
+  isValidLocationTrackEnded,
+  isValidLocationTrackId,
+  isValidLocationUpdate,
+  type LocationSnapshotInbound,
+  type LocationTelemetry,
+  type LocationTrack,
+  type LocationTrackEndedInbound,
+  type LocationTrackEndedOutbound,
+  type LocationUpdateInbound,
+  type LocationUpdateOutbound,
+} from "./location-events.js";

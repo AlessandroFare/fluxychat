@@ -97,6 +97,71 @@ describe("RoomDurableObject message handlers", () => {
     expect(blocked.allowed).toBe(false);
   });
 
+  it("fans out valid location updates and enforces track ownership", async () => {
+    const { roomDo } = createRoomDo();
+    const owner = createMockWebSocket();
+    const viewer = createMockWebSocket();
+    roomDo.clients.add(owner);
+    roomDo.clients.add(viewer);
+    roomDo.userIds.set(owner, userId);
+    roomDo.userIds.set(viewer, "viewer");
+
+    await roomDo.onMessage(owner, {
+      data: JSON.stringify({
+        type: "location_update",
+        trackId: "trip-42",
+        latitude: 45.4642,
+        longitude: 9.19,
+        accuracy: 7,
+      }),
+    });
+
+    expect(roomDo.locationTracks.get("trip-42")).toMatchObject({ userId, roomId });
+    expect(JSON.parse(viewer.sent.at(-1))).toMatchObject({
+      type: "location_update",
+      trackId: "trip-42",
+      userId,
+    });
+
+    await roomDo.onMessage(viewer, {
+      data: JSON.stringify({ type: "location_track_ended", trackId: "trip-42" }),
+    });
+    expect(JSON.parse(viewer.sent.at(-1))).toMatchObject({
+      type: "error",
+      message: "location_track_forbidden",
+    });
+  });
+
+  it("sends only fresh location tracks in a connect snapshot", () => {
+    const { roomDo } = createRoomDo();
+    const ws = createMockWebSocket();
+    roomDo.locationTracks.set("fresh", {
+      trackId: "fresh",
+      roomId,
+      userId,
+      latitude: 1,
+      longitude: 2,
+      updatedAt: new Date().toISOString(),
+      staleAt: new Date(Date.now() + 30_000).toISOString(),
+    });
+    roomDo.locationTracks.set("stale", {
+      trackId: "stale",
+      roomId,
+      userId,
+      latitude: 1,
+      longitude: 2,
+      updatedAt: new Date(Date.now() - 60_000).toISOString(),
+      staleAt: new Date(Date.now() - 30_000).toISOString(),
+    });
+
+    roomDo.sendLocationSnapshot(ws);
+
+    expect(JSON.parse(ws.sent[0])).toMatchObject({
+      type: "location_snapshot",
+      tracks: [expect.objectContaining({ trackId: "fresh" })],
+    });
+  });
+
   it("returns quota_exceeded on WS message when messages_created quota is denied", async () => {
     vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
       allowed: false,

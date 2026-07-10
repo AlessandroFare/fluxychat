@@ -373,6 +373,26 @@ export {
   type FluxyWaitForOptions,
 } from "./room-connection";
 
+export {
+  locationTrack,
+  type LocationTrackController,
+  type LocationTrackOptions,
+} from "./location-track";
+
+export {
+  useLocation,
+  type LocationTrackState,
+  type UseLocationOptions,
+} from "./use-location";
+
+export type {
+  LocationSnapshotInbound,
+  LocationTelemetry,
+  LocationTrack,
+  LocationTrackEndedInbound,
+  LocationUpdateInbound,
+} from "@fluxy-chat/protocol";
+
 export { FluxyMessageStream, type FluxyMessageStreamOptions } from "./message-stream";
 
 export {
@@ -995,6 +1015,9 @@ export type FluxyChatEvent =
       eventName: string;
       data: unknown;
     }
+  | import("@fluxy-chat/protocol").LocationUpdateInbound
+  | import("@fluxy-chat/protocol").LocationSnapshotInbound
+  | import("@fluxy-chat/protocol").LocationTrackEndedInbound
   | { type: "agentTyping"; agentId: string; isTyping: boolean }
   | {
       type: "tool_call";

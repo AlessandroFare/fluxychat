@@ -1,5 +1,9 @@
-﻿import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
-import { isValidClientWsPayload } from "../lib/ws-protocol.js";
+import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
+import {
+  isValidClientWsPayload,
+  isValidLocationTrackEnded,
+  isValidLocationUpdate,
+} from "../lib/ws-protocol.js";
 import { logInfo, logError } from "../lib/worker-log.js";
 import { isRoomMember, canAccessRoom } from "../lib/room-access.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
@@ -76,6 +80,8 @@ export const ROOM_DO_MIGRATIONS = [
 
 export const DEFAULT_WS_HISTORY_LIMIT = 50;
 export const MAX_WS_HISTORY_LIMIT = 500;
+export const LOCATION_STALE_TTL_MS = 30_000;
+export const LOCATION_UPDATE_INTERVAL_MS = 1_000;
 
 /**
  * @param {Request} request
@@ -135,6 +141,10 @@ export class RoomDurableObject {
     this.socketIds = new Map();
     /** @type {{ event: Record<string, unknown>; cachedAt: string } | null} */
     this.lastCacheEntry = null;
+    /** Ephemeral last-known foreground location per track. */
+    this.locationTracks = new Map();
+    /** Last accepted update time per user/track, enforcing the 1 Hz ceiling. */
+    this.locationUpdateTimes = new Map();
 
     if (typeof this.state.blockConcurrencyWhile === "function" && this.state.storage) {
       this._storageHydrated = this.state.blockConcurrencyWhile(async () => {
@@ -284,6 +294,27 @@ export class RoomDurableObject {
       return;
     }
     void this.notifyCacheMissWebhook();
+  }
+
+  pruneLocationTracks(now = Date.now()) {
+    for (const [trackId, track] of this.locationTracks) {
+      if (Date.parse(track.staleAt) <= now) {
+        this.locationTracks.delete(trackId);
+        this.locationUpdateTimes.delete(`${track.userId}:${trackId}`);
+      }
+    }
+  }
+
+  sendLocationSnapshot(webSocket) {
+    this.pruneLocationTracks();
+    webSocket.send(
+      JSON.stringify({
+        type: "location_snapshot",
+        roomId: this.roomId || this.state.id.toString(),
+        tracks: [...this.locationTracks.values()],
+        generatedAt: new Date().toISOString(),
+      }),
+    );
   }
 
   incrementUserConnection(userId) {
@@ -463,6 +494,12 @@ export class RoomDurableObject {
       });
     } catch (err) {
       logError("do.active_stream_state_failed", err, { roomId, projectId });
+    }
+
+    try {
+      this.sendLocationSnapshot(webSocket);
+    } catch (err) {
+      logError("do.location_snapshot_failed", err, { roomId, projectId });
     }
 
     this.wsInboundQueues.delete(webSocket);
@@ -1278,6 +1315,77 @@ export class RoomDurableObject {
         return;
       }
 
+      if (msg.type === "location_update") {
+        const roomId = this.roomId || this.state.id.toString();
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "location_requires_auth" }));
+          return;
+        }
+        if (!isValidLocationUpdate(msg)) {
+          webSocket.send(JSON.stringify({ type: "error", message: "invalid_location_update" }));
+          return;
+        }
+        const now = Date.now();
+        const updateKey = `${userId}:${msg.trackId}`;
+        const lastUpdate = this.locationUpdateTimes.get(updateKey) || 0;
+        if (now - lastUpdate < LOCATION_UPDATE_INTERVAL_MS) {
+          webSocket.send(JSON.stringify({ type: "error", message: "location_rate_limited" }));
+          return;
+        }
+        const existing = this.locationTracks.get(msg.trackId);
+        if (existing && existing.userId !== userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "location_track_forbidden" }));
+          return;
+        }
+        const updatedAt = new Date(now).toISOString();
+        const track = {
+          trackId: msg.trackId,
+          roomId,
+          userId,
+          latitude: msg.latitude,
+          longitude: msg.longitude,
+          ...(msg.accuracy == null ? {} : { accuracy: msg.accuracy }),
+          ...(msg.altitude === undefined ? {} : { altitude: msg.altitude }),
+          ...(msg.heading === undefined ? {} : { heading: msg.heading }),
+          ...(msg.speed === undefined ? {} : { speed: msg.speed }),
+          updatedAt,
+          staleAt: new Date(now + LOCATION_STALE_TTL_MS).toISOString(),
+        };
+        this.locationTracks.set(msg.trackId, track);
+        this.locationUpdateTimes.set(updateKey, now);
+        this.broadcast({ type: "location_update", ...track });
+        return;
+      }
+
+      if (msg.type === "location_track_ended") {
+        const roomId = this.roomId || this.state.id.toString();
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "location_requires_auth" }));
+          return;
+        }
+        if (!isValidLocationTrackEnded(msg)) {
+          webSocket.send(JSON.stringify({ type: "error", message: "invalid_location_track_end" }));
+          return;
+        }
+        const existing = this.locationTracks.get(msg.trackId);
+        if (existing && existing.userId !== userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "location_track_forbidden" }));
+          return;
+        }
+        this.locationTracks.delete(msg.trackId);
+        this.locationUpdateTimes.delete(`${userId}:${msg.trackId}`);
+        this.broadcast({
+          type: "location_track_ended",
+          roomId,
+          trackId: msg.trackId,
+          userId,
+          endedAt: new Date().toISOString(),
+        });
+        return;
+      }
+
       if (msg.type === "client_event") {
         const roomId = this.roomId || this.state.id.toString();
         const userId = this.userIds.get(webSocket);
@@ -1581,6 +1689,7 @@ export class RoomDurableObject {
 
   pruneEphemeralState() {
     const now = Date.now();
+    this.pruneLocationTracks(now);
     for (const [key, bucket] of this.wsRateLimitStore) {
       if (!bucket || bucket.expiresAt <= now) {
         this.wsRateLimitStore.delete(key);
