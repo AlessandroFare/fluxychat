@@ -1151,7 +1151,7 @@ export function FluxyChat({
                                       <span
                                         className={cn(
                                           "mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                                          isSelf ? "bg-white/15 text-white" : "bg-[#FF6A1A]/10 text-[#FF6A1A]",
+                                          isSelf ? "bg-white/15 text-white" : "bg-[var(--fluxy-mention-bg)] text-[var(--fluxy-mention-text)]",
                                         )}
                                       >
                                         <BrainCircuit className="size-3" /> Deep Research
@@ -1161,7 +1161,7 @@ export function FluxyChat({
                                       <span
                                         className={cn(
                                           "mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                                          isSelf ? "bg-white/15 text-white" : "bg-[#FF6A1A]/10 text-[#FF6A1A]",
+                                          isSelf ? "bg-white/15 text-white" : "bg-[var(--fluxy-mention-bg)] text-[var(--fluxy-mention-text)]",
                                         )}
                                       >
                                         <Globe className="size-3" /> Web Search
@@ -1177,7 +1177,7 @@ export function FluxyChat({
                                         authToken={adminJwt.trim() || memberJwt.trim() || null}
                                       />
                                     ) : (
-                                      {/* Text color inherits from the sent/received bubble variant tokens */}
+                                      // Text color inherits from the sent/received bubble variant tokens
                                       <p className="whitespace-pre-wrap break-words">
                                         {m.content}
                                         {!m.content && isStreaming ? "…" : null}
@@ -1333,7 +1333,7 @@ export function FluxyChat({
                 <MessageScrollerItem>
                   <Marker role="status">
                     <MarkerIcon>
-                      <BrainCircuit className="size-3 text-[#C2410C]" />
+                      <BrainCircuit className="size-3 text-[var(--fluxy-cta-color)]" />
                     </MarkerIcon>
                     <MarkerContent className="shimmer">Researching…</MarkerContent>
                   </Marker>
@@ -1344,7 +1344,7 @@ export function FluxyChat({
                 <MessageScrollerItem>
                   <Marker role="status">
                     <MarkerIcon>
-                      <Globe className="size-3 text-[#C2410C]" />
+                      <Globe className="size-3 text-[var(--fluxy-cta-color)]" />
                     </MarkerIcon>
                     <MarkerContent className="shimmer">Searching…</MarkerContent>
                   </Marker>
@@ -1496,7 +1496,7 @@ export function FluxyChat({
       {(pendingAttachments.length > 0 || pendingTool) && !pendingCompose ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
           {pendingTool ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6A1A]/10 px-2.5 py-1 text-xs font-medium text-[#FF6A1A]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--fluxy-mention-bg)] px-2.5 py-1 text-xs font-medium text-[var(--fluxy-mention-text)]">
               {pendingTool.type === "image" ? (
                 <FileImage className="size-3.5" aria-hidden />
               ) : pendingTool.type === "deep-research" ? (
@@ -1511,7 +1511,7 @@ export function FluxyChat({
                   : "Web Search active"}
               <button
                 type="button"
-                className="rounded p-0.5 hover:bg-[#FF6A1A]/20"
+                className="rounded p-0.5 hover:bg-[var(--fluxy-mention-bg)]"
                 onClick={() => setPendingTool(null)}
                 aria-label="Remove tool"
               >
@@ -1566,10 +1566,7 @@ export function FluxyChat({
         {/* Deep Research / Web Search chips above textarea */}
         {pendingTool?.type === "deep-research" || pendingTool?.type === "web-search" ? (
           <div className="flex items-center gap-2 px-1 pb-1">
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-              style={{ color: "#FF6A1A", backgroundColor: "rgba(255, 106, 26, 0.1)" }}
-            >
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--fluxy-mention-bg)] px-2.5 py-1 text-xs font-medium text-[var(--fluxy-mention-text)]">
               {pendingTool.type === "deep-research" ? (
                 <>
                   <BookOpen className="size-3" />
@@ -1583,7 +1580,7 @@ export function FluxyChat({
               )}
               <button
                 type="button"
-                className="rounded p-0.5 hover:bg-[#FF6A1A]/20"
+                className="rounded p-0.5 hover:bg-[var(--fluxy-mention-bg)]"
                 onClick={() => setPendingTool(null)}
                 aria-label="Remove tool"
               >
@@ -1642,8 +1639,7 @@ export function FluxyChat({
               </button>
               {plusMenuOpen ? (
                 <div
-                  className="absolute bottom-full left-0 z-[9999] mb-2 w-56 rounded-lg border border-border bg-popover p-1 shadow-xl ring-1 ring-border"
-                  style={{ backgroundColor: "white" }}
+                  className="absolute bottom-full left-0 z-50 mb-2 w-56 rounded-lg border border-border bg-popover p-1 shadow-xl"
                   role="menu"
                 >
                   {/* Add Photos & Files */}
@@ -1669,7 +1665,7 @@ export function FluxyChat({
                     role="menuitem"
                     onClick={() => prepareImageGeneration()}
                   >
-                    <Sparkles className="size-4" style={{ color: "#C2410C" }} aria-hidden />
+                    <Sparkles className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
                     <div className="flex flex-col">
                       <span>Create image</span>
                       <span className="text-[10px] text-muted-foreground">AI generated</span>
@@ -1683,7 +1679,7 @@ export function FluxyChat({
                     role="menuitem"
                     onClick={() => sendResearchPrompt("deep-research")}
                   >
-                    <BookOpen className="size-4" style={{ color: "#C2410C" }} aria-hidden />
+                    <BookOpen className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
                     <div className="flex flex-col">
                       <span>Deep Research</span>
                       <span className="text-[10px] text-muted-foreground">Multi-step agent</span>
@@ -1697,7 +1693,7 @@ export function FluxyChat({
                     role="menuitem"
                     onClick={() => sendResearchPrompt("web-search")}
                   >
-                    <Globe className="size-4" style={{ color: "#C2410C" }} aria-hidden />
+                    <Globe className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
                     <div className="flex flex-col">
                       <span>Web search</span>
                       <span className="text-[10px] text-muted-foreground">Live results</span>
@@ -1822,7 +1818,7 @@ export function FluxyChat({
           <DialogFooter>
             <Button
               variant="primary"
-              style={{ backgroundColor: "#C2410C" }}
+              className="bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] hover:bg-[var(--fluxy-btn-primary-hover-bg)]"
               disabled={!imagePrompt.trim() || imageGenerating}
               onClick={() => {
                 if (!imagePrompt.trim() || isAgentBusy) return;
@@ -1947,7 +1943,7 @@ function ImagePreviewDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
       onClick={onClose}
     >
       <div
@@ -2017,7 +2013,7 @@ function FluxyAttachment({
           className="mt-2 block overflow-hidden rounded-lg transition-opacity hover:opacity-90"
         >
           <AuthedImage
-                       src={fullSrc}
+            src={fullSrc}
             alt={attachment.name}
             authToken={authToken}
             className="max-h-64 max-w-xs rounded-lg object-cover"
@@ -2047,8 +2043,7 @@ function FluxyAttachment({
       <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-card p-2">
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-full text-white"
-          style={{ backgroundColor: "#C2410C" }}
+          className="flex size-8 items-center justify-center rounded-full bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] hover:bg-[var(--fluxy-btn-primary-hover-bg)]"
           onClick={() => {
             const audio = new Audio(fullSrc);
             void audio.play();
