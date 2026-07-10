@@ -53,9 +53,10 @@
   --fluxy-bubble-sent-bg: #FF6A1A;
   --fluxy-bubble-sent-text: #FFFFFF;
 
-  /* Received bubble: light warm tint */
-  --fluxy-bubble-received-bg: rgba(255, 106, 26, 0.08);
-  --fluxy-bubble-received-border: rgba(255, 106, 26, 0.15);
+  /* Received bubble: neutral card surface (brand orange is reserved for sent
+     bubbles + accents; a tinted received wall reads "demo app") */
+  --fluxy-bubble-received-bg: #F4F4F5;
+  --fluxy-bubble-received-border: #E4E4E7;
   --fluxy-bubble-received-text: #1A1A1A;
 
   --fluxy-mention-bg: rgba(255, 106, 26, 0.18);
@@ -107,6 +108,13 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.3);
   --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  /* FLUXYCHAT — BUBBLE COLOR SYSTEM (dark) */
+  --fluxy-bubble-sent-bg: #E85F17;
+  --fluxy-bubble-sent-text: #FFFFFF;
+  --fluxy-bubble-received-bg: #1F2937;
+  --fluxy-bubble-received-border: #2B3648;
+  --fluxy-bubble-received-text: #F3F4F6;
 }
 
 body {
