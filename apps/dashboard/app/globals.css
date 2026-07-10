@@ -597,3 +597,91 @@ code {
     opacity: 0.4;
   }
 }
+
+/* ── Realtime landing showcase (auto-rotating spotlight) ───────────────── */
+
+/* Timer bar that fills while a feature is on screen. */
+@keyframes rt-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Generic entrance for chat bubbles, notifications, and list rows. */
+@keyframes rt-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Emoji reactions drifting up in the live-streaming mockup. */
+@keyframes rt-float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-46px) scale(1.15);
+  }
+}
+
+/* Live badge heartbeat. */
+@keyframes rt-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Courier dot tracing an L-shaped route across the stylized map. */
+@keyframes rt-dot-move {
+  0% {
+    top: 76%;
+    left: 14%;
+  }
+  40% {
+    top: 76%;
+    left: 52%;
+  }
+  55% {
+    top: 76%;
+    left: 52%;
+  }
+  100% {
+    top: 26%;
+    left: 82%;
+  }
+}
+
+/* Sonar ring pulsing under the moving dot. */
+@keyframes rt-ping {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rt-animate {
+    animation: none !important;
+  }
+}
