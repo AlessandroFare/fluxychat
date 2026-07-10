@@ -149,6 +149,12 @@ const GROUPS: FeatureGroup[] = [
     intro: "Real-time engagement for events, communities, and streaming.",
     items: [
       {
+        title: "Realtime feature showcase",
+        description: "Live demos of in-app chat, high fan-out live streaming, and web push — real SDK calls against the demo room.",
+        href: "/features/realtime",
+        hrefLabel: "Open live demos",
+      },
+      {
         title: "Live dashboards & events",
         description: "Live metrics and event feeds for high-traffic rooms.",
         href: "/analytics",
