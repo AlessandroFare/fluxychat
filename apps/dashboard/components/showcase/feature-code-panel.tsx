@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import type { CodeToken, RealtimeFeature } from "./realtime-feature-content";
 
 /**
  * Left-hand panel of a feature showcase section: heading, blurb, and a
@@ -7,38 +8,38 @@ import { cn } from "@/lib/utils";
  * layout of realtime-SDK landing pages.
  */
 export function FeatureCodePanel({
-  title,
-  description,
-  children,
+  feature,
   className,
 }: {
-  title: string;
-  description: string;
-  children: ReactNode;
+  feature: RealtimeFeature;
   className?: string;
 }) {
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      <h3 className="text-balance text-xl font-semibold text-foreground">{title}</h3>
-      <p className="text-pretty text-sm leading-relaxed text-muted-foreground">{description}</p>
+      <h3 className="text-balance text-xl font-semibold text-foreground">{feature.title}</h3>
+      <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+        {feature.description}
+      </p>
       <pre className="overflow-x-auto rounded-xl border border-border bg-card p-4 font-mono text-xs leading-relaxed text-foreground shadow-sm">
-        <code>{children}</code>
+        <code><FeatureCodeSnippet tokens={feature.code} /></code>
       </pre>
     </div>
   );
 }
 
-/** Syntax accent helpers for hand-written snippets. */
-export function Kw({ children }: { children: ReactNode }) {
-  return <span className="text-[var(--fluxy-cta-color)]">{children}</span>;
+export function FeatureCodeSnippet({ tokens }: { tokens: readonly CodeToken[] }) {
+  return tokens.map((token, index) => (
+    <span key={`${index}-${token.text}`} className={tokenClassName(token)}>
+      {token.text}
+    </span>
+  ));
 }
 
-export function Ident({ children }: { children: ReactNode }) {
-  return <span className="text-[var(--fluxy-logo-color)]">{children}</span>;
-}
-
-export function Str({ children }: { children: ReactNode }) {
-  return <span className="text-muted-foreground">{children}</span>;
+function tokenClassName(token: CodeToken): string | undefined {
+  if (token.kind === "keyword") return "text-[var(--fluxy-cta-color)]";
+  if (token.kind === "identifier") return "text-[var(--fluxy-logo-color)]";
+  if (token.kind === "string") return "text-muted-foreground";
+  return undefined;
 }
 
 /** Right-hand live preview frame. */

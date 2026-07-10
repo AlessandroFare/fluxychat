@@ -4,30 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FluxychatLogotype } from "@/components/FluxychatLogo";
 import { cn } from "@/lib/utils";
-import { CONSOLE_NAV_MAIN, CONSOLE_NAV_TOOLS } from "./console-nav";
+import {
+  CONSOLE_NAV_MAIN,
+  CONSOLE_NAV_TOOLS,
+  isConsoleNavItemActive,
+} from "./console-nav";
 import { QuickstartNavLink } from "./quickstart-nav-link";
 import { CommandPaletteTrigger } from "./console-command-palette";
 
-const ALL_NAV_HREFS = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS].map((item) => item.href);
-
-/**
- * A link is active on an exact match or when the pathname is nested under it —
- * but a parent (e.g. `/features`) yields to a more specific sibling
- * (`/features/realtime`) so only the deepest matching item is highlighted.
- */
-function computeActive(href: string, pathname: string | null): boolean {
-  if (!pathname) return false;
-  if (href === "/") return pathname === "/";
-  if (pathname === href) return true;
-  if (!pathname.startsWith(`${href}/`)) return false;
-  return !ALL_NAV_HREFS.some(
-    (other) => other !== href && other.startsWith(`${href}/`) && (pathname === other || pathname.startsWith(`${other}/`)),
-  );
-}
-
 function NavLink({ href, label, icon: Icon }: (typeof CONSOLE_NAV_MAIN)[number]) {
   const pathname = usePathname();
-  const isActive = computeActive(href, pathname);
+  const isActive = isConsoleNavItemActive(href, pathname);
 
   return (
     <Link

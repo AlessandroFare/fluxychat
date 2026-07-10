@@ -600,6 +600,22 @@ code {
 
 /* ── Realtime landing showcase (auto-rotating spotlight) ───────────────── */
 
+/* Selected capability panel settles into place after a tab change. */
+@keyframes rt-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rt-panel-enter {
+  animation: rt-panel-enter 400ms ease-out both;
+}
+
 /* Timer bar that fills while a feature is on screen. */
 @keyframes rt-progress {
   from {
@@ -681,7 +697,8 @@ code {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rt-animate {
+  .rt-animate,
+  .rt-panel-enter {
     animation: none !important;
   }
 }

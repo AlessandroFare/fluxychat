@@ -6,11 +6,11 @@ import {
   FeatureCodePanel,
   FeaturePreviewFrame,
   ShowcaseUnavailable,
-  Kw,
-  Ident,
-  Str,
 } from "./feature-code-panel";
+import { getRealtimeFeature } from "./realtime-feature-content";
 import type { ShowcaseSession } from "./use-showcase-session";
+
+const feature = getRealtimeFeature("chat");
 
 /**
  * In-App Chat showcase — embeds the real FluxyChat widget connected to the
@@ -20,20 +20,7 @@ import type { ShowcaseSession } from "./use-showcase-session";
 export function InAppChatShowcase({ session }: { session: ShowcaseSession }) {
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-      <FeatureCodePanel
-        title="Ship a chat feature in an afternoon."
-        description="The FluxyChat SDK gives you a fully real-time room layer. Messages are delivered instantly to every connected client, with presence tracking, read receipts, threads, and emoji reactions built in."
-      >
-        <Kw>const</Kw> {"{ messages, sendMessage, reactions } = "}
-        <Ident>useChat</Ident>
-        {"({\n  roomId: "}
-        <Str>{'"chat:room-42"'}</Str>
-        {",\n});\n\n"}
-        <Ident>sendMessage</Ident>
-        {"("}
-        <Str>{'"Hello from FluxyChat"'}</Str>
-        {");"}
-      </FeatureCodePanel>
+      <FeatureCodePanel feature={feature} />
 
       <FeaturePreviewFrame label="Live in-app chat preview" className="min-h-[28rem]">
         {session.status === "loading" ? (

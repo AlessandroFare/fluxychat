@@ -7,11 +7,11 @@ import {
   FeatureCodePanel,
   FeaturePreviewFrame,
   ShowcaseUnavailable,
-  Kw,
-  Ident,
-  Str,
 } from "./feature-code-panel";
+import { getRealtimeFeature } from "./realtime-feature-content";
 import type { ShowcaseSession } from "./use-showcase-session";
+
+const feature = getRealtimeFeature("push");
 
 const SW_PATH = "/fluxy-push-sw.js";
 
@@ -24,21 +24,7 @@ const SW_PATH = "/fluxy-push-sw.js";
 export function PushNotificationsShowcase({ session }: { session: ShowcaseSession }) {
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-      <FeatureCodePanel
-        title="Push notifications, even when they're offline."
-        description="A message sent through FluxyChat isn't trapped in your app. When a user isn't connected to the room, the Worker delivers it as a VAPID web push to their device — and falls back to bridged channels like Slack, Discord, and email digests."
-      >
-        <Kw>const</Kw>
-        {" { requestPermissionAndSubscribe } = "}
-        <Ident>useWebPush</Ident>
-        {"(client, {\n  swPath: "}
-        <Str>{'"/fluxy-push-sw.js"'}</Str>
-        {",\n});\n\n"}
-        <Kw>await</Kw>{" "}
-        <Ident>requestPermissionAndSubscribe</Ident>
-        {"();\n"}
-        {"// offline users get a push; Slack / email fall back."}
-      </FeatureCodePanel>
+      <FeatureCodePanel feature={feature} />
 
       <FeaturePreviewFrame label="Push notifications preview" className="min-h-[28rem]">
         {session.status === "loading" ? (

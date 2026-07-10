@@ -14,11 +14,11 @@ import {
   FeatureCodePanel,
   FeaturePreviewFrame,
   ShowcaseUnavailable,
-  Ident,
-  Kw,
-  Str,
 } from "./feature-code-panel";
+import { getRealtimeFeature } from "./realtime-feature-content";
 import type { ShowcaseSession } from "./use-showcase-session";
+
+const feature = getRealtimeFeature("location");
 
 const LocationMap = dynamic(
   () => import("./realtime-location-map").then((module) => module.RealtimeLocationMap),
@@ -28,17 +28,7 @@ const LocationMap = dynamic(
 export function RealTimeLocationShowcase({ session }: { session: ShowcaseSession }) {
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-      <FeatureCodePanel
-        title="Live location, down to the last update."
-        description="Publish foreground position updates to an authenticated room at a safe one-update-per-second ceiling. Every connected member receives the room’s current tracks, with stale positions expiring automatically."
-      >
-        <Kw>const</Kw>{" { tracks } = "}<Ident>useLocation</Ident>
-        {"({ roomId: "}<Str>{'"delivery:42"'}</Str>{" });\n\n"}
-        <Kw>const</Kw>{" trip = "}<Ident>locationTrack</Ident>
-        {"(client, "}<Str>{'"delivery:42"'}</Str>{", {\n  trackId: "}
-        <Str>{'"courier:maya"'}</Str>{",\n});\n\n"}
-        <Ident>trip.stop</Ident>{"(); // end the track explicitly"}
-      </FeatureCodePanel>
+      <FeatureCodePanel feature={feature} />
 
       <FeaturePreviewFrame label="Real-time location preview" className="min-h-[28rem]">
         {session.status === "loading" ? (

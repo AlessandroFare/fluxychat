@@ -9,15 +9,12 @@ import { InAppChatShowcase } from "@/components/showcase/in-app-chat-showcase";
 import { LiveStreamingShowcase } from "@/components/showcase/live-streaming-showcase";
 import { PushNotificationsShowcase } from "@/components/showcase/push-notifications-showcase";
 import { RealTimeLocationShowcase } from "@/components/showcase/real-time-location-showcase";
+import {
+  REALTIME_FEATURES,
+  type RealtimeFeatureId,
+} from "@/components/showcase/realtime-feature-content";
 
-type TabId = "chat" | "streaming" | "location" | "push";
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "chat", label: "In-App Chat" },
-  { id: "streaming", label: "Live Streaming" },
-  { id: "location", label: "Real-Time Location" },
-  { id: "push", label: "Push Notifications" },
-];
+const TABS = REALTIME_FEATURES.map(({ id, label }) => ({ id, label }));
 
 /**
  * Realtime feature showcase — every selected preview runs real SDK calls
@@ -25,7 +22,7 @@ const TABS: { id: TabId; label: string }[] = [
  * so the page only opens connections for the feature being exercised.
  */
 export default function RealtimeFeaturesPage() {
-  const [tab, setTab] = React.useState<TabId>("chat");
+  const [tab, setTab] = React.useState<RealtimeFeatureId>("chat");
   const session = useShowcaseSession();
 
   return (

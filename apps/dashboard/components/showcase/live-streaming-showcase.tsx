@@ -8,11 +8,11 @@ import {
   FeatureCodePanel,
   FeaturePreviewFrame,
   ShowcaseUnavailable,
-  Kw,
-  Ident,
-  Str,
 } from "./feature-code-panel";
+import { getRealtimeFeature } from "./realtime-feature-content";
 import type { ShowcaseSession } from "./use-showcase-session";
+
+const feature = getRealtimeFeature("streaming");
 
 interface FloatingReaction {
   id: number;
@@ -33,26 +33,7 @@ const REACTION_EMOJI: Record<string, string> = {
 export function LiveStreamingShowcase({ session }: { session: ShowcaseSession }) {
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-      <FeatureCodePanel
-        title="Live streaming events, at any scale."
-        description="Live streaming is a high fan-out problem: one publisher, and every viewer in the room needs it instantly. FluxyChat client events fan out every reaction to every connected subscriber in milliseconds, with live presence counts built in."
-      >
-        <Kw>const</Kw>
-        {" { sendClientEvent, presenceMembers } = "}
-        <Ident>useChat</Ident>
-        {"({\n  roomId: "}
-        <Str>{'"live:premiere-7"'}</Str>
-        {",\n  onAnyEvent: (e) => e.type === "}
-        <Str>{'"client_event"'}</Str>
-        {" && render(e),\n});\n\n"}
-        {"// one publish, delivered to every subscriber\n"}
-        <Ident>sendClientEvent</Ident>
-        {"("}
-        <Str>{'"reaction"'}</Str>
-        {", { emoji: "}
-        <Str>{'"heart"'}</Str>
-        {" });"}
-      </FeatureCodePanel>
+      <FeatureCodePanel feature={feature} />
 
       <FeaturePreviewFrame label="Live streaming preview" className="min-h-[28rem]">
         {session.status === "loading" ? (

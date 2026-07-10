@@ -66,6 +66,21 @@ export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
   { href: "/privacy", label: "Privacy", icon: ShieldCheck, description: "GDPR export and retention" },
 ];
 
+/** Selects only the deepest configured route that contains the current pathname. */
+export function isConsoleNavItemActive(href: string, pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (href === "/") return pathname === "/";
+  if (pathname !== href && !pathname.startsWith(`${href}/`)) return false;
+
+  const allHrefs = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS].map((item) => item.href);
+  return !allHrefs.some(
+    (other) =>
+      other !== href &&
+      other.startsWith(`${href}/`) &&
+      (pathname === other || pathname.startsWith(`${other}/`)),
+  );
+}
+
 function isMarketingPath(pathname: string): boolean {
   return MARKETING_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
