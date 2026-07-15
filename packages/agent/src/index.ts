@@ -20,9 +20,11 @@ export {
 export { mintWorkerToken, type MintTokenInput, type MintTokenResult } from "./mint";
 export {
   FluxyAIError,
+  addUsage,
   classifyAIError,
   normalizeFinishReason,
   normalizeUsage,
+  retryAI,
   withTimeout,
   type AIErrorCode,
   type AIErrorData,
@@ -30,6 +32,7 @@ export {
   type AIGenerationResult,
   type AIGenerationStep,
   type AIProviderMetadata,
+  type AIRetryOptions,
   type AIStreamPart,
   type AIUsage,
   type AIWarning,

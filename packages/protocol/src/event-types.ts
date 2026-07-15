@@ -14,6 +14,8 @@ export const FLUXY_INBOUND_EVENT_TYPES = [
   "tool_call",
   "tool_result",
   "tool_error",
+  "approval_request",
+  "approval_decision",
   "agentRun",
   "presence",
   "cache_snapshot",

@@ -1043,6 +1043,26 @@ export type FluxyChatEvent =
       name: string;
       error?: string;
     }
+  | {
+      type: "approval_request";
+      approvalId: string;
+      runId: string;
+      agentId: string;
+      toolCallId: string;
+      name: string;
+      input: Record<string, unknown>;
+      reason?: string;
+      expiresAt?: string;
+    }
+  | {
+      type: "approval_decision";
+      approvalId: string;
+      runId: string;
+      toolCallId: string;
+      status: "approved" | "denied" | "expired" | "cancelled";
+      decidedBy?: string;
+      note?: string;
+    }
   | { type: "agentRun"; run: FluxyChatAgentRun }
   | {
       type: "presence";

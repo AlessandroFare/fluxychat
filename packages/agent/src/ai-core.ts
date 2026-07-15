@@ -134,6 +134,53 @@ export function normalizeUsage(usage: Partial<AIUsage> = {}): AIUsage {
   return { inputTokens, outputTokens, reasoningTokens, cachedInputTokens, totalTokens };
 }
 
+export function addUsage(...items: Array<AIUsage | undefined>): AIUsage {
+  const sum = (key: keyof AIUsage) => {
+    const values = items
+      .map((item) => item?.[key])
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    return values.length > 0 ? values.reduce((total, value) => total + value, 0) : undefined;
+  };
+  return normalizeUsage({
+    inputTokens: sum("inputTokens"),
+    outputTokens: sum("outputTokens"),
+    reasoningTokens: sum("reasoningTokens"),
+    cachedInputTokens: sum("cachedInputTokens"),
+    totalTokens: sum("totalTokens"),
+  });
+}
+
+export interface AIRetryOptions {
+  maxRetries?: number;
+  initialDelayMs?: number;
+  maxDelayMs?: number;
+  signal?: AbortSignal;
+  onRetry?: (error: FluxyAIError, attempt: number, delayMs: number) => void | Promise<void>;
+}
+
+/** Retry only failures explicitly classified as retryable, with bounded exponential backoff and jitter. */
+export async function retryAI<T>(operation: (attempt: number) => Promise<T>, options: AIRetryOptions = {}): Promise<T> {
+  const maxRetries = Math.max(0, Math.floor(options.maxRetries ?? 2));
+  const initialDelayMs = Math.max(0, options.initialDelayMs ?? 250);
+  const maxDelayMs = Math.max(initialDelayMs, options.maxDelayMs ?? 4_000);
+
+  for (let attempt = 0; ; attempt += 1) {
+    if (options.signal?.aborted) {
+      throw classifyAIError(options.signal.reason ?? new DOMException("Aborted", "AbortError"));
+    }
+    try {
+      return await operation(attempt);
+    } catch (error) {
+      const classified = classifyAIError(error);
+      if (!classified.retryable || attempt >= maxRetries) throw classified;
+      const exponential = Math.min(maxDelayMs, initialDelayMs * 2 ** attempt);
+      const delayMs = Math.round(exponential * (0.8 + Math.random() * 0.4));
+      await options.onRetry?.(classified, attempt + 1, delayMs);
+      await abortableDelay(delayMs, options.signal);
+    }
+  }
+}
+
 export function classifyAIError(error: unknown): FluxyAIError {
   if (error instanceof FluxyAIError) return error;
   if (error instanceof DOMException && error.name === "AbortError") {
@@ -148,6 +195,26 @@ export function classifyAIError(error: unknown): FluxyAIError {
   if (status >= 500) return new FluxyAIError({ code: "provider_error", message, retryable: true, statusCode: status, cause: error });
   if (status >= 400) return new FluxyAIError({ code: "invalid_request", message, retryable: false, statusCode: status, cause: error });
   return new FluxyAIError({ code: "unknown", message, retryable: false, cause: error });
+}
+
+function abortableDelay(delayMs: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(classifyAIError(signal.reason ?? new DOMException("Aborted", "AbortError")));
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout>;
+    const abort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      reject(classifyAIError(signal?.reason ?? new DOMException("Aborted", "AbortError")));
+    };
+    timer = setTimeout(() => {
+      signal?.removeEventListener("abort", abort);
+      resolve();
+    }, delayMs);
+    signal?.addEventListener("abort", abort, { once: true });
+  });
 }
 
 export function withTimeout(signal: AbortSignal | undefined, timeoutMs: number | undefined): {
