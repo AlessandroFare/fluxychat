@@ -56,7 +56,27 @@ export function useWebPush(
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Detect browser support and current permission on mount.
+  const getRegistration = React.useCallback(async () => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+      return null;
+    }
+    const existing = await navigator.serviceWorker.getRegistration(options.swPath);
+    if (existing || !options.swPath) {
+      return existing ?? navigator.serviceWorker.ready;
+    }
+    // Registration is owned by this hook so consumers cannot accidentally
+    // register the same worker twice during mount/remount cycles.
+    return navigator.serviceWorker.register(options.swPath);
+  }, [options.swPath]);
+
+  const refreshLocalSubscription = React.useCallback(async () => {
+    const registration = await getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+    setSubscribed(Boolean(subscription));
+    return subscription ?? null;
+  }, [getRegistration]);
+
+  // Detect browser support, permission, and the actual local subscription.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -64,22 +84,18 @@ export function useWebPush(
       setPermission("unsupported");
       return;
     }
+    let active = true;
     setSupported(true);
     if (typeof Notification !== "undefined") {
       setPermission(Notification.permission as WebPushPermissionState);
     }
-    void (async () => {
-      try {
-        const reg = await navigator.serviceWorker.getRegistration(
-          options.swPath,
-        );
-        const sub = await reg?.pushManager.getSubscription();
-        setSubscribed(Boolean(sub));
-      } catch {
-        // ignore
-      }
-    })();
-  }, [options.swPath]);
+    void refreshLocalSubscription().catch(() => {
+      if (active) setSubscribed(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [refreshLocalSubscription]);
 
   const reload = React.useCallback(async () => {
     if (!client?.isAuthenticated()) {
@@ -119,12 +135,8 @@ export function useWebPush(
       if (perm !== "granted") {
         return { ok: false, error: "permission_denied" };
       }
-      const reg = options.swPath
-        ? await navigator.serviceWorker.getRegistration(options.swPath)
-        : await navigator.serviceWorker.ready;
-      if (!reg) {
-        return { ok: false, error: "no_service_worker" };
-      }
+      const reg = await getRegistration();
+      if (!reg) return { ok: false, error: "no_service_worker" };
       const { publicKey } = await client.getVapidPublicKey(options.projectId);
       const rawKey = urlBase64ToUint8Array(publicKey);
       const sub = await reg.pushManager.subscribe({
@@ -151,29 +163,22 @@ export function useWebPush(
     } finally {
       setLoading(false);
     }
-  }, [client, options.projectId, options.swPath, reload]);
+  }, [client, getRegistration, options.projectId, reload]);
 
   const unsubscribe = React.useCallback(
     async (identifier?: string): Promise<{ ok: boolean }> => {
       if (!client?.isAuthenticated()) return { ok: false };
       try {
         if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-          const reg = options.swPath
-            ? await navigator.serviceWorker.getRegistration(options.swPath)
-            : await navigator.serviceWorker.ready;
-          const local = await reg?.pushManager.getSubscription();
+          const local = await refreshLocalSubscription();
           const idToRemove =
             identifier || (local ? JSON.stringify({ endpoint: local.endpoint }) : null);
-          if (idToRemove) {
-            await client.unregisterWebPush(idToRemove);
-          }
-          if (local && !identifier) {
-            await local.unsubscribe();
-          }
+          if (idToRemove) await client.unregisterWebPush(idToRemove);
+          if (local && !identifier) await local.unsubscribe();
+          await refreshLocalSubscription();
         } else if (identifier) {
           await client.unregisterWebPush(identifier);
         }
-        setSubscribed(false);
         await reload();
         return { ok: true };
       } catch (e) {
@@ -181,7 +186,7 @@ export function useWebPush(
         return { ok: false };
       }
     },
-    [client, options.swPath, reload],
+    [client, refreshLocalSubscription, reload],
   );
 
   return {

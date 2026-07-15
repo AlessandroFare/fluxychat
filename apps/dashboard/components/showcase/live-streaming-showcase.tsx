@@ -51,6 +51,15 @@ export function LiveStreamingShowcase({ session }: { session: ShowcaseSession })
 function LiveRoomPanel({ session }: { session: ShowcaseSession }) {
   const [floating, setFloating] = React.useState<FloatingReaction[]>([]);
   const nextId = React.useRef(0);
+  const reactionTimers = React.useRef(new Set<number>());
+
+  React.useEffect(
+    () => () => {
+      for (const timer of reactionTimers.current) window.clearTimeout(timer);
+      reactionTimers.current.clear();
+    },
+    [],
+  );
 
   const spawnReaction = React.useCallback((emoji: string) => {
     const id = nextId.current++;
@@ -64,9 +73,11 @@ function LiveRoomPanel({ session }: { session: ShowcaseSession }) {
         rotate: -18 + Math.random() * 36,
       },
     ]);
-    window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
+      reactionTimers.current.delete(timer);
       setFloating((prev) => prev.filter((r) => r.id !== id));
     }, 1800);
+    reactionTimers.current.add(timer);
   }, []);
 
   const onAnyEvent = React.useCallback(
@@ -102,10 +113,15 @@ function LiveRoomPanel({ session }: { session: ShowcaseSession }) {
 
   const [pressed, setPressed] = React.useState<"heart" | "fire" | null>(null);
   const react = (kind: "heart" | "fire") => {
+    // The room echoes client events to the sender, so render only from
+    // onAnyEvent to guarantee exactly one reaction on every subscriber.
     sendClientEvent("reaction", { emoji: kind });
-    spawnReaction(REACTION_EMOJI[kind]);
     setPressed(kind);
-    window.setTimeout(() => setPressed(null), 220);
+    const timer = window.setTimeout(() => {
+      reactionTimers.current.delete(timer);
+      setPressed(null);
+    }, 220);
+    reactionTimers.current.add(timer);
   };
 
   return (
