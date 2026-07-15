@@ -12,13 +12,17 @@ import {
   type AIRetryOptions,
 } from "./ai-core";
 import type { AILanguageModel, AIMessage, AIModelRequest } from "./providers";
+import { validateAIMessages } from "./message-validation";
 
 export type AIPrompt = string | readonly AIMessage[];
 
 export interface AIGenerateOptions extends Omit<AIModelRequest, "prompt" | "signal"> {
   model: AILanguageModel;
   prompt: AIPrompt;
+  /** Trusted developer instruction, always inserted ahead of untrusted messages. */
   system?: string;
+  /** Opt in only when the caller has independently authenticated system-role messages. */
+  allowSystemMessages?: boolean;
   signal?: AbortSignal;
   timeoutMs?: number;
   retry?: Omit<AIRetryOptions, "signal">;
@@ -34,14 +38,16 @@ export interface AIStreamResult {
   abort(reason?: unknown): void;
 }
 
-export function canonicalPrompt(prompt: AIPrompt, system?: string): AIMessage[] {
-  const messages = typeof prompt === "string" ? [{ role: "user" as const, content: prompt }] : [...prompt];
+export function canonicalPrompt(prompt: AIPrompt, system?: string, allowSystemMessages = false): AIMessage[] {
+  const messages = typeof prompt === "string"
+    ? [{ role: "user" as const, content: prompt }]
+    : validateAIMessages(prompt, { allowSystemMessages });
   return system ? [{ role: "system", content: system }, ...messages] : messages;
 }
 
 function modelRequest(options: AIGenerateOptions, signal: AbortSignal): AIModelRequest {
-  const { model: _model, prompt, system, timeoutMs: _timeout, retry: _retry, onStart: _start, onFinish: _finish, onError: _error, signal: _signal, ...settings } = options;
-  return { ...settings, prompt: canonicalPrompt(prompt, system), signal };
+  const { model: _model, prompt, system, allowSystemMessages, timeoutMs: _timeout, retry: _retry, onStart: _start, onFinish: _finish, onError: _error, signal: _signal, ...settings } = options;
+  return { ...settings, prompt: canonicalPrompt(prompt, system, allowSystemMessages), signal };
 }
 
 export async function generate(options: AIGenerateOptions): Promise<AIGenerationResult> {

@@ -64,6 +64,17 @@ export {
   type AIStreamResult,
 } from "./generation";
 export {
+  safeValidateAIMessages,
+  validateAIMessages,
+  type AIMessageValidationOptions,
+  type AIMessageValidationResult,
+} from "./message-validation";
+export {
+  collectTextStream,
+  toTextStream,
+  type AITextStreamOptions,
+} from "./stream-utils";
+export {
   runAgentLoop,
   stopAfterSteps,
   stopOnFinishReason,

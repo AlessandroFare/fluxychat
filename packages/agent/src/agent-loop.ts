@@ -1,16 +1,21 @@
 import { FluxyAIError, addUsage, type AIGenerationStep, type AIUsage } from "./ai-core";
 
-export interface AIToolContext {
+export interface AIToolContext<TContext = unknown> {
   signal: AbortSignal;
   step: number;
+  /** Shared orchestration context. Never serialize this value into a model prompt. */
   runtime?: unknown;
+  /** Tool-specific, validated context such as scoped credentials or service handles. */
+  tool?: TContext;
 }
 
-export interface AITool<Input = unknown, Output = unknown> {
+export interface AITool<Input = unknown, Output = unknown, TContext = unknown> {
   description?: string;
   inputSchema: Record<string, unknown>;
-  needsApproval?: (input: Input, context: AIToolContext) => boolean | Promise<boolean>;
-  execute(input: Input, context: AIToolContext): Output | Promise<Output>;
+  /** Refine parsed model input before approval and execution. */
+  refineInput?: (input: unknown, context: AIToolContext<TContext>) => Input | Promise<Input>;
+  needsApproval?: (input: Input, context: AIToolContext<TContext>) => boolean | Promise<boolean>;
+  execute(input: Input, context: AIToolContext<TContext>): Output | Promise<Output>;
 }
 
 export interface AIToolCall { id: string; name: string; input: unknown }
@@ -36,6 +41,9 @@ export interface AgentLoopOptions {
   maxToolCalls?: number;
   signal?: AbortSignal;
   runtime?: unknown;
+  /** Context is selected per tool and is never exposed to runStep/model input. */
+  toolContexts?: Readonly<Record<string, unknown>>;
+  toolTimeoutMs?: number;
   allowTools?: readonly string[];
   prepareStep?: (state: AgentLoopState) => void | Promise<void>;
   runStep: (state: AgentLoopState) => AgentStepResult | Promise<AgentStepResult>;
@@ -88,15 +96,34 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
         toolResults.push({ id: call.id, name: call.name, error: new FluxyAIError({ code: "tool_error", message: `Tool is not allowed: ${call.name}`, retryable: false }) });
         continue;
       }
-      const context: AIToolContext = { signal: options.signal ?? new AbortController().signal, step: index, runtime: options.runtime };
+      const toolController = new AbortController();
+      const abortTool = () => toolController.abort(options.signal?.reason);
+      if (options.signal?.aborted) abortTool();
+      else options.signal?.addEventListener("abort", abortTool, { once: true });
+      const timeoutMs = Math.max(0, options.toolTimeoutMs ?? 30_000);
+      const timer = timeoutMs > 0 ? setTimeout(() => toolController.abort(new FluxyAIError({
+        code: "timeout", message: `Tool timed out: ${call.name}`, retryable: true,
+      })), timeoutMs) : undefined;
+      const context: AIToolContext = {
+        signal: toolController.signal,
+        step: index,
+        runtime: options.runtime,
+        tool: options.toolContexts?.[call.name],
+      };
       try {
-        if (await tool.needsApproval?.(call.input, context)) {
-          const approved = await options.onApprovalRequired?.(call, context);
+        const refinedInput = tool.refineInput ? await tool.refineInput(call.input, context) : call.input;
+        const refinedCall = { ...call, input: refinedInput };
+        if (await tool.needsApproval?.(refinedInput, context)) {
+          const approved = await options.onApprovalRequired?.(refinedCall, context);
           if (!approved) throw new FluxyAIError({ code: "tool_error", message: `Tool approval denied: ${call.name}`, retryable: false });
         }
-        toolResults.push({ id: call.id, name: call.name, output: await tool.execute(call.input, context) });
+        toolResults.push({ id: call.id, name: call.name, output: await tool.execute(refinedInput, context) });
       } catch (error) {
-        toolResults.push({ id: call.id, name: call.name, error: error instanceof FluxyAIError ? error : new FluxyAIError({ code: "tool_error", message: error instanceof Error ? error.message : "Tool execution failed.", retryable: false, cause: error }) });
+        const reason = toolController.signal.aborted ? toolController.signal.reason : error;
+        toolResults.push({ id: call.id, name: call.name, error: reason instanceof FluxyAIError ? reason : new FluxyAIError({ code: "tool_error", message: reason instanceof Error ? reason.message : "Tool execution failed.", retryable: false, cause: reason }) });
+      } finally {
+        if (timer) clearTimeout(timer);
+        options.signal?.removeEventListener("abort", abortTool);
       }
     }
 
