@@ -247,13 +247,13 @@ Le quattro demo Realtime sono tutte implementate. La precedente roadmap che marc
 5. Adapter non-breaking tra eventi/message legacy e parts canoniche.
 6. Budget, allowlist, telemetry/redaction e lifecycle tool uniformi.
 
-### Tranche B — Next: provider, agent e UI parity
+### Tranche B — In corso: provider, agent e UI parity
 
-1. Registry e contratti per language/embedding/rerank/image/speech/transcription/realtime.
-2. Generate/stream e structured output strategy sopra i contratti condivisi.
-3. Agent loop riusabile con stop conditions, prepare step, context e delegation.
-4. UI message parts, transport, optimistic retry, stop/regenerate/resume.
-5. Retrieval/rerank/RAG con citations.
+1. **Partial:** registry originale e contratti v1 per language, embedding e rerank; restano gli adapter model uniformi per image/speech/transcription/realtime.
+2. **Partial:** `generate`/`stream`, prompt multimodale canonico, lifecycle, retry, timeout, abort e result uniforme; resta la validazione JSON Schema avanzata.
+3. **Partial:** agent loop riusabile con stop conditions, `prepareStep`, runtime context, budget tool, allowlist, approval e dedup call ID; delegation distribuita resta pianificata.
+4. **Partial:** stream part canoniche sono nel protocollo; transport e store legacy esistono, mentre la migrazione completa del renderer a `UIMessage.parts` resta pianificata.
+5. **Partial:** `embed`/`embedMany`, batching, cosine similarity, tenant scoping e rerank sono disponibili; citations UI e vector store adapter restano pianificati.
 6. Voice interruption e transcript sync; media upload/generation.
 7. MCP discovery/resources/OAuth hardening e middleware componibile.
 
@@ -298,4 +298,9 @@ Per marcare una voce `complete` servono:
 - Live Streaming: reaction ID, dedup echo, compatibilità `reaction`/`client-reaction`, queue limitata e cleanup timer.
 - Location: cleanup corretto del listener `PermissionStatus.change`.
 - Push: registrazione service worker riusata, race subscribe bloccata, rotazione VAPID gestita, rollback locale se il Worker rifiuta e stato locale preservato quando si rimuove soltanto una riga server.
-- Prossimo gate: test di regressione mirati, poi core result/stream/error canonico.
+- Aggiunti result/stream part/error/usage canonici, retry cancellabile e timeout distinguibile (`packages/agent/src/ai-core.ts`).
+- Aggiunti contratti Worker-safe v1, capability discovery, registry `provider:model`, alias e deterministic model (`packages/agent/src/providers.ts`).
+- Aggiunte primitive originali `generate`/`stream` con prompt canonico, callback lifecycle, retry/timeout/abort e fallback non-streaming (`packages/agent/src/generation.ts`).
+- Aggiunto agent loop con stop conditions componibili, `prepareStep`, budget, allowlist, approval, dedup e risultati tool tipizzati (`packages/agent/src/agent-loop.ts`).
+- Aggiunti embedding batch, cosine similarity, rerank e retrieval scoped per tenant (`packages/agent/src/retrieval.ts`).
+- Verifica locale: 11 test agent passati; build `protocol`, `sdk` e `agent` passate. Le voci provider/media/UI/MCP non coperte da questi moduli restano correttamente `partial` o pianificate.

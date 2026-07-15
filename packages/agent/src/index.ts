@@ -37,6 +37,56 @@ export {
   type AIUsage,
   type AIWarning,
 } from "./ai-core";
+export {
+  AIProviderRegistry,
+  DeterministicLanguageModel,
+  FLUXY_MODEL_SPEC_VERSION,
+  type AIContentPart,
+  type AIEmbeddingModel,
+  type AILanguageModel,
+  type AIMessage,
+  type AIMessageRole,
+  type AIModel,
+  type AIModelCapabilities,
+  type AIModelModality,
+  type AIModelRequest,
+  type AIModelResponse,
+  type AIRerankModel,
+  type AIRerankResult,
+  type AIToolDefinition,
+} from "./providers";
+export {
+  canonicalPrompt,
+  generate,
+  stream,
+  type AIGenerateOptions,
+  type AIPrompt,
+  type AIStreamResult,
+} from "./generation";
+export {
+  runAgentLoop,
+  stopAfterSteps,
+  stopOnFinishReason,
+  type AgentLoopOptions,
+  type AgentLoopResult,
+  type AgentLoopState,
+  type AgentStepResult,
+  type AgentStopCondition,
+  type AITool,
+  type AIToolCall,
+  type AIToolContext,
+  type AIToolResult,
+} from "./agent-loop";
+export {
+  cosineSimilarity,
+  embed,
+  embedMany,
+  retrieve,
+  type AIEmbeddingResult,
+  type AIEmbedManyResult,
+  type RetrievalDocument,
+  type RetrievedDocument,
+} from "./retrieval";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:8787";
 
