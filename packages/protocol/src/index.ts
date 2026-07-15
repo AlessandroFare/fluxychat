@@ -55,6 +55,18 @@ export {
 } from "./dispatch-inbound-frame.js";
 
 export {
+  FLUXY_RELIABILITY_VERSION,
+  FluxySequenceTracker,
+  advanceDeliveryStage,
+  compareDeliveryStage,
+  type FluxyDeliveryReceipt,
+  type FluxyDeliveryStage,
+  type FluxySequenceDecision,
+  type FluxySequencedEvent,
+  type FluxySyncCursor,
+} from "./reliability.js";
+
+export {
   isValidLocationTrackEnded,
   isValidLocationTrackId,
   isValidLocationUpdate,

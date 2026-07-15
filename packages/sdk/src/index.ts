@@ -248,7 +248,9 @@ export {
 export {
   createHTTPTransport,
   createSSETransport,
+  createLongPollTransport,
   createWebSocketTransport,
+  createWebTransportTransport,
   createTransportRegistry,
   type TransportConfig,
   type TransportRequest,
@@ -313,11 +315,22 @@ export {
 } from "./slash-commands";
 
 export {
+  FLUXY_AGENT_PROTOCOL_VERSION,
   createAgentCommunicationBus,
   delegateToAgent,
+  agentMessageToAGUI,
+  agentTaskToA2A,
+  type AgentArtifact,
+  type AgentBusOptions,
+  type AgentCapability,
+  type AgentCard,
+  type AgentTask,
+  type AgentTaskStatus,
   type AgentMessage,
+  type AgentMessageType,
   type AgentMessageHandler,
   type AgentCommunicationBus,
+  type AGUIEvent,
 } from "./agent-to-agent";
 
 export {

@@ -73,19 +73,61 @@ export interface DataPartRegistry {
 }
 
 export function createDataPartRegistry(): DataPartRegistry {
-  throw new Error("not implemented in SDK - use worker runtime");
+  const parsers = new Map<string, DataPartParser>();
+  return {
+    register<T>(parser: DataPartParser<T>) {
+      if (!parser.type.trim()) throw new TypeError("Data part parser type is required.");
+      parsers.set(parser.type, parser as DataPartParser);
+    },
+    get: (type) => parsers.get(type) ?? null,
+    parse(type, raw) {
+      const parser = parsers.get(type);
+      if (!parser) return null;
+      try { return parser.parse(raw); } catch { return null; }
+    },
+    serialize(type, data) {
+      const parser = parsers.get(type);
+      if (!parser) return null;
+      try { return parser.serialize(data); } catch { return null; }
+    },
+  };
 }
 
-/**
- * Built-in data part parsers.
- */
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export const BUILTIN_PARSERS: {
   text: DataPartParser<string>;
   "tool-call": DataPartParser<{ toolCallId: string; toolName: string; args: Record<string, unknown> }>;
   "tool-result": DataPartParser<{ toolCallId: string; result: unknown; success: boolean }>;
   json: DataPartParser<unknown>;
   image: DataPartParser<{ url: string; mimeType?: string; alt?: string }>;
-} = {} as any;
+} = {
+  text: { type: "text", parse: (raw) => typeof raw === "string" ? raw : null, serialize: (data) => data },
+  "tool-call": {
+    type: "tool-call",
+    parse: (raw) => record(raw) && typeof raw.toolCallId === "string" && typeof raw.toolName === "string" && record(raw.args)
+      ? { toolCallId: raw.toolCallId, toolName: raw.toolName, args: raw.args }
+      : null,
+    serialize: (data) => data,
+  },
+  "tool-result": {
+    type: "tool-result",
+    parse: (raw) => record(raw) && typeof raw.toolCallId === "string" && typeof raw.success === "boolean"
+      ? { toolCallId: raw.toolCallId, result: raw.result, success: raw.success }
+      : null,
+    serialize: (data) => data,
+  },
+  json: { type: "json", parse: (raw) => raw, serialize: (data) => data },
+  image: {
+    type: "image",
+    parse: (raw) => record(raw) && typeof raw.url === "string"
+      ? { url: raw.url, ...(typeof raw.mimeType === "string" ? { mimeType: raw.mimeType } : {}), ...(typeof raw.alt === "string" ? { alt: raw.alt } : {}) }
+      : null,
+    serialize: (data) => data,
+  },
+};
 
 /**
  * useObject — streaming structured object from LLM.
@@ -125,5 +167,31 @@ export function useObject<T>(options: UseObjectOptions<T>): UseObjectResult<T> {
  * Parse a partial JSON string and return what can be parsed.
  */
 export function parsePartialJSON<T>(partial: string): T | null {
-  throw new Error("parsePartialJSON not implemented in SDK - use worker runtime");
+  const source = partial.trim();
+  if (!source) return null;
+  try { return JSON.parse(source) as T; } catch { /* attempt conservative structural repair */ }
+
+  let repaired = source;
+  let inString = false;
+  let escaped = false;
+  const closers: string[] = [];
+  for (const char of source) {
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === "{") closers.push("}");
+    else if (char === "[") closers.push("]");
+    else if (char === "}" || char === "]") {
+      if (closers[closers.length - 1] === char) closers.pop();
+      else return null;
+    }
+  }
+  if (inString) repaired += '"';
+  repaired = repaired.replace(/[:,]\s*$/, "");
+  repaired += closers.reverse().join("");
+  try { return JSON.parse(repaired) as T; } catch { return null; }
 }

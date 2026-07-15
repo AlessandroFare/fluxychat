@@ -331,6 +331,38 @@ Questa sezione estende la parity AI SDK con capability emerse dal confronto 2026
 | Session replay privacy-safe | partial | Later | event timeline redatta, consent/retention e deterministic protocol replay |
 | Feature flags/experiments | partial | Next | tenant rollout, kill switch, holdout, metric guardrails e schema-version compatibility |
 
+### 3.6 Agent Collaboration Fabric
+
+Il gap più rilevante emerso dalla ricerca 2026 non è un'altra chat feature isolata, ma un piano di collaborazione durevole nel quale persone e agenti sono peer addressable della stessa room. A2A copre delega e lifecycle inter-agent, AG-UI copre eventi agent→interfaccia, mentre durable streams e shared-state room colmano reconnect, multi-device e co-presenza; FluxyChat deve integrarli tramite envelope originali e adapter, senza legarsi a un singolo runtime.
+
+| Capability | Stato | Fase | Definition of Done |
+|---|---|---|---|
+| Agent identity e capability discovery | partial | Now | agent card versionata, capability/trust/region/cost metadata, cache con expiry e negotiation |
+| Durable agent task lifecycle | partial | Now | submitted/working/input-required/completed/failed/cancelled, idempotency, offset resume e cancellation |
+| A2A interoperability adapter | missing | Now | mapping envelope/task/artifact, extension preservation, auth hooks e conformance fixtures ufficiali |
+| AG-UI/A2UI event adapter | missing | Now | run/step/message/tool/state/activity mapping, bidirezionalità, unknown-event preservation e replay test |
+| Durable resumable streams | partial | Now | ordered append, monotonic offset, cursor resume, compaction boundary e reconnect/device-switch test |
+| Agenti come room peer | partial | Now | presence/typing/thinking/tool/approval, ACL, immutable attribution e human-readable activity |
+| Shared agent state e artifacts | partial | Next | JSON Patch/CRDT adapter, optimistic merge, awareness, snapshots e per-field authorization |
+| Distributed delegation | partial | Next | agent-as-tool remoto, cycle/depth/budget guards, fan-out/fan-in, prepare-step e exactly-once effect key |
+| Policy-aware agent routing | missing | Next | selezione per capability/costo/latency/region/trust, circuit breaker, explainability e deterministic fallback |
+| Cross-channel continuity | missing | Next | stessa sessione tra web/mobile/voice/bot, identity binding, cursor continuity e consent boundaries |
+| AI↔AI↔human handoff | partial | Next | warm transfer con summary, provenance, pending work, consent, rollback e ownership esplicita |
+| Async tool narration | missing | Next | tool in background senza dead air, progress stream, cancellazione e risultato riconciliato nel task |
+| Agent provenance ledger | partial | Next | catena append-only di deleghe, prompt/tool/model policy version, artifact lineage ed export redatto |
+| Agent interoperability lab | missing | Next | deterministic peers, protocol fuzzing, reconnect/reorder/duplicate, golden traces e compatibility matrix |
+| Secure low-latency agent transport | missing | Later | adapter sperimentale SLIM/HTTP3 con capability negotiation, MLS dove maturo e fallback standard |
+| Spatial copresence e digital-twin rooms | missing | Later | typed scene state, agent vision/action grants, web/immersive presence e replay senza imporre rendering 3D al core |
+
+### 3.7 Segnali di mercato e criteri di adozione
+
+- **Human-agent shared rooms:** Liveblocks tratta gli agenti backend come partecipanti delle room; FluxyChat deve offrire peer identity, presence e storage condiviso senza rendere obbligatorio un vendor.
+- **Durable conversation transport:** Ably AI Transport e il protocollo Durable Streams mostrano che token/event stream devono sopravvivere a disconnect e device switch; gli offset devono essere parte del contratto, non stato UI effimero.
+- **Stateful edge agents:** Cloudflare Agents/Durable Objects confermano il valore di task lunghi, sub-agent e stato colocato; FluxyChat conserva adapter Worker-safe e separa protocollo da execution runtime.
+- **Voice senza dead air:** i tool asincroni dei moderni voice-agent stack richiedono progress/narration concorrente e cancellazione coordinata, non un loop sincrono bloccante.
+- **Standard complementari:** MCP rimane agent-to-tool, A2A agent-to-agent e AG-UI agent-to-user; nessuno sostituisce reliability, auth, policy e persistence FluxyChat.
+- **Frontiera adiacente:** spatial rooms/digital twins sono coerenti solo come shared-state e capability layer opzionale; rendering, engine 3D e hardware restano fuori dal core.
+
 ## 4. Ordine di implementazione
 
 ### Tranche A — Now: hardening e fondamenta
@@ -352,22 +384,24 @@ Questa sezione estende la parity AI SDK con capability emerse dal confronto 2026
 6. Voice interruption e transcript sync; media upload/generation.
 7. MCP discovery/resources/OAuth hardening e middleware componibile.
 
-### Tranche C — Realtime product leadership
+### Tranche C — Agent collaboration e realtime leadership
 
-1. Sequencing/gap detection, delivery receipts granulari, delta sync e presence leases.
-2. Offline outbox, transient/durable lanes e adaptive transport con chaos suite.
-3. WebRTC voice transport, semantic end-of-turn, backchannel detection e barge-in p95 sotto 150 ms.
-4. AI summaries/search/translation/moderation con provenance e human review.
-5. DLP, AI governance, realtime/voice SLO dashboard ed evaluation gates.
+1. Agent card/capability discovery, durable task lifecycle, offset resume e agenti come room peer.
+2. Adapter A2A e AG-UI/A2UI con extension preservation, conformance suite e deterministic replay.
+3. Sequencing/gap detection, delivery receipts granulari, delta sync, presence leases e durable agent streams.
+4. Offline outbox, transient/durable lanes, adaptive transport e chaos suite multi-agent.
+5. Delegation distribuita, shared agent state, policy-aware routing, async tool narration e handoff AI↔AI↔human.
+6. WebRTC voice transport, semantic end-of-turn, backchannel detection e barge-in p95 sotto 150 ms.
+7. AI summaries/search/translation/moderation con provenance, DLP, SLO ed evaluation gates.
 
-### Tranche D — Later: estensioni avanzate
+### Tranche D — Estensioni avanzate e interoperability
 
-1. Video generation e async media jobs.
-2. Durable multi-agent workflow, sandbox tools, skills versionate e marketplace sicuro.
-3. Huddles, collaborative CRDT artifacts, WebTransport e regional failover.
-4. MCP Apps, elicitation/sampling e generative UI sandbox.
-5. E2EE group/MLS, federation MIMI quando matura, data sovereignty e customer-managed keys.
-6. DevTools visuale, session replay redatto e Flutter parity completa.
+1. Video generation, async media jobs, huddles e collaborative CRDT artifacts.
+2. Sandbox tools, skills versionate, marketplace sicuro e generative UI/MCP Apps sandboxata.
+3. WebTransport, regional failover, cross-channel continuity e interoperability lab.
+4. E2EE group/MLS, MIMI/SLIM quando maturi, Matrix/ActivityPub, sovereignty e customer-managed keys.
+5. Spatial copresence/digital-twin shared state come modulo opzionale.
+6. DevTools visuale, session replay redatto, React Native e Flutter parity completa.
 
 ## 5. Regole architetturali
 
@@ -404,6 +438,9 @@ Fonti primarie da ricontrollare all'inizio di ogni tranche perché API e standar
 - Specifiche IETF WebTransport, MLS e MIMI; specifiche Matrix/ActivityPub per bridge esistenti.
 - Documentazione tecnica di LiveKit/WebRTC per voice transport, turn handling e interruption.
 - Documentazione prodotto/architettura di Ably, PubNub, Pusher, Stream e Sendbird per reliability e chat parity.
+- Specifiche e reference implementation ufficiali A2A e AG-UI/A2UI per lifecycle, event mapping e conformance; MCP resta analizzato separatamente come protocollo agent-to-tool.
+- Durable Streams, Ably AI Transport/LiveObjects, Cloudflare Agents/Durable Objects e Liveblocks AI Copilots come segnali di mercato per resume, shared state e agenti come peer.
+- SLIM viene mantenuto sperimentale finché specifica, implementazioni MLS e interoperabilità HTTP/3 non superano i quality gate; AGTP e protocolli non consolidati restano research-only.
 
 Nota: la roadmap descrive equivalenza funzionale e opportunità prodotto, non autorizza copia di codice o API protette; ogni implementazione FluxyChat deve restare originale, Worker-safe e coperta dai quality gate.
 
@@ -431,3 +468,19 @@ Nota: la roadmap descrive equivalenza funzionale e opportunità prodotto, non au
 - Aggiunta roadmap prodotto chat: AI catch-up/search/compose/translation/moderation, huddles, CRDT artifacts, marketplace e interoperability.
 - Aggiunta roadmap voice: WebRTC, semantic EOT, backchannel, barge-in SLO, TTFA, audio processing, code-switching, diarization, handoff e QA.
 - Aggiunti differenziatori enterprise e operation: E2EE/MLS, DLP, eDiscovery, AI governance, accessibility, SLO voice/realtime, evals e cost attribution.
+
+### 2026-07-15 — Agent Collaboration market audit
+
+- Identificato come gap strategico un Agent Collaboration Fabric: agent identity/card, task lifecycle durevole, resume per offset, room peer, shared state, routing e handoff.
+- Separati esplicitamente i ruoli di MCP (agent-to-tool), A2A (agent-to-agent) e AG-UI/A2UI (agent-to-user), da integrare tramite adapter originali e conformance fixture.
+- Incorporati i segnali di mercato di durable conversation transport, stateful edge agents, shared human-agent rooms e async voice tools senza introdurre dipendenze vendor nel core.
+- Aggiunti interoperability lab, provenance ledger, cross-channel continuity, SLIM sperimentale e spatial/digital-twin rooms opzionali.
+- Riordinata la Tranche C attorno ad agent collaboration; le feature infrastrutturali e gli standard non maturi restano nella Tranche D con quality gate espliciti.
+
+### 2026-07-15 — Reliability contracts e Agent Fabric foundation
+
+- Esportati i contratti reliability v1 con cursor tracker, gap/duplicate detection e monotonic delivery stages; aggiunti 4 test dedicati.
+- Sostituiti gli stub transport con implementazioni fetch HTTP/SSE/long-poll, decoding SSE/NDJSON UTF-8 safe, timeout/retry/abort, health selection e cleanup registry; WebSocket/WebTransport espongono oggi fallback HTTP esplicito e non sono marcati completi.
+- Implementato il primo Agent Collaboration Fabric in-memory/Worker-safe: card e capability discovery, messaggi ordinati/resumable, task durevoli versionati, idempotenza, depth guard, terminal state, artifact e cancellation.
+- Aggiunti boundary adapter lossless verso AG-UI e A2A, mantenendo gli extension field e senza dipendenze dal Vercel AI SDK.
+- Validazione: protocol 20 test passati + build; SDK transport 3 test e Agent Fabric 4 test passati + build.
