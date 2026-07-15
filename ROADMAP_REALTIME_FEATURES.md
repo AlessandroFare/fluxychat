@@ -1,6 +1,6 @@
 # FluxyChat Realtime + AI Roadmap
 
-> Audit del 15 luglio 2026 contro `vercel/ai` main e AI SDK 6. Obiettivo: adottare nel core FluxyChat le capability utili a chat, agenti e realtime senza dipendere da `ai` o `@ai-sdk/*` e senza copiare codice upstream.
+> Audit aggiornato il 15 luglio 2026 contro `vercel/ai` main, AI SDK 7, documentazione AI SDK e mercato realtime/voice/chat. Obiettivo: adottare nel core FluxyChat le capability utili a chat, agenti e realtime senza dipendere da `ai` o `@ai-sdk/*` e senza copiare codice upstream.
 
 ## Legenda
 
@@ -123,6 +123,12 @@ Le quattro demo Realtime sono tutte implementate. La precedente roadmap che marc
 | Per-step tracing | partial | Now | span parent/child, usage/latency/tool status |
 | Workflow agent | partial | Later | durable pause/event/retry e visualizzazione stato |
 | Agent skill loading | partial | Later | version, checksum, allowlist, sandbox, provenance |
+| Sandboxed tool execution | missing | Next | session per run, filesystem/network policy, quotas, timeout, artifact export e teardown garantito |
+| Tool input refinement | missing | Next | trasformazione tipata post-parse/pre-execute con audit del valore originale e raffinato |
+| Tool order deterministico | missing | Next | ordine esplicito, residui alfabetici e provider contract test |
+| Context separation | partial | Now | `runtimeContext` condiviso e `toolsContext` per-tool validato; credenziali mai nel prompt |
+| System-message injection guard | missing | Now | system role nei messaggi rifiutato per default; istruzioni trusted separate e opt-in auditato |
+| Include/raw controls | missing | Next | request body/messages/response/raw chunks solo opt-in con size cap e redaction |
 
 ### 2.6 UI message e chat transports
 
@@ -140,6 +146,11 @@ Le quattro demo Realtime sono tutte implementate. La precedente roadmap che marc
 | Transport abstraction | partial | Next | HTTP/SSE/WebSocket/custom prepare request/reconnect |
 | Persistence IDs | partial | Now | server-generated chat/message IDs e collision tests |
 | Message pruning | partial | Next | token-aware prune preservando tool pairs/system/pinned |
+| Standalone stream conversion | missing | Next | `AIStreamPart` → text/UI chunks separato dal result object, usabile da transport custom e test |
+| UI input validation | missing | Now | validate/safeValidate unknown messages contro schema parts/tools prima di model conversion |
+| Agent UI async iterable | missing | Next | pipeline validate → model messages → agent stream → UI chunks, indipendente da HTTP/React |
+| Stream data reconciliation | missing | Next | data parts persistenti aggiornabili per ID, transient parts non persistite e callback dedicata |
+| Generative UI sandbox | missing | Later | componenti/tool UI non fidati in iframe isolato, JSON-RPC bridge, CSP e capability grants |
 | Vanilla store | complete | — | `FluxyRoomStore` disponibile a consumer non React |
 | React parity | partial | Now | lifecycle/concurrency tests |
 | React Native parity | partial | Next | core protocol, reconnect, push, media, location |
@@ -206,6 +217,12 @@ Le quattro demo Realtime sono tutte implementate. La precedente roadmap che marc
 | Sampling | missing | Later | policy esplicita, recursion/budget guard |
 | Lifecycle cleanup | partial | Now | close transport on abort/unmount; no leaked sessions |
 | Skill upload/versioning | partial | Later | manifest/schema, checksum, immutable version, rollback |
+| MCP protocol negotiation | missing | Next | versione negoziata in ogni request, fallback Streamable HTTP → SSE su errore strutturato |
+| MCP server identity/instructions | missing | Next | `serverInfo`, istruzioni e server name propagati con provenance nelle tool parts |
+| MCP resource links | missing | Next | content type `resource_link`, URI policy e lazy fetch sicuro |
+| MCP auth refresh dedup | missing | Now | una sola refresh/token-exchange concorrente per tenant/server e redirect policy `error` di default |
+| MCP Apps | missing | Later | tool model-facing separati da app tools, iframe sandbox e JSON-RPC bridge capability-scoped |
+| Structured MCP errors | missing | Next | status, URL sanitizzato e response body capped per fallback senza parsing stringhe |
 
 ### 2.11 Reliability e security
 
@@ -236,7 +253,85 @@ Le quattro demo Realtime sono tutte implementate. La precedente roadmap che marc
 | Contract tests | partial | Now | provider, protocol, stream, transport, SDK parity |
 | Semver/deprecation | partial | Next | warning opt-in, removal window e codemod notes |
 
-## 3. Ordine di implementazione
+## 3. Realtime market expansion
+
+Questa sezione estende la parity AI SDK con capability emerse dal confronto 2026 con piattaforme chat complete, infrastrutture realtime e stack voice/WebRTC. Non tutte devono entrare nel core: transport e wire contract restano nel protocollo/SDK, mentre UI e integrazioni sono moduli separati.
+
+### 3.1 Messaging reliability e transport
+
+| Capability | Stato | Fase | Definition of Done |
+|---|---|---|---|
+| Per-room sequencing | partial | Now | sequence server-authoritative, gap detection, cursor catch-up e ordering test multi-connection |
+| Delivery semantics esplicite | partial | Now | at-least-once documentato, idempotency key client, dedup persistente e receipt accepted/persisted/delivered/read |
+| Offline-first outbox | missing | Next | queue cifrata, retry/backoff, optimistic reconciliation e conflict policy al reconnect |
+| Delta sync | partial | Now | sync incrementale da cursor con snapshot fallback e compaction boundary |
+| Presence leases | partial | Now | heartbeat/TTL, grace period multi-device e niente offline immediato al socket close |
+| Ephemeral/durable lane split | partial | Next | typing/presence/reactions transient separati dalla history durable con QoS indipendente |
+| WebTransport adapter | missing | Later | capability negotiation, bidirectional streams/datagrams, backpressure e fallback WebSocket/SSE |
+| Adaptive transport | partial | Next | health-based WebSocket/SSE/long-poll fallback senza duplicare eventi |
+| Regional failover | missing | Later | reconnect cross-region, cursor continuity, no split-brain e RTO/RPO misurati |
+| Chaos/load harness | partial | Next | packet loss, reorder, duplicate, reconnect storm, slow consumer e fan-out benchmark |
+
+### 3.2 Modern chat product surface
+
+| Capability | Stato | Fase | Definition of Done |
+|---|---|---|---|
+| Threads/replies/reactions | partial | Next | unread per thread, mention scope, reaction aggregation e sync multi-device |
+| Edits/deletes/tombstones | partial | Next | version history policy, optimistic conflict, moderation/legal-hold semantics |
+| Scheduled/ephemeral messages | partial | Next | durable scheduler, expiry tombstone, timezone e retention interaction |
+| Rich composer | partial | Next | mentions, slash commands, link preview SSRF-safe, attachments, draft sync e scheduled send |
+| Search + semantic search | partial | Next | lexical/vector/hybrid, filters, ACL post-filter, highlights e citations |
+| AI summaries/catch-up | partial | Next | room/thread/unread summaries con provenance, incremental invalidation e feedback |
+| Smart reply/compose assist | partial | Next | tenant tone, multilingual, private draft, opt-out e no training leakage |
+| Live translation | partial | Next | per-user language, original access, glossary, confidence e edit reconciliation |
+| AI moderation + appeals | partial | Next | pre/post-send policies, quarantine, human queue, explanations e appeal audit |
+| Huddles/audio-video | missing | Later | WebRTC room, screen share, captions, recording consent e chat timeline linkage |
+| Collaborative artifacts | missing | Later | typed live cards/docs/whiteboard via CRDT, permissions e version snapshots |
+| Bots/apps marketplace | partial | Later | signed manifests, scoped grants, review, quotas, revocation e provenance |
+| Federation/interoperability | partial | Later | Matrix/ActivityPub bridges oggi; valutare MIMI/MLS quando implementazioni mature |
+
+### 3.3 Realtime voice intelligence
+
+| Capability | Stato | Fase | Definition of Done |
+|---|---|---|---|
+| WebRTC media transport | missing | Next | codec/device negotiation, NAT recovery, adaptive jitter e WebSocket fallback control-plane |
+| Layered VAD + semantic EOT | missing | Next | energy gate + semantic turn model, dynamic endpointing e metriche false-cut/latency |
+| Backchannel detection | missing | Next | distinguere assenso breve, rumore e vera interruzione senza troncare l'agente |
+| Fast barge-in | partial | Now | flush playback e abort model/TTS/tool, target p95 sotto 150 ms, transcript reconciled |
+| Time-to-first-audio SLO | missing | Now | span mic→ASR→LLM→TTS→speaker, target p95 e adaptive routing |
+| Noise/echo handling | missing | Next | AEC, noise suppression, gain control e device diagnostics |
+| Multilingual/code-switching | partial | Next | language switch per segment, niente preemptive response unsafe, glossary e voice continuity |
+| Speaker diarization | partial | Later | speaker IDs stabili, overlap speech, correction UI e consent policy |
+| Prosody/emotion controls | missing | Later | normalized style/rate/pitch, provider fallback e safety boundaries |
+| Voice handoff | partial | Next | AI→human con summary/context/consent, warm transfer e continuity transcript |
+| Call QA intelligence | partial | Later | topic/outcome/sentiment/compliance score con evidence spans e human review |
+| Voice privacy controls | partial | Now | explicit recording consent, retention, redaction, regional processing e delete/export |
+
+### 3.4 Security, privacy e enterprise differentiation
+
+| Capability | Stato | Fase | Definition of Done |
+|---|---|---|---|
+| E2EE one-to-one/group | partial | Later | audited protocol; valutare MLS per gruppi, multi-device key rotation e recovery |
+| Customer-managed keys | partial | Later | envelope encryption, rotation, revocation e tenant-isolated KMS audit |
+| DLP pipeline | partial | Next | PII/PHI/PCI detection su text/file/audio, block/redact/quarantine e policy versioning |
+| eDiscovery/legal hold | partial | Next | immutable hold, scoped export, chain of custody e audit verificabile |
+| Data residency/sovereignty | partial | Later | region pinning per tenant, subprocessors, backup e inference routing coerenti |
+| AI governance | missing | Next | model/prompt/tool registry, risk tier, evaluations, approvals e evidence export |
+| Accessibility realtime | partial | Now | WCAG keyboard/SR, live captions, reduced motion, non-audio cues e latency tolerant UX |
+| Abuse/spam defense | partial | Now | device/user/tenant rate limits, raid mode, trust score e false-positive review |
+
+### 3.5 Product analytics e operations
+
+| Capability | Stato | Fase | Definition of Done |
+|---|---|---|---|
+| Realtime SLO dashboard | partial | Now | connect success, reconnect, fan-out lag, delivery/read latency, drop/duplicate/gap rate |
+| Voice quality dashboard | missing | Next | TTFA, ASR WER proxy, EOT delay, interruption precision, jitter/loss e device breakdown |
+| Conversation quality evals | partial | Next | golden datasets, online sampling, tool success, groundedness, safety e regression gates |
+| Cost attribution | partial | Now | room/run/model/tool/media cost per tenant con budget alerts e anomaly detection |
+| Session replay privacy-safe | partial | Later | event timeline redatta, consent/retention e deterministic protocol replay |
+| Feature flags/experiments | partial | Next | tenant rollout, kill switch, holdout, metric guardrails e schema-version compatibility |
+
+## 4. Ordine di implementazione
 
 ### Tranche A — Now: hardening e fondamenta
 
@@ -257,15 +352,24 @@ Le quattro demo Realtime sono tutte implementate. La precedente roadmap che marc
 6. Voice interruption e transcript sync; media upload/generation.
 7. MCP discovery/resources/OAuth hardening e middleware componibile.
 
-### Tranche C — Later: estensioni avanzate
+### Tranche C — Realtime product leadership
+
+1. Sequencing/gap detection, delivery receipts granulari, delta sync e presence leases.
+2. Offline outbox, transient/durable lanes e adaptive transport con chaos suite.
+3. WebRTC voice transport, semantic end-of-turn, backchannel detection e barge-in p95 sotto 150 ms.
+4. AI summaries/search/translation/moderation con provenance e human review.
+5. DLP, AI governance, realtime/voice SLO dashboard ed evaluation gates.
+
+### Tranche D — Later: estensioni avanzate
 
 1. Video generation e async media jobs.
-2. Durable multi-agent workflow, skills versionate e marketplace sicuro.
-3. Voice reconnect/live tools avanzati.
-4. MCP elicitation/sampling.
-5. DevTools visuale, simulate streaming e Flutter parity completa.
+2. Durable multi-agent workflow, sandbox tools, skills versionate e marketplace sicuro.
+3. Huddles, collaborative CRDT artifacts, WebTransport e regional failover.
+4. MCP Apps, elicitation/sampling e generative UI sandbox.
+5. E2EE group/MLS, federation MIMI quando matura, data sovereignty e customer-managed keys.
+6. DevTools visuale, session replay redatto e Flutter parity completa.
 
-## 4. Regole architetturali
+## 5. Regole architetturali
 
 - Nessuna dipendenza da Vercel AI SDK; API e implementazione FluxyChat originali.
 - `packages/protocol`: solo wire contracts serializzabili e versionati.
@@ -276,7 +380,7 @@ Le quattro demo Realtime sono tutte implementate. La precedente roadmap che marc
 - Ogni query o cache è scoped per tenant/project/user dove applicabile.
 - Nuovi envelope negoziano una versione; adapter legacy restano fino a deprecazione documentata.
 
-## 5. Quality gates
+## 6. Quality gates
 
 Per marcare una voce `complete` servono:
 
@@ -289,7 +393,21 @@ Per marcare una voce `complete` servono:
 7. per UI/realtime, smoke browser del percorso primario e stato unsupported/denied/reconnect;
 8. nessun uso diretto o transitivo di `ai` / `@ai-sdk/*`.
 
-## 6. Delivery log
+## 7. Research method e fonti
+
+Audit basato su codice FluxyChat, `vercel/ai` main e release AI SDK 7, reference AI SDK Core/UI/MCP, più confronto con categorie di mercato: chat-as-a-service, realtime infrastructure, WebRTC voice agents e collaboration suites. Le feature di mercato sono state incluse solo quando adiacenti a chat/realtime/agent; non sono stati inclusi CRM, ticketing o analytics generici non collegati alla conversazione.
+
+Fonti primarie da ricontrollare all'inizio di ogni tranche perché API e standard evolvono rapidamente:
+
+- `github.com/vercel/ai`, release/changelog e source dei package `ai`, provider, UI, MCP e DevTools.
+- `ai-sdk.dev` reference per Agent, UI streams, tools, middleware, media, realtime e MCP.
+- Specifiche IETF WebTransport, MLS e MIMI; specifiche Matrix/ActivityPub per bridge esistenti.
+- Documentazione tecnica di LiveKit/WebRTC per voice transport, turn handling e interruption.
+- Documentazione prodotto/architettura di Ably, PubNub, Pusher, Stream e Sendbird per reliability e chat parity.
+
+Nota: la roadmap descrive equivalenza funzionale e opportunità prodotto, non autorizza copia di codice o API protette; ogni implementazione FluxyChat deve restare originale, Worker-safe e coperta dai quality gate.
+
+## 8. Delivery log
 
 ### 2026-07-15 — Tranche A avviata
 
@@ -304,3 +422,12 @@ Per marcare una voce `complete` servono:
 - Aggiunto agent loop con stop conditions componibili, `prepareStep`, budget, allowlist, approval, dedup e risultati tool tipizzati (`packages/agent/src/agent-loop.ts`).
 - Aggiunti embedding batch, cosine similarity, rerank e retrieval scoped per tenant (`packages/agent/src/retrieval.ts`).
 - Verifica locale: 11 test agent passati; build `protocol`, `sdk` e `agent` passate. Le voci provider/media/UI/MCP non coperte da questi moduli restano correttamente `partial` o pianificate.
+
+### 2026-07-15 — Review totale AI SDK 7 + mercato realtime
+
+- Aggiunti gap AI SDK 7: standalone stream conversion, safe UI validation, agent UI async iterable, data-part reconciliation, sandbox tools, tool input refinement/order, context separation, system-message guard e include/raw controls.
+- Esteso MCP con protocol negotiation, structured errors, server identity/instructions, resource links, auth refresh dedup, redirect policy e MCP Apps sandboxate.
+- Aggiunta roadmap realtime reliability: sequencing, delivery semantics, offline outbox, delta sync, presence leases, lane transient/durable, WebTransport, failover e chaos harness.
+- Aggiunta roadmap prodotto chat: AI catch-up/search/compose/translation/moderation, huddles, CRDT artifacts, marketplace e interoperability.
+- Aggiunta roadmap voice: WebRTC, semantic EOT, backchannel, barge-in SLO, TTFA, audio processing, code-switching, diarization, handoff e QA.
+- Aggiunti differenziatori enterprise e operation: E2EE/MLS, DLP, eDiscovery, AI governance, accessibility, SLO voice/realtime, evals e cost attribution.
