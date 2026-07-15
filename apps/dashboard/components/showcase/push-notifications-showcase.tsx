@@ -40,10 +40,20 @@ function PushPanel({ session }: { session: ShowcaseSession }) {
 
   React.useEffect(() => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-    void navigator.serviceWorker
-      .register(SW_PATH)
-      .then(() => setSwReady(true))
-      .catch(() => setSwReady(false));
+    let active = true;
+    void (async () => {
+      try {
+        const existing = await navigator.serviceWorker.getRegistration(SW_PATH);
+        const registration = existing ?? await navigator.serviceWorker.register(SW_PATH);
+        await navigator.serviceWorker.ready;
+        if (active) setSwReady(Boolean(registration));
+      } catch {
+        if (active) setSwReady(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const {

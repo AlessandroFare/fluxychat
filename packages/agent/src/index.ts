@@ -18,6 +18,22 @@ export {
 } from "@fluxy-chat/sdk";
 
 export { mintWorkerToken, type MintTokenInput, type MintTokenResult } from "./mint";
+export {
+  FluxyAIError,
+  classifyAIError,
+  normalizeFinishReason,
+  normalizeUsage,
+  withTimeout,
+  type AIErrorCode,
+  type AIErrorData,
+  type AIFinishReason,
+  type AIGenerationResult,
+  type AIGenerationStep,
+  type AIProviderMetadata,
+  type AIStreamPart,
+  type AIUsage,
+  type AIWarning,
+} from "./ai-core";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:8787";
 

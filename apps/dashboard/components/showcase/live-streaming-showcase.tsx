@@ -51,6 +51,16 @@ export function LiveStreamingShowcase({ session }: { session: ShowcaseSession })
 function LiveRoomPanel({ session }: { session: ShowcaseSession }) {
   const [floating, setFloating] = React.useState<FloatingReaction[]>([]);
   const nextId = React.useRef(0);
+  const cleanupTimers = React.useRef(new Set<number>());
+  const seenReactionIds = React.useRef(new Map<string, number>());
+
+  React.useEffect(
+    () => () => {
+      for (const timer of cleanupTimers.current) window.clearTimeout(timer);
+      cleanupTimers.current.clear();
+    },
+    [],
+  );
 
   const spawnReaction = React.useCallback((emoji: string) => {
     const id = nextId.current++;
@@ -64,17 +74,30 @@ function LiveRoomPanel({ session }: { session: ShowcaseSession }) {
         rotate: -18 + Math.random() * 36,
       },
     ]);
-    window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
+      cleanupTimers.current.delete(timer);
       setFloating((prev) => prev.filter((r) => r.id !== id));
     }, 1800);
+    cleanupTimers.current.add(timer);
   }, []);
 
   const onAnyEvent = React.useCallback(
     (event: FluxyChatEvent) => {
-      if (event.type !== "client_event" || event.eventName !== "reaction") return;
-      const data = event.data as { emoji?: string } | null;
+      if (
+        event.type !== "client_event" ||
+        !["reaction", "client-reaction"].includes(event.eventName)
+      ) return;
+      const data = event.data as { emoji?: string; reactionId?: string } | null;
       const emoji = data?.emoji && REACTION_EMOJI[data.emoji];
-      if (emoji) spawnReaction(emoji);
+      if (!emoji) return;
+
+      const now = Date.now();
+      for (const [id, seenAt] of seenReactionIds.current) {
+        if (now - seenAt > 10_000) seenReactionIds.current.delete(id);
+      }
+      if (data?.reactionId && seenReactionIds.current.has(data.reactionId)) return;
+      if (data?.reactionId) seenReactionIds.current.set(data.reactionId, now);
+      spawnReaction(emoji);
     },
     [spawnReaction],
   );
@@ -102,10 +125,17 @@ function LiveRoomPanel({ session }: { session: ShowcaseSession }) {
 
   const [pressed, setPressed] = React.useState<"heart" | "fire" | null>(null);
   const react = (kind: "heart" | "fire") => {
-    sendClientEvent("reaction", { emoji: kind });
+    if (!connected) return;
+    const reactionId = crypto.randomUUID();
+    seenReactionIds.current.set(reactionId, Date.now());
+    sendClientEvent("reaction", { emoji: kind, reactionId });
     spawnReaction(REACTION_EMOJI[kind]);
     setPressed(kind);
-    window.setTimeout(() => setPressed(null), 220);
+    const timer = window.setTimeout(() => {
+      cleanupTimers.current.delete(timer);
+      setPressed(null);
+    }, 220);
+    cleanupTimers.current.add(timer);
   };
 
   return (

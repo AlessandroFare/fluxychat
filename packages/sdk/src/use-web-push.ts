@@ -55,6 +55,7 @@ export function useWebPush(
   >([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const operationInFlight = React.useRef(false);
 
   // Detect browser support and current permission on mount.
   React.useEffect(() => {
@@ -111,6 +112,10 @@ export function useWebPush(
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return { ok: false, error: "web_push_not_supported" };
     }
+    if (operationInFlight.current) {
+      return { ok: false, error: "operation_in_progress" };
+    }
+    operationInFlight.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -127,18 +132,27 @@ export function useWebPush(
       }
       const { publicKey } = await client.getVapidPublicKey(options.projectId);
       const rawKey = urlBase64ToUint8Array(publicKey);
-      const sub = await reg.pushManager.subscribe({
+      const applicationServerKey = rawKey.buffer.slice(
+        rawKey.byteOffset,
+        rawKey.byteOffset + rawKey.byteLength,
+      ) as ArrayBuffer;
+      const existing = await reg.pushManager.getSubscription();
+      if (
+        existing?.options.applicationServerKey &&
+        !arrayBuffersEqual(existing.options.applicationServerKey, applicationServerKey)
+      ) {
+        await existing.unsubscribe();
+      }
+      const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: rawKey.buffer.slice(
-          rawKey.byteOffset,
-          rawKey.byteOffset + rawKey.byteLength,
-        ) as ArrayBuffer,
+        applicationServerKey,
       });
       const result = await client.registerWebPush(sub, {
         projectId: options.projectId,
         userAgent: navigator.userAgent,
       });
       if (!result.ok) {
+        await sub.unsubscribe().catch(() => false);
         return { ok: false, error: "register_failed" };
       }
       setSubscribed(true);
@@ -149,6 +163,7 @@ export function useWebPush(
       setError(msg);
       return { ok: false, error: msg };
     } finally {
+      operationInFlight.current = false;
       setLoading(false);
     }
   }, [client, options.projectId, options.swPath, reload]);
@@ -173,7 +188,7 @@ export function useWebPush(
         } else if (identifier) {
           await client.unregisterWebPush(identifier);
         }
-        setSubscribed(false);
+        if (!identifier) setSubscribed(false);
         await reload();
         return { ok: true };
       } catch (e) {
@@ -195,6 +210,13 @@ export function useWebPush(
     unsubscribe,
     reload,
   };
+}
+
+function arrayBuffersEqual(left: ArrayBuffer, right: ArrayBuffer): boolean {
+  if (left.byteLength !== right.byteLength) return false;
+  const leftBytes = new Uint8Array(left);
+  const rightBytes = new Uint8Array(right);
+  return leftBytes.every((byte, index) => byte === rightBytes[index]);
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {

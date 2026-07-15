@@ -62,12 +62,22 @@ function LocationPanel({ session }: { session: ShowcaseSession }) {
     }
     if (!("permissions" in navigator)) return;
     let cancelled = false;
-    void navigator.permissions.query({ name: "geolocation" }).then((result) => {
-      if (!cancelled) setPermission(result.state);
-      result.addEventListener("change", () => setPermission(result.state));
-    }).catch(() => undefined);
+    let permissionStatus: PermissionStatus | null = null;
+    const handlePermissionChange = () => {
+      if (!cancelled && permissionStatus) setPermission(permissionStatus.state);
+    };
+    void navigator.permissions
+      .query({ name: "geolocation" })
+      .then((result) => {
+        if (cancelled) return;
+        permissionStatus = result;
+        setPermission(result.state);
+        result.addEventListener("change", handlePermissionChange);
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
+      permissionStatus?.removeEventListener("change", handlePermissionChange);
     };
   }, []);
 
