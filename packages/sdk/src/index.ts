@@ -233,6 +233,8 @@ export {
   type VoiceChunk,
   type VoiceSession,
   type VoiceManager,
+  type VoiceTransport,
+  type VoiceManagerOptions,
 } from "./voice";
 
 export {
