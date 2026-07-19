@@ -24,6 +24,7 @@ import { dispatchNotificationControlsRoutes } from "../routes/notification-contr
 import { dispatchSearchEnhancementsRoutes } from "../routes/search-enhancements-http.js";
 import { dispatchRichPreviewsRoutes } from "../routes/rich-previews-http.js";
 import { dispatchPinnedMessagesRoutes } from "../routes/pinned-messages-http.js";
+import { dispatchBreakoutRoomsRoutes } from "../routes/breakout-rooms-http.js";
 import { dispatchMobileUxRoutes } from "../routes/mobile-ux-http.js";
 import { dispatchPollsFormsRoutes } from "../routes/polls-forms-http.js";
 import { dispatchGamificationRoutes } from "../routes/gamification-http.js";
@@ -102,6 +103,8 @@ import { dispatchIntelligenceRoutes } from "../routes/intelligence-http.js";
 import { dispatchModerationQueueRoutes } from "../routes/moderation-queue-http.js";
 import { dispatchAgentProfilesRoutes } from "../routes/agent-profiles-http.js";
 import { dispatchAdaptersRoutes } from "../routes/adapters-http.js";
+import { dispatchFleetTrackingRoutes } from "../routes/fleet-tracking-http.js";
+import { dispatchCollabHttp } from "../routes/collab-http.js";
 
 /** @type {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} */
 export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
@@ -122,6 +125,9 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchSearchEnhancementsRoutes,
   dispatchRichPreviewsRoutes,
   dispatchPinnedMessagesRoutes,
+  dispatchBreakoutRoomsRoutes,
+  dispatchFleetTrackingRoutes,
+  dispatchCollabHttp,
   dispatchMobileUxRoutes,
   dispatchPollsFormsRoutes,
   dispatchGamificationRoutes,

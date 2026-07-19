@@ -40,7 +40,8 @@ export type AIStreamPart<TData = unknown> =
   | { type: "tool-input-available"; toolCallId: string; toolName: string; input: unknown }
   | { type: "tool-output-available"; toolCallId: string; output: unknown }
   | { type: "tool-error"; toolCallId: string; error: AIErrorData }
-  | { type: "approval-request"; approvalId: string; toolCallId: string; toolName: string; input: unknown }
+  | { type: "approval-request"; approvalId: string; toolCallId: string; toolName: string; input: unknown; isAutomatic?: boolean; signature?: string }
+  | { type: "approval-response"; approvalId: string; toolCallId: string; toolName: string; approved: boolean; reason?: string; providerExecuted?: boolean }
   | { type: "finish-step"; step: number; usage?: AIUsage; finishReason: AIFinishReason }
   | { type: "finish"; usage?: AIUsage; finishReason: AIFinishReason; providerMetadata?: AIProviderMetadata }
   | { type: "error"; error: AIErrorData };
@@ -48,6 +49,7 @@ export type AIStreamPart<TData = unknown> =
 export interface AIGenerationResult<TOutput = string> {
   output: TOutput;
   text: string;
+  reasoningText?: string;
   finishReason: AIFinishReason;
   usage: AIUsage;
   warnings: AIWarning[];

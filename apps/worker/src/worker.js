@@ -84,6 +84,7 @@ registerMockAdapter();
 export { RoomDurableObject } from "./durable-objects/room-do.js";
 export { UserDurableObject } from "./durable-objects/user-do.js";
 export { IpRateLimiterDurableObject } from "./durable-objects/ip-rate-limiter-do.js";
+export { SupergroupRouterDurableObject } from "./durable-objects/supergroup-router-do.js";
 export { FluxyScheduledWorkflow } from "./workflows/fluxy-scheduled-workflow.js";
 export { retryDelayMsForAttempt } from "./lib/webhook-delivery.js";
 export { truncateForStorage } from "./lib/storage-utils.js";

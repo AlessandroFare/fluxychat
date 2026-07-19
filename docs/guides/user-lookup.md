@@ -1,0 +1,37 @@
+# User Lookup API
+
+The user lookup API provides a registry for user profiles and a lookup service to query users by ID.
+
+## Quick Start
+
+```ts
+import { createUserLookup, registerUser } from "@fluxy-chat/sdk";
+
+const lookup = createUserLookup();
+
+// Register users
+registerUser({ userId: "user-1", fullName: "Alice", email: "alice@example.com", avatarUrl: "https://..." });
+registerUser({ userId: "user-2", username: "bob", bot: true });
+
+// Single lookup
+const user = await lookup.getUser("user-1");
+console.log(user?.fullName); // "Alice"
+
+// Batch lookup
+const users = await lookup.getUsers(["user-1", "user-2", "unknown"]);
+console.log(users.size); // 2
+```
+
+## API
+
+### `registerUser(profile)`
+Register a user profile in the global registry.
+
+### `createUserLookup(): UserLookupApi`
+Create a new lookup API instance. Returns:
+- `getUser(userId)` — returns `UserProfile | null`
+- `getUsers(userIds)` — returns `Map<string, UserProfile>`
+
+### Types
+- `UserProfile`: `{ userId, username?, fullName?, email?, avatarUrl?, bot? }`
+- `UserLookupApi`: interface for the lookup service

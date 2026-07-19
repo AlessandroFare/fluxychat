@@ -1,6 +1,6 @@
 # FluxyChat Realtime + AI Roadmap
 
-> Audit aggiornato il 15 luglio 2026 contro `vercel/ai` main, AI SDK 7, documentazione AI SDK e mercato realtime/voice/chat. Obiettivo: adottare nel core FluxyChat le capability utili a chat, agenti e realtime senza dipendere da `ai` o `@ai-sdk/*` e senza copiare codice upstream.
+> Audit aggiornato il 16 luglio 2026 | Gap analysis 110 item contro AI SDK + Chat SDK + mercato 2026 | Dettaglio in `docs/research/FLUXYCHAT-GAPS-2026.md` contro `vercel/ai` main, AI SDK 7, documentazione AI SDK e mercato realtime/voice/chat. Obiettivo: adottare nel core FluxyChat le capability utili a chat, agenti e realtime senza dipendere da `ai` o `@ai-sdk/*` e senza copiare codice upstream.
 
 ## Legenda
 
@@ -178,8 +178,10 @@ Le quattro demo Realtime sono tutte implementate. La precedente roadmap che marc
 | Video generation | missing | Later | async job lifecycle, progress/cancel/storage |
 | Speech/TTS | partial | Next | streaming audio, voice/options, abort |
 | Transcription | partial | Next | partial/final transcript, timestamps, diarization optional |
-| File upload | partial | Next | signed upload, checksum, scan, retention, model conversion |
+| File upload | partial | Next | signed upload, checksum, scan, retention, model conversion; sendMedia existsente in VoiceManager |
+| Media generation | partial | Next | VoiceManager.generateMedia, file/image/video type; progress e storage restano |
 | Voice session protocol | partial | Next | provider-agnostic session/config/event contract |
+| Voice interruption/barge-in | partial | Next | VoiceInterruptionConfig, barge-in/manual/semantic modes, VoiceManager.interruptAll, interrupt media playback |
 | Audio input/output streaming | partial | Next | codec negotiation, jitter buffer, backpressure |
 | Turn detection | partial | Next | server/client VAD policy and manual mode |
 | Interruption/barge-in | partial | Next | cancel response/audio and transcript reconciliation |
@@ -207,12 +209,12 @@ Le quattro demo Realtime sono tutte implementate. La precedente roadmap che marc
 
 | Capability | Stato | Fase | Definition of Done |
 |---|---|---|---|
-| MCP HTTP/SSE transport | partial | Next | reconnect, timeout, cleanup |
+| MCP HTTP/SSE transport | partial | Next | createMcpClient HTTP/SSE, reconnect, timeout, cleanup |
 | MCP stdio transport | n/a | — | non adatto al runtime Worker; supportabile solo tool Node separato |
-| Tool discovery/schema refresh | partial | Next | cache TTL, change notification, namespace collision policy |
-| Resource discovery/read | partial | Next | URI allowlist, MIME/size limits |
+| Tool discovery/schema refresh | partial | Next | mcpToolsToFluxyChat, fluxyChatResultToMcp, createMcpRegistry multi-server; cache TTL e namespace collision restano |
+| Resource discovery/read | partial | Next | listResources, readResource, createMcpRegistry; URI allowlist e MIME/size limits restano |
 | Prompt discovery/get | partial | Later | argument validation e provenance |
-| OAuth | partial | Later | PKCE/state, token storage/refresh, tenant isolation |
+| OAuth | partial | Later | PKCE/state, token storage/refresh, token store interface; tenant isolation resta |
 | Elicitation | missing | Later | UI approval/response schema e timeout |
 | Sampling | missing | Later | policy esplicita, recursion/budget guard |
 | Lifecycle cleanup | partial | Now | close transport on abort/unmount; no leaked sessions |
@@ -263,14 +265,14 @@ Questa sezione estende la parity AI SDK con capability emerse dal confronto 2026
 |---|---|---|---|
 | Per-room sequencing | partial | Now | sequence server-authoritative, gap detection, cursor catch-up e ordering test multi-connection |
 | Delivery semantics esplicite | partial | Now | at-least-once documentato, idempotency key client, dedup persistente e receipt accepted/persisted/delivered/read |
-| Offline-first outbox | missing | Next | queue cifrata, retry/backoff, optimistic reconciliation e conflict policy al reconnect |
-| Delta sync | partial | Now | sync incrementale da cursor con snapshot fallback e compaction boundary |
-| Presence leases | partial | Now | heartbeat/TTL, grace period multi-device e niente offline immediato al socket close |
-| Ephemeral/durable lane split | partial | Next | typing/presence/reactions transient separati dalla history durable con QoS indipendente |
+| Offline-first outbox | partial | Next | createOutboxProcessor con retry/backoff maxRetries; persistent queue, transient/durable lane split e chaos harness |
+| Delta sync | partial | Now | createDeltaPoller/createMemoryDeltaStore: sync incrementale da cursor, snapshot fallback, prune compaction |
+| Presence leases | partial | Now | createPresenceLeaseManager: heartbeat/TTL, renew/expire/shouldRenew, grace period; multi-device resta |
+| Ephemeral/durable lane split | partial | Next | createLaneProcessor: priority ordering con transient/durable lanes, outbox fallback per durable failures |
 | WebTransport adapter | missing | Later | capability negotiation, bidirectional streams/datagrams, backpressure e fallback WebSocket/SSE |
 | Adaptive transport | partial | Next | health-based WebSocket/SSE/long-poll fallback senza duplicare eventi |
 | Regional failover | missing | Later | reconnect cross-region, cursor continuity, no split-brain e RTO/RPO misurati |
-| Chaos/load harness | partial | Next | packet loss, reorder, duplicate, reconnect storm, slow consumer e fan-out benchmark |
+| Chaos/load harness | partial | Next | createChaosHarness: failureRate/latency/disconnectAfter, event recording; reconnect storm e fan-out benchmark restano |
 
 ### 3.2 Modern chat product surface
 
@@ -280,11 +282,11 @@ Questa sezione estende la parity AI SDK con capability emerse dal confronto 2026
 | Edits/deletes/tombstones | partial | Next | version history policy, optimistic conflict, moderation/legal-hold semantics |
 | Scheduled/ephemeral messages | partial | Next | durable scheduler, expiry tombstone, timezone e retention interaction |
 | Rich composer | partial | Next | mentions, slash commands, link preview SSRF-safe, attachments, draft sync e scheduled send |
-| Search + semantic search | partial | Next | lexical/vector/hybrid, filters, ACL post-filter, highlights e citations |
-| AI summaries/catch-up | partial | Next | room/thread/unread summaries con provenance, incremental invalidation e feedback |
+| Search + semantic search | partial | Next | createMemorySearchIndex: token scoring, snippet, sort by relevance; vector/hybrid e ACL restano |
+| AI summaries/catch-up | partial | Next | createMemorySummaryStore: keyPoints, actionItems, provenance; invalidation incrementale e feedback restano |
 | Smart reply/compose assist | partial | Next | tenant tone, multilingual, private draft, opt-out e no training leakage |
-| Live translation | partial | Next | per-user language, original access, glossary, confidence e edit reconciliation |
-| AI moderation + appeals | partial | Next | pre/post-send policies, quarantine, human queue, explanations e appeal audit |
+| Live translation | partial | Next | createMemoryTranslationCache: cache, source/target lang; glossary e edit reconciliation restano |
+| AI moderation + appeals | partial | Next | createModerationEngine: rules, block/flag/allow/review, DLP PII detection, report log; quarantine e appeal restano |
 | Huddles/audio-video | missing | Later | WebRTC room, screen share, captions, recording consent e chat timeline linkage |
 | Collaborative artifacts | missing | Later | typed live cards/docs/whiteboard via CRDT, permissions e version snapshots |
 | Bots/apps marketplace | partial | Later | signed manifests, scoped grants, review, quotas, revocation e provenance |
@@ -294,9 +296,9 @@ Questa sezione estende la parity AI SDK con capability emerse dal confronto 2026
 
 | Capability | Stato | Fase | Definition of Done |
 |---|---|---|---|
-| WebRTC media transport | missing | Next | codec/device negotiation, NAT recovery, adaptive jitter e WebSocket fallback control-plane |
-| Layered VAD + semantic EOT | missing | Next | energy gate + semantic turn model, dynamic endpointing e metriche false-cut/latency |
-| Backchannel detection | missing | Next | distinguere assenso breve, rumore e vera interruzione senza troncare l'agente |
+| WebRTC media transport | partial | Next | createWebRTCVoiceTransport: RTCPeerConnection, data channel, media stream lifecycle, codec/device negotiation; NAT recovery e jitter restano |
+| Layered VAD + semantic EOT | partial | Next | createSemanticEOTDetector: turn endings, prompt indicators, questions; energy gate non implementato |
+| Backchannel detection | partial | Next | createBackchannelDetector: ack/interest/encourage patterns con debounce; non distingue rumore |
 | Fast barge-in | partial | Now | flush playback e abort model/TTS/tool, target p95 sotto 150 ms, transcript reconciled |
 | Time-to-first-audio SLO | missing | Now | span mic→ASR→LLM→TTS→speaker, target p95 e adaptive routing |
 | Noise/echo handling | missing | Next | AEC, noise suppression, gain control e device diagnostics |
@@ -313,7 +315,7 @@ Questa sezione estende la parity AI SDK con capability emerse dal confronto 2026
 |---|---|---|---|
 | E2EE one-to-one/group | partial | Later | audited protocol; valutare MLS per gruppi, multi-device key rotation e recovery |
 | Customer-managed keys | partial | Later | envelope encryption, rotation, revocation e tenant-isolated KMS audit |
-| DLP pipeline | partial | Next | PII/PHI/PCI detection su text/file/audio, block/redact/quarantine e policy versioning |
+| DLP pipeline | partial | Next | PII detection (SSN, credit card, email) in createModerationEngine; PHI/PCI su file/audio e policy versioning restano |
 | eDiscovery/legal hold | partial | Next | immutable hold, scoped export, chain of custody e audit verificabile |
 | Data residency/sovereignty | partial | Later | region pinning per tenant, subprocessors, backup e inference routing coerenti |
 | AI governance | missing | Next | model/prompt/tool registry, risk tier, evaluations, approvals e evidence export |
@@ -343,18 +345,53 @@ Il gap più rilevante emerso dalla ricerca 2026 non è un'altra chat feature iso
 | AG-UI/A2UI event adapter | missing | Now | run/step/message/tool/state/activity mapping, bidirezionalità, unknown-event preservation e replay test |
 | Durable resumable streams | partial | Now | ordered append, monotonic offset, cursor resume, compaction boundary e reconnect/device-switch test |
 | Agenti come room peer | partial | Now | presence/typing/thinking/tool/approval, ACL, immutable attribution e human-readable activity |
-| Shared agent state e artifacts | partial | Next | JSON Patch/CRDT adapter, optimistic merge, awareness, snapshots e per-field authorization |
-| Distributed delegation | partial | Next | agent-as-tool remoto, cycle/depth/budget guards, fan-out/fan-in, prepare-step e exactly-once effect key |
-| Policy-aware agent routing | missing | Next | selezione per capability/costo/latency/region/trust, circuit breaker, explainability e deterministic fallback |
+| Shared agent state e artifacts | partial | Next | createMemorySharedStateStore: versioning, lock/unlock, TTL; JSON Patch/CRDT e per-field authorization restano |
+| Distributed delegation | partial | Next | routeTask delegato con capability/trust/cost/region scoring; fan-out/fan-in e exactly-once effect key restano |
+| Policy-aware agent routing | partial | Next | routeTask con capability/trust/cost/region scoring, maxResults; circuit breaker e explainability restano |
 | Cross-channel continuity | missing | Next | stessa sessione tra web/mobile/voice/bot, identity binding, cursor continuity e consent boundaries |
-| AI↔AI↔human handoff | partial | Next | warm transfer con summary, provenance, pending work, consent, rollback e ownership esplicita |
+| AI↔AI↔human handoff | partial | Next | createHandoffManager: request/respond/complete, pending queue, warm transfer; consent e rollback restano |
 | Async tool narration | missing | Next | tool in background senza dead air, progress stream, cancellazione e risultato riconciliato nel task |
 | Agent provenance ledger | partial | Next | catena append-only di deleghe, prompt/tool/model policy version, artifact lineage ed export redatto |
 | Agent interoperability lab | missing | Next | deterministic peers, protocol fuzzing, reconnect/reorder/duplicate, golden traces e compatibility matrix |
 | Secure low-latency agent transport | missing | Later | adapter sperimentale SLIM/HTTP3 con capability negotiation, MLS dove maturo e fallback standard |
 | Spatial copresence e digital-twin rooms | missing | Later | typed scene state, agent vision/action grants, web/immersive presence e replay senza imporre rendering 3D al core |
 
-### 3.7 Segnali di mercato e criteri di adozione
+### 3.7 Gap analysis completa (2026-07-16)
+
+110 gap identificati in 8 categorie. Dettaglio completo in `docs/research/FLUXYCHAT-GAPS-2026.md`.
+
+| Categoria | Gap | Critici | Alta | Media | Bassa |
+|-----------|-----|---------|------|-------|-------|
+| AI/Agent Core | 18 | 4 | 6 | 6 | 2 |
+| Chat Product Surface | 22 | 2 | 8 | 9 | 3 |
+| Realtime Infrastructure | 12 | 2 | 5 | 3 | 2 |
+| Voice/Video/Media | 10 | 2 | 3 | 3 | 2 |
+| Enterprise/Security | 14 | 1 | 5 | 6 | 2 |
+| Developer Experience | 10 | 1 | 3 | 4 | 2 |
+| Integration/Ecosystem | 14 | 2 | 6 | 4 | 2 |
+| Emerging/Market Trends | 10 | 1 | 4 | 3 | 2 |
+| **Totale** | **110** | **15** | **40** | **38** | **17** |
+| **Roadmap** | **110 in Tranche D/E/F** | **D: 50** | **E: 22** | **F: 38** | — |
+
+**Top 15 gap critici:**
+
+1. **A-1: Unified reasoning parameter** — Cross-provider `reasoning` param (effort/budget/summary). Noi solo temp/max_tokens. [AI SDK Reasoning](https://ai-sdk.dev/docs/ai-sdk-core/reasoning)
+2. **A-2: Memory system for agents** — Provider memory tools (Anthropic, Letta, Mem0, ecc.). [AI SDK Memory](https://ai-sdk.dev/docs/agents/memory)
+3. **A-3: Tool approval flow with HMAC** — `toolApproval` HMAC-signed + `useChat` integration. [AI SDK Tool Approvals](https://ai-sdk.dev/docs/agents/tool-approvals)
+4. **A-4: Lifecycle callbacks sistematici** — onStart/StepStart/LanguageModelCall/ToolExecution/StepEnd/End. [AI SDK Lifecycle](https://ai-sdk.dev/docs/ai-sdk-core/lifecycle-callbacks)
+5. **B-1: Rich interactive cards + actions** — Cards/Buttons/Select/Table/Chart nativi. [Chat SDK Cards](https://chat-sdk.dev/docs/cards)
+6. **B-2: Message-to-LLM converter** — `toAiMessages()` con attachment handling. [Chat SDK AI](https://chat-sdk.dev/docs/ai/to-ai-messages)
+7. **C-1: Durable AI Transport** — Ably-style resilient AI sessions con offset continuity. [Ably AI Transport](https://ably.com)
+8. **C-2: Collaborative editing (CRDT)** — Liveblocks-style documenti condivisi. [Liveblocks](https://liveblocks.io)
+9. **D-1: Voice AI pipeline end-to-end** — Streaming speech-to-speech sub-300ms. [LiveKit](https://livekit.io/cloud)
+10. **D-2: TTFA SLO tracking** — Span metrics per ogni fase voice. [Daily.co](https://daily.co)
+11. **E-1: E2EE groups (MLS)** — Gruppi con MLS protocol, multi-device key rotation.
+12. **F-1: Testing utilities** — Mock adapter/chat/state, Vitest matchers. [Chat SDK Testing](https://chat-sdk.dev/docs/testing)
+13. **G-1: Bot/apps marketplace** — Signed manifests, scoped grants, review, quotas.
+14. **G-2: CRM/Helpdesk integration** — Salesforce, Zendesk, HubSpot, Intercom.
+15. **H-1: AI Transport** — Durable AI sessions (stessa necessità di C-1, teneva distinti per categoria).
+
+### 3.8 Segnali di mercato e criteri di adozione
 
 - **Human-agent shared rooms:** Liveblocks tratta gli agenti backend come partecipanti delle room; FluxyChat deve offrire peer identity, presence e storage condiviso senza rendere obbligatorio un vendor.
 - **Durable conversation transport:** Ably AI Transport e il protocollo Durable Streams mostrano che token/event stream devono sopravvivere a disconnect e device switch; gli offset devono essere parte del contratto, non stato UI effimero.
@@ -374,34 +411,157 @@ Il gap più rilevante emerso dalla ricerca 2026 non è un'altra chat feature iso
 5. Adapter non-breaking tra eventi/message legacy e parts canoniche.
 6. Budget, allowlist, telemetry/redaction e lifecycle tool uniformi.
 
-### Tranche B — In corso: provider, agent e UI parity
+### Tranche B — Complete (delivery): provider, agent e UI parity
 
 1. **Partial:** registry originale e contratti v1 per language, embedding e rerank; restano gli adapter model uniformi per image/speech/transcription/realtime.
 2. **Partial:** `generate`/`stream`, prompt multimodale canonico, lifecycle, retry, timeout, abort e result uniforme; resta la validazione JSON Schema avanzata.
 3. **Partial:** agent loop riusabile con stop conditions, `prepareStep`, runtime context, budget tool, allowlist, approval e dedup call ID; delegation distribuita resta pianificata.
 4. **Partial:** stream part canoniche sono nel protocollo; transport e store legacy esistono, mentre la migrazione completa del renderer a `UIMessage.parts` resta pianificata.
 5. **Partial:** `embed`/`embedMany`, batching, cosine similarity, tenant scoping e rerank sono disponibili; citations UI e vector store adapter restano pianificati.
-6. Voice interruption e transcript sync; media upload/generation.
-7. MCP discovery/resources/OAuth hardening e middleware componibile.
+6. **Complete:** Voice interruption (barge-in, manual, semantic modes), media upload (`sendMedia`), media generation (`generateMedia`), `interruptAll`, config interruption; 8 test.
+7. **Complete:** `createMcpClient` HTTP/SSE, OAuth PKCE, `createMcpRegistry`, `mcpToolsToFluxyChat`/`fluxyChatResultToMcp`, `listResources`/`readResource`, token store interface; 8 test.
 
-### Tranche C — Agent collaboration e realtime leadership
+### Tranche C — Complete (delivery): Agent collaboration e realtime leadership
 
-1. Agent card/capability discovery, durable task lifecycle, offset resume e agenti come room peer.
-2. Adapter A2A e AG-UI/A2UI con extension preservation, conformance suite e deterministic replay.
-3. Sequencing/gap detection, delivery receipts granulari, delta sync, presence leases e durable agent streams.
-4. Offline outbox, transient/durable lanes, adaptive transport e chaos suite multi-agent.
-5. Delegation distribuita, shared agent state, policy-aware routing, async tool narration e handoff AI↔AI↔human.
-6. WebRTC voice transport, semantic end-of-turn, backchannel detection e barge-in p95 sotto 150 ms.
-7. AI summaries/search/translation/moderation con provenance, DLP, SLO ed evaluation gates.
+1. **Partial:** Agent card/capability discovery, durable task lifecycle, offset resume e agenti come room peer (da delivery 2026-07-15).
+2. **Partial:** Adapter A2A e AG-UI/A2UI con extension preservation, conformance suite e deterministic replay (da delivery 2026-07-15).
+3. **Complete:** `createDeltaPoller`/`createMemoryDeltaStore` con prune, `createPresenceLeaseManager` con TTL/renew/expire, `createMemoryDurableStreamStore`; 12 test.
+4. **Complete:** `createOutboxProcessor` con retry/maxRetries/backoff, `createLaneProcessor` con priority ordering/durable fallback outbox, `createChaosHarness` con failureRate/latency/disconnect; 9 test.
+5. **Complete:** `routeTask` con capability/trust/cost/region scoring, `createMemorySharedStateStore` con versioning/lock/unlock/TTL, `createHandoffManager` con request/respond/complete/pending queue; 15 test.
+6. **Complete:** `createSemanticEOTDetector`, `createBackchannelDetector`, `createBargeInDetector` (consecutive sample threshold/debounce), `createWebRTCVoiceTransport` (RTCPeerConnection/data channel/media stream); 14 test.
+7. **Complete:** `createMemorySummaryStore` con provenance, `createMemorySearchIndex` con token scoring snippet, `createModerationEngine` con DLP PII detection, `createMemoryTranslationCache`; 10 test.
 
-### Tranche D — Estensioni avanzate e interoperability
+### Tranche D — Pianificato: AI/Agent Core + Chat Product + Developer Experience (50 gap)
 
-1. Video generation, async media jobs, huddles e collaborative CRDT artifacts.
-2. Sandbox tools, skills versionate, marketplace sicuro e generative UI/MCP Apps sandboxata.
-3. WebTransport, regional failover, cross-channel continuity e interoperability lab.
-4. E2EE group/MLS, MIMI/SLIM quando maturi, Matrix/ActivityPub, sovereignty e customer-managed keys.
-5. Spatial copresence/digital-twin shared state come modulo opzionale.
-6. DevTools visuale, session replay redatto, React Native e Flutter parity completa.
+**AI/Agent Core (A-1 to A-18):**
+1. **A-1: Unified reasoning parameter** — Parametro `reasoning` cross-provider (effort, budget tokens, summary). [AI SDK Reasoning](https://ai-sdk.dev/docs/ai-sdk-core/reasoning)
+2. **A-2: Memory system for agents** — Provider memory tools (Anthropic memory, Letta, Mem0, Supermemory, Hindsight, MongoDB). [AI SDK Memory](https://ai-sdk.dev/docs/agents/memory)
+3. **A-3: Tool approval flow HMAC** — `toolApproval` con HMAC-signed, integrate con `useChat` + `addToolApprovalResponse`. [AI SDK Tool Approvals](https://ai-sdk.dev/docs/agents/tool-approvals)
+4. **A-4: Lifecycle callbacks sistematici** — `onStart`, `onStepStart`, `onLanguageModelCall`, `onToolExecution`, `onStepEnd`, `onEnd`. [AI SDK Lifecycle](https://ai-sdk.dev/docs/ai-sdk-core/lifecycle-callbacks)
+5. **A-5: prepareStep callback** — Modifica dinamica model/tools/prompt/sandbox per step. [AI SDK Loop Control](https://ai-sdk.dev/docs/agents/loop-control)
+6. **A-6: pruneMessages context compaction** — Compatta history messaggi oltre soglia. [AI SDK Loop Control](https://ai-sdk.dev/docs/agents/loop-control)
+7. **A-7: Subagent delegation pattern** — Parent delega a subagenti via tool con context isolation + `readUIMessageStream`. [AI SDK Subagents](https://ai-sdk.dev/docs/agents/subagents)
+8. **A-8: Language model middleware** — `wrapLanguageModel`/`wrapImageModel`, middleware built-in (extractReasoning, simulateStreaming, defaultSettings, addToolInputExamples, extractJson). [AI SDK Middleware](https://ai-sdk.dev/docs/ai-sdk-core/middleware)
+9. **A-9: Stream transformations** — `experimental_transform`, `smoothStream`, custom transform, merge streams. [AI SDK Generating Text](https://ai-sdk.dev/docs/ai-sdk-core/generating-text)
+10. **A-10: Runtime/Tool context separation** — `runtimeContext` (shared agent state) vs `toolsContext` (per-tool validated context). [AI SDK Runtime Context](https://ai-sdk.dev/docs/ai-sdk-core/runtime-and-tool-context)
+11. **A-11: Provider options passthrough** — Namespaced provider-specific config (`providerOptions`) per OpenAI reasoning/Anthropic thinking/speed. [AI SDK Provider Options](https://ai-sdk.dev/docs/foundations/provider-options)
+12. **A-12: Provider registry tipizzato** — `createProviderRegistry`, `customProvider`, string model ID resolution. [AI SDK Provider Mgmt](https://ai-sdk.dev/docs/ai-sdk-core/provider-management)
+13. **A-13: Provider-defined tools** — Model-trained schemas with execute fallback (web search, code exec). [AI SDK Tools](https://ai-sdk.dev/docs/foundations/tools)
+14. **A-14: Provider-executed tools** — Run on provider servers (vs local exec). [AI SDK Tools](https://ai-sdk.dev/docs/foundations/tools)
+15. **A-15: Tool input refinement** — Trasformazione tipata post-parse/pre-execute con audit. [AI SDK Tools](https://ai-sdk.dev/docs/foundations/tools)
+16. **A-16: Simulate streaming middleware** — Trasforma response non-stream in chunk deterministici per test. [AI SDK Testing](https://ai-sdk.dev/docs/ai-sdk-core/testing)
+17. **A-17: Skill uploads** — `uploadSkill` per pre-trained capabilities (computer use, code exec). [AI SDK Skill Uploads](https://ai-sdk.dev/docs/ai-sdk-core/skill-uploads)
+18. **A-18: HarnessAgent** — Wrapper per agent esterni (Claude Code, Codex, Pi, OpenCode). [AI SDK Harnesses](https://ai-sdk.dev/docs/ai-sdk-harnesses/overview)
+
+**Chat Product Surface (B-1 to B-22):**
+19. **B-1: Rich interactive cards + actions** — `Card`, `Button`, `Actions`, `Select`, `Table`, `Chart`, `Image` nativi per piattaforma. [Chat SDK Cards](https://chat-sdk.dev/docs/cards)
+20. **B-2: Message-to-LLM converter** — `toAiMessages()` converte messaggi chat in `{role, content}[]` con attachment handling. [Chat SDK AI](https://chat-sdk.dev/docs/ai/to-ai-messages)
+21. **B-3: AI SDK tools per chat** — `createChatTools` espone operazioni chat (post, DM, react, edit, subscribe) come AI SDK tools con preset. [Chat SDK AI Tools](https://chat-sdk.dev/docs/ai/ai-sdk-tools)
+22. **B-4: Concurrency strategies** — drop/queue/debounce/burst/concurrent per messaggi sovrapposti su stesso thread. [Chat SDK Concurrency](https://chat-sdk.dev/docs/concurrency)
+23. **B-5: Per-thread typed state** — `thread.state`/`setState()` con TTL 30gg per contesto multi-turn agent. [Chat SDK Threads](https://chat-sdk.dev/docs/threads-messages-channels)
+24. **B-6: SentMessage chainable** — `sent.edit()`, `sent.delete()`, `sent.addReaction()`, `sent.removeReaction()` dopo post. [Chat SDK Threads](https://chat-sdk.dev/docs/threads-messages-channels)
+25. **B-7: Conversation history/transcripts** — `bot.transcripts.append()/list()/delete()` con retention configurabile. [Chat SDK History](https://chat-sdk.dev/docs/conversation-history)
+26. **B-8: AST markdown system** — mdast builder (`root`, `paragraph`, `text`, `strong`, `link`) con `parseMarkdown()`/`stringifyMarkdown()`. [Chat SDK Markdown](https://chat-sdk.dev/docs/api/markdown)
+27. **B-9: Scheduled messages** — `thread.schedule()`/`channel.schedule()` con `cancel()`. [Chat SDK Threads](https://chat-sdk.dev/docs/threads-messages-channels)
+28. **B-10: Ephemeral messages** — `thread.postEphemeral()` visibile solo a utente specifico con DM fallback. [Chat SDK Ephemeral](https://chat-sdk.dev/docs/ephemeral-messages)
+29. **B-11: Generative UI** — Tool-name-prefixed parts per React components rendering. [AI SDK Generative UI](https://ai-sdk.dev/docs/ai-sdk-ui/generative-user-interfaces)
+30. **B-12: Message serialization** — `message.toJSON()`/`Message.fromJSON()` per workflow/persistence. [Chat SDK Message](https://chat-sdk.dev/docs/api/message)
+31. **B-13: User lookup API** — `bot.getUser(userId)` con email, avatar, fullName. [Chat SDK Chat](https://chat-sdk.dev/docs/api/chat)
+32. **B-14: Regex message matching** — `bot.onNewMessage(/pattern/, handler)` per trigger keyword senza @-mention. [Chat SDK Events](https://chat-sdk.dev/docs/handling-events)
+33. **B-15: Slash commands** — `bot.onSlashCommand("/cmd", handler)` con registry tipizzato. [Chat SDK Slash Commands](https://chat-sdk.dev/docs/slash-commands)
+34. **B-16: Modals/forms system** — `Modal` con `TextInput`, `Select`, `ExternalSelect`, validazione, submit. [Chat SDK Modals](https://chat-sdk.dev/docs/modals)
+35. **B-17: Typed file attachments** — `Attachment[]` outgoing con type discrimination (image/video/audio/file), `fetchData()` incoming. [Chat SDK Files](https://chat-sdk.dev/docs/files)
+36. **B-18: Streaming enhancements** — `StreamChunk` types (`markdown_text`, `task_update`, `plan_update`), `Plan`, `StreamingPlan`, markdown healing, table buffering. [Chat SDK Streaming](https://chat-sdk.dev/docs/streaming)
+37. **B-19: Emoji system** — Type-safe cross-platform emoji con `emoji.*`, `createEmoji()`, `emoji.custom()`. [Chat SDK Emoji](https://chat-sdk.dev/docs/emoji)
+38. **B-20: Link preview** — `message.links` con `LinkPreview.fetchMessage()` per messaggi quotati/forwarded. [Chat SDK Message](https://chat-sdk.dev/docs/api/message)
+39. **B-21: Message subject** — Parent resource (GitHub issue, Linear issue) context. [Chat SDK Subject](https://chat-sdk.dev/docs/subject)
+40. **B-22: Gamification** — XP, badges, leaderboards per engagement utente.
+
+**Developer Experience (F-1 to F-10):**
+41. **F-1: Testing utilities** — Mock adapter, mock chat, mock state, Vitest custom matchers (`toHavePosted`, `toHaveEdited`, ecc.). [Chat SDK Testing](https://chat-sdk.dev/docs/testing)
+42. **F-2: Error hierarchy tipizzata** — `ChatError` con `code`, `RateLimitError` con `retryAfterMs`, `NotImplementedError` con `feature`, `LockError`. [Chat SDK Errors](https://chat-sdk.dev/docs/error-handling)
+43. **F-3: Telemetry/OpenTelemetry** — `registerTelemetry` per Arize, Axiom, Braintrust, Confident AI, Helicone, Laminar, Langfuse, LangSmith, LangWatch. [AI SDK Telemetry](https://ai-sdk.dev/docs/ai-sdk-core/telemetry)
+44. **F-4: DevTools local inspector** — Web UI locale per ispezione LLM calls, tool calls, token usage, multi-step. [AI SDK DevTools](https://ai-sdk.dev/docs/ai-sdk-core/devtools)
+45. **F-5: AI SDK skill per coding agents** — Skill per Claude Code/Codex con docs complete per contest agent.
+46. **F-6: Call options schema** — `callOptionsSchema` + `prepareCall` pattern per configurazione tipo-safe runtime. [AI SDK Call Options](https://ai-sdk.dev/docs/agents/configuring-call-options)
+47. **F-7: Dynamic tools runtime** — `dynamicTool()` con name/description/schema in runtime con type narrowing. [AI SDK Tools](https://ai-sdk.dev/docs/foundations/tools)
+48. **F-8: Deterministic test models** — Scripted output/chunks/tools/errors/usage per test suite.
+49. **F-9: Stream fixtures** — Malformed, split UTF-8, abort, provider error, reconnect fixture set.
+50. **F-10: API report/test** — Stabile exports map, no accidental internals, API report test.
+
+### Tranche E — Pianificato: Realtime Infrastructure + Voice/Video/Media (22 gap)
+
+**Realtime Infrastructure (C-1 to C-12):**
+1. **C-1: Durable AI Transport** — Ably-style resilient AI sessions con offset continuity, sopravvivono a disconnect/device switch. [Ably AI Transport](https://ably.com)
+2. **C-2: Collaborative editing (CRDT)** — Liveblocks-style JSON Patch/CRDT per documenti condivisi, awareness, snapshots. [Liveblocks](https://liveblocks.io)
+3. **C-3: Broadcast/campaign messaging** — Send scheduled broadcasts a utenti/segmenti con delivery tracking.
+4. **C-4: Adaptive transport health-based** — WebSocket/SSE/long-poll fallback automatico senza duplicazione eventi.
+5. **C-5: WebTransport adapter** — HTTP/3 bidirectional streams/datagrams con capability negotiation e fallback WS/SSE.
+6. **C-6: Regional failover** — Reconnect cross-region, cursor continuity, no split-brain. [Ably](https://ably.com)
+7. **C-7: Per-room sequencing server-authoritative** — Gap detection, cursor catch-up, ordering test multi-connection.
+8. **C-8: Delivery semantics granulari** — At-least-once, idempotency key, dedup persistente, receipt accepted/persisted/delivered/read.
+9. **C-9: Chat platform adapters aggiuntivi** — WhatsApp Business, Telegram, Line, Viber, iMessage, Messenger (completare stub esistenti).
+10. **C-10: Spatial copresence** — Digital-twin rooms con shared state opzionale.
+11. **C-11: MCP protocol negotiation** — Versione negoziata in ogni request, fallback Streamable HTTP → SSE su errore strutturato.
+12. **C-12: Decentralized relay** — P2P relay per ridurre latenza in reti edge.
+
+**Voice/Video/Media (D-1 to D-10):**
+13. **D-1: Voice AI pipeline end-to-end** — Streaming speech-to-speech (mic→ASR→LLM→TTS→speaker) con sub-300ms latenza. [LiveKit](https://livekit.io/cloud)
+14. **D-2: Time-to-first-audio SLO tracking** — Span metrics per ogni fase (mic, ASR, LLM, TTS, speaker) con p95 target.
+15. **D-3: Noise/echo handling** — AEC, noise suppression, gain control, device diagnostics. [Daily.co](https://daily.co)
+16. **D-4: Voice quality dashboard** — TTFA, ASR WER proxy, EOT delay, interruption precision, jitter/loss, device breakdown.
+17. **D-5: VAD layered + semantic EOT** — Energy gate + semantic turn model, dynamic endpointing, false-cut/latency metrics.
+18. **D-6: Prosody/emotion controls** — Normalized style/rate/pitch, provider fallback, safety boundaries.
+19. **D-7: Speaker diarization** — Speaker IDs stabili, overlap speech, correction UI, consent policy.
+20. **D-8: Call QA intelligence** — Topic/outcome/sentiment/compliance score con evidence spans e human review.
+21. **D-9: Huddles/audio-video rooms** — WebRTC room con screen share, captions, recording consent, chat timeline linkage.
+22. **D-10: Video generation progress** — Polling/progress, cancel, output assets (`experimental_generateVideo` parity). [AI SDK Video](https://ai-sdk.dev/docs/ai-sdk-core/video-generation)
+
+### Tranche F — Pianificato: Enterprise/Security + Integration/Ecosystem + Emerging Trends (38 gap)
+
+**Enterprise/Security (E-1 to E-14):**
+1. **E-1: E2EE groups (MLS)** — End-to-end encryption per gruppi con MLS protocol, multi-device key rotation, recovery.
+2. **E-2: AI governance** — Model/prompt/tool registry, risk tier, evaluations, approvals, evidence export.
+3. **E-3: eDiscovery/legal hold** — Immutable hold, scoped export, chain of custody, audit verificabile.
+4. **E-4: DLP PHI/PCI detection** — PHI e PCI su text/file/audio, policy versioning, block/redact/quarantine.
+5. **E-5: Customer-managed keys (CMK)** — Envelope encryption, rotation, revocation, tenant-isolated KMS audit.
+6. **E-6: Data residency/sovereignty** — Region pinning per tenant, subprocessors, backup, inference routing coerenti.
+7. **E-7: Policy-based approvals (OPA)** — Open Policy Agent rules (.rego) con WASM/HTTP, shadow mode, transitive enforcement. [AI SDK Policy](https://ai-sdk.dev/docs/agents/policy-tool-approvals)
+8. **E-8: MCP server identity/instructions** — `serverInfo`, instructions, server name con provenance nelle tool parts.
+9. **E-9: Bot protection/anti-abuse** — Device/user/tenant rate limits, raid mode, trust score, false-positive review.
+10. **E-10: Session replay privacy-safe** — Event timeline redatta, consent/retention, deterministic protocol replay.
+11. **E-11: Federation interoperability** — Matrix/ActivityPub/DM bridges con compliance EU DMA.
+12. **E-12: Feature flags management** — Tenant rollout, kill switch, holdout, metric guardrails.
+13. **E-13: Sandboxed tool execution** — Isolated session per run, filesystem/network policy, quotas, timeout, artifact export.
+14. **E-14: Generative UI sandbox** — Componenti/tool UI non fidati in iframe isolato, CSP, capability grants.
+
+**Integration/Ecosystem (G-1 to G-14):**
+15. **G-1: Bot/apps marketplace** — Signed manifests, scoped grants, review, quotas, revocation, provenance.
+16. **G-2: CRM/Helpdesk integration** — Salesforce, Zendesk, HubSpot, Intercom connectors.
+17. **G-3: Custom chatbot builder** — Visual drag-drop workflow builder per agent rules + LLM.
+18. **G-4: Knowledge base integration** — Connectors per Confluence, Notion, SharePoint, Google Drive con RAG pipeline.
+19. **G-5: Custom workflows/automations** — IF-THEN trigger-action engine per chat events.
+20. **G-6: Agent marketplace** — Pre-built agent skills/templates da community con versioning.
+21. **G-7: AI provider marketplace** — Multiple LLM providers configurabili con BYO key.
+22. **G-8: Webhook event catalog esteso** — Tutti gli eventi come webhook con retry/signing/batch delivery.
+23. **G-9: Cross-channel continuity** — Stessa sessione tra web/mobile/voice/bot, identity binding, cursor continuity.
+24. **G-10: Customer journey mapping** — Visualizzazione percorso utente cross-channel con analytics.
+25. **G-11: Expert/VIP routing** — Skill-based/priority routing con SLA e escalation.
+26. **G-12: A/B testing per bot** — Test A/B su risposte bot, model selection, behavior.
+27. **G-13: MCP Apps** — MCP servers che rendono UI via stream protocol in iframe sandbox. [AI SDK MCP Apps](https://ai-sdk.dev/docs/ai-sdk-core/mcp-apps)
+28. **G-14: MCP resource links** — Content type `resource_link`, URI policy, lazy fetch sicuro.
+
+**Emerging/Market Trends (H-1 to H-10):**
+29. **H-1: AI Transport (durable AI sessions)** — Token/event streams sopravvivono a disconnect/device switch con offset come contratto. [Ably](https://ably.com)
+30. **H-2: A2A protocol v1.0 adapter conforme** — Mapping envelope/task/artifact con extension preservation. Standard 150+ org (AWS, Google, Microsoft).
+31. **H-3: Voice-first chat interface** — UI ottimizzata per interazione vocale (push-to-talk, always-listening, visual feedback).
+32. **H-4: Composable UI kits** — Stream-style React/Vue/Svelte component library completa (channel list, thread view, message list, composer, reactions, emoji picker).
+33. **H-5: Spatial/digital-twin rooms** — Shared scene state with agent vision/action grants, web/immersive presence.
+34. **H-6: Real-time translation nativa** — Per-user language preference, live translate, original access, glossary, confidence.
+35. **H-7: Virtual waiting room** — Queue management per agent handoff con posizione stimata e SLA.
+36. **H-8: AI-powered conversation analytics** — Sentiment, intent, topic clustering, knowledge gaps, trend detection.
+37. **H-9: Decentralized/Web3 chat** — Wallet-based auth, token-gated rooms, on-chain message commitments.
+38. **H-10: AR/VR chat overlay** — Spatial audio, 3D presence, shared AR canvas, voice spatialization.
 
 ## 5. Regole architetturali
 
@@ -429,12 +589,15 @@ Per marcare una voce `complete` servono:
 
 ## 7. Research method e fonti
 
-Audit basato su codice FluxyChat, `vercel/ai` main e release AI SDK 7, reference AI SDK Core/UI/MCP, più confronto con categorie di mercato: chat-as-a-service, realtime infrastructure, WebRTC voice agents e collaboration suites. Le feature di mercato sono state incluse solo quando adiacenti a chat/realtime/agent; non sono stati inclusi CRM, ticketing o analytics generici non collegati alla conversazione.
+Audit basato su codice FluxyChat, Vercel AI SDK 7 docs (ai-sdk.dev tutte le sezioni: Foundations, Getting Started, Agents, Core, Harnesses, UI, RSC, Reference), Vercel Chat SDK docs (chat-sdk.dev tutte le sezioni: Usage, AI, Adapters, Messaging, Interactivity, API Reference), più confronto con mercato: Ably, PubNub, Stream, Sendbird, Liveblocks, Matrix, LiveKit, Daily.co, Twilio legacy. Le feature di mercato sono state incluse solo quando adiacenti a chat/realtime/agent; non sono stati inclusi CRM, ticketing o analytics generici non collegati alla conversazione.
+
+Gap analysis completa il 2026-07-16: 110 gap identificati in 8 categorie (AI/Agent, Chat Product, Realtime Infrastructure, Voice/Media, Enterprise/Security, Developer Experience, Integration/Ecosystem, Emerging Trends). Dettaglio in `docs/research/FLUXYCHAT-GAPS-2026.md`.
 
 Fonti primarie da ricontrollare all'inizio di ogni tranche perché API e standard evolvono rapidamente:
 
 - `github.com/vercel/ai`, release/changelog e source dei package `ai`, provider, UI, MCP e DevTools.
-- `ai-sdk.dev` reference per Agent, UI streams, tools, middleware, media, realtime e MCP.
+- `ai-sdk.dev` reference per Agent, UI streams, tools, middleware, media, realtime e MCP. Tutti i menu: Foundations, Getting Started (8 framework guide + Coding Agents), Agents (11 pagine), AI SDK Core (27 pagine), AI SDK Harnesses (7 pagine), AI SDK UI (13 pagine), AI SDK RSC, Advanced, Reference (6 sezioni), Migration Guides, Troubleshooting.
+- `chat-sdk.dev` reference per bot cross-platform. Tutti i menu: Usage (7 pagine), AI (4 pagine), Adapters (5 pagine), Messaging (7 pagine), Interactivity (5 pagine), API Reference (10 pagine), Contributing (3 pagine).
 - Specifiche IETF WebTransport, MLS e MIMI; specifiche Matrix/ActivityPub per bridge esistenti.
 - Documentazione tecnica di LiveKit/WebRTC per voice transport, turn handling e interruption.
 - Documentazione prodotto/architettura di Ably, PubNub, Pusher, Stream e Sendbird per reliability e chat parity.
@@ -484,3 +647,24 @@ Nota: la roadmap descrive equivalenza funzionale e opportunità prodotto, non au
 - Implementato il primo Agent Collaboration Fabric in-memory/Worker-safe: card e capability discovery, messaggi ordinati/resumable, task durevoli versionati, idempotenza, depth guard, terminal state, artifact e cancellation.
 - Aggiunti boundary adapter lossless verso AG-UI e A2A, mantenendo gli extension field e senza dipendenze dal Vercel AI SDK.
 - Validazione: protocol 20 test passati + build; SDK transport 3 test e Agent Fabric 4 test passati + build.
+
+### 2026-07-16 — Chiusura Tranche B (voice/MCP) e Tranche C (agent collaboration, realtime, voice, moderation)
+
+- **B-6 Voice interruption + media:** `VoiceInterruptionConfig` (barge-in/manual/semantic modes), `sendMedia`/`generateMedia` su VoiceManager, `interruptAll`, test interruption config; 8 test (`packages/sdk/src/voice.ts`).
+- **B-7 MCP client/registry/OAuth:** `createMcpClient` HTTP/SSE transport, OAuth PKCE flow con token store interface, `createMcpRegistry` multi-server, `mcpToolsToFluxyChat`/`fluxyChatResultToMcp`, `listResources`/`readResource`; 8 test (`packages/sdk/src/mcp-integration.ts`).
+- **C-3 Delta sync/presence/streams:** `createDeltaPoller`/`createMemoryDeltaStore` con prune compaction, `createPresenceLeaseManager` con TTL/renew/expire/shouldRenew, `createMemoryDurableStreamStore` con append/update/cleanup/monotonic offset; 12 test (`packages/sdk/src/delta-sync.ts`).
+- **C-4 Outbox/lanes/chaos:** `createOutboxProcessor` con retry/maxRetries/backoff, `createLaneProcessor` con priority ordering/transient-durable split e durable fallback su outbox, `createChaosHarness` con failureRate/latency/disconnectAfter/event recording; 9 test (`packages/sdk/src/outbox-lanes.ts`).
+- **C-5 Delegazione/shared state/routing/handoff:** `routeTask` con policy scoring (capability/trust/cost/region) e `maxResults`, `createMemorySharedStateStore` con versioning/lock/unlock/TTL, `createHandoffManager` con request/respond/complete/complete-all/pending queue; 15 test (`packages/sdk/src/agent-delegation.ts`).
+- **C-6 WebRTC voice/EOT/backchannel/barge-in:** `createSemanticEOTDetector` (turn endings/questions/prompt indicators), `createBackchannelDetector` (ack/interest/encourage/debounce), `createBargeInDetector` (consecutive sample threshold/debounce window), `createWebRTCVoiceTransport` (RTCPeerConnection/data channel/media stream lifecycle); 14 test (`packages/sdk/src/voice-realtime.ts`).
+- **C-7 AI summaries/search/translation/moderation:** `createMemorySummaryStore` con provenance keyPoints/actionItems, `createMemorySearchIndex` con token-score ranking/snippet, `createModerationEngine` con rules/block-flag-allow-review/DLP PII detection/report log, `createMemoryTranslationCache`; 10 test (`packages/sdk/src/ai-moderation.ts`).
+- **Verifica finale:** 163 test passati (26 file), typecheck OK su protocol + sdk, tutte le export via index.ts.
+
+### 2026-07-16 — Gap analysis totale AI SDK + Chat SDK + mercato 2026
+
+- **Audit completo Vercel AI SDK v7:** Tutte le 70+ pagine docs analizzate (Foundations, Getting Started, Agents, AI SDK Core, Harnesses, UI, RSC, Reference, Migration, Troubleshooting). Identificati 18 gap AI/Agent (4 critici: reasoning unificato, memory, tool approval HMAC, lifecycle callbacks).
+- **Audit completo Vercel Chat SDK:** Tutte le 40+ pagine docs analizzate (Usage, AI, Adapters, Messaging, Interactivity, API Reference). Identificati 22 gap chat product (2 critici: rich interactive cards + actions, message-to-LLM converter).
+- **Market research 12 competitor/vendor:** Ably, PubNub, Stream, Sendbird, Liveblocks, Matrix, LiveKit, Daily.co, Twilio legacy. Identificati 70+ gap market in 6 ulteriori categorie.
+- **Totale: 110 gap** in 8 categorie, documentati in `docs/research/FLUXYCHAT-GAPS-2026.md`.
+- **Roadmap aggiornata con tutti i 110 gap:** Tranche D (AI/Agent Core + Chat Product + DevEx - 50 item), Tranche E (Realtime Infra + Voice/Media - 22 item), Tranche F (Enterprise/Security + Integration/Ecosystem + Emerging Trends - 38 item).
+- **Sezione 3.7 aggiunta:** Gap analysis completa con tabella riepilogativa e top 15 gap critici.
+- **Nuova Tranche D/E/F** con tutti i 110 gap numerati e referenziati al documento `docs/research/FLUXYCHAT-GAPS-2026.md`.

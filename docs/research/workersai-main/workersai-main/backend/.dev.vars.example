@@ -1,0 +1,4 @@
+CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
+CLOUDFLARE_AI_GATEWAY_ID=your_cloudflare_ai_gateway_name
+CLOUDFLARE_AI_GATEWAY_TOKEN=your_cloudflare_ai_gateway_token
+CLOUDFLARE_WORKERS_AI_TOKEN=your_workers_ai_token

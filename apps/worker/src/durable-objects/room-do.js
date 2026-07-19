@@ -44,6 +44,7 @@ import {
   WATCHLIST_ROOM_EVENT_TYPES,
 } from "../lib/user-watchlist.js";
 import { runStorageMigrations } from "../lib/do-sql-migrations.js";
+import { YjsSyncHandler } from "../lib/yjs-sync.js";
 
 /**
  * Ordered list of migrations applied to the Room DO's `ctx.storage`.
@@ -145,6 +146,8 @@ export class RoomDurableObject {
     this.locationTracks = new Map();
     /** Last accepted update time per user/track, enforcing the 1 Hz ceiling. */
     this.locationUpdateTimes = new Map();
+    /** @type {YjsSyncHandler} */
+    this.yjsSync = new YjsSyncHandler();
 
     if (typeof this.state.blockConcurrencyWhile === "function" && this.state.storage) {
       this._storageHydrated = this.state.blockConcurrencyWhile(async () => {
@@ -846,6 +849,18 @@ export class RoomDurableObject {
   }
 
   async onMessage(webSocket, event) {
+    if (event.data instanceof ArrayBuffer) {
+      const roomId = this.roomId || this.state.id.toString();
+      await this.yjsSync.handleBinary(
+        new Uint8Array(event.data),
+        webSocket,
+        roomId,
+        this.state.storage,
+        (data, excludeWs) => this.broadcastBinary(data, excludeWs),
+      );
+      return;
+    }
+
     let msg;
     try {
       msg = JSON.parse(event.data);
@@ -1471,6 +1486,8 @@ export class RoomDurableObject {
 
   onClose(webSocket) {
     const userId = this.userIds.get(webSocket);
+    const roomId = this.roomId || this.state.id.toString();
+    this.yjsSync.removeClient(webSocket, roomId);
     this.clients.delete(webSocket);
     this.userIds.delete(webSocket);
     this.socketIds.delete(webSocket);
@@ -1509,6 +1526,15 @@ export class RoomDurableObject {
     if (this.clients.size === 0) {
       void this.notifyRoomOccupancyWebhook("room.vacated");
     }
+  }
+
+  broadcastBinary(data, excludeWebSocket) {
+    const dead = [];
+    for (const client of this.clients) {
+      if (excludeWebSocket && client === excludeWebSocket) continue;
+      try { client.send(data instanceof ArrayBuffer ? data : data.buffer); } catch { dead.push(client); }
+    }
+    for (const client of dead) this.clients.delete(client);
   }
 
   async broadcast(message, options = {}) {

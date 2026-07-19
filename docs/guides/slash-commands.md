@@ -1,0 +1,32 @@
+# Slash Commands
+
+`createSlashCommandRegistry()` provides command parsing, registration, and execution for chat messages starting with `/`.
+
+## Usage
+
+```ts
+import { createSlashCommandRegistry } from "@fluxy-chat/sdk";
+
+const registry = createSlashCommandRegistry();
+
+registry.register({
+  name: "ping",
+  description: "Check latency",
+  execute: async (args, ctx) => {
+    await ctx.reply("pong");
+    return { success: true };
+  },
+});
+```
+
+## Parsing
+
+```ts
+const result = registry.parse("/kick user123 --reason spam");
+// { command: "kick", args: { positional: ["user123"], named: { reason: "spam" }, flags: Set() } }
+```
+
+## Built-in Commands
+
+- `/help` — Show available commands
+- `/clear` — Clear the conversation

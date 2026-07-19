@@ -6,15 +6,19 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {
   BookOpen,
   BrainCircuit,
+  BarChart3,
   FileImage,
   Globe,
   Loader2,
   Paperclip,
+  Pin,
   Reply,
   Search,
   Send,
   Smile,
   Sparkles,
+  Flag,
+  Languages,
   X,
 } from "lucide-react";
 import { useChat, useFluxyChatOptional } from "@fluxy-chat/sdk";
@@ -22,6 +26,8 @@ import {
   buildDeepResearchPrompt,
   buildImageGenerationCaption,
   buildWebSearchPrompt,
+  createHuddle,
+  type Huddle,
 } from "@fluxy-chat/sdk";
 import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
@@ -51,6 +57,11 @@ import { Button, Input } from "@/app/components/ui";
 import { VoiceRecorder } from "~/components/voice/voice-recorder";
 import { ReplySuggestions } from "@/app/components/reply-suggestions";
 import { AgentHandoffBanner } from "@/app/components/agent-handoff-banner";
+import { LinkPreviewCard } from "~/components/ui/link-preview";
+import { PinnedMessagesBar } from "~/components/ui/pinned-messages";
+import { PollView, PollCreate } from "~/components/ui/poll";
+import { BreakoutPanel, useBreakouts } from "~/components/ui/breakout-panel";
+import { SlashCommandMenu } from "~/components/ui/slash-commands";
 import { cn } from "@/lib/utils";
 
 // shadcn UI primitives
@@ -285,6 +296,7 @@ export function FluxyChat({
   const showDeepResearch = variant === "full" || variant === "demo" || variant === "onboarding";
   const showWebSearch = variant === "full" || variant === "demo" || variant === "onboarding";
   const showImageGen = variant === "full" || variant === "demo" || variant === "onboarding";
+  const showPollCreate = variant === "full" || variant === "demo" || variant === "onboarding";
   const showRoomDraftSync = variant === "full";
   const showSuggestedPrompts = (variant === "demo" || variant === "onboarding") && suggestedPrompts && suggestedPrompts.length > 0;
   const searchParams = useSearchParams();
@@ -325,14 +337,31 @@ export function FluxyChat({
   const [imagePrompt, setImagePrompt] = useState("");
   // + menu open state
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const [pollCreateOpen, setPollCreateOpen] = useState(false);
+  const [pins, setPins] = useState<Array<Record<string, unknown>>>([]);
+  const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
   const plusMenuRef = useRef<HTMLDivElement>(null);
   // Reaction picker state
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState<number | null>(null);
   const [reactionPickerAnchor, setReactionPickerAnchor] = useState<DOMRect | null>(null);
+  // Search state
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: number; content: string; userId: string; createdAt: string; snippet: string;
+  }>>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
+  }, []);
 
   const pollSinceRef = useRef<string | null>(null);
   const runFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
   const { user: clerkUser } = useClerkUser();
   const realtime = useFluxyChatOptional();
   const fluxyClient = clientProp ?? realtime?.client ?? null;
@@ -342,6 +371,71 @@ export function FluxyChat({
     : undefined;
 
   const trimmedRoomId = roomId.trim();
+
+  // ─── Huddle state ───
+  const [huddleActive, setHuddleActive] = useState(false);
+  const [huddleAudioOn, setHuddleAudioOn] = useState(false);
+  const [huddleVideoOn, setHuddleVideoOn] = useState(false);
+  const [huddleScreenOn, setHuddleScreenOn] = useState(false);
+  const huddleRef = useRef<Huddle | null>(null);
+  const huddleVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  const toggleHuddle = useCallback(async () => {
+    if (!trimmedRoomId || !fluxyClient || !localUserId) return;
+    if (huddleActive) {
+      await huddleRef.current?.leave();
+      huddleRef.current = null;
+      setHuddleActive(false);
+      setHuddleAudioOn(false);
+      setHuddleVideoOn(false);
+      setHuddleScreenOn(false);
+      return;
+    }
+    const h = createHuddle({ roomId: trimmedRoomId, audioEnabled: true, videoEnabled: false, screenShareEnabled: false, captionsEnabled: false, recordingConsent: false, maxParticipants: 10 });
+    h.onEvent((ev) => {
+      if (ev.type === "screen_share_started") setHuddleScreenOn(true);
+      else if (ev.type === "screen_share_stopped") setHuddleScreenOn(false);
+      else if (ev.type === "connection_state_change") setHuddleActive(h.getStatus() === "connected");
+      else if (ev.type === "error") console.error("Huddle error:", ev.data);
+    });
+    huddleRef.current = h;
+    await h.join();
+    setHuddleAudioOn(true);
+  }, [trimmedRoomId, fluxyClient, localUserId, huddleActive]);
+
+  const toggleHuddleMic = useCallback(() => {
+    const h = huddleRef.current;
+    if (!h) return;
+    if (huddleAudioOn) h.mute();
+    else h.unmute();
+    setHuddleAudioOn(!huddleAudioOn);
+  }, [huddleAudioOn]);
+
+  const toggleHuddleCam = useCallback(() => {
+    const h = huddleRef.current;
+    if (!h) return;
+    if (huddleVideoOn) h.disableVideo();
+    else h.enableVideo();
+    setHuddleVideoOn(!huddleVideoOn);
+  }, [huddleVideoOn]);
+
+  const toggleScreenShare = useCallback(async () => {
+    const h = huddleRef.current;
+    if (!h) return;
+    if ((h as any).isScreenSharing()) await h.stopScreenShare();
+    else await h.startScreenShare();
+  }, []);
+
+  // Pipe local stream to video element
+  useEffect(() => {
+    const h = huddleRef.current;
+    const el = huddleVideoRef.current;
+    if (!h || !el) return;
+    const stream = h.getLocalStream();
+    if (stream) el.srcObject = stream;
+    else el.srcObject = null;
+  }, [huddleActive, huddleVideoOn]);
+  const { breakouts, fetchBreakouts } = useBreakouts(fluxyClient, trimmedRoomId);
   const mentionHandle = normalizeAgentHandle(agentHandle);
   const usesMentionInvoke = Boolean(mentionHandle);
 
@@ -405,6 +499,17 @@ export function FluxyChat({
     );
     if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [scrollToMessageId, historyLoaded, messages.length]);
+
+  // Fetch pinned messages when room changes
+  useEffect(() => {
+    if (!fluxyClient || !trimmedRoomId || !fluxyClient.isAuthenticated()) {
+      setPins([]);
+      return;
+    }
+    fluxyClient.listRoomPins(trimmedRoomId).then((res) => {
+      setPins(res.pins ?? []);
+    }).catch(() => setPins([]));
+  }, [fluxyClient, trimmedRoomId]);
 
   useRoomDraftSync({
     client: fluxyClient,
@@ -881,6 +986,22 @@ export function FluxyChat({
     return id.length > maxLen ? id.slice(0, maxLen) + "…" : id;
   }
 
+  const handleSearch = useCallback(async (q: string) => {
+    if (!q.trim() || !trimmedRoomId) { setSearchResults([]); return; }
+    setSearching(true);
+    try {
+      const token = adminJwt.trim();
+      const baseUrl = getPublicWorkerUrl();
+      const res = await fetch(`${baseUrl}/search/messages?q=${encodeURIComponent(q)}&roomId=${encodeURIComponent(trimmedRoomId)}&limit=20`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`search failed: ${res.status}`);
+      const json = await res.json();
+      setSearchResults(json.results ?? []);
+    } catch { setSearchResults([]); }
+    finally { setSearching(false); }
+  }, [trimmedRoomId, adminJwt]);
+
   // ─── Render ───
 
   return (
@@ -888,6 +1009,16 @@ export function FluxyChat({
       {/* Status bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-muted/60"
+            onClick={() => setSearchOpen(!searchOpen)}
+            title="Search messages"
+          >
+            <Search className="size-3" aria-hidden />
+            {searchOpen ? "Close" : "Search"}
+          </button>
+          <span className="mx-1.5 text-muted-foreground/40">|</span>
           Room <code className="font-mono">{trimmedRoomId || ""}</code>
           {usesMentionInvoke ? (
             <span className="ml-2 text-brand">· @{mentionHandle} mention invoke</span>
@@ -950,6 +1081,64 @@ export function FluxyChat({
         </span>
       </div>
 
+      {/* Search panel */}
+      {searchOpen ? (
+        <div className="rounded-lg border border-border bg-background p-3 shadow-lg">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              autoFocus
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+                searchTimeoutRef.current = setTimeout(() => void handleSearch(e.target.value), 300);
+              }}
+              placeholder="Search messages..."
+              className="w-full rounded-md border border-border bg-muted/30 py-1.5 pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                onClick={() => { setSearchQuery(""); setSearchResults([]); }}
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </div>
+          {searching ? (
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" /> Searching...
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+              {searchResults.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className="w-full rounded-md px-2.5 py-2 text-left text-xs hover:bg-muted/60"
+                  onClick={() => {
+                    const el = document.getElementById(`msg-${r.id}`);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    setSearchOpen(false);
+                  }}
+                >
+                  <span className="font-medium text-foreground">{r.userId}</span>{" "}
+                  <span className="text-muted-foreground">
+                    {new Date(r.createdAt).toLocaleString()}
+                  </span>
+                  <div className="mt-0.5 leading-relaxed text-muted-foreground" dangerouslySetInnerHTML={{ __html: r.snippet }} />
+                </button>
+              ))}
+            </div>
+          ) : searchQuery && !searching ? (
+            <div className="mt-2 text-xs text-muted-foreground">No results found.</div>
+          ) : null}
+        </div>
+      ) : null}
+
       {runFeedback ? (
         <div
           className="rounded-lg border border-brand/25 bg-brand/10 px-3 py-2 text-xs text-foreground"
@@ -990,6 +1179,45 @@ export function FluxyChat({
           onMarkRead={sendReadReceipt}
         />
       ) : null}
+
+      {/* Pinned messages */}
+      <PinnedMessagesBar
+        pins={pins as Array<{
+          id: string;
+          messageId: number;
+          pinnedBy: string;
+          category: string;
+          sortOrder: number;
+          createdAt: string;
+          message: { content: string; userId: string; createdAt: string };
+        }>}
+        onUnpin={async (messageId) => {
+          if (!fluxyClient || !trimmedRoomId) return;
+          await fluxyClient.unpinRoomMessage(trimmedRoomId, messageId);
+          setPins((prev) => prev.filter((p: any) => p.messageId !== messageId));
+        }}
+        onJumpToMessage={(messageId) => {
+          const el = listRef.current?.querySelector(`[data-message-id="${messageId}"]`);
+          if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+        }}
+        canManage={!!localUserId}
+      />
+
+      {/* Breakout rooms */}
+      <BreakoutPanel
+        breakouts={breakouts}
+        onCreate={async (name) => {
+          if (!fluxyClient || !trimmedRoomId) return;
+          await fluxyClient.createBreakout(trimmedRoomId, name);
+          await fetchBreakouts();
+        }}
+        onClose={async (breakoutId) => {
+          if (!fluxyClient || !trimmedRoomId) return;
+          await fluxyClient.closeBreakout(trimmedRoomId, breakoutId);
+          await fetchBreakouts();
+        }}
+        canManage={!!localUserId}
+      />
 
       {/* ─── Message scroller ─── */}
       <MessageScrollerProvider autoScroll scrollPreviousItemPeek={64}>
@@ -1045,6 +1273,55 @@ export function FluxyChat({
                           <Reply className="size-3" />
                           Reply
                         </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!fluxyClient || !trimmedRoomId || m.id == null) return;
+                            try {
+                              await fluxyClient.pinRoomMessage(trimmedRoomId, m.id);
+                              const res = await fluxyClient.listRoomPins(trimmedRoomId);
+                              setPins(res.pins ?? []);
+                            } catch {
+                              /* ignore */
+                            }
+                          }}
+                          className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                          title="Pin message"
+                        >
+                          <Pin className="size-3" />
+                          Pin
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (m.id == null || !fluxyClient) return;
+                            try {
+                              const res = await fluxyClient.translateMessage(m.id, "en");
+                              const t = res.translation;
+                              const translated = t?.translatedText;
+                              if (translated) setTranslatedMessages((p) => ({ ...p, [String(m.id)]: translated }));
+                            } catch { /* ignore */ }
+                          }}
+                          className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                          title="Translate to English"
+                        >
+                          <Languages className="size-3" />
+                          Translate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (m.id == null || !fluxyClient || !trimmedRoomId) return;
+                            try {
+                              await fluxyClient.reportMessage(trimmedRoomId, m.id);
+                            } catch { /* ignore */ }
+                          }}
+                          className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                          title="Report message"
+                        >
+                          <Flag className="size-3" />
+                          Report
+                        </button>
                       </div>
                     </div>
                   ) : null;
@@ -1064,6 +1341,7 @@ export function FluxyChat({
                         className={isStreaming ? "animate-in fade-in-0 duration-300" : undefined}
                       >
                         <div
+                          id={m.id != null ? `msg-${m.id}` : undefined}
                           data-testid={isStreaming ? "agent-message-streaming" : "agent-message"}
                           data-streaming={isStreaming ? "true" : undefined}
                           data-message-id={m.id != null ? String(m.id) : undefined}
@@ -1192,6 +1470,53 @@ export function FluxyChat({
                                         ) : null}
                                       </p>
                                     )}
+
+                                    {/* Translated text */}
+                                    {m.id != null && translatedMessages[String(m.id)] ? (
+                                      <p className={cn("mt-1 whitespace-pre-wrap break-words text-xs italic opacity-80", isSelf ? "text-white/70" : "text-muted-foreground")}>
+                                        {translatedMessages[String(m.id)]}
+                                      </p>
+                                    ) : null}
+
+                                    {/* Link preview */}
+                                    {m.preview?.url ? (
+                                      <LinkPreviewCard
+                                        url={m.preview.url}
+                                        title={m.preview.title}
+                                        description={m.preview.description}
+                                        image={m.preview.imageUrl}
+                                      />
+                                    ) : null}
+
+                                    {/* Poll */}
+                                    {m.poll ? (
+                                      <PollView
+                                        poll={{
+                                          id: String(m.id),
+                                          question: m.poll.question,
+                                          options: m.poll.options.map((o) => ({
+                                            id: String(o.index),
+                                            text: o.text,
+                                            votes: o.votes,
+                                          })),
+                                          totalVotes: m.poll.totalVoters,
+                                          userVote: null,
+                                          closed: m.poll.closed,
+                                          type: m.poll.allowMultiple ? "multi" : "single",
+                                        }}
+                                        onVote={async (optionId) => {
+                                          await fluxyClient?.votePoll(m.id as number, Number(optionId));
+                                        }}
+                                        onClose={
+                                          localUserId === m.userId
+                                            ? async () => {
+                                                await fluxyClient?.closePoll(m.id as number);
+                                              }
+                                            : undefined
+                                        }
+                                        canManage={localUserId === m.userId}
+                                      />
+                                    ) : null}
 
                                     {/* Delivery status */}
                                     {m.deliveryStatus === "pending" ? (
@@ -1590,7 +1915,21 @@ export function FluxyChat({
           </div>
         ) : null}
 
+        {showSlashMenu ? (
+          <SlashCommandMenu
+            inputRef={textareaRef}
+            onCommand={(cmd) => {
+              if (cmd === "/clear") { setDraft(""); setShowSlashMenu(false); return; }
+              if (cmd === "/help") { setDraft("/help — Show available commands"); setShowSlashMenu(false); return; }
+              if (cmd === "/summarize") { setDraft("/summarize"); setShowSlashMenu(false); return; }
+              setDraft(cmd + " "); setShowSlashMenu(false);
+            }}
+            onClose={() => setShowSlashMenu(false)}
+          />
+        ) : null}
+
         <ComposerTextarea
+          ref={textareaRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={
@@ -1602,6 +1941,7 @@ export function FluxyChat({
           }
           disabled={!trimmedRoomId || isAgentBusy || Boolean(templateSelection)}
           onKeyDown={(e) => {
+            if (e.key === "/" && (e.currentTarget.selectionStart ?? 0) === 0) { setShowSlashMenu(true); return; }
             if (e.key !== "Enter" || e.shiftKey) return;
             e.preventDefault();
             if (!canSend) return;
@@ -1700,6 +2040,23 @@ export function FluxyChat({
                     </div>
                   </button>
                   ) : null}
+                  {showPollCreate ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+                    role="menuitem"
+                    onClick={() => {
+                      setPlusMenuOpen(false);
+                      setPollCreateOpen((p) => !p);
+                    }}
+                  >
+                    <BarChart3 className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
+                    <div className="flex flex-col">
+                      <span>Create poll</span>
+                      <span className="text-[10px] text-muted-foreground">Vote in chat</span>
+                    </div>
+                  </button>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -1747,6 +2104,66 @@ export function FluxyChat({
           </ComposerToolbarRight>
         </ComposerToolbar>
       </Composer>
+
+      {/* ─── Huddle toolbar ─── */}
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
+        <button
+          type="button"
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+            huddleActive ? "bg-red-600 text-white hover:bg-red-700" : "bg-brand/10 text-brand hover:bg-brand/20"
+          }`}
+          onClick={() => void toggleHuddle()}
+          title={huddleActive ? "Leave huddle" : "Join huddle"}
+        >
+          {huddleActive ? "Leave" : "Huddle"}
+        </button>
+        {huddleActive && (
+          <>
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ${
+                huddleAudioOn ? "bg-green-600/20 text-green-700" : "bg-muted text-muted-foreground"
+              }`}
+              onClick={toggleHuddleMic}
+              title={huddleAudioOn ? "Mute" : "Unmute"}
+            >
+              Mic {huddleAudioOn ? "On" : "Off"}
+            </button>
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ${
+                huddleVideoOn ? "bg-green-600/20 text-green-700" : "bg-muted text-muted-foreground"
+              }`}
+              onClick={toggleHuddleCam}
+              title={huddleVideoOn ? "Disable camera" : "Enable camera"}
+            >
+              Cam {huddleVideoOn ? "On" : "Off"}
+            </button>
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ${
+                huddleScreenOn ? "bg-green-600/20 text-green-700" : "bg-muted text-muted-foreground"
+              }`}
+              onClick={() => void toggleScreenShare()}
+              title={huddleScreenOn ? "Stop sharing" : "Share screen"}
+            >
+              Screen {huddleScreenOn ? "On" : "Off"}
+            </button>
+            <video ref={huddleVideoRef} autoPlay muted playsInline className="ml-auto size-8 rounded-full bg-black object-cover" />
+          </>
+        )}
+      </div>
+
+      {/* Poll creator */}
+      {pollCreateOpen ? (
+        <PollCreate
+          onCreate={async (question, options) => {
+            if (!fluxyClient || !trimmedRoomId) return;
+            await fluxyClient.createPoll(trimmedRoomId, { question, options });
+            setPollCreateOpen(false);
+          }}
+        />
+      ) : null}
 
       {/* ─── Errors ─── */}
       {inputError || uploadError ? (

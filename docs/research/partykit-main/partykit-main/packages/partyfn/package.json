@@ -1,0 +1,34 @@
+{
+  "name": "partyfn",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/cloudflare/partykit.git"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "nanoid": "^5.1.9",
+    "partysocket": "^1.1.18"
+  },
+  "scripts": {
+    "build": "tsx scripts/build.ts"
+  },
+  "keywords": [
+    "durable-objects",
+    "rpc"
+  ],
+  "author": "Sunil Pai <spai@cloudflare.com>",
+  "license": "ISC",
+  "description": "RPC on Durable Objects"
+}

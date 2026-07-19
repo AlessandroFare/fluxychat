@@ -36,7 +36,28 @@ export type {
   FormattedMessage,
   FormatConverter,
   ThreadAdapter,
+  AdapterEphemeralResult,
+  EphemeralMessage,
+  PostEphemeralOptions,
 } from "./adapter-types";
+
+export {
+  Card,
+  Text,
+  Button,
+  LinkButton,
+  Image,
+  Divider,
+  Actions,
+  Section,
+  Field,
+  Fields,
+  Link,
+  Table,
+  isCardElement,
+  cardToFallbackText,
+  cardToMarkdown,
+} from "./cards";
 
 export type {
   ButtonStyle,
@@ -59,11 +80,23 @@ export type {
   AnyCardElement,
 } from "./cards";
 
-export type {
-  ToolPreset,
-  ToolName,
-  ToolDefinition,
-  PresetConfig,
+export {
+  getPresetTools,
+  needsApproval,
+  getToolDefinition,
+  listPresets,
+  buildToolList,
+  createChatTools,
+  type ToolPreset,
+  type ToolName,
+  type ToolDefinition,
+  type PresetConfig,
+  type ChatWriteToolName,
+  type ApprovalConfig,
+  type ChatBinding,
+  type ToolOverrides,
+  type ChatToolsOptions,
+  type ChatTool,
 } from "./ai-tools";
 
 export type {
@@ -105,8 +138,10 @@ export {
 export {
   createThreadState,
   createThreadStateStore,
+  THREAD_STATE_TTL_MS,
   type ThreadState,
   type ThreadStateStore,
+  type TypedThreadState,
 } from "./thread-state";
 
 export {
@@ -176,7 +211,85 @@ export {
   type McpToolResult,
   type McpClient,
   type McpRegistry,
+  type McpResource,
+  type McpResourceTemplate,
 } from "./mcp-integration";
+
+export {
+  createDeltaPoller,
+  createMemoryDeltaStore,
+  createPresenceLeaseManager,
+  createMemoryDurableStreamStore,
+  type DeltaChange,
+  type DeltaCursor,
+  type DeltaSnapshot,
+  type DeltaStore,
+  type DeltaSyncOptions,
+  type DeltaSyncStage,
+  type PresenceLease,
+  type PresenceLeaseOptions,
+  type DurableAgentStream,
+  type DurableStreamStore,
+} from "./delta-sync";
+
+export {
+  createMemoryOutboxStore,
+  createOutboxProcessor,
+  createLaneProcessor,
+  createChaosHarness,
+  type OutboxEntry,
+  type OutboxStore,
+  type OutboxOptions,
+  type LaneType,
+  type LaneMessage,
+  type LaneProcessor,
+  type ChaosConfig,
+  type ChaosEvent,
+} from "./outbox-lanes";
+
+export {
+  routeTask,
+  createMemorySharedStateStore,
+  createHandoffManager,
+  type RoutingPolicy,
+  type RoutedAgent,
+  type SharedAgentState,
+  type SharedStateStore,
+  type HandoffRequest,
+  type HandoffOptions,
+} from "./agent-delegation";
+
+export {
+  createSemanticEOTDetector,
+  createBackchannelDetector,
+  createBargeInDetector,
+  createWebRTCVoiceTransport,
+  type EOTDecision,
+  type EOTDetector,
+  type BackchannelConfig,
+  type BackchannelEvent,
+  type BargeInConfig,
+  type BargeInEvent,
+  type WebRTCVoiceConfig,
+} from "./voice-realtime";
+
+export {
+  createMemorySummaryStore,
+  createMemorySearchIndex,
+  createModerationEngine,
+  createMemoryTranslationCache,
+  type ConversationSummary,
+  type SummaryStore,
+  type SearchResult,
+  type SearchIndex,
+  type ModerationAction,
+  type ModerationResult,
+  type ModerationRule,
+  type ModerationConfig,
+  type ModerationReport,
+  type TranslationResult,
+  type TranslationCache,
+} from "./ai-moderation";
 
 export {
   createDevTools,
@@ -235,6 +348,8 @@ export {
   type VoiceManager,
   type VoiceTransport,
   type VoiceManagerOptions,
+  type VoiceInterruptionMode,
+  type VoiceInterruptionConfig,
 } from "./voice";
 
 export {
@@ -371,6 +486,112 @@ export {
   type AttachmentUploadResult,
   type AttachmentManager,
 } from "./attachments";
+
+export {
+  toAiMessages,
+  type AiTextPart,
+  type AiImagePart,
+  type AiFilePart,
+  type AiMessagePart,
+  type AiUserMessage,
+  type AiAssistantMessage,
+  type AiMessage,
+  type ToAiMessagesOptions,
+} from "./messages-to-ai";
+
+export {
+  postEphemeral,
+} from "./ephemeral";
+
+export {
+  createSentMessage,
+  type SentMessage,
+} from "./sent-message";
+
+export {
+  createTextPart,
+  createToolCallPart,
+  createToolResultPart,
+  createComponentRegistry,
+  renderParts,
+  partTypeFor,
+  parseToolName,
+  isTextPart,
+  isToolPart,
+  isToolCallPart,
+  isToolResultPart,
+  type UIPart,
+  type UIPartState,
+  type TextUIPart,
+  type ToolCallUIPart,
+  type ToolResultUIPart,
+  type ComponentRenderer,
+  type ComponentRegistryEntry,
+  type ComponentRegistry,
+  type RenderPartsOptions,
+} from "./generative-ui";
+
+export {
+  createMessagePatternMatcher,
+  type MessagePatternRule,
+  type MessagePatternHandler,
+  type MessagePatternMatcher,
+} from "./regex-message-matching";
+
+export {
+  text,
+  strong,
+  emphasis,
+  strikethrough,
+  inlineCode,
+  codeBlock,
+  link,
+  blockquote,
+  paragraph,
+  root,
+  parseMarkdown,
+  stringifyMarkdown,
+  toPlainText,
+  markdownToPlainText,
+  walkAst,
+  getNodeChildren,
+  getNodeValue,
+  tableToAscii,
+  isTextNode,
+  isParagraphNode,
+  isStrongNode,
+  isEmphasisNode,
+  isDeleteNode,
+  isInlineCodeNode,
+  isCodeNode,
+  isLinkNode,
+  isBlockquoteNode,
+  isListNode,
+  isListItemNode,
+  isTableNode,
+  isTableRowNode,
+  isTableCellNode,
+  isHeadingNode,
+  type StringifyOptions,
+  type Nodes,
+  type Blockquote,
+  type Code,
+  type Content,
+  type Delete,
+  type Emphasis,
+  type Heading,
+  type InlineCode,
+  type Link,
+  type List,
+  type ListItem,
+  type Paragraph,
+  type Root,
+  type Strong,
+  type Table,
+  type TableCell,
+  type TableRow,
+  type Text,
+} from "./markdown";
 
 export {
   FLUXY_INBOUND_EVENT_TYPES,
@@ -562,6 +783,14 @@ export interface FluxyChatMessage {
    * from local interactions. Optional â€” absent means "no reactions".
    */
   reactions?: Record<string, number>;
+  poll?: {
+    messageId: number;
+    question: string;
+    allowMultiple: boolean;
+    options: Array<{ index: number; text: string; votes: number }>;
+    totalVoters: number;
+    closed: boolean;
+  };
   /** Message kind. `text` is the default and is implicit; `voice` is set
    *  by `POST /messages/voice` and carries audio metadata + a possibly
    *  pending transcription. */
@@ -2759,6 +2988,138 @@ export class FluxyChatClient {
     return body.poll ?? body;
   }
 
+  async closePoll(
+    messageId: number,
+  ): Promise<{ ok: boolean; poll: Record<string, unknown> }> {
+    if (!this.token) throw new Error("closePoll requires JWT token");
+    const url = new URL(
+      `/messages/${encodeURIComponent(String(messageId))}/poll`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), {
+      method: "PATCH",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ closed: true }),
+    });
+    if (!res.ok) throw new Error(`Failed to close poll: ${res.status}`);
+    return res.json();
+  }
+
+  async listRoomPins(
+    roomId: string,
+    opts?: { category?: string; limit?: number },
+  ): Promise<{ ok: boolean; pins: Array<Record<string, unknown>>; count: number }> {
+    if (!this.token) throw new Error("listRoomPins requires JWT token");
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/pins`,
+      this.baseUrl,
+    );
+    if (opts?.category) url.searchParams.set("category", opts.category);
+    if (opts?.limit) url.searchParams.set("limit", String(opts.limit));
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to list pins: ${res.status}`);
+    return res.json();
+  }
+
+  async pinRoomMessage(
+    roomId: string,
+    messageId: number,
+    category?: string,
+  ): Promise<{ ok: boolean; pin: Record<string, unknown> }> {
+    if (!this.token) throw new Error("pinRoomMessage requires JWT token");
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/pins`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId, category }),
+    });
+    if (!res.ok) throw new Error(`Failed to pin message: ${res.status}`);
+    return res.json();
+  }
+
+  async unpinRoomMessage(
+    roomId: string,
+    messageId: number,
+  ): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("unpinRoomMessage requires JWT token");
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/pins/${messageId}`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), {
+      method: "DELETE",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to unpin message: ${res.status}`);
+    return res.json();
+  }
+
+  async listBreakouts(
+    roomId: string,
+  ): Promise<{ ok: boolean; breakouts: Array<Record<string, unknown>> }> {
+    if (!this.token) throw new Error("listBreakouts requires JWT token");
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/breakouts`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to list breakouts: ${res.status}`);
+    return res.json();
+  }
+
+  async createBreakout(
+    roomId: string,
+    name: string,
+  ): Promise<{ ok: boolean; breakout: Record<string, unknown> }> {
+    if (!this.token) throw new Error("createBreakout requires JWT token");
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/breakouts`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new Error(`Failed to create breakout: ${res.status}`);
+    return res.json();
+  }
+
+  async closeBreakout(
+    roomId: string,
+    breakoutId: string,
+  ): Promise<{ ok: boolean; closedAt?: string }> {
+    if (!this.token) throw new Error("closeBreakout requires JWT token");
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/breakouts/${encodeURIComponent(breakoutId)}`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to close breakout: ${res.status}`);
+    return res.json();
+  }
+
+  async reportMessage(
+    roomId: string,
+    messageId: number,
+    reason?: string,
+  ): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("reportMessage requires JWT token");
+    const res = await fetch(new URL("/reports", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId, messageId, reason }),
+    });
+    if (!res.ok) throw new Error(`Failed to report message: ${res.status}`);
+    return res.json();
+  }
+
   async listBlocks(): Promise<{ userId: string; blockedAt: string }[]> {
     if (!this.token) throw new Error("listBlocks requires JWT token");
     const res = await fetch(new URL("/blocks", this.baseUrl).toString(), {
@@ -3144,6 +3505,73 @@ export class FluxyChatClient {
     if (!res.ok) throw new Error(`Failed to cancel scheduled message: ${res.status}`);
   }
 
+  // --- Live Streaming ---
+
+  async listStreams(status?: string): Promise<Record<string, unknown>[]> {
+    const url = new URL("/api/live/events", this.baseUrl);
+    if (status) url.searchParams.set("status", status);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`listStreams failed: ${res.status}`);
+    return res.json();
+  }
+
+  async getStream(eventId: string): Promise<Record<string, unknown> | null> {
+    const res = await fetch(new URL(`/api/live/events/${encodeURIComponent(eventId)}`, this.baseUrl).toString(), {
+      headers: this.authHeaders(),
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`getStream failed: ${res.status}`);
+    return res.json();
+  }
+
+  async createStream(body: { title: string; description?: string; category?: string; roomId?: string }): Promise<{ id: string }> {
+    if (!this.token) throw new Error("createStream requires JWT token");
+    const res = await fetch(new URL("/api/live/events", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`createStream failed: ${res.status}`);
+    return res.json();
+  }
+
+  async updateStream(eventId: string, body: Record<string, unknown>): Promise<void> {
+    if (!this.token) throw new Error("updateStream requires JWT token");
+    const res = await fetch(new URL(`/api/live/events/${encodeURIComponent(eventId)}`, this.baseUrl).toString(), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`updateStream failed: ${res.status}`);
+  }
+
+  async getViewerCount(eventId: string): Promise<number> {
+    const res = await fetch(new URL(`/api/live/events/${encodeURIComponent(eventId)}/viewer-count`, this.baseUrl).toString(), {
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) return 0;
+    const data = await res.json();
+    return data.count ?? data.viewerCount ?? 0;
+  }
+
+  async joinStream(eventId: string): Promise<void> {
+    if (!this.token) return;
+    await fetch(new URL(`/api/live/events/${encodeURIComponent(eventId)}/join`, this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({}),
+    });
+  }
+
+  async leaveStream(eventId: string): Promise<void> {
+    if (!this.token) return;
+    await fetch(new URL(`/api/live/events/${encodeURIComponent(eventId)}/leave`, this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({}),
+    });
+  }
+
   async putRoomDraft(
     roomId: string,
     payload: { content: string; replyToId?: number | null },
@@ -3392,6 +3820,193 @@ export class FluxyChatClient {
     });
     if (!res.ok) throw new Error(`Failed to delete webhook: ${res.status}`);
   }
+
+  // ── FluxyTrack: Fleet & GPS Tracking ──
+
+  async ingestGps(data: {
+    vehicleId: string;
+    lat: number;
+    lng: number;
+    speed?: number;
+    heading?: number;
+    accuracy?: number;
+  }): Promise<{ ok: boolean; ts: number; geofenceEvents: Array<{ id: string; geofenceId: string; vehicleId: string; eventType: string }> }> {
+    if (!this.token) throw new Error("ingestGps requires JWT token");
+    const res = await fetch(new URL("/fleet/gps", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to ingest GPS: ${res.status}`);
+    return res.json();
+  }
+
+  async getFleetPositions(): Promise<{ ok: boolean; vehicles: Array<{ id: string; name: string; plate: string | null; status: string; lat: number | null; lng: number | null; heading: number | null; speed: number | null; lastSeenAt: string | null }> }> {
+    if (!this.token) throw new Error("getFleetPositions requires JWT token");
+    const res = await fetch(new URL("/fleet/gps/current", this.baseUrl).toString(), {
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to get fleet positions: ${res.status}`);
+    return res.json();
+  }
+
+  async getGpsHistory(vehicleId: string, from?: number, to?: number): Promise<{ ok: boolean; points: Array<{ ts: number; lat: number; lng: number; speed: number | null; heading: number | null }> }> {
+    if (!this.token) throw new Error("getGpsHistory requires JWT token");
+    const url = new URL("/fleet/gps/history", this.baseUrl);
+    url.searchParams.set("vehicleId", vehicleId);
+    if (from) url.searchParams.set("from", String(from));
+    if (to) url.searchParams.set("to", String(to));
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to get GPS history: ${res.status}`);
+    return res.json();
+  }
+
+  async listFleetVehicles(): Promise<{ ok: boolean; vehicles: Array<{ id: string; name: string; plate: string | null; driverId: string | null; status: string; lat: number | null; lng: number | null; speed: number | null; lastSeenAt: string | null; createdAt: string }> }> {
+    if (!this.token) throw new Error("listFleetVehicles requires JWT token");
+    const res = await fetch(new URL("/fleet/vehicles", this.baseUrl).toString(), {
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to list fleet vehicles: ${res.status}`);
+    return res.json();
+  }
+
+  async createFleetVehicle(data: { name: string; plate?: string; driverId?: string }): Promise<{ ok: boolean; vehicle: { id: string; name: string; plate: string | null; driverId: string | null; status: string } }> {
+    if (!this.token) throw new Error("createFleetVehicle requires JWT token");
+    const res = await fetch(new URL("/fleet/vehicles", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to create fleet vehicle: ${res.status}`);
+    return res.json();
+  }
+
+  async updateFleetVehicle(vehicleId: string, data: { name?: string; plate?: string; driverId?: string; status?: string }): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("updateFleetVehicle requires JWT token");
+    const res = await fetch(new URL(`/fleet/vehicles/${encodeURIComponent(vehicleId)}`, this.baseUrl).toString(), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to update fleet vehicle: ${res.status}`);
+    return res.json();
+  }
+
+  async listFleetTrips(status?: string): Promise<{ ok: boolean; trips: Array<{ id: string; vehicleId: string; status: string; startedAt: string | null; completedAt: string | null; driverId: string | null; pickup: { lat: number; lng: number; address: string | null }; dropoff: { lat: number; lng: number; address: string | null }; distanceMeters: number | null; createdAt: string }> }> {
+    if (!this.token) throw new Error("listFleetTrips requires JWT token");
+    const url = new URL("/fleet/trips", this.baseUrl);
+    if (status) url.searchParams.set("status", status);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to list fleet trips: ${res.status}`);
+    return res.json();
+  }
+
+  async createFleetTrip(data: { vehicleId: string; pickupLat: number; pickupLng: number; pickupAddress?: string; dropoffLat: number; dropoffLng: number; dropoffAddress?: string }): Promise<{ ok: boolean; trip: { id: string; vehicleId: string; status: string; distanceMeters: number } }> {
+    if (!this.token) throw new Error("createFleetTrip requires JWT token");
+    const res = await fetch(new URL("/fleet/trips", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to create fleet trip: ${res.status}`);
+    return res.json();
+  }
+
+  async updateFleetTripStatus(tripId: string, status: "active" | "completed" | "cancelled"): Promise<{ ok: boolean; status: string }> {
+    if (!this.token) throw new Error("updateFleetTripStatus requires JWT token");
+    const res = await fetch(new URL(`/fleet/trips/${encodeURIComponent(tripId)}`, this.baseUrl).toString(), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) throw new Error(`Failed to update fleet trip: ${res.status}`);
+    return res.json();
+  }
+
+  async listFleetGeofences(): Promise<{ ok: boolean; geofences: Array<{ id: string; name: string; lat: number; lng: number; radiusMeters: number; createdAt: string }> }> {
+    if (!this.token) throw new Error("listFleetGeofences requires JWT token");
+    const res = await fetch(new URL("/fleet/geofences", this.baseUrl).toString(), {
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to list fleet geofences: ${res.status}`);
+    return res.json();
+  }
+
+  async createFleetGeofence(data: { name: string; lat: number; lng: number; radiusMeters?: number }): Promise<{ ok: boolean; geofence: { id: string; name: string; lat: number; lng: number; radiusMeters: number } }> {
+    if (!this.token) throw new Error("createFleetGeofence requires JWT token");
+    const res = await fetch(new URL("/fleet/geofences", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to create fleet geofence: ${res.status}`);
+    return res.json();
+  }
+
+  // ── FluxyTrack: Delivery Dispatch ──
+
+  async findNearestDrivers(lat: number, lng: number, limit?: number): Promise<{ ok: boolean; drivers: Array<{ id: string; name: string; plate: string | null; lat: number; lng: number; speed: number | null; lastSeenAt: string | null; distanceMeters: number }> }> {
+    if (!this.token) throw new Error("findNearestDrivers requires JWT token");
+    const res = await fetch(new URL("/fleet/delivery/nearest", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ lat, lng, limit }),
+    });
+    if (!res.ok) throw new Error(`Failed to find nearest drivers: ${res.status}`);
+    return res.json();
+  }
+
+  async matchDelivery(data: {
+    pickupLat: number; pickupLng: number; dropoffLat: number; dropoffLng: number;
+    pickupAddress?: string; dropoffAddress?: string;
+  }): Promise<{ ok: boolean; trip: { id: string; vehicleId: string; status: string; distanceMeters: number }; driver: { id: string; name: string; plate: string | null; etaMinutes: number; distanceMeters: number } }> {
+    if (!this.token) throw new Error("matchDelivery requires JWT token");
+    const res = await fetch(new URL("/fleet/delivery/match", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to match delivery: ${res.status}`);
+    return res.json();
+  }
+
+  async routeCopilot(data: { pickupLat: number; pickupLng: number; dropoffLat: number; dropoffLng: number }): Promise<{
+    ok: boolean; copilot: { distanceMeters: number; baseDurationMin: number; trafficFactor: number; weather: string; weatherFactor: number; estimatedDurationMin: number; alternatives: Array<{ label: string; durationMin: number; traffic: string; note: string | null }>; advice: string; timestamp: string }
+  }> {
+    if (!this.token) throw new Error("routeCopilot requires JWT token");
+    const res = await fetch(new URL("/fleet/route/copilot", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to get route copilot: ${res.status}`);
+    return res.json();
+  }
+
+  async predictDeliveryWindow(data: { pickupLat: number; pickupLng: number; dropoffLat: number; dropoffLng: number }): Promise<{
+    ok: boolean; window: { distanceKm: number; estimatedMinutes: number; windowLowMinutes: number; windowHighMinutes: number; windowLow: string; windowHigh: string; confidencePercent: number; sampleSize: number; factors: { peakHour: boolean; averageSpeedKmph: number } }
+  }> {
+    if (!this.token) throw new Error("predictDeliveryWindow requires JWT token");
+    const res = await fetch(new URL("/fleet/delivery/predict", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to predict delivery window: ${res.status}`);
+    return res.json();
+  }
+
+  async getDynamicPricing(): Promise<{
+    ok: boolean; pricing: { basePrice: number; surgeMultiplier: number; surgePrice: number; surgeLabel: string; activeTrips: number; availableDrivers: number; demandRatio: number; currency: string }
+  }> {
+    if (!this.token) throw new Error("getDynamicPricing requires JWT token");
+    const res = await fetch(new URL("/fleet/pricing", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+    });
+    if (!res.ok) throw new Error(`Failed to get dynamic pricing: ${res.status}`);
+    return res.json();
+  }
 }
 
 /**
@@ -3434,22 +4049,26 @@ export async function enableWebPushInBrowser(
 }
 
 // P22-D3: Concurrency Strategy
-export type {
-  ConcurrencyStrategy,
-  ConcurrencyConfig,
-  QueueEntry,
-  ConcurrencyStrategyInstance,
+export {
+  createConcurrencyStrategy,
+  type ConcurrencyStrategy,
+  type ConcurrencyConfig,
+  type QueueEntry,
+  type ConcurrencyStrategyInstance,
 } from "./concurrency";
 
 // P22-F1: Transcripts API
-export type {
-  TranscriptRole,
-  TranscriptEntry,
-  AppendInput,
-  AppendOptions,
-  ListQuery,
-  DeleteTarget,
-  TranscriptsApi,
+export {
+  createTranscriptsApi,
+  type TranscriptRole,
+  type TranscriptEntry,
+  type AppendInput,
+  type AppendOptions,
+  type ListQuery,
+  type DeleteTarget,
+  type TranscriptsApi,
+  type TranscriptsConfig,
+  type TranscriptStore,
 } from "./transcripts";
 
 // P22-F3: Callback URL
@@ -3496,6 +4115,745 @@ export type {
   StreamingPlanWrapper,
 } from "./streaming-plan";
 
+// B-12: Message serialization
+export {
+  serializeMessage,
+  deserializeMessage,
+  messageToJSON,
+  messageFromJSON,
+  type SerializedMessage,
+} from "./message-serialization";
+
+// B-13: User lookup API
+export {
+  createUserLookup,
+  registerUser,
+  type UserProfile,
+  type UserLookupApi,
+} from "./user-lookup";
+
+// B-18: Streaming enhancements
+export {
+  createStreamChunk,
+  isTextChunk,
+  isToolCallChunk,
+  isToolResultChunk,
+  parseStreamChunks,
+  serializeStreamChunks,
+  healMarkdown,
+  bufferTableCells,
+  type StreamChunk,
+  type StreamChunkType,
+} from "./streaming-enhancements";
+
+// B-20: Link preview
+export {
+  createLinkPreview,
+  linkPreviewFromData,
+  type LinkPreviewData,
+  type LinkPreviewApi,
+} from "./link-preview";
+
+// B-21: Message subject
+export {
+  createSubject,
+  subjectToString,
+  subjectToUrl,
+  type MessageSubject,
+  type SubjectResourceType,
+} from "./message-subject";
+
+// B-22: Gamification
+export {
+  createGamification,
+  type XpEvent,
+  type Badge,
+  type LeaderboardEntry,
+  type GamificationApi,
+} from "./gamification";
+
+// C-1: Durable AI Transport
+export {
+  createDurableTransport,
+  type DurableSession,
+  type DurableTransportApi,
+  type DurableTransportConfig,
+  type StreamChunkEntry,
+  type SessionState,
+} from "./durable-transport";
+
+// C-2: Collaborative editing (CRDT)
+export {
+  createCrdt,
+  type CrdtDocument,
+  type CrdtOperation,
+  type CrdtAwareness,
+  type CrdtSnapshot,
+  type CrdtApi,
+} from "./crdt";
+
+// C-3: Broadcast/campaign messaging
+export {
+  createBroadcastApi,
+  type BroadcastSegment,
+  type BroadcastMessage,
+  type BroadcastApi,
+} from "./broadcast";
+
+// C-4: Adaptive transport
+export {
+  createAdaptiveTransport,
+  type TransportType,
+  type TransportHealth,
+  type AdaptiveTransportApi,
+} from "./adaptive-transport";
+
+// C-5: WebTransport adapter
+export {
+  createWebTransportAdapter,
+  type WebTransportCapability,
+  type WebTransportNegotiation,
+  type WebTransportAdapterApi,
+} from "./web-transport";
+
+// C-6: Regional failover
+export {
+  createRegionalFailover,
+  type RegionConfig,
+  type FailoverState,
+  type RegionalFailoverApi,
+} from "./regional-failover";
+
+// C-7: Per-room sequencing
+export {
+  createRoomSequencer,
+  type SequencedEvent,
+  type RoomSequencerApi,
+} from "./room-sequencer";
+
+// C-8: Delivery semantics
+export {
+  createDeliverySemantics,
+  type DeliverySemantic,
+  type DeliveryStage,
+  type DeliveryReceipt,
+  type DeliverySemanticsApi,
+} from "./delivery-semantics";
+
+// C-9: Platform adapters (stub wrappers)
+export type {
+  AdapterPlatform,
+  PlatformMessage,
+  PlatformAdapterApi,
+} from "./platform-adapter";
+
+// C-10: Spatial copresence
+export {
+  createSpatialCopresence,
+  type SpatialPosition,
+  type SpatialParticipant,
+  type SpatialCopresenceApi,
+} from "./spatial-copresence";
+
+// C-11: MCP protocol negotiation
+export {
+  createMcpNegotiation,
+  type McpProtocolVersion,
+  type McpTransportType,
+  type McpNegotiationResult,
+  type McpProtocolNegotiationApi,
+} from "./mcp-negotiation";
+
+// C-12: Decentralized relay
+export {
+  createDecentralizedRelay,
+  type RelayPeer,
+  type RelayMessage,
+  type DecentralizedRelayApi,
+} from "./decentralized-relay";
+
+// D-1: Voice AI pipeline end-to-end
+export {
+  createVoicePipeline,
+  type PipelineStage,
+  type PipelineMetrics,
+  type PipelineEvent,
+  type PipelineStatus,
+  type PipelineConfig,
+  type VoicePipeline,
+} from "./voice-pipeline";
+
+// D-2: Time-to-first-audio SLO tracking
+export {
+  createSloTracker,
+  type SloPhase,
+  type SloSpan,
+  type SloPercentile,
+  type SloReport,
+  type SloTracker,
+} from "./voice-slo";
+
+// D-3: Noise/echo handling
+export {
+  createNoiseProcessor,
+  type NoiseConfig,
+  type DeviceDiagnostics,
+  type NoiseProcessor,
+} from "./voice-noise";
+
+// D-4: Voice quality dashboard
+export {
+  createQualityCollector,
+  type QualitySnapshot,
+  type DeviceBreakdown,
+  type QualityReport,
+  type QualityCollector,
+} from "./voice-quality-dashboard";
+
+// D-5: Turn detection VAD + semantic
+export {
+  createTurnDetector,
+  type VadConfig,
+  type VadEvent,
+  type TurnDetectionConfig,
+  type TurnDetector,
+} from "./voice-turn-detection";
+
+// D-6: Prosody/emotion controls
+export {
+  createProsodyController,
+  type ProsodyStyle,
+  type ProsodyRate,
+  type ProsodyPitch,
+  type ProsodyProvider,
+  type ProsodyConfig,
+  type ProsodySafetyBoundary,
+  type ProsodyOptions,
+  type ProsodyController,
+} from "./voice-prosody";
+
+// D-7: Speaker diarization
+export {
+  createDiarizer,
+  type SpeakerSegment,
+  type DiarizationConfig,
+  type DiarizationSession,
+  type SpeakerInfo,
+  type OverlapRegion,
+  type DiarizationResult,
+  type Diarizer,
+} from "./voice-diarization";
+
+// D-8: Call QA intelligence
+export {
+  createQaAnalyzer,
+  type QaScore,
+  type EvidenceSpan,
+  type HumanReview,
+  type CallQaResult,
+  type QaConfig,
+  type QaAnalyzer,
+  type TranscriptSegment,
+} from "./voice-qa";
+
+// D-9: Huddles/audio-video rooms
+export {
+  createHuddle,
+  type HuddleStatus,
+  type HuddleParticipantStatus,
+  type HuddleParticipant,
+  type HuddleConfig,
+  type HuddleEvent,
+  type Caption,
+  type Huddle,
+} from "./huddles";
+
+// D-10: Video generation progress
+export {
+  createVideoGenerator,
+  type VideoGenerationStatus,
+  type VideoGenerationRequest,
+  type VideoAsset,
+  type VideoProgress,
+  type VideoGenerationJob,
+  type VideoGenerator,
+} from "./video-generation";
+
+// E-1: E2EE groups (MLS)
+export {
+  createMlsManager,
+  type MlsCipherSuite,
+  type MlsDevice,
+  type MlsGroupConfig,
+  type MlsMessage,
+  type MlsGroup,
+  type MlsKeyPackage,
+  type MlsManager,
+} from "./mls-encryption";
+
+// E-2: AI governance
+export {
+  createAiGovernance,
+  type RiskTier,
+  type ApprovalStatus,
+  type ModelRegistryEntry,
+  type PromptEntry,
+  type ToolRegistryEntry,
+  type EvaluationResult,
+  type GovernanceConfig,
+  type AiGovernance,
+} from "./ai-governance";
+
+// E-3: eDiscovery/legal hold
+export {
+  createEdiscoveryManager,
+  type HoldStatus,
+  type LegalHold,
+  type ExportRequest,
+  type AuditEntry,
+  type EdiscoveryConfig,
+  type EdiscoveryManager,
+} from "./ediscovery";
+
+// E-4: DLP PHI/PCI detection
+export {
+  createDlpDetector,
+  type DlpEntityType,
+  type DlpAction,
+  type DlpContentKind,
+  type DlpPattern,
+  type DlpPolicy,
+  type DlpMatch,
+  type DlpResult,
+  type DlpDetector,
+} from "./dlp-detection";
+
+// E-5: Customer-managed keys (CMK)
+export {
+  createCmkManager,
+  type KeyStatus,
+  type EncryptionAlgorithm,
+  type CmkKey,
+  type CmkPolicy,
+  type EncryptionResult,
+  type AuditEvent,
+  type CmkManager,
+} from "./cmk-encryption";
+
+// E-6: Data residency/sovereignty
+export {
+  createResidencyValidator,
+  type RegionCode,
+  type RegionConstraint,
+  type ResidencyPolicy,
+  type DataLocation,
+  type ResidencyValidator,
+} from "./data-residency";
+
+// E-7: Policy-based approvals (OPA)
+export {
+  createPolicyEngine,
+  type PolicyEffect,
+  type PolicyMode,
+  type OpaPolicy,
+  type PolicyInput,
+  type PolicyDecision,
+  type PolicyEngine,
+} from "./policy-approvals";
+
+// E-8: MCP server identity/instructions
+export {
+  createMcpIdentityManager,
+  type McpServerInfo,
+  type McpToolProvenance,
+  type McpInstructions,
+  type McpIdentityManager,
+} from "./mcp-identity";
+
+// E-9: Bot protection/anti-abuse
+export {
+  createBotProtection,
+  type LimitScope,
+  type TrustLevel,
+  type RateLimitConfig,
+  type RaidModeConfig,
+  type TrustScore,
+  type BotProtectionEvent,
+  type BotProtection,
+} from "./bot-protection";
+
+// E-10: Session replay privacy-safe
+export {
+  createSessionReplayManager,
+  type RedactionLevel,
+  type RedactionRule,
+  type ReplaySession,
+  type ReplayEvent,
+  type ReplayProtocol,
+  type SessionReplayManager,
+} from "./session-replay";
+
+// E-11: Federation interoperability
+export {
+  createFederationBridge,
+  type FederationProtocol,
+  type BridgeConfig,
+  type RemoteIdentity,
+  type BridgedMessage,
+  type BridgeStatus,
+  type FederationBridge,
+} from "./federation-bridge";
+
+// E-12: Feature flags management
+export {
+  createFeatureFlagManager,
+  type FlagStatus,
+  type FeatureFlag,
+  type MetricGuardrail,
+  type FlagEvaluation,
+  type FeatureFlagManager,
+} from "./feature-flags";
+
+// E-13: Sandboxed tool execution
+export {
+  createSandboxExecutor,
+  type SandboxExecutionConfig,
+  type SandboxExecutionResult,
+  type SandboxQuota,
+  type SandboxExecutor,
+} from "./sandbox-execution";
+
+// E-14: Generative UI sandbox
+export {
+  createGuiSandboxManager,
+  type GuiSandboxConfig,
+  type GuiComponent,
+  type CapabilityGrant,
+  type GuiSandboxResult,
+  type GuiSandboxManager,
+} from "./gui-sandbox";
+
+// F-1: Testing utilities
+export {
+  createSpyAdapter,
+  createSpyState,
+  createSpyChatInstance,
+  createTestMessage,
+  mockLogger,
+  createMockLogger,
+  matchers,
+  registerMatchers,
+  type SpyAdapter,
+  type SpyStateAdapter,
+  type SpyChatInstance,
+  type AdapterSpy,
+} from "./testing-utils";
+
+// F-2: Error hierarchy (already exported as ChatError, RateLimitError, LockError, NotImplementedError)
+
+// F-3: Telemetry/OpenTelemetry
+export {
+  createTelemetryManager,
+  registerTelemetry,
+  OpenTelemetryIntegration,
+  DevToolsTelemetryIntegration,
+  type TelemetryEvent,
+  type TelemetrySpan,
+  type TelemetryLifecycleEvent,
+  type TelemetryIntegration,
+  type TelemetryOptions,
+  type TelemetryManager,
+} from "./telemetry";
+
+// F-4: DevTools local inspector
+export {
+  createDevToolsStore,
+  createDevToolsInspector,
+  type DevToolsRun,
+  type DevToolsStep,
+  type DevToolsStore,
+  type DevToolsInspector,
+} from "./devtools";
+
+// F-6: Call options schema
+export {
+  callOptionsSchema,
+  prepareCall,
+  createAgentWithCallOptions,
+  type CallOptionsSchema,
+  type InferCallOptions,
+  type PrepareCallContext,
+  type PrepareCallResult,
+  type PrepareCall,
+  type AgentWithCallOptions,
+} from "./call-options";
+
+// F-7: Dynamic tools runtime
+export {
+  dynamicTool,
+  createDynamicToolRegistry,
+  typeNarrowDynamicTool,
+  type DynamicToolConfig,
+  type DynamicTool,
+  type DynamicToolRegistry,
+  type ToolSet,
+  type ToolCallResult,
+} from "./dynamic-tools";
+
+// F-8: Deterministic test models
+export {
+  createDeterministicLanguageModel,
+  type ScriptedOutput,
+  type ScriptedChunk,
+  type DeterministicModelConfig,
+  type DeterministicLanguageModel,
+} from "./deterministic-models";
+
+// F-9: Stream fixtures
+export {
+  streamFixtures,
+  getStreamFixture,
+  listStreamFixtures,
+  simulateStream,
+  type StreamFixture,
+} from "./stream-fixtures";
+
+// G-1: App marketplace
+export {
+  createAppMarketplace,
+  type AppManifest,
+  type GrantScope,
+  type ReviewStatus,
+  type ReviewResult,
+  type AppMarketplace,
+} from "./app-marketplace";
+
+// G-2: CRM/Helpdesk integration
+export {
+  createCrmIntegration,
+  type CrmProvider,
+  type SyncDirection,
+  type CrmContact,
+  type CrmTicket,
+  type CrmIntegration,
+} from "./crm-integration";
+
+// G-3: Custom chatbot builder
+export {
+  createChatbotBuilder,
+  type ChatbotEventType,
+  type ChatbotActionType,
+  type TriggerActionRule,
+  type ChatbotBuilder,
+} from "./chatbot-builder";
+
+// G-4: Knowledge base integration
+export {
+  createKnowledgeBase,
+  type SourceConnector,
+  type ChunkingStrategy,
+  type KnowledgeDocument,
+  type KnowledgeBase,
+} from "./knowledge-base";
+
+// G-5: Custom workflows/automations
+export {
+  createAutomationEngine,
+  type AutomationTrigger,
+  type AutomationAction,
+  type AutomationRule,
+  type AutomationEngine,
+} from "./automation-engine";
+
+// G-6: Agent marketplace
+export {
+  createAgentMarketplace,
+  type AgentSkillCategory,
+  type AgentSkill,
+  type AgentMarketplace,
+} from "./agent-marketplace";
+
+// G-7: AI provider marketplace
+export {
+  createProviderMarketplace,
+  type LlmProvider,
+  type LlmModel,
+  type ProviderMarketplace,
+} from "./provider-marketplace";
+
+// G-8: Webhook event catalog
+export {
+  createWebhookEventCatalog,
+  type WebhookEventType,
+  type DeliveryMethod,
+  type WebhookSubscription,
+  type WebhookEventCatalog,
+} from "./webhook-catalog";
+
+// G-9: Cross-channel continuity
+export {
+  createCrossChannelContinuity,
+  type ChannelType,
+  type ChannelIdentity,
+  type CrossChannelSession,
+  type CrossChannelContinuity,
+} from "./cross-channel";
+
+// G-10: Customer journey mapping
+export {
+  createJourneyMapping,
+  type JourneyStep,
+  type CustomerJourney,
+  type JourneyPath,
+  type JourneyMapping,
+} from "./journey-mapping";
+
+// G-11: Expert routing
+export {
+  createExpertRouter,
+  type SkillLevel,
+  type AgentProfile,
+  type RoutingRequest,
+  type RoutingResult,
+  type ExpertRouter,
+} from "./expert-router";
+
+// G-12: A/B testing engine
+export {
+  createAbTestingEngine,
+  type TestVariant,
+  type AbTestConfig,
+  type AbTestResult,
+  type AbTestingEngine,
+} from "./ab-testing";
+
+// G-13: MCP Apps (Model Context Protocol)
+export {
+  MCP_APP_MIME_TYPE,
+  MCP_APP_EXTENSION_NAME,
+  getMCPAppToolMeta,
+  getMCPAppResourceUri,
+  isMCPAppTool,
+  splitMCPAppTools,
+  getMCPAppResourceUris,
+  getMCPAppResourceFromReadResult,
+  readMCPAppResource,
+  createMCPAppsClientCapabilities,
+  createMCPAppManager,
+  type MCPAppToolMeta,
+  type MCPAppResourceMeta,
+  type MCPAppResource,
+  type MCPAppToolLike,
+  type MCPAppManager,
+  type ReadMCPAppResourceOptions,
+} from "./mcp-apps";
+
+// G-14: Resource links
+export {
+  createResourceLinkManager,
+  RESOURCE_LINK_MIME_TYPE,
+  type ResourceLinkContent,
+  type UriPolicy,
+  type ResourceLinkManager,
+} from "./resource-links";
+
+// H-1: AI Transport (durable AI sessions)
+export {
+  createDurableAITransport,
+  type DurableSessionEvent,
+  type DurableSession,
+  type DurableAITransport,
+} from "./ai-transport";
+
+// H-2: Agent-to-agent (A2A) protocol
+export {
+  createA2AClient,
+  type A2AStatus,
+  type A2AEnvelope,
+  type A2ATask,
+  type A2AArtifact,
+  type A2AClient,
+} from "./a2a-protocol";
+
+// H-3: Voice-first chat interface
+export {
+  createVoiceInterfaceManager,
+  type VoiceMode,
+  type VoiceSessionState,
+  type VoiceCommand,
+  type VoiceInterfaceManager,
+} from "./voice-interface";
+
+// H-4: Composable UI kits
+export {
+  createComposableUIKit,
+  type ComponentFramework,
+  type UIComponentDefinition,
+  type ChannelListConfig,
+  type ThreadViewConfig,
+  type MessageListConfig,
+  type ComposerConfig,
+  type ComposableUIKit,
+} from "./composable-ui";
+
+// H-5: Spatial/digital-twin rooms
+export {
+  createDigitalTwinRoom,
+  type SpatialEntity,
+  type SpatialSceneState,
+  type GrantType,
+  type AgentSpatialGrant,
+  type DigitalTwinRoom,
+} from "./digital-twin";
+
+// H-6: Real-time translation
+export {
+  createTranslationService,
+  type TranslationStatus,
+  type LanguagePreference,
+  type GlossaryEntry,
+  type TranslatedMessage,
+  type TranslationService,
+} from "./translation";
+
+// H-7: Virtual waiting room
+export {
+  createVirtualWaitingRoom,
+  type WaitingTicket,
+  type WaitingRoomStats,
+  type VirtualWaitingRoom,
+} from "./waiting-room";
+
+// H-8: AI-powered conversation analytics
+export {
+  createConversationAnalytics,
+  type SentimentLabel,
+  type SentimentResult,
+  type IntentResult,
+  type TopicCluster,
+  type KnowledgeGap,
+  type ConversationAnalytics,
+} from "./conversation-analytics";
+
+// H-9: Decentralized/Web3 chat
+export {
+  createWeb3Chat,
+  type WalletProfile,
+  type TokenGateRule,
+  type OnChainMessage,
+  type DecentralizedChatRoom,
+  type Web3Chat,
+} from "./web3-chat";
+
+// H-10: AR/VR chat overlay
+export {
+  createAROverlayManager,
+  type SpatialAudioSource,
+  type ARPresence,
+  type ARCanvasObject,
+  type AROverlayManager,
+} from "./ar-overlay";
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -3505,3 +4863,79 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return out;
 }
 
+
+// 3.3: FluxyStream � Live streaming & broadcast
+export {
+  createFluxyStream,
+  type FluxyStreamApi,
+  type StreamStatus,
+  type StreamViewer,
+  type CameraAngle,
+  type StreamHighlight,
+  type SentimentBucket,
+  type StoryBranch,
+  type StoryVote,
+  type VirtualGift,
+  type SentGift,
+  type LiveProduct,
+  type StreamPoll,
+  type AIChatMessage,
+  type StreamStats,
+} from "./fluxy-stream";
+// 3.5: AI Agent Platform expansion
+export {
+  createAgentPlatform,
+  type AgentPlatformApi,
+  type AgentConfig,
+  type AgentVersion,
+  type AgentPersonality,
+  type AgentFlow,
+  type FlowStep,
+  type StepType,
+  type AgentTier,
+  type AgentStatus,
+  type CostEntry,
+  type CostSummary,
+  type RateLimitConfig,
+  type MemoryEntry,
+  type DeployStage,
+  type SandboxResult,
+} from "./agent-platform";
+// 5.1: FluxyGame � Multiplayer game backend SDK
+export {
+  createFluxyGame,
+  type FluxyGameApi,
+  type Player,
+  type GameState,
+  type GameEntity,
+  type GameEvent,
+  type InputCommand,
+  type InputAction,
+  type MatchResult,
+  type LeaderboardEntry,
+  type ReplayEntry,
+  type Tournament,
+  type TournamentRound,
+  type PartyInvite,
+  type AINPC,
+  type GameStatus,
+  type LobbyState,
+} from "./fluxy-game";
+
+// 5.2: FluxyIoT � MQTT bridge & IoT device management
+export {
+  createFluxyIoT,
+  type FluxyIoTApi,
+  type IoTDevice,
+  type DeviceType,
+  type DeviceStatus,
+  type SensorReading,
+  type IotRule,
+  type RuleCondition,
+  type RuleAction,
+  type DeviceShadow,
+  type Alert,
+  type Fleet,
+  type OTAUpdate,
+  type Geofence,
+} from "./fluxy-iot";

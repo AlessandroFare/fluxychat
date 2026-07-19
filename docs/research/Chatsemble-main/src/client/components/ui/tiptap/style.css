@@ -1,0 +1,171 @@
+/* Base styles for the Tiptap editor container */
+.tiptap {
+	color: var(--color-foreground); /* Replaces @apply text-foreground */
+	padding: 0.5rem; /* Equivalent to p-2 */
+	max-height: 500px; /* Equivalent to max-h-[500px] */
+	overflow-y: auto; /* Equivalent to overflow-y-auto */
+	/* Ensure it takes up available space if needed */
+	flex-grow: 1;
+	/* You might want basic prose styles if not using Tailwind Typography plugin */
+	line-height: 1.6;
+}
+
+/* Remove focus outline if desired (ensure accessibility alternatives) */
+.tiptap:focus {
+	outline: none; /* Replaces @apply outline-none */
+}
+
+/* Reset margin on the first element inside the editor */
+.tiptap > :first-child {
+	/* Use > for direct children */
+	margin-top: 0; /* Replaces @apply mt-0 */
+}
+
+/* List styling */
+.tiptap ul,
+.tiptap ol {
+	padding-left: 1.5rem; /* Adjust as needed, similar to Tailwind's pl */
+	margin-top: 1.25rem; /* my-5 */
+	margin-bottom: 1.25rem; /* my-5 */
+	/* Removed mx-4 as padding-left handles indentation */
+}
+
+.tiptap ul {
+	list-style-type: disc; /* Replaces @apply list-disc */
+}
+
+.tiptap ol {
+	list-style-type: decimal; /* Replaces @apply list-decimal */
+}
+
+.tiptap li {
+	margin-top: 0.5rem; /* my-2 */
+	margin-bottom: 0.5rem; /* my-2 */
+	line-height: 1.5rem; /* leading-6 */
+}
+
+/* Tiptap often wraps list item content in <p> */
+.tiptap ul li p,
+.tiptap ol li p {
+	margin-top: 0.25rem; /* my-1 */
+	margin-bottom: 0.25rem; /* my-1 */
+}
+
+/* Style list markers */
+.tiptap ul li::marker,
+.tiptap ol li::marker {
+	color: var(--color-muted-foreground); /* Replaces @apply text-muted-foreground */
+}
+
+/* Heading styling */
+.tiptap h1,
+.tiptap h2,
+.tiptap h3,
+.tiptap h4,
+.tiptap h5,
+.tiptap h6 {
+	line-height: 1.25; /* leading-tight */
+	margin-top: 2.5rem; /* mt-10 */
+	margin-bottom: 1rem; /* Add some default bottom margin */
+	font-weight: 600; /* Add common heading weight */
+	text-wrap: pretty; /* text-pretty (check browser support) */
+}
+
+.tiptap h1,
+.tiptap h2 {
+	margin-top: 3.5rem; /* mt-14 (overrides mt-10) */
+	margin-bottom: 1.5rem; /* mb-6 (overrides default bottom margin) */
+}
+
+/* Font sizes matching Tailwind defaults */
+.tiptap h1 {
+	font-size: 1.875rem;
+	line-height: 2.25rem;
+} /* text-3xl is often better for h1 */
+.tiptap h2 {
+	font-size: 1.5rem;
+	line-height: 2rem;
+} /* text-2xl */
+.tiptap h3 {
+	font-size: 1.25rem;
+	line-height: 1.75rem;
+} /* text-xl */
+.tiptap h4 {
+	font-size: 1.125rem;
+	line-height: 1.75rem;
+} /* text-lg */
+.tiptap h5 {
+	font-size: 1rem;
+	line-height: 1.5rem;
+} /* text-base */
+.tiptap h6 {
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+} /* text-sm */
+
+/* Inline code styling */
+.tiptap code {
+	background-color: var(--color-accent); /* Replaces @apply bg-accent */
+	color: var(--color-accent-foreground); /* Replaces @apply text-accent-foreground */
+	border-radius: var(--radius-sm); /* Replaces @apply rounded-sm, using theme variable */
+	font-size: 0.875rem; /* text-sm */
+	line-height: 1.25rem; /* text-sm line height */
+	padding: 0.125rem 0.375rem; /* Equivalent to py-0.5 px-1.5 roughly */
+	font-family: monospace; /* Add monospace font */
+}
+
+/* Code block styling */
+.tiptap pre {
+	background-color: var(--color-background); /* Replaces @apply bg-background */
+	color: var(--color-foreground); /* Replaces @apply text-foreground */
+	border-radius: var(--radius-lg); /* Replaces @apply rounded-lg */
+	border: 1px solid var(--color-border); /* Replaces @apply border */
+	margin-top: 1.5rem; /* my-6 */
+	margin-bottom: 1.5rem; /* my-6 */
+	padding: 0.75rem 1rem; /* py-3 px-4 */
+	font-family:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+		"Courier New", monospace; /* Replaces font-mono */
+	overflow-x: auto; /* Add horizontal scroll */
+}
+
+/* Reset inline code styles within a code block */
+.tiptap pre code {
+	background-color: transparent !important; /* Replaces @apply bg-transparent */
+	color: inherit !important; /* Inherit color from pre */
+	padding: 0 !important; /* Replaces @apply p-0 */
+	border: none !important; /* Remove border */
+	border-radius: 0 !important; /* Remove border-radius */
+	font-size: 0.875rem !important; /* text-sm (ensure consistency) */
+	line-height: inherit !important;
+	/* Font family is inherited from pre */
+}
+
+/* Blockquote styling */
+.tiptap blockquote {
+	border-left-width: 4px; /* border-l-4 */
+	border-left-style: solid; /* Required for border */
+	border-left-color: var(--color-border); /* border-border */
+	margin-top: 1.5rem; /* my-6 */
+	margin-bottom: 1.5rem; /* my-6 */
+	padding-left: 1rem; /* pl-4 */
+	color: var(--color-muted-foreground); /* Add muted color for quote text */
+}
+
+/* Horizontal rule styling */
+.tiptap hr {
+	border: 0; /* Reset default hr border */
+	border-top: 1px solid var(--color-border); /* border-t border-border */
+	margin-top: 2rem; /* my-8 */
+	margin-bottom: 2rem; /* my-8 */
+}
+
+/* Mention styling */
+.tiptap .mention {
+	background: var(--primary) !important; /* Replaces @apply bg-accent */
+	color: var(--primary-foreground) !important; /* Replaces @apply text-accent-foreground */
+	border-radius: 6px; /* Replaces @apply rounded-sm */
+	padding: 0.125rem 0.5rem; /* py-0.5 px-2 */
+	font-weight: 500; /* Add medium weight */
+	text-decoration: none; /* Remove potential underline */
+}

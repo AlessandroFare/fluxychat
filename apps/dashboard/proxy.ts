@@ -6,6 +6,7 @@ import { isClerkEnabled } from "@/lib/clerk-config";
 
 const isClerkPublicRoute = createRouteMatcher([
   "/landing(.*)",
+  "/pricing(.*)",
   "/why(.*)",
   "/enter(.*)",
   "/get-started(.*)",
@@ -28,6 +29,7 @@ function isPublicPath(pathname: string): boolean {
   if (pathname === "/favicon.ico") return true;
   const prefixes = [
     "/landing",
+    "/pricing",
     "/why",
     "/enter",
     "/get-started",
@@ -119,7 +121,7 @@ export function buildContentSecurityPolicy(nonce?: string): string {
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    "form-action 'self' https://stackblitz.com",
     "object-src 'none'",
   ].join("; ");
 }

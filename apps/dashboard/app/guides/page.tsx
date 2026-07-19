@@ -3,6 +3,7 @@ import { ALL_GUIDES } from "@/lib/guides/related-guides";
 import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { buildPageMetadata } from "@/lib/site-metadata";
 import { Button } from "~/components/ui/button";
+import { DocSearchButton } from "@/components/doc-search";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 export const metadata = buildPageMetadata({
@@ -21,13 +22,20 @@ export default function GuidesIndexPage() {
         </Link>
       </p>
 
-      <h1 className="mt-6 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-        Guides
-      </h1>
-      <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-        Edge-native realtime chat: shared state coordination on Durable Objects,
-        production SDK patterns, and avoiding a second socket vendor on Vercel.
-      </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1">
+          <h1 className="mt-6 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+            Guides
+          </h1>
+          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
+            Edge-native realtime chat: shared state coordination on Durable Objects,
+            production SDK patterns, and avoiding a second socket vendor on Vercel.
+          </p>
+        </div>
+        <div className="shrink-0 sm:pt-9">
+          <DocSearchButton />
+        </div>
+      </div>
 
       <ul className="mt-10 space-y-4">
         {ALL_GUIDES.map((guide) => (

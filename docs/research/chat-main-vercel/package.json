@@ -1,0 +1,42 @@
+{
+  "name": "chat-sdk-monorepo",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel/chat.git"
+  },
+  "homepage": "https://github.com/vercel/chat#readme",
+  "bugs": {
+    "url": "https://github.com/vercel/chat/issues"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "turbo build",
+    "build:validate": "SLACK_BOT_TOKEN=xoxb-mock SLACK_SIGNING_SECRET=mock TEAMS_APP_ID=mock TEAMS_APP_PASSWORD=mock TEAMS_APP_TENANT_ID=mock GOOGLE_CHAT_CREDENTIALS='{\"type\":\"service_account\",\"project_id\":\"mock\",\"private_key\":\"-----BEGIN RSA PRIVATE KEY-----\\nMOCK\\n-----END RSA PRIVATE KEY-----\",\"client_email\":\"mock@mock.iam.gserviceaccount.com\"}' REDIS_URL=redis://localhost:6379 RECORDING_ENABLED=false turbo build",
+    "dev": "turbo dev",
+    "test": "turbo test --filter='!example-nextjs-chat' --filter='!docs'",
+    "test:workspace": "vitest run",
+    "typecheck": "turbo typecheck",
+    "knip": "knip",
+    "validate": "pnpm knip && pnpm check && turbo typecheck && pnpm test && pnpm build:validate",
+    "clean": "turbo clean && rm -rf node_modules",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "sync-resources": "tsx scripts/sync-resources.ts",
+    "konsistent": "konsistent --config-path .github/konsistent.json"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
+    "@changesets/cli": "^2.29.8",
+    "@vitest/coverage-v8": "^4.0.18",
+    "knip": "^5.85.0",
+    "konsistent": "0.0.1-alpha.20",
+    "tsx": "^4.22.3",
+    "turbo": "^2.9.14",
+    "typescript": "^5.9.3",
+    "ultracite": "7.2.4",
+    "vitest": "^4.0.18"
+  },
+  "packageManager": "pnpm@10.30.3"
+}

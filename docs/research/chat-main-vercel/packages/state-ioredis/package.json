@@ -1,0 +1,69 @@
+{
+  "name": "@chat-adapter/state-ioredis",
+  "version": "4.31.0",
+  "description": "ioredis state adapter for Chat SDK — production state with Redis Cluster and Sentinel support via ioredis",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "chat": "workspace:*",
+    "ioredis": "^5.4.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel/chat.git",
+    "directory": "packages/state-ioredis"
+  },
+  "homepage": "https://chat-sdk.dev/adapters/official/ioredis",
+  "bugs": {
+    "url": "https://github.com/vercel/chat/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  },
+  "keywords": [
+    "chat",
+    "chat-sdk",
+    "state",
+    "state-adapter",
+    "ioredis",
+    "redis",
+    "redis-cluster",
+    "sentinel",
+    "subscriptions",
+    "distributed-lock",
+    "cache",
+    "queues",
+    "production",
+    "typescript",
+    "vercel"
+  ],
+  "license": "MIT"
+}

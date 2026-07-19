@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useTheme } from "@/app/components/theme-provider";
 import { SunIcon, MoonIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 

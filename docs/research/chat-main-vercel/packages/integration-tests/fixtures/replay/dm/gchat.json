@@ -1,0 +1,104 @@
+{
+  "botName": "Chat SDK Demo",
+  "botUserId": "users/100000000000000000002",
+  "dmSpaceName": "spaces/jLQ7DiAAAAE",
+  "mention": {
+    "chat": {
+      "user": {
+        "name": "users/100000000000000000001",
+        "displayName": "Test User",
+        "email": "testuser@example.com",
+        "type": "HUMAN"
+      },
+      "eventTime": "2026-01-02T18:02:35.465455Z",
+      "messagePayload": {
+        "space": {
+          "name": "spaces/AAQAO1heGsE",
+          "type": "ROOM",
+          "displayName": "Test Chat SDK 4",
+          "spaceType": "SPACE"
+        },
+        "message": {
+          "name": "spaces/AAQAO1heGsE/messages/KiNukbmD9L4.KiNukbmD9L4",
+          "sender": {
+            "name": "users/100000000000000000001",
+            "displayName": "Test User",
+            "email": "testuser@example.com",
+            "type": "HUMAN"
+          },
+          "createTime": "2026-01-02T18:02:35.465455Z",
+          "text": "@Chat SDK Demo hey",
+          "annotations": [
+            {
+              "type": "USER_MENTION",
+              "startIndex": 0,
+              "length": 14,
+              "userMention": {
+                "user": {
+                  "name": "users/100000000000000000002",
+                  "displayName": "Chat SDK Demo",
+                  "type": "BOT"
+                },
+                "type": "MENTION"
+              }
+            }
+          ],
+          "thread": {
+            "name": "spaces/AAQAO1heGsE/threads/KiNukbmD9L4"
+          },
+          "space": {
+            "name": "spaces/AAQAO1heGsE"
+          },
+          "argumentText": " hey"
+        }
+      }
+    }
+  },
+  "dmRequest": {
+    "message": {
+      "attributes": {
+        "ce-type": "google.workspace.chat.message.v1.created"
+      },
+      "data": "eyJtZXNzYWdlIjp7Im5hbWUiOiJzcGFjZXMvQUFRQU8xaGVHc0UvbWVzc2FnZXMvS2lOdWtibUQ5TDQuN2Frb0d5dFg5Z0EiLCJzZW5kZXIiOnsibmFtZSI6InVzZXJzLzEwMDAwMDAwMDAwMDAwMDAwMDAwMSIsInR5cGUiOiJIVU1BTiJ9LCJjcmVhdGVUaW1lIjoiMjAyNi0wMS0wMlQxODowMjo0Mi44Mzg4MTVaIiwidGV4dCI6IkRNIG1lIiwidGhyZWFkIjp7Im5hbWUiOiJzcGFjZXMvQUFRQU8xaGVHc0UvdGhyZWFkcy9LaU51a2JtRDlMNCJ9LCJzcGFjZSI6eyJuYW1lIjoic3BhY2VzL0FBUUFPMWhlR3NFIn0sImFyZ3VtZW50VGV4dCI6IkRNIG1lIiwidGhyZWFkUmVwbHkiOnRydWUsImZvcm1hdHRlZFRleHQiOiJETSBtZSJ9fQ==",
+      "messageId": "17617866744486205"
+    },
+    "subscription": "projects/example-chat-project-123456/subscriptions/chat-messages-push"
+  },
+  "dmMessage": {
+    "chat": {
+      "user": {
+        "name": "users/100000000000000000001",
+        "displayName": "Test User",
+        "email": "testuser@example.com",
+        "type": "HUMAN"
+      },
+      "eventTime": "2026-01-02T18:02:52.270735Z",
+      "messagePayload": {
+        "space": {
+          "name": "spaces/jLQ7DiAAAAE",
+          "type": "DM",
+          "singleUserBotDm": true,
+          "spaceType": "DIRECT_MESSAGE"
+        },
+        "message": {
+          "name": "spaces/jLQ7DiAAAAE/messages/HpyRFx0N2eY.HpyRFx0N2eY",
+          "sender": {
+            "name": "users/100000000000000000001",
+            "displayName": "Test User",
+            "email": "testuser@example.com",
+            "type": "HUMAN"
+          },
+          "createTime": "2026-01-02T18:02:52.270735Z",
+          "text": "Thanks!",
+          "thread": {
+            "name": "spaces/jLQ7DiAAAAE/threads/HpyRFx0N2eY"
+          },
+          "space": {
+            "name": "spaces/jLQ7DiAAAAE"
+          },
+          "argumentText": "Thanks!"
+        }
+      }
+    }
+  }
+}

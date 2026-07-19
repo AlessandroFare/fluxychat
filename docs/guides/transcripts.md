@@ -1,0 +1,43 @@
+# Transcripts API
+
+`createTranscriptsApi()` provides per-user message persistence keyed by a stable cross-platform identifier, backed by in-memory storage with configurable retention and capping.
+
+## Usage
+
+```ts
+import { createTranscriptsApi } from "@fluxy-chat/sdk";
+
+const api = createTranscriptsApi({
+  retention: "30d",
+  maxPerUser: 200,
+});
+
+// Append user message
+await api.append("thread:1", "slack", { content: "hello", id: "msg-1" }, { userKey: "user@example.com" });
+
+// Append bot reply
+await api.append("thread:1", "slack", { text: "Hi there!", role: "assistant" }, { userKey: "user@example.com" });
+
+// List recent entries
+const recent = await api.list({ userKey: "user@example.com", limit: 20 });
+
+// Count entries
+const total = await api.count({ userKey: "user@example.com" });
+
+// Delete all entries
+const result = await api.delete({ userKey: "user@example.com" });
+```
+
+## Configuration
+
+- **`retention`** — TTL for entries (ms or duration string like `"30d"`, `"6h"`, `"45s"`). Refreshed on append.
+- **`maxPerUser`** — Hard cap per user. Older entries evicted on append (default: 200).
+
+## Filtering
+
+```ts
+await api.list({ userKey: "u1", platforms: ["slack"] });
+await api.list({ userKey: "u1", threadId: "slack:C123:1234" });
+await api.list({ userKey: "u1", roles: ["user"] });
+await api.list({ userKey: "u1", limit: 50 });
+```

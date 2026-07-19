@@ -1,0 +1,22 @@
+enable: etcd
+etcd:
+  rootDirectory: openim
+  address: [localhost:12379]
+  ## Attention: If you set auth in etcd
+  ## you must also update the username and password in Chat project.
+  username:
+  password:
+
+kubernetes:
+  namespace: default
+
+rpcService:
+  user: user-rpc-service
+  friend: friend-rpc-service
+  msg: msg-rpc-service
+  push: push-rpc-service
+  messageGateway: messagegateway-rpc-service
+  group: group-rpc-service
+  auth: auth-rpc-service
+  conversation: conversation-rpc-service
+  third: third-rpc-service

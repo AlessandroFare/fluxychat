@@ -1,0 +1,77 @@
+{
+  "name": "y-partyserver",
+  "version": "2.2.0",
+  "description": "",
+  "keywords": [
+    "collaboration",
+    "text-editors",
+    "yjs"
+  ],
+  "homepage": "https://github.com/cloudflare/partykit/tree/main/packages/y-partyserver",
+  "license": "ISC",
+  "author": "Sunil Pai <spai@cloudflare.com>",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/cloudflare/partykit.git"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/server/index.d.ts",
+        "require": "./dist/server/index.d.cts",
+        "default": "./dist/server/index.d.ts"
+      },
+      "import": "./dist/server/index.js",
+      "require": "./dist/server/index.cjs"
+    },
+    "./provider": {
+      "types": {
+        "import": "./dist/provider/index.d.ts",
+        "require": "./dist/provider/index.d.cts",
+        "default": "./dist/provider/index.d.ts"
+      },
+      "import": "./dist/provider/index.js",
+      "require": "./dist/provider/index.cjs"
+    },
+    "./react": {
+      "types": {
+        "import": "./dist/provider/react.d.ts",
+        "require": "./dist/provider/react.d.cts",
+        "default": "./dist/provider/react.d.ts"
+      },
+      "import": "./dist/provider/react.js",
+      "require": "./dist/provider/react.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "check:test": "vitest -r src/tests --watch false",
+    "test": "vitest -r src/tests",
+    "test:integration": "vitest -r src/tests --config vitest.integration.config.ts --watch false",
+    "test:hibernation": "vitest -r src/tests --config vitest.hibernation.config.ts --watch false"
+  },
+  "dependencies": {
+    "lib0": "^0.2.117",
+    "lodash.debounce": "^4.0.8",
+    "nanoid": "^5.1.9",
+    "y-protocols": "^1.0.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260426.1",
+    "@types/lodash.debounce": "^4.0.9",
+    "@types/node": "25.6.0",
+    "partyserver": "^0.5.5",
+    "ws": "^8.20.0",
+    "yjs": "^13.6.30"
+  },
+  "peerDependencies": {
+    "@cloudflare/workers-types": "^4.20260424.1",
+    "partyserver": ">=0.2.0 <1.0.0",
+    "yjs": "^13.6.14"
+  }
+}

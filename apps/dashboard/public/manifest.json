@@ -1,0 +1,12 @@
+{
+  "name": "FluxyTrack Driver",
+  "short_name": "FluxyDriver",
+  "description": "Driver app for FluxyTrack fleet management",
+  "start_url": "/driver",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "/truck-icon.svg", "sizes": "192x192", "type": "image/svg+xml" }
+  ]
+}

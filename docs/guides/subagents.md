@@ -1,0 +1,137 @@
+# Subagents — Delegation Pattern
+
+A subagent is an agent that a parent agent invokes via a tool. The parent delegates work, the subagent executes autonomously, and returns a result. This keeps the parent's context clean and coherent.
+
+## When to Use Subagents
+
+**Use subagents when:**
+- Tasks require exploring large amounts of tokens (reading files, searching codebases)
+- You need to parallelize independent research
+- Context would grow beyond model limits
+
+**Avoid subagents when:**
+- Tasks are simple and focused
+- Sequential processing suffices
+- Context stays manageable
+
+## Creating a Subagent Tool
+
+Use `createSubagentTool` to create an AITool that runs a subagent internally:
+
+```ts
+import { createSubagentTool } from '@fluxy-chat/agent';
+
+const researchTool = createSubagentTool({
+  description: 'Research a topic in depth and return findings.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      task: { type: 'string', description: 'The research task' },
+    },
+  },
+  subagent: {
+    runStep: async (state) => {
+      const task = (state.runtime as any)?.subagentTask?.task ?? '';
+      const response = await someModel.generate({
+        prompt: [{ role: 'user', content: task }],
+      });
+      return { text: response.text, finishReason: response.finishReason };
+    },
+    tools: { search, read },
+    maxSteps: 5,
+  },
+});
+```
+
+## Controlling What the Model Sees
+
+Use `toModelOutput` to transform the subagent's full output into a compact summary for the parent model:
+
+```ts
+const researchTool = createSubagentTool({
+  description: 'Research a topic.',
+  inputSchema: { /* ... */ },
+  subagent: { runStep: myRunStep, tools: { read, search } },
+  toModelOutput: (result) => ({
+    summary: result.text,
+    toolCount: result.toolResults.length,
+  }),
+});
+```
+
+## Direct Subagent Invocation
+
+Use `runSubagent` to run a subagent without wrapping it in a tool:
+
+```ts
+import { runSubagent } from '@fluxy-chat/agent';
+
+const result = await runSubagent(
+  {
+    runStep: myRunStep,
+    tools: { search, read },
+    maxSteps: 3,
+  },
+  'Analyze the project structure',
+  { system: 'You are a code analyst.' },
+);
+
+console.log(result.text);
+console.log('Usage:', result.usage);
+```
+
+## Context Isolation
+
+Each subagent invocation starts with a fresh context window. The parent's runtime is merged into the subagent's runtime under `subagentTask`:
+
+```ts
+// Parent runtime: { userId: 'abc' }
+// Subagent runtime: { subagentTask: { task: '...' }, ...parentRuntime }
+//                                          ^-- merged from parent
+```
+
+## Limitations
+
+- Subagent tools cannot use approval flows (`toolApproval`, `needsApproval`)
+- Each subagent gets an isolated context — does not inherit parent's conversation history
+- Pass `messages` manually if the subagent needs context from the parent
+- Streaming progress to the UI requires generator-based tools (not currently supported in AITool.execute)
+
+## Type Reference
+
+```ts
+interface SubagentConfig {
+  runStep: AgentLoopOptions['runStep'];
+  tools?: Record<string, AITool>;
+  maxSteps?: number;
+  maxToolCalls?: number;
+  toolTimeoutMs?: number;
+  allowTools?: readonly string[];
+  stopWhen?: AgentStopCondition | readonly AgentStopCondition[];
+  toolApproval?: ToolApprovalConfig;
+  // ... lifecycle callbacks
+}
+
+interface SubagentToolOptions<TInput, TOutput> {
+  description: string;
+  inputSchema: Record<string, unknown>;
+  subagent: SubagentConfig;
+  toModelOutput?: (result: AgentLoopResult) => TOutput | Promise<TOutput>;
+}
+
+function createSubagentTool<TInput, TOutput>(
+  options: SubagentToolOptions<TInput, TOutput>,
+): AITool<TInput, TOutput>;
+
+function runSubagent(
+  config: SubagentConfig,
+  prompt: string,
+  options?: { signal?: AbortSignal; runtime?: unknown; system?: string },
+): Promise<SubagentResult>;
+```
+
+## See Also
+
+- [Agent Loop Control](./loop-control.md) — step limits, stop conditions
+- [Prune Messages](./prune-messages.md) — context compaction for parent
+- [Memory](./memory.md) — persistent agent memory

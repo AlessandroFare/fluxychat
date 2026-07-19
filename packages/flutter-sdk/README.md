@@ -1,6 +1,8 @@
 # fluxychat_sdk
 
-Flutter SDK for FluxyChat - realtime chat infrastructure for SaaS.
+Flutter SDK for [FluxyChat](https://fluxychat.com) — realtime chat infrastructure for SaaS.
+
+Add in-app chat, AI agents, and multi-platform messaging with real-time WebSocket rooms, REST API, and full state management.
 
 ## Installation
 
@@ -8,8 +10,17 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
+  fluxychat_sdk: ^1.0.0
+```
+
+Or from source:
+
+```yaml
+dependencies:
   fluxychat_sdk:
-    path: ../packages/flutter-sdk
+    git:
+      url: https://github.com/AlessandroFare/fluxychat.git
+      path: packages/flutter-sdk
 ```
 
 ## Quick Start
@@ -41,9 +52,37 @@ await client.sendMessage(
   content: 'Hello from Flutter!',
 );
 
-// Load messages
+// Load message history
 final messages = await client.loadMessages('room_123');
+
+// Invoke an AI agent
+final response = await client.invokeAgent(
+  'room_123',
+  agentId: 'support-bot',
+  message: 'What are your hours?',
+);
 ```
+
+## Features
+
+- **REST API** — Rooms, messages, members, reactions, search
+- **WebSocket** — Real-time messaging with auto-reconnect (exponential backoff)
+- **Typing indicators** — Broadcast and receive typing status
+- **Presence** — Online/offline tracking per room
+- **Read receipts** — Track message delivery and read status
+- **Message reactions** — Emoji reactions on messages
+- **AI agents** — Invoke agents with streaming responses
+- **Message search** — Full-text search across rooms
+- **Optimistic delivery** — Instant UI updates with server confirmation
+- **E2E encryption** — Client-side encryption support (TLS + Double Ratchet roadmap)
+- **Polls** — Create and vote in polls
+- **File uploads** — Multipart file upload support
+- **Push notifications** — Web push and mobile device registration
+- **Custom domains** — Domain management API
+- **Webhook management** — Register and manage webhooks
+- **Scheduled messages** — Schedule messages for future delivery
+- **Message templates** — Template rendering with variable substitution
+- **Voice messages** — Voice message sending support
 
 ## API
 
@@ -61,45 +100,63 @@ final client = FluxyChatClient(
 );
 ```
 
-### Methods
+### Connection
 
-- `connect(roomId)` - Connect to a room via WebSocket
-- `disconnect()` - Disconnect from current room
-- `listRooms()` - List all rooms
-- `createRoom(name, type)` - Create a new room
-- `sendMessage(roomId, content)` - Send a message
-- `loadMessages(roomId)` - Load message history
-- `sendTyping(roomId, typing)` - Send typing indicator
-- `addReaction(roomId, messageId, emoji)` - Add reaction
-- `invokeAgent(roomId, agentId, message)` - Invoke AI agent
-- `searchMessages(query)` - Search messages
+- `connect(roomId)` — Connect to a room via WebSocket
+- `disconnect()` — Disconnect from current room
+- `connectionStatus` — Stream of connection state changes
+- `connectUser()` — Connect to user channel for personal events
+
+### Rooms
+
+- `listRooms()` — List all accessible rooms
+- `getRoom(roomId)` — Get room details
+- `createRoom(name, {type})` — Create a new room
+- `updateRoom(roomId, data)` — Update room metadata
+- `deleteRoom(roomId)` — Delete a room
+
+### Messages
+
+- `sendMessage(roomId, content, {kind, metadata, parentId})` — Send a message
+- `sendOptimisticMessage(roomId, content)` — Send with optimistic UI update
+- `loadMessages(roomId, {limit, before})` — Load message history
+- `editMessage(roomId, messageId, content)` — Edit a message
+- `deleteMessage(roomId, messageId)` — Delete a message
+- `sendTyping(roomId, isTyping)` — Send typing indicator
+- `addReaction(roomId, messageId, emoji)` — Add emoji reaction
+- `removeReaction(roomId, messageId, emoji)` — Remove reaction
+- `sendReadReceipt(roomId, messageId)` — Mark message as read
+
+### AI Agents
+
+- `invokeAgent(roomId, agentId, message)` — Invoke an AI agent
+- `listAgents()` — List available agents
+- `getAgent(agentId)` — Get agent details
 
 ### Events
 
-- `message` - New message received
-- `typing` - User typing indicator
-- `presence` - User presence change
-- `read` - Read receipt
-- `reaction` - Message reaction
+- `on(event, handler)` — Subscribe to events
+- `off(event, handler)` — Unsubscribe from events
+- `onStatusChange(handler)` — Connection status changes
 
-## Features
+**Available events:** `message`, `message_edit`, `message_delete`, `typing`, `presence`, `reaction`, `read`, `member_joined`, `member_left`, `agentTyping`, `agentRun`, `stream`, `error`
 
-- REST API client for rooms, messages, members
-- WebSocket with auto-reconnect and exponential backoff
-- Typing indicators and presence
-- Read receipts
-- Message reactions
-- AI agent invocation
-- Message search
+## Protocol
+
+The SDK implements the FluxyChat wire protocol (v1.0.0) with 30 inbound and 11 outbound event types. Protocol parity is validated against `packages/protocol/protocol-events.json`.
 
 ## Testing
 
 ```bash
-flutter test test/protocol_contract_test.dart
+flutter test
 ```
 
-Protocol parity is validated against `packages/protocol/protocol-events.json`.
+## Requirements
+
+- Dart SDK >=3.2.0
+- Flutter >=3.16.0
 
 ## License
 
-MIT
+MIT — see LICENSE for details.
+

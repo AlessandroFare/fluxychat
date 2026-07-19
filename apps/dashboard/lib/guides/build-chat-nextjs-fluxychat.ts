@@ -71,5 +71,7 @@ export function RoomChat({ roomId }: { roomId: string }) {
     "useChat cloudflare workers",
     "build chat app nextjs vercel",
   ],
+  stackblitzTemplateId: "react-chat-ui",
+  stackblitzLabel: "Run this example in StackBlitz",
 };
 

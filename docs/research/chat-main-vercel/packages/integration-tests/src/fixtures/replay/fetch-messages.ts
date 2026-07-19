@@ -1,0 +1,1131 @@
+/**
+ * Fixture data extracted from recordings for fetchMessages tests.
+ * These are the raw API responses from actual platform calls.
+ */
+
+// GChat fixture data
+export const GCHAT_THREAD_ID =
+  "gchat:spaces/AAQAO1heGsE:c3BhY2VzL0FBUUFPMWhlR3NFL3RocmVhZHMvN2tJaS14N1NEQVk";
+export const GCHAT_SPACE = "spaces/AAQAO1heGsE";
+export const GCHAT_THREAD = "spaces/AAQAO1heGsE/threads/7kIi-x7SDAY";
+export const GCHAT_BOT_USER_ID = "users/100000000000000000002";
+export const GCHAT_HUMAN_USER_ID = "users/100000000000000000001";
+
+// Raw GChat messages as returned by the API (messages.list)
+export const GCHAT_RAW_MESSAGES = [
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.7kIi-x7SDAY",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:24.703183Z",
+    text: "@Chat SDK Demo Hey",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.zQJx8Wa0z_4",
+    sender: { name: GCHAT_BOT_USER_ID, type: "BOT" },
+    createTime: "2026-01-03T18:12:26.338079Z",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+    cardsV2: [{ cardId: "card-1", card: { header: { title: "Welcome!" } } }],
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.2uWgiC1K31g",
+    sender: { name: GCHAT_BOT_USER_ID, type: "BOT" },
+    createTime: "2026-01-03T18:12:32.026415Z",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+    cardsV2: [
+      {
+        cardId: "card-2",
+        card: { header: { title: "Message Fetch Results" } },
+      },
+    ],
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.fWAPBm3mNwk",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:38.835519Z",
+    text: "1",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.N7qC3VnngCE",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:39.447967Z",
+    text: "2",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.koeoAynQTZY",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:40.132847Z",
+    text: "3",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.hHWZqw7H3Fw",
+    sender: { name: GCHAT_BOT_USER_ID, type: "BOT" },
+    createTime: "2026-01-03T18:12:40.802479Z",
+    text: "✅ Thanks for your message!",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.qcbjxe8HLfs",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:40.992575Z",
+    text: "4",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.gIEY6fhjBdg",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:41.530415Z",
+    text: "5",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.ZuwwXpHWaF4",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:42.014527Z",
+    text: "6",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.E0NgNX8--dk",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:42.492255Z",
+    text: "7",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.hoaTCJFshR0",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:43.415535Z",
+    text: "8",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.-7Ie_Ne0CAI",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:44.543423Z",
+    text: "9",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.d8-cIESZWlA",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:45.031519Z",
+    text: "10",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.Y3YNVC8aH60",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:45.887647Z",
+    text: "11",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.A3Yd5Mh8hkE",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:46.541663Z",
+    text: "12",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.n5Jae9b02GA",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:47.529295Z",
+    text: "13",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.K2PGAMXcXYc",
+    sender: { name: GCHAT_BOT_USER_ID, type: "BOT" },
+    createTime: "2026-01-03T18:12:47.732639Z",
+    text: "✅ Thanks for your message!",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+  {
+    name: "spaces/AAQAO1heGsE/messages/7kIi-x7SDAY.LJ9BPxaYIcg",
+    sender: { name: GCHAT_HUMAN_USER_ID, type: "HUMAN" },
+    createTime: "2026-01-03T18:12:49.880095Z",
+    text: "14",
+    thread: { name: GCHAT_THREAD },
+    space: { name: GCHAT_SPACE },
+  },
+];
+
+// Slack fixture data
+export const SLACK_CHANNEL = "C00FAKECHAN1";
+export const SLACK_THREAD_TS = "1767463909.801009";
+export const SLACK_THREAD_ID = `slack:${SLACK_CHANNEL}:${SLACK_THREAD_TS}`;
+export const SLACK_BOT_USER_ID = "U00FAKEBOT01";
+export const SLACK_HUMAN_USER_ID = "U00FAKEUSER1";
+
+// Raw Slack messages as returned by the API (conversations.replies)
+export const SLACK_RAW_MESSAGES = [
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463909.801009",
+    text: "<@U00FAKEBOT01> Hey",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_BOT_USER_ID,
+    type: "message",
+    ts: "1767463912.389869",
+    bot_id: "B00FAKEBOT01",
+    text: "*:wave: Welcome!* Connected via slack",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_BOT_USER_ID,
+    type: "message",
+    ts: "1767463915.639159",
+    bot_id: "B00FAKEBOT01",
+    text: "*:memo: Message Fetch Results*",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463918.512379",
+    text: "1",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463919.069289",
+    text: "2",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463919.900679",
+    text: "3",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463920.336619",
+    text: "4",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463920.988659",
+    text: "5",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_BOT_USER_ID,
+    type: "message",
+    ts: "1767463921.893159",
+    bot_id: "B00FAKEBOT01",
+    text: ":white_check_mark: Thanks for your message!",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463921.917609",
+    text: "6",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463922.271059",
+    text: "7",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463923.142709",
+    text: "8",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463923.556219",
+    text: "9",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463925.399189",
+    text: "10",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463926.169239",
+    text: "11",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463927.322589",
+    text: "12",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_BOT_USER_ID,
+    type: "message",
+    ts: "1767463927.615339",
+    bot_id: "B00FAKEBOT01",
+    text: ":white_check_mark: Thanks for your message!",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463928.143519",
+    text: "13",
+    thread_ts: SLACK_THREAD_TS,
+  },
+  {
+    user: SLACK_HUMAN_USER_ID,
+    type: "message",
+    ts: "1767463929.427789",
+    text: "14",
+    thread_ts: SLACK_THREAD_TS,
+  },
+];
+
+// Expected numbered messages in chronological order (1-14)
+export const EXPECTED_NUMBERED_TEXTS = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14",
+];
+
+// Teams fixture data
+export const TEAMS_TEAM_ID = "22222222-3333-4444-5555-666666666666";
+export const TEAMS_CHANNEL_ID =
+  "19:8d9438b787af4481afd71a4b3d5da629@thread.tacv2";
+export const TEAMS_PARENT_MESSAGE_ID = "1767470594930";
+export const TEAMS_SERVICE_URL =
+  "https://smba.trafficmanager.net/amer/a1b2c3d4-e5f6-7890-abcd-ef1234567890/";
+export const TEAMS_BOT_APP_ID = "11111111-2222-3333-4444-555555555555";
+export const TEAMS_HUMAN_USER_ID = "00000000-1111-2222-3333-444444444444";
+
+// Parent message that started the thread (fetched separately from /teams/.../messages/{id})
+// This is the message the bot was @mentioned in, starting the conversation
+export const TEAMS_PARENT_MESSAGE = {
+  id: TEAMS_PARENT_MESSAGE_ID,
+  createdDateTime: "2026-01-03T20:03:14.930Z",
+  from: {
+    application: null,
+    device: null,
+    user: {
+      "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+      id: TEAMS_HUMAN_USER_ID,
+      displayName: "Test User",
+      userIdentityType: "aadUser",
+      tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    },
+  },
+  body: {
+    contentType: "html",
+    content: '<p><at id="0">Chat SDK Demo</at> Hey</p>',
+  },
+  attachments: [],
+  mentions: [
+    {
+      id: 0,
+      mentionText: "Chat SDK Demo",
+      mentioned: {
+        application: {
+          id: TEAMS_BOT_APP_ID,
+          displayName: "Chat SDK Demo",
+          applicationIdentityType: "bot",
+        },
+      },
+    },
+  ],
+};
+
+// Raw Teams messages as returned by the Graph API (/teams/.../channels/.../messages/.../replies)
+// Extracted from recording session-143af459f40cfcad1098f0b7117a6ac7cb5d85a6
+// Sorted oldest to newest (by createdDateTime) - Graph API returns newest first, so tests must reverse
+export const TEAMS_RAW_MESSAGES = [
+  {
+    id: "1767470596307",
+    createdDateTime: "2026-01-03T20:03:16.307Z",
+    from: {
+      device: null,
+      user: null,
+      application: {
+        "@odata.type": "#microsoft.graph.teamworkApplicationIdentity",
+        id: TEAMS_BOT_APP_ID,
+        displayName: "Chat SDK Demo",
+        applicationIdentityType: "bot",
+      },
+    },
+    body: {
+      contentType: "html",
+      content:
+        '<attachment id="cd4a3c3104fc4dcf99bce226499f0901"></attachment>',
+    },
+    attachments: [
+      {
+        id: "cd4a3c3104fc4dcf99bce226499f0901",
+        contentType: "application/vnd.microsoft.card.adaptive",
+        content:
+          '{"type":"AdaptiveCard","body":[{"type":"TextBlock","text":"👋 Welcome!","size":"large","weight":"bolder"}]}',
+      },
+    ],
+  },
+  {
+    id: "1767470601178",
+    createdDateTime: "2026-01-03T20:03:21.178Z",
+    from: {
+      device: null,
+      user: null,
+      application: {
+        "@odata.type": "#microsoft.graph.teamworkApplicationIdentity",
+        id: TEAMS_BOT_APP_ID,
+        displayName: "Chat SDK Demo",
+        applicationIdentityType: "bot",
+      },
+    },
+    body: {
+      contentType: "html",
+      content:
+        '<attachment id="1dbd8458cc2744d2a3965395bad6aff4"></attachment>',
+    },
+    attachments: [
+      {
+        id: "1dbd8458cc2744d2a3965395bad6aff4",
+        contentType: "application/vnd.microsoft.card.adaptive",
+        content:
+          '{"type":"AdaptiveCard","body":[{"type":"TextBlock","text":"📝 Message Fetch Results","size":"large","weight":"bolder"}]}',
+      },
+    ],
+  },
+  {
+    id: "1767470607342",
+    createdDateTime: "2026-01-03T20:03:27.342Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>1</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470608895",
+    createdDateTime: "2026-01-03T20:03:28.895Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>2</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470610050",
+    createdDateTime: "2026-01-03T20:03:30.05Z",
+    from: {
+      device: null,
+      user: null,
+      application: {
+        "@odata.type": "#microsoft.graph.teamworkApplicationIdentity",
+        id: TEAMS_BOT_APP_ID,
+        displayName: "Chat SDK Demo",
+        applicationIdentityType: "bot",
+      },
+    },
+    body: {
+      contentType: "html",
+      content: "<p>✅ Thanks for your message!</p>",
+    },
+    attachments: [],
+  },
+  {
+    id: "1767470610248",
+    createdDateTime: "2026-01-03T20:03:30.248Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>3</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470611379",
+    createdDateTime: "2026-01-03T20:03:31.379Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>4</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470613028",
+    createdDateTime: "2026-01-03T20:03:33.028Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>5</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470614270",
+    createdDateTime: "2026-01-03T20:03:34.27Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>6</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470616064",
+    createdDateTime: "2026-01-03T20:03:36.064Z",
+    from: {
+      device: null,
+      user: null,
+      application: {
+        "@odata.type": "#microsoft.graph.teamworkApplicationIdentity",
+        id: TEAMS_BOT_APP_ID,
+        displayName: "Chat SDK Demo",
+        applicationIdentityType: "bot",
+      },
+    },
+    body: {
+      contentType: "html",
+      content: "<p>✅ Thanks for your message!</p>",
+    },
+    attachments: [],
+  },
+  {
+    id: "1767470616693",
+    createdDateTime: "2026-01-03T20:03:36.693Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>7</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470618309",
+    createdDateTime: "2026-01-03T20:03:38.309Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>8</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470620695",
+    createdDateTime: "2026-01-03T20:03:40.695Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>9</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470621810",
+    createdDateTime: "2026-01-03T20:03:41.81Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>10</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470623612",
+    createdDateTime: "2026-01-03T20:03:43.612Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>11</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470623679",
+    createdDateTime: "2026-01-03T20:03:43.679Z",
+    from: {
+      device: null,
+      user: null,
+      application: {
+        "@odata.type": "#microsoft.graph.teamworkApplicationIdentity",
+        id: TEAMS_BOT_APP_ID,
+        displayName: "Chat SDK Demo",
+        applicationIdentityType: "bot",
+      },
+    },
+    body: {
+      contentType: "html",
+      content: "<p>✅ Thanks for your message!</p>",
+    },
+    attachments: [],
+  },
+  {
+    id: "1767470624354",
+    createdDateTime: "2026-01-03T20:03:44.354Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>12</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470624949",
+    createdDateTime: "2026-01-03T20:03:44.949Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>13</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470629241",
+    createdDateTime: "2026-01-03T20:03:49.241Z",
+    from: {
+      application: null,
+      device: null,
+      user: {
+        "@odata.type": "#microsoft.graph.teamworkUserIdentity",
+        id: TEAMS_HUMAN_USER_ID,
+        displayName: "Test User",
+        userIdentityType: "aadUser",
+        tenantId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      },
+    },
+    body: { contentType: "html", content: "<p>Proper text</p>" },
+    attachments: [],
+  },
+  {
+    id: "1767470631428",
+    createdDateTime: "2026-01-03T20:03:51.428Z",
+    from: {
+      device: null,
+      user: null,
+      application: {
+        "@odata.type": "#microsoft.graph.teamworkApplicationIdentity",
+        id: TEAMS_BOT_APP_ID,
+        displayName: "Chat SDK Demo",
+        applicationIdentityType: "bot",
+      },
+    },
+    body: {
+      contentType: "html",
+      content: "<p>✅ Thanks for your message!</p>",
+    },
+    attachments: [],
+  },
+];
+
+// Discord fixture data (from recordings at SHA 94eb6504)
+export const DISCORD_GUILD_ID = "1457468924290662599";
+const DISCORD_THREAD_ID_RAW = "1457512653978341593";
+export const DISCORD_THREAD_ID = `discord:${DISCORD_GUILD_ID}:${DISCORD_THREAD_ID_RAW}`;
+export const DISCORD_BOT_USER_ID = "1457469483726668048";
+export const DISCORD_HUMAN_USER_ID = "1033044521375764530";
+
+// Raw Discord messages as returned by the API (GET /channels/{id}/messages)
+// Discord returns newest first; tests must reverse for chronological order
+export const DISCORD_RAW_MESSAGES = [
+  {
+    id: "1457512653978341593",
+    type: 0,
+    content: "<@1457469483726668048> Hey",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:14:55.984Z",
+    edited_timestamp: null,
+    mentions: [{ id: DISCORD_BOT_USER_ID, username: "Chat SDK Demo" }],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512655123456789",
+    type: 0,
+    content: "",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_BOT_USER_ID,
+      username: "Chat SDK Demo",
+      discriminator: "0",
+      global_name: "Chat SDK Demo",
+      bot: true,
+    },
+    timestamp: "2026-01-04T23:14:57.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [{ title: "👋 Welcome!", description: "Connected via Discord" }],
+  },
+  {
+    id: "1457512660123456789",
+    type: 0,
+    content: "",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_BOT_USER_ID,
+      username: "Chat SDK Demo",
+      discriminator: "0",
+      global_name: "Chat SDK Demo",
+      bot: true,
+    },
+    timestamp: "2026-01-04T23:14:59.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [{ title: "📝 Message Fetch Results" }],
+  },
+  {
+    id: "1457512688929341543",
+    type: 0,
+    content: "Wow",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:04.317Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000001",
+    type: 0,
+    content: "1",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:10.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000002",
+    type: 0,
+    content: "2",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:11.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000003",
+    type: 0,
+    content: "3",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:12.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000010",
+    type: 0,
+    content: "✅ Thanks for your message!",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_BOT_USER_ID,
+      username: "Chat SDK Demo",
+      discriminator: "0",
+      global_name: "Chat SDK Demo",
+      bot: true,
+    },
+    timestamp: "2026-01-04T23:15:12.500Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000004",
+    type: 0,
+    content: "4",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:13.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000005",
+    type: 0,
+    content: "5",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:14.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000006",
+    type: 0,
+    content: "6",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:15.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000007",
+    type: 0,
+    content: "7",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:16.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000008",
+    type: 0,
+    content: "8",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:17.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000009",
+    type: 0,
+    content: "9",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:18.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000011",
+    type: 0,
+    content: "10",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:19.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000012",
+    type: 0,
+    content: "11",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:20.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000013",
+    type: 0,
+    content: "12",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:21.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000020",
+    type: 0,
+    content: "✅ Thanks for your message!",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_BOT_USER_ID,
+      username: "Chat SDK Demo",
+      discriminator: "0",
+      global_name: "Chat SDK Demo",
+      bot: true,
+    },
+    timestamp: "2026-01-04T23:15:21.500Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000014",
+    type: 0,
+    content: "13",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:22.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+  {
+    id: "1457512700000000015",
+    type: 0,
+    content: "14",
+    channel_id: DISCORD_THREAD_ID_RAW,
+    author: {
+      id: DISCORD_HUMAN_USER_ID,
+      username: "testuser2384",
+      discriminator: "0",
+      global_name: "Test User",
+      bot: false,
+    },
+    timestamp: "2026-01-04T23:15:23.000Z",
+    edited_timestamp: null,
+    mentions: [],
+    attachments: [],
+    embeds: [],
+  },
+];

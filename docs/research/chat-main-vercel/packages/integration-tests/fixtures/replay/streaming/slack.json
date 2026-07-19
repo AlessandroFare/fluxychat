@@ -1,0 +1,423 @@
+{
+  "botName": "Chat SDK Bot",
+  "botUserId": "U00FAKEBOT01",
+  "aiMention": {
+    "token": "xAbCdEfGhIjKlMnOpQrStUvW",
+    "team_id": "T00FAKE00AA",
+    "context_team_id": "T00FAKE00AA",
+    "context_enterprise_id": null,
+    "api_app_id": "A00FAKEAPP01",
+    "event": {
+      "type": "message",
+      "user": "U00FAKEUSER1",
+      "ts": "1767406613.568609",
+      "client_msg_id": "8c5824aa-018c-4df5-9cc6-aa9b44ec8d8b",
+      "text": "<@U00FAKEBOT01> AI What is love?",
+      "team": "T00FAKE00AA",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "Z8Zz/",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                { "type": "user", "user_id": "U00FAKEBOT01" },
+                { "type": "text", "text": " AI What is love?" }
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "C00FAKECHAN1",
+      "event_ts": "1767406613.568609",
+      "channel_type": "channel"
+    },
+    "type": "event_callback",
+    "event_id": "Ev0A6CPRGKL3",
+    "event_time": 1767406613,
+    "authorizations": [
+      {
+        "enterprise_id": null,
+        "team_id": "T00FAKE00AA",
+        "user_id": "U00FAKEBOT01",
+        "is_bot": true,
+        "is_enterprise_install": false
+      }
+    ],
+    "is_ext_shared_channel": false,
+    "event_context": "4-eyJldCI6Im1lc3NhZ2UiLCJ0aWQiOiJUMDNTSDdHMDFHVSIsImFpZCI6IkEwQTVGVVhQMUVEIiwiY2lkIjoiQzBBNTExTUJDVVcifQ"
+  },
+  "followUp": {
+    "token": "xAbCdEfGhIjKlMnOpQrStUvW",
+    "team_id": "T00FAKE00AA",
+    "context_team_id": "T00FAKE00AA",
+    "context_enterprise_id": null,
+    "api_app_id": "A00FAKEAPP01",
+    "event": {
+      "type": "message",
+      "user": "U00FAKEUSER1",
+      "ts": "1767406631.679539",
+      "client_msg_id": "452f5bd0-7ea2-462d-ab9e-5efcea8ece92",
+      "text": "Who are you?",
+      "team": "T00FAKE00AA",
+      "thread_ts": "1767406613.568609",
+      "parent_user_id": "U00FAKEUSER1",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "Ls7Lf",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [{ "type": "text", "text": "Who are you?" }]
+            }
+          ]
+        }
+      ],
+      "channel": "C00FAKECHAN1",
+      "event_ts": "1767406631.679539",
+      "channel_type": "channel"
+    },
+    "type": "event_callback",
+    "event_id": "Ev0A6K5EK4SW",
+    "event_time": 1767406631,
+    "authorizations": [
+      {
+        "enterprise_id": null,
+        "team_id": "T00FAKE00AA",
+        "user_id": "U00FAKEBOT01",
+        "is_bot": true,
+        "is_enterprise_install": false
+      }
+    ],
+    "is_ext_shared_channel": false,
+    "event_context": "4-eyJldCI6Im1lc3NhZ2UiLCJ0aWQiOiJUMDNTSDdHMDFHVSIsImFpZCI6IkEwQTVGVVhQMUVEIiwiY2lkIjoiQzBBNTExTUJDVVcifQ"
+  },
+  "aiMentionWithFile": {
+    "token": "zCdEfGhIjKlMnOpQrStUvWxY",
+    "team_id": "T00FAKE00BB",
+    "api_app_id": "A00FAKEAPP03",
+    "event": {
+      "type": "app_mention",
+      "text": "<@U00FAKEBOT01> [AI] I don't really understand this explanation.",
+      "files": [
+        {
+          "id": "F0AD236ATJN",
+          "created": 1770241967,
+          "timestamp": 1770241967,
+          "name": "image.png",
+          "title": "image.png",
+          "mimetype": "image/png",
+          "filetype": "png",
+          "pretty_type": "PNG",
+          "user": "U00FAKEUSER2",
+          "user_team": "T00FAKE00BB",
+          "editable": false,
+          "size": 214244,
+          "mode": "hosted",
+          "is_external": false,
+          "external_type": "",
+          "is_public": true,
+          "public_url_shared": false,
+          "display_as_bot": false,
+          "username": "",
+          "url_private": "https://files.slack.com/files-pri/T00FAKE00BB-F0XY789ZKLM/image.png",
+          "url_private_download": "https://files.slack.com/files-pri/T00FAKE00BB-F0XY789ZKLM/download/image.png",
+          "media_display_type": "unknown",
+          "thumb_64": "https://files.slack.com/files-tmb/T00FAKE00BB-F0XY789ZKLM-b4f7c2d9e1/image_64.png",
+          "thumb_80": "https://files.slack.com/files-tmb/T00FAKE00BB-F0XY789ZKLM-b4f7c2d9e1/image_80.png",
+          "thumb_360": "https://files.slack.com/files-tmb/T00FAKE00BB-F0XY789ZKLM-b4f7c2d9e1/image_360.png",
+          "thumb_360_w": 196,
+          "thumb_360_h": 360,
+          "thumb_480": "https://files.slack.com/files-tmb/T00FAKE00BB-F0XY789ZKLM-b4f7c2d9e1/image_480.png",
+          "thumb_480_w": 261,
+          "thumb_480_h": 480,
+          "thumb_160": "https://files.slack.com/files-tmb/T00FAKE00BB-F0XY789ZKLM-b4f7c2d9e1/image_160.png",
+          "thumb_720": "https://files.slack.com/files-tmb/T00FAKE00BB-F0XY789ZKLM-b4f7c2d9e1/image_720.png",
+          "thumb_720_w": 391,
+          "thumb_720_h": 720,
+          "thumb_800": "https://files.slack.com/files-tmb/T00FAKE00BB-F0XY789ZKLM-b4f7c2d9e1/image_800.png",
+          "thumb_800_w": 800,
+          "thumb_800_h": 1472,
+          "thumb_960": "https://files.slack.com/files-tmb/T00FAKE00BB-F0XY789ZKLM-b4f7c2d9e1/image_960.png",
+          "thumb_960_w": 522,
+          "thumb_960_h": 960,
+          "thumb_1024": "https://files.slack.com/files-tmb/T00FAKE00BB-F0XY789ZKLM-b4f7c2d9e1/image_1024.png",
+          "thumb_1024_w": 557,
+          "thumb_1024_h": 1024,
+          "original_w": 800,
+          "original_h": 1472,
+          "thumb_tiny": "AwAwABu9cLMyjyHVTnnIqDy77vMnT/ParQ3bmyQQD0CkUfMScEcHupoArol2HBaVSueRkdM/7vpVoZxzRRQBE7uqu3y/KeMvj8OnFAdgBgo49S3fGccCnkP2ZR16r+Xf/PtThnvQAxctGMtgnupz/T+lPoByM1GDNjlUJ/3iP6UAOIJPce/FAJ3fdbp14/z/APqowrEsu3djGcZ/CmgJFt/1a544GMn/ADmgBxJAJ2sxHTpk06mYwCxKA+u3/wCv9afQB//Z",
+          "permalink": "https://example.slack.com/files/U00FAKEBOT01/F0XY789ZKLM/image.png",
+          "permalink_public": "https://slack-files.com/T00FAKE00BB-F0XY789ZKLM-8c92d4a7f3",
+          "is_starred": false,
+          "skipped_shares": true,
+          "has_rich_preview": false,
+          "file_access": "visible"
+        }
+      ],
+      "upload": false,
+      "user": "U00FAKEUSER2",
+      "display_as_bot": false,
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "dGY07",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "user",
+                  "user_id": "U00FAKEBOT01"
+                },
+                {
+                  "type": "text",
+                  "text": " [AI] I don't really understand this explanation."
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "ts": "1770241970.822989",
+      "client_msg_id": "ed0f98a2-235e-40e9-ba5a-88d77dc14d85",
+      "channel": "C00FAKECHAN3",
+      "assistant_thread": {
+        "action_token": "10442059173734.10229338706656.8fa22794d81cd1c8d11947967bca4cf7"
+      },
+      "event_ts": "1770241970.822989"
+    },
+    "type": "event_callback",
+    "event_id": "Ev0ACYL5R65B",
+    "event_time": 1770241970,
+    "authorizations": [
+      {
+        "enterprise_id": null,
+        "team_id": "T00FAKE00BB",
+        "user_id": "U00FAKEBOT01",
+        "is_bot": true,
+        "is_enterprise_install": false
+      }
+    ],
+    "is_ext_shared_channel": false,
+    "event_context": "4-eyJldCI6ImFwcF9tZW50aW9uIiwidGlkIjoiVDBBNlI5WUxTS0EiLCJhaWQiOiJBMEE2MEswOENMQyIsImNpZCI6IkMwQUNFTENRQkFCIn0"
+  },
+  "promptMessage": {
+    "token": "sanitized-verification-token",
+    "team_id": "T08REALTEAM1",
+    "context_team_id": "T08REALTEAM1",
+    "context_enterprise_id": null,
+    "api_app_id": "A08REALAPP1",
+    "event": {
+      "type": "message",
+      "user": "U08REALBOT1",
+      "ts": "1775407827.773439",
+      "bot_id": "B08REALBOT1",
+      "app_id": "A08REALAPP1",
+      "text": "*Which option should I use?* Select an option to continue:",
+      "team": "T08REALTEAM1",
+      "thread_ts": "1775407823.782829",
+      "parent_user_id": "U08REALUSER1",
+      "blocks": [
+        {
+          "type": "header",
+          "block_id": "BP/k8",
+          "text": {
+            "type": "plain_text",
+            "text": "Which option should I use?",
+            "emoji": true
+          }
+        },
+        {
+          "type": "section",
+          "block_id": "wIM5b",
+          "text": {
+            "type": "mrkdwn",
+            "text": "Select an option to continue:",
+            "verbatim": false
+          }
+        },
+        {
+          "type": "actions",
+          "block_id": "AXMQo",
+          "elements": [
+            {
+              "type": "button",
+              "action_id": "option-select:option-a",
+              "text": {
+                "type": "plain_text",
+                "text": "Option A",
+                "emoji": true
+              },
+              "value": "option-a"
+            }
+          ]
+        }
+      ],
+      "channel": "C08REALCHAN1",
+      "event_ts": "1775407827.773439",
+      "channel_type": "channel"
+    },
+    "type": "event_callback",
+    "event_id": "Ev08REALPROMPT1",
+    "event_time": 1775407827,
+    "authorizations": [
+      {
+        "enterprise_id": null,
+        "team_id": "T08REALTEAM1",
+        "user_id": "U08REALBOT1",
+        "is_bot": true,
+        "is_enterprise_install": false
+      }
+    ],
+    "is_ext_shared_channel": false,
+    "event_context": "4-sanitized-button-prompt"
+  },
+  "buttonAction": {
+    "type": "block_actions",
+    "user": {
+      "id": "U08REALUSER1",
+      "username": "testuser",
+      "name": "testuser",
+      "team_id": "T08REALTEAM1"
+    },
+    "api_app_id": "A08REALAPP1",
+    "token": "sanitized-verification-token",
+    "container": {
+      "type": "message",
+      "message_ts": "1775407827.773439",
+      "channel_id": "C08REALCHAN1",
+      "is_ephemeral": false,
+      "thread_ts": "1775407823.782829"
+    },
+    "trigger_id": "10847034803718.8832297784567.sanitized",
+    "team": {
+      "id": "T08REALTEAM1",
+      "domain": "example-workspace"
+    },
+    "enterprise": null,
+    "is_enterprise_install": false,
+    "channel": {
+      "id": "C08REALCHAN1",
+      "name": "general"
+    },
+    "message": {
+      "user": "U08REALBOT1",
+      "type": "message",
+      "ts": "1775407827.773439",
+      "bot_id": "B08REALBOT1",
+      "app_id": "A08REALAPP1",
+      "text": "*Which option should I use?* Select an option to continue:",
+      "team": "T08REALTEAM1",
+      "thread_ts": "1775407823.782829",
+      "parent_user_id": "U08REALUSER1",
+      "blocks": [
+        {
+          "type": "header",
+          "block_id": "BP/k8",
+          "text": {
+            "type": "plain_text",
+            "text": "Which option should I use?",
+            "emoji": true
+          }
+        },
+        {
+          "type": "section",
+          "block_id": "wIM5b",
+          "text": {
+            "type": "mrkdwn",
+            "text": "Select an option to continue:",
+            "verbatim": false
+          }
+        },
+        {
+          "type": "actions",
+          "block_id": "AXMQo",
+          "elements": [
+            {
+              "type": "button",
+              "action_id": "option-select:option-a",
+              "text": {
+                "type": "plain_text",
+                "text": "Option A",
+                "emoji": true
+              },
+              "value": "option-a"
+            }
+          ]
+        }
+      ]
+    },
+    "state": {
+      "values": {}
+    },
+    "response_url": "https://hooks.slack.com/actions/T08REALTEAM1/10849095105106/sanitized",
+    "actions": [
+      {
+        "action_id": "option-select:option-a",
+        "block_id": "AXMQo",
+        "text": {
+          "type": "plain_text",
+          "text": "Option A",
+          "emoji": true
+        },
+        "value": "option-a",
+        "type": "button",
+        "action_ts": "1775407849.087100"
+      }
+    ]
+  },
+  "threadFollowUp": {
+    "token": "sanitized-verification-token",
+    "team_id": "T08REALTEAM1",
+    "context_team_id": "T08REALTEAM1",
+    "context_enterprise_id": null,
+    "api_app_id": "A08REALAPP1",
+    "event": {
+      "type": "message",
+      "user": "U08REALUSER1",
+      "ts": "1775407883.655979",
+      "client_msg_id": "23bf75d5-4b7f-4caa-88ff-b9510ae177f4",
+      "text": "ping?",
+      "team": "T08REALTEAM1",
+      "thread_ts": "1775407823.782829",
+      "parent_user_id": "U08REALUSER1",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "v6Z74",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "ping?"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "C08REALCHAN1",
+      "event_ts": "1775407883.655979",
+      "channel_type": "channel"
+    },
+    "type": "event_callback",
+    "event_id": "Ev08REALFOLLOWUP1",
+    "event_time": 1775407883,
+    "authorizations": [
+      {
+        "enterprise_id": null,
+        "team_id": "T08REALTEAM1",
+        "user_id": "U08REALBOT1",
+        "is_bot": true,
+        "is_enterprise_install": false
+      }
+    ],
+    "is_ext_shared_channel": false,
+    "event_context": "4-sanitized-thread-follow-up"
+  }
+}

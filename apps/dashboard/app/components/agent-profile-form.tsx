@@ -140,14 +140,16 @@ export function AgentProfileForm({
             <ModelParamsPanel
               open={showParams}
               onOpenChange={setShowParams}
-              params={{
-                temperature: values.temperature,
-                maxTokens: values.maxTokens,
-                topP: values.topP,
-                frequencyPenalty: values.frequencyPenalty,
-                presencePenalty: values.presencePenalty,
-                stopSequences: values.stopSequences,
-              }}
+            params={{
+              temperature: values.temperature,
+              maxTokens: values.maxTokens,
+              topP: values.topP,
+              frequencyPenalty: values.frequencyPenalty,
+              presencePenalty: values.presencePenalty,
+              stopSequences: values.stopSequences,
+              reasoningEffort: values.reasoningEffort,
+              reasoningSummary: values.reasoningSummary,
+            }}
               onChange={(patch) => onChange(patch)}
             />
           </div>

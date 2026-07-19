@@ -1,5 +1,8 @@
 import { buildAgentLlmConfig } from "@/lib/agent-catalog";
 
+export type ReasoningEffort = "none" | "low" | "medium" | "high";
+export type ReasoningSummary = "auto" | "concise" | "detailed" | "none";
+
 export interface AgentFormValues {
   name: string;
   handle: string;
@@ -18,6 +21,8 @@ export interface AgentFormValues {
   frequencyPenalty: number;
   presencePenalty: number;
   stopSequences: string;
+  reasoningEffort: ReasoningEffort;
+  reasoningSummary: ReasoningSummary;
 }
 
 export interface AgentRecord {
@@ -56,6 +61,8 @@ export function emptyAgentForm(): AgentFormValues {
     frequencyPenalty: 0,
     presencePenalty: 0,
     stopSequences: "",
+    reasoningEffort: "none",
+    reasoningSummary: "auto",
   };
 }
 
@@ -69,6 +76,8 @@ export function agentToFormValues(agent: AgentRecord): AgentFormValues {
       frequencyPenalty?: number;
       presencePenalty?: number;
       stopSequences?: string;
+      reasoningEffort?: ReasoningEffort;
+      reasoningSummary?: ReasoningSummary;
     };
   } | null | undefined;
   const mp = cfg?.modelParams;
@@ -90,6 +99,8 @@ export function agentToFormValues(agent: AgentRecord): AgentFormValues {
     frequencyPenalty: mp?.frequencyPenalty ?? 0,
     presencePenalty: mp?.presencePenalty ?? 0,
     stopSequences: mp?.stopSequences ?? "",
+    reasoningEffort: mp?.reasoningEffort ?? "none",
+    reasoningSummary: mp?.reasoningSummary ?? "auto",
   };
 }
 
@@ -139,6 +150,8 @@ export function agentFormToPayload(form: AgentFormValues) {
       frequencyPenalty: form.frequencyPenalty,
       presencePenalty: form.presencePenalty,
       stopSequences: form.stopSequences,
+      reasoningEffort: form.reasoningEffort,
+      reasoningSummary: form.reasoningSummary,
     }),
   };
 }

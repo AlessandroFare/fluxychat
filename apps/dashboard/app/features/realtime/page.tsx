@@ -9,6 +9,7 @@ import { InAppChatShowcase } from "@/components/showcase/in-app-chat-showcase";
 import { LiveStreamingShowcase } from "@/components/showcase/live-streaming-showcase";
 import { PushNotificationsShowcase } from "@/components/showcase/push-notifications-showcase";
 import { RealTimeLocationShowcase } from "@/components/showcase/real-time-location-showcase";
+import { AiTransportShowcase, VoiceInterfaceShowcase } from "@/components/showcase/ai-voice-showcase";
 import {
   REALTIME_FEATURES,
   type RealtimeFeatureId,
@@ -78,6 +79,8 @@ export default function RealtimeFeaturesPage() {
         {tab === "streaming" ? <LiveStreamingShowcase session={session} /> : null}
         {tab === "location" ? <RealTimeLocationShowcase session={session} /> : null}
         {tab === "push" ? <PushNotificationsShowcase session={session} /> : null}
+        {tab === "ai-transport" ? <AiTransportShowcase session={session} /> : null}
+        {tab === "voice" ? <VoiceInterfaceShowcase session={session} /> : null}
       </div>
     </ConsoleShell>
   );

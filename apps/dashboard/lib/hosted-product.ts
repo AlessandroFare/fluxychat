@@ -32,6 +32,7 @@ export const HOSTED_PATHS = {
 /** Routes that use marketing layout (no console sidebar). */
 export const MARKETING_PATH_PREFIXES = [
   "/landing",
+  "/pricing",
   "/why",
   "/enter",
   "/get-started",

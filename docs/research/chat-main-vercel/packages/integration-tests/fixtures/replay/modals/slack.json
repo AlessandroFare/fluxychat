@@ -1,0 +1,532 @@
+{
+  "botName": "Test Support Insights",
+  "botUserId": "U00FAKEBOT02",
+  "mention": {
+    "token": "yBcDeFgHiJkLmNoPqRsTuVwX",
+    "team_id": "T00FAKE00BB",
+    "api_app_id": "A00FAKEAPP02",
+    "event": {
+      "type": "app_mention",
+      "user": "U00FAKEUSER2",
+      "ts": "1769220155.940449",
+      "client_msg_id": "bd2ed218-66b1-4ead-84db-72cc508204ab",
+      "text": "<@U00FAKEBOT02> Hello",
+      "team": "T00FAKE00BB",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "L2Wjk",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "user",
+                  "user_id": "U00FAKEBOT02"
+                },
+                {
+                  "type": "text",
+                  "text": " Hello"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "C00FAKECHAN2",
+      "event_ts": "1769220155.940449"
+    },
+    "type": "event_callback",
+    "event_id": "Ev0AATDEL38U",
+    "event_time": 1769220155,
+    "authorizations": [
+      {
+        "enterprise_id": null,
+        "team_id": "T00FAKE00BB",
+        "user_id": "U00FAKEBOT02",
+        "is_bot": true,
+        "is_enterprise_install": false
+      }
+    ],
+    "is_ext_shared_channel": false
+  },
+  "action": {
+    "type": "block_actions",
+    "user": {
+      "id": "U00FAKEUSER2",
+      "username": "jane.smith",
+      "name": "jane.smith",
+      "team_id": "T00FAKE00BB"
+    },
+    "api_app_id": "A00FAKEAPP02",
+    "token": "yBcDeFgHiJkLmNoPqRsTuVwX",
+    "container": {
+      "type": "message",
+      "message_ts": "1769220161.503009",
+      "channel_id": "C00FAKECHAN2",
+      "is_ephemeral": false,
+      "thread_ts": "1769220155.940449"
+    },
+    "trigger_id": "10367455086084.10229338706656.e675a0c0dacc24a1f7b84a7a426d1197",
+    "team": {
+      "id": "T00FAKE00BB",
+      "domain": "acme-test-workspace"
+    },
+    "enterprise": null,
+    "is_enterprise_install": false,
+    "channel": {
+      "id": "C00FAKECHAN2",
+      "name": "spam-report-formatting"
+    },
+    "message": {
+      "user": "U00FAKEBOT02",
+      "type": "message",
+      "ts": "1769220161.503009",
+      "bot_id": "B00FAKEBOT02",
+      "app_id": "A00FAKEAPP02",
+      "text": "*:wave: Welcome!* Connected via slack I'm now listening to this thread.",
+      "team": "T00FAKE00BB",
+      "thread_ts": "1769220155.940449",
+      "parent_user_id": "U00FAKEUSER2",
+      "blocks": [
+        {
+          "type": "header",
+          "block_id": "jJQhN",
+          "text": {
+            "type": "plain_text",
+            "text": ":wave: Welcome!",
+            "emoji": true
+          }
+        },
+        {
+          "type": "actions",
+          "block_id": "XH72R",
+          "elements": [
+            {
+              "type": "button",
+              "action_id": "feedback",
+              "text": {
+                "type": "plain_text",
+                "text": "Send Feedback",
+                "emoji": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "state": {
+      "values": {}
+    },
+    "response_url": "https://hooks.slack.com/actions/T00FAKE00BB/10348409316023/sPe1cI1jl72ZPyKpdJYaBV9s",
+    "actions": [
+      {
+        "action_id": "feedback",
+        "block_id": "XH72R",
+        "text": {
+          "type": "plain_text",
+          "text": "Send Feedback",
+          "emoji": true
+        },
+        "type": "button",
+        "action_ts": "1769220166.113300"
+      }
+    ]
+  },
+  "viewSubmission": {
+    "type": "view_submission",
+    "team": {
+      "id": "T00FAKE00BB",
+      "domain": "acme-test-workspace"
+    },
+    "user": {
+      "id": "U00FAKEUSER2",
+      "username": "jane.smith",
+      "name": "jane.smith",
+      "team_id": "T00FAKE00BB"
+    },
+    "api_app_id": "A00FAKEAPP02",
+    "token": "yBcDeFgHiJkLmNoPqRsTuVwX",
+    "trigger_id": "10348409668983.10229338706656.91080fe083940dcea332270e757368a5",
+    "view": {
+      "id": "V0AB2P1M2HX",
+      "team_id": "T00FAKE00BB",
+      "type": "modal",
+      "blocks": [
+        {
+          "type": "input",
+          "block_id": "message",
+          "label": {
+            "type": "plain_text",
+            "text": "Your Feedback",
+            "emoji": true
+          },
+          "optional": false,
+          "dispatch_action": false,
+          "element": {
+            "type": "plain_text_input",
+            "action_id": "message",
+            "placeholder": {
+              "type": "plain_text",
+              "text": "Tell us what you think...",
+              "emoji": true
+            },
+            "multiline": true
+          }
+        },
+        {
+          "type": "input",
+          "block_id": "category",
+          "label": {
+            "type": "plain_text",
+            "text": "Category",
+            "emoji": true
+          },
+          "optional": false,
+          "dispatch_action": false,
+          "element": {
+            "type": "static_select",
+            "action_id": "category",
+            "placeholder": {
+              "type": "plain_text",
+              "text": "Select a category",
+              "emoji": true
+            },
+            "options": [
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Bug Report",
+                  "emoji": true
+                },
+                "value": "bug"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Feature Request",
+                  "emoji": true
+                },
+                "value": "feature"
+              }
+            ]
+          }
+        },
+        {
+          "type": "input",
+          "block_id": "email",
+          "label": {
+            "type": "plain_text",
+            "text": "Email (optional)",
+            "emoji": true
+          },
+          "optional": true,
+          "dispatch_action": false,
+          "element": {
+            "type": "plain_text_input",
+            "action_id": "email",
+            "placeholder": {
+              "type": "plain_text",
+              "text": "your@email.com",
+              "emoji": true
+            },
+            "multiline": false
+          }
+        }
+      ],
+      "private_metadata": "d57850a7-5bab-414d-b11e-ca355b55d629",
+      "callback_id": "feedback_form",
+      "state": {
+        "values": {
+          "message": {
+            "message": {
+              "type": "plain_text_input",
+              "value": "Hello!"
+            }
+          },
+          "category": {
+            "category": {
+              "type": "static_select",
+              "selected_option": {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Feature Request",
+                  "emoji": true
+                },
+                "value": "feature"
+              }
+            }
+          },
+          "email": {
+            "email": {
+              "type": "plain_text_input",
+              "value": "user@example.com"
+            }
+          }
+        }
+      },
+      "hash": "1769220166.YVocmHYs",
+      "title": {
+        "type": "plain_text",
+        "text": "Send Feedback",
+        "emoji": true
+      },
+      "clear_on_close": false,
+      "notify_on_close": true,
+      "close": {
+        "type": "plain_text",
+        "text": "Cancel",
+        "emoji": true
+      },
+      "submit": {
+        "type": "plain_text",
+        "text": "Send",
+        "emoji": true
+      },
+      "previous_view_id": null,
+      "root_view_id": "V0AB2P1M2HX",
+      "app_id": "A00FAKEAPP02",
+      "external_id": "",
+      "app_installed_team_id": "T00FAKE00BB",
+      "bot_id": "B00FAKEBOT02"
+    },
+    "response_urls": [],
+    "is_enterprise_install": false,
+    "enterprise": null
+  },
+  "modalContext": {
+    "contextId": "d57850a7-5bab-414d-b11e-ca355b55d629",
+    "thread": {
+      "_type": "chat:Thread",
+      "id": "slack:C00FAKECHAN2:1769220155.940449",
+      "channelId": "C00FAKECHAN2",
+      "isDM": false,
+      "adapterName": "slack"
+    },
+    "message": {
+      "_type": "chat:Message",
+      "id": "1769220161.503009",
+      "threadId": "slack:C00FAKECHAN2:1769220155.940449",
+      "text": ":wave: Welcome! Connected via slack I'm now listening to this thread. Try these actions: :sparkles: Mention me with \"AI\" to enable AI assistant mode --- DM Support: No Platform: slack --- [Say Hello] [Ephemeral response] [Show Info] [Send Feedback] [Fetch Messages] [Open Link] [Goodbye]",
+      "formatted": {
+        "type": "root",
+        "children": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "type": "text",
+                "value": ":wave: Welcome!"
+              }
+            ]
+          }
+        ]
+      },
+      "raw": {
+        "user": "U00FAKEBOT02",
+        "type": "message",
+        "ts": "1769220161.503009",
+        "bot_id": "B00FAKEBOT02",
+        "app_id": "A00FAKEAPP02",
+        "team": "T00FAKE00BB",
+        "thread_ts": "1769220155.940449"
+      },
+      "author": {
+        "userId": "U00FAKEBOT02",
+        "userName": "Test Support Insights",
+        "fullName": "Test Support Insights",
+        "isBot": true,
+        "isMe": true
+      },
+      "metadata": {
+        "dateSent": "2026-01-24T02:02:41.503Z",
+        "edited": false
+      },
+      "attachments": []
+    }
+  },
+  "ephemeralAction": {
+    "type": "block_actions",
+    "user": {
+      "id": "U00FAKEUSER2",
+      "username": "jane.smith",
+      "name": "jane.smith",
+      "team_id": "T00FAKE00BB"
+    },
+    "api_app_id": "A00FAKEAPP02",
+    "token": "yBcDeFgHiJkLmNoPqRsTuVwX",
+    "container": {
+      "type": "message",
+      "message_ts": "1771126609.000200",
+      "channel_id": "C00FAKECHAN3",
+      "is_ephemeral": true,
+      "thread_ts": "1771126602.612659"
+    },
+    "trigger_id": "10541689532400.10229338706656.500e194be18c7e17dd828032cc9a769f",
+    "team": {
+      "id": "T00FAKE00BB",
+      "domain": "acme-test-workspace"
+    },
+    "enterprise": null,
+    "is_enterprise_install": false,
+    "channel": {
+      "id": "C00FAKECHAN3",
+      "name": "support-agent-dev"
+    },
+    "state": {
+      "values": {}
+    },
+    "response_url": "https://hooks.slack.com/actions/T00FAKE00BB/10497963005175/6JXlnuaOBOquTvi51uTnoFgi",
+    "actions": [
+      {
+        "action_id": "ephemeral_modal",
+        "block_id": "g/2hQ",
+        "text": {
+          "type": "plain_text",
+          "text": "Open Modal",
+          "emoji": true
+        },
+        "style": "primary",
+        "type": "button",
+        "action_ts": "1771126610.436992"
+      }
+    ]
+  },
+  "ephemeralViewSubmission": {
+    "type": "view_submission",
+    "team": {
+      "id": "T00FAKE00BB",
+      "domain": "acme-test-workspace"
+    },
+    "user": {
+      "id": "U00FAKEUSER2",
+      "username": "jane.smith",
+      "name": "jane.smith",
+      "team_id": "T00FAKE00BB"
+    },
+    "api_app_id": "A00FAKEAPP02",
+    "token": "yBcDeFgHiJkLmNoPqRsTuVwX",
+    "trigger_id": "10513412613426.10229338706656.56d90cbf0a2ef4d7fc85f753d0425473",
+    "view": {
+      "id": "V0AFG9NQY65",
+      "team_id": "T00FAKE00BB",
+      "type": "modal",
+      "blocks": [
+        {
+          "type": "input",
+          "block_id": "response",
+          "label": {
+            "type": "plain_text",
+            "text": "Your Response",
+            "emoji": true
+          },
+          "optional": false,
+          "dispatch_action": false,
+          "element": {
+            "type": "plain_text_input",
+            "action_id": "response",
+            "placeholder": {
+              "type": "plain_text",
+              "text": "Type something...",
+              "emoji": true
+            },
+            "multiline": false,
+            "dispatch_action_config": {
+              "trigger_actions_on": ["on_enter_pressed"]
+            }
+          }
+        }
+      ],
+      "private_metadata": "{\"c\":\"7c626a37-a151-4aa0-a9e7-5fd2a76ce639\"}",
+      "callback_id": "ephemeral_modal_form",
+      "state": {
+        "values": {
+          "response": {
+            "response": {
+              "type": "plain_text_input",
+              "value": "Hello!"
+            }
+          }
+        }
+      },
+      "hash": "1771126611.bXwO8lOR",
+      "title": {
+        "type": "plain_text",
+        "text": "Ephemeral Modal",
+        "emoji": true
+      },
+      "clear_on_close": false,
+      "notify_on_close": false,
+      "close": {
+        "type": "plain_text",
+        "text": "Cancel",
+        "emoji": true
+      },
+      "submit": {
+        "type": "plain_text",
+        "text": "Submit",
+        "emoji": true
+      },
+      "previous_view_id": null,
+      "root_view_id": "V0AFG9NQY65",
+      "app_id": "A00FAKEAPP02",
+      "external_id": "",
+      "app_installed_team_id": "T00FAKE00BB",
+      "bot_id": "B00FAKEBOT02"
+    },
+    "response_urls": [],
+    "is_enterprise_install": false,
+    "enterprise": null
+  },
+  "ephemeralModalContext": {
+    "contextId": "7c626a37-a151-4aa0-a9e7-5fd2a76ce639",
+    "thread": {
+      "_type": "chat:Thread",
+      "id": "slack:C00FAKECHAN3:1771126602.612659",
+      "channelId": "C00FAKECHAN3",
+      "isDM": false,
+      "adapterName": "slack"
+    },
+    "message": {
+      "_type": "chat:Message",
+      "id": "ephemeral:1771126609.000200:eyJyZXNwb25zZVVybCI6Imh0dHBzOi8vaG9va3Muc2xhY2suY29tL2FjdGlvbnMvVDAwRkFLRTAwQkIvMTA0OTc5NjMwMDUxNzUvNkpYbG51YU9CT3F1VHZpNTF1VG5vRmdpIiwidXNlcklkIjoiVTAwRkFLRVVTRVIyIn0=",
+      "threadId": "slack:C00FAKECHAN3:1771126602.612659",
+      "text": "This is an ephemeral message with a button to open a modal.",
+      "formatted": {
+        "type": "root",
+        "children": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "type": "text",
+                "value": "This is an ephemeral message with a button to open a modal."
+              }
+            ]
+          }
+        ]
+      },
+      "raw": {
+        "user": "U00FAKEBOT02",
+        "type": "message",
+        "ts": "1771126609.000200",
+        "bot_id": "B00FAKEBOT02",
+        "app_id": "A00FAKEAPP02",
+        "team": "T00FAKE00BB",
+        "thread_ts": "1771126602.612659"
+      },
+      "author": {
+        "userId": "U00FAKEBOT02",
+        "userName": "Test Support Insights",
+        "fullName": "Test Support Insights",
+        "isBot": true,
+        "isMe": true
+      },
+      "metadata": {
+        "dateSent": "2026-02-15T12:36:49.000Z",
+        "edited": false
+      },
+      "attachments": []
+    }
+  }
+}

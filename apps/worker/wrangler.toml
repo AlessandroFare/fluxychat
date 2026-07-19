@@ -50,6 +50,12 @@ class_name = "UserDurableObject"
 name = "IP_RATE_LIMITER"
 class_name = "IpRateLimiterDurableObject"
 
+# Supergroup router — coordinates sharded rooms with >1K concurrent connections.
+# One DO per project; manages shard capacity monitoring and auto-scaling.
+[[durable_objects.bindings]]
+name = "SUPERGROUP_ROUTER"
+class_name = "SupergroupRouterDurableObject"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "fluxychat"
@@ -84,6 +90,10 @@ new_sqlite_classes = ["IpRateLimiterDurableObject"]
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["UserDurableObject"]
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["SupergroupRouterDurableObject"]
 
 # P12-L: scheduled jobs via Workflows (set WORKFLOW_SCHEDULES_ENABLED=false + uncomment triggers for legacy cron)
 [triggers]

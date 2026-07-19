@@ -45,7 +45,7 @@ pnpm-debug.log*
 .openclaw-attachments/
 .opencode/
 apps/dashboard/.kimchi/
-docs/research/
+
 AGENTS.md
 HEARTBEAT.md
 IDENTITY.md

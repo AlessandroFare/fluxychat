@@ -7,11 +7,14 @@ import { LandingFaqSection } from "./landing-faq-section";
 import { LandingFeaturesClient } from "./landing-features-client";
 import { LandingFinalCtaSection } from "./landing-final-cta-section";
 import { LandingFooter } from "./landing-footer";
+import { LandingDemoSection } from "./landing-demo-section";
 import { LandingHeroClient } from "./landing-hero-client";
 import { LandingLifecycleSection } from "./landing-lifecycle-section";
 import { LandingLogoStrip } from "./landing-logo-strip";
 import { LandingPricingSection } from "./landing-pricing-section";
 import { LandingRealtimeSection } from "./landing-realtime-section";
+import { LandingCollabSection } from "./landing-collab-section";
+import { LandingStreamSection } from "./landing-stream-section";
 import { LandingShell } from "./landing-shell";
 import { LandingStatsSection } from "./landing-stats-section";
 import { LandingWhatsNewSection } from "./landing-whats-new-section";
@@ -23,11 +26,14 @@ export default function LandingPage() {
   return (
     <LandingShell>
       <LandingHeroClient />
+      <LandingDemoSection />
       <LandingLogoStrip />
       <LandingStatsSection />
       <LandingFeaturesClient />
       <LandingWhatsNewSection />
       <LandingRealtimeSection />
+      <LandingCollabSection />
+      <LandingStreamSection />
       <LandingEnterpriseSection />
       <LandingPricingSection />
       <LandingLifecycleSection />

@@ -1,0 +1,326 @@
+groupCreated:
+  isSendMsg: true
+# Deprecated. Fixed as 1.
+  reliabilityLevel: 1
+# Deprecated. Fixed as false.
+  unreadCount: false
+# Configuration for offline push notifications.
+  offlinePush:
+    # Enables or disables offline push notifications.
+    enable: false
+    # Title for the notification when a group is created.
+    title: create group title
+    # Description for the notification.
+    desc: create group desc
+    # Additional information for the notification.
+    ext: create group ext
+
+groupInfoSet:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupInfoSet title
+    desc: groupInfoSet desc
+    ext: groupInfoSet ext
+
+
+joinGroupApplication:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: true
+    title: joinGroupApplication title
+    desc: joinGroupApplication desc
+    ext: joinGroupApplication ext
+
+memberQuit:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: memberQuit title
+    desc: memberQuit desc
+    ext: memberQuit ext
+
+groupApplicationAccepted:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: true
+    title: groupApplicationAccepted title
+    desc: groupApplicationAccepted desc
+    ext: groupApplicationAccepted ext
+
+groupApplicationRejected:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: true
+    title: groupApplicationRejected title
+    desc: groupApplicationRejected desc
+    ext: groupApplicationRejected ext
+
+
+groupOwnerTransferred:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupOwnerTransferred title
+    desc: groupOwnerTransferred desc
+    ext: groupOwnerTransferred ext
+
+memberKicked:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: memberKicked title
+    desc: memberKicked desc
+    ext: memberKicked ext
+
+memberInvited:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: memberInvited title
+    desc: memberInvited desc
+    ext: memberInvited ext
+
+memberEnter:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: memberEnter title
+    desc: memberEnter desc
+    ext: memberEnter ext
+
+groupDismissed:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupDismissed title
+    desc: groupDismissed desc
+    ext: groupDismissed ext
+
+groupMuted:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupMuted title
+    desc: groupMuted desc
+    ext: groupMuted ext
+
+groupCancelMuted:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupCancelMuted title
+    desc: groupCancelMuted desc
+    ext: groupCancelMuted ext
+  defaultTips:
+    tips: group Cancel Muted
+
+
+groupMemberMuted:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupMemberMuted title
+    desc: groupMemberMuted desc
+    ext: groupMemberMuted ext
+
+groupMemberCancelMuted:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupMemberCancelMuted title
+    desc: groupMemberCancelMuted desc
+    ext: groupMemberCancelMuted ext
+
+groupMemberInfoSet:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupMemberInfoSet title
+    desc: groupMemberInfoSet desc
+    ext: groupMemberInfoSet ext
+
+groupInfoSetAnnouncement:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupInfoSetAnnouncement title
+    desc: groupInfoSetAnnouncement desc
+    ext: groupInfoSetAnnouncement ext
+
+
+groupInfoSetName:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: groupInfoSetName title
+    desc: groupInfoSetName desc
+    ext: groupInfoSetName ext
+
+
+#############################friend#################################
+friendApplicationAdded:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: true
+    title: Somebody applies to add you as a friend
+    desc: Somebody applies to add you as a friend
+    ext: Somebody applies to add you as a friend
+
+friendApplicationApproved:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: true
+    title: Someone applies to add your friend application
+    desc: Someone applies to add your friend application
+    ext: Someone applies to add your friend application
+
+friendApplicationRejected:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: true
+    title: Someone rejected your friend application
+    desc: Someone rejected your friend application
+    ext: Someone rejected your friend application
+
+friendAdded:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: We have become friends
+    desc: We have become friends
+    ext: We have become friends
+
+friendDeleted:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: deleted a friend
+    desc: deleted a friend
+    ext: deleted a friend
+
+friendRemarkSet:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: Your friend's profile has been changed
+    desc: Your friend's profile has been changed
+    ext: Your friend's profile has been changed
+
+blackAdded:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: blocked a user
+    desc: blocked a user
+    ext: blocked a user
+
+blackDeleted:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: Remove a blocked user
+    desc: Remove a blocked user
+    ext: Remove a blocked user
+
+friendInfoUpdated:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: friend info updated
+    desc: friend info updated
+    ext: friend info updated
+
+#####################user#########################
+userInfoUpdated:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: userInfo updated
+    desc: userInfo updated
+    ext: userInfo updated
+
+userStatusChanged:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: user status changed
+    desc: user status changed
+    ext: user status changed
+
+#####################conversation#########################
+conversationChanged:
+  isSendMsg: false
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: conversation changed
+    desc: conversation changed
+    ext: conversation changed
+
+conversationSetPrivate:
+  isSendMsg: true
+  reliabilityLevel: 1
+  unreadCount: false
+  offlinePush:
+    enable: false
+    title: burn after reading
+    desc: burn after reading
+    ext: burn after reading

@@ -64,12 +64,27 @@ export {
   type AIStreamResult,
 } from "./generation";
 export {
+  isReasoningConfig,
+  normalizeReasoningConfig,
+  reasoningToOpenAIOptions,
+  reasoningToAnthropicOptions,
+  reasoningToGoogleOptions,
+  reasoningToProviderOptions,
+  extractReasoningText,
+  mergeReasoningProviderMetadata,
+  type AIReasoningConfig,
+  type AIReasoningEffort,
+  type AIReasoningResult,
+  type AIReasoningSummary,
+} from "./reasoning";
+export {
   safeValidateAIMessages,
   validateAIMessages,
   type AIMessageValidationOptions,
   type AIMessageValidationResult,
 } from "./message-validation";
 export {
+  collectStreamParts,
   collectTextStream,
   toTextStream,
   type AITextStreamOptions,
@@ -89,6 +104,40 @@ export {
   type AIToolResult,
 } from "./agent-loop";
 export {
+  createApprovalId,
+  hashCanonical,
+  normalizeToolApprovalStatus,
+  resolveToolApproval,
+  signApproval,
+  verifyApprovalSignature,
+  type ApprovalRequest,
+  type ApprovalResponse,
+  type SingleToolApprovalFunction,
+  type GenericToolApprovalFunction,
+  type ToolApprovalConfig,
+  type ToolApprovalDecision,
+  type ToolApprovalRecord,
+  type ToolApprovalStatus,
+} from "./tool-approval";
+export type {
+  Callback,
+  LoopStartEvent,
+  StepStartEvent,
+  ToolExecutionStartEvent,
+  ToolExecutionEndEvent,
+  StepEndEvent,
+  LoopEndEvent,
+} from "./lifecycle-events";
+export type {
+  PrepareStepContext,
+  PrepareStepResult,
+  PrepareStepFunction,
+} from "./prepare-step";
+export {
+  pruneMessages,
+  type PruneMessagesOptions,
+} from "./prune-messages";
+export {
   cosineSimilarity,
   embed,
   embedMany,
@@ -98,6 +147,72 @@ export {
   type RetrievalDocument,
   type RetrievedDocument,
 } from "./retrieval";
+export {
+  InMemoryMemoryStore,
+  FileMemoryStore,
+  createMemoryTools,
+  AUTO_MEMORY_SYSTEM_PROMPT,
+  type AIMemoryEntry,
+  type AIMemoryQuery,
+  type AIMemoryStore,
+  type AIMemoryConfig,
+  type CreateMemoryToolsOptions,
+  type FileMemoryStoreOptions,
+} from "./memory";
+export {
+  createSubagentTool,
+  runSubagent,
+  type SubagentConfig,
+  type SubagentToolOptions,
+  type SubagentResult,
+} from "./subagent";
+export {
+  createCustomProvider,
+  createProviderRegistry,
+  ProviderRegistry,
+  type CustomProviderConfig,
+  type ProviderRegistryConfig,
+  type ProviderRegistryOptions,
+} from "./provider-registry";
+export {
+  wrapLanguageModel,
+  extractReasoningMiddleware,
+  defaultSettingsMiddleware,
+  simulateStreamingMiddleware,
+  extractJsonMiddleware,
+  type LanguageModelMiddleware,
+  type MiddlewareParams,
+  type GenerateContext,
+  type StreamContext,
+  type WrappedModelOptions,
+} from "./middleware";
+export {
+  smoothStream,
+  experimental_transform,
+  type SmoothStreamOptions,
+  type StreamTransformFunction,
+  type ExperimentalTransformOptions,
+} from "./stream-transform";
+export {
+  uploadSkill,
+  type ProviderReference,
+  type SkillFile,
+  type SkillProvider,
+  type UploadSkillOptions,
+  type UploadSkillResult,
+} from "./skill-uploads";
+export {
+  HarnessAgent,
+  type HarnessAdapter,
+  type HarnessSession,
+  type HarnessSessionResumeState,
+  type HarnessGenerateOptions,
+  type HarnessStreamOptions,
+  type HarnessGenerateResult,
+  type HarnessStreamResult,
+  type HarnessStepResult,
+  type HarnessMessage,
+} from "./harness-agent";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:8787";
 

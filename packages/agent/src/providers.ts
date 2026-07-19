@@ -5,6 +5,7 @@ import type {
   AIUsage,
   AIWarning,
 } from "./ai-core";
+import type { AIReasoningConfig } from "./reasoning";
 
 export const FLUXY_MODEL_SPEC_VERSION = "fluxy.ai.v1" as const;
 
@@ -47,6 +48,10 @@ export interface AIToolDefinition {
   name: string;
   description?: string;
   inputSchema: Record<string, unknown>;
+  /** If true, the tool schema is defined by the provider (not user). */
+  providerDefined?: boolean;
+  /** If true, the tool executes on the provider's servers, not locally. */
+  providerExecuted?: boolean;
 }
 
 export interface AIModelRequest {
@@ -58,6 +63,7 @@ export interface AIModelRequest {
   temperature?: number;
   maxOutputTokens?: number;
   stopSequences?: readonly string[];
+  reasoning?: AIReasoningConfig;
   providerOptions?: Record<string, unknown>;
   headers?: Record<string, string>;
   signal?: AbortSignal;
@@ -65,6 +71,7 @@ export interface AIModelRequest {
 
 export interface AIModelResponse {
   text: string;
+  reasoningText?: string;
   finishReason: AIFinishReason;
   usage?: AIUsage;
   warnings?: readonly AIWarning[];
@@ -116,7 +123,7 @@ function modelKey(provider: string, modelId: string): string {
 }
 
 export class AIProviderRegistry {
-  private readonly models = new Map<string, AIModelFactory>();
+  readonly models = new Map<string, AIModelFactory>();
   private readonly aliases = new Map<string, string>();
 
   register(model: AIModel | AIModelFactory, options: { replace?: boolean; aliases?: readonly string[] } = {}): this {
@@ -164,20 +171,32 @@ export class DeterministicLanguageModel implements AILanguageModel {
   readonly provider = "fluxy-test";
   readonly modelId: string;
   readonly capabilities: AIModelCapabilities = {
-    input: ["text"], output: ["text"], streaming: true, structuredOutput: true,
+    input: ["text"], output: ["text"], streaming: true, structuredOutput: true, reasoning: true,
   };
 
-  constructor(private readonly response: string | ((request: AIModelRequest) => string), modelId = "deterministic") {
+  constructor(
+    private readonly response: string | ((request: AIModelRequest) => string),
+    private readonly reasoningResponse?: string | ((request: AIModelRequest) => string),
+    modelId = "deterministic",
+  ) {
     this.modelId = modelId;
   }
 
   async generate(request: AIModelRequest): Promise<AIModelResponse> {
     if (request.signal?.aborted) throw request.signal.reason;
     const text = typeof this.response === "function" ? this.response(request) : this.response;
+    const reasoningText = this.reasoningResponse
+      ? typeof this.reasoningResponse === "function" ? this.reasoningResponse(request) : this.reasoningResponse
+      : undefined;
     return {
       text,
+      reasoningText,
       finishReason: "stop",
-      usage: { inputTokens: request.prompt.length, outputTokens: text.length ? 1 : 0 },
+      usage: {
+        inputTokens: request.prompt.length,
+        outputTokens: text.length ? 1 : 0,
+        ...(reasoningText ? { reasoningTokens: reasoningText.length } : {}),
+      },
     };
   }
 
@@ -186,6 +205,11 @@ export class DeterministicLanguageModel implements AILanguageModel {
     return new ReadableStream<AIStreamPart>({
       start(controller) {
         controller.enqueue({ type: "start", modelId: "fluxy-test:deterministic" });
+        if (result.reasoningText) {
+          controller.enqueue({ type: "reasoning-start", id: "reasoning-0" });
+          controller.enqueue({ type: "reasoning-delta", id: "reasoning-0", delta: result.reasoningText });
+          controller.enqueue({ type: "reasoning-end", id: "reasoning-0" });
+        }
         controller.enqueue({ type: "text-start", id: "text-0" });
         if (result.text) controller.enqueue({ type: "text-delta", id: "text-0", delta: result.text });
         controller.enqueue({ type: "text-end", id: "text-0" });

@@ -1,0 +1,86 @@
+# Provider Options
+
+Provider options let you pass provider-specific configuration beyond standard settings. They are namespaced by provider name so you can include options for multiple providers in the same call.
+
+## Passing Provider Options
+
+Provider options flow through `AgentLoopOptions.providerOptions` and are accessible via `AgentLoopState.providerOptions` in `runStep`:
+
+```ts
+import { runAgentLoop } from '@fluxy-chat/agent';
+
+const result = await runAgentLoop({
+  runStep: async (state) => {
+    const openaiOpts = state.providerOptions?.openai;
+    // Use provider options when building the model request
+    const response = await model.generate({
+      prompt: buildPrompt(state),
+      providerOptions: state.providerOptions,
+    });
+    return { text: response.text, finishReason: response.finishReason };
+  },
+  providerOptions: {
+    openai: {
+      reasoningEffort: 'high',
+    },
+  },
+});
+```
+
+## PrepareStep Integration
+
+Provider options can be changed mid-loop via `prepareStep`:
+
+```ts
+const result = await runAgentLoop({
+  runStep: myRunStep,
+  providerOptions: { openai: { reasoningEffort: 'low' } },
+
+  prepareStep({ stepNumber }) {
+    if (stepNumber > 2) {
+      return {
+        providerOptions: { openai: { reasoningEffort: 'high' } },
+      };
+    }
+  },
+});
+```
+
+## Common Options Pattern
+
+Provider options are `Record<string, unknown>` — each provider uses its own key:
+
+```ts
+providerOptions: {
+  openai: { reasoningEffort: 'high', reasoningSummary: 'detailed' },
+  anthropic: { thinking: { type: 'enabled', budgetTokens: 12000 }, effort: 'medium' },
+}
+```
+
+Only the options matching the active provider are used by the model.
+
+## Type Reference
+
+```ts
+interface AgentLoopOptions {
+  providerOptions?: Record<string, unknown>;
+  // ...
+}
+
+interface AgentLoopState {
+  providerOptions?: Record<string, unknown>;
+  // ...
+}
+
+// In prepareStep:
+interface PrepareStepResult {
+  providerOptions?: Record<string, unknown>;
+  // ...
+}
+```
+
+## See Also
+
+- [Prepare Step](./prepare-step.md) — dynamic step configuration
+- [LLM Middleware](./llm-middleware.md) — applying default settings via middleware
+- [Provider Registry](./provider-registry.md) — typed provider management

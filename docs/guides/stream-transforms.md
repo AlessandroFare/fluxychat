@@ -1,0 +1,117 @@
+# Stream Transformations
+
+Stream transforms modify AI stream parts in real-time — adding delays, filtering, or transforming content as it flows from the model to the consumer.
+
+## smoothStream
+
+Adds configurable delay between text chunks for a smooth streaming UX:
+
+```ts
+import { smoothStream } from '@fluxy-chat/agent';
+
+const stream = await model.stream({ prompt: [...] });
+const smoothed = stream.pipeThrough(smoothStream({
+  delayInMs: 30,   // 30ms between chunks
+  chunkSize: 1,    // 1 character per chunk
+}));
+
+// Consume the smoothed stream
+const reader = smoothed.getReader();
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `delayInMs` | `number` | `50` | Milliseconds delay between chunks |
+| `chunkSize` | `number` | `1` | Characters per chunk |
+| `wordDelay` | `boolean` | `false` | Chunk by words instead of characters |
+
+### Word-Level Delay
+
+```ts
+const stream = modelStream.pipeThrough(smoothStream({
+  wordDelay: true,
+  delayInMs: 100,  // 100ms between words
+}));
+```
+
+## experimental_transform
+
+Custom part-by-part transformation function:
+
+```ts
+import { experimental_transform } from '@fluxy-chat/agent';
+
+const stream = modelStream.pipeThrough(experimental_transform({
+  transform: (part) => {
+    if (part.type === 'text-delta') {
+      // Uppercase all text
+      return { ...part, delta: part.delta.toUpperCase() };
+    }
+    if (part.type === 'reasoning-delta') {
+      // Skip reasoning parts
+      return null;
+    }
+    return part;
+  },
+}));
+```
+
+### Multiple Outputs
+
+Return an array to split one part into multiple:
+
+```ts
+experimental_transform({
+  transform: (part) => {
+    if (part.type === 'text-delta') {
+      return [
+        { type: 'text-delta', id: part.id, delta: part.delta[0] ?? '' },
+        { type: 'text-delta', id: part.id, delta: part.delta.slice(1) },
+      ];
+    }
+    return part;
+  },
+});
+```
+
+### Returning null
+
+Return `null` to drop a part entirely.
+
+## Chaining Transforms
+
+Transforms compose with `.pipeThrough()`:
+
+```ts
+const stream = modelStream
+  .pipeThrough(experimental_transform({ transform: filterToolParts }))
+  .pipeThrough(smoothStream({ delayInMs: 20 }));
+```
+
+## Type Reference
+
+```ts
+interface SmoothStreamOptions {
+  delayInMs?: number;
+  chunkSize?: number;
+  wordDelay?: boolean;
+}
+
+function smoothStream(options?: SmoothStreamOptions): TransformStream<AIStreamPart, AIStreamPart>;
+
+type StreamTransformFunction = (
+  part: AIStreamPart,
+) => AIStreamPart | AIStreamPart[] | null | Promise<AIStreamPart | AIStreamPart[] | null>;
+
+function experimental_transform(
+  options: ExperimentalTransformOptions,
+): TransformStream<AIStreamPart, AIStreamPart>;
+```
+
+## See Also
+
+- [LLM Middleware](./llm-middleware.md) — model-level transforms (before/after streaming)
+- [Generating Text](../reference/generation.md) — `generate()` and `stream()` functions
+- [Stream Utils](../reference/stream-utils.md) — `collectStreamParts`, `toTextStream`

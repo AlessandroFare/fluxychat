@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import React from "react";
-import { ArrowRight, Bell, Check, Eye, Heart, MapPin, Radio, Flame } from "lucide-react";
+import { ArrowRight, Bell, Check, Cpu, Eye, Heart, MapPin, Mic, Radio, Flame } from "lucide-react";
 import { FeatureCodeSnippet } from "@/components/showcase/feature-code-panel";
 import {
   REALTIME_FEATURES,
@@ -141,6 +141,8 @@ function RealtimePreview({ featureId }: { featureId: RealtimeFeatureId }) {
       {featureId === "streaming" ? <StreamingPreview /> : null}
       {featureId === "location" ? <LocationPreview /> : null}
       {featureId === "push" ? <PushPreview /> : null}
+      {featureId === "ai-transport" ? <AiTransportPreview /> : null}
+      {featureId === "voice" ? <VoicePreview /> : null}
     </div>
   );
 }
@@ -628,6 +630,320 @@ function PushPreview() {
         {visible.length === 0 ? (
           <div className="flex flex-1 items-center justify-center text-[11px] text-slate-600">
             Waiting for the next event...
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── AI Transport ─────────────────────────── */
+
+const AI_EVENTS = [
+  { label: "Session created", detail: "device: Chrome · user: demo-01", icon: "start" as const },
+  { label: "Message appended", detail: "offset 1 · \"hello from user\"", icon: "event" as const },
+  { label: "Message appended", detail: "offset 2 · \"how does replay work?\"", icon: "event" as const },
+  { label: "Device switched", detail: "Chrome → Mobile Safari", icon: "switch" as const },
+  { label: "Replay from offset 0", detail: "2 events replayed", icon: "replay" as const },
+];
+
+function AiTransportPreview() {
+  const [phase, setPhase] = React.useState(0);
+  const [events, setEvents] = React.useState<{ label: string; detail: string; icon: string }[]>([]);
+  const [replaying, setReplaying] = React.useState(false);
+  const [replayIdx, setReplayIdx] = React.useState(0);
+  const [cycle, setCycle] = React.useState(0);
+
+  React.useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setEvents(AI_EVENTS.slice(0, 5));
+      return;
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      while (!cancelled) {
+        // Phase 1: events trickle in
+        setEvents([]);
+        setReplaying(false);
+        setReplayIdx(0);
+        await sleep(500);
+        for (let i = 0; i < 3; i++) {
+          if (cancelled) return;
+          setEvents((p) => [...p, AI_EVENTS[i]]);
+          await sleep(900);
+        }
+        // Phase 2: device switch
+        if (cancelled) return;
+        setEvents((p) => [...p, AI_EVENTS[3]]);
+        await sleep(1100);
+        // Phase 3: replay animation
+        if (cancelled) return;
+        setReplaying(true);
+        for (let i = 0; i < 2; i++) {
+          if (cancelled) return;
+          setReplayIdx(i + 1);
+          await sleep(700);
+        }
+        await sleep(2000);
+        setCycle((c) => c + 1);
+      }
+    };
+    void run();
+    return () => { cancelled = true; };
+  }, [cycle]);
+
+  return (
+    <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
+      {/* header */}
+      <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
+        <Cpu className="size-4 text-blue-400" aria-hidden />
+        <span className="text-xs font-semibold text-white">Durable AI Transport</span>
+        <span className="ml-auto rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-medium text-blue-300">
+          Session active
+        </span>
+      </div>
+
+      {/* session id bar */}
+      <div className="border-b border-white/10 bg-slate-950/40 px-4 py-2">
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="text-slate-500">session:</span>
+          <span className="font-mono text-slate-300">dur-session-04a2</span>
+          <span className="ml-auto flex items-center gap-1 text-slate-500">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60 opacity-75 motion-reduce:animate-none" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+            </span>
+            connected
+          </span>
+        </div>
+      </div>
+
+      {/* event timeline */}
+      <div className="flex flex-col gap-2 p-4">
+        <div className="relative pl-5">
+          {/* vertical line */}
+          {events.length > 0 && events.length < 4 ? (
+            <div className="absolute left-[7px] top-2 bottom-0 w-px bg-blue-500/20" aria-hidden />
+          ) : null}
+
+          {events.map((ev, i) => (
+            <div key={`${cycle}-${i}`} className="relative mb-3 animate-in fade-in-0 slide-in-from-left-1 duration-400">
+              <span className="absolute -left-[17px] flex size-3.5 items-center justify-center rounded-full border border-blue-500/30 bg-slate-900">
+                {ev.icon === "start" ? (
+                  <span className="size-1.5 rounded-full bg-blue-400" />
+                ) : ev.icon === "switch" ? (
+                  <ArrowRight className="size-2 text-orange-400" />
+                ) : (
+                  <span className="size-1 rounded-full bg-slate-500" />
+                )}
+              </span>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-medium text-white">{ev.label}</p>
+                {ev.icon === "switch" ? (
+                  <span className="rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[9px] font-medium text-orange-300">device</span>
+                ) : null}
+              </div>
+              <p className="text-[10px] text-slate-500">{ev.detail}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* replay section */}
+        {replaying ? (
+          <div className="mt-1 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 animate-in fade-in-0 duration-300">
+            <div className="flex items-center gap-1.5 text-[10px] font-medium text-blue-300 mb-2">
+              <span className="flex size-3 items-center justify-center rounded bg-blue-500/20 text-[8px]">&#x25B6;</span>
+              Replaying from offset 0
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {AI_EVENTS.slice(0, 2).map((ev, i) => (
+                <div
+                  key={ev.label}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border border-white/5 bg-slate-950/60 px-2.5 py-1.5 text-[10px] transition-opacity duration-300",
+                    i < replayIdx ? "opacity-100" : "opacity-0",
+                  )}
+                >
+                  <span className="font-mono text-slate-500">#{i + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-300">{ev.label}</span>
+                    <span className="text-slate-600">{ev.detail}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* offset counter */}
+        {events.length > 0 ? (
+          <div className="flex gap-3 rounded-lg border border-white/5 bg-slate-950/40 px-3 py-2 text-[10px]">
+            <span className="text-slate-500">last offset</span>
+            <span key={events.length} className="font-mono text-blue-300 tabular-nums animate-in fade-in-0 duration-200">
+              {Math.min(events.length, 2)}
+            </span>
+            <span className="ml-auto text-slate-600">{Math.min(events.length, 3)} event{events.length !== 1 ? "s" : ""}</span>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Voice Interface ─────────────────────────── */
+
+const VOICE_TRANSCRIPTS = [
+  { text: "send message to #general", confidence: 0.97, mode: "push_to_talk" },
+  { text: "what's the weather today?", confidence: 0.94, mode: "always_listening" },
+  { text: "schedule a meeting for 3pm", confidence: 0.88, mode: "always_listening" },
+  { text: "stop listening", confidence: 0.99, mode: "voice_activity_detection" },
+];
+
+function VoicePreview() {
+  const [visible, setVisible] = React.useState(0);
+  const [isListening, setIsListening] = React.useState(false);
+  const [currentMode, setCurrentMode] = React.useState("push_to_talk");
+  const [audioLevel, setAudioLevel] = React.useState(0);
+  const [cycle, setCycle] = React.useState(0);
+
+  React.useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setVisible(VOICE_TRANSCRIPTS.length);
+      setIsListening(true);
+      setCurrentMode("always_listening");
+      setAudioLevel(0.6);
+      return;
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      while (!cancelled) {
+        // Phase 1: push-to-talk
+        setVisible(0);
+        setIsListening(false);
+        setCurrentMode("push_to_talk");
+        setAudioLevel(0);
+        await sleep(600);
+        setIsListening(true);
+        await sleep(400);
+        // audio level animation
+        for (let i = 0; i < 5; i++) { if (cancelled) return; setAudioLevel(0.3 + Math.random() * 0.5); await sleep(120); }
+        setVisible(1);
+        setIsListening(false);
+        setAudioLevel(0);
+        await sleep(1400);
+
+        // Phase 2: always_listening
+        setVisible(0);
+        setIsListening(true);
+        setCurrentMode("always_listening");
+        await sleep(500);
+        for (let i = 0; i < 3; i++) { if (cancelled) return; setAudioLevel(0.2 + Math.random() * 0.6); await sleep(100); }
+        setVisible(1);
+        await sleep(800);
+        for (let i = 0; i < 3; i++) { if (cancelled) return; setAudioLevel(0.2 + Math.random() * 0.6); await sleep(100); }
+        setVisible(2);
+        await sleep(1600);
+
+        // Phase 3: VAD
+        setVisible(0);
+        setIsListening(true);
+        setCurrentMode("voice_activity_detection");
+        await sleep(600);
+        for (let i = 0; i < 3; i++) { if (cancelled) return; setAudioLevel(0.3 + Math.random() * 0.5); await sleep(100); }
+        setVisible(1);
+        await sleep(900);
+        setVisible(2);
+        await sleep(1200);
+
+        setIsListening(false);
+        setAudioLevel(0);
+        await sleep(2000);
+        setCycle((c) => c + 1);
+      }
+    };
+    void run();
+    return () => { cancelled = true; };
+  }, [cycle]);
+
+  const modeColors: Record<string, string> = {
+    push_to_talk: "bg-blue-500/15 text-blue-300 border-blue-500/20",
+    always_listening: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
+    voice_activity_detection: "bg-purple-500/15 text-purple-300 border-purple-500/20",
+  };
+
+  const modeLabels: Record<string, string> = {
+    push_to_talk: "Push to Talk",
+    always_listening: "Always Listening",
+    voice_activity_detection: "VAD",
+  };
+
+  return (
+    <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
+      {/* header */}
+      <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
+        <Mic className="size-4 text-blue-400" aria-hidden />
+        <span className="text-xs font-semibold text-white">Voice Interface</span>
+        <span className={cn("ml-auto rounded-full border px-2 py-0.5 text-[10px] font-medium", modeColors[currentMode])}>
+          {modeLabels[currentMode]}
+        </span>
+      </div>
+
+      {/* waveform area */}
+      <div className="flex h-28 items-center justify-center gap-0.5 border-b border-white/10 bg-slate-950/40 px-4">
+        {isListening
+          ? Array.from({ length: 32 }).map((_, i) => {
+              const barHeight = Math.max(4, ((Math.sin(i * 0.8 + Date.now() * 0.005) * 0.5 + 0.5) * audioLevel * 64) + 4);
+              return (
+                <span
+                  key={i}
+                  className="w-1.5 rounded-full bg-gradient-to-t from-blue-500/60 to-blue-400 transition-all duration-75"
+                  style={{ height: `${barHeight}px` }}
+                />
+              );
+            })
+          : <div className="flex items-center gap-2 text-[11px] text-slate-600">
+              <span className="relative flex size-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-500/40 opacity-75 motion-reduce:animate-none" />
+                <span className="relative inline-flex size-3 rounded-full bg-slate-500" />
+              </span>
+              idle — waiting for input
+            </div>
+        }
+      </div>
+
+      {/* transcripts */}
+      <div className="flex flex-col gap-1.5 p-4">
+        {VOICE_TRANSCRIPTS.slice(0, visible).map((t, i) => (
+          <div
+            key={`${cycle}-${i}`}
+            className="flex items-center gap-2 rounded-lg border border-white/5 bg-slate-950/60 px-3 py-2 animate-in fade-in-0 slide-in-from-bottom-1 duration-300"
+          >
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15">
+              <Mic className="size-3 text-blue-400" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs text-slate-200">{t.text}</p>
+              <span className="text-[10px] text-slate-600">{t.mode.replace(/_/g, " ")}</span>
+            </div>
+            <span className="shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">
+              {Math.round(t.confidence * 100)}%
+            </span>
+          </div>
+        ))}
+        {visible === 0 ? (
+          <div className="flex items-center justify-center py-6 text-[11px] text-slate-600">
+            <span className="flex items-center gap-2">
+              <span className="flex gap-0.5">
+                <span className="size-1 animate-bounce rounded-full bg-slate-500 motion-reduce:animate-none" style={{ animationDelay: "0ms" }} />
+                <span className="size-1 animate-bounce rounded-full bg-slate-500 motion-reduce:animate-none" style={{ animationDelay: "120ms" }} />
+                <span className="size-1 animate-bounce rounded-full bg-slate-500 motion-reduce:animate-none" style={{ animationDelay: "240ms" }} />
+              </span>
+              listening...
+            </span>
           </div>
         ) : null}
       </div>

@@ -1,0 +1,101 @@
+{
+  "botName": "Chat SDK Demo",
+  "botUserId": "users/100000000000000000002",
+  "aiMention": {
+    "commonEventObject": {
+      "userLocale": "en",
+      "hostApp": "CHAT",
+      "platform": "WEB",
+      "timeZone": {
+        "id": "America/Los_Angeles",
+        "offset": -28800000
+      }
+    },
+    "chat": {
+      "user": {
+        "name": "users/100000000000000000001",
+        "displayName": "Test User",
+        "avatarUrl": "https://lh3.googleusercontent.com/a-/user-avatar",
+        "email": "testuser@example.com",
+        "type": "HUMAN",
+        "domainId": "12juw1z"
+      },
+      "eventTime": "2026-01-03T02:18:02.075999Z",
+      "messagePayload": {
+        "space": {
+          "name": "spaces/AAQAO1heGsE",
+          "type": "ROOM",
+          "displayName": "Test Chat SDK 4",
+          "spaceThreadingState": "THREADED_MESSAGES",
+          "spaceType": "SPACE",
+          "spaceHistoryState": "HISTORY_ON"
+        },
+        "message": {
+          "name": "spaces/AAQAO1heGsE/messages/QCiv1HErQkk.QCiv1HErQkk",
+          "sender": {
+            "name": "users/100000000000000000001",
+            "displayName": "Test User",
+            "avatarUrl": "https://lh3.googleusercontent.com/a-/user-avatar",
+            "email": "testuser@example.com",
+            "type": "HUMAN",
+            "domainId": "12juw1z"
+          },
+          "createTime": "2026-01-03T02:18:02.075999Z",
+          "text": "@Chat SDK Demo AI What is love?",
+          "annotations": [
+            {
+              "type": "USER_MENTION",
+              "startIndex": 0,
+              "length": 14,
+              "userMention": {
+                "user": {
+                  "name": "users/100000000000000000002",
+                  "displayName": "Chat SDK Demo",
+                  "avatarUrl": "https://lh6.googleusercontent.com/proxy/default-bot-avatar",
+                  "type": "BOT"
+                },
+                "type": "MENTION"
+              }
+            }
+          ],
+          "thread": {
+            "name": "spaces/AAQAO1heGsE/threads/QCiv1HErQkk",
+            "retentionSettings": { "state": "PERMANENT" }
+          },
+          "space": {
+            "name": "spaces/AAQAO1heGsE",
+            "type": "ROOM",
+            "displayName": "Test Chat SDK 4",
+            "spaceThreadingState": "THREADED_MESSAGES",
+            "spaceType": "SPACE",
+            "spaceHistoryState": "HISTORY_ON"
+          },
+          "argumentText": " AI What is love?",
+          "retentionSettings": { "state": "PERMANENT" },
+          "messageHistoryState": "HISTORY_ON",
+          "formattedText": "@Chat SDK Demo AI What is love?"
+        }
+      }
+    }
+  },
+  "followUp": {
+    "message": {
+      "attributes": {
+        "ce-datacontenttype": "application/json",
+        "ce-id": "spaces/AAQAO1heGsE/spaceEvents/MTc2NzQwNjY5Mjg4NjYzOV82X2NyZWF0ZWQ",
+        "ce-source": "//workspaceevents.googleapis.com/subscriptions/chat-spaces-czpBQVFBTzFoZUdzRToxMTc5OTQ4NzMzNTQzNzU4NjAwODk6MTEzOTc3OTE2MjAxNTUyMzQ2MTQ2",
+        "ce-specversion": "1.0",
+        "ce-subject": "//chat.googleapis.com/spaces/AAQAO1heGsE",
+        "ce-time": "2026-01-03T02:18:12.886639Z",
+        "ce-type": "google.workspace.chat.message.v1.created"
+      },
+      "data": "eyJtZXNzYWdlIjp7Im5hbWUiOiJzcGFjZXMvQUFRQU8xaGVHc0UvbWVzc2FnZXMvUUNpdjFIRXJRa2suTEpGclN1UmxqZ1kiLCJzZW5kZXIiOnsibmFtZSI6InVzZXJzLzEwMDAwMDAwMDAwMDAwMDAwMDAwMSIsInR5cGUiOiJIVU1BTiJ9LCJjcmVhdGVUaW1lIjoiMjAyNi0wMS0wM1QwMjoxODoxMi44ODY2MzlaIiwidGV4dCI6IldobyBhcmUgeW91PyIsInRocmVhZCI6eyJuYW1lIjoic3BhY2VzL0FBUUFPMWhlR3NFL3RocmVhZHMvUUNpdjFIRXJRa2sifSwic3BhY2UiOnsibmFtZSI6InNwYWNlcy9BQVFBTzFoZUdzRSJ9LCJhcmd1bWVudFRleHQiOiJXaG8gYXJlIHlvdT8iLCJ0aHJlYWRSZXBseSI6dHJ1ZSwiZm9ybWF0dGVkVGV4dCI6IldobyBhcmUgeW91PyJ9fQ==",
+      "messageId": "17622191887796419",
+      "message_id": "17622191887796419",
+      "orderingKey": "//workspaceevents.googleapis.com/subscriptions/chat-spaces-czpBQVFBTzFoZUdzRToxMTc5OTQ4NzMzNTQzNzU4NjAwODk6MTEzOTc3OTE2MjAxNTUyMzQ2MTQ2",
+      "publishTime": "2026-01-03T02:18:12.996Z",
+      "publish_time": "2026-01-03T02:18:12.996Z"
+    },
+    "subscription": "projects/example-chat-project-123456/subscriptions/chat-messages-push"
+  }
+}

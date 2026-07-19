@@ -1,0 +1,34 @@
+{
+  "name": "partywhen",
+  "version": "0.1.5",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/cloudflare/partykit.git"
+  },
+  "homepage": "https://github.com/cloudflare/partykit/tree/main/packages/partywhen",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "check:test": "(cd tests; vitest --no-watch)"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "scheduling",
+    "cron",
+    "ai agents",
+    "durable-objects"
+  ],
+  "author": "Sunil Pai <spai@cloudflare.com>",
+  "license": "ISC",
+  "description": "A library for scheduling and running tasks in Cloudflare Workers",
+  "dependencies": {
+    "cron-parser": "^5.5.0",
+    "partyserver": "^0.5.5"
+  }
+}

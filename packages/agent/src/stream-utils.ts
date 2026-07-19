@@ -57,3 +57,25 @@ export async function collectTextStream(source: ReadableStream<string>): Promise
     reader.releaseLock();
   }
 }
+
+/** Extract reasoning text from a stream, returning both text and reasoning. */
+export async function collectStreamParts(
+  source: ReadableStream<AIStreamPart>,
+): Promise<{ text: string; reasoningText: string; parts: AIStreamPart[] }> {
+  const reader = source.getReader();
+  const parts: AIStreamPart[] = [];
+  let text = "";
+  let reasoningText = "";
+  try {
+    for (;;) {
+      const next = await reader.read();
+      if (next.done) break;
+      parts.push(next.value);
+      if (next.value.type === "text-delta") text += next.value.delta;
+      if (next.value.type === "reasoning-delta") reasoningText += next.value.delta;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return { text, reasoningText, parts };
+}

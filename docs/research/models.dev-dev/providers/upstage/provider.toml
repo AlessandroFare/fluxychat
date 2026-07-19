@@ -1,0 +1,5 @@
+name = "Upstage"
+env = ["UPSTAGE_API_KEY"]
+npm = "@ai-sdk/openai-compatible"
+doc = "https://developers.upstage.ai/docs/apis/chat"
+api = "https://api.upstage.ai/v1/solar" 

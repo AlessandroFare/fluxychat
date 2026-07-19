@@ -1,0 +1,15 @@
+{
+	"extends": "./tsconfig.node.json",
+	"compilerOptions": {
+		"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo",
+		"types": ["@types/node", "vite/client", "./worker-configuration.d.ts"],
+		"allowJs": true,
+		"jsx": "react-jsx",
+		"baseUrl": ".",
+		"paths": {
+			"@server/*": ["src/server/*"],
+			"@shared/*": ["src/shared/*"]
+		}
+	},
+	"include": ["src/server"]
+}

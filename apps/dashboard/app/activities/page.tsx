@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Activity, RefreshCw } from "lucide-react";
+import { Activity, RefreshCw, GitFork, Zap } from "lucide-react";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { Badge } from "@/components/ui/badge";
 import { useDashboardSession } from "../components/dashboard-session";
@@ -108,6 +108,24 @@ export default function ActivitiesPage() {
       />
 
       {error ? <Banner variant="error">{error}</Banner> : null}
+
+      {/* Automation engine info */}
+      <Panel className="mb-4 rounded-2xl border border-border/80 p-4">
+        <div className="flex items-start gap-3">
+          <Zap className="mt-0.5 h-5 w-5 text-amber-500" />
+          <div>
+            <h3 className="text-sm font-semibold">Automation Engine (createAutomationEngine)</h3>
+            <p className="text-xs text-muted-foreground">
+              IF-THEN trigger-action rules with 9 trigger events, 7 action types, cooldown, priority ordering,
+              and execution history. Import from @fluxy-chat/sdk.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-4 text-[10px] text-muted-foreground">
+              <span><strong>Triggers:</strong> message, user join/leave, reaction, ticket, schedule, event, webhook, custom</span>
+              <span><strong>Actions:</strong> notify, webhook, tag, lock, escalate, log, custom</span>
+            </div>
+          </div>
+        </div>
+      </Panel>
 
       <Panel className="mb-4 rounded-2xl border border-border/80 p-4">
         <label className="text-xs text-muted-foreground">

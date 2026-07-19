@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PAGE_METADATA } from "@/lib/marketing-copy";
-import { ArrowRight, BookOpen, Cloud, KeyRound, Package, Server, Webhook } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, Cloud, Code2, KeyRound, Package, Search, Server, Webhook, Zap } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { MarketingShell } from "../components/marketing-shell";
+import { DocSearchButton } from "@/components/doc-search";
+import { StackBlitzButton } from "@/components/stackblitz-button";
+import { STACKBLITZ_TEMPLATES } from "@/lib/stackblitz-templates";
 import { HOSTED_COPY, HOSTED_PATHS } from "@/lib/hosted-product";
 
 export const metadata: Metadata = PAGE_METADATA.docs;
@@ -63,8 +66,15 @@ const GUIDES = [
 export default function DocsPage() {
   return (
     <MarketingShell className="max-w-4xl">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Documentation</p>
-      <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900">Guides and reference</h1>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Documentation</p>
+          <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900">Guides and reference</h1>
+        </div>
+        <div className="shrink-0 sm:pt-1">
+          <DocSearchButton />
+        </div>
+      </div>
       <p className="mt-3 text-slate-600">
         Auth, SDK, and deployment notes for Fluxychat. Long-form guides live under{" "}
         <Link href={HOSTED_PATHS.guides} className="text-primary underline underline-offset-2">
@@ -121,6 +131,59 @@ export default function DocsPage() {
         <pre className="mt-4 overflow-x-auto rounded-xl bg-[#111111] p-4 text-sm text-slate-100">
           {`pnpm add @fluxy-chat/sdk\n\nimport { FluxyChatClient, useChat } from "@fluxy-chat/sdk";\n\nconst client = new FluxyChatClient({\n  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL,\n  userId: "user_123",\n  token: memberJwtFromYourBackend,\n});`}
         </pre>
+        <h3 className="mt-6 font-heading text-base font-semibold text-slate-800">Flutter (Dart)</h3>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          Native Dart SDK for cross-platform apps. Install from{" "}
+          <a
+            href="https://pub.dev/packages/fluxychat_sdk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline underline-offset-2"
+          >
+            pub.dev
+          </a>
+          .
+        </p>
+        <pre className="mt-3 overflow-x-auto rounded-xl bg-[#111111] p-4 text-sm text-slate-100">
+          {`flutter pub add fluxychat_sdk\n\nimport 'package:fluxychat_sdk/fluxychat_sdk.dart';\n\nfinal client = FluxyChatClient(\n  config: FluxyChatConfig(\n    apiUrl: 'https://your-worker.workers.dev',\n    wsUrl: 'wss://your-worker.workers.dev',\n    projectId: 'proj_123',\n    token: 'your-jwt-token',\n  ),\n);`}
+        </pre>
+      </section>
+
+      <section id="interactive" className="mt-14 scroll-mt-24 border-t border-black/[0.06] pt-10">
+        <h2 className="font-heading text-xl font-semibold text-slate-900">
+          Interactive examples
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          Run live FluxyChat SDK examples in your browser via StackBlitz. No setup required.
+          Each project is fully configured with the SDK and a public demo endpoint.
+        </p>
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {STACKBLITZ_TEMPLATES.map((tmpl) => {
+            const Icon =
+              tmpl.id === "basic-connection"
+                ? Zap
+                : tmpl.id === "react-chat-ui"
+                  ? Code2
+                  : Bot;
+            return (
+              <div
+                key={tmpl.id}
+                className="flex flex-col gap-3 rounded-xl border border-black/[0.06] bg-white/80 p-4 shadow-[var(--shadow-subtle-2)]"
+              >
+                <Icon className="size-5 text-primary" aria-hidden />
+                <div>
+                  <h3 className="font-semibold text-sm text-slate-900">{tmpl.label}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                    {tmpl.description}
+                  </p>
+                </div>
+                <div className="mt-auto pt-1">
+                  <StackBlitzButton templateId={tmpl.id} label="Open in StackBlitz" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <section id="webhooks" className="mt-12 scroll-mt-24">

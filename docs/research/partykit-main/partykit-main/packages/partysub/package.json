@@ -1,0 +1,52 @@
+{
+  "name": "partysub",
+  "version": "2.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/cloudflare/partykit.git"
+  },
+  "homepage": "https://github.com/cloudflare/partykit/tree/main/packages/partysub",
+  "type": "module",
+  "exports": {
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "require": "./dist/server/index.js",
+      "import": "./dist/server/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "require": "./dist/client/index.js",
+      "import": "./dist/client/index.js"
+    },
+    "./react": {
+      "types": "./dist/client/react.d.ts",
+      "require": "./dist/client/react.js",
+      "import": "./dist/client/react.js"
+    }
+  },
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "check:test": "vitest -r src/server/tests --watch false"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "pubsub",
+    "websockets"
+  ],
+  "author": "Sunil Pai <spai@cloudflare.com>",
+  "license": "ISC",
+  "description": "",
+  "peerDependencies": {
+    "@cloudflare/workers-types": "^4.20260424.1",
+    "partyserver": ">=0.2.0 <1.0.0",
+    "partysocket": "^1.1.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260426.1",
+    "partyserver": "^0.5.5",
+    "partysocket": "^1.1.18"
+  }
+}

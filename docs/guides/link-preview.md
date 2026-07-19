@@ -1,0 +1,41 @@
+# Link Preview
+
+Extract and preview links from message text.
+
+```ts
+import { createLinkPreview, linkPreviewFromData } from "@fluxy-chat/sdk";
+```
+
+## Extracting Links
+
+```ts
+const api = createLinkPreview();
+
+const links = api.extractLinks("Check https://example.com and http://test.com/page");
+// -> ["https://example.com", "http://test.com/page"]
+```
+
+## Fetching Preview Data
+
+```ts
+const preview = await api.fetchMessage("https://example.com");
+// -> { url: "https://example.com", title: "example.com" }
+```
+
+Results are cached in memory for the lifetime of the API instance.
+
+## Manual Creation
+
+```ts
+const preview = linkPreviewFromData({
+  url: "https://example.com",
+  title: "Example",
+  description: "An example site",
+  imageUrl: "https://example.com/og.png",
+});
+```
+
+## Types
+
+- `LinkPreviewData`: `{ url, title?, description?, imageUrl?, favicon?, siteName? }`
+- `LinkPreviewApi`: `{ fetchMessage(url), extractLinks(text) }`

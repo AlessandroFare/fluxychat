@@ -153,6 +153,28 @@ export async function getMessagePoll(env, messageId, projectId) {
  *   optionIndex: number,
  * }} input
  */
+/**
+ * @param {*} env
+ * @param {number} messageId
+ * @param {string} projectId
+ */
+export async function closeMessagePoll(env, messageId, projectId) {
+  const row = await env.DB.prepare(
+    `SELECT closed FROM message_polls WHERE message_id = ? AND project_id = ? LIMIT 1`,
+  )
+    .bind(messageId, projectId)
+    .first();
+  if (!row) return { ok: false, error: "poll_not_found", status: 404 };
+  if (row.closed === 1) return { ok: false, error: "already_closed", status: 409 };
+  await env.DB.prepare(
+    `UPDATE message_polls SET closed = 1 WHERE message_id = ? AND project_id = ?`,
+  )
+    .bind(messageId, projectId)
+    .run();
+  const snapshot = await getMessagePoll(env, messageId, projectId);
+  return { ok: true, poll: snapshot };
+}
+
 export async function castPollVote(env, input) {
   const poll = await env.DB.prepare(
     `SELECT question, options_json, allow_multiple, closed, room_id

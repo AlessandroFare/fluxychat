@@ -49,11 +49,11 @@ export const LANDING_BADGES = [
 export const LANDING_NAV_LINKS: readonly TopNavLink[] = [
   { href: HOSTED_PATHS.docs, label: "Docs" },
   { href: HOSTED_PATHS.why, label: "Why" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "/pricing", label: "Pricing" },
   { href: HOSTED_PATHS.compare, label: "Compare" },
   { href: HOSTED_PATHS.guides, label: "Guides" },
   { href: "#lifecycle", label: "Lifecycle" },
-  { href: "/demo", label: "Demo" },
+  { href: "/demo", label: "Demo ✦" },
   { href: "#faq", label: "FAQ" },
   { href: HOSTED_PATHS.status, label: "Status" },
 ];

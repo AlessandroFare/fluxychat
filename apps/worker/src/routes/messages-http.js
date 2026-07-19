@@ -21,6 +21,7 @@ import {
   parsePollCreateInput,
   insertMessagePoll,
   getMessagePoll,
+  closeMessagePoll,
   castPollVote,
 } from "../lib/message-polls.js";
 import { translateMessageContent } from "../lib/message-translation.js";
@@ -600,6 +601,31 @@ export async function dispatchMessagesRoutes(request, url, h) {
       }),
     });
 
+    return json({ ok: true, poll: result.poll });
+  }
+
+  const pollCloseMatch = url.pathname.match(/^\/messages\/([^/]+)\/poll$/);
+  if (pollCloseMatch && request.method === "PATCH") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(pollCloseMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const { closed: closeRequest } = await request.json().catch(() => ({}));
+    if (closeRequest !== true) {
+      return json({ error: 'body must have {"closed":true}' }, { status: 400 });
+    }
+    const result = await closeMessagePoll(env, messageId, auth.projectId);
+    if (!result.ok) {
+      return json({ error: result.error }, { status: result.status || 400 });
+    }
     return json({ ok: true, poll: result.poll });
   }
 

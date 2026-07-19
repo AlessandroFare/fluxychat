@@ -58,6 +58,8 @@ export function AgentFormFields({
               frequencyPenalty: values.frequencyPenalty,
               presencePenalty: values.presencePenalty,
               stopSequences: values.stopSequences,
+              reasoningEffort: values.reasoningEffort,
+              reasoningSummary: values.reasoningSummary,
             }}
             onChange={(patch) => onChange(patch)}
           />

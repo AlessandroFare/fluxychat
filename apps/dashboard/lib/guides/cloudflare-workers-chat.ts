@@ -56,5 +56,7 @@ export const CF_WORKERS_CHAT_GUIDE: GuideContent = {
     "vercel websocket limits",
     "ably alternative next.js",
   ],
+  stackblitzTemplateId: "basic-connection",
+  stackblitzLabel: "Open basic example in StackBlitz",
 };
 

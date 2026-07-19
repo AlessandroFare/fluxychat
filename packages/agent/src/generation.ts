@@ -12,6 +12,8 @@ import {
   type AIRetryOptions,
 } from "./ai-core";
 import type { AILanguageModel, AIMessage, AIModelRequest } from "./providers";
+import type { AIReasoningConfig } from "./reasoning";
+import { normalizeReasoningConfig } from "./reasoning";
 import { validateAIMessages } from "./message-validation";
 
 export type AIPrompt = string | readonly AIMessage[];
@@ -46,8 +48,9 @@ export function canonicalPrompt(prompt: AIPrompt, system?: string, allowSystemMe
 }
 
 function modelRequest(options: AIGenerateOptions, signal: AbortSignal): AIModelRequest {
-  const { model: _model, prompt, system, allowSystemMessages, timeoutMs: _timeout, retry: _retry, onStart: _start, onFinish: _finish, onError: _error, signal: _signal, ...settings } = options;
-  return { ...settings, prompt: canonicalPrompt(prompt, system, allowSystemMessages), signal };
+  const { model: _model, prompt, system, allowSystemMessages, timeoutMs: _timeout, retry: _retry, onStart: _start, onFinish: _finish, onError: _error, signal: _signal, reasoning, ...settings } = options;
+  const normalizedReasoning = normalizeReasoningConfig(reasoning);
+  return { ...settings, ...(normalizedReasoning ? { reasoning: normalizedReasoning } : {}), prompt: canonicalPrompt(prompt, system, allowSystemMessages), signal };
 }
 
 export async function generate(options: AIGenerateOptions): Promise<AIGenerationResult> {
@@ -61,6 +64,7 @@ export async function generate(options: AIGenerateOptions): Promise<AIGeneration
     const result: AIGenerationResult = {
       output: response.text,
       text: response.text,
+      reasoningText: response.reasoningText,
       finishReason: response.finishReason,
       usage: normalizeUsage(response.usage),
       warnings: [...(response.warnings ?? [])],
@@ -95,6 +99,7 @@ export function stream(options: AIGenerateOptions): AIStreamResult {
   const output = new ReadableStream<AIStreamPart>({
     async start(target) {
       let text = "";
+      let reasoningText = "";
       let usage: AIUsage = {};
       let finishReason: AIGenerationResult["finishReason"] = "unknown";
       let warnings: AIWarning[] = [];
@@ -108,6 +113,7 @@ export function stream(options: AIGenerateOptions): AIStreamResult {
           target.enqueue({ type: "text-end", id: "text-0" });
           target.enqueue({ type: "finish", finishReason: generated.finishReason, usage: generated.usage });
           text = generated.text;
+          reasoningText = generated.reasoningText ?? "";
           usage = generated.usage;
           finishReason = generated.finishReason;
           warnings = generated.warnings;
@@ -123,6 +129,7 @@ export function stream(options: AIGenerateOptions): AIStreamResult {
               if (next.done) break;
               const part = next.value;
               if (part.type === "text-delta") text += part.delta;
+              if (part.type === "reasoning-delta") reasoningText += part.delta;
               if (part.type === "finish-step" || part.type === "finish") {
                 usage = addUsage(usage, part.usage);
                 finishReason = part.finishReason;
@@ -133,7 +140,7 @@ export function stream(options: AIGenerateOptions): AIStreamResult {
             reader.releaseLock();
           }
         }
-        const completed: AIGenerationResult = { output: text, text, usage: normalizeUsage(usage), finishReason, warnings };
+        const completed: AIGenerationResult = { output: text, text, reasoningText: reasoningText || undefined, usage: normalizeUsage(usage), finishReason, warnings };
         await options.onFinish?.(completed);
         resolveResult(completed);
         target.close();

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { GitBranch, BarChart, Play, ArrowRight, TrendingUp, Search, Activity, Brain, Lightbulb } from "lucide-react";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
@@ -8,7 +9,11 @@ import { AnalyticsVisualSections } from "../components/analytics/analytics-visua
 import { StatCard } from "../components/analytics/analytics-charts";
 import { RoomPicker } from "../components/room-picker";
 import { ConsoleFeedback } from "../components/console-feedback";
-import { Button, Section } from "../components/ui";
+import { Button, Section, Panel } from "../components/ui";
+import { Input } from "~/components/ui/input";
+import { Badge } from "~/components/ui/badge";
+import { createJourneyMapping } from "@fluxy-chat/sdk";
+import { createConversationAnalytics } from "@fluxy-chat/sdk";
 
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { downloadBlob } from "@/lib/download-blob";
@@ -440,6 +445,14 @@ export default function AnalyticsPage() {
         )}
       </Section>
 
+      {/* Journey Mapping + Conversation Analytics — Interactive */}
+      <div className="mt-8">
+        <JourneyMappingSection />
+      </div>
+      <div className="mt-6">
+        <ConversationAnalyticsSection />
+      </div>
+
       <AnalyticsVisualSections
         costs={costs}
         slo={slo}
@@ -467,6 +480,226 @@ export default function AnalyticsPage() {
   );
 }
 
+/* ─── Journey Mapping Interactive ─── */
 
+const JOURNEY_CHANNELS = ["web", "mobile", "voice", "bot", "email", "sms", "push"] as const;
+const JOURNEY_ACTIONS = ["view", "click", "purchase", "signup", "support", "feedback", "search"] as const;
 
+function JourneyMappingSection() {
+  const jm = useMemo(() => createJourneyMapping(), []);
+  const [userId, setUserId] = useState("demo-traveler");
+  const [paths, setPaths] = useState<Array<{ from: string; to: string; count: number; avgDurationMs: number }>>([]);
+  const [steps, setSteps] = useState<Array<{ channel: string; action: string; ts: number }>>([]);
+  const [log, setLog] = useState<string[]>([]);
 
+  function addLog(msg: string) { setLog((p) => [msg, ...p.slice(0, 9)]); }
+
+  function recordRandomStep() {
+    const channel = JOURNEY_CHANNELS[Math.floor(Math.random() * JOURNEY_CHANNELS.length)];
+    const action = JOURNEY_ACTIONS[Math.floor(Math.random() * JOURNEY_ACTIONS.length)];
+    const step = jm.recordStep(userId, { channel, action, timestamp: Date.now(), durationMs: 200 + Math.floor(Math.random() * 800), metadata: {} });
+    setSteps((p) => [...p, { channel, action, ts: step.timestamp }]);
+    setPaths(jm.getPaths(1));
+    addLog(`${channel} → ${action}`);
+  }
+
+  function simulateJourney(n: number) {
+    for (let i = 0; i < n; i++) {
+      const channel = JOURNEY_CHANNELS[Math.floor(Math.random() * JOURNEY_CHANNELS.length)];
+      const action = JOURNEY_ACTIONS[Math.floor(Math.random() * JOURNEY_ACTIONS.length)];
+      jm.recordStep(`sim-user-${1 + Math.floor(Math.random() * 5)}`, { channel, action, timestamp: Date.now() + i, durationMs: 100 + Math.floor(Math.random() * 900), metadata: {} });
+    }
+    setPaths(jm.getPaths(1));
+    addLog(`Simulated ${n} steps across random users`);
+  }
+
+  const avgSteps = jm.getAverageStepsPerJourney();
+  const channelColors: Record<string, string> = {
+    web: "#3b82f6", mobile: "#8b5cf6", voice: "#f59e0b", bot: "#10b981",
+    email: "#ef4444", sms: "#06b6d4", push: "#ec4899",
+  };
+
+  return (
+    <Section title="Customer Journey Mapping" description="Track user touchpoints across channels and visualize transition paths via createJourneyMapping() — interactive in-memory demo.">
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="User ID" className="max-w-[140px]" />
+        <Button size="sm" onClick={recordRandomStep}><Play className="h-3.5 w-3.5 mr-1" /> Record step</Button>
+        <Button size="sm" variant="outline" onClick={() => simulateJourney(10)}>Simulate 10 steps</Button>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+        {/* Path visualization */}
+        <Panel className="p-4">
+          <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5"><GitBranch className="h-4 w-4" /> Transition paths</h4>
+          {paths.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Record some steps to see channel transition paths.</p>
+          ) : (
+            <div className="space-y-2">
+              {paths.sort((a, b) => b.count - a.count).slice(0, 8).map((p, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2">
+                  <span className="inline-flex items-center gap-0.5 text-xs font-medium">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-white" style={{ backgroundColor: channelColors[p.from] || "#94a3b8" }}>
+                      {p.from}
+                    </span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-white" style={{ backgroundColor: channelColors[p.to] || "#94a3b8" }}>
+                      {p.to}
+                    </span>
+                  </span>
+                  <Badge variant="outline" className="text-[9px] ml-auto">{p.count}x</Badge>
+                  <span className="text-[10px] text-muted-foreground">{(p.avgDurationMs / 1000).toFixed(1)}s avg</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        {/* Steps log */}
+        <Panel className="p-4">
+          <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5"><Activity className="h-4 w-4" /> Recent steps</h4>
+          <div className="flex gap-4 mb-3 text-xs text-muted-foreground">
+            <span>Avg steps/journey: <strong>{avgSteps.toFixed(1)}</strong></span>
+          </div>
+          {steps.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No steps recorded yet.</p>
+          ) : (
+            <div className="max-h-60 overflow-y-auto space-y-1">
+              {steps.slice(-10).reverse().map((s, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-2 py-1.5 text-xs">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-white" style={{ backgroundColor: channelColors[s.channel] || "#94a3b8" }}>
+                    {s.channel}
+                  </span>
+                  <span className="text-muted-foreground">{s.action}</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground">
+                    {new Date(s.ts).toLocaleTimeString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      <div className="mt-3 max-h-24 space-y-0.5 overflow-y-auto rounded-md border border-border bg-muted/30 p-2">
+        {log.map((e, i) => <p key={i} className="text-xs text-muted-foreground">{e}</p>)}
+      </div>
+    </Section>
+  );
+}
+
+/* ─── Conversation Analytics Interactive ─── */
+
+function ConversationAnalyticsSection() {
+  const ca = useMemo(() => createConversationAnalytics(), []);
+  const [text, setText] = useState("");
+  const [results, setResults] = useState<Array<{
+    text: string;
+    sentiment: { label: string; score: number; confidence: number };
+    intent: { intent: string; confidence: number };
+  }>>([]);
+  const [topics, setTopics] = useState<Array<{ name: string; count: number }>>([]);
+  const [gaps, setGaps] = useState<Array<{ topic: string; frequency: number; unanswered: number }>>([]);
+  const [stats, setStats] = useState<ReturnType<typeof ca.getAggregatedStats> | null>(null);
+
+  function handleAnalyze() {
+    if (!text.trim()) return;
+    const sentiment = ca.analyzeSentiment(text.trim());
+    const intent = ca.extractIntent(text.trim());
+    setResults((p) => [...p.slice(-14), { text: text.trim(), sentiment, intent }]);
+    setText("");
+    const msgs = results.map((r) => r.text).concat(text.trim());
+    const clusters = ca.clusterTopics(msgs);
+    setTopics(clusters.map((c) => ({ name: c.name, count: c.messageCount })));
+    setGaps(ca.identifyKnowledgeGaps(msgs.map((t) => ({ text: t, answered: Math.random() > 0.5 }))).map((g) => ({ topic: g.topic, frequency: g.frequency, unanswered: g.unansweredCount })));
+    setStats(ca.getAggregatedStats());
+  }
+
+  const SENTIMENT_EMOJI: Record<string, string> = { positive: "😊", negative: "😟", neutral: "😐", mixed: "🤔" };
+  const SENTIMENT_COLOR: Record<string, string> = { positive: "text-emerald-400", negative: "text-red-400", neutral: "text-slate-400", mixed: "text-amber-400" };
+
+  return (
+    <Section title="Conversation Analytics" description="Sentiment, intent detection, topic clustering, and knowledge gap identification via createConversationAnalytics() — in-memory NLP demo.">
+      <div className="flex gap-2 mb-4">
+        <Input value={text} onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleAnalyze(); }}
+          placeholder="Type a message to analyze (e.g. 'this product is amazing!')"
+          className="flex-1" />
+        <Button size="sm" onClick={handleAnalyze}><Search className="h-3.5 w-3.5 mr-1" /> Analyze</Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        {/* Messages */}
+        <Panel className="p-4 sm:col-span-2">
+          <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5"><Activity className="h-4 w-4" /> Analyzed messages ({results.length})</h4>
+          {results.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Type messages above to see sentiment and intent analysis.</p>
+          ) : (
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              {results.slice().reverse().map((r, i) => (
+                <div key={i} className="rounded-md border border-border bg-muted/20 px-3 py-2">
+                  <p className="text-xs">{r.text}</p>
+                  <div className="mt-1 flex items-center gap-2 text-[10px]">
+                    <span className={SENTIMENT_COLOR[r.sentiment.label]}>
+                      {SENTIMENT_EMOJI[r.sentiment.label]} {r.sentiment.label} ({(r.sentiment.confidence * 100).toFixed(0)}%)
+                    </span>
+                    <span className="text-muted-foreground">· Intent: <strong>{r.intent.intent}</strong> ({(r.intent.confidence * 100).toFixed(0)}%)</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        {/* Sidebar: topics + gaps */}
+        <div className="space-y-4">
+          {stats && (
+            <Panel className="p-4">
+              <h4 className="text-sm font-semibold mb-2">Sentiment</h4>
+              <div className="flex justify-around">
+                {(Object.entries(stats.sentimentDistribution) as [string, number][]).filter(([, v]) => v > 0).map(([k, v]) => (
+                  <div key={k} className="text-center">
+                    <span className={SENTIMENT_COLOR[k]}>{SENTIMENT_EMOJI[k]}</span>
+                    <p className="text-xs font-semibold">{v}</p>
+                    <p className="text-[9px] text-muted-foreground">{k}</p>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
+
+          {topics.length > 0 && (
+            <Panel className="p-4">
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Brain className="h-4 w-4" /> Topics</h4>
+              <div className="space-y-1">
+                {topics.slice(0, 5).map((t, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <span className="truncate">{t.name}</span>
+                    <Badge variant="outline" className="text-[9px]">{t.count}</Badge>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
+
+          {gaps.length > 0 && (
+            <Panel className="p-4">
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Lightbulb className="h-4 w-4" /> Knowledge gaps</h4>
+              <div className="space-y-1">
+                {gaps.slice(0, 5).map((g, i) => (
+                  <div key={i} className="text-xs">
+                    <span className="font-medium">{g.topic}</span>
+                    <p className="text-[10px] text-muted-foreground">{g.frequency} mentions · {g.unanswered} unanswered</p>
+                    {/* Mini bar */}
+                    <div className="mt-0.5 h-1 rounded-full bg-muted/50">
+                      <div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.min(100, (g.unanswered / Math.max(g.frequency, 1)) * 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
+        </div>
+      </div>
+    </Section>
+  );
+}

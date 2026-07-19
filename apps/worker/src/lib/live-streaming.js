@@ -16,7 +16,7 @@ export async function createEvent(env, { projectId, roomId, title, description, 
   return { id };
 }
 
-export async function updateEvent(env, { eventId, title, description, status, streamUrl, thumbnailUrl, category, tags }) {
+export async function updateEvent(env, { projectId, eventId, title, description, status, streamUrl, thumbnailUrl, category, tags }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
@@ -31,13 +31,13 @@ export async function updateEvent(env, { eventId, title, description, status, st
   if (thumbnailUrl) { sets.push("thumbnail_url = ?"); params.push(thumbnailUrl); }
   if (category !== undefined) { sets.push("category = ?"); params.push(category); }
   if (tags) { sets.push("tags = ?"); params.push(JSON.stringify(tags)); }
-  params.push(eventId);
-  await env.DB.prepare(`UPDATE live_events SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  params.push(eventId, projectId);
+  await env.DB.prepare(`UPDATE live_events SET ${sets.join(", ")} WHERE id = ? AND project_id = ?`).bind(...params).run();
   return { updated: true };
 }
 
-export async function getEvent(env, { eventId }) {
-  const row = await env.DB.prepare("SELECT * FROM live_events WHERE id = ?").bind(eventId).first();
+export async function getEvent(env, { eventId, projectId }) {
+  const row = await env.DB.prepare("SELECT * FROM live_events WHERE id = ? AND project_id = ?").bind(eventId, projectId).first();
   return row ? mapEventRow(row) : null;
 }
 
@@ -291,6 +291,11 @@ function mapEventRow(row) {
     peakViewers: row.peak_viewers, totalViewers: row.total_viewers,
     totalMessages: row.total_messages, durationSeconds: row.duration_seconds,
     createdAt: row.created_at, updatedAt: row.updated_at,
+    liveInputUid: row.live_input_uid, rtmpsUrl: row.rtmps_url,
+    streamKey: row.stream_key, whipUrl: row.whip_url,
+    playbackHls: row.playback_hls, playbackDash: row.playback_dash,
+    recordingMode: row.recording_mode, preferLowLatency: row.prefer_low_latency === 1,
+    providerState: row.provider_state,
   };
 }
 

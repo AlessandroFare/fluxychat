@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import { Bell, MapPin, MessageSquare, Radio } from "lucide-react";
+import { Bell, MapPin, MessageSquare, Radio, Cpu, Mic } from "lucide-react";
 
-export type RealtimeFeatureId = "chat" | "streaming" | "location" | "push";
+export type RealtimeFeatureId = "chat" | "streaming" | "location" | "push" | "ai-transport" | "voice";
 export type CodeTokenKind = "plain" | "keyword" | "identifier" | "string";
 
 export interface CodeToken {
@@ -107,6 +107,64 @@ export const REALTIME_FEATURES: readonly RealtimeFeature[] = [
       { text: " " },
       { text: "requestPermissionAndSubscribe", kind: "identifier" },
       { text: "();\n// offline users get a push; Slack / email fall back." },
+    ],
+  },
+  {
+    id: "ai-transport",
+    label: "AI Transport",
+    title: "Durable AI sessions that survive disconnects.",
+    description:
+      "Ably-style resilient AI sessions with offset-based event replay. Sessions survive disconnect and device switch — the offset is the contract, not ephemeral UI state.",
+    icon: Cpu,
+    code: [
+      { text: "const", kind: "keyword" },
+      { text: " dt = " },
+      { text: "createDurableAITransport", kind: "identifier" },
+      { text: "();\nconst session = dt." },
+      { text: "createSession", kind: "identifier" },
+      { text: "(" },
+      { text: '"user-1"', kind: "string" },
+      { text: ", { deviceId: " },
+      { text: '"dev-1"', kind: "string" },
+      { text: " });\ndt." },
+      { text: "appendEvent", kind: "identifier" },
+      { text: "(session.id, " },
+      { text: '"message"', kind: "string" },
+      { text: ", { text: " },
+      { text: '"hello"', kind: "string" },
+      { text: " });\nconst replayed = dt." },
+      { text: "replay", kind: "identifier" },
+      { text: "(session.id, 0);\ndt." },
+      { text: "switchDevice", kind: "identifier" },
+      { text: "(session.id, " },
+      { text: '"dev-2"', kind: "string" },
+      { text: ");" },
+    ],
+  },
+  {
+    id: "voice",
+    label: "Voice Interface",
+    title: "Voice-first chat with push-to-talk or always-listening.",
+    description:
+      "Voice session state management with push-to-talk, always-listening, and VAD modes. Submit transcripts, track commands, and get audio feedback visualizations.",
+    icon: Mic,
+    code: [
+      { text: "const", kind: "keyword" },
+      { text: " vi = " },
+      { text: "createVoiceInterfaceManager", kind: "identifier" },
+      { text: "();\nvi." },
+      { text: "setMode", kind: "identifier" },
+      { text: "(" },
+      { text: '"always_listening"', kind: "string" },
+      { text: ");\nvi." },
+      { text: "startListening", kind: "identifier" },
+      { text: "();\nconst cmd = vi." },
+      { text: "submitTranscript", kind: "identifier" },
+      { text: "(" },
+      { text: '"send message to #general"', kind: "string" },
+      { text: ");\nconst feedback = vi." },
+      { text: "getFeedbackVisual", kind: "identifier" },
+      { text: "();" },
     ],
   },
 ] as const;

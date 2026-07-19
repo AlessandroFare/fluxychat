@@ -92,6 +92,8 @@ export interface AgentLlmConfigInput {
   frequencyPenalty?: number;
   presencePenalty?: number;
   stopSequences?: string;
+  reasoningEffort?: string;
+  reasoningSummary?: string;
 }
 
 export function buildAgentLlmConfig(
@@ -116,6 +118,8 @@ export function buildAgentLlmConfig(
   if (input.frequencyPenalty !== undefined && input.frequencyPenalty !== 0) modelParams.frequencyPenalty = input.frequencyPenalty;
   if (input.presencePenalty !== undefined && input.presencePenalty !== 0) modelParams.presencePenalty = input.presencePenalty;
   if (input.stopSequences?.trim()) modelParams.stopSequences = input.stopSequences.trim();
+  if (input.reasoningEffort && input.reasoningEffort !== "none") modelParams.reasoningEffort = input.reasoningEffort;
+  if (input.reasoningSummary && input.reasoningSummary !== "auto") modelParams.reasoningSummary = input.reasoningSummary;
 
   const result: Record<string, unknown> = {};
   if (Object.keys(llm).length) result.llm = llm;
