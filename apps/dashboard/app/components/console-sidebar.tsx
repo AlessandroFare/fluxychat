@@ -6,7 +6,7 @@ import { FluxychatLogotype } from "@/components/FluxychatLogo";
 import { cn } from "@/lib/utils";
 import {
   CONSOLE_NAV_MAIN,
-  CONSOLE_NAV_TOOLS,
+  CONSOLE_NAV_GROUPS,
   isConsoleNavItemActive,
 } from "./console-nav";
 import { QuickstartNavLink } from "./quickstart-nav-link";
@@ -41,34 +41,24 @@ export function ConsoleSidebar() {
         </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-4" aria-label="Console">
-        <div>
-          <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-            Operate
-          </p>
-          <ul className="space-y-0.5">
-            {CONSOLE_NAV_MAIN.map((item) => (
-              <li key={item.href}>
-                {item.href === "/onboarding" ? (
-                  <QuickstartNavLink label={item.label} icon={item.icon} />
-                ) : (
-                  <NavLink {...item} />
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-            Tools
-          </p>
-          <ul className="space-y-0.5">
-            {CONSOLE_NAV_TOOLS.map((item) => (
-              <li key={item.href}>
-                <NavLink {...item} />
-              </li>
-            ))}
-          </ul>
-        </div>
+        {CONSOLE_NAV_GROUPS.map((group) => (
+          <div key={group.label}>
+            <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+              {group.label}
+            </p>
+            <ul className="flex flex-col gap-0.5">
+              {group.items.map((item) => (
+                <li key={`${group.label}-${item.href}`}>
+                  {item.href === "/onboarding" ? (
+                    <QuickstartNavLink label={item.label} icon={item.icon} />
+                  ) : (
+                    <NavLink {...item} />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
       <div className="space-y-2 border-t border-black/[0.06] p-3">
         <CommandPaletteTrigger />

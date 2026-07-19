@@ -160,6 +160,7 @@ export function createFluxyStream(config?: {
   const sentGifts: SentGift[] = [];
   const products: LiveProduct[] = [];
   const polls: StreamPoll[] = [];
+  const pollVotes = new Map<string, Map<string, Set<string>>>();
   const chatMessages: AIChatMessage[] = [];
   const stats: StreamStats = {
     status: "scheduled",
@@ -462,6 +463,7 @@ export function createFluxyStream(config?: {
       createdAt: new Date().toISOString(),
     };
     polls.push(poll);
+    pollVotes.set(poll.id, new Map());
     return poll;
   }
 
@@ -470,6 +472,12 @@ export function createFluxyStream(config?: {
     if (!poll || poll.status !== "open") return false;
     const opt = poll.options.find((o) => o.id === optionId);
     if (!opt) return false;
+    const userVotes = pollVotes.get(pollId) ?? new Map<string, Set<string>>();
+    const selected = userVotes.get(userId) ?? new Set<string>();
+    if (selected.has(optionId) || (!poll.allowMultiple && selected.size > 0)) return false;
+    selected.add(optionId);
+    userVotes.set(userId, selected);
+    pollVotes.set(pollId, userVotes);
     opt.votes++;
     gamification.awardXp(userId, 2, "Poll vote");
     return true;
@@ -477,7 +485,7 @@ export function createFluxyStream(config?: {
 
   function closePoll(pollId: string): boolean {
     const poll = polls.find((p) => p.id === pollId);
-    if (!poll || poll.status !== "closed") return false;
+    if (!poll || poll.status !== "open") return false;
     poll.status = "closed";
     poll.closedAt = new Date().toISOString();
     return true;

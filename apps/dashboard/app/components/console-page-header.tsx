@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { CONSOLE_NAV_MAIN, CONSOLE_NAV_TOOLS } from "./console-nav";
+import { CONSOLE_NAV_GROUPS } from "./console-nav";
 
-const ALL_NAV = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS];
+const ALL_NAV = CONSOLE_NAV_GROUPS.flatMap((group) => group.items);
 
 function titleForPath(pathname: string): string {
   if (pathname === "/") return "Overview";

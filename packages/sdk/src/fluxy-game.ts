@@ -140,6 +140,9 @@ export function createFluxyGame() {
   const players = new Map<string, Player>();
   const matches = new Map<string, GameState>();
   const matchResults = new Map<string, MatchResult>();
+  const matchStartedAt = new Map<string, number>();
+  const inputSequences = new Map<string, Map<string, number>>();
+  let eventCounter = 0;
   const replays = new Map<string, ReplayEntry[]>();
   const lobbies = new Map<string, { id: string; players: string[]; state: LobbyState; gameMode: string; maxPlayers: number; hostId: string }>();
   const parties = new Map<string, { id: string; members: string[]; leader: string }>();
@@ -222,6 +225,8 @@ export function createFluxyGame() {
     });
 
     matches.set(matchId, state);
+    matchStartedAt.set(matchId, state.timestamp);
+    inputSequences.set(matchId, new Map());
     replays.set(matchId, []);
     return matchId;
   }
@@ -230,7 +235,13 @@ export function createFluxyGame() {
 
   function processInput(matchId: string, input: InputCommand): void {
     const state = matches.get(matchId);
-    if (!state) return;
+    if (!state || !Number.isSafeInteger(input.sequence) || input.sequence < 0) return;
+    const sequences = inputSequences.get(matchId);
+    const previousSequence = sequences?.get(input.playerId) ?? -1;
+    if (input.sequence <= previousSequence) return;
+    const ownedEntity = state.entities.get(`ent_${input.playerId}`);
+    if (!ownedEntity || ownedEntity.ownerId !== input.playerId) return;
+    sequences?.set(input.playerId, input.sequence);
 
     for (const action of input.actions) {
       const entity = state.entities.get(`ent_${input.playerId}`);
@@ -238,8 +249,11 @@ export function createFluxyGame() {
 
       switch (action.type) {
         case "move": {
-          const dx = (action.payload.dx as number) || 0;
-          const dy = (action.payload.dy as number) || 0;
+          const rawDx = Number(action.payload.dx);
+          const rawDy = Number(action.payload.dy);
+          if (!Number.isFinite(rawDx) || !Number.isFinite(rawDy)) break;
+          const dx = Math.max(-1, Math.min(1, rawDx));
+          const dy = Math.max(-1, Math.min(1, rawDy));
           entity.x += dx * 5;
           entity.y += dy * 5;
           entity.velocity = { x: dx * 5, y: dy * 5 };
@@ -251,7 +265,7 @@ export function createFluxyGame() {
           if (target && target.type === "player") {
             target.health -= 25;
             state.events.push({
-              id: `evt_${state.tick}_${Math.random()}`,
+              id: `evt_${state.tick}_${++eventCounter}`,
               type: "hit", tick: state.tick,
               playerId: input.playerId,
               data: { targetId, damage: 25, remainingHealth: target.health },
@@ -262,7 +276,7 @@ export function createFluxyGame() {
               shooterMeta.kills = (shooterMeta.kills || 0) + 1;
               targetMeta.deaths = (targetMeta.deaths || 0) + 1;
               state.events.push({
-                id: `evt_${state.tick}_${Math.random()}`,
+                id: `evt_${state.tick}_${++eventCounter}`,
                 type: "death", tick: state.tick,
                 playerId: targetId,
                 data: { killer: input.playerId },
@@ -276,7 +290,7 @@ export function createFluxyGame() {
           break;
         case "ability":
           state.events.push({
-            id: `evt_${state.tick}_${Math.random()}`,
+            id: `evt_${state.tick}_${++eventCounter}`,
             type: "ability", tick: state.tick,
             playerId: input.playerId,
             data: action.payload,
@@ -323,11 +337,13 @@ export function createFluxyGame() {
 
     const result: MatchResult = {
       matchId, winner,
-      duration: Math.floor((Date.now() - state.timestamp) / 1000),
-      scores, mvp, events: state.events,
+      duration: Math.max(0, Math.floor((Date.now() - (matchStartedAt.get(matchId) ?? state.timestamp)) / 1000)),
+      scores, mvp, events: structuredClone(state.events),
     };
     matchResults.set(matchId, result);
     matches.delete(matchId);
+    matchStartedAt.delete(matchId);
+    inputSequences.delete(matchId);
 
     // Update player stats
     if (winner) {

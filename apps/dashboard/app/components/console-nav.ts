@@ -37,6 +37,11 @@ import {
   Radio,
   Gamepad2,
   Cpu,
+  GraduationCap,
+  HeartPulse,
+  CalendarRange,
+  Landmark,
+  Orbit,
 } from "lucide-react";
 import { MARKETING_PATH_PREFIXES } from "@/lib/hosted-product";
 
@@ -95,13 +100,33 @@ export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
   { href: "/templates/code", label: "Code Templates", icon: Code2, description: "Runnable StackBlitz templates — basic, discord clone, support widget, location tracker" },
 ];
 
+export const CONSOLE_NAV_INDUSTRIES: ConsoleNavItem[] = [
+  { href: "/edu", label: "Education", icon: GraduationCap, description: "Live classes, breakouts, polls and attendance" },
+  { href: "/health", label: "Health", icon: HeartPulse, description: "Secure care rooms and consent workflows" },
+  { href: "/events", label: "Events", icon: CalendarRange, description: "Venues, stages, Q&A and ticket verification" },
+  { href: "/finance", label: "Finance", icon: Landmark, description: "Market rooms, risk alerts and approvals" },
+];
+
+export const CONSOLE_NAV_LABS: ConsoleNavItem[] = [
+  { href: "/continuity", label: "Cross-Reality", icon: Orbit, description: "Cross-device capability and handoff simulator" },
+  { href: "/spatial", label: "Spatial", icon: Boxes, description: "Digital twin rooms and AR overlays" },
+  { href: "/transport", label: "Transport", icon: Zap, description: "WebTransport readiness and negotiation" },
+];
+
+export const CONSOLE_NAV_GROUPS = [
+  { label: "Build", items: CONSOLE_NAV_MAIN },
+  { label: "Products & tools", items: CONSOLE_NAV_TOOLS.filter((item) => item.href !== "/spatial" && item.href !== "/transport") },
+  { label: "Industries", items: CONSOLE_NAV_INDUSTRIES },
+  { label: "Labs", items: CONSOLE_NAV_LABS },
+] as const;
+
 /** Selects only the deepest configured route that contains the current pathname. */
 export function isConsoleNavItemActive(href: string, pathname: string | null): boolean {
   if (!pathname) return false;
   if (href === "/") return pathname === "/";
   if (pathname !== href && !pathname.startsWith(`${href}/`)) return false;
 
-  const allHrefs = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS].map((item) => item.href);
+  const allHrefs = CONSOLE_NAV_GROUPS.flatMap((group) => group.items).map((item) => item.href);
   return !allHrefs.some(
     (other) =>
       other !== href &&

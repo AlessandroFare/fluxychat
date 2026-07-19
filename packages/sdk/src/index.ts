@@ -4864,7 +4864,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 
-// 3.3: FluxyStream — Live streaming & broadcast
+// 3.3: FluxyStream ï¿½ Live streaming & broadcast
 export {
   createFluxyStream,
   type FluxyStreamApi,
@@ -4901,7 +4901,7 @@ export {
   type DeployStage,
   type SandboxResult,
 } from "./agent-platform";
-// 5.1: FluxyGame — Multiplayer game backend SDK
+// 5.1: FluxyGame ï¿½ Multiplayer game backend SDK
 export {
   createFluxyGame,
   type FluxyGameApi,
@@ -4922,7 +4922,26 @@ export {
   type LobbyState,
 } from "./fluxy-game";
 
-// 5.2: FluxyIoT — MQTT bridge & IoT device management
+// 5.3+: Vertical capability platform
+export {
+  createVerticalPlatform,
+  VERTICAL_BLUEPRINTS,
+  type VerticalId,
+  type CapabilityId,
+  type PlatformReadiness,
+  type EventActor,
+  type RoomEvent,
+  type RoomPolicy,
+  type CapabilityDefinition,
+  type RoomKernelConfig,
+  type DeviceCapabilities,
+  type SessionCheckpoint,
+  type PollDefinition,
+  type PollVote,
+  type VerticalPlatform,
+} from "./vertical-platform";
+
+// 5.2: FluxyIoT ï¿½ MQTT bridge & IoT device management
 export {
   createFluxyIoT,
   type FluxyIoTApi,

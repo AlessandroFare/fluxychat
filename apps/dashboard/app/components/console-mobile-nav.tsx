@@ -6,13 +6,12 @@ import { Menu, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuickstartHref } from "@/lib/use-quickstart-href";
 import {
-  CONSOLE_NAV_MAIN,
-  CONSOLE_NAV_TOOLS,
+  CONSOLE_NAV_GROUPS,
   isConsoleNavItemActive,
 } from "./console-nav";
 import { useCommandPalette } from "./console-command-palette";
 
-const MOBILE_LINKS = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS];
+const MOBILE_LINKS = CONSOLE_NAV_GROUPS.flatMap((group) => group.items);
 
 export function ConsoleMobileNav() {
   const pathname = usePathname();
