@@ -1,0 +1,139 @@
+---
+title: Inbox and notifications
+description: Combine inbox feeds, read state, user-channel events, and web push.
+---
+
+FluxyChat splits **inbox** (cross-room attention) from **notifications** (delivery channels). This guide shows how to wire both in a support or team app.
+
+## Mental model
+
+| Layer | Purpose | Primary API |
+|-------|---------|-------------|
+| **Inbox items** | Mentions, unread rooms, snooze, follow-ups | `useInbox()` |
+| **Room watermark** | How far you read inside one room | `markReadRest` / `useChat().markReadLatest` |
+| **User channel** | Realtime inbox refresh, system alerts | `useNotifications()` / `useUserChannel()` |
+| **Web push** | Browser notifications when tab is closed | `useWebPush()` |
+
+Clearing inbox unread does **not** automatically advance the room watermark — call mark-read explicitly when the user opens a thread.
+
+## Inbox sidebar
+
+```tsx
+import { useInbox } from "@fluxy-chat/react";
+
+function InboxNav() {
+  const { items, counter, unseen, onItem, reload } = useInbox({
+    pollIntervalMs: 30_000,
+    realtime: true,
+    onItem: (item) => {
+      toast(`New ${item.kind} in ${item.roomName ?? item.roomId}`);
+      reload();
+    },
+  });
+
+  return (
+    <nav>
+      <span>Inbox {counter > 0 ? `(${counter})` : ""}</span>
+      <ul>
+        {items.map((item) => (
+          <li key={item.id}>
+            <a href={`/rooms/${item.roomId}`}>
+              [{item.kind}] {item.roomName ?? item.roomId}
+            </a>
+          </li>
+        ))}
+      </ul>
+      {unseen > 0 && <Badge>{unseen} unseen</Badge>}
+    </nav>
+  );
+}
+```
+
+See [Inbox model](/docs/inbox) for item kinds and counter vs unseen.
+
+## Mark read when opening a room
+
+```tsx
+import { useChat } from "@fluxy-chat/react";
+
+function RoomThread({ roomId }: { roomId: string }) {
+  const { messages, markReadLatest } = useChat(roomId);
+
+  useEffect(() => {
+    if (messages.length > 0) markReadLatest();
+  }, [messages.length, markReadLatest]);
+
+  return <MessageList messages={messages} />;
+}
+```
+
+After mark-read, refresh inbox summary:
+
+```ts
+await client.markReadRest(roomId, latestMessageId);
+await reloadInbox();
+```
+
+## User channel events
+
+Subscribe to per-user realtime events (inbox pushes, mentions, system alerts):
+
+```tsx
+import { useNotifications } from "@fluxy-chat/react";
+
+useNotifications({
+  client,
+  onEvent: (event) => {
+    if (event.type === "inbox_item") reloadInbox();
+    if (event.type === "mention") playSound();
+  },
+});
+```
+
+Member JWT is required — the user channel is scoped to `userId` in the token.
+
+## Web push
+
+```tsx
+import { useWebPush } from "@fluxy-chat/react";
+
+function PushToggle({ client }: { client: FluxyChatClient }) {
+  const { permission, requestPermissionAndSubscribe } = useWebPush(client);
+
+  if (permission === "unsupported") return null;
+
+  return (
+    <button onClick={() => requestPermissionAndSubscribe()}>
+      {permission === "granted" ? "Push on" : "Enable notifications"}
+    </button>
+  );
+}
+```
+
+Configure VAPID keys on the Worker:
+
+```ini
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+```
+
+See [Web push (VAPID)](/docs/web-push-vapid).
+
+## Delivery matrix
+
+| Channel | When it fires | Requires |
+|---------|---------------|----------|
+| In-app badge | Inbox counter / unseen | Active session or poll |
+| User channel WS | Realtime inbox item | Member JWT + WS |
+| Web push | Mention / DM / configured rules | VAPID + browser permission |
+| Email / SMS | Tenant integrations | Worker config |
+
+## Dashboard parity
+
+The hosted console implements this stack at `/inbox` and `/notifications`. Use it as a reference implementation when building your own operator UI.
+
+## See also
+
+- [Inbox model](/docs/inbox)
+- [Notifications](/docs/notifications)
+- [Auth & JWT](/docs/auth-jwt)

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { ConsoleShell } from "../components/console-shell";
 import { Banner } from "../components/ui";
 import { OnboardingPlayground } from "./onboarding-playground";
@@ -31,7 +32,7 @@ export default function OnboardingPage() {
         <div className="mb-4">
           <Banner variant="info">
             You are already set up. Send another message below, or head to the{" "}
-            <Link href="/" className="font-medium underline underline-offset-2">
+            <Link href={HOSTED_PATHS.console} className="font-medium underline underline-offset-2">
               console home
             </Link>
             .

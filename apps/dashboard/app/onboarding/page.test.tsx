@@ -27,6 +27,9 @@ vi.mock("@fluxy-chat/sdk", () => ({
   FluxyChatClient: function FluxyChatClient() {
     return {};
   },
+}));
+
+vi.mock("@fluxy-chat/react", () => ({
   useChat: () => ({
     messages: [],
     sendMessage: vi.fn(),

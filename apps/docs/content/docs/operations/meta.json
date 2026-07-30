@@ -1,0 +1,12 @@
+{
+  "pages": [
+    "d1-schema-consolidation",
+    "environment-setup",
+    "hosted-multi-tenant",
+    "observability",
+    "open-beta-deploy-guide",
+    "production-demo-and-sms",
+    "staging-and-status",
+    "us-sms-compliance-playbook"
+  ]
+}

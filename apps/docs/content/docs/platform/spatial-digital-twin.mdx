@@ -1,0 +1,88 @@
+---
+title: Spatial & Digital Twin
+description: Digital twin scenes, entity updates, MCP spatial grants, and room WebSocket events.
+---
+
+FluxyChat Spatial maps physical or virtual venues to **room-scoped digital twins**. Scene creation, entity placement, and telemetry fan out on the same room WebSocket as chat — no separate realtime bus.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  API["POST /api/spatial/scenes"] --> Worker["Worker + D1"]
+  Worker --> Fanout["fanoutServerEvent"]
+  Fanout --> DO["Room Durable Object"]
+  DO --> WS["room WebSocket server_event"]
+  WS --> SDK["onServerEvent / useServerEvents"]
+  MCP["MCP spatial grant"] --> Worker
+```
+
+## Room WebSocket events
+
+| Event | When |
+|-------|------|
+| `spatial.scene_created` | New twin scene bound to a room |
+| `spatial.entity_added` | Entity placed or updated in a scene |
+
+Subscribe from the SDK:
+
+```ts
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const conn = client.connectRoom("spatial:my-project");
+conn.connect();
+conn.onServerEvent((ev) => {
+  if (ev.name === "spatial.entity_added") {
+    console.log(ev.data);
+  }
+});
+```
+
+Or via `useChat`:
+
+```ts
+useChat({
+  roomId: "spatial:my-project",
+  onServerEvent: (ev) => { /* ... */ },
+});
+```
+
+## Default room binding
+
+When `roomId` is omitted on scene create, the Worker defaults to `spatial:{projectId}` so dashboards and showcases can connect without extra configuration.
+
+## MCP spatial grants
+
+Spatial tools (scene lookup, entity query, AR anchor export) are exposed through **MCP Apps** with scoped grants:
+
+1. Create an MCP identity grant in the dashboard (**MCP Apps → Spatial**).
+2. Scope grants to `spatial:read`, `spatial:write`, or `spatial:export` per project.
+3. The Worker validates JWT claims (`projectId`, `mcpGrantId`, allowed scopes) before returning scene payloads.
+
+Grants are **least-privilege**: write scopes cannot export raw anchor bundles; export requires an explicit `spatial:export` scope and audit log entry.
+
+## AR / WebXR path
+
+Production AR flows use progressive enhancement:
+
+1. **Room WS** delivers entity pose updates (`spatial.entity_added`).
+2. **Dashboard showcase** (`/spatial`) renders a WebGL preview for operators.
+3. **WebXR session** (optional) attaches to the same entity stream — when WebXR is unavailable, the 2D map fallback remains fully accessible.
+
+Anchor bundles for native AR (ARKit / ARCore) can be exported via MCP when `spatial:export` is granted. Exports are signed, time-limited URLs — never embed long-lived secrets in client bundles.
+
+## Readiness gate
+
+Spatial is **production** when:
+
+- Worker persist + `server_event` fan-out ✅
+- SDK `onServerEvent` subscription ✅
+- Dashboard showcase live WS ✅
+- MCP grant documentation (this page) ✅
+- Operator runbook in `/spatial` console ✅
+
+## Related
+
+- [Realtime modules](/docs/platform/realtime-modules) — full `server_event` catalog
+- [Collab](/docs/platform/collab) — shared whiteboards in venue back-of-house rooms
+- Dashboard: `/spatial` showcase and scene console

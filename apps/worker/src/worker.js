@@ -28,6 +28,7 @@ import { dispatchPublicRoutes } from "./routes/public-http.js";
 import { dispatchWorkerHttpRoutes } from "./lib/worker-route-dispatch.js";
 import { maybeHandleDevProvision } from "./routes/dev-provision-http.js";
 import { resolveProjectId } from "./lib/resolve-project-id.js";
+import { provisionBuiltinAgents } from "./lib/provision-builtin-agents.js";
 import { hashApiKey } from "./lib/api-key-hash.js";
 import { base64urlEncode } from "./lib/jwt-auth.js";
 import { listLlmProvidersForApi } from "./lib/llm-providers.js";
@@ -84,6 +85,7 @@ registerMockAdapter();
 export { RoomDurableObject } from "./durable-objects/room-do.js";
 export { UserDurableObject } from "./durable-objects/user-do.js";
 export { IpRateLimiterDurableObject } from "./durable-objects/ip-rate-limiter-do.js";
+export { SupergroupRouterDurableObject } from "./durable-objects/supergroup-router-do.js";
 export { FluxyScheduledWorkflow } from "./workflows/fluxy-scheduled-workflow.js";
 export { retryDelayMsForAttempt } from "./lib/webhook-delivery.js";
 export { truncateForStorage } from "./lib/storage-utils.js";
@@ -572,36 +574,6 @@ export default {
   },
 };
 
-async function provisionBuiltinAgents(env, projectId) {
-  if (!env?.DB) return;
-  const templates = await env.DB.prepare(
-    "SELECT id, name, handle, provider, model, system_prompt, capabilities, tools_schema FROM builtin_agent_templates WHERE is_active = 1"
-  ).all();
-
-  const now = new Date().toISOString();
-  const stmts = (templates.results || []).map((t) =>
-    env.DB.prepare(
-      "INSERT OR IGNORE INTO bots (id, project_id, name, handle, provider, model, system_prompt, capabilities, config, webhook_url, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(
-      `${t.id}-${projectId}`,
-      projectId,
-      t.name,
-      t.handle,
-      t.provider,
-      t.model,
-      t.system_prompt,
-      t.capabilities,
-      null,
-      null,
-      null,
-      null,
-      t.tools_schema,
-      30,
-      now
-    )
-  );
-  if (stmts.length) await env.DB.batch(stmts); // perf: N+1
-}
 
 // ---------- Hosted SaaS: platform vs tenant project scope ----------
 function canCreateTenantProjects(adminAuth, env) {
@@ -698,6 +670,11 @@ async function insertNewProject(env, ctx, name, options = {}) {
       logError("seed_demo_room_failed", err, { projectId }),
     ),
   );
+  ctx.waitUntil(
+    import("./lib/llm-models-catalog.js")
+      .then(({ syncModelsCatalog }) => syncModelsCatalog(env))
+      .catch((err) => logError("models_catalog_sync_failed", err, { projectId })),
+  );
 
   return {
     id: projectId,
@@ -714,19 +691,23 @@ async function insertNewProject(env, ctx, name, options = {}) {
  */
 async function seedDemoRoom(env, projectId) {
   const now = new Date().toISOString();
+  const configuredDemoRoom = String(env.DEMO_ROOM_ID || "").trim();
+  const roomIds = configuredDemoRoom
+    ? ["general", configuredDemoRoom]
+    : ["general"];
+  for (const roomId of roomIds) {
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, 'public', ?, ?)"
+    )
+      .bind(roomId, projectId, roomId, now)
+      .run();
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)"
+    )
+      .bind(roomId, "fluxybot", now)
+      .run();
+  }
   const roomId = "general";
-  // INSERT OR IGNORE so re-running provision is safe.
-  await env.DB.prepare(
-    "INSERT OR IGNORE INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, 'public', 'general', ?)"
-  )
-    .bind(roomId, projectId, now)
-    .run();
-  // Add the fluxybot system user as a member.
-  await env.DB.prepare(
-    "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)"
-  )
-    .bind(roomId, "fluxybot", now)
-    .run();
   // Welcome message.
   await env.DB.prepare(
     `INSERT INTO messages (project_id, room_id, user_id, content, created_at)

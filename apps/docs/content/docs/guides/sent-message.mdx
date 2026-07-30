@@ -1,0 +1,50 @@
+---
+title: "SentMessage (Chainable Message Result)"
+description: "`createSentMessage()` wraps a sent message with chainable `.edit()`, `.delete()`, `.addReaction()`, `.removeReaction()` methods."
+---
+
+## Usage
+
+```ts
+import { createSentMessage } from "@fluxy-chat/sdk";
+
+const msg = createSentMessage(adapter, "thread\:abc", "msg:123", "Hello world");
+
+// Chainable operations
+await msg.addReaction("+1");
+await msg.edit("Updated content");
+await msg.removeReaction("+1");
+await msg.delete();
+```
+
+## API
+
+```ts
+interface SentMessage {
+  id: string;
+  threadId: string;
+  content: string;
+  edit(newContent: string): Promise<SentMessage>;
+  delete(): Promise<void>;
+  addReaction(emoji: string): Promise<void>;
+  removeReaction(emoji: string): Promise<void>;
+}
+```
+
+## Chaining
+
+`edit()` returns a new `SentMessage` so calls can be chained:
+
+```ts
+const edited = await msg.edit("v1").edit("v2");
+```
+
+## Integration
+
+Combine with `postMessage` on a `ThreadAdapter`:
+
+```ts
+const raw = await adapter.postMessage(threadId, "Hello");
+const sent = createSentMessage(adapter, threadId, raw.id, "Hello");
+await sent.addReaction("rocket");
+```

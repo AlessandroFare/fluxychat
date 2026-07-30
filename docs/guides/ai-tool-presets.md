@@ -1,116 +1,69 @@
-# AI Tool Presets & Approval Gates
+# AI Tool Presets
 
-FluxyChat's tool preset system (P22-D) gives operators fine-grained control over what AI agents can do — from read-only observation to full moderation — with per-tool approval gates for high-risk actions.
-
-## Overview
-
-Instead of all-or-nothing tool access, presets bundle tools into role-based groups. Each tool can require human approval before execution, ensuring enterprise governance over AI actions.
-
-## Three Built-in Presets
-
-### `reader` — Read-Only
-
-Tools that observe and retrieve information. No side effects.
-
-- `list_rooms`, `get_room_messages`, `search_chat`, `get_room_info`
-- `get_room_memory`, `get_knowledge_graph`
-- No approval required
-
-### `messenger` — Send & Reply
-
-Everything in `reader`, plus tools that post messages.
-
-- `send_message`, `reply_to_message`, `add_reaction`
-- `suggest_replies`, `summarize_thread`
-- Approval optional (configurable per profile)
-
-### `moderator` — Full Access
-
-Everything in `messenger`, plus administrative tools.
-
-- `delete_message`, `pin_message`, `ban_user`, `mute_user`
-- `create_room`, `archive_room`, `update_room_config`
-- `run_webhook`, `send_email`, `create_ticket`
-- **Approval required** for all write/moderation tools
+`createChatTools()` generates a set of AI SDK-compatible tools for chat operations (fetching messages, posting, reactions, etc.) with preset-based filtering and approval controls.
 
 ## Usage
 
 ```ts
-import { getToolPreset, applyToolOverrides } from "@fluxy-chat/sdk";
+import { createChatTools } from "@fluxy-chat/sdk";
 
-// Get tools for a support agent profile
-const readerTools = getToolPreset("reader");
-const messengerTools = getToolPreset("messenger");
-const moderatorTools = getToolPreset("moderator");
+const chat: ChatBinding = {
+  thread(id) { /* ... */ },
+  channel(id) { /* ... */ },
+  getUser(id) { /* ... */ },
+  openDM(id) { /* ... */ },
+};
 
-// Each returns an array of tool definitions ready for LLM function calling
-```
+const tools = createChatTools({ chat, preset: "reader" });
 
-## Per-Tool Approval Gates
-
-Any tool can be flagged with `needsApproval: true`. When an AI agent calls such a tool, execution pauses until a human approves or rejects the request.
-
-```ts
-import { applyToolOverrides } from "@fluxy-chat/sdk";
-
-const tools = applyToolOverrides(moderatorTools, {
-  send_email: { needsApproval: true, description: "Send email on behalf of the team" },
-  run_webhook: { needsApproval: true, title: "Trigger External Webhook" },
-  ban_user: { needsApproval: true },
+// Pass to AI SDK
+const result = await streamText({
+  model: openai("gpt-4"),
+  tools,
 });
 ```
 
-## Approval Workflow
+## Presets
 
-1. AI agent calls a tool with `needsApproval: true`
-2. Worker creates an approval request in D1
-3. A card with "Approve" / "Reject" buttons is posted to the room (P22-C + P22-F3)
-4. Human clicks a button → callback URL routes to approval handler
-5. If approved: tool executes
-6. If rejected: agent receives `tool_error` with "Action rejected by operator"
-7. Full audit trail recorded in `audit_events`
+| Preset | Tools | Description |
+|--------|-------|-------------|
+| `reader` | 7 | Read-only: fetch messages, threads, users |
+| `messenger` | 10 | Read + post + reactions + typing |
+| `moderator` | 17 | Full set including edit, delete, subscriptions |
 
-## Tool Overrides
+## Approval
 
-Customize tool metadata without changing implementation:
+Write tools (post, edit, delete, react, subscribe) default to `needsApproval: true`:
 
 ```ts
-const customized = applyToolOverrides(preset, {
-  send_message: {
-    description: "Post a message to the current support room",
-    title: "Send Message",
+createChatTools({
+  chat,
+  preset: "messenger",
+  requireApproval: { postMessage: false },  // override specific tools
+});
+```
+
+## Overrides
+
+Customize tool descriptions or other non-core fields:
+
+```ts
+createChatTools({
+  chat,
+  preset: "reader",
+  overrides: {
+    fetchMessages: { description: "Custom description" },
   },
-  delete_message: {
-    needsApproval: true,
-    title: "Delete Message (requires approval)",
-  },
 });
 ```
 
-## Concurrency Strategies (P22-D3)
+Protected fields (`execute`, `parameters`) cannot be overridden.
 
-Each adapter/room can configure how messages and tool calls are processed:
+## Tool Definitions
 
-| Strategy | Behavior | Use case |
-|----------|----------|----------|
-| `drop` | Discard new messages while processing | High-frequency live chat |
-| `queue` | FIFO ordered processing | Support tickets |
-| `debounce` | Wait for quiet period, then process last | Rapid status updates |
-| `burst` | Allow N concurrent, queue the rest | Bursty workloads |
-| `concurrent` | Process all in parallel | Read-only operations |
-
-## Scoped Tool Context (P23-10)
-
-Each tool gets only the context it needs. API keys, permissions, and tenant data are isolated per-tool — a tool that searches rooms can't access billing data.
-
-```ts
-const tools = buildScopedTools({
-  send_email: { apiKey: process.env.EMAIL_KEY },
-  run_webhook: { allowedUrls: ["https://api.mycompany.com/*"] },
-});
-```
+Each tool exports `description`, `parameters` (JSON Schema), `execute` function, and optional `needsApproval` flag. Compatible with Vercel AI SDK, OpenAI, Anthropic, and other tool-calling APIs.
 
 ## See Also
 
-- [Card Builder Guide](./card-builder.md) — Approval UI cards
-- [LLM Middleware Guide](./llm-middleware.md) — Intercept tool calls before execution
+- [Message-to-LLM Converter](./messages-to-ai.md)
+- [LLM Middleware](./llm-middleware.md)

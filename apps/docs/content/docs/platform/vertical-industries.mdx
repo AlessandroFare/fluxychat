@@ -1,0 +1,59 @@
+---
+title: Vertical industries (Health, Finance, Continuity)
+description: Production capability events, compliance live workspace, and room WebSocket integration.
+---
+
+FluxyHealth, FluxyFinance, and Cross-Reality Continuity share the **Vertical Studio** pattern: versioned capability events on the room bus, live metrics from WebSocket, and a **Live workspace** panel for operator actions.
+
+## Production gate
+
+| Vertical | Capability events | Live workspace | Readiness |
+|----------|-------------------|----------------|-----------|
+| FluxyHealth | `health.consent.verified`, care session events | Publish compliance signal | **production** |
+| FluxyFinance | `finance.risk.flagged`, `finance.audit.exported` | Risk/audit publish | **production** |
+| Continuity | `continuity.checkpoint.created`, device handoff | Checkpoint publish | **production** |
+
+Dashboard: `/health`, `/finance`, `/continuity`.
+
+## Live workspace
+
+When signed in with an active project + room, Vertical Studio renders **Live workspace**:
+
+1. **Publish compliance event** — `POST /rooms/:roomId/capabilities/events` with idempotency key
+2. Worker persists + broadcasts `capability_event` on room WebSocket
+3. Studio metrics update from `onCapabilityEvent` (not fixture counters)
+
+```tsx
+import { createCapabilityClient } from "@fluxy-chat/sdk";
+
+const client = createCapabilityClient({ baseUrl, token });
+await client.publish({
+  roomId: "care-team-1",
+  vertical: "health",
+  type: "health.consent.verified",
+  actor: { id: "clinician-1", type: "user", role: "clinician" },
+  idempotencyKey: `consent-${Date.now()}`,
+  payload: { scope: "treatment", verified: true },
+});
+```
+
+## Edu & Event (same kernel)
+
+| Vertical | Worker APIs | `server_event` |
+|----------|-------------|----------------|
+| FluxyEdu | `POST /polls`, `POST /rooms/:id/breakouts` | `poll.*`, `edu.breakout.*` |
+| FluxyEvent | `POST /api/live/events`, `POST /hybrid/events` | `live.*`, `event.hybrid.*` |
+
+Live workspace on `/edu` and `/events` runs these calls against your active room.
+
+## Compliance notes
+
+- **Health**: not HIPAA-certified out of the box — BAA, retention, and vendor chain are deployment gates. Demo data is synthetic.
+- **Finance**: no trade execution or PAN storage — alerts and approvals are audit events only.
+- **Continuity**: device view state is local; room membership and checkpoints are server-authoritative.
+
+## Related
+
+- [Realtime modules](/docs/platform/realtime-modules) — `server_event` + `capability_event` catalog
+- Dashboard **FluxyEdu** (`/edu`) and **FluxyEvent** (`/events`) — polls, breakouts, stage live, hybrid check-in
+- [Spatial & Digital Twin](/docs/platform/spatial-digital-twin) — continuity + spatial handoff

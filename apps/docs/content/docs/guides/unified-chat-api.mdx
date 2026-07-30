@@ -1,0 +1,132 @@
+---
+title: "Unified Chat API"
+description: "FluxyChat's unified Chat API (P26-A) provides top-level methods that auto-infer the correct adapter from thread IDs and user IDs, so you can perform cross-platf"
+---
+
+FluxyChat's unified Chat API (P26-A) provides top-level methods that auto-infer the correct adapter from thread IDs and user IDs, so you can perform cross-platform operations without manual adapter lookup.
+
+## Overview
+
+Thread IDs in FluxyChat follow the format `adapter:channelId:messageId`. The unified API parses the prefix to resolve the adapter, returns lightweight `ThreadRef` objects, and delegates posting to the appropriate platform.
+
+**Source:** `apps/worker/src/lib/chat-api.js`
+
+## `chat.thread(threadId)`
+
+Returns a `ThreadRef` for the given thread ID. The adapter is inferred from the ID prefix.
+
+```js
+import { chat } from "@fluxy-chat/sdk";
+
+// Slack thread
+const thread = chat.thread("slack\:C123ABC:1234567890.123456");
+console.log(thread.adapterSlug); // "slack"
+console.log(thread.channelId);   // "C123ABC"
+
+// Web thread
+const webThread = chat.thread("web:room-123\:msg-456");
+console.log(webThread.adapterSlug); // "web"
+```
+
+### ThreadRef
+
+`ThreadRef` is a lightweight thread reference. It holds the ID, adapter slug, and channel ID, and supports JSON serialization for D1 round-trips.
+
+```js
+const thread = chat.thread("slack\:C123:1234567890.123456");
+
+// Serialize
+const json = thread.toJSON();
+// { _type: "fluxy\:Thread", id: "slack\:C123:1234567890.123456", adapterSlug: "slack", channelId: "C123" }
+
+// Deserialize
+const restored = ThreadRef.fromJSON(json);
+```
+
+## `chat.openDM(userId)`
+
+Opens a DM by user ID, auto-inferring the adapter from the ID format.
+
+```js
+const dm = await chat.openDM("U123ABC");       // Slack
+console.log(dm.adapterSlug);                    // "slack"
+console.log(dm.id);                             // "slack:dm\:U123ABC"
+
+const discordDM = await chat.openDM("123456789012345678"); // Discord
+console.log(discordDM.adapterSlug);                          // "discord"
+```
+
+### User ID inference rules
+
+| Pattern | Adapter | Example |
+|---------|---------|---------|
+| `U...` / `W...` (uppercase alphanumeric) | Slack | `U123ABC` |
+| `29:...` | Teams | `29:1abc...` |
+| 17–19 digit snowflake | Discord | `123456789012345678` |
+| `users/...` | Google Chat | `users/123` |
+| 1–13 digit numeric | Telegram | `123456789` |
+| UUID | Web | `a1b2c3d4-...` |
+
+## `chat.getUser(userId)`
+
+Looks up user info (email, avatar, full name) by user ID, auto-inferring the adapter.
+
+```js
+const user = await chat.getUser("alice-uuid");
+// { userId: "alice-uuid", email: "alice@example.com", fullName: "Alice", avatarUrl: "...", adapter: "web" }
+
+// For external adapters without D1 lookup, returns minimal info
+const slackUser = await chat.getUser("U123ABC");
+// { userId: "U123ABC", adapter: "slack" }
+```
+
+## Context-bound API
+
+For worker routes that need D1/KV access, create a context-bound instance:
+
+```js
+import { createChatApi } from "@fluxy-chat/sdk";
+
+const api = createChatApi({ env, db, roomStub });
+
+// thread() works the same
+const thread = api.thread("web:room-123\:msg-456");
+
+// openDM() and getUser() can use D1
+const user = await api.getUser("alice-uuid"); // looks up from D1
+```
+
+## `thread.mentionUser(userId)`
+
+Format platform-specific mentions. Each adapter handles this differently:
+
+```js
+// Slack: <@U123ABC>
+// Discord: <@123456789012345678>
+// Teams: <at>John Doe</at>
+// Web: @alice
+```
+
+## `thread.getParticipants()`
+
+Scans messages in a thread and returns deduplicated non-bot authors. Useful for subscribe/unsubscribe logic and analytics.
+
+```js
+const participants = await thread.getParticipants();
+// [{ userId: "alice", adapter: "web" }, { userId: "bob", adapter: "web" }]
+```
+
+## `chat.shutdown()`
+
+Gracefully disconnects all registered adapters, calling each adapter's `disconnect()` method. Useful for worker lifecycle management.
+
+```js
+const result = await chat.shutdown();
+// { disconnected: ["web", "slack"], errors: [] }
+```
+
+## See Also
+
+- [Adapter Errors](/docs/adapter-errors) — Standardized error hierarchy for adapter operations
+- [Chat Singleton](/docs/chat-singleton) — Global singleton for thread deserialization
+- [Adapter Pattern](/docs/adapter-pattern) — Multi-platform adapter interface

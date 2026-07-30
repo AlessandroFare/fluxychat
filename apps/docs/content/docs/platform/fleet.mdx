@@ -1,0 +1,18 @@
+---
+title: Fleet
+description: Multi-tenant fleet coordination.
+---
+
+# Fleet module
+
+Coordinate many Workers, projects, or edge nodes from a central operator view.
+
+Fleet features integrate with:
+
+- Project-scoped API keys and JWT `tid` claims
+- Admin audit and export APIs
+- Cross-room inbox (`useInbox`) for operator consoles
+
+Deploy a single Worker per environment; use project provisioning (`ALLOW_DEV_PROVISION` locally, dashboard in production) to isolate tenants.
+
+See [Architecture](/docs/architecture) and [Operations](/docs/operations/scaling).

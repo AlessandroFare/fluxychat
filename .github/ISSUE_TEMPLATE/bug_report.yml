@@ -1,0 +1,48 @@
+name: Bug report
+description: Report broken behavior in FluxyChat Worker, SDK, or dashboard
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Include reproduction steps and expected vs actual behavior. For connection issues, note `connectionStatus` and Worker URL.
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Start worker...\n2. Open dashboard...\n3. ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Package or app version / git SHA
+      placeholder: "main @ abc1234 or @fluxy-chat/sdk 0.x"
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - worker
+        - dashboard
+        - sdk
+        - react
+        - docs
+        - other

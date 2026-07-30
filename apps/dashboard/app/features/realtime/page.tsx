@@ -3,12 +3,15 @@
 import React from "react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
+import { ConsoleProjectRoomBar } from "../../components/console-project-room-bar";
 import { cn } from "@/lib/utils";
 import { useShowcaseSession } from "@/components/showcase/use-showcase-session";
 import { InAppChatShowcase } from "@/components/showcase/in-app-chat-showcase";
 import { LiveStreamingShowcase } from "@/components/showcase/live-streaming-showcase";
 import { PushNotificationsShowcase } from "@/components/showcase/push-notifications-showcase";
 import { RealTimeLocationShowcase } from "@/components/showcase/real-time-location-showcase";
+import { AiTransportShowcase, VoiceInterfaceShowcase } from "@/components/showcase/ai-voice-showcase";
+import { VerticalRealtimeShowcase } from "@/components/showcase/vertical-realtime-showcases";
 import {
   REALTIME_FEATURES,
   type RealtimeFeatureId,
@@ -29,7 +32,12 @@ export default function RealtimeFeaturesPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Realtime features"
-        description="Live SDK demos for room messaging, ephemeral pub/sub, foreground location, and standards-based web push."
+        description="Live SDK demos for chat, streaming, location, collab, game, IoT, fleet, spatial, and omnichannel — against your Worker demo room or guest session."
+      />
+
+      <ConsoleProjectRoomBar
+        preferRoom
+        hint="Uses the Worker /demo/session guest room when not signed in; sign in and pick a project to exercise your own rooms."
       />
 
       <div
@@ -78,6 +86,16 @@ export default function RealtimeFeaturesPage() {
         {tab === "streaming" ? <LiveStreamingShowcase session={session} /> : null}
         {tab === "location" ? <RealTimeLocationShowcase session={session} /> : null}
         {tab === "push" ? <PushNotificationsShowcase session={session} /> : null}
+        {tab === "ai-transport" ? <AiTransportShowcase session={session} /> : null}
+        {tab === "voice" ? <VoiceInterfaceShowcase session={session} /> : null}
+        {tab === "collab" ? <VerticalRealtimeShowcase featureId="collab" session={session} /> : null}
+        {tab === "fluxy-stream" ? <VerticalRealtimeShowcase featureId="fluxy-stream" session={session} /> : null}
+        {tab === "game" ? <VerticalRealtimeShowcase featureId="game" session={session} /> : null}
+        {tab === "iot" ? <VerticalRealtimeShowcase featureId="iot" session={session} /> : null}
+        {tab === "fleet" ? <VerticalRealtimeShowcase featureId="fleet" session={session} /> : null}
+        {tab === "spatial" ? <VerticalRealtimeShowcase featureId="spatial" session={session} /> : null}
+        {tab === "edu-live" ? <VerticalRealtimeShowcase featureId="edu-live" session={session} /> : null}
+        {tab === "omnichannel" ? <VerticalRealtimeShowcase featureId="omnichannel" session={session} /> : null}
       </div>
     </ConsoleShell>
   );

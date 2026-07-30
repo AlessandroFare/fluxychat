@@ -50,9 +50,26 @@ export {
 } from "./parse-inbound-frame.js";
 
 export {
+  isUnknownWsFrame,
+  type UnknownWsFrame,
+} from "./unknown-frame.js";
+
+export {
   dispatchInboundWsFrame,
   type InboundDispatchHandlers,
 } from "./dispatch-inbound-frame.js";
+
+export {
+  FLUXY_RELIABILITY_VERSION,
+  FluxySequenceTracker,
+  advanceDeliveryStage,
+  compareDeliveryStage,
+  type FluxyDeliveryReceipt,
+  type FluxyDeliveryStage,
+  type FluxySequenceDecision,
+  type FluxySequencedEvent,
+  type FluxySyncCursor,
+} from "./reliability.js";
 
 export {
   isValidLocationTrackEnded,
@@ -66,3 +83,9 @@ export {
   type LocationUpdateInbound,
   type LocationUpdateOutbound,
 } from "./location-events.js";
+
+export {
+  isValidServerRealtimeEventFrame,
+  parseServerRealtimeEventFrame,
+  type ServerRealtimeEventFrame,
+} from "./server-realtime-events.js";

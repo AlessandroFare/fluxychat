@@ -1,7 +1,29 @@
 {
     "name":  "@fluxy-chat/ui",
-    "version":  "0.1.0",
-    "description":  "Fluxychat React UI components (shadcn-based)",
+    "version":  "0.1.1",
+    "description":  "FluxyChat React UI components (shadcn-based chat primitives)",
+    "license":  "MIT",
+    "author":  "Fluxychat",
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/AlessandroFare/fluxychat.git",
+                       "directory":  "packages/ui"
+                   },
+    "homepage":  "https://github.com/AlessandroFare/fluxychat/tree/main/packages/ui#readme",
+    "bugs":  {
+                 "url":  "https://github.com/AlessandroFare/fluxychat/issues"
+             },
+    "keywords":  [
+                     "chat",
+                     "react",
+                     "ui",
+                     "components",
+                     "fluxychat"
+                 ],
+    "files":  [
+                  "dist",
+                  "README.md"
+              ],
     "main":  "dist/index.js",
     "module":  "dist/index.mjs",
     "types":  "dist/index.d.ts",

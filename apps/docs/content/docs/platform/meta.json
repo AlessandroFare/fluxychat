@@ -1,0 +1,17 @@
+{
+  "title": "Platform",
+  "icon": "Globe",
+  "pages": [
+    "index",
+    "realtime-modules",
+    "transport",
+    "agent-platform",
+    "embed-widget",
+    "custom-domains",
+    "stream",
+    "collab",
+    "game",
+    "iot",
+    "fleet"
+  ]
+}

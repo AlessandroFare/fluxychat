@@ -1,0 +1,95 @@
+---
+title: "Prune Messages — Context Compaction"
+description: "`pruneMessages` compacts a message array to stay within token or count limits while preserving essential context. Use it to prevent agent loops from growing bey"
+---
+
+`pruneMessages` compacts a message array to stay within token or count limits while preserving essential context. Use it to prevent agent loops from growing beyond the model's context window.
+
+## Basic Usage
+
+```ts
+import { pruneMessages } from '@fluxy-chat/agent';
+
+const messages = [
+  { role: 'system', content: 'You are a helpful assistant.' },
+  { role: 'user', content: 'Tell me about AI.' },
+  { role: 'assistant', content: 'AI stands for Artificial Intelligence...' },
+  { role: 'user', content: 'Tell me more.' },
+];
+
+const pruned = pruneMessages(messages, { maxMessages: 2 });
+// Keeps system message + the most recent message
+// Result: [{ role: 'system', ... }, { role: 'user', content: 'Tell me more.' }]
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `maxMessages` | `number` | — | Maximum number of messages to keep (system always preserved) |
+| `maxChars` | `number` | — | Maximum total characters across all messages |
+| `removeRoles` | `readonly AIMessageRole[]` | — | Filter out specific roles (e.g., `['tool']`) |
+| `removeEmpty` | `boolean` | `false` | Remove messages with empty/no content |
+| `preserveLast` | `boolean` | `true` | Always keep the last non-system message |
+
+## Max Messages
+
+Truncates the history to the N most recent messages, always preserving the system message:
+
+```ts
+const pruned = pruneMessages(messages, { maxMessages: 5 });
+// Keeps system + 4 most recent messages
+```
+
+## Max Characters
+
+Truncates character count, removing oldest messages first:
+
+```ts
+const pruned = pruneMessages(messages, { maxChars: 4000 });
+// Drops oldest messages until total is <= 4000 chars
+```
+
+## Remove by Role
+
+Strip tool-role messages to reduce noise:
+
+```ts
+const pruned = pruneMessages(messages, { removeRoles: ['tool'] });
+// All tool-role messages are removed
+```
+
+## Multi-Constraint
+
+Multiple options compose. The system message is always preserved:
+
+```ts
+const pruned = pruneMessages(messages, {
+  maxMessages: 20,
+  maxChars: 8000,
+  removeRoles: ['tool'],
+  removeEmpty: true,
+});
+```
+
+## Type Reference
+
+```ts
+interface PruneMessagesOptions {
+  maxMessages?: number;
+  maxChars?: number;
+  removeRoles?: readonly AIMessageRole[];
+  removeEmpty?: boolean;
+  preserveLast?: boolean;
+}
+
+function pruneMessages(
+  messages: readonly AIMessage[],
+  options: PruneMessagesOptions,
+): AIMessage[];
+```
+
+## See Also
+
+- [Loop Control](/docs/loop-control) — `maxSteps`, `maxToolCalls` limits
+- [Subagents](/docs/subagents) — context isolation pattern

@@ -3,6 +3,7 @@
 import React from "react";
 import { Settings2, X } from "lucide-react";
 import { Button, Input } from "./ui";
+import type { ReasoningEffort, ReasoningSummary } from "@/lib/agent-form";
 
 export interface ModelParams {
   temperature: number;
@@ -11,6 +12,8 @@ export interface ModelParams {
   frequencyPenalty: number;
   presencePenalty: number;
   stopSequences: string;
+  reasoningEffort?: ReasoningEffort;
+  reasoningSummary?: ReasoningSummary;
 }
 
 interface ModelParamsPanelProps {
@@ -91,6 +94,34 @@ export function ModelParamsPanel({ open, onOpenChange, params, onChange }: Model
                 value={params.stopSequences}
                 onChange={(v) => onChange({ stopSequences: v })}
               />
+
+              <ParamSelect
+                label="Reasoning effort"
+                hint="Enables chain-of-thought reasoning. Not supported by all providers."
+                value={params.reasoningEffort ?? "none"}
+                options={[
+                  { value: "none", label: "Off" },
+                  { value: "low", label: "Low" },
+                  { value: "medium", label: "Medium" },
+                  { value: "high", label: "High" },
+                ]}
+                onChange={(v) => onChange({ reasoningEffort: v as ReasoningEffort })}
+              />
+
+              {params.reasoningEffort && params.reasoningEffort !== "none" && (
+                <ParamSelect
+                  label="Reasoning summary"
+                  hint="Controls how the reasoning trace is summarized."
+                  value={params.reasoningSummary ?? "auto"}
+                  options={[
+                    { value: "auto", label: "Auto" },
+                    { value: "concise", label: "Concise" },
+                    { value: "detailed", label: "Detailed" },
+                    { value: "none", label: "None" },
+                  ]}
+                  onChange={(v) => onChange({ reasoningSummary: v as ReasoningSummary })}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -134,6 +165,26 @@ function ParamInput({ label, hint, type, value, onChange }: {
         onChange={(e) => onChange(e.target.value)}
         className="w-full"
       />
+      {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
+    </label>
+  );
+}
+
+function ParamSelect({ label, hint, value, options, onChange }: {
+  label: string; hint?: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
       {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
     </label>
   );

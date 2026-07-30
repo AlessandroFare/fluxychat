@@ -3,11 +3,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClerkUser } from "@/lib/clerk-user";
-import { useChat, useFluxyChatOptional, type UseChatHistoryReplay } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useFluxyChatOptional } from "@fluxy-chat/react";
 import { useDashboardSession } from "../components/dashboard-session";
 import {
   applyModelInput,
+  DEFAULT_ONBOARDING_AGENT_MODEL,
+  DEFAULT_ONBOARDING_AGENT_PROVIDER,
 } from "@/lib/agent-catalog";
+import { pickDefaultAssistantAgent } from "@/lib/assistant-room";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
 import { loadQuickstartProgress, markQuickstartFirstMessage } from "@/lib/quickstart-progress";
@@ -50,8 +54,8 @@ export function useOnboardingWizard() {
   const [room, setRoom] = useState<CreatedRoom | null>(null);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [agentName, setAgentName] = useState("Assistant");
-  const [agentProvider, setAgentProvider] = useState("openai");
-  const [agentModel, setAgentModel] = useState("gpt-4o-mini");
+  const [agentProvider, setAgentProvider] = useState(DEFAULT_ONBOARDING_AGENT_PROVIDER);
+  const [agentModel, setAgentModel] = useState(DEFAULT_ONBOARDING_AGENT_MODEL);
   const [agent, setAgent] = useState<CreatedAgent | null>(null);
   const [creatingAgent, setCreatingAgent] = useState(false);
   const [agentPrompt, setAgentPrompt] = useState("Summarize the last messages in 3 bullets");
@@ -67,13 +71,16 @@ export function useOnboardingWizard() {
   const fluxyClient = useFluxyChatOptional()?.client ?? null;
   const project = activeProject as CreatedProject | null;
   const activeRoomId = room?.id ?? "";
-  const onboardingReplay: UseChatHistoryReplay = skipHistoryOnConnect ? "request" : "connect";
 
-  const { messages, sendMessage: rawSendMessage, connectionStatus, historyLoaded, loadHistory } = useChat({
-    roomId: activeRoomId,
-    replay: onboardingReplay,
-    markReadLatest: Boolean(activeRoomId),
-  });
+  const chatClient = useMemo(() => {
+    if (fluxyClient) return fluxyClient;
+    if (!memberJwt.trim()) return null;
+    return new FluxyChatClient({
+      baseUrl: WORKER_URL,
+      userId: userId.trim() || "owner",
+      token: memberJwt.trim(),
+    });
+  }, [fluxyClient, memberJwt, userId]);
 
   // Track whether the *current user* has sent a message during this onboarding
   // session.
@@ -90,15 +97,7 @@ export function useOnboardingWizard() {
     }
   }, [clerkUser?.id, userId]);
 
-  const handleSendMessage = useCallback(
-    (...args: Parameters<typeof rawSendMessage>) => {
-      markMessageSent();
-      return rawSendMessage(...args);
-    },
-    [rawSendMessage, markMessageSent],
-  );
-
-  // Celebrate + advance to step 3 (Explore Features) when user sends first message.
+  // Celebrate when user sends first message.
   useEffect(() => {
     if (!userSentMessage || celebratedRef.current) return;
     celebratedRef.current = true;
@@ -131,7 +130,7 @@ export function useOnboardingWizard() {
   // Auto-advance to first incomplete step on mount — but if the user hasn't
   // even connected yet, start at the Welcome screen (step 0).
   useEffect(() => {
-    const first = firstIncompleteOnboardingStep({ adminJwt, activeProject: project, memberJwt, room, messageCount: messages.length, userSentMessage });
+    const first = firstIncompleteOnboardingStep({ adminJwt, activeProject: project, memberJwt, room, messageCount: userSentMessage ? 1 : 0, userSentMessage });
     // Only auto-advance past welcome if there's real progress
     if (first > 1) setActiveStep(first);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -159,6 +158,20 @@ export function useOnboardingWizard() {
     void createRoom(defaultRoomName);
   }, [memberJwt, room?.id, project?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-create or reuse @assistant agent for First Chat
+  const autoAgentKeyRef = useRef("");
+  useEffect(() => {
+    if (!adminJwt.trim() || agent?.id || creatingAgent) return;
+    const key = `${adminJwt.slice(0, 20)}:${project?.id ?? ""}`;
+    if (autoAgentKeyRef.current === key) return;
+
+    void (async () => {
+      autoAgentKeyRef.current = key;
+      const ok = await ensureAssistantAgent();
+      if (!ok) autoAgentKeyRef.current = "";
+    })();
+  }, [adminJwt, agent?.id, creatingAgent, project?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const furthest = useMemo(
     () =>
       firstIncompleteOnboardingStep({
@@ -166,10 +179,10 @@ export function useOnboardingWizard() {
         activeProject: project,
         memberJwt,
         room,
-        messageCount: messages.length,
+        messageCount: userSentMessage ? 1 : 0,
         userSentMessage,
       }),
-    [adminJwt, project, memberJwt, room, messages.length, userSentMessage],
+    [adminJwt, project, memberJwt, room, userSentMessage],
   );
 
   const stepContext = useMemo(
@@ -178,10 +191,10 @@ export function useOnboardingWizard() {
       activeProject: project,
       memberJwt,
       room,
-      messageCount: messages.length,
+      messageCount: userSentMessage ? 1 : 0,
       userSentMessage,
     }),
-    [adminJwt, project, memberJwt, room, messages.length, userSentMessage],
+    [adminJwt, project, memberJwt, room, userSentMessage],
   );
 
   function goNext() {
@@ -380,18 +393,41 @@ export function useOnboardingWizard() {
     }
   }
 
-  async function createAgent() {
+  async function ensureAssistantAgent(): Promise<boolean> {
+    if (!adminJwt.trim()) return false;
+    setCreatingAgent(true);
+    setError(null);
+    try {
+      const listJson = await fetchWorkerJson<{ agents?: Array<{ id: string; name: string; handle?: string | null }> }>(
+        `${WORKER_URL}/agents`,
+        { headers: { Authorization: `Bearer ${adminJwt.trim()}` } },
+      );
+      const existing = pickDefaultAssistantAgent(listJson.agents ?? []);
+      if (existing) {
+        setAgent({ id: existing.id, name: existing.name });
+        return true;
+      }
+      return await createAgent();
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Failed to prepare assistant agent"));
+      return false;
+    } finally {
+      setCreatingAgent(false);
+    }
+  }
+
+  async function createAgent(): Promise<boolean> {
     if (!adminJwt.trim()) {
       setError("Admin JWT required to create agent (/agents).");
-      return;
+      return false;
     }
     setCreatingAgent(true);
     setError(null);
     setNotice(null);
     try {
       const applied = applyModelInput(
-        agentProvider.trim() || "openai",
-        agentModel.trim() || "gpt-4o-mini",
+        agentProvider.trim() || DEFAULT_ONBOARDING_AGENT_PROVIDER,
+        agentModel.trim() || DEFAULT_ONBOARDING_AGENT_MODEL,
       );
       const json = await fetchWorkerJson<{ agent: { id: string; name: string } }>(
         `${WORKER_URL}/agents`,
@@ -412,8 +448,10 @@ export function useOnboardingWizard() {
       );
       setAgent({ id: json.agent.id, name: json.agent.name });
       setNotice("Agent created.");
+      return true;
     } catch (err: unknown) {
       setError(messageFromUnknown(err, "Failed to create agent"));
+      return false;
     } finally {
       setCreatingAgent(false);
     }
@@ -465,7 +503,7 @@ export function useOnboardingWizard() {
     isReviewMode,
     clerkUser,
     clerkSignedIn,
-    fluxyClient,
+    fluxyClient: chatClient,
     project,
     adminJwt,
     setAdminJwt,
@@ -504,13 +542,8 @@ export function useOnboardingWizard() {
     activeRoomId,
     skipHistoryOnConnect,
     setSkipHistoryOnConnect,
-    messages,
-    sendMessage: handleSendMessage,
     markMessageSent,
     userSentMessage,
-    connectionStatus,
-    historyLoaded,
-    loadHistory,
     setLastRoom,
     showCelebration,
     setShowCelebration,

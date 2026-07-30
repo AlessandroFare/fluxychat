@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, ExternalLink, Plus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, Plus, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
@@ -186,6 +186,25 @@ export default function WebhooksPage() {
           >
             {loading ? "Refreshing…" : "Refresh"}
           </Button>
+        </div>
+      </Section>
+
+      <Section title="Event catalog" description="All 17 webhook event types available via createWebhookEventCatalog() SDK module.">
+        <div className="grid gap-2 sm:grid-cols-3">
+          {[
+            { cat: "Messages", events: ["message.sent", "message.edited", "message.deleted", "message.reacted"] },
+            { cat: "Users", events: ["user.joined", "user.left", "user.updated", "user.blocked"] },
+            { cat: "Rooms", events: ["room.created", "room.updated", "room.deleted", "room.archived"] },
+            { cat: "Agents", events: ["agent.started", "agent.completed", "agent.failed"] },
+            { cat: "System", events: ["webhook.enabled", "webhook.disabled"] },
+          ].map((g) => (
+            <div key={g.cat} className="rounded-lg border border-border bg-muted/20 p-3">
+              <h4 className="flex items-center gap-1.5 text-xs font-semibold"><BookOpen className="h-3 w-3" /> {g.cat}</h4>
+              <ul className="mt-1.5 space-y-0.5">
+                {g.events.map((ev) => <li key={ev} className="text-[11px] font-mono text-muted-foreground">{ev}</li>)}
+              </ul>
+            </div>
+          ))}
         </div>
       </Section>
     </ConsoleShell>

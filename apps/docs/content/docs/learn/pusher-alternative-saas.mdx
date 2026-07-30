@@ -1,0 +1,32 @@
+---
+title: "Pusher Channels alternative for SaaS chat"
+description: "Pusher's free tier works until it doesn't. If connection pricing is climbing faster than your app, room chat on Cloudflare with optional self-host is worth a look."
+---
+
+## Why people leave Pusher
+
+- Demo runs on the free tier; production traffic hits connection and message line items.
+- Start on hosted beta; self-host on your Cloudflare account when you want cost control.
+- You read Cloudflare DO/D1 pricing instead of guessing at a channels SKU.
+
+## Three paths
+
+- Roll your own Socket.IO on a VM — full control, full ops.
+- Pusher / Ably / Stream — fast start, vendor bill, less schema ownership.
+- FluxyChat — room-per-DO on Workers + D1, MIT self-host or hosted beta, SDK with loadMore.
+
+## What Pusher threads complain about
+
+- History and replay take extra work on Channels.
+- Pricing at scale (connections, messages).
+- Second vendor when the app already runs on Cloudflare.
+
+## Migration sketch
+
+- Map channel names to roomIds.
+- Mint JWTs server-side; client uses useChat.
+- Keep Next on Vercel; Worker handles WS.
+
+## When to stay on Pusher
+
+Generic pub/sub, telco-scale fan-out, or you need their dashboard tomorrow. FluxyChat is for tenant in-app chat where you want D1 history and the option to self-host.

@@ -17,6 +17,27 @@ const nextConfig = {
   },
   images: {
     formats: ['image/avif', 'image/webp'],
+    // Mitigate CPU exhaustion from malicious remote SVGs (CVE-2026-64644) on self-hosted builds.
+    dangerouslyAllowSVG: false,
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '5mb',
+    },
+  },
+  async redirects() {
+    return [
+      {
+        source: "/landing",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/landing/:path*",
+        destination: "/:path*",
+        permanent: true,
+      },
+    ];
   },
   // Security headers (CSP + X-Content-Type-Options + Referrer-Policy +
   // X-Frame-Options) are now set by the dashboard's middleware so each

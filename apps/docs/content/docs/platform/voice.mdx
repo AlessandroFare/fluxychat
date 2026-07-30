@@ -1,0 +1,69 @@
+---
+title: Voice AI
+description: STT→LLM→TTS pipeline, latency SLOs, transport fallback, and room integration.
+---
+
+Production voice runs on the same Worker as chat. Dashboard: [**Voice AI**](/voice-ai).
+
+## Latency SLO
+
+| Tier | Target | Path |
+|------|--------|------|
+| **Production** | P95 ≤ 300ms end-to-end | OpenAI Realtime WebSocket (`openai-realtime`) |
+| **Acceptable** | P95 ≤ 350ms | Gemini Live (OpenAI-compatible WS surface) |
+| **Degraded** | Best effort | Chunked REST STT → LLM → TTS |
+| **Demo / offline** | N/A | Text-only pipeline (`useVoice` simulation) |
+
+Report samples via `POST /admin/voice-ai/metrics` and inspect aggregates on `/voice-ai` (avg, P95, under-300ms count).
+
+## Transport fallback ladder
+
+The SDK degrades automatically when a faster path is unavailable:
+
+```
+realtime (OpenAI/Gemini WS)
+  ↓ mic denied / WS error / missing API key
+chunked (REST STT + TTS segments)
+  ↓ provider error
+text_only (LLM + TTS text path — dashboard demo default)
+```
+
+```typescript
+import { useVoice } from "@fluxy-chat/react";
+
+const voice = useVoice({
+  preferredTransport: "realtime",
+  autoFallback: true,
+  noiseSuppression: true,
+  echoCancellation: true,
+  onMetrics: ({ totalLatencyMs }) => {
+    if (totalLatencyMs > 300) console.warn("above SLO");
+  },
+});
+
+await voice.start();
+console.log(voice.pipeline?.getActiveTransport()); // realtime | chunked | text_only
+```
+
+Listen for `transport_fallback` events on the pipeline when debugging production paths.
+
+## Worker session
+
+```bash
+curl -X POST "$WORKER_URL/admin/voice-ai/sessions" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"providerId":"openai-realtime","roomId":"support"}'
+```
+
+Returns `targetLatencyMs: 300` and a session `wsUrl` for streaming audio.
+
+## Room integration
+
+Voice sessions optionally bind to a `roomId`. Agent replies and voice message transcriptions appear on the **same room WebSocket** as chat (`message` with `kind: "voice"`). See [Voice AI pipeline guide](/docs/guides/voice-ai-pipeline).
+
+## Related
+
+- [Voice AI pipeline guide](/docs/guides/voice-ai-pipeline) — curl examples + metrics
+- [Voice & huddles](/docs/core/voice-huddles) — WebRTC huddles vs AI pipeline
+- [Realtime modules](/docs/platform/realtime-modules) — unified room bus

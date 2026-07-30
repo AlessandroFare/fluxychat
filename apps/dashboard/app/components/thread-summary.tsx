@@ -2,7 +2,7 @@
 
 import React, { useCallback, useState } from "react";
 import { ListCollapse, Loader2 } from "lucide-react";
-import { useFluxyChatOptional } from "@fluxy-chat/sdk";
+import { useFluxyChatOptional } from "@fluxy-chat/react";
 import { Button } from "../components/ui";
 
 interface ThreadSummaryProps {

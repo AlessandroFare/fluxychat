@@ -1,0 +1,108 @@
+---
+title: Inbox
+description: Cross-room inbox — items feed, counter badges, channels, and realtime onItem.
+---
+
+# Inbox model
+
+FluxyChat separates three concepts that are easy to conflate:
+
+| Concept | What it is | SDK / API |
+|---------|------------|-----------|
+| **Items feed** | Flat list of inbox rows (mentions, unread rooms, snoozed, follow-ups) | `useInbox().items` |
+| **Counter** | Global badge: number of rooms with unread messages | `useInbox().counter` |
+| **Unseen** | Rows in the current view that need attention (mentions + unread) | `useInbox().unseen` |
+| **Channel watermark** | Per-room “how far you read” in chat history | `markReadRest(roomId, messageId)` / `markReadLatest` in `useChat` |
+
+The **inbox** tracks *noticing* (mentions, unread rooms, snooze, follow-ups).  
+The **room channel** tracks *reading* (last read message id inside a room). Clearing inbox unread does not automatically advance the room watermark unless you call mark-read.
+
+## Quick start
+
+```tsx
+import { useInbox } from "@fluxy-chat/react";
+
+function InboxSidebar() {
+  const { items, counter, unseen, status, reload, onItem } = useInbox({
+    pollIntervalMs: 30_000,
+    realtime: true,
+    onItem: (item) => console.log("live inbox push", item),
+  });
+
+  return (
+    <div>
+      <h2>Inbox {counter > 0 ? `(${counter})` : ""}</h2>
+      {status === "loading" && <p>Loading…</p>}
+      <ul>
+        {items.map((item) => (
+          <li key={item.id}>
+            <a href={`/rooms/${item.roomId}`}>
+              [{item.kind}] {item.roomName ?? item.roomId}
+              {item.unreadCount != null ? ` · ${item.unreadCount} unread` : ""}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+## Item kinds
+
+Each row in `items` is a `FluxyInboxItem`:
+
+| `kind` | Source in REST summary | Typical use |
+|--------|------------------------|-------------|
+| `mention` | `summary.mentions` | @you in a room |
+| `unread` | `summary.unreadRooms` | Room has messages after your watermark |
+| `snooze` | `summary.snoozedRooms` | Room hidden until `snoozedUntil` |
+| `follow_up` | `summary.followUps` | Operator reminder you created |
+
+Items are built from `GET /inbox` and merged with realtime pushes on the **user channel** WebSocket (`onItem`).
+
+## Counter vs unseen
+
+- `counter` — `summary.counts.unreadRooms` (or length of unread room list). Use for nav badges.
+- `unseen` — count of `mention` + `unread` rows in the current `items` feed (respects client `query` filter).
+
+```tsx
+useInbox({ query: { unread: true } }); // narrows REST snapshot client-side
+```
+
+## Mark read (room channel)
+
+Marking a room read advances the **channel watermark**, not the inbox snooze state:
+
+```tsx
+await client.markReadRest(roomId, messageId);
+await reload(); // refresh inbox summary
+```
+
+In chat UI, `useChat({ readOn: "mount" })` or `markReadLatest: true` sends read receipts when the user opens a room.
+
+## REST
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/inbox` | Inbox summary (mentions, unread, snoozed, follow-ups, counts) |
+| POST | `/inbox/rooms/:roomId/snooze` | Snooze a room |
+| POST | `/inbox/follow-ups` | Schedule follow-up |
+| POST | `/rooms/:roomId/read` | Advance read watermark `{ messageId }` |
+
+Requires authenticated member JWT (same as chat).
+
+## Realtime
+
+When `realtime: true` (default when authenticated), `useInbox` subscribes to the user channel. Server pushes `inbox_item` events; the hook merges them into `items` and calls `onItem` once per new row.
+
+## Console
+
+The dashboard **Inbox** page (`/inbox`) shows the items feed, sidebar badge via `useInbox().counter`, live `onItem` banner, and **Mark read** on unread rows.
+
+## Related
+
+- [Notifications](/docs/core/notifications)
+- [User channel](/docs/core/user-channel)
+- [Team chat use case](/docs/use-cases/team-chat)
+- [SDK playground](/playground)

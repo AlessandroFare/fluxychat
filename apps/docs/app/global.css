@@ -1,0 +1,130 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+@import "fumadocs-openapi/css/preset.css";
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0 !important;
+  --removed-body-scroll-bar-size: 0 !important;
+}
+
+/* FluxyChat brand — orange #FF6A1A, tuned for docs readability */
+:root {
+  --color-fd-primary: #ff6a1a;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-ring: #ff6a1a;
+
+  --color-brand: #ff6a1a;
+  --color-brand-foreground: #ffffff;
+}
+
+.dark {
+  --color-fd-primary: #ff8a47;
+  --color-fd-primary-foreground: #141414;
+  --color-fd-ring: #ff8a47;
+
+  --color-brand: #ff8a47;
+  --color-brand-foreground: #141414;
+}
+
+@theme inline {
+  --default-font-family: var(--font-sans);
+  --color-brand: var(--color-brand);
+  --color-brand-foreground: var(--color-brand-foreground);
+}
+
+body {
+  background-color: var(--color-fd-background);
+}
+
+/*
+ * Docs layout — match official Fumadocs proportions:
+ * sidebar 268px, TOC 268px, main column fills remaining width.
+ * https://fumadocs.dev/docs/ui/layouts/docs
+ */
+#nd-docs-layout {
+  /* Default Fumadocs uses 97rem; fill viewport so right gutter stays minimal */
+  --fd-layout-width: min(97rem, 100vw);
+}
+
+@media (min-width: 768px) {
+  #nd-docs-layout {
+    --fd-sidebar-width: 268px;
+  }
+}
+
+@media (min-width: 1280px) {
+  #nd-docs-layout {
+    --fd-toc-width: 268px;
+  }
+}
+
+/* Sidebar: enforce fixed column width (do not stretch with long labels) */
+#nd-sidebar,
+#nd-sidebar > div,
+[data-sidebar-placeholder] {
+  max-width: var(--fd-sidebar-width);
+}
+
+#nd-sidebar [data-sidebar-folder] > button,
+#nd-sidebar a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Main article: use full main grid column (Fumadocs default caps at 900px centered) */
+#nd-page {
+  max-width: 100%;
+  margin-inline: 0;
+}
+
+/* TOC: fixed width, flush to the right column */
+#nd-toc,
+#nd-toc-placeholder {
+  width: var(--fd-toc-width);
+  max-width: var(--fd-toc-width);
+}
+
+#nd-toc {
+  padding-inline-end: 1rem;
+}
+
+#nd-sidebar [data-sidebar-separator] {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-fd-muted-foreground);
+}
+
+#nd-sidebar [data-sidebar-folder] > button {
+  font-weight: 500;
+}
+
+#nd-sidebar [data-sidebar-folder][data-state="open"] > button {
+  color: var(--color-fd-foreground);
+}
+
+#nd-sidebar a[data-active="true"] {
+  font-weight: 500;
+  color: var(--color-fd-primary);
+}
+
+/* Page title block */
+h1.text-\[1\.75em\] {
+  margin-bottom: 0.5rem;
+}
+
+/* Fumadocs cards — subtle brand hover */
+[data-card] {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[data-card]:hover {
+  border-color: color-mix(in oklab, var(--color-fd-primary) 35%, var(--color-fd-border));
+}

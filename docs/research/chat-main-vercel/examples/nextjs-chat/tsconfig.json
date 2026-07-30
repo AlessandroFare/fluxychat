@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "ES2022"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"],
+      "chat": ["../../packages/chat/src/index.ts"],
+      "chat/ai": ["../../packages/chat/src/ai/index.ts"],
+      "chat/jsx-runtime": ["../../packages/chat/src/jsx-runtime.ts"],
+      "chat/jsx-dev-runtime": ["../../packages/chat/src/jsx-runtime.ts"],
+      "@chat-adapter/slack": ["../../packages/adapter-slack/src/index.ts"],
+      "@chat-adapter/gchat": ["../../packages/adapter-gchat/src/index.ts"],
+      "@chat-adapter/teams": ["../../packages/adapter-teams/src/index.ts"],
+      "@chat-adapter/discord": ["../../packages/adapter-discord/src/index.ts"],
+      "@chat-adapter/github": ["../../packages/adapter-github/src/index.ts"],
+      "@chat-adapter/linear": ["../../packages/adapter-linear/src/index.ts"],
+      "@chat-adapter/telegram": [
+        "../../packages/adapter-telegram/src/index.ts"
+      ],
+      "@chat-adapter/state-redis": ["../../packages/state-redis/src/index.ts"],
+      "@chat-adapter/state-memory": ["../../packages/state-memory/src/index.ts"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

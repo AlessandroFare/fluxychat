@@ -84,6 +84,16 @@ export async function getAgentBySlug(env, { slug }) {
   return row ? mapAgentRow(row) : null;
 }
 
+export async function listPublisherAgents(env, { publisherId, status, limit, offset }) {
+  let sql = "SELECT * FROM agent_marketplace WHERE publisher_id = ?";
+  const params = [publisherId];
+  if (status) { sql += " AND status = ?"; params.push(status); }
+  sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+  params.push(limit || 50, offset || 0);
+  const rows = await env.DB.prepare(sql).bind(...params).all();
+  return (rows.results || []).map(mapAgentRow);
+}
+
 export async function listAgents(env, { category, status, search, sort, limit, offset }) {
   let sql = "SELECT * FROM agent_marketplace WHERE 1=1";
   const params = [];

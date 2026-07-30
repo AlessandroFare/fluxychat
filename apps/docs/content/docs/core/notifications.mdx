@@ -1,0 +1,55 @@
+---
+title: Notifications
+description: Web push, user channel events, and in-app alerts.
+---
+
+Push and in-app notifications use Worker-configured VAPID keys and the user-channel WebSocket.
+
+## Web push
+
+```tsx
+import { useWebPush } from "@fluxy-chat/react";
+
+import type { FluxyChatClient } from "@fluxy-chat/sdk";
+
+function PushSettings({ client }: { client: FluxyChatClient }) {
+  const { permission, requestPermissionAndSubscribe, unsubscribe } = useWebPush(client);
+
+  if (permission === "unsupported") return null;
+
+  return (
+    <button onClick={() => requestPermissionAndSubscribe()}>
+      {permission === "granted" ? "Push enabled" : "Enable push"}
+    </button>
+  );
+}
+```
+
+Configure VAPID keys in Worker secrets / `.dev.vars`:
+
+```ini
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+```
+
+See [Web push (VAPID)](/docs/guides/realtime/web-push-vapid).
+
+## User channel
+
+`useNotifications` and `useUserChannel` subscribe to per-user realtime events (inbox refresh, mentions, system alerts):
+
+```tsx
+import { useNotifications } from "@fluxy-chat/react";
+
+useNotifications({ client, onEvent: (event) => console.log(event) });
+```
+
+## Delivery types
+
+| Channel | Mechanism |
+|---------|-----------|
+| In-app | User channel WS + inbox |
+| Web push | Browser Push API + Worker delivery |
+| Email / SMS | Worker integrations (tenant-configured) |
+
+Member JWT required for subscription registration.

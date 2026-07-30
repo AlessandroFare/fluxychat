@@ -555,7 +555,7 @@ export default function ProjectsPage() {
                   </a>
                   . This form is an operator override for self-hosted or dev tenants — it does not charge a card.
                   Compare tiers on{" "}
-                  <a href="/landing#pricing" className="font-medium text-primary underline-offset-2 hover:underline">
+                  <a href="/#pricing" className="font-medium text-primary underline-offset-2 hover:underline">
                     pricing
                   </a>
                   .

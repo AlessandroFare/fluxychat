@@ -1,0 +1,115 @@
+---
+title: Interactive cards end-to-end
+description: Compose, send, render, and handle button actions for FluxyChat cards.
+---
+
+This guide walks through the full card lifecycle: build → send → display → handle button clicks.
+
+## 1. Compose a card
+
+Use the function API from `@fluxy-chat/sdk`:
+
+```ts
+import { Card, Text, Button, Actions, cardToFallbackText } from "@fluxy-chat/sdk";
+
+const card = Card({
+  title: "Approve deployment?",
+  children: [
+    Text({ content: "Production v2.4.1 is ready." }),
+    Actions({
+      children: [
+        Button({ id: "approve-deploy", label: "Approve", style: "primary" }),
+        Button({ id: "reject-deploy", label: "Reject", style: "danger" }),
+      ],
+    }),
+  ],
+});
+
+console.log(cardToFallbackText(card)); // plain-text fallback for SMS/email
+```
+
+See [Card Element Builder](/docs/card-builder) for all element types.
+
+## 2. Send to a room
+
+```ts
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({
+  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,
+  userId: "bot_ops",
+  token: memberJwt,
+});
+
+const message = await client.sendCard("prod-alerts", card);
+```
+
+REST equivalent:
+
+```http
+POST /api/cards/send
+Authorization: Bearer <member-jwt>
+Content-Type: application/json
+
+{
+  "roomId": "prod-alerts",
+  "card": { "type": "card", "title": "Approve deployment?", "children": [] }
+}
+```
+
+The Worker stores the card JSON inside the message body with `<!--fluxy-card:v1-->` markers so clients can parse structured content while still showing fallback text.
+
+## 3. Render in React
+
+Cards arrive as messages. Parse the card payload or use the dashboard **Card Builder** (`/playground`) to preview layouts.
+
+```tsx
+import { useChat } from "@fluxy-chat/react";
+import { isCardElement } from "@fluxy-chat/sdk";
+
+function Room({ roomId }: { roomId: string }) {
+  const { messages } = useChat(roomId);
+
+  return (
+    <ul>
+      {messages.map((m) => (
+        <li key={m.id}>
+          {m.card && isCardElement(m.card) ? (
+            <CardView card={m.card} roomId={roomId} />
+          ) : (
+            m.content
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## 4. Handle button actions
+
+When a user clicks a card button, the client emits a structured event on the room WebSocket (`type: card_action`) with the button `id` and source message id.
+
+Server-side, register a webhook or agent handler:
+
+```ts
+// Worker webhook / bot handler (pseudo)
+if (event.type === "card_action" && event.actionId === "approve-deploy") {
+  await triggerDeploy(event.roomId);
+  await client.sendMessage(event.roomId, "✅ Deployment approved.");
+}
+```
+
+For approval gates that require human confirmation, combine cards with [AI tool presets](/docs/ai-tool-presets) so destructive actions pause until a moderator approves.
+
+## 5. Test locally
+
+1. Start Worker: `pnpm --filter @fluxychat/worker dev`
+2. Open dashboard **Card Builder** → send to `dev-local-general`
+3. Click buttons and verify webhook/agent logs
+
+## See also
+
+- [Card Element Builder](/docs/card-builder)
+- [Adapter pattern](/docs/adapter-pattern) — platform-specific card rendering
+- [Testing integrations](/docs/testing-integration) — mock client for Vitest

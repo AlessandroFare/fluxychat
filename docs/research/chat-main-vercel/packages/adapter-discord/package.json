@@ -1,0 +1,70 @@
+{
+  "name": "@chat-adapter/discord",
+  "version": "4.31.0",
+  "description": "Discord adapter for Chat SDK — HTTP interactions, Gateway events, slash commands, and embeds",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chat-adapter/shared": "workspace:*",
+    "chat": "workspace:*",
+    "discord-api-types": "^0.37.119",
+    "discord-interactions": "^4.4.0",
+    "discord.js": "^14.25.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel/chat.git",
+    "directory": "packages/adapter-discord"
+  },
+  "homepage": "https://chat-sdk.dev/adapters/official/discord",
+  "bugs": {
+    "url": "https://github.com/vercel/chat/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "chat",
+    "chat-sdk",
+    "chatbot",
+    "discord",
+    "discord-bot",
+    "bot",
+    "adapter",
+    "slash-commands",
+    "interactions",
+    "messaging",
+    "ai-agent",
+    "ai-sdk",
+    "vercel"
+  ],
+  "license": "MIT"
+}

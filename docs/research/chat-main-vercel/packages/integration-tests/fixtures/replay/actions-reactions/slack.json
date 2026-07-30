@@ -1,0 +1,195 @@
+{
+  "botName": "Chat SDK ExampleBot",
+  "botUserId": "U00FAKEBOT01",
+  "mention": {
+    "token": "xAbCdEfGhIjKlMnOpQrStUvW",
+    "team_id": "T00FAKE00AA",
+    "api_app_id": "A00FAKEAPP01",
+    "event": {
+      "type": "app_mention",
+      "user": "U00FAKEUSER1",
+      "ts": "1767326125.870439",
+      "text": "<@U00FAKEBOT01> Test",
+      "channel": "C00FAKECHAN1",
+      "event_ts": "1767326125.870439"
+    },
+    "type": "event_callback",
+    "authorizations": [{ "user_id": "U00FAKEBOT01", "is_bot": true }]
+  },
+  "action": {
+    "type": "block_actions",
+    "user": {
+      "id": "U00FAKEUSER1",
+      "username": "testuser",
+      "name": "testuser",
+      "team_id": "T00FAKE00AA"
+    },
+    "api_app_id": "A00FAKEAPP01",
+    "token": "xAbCdEfGhIjKlMnOpQrStUvW",
+    "container": {
+      "type": "message",
+      "message_ts": "1767326126.896109",
+      "channel_id": "C00FAKECHAN1",
+      "is_ephemeral": false,
+      "thread_ts": "1767326125.870439"
+    },
+    "trigger_id": "10215325802133.3901254001572.2e2548aa918b35fd85829545c2d4ae2b",
+    "team": {
+      "id": "T00FAKE00AA",
+      "domain": "vercelslacktesting"
+    },
+    "channel": {
+      "id": "C00FAKECHAN1",
+      "name": "chat-sdk"
+    },
+    "message": {
+      "user": "U00FAKEBOT01",
+      "type": "message",
+      "ts": "1767326126.896109",
+      "thread_ts": "1767326125.870439"
+    },
+    "actions": [
+      {
+        "type": "button",
+        "block_id": "P0z+f",
+        "action_id": "info",
+        "text": {
+          "type": "plain_text",
+          "text": "Show Info",
+          "emoji": true
+        },
+        "action_ts": "1767326130.289415"
+      }
+    ],
+    "response_url": "https://hooks.slack.com/actions/T00FAKE00AA/10231680918177/hMWwGmzsWEYbB4BjtNump6kO"
+  },
+  "reaction": {
+    "token": "xAbCdEfGhIjKlMnOpQrStUvW",
+    "team_id": "T00FAKE00AA",
+    "api_app_id": "A00FAKEAPP01",
+    "event": {
+      "type": "reaction_added",
+      "user": "U00FAKEUSER1",
+      "reaction": "+1",
+      "item": {
+        "type": "message",
+        "channel": "C00FAKECHAN1",
+        "ts": "1767326126.896109"
+      },
+      "item_user": "U00FAKEBOT01",
+      "event_ts": "1767326140.000700"
+    },
+    "type": "event_callback",
+    "authorizations": [{ "user_id": "U00FAKEBOT01", "is_bot": true }]
+  },
+  "staticSelectAction": {
+    "type": "block_actions",
+    "user": {
+      "id": "U00FAKEUSER1",
+      "username": "testuser",
+      "name": "testuser",
+      "team_id": "T00FAKE00AA"
+    },
+    "api_app_id": "A00FAKEAPP01",
+    "token": "xAbCdEfGhIjKlMnOpQrStUvW",
+    "container": {
+      "type": "message",
+      "message_ts": "1767326126.896109",
+      "channel_id": "C00FAKECHAN1",
+      "is_ephemeral": false,
+      "thread_ts": "1767326125.870439"
+    },
+    "trigger_id": "10215325802133.3901254001572.staticselect123",
+    "team": {
+      "id": "T00FAKE00AA",
+      "domain": "vercelslacktesting"
+    },
+    "channel": {
+      "id": "C00FAKECHAN1",
+      "name": "chat-sdk"
+    },
+    "message": {
+      "user": "U00FAKEBOT01",
+      "type": "message",
+      "ts": "1767326126.896109",
+      "thread_ts": "1767326125.870439"
+    },
+    "actions": [
+      {
+        "type": "static_select",
+        "action_id": "quick_action",
+        "block_id": "ikh4M",
+        "selected_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Say Hello",
+            "emoji": true
+          },
+          "value": "greet"
+        },
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Choose...",
+          "emoji": true
+        },
+        "action_ts": "1767326130.289415"
+      }
+    ],
+    "response_url": "https://hooks.slack.com/actions/T00FAKE00AA/10231680918177/staticSelectExample"
+  },
+  "radioButtonsAction": {
+    "type": "block_actions",
+    "user": {
+      "id": "U00FAKEUSER1",
+      "username": "testuser",
+      "name": "testuser",
+      "team_id": "T00FAKE00AA"
+    },
+    "api_app_id": "A00FAKEAPP01",
+    "token": "xAbCdEfGhIjKlMnOpQrStUvW",
+    "container": {
+      "type": "message",
+      "message_ts": "1767326126.896109",
+      "channel_id": "C00FAKECHAN1",
+      "is_ephemeral": false,
+      "thread_ts": "1767326125.870439"
+    },
+    "trigger_id": "10215325802133.3901254001572.radiobuttons123",
+    "team": {
+      "id": "T00FAKE00AA",
+      "domain": "vercelslacktesting"
+    },
+    "channel": {
+      "id": "C00FAKECHAN1",
+      "name": "chat-sdk"
+    },
+    "message": {
+      "user": "U00FAKEBOT01",
+      "type": "message",
+      "ts": "1767326126.896109",
+      "thread_ts": "1767326125.870439"
+    },
+    "actions": [
+      {
+        "type": "radio_buttons",
+        "action_id": "plan_selected",
+        "block_id": "yCgjj",
+        "selected_option": {
+          "text": {
+            "type": "mrkdwn",
+            "text": "*All text elements*",
+            "verbatim": false
+          },
+          "value": "all_text",
+          "description": {
+            "type": "mrkdwn",
+            "text": "Headers, body text, labels, and placeholders",
+            "verbatim": false
+          }
+        },
+        "action_ts": "1767326135.289415"
+      }
+    ],
+    "response_url": "https://hooks.slack.com/actions/T00FAKE00AA/10231680918177/radioButtonsExample"
+  }
+}

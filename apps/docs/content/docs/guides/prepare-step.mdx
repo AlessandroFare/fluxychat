@@ -1,0 +1,139 @@
+---
+title: "PrepareStep — Dynamic Step Configuration"
+description: "`prepareStep` lets you dynamically modify the runtime, tool access, tool contexts, tool approval rules, and provider options each step of `runAgentLoop`. Us"
+---
+
+`prepareStep` lets you dynamically modify the runtime, tool access, tool contexts, tool approval rules, and provider options **each step** of `runAgentLoop`. Use it to implement adaptive agent behavior: restrict tools after a certain step, inject context based on conversation state, or change provider options mid-loop.
+
+## How It Works
+
+The `prepareStep` function is called at the start of each step, **before** the model generates a response. It receives the current loop state and can return overrides for the step's configuration.
+
+```ts
+import { runAgentLoop } from '@fluxy-chat/agent';
+
+const result = await runAgentLoop({
+  runStep: myRunStep,
+  tools: { search, read, write },
+
+  prepareStep({ stepNumber, steps, toolResults, state, runtime, providerOptions }) {
+    if (stepNumber === 0) {
+      // First step: allow read-only tools
+      return { allowTools: ['read'] };
+    }
+    // Subsequent steps: allow all tools
+    return { allowTools: ['read', 'search', 'write'] };
+  },
+});
+```
+
+## Return Values
+
+All fields on `PrepareStepResult` are optional. Only return what needs to change.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `allowTools` | `readonly string[]` | Restrict available tools to this list for the step |
+| `runtime` | `unknown` | Override shared runtime context |
+| `toolContexts` | `Readonly<Record<string, unknown>>` | Override per-tool contexts |
+| `toolApproval` | `ToolApprovalConfig` | Override tool approval rules |
+| `providerOptions` | `Record<string, unknown>` | Override provider-specific options |
+
+## Adaptive Tool Access
+
+Restrict tools in the first step, then gradually expand access:
+
+```ts
+prepareStep({ stepNumber }) {
+  if (stepNumber < 2) {
+    return { allowTools: ['search', 'read'] };
+  }
+  // After step 2, allow modification tools
+  return { allowTools: ['search', 'read', 'write', 'delete'] };
+}
+```
+
+## Runtime Context Injection
+
+Use `prepareStep` to pass dynamic state to tool implementations:
+
+```ts
+prepareStep({ toolResults, runtime }) {
+  const userId = (runtime as any)?.userId;
+  const previousErrors = toolResults.filter(r => r.error);
+  return {
+    runtime: {
+      userId,
+      errorCount: previousErrors.length,
+    },
+  };
+}
+```
+
+## Provider Options Adaptation
+
+Change provider options mid-loop, e.g., enable reasoning only on complex steps:
+
+```ts
+prepareStep({ stepNumber }) {
+  if (stepNumber > 2) {
+    return {
+      providerOptions: {
+        openai: { reasoningEffort: 'high' },
+      },
+    };
+  }
+  return {
+    providerOptions: {
+      openai: { reasoningEffort: 'low' },
+    },
+  };
+}
+```
+
+## Multi-Override Example
+
+Every field can be combined in a single return:
+
+```ts
+prepareStep({ stepNumber, steps }) {
+  return {
+    allowTools: stepNumber < 1 ? ['search'] : undefined,
+    runtime: { conversationLength: steps.length },
+    toolContexts: { search: { maxResults: 10 } },
+    toolApproval: stepNumber < 1 ? 'auto' : { search: 'never' },
+    providerOptions: { openai: { reasoningEffort: 'low' } },
+  };
+}
+```
+
+## Type Reference
+
+```ts
+interface PrepareStepContext {
+  stepNumber: number;
+  steps: readonly AIGenerationStep[];
+  toolResults: readonly AIToolResult[];
+  state: AgentLoopState;
+  runtime: unknown | undefined;
+  providerOptions?: Record<string, unknown>;
+}
+
+interface PrepareStepResult {
+  allowTools?: readonly string[];
+  runtime?: unknown;
+  toolContexts?: Readonly<Record<string, unknown>>;
+  toolApproval?: ToolApprovalConfig;
+  providerOptions?: Record<string, unknown>;
+}
+
+type PrepareStepFunction = (
+  context: PrepareStepContext,
+) => PrepareStepResult | Promise<PrepareStepResult> | void | Promise<void>;
+```
+
+## See Also
+
+- [Lifecycle Callbacks](/docs/lifecycle-callbacks) — events at each phase of the loop
+- [Tool Approvals](/docs/tool-approvals) — per-tool approval configuration
+- [Provider Options](/docs/provider-options) — provider-specific settings

@@ -32,6 +32,7 @@ import {
   createLegalHold,
   releaseLegalHold,
   getActiveHoldsForRoom,
+  listActiveLegalHolds,
   isRoomOnHold,
   createExportSnapshot,
   updateExportSnapshotStatus,
@@ -43,6 +44,8 @@ import {
   updateDlpRule,
   deleteDlpRule,
   scanContent,
+  scanContentKind,
+  getDlpPolicyVersion,
   redactText,
   logDlpResult,
 } from "../lib/dlp-redaction.js";
@@ -258,8 +261,9 @@ export async function dispatchEnterpriseComplianceRoutes(request, url, h) {
     const auth = await adminAuth();
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const roomId = url.searchParams.get("roomId");
-    if (!roomId) return json({ error: "roomId query param is required" }, { status: 400 });
-    const holds = await getActiveHoldsForRoom(env, { projectId: auth.projectId, roomId });
+    const holds = roomId
+      ? await getActiveHoldsForRoom(env, { projectId: auth.projectId, roomId })
+      : await listActiveLegalHolds(env, { projectId: auth.projectId });
     return json({ holds, count: holds.length });
   }
 
@@ -369,16 +373,26 @@ export async function dispatchEnterpriseComplianceRoutes(request, url, h) {
     return json({ ok: true });
   }
 
+  // GET /enterprise/dlp/policy-version
+  if (url.pathname === "/enterprise/dlp/policy-version" && request.method === "GET") {
+    const auth = await adminAuth();
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    const policyVersion = await getDlpPolicyVersion(env, { projectId: auth.projectId });
+    return json(policyVersion);
+  }
+
   // POST /enterprise/dlp/scan
   if (url.pathname === "/enterprise/dlp/scan" && request.method === "POST") {
     const auth = await adminAuth();
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const body = await request.json().catch(() => null);
     if (!body?.text) return json({ error: "text is required" }, { status: 400 });
-    const matches = await scanContent(env, { projectId: auth.projectId, text: body.text });
+    const kind = body.contentKind || "text";
+    const scanned = await scanContentKind(env, { projectId: auth.projectId, text: body.text, contentKind: kind });
+    const matches = scanned.matches;
     const redacted = matches.length > 0 ? redactText(body.text, matches) : body.text;
+    const policyVersion = await getDlpPolicyVersion(env, { projectId: auth.projectId });
 
-    // Log results if message/room context provided
     if (body.messageId || body.roomId) {
       await logDlpResult(env, {
         projectId: auth.projectId,
@@ -388,9 +402,20 @@ export async function dispatchEnterpriseComplianceRoutes(request, url, h) {
       });
     }
 
+    const primaryAction = matches.find((m) => m.action === "block")
+      ? "block"
+      : matches.find((m) => m.action === "redact")
+        ? "redact"
+        : matches.length
+          ? "flag"
+          : "allow";
+
     return json({
       matches,
       matchCount: matches.length,
+      contentKind: scanned.contentKind,
+      policyVersion,
+      action: primaryAction,
       originalText: body.text,
       redactedText: redacted,
     });

@@ -1,0 +1,126 @@
+---
+title: "Worker Response Envelope Extension"
+description: "Status: P3 strategic — design document with implementation path."
+---
+
+**Status:** P3 strategic — design document with implementation path.
+**Last updated:** 2026-06-18
+
+## Background
+
+The dashboard Route Handlers use a standardized response envelope (`apps/dashboard/lib/api-response.ts`):
+
+```ts
+// Success
+{ ok: true, data: T }
+
+// Error
+{ ok: false, error: { code: string, message: string } }
+```
+
+The worker currently uses raw `json()` responses — the data shape varies per route. This works fine for the worker's own clients (SDK, curl) but creates inconsistency when the dashboard proxies worker responses.
+
+## Current State
+
+### Worker JSON helper (`apps/worker/src/lib/http-json.js`)
+
+```js
+// Just wraps Response.json with traceId injection on errors
+json(data, status)           → Response(JSON.stringify(data), { status })
+json(data, deps, status)      → same with traceId/corsHeaders
+```
+
+Routes return arbitrary shapes: `\{ room: \{...\} \}`, `\{ rooms: [...] \}`, `\{ error: "..." \}`, etc.
+
+### Dashboard API helpers (`apps/dashboard/lib/api-response.ts`)
+
+```ts
+apiOk(data)           → { ok: true, data }
+apiOkVoid()           → { ok: true }
+apiError(code, msg)   → { ok: false, error: { code, message } }
+apiErrorFromUnknown(e)→ { ok: false, error: { code, message } }
+```
+
+## Proposed Extension
+
+### Option A: Opt-in envelope (recommended)
+
+Add an `envelope()` helper to `apps/worker/src/lib/http-json.js` that routes can use alongside the existing `json()`:
+
+```js
+// New helper — wraps data in { ok, data } or { ok, error }
+export function envelope(data, status = 200, corsHeaders = {}) {
+  const wrapped = status >= 400
+    ? { ok: false, error: typeof data === 'string' ? { code: 'ERROR', message: data } : data }
+    : { ok: true, data };
+  return json(wrapped, status, corsHeaders);
+}
+```
+
+Routes adopt it incrementally — no big-bang rewrite. High-priority routes first:
+
+1. **Agent routes** (`agents-http.js`) — invoked from dashboard with error handling
+2. **Room CRUD** (`rooms-mutations-http.js`) — dashboard rooms page
+3. **Analytics** (`analytics-room-http.js`, `realtime-stats-http.js`) — dashboard analytics
+4. **Billing** (`billing-http.js`) — dashboard billing page
+5. **Search** (`search-http.js`) — dashboard search
+
+### Option B: Middleware wrapper
+
+A fetch handler wrapper that auto-envelopes all JSON responses:
+
+```js
+function withEnvelope(handler) {
+  return async (request, env, ctx) => {
+    const response = await handler(request, env, ctx);
+    if (response.headers.get('content-type')?.includes('json')) {
+      const body = await response.json();
+      const enveloped = response.status >= 400
+        ? { ok: false, error: body }
+        : { ok: true, data: body };
+      return new Response(JSON.stringify(enveloped), {
+        status: response.status,
+        headers: response.headers,
+      });
+    }
+    return response;
+  };
+}
+```
+
+**Pros:** Zero changes to route modules.
+**Cons:** Breaks SDK clients that expect raw shapes. Only viable with versioned API or opt-out header.
+
+### Option C: Accept header negotiation
+
+Routes check `Accept: application/vnd.fluxy.envelope+json` and wrap accordingly:
+
+```js
+function wantsEnvelope(request) {
+  return request.headers.get('accept')?.includes('vnd.fluxy.envelope');
+}
+```
+
+**Pros:** Backward compatible with all existing clients.
+**Cons:** Added complexity in every route; dashboard would need to send the header.
+
+## Recommendation
+
+**Option A** (opt-in envelope) is the right approach:
+
+1. Add `envelope()` to `http-json.js` — one file change
+2. Add it to `ROUTE_DEP_KEY_CATALOG` in `route-http-deps.js` — one file change
+3. Dashboard-side SDK consumer can normalize: if `response.ok` exists, use envelope; otherwise, treat raw shape as success
+4. Route authors adopt incrementally — no backward compatibility break
+
+This keeps the worker simple for direct SDK users (raw JSON) while giving the dashboard a consistent pattern for routes that opt in.
+
+## Implementation Checklist
+
+- [ ] Add `envelope()` export to `apps/worker/src/lib/http-json.js`
+- [ ] Add `"envelope"` to `ROUTE_DEP_KEY_CATALOG`
+- [ ] Update `agents-http.js` to use `envelope()` (5 endpoints)
+- [ ] Update `rooms-mutations-http.js` to use `envelope()` (4 endpoints)
+- [ ] Update `analytics-room-http.js` to use `envelope()` (3 endpoints)
+- [ ] Update dashboard SDK consumer to detect and unwrap envelope responses
+- [ ] Update `api-response.ts` docs to note worker routes now support the same pattern

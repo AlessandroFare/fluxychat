@@ -1,0 +1,9 @@
+{
+  "title": "Features",
+  "icon": "Sparkles",
+  "pages": [
+    "index",
+    "features-overview",
+    "fluxystream"
+  ]
+}

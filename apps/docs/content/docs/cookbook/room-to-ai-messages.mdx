@@ -1,0 +1,60 @@
+---
+title: Room history to AI messages
+description: Convert FluxyChat room history into AI SDK-compatible messages with toAiMessagesFromRoom.
+---
+
+# Room history → AI messages
+
+Use `FluxyChatClient.toAiMessagesFromRoom()` to feed in-room chat history into agents, RAG pipelines, or Vercel AI SDK `generateText` / `streamText` calls.
+
+## Basic usage
+
+```typescript
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { generateText } from "ai";
+
+const client = new FluxyChatClient({
+  baseUrl: process.env.FLUXY_WORKER_URL!,
+  userId: "agent-bot",
+  token: memberJwt,
+});
+
+const messages = await client.toAiMessagesFromRoom("support-room-1", {
+  limit: 30,
+  includeSystem: false,
+});
+
+const result = await generateText({
+  model: openai("gpt-4o-mini"),
+  system: "Summarize the conversation for the next human agent.",
+  messages,
+});
+
+await client.createMessage("support-room-1", result.text);
+```
+
+## Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `limit` | number | Max messages to fetch (default 50) |
+| `includeSystem` | boolean | Include system-role messages |
+| `mapUserDisplayNames` | boolean | Prefix user messages with display names when available |
+
+## Agent invoke pattern
+
+```typescript
+import { createTelemetryManager, createConsoleTelemetryIntegration } from "@fluxy-chat/sdk";
+
+const telemetry = createTelemetryManager({ functionId: "room-summarizer" });
+telemetry.register(createConsoleTelemetryIntegration());
+
+const history = await client.toAiMessagesFromRoom(roomId);
+// Pass history to your @fluxy-chat/agent runAgentLoop or external LLM
+```
+
+## Related
+
+- [KB + RAG agent](/docs/cookbook/kb-rag-agent) — retrieval over knowledge base
+- [AI agents handoff](/docs/guides/ai-agents/handoff) — human takeover from in-room AI
+- [Unified reasoning](/docs/guides/unified-reasoning) — cross-provider thinking controls

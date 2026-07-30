@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.turbo/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Test
+coverage/
+
+# Next.js
+.next/
+out/
+
+tsup.config.bundled*.mjs
+*.tsbuildinfo
+recording.json
+recording*.json
+todo/
+
+# Turborepo
+.turbo
+.vercel
+.env*.local
+
+next-env.d.ts
+!packages/create-chat-sdk/_template/next-env.d.ts
+.source
+
+packages/chat/docs
+.deepsec

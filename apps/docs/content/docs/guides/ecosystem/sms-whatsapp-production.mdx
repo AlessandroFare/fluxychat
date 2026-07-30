@@ -1,0 +1,34 @@
+---
+title: SMS and WhatsApp in production
+description: Production checklist for Sent.dm offline notify, opt-in, rate limits, and template compliance.
+---
+
+FluxyChat pairs in-app realtime chat with **Sent.dm** for offline SMS/WhatsApp. See the full fan-out cookbook for architecture; this page is the production checklist.
+
+## Prerequisites
+
+- Sent.dm account with approved **SMS and/or WhatsApp** sender profile
+- Template registered in Sent.dm (default name: `chat_notify`)
+- Worker env vars configured (see [Offline notify cookbook](/docs/cookbook/offline-notify-sent-dm))
+
+## Production checklist
+
+1. **User opt-in** — store phone on member preferences via `PATCH /rooms/{roomId}/members/me/preferences`; never SMS without consent.
+2. **Rate limits** — set `OFFLINE_SMS_PER_USER_PER_HOUR` (default 6) and `OFFLINE_SMS_IDLE_MINUTES` (default 5).
+3. **Webhook verification** — verify `X-Fluxy-Signature` on `message.created` if using a custom consumer instead of built-in Worker automation.
+4. **Template params** — keep templates short; include deep link back to your app room.
+5. **Media** — disable `OFFLINE_SMS_MEDIA_ENABLED` if carriers reject attachment URLs in your region.
+6. **Monitoring** — use dashboard **Activities** and Sent.dm delivery logs; alert on spike in failed deliveries.
+
+## Built-in Worker path
+
+When `OFFLINE_SMS_ENABLED=true` and Sent.dm keys are set, the Worker sends SMS for mentions/DMs when the recipient has not read the room within the idle window.
+
+## Custom webhook path
+
+For multi-channel logic (email + SMS + push), consume `message.created` webhooks and call Sent.dm from your backend. See the cookbook sequence diagram.
+
+## Related
+
+- [Offline notify (Sent.dm)](/docs/cookbook/offline-notify-sent-dm)
+- [Webhooks catalog](/docs/webhooks/catalog)

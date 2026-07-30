@@ -1,163 +1,200 @@
-# LLM Middleware Pipeline
+# Language Model Middleware
 
-FluxyChat's language model middleware (P23-4) is a pluggable layer that intercepts, modifies, or augments LLM calls — enabling guardrails, caching, RAG injection, logging, and parameter transformation.
+Language model middleware intercepts and modifies LLM calls — enabling guardrails, caching, RAG injection, logging, and parameter transformation in a model-agnostic way.
 
-## Overview
+## Using Middleware
 
-Middleware sits between the agent runtime and the LLM provider. Each middleware can:
+`wrapLanguageModel` wraps a model with one or more middleware:
 
-- **Transform parameters** before the model call (system prompt injection, token budgeting)
-- **Wrap generation** (logging, metrics, retry, fallback)
-- **Wrap streaming** (real-time content filtering, token counting)
-- **Short-circuit** (return cached response, block request)
+```ts
+import { wrapLanguageModel } from '@fluxy-chat/agent';
+
+const wrappedModel = wrapLanguageModel({
+  model: myModel,
+  middleware: myMiddleware,
+});
+
+// Use like any other model
+const result = await wrappedModel.generate({ prompt: [...] });
+```
+
+## Multiple Middleware
+
+Middleware applies in order (first wraps second):
+
+```ts
+const wrapped = wrapLanguageModel({
+  model: myModel,
+  middleware: [loggingMiddleware, cachingMiddleware],
+});
+// loggingMiddleware(cachingMiddleware(myModel))
+```
 
 ## Built-in Middleware
 
-### `extractReasoningMiddleware` (P24-7)
+### extractReasoningMiddleware
 
-Surfaces chain-of-thought reasoning from models that output thinking tokens (e.g., Claude's extended thinking, o1's reasoning steps).
-
-```ts
-import { extractReasoningMiddleware } from "@fluxy-chat/sdk";
-
-const middleware = extractReasoningMiddleware();
-// Reasoning tokens are extracted and exposed as `reasoning` in the response
-```
-
-### RAG Middleware (P24-8)
-
-Injects relevant context from a knowledge base into the LLM prompt:
+Extracts reasoning from `<think>` tags in generated text:
 
 ```ts
-import { createRagMiddleware } from "@fluxy-chat/sdk";
+import { wrapLanguageModel, extractReasoningMiddleware } from '@fluxy-chat/agent';
 
-const rag = createRagMiddleware({
-  retrieve: async (query) => {
-    // Search your knowledge base
-    return { context: "Relevant docs...", sources: ["doc1", "doc2"] };
-  },
+const model = wrapLanguageModel({
+  model: myModel,
+  middleware: extractReasoningMiddleware({ tagName: 'think' }),
 });
+
+const result = await model.generate({ prompt: ['Explain AI'] });
+console.log(result.text);          // Clean text without tags
+console.log(result.reasoningText); // Extracted reasoning
 ```
 
-### Custom Middleware
+### defaultSettingsMiddleware
+
+Applies default settings without overriding explicit values:
 
 ```ts
-import { wrapLanguageModel, transformParams } from "@fluxy-chat/sdk";
+import { wrapLanguageModel, defaultSettingsMiddleware } from '@fluxy-chat/agent';
 
-const loggingMiddleware = wrapLanguageModel({
+const model = wrapLanguageModel({
+  model: myModel,
+  middleware: defaultSettingsMiddleware({
+    settings: {
+      temperature: 0.5,
+      maxOutputTokens: 800,
+      providerOptions: { openai: { reasoningEffort: 'low' } },
+    },
+  }),
+});
+
+// Explicit temperature=0.9 overrides the default
+const result = await model.generate({ prompt: [...], temperature: 0.9 });
+```
+
+### extractJsonMiddleware
+
+Strips markdown code fences from JSON responses:
+
+```ts
+import { wrapLanguageModel, extractJsonMiddleware } from '@fluxy-chat/agent';
+
+const model = wrapLanguageModel({
+  model: myModel,
+  middleware: extractJsonMiddleware(),
+});
+
+// If model returns ```json { "key": "value" } ```
+// The middleware returns { "key": "value" }
+```
+
+### simulateStreamingFromGenerate
+
+Creates a streaming interface from a non-streaming model by chunking the response:
+
+```ts
+import { simulateStreamingFromGenerate } from '@fluxy-chat/agent';
+
+const streamingModel = simulateStreamingFromGenerate(myModel);
+const stream = await streamingModel.stream({ prompt: [...] });
+```
+
+## Custom Middleware
+
+Implement the `LanguageModelMiddleware` interface with any of these hooks:
+
+```ts
+import type { LanguageModelMiddleware } from '@fluxy-chat/agent';
+
+const loggingMiddleware: LanguageModelMiddleware = {
   transformParams: async ({ params }) => {
-    console.log("LLM call:", params.model, params.messages.length, "messages");
+    console.log('Request:', params.prompt.length, 'messages');
     return params;
   },
+
   wrapGenerate: async ({ doGenerate, params }) => {
     const start = Date.now();
-    const result = await doGenerate(params);
-    console.log("Generate:", Date.now() - start, "ms");
+    const result = await doGenerate();
+    console.log('Generated', result.text.length, 'chars in', Date.now() - start, 'ms');
     return result;
   },
+
   wrapStream: async ({ doStream, params }) => {
-    return doStream(params); // pass through, or intercept chunks
+    const stream = await doStream();
+    return stream; // passthrough or pipe through TransformStream
   },
-});
+};
 ```
 
-## Composition
+### RAG Middleware
 
-Middleware composes in order — each wraps the next:
+Inject relevant context from a knowledge base:
 
 ```ts
-import { composeMiddleware } from "@fluxy-chat/sdk";
-
-const pipeline = composeMiddleware([
-  extractReasoningMiddleware(),
-  ragMiddleware,
-  loggingMiddleware,
-  guardrailsMiddleware,
-]);
-
-// Apply to agent runtime
-const agent = createAgent({
-  model: "gpt-4o",
-  middleware: pipeline,
-});
+const ragMiddleware: LanguageModelMiddleware = {
+  transformParams: async ({ params }) => {
+    const lastUserMsg = params.prompt.findLast(m => m.role === 'user');
+    if (!lastUserMsg || typeof lastUserMsg.content !== 'string') return params;
+    const context = await searchKnowledgeBase(lastUserMsg.content);
+    return {
+      ...params,
+      prompt: [
+        ...params.prompt,
+        { role: 'system', content: `Context: ${context}` },
+      ],
+    };
+  },
+};
 ```
 
-## Common Patterns
-
-### System Prompt Injection
+### Caching Middleware
 
 ```ts
-const systemPromptMiddleware = transformParams(async ({ params }) => {
-  return {
-    ...params,
-    messages: [
-      { role: "system", content: "You are a support agent for ACME Corp." },
-      ...params.messages,
-    ],
-  };
-});
-```
+const cache = new Map<string, any>();
 
-### Response Caching
-
-```ts
-const cacheMiddleware = wrapLanguageModel({
+const cacheMiddleware: LanguageModelMiddleware = {
   wrapGenerate: async ({ doGenerate, params }) => {
-    const cacheKey = JSON.stringify(params);
-    const cached = await cache.get(cacheKey);
-    if (cached) return cached;
-
-    const result = await doGenerate(params);
-    await cache.set(cacheKey, result, { ttl: 3600 });
+    const key = JSON.stringify(params);
+    if (cache.has(key)) return cache.get(key);
+    const result = await doGenerate();
+    cache.set(key, result);
     return result;
   },
-});
+};
 ```
 
-### Token Budgeting
+### Guardrails Middleware
 
 ```ts
-const budgetMiddleware = transformParams(async ({ params }) => {
-  const totalTokens = estimateTokens(params.messages);
-  if (totalTokens > 100_000) {
-    // Truncate older messages
-    params.messages = truncateHistory(params.messages, 100_000);
-  }
-  return params;
-});
+const guardrailMiddleware: LanguageModelMiddleware = {
+  wrapGenerate: async ({ doGenerate }) => {
+    const result = await doGenerate();
+    return {
+      ...result,
+      text: result.text.replace(/badword/g, '<REDACTED>'),
+    };
+  },
+};
 ```
 
-### PII Redaction (P18-D)
-
-The DLP pipeline uses middleware to redact PII before sending to LLM providers:
+## Type Reference
 
 ```ts
-const dlpMiddleware = transformParams(async ({ params }) => {
-  params.messages = params.messages.map(m => ({
-    ...m,
-    content: redactPII(m.content), // replaces SSNs, credit cards, etc.
-  }));
-  return params;
-});
-```
+interface LanguageModelMiddleware {
+  transformParams?: (context: MiddlewareParams) => AIModelRequest | Promise<AIModelRequest>;
+  wrapGenerate?: (context: GenerateContext) => Promise<AIModelResponse>;
+  wrapStream?: (context: StreamContext) => Promise<ReadableStream<AIStreamPart>>;
+}
 
-## Provider-Level Middleware (P24-9)
+interface WrappedModelOptions {
+  model: AILanguageModel;
+  middleware: LanguageModelMiddleware | readonly LanguageModelMiddleware[];
+}
 
-Apply middleware to all models from a provider at once:
-
-```ts
-import { wrapProvider } from "@fluxy-chat/sdk";
-
-const enhancedOpenAI = wrapProvider(openai, [
-  loggingMiddleware,
-  guardrailsMiddleware,
-]);
-
-// All models from this provider get middleware
-const model = enhancedOpenAI("gpt-4o");
+function wrapLanguageModel(options: WrappedModelOptions): AILanguageModel;
 ```
 
 ## See Also
 
-- [AI Tool Presets Guide](./ai-tool-presets.md) — Tool-level governance
-- [MCP Client Guide](./mcp-client.md) — External tool integration
+- [Provider Options](./provider-options.md) — provider-specific configuration
+- [Stream Transforms](./stream-transforms.md) — stream-level transformations
+- [Provider Registry](./provider-registry.md) — combining middleware with provider management

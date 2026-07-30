@@ -7,6 +7,7 @@ import { ConsoleMobileNav } from "./console-mobile-nav";
 import { QuickstartGate } from "./quickstart-gate";
 import { SystemStatusBanner } from "./system-status-banner";
 import { ConsoleCommandPaletteProvider } from "./console-command-palette";
+import { ConsoleAuthGate } from "./console-auth-gate";
 import { isConsoleRoute } from "./console-nav";
 
 export function ConsoleChrome({ children }: { children: React.ReactNode }) {
@@ -34,7 +35,9 @@ export function ConsoleChrome({ children }: { children: React.ReactNode }) {
               >
                 Skip to content
               </a>
-              <main id="console-main" className="flex-1">{children}</main>
+              <main id="console-main" className="flex-1">
+                <ConsoleAuthGate>{children}</ConsoleAuthGate>
+              </main>
             </div>
           </div>
         </QuickstartGate>

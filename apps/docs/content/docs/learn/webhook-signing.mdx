@@ -1,0 +1,40 @@
+---
+title: "Webhook signing and verification"
+description: "Verify that webhook payloads came from FluxyChat using HMAC-SHA256 signatures."
+---
+
+## Why sign webhooks?
+
+Webhooks allow FluxyChat to notify your backend about events like new messages, agent runs, or reactions. Without signature verification, an attacker could send fake webhook payloads to your endpoint.
+
+FluxyChat signs every webhook with HMAC-SHA256 using a shared secret. Your backend must verify the signature before processing the payload.
+
+## Setting up webhook signing
+
+- Generate a strong secret (32+ random bytes, base64-encoded)
+- Set WEBHOOK_SECRET_ENCRYPTION_KEY in your worker env for at-rest encryption
+- Each webhook subscription stores its own signing secret (encrypted in D1)
+- The signature is sent in the X-FluxyChat-Signature header
+
+## Verifying signatures
+
+The signature header contains the HMAC-SHA256 of the raw request body, hex-encoded. Compare it using a constant-time comparison to prevent timing attacks.
+
+```
+import crypto from "crypto";
+
+function verifyWebhook(rawBody: Buffer, signature: string, secret: string): boolean {
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature),
+  );
+}
+```
+
+## Replay protection
+
+Each webhook includes a timestamp in the X-FluxyChat-Timestamp header. Reject webhooks older than 5 minutes to prevent replay attacks. The timestamp is included in the signed payload.

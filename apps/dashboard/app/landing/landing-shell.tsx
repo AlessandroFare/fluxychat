@@ -9,8 +9,10 @@ import {
   useTopNavMobileMenu,
 } from "../components/top-nav-mobile-menu";
 import { FluxychatLogotype } from "@/components/FluxychatLogo";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { cn } from "@/lib/utils";
 import { LANDING_MOBILE_MENU_ID, LANDING_NAV_LINKS } from "./landing-shared";
+import { LandingMegaNav } from "./landing-mega-nav";
 
 /** Sticky marketing nav — client island; page body is composed as server `children`. */
 export function LandingShell({ children }: { children: ReactNode }) {
@@ -26,9 +28,6 @@ export function LandingShell({ children }: { children: ReactNode }) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const navLinkClass = "text-slate-600 transition-colors hover:text-slate-900";
-  const navLinkClassDock = "text-slate-600 transition-colors hover:text-slate-900 text-xs sm:text-sm";
 
   return (
     <div id="fc-marketing-root" className="flex min-h-screen flex-col bg-background text-foreground">
@@ -54,30 +53,14 @@ export function LandingShell({ children }: { children: ReactNode }) {
         >
           <div className="flex min-w-0 items-center md:col-start-1">
             <Link
-              href="/landing"
+              href={HOSTED_PATHS.landing}
               className={cn("text-slate-900", navDocked ? "scale-[0.92] sm:scale-100" : "")}
               aria-label="Fluxychat"
             >
               <FluxychatLogotype size={navDocked ? 26 : 30} />
             </Link>
           </div>
-          <nav
-            className={cn(
-              "hidden min-w-0 justify-center font-medium md:col-start-2 md:flex md:flex-nowrap",
-              navDocked ? "gap-2.5 px-2 text-xs lg:gap-3 lg:text-sm" : "gap-5 text-sm lg:gap-6",
-            )}
-            aria-label="Top links"
-          >
-            {LANDING_NAV_LINKS.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={cn(navDocked ? navLinkClassDock : navLinkClass, "shrink-0")}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          <LandingMegaNav docked={navDocked} />
           <div className="col-start-2 flex shrink-0 items-center justify-end gap-1.5 sm:gap-2 md:col-start-3">
             <LandingNavAuthCta navDocked={navDocked} />
             <TopNavMobileMenuButton

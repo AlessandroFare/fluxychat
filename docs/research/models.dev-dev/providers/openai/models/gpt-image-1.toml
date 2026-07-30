@@ -1,0 +1,6 @@
+base_model = "openai/gpt-image-1"
+reasoning_options = []
+name = "gpt-image-1"
+
+[limit]
+input = 0

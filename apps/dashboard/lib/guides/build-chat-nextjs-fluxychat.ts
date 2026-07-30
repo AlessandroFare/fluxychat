@@ -33,7 +33,8 @@ export async function POST(req: Request) {
     {
       title: "2. Client room component",
       code: `"use client";
-import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/react";
 
 const client = new FluxyChatClient({
   baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL!,
@@ -71,5 +72,7 @@ export function RoomChat({ roomId }: { roomId: string }) {
     "useChat cloudflare workers",
     "build chat app nextjs vercel",
   ],
+  stackblitzTemplateId: "react-chat-ui",
+  stackblitzLabel: "Run this example in StackBlitz",
 };
 

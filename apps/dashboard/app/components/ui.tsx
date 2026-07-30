@@ -35,11 +35,13 @@ export function Section({
   title,
   description,
   actions,
+  className,
   children,
 }: {
   title: string;
   description?: React.ReactNode;
   actions?: React.ReactNode;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -47,6 +49,7 @@ export function Section({
       className={cn(
         "mb-6 rounded-2xl border border-black/[0.06] bg-white/90 p-5 shadow-[var(--shadow-subtle-2)] backdrop-blur-sm",
         "sm:p-6",
+        className,
       )}
     >
       <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">

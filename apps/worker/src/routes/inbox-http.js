@@ -9,6 +9,7 @@ import {
   deleteFollowUp,
   resolveSnoozeUntil,
 } from "../lib/inbox.js";
+import { applyInboxQuery, parseInboxQueryParams } from "../lib/inbox-where.js";
 
 export async function dispatchInboxRoutes(request, url, h) {
   const {
@@ -38,12 +39,19 @@ export async function dispatchInboxRoutes(request, url, h) {
     if (!auth) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
+    const parsed = parseInboxQueryParams(
+      url.searchParams.get("roomId"),
+      url.searchParams.get("where"),
+    );
+    if (!parsed.ok) {
+      return json({ error: parsed.error }, { status: 400, headers: corsHeaders });
+    }
     const summary = await getInboxSummary(env, {
       projectId: auth.projectId,
       userId: auth.userId,
       roles: auth.roles,
     });
-    return json(summary, { headers: corsHeaders });
+    return json(applyInboxQuery(summary, parsed.query), { headers: corsHeaders });
   }
 
   const snoozeMatch = url.pathname.match(/^\/inbox\/rooms\/([^/]+)\/snooze$/);

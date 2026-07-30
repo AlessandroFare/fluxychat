@@ -1,0 +1,13 @@
+{
+  "pages": [
+    "agent",
+    "config",
+    "create-fluxy-chat",
+    "flutter-sdk",
+    "protocol",
+    "react",
+    "react-native-sdk",
+    "sdk",
+    "ui"
+  ]
+}

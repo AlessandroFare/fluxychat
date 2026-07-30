@@ -1,0 +1,52 @@
+# AST Markdown System
+
+The markdown module provides a complete mdast (Markdown AST) system using unified/remark with GFM support.
+
+## Builders
+
+Create AST nodes programmatically:
+
+```ts
+import { root, paragraph, text, strong, link } from "@fluxy-chat/sdk";
+
+const ast = root([
+  paragraph([text("Hello "), strong([text("world")])]),
+  paragraph([link("https://example.com", [text("click here")])]),
+]);
+```
+
+## Parse / Stringify
+
+```ts
+import { parseMarkdown, stringifyMarkdown } from "@fluxy-chat/sdk";
+
+const ast = parseMarkdown("**bold** and *italic*");
+const md = stringifyMarkdown(ast);
+// "**bold** and *italic*\n"
+```
+
+## Plain Text
+
+```ts
+import { markdownToPlainText, toPlainText } from "@fluxy-chat/sdk";
+
+markdownToPlainText("**bold** and *italic*"); // "bold and italic"
+toPlainText(ast); // "bold and italic"
+```
+
+## Walk AST
+
+```ts
+import { walkAst, isTextNode } from "@fluxy-chat/sdk";
+
+walkAst(ast, (node) => {
+  if (isTextNode(node)) {
+    return { ...node, value: node.value.toUpperCase() };
+  }
+  return node;
+});
+```
+
+## Type Guards
+
+All 14 type guards available: `isTextNode`, `isParagraphNode`, `isStrongNode`, `isEmphasisNode`, `isDeleteNode`, `isInlineCodeNode`, `isCodeNode`, `isLinkNode`, `isBlockquoteNode`, `isListNode`, `isListItemNode`, `isTableNode`, `isTableRowNode`, `isTableCellNode`, `isHeadingNode`.

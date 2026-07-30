@@ -1,0 +1,54 @@
+{
+  "botName": "Chat SDK Demo",
+  "botUserId": "users/100000000000000000002",
+  "mention": {
+    "commonEventObject": {
+      "userLocale": "en",
+      "hostApp": "CHAT",
+      "platform": "WEB"
+    },
+    "chat": {
+      "user": {
+        "name": "users/100000000000000000001",
+        "displayName": "Test User",
+        "type": "HUMAN"
+      },
+      "eventTime": "2025-12-31T23:47:51.749519Z",
+      "messagePayload": {
+        "space": { "name": "spaces/AAQAJ9CXYcg", "type": "ROOM" },
+        "message": {
+          "name": "spaces/AAQAJ9CXYcg/messages/kVOtO797ZPI.kVOtO797ZPI",
+          "sender": {
+            "name": "users/100000000000000000001",
+            "displayName": "Test User",
+            "type": "HUMAN"
+          },
+          "text": "@Chat SDK Demo hello",
+          "annotations": [
+            {
+              "type": "USER_MENTION",
+              "startIndex": 0,
+              "length": 14,
+              "userMention": {
+                "user": {
+                  "name": "users/100000000000000000002",
+                  "type": "BOT"
+                },
+                "type": "MENTION"
+              }
+            }
+          ],
+          "thread": { "name": "spaces/AAQAJ9CXYcg/threads/kVOtO797ZPI" },
+          "space": { "name": "spaces/AAQAJ9CXYcg" }
+        }
+      }
+    }
+  },
+  "followUp": {
+    "message": {
+      "attributes": { "ce-type": "google.workspace.chat.message.v1.created" },
+      "data": "eyJtZXNzYWdlIjp7Im5hbWUiOiJzcGFjZXMvQUFRQUo5Q1hZY2cvbWVzc2FnZXMva1ZPdE83OTdaUEkud0xLSS05REx1OHciLCJzZW5kZXIiOnsibmFtZSI6InVzZXJzLzEwMDAwMDAwMDAwMDAwMDAwMDAwMSIsInR5cGUiOiJIVU1BTiJ9LCJ0ZXh0IjoiSGV5IiwidGhyZWFkIjp7Im5hbWUiOiJzcGFjZXMvQUFRQUo5Q1hZY2cvdGhyZWFkcy9rVk90Tzc5N1pQSSJ9LCJzcGFjZSI6eyJuYW1lIjoic3BhY2VzL0FBUUFKOUNYWWNnIn0sInRocmVhZFJlcGx5Ijp0cnVlfX0="
+    },
+    "subscription": "projects/example-chat-project-123456/subscriptions/chat-messages-push"
+  }
+}

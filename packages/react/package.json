@@ -1,0 +1,59 @@
+{
+  "name": "@fluxy-chat/react",
+  "version": "0.1.0",
+  "description": "React hooks and providers for FluxyChat — useChat, useInbox, FluxyRealtimeProvider",
+  "homepage": "https://github.com/AlessandroFare/fluxychat/tree/main/packages/react#readme",
+  "bugs": {
+    "url": "https://github.com/AlessandroFare/fluxychat/issues"
+  },
+  "keywords": [
+    "chat",
+    "react",
+    "hooks",
+    "realtime",
+    "fluxychat"
+  ],
+  "license": "MIT",
+  "author": "Fluxychat",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlessandroFare/fluxychat.git",
+    "directory": "packages/react"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prebuild": "pnpm --filter @fluxy-chat/sdk build",
+    "build": "pnpm exec tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm run build && node ../../scripts/verify-publish-manifest.mjs",
+    "dev": "tsc -w -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "@fluxy-chat/sdk": "workspace:*"
+  },
+  "dependencies": {
+    "@fluxy-chat/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "react": "^19.2.0",
+    "typescript": "^5"
+  }
+}

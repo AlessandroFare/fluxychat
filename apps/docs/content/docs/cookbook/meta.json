@@ -1,0 +1,11 @@
+{
+  "pages": [
+    "auth-jwt",
+    "bot-streaming-fluxy-message-stream",
+    "kb-rag-agent",
+    "message-templates",
+    "offline-notify-sent-dm",
+    "public-demo-hardening",
+    "transport-fallback"
+  ]
+}

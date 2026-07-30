@@ -1,0 +1,41 @@
+---
+title: Custom Domains
+description: White-label chat on your own hostname.
+---
+
+Serve FluxyChat from a branded hostname (e.g. `chat.yourcompany.com`) with optional default room and logo.
+
+## Register a domain
+
+Admin JWT required:
+
+```bash
+curl -X POST "$FLUXY_BASE_URL/admin/custom-domains" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hostname": "chat.example.com",
+    "defaultRoomId": "room_support",
+    "brandName": "Acme Support",
+    "allowedOrigins": ["https://example.com"]
+  }'
+```
+
+## DNS setup
+
+1. Add the hostname in the dashboard or API (status `pending`).
+2. Point a CNAME to your Worker custom domain route (Cloudflare dashboard → Workers → Triggers).
+3. Once TLS is active, patch status to `active`:
+
+```bash
+curl -X PATCH "$FLUXY_BASE_URL/admin/custom-domains/$DOMAIN_ID" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "active" }'
+```
+
+## Embed + custom domain
+
+Combine with [Embed widget](/docs/platform/embed-widget) — set `allowedOrigins` on both the embed config (`PATCH /admin/embed-config`) and the custom domain record so the iframe loads only from approved sites.
+
+See [API Reference: Admin](/docs/api-reference).

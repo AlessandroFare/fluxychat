@@ -1,5 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('./message-import.js', () => ({
+  importAdminMessage: vi.fn(async () => ({ imported: true, messageId: 42 })),
+}));
+
+import { importAdminMessage } from './message-import.js';
 import { createBridgeConfig, connectBridge, disconnectBridge, getBridgeConfig, listBridgeConfigs, deleteBridgeConfig, createChannelMapping, listChannelMappings, getChannelMappingByRoom, getChannelMappingByExternal, deleteChannelMapping, mapMessage, findExternalMessage, findFluxychatMessage, recordBridgeEvent, getBridgeStats, syncInboundMessage, syncOutboundMessage } from './bridge.js';
+
+beforeEach(() => {
+  vi.mocked(importAdminMessage).mockResolvedValue({ imported: true, messageId: 42 });
+});
 
 function createEnv(rows = {}) {
   const seq = rows.sequence || null;
@@ -147,9 +157,11 @@ describe('bridge lib', () => {
         { id: 'bcm-1', fluxychat_room_id: 'room-1', sync_direction: 'both' },
         null,
       ] });
-      const result = await syncInboundMessage(env, { bridgeId: 'br-1', projectId: 'p1', externalMessageId: 'ext-1', externalChannelId: 'C1', content: 'hello' });
+      const result = await syncInboundMessage(env, { bridgeId: 'br-1', projectId: 'p1', platform: 'slack', externalMessageId: 'ext-1', externalChannelId: 'C1', content: 'hello' });
       expect(result.roomId).toBe('room-1');
       expect(result.content).toBe('hello');
+      expect(result.messageId).toBe(42);
+      expect(importAdminMessage).toHaveBeenCalled();
     });
     it('returns error if no mapping', async () => {
       const env = createEnv({ sequence: [null] });

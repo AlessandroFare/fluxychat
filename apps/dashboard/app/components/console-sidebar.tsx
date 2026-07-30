@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 import { FluxychatLogotype } from "@/components/FluxychatLogo";
 import { cn } from "@/lib/utils";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
 import {
-  CONSOLE_NAV_MAIN,
-  CONSOLE_NAV_TOOLS,
+  CONSOLE_NAV_GROUPS,
   isConsoleNavItemActive,
+  type ConsoleNavItem,
 } from "./console-nav";
 import { QuickstartNavLink } from "./quickstart-nav-link";
+import { InboxNavLink } from "./inbox-nav-link";
 import { CommandPaletteTrigger } from "./console-command-palette";
 
-function NavLink({ href, label, icon: Icon }: (typeof CONSOLE_NAV_MAIN)[number]) {
+function NavLink({ href, label, icon: Icon }: ConsoleNavItem) {
   const pathname = usePathname();
   const isActive = isConsoleNavItemActive(href, pathname);
 
@@ -32,43 +36,66 @@ function NavLink({ href, label, icon: Icon }: (typeof CONSOLE_NAV_MAIN)[number])
   );
 }
 
+function CollapsibleNavGroup({
+  label,
+  items,
+  defaultOpen = false,
+}: {
+  label: string;
+  items: ConsoleNavItem[];
+  defaultOpen?: boolean;
+}) {
+  const pathname = usePathname();
+  const hasActiveChild = items.some((item) => isConsoleNavItemActive(item.href, pathname));
+  const [open, setOpen] = useState(defaultOpen || hasActiveChild);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="mb-2 flex w-full items-center justify-between rounded-lg px-2.5 py-1 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600 hover:bg-slate-100/80"
+        aria-expanded={open}
+      >
+        {label}
+        <ChevronDown className={cn("size-3.5 transition-transform", open && "rotate-180")} aria-hidden />
+      </button>
+      {open ? (
+        <ul className="flex flex-col gap-0.5">
+          {items.map((item) => (
+            <li key={`${label}-${item.href}`}>
+              {item.href === "/onboarding" ? (
+                <QuickstartNavLink label={item.label} icon={item.icon} />
+              ) : item.href === "/inbox" ? (
+                <InboxNavLink />
+              ) : (
+                <NavLink {...item} />
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 export function ConsoleSidebar() {
   return (
     <aside className="hidden w-56 shrink-0 border-r border-black/[0.06] bg-white/70 backdrop-blur-md lg:flex lg:flex-col">
       <div className="flex h-14 items-center border-b border-black/[0.06] px-4">
-        <Link href="/" className="text-slate-900" aria-label="Fluxychat console home">
+        <Link href={HOSTED_PATHS.console} className="text-slate-900" aria-label="Fluxychat console home">
           <FluxychatLogotype size={24} />
         </Link>
       </div>
-      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-4" aria-label="Console">
-        <div>
-          <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-            Operate
-          </p>
-          <ul className="space-y-0.5">
-            {CONSOLE_NAV_MAIN.map((item) => (
-              <li key={item.href}>
-                {item.href === "/onboarding" ? (
-                  <QuickstartNavLink label={item.label} icon={item.icon} />
-                ) : (
-                  <NavLink {...item} />
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <p className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-            Tools
-          </p>
-          <ul className="space-y-0.5">
-            {CONSOLE_NAV_TOOLS.map((item) => (
-              <li key={item.href}>
-                <NavLink {...item} />
-              </li>
-            ))}
-          </ul>
-        </div>
+      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4" aria-label="Console">
+        {CONSOLE_NAV_GROUPS.map((group) => (
+          <CollapsibleNavGroup
+            key={group.label}
+            label={group.label}
+            items={group.items}
+            defaultOpen={group.defaultOpen}
+          />
+        ))}
       </nav>
       <div className="space-y-2 border-t border-black/[0.06] p-3">
         <CommandPaletteTrigger />
@@ -79,7 +106,7 @@ export function ConsoleSidebar() {
           Settings
         </Link>
         <Link
-          href="/landing"
+          href={HOSTED_PATHS.landing}
           className="block rounded-lg px-2.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800"
         >
           ← Product &amp; pricing

@@ -11,6 +11,10 @@ import {
 import { pickRouteDeps } from "./route-http-deps.js";
 import { runInboundMessageMiddleware } from "../lib/message-middleware.js";
 import {
+  runFluxyRoomAuthz,
+  runFluxyPublishPipeline,
+} from "../lib/fluxy-config-runtime.js";
+import {
   notifyDmRecipient,
   notifyMentionedUsers,
 } from "../lib/in-app-notifications.js";
@@ -21,6 +25,7 @@ import {
   parsePollCreateInput,
   insertMessagePoll,
   getMessagePoll,
+  closeMessagePoll,
   castPollVote,
 } from "../lib/message-polls.js";
 import { translateMessageContent } from "../lib/message-translation.js";
@@ -123,6 +128,11 @@ export async function dispatchMessagesRoutes(request, url, h) {
       return json({ error: "forbidden" }, { status: 403 });
     }
 
+    const authz = await runFluxyRoomAuthz(roomId, auth);
+    if (authz.action === "block") {
+      return json({ error: authz.reason, code: "blocked" }, { status: 403 });
+    }
+
     const roomAccessRow = await env.DB.prepare(
       "SELECT type FROM rooms WHERE project_id = ? AND id = ? LIMIT 1",
     )
@@ -182,6 +192,20 @@ export async function dispatchMessagesRoutes(request, url, h) {
       );
     }
     content = middlewareResult.content;
+
+    const fluxyPipeline = await runFluxyPublishPipeline(
+      roomId,
+      auth,
+      content,
+      {
+        capabilities: authz.capabilities ?? {},
+        replyTo: body.replyTo ? Number(body.replyTo) || null : null,
+      },
+    );
+    if (!fluxyPipeline.ok) {
+      return json({ error: fluxyPipeline.reason, code: "blocked" }, { status: 403 });
+    }
+    content = fluxyPipeline.content;
     const expiryResult = resolveMessageExpiry(body, env);
     if (!expiryResult.ok) {
       return json({ error: expiryResult.error }, { status: 400 });
@@ -600,6 +624,31 @@ export async function dispatchMessagesRoutes(request, url, h) {
       }),
     });
 
+    return json({ ok: true, poll: result.poll });
+  }
+
+  const pollCloseMatch = url.pathname.match(/^\/messages\/([^/]+)\/poll$/);
+  if (pollCloseMatch && request.method === "PATCH") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(pollCloseMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const { closed: closeRequest } = await request.json().catch(() => ({}));
+    if (closeRequest !== true) {
+      return json({ error: 'body must have {"closed":true}' }, { status: 400 });
+    }
+    const result = await closeMessagePoll(env, messageId, auth.projectId);
+    if (!result.ok) {
+      return json({ error: result.error }, { status: result.status || 400 });
+    }
     return json({ ok: true, poll: result.poll });
   }
 

@@ -1,25 +1,96 @@
-/**
- * P22-F8: Thread state management (per-thread KV with TTL).
- * Provides typed interface for thread-local state.
- */
-
-export interface ThreadState {
+export interface ThreadState<T = Record<string, unknown>> {
   threadId: string;
-  state: Record<string, unknown>;
+  state: T;
   expiresAt?: Date;
 }
 
-export interface ThreadStateStore {
-  get(threadId: string): Promise<ThreadState | null>;
-  set(threadId: string, state: Record<string, unknown>, ttlMs?: number): Promise<void>;
+export interface ThreadStateStore<T = Record<string, unknown>> {
+  get(threadId: string): Promise<ThreadState<T> | null>;
+  set(threadId: string, state: T, ttlMs?: number): Promise<void>;
   delete(threadId: string): Promise<void>;
 }
 
-export function createThreadState(threadId: string, ttlMs?: number): ThreadState {
-  throw new Error("createThreadState not implemented in SDK - use worker runtime");
+export interface TypedThreadState<T = Record<string, unknown>> {
+  readonly threadId: string;
+  readonly state: Promise<T | null>;
+  setState(state: Partial<T>, options?: { replace?: boolean }): Promise<void>;
 }
-export function createThreadStateStore(kv: KVNamespace): ThreadStateStore {
-  throw new Error("createThreadStateStore not implemented in SDK - use worker runtime");
+
+export const THREAD_STATE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+export function createThreadState<T = Record<string, unknown>>(
+  threadId: string,
+  store: ThreadStateStore<T>,
+  ttlMs: number = THREAD_STATE_TTL_MS
+): TypedThreadState<T> {
+  return {
+    get threadId() { return threadId; },
+    get state(): Promise<T | null> {
+      return store.get(threadId).then(s => s?.state ?? null);
+    },
+    async setState(newState: Partial<T>, options?: { replace?: boolean }): Promise<void> {
+      if (options?.replace) {
+        await store.set(threadId, newState as T, ttlMs);
+      } else {
+        const existing = await store.get(threadId);
+        const merged = { ...existing?.state, ...newState } as T;
+        await store.set(threadId, merged, ttlMs);
+      }
+    },
+  };
+}
+
+export function createThreadStateStore(kv?: KVNamespace): ThreadStateStore {
+  if (kv) {
+    return {
+      async get<T>(threadId: string): Promise<ThreadState<T> | null> {
+        const raw = await kv.get(threadId);
+        if (!raw) return null;
+        return JSON.parse(raw) as ThreadState<T>;
+      },
+      async set<T>(threadId: string, state: T, ttlMs?: number): Promise<void> {
+        const entry: ThreadState<T> = {
+          threadId,
+          state,
+          expiresAt: ttlMs ? new Date(Date.now() + ttlMs) : undefined,
+        };
+        const opts = ttlMs ? { expirationTtl: Math.ceil(ttlMs / 1000) } : undefined;
+        await kv.put(threadId, JSON.stringify(entry), opts);
+      },
+      async delete(threadId: string): Promise<void> {
+        await kv.delete(threadId);
+      },
+    };
+  }
+
+  const store = new Map<string, { state: Record<string, unknown>; expiresAt: number }>();
+
+  const prune = () => {
+    const now = Date.now();
+    for (const [key, value] of store) {
+      if (value.expiresAt <= now) store.delete(key);
+    }
+  };
+  const timer = setInterval(prune, 60_000);
+  if (typeof timer === "object" && timer !== null && "unref" in timer) {
+    (timer as NodeJS.Timeout).unref?.();
+  }
+
+  return {
+    async get<T>(threadId: string): Promise<ThreadState<T> | null> {
+      prune();
+      const entry = store.get(threadId);
+      if (!entry) return null;
+      return { threadId, state: entry.state as T, expiresAt: new Date(entry.expiresAt) };
+    },
+    async set<T>(threadId: string, state: T, ttlMs?: number): Promise<void> {
+      const expiresAt = Date.now() + (ttlMs ?? THREAD_STATE_TTL_MS);
+      store.set(threadId, { state: state as Record<string, unknown>, expiresAt });
+    },
+    async delete(threadId: string): Promise<void> {
+      store.delete(threadId);
+    },
+  };
 }
 
 interface KVNamespace {

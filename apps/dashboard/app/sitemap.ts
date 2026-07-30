@@ -14,7 +14,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const marketing = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://fluxychat.com";
   return [
     { url: `${marketing}/`, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
-    { url: `${marketing}/landing`, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
     { url: `${marketing}/pricing`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${marketing}/compare`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${marketing}/get-started`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },

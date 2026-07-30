@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { fetchWorkerHealth } from "@/lib/worker-health";
+import { loadStatusIncidents } from "@/lib/status-incidents";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -28,6 +29,7 @@ function statusTone(ok: boolean | undefined, degraded?: boolean): string {
 
 export default async function StatusPage() {
   const health = await fetchWorkerHealth();
+  const incidents = loadStatusIncidents();
   const ok = health.data?.ok;
   const degraded = health.data?.degraded;
   const label = statusLabel(ok, degraded);
@@ -102,6 +104,40 @@ export default async function StatusPage() {
                   <li key={key} className="flex justify-between gap-4">
                     <span className="text-muted-foreground">{key}</span>
                     <span>{value}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="font-heading text-lg font-semibold">Incidents</h2>
+          {incidents.active.length === 0 ? (
+            <p className="mt-3 text-sm text-emerald-600">All systems operational — no active incidents.</p>
+          ) : (
+            <ul className="mt-4 space-y-4">
+              {incidents.active.map((incident) => (
+                <li key={incident.title} className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+                  <p className="font-medium">{incident.title}</p>
+                  {incident.impact ? <p className="mt-1 text-sm text-muted-foreground">{incident.impact}</p> : null}
+                  {incident.summary ? <p className="mt-2 text-sm">{incident.summary}</p> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {incidents.resolved.length > 0 ? (
+            <div className="mt-8">
+              <h3 className="text-sm font-medium text-muted-foreground">Recent resolved</h3>
+              <ul className="mt-3 space-y-3 text-sm">
+                {incidents.resolved.slice(0, 5).map((incident) => (
+                  <li key={`${incident.date}-${incident.title}`} className="flex flex-col gap-1 border-b border-border pb-3 last:border-0">
+                    <span className="font-medium">{incident.title}</span>
+                    <span className="text-muted-foreground">
+                      {[incident.date, incident.duration, incident.status].filter(Boolean).join(" · ")}
+                    </span>
+                    {incident.summary ? <span>{incident.summary}</span> : null}
                   </li>
                 ))}
               </ul>

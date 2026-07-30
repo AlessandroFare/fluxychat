@@ -1,7 +1,5 @@
 /**
- * P23-4: Language Model Middleware
- * Pluggable layer to intercept/modify LLM calls.
- * Supports guardrails, caching, RAG injection, logging, parameter transformation.
+ * P23-4: Language Model Middleware — SDK implementation (mirrors worker runtime).
  */
 
 export interface LLMCallParams {
@@ -29,7 +27,10 @@ export interface LLMCallResult {
 
 export type TransformParamsFn = (params: LLMCallParams) => LLMCallParams | Promise<LLMCallParams>;
 export type WrapGenerateFn = (params: LLMCallParams, next: () => Promise<LLMCallResult>) => Promise<LLMCallResult>;
-export type WrapStreamFn = (params: LLMCallParams, next: () => AsyncGenerator<LLMStreamChunk>) => AsyncGenerator<LLMStreamChunk>;
+export type WrapStreamFn = (
+  params: LLMCallParams,
+  next: () => AsyncGenerator<LLMStreamChunk>,
+) => AsyncGenerator<LLMStreamChunk>;
 
 export interface LLMStreamChunk {
   type: "text" | "tool_call" | "tool_call_start" | "tool_call_delta" | "error" | "finish";
@@ -54,16 +55,106 @@ export function createLLMMiddleware(opts: {
   wrapGenerate?: WrapGenerateFn;
   wrapStream?: WrapStreamFn;
 }): LLMMiddleware {
-  throw new Error("createLLMMiddleware not implemented in SDK - use worker runtime");
-}
-
-export function wrapLanguageModel(
-  model: { generate: (params: LLMCallParams) => Promise<LLMCallResult>; stream: (params: LLMCallParams) => AsyncGenerator<LLMStreamChunk> },
-  middlewares: LLMMiddleware[],
-): { generate: (params: LLMCallParams) => Promise<LLMCallResult>; stream: (params: LLMCallParams) => AsyncGenerator<LLMStreamChunk> } {
-  throw new Error("wrapLanguageModel not implemented in SDK - use worker runtime");
+  return {
+    name: opts.name,
+    transformParams: opts.transformParams,
+    wrapGenerate: opts.wrapGenerate,
+    wrapStream: opts.wrapStream,
+  };
 }
 
 export function composeMiddlewares(...middlewares: LLMMiddleware[]): LLMMiddleware {
-  throw new Error("composeMiddlewares not implemented in SDK - use worker runtime");
+  return {
+    name: `composed(${middlewares.map((m) => m.name).join(", ")})`,
+
+    async transformParams(params) {
+      let result = params;
+      for (const mw of middlewares) {
+        if (mw.transformParams) {
+          result = await mw.transformParams(result);
+        }
+      }
+      return result;
+    },
+
+    async wrapGenerate(params, next) {
+      let chain = next;
+      for (let i = middlewares.length - 1; i >= 0; i--) {
+        const mw = middlewares[i];
+        if (mw.wrapGenerate) {
+          const prev = chain;
+          chain = () => mw.wrapGenerate!(params, prev);
+        }
+      }
+      return chain();
+    },
+
+    async *wrapStream(params, next) {
+      let chain = next;
+      for (let i = middlewares.length - 1; i >= 0; i--) {
+        const mw = middlewares[i];
+        if (mw.wrapStream) {
+          const prev = chain;
+          chain = () => mw.wrapStream!(params, prev);
+        }
+      }
+      yield* chain();
+    },
+  };
+}
+
+export interface WrappedLanguageModel {
+  generate(params: LLMCallParams): Promise<LLMCallResult>;
+  stream(params: LLMCallParams): AsyncGenerator<LLMStreamChunk>;
+}
+
+export function wrapLanguageModel(
+  model: WrappedLanguageModel,
+  middlewares: LLMMiddleware[],
+): WrappedLanguageModel {
+  if (!middlewares.length) return model;
+  const composed = composeMiddlewares(...middlewares);
+
+  return {
+    async generate(params) {
+      let finalParams = params;
+      if (composed.transformParams) {
+        finalParams = await composed.transformParams(params);
+      }
+      if (composed.wrapGenerate) {
+        return composed.wrapGenerate(finalParams, () => model.generate(finalParams));
+      }
+      return model.generate(finalParams);
+    },
+
+    async *stream(params) {
+      let finalParams = params;
+      if (composed.transformParams) {
+        finalParams = await composed.transformParams(params);
+      }
+      if (composed.wrapStream) {
+        yield* composed.wrapStream(finalParams, () => model.stream(finalParams));
+      } else {
+        yield* model.stream(finalParams);
+      }
+    },
+  };
+}
+
+export function createLoggingMiddleware(
+  logger: { info: (msg: string, meta?: Record<string, unknown>) => void },
+): LLMMiddleware {
+  return createLLMMiddleware({
+    name: "logging",
+    async wrapGenerate(params, next) {
+      const start = Date.now();
+      const result = await next();
+      logger.info("llm.generate", {
+        model: params.model,
+        provider: params.provider,
+        latencyMs: Date.now() - start,
+      });
+      return result;
+    },
+  });
 }

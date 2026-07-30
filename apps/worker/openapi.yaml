@@ -256,7 +256,8 @@ paths:
       security: []
       responses:
         "200":
-          description: Host config or `{ configured: false }`
+          description: |
+            Host config or `{ configured: false }`
 
   /public/embed-config:
     get:

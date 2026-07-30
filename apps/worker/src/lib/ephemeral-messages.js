@@ -12,6 +12,8 @@
  *   });
  */
 
+import { resolveAppKv } from "./app-kv.js";
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -221,8 +223,7 @@ export async function cleanupEphemeralMessages(env) {
  * @returns {KVNamespace}
  */
 function envKV(env) {
-  // In Cloudflare Workers, KV is accessed via env.KV
-  return env.KV;
+  return resolveAppKv(env);
 }
 
 /**

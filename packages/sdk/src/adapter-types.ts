@@ -50,6 +50,19 @@ export interface FormatConverter {
   toRaw(formatted: FormattedMessage): unknown;
 }
 
+export interface AdapterEphemeralResult {
+  id: string;
+  threadId: string;
+}
+
+export interface EphemeralMessage extends AdapterEphemeralResult {
+  usedFallback: boolean;
+}
+
+export interface PostEphemeralOptions {
+  fallbackToDM?: boolean;
+}
+
 export interface ThreadAdapter {
   name: string;
   displayName: string;
@@ -65,4 +78,6 @@ export interface ThreadAdapter {
   fetchThread(threadId: string): Promise<unknown>;
   fetchChannelInfo(channelId: string): Promise<unknown>;
   getUser(userId: string): Promise<UserInfo>;
+  postEphemeral?(threadId: string, userId: string, content: string): Promise<AdapterEphemeralResult>;
+  openDM?(userId: string): Promise<string>;
 }

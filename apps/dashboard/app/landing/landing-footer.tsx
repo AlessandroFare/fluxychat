@@ -18,7 +18,7 @@ export function LandingFooter() {
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-6 text-sm">
             <ConsoleEntryLink className="hover:text-white">{HOSTED_COPY.console}</ConsoleEntryLink>
-            <a href="#pricing" className="hover:text-white">Pricing</a>
+            <Link href="/pricing" className="hover:text-white">Pricing</Link>
             <a href="#faq" className="hover:text-white">FAQ</a>
             <Link href={HOSTED_PATHS.why} className="hover:text-white">Why</Link>
             <Link href={HOSTED_PATHS.compare} className="hover:text-white">Compare</Link>

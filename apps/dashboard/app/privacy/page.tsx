@@ -136,6 +136,16 @@ export default function PrivacyPage() {
         description="What we store, how long we keep it, and export or erasure for your project."
       />
 
+      <Section title="Platform features & data" description="How new capabilities handle personal data">
+        <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
+          <li><strong className="text-foreground">Fleet & geocode</strong> — address search is proxied via the dashboard API; queries go to OpenStreetMap Nominatim, not stored as search history.</li>
+          <li><strong className="text-foreground">Live streaming</strong> — event metadata (title, room, schedule) in D1; no viewer PII unless you attach it.</li>
+          <li><strong className="text-foreground">Devtools chat</strong> — debug prompts stream through your Worker; treat like production chat for retention.</li>
+          <li><strong className="text-foreground">Digital twin / IoT</strong> — device and telemetry IDs are project-scoped; export via GDPR endpoints below.</li>
+          <li><strong className="text-foreground">Cross-channel</strong> — linked identities (web/mobile/voice) stored per project session in Worker memory or D1 when persisted.</li>
+        </ul>
+      </Section>
+
       <Section title="Who is the controller?" description={`Updated ${PRIVACY_UPDATED}`}>
         <div className="text-sm leading-relaxed text-muted-foreground">
           <p className="mb-3">

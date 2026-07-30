@@ -1,7 +1,24 @@
+import { fanoutServerEvent } from "./message-realtime-fanout.js";
+import { createLiveInput } from "./cloudflare-stream.js";
+
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+async function fanoutLiveEvent(env, { projectId, eventId, name, userId, data }) {
+  const row = await env.DB.prepare(
+    "SELECT room_id FROM live_events WHERE id = ? AND project_id = ?",
+  ).bind(eventId, projectId).first();
+  if (!row?.room_id) return;
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId: row.room_id,
+    name,
+    userId,
+    data,
+  }).catch(() => {});
 }
 
 // --- Live Events ---
@@ -9,14 +26,36 @@ function generateId() {
 export async function createEvent(env, { projectId, roomId, title, description, streamUrl, thumbnailUrl, category, tags }) {
   const id = `le_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
+  const effectiveRoomId = (roomId && String(roomId).trim()) || `live-${projectId}`;
+  const safeTitle = String(title || "Untitled live event").trim().slice(0, 200);
   await env.DB.prepare(
     `INSERT INTO live_events (id, project_id, room_id, title, description, status, stream_url, thumbnail_url, category, tags, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?)`
-  ).bind(id, projectId, roomId, title, description || null, streamUrl || null, thumbnailUrl || null, category || null, tags ? JSON.stringify(tags) : null, now, now).run();
-  return { id };
+  ).bind(
+    id,
+    projectId,
+    effectiveRoomId,
+    safeTitle,
+    description || null,
+    streamUrl || null,
+    thumbnailUrl || null,
+    category || null,
+    tags ? JSON.stringify(tags) : null,
+    now,
+    now,
+  ).run();
+  const created = await getEvent(env, { eventId: id, projectId });
+  await fanoutLiveEvent(env, {
+    projectId,
+    eventId: id,
+    name: "live.event_created",
+    userId: "system",
+    data: { eventId: id, title: safeTitle, status: "scheduled", roomId: effectiveRoomId },
+  });
+  return created;
 }
 
-export async function updateEvent(env, { eventId, title, description, status, streamUrl, thumbnailUrl, category, tags }) {
+export async function updateEvent(env, { projectId, eventId, title, description, status, streamUrl, thumbnailUrl, category, tags }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
@@ -31,13 +70,25 @@ export async function updateEvent(env, { eventId, title, description, status, st
   if (thumbnailUrl) { sets.push("thumbnail_url = ?"); params.push(thumbnailUrl); }
   if (category !== undefined) { sets.push("category = ?"); params.push(category); }
   if (tags) { sets.push("tags = ?"); params.push(JSON.stringify(tags)); }
-  params.push(eventId);
-  await env.DB.prepare(`UPDATE live_events SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  params.push(eventId, projectId);
+  await env.DB.prepare(`UPDATE live_events SET ${sets.join(", ")} WHERE id = ? AND project_id = ?`).bind(...params).run();
+  if (status === "live") {
+    await maybeAutoProvisionStreamInput(env, { projectId, eventId, title }).catch(() => {});
+  }
+  if (status === "live" || status === "ended") {
+    await fanoutLiveEvent(env, {
+      projectId,
+      eventId,
+      name: status === "live" ? "live.event_live" : "live.event_ended",
+      userId: "system",
+      data: { eventId, status },
+    });
+  }
   return { updated: true };
 }
 
-export async function getEvent(env, { eventId }) {
-  const row = await env.DB.prepare("SELECT * FROM live_events WHERE id = ?").bind(eventId).first();
+export async function getEvent(env, { eventId, projectId }) {
+  const row = await env.DB.prepare("SELECT * FROM live_events WHERE id = ? AND project_id = ?").bind(eventId, projectId).first();
   return row ? mapEventRow(row) : null;
 }
 
@@ -105,15 +156,35 @@ export async function joinEvent(env, { eventId, projectId, userId, username, rol
     "UPDATE live_events SET total_viewers = total_viewers + 1, updated_at = ? WHERE id = ?"
   ).bind(now, eventId).run();
 
+  const { count } = await getViewerCount(env, { eventId });
+  await fanoutLiveEvent(env, {
+    projectId,
+    eventId,
+    name: "live.viewer_joined",
+    userId,
+    data: { eventId, userId, viewerCount: count },
+  });
+
   return { id };
 }
 
-export async function leaveEvent(env, { eventId, userId }) {
+export async function leaveEvent(env, { eventId, projectId, userId }) {
   const now = new Date().toISOString();
   const result = await env.DB.prepare(
     "UPDATE live_viewers SET left_at = ? WHERE event_id = ? AND user_id = ? AND left_at IS NULL"
   ).bind(now, eventId, userId).run();
-  return { left: result.meta?.changes || 0 };
+  const left = result.meta?.changes || 0;
+  if (left > 0 && projectId) {
+    const { count } = await getViewerCount(env, { eventId });
+    await fanoutLiveEvent(env, {
+      projectId,
+      eventId,
+      name: "live.viewer_left",
+      userId,
+      data: { eventId, userId, viewerCount: count },
+    });
+  }
+  return { left };
 }
 
 export async function getViewerCount(env, { eventId }) {
@@ -214,6 +285,14 @@ export async function sendLiveMessage(env, { eventId, projectId, userId, usernam
     "UPDATE live_events SET total_messages = total_messages + 1, updated_at = ? WHERE id = ?"
   ).bind(now, eventId).run();
 
+  await fanoutLiveEvent(env, {
+    projectId,
+    eventId,
+    name: "live.chat_message",
+    userId,
+    data: { eventId, messageId: id, content, contentType: contentType || "text", username },
+  });
+
   return { id };
 }
 
@@ -281,6 +360,32 @@ export async function getLiveStats(env, { projectId }) {
 
 // --- Helpers ---
 
+async function maybeAutoProvisionStreamInput(env, { projectId, eventId, title }) {
+  const event = await getEvent(env, { eventId, projectId });
+  if (!event?.id || event.liveInputUid) return event;
+  const accountId = String(env.CLOUDFLARE_ACCOUNT_ID || "").trim();
+  const token = String(env.CLOUDFLARE_STREAM_API_TOKEN || "").trim();
+  const customerCode = String(env.CLOUDFLARE_STREAM_CUSTOMER_CODE || "").trim();
+  if (!accountId || !token || !customerCode) return event;
+
+  const input = await createLiveInput(env, {
+    eventId,
+    projectId,
+    title: title || event.title,
+  });
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `UPDATE live_events SET live_input_uid = ?, rtmps_url = ?, stream_key = ?, whip_url = ?,
+      stream_url = ?, playback_hls = ?, playback_dash = ?, provider_state = ?, updated_at = ?
+     WHERE id = ? AND project_id = ?`,
+  ).bind(
+    input.uid, input.rtmpsUrl, input.streamKey, input.whipUrl, input.streamUrl,
+    input.playbackHls, input.playbackDash, input.providerState,
+    now, eventId, projectId,
+  ).run();
+  return getEvent(env, { eventId, projectId });
+}
+
 function mapEventRow(row) {
   return {
     id: row.id, projectId: row.project_id, roomId: row.room_id,
@@ -291,6 +396,11 @@ function mapEventRow(row) {
     peakViewers: row.peak_viewers, totalViewers: row.total_viewers,
     totalMessages: row.total_messages, durationSeconds: row.duration_seconds,
     createdAt: row.created_at, updatedAt: row.updated_at,
+    liveInputUid: row.live_input_uid, rtmpsUrl: row.rtmps_url,
+    streamKey: row.stream_key, whipUrl: row.whip_url,
+    playbackHls: row.playback_hls, playbackDash: row.playback_dash,
+    recordingMode: row.recording_mode, preferLowLatency: row.prefer_low_latency === 1,
+    providerState: row.provider_state,
   };
 }
 

@@ -6,6 +6,10 @@ export interface AgentProviderOption {
   hint?: string;
 }
 
+/** Production default: OpenCode Zen gateway + DeepSeek Flash v4 (free tier). */
+export const DEFAULT_ONBOARDING_AGENT_PROVIDER = "custom";
+export const DEFAULT_ONBOARDING_AGENT_MODEL = "deepseek-v4-flash";
+
 /** Keep in sync with apps/worker/src/lib/llm-providers.js */
 export const AGENT_PROVIDER_OPTIONS: AgentProviderOption[] = [
   {
@@ -92,6 +96,8 @@ export interface AgentLlmConfigInput {
   frequencyPenalty?: number;
   presencePenalty?: number;
   stopSequences?: string;
+  reasoningEffort?: string;
+  reasoningSummary?: string;
 }
 
 export function buildAgentLlmConfig(
@@ -116,6 +122,8 @@ export function buildAgentLlmConfig(
   if (input.frequencyPenalty !== undefined && input.frequencyPenalty !== 0) modelParams.frequencyPenalty = input.frequencyPenalty;
   if (input.presencePenalty !== undefined && input.presencePenalty !== 0) modelParams.presencePenalty = input.presencePenalty;
   if (input.stopSequences?.trim()) modelParams.stopSequences = input.stopSequences.trim();
+  if (input.reasoningEffort && input.reasoningEffort !== "none") modelParams.reasoningEffort = input.reasoningEffort;
+  if (input.reasoningSummary && input.reasoningSummary !== "auto") modelParams.reasoningSummary = input.reasoningSummary;
 
   const result: Record<string, unknown> = {};
   if (Object.keys(llm).length) result.llm = llm;

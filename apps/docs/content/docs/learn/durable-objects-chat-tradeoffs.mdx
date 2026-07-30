@@ -1,0 +1,25 @@
+---
+title: "Single-threaded Durable Objects and chat — honest tradeoffs"
+description: "When the Room DO is the source of truth, when D1 is, and what throughput to expect per room (without pretending one object scales infinite hot rooms)."
+---
+
+## “DOs are single-threaded” — what it means for chat
+
+Each Durable Object processes requests sequentially. For one chat room, that is often a feature: ordering is straightforward and you avoid distributed locks inside the room.
+
+A single ultra-hot room (thousands of messages per second in one channel) may need sharding or fan-out patterns beyond one object — most SaaS tenant rooms are far below that.
+
+## DO vs D1 — division of labor
+
+- DO — who is connected now, fan-out, ephemeral signals (typing).
+- D1 — durable messages, membership, audit-friendly history.
+- Worker — auth, REST pagination, webhooks, GDPR export.
+- Do not treat DO storage as your message database for unbounded history.
+
+## Workers only (no DO)?
+
+Stateless Workers cannot hold open WebSocket fan-out for a room across clients. You need sticky coordination — that is the DO (or an external broker). “Just Workers” fits HTTP, not multi-client room state.
+
+## FluxyChat’s scope
+
+We optimize for many rooms with moderate throughput each, not one global firehose. If you outgrow one room object, you shard by roomId (multiple products) or redesign that hot channel — we do not hide that limit.

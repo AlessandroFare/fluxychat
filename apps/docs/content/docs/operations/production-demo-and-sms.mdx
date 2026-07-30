@@ -1,0 +1,15 @@
+---
+title: "Production: demo hardening & inbound SMS"
+description: "- Configure Turnstile / rate limits per [public demo hardening](/docs/cookbook/public-demo-hardening)."
+---
+
+## Public demo (`/demo`)
+
+- Configure Turnstile / rate limits per [public demo hardening](/docs/cookbook/public-demo-hardening).
+- Worker: `TELCO_INBOUND_ENABLED`, guest session limits in `.dev.vars.example`.
+
+## Inbound SMS / WhatsApp (optional)
+
+See `apps/worker/.dev.vars.example` (`TELCO_INBOUND_*`) and [Twilio parity inspiration](/docs/twilio-parity-inspiration).
+
+For US 10DLC and STOP handling, see [US SMS compliance playbook](/docs/us-sms-compliance-playbook).

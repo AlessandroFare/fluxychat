@@ -1,0 +1,52 @@
+{
+  "name": "@chat-adapter/shared",
+  "version": "4.31.0",
+  "description": "Shared utilities for Chat SDK platform adapters",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "chat": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel/chat.git",
+    "directory": "packages/adapter-shared"
+  },
+  "homepage": "https://chat-sdk.dev/docs/contributing/building",
+  "bugs": {
+    "url": "https://github.com/vercel/chat/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "chat",
+    "bot",
+    "adapter",
+    "shared"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Build first: each package consumes the built type declarations of its workspace
+      # dependencies (e.g. core imports @portalsdk/wire-protocol's dist types), so the
+      # dependency's dist must exist before typecheck runs.
+      - run: pnpm -r build
+
+      - run: pnpm -r typecheck
+
+      # ──────────────────────────────────────────────────────────────────────
+      # Private conformance fixture (STUB — to be wired up).
+      #
+      # The recorded gate-harness frames are NOT committed. The conformance
+      # suites read `working-context/m3-frames.json` and skip gracefully when it
+      # is absent (fork PRs, fresh clones). To run conformance in CI, this step
+      # must fetch that file from a private source before the tests.
+      #
+      # Contract for whatever replaces this step:
+      #   - Output: writes the recorded frames to `working-context/m3-frames.json`.
+      #   - Auth:   a repo/org secret (this step has no access to secrets on forks,
+      #             so conformance correctly stays skipped there).
+      #   - No-op on failure: leave the file absent → conformance skips, never fails.
+      #
+      # TODO(portal): replace the body below with the real fetch, e.g.
+      #   curl -fsSL -H "Authorization: Bearer $FIXTURE_TOKEN" "$FIXTURE_URL" \
+      #     -o working-context/m3-frames.json
+      # ──────────────────────────────────────────────────────────────────────
+      - name: Fetch private conformance fixture (stub)
+        env:
+          FIXTURE_URL: ${{ secrets.CONFORMANCE_FIXTURE_URL }}
+          FIXTURE_TOKEN: ${{ secrets.CONFORMANCE_FIXTURE_TOKEN }}
+        run: |
+          mkdir -p working-context
+          echo "STUB: private conformance fixture fetch not yet wired."
+          echo "Conformance suites will skip until working-context/m3-frames.json is provided."
+
+      - run: pnpm -r test

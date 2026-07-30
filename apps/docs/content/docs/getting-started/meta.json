@@ -1,0 +1,11 @@
+{
+  "title": "Getting Started",
+  "icon": "Rocket",
+  "pages": [
+    "index",
+    "quickstart",
+    "client-setup",
+    "local-development",
+    "self-hosting"
+  ]
+}

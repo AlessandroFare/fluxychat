@@ -114,7 +114,7 @@ export const PUBLIC_PLAN_CATALOG: Record<string, PublicPlanRow> = {
     webhooks: FREE_TIER_LIMITS.webhookDeliveryLimitMonthly,
     tagline: "Try the stack without a card.",
     bullets: [
-      "SDK and dashboard access",
+      "SDK, dashboard, and platform modules",
       // TODO: replace with real Discord invite URL before launch
       "Community support (GitHub + Discord: https://discord.gg/fluxychat)",
       "One project, fair-use limits",
@@ -129,7 +129,7 @@ export const PUBLIC_PLAN_CATALOG: Record<string, PublicPlanRow> = {
     webhooks: CANONICAL_TIER_LIMITS.starter.webhookDeliveryLimitMonthly,
     tagline: "Production traffic with fixed monthly limits.",
     bullets: [
-      "Higher quotas than Free",
+      "Chat, agents, stream, collab, game, IoT on one worker",
       "Signed webhooks with retries",
       "GDPR export and erasure endpoints",
       "Email support (best effort)",

@@ -1,0 +1,71 @@
+---
+title: DLP policy versioning and CMK
+description: Custom DLP rules, policy version fingerprints, content-kind scans, and customer-managed encryption keys.
+---
+
+Enterprise DLP extends built-in PHI/PCI detection with **custom rules**, **policy versioning**, and **customer-managed keys (CMK)** for envelope encryption metadata.
+
+Open the dashboard at [**Settings → DLP**](/settings/dlp) or use the Worker REST APIs below.
+
+## Policy version
+
+Every scan returns a policy fingerprint so clients can cache rules safely:
+
+```bash
+curl "$WORKER_URL/enterprise/dlp/policy-version" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Response includes `version`, `builtinPatternCount`, `customRuleCount`, and `enabledRuleCount`.
+
+## Content-kind scan
+
+Scan text, file excerpts, or audio transcripts with optional room/message context:
+
+```bash
+curl -X POST "$WORKER_URL/enterprise/dlp/scan" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Patient SSN 123-45-6789",
+    "contentKind": "text",
+    "roomId": "room_demo",
+    "messageId": 42
+  }'
+```
+
+Response fields:
+
+- `matches` — detected entities with severity and rule action
+- `action` — primary outcome: `allow`, `flag`, `redact`, or `block`
+- `policyVersion` — fingerprint at scan time
+- `redactedText` — text after redaction when applicable
+
+## Customer-managed keys (CMK)
+
+Admin routes under `/admin/cmk/*`:
+
+```bash
+# List keys (material never returned)
+curl "$WORKER_URL/admin/cmk/keys" -H "Authorization: Bearer $ADMIN_JWT"
+
+# Create AES-256-GCM key
+curl -X POST "$WORKER_URL/admin/cmk/keys" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"algorithm":"AES-256-GCM"}'
+
+# Rotate or revoke
+curl -X POST "$WORKER_URL/admin/cmk/keys/cmk_abc123/rotate" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+
+curl -X POST "$WORKER_URL/admin/cmk/keys/cmk_abc123/revoke" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Use `POST /admin/cmk/encrypt` with `{ "plaintext": "..." }` for envelope encryption during export or attachment handling.
+
+## Related
+
+- [DLP and audit export](/docs/guides/enterprise/dlp-audit-export) — SOC 2 page, audit stream export
+- [AI Governance](/docs/guides/enterprise/ai-governance) — model/prompt/tool registry

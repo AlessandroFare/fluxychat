@@ -1,0 +1,67 @@
+---
+title: "Ephemeral Messages"
+description: "`postEphemeral()` sends a message visible only to a specific user with automatic DM fallback when the platform doesn't support native ephemeral messages."
+---
+
+## Usage
+
+```ts
+import { postEphemeral } from "@fluxy-chat/sdk";
+
+const result = await postEphemeral(adapter, "thread\:abc", "user:123", "Hello only you can see");
+
+if (result) {
+  console.log(result.usedFallback ? "Sent via DM" : "Sent natively");
+}
+```
+
+## How It Works
+
+1. If the adapter provides `postEphemeral()` — sends natively (e.g., Slack `chat.postEphemeral`)
+2. If not, and `fallbackToDM` isn't `false` — opens a DM via `adapter.openDM()` and posts there
+3. If neither is available — returns `null`
+
+## Options
+
+```ts
+interface PostEphemeralOptions {
+  fallbackToDM?: boolean; // default true
+}
+```
+
+## Result
+
+```ts
+interface EphemeralMessage {
+  id: string;
+  threadId: string;
+  usedFallback: boolean; // true if sent via DM fallback
+}
+```
+
+## Platform Support
+
+| Platform | Native | Fallback |
+|----------|--------|----------|
+| Slack | ✅ | DM |
+| Google Chat | ✅ | DM |
+| Discord | ❌ | DM |
+| Teams | ❌ | DM |
+
+## Adapter Integration
+
+Implement `postEphemeral` and `openDM` on your adapter for platform-native support:
+
+```ts
+const adapter: ThreadAdapter = {
+  // ...other methods
+  async postEphemeral(threadId, userId, content) {
+    // Platform-specific ephemeral API
+    return { id: result.id, threadId };
+  },
+  async openDM(userId) {
+    // Open or create DM conversation
+    return dmThreadId;
+  },
+};
+```

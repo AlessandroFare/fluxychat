@@ -3,7 +3,7 @@
  */
 
 export const WHY_THESIS =
-  "Shipping a REST route on Vercel or Netlify is usually quick. WebSockets still tend to send you elsewhere: another vendor, another stack, or someone on the team who knows socket ops. FluxyChat brings chat, AI agents, and 14 platform adapters onto the same edge you already deploy to.";
+  "Shipping a REST route on Vercel or Netlify is usually quick. WebSockets still tend to send you elsewhere: another vendor, another stack, or someone on the team who knows socket ops. FluxyChat brings chat, AI agents, and platform modules (stream, collab, game, IoT) onto the same Cloudflare edge you already deploy to.";
 
 export interface WhySection {
   id: string;

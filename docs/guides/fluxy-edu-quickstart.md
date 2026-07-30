@@ -1,0 +1,91 @@
+# FluxyEdu quickstart
+
+Run a **testable classroom workflow** from the dashboard or SDK. This guide uses deterministic demo seeds — not production persistence.
+
+## Dashboard
+
+1. Open **[Education studio](/edu)** from the console sidebar (Industries → Education).
+2. Click **Start live class** to begin the journey.
+3. Use **Advance demo** to step through:
+   - Create classroom / open session
+   - Record attendance heartbeats
+   - Run a knowledge check (idempotent poll)
+   - Assign breakout groups
+   - Review AI grade suggestion (requires educator approval)
+
+The activity panel shows **versioned room events** from `createVerticalWorkflow`, not static copy.
+
+## SDK
+
+```typescript
+import {
+  createVerticalWorkflow,
+  runVerticalDemoStep,
+  VERTICAL_DEMO_SEEDS,
+} from "@fluxy-chat/sdk";
+
+const workflow = createVerticalWorkflow(VERTICAL_DEMO_SEEDS.edu);
+
+// Step through the demo journey (0–4)
+for (let step = 0; step < 5; step += 1) {
+  runVerticalDemoStep(workflow, "edu", step);
+}
+
+console.log(workflow.platform.events());
+console.log(workflow.activityFeed());
+```
+
+### Polls and attendance
+
+```typescript
+workflow.startSession({ id: "teacher_1", type: "user", role: "teacher" });
+workflow.recordAttendance("student_1", "student");
+
+const poll = workflow.createKnowledgeCheck("Ready to start?", [
+  { id: "yes", label: "Yes" },
+  { id: "no", label: "Not yet" },
+]);
+
+workflow.submitPollVote(poll.id, ["yes"], "student_1");
+workflow.platform.closePoll(poll.id);
+```
+
+### Human-in-the-loop grading
+
+AI suggestions stay in `draft` until a teacher approves:
+
+```typescript
+const grade = workflow.suggestGrade({
+  studentId: "student_1",
+  rubricId: "quiz_1",
+  score: 91,
+  feedback: "Clear steps shown.",
+  suggestedBy: "ai",
+});
+
+workflow.approveGrade(grade.id, "teacher_1");
+```
+
+## Readiness
+
+| Capability | Status |
+|------------|--------|
+| Room + attendance events | Beta (client demo) |
+| Idempotent polls | Beta (client demo) |
+| Yjs whiteboard | Adapter — not wired in demo |
+| Multiparty media (SFU) | Adapter — configure provider |
+| AI grading publish | Gated — approval required |
+
+## Production checklist
+
+Before FERPA/COPPA-sensitive deployments:
+
+- Configure retention and consent policies per workspace
+- Persist events on Worker/DO (see [vertical-platform-expansion.md](../architecture/vertical-platform-expansion.md))
+- Wire Yjs whiteboard per Architectural Decisions Log
+- Connect SFU/TURN for live video
+
+## Related
+
+- [Vertical platform architecture](../architecture/vertical-platform-expansion.md)
+- [ROADMAP §5.3 FluxyEdu](../../ROADMAP.md)

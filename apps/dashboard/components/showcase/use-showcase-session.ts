@@ -39,28 +39,52 @@ export function useShowcaseSession(): ShowcaseSession {
   const [status, setStatus] = useState<ShowcaseSessionStatus>("loading");
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setStatus("loading");
-    setError(null);
-    try {
-      const res = await fetch(`${workerUrl}/demo/session`);
-      const body = (await res.json()) as DemoSessionResponse & { error?: string };
-      if (!res.ok || !body.enabled) {
-        setStatus("unavailable");
-        setError(body.error ?? "Live demo session not configured on this deployment.");
-        return;
-      }
-      setSession(body);
-      setStatus("ready");
-    } catch {
-      setStatus("unavailable");
-      setError("Could not reach the Worker demo endpoint.");
-    }
-  }, [workerUrl]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const load = async () => {
+      setStatus("loading");
+      setError(null);
+      try {
+        const res = await fetch(`${workerUrl}/demo/session`, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        const body = (await res.json()) as DemoSessionResponse & { error?: string };
+        if (!res.ok || !body.enabled) {
+          setSession(null);
+          setStatus("unavailable");
+          setError(body.error ?? "Live demo session not configured on this deployment.");
+          return;
+        }
+        setSession(body);
+        setStatus("ready");
+
+        // Refresh before the guest token expires so open showcase tabs keep
+        // their authenticated realtime connection without a hard failure.
+        const refreshAfterMs = Math.max(5_000, body.expiresIn * 1_000 - 30_000);
+        refreshTimer = setTimeout(() => setReloadKey((key) => key + 1), refreshAfterMs);
+      } catch (nextError) {
+        if (controller.signal.aborted) return;
+        setSession(null);
+        setStatus("unavailable");
+        setError(
+          nextError instanceof Error && nextError.message
+            ? nextError.message
+            : "Could not reach the Worker demo endpoint.",
+        );
+      }
+    };
+
     void load();
-  }, [load]);
+    return () => {
+      controller.abort();
+      if (refreshTimer) clearTimeout(refreshTimer);
+    };
+  }, [reloadKey, workerUrl]);
 
   const client = useMemo(() => {
     if (!session?.token || !session.userId) return null;
@@ -78,6 +102,6 @@ export function useShowcaseSession(): ShowcaseSession {
     client,
     readOnly: session?.readOnly === true,
     error,
-    retry: () => void load(),
+    retry: () => setReloadKey((key) => key + 1),
   };
 }

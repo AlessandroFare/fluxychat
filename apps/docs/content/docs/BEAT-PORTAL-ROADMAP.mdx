@@ -1,0 +1,442 @@
+---
+title: "Beat Portal — Product Excellence Roadmap"
+description: Internal product roadmap — not published in the public docs navigation.
+draft: true
+---
+
+**Obiettivo:** portare FluxyChat a un livello prodotto che superi Portal, Stream, Ably e Pusher su developer experience, polish, e AI-native platform — diventando il punto di riferimento per chat/realtime AI nel 2026.
+
+**Ultimo aggiornamento:** 2026-07-28 (principio build-first: tutto implementabile gratis resta in scope)  
+**Owner:** `@alefare`  
+**Stato attuale:** Fase 1 — in corso (DX quickstart + SDK cleanup)  
+**Budget:** zero SaaS obbligatorio — implementiamo noi o usiamo alternative OSS; **il costo del team non è un vincolo**  
+**Riferimenti:** [`ROADMAP_EXECUTION.md`](/docs/ROADMAP_EXECUTION) (SPEC/ops), [`PORTAL-PARITY-ANALYSIS.md`](PORTAL-PARITY-ANALYSIS) (gap SDK), [`PORTAL-SDK-BACKLOG.md`](PORTAL-SDK-BACKLOG) (ARCH completati), [`fluxychat-market-research-2026.md`](/docs/fluxychat-market-research-2026) (gap analysis 110 punti), [`FLUXYCHAT-GAPS-2026.md`](research/FLUXYCHAT-GAPS-2026) (gap vs Vercel AI SDK 7 / Chat SDK)
+
+---
+
+## Come usare questo file
+
+- Aggiorna le checkbox durante il lavoro:
+  - `[ ]` non iniziato
+  - `[-]` in corso
+  - `[x]` completato
+  - `[~]` saltato / differito (con nota)
+- Un item è **DONE** solo se: codice merge-ready, docs aggiornate se serve, verifica manuale o test passa.
+- **Non duplicare** checklist ops/deploy qui — restano in `ROADMAP_EXECUTION.md` e `RUNBOOK_DEPLOY_ROLLBACK.md`.
+
+---
+
+## Fuori scope (per ora)
+
+Questi track restano in backlog generale finché non c’è Stripe Business o necessità ops:
+
+| ID | Item | Motivo |
+|----|------|--------|
+| PG-1 | Stripe checkout / portal / webhook in produzione | Richiede Stripe Business |
+| PG-2 | Billing self-serve Growth (`landing-pricing-section`) | Idem |
+| PG-3 | Deploy produzione + smoke post-deploy target | Ops — fare quando serve go-live |
+| PG-4 | Benchmark SLO su env reale + tuning soglie | Ops — dopo deploy staging/prod |
+| PG-5 | KV/D1 placeholder `REPLACE_WITH_*` in wrangler prod | Ops — al deploy |
+
+Quando Stripe sarà pronto, riprendere da `ROADMAP_EXECUTION.md` § P3 (Stripe) e `docs/billing-stripe-runbook.md`.
+
+---
+
+## Principio build-first (leggere prima di eseguire)
+
+**Regola:** ogni item resta **in scope** se realizzabile **senza pagare vendor SaaS**. Preferiamo codice nostro, OSS self-host, standard aperti. **Il costo del team non è un vincolo** — obiettivo = punto di riferimento per tutti.
+
+**Fuori scope** solo cassa obbligatoria: Stripe Business (PG-*), audit SOC 2 **firmato** da terza parte, consumo LLM/TTS del cliente finale.
+
+### Mappa SaaS → build-first
+
+| Area | Item | Perché |
+|------|------|--------|
+| DX | DX-1 → DX-9 | Quickstart verificato, docs allineate, stub SDK fuori dall’entry client |
+| DX | DX-9.1 (transitional) | `@fluxy-chat/react` **esiste già** — completare re-export + docs, non riscrivere da zero |
+| Docs | DX-2, DX-4, DX-5 | Solo markdown/MDX nel repo |
+| Polish | PL-1 → PL-3, PL-13 | Riorganizzazione nav dashboard + compare page in docs |
+| CI | PL-14, DX-14 | GitHub Actions + manifest check (già parzialmente presenti) |
+
+### Tier B — differire fino a primi utenti / API key LLM (costo variabile, no SaaS obbligatorio)
+
+| Item roadmap | Nota zero-budget |
+|--------------|------------------|
+| MO-9.1 Voice pipeline | Richiede chiavi OpenAI/Gemini (pay-per-use) — doc + adapter stub OK, prod solo quando serve |
+| MO-3.6 KB connectors | Notion/GDrive OAuth + storage — fare **un** connector (file upload / URL) prima del marketplace |
+| PL-20.1 OTel → LangSmith/Arize | **Prima:** export OTel/console + docs self-host Jaeger; SaaS telemetry solo se richiesto |
+| DX-5.1 testing utilities | Estendere `createMockAdapter` / `createSpyAdapter` già in SDK — non reinventare |
+
+### Tier C — esplicitamente fuori scope finché zero budget
+
+| Item | Motivo |
+|------|--------|
+| MD-1 SOC 2 / HIPAA BAA | Audit a pagamento (decine di k€) |
+| PL-17.2 BetterStack status page | Usare **CF Pages + `/health` + pagina statica** in `apps/docs` o `apps/dashboard` |
+| PL-17.3 Headway changelog | Changelog markdown in repo (`CHANGELOG.md` + pagina docs) |
+| MO-12.1 MCP marketplace “verificato” | Security audit a pagamento — lista curated in docs basta per MVP |
+| MD-4 FluxyConf, MD-5 SDK nativi Kotlin/Swift | Team/time non giustificati pre-traction |
+| Fase 4 intera | Trigger: revenue + go-live, non prima |
+
+### Già fatto nel repo (non rifare)
+
+- `@fluxy-chat/react` package con re-export transitional (`packages/react/`)
+- `packages/sdk/src/worker-runtime.ts` (subpath da esporre in `package.json`)
+- Docs HTTP API Fumadocs tag-grouped (531 pagine build OK)
+- `RateLimitError` con `retryAfterMs` in `structured-errors.ts` (DX-10.1 parziale — estendere, non duplicare)
+- Worker agent runtime con implementazioni locali in `apps/worker/src/lib/` (non dipende dagli stub SDK)
+
+### Ordine esecuzione realistico (zero budget)
+
+```
+Settimana 1:   DX-1 → DX-2, DX-6 → DX-9, DX-8 (quickstart + SDK surface)
+Settimana 2:   DX-4, DX-5, DX-10, DX-11, PL-1 → PL-3 (docs errori + nav console)
+Settimana 3+:  PL-6 → PL-8, PL-13, PL-14 (inbox polish + compare + docs CI)
+Dopo traction: Fase 3 voice/KB/enterprise — un item alla volta
+```
+
+**Prossimo task:** `DX-1` + `DX-6` → `DX-9` + `DX-2`.
+
+---
+
+## Market Landscape 2026 — Dove siamo e dove vogliamo arrivare
+
+### Convergenza del mercato: Chat × Realtime × AI Agents = battleground 2026
+
+Il mercato nel 2026 si è biforcato in due tier, e **la convergenza è la zona vincente**:
+
+| Tier | Esempi | Punti forti | Punti deboli |
+|------|--------|-------------|--------------|
+| **Chat API Providers** | Stream, Sendbird, Ably Chat, Pusher | Chat primitives mature, UI kit, compliance | AI è un add-on separato, pricing opaco per volumi medi, nessun self-host MIT |
+| **AI Agent Infra** | LiveKit, Daily, Liveblocks AI Copilots, Vercel AI SDK 7 | Voice/video AI nativo, agent framework moderni | Nessuna chat persistente/history, no operator console per customer-facing chat |
+| **AI-Native Chat Platform (NOI)** | **FluxyChat** | **Entrambi i mondi su un singolo Worker kernel: chat persistente + AI agents + voice + self-host MIT + 14 canali omnichannel + moduli verticali** | Ad oggi: SDK surface da pulire (stub), alcuni UX polish, package split, DevTools, status page — tutto trackabile in questa roadmap |
+| **Chat-first Lightweight SDK** | Portal | DX molto curata, package split, piccolo bundle | Nessuna AI, nessun self-host, nessuna enterprise feature, solo chat |
+
+### Trend 2026 che dobbiamo cavalcare per diventare punto di riferimento
+
+Fonte: ricerche interne, Vercel AI SDK 7 (16M+ weekly downloads), OpenAI Responses API con MCP nativo, report QuickBlox/TRTC 2026, analisi gap `FLUXYCHAT-GAPS-2026.md`.
+
+| # | Trend | Perché conta | Dove lo posizioniamo |
+|---|-------|-------------|----------------------|
+| 1 | **AI SDK 7 come standard de facto per agenti** | reasoning param standard, tool/runtime context, WorkflowAgent, MCP Apps, telemetry OTel, lifecycle callbacks | **Integrare pattern Vercel AI SDK 7** nel nostro agent layer — così i dev conoscono già le API quando arrivano su FluxyChat |
+| 2 | **MCP (Model Context Protocol) = standard industriale** | OpenAI l'ha messo nativamente in Responses API + Steering Committee; tutti i provider lo adottano | **MCP client + server già presenti** — elevare a first-class citizen, docs, marketplace di server MCP pre-connessi |
+| 3 | **Realtime Voice (speech-to-speech) < 300ms** | OpenAI Realtime API = standard; Gemini Live come adapter; LiveKit/Daily già scalano | **Voice pipeline end-to-end cross-provider** con adapter OpenAI Realtime + fallback Gemini Live (stesso pattern di successo nel mercato) |
+| 4 | **Durable AI Sessions (sopravvivono a disconnect/reload)** | Ably AI Transport, WorkflowAgent di Vercel — gli utenti si aspettano che l'agente continui da dove era | **AI Transport layer** con resumable token streaming, multi-device state sync |
+| 5 | **Developer Experience = differenziatore principale** | I dev scelgono il SDK che li fa spedire in produzione in 5 min con meno bug | Package split (protocol/core/react), error hierarchy tipizzata, testing utilities, DevTools inspector, status page pubblica |
+| 6 | **Compliance + Enterprise = moat crescente** | DSA EU, EU AI Act, HIPAA, SOC 2 Type 2, DLP PHI/PCI | Consolidare SSO/SAML, DLP, audit, retention già esistenti — aggiungere governance AI, CMK, e-discovery |
+| 7 | **Offline + reconnect = dove i bravi SDK si distinguono** | Le demo funzionano tutte; la qualità si vede in weak network, background, handoff 4G→WiFi | Outbox persistente, delivery receipts, message ordering guarantees, reconnect senza perdite |
+| 8 | **Knowledge base + RAG integrato** | Nessuno vuole connettere manualmente Notion/Confluence/GDrive | Connectors pre-built per KB → RAG automatico per agenti |
+| 9 | **Pricing chiaro + self-host MIT** | Startup e indie dev odiano le sorprese a fine mese; vogliono lock-in zero | **Il nostro positioning principale!** $1/1M messaggi, MIT self-host, nessun vendor lock-in |
+
+### Cosa cercano i dev oggi (pain points da risolvere)
+
+Fonte: ricerche QuickBlox/TRTC e analisi HN/Dev.to commenti
+
+1. **"Pusher/Ably costano troppo anche per volumi modesti"** → il nostro pricing lo batte
+2. **"La demo funziona, ma in weak network il SDK perde messaggi"** → reconnect + outbox + delivery receipts (Fase 1)
+3. **"L'AI è un add-on separato che non si integra con la chat history"** → AI agents nativi nella room (nostro punto forte!)
+4. **"Errori SDK non documentati, debug impossibile"** → error hierarchy tipizzata + DevTools (Fase 1/2)
+5. **"Per voice devo integrare LiveKit a parte"** → voice pipeline end-to-end (Fase 3)
+6. **"Per SSO/SCIM devo pagare enterprise plan"** → già incluso nel nostro stack!
+
+---
+
+## Visione competitiva — ampliata
+
+| Vincono su… | FluxyChat deve… |
+|--------------|-----------------|
+| **Portal** — Setup 3 righe, ~14 kB gzip, `useSyncExternalStore`, status `degraded` | Quickstart ≤ 5 min, bundle documentato, zero stub in API pubblica, package split `@fluxy-chat/react` |
+| **Stream/Sendbird** — UI kit pronti per React/iOS/Android, 8+ SDK nativi, moderation dashboard | Headless UI kit maturo + Storybook, `@fluxy-chat/ui` stabile publish, moderation UI in console |
+| **Ably** — 99.999% SLA, global edge PoPs, pub/sub guarantees, firehose | SLO tracking visibile in console, status page pubblica, 99.99% target sul Worker Cloudflare |
+| **LiveKit/Daily** — Voice AI end-to-end, WebRTC, STT→LLM→TTS < 300ms | Voice pipeline cross-provider (OpenAI Realtime + Gemini Live adapter), huddles con screen share |
+| **Vercel AI SDK 7** — Standard API per agenti (reasoning, tool context, WorkflowAgent, OTel telemetry) | Integrare stesso pattern API nel nostro agent layer → dev familiarità istantanea |
+| **Tutti** — Lock-in cloud obbligatorio | **MOAT INSUPERABILE:** MIT self-host completo + Cloudflare pricing leggibile + nessun vendor lock-in |
+
+**Regola:** non aggiungere feature demo finché Fase 1–2 non sono verdi.
+
+---
+
+## Fase 1 — Beat Portal on DX
+
+**Obiettivo:** un developer integra chat in produzione (self-host o cloud) con la stessa facilità percepita di Portal, con SDK più robusto e testato.  
+**Durata stimata:** 3–4 settimane  
+**Exit criteria:** quickstart E2E verificato; zero export SDK pubblici che throwano stub; errori documentati; publish CI verde; package split fatto.
+
+### 1.1 Quickstart & first-run (P0)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| DX-1 | Verificare `pnpm first-message` end-to-end su macchina pulita | `scripts/first-message.mjs` | [x] |
+| DX-2 | Allineare quickstart docs ↔ script (stessi env var, stessi curl) | `apps/docs/content/docs/getting-started/quickstart.mdx`, `docs/quickstart-afternoon.md` | [x] |
+| DX-3 | StackBlitz / template `create-fluxy-chat` — smoke test template default | `packages/create-fluxy-chat/` | [x] |
+| DX-4 | Pagina docs “Client setup” con tab React / vanilla / RN / Flutter | `apps/docs/content/docs/getting-started/client-setup.mdx` | [x] |
+| DX-5 | Errori comuni (401, not member, token expired) con fix copy-paste | nuova guida `apps/docs/content/docs/guides/troubleshooting-integration.mdx` | [x] |
+| **DX-5.1** (NUOVO) | Testing utilities: mock adapter, `FluxyChatMockClient`, Vitest matchers (`toHavePosted`, `toHaveEdited`) | `packages/sdk/src/testing-utils.ts` + docs guida testing | [x] |
+
+### 1.2 SDK API surface cleanup + package split (P0)
+
+Molti moduli in `@fluxy-chat/sdk` espongono funzioni che lanciano `"not implemented in SDK - use worker runtime"`. Pulire la superficie pubblica e fare package split indipendenti stile Portal.
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| DX-6 | Inventario export pubblici vs worker-only | `packages/sdk/src/index.ts`, `package.json` exports | [x] |
+| DX-7 | Spostare runtime-only in subpath `@fluxy-chat/sdk/worker-runtime` + rimuovere da index principale | `packages/sdk/` | [x] |
+| DX-8 | Documentare in README: cosa va nel browser vs nel Worker | `packages/sdk/README.md` | [x] |
+| DX-9 | Aggiungere test che fallisce se nuovo export stub finisce in entry client | `packages/sdk/src/api-report.test.ts` | [x] |
+| **DX-9.1** (NUOVO — ARCH-4) | **Package split `@fluxy-chat/react`** — estrarre hook React dal monolite SDK, peer dep react, transitional re-export da `@fluxy-chat/sdk/react` | `packages/react/` (esiste — re-export da SDK), workspace + CI publish | [x] |
+| **DX-9.2** (NUOVO — ARCH-1) | `useSyncExternalStore` + `INERT_FLUXY_ROOM_SNAPSHOT` frozen per SSR sicuro + no StrictMode glitch | `packages/sdk/src/use-chat.ts`, `packages/react/` | [x] |
+
+**Stub noti da risolvere o reclassificare:**  
+`tts.ts`, `tool-overrides.ts`, `tool-context.ts`, `tool-annotations.ts`, `structured-output.ts`, `streaming-markdown.ts`, `stream-resumption.ts`, `sandbox.ts`, `provider-tools.ts`, `message-metadata.ts`, `loop-control.ts`, `image-generation.ts`, `hitl-approval.ts`, `dynamic-prompts.ts`, `data-parts.ts`, `cross-platform.ts`.
+
+### 1.3 Errori tipizzati, connection UX & diagnostics (P1)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| DX-10 | Tabella errori SDK (`code` → HTTP/WS → azione utente) | `packages/sdk/README.md` + docs guide | [x] |
+| **DX-10.1** (NUOVO — F-2) | **Error hierarchy tipizzata completo:** `FluxyChatError` base, `FluxyRateLimitError` (con `retryAfterMs`), `FluxyNotImplementedError`, `FluxyLockError`, sottoclassi per ogni caso | `errors.ts` + `structured-errors.ts` (`RateLimitError` già presente) | [x] |
+| DX-11 | Mapping `connectionStatus` → label UI (incl. `degraded`, `degraded-http`) — PARITY Portal | `packages/sdk/src/connection-state.ts`, `packages/ui/` | [x] |
+| DX-12 | Banner connessione in dashboard chat (reconnect, degraded) | `apps/dashboard/components/chat/fluxychat.tsx` | [x] |
+| **DX-12.1** (NUOVO — ARCH-2) | `FinalizationRegistry` dev-only leak warning su `acquireFluxyRoomSession` | `packages/sdk/src/room-session-handle.ts` | [x] |
+| DX-13 | Verifica checklist post-ARCH in `PORTAL-PARITY-ANALYSIS.md` § Verifica manuale | manual QA | [x] |
+
+### 1.4 Package publish & CI (P1)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| DX-14 | `pnpm check:publish-manifest` verde su protocol, sdk, react, ui | `scripts/check-publish-manifests.mjs` | [x] |
+| **DX-14.1** (NUOVO) | Publish manifest verify script stile Portal CI (check `workspace:` non sbagliato, exports map validi) | `.github/workflows/`, `scripts/verify-publish-manifest.mjs` | [x] |
+| DX-15 | Changelog per release `@fluxy-chat/*` (semver policy + release note) | `docs/PUBLISHING.md`, package CHANGELOG | [x] |
+| DX-16 | Badge bundle size SDK in README (gzip) + confronto Portal (14 kB) | `packages/sdk/README.md` | [x] |
+| **DX-16.1** (NUOVO) | Bundle analyzer report su CI (treemap) — teniamo traccia del size | `.github/workflows/`, script rollup | [x] |
+
+### 1.5 React Native parity (P2)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| DX-17 | Implementare `loadHistory` in `use-chat` RN | `packages/react-native-sdk/src/use-chat.ts` | [x] |
+| DX-18 | Test reconnect + history su mock WS | `packages/react-native-sdk/` | [x] |
+| DX-19 | Docs RN quickstart | `apps/docs/content/docs/` (nuova pagina) | [x] |
+| **DX-19.1** (NUOVO) | Offline message outbox + auto-send on reconnect (mobile weak network) | `packages/sdk/src/transport/outbox.ts` | [x] |
+
+---
+
+## Fase 2 — Product polish
+
+**Obiettivo:** il prodotto *sembra* finito — console operatore chiara, showcase separati, inbox e docs al livello Portal+. Inoltre: status page pubblica, DevTools, UI kit maturo, knowledge base connectors.  
+**Durata stimata:** 4–6 settimane  
+**Exit criteria:** navigazione console vs labs chiara; inbox e2e verde; 8 guide cookbook complete; compare page aggiornata con tutti i competitor; status page live; DevTools funzionante.
+
+### 2.1 Dashboard — Console vs Labs (P0)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| PL-1 | Audit pagine: **Console** (ops) vs **Labs/Showcase** (demo) | `apps/dashboard/app/` | [x] |
+| PL-2 | Raggruppare showcase sotto `/labs` o nav secondaria “Demos” | `apps/dashboard/app/components/console-nav.ts` | [x] |
+| PL-3 | Console core sempre in evidenza: Rooms, Agents, Webhooks, Inbox, Settings, Privacy, Moderation, Analytics | sidebar / home | [x] |
+| PL-4 | Home operator: shortcut + stato connessione worker + SLO widget (ultimi 7 gg) | `apps/dashboard/app/dashboard/page.tsx` | [x] |
+| PL-5 | Rimuovere o nascondere pagine incomplete dietro feature flag | `docs/feature-flags.md` | [x] |
+
+**Pagine candidate Labs:** `/stream`, `/game`, `/fleet`, `/web3`, showcase components.
+
+### 2.2 Inbox hub + Moderation + Analytics (P1)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| PL-6 | UI inbox: items feed + counter badge + mark read | `apps/dashboard/app/inbox/` | [x] |
+| PL-7 | `onItem` callback demo / test integrato | `apps/dashboard/app/inbox/use-inbox-on-item.test.tsx` | [x] |
+| PL-8 | Docs inbox: modello items vs channels vs counter | `apps/docs/content/docs/core/inbox.mdx` (o nuova) | [x] |
+| **PL-8.1** (NUOVO) | **Moderation dashboard UI** — reports list, mute/ban utente, message flag, profanity filter stats, escalation queue HITL | `apps/dashboard/app/moderation/` nuova sezione | [x] |
+| **PL-8.2** (NUOVO) | Analytics room: message volume, active users, peak concurrency, agent usage, delivery rate | `apps/dashboard/app/analytics/` o dentro `/rooms/\{id\}` | [x] |
+
+### 2.3 Docs & guides (P1)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| PL-9 | Guida Auth (JWT, anonymous, token refresh) | `apps/docs/content/docs/guides/` | [x] |
+| PL-10 | Guida Interactive cards end-to-end | cookbook cards | [x] |
+| PL-11 | Guida Agents + HITL | esiste parzialmente — allineare a codice | [x] |
+| PL-12 | Guida Inbox + notifications | nuova o merge | [x] |
+| **PL-12.1** (NUOVO) | **Guida Testing con mocking utilities** — esempio Vitest/Jest di test integrazione SDK | `apps/docs/content/docs/guides/testing-sdk.mdx` | [x] |
+| **PL-12.2** (NUOVO) | **Cookbook Knowledge Base + RAG** — connettere Notion/Confluence/GDrive a un agente Fluxy | `docs/cookbook/kb-rag-agent.md` | [x] |
+| **PL-12.3** (NUOVO) | **Guida Migration da Pusher / Ably / Sendbird** — mapping API equivalenti, script di import history | `apps/docs/content/docs/guides/migrate-from-pusher.mdx` | [x] |
+| PL-13 | Pagina **Compare** (FluxyChat vs Portal vs Pusher vs Stream vs Ably) — fatti, no marketing vuoto, aggiungere row per self-host MIT, AI, voice, omnichannel | dashboard `/compare` o docs | [x] |
+| PL-14 | Docs build CI in GitHub Actions | `.github/workflows/` | [x] |
+| **PL-14.1** (NUOVO) | Interactive docs playground — editor live per testare SDK API senza setup (es. “try send message”) | `apps/docs/app/playground/` | [x] |
+
+### 2.4 UI kit & chat widget & Trust (P2)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| PL-15 | `@fluxy-chat/ui` — storybook o pagina docs live components + publish package | `packages/ui/` | [x] |
+| PL-16 | Embed widget: doc + demo minimale | `docs/embed-widget.md`, dashboard | [x] |
+| PL-17 | Theming / white-label: `data-theme` documentato con esempio | `docs/custom-domain-white-label.md` | [x] |
+| **PL-17.1** (NUOVO — F-4 / trust signal) | **DevTools inspector Web UI locale** — ispeziona LLM calls, tool calls, token usage, timeline room events, connection debug | `packages/sdk/src/devtools.ts` + standalone pagina docs/dashboard | [x] |
+| **PL-17.2** (NUOVO — trust signal) | **Status page pubblica** — uptime da cron `/health`, storico D1/KV, incidenti markdown | `apps/status/` su CF Pages (build-first, no BetterStack) | [x] |
+| **PL-17.3** (NUOVO — trust signal) | Public changelog — release note da `CHANGELOG.md` + git tags | `apps/docs/app/changelog/` (build-first, no Headway) | [x] |
+
+### 2.5 Qualità & test (P2)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| PL-18 | E2E smoke: onboarding + inbox + send message + weak network simulation | `apps/dashboard/e2e/` | [x] |
+| PL-19 | Conformance test protocol ↔ worker frames | `packages/protocol/src/conformance-synthetic.test.ts` | [x] |
+| PL-20 | `pnpm test` root — documentare cosa gira per package | root `package.json` | [x] |
+| **PL-20.1** (NUOVO — F-3 observability) | OpenTelemetry SDK + Worker — export OTLP; doc self-host Langfuse OSS / Jaeger / Grafana Tempo | `packages/sdk/src/telemetry.ts`, worker `tracing.js` | [x] |
+| **PL-20.2** (NUOVO — G-8) | **Webhook event catalog completo** — ogni evento con schema typizzato, firma HMAC, retry policy (200 status), batch opzionale | `apps/docs/content/docs/webhooks/catalog.mdx` + worker validazione | [x] |
+
+---
+
+## Fase 3 — Moat (differenziazione vs TUTTI i competitor)
+
+**Obiettivo:** feature che Portal, Stream, Ably, Pusher non possono copiare facilmente — diventare la piattaforma AI-native chat per eccellenza.  
+**Durata:** ongoing, dopo Fase 1–2 verdi  
+**Priorità:** **MEDIUM → ALTA dopo F2** (perché AI × Chat è il nostro differenziale chiave nel 2026).
+
+### 3.1 AI-native platform — Vercel AI SDK 7 compatibilità (P1 — ALTA dopo F2)
+
+Integrare pattern API Vercel AI SDK 7 perché i developer già li conoscono (16M+ weekly downloads = standard de facto).
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| MO-1 | Agent templates installabili (1-click da dashboard) | `apps/dashboard/app/agents/` | [x] |
+| MO-2 | HITL approval flow documentato + UI polish + HMAC-signed per-tool approval | `ToolApprovalPanel`, docs | [x] |
+| MO-3 | `toAiMessagesFromRoom` in cookbook agent | docs + example repo | [x] |
+| **MO-3.1** (NUOVO — A-1 critical) | **Param `reasoning` standard cross-provider** per `generateText`/`streamText`/agent invoke — mappa a setting nativo OpenAI/Anthropic/Gemini | `packages/agent/src/` + SDK invoke API | [x] |
+| **MO-3.2** (NUOVO — A-3 critical) | **Tool approval flow con HMAC + per-tool map** → pattern identico Vercel AI SDK 7 `toolApproval` | worker + SDK + dashboard UI | [x] |
+| **MO-3.3** (NUOVO — A-2/KB) | **Agent memory system integrato** — provider-agnostic (Anthropic memory, Mem0, MongoDB, D1 built-in) con `memory.*` API in SDK | `packages/agent/src/memory.ts` + docs | [x] |
+| **MO-3.4** (NUOVO — A-4 lifecycle) | **Lifecycle callbacks sistematici** (`onStart`, `onStepStart`, `onLanguageModelCallStart/End`, `onToolExecutionStart/End`, `onStepEnd`, `onEnd`) su generate/stream/agent | `packages/agent/src/` | [x] |
+| **MO-3.5** (NUOVO — C-1 durable) | **Durable AI Transport layer** — sessioni agente che sopravvivono a disconnect/device switch con resumable token streaming + offset continuity | worker AI transport, SDK reconnect resume hook | [x] |
+| **MO-3.6** (NUOVO — G-4 KB RAG) | **Knowledge base connectors** (Notion, Confluence, Google Drive, Intercom, Zendesk) + RAG automatico per agenti | worker connectors, dashboard UI, docs cookbook | [x] |
+
+### 3.2 Enterprise & compliance — AI governance (P2 — ALTA per mid-market)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| MO-4 | SAML/SCIM — completare UI config (codice parziale P14/P18) | dashboard settings | [x] |
+| MO-5 | DLP + audit export — happy path documentato + PHI/PCI detection | `docs/`, `/soc2` | [x] |
+| MO-6 | Retention + legal hold — verifica UI admin + chain of custody export | worker + dashboard | [x] |
+| **MO-6.1** (NUOVO — E-2) | **AI Governance dashboard** — model/prompt/tool registry, risk tier (low/med/high/critical), evaluations pre-deploy, evidence export SOC 2 | dashboard nuova sezione `/ai-governance` | [x] |
+| **MO-6.2** (NUOVO — E-4/E-5) | **DLP PHI/PCI detection** su text/file/audio + policy versioning + action block/redact/quarantine + **Customer-Managed Keys (CMK)** envelope encryption | worker `dlp-*.js`, dashboard settings | [x] |
+| **MO-6.3** (NUOVO — E-8/MCP) | **MCP server identity & instructions** — `serverInfo`, provenienza tool parts, capability grants, audit log ogni tool call | worker `mcp-*.js` + SDK | [x] |
+
+### 3.3 Omnichannel, self-host & Voice (P2 — voice = differenziale 2026)
+
+| ID | Task | File / area | Status |
+|----|------|-------------|--------|
+| MO-7 | SMS/WhatsApp guide produzione (Sent.dm o adapter) | docs cookbook | [x] |
+| MO-8 | Self-host one-command path (`wrangler` + migrate + seed) | `docs/self-hosting.md`, script | [x] |
+| MO-9 | `fluxy.config.ts` — esempio authz + middleware in docs | `@fluxy-chat/config` | [x] |
+| **MO-9.1** (NUOVO — D-1/D-3/D-4/D-5 critical voice) | **Voice AI pipeline end-to-end cross-provider** — STT→LLM→TTS < 300ms. Pattern **adapter OpenAI Realtime API come standard** (mercato l'ha già scelto) + Gemini Live adapter upstream (emula OpenAI WS surface). VAD + turn detection semantico, interruption/barge-in, noise suppression AEC | worker voice routes, SDK `useVoice()` hook, dashboard quality metrics | [ ] |
+| **MO-9.2** (NUOVO — D-9 huddles) | **Huddles audio/video con screen share** (WebRTC) + captions + recording + end-to-end encryption opzionale | worker routes + UI widget | [ ] |
+| **MO-9.3** (NUOVO — G-9 cross-channel) | **Cross-channel continuity & customer memory** — stesso utente tra web/app/WhatsApp/SMS/voice con identity binding + profile merge + journey history | worker CDP + dashboard customer profile view | [ ] |
+| **MO-9.4** (NUOVO — G-5 automation) | **Workflow automation builder** (IF-THEN trigger-action) visuale o dichiarativo: "quando messaggio contiene X → avvia agente Y → invia notifica Z" | dashboard `/automations`, worker executor | [x] |
+
+### 3.4 Marketplace & ecosystem (P3 — future, ma imposta le fondamenta in F3)
+
+| ID | Task | Status |
+|----|------|--------|
+| MO-10 | Agent marketplace publish/install (templates + skill + connectors) | [x] |
+| MO-11 | Adapter Slack/Discord inbound bridge (già stub — completo) | [x] |
+| MO-12 | Customer data layer + segment broadcast | [ ] |
+| **MO-12.1** (NUOVO — G-1/MCP) | **MCP Apps marketplace** — server MCP pre-built e verificati installabili 1-click su qualsiasi agente | marketplace + security audit dei server | [ ] |
+| **MO-12.2** (NUOVO — G-2 integrations) | **CRM/Helpdesk native integrations** (Zendesk, Intercom, HubSpot, Salesforce) — sync tickets, customer profile, agent handoff bi-direzionale | worker adapters, dashboard settings, docs | [ ] |
+
+---
+
+## Fase 4 — Market Dominance (Diventiamo IL Punto Di Riferimento)
+
+**Obiettivo:** 6-12 mesi dopo production go-live — FluxyChat è il nome che tutti i dev citano quando si parla di "chat + AI su Workers".  
+**Trigger di partenza:** Fasi 1-2-3 completate al 80%, primi 50 paying customer, SOC 2 Type 2 report ottenuto.
+
+| ID | Task | Priorità | Perché diventiamo punto di riferimento |
+|----|------|----------|----------------------------------------|
+| MD-1 | **SOC 2 Type 2 + HIPAA BAA** — controlli + evidence in product (**audit firmato** differito fino a revenue) | dashboard `/soc2`, runbook | [ ] |
+| MD-2 | **Product Hunt Launch 2.0 (Production Edition)** — launch event, comparison HN, Dev.to technical deep-dive, YT demo 5-min | High | Dà il boost iniziale di credibilità "production-ready" |
+| MD-3 | **Case study pubblici** — 3-5 customer reali con metriche quantificabili (es. "abbiamo sostituito Pusher e risparmiato 70%", "voice agent上线 in 2 settimane") | High | Social proof = vendite B2B si fanno così |
+| MD-4 | **FluxyConf virtuale** — 1 gg talk su case study, deep-dive tecnici, roadmap, community | Medium | Costruisce community e moat reputazionale |
+| MD-5 | **Official SDK per piattaforme mancanti** — native Kotlin (Android), Swift (iOS), Unity, Unreal | Medium | Copre il 95% del mercato mobile/gaming; Stream/Sendbird li hanno |
+| MD-6 | **Terraform + Pulumi provider** — IaC per configurare progetti Fluxy | Medium | Enterprise buyer ama IaC |
+| MD-7 | **Academic paper / technical whitepaper** — "Serverless Chat at Scale: RoomDurableObject + D1 Architecture" | Medium | Posizionamento thought leadership, citazioni HN/Twitter |
+| MD-8 | **Open Source Community Program** — bounty per issue, contributor license, core maintainer program | Low | Riduce nostro carico di lavoro + aumenta adoption organica |
+| MD-9 | **Federation Matrix bridge** (DMA EU compliance) — cross-server interoperabilità | Low | Apre a uso case pubblico/enterprise europei, moat lungo periodo |
+
+**Trigger Fase 4 audit firmato:** revenue + go-live; **tutto il resto Fase 4** (case study, PH launch, Terraform, SDK nativi, FluxyConf) resta in scope build-first.
+
+---
+
+## Ordine di esecuzione consigliato
+
+Vedi § **Principio build-first** — eseguire Fase 1 → 2 → 3 in sequenza; Fase 4 in parallelo dove non richiede audit a pagamento.
+
+---
+
+## Progress log
+
+| Data | Item | Nota |
+|------|------|------|
+| 2026-07-28 | Roadmap creata | Production gate / Stripe esclusi per mancanza Stripe Business |
+| 2026-07-28 | Docs HTTP API | Fumadocs tag-grouped, 531 pagine build OK |
+| 2026-07-28 | Roadmap aggiornata post-analisi completa | Aggiunta Fase 4 Market Dominance; 30+ nuovi item da market research; sezione Market Landscape 2026; confronto ampliato vs 5 categorie competitor |
+| 2026-07-28 | Principio build-first | Tutti gli item implementabili gratis/OSS in scope; solo Stripe + audit SOC 2 firmato fuori; team cost non vincolo |
+| 2026-07-28 | DX-1, DX-2, DX-6–DX-9 | `first-message` OK (messageId=21); quickstart docs; stub rimossi da `@fluxy-chat/sdk` entry; test denylist; README browser vs worker |
+| 2026-07-28 | DX-4, DX-5, DX-10, DX-11 | client-setup tabs; troubleshooting guide; error table README; `getConnectionStatusLabel` |
+| 2026-07-28 | MO-6.1, MO-9.4 | `/ai-governance` registry + evaluations; `/automations` workflows UI; guides |
+| 2026-07-28 | MO-3.6, MO-6 | `/admin/kb/*` connectors + dashboard `/knowledge`; retention/legal hold `/settings/retention`; KB connectors guide |
+| 2026-07-28 | MO-5 | DLP + audit export guide; `/soc2` DLP scan + audit log download |
+| 2026-07-28 | MO-3.5, MO-4 | `createResumableAgentStream` + worker `/ai/streams/*`; guide durable-ai-sessions; dashboard `/settings/identity` SAML + SCIM |
+| 2026-07-28 | PL-8.1–8.2, MO-1–3.4, MO-7–9 | moderation dashboard; analytics delivery/agent stats; agent 1-click templates; agent guides (HMAC, memory, lifecycle, room→AI); self-host script; fluxy.config + SMS prod checklist |
+| 2026-07-28 | MO-6.2, MO-6.3, MO-10, MO-11 | `/settings/dlp` CMK + policy version; `/settings/mcp` identity + audit; `/bridges` Slack/Discord; marketplace publish/submit UI; enterprise guides |
+| 2026-07-28 | PL-17.1–17.3, PL-20.1, DX-19.1 | DevTools docs; status page + apps/status CF Pages; public changelog; OTLP/console telemetry + observability doc; transport message outbox |
+| 2026-07-28 | PL-16–17, PL-20.2, DX-17–19 | embed demo + smoke; data-theme white-label; webhook catalog + worker validation; RN loadHistory + reconnect test + quickstart |
+| 2026-07-28 | PL-12.2–12.3, PL-15, PL-18–20, DX-16.1 | KB+RAG cookbook; Pusher migration guide; UI component ref; portal-parity E2E; protocol conformance; TESTING.md + root test matrix; bundle size CI |
+| 2026-07-28 | DX-13–15, DX-14.1, PL-5, PL-10–12 | publish manifest CI + exports check; semver/CHANGELOG; dashboard nav flags; cards/HITL/inbox guides |
+| 2026-07-28 | PL-8, PL-9, PL-12.1, DX-16 | inbox docs (items/counter/watermark); auth + troubleshooting + testing guides; SDK bundle size note |
+
+---
+
+## Verifica “beat TUTTI i competitor” (Checklist Finale Estesa)
+
+### Fase 1 — DX (Beat Portal)
+- [ ] Developer nuovo: messaggio inviato in < 5 min con docs + script
+- [ ] Nessun export client SDK che throwa stub a runtime
+- [ ] Errori connessione comprensibili in UI e docs (incl. `degraded`/`degraded-http`)
+- [ ] Sidebar docs: API per tag + guide cookbook ≥ 8
+- [ ] Package split: `@fluxy-chat/protocol` + `@fluxy-chat/sdk` + `@fluxy-chat/react` publishabili indipendentemente
+- [ ] `useSyncExternalStore` + snapshot frozen → no SSR warning / StrictMode glitch
+- [ ] Error hierarchy tipizzata completa (RateLimit con retryAfterMs, ecc.)
+- [ ] Testing utilities pubblici + guida docs
+- [ ] `@fluxy-chat/sdk` publish manifest + changelog pronti + CI verde
+
+### Fase 2 — Product Polish (Beat Stream/Ably UI)
+- [ ] Dashboard: console separata da demo/labs
+- [ ] Inbox: badge + items feed + mark read funzionanti + `onItem` callback
+- [ ] Moderation dashboard: reports, mute/ban, escalation HITL
+- [ ] Analytics room/tenant: volume, active users, delivery rate
+- [ ] Compare page onesta vs 5 competitor (Portal, Pusher, Ably, Stream, Liveblocks) con self-host e AI come differenziatori
+- [ ] `@fluxy-chat/ui` storybook live + publish npm
+- [ ] DevTools inspector Web UI: LLM calls, tool calls, timeline
+- [ ] Status page pubblica (uptime, SLO, incidenti)
+- [ ] Public changelog regolare
+- [ ] Telemetry OpenTelemetry exportabile + doc self-host (Langfuse OSS / Jaeger / Tempo)
+- [ ] Guida migration da Pusher/Ably/Sendbird
+
+### Fase 3 — Moat (Beat TUTTI)
+- [ ] Agent invoke API con param `reasoning` standard cross-provider
+- [ ] Tool approvals HMAC-signed + per-tool map
+- [ ] Durable AI Transport: sessioni agente sopravvivono a disconnect
+- [ ] Knowledge base connectors (Notion/Confluence/GDrive) + RAG automatico
+- [ ] AI Governance dashboard (model registry, risk tier, evaluations)
+- [ ] DLP PHI/PCI detection + Customer-Managed Keys
+- [ ] Voice AI pipeline end-to-end: OpenAI Realtime + Gemini Live adapter, under 300ms latency, interruption, VAD semantico
+- [ ] Huddles audio/video con screen share + recording
+- [ ] Cross-channel continuity (web/WhatsApp/SMS/voice) con customer memory
+- [ ] MCP Apps marketplace installabile
+- [ ] Zendesk/Intercom/HubSpot native integrations
+
+### Fase 4 — Dominance
+- [ ] SOC 2 controlli + evidence export completi in product (audit Type 2 firmato quando revenue)
+- [ ] HIPAA BAA template + checklist (BAA legale firmato quando enterprise deal)
+- [ ] 3-5 case study pubblici con metriche
+- [ ] Product Hunt Production Edition con ≥500 upvote
+- [ ] Terraform provider ufficiale

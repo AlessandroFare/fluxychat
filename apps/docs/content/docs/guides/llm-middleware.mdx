@@ -1,0 +1,203 @@
+---
+title: "Language Model Middleware"
+description: "Language model middleware intercepts and modifies LLM calls — enabling guardrails, caching, RAG injection, logging, and parameter transformation in a model-agno"
+---
+
+Language model middleware intercepts and modifies LLM calls — enabling guardrails, caching, RAG injection, logging, and parameter transformation in a model-agnostic way.
+
+## Using Middleware
+
+`wrapLanguageModel` wraps a model with one or more middleware:
+
+```ts
+import { wrapLanguageModel } from '@fluxy-chat/agent';
+
+const wrappedModel = wrapLanguageModel({
+  model: myModel,
+  middleware: myMiddleware,
+});
+
+// Use like any other model
+const result = await wrappedModel.generate({ prompt: [...] });
+```
+
+## Multiple Middleware
+
+Middleware applies in order (first wraps second):
+
+```ts
+const wrapped = wrapLanguageModel({
+  model: myModel,
+  middleware: [loggingMiddleware, cachingMiddleware],
+});
+// loggingMiddleware(cachingMiddleware(myModel))
+```
+
+## Built-in Middleware
+
+### extractReasoningMiddleware
+
+Extracts reasoning from `<think>` tags in generated text:
+
+```ts
+import { wrapLanguageModel, extractReasoningMiddleware } from '@fluxy-chat/agent';
+
+const model = wrapLanguageModel({
+  model: myModel,
+  middleware: extractReasoningMiddleware({ tagName: 'think' }),
+});
+
+const result = await model.generate({ prompt: ['Explain AI'] });
+console.log(result.text);          // Clean text without tags
+console.log(result.reasoningText); // Extracted reasoning
+```
+
+### defaultSettingsMiddleware
+
+Applies default settings without overriding explicit values:
+
+```ts
+import { wrapLanguageModel, defaultSettingsMiddleware } from '@fluxy-chat/agent';
+
+const model = wrapLanguageModel({
+  model: myModel,
+  middleware: defaultSettingsMiddleware({
+    settings: {
+      temperature: 0.5,
+      maxOutputTokens: 800,
+      providerOptions: { openai: { reasoningEffort: 'low' } },
+    },
+  }),
+});
+
+// Explicit temperature=0.9 overrides the default
+const result = await model.generate({ prompt: [...], temperature: 0.9 });
+```
+
+### extractJsonMiddleware
+
+Strips markdown code fences from JSON responses:
+
+```ts
+import { wrapLanguageModel, extractJsonMiddleware } from '@fluxy-chat/agent';
+
+const model = wrapLanguageModel({
+  model: myModel,
+  middleware: extractJsonMiddleware(),
+});
+
+// If model returns ```json { "key": "value" } ```
+// The middleware returns { "key": "value" }
+```
+
+### simulateStreamingFromGenerate
+
+Creates a streaming interface from a non-streaming model by chunking the response:
+
+```ts
+import { simulateStreamingFromGenerate } from '@fluxy-chat/agent';
+
+const streamingModel = simulateStreamingFromGenerate(myModel);
+const stream = await streamingModel.stream({ prompt: [...] });
+```
+
+## Custom Middleware
+
+Implement the `LanguageModelMiddleware` interface with any of these hooks:
+
+```ts
+import type { LanguageModelMiddleware } from '@fluxy-chat/agent';
+
+const loggingMiddleware: LanguageModelMiddleware = {
+  transformParams: async ({ params }) => {
+    console.log('Request:', params.prompt.length, 'messages');
+    return params;
+  },
+
+  wrapGenerate: async ({ doGenerate, params }) => {
+    const start = Date.now();
+    const result = await doGenerate();
+    console.log('Generated', result.text.length, 'chars in', Date.now() - start, 'ms');
+    return result;
+  },
+
+  wrapStream: async ({ doStream, params }) => {
+    const stream = await doStream();
+    return stream; // passthrough or pipe through TransformStream
+  },
+};
+```
+
+### RAG Middleware
+
+Inject relevant context from a knowledge base:
+
+```ts
+const ragMiddleware: LanguageModelMiddleware = {
+  transformParams: async ({ params }) => {
+    const lastUserMsg = params.prompt.findLast(m => m.role === 'user');
+    if (!lastUserMsg || typeof lastUserMsg.content !== 'string') return params;
+    const context = await searchKnowledgeBase(lastUserMsg.content);
+    return {
+      ...params,
+      prompt: [
+        ...params.prompt,
+        { role: 'system', content: `Context: ${context}` },
+      ],
+    };
+  },
+};
+```
+
+### Caching Middleware
+
+```ts
+const cache = new Map<string, any>();
+
+const cacheMiddleware: LanguageModelMiddleware = {
+  wrapGenerate: async ({ doGenerate, params }) => {
+    const key = JSON.stringify(params);
+    if (cache.has(key)) return cache.get(key);
+    const result = await doGenerate();
+    cache.set(key, result);
+    return result;
+  },
+};
+```
+
+### Guardrails Middleware
+
+```ts
+const guardrailMiddleware: LanguageModelMiddleware = {
+  wrapGenerate: async ({ doGenerate }) => {
+    const result = await doGenerate();
+    return {
+      ...result,
+      text: result.text.replace(/badword/g, '<REDACTED>'),
+    };
+  },
+};
+```
+
+## Type Reference
+
+```ts
+interface LanguageModelMiddleware {
+  transformParams?: (context: MiddlewareParams) => AIModelRequest | Promise<AIModelRequest>;
+  wrapGenerate?: (context: GenerateContext) => Promise<AIModelResponse>;
+  wrapStream?: (context: StreamContext) => Promise<ReadableStream<AIStreamPart>>;
+}
+
+interface WrappedModelOptions {
+  model: AILanguageModel;
+  middleware: LanguageModelMiddleware | readonly LanguageModelMiddleware[];
+}
+
+function wrapLanguageModel(options: WrappedModelOptions): AILanguageModel;
+```
+
+## See Also
+
+- [Provider Options](/docs/provider-options) — provider-specific configuration
+- [Stream Transforms](/docs/stream-transforms) — stream-level transformations
+- [Provider Registry](/docs/provider-registry) — combining middleware with provider management

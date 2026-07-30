@@ -1,0 +1,97 @@
+---
+title: "Card Element Builder"
+description: "FluxyChat's card builder lets you compose structured, interactive messages with buttons, tables, images, and sections."
+---
+
+## Overview
+
+Cards go beyond plain text and markdown. They enable:
+
+- **Interactive buttons** for approvals, quick replies, and form submissions
+- **Structured layouts** with sections, dividers, and fields
+- **Tables** with headers and rows
+- **Images** with captions
+
+## Element Types
+
+| Element | Description |
+|---------|-------------|
+| `Card` | Root container with optional title, subtitle, imageUrl |
+| `Text` | Text content (plain, bold, or muted) |
+| `Button` | Interactive button with action ID and optional style |
+| `LinkButton` | Button that opens a URL |
+| `Actions` | Horizontal button group container |
+| `Image` | Image with optional alt text |
+| `Divider` | Horizontal separator |
+| `Section` | Grouped content block |
+| `Field` | Label-value pair |
+| `Fields` | Grid of field pairs |
+| `Link` | Inline link with text and URL |
+| `Table` | Header + rows structured table |
+
+## Function API
+
+```ts
+import { Card, Text, Button, Actions, Divider, Section, Table, cardToMarkdown, cardToFallbackText } from "@fluxy-chat/sdk";
+
+const card = Card({
+  title: "🎉 Welcome!",
+  children: [
+    Text({ content: "Get started with FluxyChat" }),
+    Divider(),
+    Section({
+      children: [
+        Text({ content: "Choose an action:", style: "bold" }),
+        Actions({
+          children: [
+            Button({ id: "create-room", label: "Create Room", style: "primary" }),
+            LinkButton({ url: "https://docs.example.com", label: "Read Docs" }),
+          ],
+        }),
+      ],
+    }),
+  ],
+});
+
+// Render for different platforms
+const markdown = cardToMarkdown(card);
+const fallback = cardToFallbackText(card);
+```
+
+## Fallback Text
+
+For platforms that can't render cards, `cardToFallbackText()` generates a plain-text representation:
+
+```ts
+const text = cardToFallbackText(card);
+// **Title**
+// Subtitle
+// Content
+```
+
+## Markdown Rendering
+
+`cardToMarkdown()` converts a card to markdown format:
+
+```ts
+const md = cardToMarkdown(card);
+// # Title
+// ## Subtitle
+// Content
+```
+
+## Type Guard
+
+```ts
+import { isCardElement } from "@fluxy-chat/sdk";
+
+if (isCardElement(value)) {
+  // value is CardElement
+  console.log(value.title);
+}
+```
+
+## See Also
+
+- [Adapter Pattern Guide](/docs/adapter-pattern) — How cards render per platform
+- [AI Tool Presets Guide](/docs/ai-tool-presets) — Approval gates for card interactions

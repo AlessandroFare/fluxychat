@@ -24,8 +24,11 @@ import type {
   FluxyChatEvent,
   FluxyChatMessage,
 } from "./index";
-import type { FluxySendMessageOptions } from "./message-template";
+import type { FluxySendMessageOptions, FluxyPresenceIntent } from "./message-template";
+import type { ConcurrencyConfig } from "./concurrency";
+import { createConcurrencyStrategy } from "./concurrency";
 import type { UseChatHistoryReplay } from "./use-chat";
+import type { ServerEventHandler } from "./server-realtime";
 import {
   decryptE2eContent,
   encryptE2eContent,
@@ -39,15 +42,22 @@ export interface StartFluxyRoomSessionOptions {
   historyLimit?: number;
   replay?: UseChatHistoryReplay;
   replayHistoryOnReconnect?: boolean;
+  /** Auto read-receipt policy (Portal-style). Default `manual`. */
+  readOn?: import("./use-chat").UseChatReadOn;
+  /** @deprecated use readOn */
   markReadLatest?: boolean;
   presenceInfo?: Record<string, unknown>;
-  /** Pusher-style cache channel: `cache=1` on WS connect. */
+  /** Pusher-style cache channel: `cache=1` on WS connect. Default `on`. */
   wsCache?: "on" | "off";
+  /** Overlapping bot/agent invoke strategy (Portal B-4). */
+  concurrency?: ConcurrencyConfig;
   /** Optional E2E encryption for message bodies (requires room `e2eEnabled`). */
   e2eKey?: string;
   /** When true, fetch GET /rooms/:id/e2e-key on session start if e2eKey is unset. */
   e2eAutoFetch?: boolean;
   onAnyEvent?: (event: FluxyChatEvent) => void;
+  /** Worker vertical/labs fan-out (`server_event` frames). */
+  onServerEvent?: ServerEventHandler;
   onRefreshSession?: () => void;
 }
 
@@ -62,14 +72,21 @@ export function startFluxyRoomSession(
     historyLimit = 50,
     replay = "connect",
     replayHistoryOnReconnect = true,
+    readOn: readOnOption,
     markReadLatest = false,
     presenceInfo,
-    wsCache,
+    wsCache: wsCacheOption,
     e2eKey: e2eKeyOption,
     e2eAutoFetch = false,
+    concurrency,
     onAnyEvent,
+    onServerEvent,
     onRefreshSession,
   } = options;
+
+  const wsCache = wsCacheOption ?? "on";
+
+  const readOn = readOnOption ?? (markReadLatest ? "mount" : "manual");
 
   const { setState, getState } = store;
   const historyOnConnect = replay === "connect";
@@ -93,6 +110,10 @@ export function startFluxyRoomSession(
     const current = getState();
     setState(syncRoomConnectionState(patch, current));
   };
+
+  function httpPublishAvailable(): boolean {
+    return Boolean(client?.isAuthenticated());
+  }
 
   async function maybeDecryptContent(content: string): Promise<string> {
     if (!e2eKeyRef || !isE2eContentEnvelope(content)) return content;
@@ -414,6 +435,12 @@ export function startFluxyRoomSession(
     if (!client) return;
     stopPollingFallback();
     stopSSEFallback();
+    patchConnection({
+      connectionStatus: "degraded-http",
+      connected: false,
+      fallbackTransport: "polling",
+      canPublishViaHttp: httpPublishAvailable(),
+    });
     const tick = async () => {
       if (!active || !client) return;
       try {
@@ -442,7 +469,12 @@ export function startFluxyRoomSession(
       return;
     }
     sseRef = es;
-    patchConnection({ connectionStatus: "sse", connected: false });
+    patchConnection({
+      connectionStatus: "degraded-http",
+      connected: false,
+      fallbackTransport: "sse",
+      canPublishViaHttp: httpPublishAvailable(),
+    });
 
     es.addEventListener("message", (event: MessageEvent) => {
       if (!active) return;
@@ -457,7 +489,6 @@ export function startFluxyRoomSession(
       if (!active) return;
       stopSSEFallback();
       startPollingFallback();
-      patchConnection({ connectionStatus: "polling", connected: false });
     });
   };
 
@@ -518,6 +549,7 @@ export function startFluxyRoomSession(
               type: "message",
               userId: client.userId,
               content: outboundContent,
+              clientMessageId,
               parentId: replyTo ?? null,
               attachments: attachments ?? [],
               ...(options?.expiresInSeconds != null
@@ -540,6 +572,7 @@ export function startFluxyRoomSession(
           type: "message",
           userId: client.userId,
           content: outboundContent,
+          clientMessageId,
           parentId: replyTo ?? null,
           attachments: attachments ?? [],
           ...(options?.expiresInSeconds != null
@@ -619,13 +652,18 @@ export function startFluxyRoomSession(
     }
   };
 
-  const setTyping = (isTyping: boolean) => {
+  const invokeConcurrency = concurrency
+    ? createConcurrencyStrategy(concurrency)
+    : null;
+
+  const setTyping = (isTyping: boolean, intent?: FluxyPresenceIntent) => {
     if (!client) return;
     try {
       connectionRef?.sendJson({
         type: "typing",
         userId: client.userId,
         isTyping,
+        intent: intent ?? (isTyping ? "composing" : "idle"),
       });
     } catch {
       /* ignore */
@@ -765,14 +803,24 @@ export function startFluxyRoomSession(
     if (!targetAgentId) {
       throw new Error("invokeAgent requires an agentId");
     }
-    setState({ agentTyping: true, invokeTypingAgentId: targetAgentId });
-    try {
-      return await client.invokeAgentRest(targetAgentId, trimmedRoomId, content, {
-        replyTo: invokeOptions?.replyTo,
-      });
-    } finally {
-      setState({ agentTyping: false, invokeTypingAgentId: null });
+
+    const run = async () => {
+      setState({ agentTyping: true, invokeTypingAgentId: targetAgentId });
+      try {
+        return await client.invokeAgentRest(targetAgentId, trimmedRoomId, content, {
+          replyTo: invokeOptions?.replyTo,
+        });
+      } finally {
+        setState({ agentTyping: false, invokeTypingAgentId: null });
+      }
+    };
+
+    if (invokeConcurrency) {
+      const result = await invokeConcurrency.enqueue(content, run);
+      if (result === null) return null;
+      return result;
     }
+    return run();
   };
 
   const clearToolThread = () => {
@@ -793,8 +841,18 @@ export function startFluxyRoomSession(
     }
   };
 
+  let visibilityCleanup: (() => void) | undefined;
+
+  const shouldAutoMarkRead = (): boolean => {
+    if (readOn === "manual") return false;
+    if (readOn === "visible" && typeof document !== "undefined" && document.visibilityState !== "visible") {
+      return false;
+    }
+    return true;
+  };
+
   const maybeMarkLatestRead = (messages: FluxyChatMessage[]) => {
-    if (!markReadLatest || !client) return;
+    if (!shouldAutoMarkRead() || !client) return;
     const sorted = [...messages]
       .filter((m) => typeof m.id === "number" && !m.deletedAt)
       .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
@@ -805,9 +863,21 @@ export function startFluxyRoomSession(
   };
 
   scheduleMarkLatest = () => {
-    if (!markReadLatest) return;
+    if (readOn === "manual") return;
     queueMicrotask(() => maybeMarkLatestRead(getState().messages));
   };
+
+  if (readOn === "visible" && typeof document !== "undefined") {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") scheduleMarkLatest();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    visibilityCleanup = () => document.removeEventListener("visibilitychange", onVisibility);
+  }
+
+  if (readOn === "mount" || readOn === "visible") {
+    queueMicrotask(() => scheduleMarkLatest());
+  }
 
   setState({
     sendMessage,
@@ -877,6 +947,7 @@ export function startFluxyRoomSession(
   void (async () => {
     let reconnectBackoff: { baseBackoffMs?: number; maxBackoffMs?: number } = {};
     try {
+      if (client.resolveToken) await client.resolveToken();
       const flags = await client.getFeatureFlags();
       reconnectBackoff = flags.reconnectBackoff;
     } catch {
@@ -911,7 +982,7 @@ export function startFluxyRoomSession(
           });
         } else if (status === "reconnecting") {
           patchConnection({
-            connectionStatus: "reconnecting",
+            connectionStatus: connection.reconnectAttempts > 0 ? "degraded" : "reconnecting",
             connected: false,
             reconnectAttempt: connection.reconnectAttempts,
             reconnectDelayMs: connection.getScheduledReconnectDelayMs(),
@@ -926,7 +997,7 @@ export function startFluxyRoomSession(
       onAuthError: (err) => {
         if (!active) return;
         patchConnection({
-          connectionStatus: "disconnected",
+          connectionStatus: "blocked",
           connected: false,
           connectionError: err,
         });
@@ -954,12 +1025,18 @@ export function startFluxyRoomSession(
         if (active) onAnyEvent(data);
       });
     }
+    if (onServerEvent) {
+      connection.onServerEvent((ev) => {
+        if (active) onServerEvent(ev);
+      });
+    }
     connectionRef = connection;
     connection.connect();
   })();
 
   return () => {
     active = false;
+    visibilityCleanup?.();
     streamEditBatcher.flush();
     stopPollingFallback();
     stopSSEFallback();

@@ -208,6 +208,108 @@ const GROUPS: FeatureGroup[] = [
         href: "/integrations",
         hrefLabel: "Integrations",
       },
+      {
+        title: "Conversation transcripts",
+        description: "Per-user message persistence keyed by cross-platform identity. Append, list, filter, and delete with configurable retention.",
+        href: "/transcripts",
+        hrefLabel: "Transcripts",
+      },
+      {
+        title: "Slash commands",
+        description: "Built-in command parser with positional/named args, flags, quoted values, aliases, and auto-generated help.",
+      },
+      {
+        title: "Regex message routing",
+        description: "Pattern-based message handlers using regular expressions for keyword triggers without @-mentions.",
+      },
+      {
+        title: "App & Agent Marketplace",
+        description: "Publish, review, and install apps with signed manifests, scoped grants, and quota tracking.",
+        href: "/marketplace",
+        hrefLabel: "Try marketplace",
+      },
+      {
+        title: "Chatbot Builder",
+        description: "Visual trigger-action rule engine with 6 event types, 7 action types, conditions, and priority ordering.",
+        href: "/chatbot-builder",
+        hrefLabel: "Build a bot",
+      },
+      {
+        title: "Cross-Channel Continuity",
+        description: "Unified user sessions across web, mobile, voice, email, and SMS with identity binding and context sharing.",
+        href: "/cross-channel",
+        hrefLabel: "Try cross-channel",
+      },
+      {
+        title: "A/B Testing",
+        description: "Multi-variant bot response tests with weighted traffic split, exposure/conversion tracking, and p-value estimation.",
+        href: "/cross-channel",
+        hrefLabel: "A/B testing",
+      },
+      {
+        title: "A2A Protocol",
+        description: "Agent-to-agent communication using Google-standard envelope/task/artifact mapping with extension preservation.",
+        href: "/cross-channel",
+        hrefLabel: "A2A protocol",
+      },
+      {
+        title: "Spatial & Digital Twin Rooms",
+        description: "Shared 3D scene state with entity CRUD, agent vision/action grants, and spatial audio.",
+        href: "/spatial",
+        hrefLabel: "Spatial demo",
+      },
+      {
+        title: "Web3 / Decentralized Chat",
+        description: "Wallet-based auth, token-gated rooms, on-chain message commitments.",
+        href: "/web3",
+        hrefLabel: "Web3 demo",
+      },
+      {
+        title: "Journey Mapping",
+        description: "Track customer touchpoints across channels, visualize transition paths, detect drop-off points.",
+      },
+      {
+        title: "Conversation Analytics",
+        description: "Sentiment analysis, intent detection, topic clustering, and knowledge gap identification.",
+      },
+      {
+        title: "Expert Routing",
+        description: "Skill-based agent routing with SLA policies, priority scoring, and per-agent load balancing.",
+      },
+      {
+        title: "Virtual Waiting Room",
+        description: "Queue management with priority ordering, estimated wait times, and abandonment tracking.",
+      },
+      {
+        title: "CRM & Knowledge Base",
+        description: "Salesforce/Zendesk/HubSpot/Intercom integrations, Confluence/Notion/SharePoint connectors with RAG.",
+        href: "/integrations",
+        hrefLabel: "Integrations",
+      },
+      {
+        title: "Real-time Translation",
+        description: "Per-user language preference, auto-detect, glossary terms, and live translate.",
+      },
+      {
+        title: "Automation Engine",
+        description: "IF-THEN trigger-action rules with 9 event types, 7 action types, cooldown, and execution history.",
+      },
+      {
+        title: "AST markdown system",
+        description: "Complete mdast builder (text, strong, link, code, etc.) with parseMarkdown/stringifyMarkdown via unified/remark with GFM support.",
+      },
+      {
+        title: "Concurrency strategies",
+        description: "Five strategies (concurrent, drop, queue, debounce, burst) for controlling message processing with TTL and overflow policies.",
+      },
+      {
+        title: "Thread state",
+        description: "Per-thread typed state with merge/replace, TTL-based expiry, and generic TypedThreadState accessor.",
+      },
+      {
+        title: "Ephemeral messages",
+        description: "Post ephemeral messages visible only to specific users with automatic DM fallback when native ephemeral is unsupported.",
+      },
     ],
   },
 ];

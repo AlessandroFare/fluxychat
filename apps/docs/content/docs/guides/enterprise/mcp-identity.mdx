@@ -1,0 +1,58 @@
+---
+title: MCP identity and audit
+description: Register MCP servers, tool provenance, and review tool-call audit logs for agent security.
+---
+
+FluxyChat tracks **MCP server identity**, **tool instructions/provenance**, and an **audit log** for every tool call routed through the platform MCP layer.
+
+Configure from [**Settings → MCP identity**](/settings/mcp) or the admin APIs below.
+
+## Register an MCP server
+
+```bash
+curl -X POST "$WORKER_URL/admin/mcp-identity/servers" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "crm-tools",
+    "version": "2.1.0",
+    "vendor": "acme",
+    "instructions": "Use only for read-only CRM lookups."
+  }'
+```
+
+## Register tool provenance
+
+Link a tool to a registered server with origin metadata (`installed`, `builtin`, `remote`):
+
+```bash
+curl -X POST "$WORKER_URL/admin/mcp-identity/tools" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverName": "crm-tools",
+    "toolName": "lookup_contact",
+    "instructions": "Requires customerId in args.",
+    "origin": "installed"
+  }'
+```
+
+## Registry and audit log
+
+```bash
+# Full registry + built-in serverInfo
+curl "$WORKER_URL/admin/mcp-identity/registry" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+
+# Recent tool calls (default limit 50)
+curl "$WORKER_URL/admin/mcp-identity/audit?limit=100" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Built-in FluxyChat MCP tools are logged automatically when invoked through the worker MCP handler.
+
+## Security notes
+
+- Treat `instructions` as security policy — they are shown to agents and stored per tenant.
+- Audit entries retain server/tool names and outcome hashes, not full argument payloads (PII minimization).
+- Pair with [AI Governance](/docs/guides/enterprise/ai-governance) for risk-tier evaluations on tools and models.

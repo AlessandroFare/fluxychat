@@ -1,0 +1,668 @@
+import {
+  Actions,
+  Button,
+  Card,
+  CardLink,
+  CardText,
+  Divider,
+  Field,
+  Fields,
+  Image,
+  LinkButton,
+  RadioSelect,
+  Section,
+  Select,
+  SelectOption,
+} from "chat";
+import { describe, expect, it } from "vitest";
+import { cardToFallbackText, cardToGoogleCard } from "./cards";
+
+describe("cardToGoogleCard", () => {
+  it("creates a valid Google Chat card structure", () => {
+    const card = Card({ title: "Test" });
+    const gchatCard = cardToGoogleCard(card);
+
+    expect(gchatCard.card).toBeDefined();
+    expect(gchatCard.card.sections).toBeInstanceOf(Array);
+  });
+
+  it("accepts an optional cardId", () => {
+    const card = Card({ title: "Test" });
+    const gchatCard = cardToGoogleCard(card, "my-card-id");
+
+    expect(gchatCard.cardId).toBe("my-card-id");
+  });
+
+  it("converts a card with title", () => {
+    const card = Card({ title: "Welcome Message" });
+    const gchatCard = cardToGoogleCard(card);
+
+    expect(gchatCard.card.header).toEqual({
+      title: "Welcome Message",
+    });
+  });
+
+  it("converts a card with title and subtitle", () => {
+    const card = Card({
+      title: "Order Update",
+      subtitle: "Your package is on its way",
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    expect(gchatCard.card.header).toEqual({
+      title: "Order Update",
+      subtitle: "Your package is on its way",
+    });
+  });
+
+  it("converts a card with header image", () => {
+    const card = Card({
+      title: "Product",
+      imageUrl: "https://example.com/product.png",
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    expect(gchatCard.card.header).toEqual({
+      title: "Product",
+      imageUrl: "https://example.com/product.png",
+      imageType: "SQUARE",
+    });
+  });
+
+  it("converts text elements to textParagraph widgets", () => {
+    const card = Card({
+      children: [
+        CardText("Regular text"),
+        CardText("Bold text", { style: "bold" }),
+      ],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    expect(gchatCard.card.sections).toHaveLength(1);
+    const widgets = gchatCard.card.sections[0].widgets;
+
+    expect(widgets).toHaveLength(2);
+    expect(widgets[0]).toEqual({
+      textParagraph: { text: "Regular text" },
+    });
+    expect(widgets[1]).toEqual({
+      textParagraph: { text: "*Bold text*" },
+    });
+  });
+
+  it("converts image elements", () => {
+    const card = Card({
+      children: [
+        Image({ url: "https://example.com/img.png", alt: "My image" }),
+      ],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets).toHaveLength(1);
+    expect(widgets[0]).toEqual({
+      image: {
+        imageUrl: "https://example.com/img.png",
+        altText: "My image",
+      },
+    });
+  });
+
+  it("converts divider elements", () => {
+    const card = Card({
+      children: [Divider()],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets).toHaveLength(1);
+    expect(widgets[0]).toEqual({ divider: {} });
+  });
+
+  it("converts actions with buttons to buttonList", () => {
+    const card = Card({
+      children: [
+        Actions([
+          Button({ id: "approve", label: "Approve", style: "primary" }),
+          Button({
+            id: "reject",
+            label: "Reject",
+            style: "danger",
+            value: "data-123",
+          }),
+          Button({ id: "skip", label: "Skip" }),
+        ]),
+      ],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets).toHaveLength(1);
+
+    const buttonList = widgets[0].buttonList;
+    expect(buttonList).toBeDefined();
+    expect(buttonList?.buttons).toHaveLength(3);
+
+    // Without endpointUrl, function is the action ID (backward compatible)
+    // actionId is always in parameters for HTTP endpoint compatibility
+    expect(buttonList?.buttons[0]).toEqual({
+      text: "Approve",
+      onClick: {
+        action: {
+          function: "approve",
+          parameters: [{ key: "actionId", value: "approve" }],
+        },
+      },
+      color: { red: 0.2, green: 0.5, blue: 0.9 }, // primary blue
+    });
+
+    expect(buttonList?.buttons[1]).toEqual({
+      text: "Reject",
+      onClick: {
+        action: {
+          function: "reject",
+          parameters: [
+            { key: "actionId", value: "reject" },
+            { key: "value", value: "data-123" },
+          ],
+        },
+      },
+      color: { red: 0.9, green: 0.2, blue: 0.2 }, // danger red
+    });
+
+    expect(buttonList?.buttons[2]).toEqual({
+      text: "Skip",
+      onClick: {
+        action: {
+          function: "skip",
+          parameters: [{ key: "actionId", value: "skip" }],
+        },
+      },
+    });
+  });
+
+  it("sets disabled on button when specified", () => {
+    const card = Card({
+      children: [
+        Actions([
+          Button({
+            id: "cancel",
+            label: "Cancelled",
+            style: "danger",
+            disabled: true,
+          }),
+          Button({ id: "retry", label: "Retry" }),
+        ]),
+      ],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    const buttonList = widgets[0].buttonList;
+    expect(buttonList?.buttons).toHaveLength(2);
+
+    expect(buttonList?.buttons[0]).toEqual({
+      text: "Cancelled",
+      onClick: {
+        action: {
+          function: "cancel",
+          parameters: [{ key: "actionId", value: "cancel" }],
+        },
+      },
+      color: { red: 0.9, green: 0.2, blue: 0.2 },
+      disabled: true,
+    });
+
+    // Non-disabled button should not have disabled field
+    expect(buttonList?.buttons[1]).toEqual({
+      text: "Retry",
+      onClick: {
+        action: {
+          function: "retry",
+          parameters: [{ key: "actionId", value: "retry" }],
+        },
+      },
+    });
+  });
+
+  it("uses endpointUrl as function when provided", () => {
+    const card = Card({
+      children: [
+        Actions([
+          Button({ id: "approve", label: "Approve" }),
+          Button({ id: "reject", label: "Reject", value: "data-123" }),
+        ]),
+      ],
+    });
+    const gchatCard = cardToGoogleCard(card, {
+      endpointUrl: "https://example.com/api/webhooks/gchat",
+    });
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    const buttonList = widgets[0].buttonList;
+
+    // With endpointUrl, function should be the URL, actionId in parameters
+    expect(buttonList?.buttons[0]).toEqual({
+      text: "Approve",
+      onClick: {
+        action: {
+          function: "https://example.com/api/webhooks/gchat",
+          parameters: [{ key: "actionId", value: "approve" }],
+        },
+      },
+    });
+
+    expect(buttonList?.buttons[1]).toEqual({
+      text: "Reject",
+      onClick: {
+        action: {
+          function: "https://example.com/api/webhooks/gchat",
+          parameters: [
+            { key: "actionId", value: "reject" },
+            { key: "value", value: "data-123" },
+          ],
+        },
+      },
+    });
+  });
+
+  it("converts link buttons with openLink", () => {
+    const card = Card({
+      children: [
+        Actions([
+          LinkButton({
+            url: "https://example.com/docs",
+            label: "View Docs",
+            style: "primary",
+          }),
+        ]),
+      ],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets).toHaveLength(1);
+
+    const buttonList = widgets[0].buttonList;
+    expect(buttonList).toBeDefined();
+    expect(buttonList?.buttons).toHaveLength(1);
+
+    expect(buttonList?.buttons[0]).toEqual({
+      text: "View Docs",
+      onClick: {
+        openLink: {
+          url: "https://example.com/docs",
+        },
+      },
+      color: { red: 0.2, green: 0.5, blue: 0.9 }, // primary blue
+    });
+  });
+
+  it("converts select actions to selectionInput dropdown widgets", () => {
+    const card = Card({
+      children: [
+        Actions([
+          Select({
+            id: "priority",
+            label: "Priority",
+            options: [
+              SelectOption({
+                label: "High",
+                value: "high",
+                description: "Urgent",
+              }),
+              SelectOption({ label: "Normal", value: "normal" }),
+            ],
+            initialOption: "normal",
+          }),
+        ]),
+      ],
+    });
+
+    const gchatCard = cardToGoogleCard(card, {
+      endpointUrl: "https://example.com/api/webhooks/gchat",
+    });
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets).toHaveLength(1);
+    expect(widgets[0]).toEqual({
+      selectionInput: {
+        name: "priority",
+        label: "Priority",
+        type: "DROPDOWN",
+        items: [
+          {
+            text: "High",
+            value: "high",
+          },
+          {
+            text: "Normal",
+            value: "normal",
+            selected: true,
+          },
+        ],
+        onChangeAction: {
+          function: "https://example.com/api/webhooks/gchat",
+          parameters: [{ key: "actionId", value: "priority" }],
+        },
+      },
+    });
+  });
+
+  it("converts radio select actions to selectionInput radio widgets", () => {
+    const card = Card({
+      children: [
+        Actions([
+          RadioSelect({
+            id: "status",
+            label: "Status",
+            options: [
+              SelectOption({ label: "Open", value: "open" }),
+              SelectOption({ label: "Closed", value: "closed" }),
+            ],
+            initialOption: "open",
+          }),
+        ]),
+      ],
+    });
+
+    const gchatCard = cardToGoogleCard(card);
+    const widgets = gchatCard.card.sections[0].widgets;
+
+    expect(widgets).toHaveLength(1);
+    expect(widgets[0]).toEqual({
+      selectionInput: {
+        name: "status",
+        label: "Status",
+        type: "RADIO_BUTTON",
+        items: [
+          {
+            text: "Open",
+            value: "open",
+            selected: true,
+          },
+          {
+            text: "Closed",
+            value: "closed",
+          },
+        ],
+        onChangeAction: {
+          function: "status",
+          parameters: [{ key: "actionId", value: "status" }],
+        },
+      },
+    });
+  });
+
+  it("preserves action order for mixed buttons and selection inputs", () => {
+    const card = Card({
+      children: [
+        Actions([
+          Button({ id: "refresh", label: "Refresh" }),
+          Select({
+            id: "category",
+            label: "Category",
+            options: [
+              SelectOption({ label: "Alpha", value: "alpha" }),
+              SelectOption({ label: "Beta", value: "beta" }),
+            ],
+          }),
+          LinkButton({ url: "https://example.com/docs", label: "Docs" }),
+          RadioSelect({
+            id: "view",
+            label: "View",
+            options: [
+              SelectOption({ label: "Summary", value: "summary" }),
+              SelectOption({ label: "Detailed", value: "detailed" }),
+            ],
+          }),
+        ]),
+      ],
+    });
+
+    const gchatCard = cardToGoogleCard(card);
+    const widgets = gchatCard.card.sections[0].widgets;
+
+    expect(widgets).toHaveLength(4);
+    expect(widgets[0].buttonList?.buttons).toHaveLength(1);
+    expect(widgets[0].buttonList?.buttons[0]).toEqual({
+      text: "Refresh",
+      onClick: {
+        action: {
+          function: "refresh",
+          parameters: [{ key: "actionId", value: "refresh" }],
+        },
+      },
+    });
+    expect(widgets[1].selectionInput?.name).toBe("category");
+    expect(widgets[1].selectionInput?.type).toBe("DROPDOWN");
+    expect(widgets[2].buttonList?.buttons).toEqual([
+      {
+        text: "Docs",
+        onClick: {
+          openLink: {
+            url: "https://example.com/docs",
+          },
+        },
+      },
+    ]);
+    expect(widgets[3].selectionInput?.name).toBe("view");
+    expect(widgets[3].selectionInput?.type).toBe("RADIO_BUTTON");
+  });
+
+  it("converts fields to decoratedText widgets", () => {
+    const card = Card({
+      children: [
+        Fields([
+          Field({ label: "Status", value: "Active" }),
+          Field({ label: "Priority", value: "High" }),
+        ]),
+      ],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets).toHaveLength(2);
+
+    expect(widgets[0]).toEqual({
+      decoratedText: {
+        topLabel: "Status",
+        text: "Active",
+      },
+    });
+
+    expect(widgets[1]).toEqual({
+      decoratedText: {
+        topLabel: "Priority",
+        text: "High",
+      },
+    });
+  });
+
+  it("creates separate sections for Section children", () => {
+    const card = Card({
+      children: [
+        CardText("Before section"),
+        Section([CardText("Inside section")]),
+        CardText("After section"),
+      ],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    // Should have 3 sections: before, section contents, after
+    expect(gchatCard.card.sections).toHaveLength(3);
+    expect(gchatCard.card.sections[0].widgets[0].textParagraph?.text).toBe(
+      "Before section"
+    );
+    expect(gchatCard.card.sections[1].widgets[0].textParagraph?.text).toBe(
+      "Inside section"
+    );
+    expect(gchatCard.card.sections[2].widgets[0].textParagraph?.text).toBe(
+      "After section"
+    );
+  });
+
+  it("converts a complete card", () => {
+    const card = Card({
+      title: "Order #1234",
+      subtitle: "Status update",
+      children: [
+        CardText("Your order has been shipped!"),
+        Fields([
+          Field({ label: "Tracking", value: "ABC123" }),
+          Field({ label: "ETA", value: "Dec 25" }),
+        ]),
+        Actions([
+          Button({ id: "track", label: "Track Package", style: "primary" }),
+        ]),
+      ],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    expect(gchatCard.card.header?.title).toBe("Order #1234");
+    expect(gchatCard.card.header?.subtitle).toBe("Status update");
+
+    // All children should be in one section
+    expect(gchatCard.card.sections).toHaveLength(1);
+    const widgets = gchatCard.card.sections[0].widgets;
+
+    // text + 2 fields + buttonList = 4 widgets
+    expect(widgets).toHaveLength(4);
+    expect(widgets[0].textParagraph).toBeDefined();
+    expect(widgets[1].decoratedText).toBeDefined();
+    expect(widgets[2].decoratedText).toBeDefined();
+    expect(widgets[3].buttonList).toBeDefined();
+  });
+
+  it("creates an empty section with placeholder for empty cards", () => {
+    const card = Card({});
+    const gchatCard = cardToGoogleCard(card);
+
+    // GChat requires at least one section with at least one widget
+    expect(gchatCard.card.sections).toHaveLength(1);
+    expect(gchatCard.card.sections[0].widgets).toHaveLength(1);
+  });
+});
+
+describe("cardToFallbackText", () => {
+  it("generates fallback text for a card", () => {
+    const card = Card({
+      title: "Order Update",
+      subtitle: "Status changed",
+      children: [
+        CardText("Your order is ready"),
+        Fields([
+          Field({ label: "Order ID", value: "#1234" }),
+          Field({ label: "Status", value: "Ready" }),
+        ]),
+        Actions([
+          Button({ id: "pickup", label: "Schedule Pickup" }),
+          Button({ id: "delay", label: "Delay" }),
+        ]),
+      ],
+    });
+
+    const text = cardToFallbackText(card);
+
+    expect(text).toContain("*Order Update*");
+    expect(text).toContain("Status changed");
+    expect(text).toContain("Your order is ready");
+    expect(text).toContain("Order ID: #1234");
+    expect(text).toContain("Status: Ready");
+    // Actions excluded from fallback — interactive elements aren't meaningful in notifications
+    expect(text).not.toContain("[Schedule Pickup]");
+    expect(text).not.toContain("[Delay]");
+  });
+
+  it("handles card with only title", () => {
+    const card = Card({ title: "Simple Card" });
+    const text = cardToFallbackText(card);
+    expect(text).toBe("*Simple Card*");
+  });
+});
+
+describe("markdown bold to Google Chat conversion", () => {
+  it("converts **bold** to *bold* in CardText content", () => {
+    const card = Card({
+      children: [CardText("The **domain** is example.com")],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets[0].textParagraph.text).toBe("The *domain* is example.com");
+  });
+
+  it("converts multiple **bold** segments", () => {
+    const card = Card({
+      children: [CardText("**Project**: my-app, **Status**: active")],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets[0].textParagraph.text).toBe(
+      "*Project*: my-app, *Status*: active"
+    );
+  });
+
+  it("preserves existing single *asterisk* formatting", () => {
+    const card = Card({
+      children: [CardText("Already *bold* in GChat format")],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets[0].textParagraph.text).toBe(
+      "Already *bold* in GChat format"
+    );
+  });
+
+  it("converts **bold** in field values", () => {
+    const card = Card({
+      children: [Fields([Field({ label: "Status", value: "**Active**" })])],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    const decoratedText = widgets[0].decoratedText;
+    expect(decoratedText.text).toBe("*Active*");
+    expect(decoratedText.text).not.toContain("**");
+  });
+
+  it("converts **bold** in field labels", () => {
+    const card = Card({
+      children: [Fields([Field({ label: "**Important**", value: "value" })])],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets[0].decoratedText.topLabel).toBe("*Important*");
+  });
+
+  it("handles text with no markdown", () => {
+    const card = Card({
+      children: [CardText("Plain text")],
+    });
+    const gchatCard = cardToGoogleCard(card);
+
+    const widgets = gchatCard.card.sections[0].widgets;
+    expect(widgets[0].textParagraph.text).toBe("Plain text");
+  });
+});
+
+describe("cardToGoogleCard with CardLink", () => {
+  it("converts CardLink to a textParagraph widget with HTML link", () => {
+    const card = Card({
+      children: [CardLink({ url: "https://example.com", label: "Click here" })],
+    });
+
+    const googleCard = cardToGoogleCard(card);
+
+    expect(googleCard.card.sections).toHaveLength(1);
+    expect(googleCard.card.sections[0].widgets).toHaveLength(1);
+    expect(googleCard.card.sections[0].widgets[0]).toEqual({
+      textParagraph: {
+        text: '<a href="https://example.com">Click here</a>',
+      },
+    });
+  });
+});

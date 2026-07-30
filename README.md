@@ -6,11 +6,12 @@ Realtime chat on Cloudflare Workers. One worker, WebSocket rooms, a TypeScript S
 
 | What | Where |
 |------|-------|
-| Try hosted | [fluxychat.com/landing](https://fluxychat.com/landing) |
+| Try hosted | [fluxychat.com](https://fluxychat.com) |
 | Operator console | `apps/dashboard` â†’ start at `/onboarding` |
 | SDK (npm) | [@fluxy-chat/sdk](https://www.npmjs.com/package/@fluxy-chat/sdk) |
 | Worker API | `apps/worker` Â· deploy with Wrangler |
 | Documentation | [docs/README.md](docs/README.md) Â· [Features overview](docs/features-overview.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Marketing | [docs/marketing/](docs/marketing/) |
 
 ### What you get (at a glance)

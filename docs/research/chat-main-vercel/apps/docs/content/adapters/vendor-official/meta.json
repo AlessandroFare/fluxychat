@@ -1,0 +1,16 @@
+{
+  "title": "Vendor-Official Adapters",
+  "pages": [
+    "liveblocks",
+    "resend",
+    "novu",
+    "sendblue",
+    "zernio",
+    "matrix",
+    "agentphone",
+    "lark",
+    "velt",
+    "kapso",
+    "linq"
+  ]
+}

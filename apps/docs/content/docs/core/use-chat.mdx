@@ -1,0 +1,112 @@
+---
+title: useChat
+description: React hook for room messages, sending, and connection state.
+---
+
+`useChat` connects to a room through a shared `FluxyChatClient`. It handles history, optimistic sends, transport fallback, and agent invoke.
+
+```tsx
+import { useChat } from "@fluxy-chat/react";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({
+  baseUrl: process.env.NEXT_PUBLIC_FLUXY_BASE_URL!,
+  userId: "alice",
+  token: jwt,
+});
+
+function ChatRoom({ roomId }: { roomId: string }) {
+  const {
+    messages,
+    sendMessage,
+    connectionState,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    retryMessage,
+    invokeAgent,
+  } = useChat({ roomId, client, markReadLatest: true });
+
+  return (
+    <div>
+      <p>Status: {connectionState.status}</p>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          {msg.content}
+          {msg.deliveryStatus === "failed" && (
+            <button onClick={() => retryMessage(msg.id)}>Retry</button>
+          )}
+        </div>
+      ))}
+      {hasMore && (
+        <button disabled={isLoadingMore} onClick={() => loadMore()}>
+          Load older
+        </button>
+      )}
+      <button onClick={() => sendMessage("Hello!")}>Send</button>
+    </div>
+  );
+}
+```
+
+## Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `roomId` | `string` | Room to subscribe to |
+| `client` | `FluxyChatClient` | Connected client instance |
+| `markReadLatest` | `boolean` | Mark latest message read on mount/update |
+| `readOn` | `"mount" \| "visible" \| "manual"` | Read receipt timing |
+| `onAnyEvent` | `(event) => void` | Raw room WebSocket events (messages, typing, client_event, …) |
+| `onServerEvent` | `(event) => void` | Worker vertical fan-out (`server_event`: polls, live, game, collab CRDT metadata) |
+
+## Vertical `server_event` via useChat
+
+```tsx
+useChat({
+  roomId,
+  client,
+  onServerEvent: ({ name, data, roomId: rid }) => {
+    if (name === "poll.created") console.log(data.pollId);
+    if (name === "collab.crdt_update") console.log("Yjs activity", data.byteLength);
+  },
+});
+```
+
+For React-only subscription without message state, see `useServerEvents` from `@fluxy-chat/react`.
+
+## With FluxyRealtimeProvider
+
+When the provider owns the client, omit the explicit `client`:
+
+```tsx
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+<FluxyRealtimeProvider config={{ baseUrl, userId, token }}>
+  <Room roomId="general" />
+</FluxyRealtimeProvider>
+```
+
+## Connection state
+
+`connectionState` includes `status`, `transport` (`websocket` | `sse` | `polling`), and `nextRetryAt` during reconnect. See [Connection state](/docs/core/connection-state).
+
+## Agents in-room
+
+```tsx
+const { invokeAgent } = useChat({ roomId, client });
+
+await invokeAgent("agent-id-here", "Summarize this thread");
+```
+
+Mention-based invoke (`@assistant …`) is handled by the Worker when agents have handles configured.
+
+## Vanilla (no React)
+
+```ts
+import { createFluxyRoomSession } from "@fluxy-chat/sdk";
+
+const { store, stop } = createFluxyRoomSession({ roomId: "general", client });
+store.getState().sendMessage("hello");
+// cleanup: stop();
+```

@@ -3,8 +3,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  AltHeroPreview,
+  HERO_PREVIEW_SCENES,
+} from "./hero-preview-scenes";
 
-const SNIPPET = `import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+const SNIPPET = `import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/react";
 
 const client = new FluxyChatClient({
   baseUrl: "https://your-worker.example.com",
@@ -247,6 +252,7 @@ function resetChatPhases(): ChatPhaseRef {
 
 export function HeroCodeInboxDemo() {
   const [codeLen, setCodeLen] = useState(0);
+  const [sceneIndex, setSceneIndex] = useState(0);
   const [chat, setChat] = useState({
     incomingTyping: false,
     incomingVisible: false,
@@ -254,10 +260,17 @@ export function HeroCodeInboxDemo() {
     outgoingVisible: false,
   });
 
+  const activeScene = HERO_PREVIEW_SCENES[sceneIndex] ?? HERO_PREVIEW_SCENES[0];
+  const isChatScene = activeScene.id === "chat";
+
   const cancelled = useRef(false);
   const chatRef = useRef(resetChatPhases());
 
   useEffect(() => {
+    if (!isChatScene) {
+      setCodeLen(SNIPPET.length);
+      return;
+    }
     cancelled.current = false;
     chatRef.current = resetChatPhases();
     setChat({
@@ -327,14 +340,7 @@ export function HeroCodeInboxDemo() {
       if (chatDone) {
         window.setTimeout(() => {
           if (cancelled.current) return;
-          chatRef.current = resetChatPhases();
-          setChat({
-            incomingTyping: false,
-            incomingVisible: false,
-            outgoingTyping: false,
-            outgoingVisible: false,
-          });
-          void restartAfterPause();
+          setSceneIndex((index) => (index + 1) % HERO_PREVIEW_SCENES.length);
         }, PAUSE_END_MS);
         return;
       }
@@ -342,49 +348,45 @@ export function HeroCodeInboxDemo() {
       raf = requestAnimationFrame(frame);
     }
 
-    function restartAfterPause() {
-      if (cancelled.current) return;
-      chatRef.current = resetChatPhases();
-      const t1 = performance.now();
-      function frame2(now: number) {
-        if (cancelled.current) return;
-        const elapsed = now - t1;
-        const c = Math.min(n, Math.floor(elapsed / CODE_MS));
-        setCodeLen(c);
-        syncChat(now, c);
-        const r = chatRef.current;
-        const chatDone = r.incomingVisible && r.outgoingVisible && c >= n;
-        if (chatDone) {
-          window.setTimeout(() => {
-            if (cancelled.current) return;
-            chatRef.current = resetChatPhases();
-            setChat({
-              incomingTyping: false,
-              incomingVisible: false,
-              outgoingTyping: false,
-              outgoingVisible: false,
-            });
-            void restartAfterPause();
-          }, PAUSE_END_MS);
-          return;
-        }
-        raf = requestAnimationFrame(frame2);
-      }
-      raf = requestAnimationFrame(frame2);
-    }
-
     raf = requestAnimationFrame(frame);
     return () => {
       cancelled.current = true;
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [isChatScene, sceneIndex]);
+
+  useEffect(() => {
+    if (isChatScene) return;
+    const id = window.setInterval(() => {
+      setSceneIndex((index) => (index + 1) % HERO_PREVIEW_SCENES.length);
+    }, 5200);
+    return () => window.clearInterval(id);
+  }, [isChatScene]);
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-hidden">
-      <div className="mb-3 flex flex-col gap-1 border-b border-black/[0.06] pb-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-3 flex flex-col gap-2 border-b border-black/[0.06] pb-3 sm:flex-row sm:items-end sm:justify-between">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Your app</p>
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 sm:text-right">Live preview</p>
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-wrap justify-end gap-1" role="tablist" aria-label="Preview modes">
+            {HERO_PREVIEW_SCENES.map((scene, index) => (
+              <button
+                key={scene.id}
+                type="button"
+                role="tab"
+                aria-selected={index === sceneIndex}
+                onClick={() => setSceneIndex(index)}
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-medium transition",
+                  index === sceneIndex ? "bg-[#111111] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                )}
+              >
+                {scene.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-600">Live preview</p>
+        </div>
       </div>
 
       <div className="grid min-w-0 gap-6 md:grid-cols-2 md:gap-8">
@@ -408,6 +410,7 @@ export function HeroCodeInboxDemo() {
         </div>
 
         <div className={cn("flex min-w-0 flex-col", CARD_H)}>
+          {isChatScene ? (
           <div
             className={cn(
               "isolate flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl shadow-[var(--shadow-subtle-3)]",
@@ -435,7 +438,7 @@ export function HeroCodeInboxDemo() {
                   }}
                 />
                 <span className="text-sm font-semibold" style={{ color: preview.shellText }}>
-                  support-room
+                  {activeScene.room}
                 </span>
               </div>
               <span
@@ -542,14 +545,17 @@ export function HeroCodeInboxDemo() {
               </div>
             </div>
           </div>
+          ) : (
+            <div key={activeScene.id} className={cn("flex min-w-0 flex-col animate-in fade-in-0 slide-in-from-bottom-1 duration-300 ease-out", CARD_H)}>
+              <AltHeroPreview sceneId={activeScene.id} scene={activeScene} />
+            </div>
+          )}
         </div>
       </div>
 
       <p className="mx-auto mt-4 max-w-3xl text-center text-xs leading-relaxed text-slate-600 sm:text-sm">
-        The same hooks power your production UI: wire the client once, then iterate on layout and copy — the preview
-        mirrors the room your users join in your app.
+        Wire the client once. Tabs cycle chat, agents, location, stream, collab, game, IoT, and channel adapters — same SDK, same room.
       </p>
     </div>
   );
 }
-

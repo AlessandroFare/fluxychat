@@ -1,8 +1,10 @@
 # @fluxy-chat/sdk
 
-[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.2)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.2)
+[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0)
 
-Client for a **Fluxychat Worker** (self-hosted or [Fluxychat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and optional React `useChat`.
+Client for a **FluxyChat Worker** (self-hosted or [FluxyChat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and vertical SDKs.
+
+For **React hooks** (`useChat`, `useInbox`, `FluxyRealtimeProvider`), install [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) alongside this package.
 
 The SDK talks to **your** Worker URL. It does **not** include LLM API keys — only your Fluxy **project API key** or **member JWT**.
 
@@ -10,11 +12,72 @@ The SDK talks to **your** Worker URL. It does **not** include LLM API keys — o
 
 ```bash
 npm install @fluxy-chat/sdk zustand
+# React apps also need:
+npm install @fluxy-chat/react react
 # or
-pnpm add @fluxy-chat/sdk zustand
+pnpm add @fluxy-chat/sdk @fluxy-chat/react zustand
 ```
 
-**Peer dependencies:** install `react` (18+) when you use `useChat` / `FluxyRealtimeProvider`, and `zustand` (5+) for `useChat`, `createFluxyRoomSession`, or the room store helpers. The SDK has **no runtime npm dependencies** — only your Worker URL is contacted over the network ([Socket network-access note](https://socket.dev/alerts/networkAccess)).
+**Peer dependencies:** install `react` (18+) when you use hooks from `@fluxy-chat/react`, and `zustand` (5+) for `createFluxyRoomSession` or room store helpers. The SDK has **no runtime npm dependencies** beyond protocol/types — only your Worker URL is contacted over the network ([Socket network-access note](https://socket.dev/alerts/networkAccess)).
+
+### Bundle size
+
+Import only what your app needs — the full `dist/index.js` artifact is ~112 KB uncompressed; tree-shaken app bundles (client + hooks via `@fluxy-chat/react`) are typically much smaller. Compare gzip size in your bundler (Vite/webpack) when evaluating against other chat SDKs.
+
+## Browser vs Worker runtime
+
+| Import | Use in | Contents |
+|--------|--------|----------|
+| `@fluxy-chat/sdk` | Browser, Node scripts, React/React Native | `FluxyChatClient`, hooks (transitional), types, client-safe helpers |
+| `@fluxy-chat/react` | React apps | `useChat`, `FluxyRealtimeProvider`, inbox hooks (re-exported from SDK during split) |
+| `@fluxy-chat/sdk/worker-runtime` | Cloudflare Worker, Node agent services | Agent loop, sandbox, HITL approval store, TTS/image stubs wired on the Worker |
+
+Do **not** import `@fluxy-chat/sdk/worker-runtime` from browser bundles — those factories expect KV/D1 and Worker APIs. The FluxyChat Worker ships its own implementations under `apps/worker/src/lib/`; the SDK subpath is for **custom Workers** that embed the same agent helpers.
+
+Quick local smoke test (monorepo):
+
+```bash
+pnpm run first-message
+```
+
+## Errors and connection status
+
+### Typed errors (REST + chat)
+
+| SDK class / code | HTTP / WS | User action |
+|------------------|-----------|-------------|
+| `FluxyTokenExpiredError` / `token_expired` | 401, WS 1008 | Mint fresh JWT via `POST /auth/token` |
+| `FluxyNotMemberError` / `not_member` | 403, WS 1008 Forbidden | Add member to room or join with correct JWT |
+| `FluxyAnonymousNotAllowedError` | WS 1008 | Use authenticated JWT, not anonymous |
+| `FluxyAuthError` / `auth_refused` | 401, WS 1008 | Check API key (server) or JWT claims |
+| `RateLimitError` / `FluxyRateLimitError` / `RATE_LIMITED` | 429 | Wait `retryAfterMs`, backoff, reduce send rate |
+| `LockError` / `FluxyLockError` / `LOCK_ACQUISITION_FAILED` | 409 | Retry send or refresh thread lock |
+| `NotImplementedError` / `FluxyNotImplementedError` | 501 | Feature not on this adapter/runtime |
+| `FluxyConnectionError` | WS abnormal close | Auto-reconnect; check network |
+| `FluxySendError` | — | Wait until socket open or use REST fallback |
+
+Use `describeConnectionError()` from `@fluxy-chat/sdk` for UI copy. Full troubleshooting: [Integration troubleshooting guide](https://github.com/AlessandroFare/fluxychat/blob/main/apps/docs/content/docs/guides/troubleshooting-integration.mdx).
+
+### Connection status labels (Portal parity)
+
+| `status` | UI label (`getConnectionStatusLabel`) |
+|----------|----------------------------------------|
+| `connected` | Connected |
+| `connecting` | Connecting… |
+| `reconnecting` | Reconnecting in Ns… |
+| `degraded` | Degraded — realtime limited |
+| `degraded-http` | Degraded — HTTP fallback active |
+| `blocked` | Connection blocked |
+| `disconnected` | Disconnected |
+
+```ts
+import { getConnectionStatusLabel } from "@fluxy-chat/sdk";
+
+const label = getConnectionStatusLabel(connectionState.status, {
+  includeTransport: true,
+  nextRetryAt: connectionState.nextRetryAt,
+});
+```
 
 ### Vanilla store (Vue, Solid, Node)
 
@@ -78,7 +141,7 @@ curl -sS -X POST "$WORKER_URL/messages" \
 # 2. Read it back
 curl -sS "$WORKER_URL/api/messages?roomId=$ROOM_ID&limit=1" \
   -H "Authorization: Bearer $JWT"
-# Verified against @fluxy-chat/sdk@0.4.2  2026-06-26
+# Verified against @fluxy-chat/sdk@0.5.0
 ```
 
 If both calls return 200 and the message id round-trips, your Worker URL, JWT, and room are wired correctly. Skip to Option A below.
@@ -86,7 +149,8 @@ If both calls return 200 and the message id round-trips, your Worker URL, JWT, a
 ### Option A — explicit client
 
 ```tsx
-import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/react";
 
 const client = new FluxyChatClient({
   baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,
@@ -140,7 +204,7 @@ await client.markNotificationRead(notes[0].id);
 Wrap your app (or chat layout) once. The provider refreshes the member JWT before expiry and on auth errors.
 
 ```tsx
-import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/sdk";
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
 export function ChatLayout({ children }: { children: React.ReactNode }) {
   return (

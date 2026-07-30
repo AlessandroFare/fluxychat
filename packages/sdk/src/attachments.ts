@@ -67,19 +67,69 @@ export interface AttachmentManager {
 }
 
 export function createAttachmentManager(config?: AttachmentConfig): AttachmentManager {
-  throw new Error("createAttachmentManager not implemented in SDK - use worker runtime");
+  const maxSize = config?.maxFileSize ?? 10 * 1024 * 1024;
+  const allowedMime = config?.allowedMimeTypes ?? [
+    "image/jpeg", "image/png", "image/gif", "image/webp",
+    "video/mp4", "video/webm",
+    "audio/mpeg", "audio/ogg", "audio/wav", "audio/webm",
+    "application/pdf", "text/plain", "text/csv",
+    "application/zip", "application/gzip",
+  ];
+  const maxAttach = config?.maxAttachments ?? 10;
+  const store = new Map<string, Attachment>();
+  const messageIndex = new Map<string, string[]>();
+
+  return {
+    async upload(file, filename, mimeType, uploadedBy) {
+      const validation = this.validate({ size: file instanceof File ? file.size : file.byteLength, type: mimeType });
+      if (!validation.valid) return { success: false, error: validation.error };
+
+      const id = crypto.randomUUID();
+      const size = file instanceof File ? file.size : file.byteLength;
+      const type = mimeToAttachmentType(mimeType);
+
+      const attachment: Attachment = {
+        id, filename, mimeType, size, url: `memory://${id}`, type, uploadedAt: new Date().toISOString(), uploadedBy,
+      };
+      if (config?.cdnBaseUrl) attachment.cdnUrl = `${config.cdnBaseUrl}/${id}`;
+
+      store.set(id, attachment);
+      return { success: true, attachment };
+    },
+
+    async get(id) {
+      return store.get(id) ?? null;
+    },
+
+    async delete(id) {
+      store.delete(id);
+    },
+
+    async listForMessage(messageId) {
+      const ids = messageIndex.get(messageId) ?? [];
+      return ids.map((id) => store.get(id)).filter(Boolean) as Attachment[];
+    },
+
+    validate(file) {
+      if (file.size > maxSize) return { valid: false, error: `File too large (max ${formatFileSize(maxSize)})` };
+      if (!allowedMime.includes(file.type) && allowedMime.length > 0) return { valid: false, error: `MIME type not allowed: ${file.type}` };
+      return { valid: true };
+    },
+  };
 }
 
-/**
- * Determine attachment type from MIME type.
- */
 export function mimeToAttachmentType(mimeType: string): AttachmentType {
-  throw new Error("mimeToAttachmentType not implemented in SDK - use worker runtime");
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  if (mimeType.startsWith("audio/")) return "audio";
+  if (["application/pdf", "text/plain", "text/csv", "application/json"].includes(mimeType)) return "document";
+  if (["application/zip", "application/gzip", "application/x-tar", "application/x-7z-compressed"].includes(mimeType)) return "archive";
+  return "other";
 }
 
-/**
- * Format file size for display.
- */
 export function formatFileSize(bytes: number): string {
-  throw new Error("formatFileSize not implemented in SDK - use worker runtime");
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }

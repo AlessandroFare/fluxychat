@@ -43,22 +43,28 @@ export async function dispatchUsersRoutes(request, url, h) {
     const displayName = body.displayName ? String(body.displayName).trim().slice(0, 256) : null;
     const imageUrl = body.imageUrl ? String(body.imageUrl).trim().slice(0, 2048) : null;
     const email = body.email ? String(body.email).trim().slice(0, 320) : null;
+    const statusEmoji = body.statusEmoji ? String(body.statusEmoji).trim().slice(0, 64) : null;
+    const statusText = body.statusText ? String(body.statusText).trim().slice(0, 128) : null;
+    const statusExpiration = body.statusExpiration != null ? Math.floor(Number(body.statusExpiration)) : null;
 
     // Use clerk-derived id as the user id (matches fluxyUserIdFromClerk)
     const userId = auth.userId;
 
     try {
       await env.DB.prepare(
-        `INSERT INTO users (id, clerk_user_id, display_name, image_url, email, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        `INSERT INTO users (id, clerk_user_id, display_name, image_url, email, status_emoji, status_text, status_expiration, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
          ON CONFLICT(id) DO UPDATE SET
            clerk_user_id = excluded.clerk_user_id,
            display_name = COALESCE(excluded.display_name, users.display_name),
            image_url = COALESCE(excluded.image_url, users.image_url),
            email = COALESCE(excluded.email, users.email),
+           status_emoji = COALESCE(excluded.status_emoji, users.status_emoji),
+           status_text = COALESCE(excluded.status_text, users.status_text),
+           status_expiration = COALESCE(excluded.status_expiration, users.status_expiration),
            updated_at = datetime('now')`
       )
-        .bind(userId, clerkUserId, displayName, imageUrl, email)
+        .bind(userId, clerkUserId, displayName, imageUrl, email, statusEmoji, statusText, statusExpiration)
         .run();
     } catch (err) {
       logError("users.sync_failed", err, { ...requestLogCtx, userId });
@@ -86,7 +92,7 @@ export async function dispatchUsersRoutes(request, url, h) {
     }
 
     const row = await env.DB.prepare(
-      "SELECT id, clerk_user_id, display_name, image_url, email, bio, created_at, updated_at FROM users WHERE id = ?"
+      "SELECT id, clerk_user_id, display_name, image_url, email, bio, status_emoji, status_text, status_expiration, created_at, updated_at FROM users WHERE id = ?"
     )
       .bind(targetId)
       .first();
@@ -138,6 +144,18 @@ export async function dispatchUsersRoutes(request, url, h) {
       updates.push("image_url = ?");
       binds.push(String(body.imageUrl).trim().slice(0, 2048) || null);
     }
+    if (body.statusEmoji !== undefined) {
+      updates.push("status_emoji = ?");
+      binds.push(body.statusEmoji ? String(body.statusEmoji).trim().slice(0, 64) : null);
+    }
+    if (body.statusText !== undefined) {
+      updates.push("status_text = ?");
+      binds.push(body.statusText ? String(body.statusText).trim().slice(0, 128) : null);
+    }
+    if (body.statusExpiration !== undefined) {
+      updates.push("status_expiration = ?");
+      binds.push(body.statusExpiration != null ? Math.floor(Number(body.statusExpiration)) : null);
+    }
 
     if (updates.length === 0) {
       return json({ error: "No updatable fields provided" }, { status: 400 });
@@ -158,7 +176,7 @@ export async function dispatchUsersRoutes(request, url, h) {
     }
 
     const updated = await env.DB.prepare(
-      "SELECT id, clerk_user_id, display_name, image_url, email, bio, created_at, updated_at FROM users WHERE id = ?"
+      "SELECT id, clerk_user_id, display_name, image_url, email, bio, status_emoji, status_text, status_expiration, created_at, updated_at FROM users WHERE id = ?"
     )
       .bind(targetId)
       .first();

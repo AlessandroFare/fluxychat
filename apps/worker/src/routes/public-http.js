@@ -6,6 +6,7 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { guardDemoSessionRequest } from "../lib/demo-guard.js";
 import { issueDemoSession } from "../lib/demo-session.js";
+import { issueAnonymousToken } from "../lib/anonymous-token.js";
 import { issuePublicGuestSession } from "../lib/guest-public-session.js";
 import {
   parseRoomIdFromChannelName,
@@ -17,6 +18,7 @@ import { requestSmsOtp, verifySmsOtp } from "../lib/sms-otp-auth.js";
 import { isBrowserRunConfigured } from "../lib/browser-run.js";
 import { getPublicHostConfig } from "../lib/custom-domains.js";
 import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flags.js";
+import { getFluxyClientDefaults } from "../lib/fluxy-config-runtime.js";
 import { isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
 import { queryModelsCatalog, getModelById, listModelProviders, syncModelsCatalog } from "../lib/llm-models-catalog.js";
 
@@ -108,6 +110,16 @@ export async function dispatchPublicRoutes(request, url, h) {
           flags.reconnect_backoff_fluxy === true
             ? { baseBackoffMs: 1_000, maxBackoffMs: 8_000 }
             : { baseBackoffMs: 500, maxBackoffMs: 20_000 },
+      },
+      { headers: corsHeaders },
+    );
+  }
+
+  if (url.pathname === "/config/client" && request.method === "GET") {
+    return json(
+      {
+        client: getFluxyClientDefaults(),
+        source: "fluxy.config",
       },
       { headers: corsHeaders },
     );
@@ -657,6 +669,15 @@ export async function dispatchPublicRoutes(request, url, h) {
       return json({ error: result.error }, { status: result.status || 500 });
     }
     return json(result);
+  }
+
+  if (url.pathname === "/tokens/anonymous" && request.method === "POST") {
+    const body = await request.json().catch(() => ({}));
+    const result = await issueAnonymousToken(env, { signJwtHs256, isValidId, resolveProjectId }, request, body);
+    if (!result.ok) {
+      return json(result.body, { status: result.status, headers: corsHeaders });
+    }
+    return json(result.body, { headers: corsHeaders });
   }
 
   if (

@@ -1,0 +1,34 @@
+---
+title: Search
+description: Full-text message search via REST.
+---
+
+Search room history with `GET /search/messages` (FTS5-backed). The SDK wraps this as `client.searchMessages()`.
+
+```ts
+const { results } = await client.searchMessages("deployment rollback", {
+  roomId: "engineering",
+  limit: 20,
+});
+
+for (const hit of results) {
+  console.log(hit.snippet, hit.roomId, hit.createdAt);
+}
+```
+
+## Query parameters
+
+| Param | Description |
+|-------|-------------|
+| `q` | Search string (required) |
+| `roomId` | Limit to one room |
+| `from` / `to` | ISO date range |
+| `limit` | Max hits (default 20, max 50) |
+
+Requires member JWT with access to the scoped rooms.
+
+## UI pattern
+
+Debounce input, show snippets from `hit.snippet`, deep-link to `/rooms/{roomId}?message={id}` in your app router.
+
+See [API Reference](/docs/api-reference) → **Search**.

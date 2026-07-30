@@ -1,0 +1,13 @@
+{
+  "title": "Security & Auth",
+  "pages": [
+    "index",
+    "jwt-auth",
+    "api-key-management",
+    "webhook-signing",
+    "user-blocks",
+    "sms-otp",
+    "e2e-encryption",
+    "gdpr-compliance"
+  ]
+}

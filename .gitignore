@@ -11,7 +11,7 @@ dist/
 apps/dashboard/.next/
 apps/dashboard/out/
 apps/dashboard/.vercel/
-
+apps/docs/.next/
 # Cloudflare Wrangler local state & secrets
 apps/worker/.wrangler/
 apps/worker/.dev.vars
@@ -45,7 +45,7 @@ pnpm-debug.log*
 .openclaw-attachments/
 .opencode/
 apps/dashboard/.kimchi/
-docs/research/
+
 AGENTS.md
 HEARTBEAT.md
 IDENTITY.md
@@ -79,3 +79,14 @@ opencode-dev/
 directories_links.xlsx
 
 docs/operations/
+
+AGENTS.md
+AUDIT_2026-06-19.md
+directories_links.xlsx
+docs/research/
+docs/BEAT-PORTAL-ROADMAP.md
+docs/PORTAL-PARITY-ANALYSIS.md
+docs/PORTAL-SDK-BACKLOG.md
+docs/PUBLISHING.md
+docs/RELEASE-QA-CHECKLIST.md
+docs/TESTING.md

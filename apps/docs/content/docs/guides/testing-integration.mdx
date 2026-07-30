@@ -1,0 +1,73 @@
+---
+title: Testing integrations
+description: Mock adapters, FluxyChatClient stubs, and Vitest matchers for SDK tests.
+---
+
+Use `@fluxy-chat/sdk/testing` in Vitest or Jest suites.
+
+## Install dev deps
+
+```bash
+pnpm add -D vitest @testing-library/react
+```
+
+## Spy adapter + matchers
+
+```ts
+import { describe, expect, it } from "vitest";
+import { createSpyAdapter, registerFluxyChatMatchers } from "@fluxy-chat/sdk/testing";
+
+registerFluxyChatMatchers(expect);
+
+describe("bot posts to thread", () => {
+  it("records postMessage", async () => {
+    const adapter = createSpyAdapter();
+    await adapter.postMessage("thread-1", "hello");
+    expect(adapter).toHavePosted("thread-1", "hello");
+  });
+});
+```
+
+| Matcher | Asserts |
+|---------|---------|
+| `toHavePosted(threadId, content?)` | `postMessage` was called |
+| `toHaveEdited(threadId, messageId, content?)` | `editMessage` was called |
+
+## Mock FluxyChatClient
+
+```ts
+import { createFluxyChatMockClient } from "@fluxy-chat/sdk/testing";
+import { renderHook, waitFor } from "@testing-library/react";
+import { useInbox } from "@fluxy-chat/react";
+
+const client = createFluxyChatMockClient({
+  inbox: {
+    mentions: [],
+    unreadRooms: [{
+      roomId: "r1",
+      roomName: "General",
+      unreadCount: 2,
+      lastReadMessageId: 1,
+      firstUnreadMessageId: 2,
+    }],
+    snoozedRooms: [],
+    followUps: [],
+    counts: { mentions: 0, unreadRooms: 1, snoozedRooms: 0, followUps: 0 },
+  },
+});
+
+const { result } = renderHook(() =>
+  useInbox({ client, enabled: true, pollIntervalMs: 0 }),
+);
+
+await waitFor(() => expect(result.current.items.length).toBe(1));
+```
+
+## onItem callback test
+
+See `apps/dashboard/app/inbox/use-inbox-on-item.test.tsx` for a full `useInbox` + user-channel push example.
+
+## Related
+
+- [SDK API playground](/playground)
+- [Troubleshooting integration](/docs/guides/troubleshooting-integration)

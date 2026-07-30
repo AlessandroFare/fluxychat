@@ -1,0 +1,23 @@
+{
+  "title": "Official Adapters",
+  "defaultOpen": true,
+  "pages": [
+    "---Platforms---",
+    "slack",
+    "teams",
+    "gchat",
+    "discord",
+    "telegram",
+    "github",
+    "linear",
+    "whatsapp",
+    "twilio",
+    "messenger",
+    "web",
+    "---State---",
+    "memory",
+    "redis",
+    "ioredis",
+    "postgres"
+  ]
+}

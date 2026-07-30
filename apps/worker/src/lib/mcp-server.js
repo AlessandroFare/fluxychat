@@ -202,23 +202,46 @@ async function handleToolCall(params, { env, auth, logError }) {
   const { name, arguments: args } = params;
 
   try {
+    let result;
     switch (name) {
       case "list_rooms":
-        return await toolListRooms(args, { env, auth });
+        result = await toolListRooms(args, { env, auth });
+        break;
       case "get_room_messages":
-        return await toolGetRoomMessages(args, { env, auth });
+        result = await toolGetRoomMessages(args, { env, auth });
+        break;
       case "send_message":
-        return await toolSendMessage(args, { env, auth, logError });
+        result = await toolSendMessage(args, { env, auth, logError });
+        break;
       case "search_chat":
-        return await toolSearchChat(args, { env, auth });
+        result = await toolSearchChat(args, { env, auth });
+        break;
       case "get_room_info":
-        return await toolGetRoomInfo(args, { env, auth });
+        result = await toolGetRoomInfo(args, { env, auth });
+        break;
       default:
-        return {
+        result = {
           content: [{ type: "text", text: `Unknown tool: ${name}` }],
           isError: true,
         };
     }
+
+    try {
+      const { logMcpToolCall } = await import("./mcp-identity-store.js");
+      await logMcpToolCall(env, {
+        projectId: auth.projectId,
+        serverName: MCP_SERVER_INFO.name,
+        toolName: name,
+        userId: auth.userId,
+        agentId: args?.agentId ?? null,
+        success: !result?.isError,
+        detail: result?.isError ? "tool_error" : "ok",
+      });
+    } catch {
+      // Audit is best-effort.
+    }
+
+    return result;
   } catch (err) {
     logError("mcp.tool_error", err, { tool: name, projectId: auth.projectId });
     return {

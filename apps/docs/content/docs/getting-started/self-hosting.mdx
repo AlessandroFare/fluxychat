@@ -1,0 +1,34 @@
+---
+title: Self-hosting
+description: Deploy the FluxyChat Worker on your Cloudflare account with D1, KV, and wrangler.
+---
+
+FluxyChat runs as a **Cloudflare Worker** with Durable Objects and D1. You can bootstrap locally in one command or deploy to your own Cloudflare account.
+
+## Quick local bootstrap
+
+```bash
+pnpm run self-host
+pnpm --filter @fluxy-chat/worker dev
+pnpm run first-message
+```
+
+Full walkthrough: [Self-host one command](/docs/guides/self-host-one-command).
+
+## Production deploy
+
+1. Apply D1 migrations on your remote database
+2. Set secrets (`JWT_SIGNING_KEY`, LLM provider keys, webhook HMAC)
+3. Deploy with `pnpm run deploy` from `apps/worker`
+
+See [Local development](/docs/getting-started/local-development) and the repo `RUNBOOK_DEPLOY_ROLLBACK.md` for environment variables and rollback steps.
+
+## Enterprise SSO
+
+When SAML SSO is enabled, FluxyChat verifies IdP signatures on the Worker. See [SAML signature verification](/docs/security/saml-signature-verification).
+
+## Related
+
+- [Client setup](/docs/getting-started/client-setup) — SDK integration
+- [Auth JWT](/docs/guides/auth-jwt) — mint member tokens
+- [Dashboard integration](/docs/reference/dashboard-integration) — hosted console + your Worker

@@ -1,0 +1,78 @@
+---
+title: Terraform and IaC
+description: Provision FluxyChat projects with the fluxychat Terraform provider and Cloudflare binding modules.
+---
+
+Two paths:
+
+1. **`fluxychat` provider** — manage FluxyChat **projects** via Worker admin API
+2. **Cloudflare module** — D1/KV binding names + optional migration hook (`infra/terraform/fluxychat`)
+
+## Provider: `fluxychat_project`
+
+Build locally from [`terraform/providers/fluxychat`](https://github.com/fluxychat/fluxychat/tree/main/terraform/providers/fluxychat):
+
+```bash
+cd terraform/providers/fluxychat
+go mod tidy
+go build -o terraform-provider-fluxychat
+```
+
+Example (`examples/project/main.tf`):
+
+```hcl
+provider "fluxychat" {
+  worker_url = "https://your-worker.workers.dev"
+  admin_jwt  = var.admin_jwt
+}
+
+resource "fluxychat_project" "staging" {
+  name = "Staging"
+}
+
+output "project_id" {
+  value = fluxychat_project.staging.id
+}
+```
+
+Import existing project:
+
+```bash
+terraform import fluxychat_project.staging proj_abc123
+```
+
+**Delete** removes Terraform state only — Worker project DELETE is not exposed yet.
+
+## Provider: `fluxychat_webhook`
+
+Register outbound webhooks (HMAC-signed event delivery) for the project tied to your admin JWT:
+
+```hcl
+resource "fluxychat_webhook" "messages" {
+  url = "https://hooks.example.com/fluxy"
+  event_types = [
+    "message.created",
+    "mention",
+  ]
+  secret = var.webhook_secret # optional
+}
+```
+
+Example: `terraform/providers/fluxychat/examples/webhook/main.tf`
+
+**Update** supports `url`, `event_types`, and `secret` rotation via `PATCH /webhooks/{id}`. **Delete** calls `DELETE /webhooks/{id}`.
+
+## Cloudflare bindings module
+
+```bash
+cd infra/terraform/fluxychat
+cp terraform.tfvars.example terraform.tfvars
+terraform init && terraform plan
+```
+
+Deploy Worker separately: `pnpm --filter worker deploy`.
+
+## See also
+
+- [Self-host one command](/docs/guides/self-host-one-command)
+- [Contributing](/docs/guides/ecosystem/contributing)

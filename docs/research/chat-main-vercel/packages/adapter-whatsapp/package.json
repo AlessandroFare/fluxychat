@@ -1,0 +1,67 @@
+{
+  "name": "@chat-adapter/whatsapp",
+  "version": "4.31.0",
+  "description": "WhatsApp adapter for Chat SDK — Business Cloud API webhooks, interactive messages, and templates",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chat-adapter/shared": "workspace:*",
+    "chat": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel/chat.git",
+    "directory": "packages/adapter-whatsapp"
+  },
+  "homepage": "https://chat-sdk.dev/adapters/official/whatsapp",
+  "bugs": {
+    "url": "https://github.com/vercel/chat/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "chat",
+    "chat-sdk",
+    "chatbot",
+    "whatsapp",
+    "whatsapp-business",
+    "bot",
+    "adapter",
+    "messaging",
+    "meta",
+    "cloud-api",
+    "ai-agent",
+    "ai-sdk",
+    "vercel"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,71 @@
+---
+title: Knowledge base connectors
+description: Register URL and manual KB sources on the Worker, sync documents, and query RAG context for agents.
+---
+
+FluxyChat stores connector metadata in KV and indexed documents in D1 (`support_knowledge_base`). Start with a **URL** or **manual paste** connector; Notion, Confluence, Google Drive, Intercom, and Zendesk appear in the dashboard as source types — sync via pasted content or your own OAuth worker until marketplace OAuth ships.
+
+## Dashboard
+
+Open [**Knowledge base**](/knowledge) in the console:
+
+1. **Add source** — pick type and name (URL sources need a fetchable https link).
+2. **Sync** — URL sources fetch and ingest; other types use pasted Markdown/text.
+3. **Search** — keyword search over published articles.
+4. Attach RAG to agents with `POST /admin/kb/rag` or the [KB + RAG cookbook](/docs/cookbook/kb-rag-agent).
+
+## Admin API
+
+All routes require an **admin JWT**.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/admin/kb/sources` | List connectors |
+| POST | `/admin/kb/sources` | Create connector `{ type, name, config? }` |
+| DELETE | `/admin/kb/sources/:id` | Remove connector metadata |
+| POST | `/admin/kb/sources/:id/sync` | URL fetch or `{ content, title? }` ingest |
+| POST | `/admin/kb/ingest` | Direct ingest `{ sourceId, title, content }` |
+| GET | `/admin/kb/search?q=` | Search index |
+| POST | `/admin/kb/rag` | `{ query, maxResults? }` → `synthesizedPrompt` |
+
+### Example: URL connector
+
+```bash
+curl -X POST "$WORKER/admin/kb/sources" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"url","name":"Runbooks","config":{"url":"https://docs.example.com/runbooks"}}'
+
+curl -X POST "$WORKER/admin/kb/sources/kbs_abc123/sync" \
+  -H "Authorization: Bearer $JWT"
+```
+
+### RAG for agent invoke
+
+```bash
+curl -X POST "$WORKER/admin/kb/rag" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"How do I reset MFA?"}'
+```
+
+Use `synthesizedPrompt` as extra system context before `POST /agents/:id/invoke`.
+
+## SDK (client-side dev)
+
+For local prototyping without the Worker:
+
+```typescript
+import { createKnowledgeBase } from "@fluxy-chat/sdk";
+
+const kb = createKnowledgeBase();
+const source = kb.addSource({
+  type: "notion",
+  name: "Wiki",
+  connectionConfig: { integrationToken: process.env.NOTION_TOKEN! },
+  enabled: true,
+  syncIntervalMs: 3_600_000,
+});
+```
+
+Production indexing should go through Worker `/admin/kb/*` so secrets stay server-side.

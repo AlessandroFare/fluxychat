@@ -1,0 +1,5 @@
+base_model = "minimax/MiniMax-M2"
+
+[cost]
+input = 0.3
+output = 1.2

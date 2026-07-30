@@ -1,0 +1,36 @@
+{
+  "botName": "Chat SDK ExampleBot",
+  "botUserId": "U00FAKEBOT01",
+  "mention": {
+    "token": "xAbCdEfGhIjKlMnOpQrStUvW",
+    "team_id": "T00FAKE00AA",
+    "api_app_id": "A00FAKEAPP01",
+    "event": {
+      "type": "message",
+      "user": "U00FAKEUSER1",
+      "ts": "1767224888.280449",
+      "text": "<@U00FAKEBOT01> Hey",
+      "channel": "C00FAKECHAN1",
+      "event_ts": "1767224888.280449"
+    },
+    "type": "event_callback",
+    "authorizations": [{ "user_id": "U00FAKEBOT01", "is_bot": true }]
+  },
+  "followUp": {
+    "token": "xAbCdEfGhIjKlMnOpQrStUvW",
+    "team_id": "T00FAKE00AA",
+    "api_app_id": "A00FAKEAPP01",
+    "event": {
+      "type": "message",
+      "user": "U00FAKEUSER1",
+      "ts": "1767224901.701849",
+      "text": "Hi",
+      "thread_ts": "1767224888.280449",
+      "parent_user_id": "U00FAKEUSER1",
+      "channel": "C00FAKECHAN1",
+      "event_ts": "1767224901.701849"
+    },
+    "type": "event_callback",
+    "authorizations": [{ "user_id": "U00FAKEBOT01", "is_bot": true }]
+  }
+}

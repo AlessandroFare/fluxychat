@@ -26,7 +26,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 const PUBLIC_PAGES = [
-  { name: "landing", path: "/landing" },
+  { name: "landing", path: "/" },
   { name: "why", path: "/why" },
   { name: "compare", path: "/compare" },
   { name: "get-started", path: "/get-started" },
@@ -43,7 +43,7 @@ const PUBLIC_PAGES = [
 // SKIP: pre-existing contrast + landmark violations on the warm-light
 // theme  documented in ROADMAP_EXECUTION.md "M12  A11y contrast pass"
 // const MARKETING_PAGES = [
-//   { name: "landing", path: "/landing" },
+//   { name: "landing", path: "/" },
 //   { name: "why", path: "/why" },
 //   { name: "compare", path: "/compare" },
 //   { name: "get-started", path: "/get-started" },

@@ -58,8 +58,38 @@ await client.updateCustomDomain(id, { status: "active" });
 - Guest sessions on a custom host only work for rooms in that project.
 - Cross-tenant JWTs are rejected on white-label hosts.
 
+## Theming and `data-theme` (P14-I)
+
+White-label the chat shell on your marketing site and embed iframe:
+
+1. Set **`data-theme`** on the host page (or `<html>`) so your CSS can scope brand tokens:
+
+```html
+<html lang="en" data-theme="acme">
+  <head>
+    <style>
+      [data-theme="acme"] {
+        --fluxy-primary: #0d9488;
+        --fluxy-surface: #f0fdfa;
+        --fluxy-text: #134e4a;
+      }
+    </style>
+  </head>
+```
+
+2. Configure embed theme in dashboard **Embed widget** — saves `primaryColor` and launcher position; the generated snippet includes `data-primary-color` and `data-position`.
+
+3. On custom domains, `GET /public/host-config` returns optional `brand` JSON — use it to set `data-theme` dynamically:
+
+```ts
+const host = await client.getPublicHostConfig();
+document.documentElement.setAttribute("data-theme", host.brand?.themeId ?? "default");
+```
+
+4. For full SDK embeds (not the bubble), pass the same CSS variables into your React app wrapping `@fluxy-chat/ui` components.
+
 ## Related
 
+- [Embeddable chat widget](./embed-widget.md)
 - [Hosted domains (fluxychat.com setup)](./hosted-domains.md)
-- P12-A embed widget (next) — uses `getPublicHostConfig()` + default room
 

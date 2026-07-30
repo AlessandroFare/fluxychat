@@ -6,13 +6,10 @@ import { Menu, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuickstartHref } from "@/lib/use-quickstart-href";
 import {
-  CONSOLE_NAV_MAIN,
-  CONSOLE_NAV_TOOLS,
+  CONSOLE_NAV_GROUPS,
   isConsoleNavItemActive,
 } from "./console-nav";
 import { useCommandPalette } from "./console-command-palette";
-
-const MOBILE_LINKS = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS];
 
 export function ConsoleMobileNav() {
   const pathname = usePathname();
@@ -42,11 +39,12 @@ export function ConsoleMobileNav() {
           <span className="hidden text-xs text-slate-600 group-open:inline">Close</span>
         </summary>
         <nav className="mt-2 grid grid-cols-2 gap-1 pb-1 sm:grid-cols-3" aria-label="Console mobile">
-          {MOBILE_LINKS.map((item) => {
+          {CONSOLE_NAV_GROUPS.flatMap((group) =>
+            group.items.map((item) => {
             const isActive = isConsoleNavItemActive(item.href, pathname);
             return (
               <Link
-                key={item.href}
+                key={`${group.label}-${item.href}`}
                 href={item.href === "/onboarding" ? quickstartHref : item.href}
                 className={cn(
                   "rounded-lg px-2 py-2 text-center text-xs font-medium",
@@ -56,7 +54,8 @@ export function ConsoleMobileNav() {
                 {item.label}
               </Link>
             );
-          })}
+          }),
+          )}
         </nav>
       </details>
     </div>

@@ -3,13 +3,18 @@ import {
   FLUXY_OUTBOUND_EVENT_TYPES,
   FLUXY_SDK_SYNTHETIC_INBOUND_TYPES,
 } from "./event-types.js";
+import { isUnknownWsFrame, type UnknownWsFrame } from "./unknown-frame.js";
 
-export type InboundFrameKind = "pong" | "replay" | "event" | "ignored";
+export type { UnknownWsFrame } from "./unknown-frame.js";
+
+export type InboundFrameKind = "pong" | "replay" | "event" | "unknown";
 
 export interface ParsedInboundWsFrame {
   kind: InboundFrameKind;
   event?: Record<string, unknown>;
   messages?: unknown[];
+  /** Present when kind is `unknown` — full frame passthrough (forward-compat). */
+  frame?: UnknownWsFrame;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -42,7 +47,10 @@ export function parseInboundWsFrame(raw: string): ParsedInboundWsFrame | null {
   }
 
   if (!isDeliverableInboundType(data.type)) {
-    return { kind: "ignored" };
+    if (isUnknownWsFrame(data)) {
+      return { kind: "unknown", frame: data };
+    }
+    return null;
   }
 
   return { kind: "event", event: data };

@@ -1,0 +1,42 @@
+---
+title: "Hosted multi-tenant (P0-4 / ENG-04)"
+description: "When `HOSTED_MULTI_TENANT=true`, the Worker treats missing tenant context as unauthorized instead of falling back to a shared `default` project."
+---
+
+When `HOSTED_MULTI_TENANT=true`, the Worker treats missing tenant context as **unauthorized** instead of falling back to a shared `default` project.
+
+## Required vars (Worker)
+
+```bash
+HOSTED_MULTI_TENANT=true
+FLUXY_PLATFORM_PROJECT_ID=<uuid-from-provision-bootstrap>
+ALLOWED_ORIGINS=https://app.fluxychat.com,https://your-dashboard.vercel.app
+REQUIRE_ADMIN_AUTH=true
+```
+
+Bootstrap once:
+
+```bash
+pnpm provision:bootstrap
+# Copy fc_... API key + project UUID to dashboard .env.local AND worker .dev.vars
+```
+
+## Client behaviour
+
+- Dashboard sends `X-Fluxy-Api-Key` or JWT with `tid` (project id).
+- `resolveProjectId` in `apps/worker/src/lib/resolve-project-id.js` returns `null` without a key in hosted mode → routes respond **401**, not cross-tenant data.
+
+## Local dev
+
+Simplest path: leave `HOSTED_MULTI_TENANT` unset/false and use a single project + manual JWT in onboarding.
+
+For hosted parity locally, align **both** dashboard `.env.local` and worker `.dev.vars` after `pnpm provision:bootstrap`.
+
+## Smoke
+
+```bash
+# Without API key on hosted worker → expect 401 on tenant-scoped routes
+curl -i https://api.example.com/projects
+```
+
+See also [staging and status](/docs/staging-and-status).

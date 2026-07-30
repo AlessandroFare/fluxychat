@@ -1,0 +1,79 @@
+---
+title: Huddles — audio, video, and screen share
+description: WebRTC huddles with worker call sessions, captions, and optional recording.
+---
+
+**Huddles** combine the SDK `createHuddle()` WebRTC helper with worker **call sessions** for room-scoped audio/video, screen share, captions, and recording.
+
+Dashboard: [**Huddles**](/huddles)
+
+## Create and start a call
+
+```bash
+curl -X POST "$WORKER_URL/admin/calls" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roomId": "room_team",
+    "provider": "livekit",
+    "recordingEnabled": true,
+    "maxParticipants": 25
+  }'
+
+curl -X POST "$WORKER_URL/admin/calls/{callId}/start" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+
+curl -X POST "$WORKER_URL/admin/calls/join" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"callId":"...","displayName":"Alex","role":"host"}'
+```
+
+## Screen share and recording
+
+Update participant state:
+
+```bash
+curl -X PATCH "$WORKER_URL/admin/calls/participants" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"callId":"...","screenSharing":true}'
+```
+
+Toggle server-side recording:
+
+```bash
+curl -X POST "$WORKER_URL/admin/calls/{callId}/recording" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":true}'
+```
+
+## SDK — local huddle
+
+```typescript
+import { createHuddle } from "@fluxy-chat/sdk";
+
+const huddle = createHuddle({
+  roomId: "room_team",
+  audioEnabled: true,
+  videoEnabled: true,
+  screenShareEnabled: true,
+  captionsEnabled: true,
+  recordingConsent: false,
+  maxParticipants: 25,
+});
+
+await huddle.join();
+await huddle.startScreenShare();
+huddle.giveRecordingConsent();
+```
+
+## Stats
+
+```bash
+curl "$WORKER_URL/admin/calls/active" -H "Authorization: Bearer $ADMIN_JWT"
+curl "$WORKER_URL/admin/calls/stats" -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Optional E2E encryption can be layered via room E2E keys — see [Voice huddles core doc](/docs/core/voice-huddles).

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { GuideContent, RelatedGuide } from "@/lib/guides/types";
 import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { Button } from "~/components/ui/button";
+import { StackBlitzButton } from "@/components/stackblitz-button";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 interface MarketingGuidePageProps {
@@ -38,6 +39,15 @@ export function MarketingGuidePage({
       <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
         {subtitle}
       </p>
+
+      {content.stackblitzTemplateId ? (
+        <div className="mt-6">
+          <StackBlitzButton
+            templateId={content.stackblitzTemplateId}
+            label={content.stackblitzLabel}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-10 space-y-10">
         {sections.map((section) => (

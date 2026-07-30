@@ -1,0 +1,79 @@
+---
+title: Tool approval (HMAC)
+description: Per-tool HMAC-signed approvals compatible with Vercel AI SDK 7 toolApproval patterns.
+---
+
+# Tool approval with HMAC signatures
+
+FluxyChat agents support human-in-the-loop (HITL) tool execution with **HMAC-signed approval requests** — the same mental model as Vercel AI SDK 7 `toolApproval`.
+
+## Per-tool approval map
+
+```typescript
+import { resolveToolApproval, type ToolApprovalConfig } from "@fluxy-chat/agent";
+
+const approval: ToolApprovalConfig = {
+  searchWeb: "user-approval",
+  deleteRecord: "denied",
+  sendEmail: async (input) => {
+    if (typeof input === "object" && input && "to" in input) return "approved";
+    return "denied";
+  },
+};
+
+const decision = await resolveToolApproval(approval, {
+  id: "call_1",
+  name: "searchWeb",
+  input: { query: "weather" },
+});
+// decision.type === "user-approval"
+```
+
+## HMAC signing
+
+Approval payloads are signed so clients cannot forge approvals:
+
+```typescript
+import {
+  signApproval,
+  verifyApprovalSignature,
+  hashCanonical,
+} from "@fluxy-chat/agent";
+
+const secret = process.env.TOOL_APPROVAL_HMAC_SECRET!;
+
+const signature = await signApproval({
+  secret,
+  approvalId: "apr_1",
+  toolCallId: "call_1",
+  toolName: "searchWeb",
+  input: { query: "weather" },
+});
+
+const valid = await verifyApprovalSignature({
+  secret,
+  signature,
+  approvalId: "apr_1",
+  toolCallId: "call_1",
+  toolName: "searchWeb",
+  input: { query: "weather" },
+});
+```
+
+## Dashboard UI
+
+The console chat embeds `ToolApprovalPanel` when HITL is enabled. Operators approve or deny pending tool calls for the active room.
+
+Set `NEXT_PUBLIC_DASHBOARD_LABS=1` and open a room with an agent that declares `user-approval` tools.
+
+## Worker API
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/hitl/approvals/pending` | List pending approvals for a room |
+| `POST` | `/api/hitl/approvals/:id/respond` | Approve or deny with HMAC token |
+
+## Related
+
+- [Handoff (HITL)](/docs/guides/ai-agents/handoff) — agent queue and human takeover
+- [DevTools inspector](/docs/guides/advanced/devtools-inspector) — debug tool calls locally

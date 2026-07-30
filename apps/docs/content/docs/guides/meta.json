@@ -1,0 +1,19 @@
+{
+  "title": "How-to Guides",
+  "icon": "BookOpen",
+  "pages": [
+    "index",
+    "troubleshooting-integration",
+    "testing-integration",
+    "auth-jwt",
+    "migrate-from-pusher",
+    "self-host-one-command",
+    "fluxy-config",
+    "realtime",
+    "security",
+    "ai-agents",
+    "chat",
+    "advanced",
+    "ecosystem"
+  ]
+}

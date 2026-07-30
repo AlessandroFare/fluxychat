@@ -1,0 +1,116 @@
+---
+title: "OAuth Token Encryption"
+description: "FluxyChat's token encryption (P26-B2) provides AES-256-GCM encryption for securely storing OAuth tokens used by platform adapters (Slack, Linear, etc.)."
+---
+
+## Overview
+
+OAuth tokens stored in D1 or external systems should never be plaintext. The `TokenCrypto` class wraps the Web Crypto API's AES-256-GCM implementation with a simple encrypt/decrypt interface. Each encryption uses a random 12-byte IV, ensuring the same plaintext produces different ciphertext every time.
+
+**Source:** `apps/worker/src/lib/token-crypto.js`
+
+## Quick Start
+
+```js
+import { TokenCrypto } from "@fluxy-chat/sdk";
+
+// Initialize with your master encryption key (store in Worker secrets)
+const crypto = new TokenCrypto(process.env.OAUTH_ENCRYPTION_KEY);
+
+// Encrypt an OAuth token before storing it
+const encrypted = await crypto.encrypt("xoxb-slack-bot-token-...");
+// { ciphertext: "base64...", iv: "base64...", tag: "base64..." }
+
+// Store `encrypted` in D1
+await db.prepare(
+  "INSERT INTO oauth_tokens (adapter, user_id, ciphertext, iv, tag) VALUES (?, ?, ?, ?, ?)"
+).bind("slack", "U123", encrypted.ciphertext, encrypted.iv, encrypted.tag);
+
+// Decrypt when you need to use the token
+const row = await db.prepare("SELECT * FROM oauth_tokens WHERE user_id = ?").bind("U123").first();
+const plaintext = await crypto.decrypt({
+  ciphertext: row.ciphertext,
+  iv: row.iv,
+  tag: row.tag,
+});
+// "xoxb-slack-bot-token-..."
+```
+
+## How It Works
+
+1. **Key derivation:** The master key string is SHA-256 hashed to produce a 256-bit AES-GCM `CryptoKey`.
+2. **Encryption:** A random 12-byte (96-bit) IV is generated per encryption. The plaintext is encrypted using AES-GCM with a 128-bit authentication tag.
+3. **Output:** Three base64-encoded values: `ciphertext`, `iv`, and `tag`.
+4. **Decryption:** The IV and tag are combined with the ciphertext to decrypt back to plaintext.
+
+The Web Crypto API (`crypto.subtle`) is used throughout, so this works on Cloudflare Workers, browsers, and Node.js >= 19.
+
+## Lower-Level API
+
+For cases where you already have a `CryptoKey` (e.g., shared across multiple operations):
+
+```js
+import { deriveKey, encryptToken, decryptToken } from "@fluxy-chat/sdk";
+
+const key = await deriveKey(process.env.OAUTH_ENCRYPTION_KEY);
+
+const encrypted = await encryptToken("my-secret-token", key);
+// { ciphertext, iv, tag }
+
+const plaintext = await decryptToken(encrypted, key);
+// "my-secret-token"
+```
+
+## Type Guard
+
+```js
+import { isEncryptedTokenData } from "@fluxy-chat/sdk";
+
+const value = JSON.parse(row.data);
+if (isEncryptedTokenData(value)) {
+  const token = await crypto.decrypt(value);
+}
+```
+
+## Adapter Integration
+
+Adapters that handle OAuth flows (Slack, Linear, etc.) use `TokenCrypto` internally:
+
+```js
+class SlackAdapter extends BaseAdapter {
+  constructor(env) {
+    this.tokenCrypto = new TokenCrypto(env.OAUTH_ENCRYPTION_KEY);
+  }
+
+  async storeUserToken(userId, token) {
+    const encrypted = await this.tokenCrypto.encrypt(token);
+    await this.db.prepare(
+      "INSERT INTO slack_oauth (user_id, ciphertext, iv, tag) VALUES (?, ?, ?, ?)"
+    ).bind(userId, encrypted.ciphertext, encrypted.iv, encrypted.tag).run();
+  }
+
+  async getUserToken(userId) {
+    const row = await this.db.prepare(
+      "SELECT ciphertext, iv, tag FROM slack_oauth WHERE user_id = ?"
+    ).bind(userId).first();
+    if (!row) return null;
+    return this.tokenCrypto.decrypt({
+      ciphertext: row.ciphertext,
+      iv: row.iv,
+      tag: row.tag,
+    });
+  }
+}
+```
+
+## Security Notes
+
+- **Master key:** Store `OAUTH_ENCRYPTION_KEY` in Cloudflare Worker secrets (`wrangler secret put`). Never commit it to source.
+- **Key rotation:** To rotate, decrypt all tokens with the old key and re-encrypt with the new key. There's no built-in migration tool — handle this in a maintenance script.
+- **IV uniqueness:** Each encryption call generates a cryptographically random IV. Never reuse an IV with the same key.
+- **Authentication tag:** The GCM tag ensures ciphertext integrity. If the encrypted data is tampered with, decryption will throw.
+
+## See Also
+
+- [Adapter Errors](/docs/adapter-errors) — `AuthenticationError` for invalid/expired tokens
+- [Adapter Pattern](/docs/adapter-pattern) — How adapters are structured

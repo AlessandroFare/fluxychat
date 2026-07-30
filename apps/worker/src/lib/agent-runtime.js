@@ -25,6 +25,7 @@ import { createPlan, addTask, updateTaskStatus, getPlanProgress } from "./plan.j
 import { cardToFallbackText } from "./cards.js";
 import { createSentMessage } from "./sent-message.js";
 import { createThreadStateStore } from "./thread-state.js";
+import { resolveAppKv } from "./app-kv.js";
 import { createLLMMiddleware, wrapLanguageModel, createLoggingMiddleware } from "./llm-middleware.js";
 import { createLoopController, LOOP_PRESETS } from "./loop-control.js";
 import { createApprovalStore, createApprovalGate } from "./hitl-approval.js";
@@ -303,8 +304,11 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   const startTime = performance.now();
   const runId = crypto.randomUUID();
 
+  agentLog.info("agent_lifecycle_onStart", { runId, agentId: agentRow.id, roomId, userId, traceId });
+
   // P22-F10: Track thread state for this agent run
-  const threadStateStore = env.KV ? createThreadStateStore(env.KV) : null;
+  const appKv = resolveAppKv(env);
+  const threadStateStore = appKv ? createThreadStateStore(appKv) : null;
   const threadKey = `${projectId}:${roomId}`;
   if (threadStateStore) {
     await threadStateStore.set(threadKey, {
@@ -434,7 +438,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   });
 
   // P23-2: HITL approval — gate sensitive tool calls
-  const approvalStore = env.KV ? createApprovalStore(env.KV) : null;
+  const approvalStore = appKv ? createApprovalStore(appKv) : null;
   const approvalGate = agentRow.config?.approvalGate
     ? createApprovalGate(agentRow.config.approvalGate)
     : null;
@@ -658,7 +662,14 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           name: tc.name,
           arguments: tc.arguments,
         });
+        agentLog.info("agent_lifecycle_onToolExecutionStart", { runId, toolName: tc.name, toolCallId: tc.id });
         const toolResult = await executeToolCall(env, toolExecuteUrl, tc, projectId, runId, traceId);
+        agentLog.info("agent_lifecycle_onToolExecutionEnd", {
+          runId,
+          toolName: tc.name,
+          toolCallId: tc.id,
+          success: toolResult.success,
+        });
         await announceRoomEvent(env, roomId, {
           type: toolResult.success ? "tool_result" : "tool_error",
           runId,

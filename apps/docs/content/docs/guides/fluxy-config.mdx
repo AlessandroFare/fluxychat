@@ -1,0 +1,71 @@
+---
+title: fluxy.config.ts
+description: Declarative room authz, middleware hooks, and client defaults with @fluxy-chat/config.
+---
+
+Use `@fluxy-chat/config` to declare per-room authorization, publish middleware, and client defaults — similar to a `next.config` for your chat deployment.
+
+## Example
+
+```typescript
+import {
+  defineConfig,
+  allow,
+  block,
+  defineMiddleware,
+  allowPublish,
+  blockPublish,
+} from "@fluxy-chat/config";
+
+const moderate = defineMiddleware("publish", (ctx) => {
+  if (ctx.capabilities.publish === false) {
+    return blockPublish("You do not have permission to post.");
+  }
+  return allowPublish();
+});
+
+export default defineConfig({
+  workerUrl: process.env.FLUXY_WORKER_URL,
+  client: {
+    readOn: "visible",
+    wsCache: "on",
+    historyLimit: 50,
+  },
+  rooms: {
+    "support-*": {
+      anonymous: false,
+      authz: (ctx) =>
+        ctx.anonymous ? block("Sign in to contact support.") : allow({ publish: true }),
+      onPublish: [moderate.handler],
+    },
+    "room-*": {
+      anonymous: true,
+      authz: () => allow({ publish: true, invokeAgent: true }),
+      onPublish: [moderate.handler],
+    },
+  },
+});
+```
+
+Copy from `packages/config/fluxy.config.example.ts` in the monorepo.
+
+## Room patterns
+
+| Pattern | Use case |
+|---------|----------|
+| `support-*` | Authenticated support rooms |
+| `room-*` | Public demo rooms with agent invoke |
+| Exact room id | Override for a single channel |
+
+## Middleware
+
+`defineMiddleware("publish", handler)` runs before messages are accepted. Return `blockPublish(reason)` to reject with a user-visible error, or `allowPublish()` to continue.
+
+## Worker integration
+
+The Worker reads `fluxy.config.js` (compiled from TypeScript) for hosted multi-tenant projects. Self-hosters can colocate config beside `apps/worker/wrangler.toml`.
+
+## Related
+
+- [Auth JWT](/docs/guides/auth-jwt)
+- [Self-host one command](/docs/guides/self-host-one-command)

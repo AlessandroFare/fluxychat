@@ -20,9 +20,9 @@ import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 export const metadata = buildPageMetadata({
-  title: "Pusher alternative — compare FluxyChat",
+  title: "Compare FluxyChat — vs Portal, Pusher, Ably, Stream",
   description:
-    "How FluxyChat compares to Pusher, Ably, Stream, and DIY Workers chat — in-app rooms on Cloudflare, optional self-host, no helpdesk lock-in.",
+    "How FluxyChat compares to Portal, Pusher, Ably, Stream, and DIY Workers — chat, agents, MIT self-host, voice, omnichannel inbox, 14 channels.",
   path: "/compare",
 });
 
@@ -80,7 +80,7 @@ export default function ComparePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
       <p className="text-sm text-muted-foreground">
-        <Link href="/landing" className="text-brand underline underline-offset-2">
+        <Link href={HOSTED_PATHS.landing} className="text-brand underline underline-offset-2">
           ← Back to landing
         </Link>
       </p>
@@ -88,9 +88,9 @@ export default function ComparePage() {
         Compare FluxyChat
       </h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">
-        Rough positioning for teams looking at Stream, Ably, Pusher, TalkJS, Firebase, or a DIY
-        Workers stack. FluxyChat is in-app chat on Cloudflare (one Durable Object per room + D1),
-        MIT self-host or hosted beta — not a helpdesk widget.{" "}
+        Positioning for teams evaluating Stream, Ably, Pusher, TalkJS, Firebase, or a DIY Workers stack.
+        FluxyChat is a realtime platform on Cloudflare — chat, agents, streaming, collab, game, IoT, fleet,
+        spatial, and 14 channel adapters in one SDK — MIT self-host or hosted beta, not a helpdesk widget.{" "}
         <Link href={MARKETING_GUIDE_PATHS.pusherAlternativeSaas} className="text-brand underline underline-offset-2">
           Pusher alternative guide →
         </Link>
@@ -151,6 +151,15 @@ export default function ComparePage() {
       </div>
 
       <div className="mt-6 rounded-xl border border-border bg-muted/30 px-4 py-4 text-sm">
+        <p className="font-medium">One platform, not a patchwork of SKUs</p>
+        <p className="mt-1 text-muted-foreground">
+          Pusher and Ably excel at pub/sub channels. Stream bundles chat and feeds with separate video products.
+          FluxyChat ships stream, collab, game, IoT, fleet, and spatial modules on the same Worker and room kernel —
+          so you are not stitching five vendor bills for one product experience.
+        </p>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-border bg-muted/30 px-4 py-4 text-sm">
         <p className="font-medium">Chat layer, not full BaaS</p>
         <p className="mt-1 text-muted-foreground">
           If you need auth, RBAC, uploads, and AI in one mega-starter, a full Cloudflare
@@ -175,17 +184,22 @@ export default function ComparePage() {
       <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">
         Managed chat APIs
       </h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        Side-by-side with Portal (chat-first DX benchmark), Stream, Ably, and Pusher.
+        Rows are factual — check each vendor&apos;s current docs before you buy.
+      </p>
       <div className="mt-4">
         <CompareTable
           headers={[
             "Capability",
-            "Stream APIs",
-            "Ably-style",
-            "Pusher-style",
+            "Portal",
+            "Stream",
+            "Ably",
+            "Pusher",
             "FluxyChat",
           ]}
           rows={COMPARE_ROWS.map((row) => ({
-            cells: [row.label, row.stream, row.ably, row.pusher, row.fluxy],
+            cells: [row.label, row.portal, row.stream, row.ably, row.pusher, row.fluxy],
           }))}
         />
       </div>

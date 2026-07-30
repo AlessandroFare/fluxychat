@@ -1,0 +1,63 @@
+---
+title: Agent lifecycle callbacks
+description: Systematic onStart, onStepStart, onToolExecution, and onEnd hooks for generate, stream, and agent loops.
+---
+
+`@fluxy-chat/agent` exposes lifecycle hooks aligned with Vercel AI SDK 7 telemetry phases — use them for logging, billing, guardrails, and OpenTelemetry export.
+
+## Callback phases
+
+| Phase | When |
+|-------|------|
+| `onStart` | Before the first model step |
+| `onStepStart` | Before each agent step |
+| `onLanguageModelCallStart` / `onLanguageModelCallEnd` | Around each LLM request |
+| `onToolExecutionStart` / `onToolExecutionEnd` | Around each tool call |
+| `onStepEnd` | After each step completes |
+| `onEnd` | When the run finishes |
+
+## Agent loop example
+
+```typescript
+import { runAgentLoop } from "@fluxy-chat/agent";
+
+await runAgentLoop({
+  model,
+  tools,
+  messages,
+  onStart: ({ callId, maxSteps }) => {
+    console.log("run", callId, "maxSteps", maxSteps);
+  },
+  onToolExecutionStart: ({ toolCall }) => {
+    console.log("tool", toolCall.name);
+  },
+  onEnd: ({ text, usage }) => {
+    console.log("tokens", usage.totalTokens);
+  },
+});
+```
+
+## SDK telemetry bridge
+
+Wire the same events to OTLP or console export:
+
+```typescript
+import {
+  createTelemetryManager,
+  createOtlpTelemetryIntegration,
+} from "@fluxy-chat/sdk";
+
+const telemetry = createTelemetryManager();
+telemetry.register(
+  createOtlpTelemetryIntegration({
+    endpoint: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT!,
+  }),
+);
+```
+
+See [Observability (OTLP)](/docs/observability-otel).
+
+## Related
+
+- [Unified reasoning](/docs/guides/unified-reasoning)
+- [Tool approval HMAC](/docs/guides/ai-agents/tool-approval-hmac)

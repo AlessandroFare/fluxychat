@@ -1,0 +1,63 @@
+---
+title: MCP Apps marketplace
+description: Install curated, verified MCP servers on any agent with one click.
+---
+
+The **MCP Apps marketplace** lists pre-built, **curated** MCP servers (GitHub, Slack, Notion, Linear, …) that you can install on any agent in one click. Installs register server identity and tool provenance in the MCP identity registry.
+
+Browse from **Marketplace → MCP Apps** in the dashboard or use the APIs below.
+
+## Catalog (public)
+
+```bash
+curl "$WORKER_URL/marketplace/mcp-apps"
+```
+
+Each entry includes `verified`, `auditLevel` (`curated`), `tools`, and `category`.
+
+## Install on an agent
+
+Admin JWT required:
+
+```bash
+curl -X POST "$WORKER_URL/admin/mcp-apps/install" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "appId": "github-mcp",
+    "agentId": "agent_support_1"
+  }'
+```
+
+Omit `agentId` for a project-wide install. Tools are registered via `/admin/mcp-identity/*`.
+
+## List installed apps
+
+```bash
+curl "$WORKER_URL/admin/mcp-apps/installed" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+## Uninstall
+
+```bash
+curl -X DELETE "$WORKER_URL/admin/mcp-apps/install?appId=github-mcp&agentId=agent_support_1" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+## SDK — MCP App UI resources
+
+For rendering MCP App HTML resources in the client:
+
+```typescript
+import { createMCPAppManager, readMCPAppResource } from "@fluxy-chat/sdk";
+
+const manager = createMCPAppManager();
+const isApp = manager.isMCPAppTool(toolDefinition);
+```
+
+## Security
+
+- Curated catalog only for MVP — third-party servers require manual review before listing.
+- Installed tools appear in [MCP identity & audit](/docs/guides/enterprise/mcp-identity) for every tool call.
+- Pair with [AI Governance](/docs/guides/enterprise/ai-governance) for risk-tier policies on external tools.

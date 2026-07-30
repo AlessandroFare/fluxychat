@@ -3,12 +3,8 @@
 import dynamic from "next/dynamic";
 import React from "react";
 import { Loader2, LocateFixed, MapPin, Navigation, Square } from "lucide-react";
-import {
-  locationTrack,
-  useLocation,
-  type LocationTrackController,
-  type LocationTrackState,
-} from "@fluxy-chat/sdk";
+import { locationTrack, type LocationTrackController, type LocationTrackState } from "@fluxy-chat/sdk";
+import { useLocation } from "@fluxy-chat/react";
 import { Button } from "@/components/ui/button";
 import {
   FeatureCodePanel,
@@ -62,12 +58,22 @@ function LocationPanel({ session }: { session: ShowcaseSession }) {
     }
     if (!("permissions" in navigator)) return;
     let cancelled = false;
-    void navigator.permissions.query({ name: "geolocation" }).then((result) => {
-      if (!cancelled) setPermission(result.state);
-      result.addEventListener("change", () => setPermission(result.state));
-    }).catch(() => undefined);
+    let permissionStatus: PermissionStatus | null = null;
+    const handlePermissionChange = () => {
+      if (!cancelled && permissionStatus) setPermission(permissionStatus.state);
+    };
+    void navigator.permissions
+      .query({ name: "geolocation" })
+      .then((result) => {
+        if (cancelled) return;
+        permissionStatus = result;
+        setPermission(result.state);
+        result.addEventListener("change", handlePermissionChange);
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
+      permissionStatus?.removeEventListener("change", handlePermissionChange);
     };
   }, []);
 

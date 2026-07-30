@@ -1,0 +1,6 @@
+project_name          = "fluxychat"
+environment             = "staging"
+cloudflare_account_id   = "YOUR_ACCOUNT_ID"
+d1_database_name        = "fluxychat-db"
+worker_script_name      = "fluxychat-worker"
+run_migrations_on_apply = false

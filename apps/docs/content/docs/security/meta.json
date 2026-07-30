@@ -1,0 +1,8 @@
+{
+  "title": "Security",
+  "icon": "Shield",
+  "pages": [
+    "agent-tool-exfiltration",
+    "saml-signature-verification"
+  ]
+}

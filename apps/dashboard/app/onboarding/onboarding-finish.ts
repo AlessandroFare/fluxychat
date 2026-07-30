@@ -15,7 +15,7 @@ export async function finishQuickstartAndOpenConsole(
     projectId: string;
     setLastRoom: (room: CreatedRoom) => void;
   },
-  destination = "/",
+  destination = "/dashboard",
 ) {
   markQuickstartComplete(args.clerkUserId);
   if (args.memberJwt.trim() && args.memberUserId.trim()) {

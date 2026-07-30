@@ -6,7 +6,7 @@ import { ReplySuggestions, suggestCache } from "./reply-suggestions";
 
 const mockSuggestReplies = vi.fn();
 
-vi.mock("@fluxy-chat/sdk", () => ({
+vi.mock("@fluxy-chat/react", () => ({
   useFluxyChatOptional: () => ({
     client: { suggestReplies: mockSuggestReplies },
   }),

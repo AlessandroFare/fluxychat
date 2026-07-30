@@ -1,7 +1,7 @@
 {
   "name": "@fluxy-chat/sdk",
-  "version": "0.4.2",
-  "description": "Fluxychat JavaScript/TypeScript SDK â€” WebSocket rooms, REST messages, FluxyRealtimeProvider, useChat with loadMore",
+  "version": "0.5.0",
+  "description": "FluxyChat JavaScript/TypeScript SDK — WebSocket rooms, REST messages, FluxyChatClient, agents, and vertical SDKs",
   "license": "MIT",
   "author": "Fluxychat",
   "repository": {
@@ -22,6 +22,53 @@
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./edu": {
+      "types": "./dist/edu.d.ts",
+      "import": "./dist/edu.js",
+      "default": "./dist/edu.js"
+    },
+    "./health": {
+      "types": "./dist/health.d.ts",
+      "import": "./dist/health.js",
+      "default": "./dist/health.js"
+    },
+    "./event": {
+      "types": "./dist/event.d.ts",
+      "import": "./dist/event.js",
+      "default": "./dist/event.js"
+    },
+    "./finance": {
+      "types": "./dist/finance.d.ts",
+      "import": "./dist/finance.js",
+      "default": "./dist/finance.js"
+    },
+    "./continuity": {
+      "types": "./dist/continuity.d.ts",
+      "import": "./dist/continuity.js",
+      "default": "./dist/continuity.js"
+    },
+    "./worker-runtime": {
+      "types": "./dist/worker-runtime.d.ts",
+      "import": "./dist/worker-runtime.js",
+      "default": "./dist/worker-runtime.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "default": "./dist/react.js"
+    },
+    "./testing": {
+      "types": "./dist/testing-utils.d.ts",
+      "import": "./dist/testing-utils.js",
+      "default": "./dist/testing-utils.js"
+    }
+  },
   "sideEffects": false,
   "files": [
     "dist/index.js",
@@ -72,6 +119,8 @@
     "dist/devtools.d.ts",
     "dist/workflow-agent.js",
     "dist/workflow-agent.d.ts",
+    "dist/worker-runtime.js",
+    "dist/worker-runtime.d.ts",
     "dist/sandbox.js",
     "dist/sandbox.d.ts",
     "dist/cross-platform.js",
@@ -150,6 +199,10 @@
     "dist/room-session.d.ts",
     "dist/use-fluxy-room-store.js",
     "dist/use-fluxy-room-store.d.ts",
+    "dist/react.js",
+    "dist/react.d.ts",
+    "dist/testing-utils.js",
+    "dist/testing-utils.d.ts",
     "dist/message-template.js",
     "dist/message-template.d.ts",
     "LICENSE",
@@ -161,7 +214,7 @@
   "scripts": {
     "prebuild": "pnpm --filter @fluxy-chat/protocol build",
     "build": "pnpm exec tsc -p tsconfig.json",
-    "prepublishOnly": "pnpm run build",
+    "prepublishOnly": "pnpm run build && node ../../scripts/verify-publish-manifest.mjs",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts,.tsx",
     "test": "pnpm exec vitest run"
@@ -191,7 +244,13 @@
   },
   "dependencies": {
     "@fluxy-chat/protocol": "workspace:*",
-    "remend": "^1.0.0"
+    "@types/mdast": "^4.0.4",
+    "mdast-util-to-string": "^4.0.0",
+    "partysocket": "1.3.0",
+    "remark": "^15.0.1",
+    "remark-gfm": "^4.0.1",
+    "remend": "^1.0.0",
+    "unified": "^11.0.5"
   }
 }
 

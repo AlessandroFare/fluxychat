@@ -46,15 +46,80 @@ export const LANDING_BADGES = [
   },
 ] as const;
 
+export interface LandingNavMenuLink {
+  href: string;
+  label: string;
+}
+
+export interface LandingNavMenuColumn {
+  heading: string;
+  links: LandingNavMenuLink[];
+}
+
+export interface LandingNavMenu {
+  label: string;
+  href?: string;
+  links?: LandingNavMenuLink[];
+  columns?: LandingNavMenuColumn[];
+}
+
+export const LANDING_NAV_MENUS: readonly LandingNavMenu[] = [
+  {
+    label: "Product",
+    columns: [
+      {
+        heading: "Core",
+        links: [
+          { href: "/#features", label: "Chat & messaging" },
+          { href: "/#realtime", label: "Realtime SDK" },
+          { href: "/demo", label: "Live demo" },
+        ],
+      },
+      {
+        heading: "Platform",
+        links: [
+          { href: "/#realtime", label: "Location & push" },
+          { href: "/#realtime", label: "Stream & collab" },
+          { href: "/#realtime", label: "Game, IoT & fleet" },
+          { href: "/#realtime", label: "14 channel adapters" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "Solutions",
+    links: [
+      { href: HOSTED_PATHS.why, label: "Why FluxyChat" },
+      { href: HOSTED_PATHS.compare, label: "Compare vendors" },
+      { href: "/#realtime", label: "Education & events" },
+      { href: "/#realtime", label: "Health & finance" },
+      { href: HOSTED_PATHS.guidesBuildNextjs, label: "Next.js quickstart" },
+    ],
+  },
+  {
+    label: "Resources",
+    links: [
+      { href: HOSTED_PATHS.docs, label: "Docs" },
+      { href: HOSTED_PATHS.guides, label: "Guides" },
+      { href: "/demo", label: "Try demo (no signup)" },
+      { href: HOSTED_PATHS.status, label: "Status" },
+      { href: "/#faq", label: "FAQ" },
+    ],
+  },
+  { label: "Pricing", href: "/pricing" },
+];
+
+/** Flat links for mobile drawer */
 export const LANDING_NAV_LINKS: readonly TopNavLink[] = [
+  { href: "/#features", label: "Chat & AI" },
+  { href: "/#realtime", label: "Realtime" },
   { href: HOSTED_PATHS.docs, label: "Docs" },
   { href: HOSTED_PATHS.why, label: "Why" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "/pricing", label: "Pricing" },
   { href: HOSTED_PATHS.compare, label: "Compare" },
   { href: HOSTED_PATHS.guides, label: "Guides" },
-  { href: "#lifecycle", label: "Lifecycle" },
   { href: "/demo", label: "Demo" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/#faq", label: "FAQ" },
   { href: HOSTED_PATHS.status, label: "Status" },
 ];
 

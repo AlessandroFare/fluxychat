@@ -7,9 +7,9 @@ import {
 
 describe("worker-route-dispatch (P0-2)", () => {
   it("registers the expected number of route handlers", () => {
-    expect(WORKER_ROUTE_DISPATCHER_COUNT).toBe(99);
-    expect(WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY.length).toBe(91);
-    expect(WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY.length).toBe(6);
+    expect(WORKER_ROUTE_DISPATCHER_COUNT).toBe(124);
+    expect(WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY.length).toBe(115);
+    expect(WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY.length).toBe(7);
   });
 
   it("keeps GDPR/billing handlers out of the main routeDeps segments", () => {

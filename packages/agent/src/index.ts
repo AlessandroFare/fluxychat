@@ -18,6 +18,201 @@ export {
 } from "@fluxy-chat/sdk";
 
 export { mintWorkerToken, type MintTokenInput, type MintTokenResult } from "./mint";
+export {
+  FluxyAIError,
+  addUsage,
+  classifyAIError,
+  normalizeFinishReason,
+  normalizeUsage,
+  retryAI,
+  withTimeout,
+  type AIErrorCode,
+  type AIErrorData,
+  type AIFinishReason,
+  type AIGenerationResult,
+  type AIGenerationStep,
+  type AIProviderMetadata,
+  type AIRetryOptions,
+  type AIStreamPart,
+  type AIUsage,
+  type AIWarning,
+} from "./ai-core";
+export {
+  AIProviderRegistry,
+  DeterministicLanguageModel,
+  FLUXY_MODEL_SPEC_VERSION,
+  type AIContentPart,
+  type AIEmbeddingModel,
+  type AILanguageModel,
+  type AIMessage,
+  type AIMessageRole,
+  type AIModel,
+  type AIModelCapabilities,
+  type AIModelModality,
+  type AIModelRequest,
+  type AIModelResponse,
+  type AIRerankModel,
+  type AIRerankResult,
+  type AIToolDefinition,
+} from "./providers";
+export {
+  canonicalPrompt,
+  generate,
+  stream,
+  type AIGenerateOptions,
+  type AIPrompt,
+  type AIStreamResult,
+} from "./generation";
+export {
+  isReasoningConfig,
+  normalizeReasoningConfig,
+  reasoningToOpenAIOptions,
+  reasoningToAnthropicOptions,
+  reasoningToGoogleOptions,
+  reasoningToProviderOptions,
+  extractReasoningText,
+  mergeReasoningProviderMetadata,
+  type AIReasoningConfig,
+  type AIReasoningEffort,
+  type AIReasoningResult,
+  type AIReasoningSummary,
+} from "./reasoning";
+export {
+  safeValidateAIMessages,
+  validateAIMessages,
+  type AIMessageValidationOptions,
+  type AIMessageValidationResult,
+} from "./message-validation";
+export {
+  collectStreamParts,
+  collectTextStream,
+  toTextStream,
+  type AITextStreamOptions,
+} from "./stream-utils";
+export {
+  runAgentLoop,
+  stopAfterSteps,
+  stopOnFinishReason,
+  type AgentLoopOptions,
+  type AgentLoopResult,
+  type AgentLoopState,
+  type AgentStepResult,
+  type AgentStopCondition,
+  type AITool,
+  type AIToolCall,
+  type AIToolContext,
+  type AIToolResult,
+} from "./agent-loop";
+export {
+  createApprovalId,
+  hashCanonical,
+  normalizeToolApprovalStatus,
+  resolveToolApproval,
+  signApproval,
+  verifyApprovalSignature,
+  type ApprovalRequest,
+  type ApprovalResponse,
+  type SingleToolApprovalFunction,
+  type GenericToolApprovalFunction,
+  type ToolApprovalConfig,
+  type ToolApprovalDecision,
+  type ToolApprovalRecord,
+  type ToolApprovalStatus,
+} from "./tool-approval";
+export type {
+  Callback,
+  LoopStartEvent,
+  StepStartEvent,
+  ToolExecutionStartEvent,
+  ToolExecutionEndEvent,
+  StepEndEvent,
+  LoopEndEvent,
+} from "./lifecycle-events";
+export type {
+  PrepareStepContext,
+  PrepareStepResult,
+  PrepareStepFunction,
+} from "./prepare-step";
+export {
+  pruneMessages,
+  type PruneMessagesOptions,
+} from "./prune-messages";
+export {
+  cosineSimilarity,
+  embed,
+  embedMany,
+  retrieve,
+  type AIEmbeddingResult,
+  type AIEmbedManyResult,
+  type RetrievalDocument,
+  type RetrievedDocument,
+} from "./retrieval";
+export {
+  InMemoryMemoryStore,
+  FileMemoryStore,
+  createMemoryTools,
+  AUTO_MEMORY_SYSTEM_PROMPT,
+  type AIMemoryEntry,
+  type AIMemoryQuery,
+  type AIMemoryStore,
+  type AIMemoryConfig,
+  type CreateMemoryToolsOptions,
+  type FileMemoryStoreOptions,
+} from "./memory";
+export {
+  createSubagentTool,
+  runSubagent,
+  type SubagentConfig,
+  type SubagentToolOptions,
+  type SubagentResult,
+} from "./subagent";
+export {
+  createCustomProvider,
+  createProviderRegistry,
+  ProviderRegistry,
+  type CustomProviderConfig,
+  type ProviderRegistryConfig,
+  type ProviderRegistryOptions,
+} from "./provider-registry";
+export {
+  wrapLanguageModel,
+  extractReasoningMiddleware,
+  defaultSettingsMiddleware,
+  simulateStreamingMiddleware,
+  extractJsonMiddleware,
+  type LanguageModelMiddleware,
+  type MiddlewareParams,
+  type GenerateContext,
+  type StreamContext,
+  type WrappedModelOptions,
+} from "./middleware";
+export {
+  smoothStream,
+  experimental_transform,
+  type SmoothStreamOptions,
+  type StreamTransformFunction,
+  type ExperimentalTransformOptions,
+} from "./stream-transform";
+export {
+  uploadSkill,
+  type ProviderReference,
+  type SkillFile,
+  type SkillProvider,
+  type UploadSkillOptions,
+  type UploadSkillResult,
+} from "./skill-uploads";
+export {
+  HarnessAgent,
+  type HarnessAdapter,
+  type HarnessSession,
+  type HarnessSessionResumeState,
+  type HarnessGenerateOptions,
+  type HarnessStreamOptions,
+  type HarnessGenerateResult,
+  type HarnessStreamResult,
+  type HarnessStepResult,
+  type HarnessMessage,
+} from "./harness-agent";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:8787";
 

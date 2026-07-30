@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import {
   FluxyRealtimeProvider,
-  decodeFluxyJwtPayload,
-  jwtRefreshDelayMs,
   type FluxyAuthTokenResult,
-} from "@fluxy-chat/sdk";
+} from "@fluxy-chat/react";
+import { decodeFluxyJwtPayload, jwtRefreshDelayMs } from "@fluxy-chat/sdk";
 import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
@@ -20,6 +20,7 @@ const REFRESH_BUFFER_MS = 5 * 60 * 1000;
  * `/api/fluxy/connect` (hosted) or reuses a pasted member JWT (self-host).
  */
 export function FluxyRealtimeShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const workerUrl = getPublicWorkerUrl();
   const { hasHydrated, memberJwt, setMemberJwt, setAdminJwt } = useDashboardSession();
   const { user, isSignedIn, isLoaded } = useClerkUser();
@@ -76,6 +77,7 @@ export function FluxyRealtimeShell({ children }: { children: React.ReactNode }) 
   }, [clerkHosted, isSignedIn, memberJwt, resolvedUserId, setAdminJwt, setMemberJwt]);
 
   const shouldWrap =
+    !pathname?.startsWith("/demo") &&
     hasHydrated &&
     Boolean(workerUrl) &&
     (memberJwt.trim().length >= 12 || (clerkHosted && isLoaded && isSignedIn));

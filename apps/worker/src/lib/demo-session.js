@@ -3,6 +3,8 @@
  * @param {*} env
  * @param {*} deps
  */
+import { resolveDemoAgent } from "./resolve-demo-agent.js";
+
 export async function issueDemoSession(env, deps) {
   const {
     resolveProjectId,
@@ -55,6 +57,8 @@ export async function issueDemoSession(env, deps) {
     return { ok: false, status: 500, body: { error: "demo_project_secret_missing" } };
   }
 
+  const demoAgent = await resolveDemoAgent(env, demoProjectId);
+
   const ttlSeconds = Math.min(
     3600,
     Math.max(300, Number(env.DEMO_TOKEN_TTL_SECONDS || 1800)),
@@ -67,6 +71,8 @@ export async function issueDemoSession(env, deps) {
     exp: Math.floor(Date.now() / 1000) + ttlSeconds,
   });
 
+  const agentDisplayName = (env.DEMO_AGENT_NAME || "FluxyBot").trim() || "FluxyBot";
+
   return {
     ok: true,
     status: 200,
@@ -77,6 +83,9 @@ export async function issueDemoSession(env, deps) {
       token,
       expiresIn: ttlSeconds,
       readOnly: env.DEMO_READ_ONLY === "true",
+      agentId: demoAgent?.id ?? null,
+      agentName: agentDisplayName,
+      agentHandle: demoAgent?.handle ?? null,
     },
   };
 }

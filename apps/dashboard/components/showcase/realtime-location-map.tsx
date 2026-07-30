@@ -6,6 +6,7 @@ import L from "leaflet";
 import type { LatLngBoundsExpression } from "leaflet";
 import type { LocationTrackState } from "@fluxy-chat/sdk";
 import "leaflet/dist/leaflet.css";
+import { sanitizeMapPopupText } from "@/lib/sanitize-map-popup-text";
 
 function useThemeColors() {
   const [colors, setColors] = React.useState({
@@ -81,7 +82,7 @@ export function RealtimeLocationMap({ tracks }: { tracks: LocationTrackState[] }
             }}
           >
             <Popup>
-              <strong>{track.trackId}</strong>
+              <strong>{sanitizeMapPopupText(track.trackId)}</strong>
               <br />
               Last seen {new Date(track.updatedAt).toLocaleTimeString()}
             </Popup>
@@ -89,7 +90,7 @@ export function RealtimeLocationMap({ tracks }: { tracks: LocationTrackState[] }
         ) : (
           <Marker key={track.trackId} position={[track.latitude, track.longitude]} icon={liveIcon}>
             <Popup>
-              <strong>{track.trackId}</strong>
+              <strong>{sanitizeMapPopupText(track.trackId)}</strong>
               <br />
               Updated {new Date(track.updatedAt).toLocaleTimeString()}
             </Popup>

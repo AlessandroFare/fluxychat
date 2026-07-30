@@ -1,0 +1,34 @@
+---
+title: Read receipts
+description: Unread counts and mark-read over REST and useChat.
+---
+
+FluxyChat tracks per-user read position per room in D1. Clients update via REST; other members see unread badges via inbox and room list.
+
+## Mark read (SDK)
+
+```ts
+await client.markReadRest("general", latestMessageId);
+```
+
+Or enable automatic read on mount:
+
+```tsx
+useChat({ roomId, client, markReadLatest: true });
+```
+
+## Unread catch-up
+
+```ts
+const { unreadCount, firstUnreadMessageId } = await client.getRoomCatchUp(roomId);
+```
+
+## REST
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/rooms/{id}/read` | Body `{ messageId }` |
+| GET | `/rooms/{id}/unread` | Unread count + first unread id |
+| GET | `/rooms?userId=` | Room list includes `unreadCount` per room |
+
+Read receipts sync to [Inbox](/docs/core/inbox) and the user channel (`inbox_updated` events).

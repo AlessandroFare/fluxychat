@@ -1,5 +1,6 @@
 @import "../node_modules/tw-animate-css/dist/tw-animate.css";
 @import "../node_modules/shadcn/dist/tailwind.css";
+@import "@docsearch/css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -693,6 +694,17 @@ code {
   100% {
     opacity: 0;
     transform: scale(2.4);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

@@ -55,9 +55,7 @@ describe("VoiceMessageBubble (P12-B UI)", () => {
       transcriptionStatus: "pending",
     };
     const { container } = render(<VoiceMessageBubble message={msg} />);
-    expect(
-      container.querySelector('[data-testid="voice-transcription-pending"]'),
-    ).toBeTruthy();
+    expect(screen.getByText("Transcribing…")).toBeTruthy();
     expect(
       container.querySelector('[data-voice-status="pending"]'),
     ).toBeTruthy();

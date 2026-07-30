@@ -1,0 +1,62 @@
+# Gamification
+
+XP, badges, and leaderboard system for chat engagement.
+
+## Quick Start
+
+```ts
+import { createGamification } from "@fluxy-chat/sdk";
+
+const game = createGamification();
+```
+
+## XP System
+
+```ts
+// Award XP
+game.awardXp("user-1", 100, "message sent");
+game.awardXp("user-1", 50, "login");
+
+// Query
+console.log(game.getXp("user-1")); // 150
+
+// History
+const history = game.getHistory("user-1");
+// -> [{ userId: "user-1", amount: 100, reason: "message sent", timestamp: "..." }, ...]
+```
+
+## Badges
+
+```ts
+game.awardBadge("user-1", { id: "first-msg", name: "First Message", description: "Sent your first message" });
+game.awardBadge("user-1", { id: "streak-7", name: "Week Streak" });
+
+const badges = game.getBadges("user-1");
+// -> [{ id: "first-msg", name: "First Message", ... }, ...]
+
+// Duplicate badges are not awarded
+game.awardBadge("user-1", { id: "first-msg", name: "First Message" });
+console.log(game.getBadges("user-1").length); // 2 (still 2, not 3)
+```
+
+## Leaderboard
+
+```ts
+game.awardXp("user-1", 300, "threads");
+game.awardXp("user-2", 500, "messages");
+game.awardXp("user-3", 100, "reactions");
+
+const lb = game.getLeaderboard(3);
+// -> [
+//   { userId: "user-2", totalXp: 500, badges: 0, rank: 1 },
+//   { userId: "user-1", totalXp: 300, badges: 2, rank: 2 },
+//   { userId: "user-3", totalXp: 100, badges: 0, rank: 3 },
+// ]
+```
+
+## Types
+
+- `XpEvent`: `{ userId, amount, reason, timestamp }`
+- `Badge`: `{ id, name, description?, iconUrl?, awardedAt? }`
+- `LeaderboardEntry`: `{ userId, username?, avatarUrl?, totalXp, badges, rank }`
+- `GamificationApi`: interface with `awardXp`, `getXp`, `getHistory`, `awardBadge`, `getBadges`, `getLeaderboard`

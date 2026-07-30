@@ -34,7 +34,8 @@ export type { TypingUsersIndicatorProps } from "./typing-users-indicator";
 export { cn } from "./lib/utils";
 export {
   Message, MessageGroup, MessageAvatar, MessageContent, MessageHeader, MessageFooter,
-  MessageTimestamp, MessageStatus, MessageActions, MessageAction, MessageReactions,
+  MessageTimestamp, MessageStatus, MessageActions, MessageHoverToolbar, MessageAction, MessageReactions,
+  messageToolbarButtonClass, messageToolbarIconButtonClass,
 } from "./primitives/message";
 export {
   Bubble, BubbleGroup, BubbleContent, BubbleReactions,

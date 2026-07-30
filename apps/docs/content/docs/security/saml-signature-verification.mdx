@@ -1,0 +1,92 @@
+---
+title: "SAML signature verification"
+description: "FluxyChat verifies SAML 2.0 responses by parsing the XML response with"
+---
+
+FluxyChat verifies SAML 2.0 responses by parsing the XML response with
+the runtime's built-in DOMParser, applying the canonicalization
+algorithm declared in `<ds:CanonicalizationMethod>` (exclusive C14N
+1.0  the SAML 2.0 default), hashing the canonical SignedInfo bytes
+with SHA-256, and verifying the IdP's RSA-SHA256 signature against the
+configured IdP public key.
+
+## Configuration
+
+Before going public, set `SECURITY_CONTACT_EMAIL` (default:
+`security@fluxychat.com`) in your worker env to a **dedicated,
+monitored** inbox. This address is published in
+`/.well-known/security.txt` and is the destination for
+third-party vulnerability reports.
+
+> The minimum bar is an autoresponder that issues a CVE-style
+> ticket ID and pages a human within one business day. The
+> `fluxychat@outlook.com` general support address is **not** a
+> suitable substitute  researchers should be able to report a
+> vulnerability without it being triaged alongside billing
+> questions. See `RUNBOOK_DEPLOY_ROLLBACK.md` §8 for the
+> secrets-rotation procedure that lives alongside this.
+
+**Supported canonicalization algorithms:**
+
+- `http://www.w3.org/2001/10/xml-exc-c14n#`  exclusive C14N 1.0
+  (SAML 2.0 default; what Okta, Azure AD, Auth0, OneLogin, Google
+  Workspace, ADFS, PingFederate all emit)
+- `http://www.w3.org/2001/10/xml-exc-c14n#WithComments`  exclusive
+  C14N 1.0 with comments preserved
+- Inclusive C14N 1.0 (`http://www.w3.org/TR/2001/REC-xml-c14n-20010315`)
+  is **not** implemented by the `xml-c14n@0.0.6` library. No major
+  IdP uses it by default. If your IdP emits inclusive C14N, configure
+  it to emit exclusive C14N (the SAML 2.0 default) instead.
+
+The c14n algorithm is provided by the `xml-c14n` library
+(7 KB unpacked, no transitive dependencies). The XML parser is the
+runtime's built-in `DOMParser` (Cloudflare Workers, Node 18+ via
+`@xmldom/xmldom` for tests, jsdom for browser-side tests).
+
+## Bundle impact
+
+| Component | Size |
+|-----------|------|
+| Worker bundle before c14n library | 1,998 KB (342 KB gzip) |
+| Worker bundle after c14n library | 2,237 KB (393 KB gzip) |
+| Delta | +239 KB uncompressed, +51 KB gzip |
+| Cloudflare Workers 1 MB free-tier limit (compressed) | 1,024 KB gzip |
+| Headroom | ~630 KB gzip |
+
+The 51 KB gzipped delta is dominated by the `xml-c14n` module's
+algorithm table; the actual canonicalization primitive is small.
+
+## What is canonicalization and why does it matter?
+
+XML has multiple equivalent representations of the same logical document
+(different whitespace, attribute order, namespace prefixes). To produce a
+deterministic byte sequence to sign, IdPs apply a canonicalization
+algorithm before computing the signature. By applying the **same
+algorithm** at verify time that the IdP used at sign time, FluxyChat
+can verify signatures regardless of how the IdP emits the SignedInfo
+whitespace.
+
+## Troubleshooting
+
+If verification fails with `signature_invalid` even though the IdP
+certificate is correct, capture the raw SAML response from the IdP's
+network trace and confirm:
+
+1. The `<ds:CanonicalizationMethod Algorithm="…">` URL matches one of
+   the supported algorithms above.
+2. The IdP's public key (PEM) is loaded into FluxyChat's
+   `saml_configurations.idp_certificate`.
+3. The IdP's metadata exchange succeeded and the configured
+   `idp_entity_id` matches the `<saml:Issuer>` in the response.
+
+If `want_assertions_signed = true` and the response is signed at the
+response level only, FluxyChat will reject with
+`assertion_signature_unverified`. Set
+`want_assertions_signed = false` if your IdP signs only the response.
+
+## Self-reporting
+
+If you hit a verification issue, file a bug with the SAML response
+captured from your IdP's network trace (do **not** include the
+assertion  only the SAML response headers and the SignedInfo element).
+

@@ -1,0 +1,94 @@
+---
+title: Webhook event catalog
+description: Outbound webhook types, payload shape, HMAC signing, retries, and batch verify.
+---
+
+FluxyChat delivers project events to HTTPS endpoints you register in the dashboard **Admin** tab or via `POST /webhooks/register`.
+
+## Discover types
+
+```bash
+curl "$WORKER_URL/webhooks/event-types"
+```
+
+Returns the canonical `events[]` list (same as this page).
+
+## Event types
+
+| Event | When it fires | Payload highlights |
+|-------|---------------|-------------------|
+| `message.created` | New message persisted | `roomId`, `messageId`, `userId`, `content` |
+| `mention` | User @mentioned | `roomId`, `messageId`, `mentionedUserId` |
+| `report.created` | Moderation report filed | `roomId`, `messageId`, `reporterId` |
+| `moderation.auto_flag` | Automation flagged content | `roomId`, `messageId`, `reason` |
+| `room.occupied` | First subscriber connects | `roomId`, `at` |
+| `room.vacated` | Last subscriber disconnects | `roomId`, `at` |
+| `member_joined` | Presence join | `roomId`, `userId`, `subscriptionCount` |
+| `member_left` | Presence leave | `roomId`, `userId`, `subscriptionCount` |
+| `subscription_count` | Connection count changed | `roomId`, `subscriptionCount` |
+| `client_event` | Client-sent `client-*` WS event | `roomId`, `event`, `data` |
+| `cache_miss` | Cache channel empty on subscribe | `roomId`, `at` |
+| `user.event` | User channel push | `userId`, `event` |
+
+Subscribe only to events you handle — unknown types are rejected at registration time.
+
+## Envelope
+
+Each delivery POST body:
+
+```json
+{
+  "type": "message.created",
+  "projectId": "proj_abc",
+  "payload": { "roomId": "support", "messageId": 42 },
+  "createdAt": "2026-07-28T12:00:00.000Z"
+}
+```
+
+Headers:
+
+| Header | Value |
+|--------|--------|
+| `Content-Type` | `application/json` |
+| `X-Fluxy-Signature` | HMAC-SHA256 hex of raw body |
+| `X-Fluxy-Event` | Event type |
+| `X-Fluxy-Project-Id` | Project id |
+| `X-Fluxy-Delivery-Id` | Delivery row id (for idempotency) |
+
+Verify signatures with your webhook secret (shown once at registration). Use the dashboard **Webhooks** playground to test HMAC locally.
+
+## Retry policy
+
+Deliveries succeed when your endpoint returns **2xx** (typically `200`).
+
+| Attempt | Backoff (default) |
+|---------|-------------------|
+| 1 | immediate |
+| 2 | 60s |
+| 3 | 5m |
+| 4 | 30m |
+| 5 | 60m |
+
+Max attempts: `WEBHOOK_MAX_ATTEMPTS` (default `5`). Failed deliveries appear under **Activities** in the console.
+
+## Batch verify (optional)
+
+Send an array of sample events to `POST /webhooks/verify-batch` with `X-Fluxy-Signature` to validate your handler accepts multiple event shapes before going live.
+
+## Register
+
+```bash
+curl -X POST "$WORKER_URL/webhooks/register" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.example.com/fluxy/webhook",
+    "eventTypes": ["message.created", "room.occupied"],
+    "secret": "whsec_your_random_secret"
+  }'
+```
+
+## See also
+
+- [Webhook secret migration](/docs/webhook-secret-migration)
+- [Dashboard integration](/docs/reference/dashboard-integration)

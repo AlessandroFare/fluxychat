@@ -1,0 +1,68 @@
+{
+  "name": "@chat-adapter/gchat",
+  "version": "4.31.0",
+  "description": "Google Chat adapter for Chat SDK — service account auth, Card v2, dialogs, and Workspace Events",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chat-adapter/shared": "workspace:*",
+    "@googleapis/chat": "^44.6.0",
+    "@googleapis/workspaceevents": "^9.1.0",
+    "chat": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel/chat.git",
+    "directory": "packages/adapter-gchat"
+  },
+  "homepage": "https://chat-sdk.dev/adapters/official/gchat",
+  "bugs": {
+    "url": "https://github.com/vercel/chat/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "chat",
+    "chat-sdk",
+    "chatbot",
+    "google-chat",
+    "gchat",
+    "google-workspace",
+    "bot",
+    "adapter",
+    "messaging",
+    "ai-agent",
+    "ai-sdk",
+    "vercel"
+  ],
+  "license": "MIT"
+}

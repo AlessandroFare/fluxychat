@@ -3,17 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { CONSOLE_NAV_MAIN, CONSOLE_NAV_TOOLS } from "./console-nav";
-
-const ALL_NAV = [...CONSOLE_NAV_MAIN, ...CONSOLE_NAV_TOOLS];
-
-function titleForPath(pathname: string): string {
-  if (pathname === "/") return "Overview";
-  const match = ALL_NAV.find(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
-  return match?.label ?? "Console";
-}
+import { resolveConsoleNavContext } from "@/lib/console-command-items";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 export function ConsolePageHeader({
   title,
@@ -25,7 +16,8 @@ export function ConsolePageHeader({
   actions?: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const pageTitle = title ?? titleForPath(pathname ?? "/");
+  const navContext = resolveConsoleNavContext(pathname);
+  const pageTitle = title ?? navContext?.itemLabel ?? "Console";
 
   return (
     <header className="mb-6 border-b border-black/[0.06] pb-5">
@@ -36,11 +28,22 @@ export function ConsolePageHeader({
       */}
       <ol className="mb-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
         <li>
-          <Link href="/" className="hover:text-foreground">
+          <Link href={HOSTED_PATHS.console} className="hover:text-foreground">
             Console
           </Link>
         </li>
-        {pathname !== "/" ? (
+        {navContext ? (
+          <>
+            <li className="flex items-center gap-1">
+              <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
+              <span>{navContext.groupLabel}</span>
+            </li>
+            <li className="flex items-center gap-1 font-medium text-foreground">
+              <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
+              <span aria-current="page">{pageTitle}</span>
+            </li>
+          </>
+        ) : pathname !== "/" ? (
           <li className="flex items-center gap-1 font-medium text-foreground">
             <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
             <span aria-current="page">{pageTitle}</span>

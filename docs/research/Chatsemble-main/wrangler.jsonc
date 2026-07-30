@@ -1,0 +1,45 @@
+{
+	"name": "chatsemble",
+	"compatibility_date": "2025-02-04",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"nodejs_compat_populate_process_env"
+	],
+	"main": "./src/server/index.ts",
+	"assets": {
+		"not_found_handling": "single-page-application",
+		"binding": "ASSETS"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"rules": [
+		{
+			"type": "Text",
+			"globs": ["**/*.sql"],
+			"fallthrough": true
+		}
+	],
+	"migrations": [
+		{
+			"new_sqlite_classes": ["OrganizationDurableObject"],
+			"tag": "v1"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "ORGANIZATION_DURABLE_OBJECT",
+				"class_name": "OrganizationDurableObject"
+			}
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "chatsemble-db",
+			"database_id": "2815d782-18dc-415f-8237-cba2361e3144",
+			"migrations_dir": "src/server/db/migrations"
+		}
+	]
+}

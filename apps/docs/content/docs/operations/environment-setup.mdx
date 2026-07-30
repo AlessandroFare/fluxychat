@@ -1,0 +1,279 @@
+---
+title: "Environment setup -- local, staging, production"
+description: "Step-by-step configuration before first deploy. Run code checks first (`pnpm run check:env`)."
+---
+
+## Quick start (local only, ~10 min)
+
+```bash
+pnpm install
+pnpm run dev:setup          # copies .dev.vars + .env.local from examples (won't overwrite)
+pnpm dev                    # worker :8787 + dashboard :3000
+```
+
+Open `http://localhost:3000/onboarding` → paste admin JWT (from Worker `POST /auth/token` with a project API key) → create room → message.
+
+**Worker:** edit `apps/worker/.dev.vars` (from example). Minimum:
+
+| Var | Value |
+|-----|--------|
+| `ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` |
+| `REQUIRE_ADMIN_AUTH` | `true` |
+| `ALLOW_PLAINTEXT_WEBHOOK_SECRETS` | `true` (local only) |
+
+**Dashboard:** edit `apps/dashboard/.env.local`:
+
+| Var | Value |
+|-----|--------|
+| `NEXT_PUBLIC_FLUXYCHAT_WORKER_URL` | `http://127.0.0.1:8787` |
+
+Leave Clerk keys empty for manual JWT onboarding.
+
+---
+
+## Architecture (what talks to what)
+
+```text
+Browser → Dashboard (Vercel) → Worker API (Cloudflare)
+                ↓                    ↓
+           Clerk (optional)      D1 + DO + KV + R2
+```
+
+| Host (example) | App | Env file / config |
+|----------------|-----|-------------------|
+| `app.fluxychat.com` | Dashboard | Vercel env vars |
+| `api.fluxychat.com` | Worker | `wrangler.toml` + secrets |
+| `status.fluxychat.com` | Dashboard `/status` | Same Vercel project, optional subdomain |
+
+---
+
+## Phase 1 -- Cloudflare Worker (staging or production)
+
+### 1.1 Create resources (staging -- separate from prod)
+
+Run from `apps/worker`:
+
+```bash
+# D1
+pnpm exec wrangler d1 create fluxychat-staging
+# → paste database_id into wrangler.staging.toml
+
+# KV (rate limits)
+pnpm exec wrangler kv namespace create RATE_LIMIT_KV
+pnpm exec wrangler kv namespace create RATE_LIMIT_KV --preview
+# → paste id + preview_id into wrangler.staging.toml
+
+# R2
+pnpm exec wrangler r2 bucket create fluxychat-attachments-staging
+```
+
+Production uses names in `wrangler.toml` (`fluxychat`, `fluxychat-attachments`) -- create if not already done.
+
+### 1.2 Migrations
+
+```bash
+cd apps/worker
+# Staging
+pnpm exec wrangler d1 migrations apply fluxychat-staging --remote --config wrangler.staging.toml
+# Production
+pnpm exec wrangler d1 migrations apply fluxychat --remote
+```
+
+### 1.3 Worker vars (`wrangler.toml` / `wrangler.staging.toml` `[vars]`)
+
+| Var | Staging | Production |
+|-----|---------|------------|
+| `WORKFLOW_SCHEDULES_ENABLED` | `false` | `false` (unless using Workflows) |
+| `BROWSER_ENABLED` | `false` | `false` until you need SPA OG previews |
+| `ALLOWED_ORIGINS` | `https://staging-app.example.com,http://localhost:3000` | `https://app.fluxychat.com,https://fluxychat.com` |
+
+### 1.4 Worker secrets (`wrangler secret put NAME`)
+
+**Required for hosted multi-tenant:**
+
+| Secret | How to get |
+|--------|------------|
+| `PLATFORM_BOOTSTRAP_SECRET` | `openssl rand -base64 32` -- one-time bootstrap only |
+| `WEBHOOK_SECRET_ENCRYPTION_KEY` | `openssl rand -base64 32` -- 32 bytes base64 |
+
+**After bootstrap** (see Phase 2):
+
+| Secret | Notes |
+|--------|--------|
+| -- | Per-project `jwt_secret` lives in D1 `project_secrets` (bootstrap creates platform project) |
+
+**Optional by feature:**
+
+| Secret | Feature |
+|--------|---------|
+| `STRIPE_SECRET_KEY` | Billing checkout |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhooks |
+| `AI_GATEWAY_TOKEN` + gateway vars | AI agents |
+| `AI_API_KEY` | Legacy AI fallback |
+| `TURNSTILE_SECRET_KEY` | Public `/demo` |
+| `CLERK_WEBHOOK` N/A on worker | Clerk is dashboard-side |
+
+Set hosted mode on Worker:
+
+```bash
+pnpm exec wrangler secret put HOSTED_MULTI_TENANT
+# enter: true
+
+pnpm exec wrangler secret put FLUXY_PLATFORM_PROJECT_ID
+# enter: <uuid from provision bootstrap>
+```
+
+Or use `[vars]` for non-secret flags and secrets for keys.
+
+### 1.5 Deploy
+
+```bash
+# Staging
+pnpm exec wrangler deploy src/worker.js --config wrangler.staging.toml
+
+# Production
+pnpm --filter @fluxy-chat/worker deploy
+```
+
+### 1.6 Custom domain (API)
+
+Cloudflare dashboard → Worker → Custom domains → add `api.fluxychat.com` (or staging subdomain).  
+`wrangler.toml` already has `[[routes]]` for production pattern.
+
+---
+
+## Phase 2 -- Platform bootstrap (hosted tenants)
+
+One-time per Worker deployment:
+
+1. Set on Worker: `ALLOW_PLATFORM_BOOTSTRAP=true`, `PLATFORM_BOOTSTRAP_SECRET=<random>`.
+2. From repo root:
+
+```bash
+PLATFORM_BOOTSTRAP_SECRET=<same> \
+FLUXY_WORKER_URL=https://api.fluxychat.com \
+pnpm provision:bootstrap
+```
+
+3. Read `scripts/.provision-secrets.env` (gitignored) -- contains `FLUXY_CONSOLE_API_KEY` and project UUID.
+4. Copy to **dashboard** `.env.local` / Vercel:
+
+```bash
+FLUXY_CONSOLE_API_KEY=fc_...
+FLUXY_CONSOLE_PROJECT_ID=<uuid>
+FLUXY_PLATFORM_PROJECT_ID=<uuid>
+NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL=https://api.fluxychat.com
+```
+
+5. Copy to **Worker** secret: `FLUXY_PLATFORM_PROJECT_ID=<uuid>`, set `HOSTED_MULTI_TENANT=true`.
+6. Disable bootstrap: remove `ALLOW_PLATFORM_BOOTSTRAP` or set false.
+
+---
+
+## Phase 3 -- Dashboard (Vercel or self-host)
+
+### 3.1 Environment variables
+
+See `apps/dashboard/.env.example`, `.env.staging.example`, `.env.production.example`.
+
+| Var | Required | Purpose |
+|-----|----------|---------|
+| `NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL` | Hosted | Worker API URL (wins over WORKER_URL) |
+| `NEXT_PUBLIC_SITE_URL` | Prod | Canonical / OG (`https://fluxychat.com`) |
+| `FLUXY_CONSOLE_API_KEY` | Hosted | Server-only; provisions tenants |
+| `FLUXY_PLATFORM_PROJECT_ID` | Hosted | Must match Worker |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Optional | Hosted sign-in |
+| `CLERK_SECRET_KEY` | Optional | Clerk server |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Optional | Auto-provision on sign-up |
+| `DASHBOARD_PUBLIC_URL` | Optional | Clerk webhook URL base |
+
+**Do not** expose `FLUXY_CONSOLE_API_KEY` to the browser -- only server routes use it.
+
+### 3.2 Vercel project
+
+1. Import repo → root `apps/dashboard` or monorepo with filter.
+2. Build: `pnpm --filter @fluxy-chat/dashboard build` (or Turbo from root).
+3. Env vars: paste from `.env.production.example` checklist.
+4. Domains: `app.fluxychat.com`, optional `status.fluxychat.com` → same project (`/status` route exists).
+
+### 3.3 Clerk (optional)
+
+Clerk Dashboard → Application → API Keys → paste into Vercel.  
+Paths: Sign-in `/sign-in`, Sign-up `/sign-up`, after sign-up redirect `/onboarding`.
+
+---
+
+## Phase 4 -- Stripe (optional, billing)
+
+1. Stripe Dashboard → Developers → API keys → `STRIPE_SECRET_KEY` on Worker.
+2. Webhook endpoint: `https://api.fluxychat.com/webhooks/stripe` → `STRIPE_WEBHOOK_SECRET`.
+3. Without Stripe: `/health` shows `paymentsEnabled: false`; users stay on Free tier.
+
+---
+
+## Phase 5 -- GitHub Actions (CI deploy)
+
+Repository → Settings → Secrets and variables → Actions:
+
+| Secret | Purpose |
+|--------|---------|
+| `CLOUDFLARE_API_TOKEN` | Wrangler deploy (Workers + D1) |
+| `CLOUDFLARE_ACCOUNT_ID` | Account ID |
+| `E2E_ADMIN_JWT` | Optional integrated Playwright |
+
+Create environments `staging` and `production` in GitHub → wire approval on `production`.
+
+Manual deploy: Actions → **Deploy** → choose environment.
+
+---
+
+## Phase 6 -- Smoke verification
+
+```bash
+# Worker
+pnpm --filter @fluxy-chat/worker smoke:remote -- \
+  --base-url https://api.fluxychat.com \
+  --admin-jwt "<JWT>"
+
+# Dashboard CI smoke (no worker)
+cd apps/dashboard && CI=true pnpm test:e2e:smoke
+
+# Full integrated (local worker + dashboard)
+E2E_ADMIN_JWT=<jwt> pnpm --filter @fluxy-chat/dashboard test:e2e:integrated
+```
+
+Browser checks:
+
+- `https://<dashboard>/status` — public health
+- `https://<dashboard>/onboarding` — wizard
+- `https://<dashboard>/billing` — load plan
+
+---
+
+## Configuration matrix (minimum vs full)
+
+| Capability | Local dev | Staging | Production |
+|------------|-----------|---------|------------|
+| Chat / rooms | Worker + `.dev.vars` | Worker staging + D1 | Worker prod |
+| Dashboard | `.env.local` localhost | Vercel preview env | Vercel prod |
+| Multi-tenant | Optional bootstrap | Bootstrap + `HOSTED_MULTI_TENANT` | Same |
+| Clerk sign-in | Skip (manual JWT) | Test Clerk app | Live Clerk |
+| Stripe | Off | Test mode keys | Live keys |
+| AI agents | `AI_API_KEY` optional | Gateway or API key | Gateway recommended |
+| Browser OG | `BROWSER_ENABLED=true` locally | Off | Off until needed |
+| Status page | `/status` | `/status` | + DNS `status.*` |
+
+---
+
+## Troubleshooting
+
+| Symptom | Check |
+|---------|--------|
+| CORS errors | `ALLOWED_ORIGINS` includes dashboard origin |
+| Connect forbidden | `FLUXY_PLATFORM_PROJECT_ID` matches API key project |
+| 401 on hosted routes | `HOSTED_MULTI_TENANT=true` + valid API key/JWT |
+| Billing 501 | `STRIPE_SECRET_KEY` not set (expected in beta) |
+| `/status` unreachable | `NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL` or `WORKER_URL` |
+| Staging deploy fails | Replace `REPLACE_WITH_*` in `wrangler.staging.toml` |
+
+See also [RUNBOOK_DEPLOY_ROLLBACK.md](/docs/../RUNBOOK_DEPLOY_ROLLBACK), [open-beta-deploy-guide](/docs/open-beta-deploy-guide).

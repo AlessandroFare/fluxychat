@@ -5,7 +5,9 @@ import { CONSOLE_ACK_COOKIE, getDashboardAccessMode } from "@/lib/dashboard-acce
 import { isClerkEnabled } from "@/lib/clerk-config";
 
 const isClerkPublicRoute = createRouteMatcher([
+  "/",
   "/landing(.*)",
+  "/pricing(.*)",
   "/why(.*)",
   "/enter(.*)",
   "/get-started(.*)",
@@ -26,8 +28,10 @@ const isClerkPublicRoute = createRouteMatcher([
 
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/favicon.ico") return true;
+  if (pathname === "/") return true;
   const prefixes = [
     "/landing",
+    "/pricing",
     "/why",
     "/enter",
     "/get-started",
@@ -83,6 +87,9 @@ export function buildContentSecurityPolicy(nonce?: string): string {
     devWorkerConnect,
     clerkHosts,
     "https://clerk-telemetry.com",
+    "https://*.algolia.net",
+    "https://*.algolianet.com",
+    "https://*.algolia.io",
   ]
     .filter(Boolean)
     .join(" ");
@@ -119,7 +126,7 @@ export function buildContentSecurityPolicy(nonce?: string): string {
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    "form-action 'self' https://stackblitz.com",
     "object-src 'none'",
   ].join("; ");
 }
@@ -195,7 +202,7 @@ function handleConsoleAck(request: NextRequest): NextResponse {
   const next = `${pathname}${request.nextUrl.search || ""}`;
   const url = request.nextUrl.clone();
   url.pathname = "/enter";
-  url.searchParams.set("next", next || "/");
+  url.searchParams.set("next", next || "/dashboard");
   // For redirects we still need to apply the security headers. Build
   // a redirect response and copy the *static* security headers onto
   // it. The nonce is per-request RSC plumbing and is not relevant for

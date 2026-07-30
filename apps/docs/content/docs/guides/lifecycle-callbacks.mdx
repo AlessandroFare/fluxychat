@@ -1,0 +1,199 @@
+---
+title: "Lifecycle Callbacks"
+description: "Lifecycle callbacks let you run custom code at key points during `runAgentLoop`. Use them for logging, analytics, monitoring, metrics, or any application-specif"
+---
+
+Lifecycle callbacks let you run custom code at key points during `runAgentLoop`. Use them for logging, analytics, monitoring, metrics, or any application-specific hook without modifying the loop internals.
+
+Callbacks can be synchronous or asynchronous. If a callback throws, the error is caught internally and the loop continues.
+
+## Available Callbacks
+
+| Callback | When | Event |
+|----------|------|-------|
+| `onStart` | Once before any steps run | `LoopStartEvent` |
+| `onStepStart` | Before each step | `StepStartEvent` |
+| `onToolExecutionStart` | Before each tool's `execute` function | `ToolExecutionStartEvent` |
+| `onToolExecutionEnd` | After each tool's `execute` completes or errors | `ToolExecutionEndEvent` |
+| `onStepEnd` | After each step completes | `StepEndEvent` |
+| `onEnd` | Once when the loop finishes | `LoopEndEvent` |
+
+## Execution Order
+
+A typical single-step loop with one tool call runs in this order:
+
+1. `onStart`
+2. `onStepStart`
+3. `onToolExecutionStart`
+4. `onToolExecutionEnd`
+5. `onStepEnd`
+6. `onEnd`
+
+A multi-step loop with tool calls in each step repeats steps 2–5:
+
+1. `onStart`
+2. `onStepStart` → `onToolExecutionStart` → `onToolExecutionEnd` → `onStepEnd`
+3. `onStepStart` → `onToolExecutionStart` → `onToolExecutionEnd` → `onStepEnd`
+4. `onEnd`
+
+## Basic Usage
+
+```ts
+import { runAgentLoop } from '@fluxy-chat/agent';
+
+const result = await runAgentLoop({
+  model: someModel,
+  tools: { /* ... */ },
+
+  onStart({ callId }) {
+    console.log('Loop started', { callId });
+  },
+
+  onStepEnd({ stepNumber, text, toolResults, finishReason }) {
+    console.log(`Step ${stepNumber} finished`, {
+      finishReason,
+      toolCount: toolResults.length,
+      textLength: text.length,
+    });
+  },
+
+  onEnd({ text, usage, steps }) {
+    console.log('Loop finished', {
+      totalTokens: usage.totalTokens,
+      stepCount: steps.length,
+    });
+  },
+});
+```
+
+## Request Logging
+
+Use `onStart` and `onEnd` to record one application log for the beginning and end of the loop:
+
+```ts
+onStart({ callId, tools, maxSteps }) {
+  logger.info('agent.loop.started', { callId, maxSteps, tools: Object.keys(tools ?? {}) });
+},
+
+onEnd({ callId, finishReason, usage, steps }) {
+  logger.info('agent.loop.finished', {
+    callId, finishReason,
+    totalTokens: usage.totalTokens,
+    stepCount: steps.length,
+  });
+},
+```
+
+## Debugging Multi-Step Execution
+
+Use `onStepStart` and `onStepEnd` to understand how many steps the loop took and which tools were called:
+
+```ts
+onStepStart({ stepNumber, state }) {
+  console.log(`Step ${stepNumber}: ${state.toolResults.length} tools so far`);
+},
+
+onStepEnd({ stepNumber, toolCalls, toolResults }) {
+  console.log(`Step ${stepNumber} tools:`, toolCalls.map(t => t.name));
+  console.log(`Step ${stepNumber} results:`, toolResults.map(r => r.output));
+},
+```
+
+## Monitoring Tool Execution
+
+Use `onToolExecutionStart` and `onToolExecutionEnd` to track tool usage, latency, and errors:
+
+```ts
+onToolExecutionStart({ toolCall }) {
+  logger.info('agent.tool.started', {
+    toolName: toolCall.name,
+    input: toolCall.input,
+  });
+},
+
+onToolExecutionEnd({ toolCall, toolExecutionMs, output, error }) {
+  logger.info('agent.tool.finished', {
+    toolName: toolCall.name,
+    durationMs: toolExecutionMs,
+    success: !error,
+  });
+},
+```
+
+`onToolExecutionEnd` always fires — for successful results, errors denied approvals, and timeouts. Check the `error` field to distinguish success from failure.
+
+## Event Data Reference
+
+### LoopStartEvent
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `callId` | `string` | Unique ID for this loop execution (`call_...`) |
+| `tools` | `Record<string, unknown> \| undefined` | Available tools |
+| `maxSteps` | `number` | Maximum steps configured |
+| `runtime` | `unknown` | Shared runtime context |
+
+### StepStartEvent
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `callId` | `string` | Loop call ID |
+| `stepNumber` | `number` | Zero-based step index |
+| `state` | `AgentLoopState` | Current loop state (steps, toolResults, usage) |
+
+### ToolExecutionStartEvent
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `callId` | `string` | Loop call ID |
+| `stepNumber` | `number` | Current step index |
+| `toolCall` | `AIToolCall` | The tool call about to execute (`id`, `name`, `input`) |
+| `toolContext` | `unknown \| undefined` | Tool-specific context from `toolContexts` |
+
+### ToolExecutionEndEvent
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `callId` | `string` | Loop call ID |
+| `stepNumber` | `number` | Current step index |
+| `toolCall` | `AIToolCall` | The tool call that executed |
+| `toolContext` | `unknown \| undefined` | Tool-specific context |
+| `toolExecutionMs` | `number` | Execution duration in ms |
+| `output` | `unknown \| undefined` | Tool output (undefined on error) |
+| `error` | `unknown \| undefined` | Tool error (undefined on success) |
+| `approval` | `ToolApprovalRecord \| undefined` | Approval result if applicable |
+
+### StepEndEvent
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `callId` | `string` | Loop call ID |
+| `stepNumber` | `number` | Zero-based step index |
+| `text` | `string` | Text generated in this step |
+| `toolCalls` | `readonly AIToolCall[]` | Tool calls in this step |
+| `toolResults` | `readonly AIToolResult[]` | Tool results from this step |
+| `finishReason` | `AIFinishReason` | How the step finished |
+| `usage` | `AIUsage` | Token usage so far |
+| `state` | `AgentLoopState` | Current loop state |
+
+### LoopEndEvent
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `callId` | `string` | Loop call ID |
+| `text` | `string` | Complete generated text |
+| `toolCalls` | `readonly AIToolCall[]` | All tool calls across all steps |
+| `toolResults` | `readonly AIToolResult[]` | All tool results across all steps |
+| `finishReason` | `AIFinishReason` | Final finish reason |
+| `usage` | `AIUsage` | Total token usage |
+| `steps` | `readonly AIGenerationStep[]` | All step results |
+| `finalState` | `AgentLoopState` | Final loop state |
+
+## Backward Compatibility
+
+The deprecated `onStepFinish` callback still works. It fires at the same point as `onStepEnd`. Prefer `onStepEnd` for new code.
+
+```ts
+/** @deprecated Use onStepEnd instead */
+onStepFinish?: (state: AgentLoopState, latest: AgentStepResult) => void | Promise<void>;
+```

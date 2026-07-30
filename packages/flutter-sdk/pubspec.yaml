@@ -1,11 +1,20 @@
 name: fluxychat_sdk
-description: Flutter SDK for FluxyChat - realtime chat infrastructure for SaaS.
+description: Flutter SDK for FluxyChat — realtime chat infrastructure for SaaS. WebSocket rooms, REST messages, AI agents, typing indicators, presence, reactions, and more.
 version: 1.0.0
-homepage: https://github.com/AlessandroFare/fluxychat/tree/main/packages/flutter-sdk
+homepage: https://fluxychat.com
+repository: https://github.com/AlessandroFare/fluxychat
+issue_tracker: https://github.com/AlessandroFare/fluxychat/issues
+documentation: https://fluxychat.com/docs
+topics:
+  - chat
+  - realtime
+  - websocket
+  - saas
+  - messaging
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
-  flutter: '>=3.16.0'
+  sdk: ">=3.2.0 <4.0.0"
+  flutter: ">=3.16.0"
 
 dependencies:
   flutter:

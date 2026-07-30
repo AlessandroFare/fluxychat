@@ -1,0 +1,59 @@
+---
+title: DevTools inspector
+description: Inspect LLM calls, tool usage, token stats, and connection debug locally via SDK hooks and the dashboard DevTools page.
+---
+
+FluxyChat includes a local DevTools inspector for AI agent runs — inspired by production observability UIs, but runnable on your machine with no SaaS.
+
+## Dashboard UI
+
+When signed in to the console with labs enabled:
+
+1. Set `NEXT_PUBLIC_DASHBOARD_LABS=1` in the dashboard env.
+2. Open `/devtools` in the dashboard app.
+3. Use preset prompts or custom input to stream agent responses.
+4. Inspect the timeline: LLM steps, tool calls (including HITL approval), token usage, and Chat API probe results.
+
+The page uses your configured Worker URL and member JWT from the dashboard session.
+
+## SDK hooks
+
+Capture runs programmatically for custom UIs or tests:
+
+```typescript
+import {
+  createDevToolsInspector,
+  createDevToolsStore,
+  DevToolsTelemetryIntegration,
+  createTelemetryManager,
+  registerTelemetry,
+} from "@fluxy-chat/sdk";
+
+const store = createDevToolsStore();
+const inspector = createDevToolsInspector(store);
+const telemetry = createTelemetryManager();
+registerTelemetry(telemetry, new DevToolsTelemetryIntegration());
+
+const runId = `run_${Date.now()}`;
+inspector.captureGenerateText(runId, 1, {
+  model: "gpt-4o-mini",
+  provider: "openai",
+  input: { prompt: "Summarize this room" },
+  output: { text: "..." },
+  usage: { promptTokens: 120, completionTokens: 48, totalTokens: 168 },
+  durationMs: 890,
+});
+
+const runs = inspector.getStore().getRuns();
+```
+
+### Connection debug
+
+Pair DevTools with `getConnectionStatusLabel()` and the connection banner patterns from the SDK testing utilities when debugging WebSocket reconnects in weak network conditions.
+
+For offline message durability, see the [React Native quickstart](/docs/guides/ecosystem/react-native-quickstart) and SDK `createMessageOutbox` transport helper.
+
+## Related
+
+- [Observability (OTLP)](/docs/observability-otel) — export traces to Jaeger, Tempo, or Langfuse OSS
+- [Testing integration](/docs/guides/testing-integration) — mock adapters and smoke patterns

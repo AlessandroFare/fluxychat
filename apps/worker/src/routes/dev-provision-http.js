@@ -13,9 +13,29 @@
  * ALLOW_DEV_PROVISION must never be set in production.
  */
 import { hashApiKey } from "../lib/api-key-hash.js";
+import { provisionBuiltinAgents } from "../lib/provision-builtin-agents.js";
 
 const DEV_PROJECT_NAME = "dev-local";
 const DEV_PROJECT_ID = "dev-local";
+
+async function ensureDevSeedRooms(env) {
+  const demoRoomId = String(env.DEMO_ROOM_ID || "public-demo-room").trim();
+  const generalRoomId = `${DEV_PROJECT_ID}-general`;
+  const roomIds = [generalRoomId, ...(demoRoomId ? [demoRoomId] : [])];
+  const now = nowIso();
+  for (const roomId of roomIds) {
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, 'public', ?, ?)",
+    )
+      .bind(roomId, DEV_PROJECT_ID, roomId, now)
+      .run();
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)",
+    )
+      .bind(roomId, "fluxybot", now)
+      .run();
+  }
+}
 
 function isDevModeEnabled(env) {
   if (!env || env.ALLOW_DEV_PROVISION !== "true") return false;
@@ -77,6 +97,9 @@ export async function handleDevProvision(request, env) {
       .bind(DEV_PROJECT_ID, DEV_PROJECT_NAME, nowIso())
       .run();
   }
+
+  await ensureDevSeedRooms(env);
+  await provisionBuiltinAgents(env, DEV_PROJECT_ID);
 
   const now = nowIso();
 

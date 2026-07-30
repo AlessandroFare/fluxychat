@@ -1,0 +1,71 @@
+---
+title: Embed widget
+description: Public guest sessions and host config for embedded chat.
+---
+
+FluxyChat supports **embedded chat** on third-party sites via guest JWTs and public host configuration — no full dashboard login required.
+
+## Public host config
+
+```bash
+curl "$FLUXY_BASE_URL/public/host-config?projectId=$PROJECT_ID"
+```
+
+Returns theme tokens, allowed origins, and feature flags for the embed iframe or JS loader.
+
+## Guest sessions
+
+For public rooms that allow anonymous access:
+
+```bash
+curl -X POST "$FLUXY_BASE_URL/public/rooms/$ROOM_ID/guest-session" \
+  -H "Content-Type: application/json" \
+  -d '{ "displayName": "Visitor", "projectId": "default" }'
+```
+
+Response includes a short-lived JWT scoped to the room. Pass it to `FluxyChatClient` the same way as member tokens.
+
+## Embed assets
+
+| Path | Purpose |
+|------|---------|
+| `/embed.js` | Loader script for iframe/widget |
+| `/embed/frame` | Hosted iframe shell |
+| `/public/embed-config` | Widget-specific config |
+
+Configure allowed origins in the dashboard, `PATCH /admin/embed-config`, or `ALLOWED_ORIGINS` on the Worker.
+
+## Admin embed config
+
+```bash
+curl "$FLUXY_BASE_URL/admin/embed-config" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Update launcher position, theme, and allowed origins:
+
+```bash
+curl -X PATCH "$FLUXY_BASE_URL/admin/embed-config" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "defaultRoomId": "room_support",
+    "allowedOrigins": ["https://example.com"],
+    "theme": { "primaryColor": "#2563eb", "position": "bottom-right" }
+  }'
+```
+
+Install snippet is returned in the GET response.
+
+## Custom domains
+
+White-label the embed on your own hostname — see [Custom domains](/docs/platform/custom-domains).
+
+## Security
+
+- Guest tokens are room-scoped and rate-limited per IP.
+- Disable guest write on sensitive rooms via room config.
+- Never embed project API keys — use guest sessions or server-minted JWTs.
+
+See [API Reference](/docs/api-reference) → **Public** and [JWT auth](/docs/guides/security/jwt-auth).

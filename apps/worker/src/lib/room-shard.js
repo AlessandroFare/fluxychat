@@ -64,21 +64,39 @@ export function getRoomStub(env, roomId, shardCount, userId) {
   return env.ROOM.get(env.ROOM.idFromName(name));
 }
 
+export const SHARD_FETCH_TIMEOUT_MS = 100;
+
 /**
  * @param {*} env
  * @param {string} roomId
  * @param {number} shardCount
  * @param {(stub: DurableObjectStub, shardIndex: number) => Promise<unknown>} fn
+ * @param {number} [timeoutMs]
  */
-export async function forEachRoomShard(env, roomId, shardCount, fn) {
+export async function forEachRoomShard(env, roomId, shardCount, fn, timeoutMs = SHARD_FETCH_TIMEOUT_MS) {
   const count = normalizeShardCount(shardCount);
-  const results = [];
-  for (let i = 0; i < count; i++) {
-    const name = roomDoName(roomId, i, count);
-    const stub = env.ROOM.get(env.ROOM.idFromName(name));
-    results.push(await fn(stub, i));
+  if (count <= 1) {
+    const stub = env.ROOM.get(env.ROOM.idFromName(roomId));
+    return [await fn(stub, 0)];
   }
-  return results;
+  const stubs = [];
+  for (let i = 0; i < count; i++) {
+    stubs.push(env.ROOM.get(env.ROOM.idFromName(roomDoName(roomId, i, count))));
+  }
+  const settled = await Promise.allSettled(
+    stubs.map((stub, i) => {
+      if (timeoutMs > 0) {
+        return Promise.race([
+          fn(stub, i),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("shard timeout")), timeoutMs)),
+        ]);
+      }
+      return fn(stub, i);
+    }),
+  );
+  const failed = settled.filter((r) => r.status === "rejected").length;
+  if (failed > 0) console.warn(`forEachRoomShard: ${failed}/${count} shards timed out for room ${roomId}`);
+  return settled.map((r) => (r.status === "fulfilled" ? r.value : undefined));
 }
 
 /**
@@ -152,7 +170,7 @@ export async function fetchAggregatedRoomLive(env, projectId, roomId) {
 }
 
 /**
- * POST/GET to all shard DOs (e.g. /announce).
+ * POST/GET to all shard DOs (e.g. /announce) — parallel fan-out.
  * @param {*} env
  * @param {string} projectId
  * @param {string} roomId
@@ -175,3 +193,39 @@ export async function getRoomStubForProject(env, projectId, roomId, userId) {
   const shardCount = await getRoomShardCount(env, projectId, roomId);
   return getRoomStub(env, roomId, shardCount, userId);
 }
+
+/**
+ * Get SupergroupRouter stub for a project.
+ * @param {*} env
+ * @param {string} projectId
+ */
+export function getSupergroupRouter(env, projectId) {
+  if (!env.SUPERGROUP_ROUTER) return null;
+  const id = env.SUPERGROUP_ROUTER.idFromName(projectId);
+  return env.SUPERGROUP_ROUTER.get(id);
+}
+
+/**
+ * Rebalance shards for a room if approaching capacity.
+ * Called after a WebSocket connects to check if rebalancing is needed.
+ * @param {*} env
+ * @param {string} projectId
+ * @param {string} roomId
+ */
+export async function autoRebalanceRoom(env, projectId, roomId) {
+  const router = getSupergroupRouter(env, projectId);
+  if (!router) return null;
+  try {
+    const res = await router.fetch("https://internal/rebalance", {
+      method: "POST",
+      body: JSON.stringify({ projectId, roomId }),
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(200),
+    });
+    return res.ok ? res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+

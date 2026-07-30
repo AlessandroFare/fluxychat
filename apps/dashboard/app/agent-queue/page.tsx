@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Headphones, RefreshCw, Timer, UserCheck } from "lucide-react";
+import { Headphones, RefreshCw, Timer, UserCheck, Route, Clock } from "lucide-react";
 import {
   FluxyChatClient,
   type FluxyAgentQueueSummary,
@@ -300,6 +300,44 @@ export default function AgentQueuePage() {
           </li>
         ))}
       </ul>
+
+      {/* Expert Routing SDK module */}
+      <Panel className="mt-8 rounded-2xl border border-border/80 p-4">
+        <div className="flex items-start gap-3">
+          <Route className="mt-0.5 h-5 w-5 text-blue-500" />
+          <div>
+            <h3 className="text-sm font-semibold">Expert Routing (createExpertRouter)</h3>
+            <p className="text-xs text-muted-foreground">
+              Skill-based agent routing with SLA policies. Score agents by skill match, load,
+              language, and priority. Available as an SDK module.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-4 text-[10px] text-muted-foreground">
+              <span><strong>Skills:</strong> beginner / intermediate / expert</span>
+              <span><strong>Priorities:</strong> low / normal / high / urgent</span>
+              <span><strong>SLA:</strong> per-priority target seconds + escalation</span>
+            </div>
+          </div>
+        </div>
+      </Panel>
+
+      {/* Waiting Room SDK module */}
+      <Panel className="mt-4 rounded-2xl border border-border/80 p-4">
+        <div className="flex items-start gap-3">
+          <Clock className="mt-0.5 h-5 w-5 text-amber-500" />
+          <div>
+            <h3 className="text-sm font-semibold">Virtual Waiting Room (createVirtualWaitingRoom)</h3>
+            <p className="text-xs text-muted-foreground">
+              Queue management for agent handoff with priority ordering, estimated wait time,
+              abandon tracking, and real-time stats.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-4 text-[10px] text-muted-foreground">
+              <span><strong>Priorities:</strong> normal / VIP / urgent</span>
+              <span><strong>Stats:</strong> avg/max wait, abandonment rate, agent availability</span>
+              <span><strong>Actions:</strong> enqueue, dequeue, abandon, connect, peek</span>
+            </div>
+          </div>
+        </div>
+      </Panel>
     </ConsoleShell>
   );
 }

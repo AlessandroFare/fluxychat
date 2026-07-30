@@ -1,0 +1,51 @@
+---
+title: Self-host one command
+description: Bootstrap a local FluxyChat stack with wrangler D1 migrations and dev env files.
+---
+
+# Self-host in one command
+
+Run the monorepo bootstrap script to install dependencies, copy dev env templates, and apply **local D1 migrations** (includes built-in agent template seeds).
+
+```bash
+pnpm run self-host
+```
+
+Then start services:
+
+```bash
+# Terminal 1 — Worker API + WebSocket
+pnpm --filter @fluxy-chat/worker dev
+
+# Terminal 2 — Dashboard console (optional)
+pnpm --filter dashboard dev
+```
+
+Verify with:
+
+```bash
+pnpm run first-message
+```
+
+## What the script does
+
+1. `pnpm install` (if needed)
+2. `pnpm run dev:setup` — creates `apps/worker/.dev.vars` and `apps/dashboard/.env.local` from templates
+3. `wrangler d1 migrations apply fluxychat --local` — schema + seed data (including `builtin_agent_templates`)
+
+## Production deploy
+
+For remote Cloudflare deploy, see [Local development](/docs/getting-started/local-development) and `RUNBOOK_DEPLOY_ROLLBACK.md`:
+
+```bash
+cd apps/worker
+pnpm exec wrangler d1 migrations apply fluxychat --remote
+pnpm run deploy
+```
+
+Set secrets via `wrangler secret put` (JWT signing keys, LLM provider keys, webhook HMAC secrets).
+
+## Related
+
+- [Client setup](/docs/getting-started/client-setup) — SDK integration
+- [Auth JWT](/docs/guides/auth-jwt) — mint member tokens

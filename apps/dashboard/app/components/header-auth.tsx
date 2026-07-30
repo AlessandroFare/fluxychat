@@ -77,7 +77,7 @@ function ClerkHeaderAuth({
             <Link href={cta.href}>{cta.label}</Link>
           </Button>
           <UserButton
-            afterSignOutUrl="/landing"
+            afterSignOutUrl={HOSTED_PATHS.landing}
             appearance={{
               elements: {
                 userButtonAvatarBox: "h-8 w-8",

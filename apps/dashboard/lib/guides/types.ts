@@ -17,6 +17,8 @@ export interface GuideContent {
   subtitle: string;
   sections: readonly GuideSection[];
   seoTopics: readonly string[];
+  stackblitzTemplateId?: string;
+  stackblitzLabel?: string;
 }
 
 export interface RelatedGuide {

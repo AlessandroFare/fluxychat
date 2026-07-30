@@ -1,0 +1,97 @@
+---
+title: Authentication (JWT)
+description: API keys, member JWTs, roles, token refresh, and WebSocket auth.
+---
+
+# Authentication
+
+FluxyChat uses two credential forms:
+
+- **API key** (`X-Fluxy-Api-Key`): server-to-server, identifies the **tenant/project**.
+- **JWT** (`Authorization: Bearer …`): client-to-worker/SDK — claims include `sub` (userId), `tid` (projectId), `roles`, `exp`.
+
+**Rule:** keep the API key on your backend and **mint JWTs** for browsers and mobile clients. Never expose the API key in client bundles.
+
+## Mint a member JWT (server-side)
+
+```bash
+export FLUXY_BASE_URL="http://127.0.0.1:8787"
+export FLUXY_API_KEY="fc_..."
+
+curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
+  -H "Content-Type: application/json" \
+  -H "X-Fluxy-Api-Key: $FLUXY_API_KEY" \
+  -d '{"userId":"alice","roles":["member"],"ttlSeconds":3600}'
+```
+
+Response includes `token`, `expiresIn`, and echoed `claims`.
+
+## Roles
+
+| Role | Typical access |
+|------|----------------|
+| `member` | Send/edit own messages, reactions, read receipts, inbox |
+| `moderator` | Mute/ban, some admin routes |
+| `admin` | Webhooks, projects, alert rules |
+| `owner` | Sensitive tenant operations |
+
+Admin routes enforce role checks per endpoint — see OpenAPI docs for each route.
+
+## Next.js Route Handler example
+
+```ts
+import { NextResponse } from "next/server";
+
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  const userId = body?.userId;
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+  const res = await fetch(`${process.env.FLUXY_BASE_URL}/auth/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Fluxy-Api-Key": process.env.FLUXY_API_KEY!,
+    },
+    body: JSON.stringify({ userId, roles: ["member"], ttlSeconds: 3600 }),
+  });
+
+  return NextResponse.json(await res.json(), { status: res.status });
+}
+```
+
+Wire the returned JWT into `FluxyRealtimeProvider` or `FluxyChatClient({ token })`.
+
+## WebSocket auth
+
+```
+GET /ws/room/:roomId?token=<JWT>
+```
+
+Membership is enforced — `403` / close `1008` when the user is not a room member.
+
+## Token refresh
+
+The SDK does not expose `client.updateToken()`. When `exp` passes:
+
+1. Mint a new JWT on your backend (`POST /auth/token`).
+2. Pass it via `FluxyRealtimeProvider` `authTokenProvider` or recreate `FluxyChatClient` with the new token.
+
+Hosted dashboard uses `/api/fluxy/connect` to refresh member JWT automatically.
+
+## Common errors
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| 401 invalid api key | Revoked or wrong project key | Rotate key in Projects console |
+| `FluxyTokenExpiredError` | JWT `exp` passed | Mint new JWT |
+| `FluxyNotMemberError` | User not in room | Add membership or join room |
+| `FluxyAnonymousNotAllowedError` | Room requires auth | Use member JWT |
+
+See [Troubleshooting integration](/docs/guides/troubleshooting-integration) for copy-paste fixes.
+
+## Related
+
+- [Quickstart](/docs/getting-started/quickstart)
+- [Client setup](/docs/getting-started/client-setup)
+- [SDK playground](/playground)

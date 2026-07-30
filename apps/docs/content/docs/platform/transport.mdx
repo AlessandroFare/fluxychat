@@ -1,0 +1,58 @@
+---
+title: Transport
+description: WebSocket, SSE, polling, and Durable Object room state.
+---
+
+Realtime delivery uses a **WebSocket-first** stack with automatic fallback in the SDK.
+
+## Primary: WebSocket
+
+```
+GET /ws/room/:roomId?token=<JWT>
+```
+
+Room state lives in a **Durable Object** — reconnections resume membership and recent history without losing the room kernel.
+
+```ts
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({ baseUrl, userId, token: jwt });
+await client.connect();
+await client.joinRoom(roomId);
+```
+
+## Fallback chain
+
+When the socket cannot stay up, `useChat` degrades automatically:
+
+```
+WebSocket → SSE (/rooms/:id/stream) → polling (GET /api/messages)
+```
+
+See [Transport fallback](/docs/guides/realtime/transport-fallback).
+
+## REST publish
+
+Backends and cron jobs can publish without a socket:
+
+```bash
+curl -X POST "$FLUXY_BASE_URL/messages" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{ "roomId": "alerts", "content": "Deploy complete" }'
+```
+
+Connected clients still receive the event over WebSocket.
+
+## Comparison
+
+| Layer | Latency | When to use |
+|-------|---------|-------------|
+| WebSocket | Lowest | Live chat, agents, presence |
+| SSE | Medium | Mobile/proxy environments |
+| REST polling | Highest | Last-resort fallback |
+| REST POST | N/A | Server-initiated messages |
+
+## Firewall note
+
+If corporate proxies block WebSockets, the SDK still delivers via SSE/polling — surface `connectionState.transport` in your UI.

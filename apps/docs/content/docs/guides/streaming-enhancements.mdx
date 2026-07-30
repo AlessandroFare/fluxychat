@@ -1,0 +1,69 @@
+---
+title: "Streaming Enhancements"
+description: "Stream chunk types, markdown healing, and table buffering utilities."
+---
+
+## Stream Chunks
+
+Stream chunks represent pieces of a streaming response.
+
+```ts
+import {
+  createStreamChunk, parseStreamChunks, serializeStreamChunks,
+  isTextChunk, isToolCallChunk, isToolResultChunk,
+  healMarkdown, bufferTableCells,
+} from "@fluxy-chat/sdk";
+```
+
+### Creating Chunks
+
+```ts
+const text = createStreamChunk("text", { content: "Hello " });
+const toolCall = createStreamChunk("tool-call", { toolName: "get_weather", toolArgs: '{"city":"London"}' });
+const toolResult = createStreamChunk("tool-result", { toolResult: '{"temp":20}' });
+const done = createStreamChunk("done");
+```
+
+### Parsing & Serializing
+
+Uses Vercel AI SDK wire format prefixes (`0:` for text, `8:` for tool calls, `9:` for tool results, `3:` for errors):
+
+```ts
+const raw = '0:Hello\n8:{"toolName":"get_weather","args":{"city":"London"}}\n9:{"temp":20}';
+const chunks = parseStreamChunks(raw);
+// -> [{ type: "text", content: "Hello" }, { type: "tool-call", toolName: "get_weather" }, { type: "tool-result", ... }]
+
+const serialized = serializeStreamChunks(chunks);
+// -> same as raw
+```
+
+### Type Guards
+
+```ts
+if (isTextChunk(chunk)) console.log(chunk.content);
+if (isToolCallChunk(chunk)) console.log(chunk.toolName);
+if (isToolResultChunk(chunk)) console.log(chunk.toolResult);
+```
+
+## Markdown Healing
+
+Closes unclosed code fences that may result from streaming interruption:
+
+```ts
+healMarkdown("```js\nconsole.log('hi')"); // -> "```js\nconsole.log('hi')\n```"
+healMarkdown("hello **world**");           // unchanged (valid)
+```
+
+## Table Buffering
+
+Adds a separator row to pipe tables:
+
+```ts
+bufferTableCells("| Name | Age |\n| Alice | 30 |");
+// -> "| Name | Age |\n| --- | --- |\n| Alice | 30 |"
+```
+
+## Types
+
+- `StreamChunkType`: `"text" | "tool-call" | "tool-result" | "error" | "done"`
+- `StreamChunk`: `\{ type, content?, toolName?, toolArgs?, toolResult?, error? \}`

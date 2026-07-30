@@ -1,0 +1,54 @@
+---
+title: "Observability & scheduled jobs (ENG-09 / ENG-18)"
+description: "New projects receive seeded operational alert rules via `insertNewProject` → `seedDefaultAlertRules` (`apps/worker/src/lib/seed-default-alert-rules.js`)."
+---
+
+## Default alert rules
+
+New projects receive seeded operational alert rules via `insertNewProject` → `seedDefaultAlertRules` (`apps/worker/src/lib/seed-default-alert-rules.js`).
+
+Console: **Analytics** → alerts list; open alerts also surface in the red **System status** banner (owner/admin JWT).
+
+## Cron / workflows default
+
+| Mode | `WORKFLOW_SCHEDULES_ENABLED` | What runs |
+|------|------------------------------|-----------|
+| **Production default (repo)** | `false` | Worker `[triggers] crons` in `wrangler.toml` |
+| Workflows (optional) | `true` | `FluxyScheduledWorkflow` bindings; Worker `scheduled` is a no-op |
+
+Crons when enabled (either path):
+
+| Schedule | Job |
+|----------|-----|
+| `0 8 * * *` | Daily AI digest |
+| `*/15 * * * *` | Quiet-hours notification batch |
+| `0 3 * * *` | Data retention purge |
+| `*/5 * * * *` | Pending webhook delivery flush |
+
+### Local dev
+
+In `apps/worker/.dev.vars`:
+
+```bash
+WORKFLOW_SCHEDULES_ENABLED=false
+```
+
+Uses Worker cron from `wrangler.toml` `[triggers]` during `wrangler dev`.
+
+Manual trigger (owner/admin JWT):
+
+```http
+POST /admin/scheduled/run
+Content-Type: application/json
+
+{ "cron": "0 8 * * *" }
+```
+
+Allowed values: `0 8 * * *`, `*/15 * * * *`, `0 3 * * *`, `*/5 * * * *`.
+
+Implementation: `apps/worker/src/lib/scheduled-runners.js`. Full Workflows setup: [scheduled-workflows.md](/docs/scheduled-workflows).
+
+## Health & smoke
+
+- Public: dashboard `/status` → Worker `/health`
+- Operator: `pnpm --filter @fluxy-chat/worker smoke:remote -- --base-url … --admin-jwt …`
