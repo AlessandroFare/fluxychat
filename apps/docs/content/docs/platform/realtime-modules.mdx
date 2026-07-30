@@ -1,0 +1,108 @@
+---
+title: Realtime modules
+description: Composable platform modules on one Worker and room kernel.
+---
+
+All modules share the same Worker, Durable Object rooms, D1 persistence, and WebSocket transport.
+
+<Cards>
+  <Card title="Chat" description="Rooms, messages, presence, reactions." href="/docs/core/use-chat" />
+  <Card title="Stream" description="Live event messaging." href="/docs/platform/stream" />
+  <Card title="Voice AI" description="STT→LLM→TTS pipeline, latency SLO, fallback." href="/docs/platform/voice" />
+  <Card title="Agents" description="In-room AI invoke and streaming." href="/docs/core/agents" />
+  <Card title="Game" description="Session messaging via game client." href="/docs/platform/game" />
+  <Card title="IoT" description="Device and operator channels." href="/docs/platform/iot" />
+  <Card title="Fleet" description="Multi-tenant operator coordination." href="/docs/platform/fleet" />
+</Cards>
+
+## Chat (core)
+
+```tsx
+import { useChat } from "@fluxy-chat/react";
+
+const { messages, sendMessage, connectionState } = useChat({ roomId: "general" });
+```
+
+## Stream
+
+```ts
+import { createWorkerFluxyStreamClient } from "@fluxy-chat/sdk";
+
+const stream = createWorkerFluxyStreamClient({ baseUrl, token: jwt });
+```
+
+Live event messages: `POST /api/live/events/:eventId/messages`.
+
+## Agents
+
+Configure agents on the Worker (dashboard or `POST /agents`). Invoke from clients:
+
+```tsx
+const { invokeAgent } = useChat({ roomId, client });
+await invokeAgent(agentId, "Summarize this thread");
+```
+
+Mention handles (`@assistant`) trigger background invoke with streaming edits.
+
+## Platform clients
+
+| Module | Factory |
+|--------|---------|
+| Stream | `createWorkerFluxyStreamClient` |
+| Game | `createWorkerFluxyGameClient` |
+| IoT | `createWorkerFluxyIoTClient` |
+| Agents (platform) | `createWorkerAgentPlatformClient` |
+
+See [Platform index](/docs/platform) and [Packages: SDK](/docs/packages/sdk).
+
+## Live room events (`server_event` + `capability_event`)
+
+Vertical and labs modules fan out typed frames on the **same room WebSocket** as chat. Subscribe with:
+
+```ts
+const conn = client.connectRoom("classroom:42");
+conn.connect();
+
+conn.onServerEvent(({ name, data }) => {
+  if (name === "poll.voted") console.log(data);
+});
+
+conn.onCapabilityEvent((event) => {
+  console.log(event.type, event.payload);
+});
+```
+
+React hook:
+
+```tsx
+import { useServerEvents } from "@fluxy-chat/react";
+
+const { lastEvent, connected } = useServerEvents({
+  client,
+  roomId: "classroom:42",
+  filter: (name) => name.startsWith("poll."),
+});
+```
+
+### `server_event` catalog (Worker → room)
+
+| Name | Source | Payload (summary) |
+|------|--------|-------------------|
+| `game.match_started` | FluxyGame | `{ matchId, lobbyId }` |
+| `game.tick` | FluxyGame | `{ matchId, tick, state }` |
+| `iot.reading` | FluxyIoT | `{ deviceId, sensor, value, unit }` |
+| `live.event_created` | Live streaming | `{ eventId, title, status, roomId }` |
+| `live.event_live` / `live.event_ended` | Live streaming | `{ eventId, status }` |
+| `live.viewer_joined` / `live.viewer_left` | Live streaming | `{ eventId, userId, viewerCount }` |
+| `live.chat_message` | Live streaming | `{ eventId, messageId, content }` |
+| `fleet.gps_update` | Fleet GPS ingest | `{ vehicleId, lat, lng, speed, heading, ts }` |
+| `poll.created` / `poll.voted` / `poll.closed` | Polls (edu/events) | `{ pollId, … }` |
+| `form.created` / `form.submitted` | Forms | `{ formId, … }` |
+| `spatial.scene_created` / `spatial.entity_added` | Digital twin | `{ sceneId, entityId, position, … }` |
+| `collab.crdt_update` | Yjs CRDT (Room DO) | `{ byteLength, channel: "yjs" }` — throttled metadata; binary sync unchanged |
+| `collab.awareness` | Yjs awareness | `{ byteLength, channel: "yjs" }` |
+| `collab.note` | Collab (client_event) | `{ id, text, x, y, color, authorId }` — fan-out via room WS, not `server_event` |
+
+Yjs CRDT documents use **binary frames** on the same room WebSocket (type bytes 0/1/2). See `/collab` dashboard.
+
+Industry workflows use `capability_event` with typed `event.type` (e.g. `edu.session.started`, `event.stage.live`) via `POST /capabilities/events` — see [Vertical platform](/docs/platform/vertical-platform).

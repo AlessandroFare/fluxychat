@@ -20,6 +20,7 @@ export const FLUXY_INBOUND_EVENT_TYPES = [
   "presence",
   "cache_snapshot",
   "server_event",
+  "capability_event",
   "user_event",
   "user_subscription_succeeded",
   "state_change",

@@ -25,6 +25,7 @@
     "wrangler": "^4.92.0"
   },
   "dependencies": {
+    "@fluxy-chat/config": "workspace:*",
     "@fluxy-chat/protocol": "workspace:*",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",

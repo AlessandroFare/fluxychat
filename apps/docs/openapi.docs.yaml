@@ -1,0 +1,3232 @@
+openapi: 3.1.0
+info:
+  title: HTTP API
+  version: 1.0.0
+  summary: REST endpoints on your FluxyChat Worker.
+  description: |
+    The public HTTP surface of FluxyChat — every route your Worker exposes for
+    auth, chat, agents, inbox, webhooks, billing, and admin operations.
+
+    ## Authentication at a glance
+
+    * **Project API key** — `X-Fluxy-Api-Key: fc_…`. Server-only; mint JWTs and
+      create rooms. Never ship this key to browsers.
+    * **Member JWT** — `Authorization: Bearer eyJ…`. Short-lived token from
+      `POST /auth/token` or `POST /auth/signin`. Used for messages, agents, inbox,
+      and most member-scoped routes.
+
+    ## Base URL
+
+    * Production: `https://your-worker.workers.dev`
+    * Local: `http://127.0.0.1:8787`
+
+    ## Excluded from this document
+
+    WebSocket endpoints (room sockets, user channel, SSE) are documented in
+    [Wire protocol](/docs/architecture/wire-protocol), not OpenAPI.
+servers:
+  - url: https://your-worker.workers.dev
+    description: Production
+  - url: http://127.0.0.1:8787
+    description: Local development
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    fluxyApiKey:
+      type: apiKey
+      in: header
+      name: X-Fluxy-Api-Key
+      description: Project API key (prefix fc_...)
+  schemas:
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        roomId:
+          type: string
+        content:
+          type: string
+        userId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+security:
+  - bearerAuth: []
+paths:
+  /auth/token:
+    post:
+      summary: Mint a short-lived JWT
+      description: Server-side token minting for SDK clients. Uses the project API
+        key, not a Bearer JWT.
+      tags:
+        - Auth
+      security:
+        - fluxyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - roles
+              properties:
+                userId:
+                  type: string
+                  description: Subject claim (sub).
+                roles:
+                  type: array
+                  items:
+                    type: string
+                  description: e.g. member, admin, owner
+                ttlSeconds:
+                  type: integer
+                  description: Lifetime in seconds (default 3600).
+                displayName:
+                  type: string
+      responses:
+        "200":
+          description: Signed JWT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  expiresIn:
+                    type: integer
+                  claims:
+                    type: object
+        "401":
+          description: Invalid API key
+  /auth/signin:
+    post:
+      summary: Sign in (JWT + user channel)
+      description: Same as mint token but returns user channel WebSocket paths.
+      tags:
+        - Auth
+      security:
+        - fluxyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - roles
+              properties:
+                userId:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+                ttlSeconds:
+                  type: integer
+      responses:
+        "200":
+          description: JWT and channel metadata
+  /messages:
+    post:
+      summary: Create message
+      description: Send a message to a room. Requires member JWT.
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+              properties:
+                roomId:
+                  type: string
+                content:
+                  type: string
+                replyTo:
+                  type: integer
+                  nullable: true
+                templateId:
+                  type: string
+                templateVars:
+                  type: object
+      responses:
+        "200":
+          description: Created message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: "#/components/schemas/Message"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Not allowed in this room
+  /api/messages:
+    get:
+      summary: List messages
+      description: Paginated message history for a room.
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: before
+          in: query
+          schema:
+            type: integer
+        - name: after
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Message list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Message"
+  /rooms:
+    get:
+      summary: List rooms
+      tags:
+        - Rooms
+      security:
+        - fluxyApiKey: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - dm
+              - group
+              - public
+        - name: userId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Room list
+    post:
+      summary: Create room
+      tags:
+        - Rooms
+      security:
+        - fluxyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - type
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum:
+                    - dm
+                    - group
+                    - public
+                members:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                      role:
+                        type: string
+      responses:
+        "200":
+          description: Created room
+  /health:
+    get:
+      summary: Health check
+      description: Worker liveness probe.
+      tags:
+        - System
+      security: []
+      responses:
+        "200":
+          description: Worker is healthy
+  /agents:
+    get:
+      summary: List agents
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Agent list
+    post:
+      summary: Create agent
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                handle:
+                  type: string
+                provider:
+                  type: string
+                model:
+                  type: string
+                capabilities:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Created agent
+  /agents/{agentId}/invoke:
+    post:
+      summary: Invoke agent
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+                - content
+              properties:
+                roomId:
+                  type: string
+                content:
+                  type: string
+                replyTo:
+                  type: string
+      responses:
+        "200":
+          description: Agent run started
+  /webhooks/register:
+    post:
+      summary: Register webhook
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+                - eventTypes
+              properties:
+                url:
+                  type: string
+                eventTypes:
+                  type: array
+                  items:
+                    type: string
+                secret:
+                  type: string
+      responses:
+        "200":
+          description: Webhook registered
+  /inbox:
+    get:
+      summary: Get inbox
+      description: Cross-room inbox summary for the authenticated user.
+      tags:
+        - Inbox
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Inbox summary
+  /inbox/rooms/{roomId}/snooze:
+    put:
+      summary: Snooze room in inbox
+      tags:
+        - Inbox
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                until:
+                  type: string
+                  format: date-time
+                minutes:
+                  type: integer
+                hours:
+                  type: integer
+      responses:
+        "200":
+          description: Room snoozed
+  /messages/{id}:
+    patch:
+      summary: Edit message
+      description: Edit your own message content.
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+      responses:
+        "200":
+          description: Edited message
+        "403":
+          description: Not the sender
+        "404":
+          description: Not found
+    delete:
+      summary: Delete message
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+  /messages/{id}/reactions:
+    post:
+      summary: Add reaction
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - emoji
+              properties:
+                emoji:
+                  type: string
+      responses:
+        "200":
+          description: Reaction added
+    delete:
+      summary: Remove reaction
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - emoji
+              properties:
+                emoji:
+                  type: string
+      responses:
+        "200":
+          description: Reaction removed
+  /messages/voice:
+    post:
+      summary: Upload voice message
+      description: Multipart form with audio file, roomId, optional durationMs.
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - audio
+                - roomId
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                roomId:
+                  type: string
+                durationMs:
+                  type: integer
+                parentId:
+                  type: integer
+      responses:
+        "201":
+          description: Voice message created with transcription pending
+        "413":
+          description: File too large
+        "415":
+          description: Unsupported audio format
+  /rooms/{id}/read:
+    post:
+      summary: Mark room read
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+              properties:
+                messageId:
+                  type: integer
+      responses:
+        "200":
+          description: Read receipt stored
+  /rooms/{id}/unread:
+    get:
+      summary: Room unread catch-up
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: unreadCount, lastReadMessageId, firstUnreadMessageId
+  /rooms/{id}/members:
+    get:
+      summary: List room members
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Member list
+    post:
+      summary: Add room member
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                role:
+                  type: string
+      responses:
+        "200":
+          description: Member added
+  /search/messages:
+    get:
+      summary: Search messages
+      description: Full-text search across rooms (FTS5).
+      tags:
+        - Search
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: roomId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            maximum: 50
+      responses:
+        "200":
+          description: Search hits with snippets
+  /upload:
+    post:
+      summary: Upload file
+      description: Binary body. Set Content-Type, X-File-Name, X-Room-Id headers.
+      tags:
+        - Upload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: File metadata and URL
+        "503":
+          description: R2 not configured
+  /attachments/{fileKey}:
+    get:
+      summary: Download attachment
+      tags:
+        - Upload
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fileKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File bytes
+        "404":
+          description: Not found
+  /reports:
+    post:
+      summary: Report message
+      tags:
+        - Moderation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+                - roomId
+              properties:
+                messageId:
+                  type: integer
+                roomId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Report accepted
+  /blocks:
+    get:
+      summary: List blocked users
+      tags:
+        - Moderation
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Block list
+    post:
+      summary: Block user
+      tags:
+        - Moderation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+      responses:
+        "200":
+          description: User blocked
+  /blocks/{userId}:
+    delete:
+      summary: Unblock user
+      tags:
+        - Moderation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User unblocked
+  /gdpr/export:
+    get:
+      summary: Export user data
+      description: GDPR data portability — JSON export for the authenticated user.
+      tags:
+        - Privacy
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: JSON export attachment
+        "401":
+          description: Unauthorized
+  /gdpr/delete:
+    delete:
+      summary: Erase user data
+      description: GDPR right to erasure. Requires owner or admin role.
+      tags:
+        - Privacy
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Erasure completed
+        "403":
+          description: Insufficient role
+  /digest/preferences:
+    get:
+      summary: Get digest preferences
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Digest opt-in and channel toggles
+    patch:
+      summary: Update digest preferences
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                emailEnabled:
+                  type: boolean
+                webPushEnabled:
+                  type: boolean
+                inAppEnabled:
+                  type: boolean
+                email:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Updated preferences
+  /push/web/vapid-public-key:
+    get:
+      summary: VAPID public key
+      description: No auth. Pass projectId query param.
+      tags:
+        - Push
+      security: []
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: publicKey and subject
+  /push/web/subscribe:
+    post:
+      summary: Register web push subscription
+      tags:
+        - Push
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - endpoint
+                - keys
+              properties:
+                endpoint:
+                  type: string
+                keys:
+                  type: object
+                  required:
+                    - p256dh
+                    - auth
+                  properties:
+                    p256dh:
+                      type: string
+                    auth:
+                      type: string
+      responses:
+        "200":
+          description: Subscription stored
+  /push/web/subscriptions:
+    get:
+      summary: List web push subscriptions
+      tags:
+        - Push
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Subscription list
+  /push/devices:
+    get:
+      summary: List push devices
+      tags:
+        - Push
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Device list
+    post:
+      summary: Register FCM device
+      tags:
+        - Push
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - platform
+                - token
+              properties:
+                platform:
+                  type: string
+                  enum:
+                    - fcm
+                    - web
+                token:
+                  type: string
+      responses:
+        "200":
+          description: Device registered
+  /agents/{agentId}:
+    get:
+      summary: Get agent
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Agent profile
+        "404":
+          description: Not found
+    patch:
+      summary: Update agent
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Updated agent
+    delete:
+      summary: Delete agent
+      description: Requires owner or admin role.
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+  /agents/{agentId}/runs:
+    get:
+      summary: List agent runs
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run history
+  /webhooks/{webhookId}:
+    patch:
+      summary: Update webhook
+      description: Requires owner or admin role.
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                eventTypes:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Updated
+    delete:
+      summary: Delete webhook
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+  /public/host-config:
+    get:
+      summary: Public host config
+      description: Embed and dashboard bootstrap config. No auth.
+      tags:
+        - Public
+      security: []
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Host configuration JSON
+  /public/rooms/{roomId}/guest-session:
+    post:
+      summary: Create guest session
+      description: Anonymous JWT for public room embeds.
+      tags:
+        - Public
+      security: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                projectId:
+                  type: string
+      responses:
+        "200":
+          description: Guest JWT and room access
+        "403":
+          description: Guest access disabled for room
+  /polls:
+    post:
+      summary: Create poll
+      tags:
+        - Polls
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+                - title
+                - options
+              properties:
+                roomId:
+                  type: string
+                title:
+                  type: string
+                pollType:
+                  type: string
+                  enum:
+                    - single
+                    - multi
+                options:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      label:
+                        type: string
+      responses:
+        "201":
+          description: Poll created
+  /polls/{pollId}/vote:
+    post:
+      summary: Vote on poll
+      tags:
+        - Polls
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: pollId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - optionIds
+              properties:
+                optionIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Vote recorded
+  /polls/{pollId}:
+    get:
+      summary: Poll results
+      tags:
+        - Polls
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: pollId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Results
+  /agent-queue:
+    get:
+      summary: List queue tasks
+      tags:
+        - Agent Queue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - open
+              - claimed
+              - resolved
+      responses:
+        "200":
+          description: Task list
+    post:
+      summary: Create queue task
+      tags:
+        - Agent Queue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+              properties:
+                roomId:
+                  type: string
+                subject:
+                  type: string
+                priority:
+                  type: string
+      responses:
+        "201":
+          description: Task created
+  /agent-queue/{taskId}/claim:
+    post:
+      summary: Claim task
+      tags:
+        - Agent Queue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task claimed
+  /billing/plan:
+    get:
+      summary: Current plan and usage
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plan and monthly usage counters
+  /billing/checkout:
+    post:
+      summary: Stripe checkout session
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planName:
+                  type: string
+                successUrl:
+                  type: string
+                cancelUrl:
+                  type: string
+      responses:
+        "200":
+          description: Checkout URL
+        "501":
+          description: Stripe not configured
+  /billing/portal:
+    post:
+      summary: Stripe customer portal
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Portal URL
+        "501":
+          description: Stripe not configured
+  /auth/sms-otp/send:
+    post:
+      summary: Send SMS OTP
+      description: Server-side only. Requires Sent.dm or SMS provider configured on Worker.
+      tags:
+        - Auth
+      security:
+        - fluxyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - e164
+              properties:
+                userId:
+                  type: string
+                e164:
+                  type: string
+      responses:
+        "200":
+          description: OTP sent
+  /auth/sms-otp/verify:
+    post:
+      summary: Verify SMS OTP and mint JWT
+      tags:
+        - Auth
+      security:
+        - fluxyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - e164
+                - code
+              properties:
+                userId:
+                  type: string
+                e164:
+                  type: string
+                code:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: JWT with sms_verified claim
+  /auth/channel:
+    post:
+      summary: Channel auth (Pusher-compatible)
+      description: Returns signed auth for private or presence channel subscription
+        during migration.
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - socket_id
+              properties:
+                socket_id:
+                  type: string
+                channel_name:
+                  type: string
+                roomId:
+                  type: string
+                presenceInfo:
+                  type: object
+      responses:
+        "200":
+          description: Signed channel auth
+        "403":
+          description: Room access denied
+  /client/feature-flags:
+    get:
+      summary: Client feature flags
+      description: Public. Optional Bearer JWT for project targeting.
+      tags:
+        - Client
+      security: []
+      responses:
+        "200":
+          description: Boolean flags and reconnect backoff profile
+  /public/embed-config:
+    get:
+      summary: Public embed widget config
+      tags:
+        - Public
+      security: []
+      responses:
+        "200":
+          description: Widget enabled flag, theme, default room
+  /messages/suggest-replies:
+    post:
+      summary: AI reply suggestions
+      description: Up to three short suggestions based on recent room messages.
+      tags:
+        - AI
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+              properties:
+                roomId:
+                  type: string
+                parentId:
+                  type: integer
+                  nullable: true
+      responses:
+        "200":
+          description: Suggestion strings
+        "402":
+          description: Quota exceeded
+        "503":
+          description: AI not configured
+  /messages/{messageId}/summary:
+    post:
+      summary: Thread summary (TL;DR)
+      description: Summarize a reply thread anchored at the given message.
+      tags:
+        - AI
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+              properties:
+                roomId:
+                  type: string
+      responses:
+        "200":
+          description: Thread summary text
+        "400":
+          description: Thread too short
+  /messages/{id}/translate:
+    post:
+      summary: Translate message
+      tags:
+        - AI
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - targetLang
+              properties:
+                targetLang:
+                  type: string
+                sourceLang:
+                  type: string
+      responses:
+        "200":
+          description: Translated text (cached in D1)
+  /messages/{id}/delivered:
+    post:
+      summary: Mark message delivered
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Delivery recorded
+  /messages/{id}/deliveries:
+    get:
+      summary: List message deliveries
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Per-recipient delivery status
+  /messages/{id}/poll:
+    get:
+      summary: Get poll results
+      tags:
+        - Polls
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Poll results
+  /messages/{id}/vote:
+    post:
+      summary: Vote on message poll
+      tags:
+        - Polls
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                optionIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Vote recorded
+  /rooms/dm:
+    post:
+      summary: Create or get DM room
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - participantIds
+              properties:
+                participantIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: DM room
+  /rooms/{id}/draft:
+    get:
+      summary: Get room message draft
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Draft content
+    put:
+      summary: Save room message draft
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+      responses:
+        "200":
+          description: Draft saved
+  /rooms/{roomId}/handoff:
+    get:
+      summary: Handoff state
+      tags:
+        - Handoff
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: AI vs human handoff state
+    post:
+      summary: Start human handoff
+      tags:
+        - Handoff
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agentId:
+                  type: string
+                note:
+                  type: string
+      responses:
+        "201":
+          description: Handoff started
+    patch:
+      summary: Complete handoff
+      tags:
+        - Handoff
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - disposition
+              properties:
+                disposition:
+                  type: string
+      responses:
+        "200":
+          description: Handoff resolved
+  /inbox/follow-ups:
+    post:
+      summary: Create inbox follow-up
+      tags:
+        - Inbox
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+              properties:
+                roomId:
+                  type: string
+                messageId:
+                  type: integer
+                note:
+                  type: string
+                dueAt:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: Follow-up created
+  /inbox/follow-ups/{id}:
+    patch:
+      summary: Update follow-up
+      tags:
+        - Inbox
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - open
+                    - done
+      responses:
+        "200":
+          description: Updated
+    delete:
+      summary: Delete follow-up
+      tags:
+        - Inbox
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+  /notifications/quiet-hours:
+    get:
+      summary: Quiet hours preferences
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Preferences and inQuietHours flag
+    patch:
+      summary: Update quiet hours
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                startHour:
+                  type: integer
+                endHour:
+                  type: integer
+                timezone:
+                  type: string
+      responses:
+        "200":
+          description: Updated
+  /notifications/flush-batch:
+    post:
+      summary: Flush batched notifications
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Flush result
+        "409":
+          description: Still in quiet hours
+  /export/rooms/{roomId}.markdown:
+    get:
+      summary: Export room as Markdown
+      tags:
+        - Export
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Markdown file download
+  /export/rooms/{roomId}.pdf:
+    get:
+      summary: Export room as PDF
+      tags:
+        - Export
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PDF file download
+  /export/messages.json:
+    get:
+      summary: Export messages JSON
+      tags:
+        - Export
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: JSON message export
+  /export/messages.csv:
+    get:
+      summary: Export messages CSV
+      tags:
+        - Export
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: CSV file download
+  /search/conversations:
+    get:
+      summary: Search conversations
+      tags:
+        - Search
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Matching rooms with hit counts
+  /forms:
+    post:
+      summary: Create form
+      tags:
+        - Forms
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+                - title
+                - schema
+              properties:
+                roomId:
+                  type: string
+                title:
+                  type: string
+                schema:
+                  type: object
+      responses:
+        "201":
+          description: Form created
+  /forms/{formId}/submit:
+    post:
+      summary: Submit form response
+      tags:
+        - Forms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                response:
+                  type: object
+                  description: Form field values keyed by field id
+      responses:
+        "200":
+          description: Submission recorded
+  /agent-queue/{taskId}/release:
+    post:
+      summary: Release claimed task
+      tags:
+        - Agent Queue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task returned to queue
+  /agent-queue/dispositions:
+    get:
+      summary: List disposition codes
+      tags:
+        - Agent Queue
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Disposition list
+  /agent-queue/{taskId}:
+    patch:
+      summary: Update queue task
+      tags:
+        - Agent Queue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                disposition:
+                  type: string
+      responses:
+        "200":
+          description: Task updated
+  /stats/rooms/{id}:
+    get:
+      summary: Room statistics
+      tags:
+        - Stats
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Message volume and active users
+  /stats/costs:
+    get:
+      summary: Cost estimates
+      description: Operator metrics. Requires admin JWT.
+      tags:
+        - Stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cost breakdown
+  /admin/mute:
+    post:
+      summary: Mute user in room
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+                - userId
+              properties:
+                roomId:
+                  type: string
+                userId:
+                  type: string
+                durationSeconds:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: User muted
+  /admin/ban:
+    post:
+      summary: Ban user from room
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+                - userId
+              properties:
+                roomId:
+                  type: string
+                userId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: User banned
+  /admin/unmute:
+    post:
+      summary: Unmute user
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+                - userId
+              properties:
+                roomId:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        "200":
+          description: User unmuted
+  /admin/unban:
+    post:
+      summary: Unban user
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+                - userId
+              properties:
+                roomId:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        "200":
+          description: User unbanned
+  /admin/reports:
+    get:
+      summary: List moderation reports
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report list
+  /webhooks/verify:
+    post:
+      summary: Verify webhook signature
+      description: Test HMAC verification for a webhook secret.
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - webhookId
+                - body
+                - signature
+              properties:
+                webhookId:
+                  type: string
+                body:
+                  type: string
+                signature:
+                  type: string
+      responses:
+        "200":
+          description: Verification result
+  /automation/trigger:
+    post:
+      summary: Trigger automation event
+      description: Generic automation hook (e.g. room_summary, dm_message).
+      tags:
+        - Automation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - eventType
+              properties:
+                eventType:
+                  type: string
+                roomId:
+                  type: string
+                payload:
+                  type: object
+      responses:
+        "200":
+          description: Accepted
+  /embed.js:
+    get:
+      summary: Embeddable widget loader
+      tags:
+        - Public
+      security: []
+      responses:
+        "200":
+          description: JavaScript loader for chat bubble and iframe
+  /embed/frame:
+    get:
+      summary: Embed iframe chat shell
+      tags:
+        - Public
+      security: []
+      parameters:
+        - name: roomId
+          in: query
+          schema:
+            type: string
+        - name: parentOrigin
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: HTML chat frame
+  /admin/embed-config:
+    get:
+      summary: Read embed widget config
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Config and HTML install snippet
+    patch:
+      summary: Update embed widget config
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                defaultRoomId:
+                  type: string
+                allowedOrigins:
+                  type: array
+                  items:
+                    type: string
+                theme:
+                  type: object
+      responses:
+        "200":
+          description: Updated config
+  /admin/custom-domains:
+    get:
+      summary: List custom domains
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Domain list
+    post:
+      summary: Register custom hostname
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - hostname
+              properties:
+                hostname:
+                  type: string
+                defaultRoomId:
+                  type: string
+                brandName:
+                  type: string
+      responses:
+        "201":
+          description: Created
+  /admin/custom-domains/{id}:
+    patch:
+      summary: Update custom domain
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - pending
+                    - active
+                    - disabled
+      responses:
+        "200":
+          description: Updated
+    delete:
+      summary: Remove custom domain
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+  /users/{userId}/events:
+    post:
+      summary: Trigger user-targeted event
+      description: Delivers to the user channel and optionally fans out to member rooms.
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                data:
+                  type: object
+                fanoutRooms:
+                  type: boolean
+      responses:
+        "200":
+          description: Delivery counts
+  /users/{userId}/connections:
+    delete:
+      summary: Terminate user WebSocket connections
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Closed socket count
+  /users/{userId}/watchlist:
+    get:
+      summary: List watchlist targets
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Watchlist entries
+    post:
+      summary: Add watchlist target
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - targetId
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - room
+                    - user
+                targetId:
+                  type: string
+      responses:
+        "200":
+          description: Target added
+    delete:
+      summary: Remove watchlist target
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: targetId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Target removed
+  /events:
+    post:
+      summary: Trigger events (multi-room)
+      description: Pusher-style HTTP trigger to up to 50 rooms.
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomIds
+              properties:
+                roomIds:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 50
+                name:
+                  type: string
+                data:
+                  type: object
+                excludeSocketId:
+                  type: string
+      responses:
+        "200":
+          description: Trigger result
+  /admin/scheduled/run:
+    post:
+      summary: Run scheduled cron job manually
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cron
+              properties:
+                cron:
+                  type: string
+                  enum:
+                    - 0 8 * * *
+                    - "*/15 * * * *"
+                    - 0 3 * * *
+                    - "*/5 * * * *"
+      responses:
+        "200":
+          description: Job completed
+  /admin/digest/run:
+    post:
+      summary: Run daily digest now
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Digest run started
+  /admin/agent-queue/stats:
+    get:
+      summary: Agent queue disposition stats
+      tags:
+        - Agent Queue
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Breakdown by disposition
+  /push/devices/{id}:
+    delete:
+      summary: Remove FCM device token
+      tags:
+        - Push
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Device removed
+  /push/web/subscribe/{endpointId}:
+    delete:
+      summary: Unsubscribe web push endpoint
+      tags:
+        - Push
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: endpointId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unsubscribed
+  /rooms/{id}:
+    patch:
+      summary: Update room
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum:
+                    - dm
+                    - group
+                    - public
+                e2eEnabled:
+                  type: boolean
+                shardCount:
+                  type: integer
+      responses:
+        "200":
+          description: Room updated
+    delete:
+      summary: Delete room
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Room deleted
+  /rooms/{id}/live:
+    get:
+      summary: Live channel stats
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Occupancy and connected users
+  /rooms/{id}/pin:
+    patch:
+      summary: Pin or unpin message
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messageId:
+                  type: integer
+                  nullable: true
+      responses:
+        "200":
+          description: Pin updated
+  /rooms/{id}/terminate-connection:
+    post:
+      summary: Terminate room WebSocket
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - socketId
+              properties:
+                socketId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Connection terminated
+  /rooms/{id}/e2e-key:
+    get:
+      summary: Fetch room E2E encryption key
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: E2E key material for members
+  /rooms/{id}/stream:
+    get:
+      summary: SSE stream for room updates
+      tags:
+        - Rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            example: text/event-stream
+      responses:
+        "200":
+          description: Server-sent events stream
+  /rooms/{id}/messages/from-bot:
+    post:
+      summary: Post message as bot
+      tags:
+        - Bots
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - botId
+                - content
+              properties:
+                botId:
+                  type: string
+                content:
+                  type: string
+                replyTo:
+                  type: integer
+      responses:
+        "200":
+          description: Bot message created
+  /bots:
+    post:
+      summary: Create or update bot
+      tags:
+        - Bots
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                handle:
+                  type: string
+                webhookUrl:
+                  type: string
+                provider:
+                  type: string
+                model:
+                  type: string
+      responses:
+        "200":
+          description: Bot registered
+  /admin/announcement:
+    post:
+      summary: Send system announcement
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+                - content
+              properties:
+                roomId:
+                  type: string
+                content:
+                  type: string
+      responses:
+        "200":
+          description: Announcement sent
+  /admin/projects:
+    get:
+      summary: List projects
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Project list
+    post:
+      summary: Create project
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        "200":
+          description: Project and API key
+  /admin/projects/{projectId}/plan:
+    patch:
+      summary: Update project plan
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planName:
+                  type: string
+      responses:
+        "200":
+          description: Plan updated
+  /forms/{formId}:
+    get:
+      summary: Get form results
+      tags:
+        - Forms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Form schema and submissions
+  /polls/{pollId}/close:
+    post:
+      summary: Close poll
+      tags:
+        - Polls
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: pollId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Poll closed
+  /benchmark:
+    post:
+      summary: Admin DB/KV benchmark
+      tags:
+        - System
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                iterations:
+                  type: integer
+      responses:
+        "200":
+          description: Benchmark summary
+  /compliance/report:
+    get:
+      summary: Compliance snapshot
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Structured compliance report
+  /stats/ai:
+    get:
+      summary: AI usage stats
+      tags:
+        - Stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token and invoke counts
+  /stats/ops:
+    get:
+      summary: Operational counters
+      tags:
+        - Stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Request and error counters
+  /stats/slo:
+    get:
+      summary: SLO snapshot
+      tags:
+        - Stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Error rate and latency SLOs
+  /stats/alerts:
+    get:
+      summary: List operational alerts
+      tags:
+        - Stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active alerts
+  /stats/alerts/evaluate:
+    post:
+      summary: Evaluate alert rules
+      tags:
+        - Stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Evaluation result
+  /stats/launch-kpis:
+    get:
+      summary: Launch KPIs
+      tags:
+        - Stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Activation and retention metrics
+  /webhooks/verify-batch:
+    post:
+      summary: Verify webhook batch HMAC
+      tags:
+        - Webhooks
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - secret
+              properties:
+                secret:
+                  type: string
+                body:
+                  type: string
+                signature:
+                  type: string
+                events:
+                  type: array
+                  maxItems: 50
+      responses:
+        "200":
+          description: Verification result
+  /webhooks/stripe:
+    post:
+      summary: Stripe webhook ingress
+      tags:
+        - Webhooks
+      security: []
+      responses:
+        "200":
+          description: Event processed
+  /admin/audit/events:
+    get:
+      summary: Operational audit log
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: action
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audit events
+  /admin/webhooks:
+    get:
+      summary: List project webhooks
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Webhook metadata
+  /admin/webhooks/deliveries:
+    get:
+      summary: List webhook deliveries
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Delivery attempts
+  /admin/webhooks/deliveries/{deliveryId}/replay:
+    post:
+      summary: Replay webhook delivery
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Replay queued
+  /admin/alerts/rules:
+    get:
+      summary: List alert rules
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Alert rules
+    post:
+      summary: Create alert rule
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                metric:
+                  type: string
+                threshold:
+                  type: number
+      responses:
+        "201":
+          description: Rule created
+  /integrations/sent/webhook:
+    post:
+      summary: Sent.dm delivery webhook
+      tags:
+        - Integrations
+      security: []
+      responses:
+        "200":
+          description: Delivery status recorded
+  /admin/integrations/sent/deliveries:
+    get:
+      summary: List Sent.dm deliveries
+      tags:
+        - Integrations
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: SMS delivery records
+  /integrations/sent/contacts/sync:
+    post:
+      summary: Sync Sent.dm contacts
+      tags:
+        - Integrations
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Contacts synced
+  /admin/integrations/sent/contacts:
+    get:
+      summary: List Sent.dm contacts
+      tags:
+        - Integrations
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Contact mirror with opt-out flags
+tags:
+  - name: Admin
+    description: Mute, ban, embed, domains
+  - name: Agent Queue
+    description: Support task queue
+  - name: Agents
+    description: CRUD, invoke, runs
+  - name: AI
+    description: Suggestions, summary, translation
+  - name: Auth
+    description: JWT, SMS OTP, channel auth
+  - name: Automation
+    description: Automation hooks
+  - name: Billing
+    description: Stripe checkout
+  - name: Bots
+    description: Bot registration
+  - name: Client
+    description: Feature flags
+  - name: Events
+    description: Multi-room HTTP trigger
+  - name: Export
+    description: Markdown, PDF, JSON, CSV
+  - name: Forms
+    description: In-chat forms
+  - name: Handoff
+    description: AI to human escalation
+  - name: Inbox
+    description: Summary, snooze, follow-ups
+  - name: Integrations
+    description: Sent.dm SMS
+  - name: Messages
+    description: Send, edit, reactions, delivery
+  - name: Moderation
+    description: Reports and blocks
+  - name: Notifications
+    description: Digest and quiet hours
+  - name: Polls
+    description: Polls and voting
+  - name: Privacy
+    description: GDPR export and delete
+  - name: Public
+    description: Guest sessions and embed
+  - name: Push
+    description: Web push and FCM
+  - name: Rooms
+    description: CRUD, DMs, drafts, SSE
+  - name: Search
+    description: Messages and conversations
+  - name: Stats
+    description: Usage and SLO metrics
+  - name: System
+    description: Health and benchmark
+  - name: Upload
+    description: R2 attachments
+  - name: Users
+    description: User channel APIs
+  - name: Webhooks
+    description: Register and verify

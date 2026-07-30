@@ -168,7 +168,19 @@ export function useChat({
     reactions: state.reactions,
     sendMessage,
     loadMore,
-    loadHistory: React.useCallback(async () => { /* TODO */ }, []),
+    loadHistory: React.useCallback(async () => {
+      if (!client || !storeRef.current) return;
+      try {
+        const initial = await client.fetchMessages(roomIdRef.current, { limit: historyLimit });
+        storeRef.current.setState({
+          messages: sortMessagesChronological(initial as any) as any,
+          hasMore: initial.length >= historyLimit,
+          historyLoaded: true,
+        });
+      } catch {
+        /* best-effort refresh */
+      }
+    }, [client, historyLimit]),
     setTyping: React.useCallback((isTyping: boolean) => { connRef.current?.sendJson({ type: "typing", userId: client?.userId, isTyping }); }, [client]),
     editMessage: React.useCallback((messageId: number, content: string) => { connRef.current?.sendJson({ type: "edit", userId: client?.userId, messageId, content }); }, [client]),
     sendReaction: React.useCallback((messageId: number, emoji: string, op: "add" | "remove" = "add") => { connRef.current?.sendJson({ type: "reaction", userId: client?.userId, messageId, emoji, op }); }, [client]),

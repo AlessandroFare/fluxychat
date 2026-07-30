@@ -1,0 +1,36 @@
+---
+title: "Durable AI Transport"
+description: "Durable sessions survive disconnects and device switches."
+---
+
+```ts
+import { createDurableTransport } from "@fluxy-chat/sdk";
+```
+
+## Session Lifecycle
+
+```ts
+const transport = createDurableTransport({ maxChunks: 5000, ttlMs: 1800000 });
+
+// Create session
+const session = transport.createSession("device-1", { userId: "u1" });
+
+// Append stream chunks
+transport.appendChunk(session.id, "token1");
+transport.appendChunk(session.id, "token2");
+
+// Reconnect with offset recovery
+const result = transport.reconnect(session.id, "device-2", 1);
+// result.missedChunks contains chunks after offset 1
+// result.liveStream is true if session is still active
+
+// Close session when done
+transport.closeSession(session.id);
+```
+
+## Cleanup
+
+```ts
+// Remove sessions older than ttlMs
+const removed = transport.cleanup();
+```

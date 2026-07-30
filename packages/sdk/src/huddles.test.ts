@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createHuddle } from "./huddles";
 
 describe("huddles", () => {
@@ -30,6 +30,16 @@ describe("huddles", () => {
   });
 
   it("should start and stop screen share", async () => {
+    const mockStream = {
+      getVideoTracks: () => [{ addEventListener: () => {} }],
+      getTracks: () => [{ stop: () => {} }],
+    };
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getDisplayMedia: vi.fn().mockResolvedValue(mockStream),
+      },
+    });
+
     const h = createHuddle({ roomId: "room-1", audioEnabled: true, videoEnabled: false, screenShareEnabled: true, captionsEnabled: false, recordingConsent: false, maxParticipants: 10 });
     const events: string[] = [];
     h.onEvent((e) => events.push(e.type));

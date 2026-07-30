@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Inbox, Bell, Clock, Pin, RefreshCw } from "lucide-react";
-import {
-  FluxyChatClient,
-  type FluxyInboxSummary,
-} from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useInbox, type FluxyInboxItem } from "@fluxy-chat/react";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
@@ -23,11 +21,16 @@ export default function InboxPage() {
   const { memberJwt, adminJwt } = useDashboardSession();
   const token = memberJwt.trim() || adminJwt.trim();
   const [tab, setTab] = useState<InboxTab>("all");
-  const [data, setData] = useState<FluxyInboxSummary | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [followNote, setFollowNote] = useState("");
   const [followRoomId, setFollowRoomId] = useState("");
+  const [liveItems, setLiveItems] = useState<FluxyInboxItem[]>([]);
+
+  const onInboxItem = useCallback((item: FluxyInboxItem) => {
+    setLiveItems((prev) => {
+      if (prev.some((row) => row.id === item.id)) return prev;
+      return [item, ...prev].slice(0, 8);
+    });
+  }, []);
 
   const client = useMemo(() => {
     if (!token) return null;
@@ -38,23 +41,46 @@ export default function InboxPage() {
     });
   }, [token]);
 
-  const reload = useCallback(async () => {
-    if (!client) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const summary = await client.getInbox();
-      setData(summary);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load inbox");
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  const {
+    summary: data,
+    items,
+    unseen,
+    isLoading: loading,
+    error: inboxError,
+    reload,
+    counter: unreadCounter,
+  } = useInbox({
+    client,
+    pollIntervalMs: 30_000,
+    enabled: Boolean(client),
+    onItem: onInboxItem,
+  });
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const error = inboxError?.message ?? null;
+
+  async function handleMarkRead(roomId: string, messageId: number) {
+    if (!client) return;
+    await client.markReadRest(roomId, messageId);
+    await reload();
+  }
+
+  function resolveMarkReadMessageId(room: {
+    firstUnreadMessageId: number | null;
+    lastReadMessageId: number;
+    lastMessage?: { messageId: number } | null;
+  }): number | null {
+    if (room.firstUnreadMessageId != null) return room.firstUnreadMessageId;
+    if (room.lastMessage?.messageId != null) return room.lastMessage.messageId;
+    if (room.lastReadMessageId > 0) return room.lastReadMessageId;
+    return null;
+  }
+
+  const kindLabel: Record<FluxyInboxItem["kind"], string> = {
+    mention: "Mention",
+    unread: "Unread",
+    follow_up: "Follow-up",
+    snooze: "Snoozed",
+  };
 
   async function handleSnooze(roomId: string, hours: number) {
     if (!client) return;
@@ -97,8 +123,77 @@ export default function InboxPage() {
     <ConsoleShell className="max-w-3xl">
       <ConsolePageHeader
         title="Inbox"
-        description="Mentions, unread rooms, snoozed channels, and follow-ups across your project."
+        description={`Mentions, unread rooms, snoozed channels, and follow-ups.${unreadCounter > 0 ? ` ${unreadCounter} unread room${unreadCounter === 1 ? "" : "s"}.` : ""}${unseen > 0 ? ` ${unseen} in view.` : ""}`}
       />
+
+      {tab === "all" && items.length > 0 ? (
+        <section className="mb-6" data-testid="inbox-items-feed">
+          <h2 className="mb-2 text-sm font-semibold">Items feed</h2>
+          <ul className="space-y-2">
+            {items.slice(0, 12).map((item) => (
+              <li key={item.id}>
+                <Panel className="flex flex-wrap items-start justify-between gap-3 p-4">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-primary">{kindLabel[item.kind]}</p>
+                    <Link
+                      href={`/rooms?room=${encodeURIComponent(item.roomId)}`}
+                      className="font-medium text-foreground hover:underline"
+                    >
+                      {item.roomName ?? item.roomId}
+                    </Link>
+                    {item.unreadCount != null ? (
+                      <p className="mt-1 text-xs text-muted-foreground">{item.unreadCount} unread</p>
+                    ) : null}
+                  </div>
+                  {item.kind === "unread" ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      data-testid={`inbox-mark-read-${item.roomId}`}
+                      onClick={() => {
+                        const payload = item.payload as {
+                          firstUnreadMessageId?: number | null;
+                          lastReadMessageId?: number;
+                          lastMessage?: { messageId: number } | null;
+                        };
+                        const messageId = resolveMarkReadMessageId({
+                          firstUnreadMessageId: payload.firstUnreadMessageId ?? null,
+                          lastReadMessageId: payload.lastReadMessageId ?? 0,
+                          lastMessage: payload.lastMessage ?? null,
+                        });
+                        if (messageId != null) void handleMarkRead(item.roomId, messageId);
+                      }}
+                    >
+                      Mark read
+                    </Button>
+                  ) : null}
+                </Panel>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {liveItems.length > 0 ? (
+        <div className="mb-4 space-y-2" data-testid="inbox-live-items">
+          {liveItems.map((item) => (
+            <Panel key={item.id} className="border-primary/30 bg-primary/[0.04] p-3" data-testid="inbox-live-item">
+              <p className="text-xs font-medium text-primary">Live · {item.kind}</p>
+              <p className="text-sm text-foreground">
+                {item.roomName ?? item.roomId}
+                {item.unreadCount != null ? ` · ${item.unreadCount} unread` : ""}
+              </p>
+            </Panel>
+          ))}
+        </div>
+      ) : null}
+
+      {items.length > 0 ? (
+        <p className="mb-2 text-xs text-muted-foreground" data-testid="inbox-items-count">
+          {items.length} item{items.length === 1 ? "" : "s"} in feed
+        </p>
+      ) : null}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => void reload()} disabled={loading || !client}>
@@ -190,9 +285,22 @@ export default function InboxPage() {
                             {r.lastMessage?.preview ? ` · ${r.lastMessage.preview}` : ""}
                           </p>
                         </div>
-                        <Button type="button" size="sm" variant="outline" onClick={() => void handleSnooze(r.roomId, 24)}>
-                          Snooze 24h
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const messageId = resolveMarkReadMessageId(r);
+                              if (messageId != null) void handleMarkRead(r.roomId, messageId);
+                            }}
+                          >
+                            Mark read
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" onClick={() => void handleSnooze(r.roomId, 24)}>
+                            Snooze 24h
+                          </Button>
+                        </div>
                       </Panel>
                     </li>
                   ))}

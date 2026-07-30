@@ -179,6 +179,21 @@ export async function getActiveHoldsForRoom(env, { projectId, roomId }) {
 }
 
 /**
+ * List active legal holds for a project (optional room filter).
+ */
+export async function listActiveLegalHolds(env, { projectId, roomId }) {
+  let sql = `SELECT * FROM legal_holds WHERE project_id = ? AND released_at IS NULL`;
+  const params = [projectId];
+  if (roomId) {
+    sql += ` AND room_id = ?`;
+    params.push(roomId);
+  }
+  sql += ` ORDER BY created_at DESC LIMIT 100`;
+  const rows = await env.DB.prepare(sql).bind(...params).all();
+  return (rows.results || []).map(mapLegalHoldRow);
+}
+
+/**
  * Check if a room is currently on legal hold.
  */
 export async function isRoomOnHold(env, { projectId, roomId }) {

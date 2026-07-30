@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { ConsoleShell } from "@/app/components/console-shell";
 import { ConsolePageHeader } from "@/app/components/console-page-header";
+import { ConsoleProjectRoomBar } from "@/app/components/console-project-room-bar";
 import { cn } from "@/lib/utils";
 import { createWebTransportAdapter, createAdaptiveTransport, type WebTransportNegotiation, type TransportHealth } from "@fluxy-chat/sdk";
 import { Zap, CheckCircle2, XCircle, AlertTriangle, Activity, ArrowRight, Wifi, Globe } from "lucide-react";
@@ -77,6 +78,10 @@ export default function WebTransportPage() {
       <ConsolePageHeader
         title="WebTransport Readiness"
         description="Auto-negotiation: WebTransport → WebSocket → SSE → Long Poll. Client-side feature detection with automatic fallback."
+      />
+
+      <ConsoleProjectRoomBar
+        hint="Transport negotiation runs client-side. Production chat uses WebSocket on your Worker today; WebTransport auto-fallback is ready when CF supports it."
       />
 
       <div className="flex flex-1 flex-col gap-4 p-4 pt-2">

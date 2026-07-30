@@ -3,16 +3,16 @@
  */
 
 export const MARKETING_HERO = {
-  eyebrow: "AI-native chat platform on Cloudflare",
-  headlineLead: "Ship AI-powered chat",
-  headlineAccent: "across 14 platforms",
+  eyebrow: "Realtime platform on Cloudflare",
+  headlineLead: "Ship chat and live product",
+  headlineAccent: "from one SDK",
   subhead:
-    "One SDK for in-app chat, AI agents, and multi-platform messaging. Streaming markdown, MCP tool calling, and LLM middleware — self-host on Cloudflare Workers or use hosted cloud.",
+    "In-app chat, voice AI, live location, stream, collab, and device sync — plus Slack, Discord, and 12 more channels. Self-host on Workers or start on hosted cloud.",
 } as const;
 
 export const MARKETING_WHY = {
   title: "Why teams pick FluxyChat",
-  body: "Most products stitch together chat, AI, support, and governance from different vendors. That stack gets expensive, hard to audit, and painful to migrate. FluxyChat combines 14 platform adapters, AI-native streaming, MCP tool calling, LLM middleware, and compliance hooks on the edge you already run.",
+  body: "Most teams glue together chat, AI, support, and compliance from different vendors. That gets expensive and hard to audit. FluxyChat puts 14 platform adapters, streaming AI, MCP tools, and governance hooks on the edge you already run.",
 } as const;
 
 export const MARKETING_PLATFORM_FEATURES = [
@@ -71,11 +71,15 @@ export const MARKETING_FINAL_CTA = {
 export const PRICING_FAQ = [
   {
     q: "Why usage-based quotas?",
-    a: "Real cost scales with messages, AI invokes, and webhook volume. Self-serve plans include fixed monthly quotas; heavy usage can be metered on Growth and above.",
+    a: "Cost tracks messages, AI invokes, and webhook volume. Self-serve plans include fixed monthly quotas; heavy usage can be metered on Growth and above.",
   },
   {
     q: "Do AI agent invokes count against my quota?",
-    a: "Yes — each plan includes a monthly agent invoke limit. AI streaming, tool calls, and MCP interactions all count as invokes. Pro raises the limit 10× for production copilots and agentic features.",
+    a: "Yes. Each plan includes a monthly agent invoke limit. Streaming AI, tool calls, and MCP interactions count as invokes.",
+  },
+  {
+    q: "Are stream, collab, game, and IoT modules extra?",
+    a: "No separate SKU. Platform modules run on the same room and worker — quotas apply to messages and agent invokes like chat.",
   },
   {
     q: "Enterprise vs Business?",

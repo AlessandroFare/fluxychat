@@ -56,19 +56,19 @@ const DEFAULT_SANDBOX_ATTRIBUTES = [
   "allow-popups",
 ];
 
-export function createGuiSandboxManager(): GuiSandboxManager {
+export function createGuiSandboxManager(defaults: Partial<GuiSandboxConfig> = {}): GuiSandboxManager {
   const components = new Map<string, GuiComponent>();
   const grants = new Map<string, CapabilityGrant>();
 
   return {
     registerComponent(componentId: string, source: string, config: Partial<GuiSandboxConfig> = {}): GuiComponent {
       const sandboxConfig: GuiSandboxConfig = {
-        allowedOrigins: config.allowedOrigins ?? ["self"],
-        cspDirectives: { ...DEFAULT_CSP_DIRECTIVES, ...config.cspDirectives },
-        capabilityGrants: config.capabilityGrants ?? [],
-        maxRenderTimeMs: config.maxRenderTimeMs ?? 5000,
-        maxMemoryMb: config.maxMemoryMb ?? 50,
-        sandboxAttributes: config.sandboxAttributes ?? DEFAULT_SANDBOX_ATTRIBUTES,
+        allowedOrigins: config.allowedOrigins ?? defaults.allowedOrigins ?? ["self"],
+        cspDirectives: { ...DEFAULT_CSP_DIRECTIVES, ...defaults.cspDirectives, ...config.cspDirectives },
+        capabilityGrants: config.capabilityGrants ?? defaults.capabilityGrants ?? [],
+        maxRenderTimeMs: config.maxRenderTimeMs ?? defaults.maxRenderTimeMs ?? 5000,
+        maxMemoryMb: config.maxMemoryMb ?? defaults.maxMemoryMb ?? 50,
+        sandboxAttributes: config.sandboxAttributes ?? defaults.sandboxAttributes ?? DEFAULT_SANDBOX_ATTRIBUTES,
       };
       const component: GuiComponent = { componentId, source, sandboxConfig, status: "pending" };
       components.set(componentId, component);

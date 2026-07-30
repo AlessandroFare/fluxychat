@@ -1,0 +1,60 @@
+---
+title: AI Agents
+description: Invoke agents in rooms, REST invoke, and handoff.
+---
+
+Agents are configured on the Worker (dashboard or admin API). Clients **invoke** them — there is no `client.createAgent()` in the SDK.
+
+## Configure on the Worker
+
+Create agents with admin JWT:
+
+```bash
+curl -X POST "$FLUXY_BASE_URL/agents" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Assistant",
+    "handle": "assistant",
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "capabilities": ["chat"]
+  }'
+```
+
+Agents with a **handle** (e.g. `@assistant`) auto-invoke when users mention them in a room message.
+
+## Invoke from useChat
+
+```tsx
+const { invokeAgent } = useChat({ roomId, client });
+
+await invokeAgent("agent-id", "What is our refund policy?");
+```
+
+## Invoke via REST
+
+```ts
+await client.invokeAgentRest(agentId, roomId, "Summarize the last 10 messages");
+```
+
+Requires member JWT on the client.
+
+## Handoff
+
+Check whether a human should take over:
+
+```ts
+const handoff = await client.getRoomHandoff(roomId);
+// { shouldHandoff, reason?, suggestedAssignee? }
+```
+
+## Streaming
+
+When the provider supports it, agent replies stream as message edits over WebSocket (`streaming: true` on message rows). Tool calls appear as structured cards in the thread when `toolExecuteUrl` is set.
+
+## Next steps
+
+- [Agent platform](/docs/platform/agent-platform)
+- [Handoff guide](/docs/guides/ai-agents/handoff)
+- [Use case: Assistant room](/docs/use-cases/assistant-room)

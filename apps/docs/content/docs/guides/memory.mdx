@@ -1,0 +1,181 @@
+---
+title: "Memory System"
+description: "> A modular memory framework for AI agents. Store, retrieve, and recall information across conversations using pluggable storage backends and agent-integrated t"
+---
+
+> A modular memory framework for AI agents. Store, retrieve, and recall information across conversations using pluggable storage backends and agent-integrated tools.
+
+## Overview
+
+The memory system gives agents persistent memory. Without it, every conversation starts fresh. With it, agents build context over time, recall user preferences, and adapt their behavior.
+
+Three key components:
+
+- `AIMemoryStore` — pluggable storage backend (in-memory, filesystem, database)
+- `createMemoryTools()` — generates agent tools (`remember`, `recall`, `forget`, `listMemories`)
+- `AUTO_MEMORY_SYSTEM_PROMPT` — ready-to-use instructions for the agent
+
+## Quick Start
+
+```typescript
+import { InMemoryMemoryStore, createMemoryTools } from "@fluxy-chat/agent";
+
+// 1. Pick a store
+const store = new InMemoryMemoryStore();
+
+// 2. Create memory tools
+const memoryTools = createMemoryTools({ store });
+
+// 3. Use in an agent loop
+const result = await runAgentLoop({
+  runStep: async (state) => { /* your LLM call */ },
+  tools: memoryTools,
+  maxSteps: 10,
+});
+```
+
+## Memory Stores
+
+### InMemoryMemoryStore
+
+Ephemeral storage — perfect for testing and single-session agents. Data lives in a `Map` and is lost when the process exits.
+
+```typescript
+const store = new InMemoryMemoryStore();
+await store.save({ role: "assistant", content: "User likes cats" });
+const results = await store.search({ text: "cats" });
+```
+
+### FileMemoryStore
+
+Persists to a JSON file on disk. Useful for local development. Falls back silently in non-Node environments (browser, edge).
+
+```typescript
+const store = new FileMemoryStore({ filePath: "./memory.json", autoSave: true });
+await store.save({ role: "assistant", content: "Persistent fact" });
+```
+
+### Custom Store
+
+Implement `AIMemoryStore` to back memory with any database:
+
+```typescript
+class MyDatabaseStore implements AIMemoryStore {
+  async save(entry) { /* INSERT into db */ }
+  async search(query) { /* SELECT with WHERE + scoring */ }
+  async get(id) { /* SELECT by id */ }
+  async list(opts) { /* SELECT with filters */ }
+  async delete(id) { /* DELETE */ }
+  async clear(userId?) { /* DELETE with optional scope */ }
+}
+```
+
+## Agent Tools
+
+`createMemoryTools()` returns four tools that an agent can call during its loop:
+
+| Tool | Description | Input |
+|------|-------------|-------|
+| `remember` | Save a fact for future conversations | `content: string`, `tags?: string[]` |
+| `recall` | Search past memories by keyword | `query: string`, `limit?: number` |
+| `forget` | Delete a specific memory by ID | `id: string` |
+| `listMemories` | List or filter recent memories | `tag?: string`, `limit?: number` |
+
+### User-scoped memory
+
+Pass `userId` through tool context to scope memories per user:
+
+```typescript
+import { InMemoryMemoryStore, createMemoryTools, runAgentLoop } from "@fluxy-chat/agent";
+
+const store = new InMemoryMemoryStore();
+const tools = createMemoryTools({ store });
+
+// Per-request: scope memory to the current user
+const result = await runAgentLoop({
+  runStep: async () => { /* ... */ },
+  tools,
+  toolContexts: {
+    remember: { userId: "user-123" },
+    recall: { userId: "user-123" },
+    listMemories: { userId: "user-123" },
+  },
+});
+```
+
+Or set a default user with `CreateMemoryToolsOptions`:
+
+```typescript
+const tools = createMemoryTools({ store, defaultUserId: "user-123" });
+```
+
+### System Prompt
+
+Inject `AUTO_MEMORY_SYSTEM_PROMPT` into the agent's system prompt so it knows how to use memory tools:
+
+```typescript
+import { AUTO_MEMORY_SYSTEM_PROMPT } from "@fluxy-chat/agent";
+
+const result = await generate({
+  model,
+  prompt: "Remember my name is Alice",
+  system: AUTO_MEMORY_SYSTEM_PROMPT + "\n\nYou are a helpful assistant.",
+});
+```
+
+## API Reference
+
+### `AIMemoryEntry`
+
+```typescript
+interface AIMemoryEntry {
+  id: string;
+  userId?: string;
+  sessionId?: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  embedding?: number[];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### `AIMemoryStore`
+
+```typescript
+interface AIMemoryStore {
+  save(entry: Omit<AIMemoryEntry, "id" | "createdAt" | "updatedAt">): Promise<AIMemoryEntry>;
+  search(query: AIMemoryQuery): Promise<AIMemoryEntry[]>;
+  get(id: string): Promise<AIMemoryEntry | null>;
+  list(options?: { userId?, sessionId?, tags?, limit? }): Promise<AIMemoryEntry[]>;
+  delete(id: string): Promise<boolean>;
+  clear(userId?: string): Promise<void>;
+  close?(): Promise<void>;
+}
+```
+
+### `AIMemoryQuery`
+
+```typescript
+interface AIMemoryQuery {
+  text: string;
+  userId?: string;
+  sessionId?: string;
+  tags?: string[];
+  limit?: number;
+  minScore?: number;
+}
+```
+
+### `CreateMemoryToolsOptions`
+
+```typescript
+interface CreateMemoryToolsOptions {
+  store: AIMemoryStore;
+  embeddingModel?: AIEmbeddingModel;   // for semantic search (future)
+  defaultUserId?: string;
+  defaultSessionId?: string;
+}
+```

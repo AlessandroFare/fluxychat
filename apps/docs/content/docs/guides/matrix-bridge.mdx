@@ -1,0 +1,72 @@
+---
+title: Matrix bridge
+description: Federate FluxyChat rooms with Matrix homeservers for cross-server messaging and EU interoperability workflows.
+---
+
+FluxyChat stores Matrix bridge configuration in D1 and exposes admin APIs under `/admin/matrix/*`. Use the dashboard **Bridges → Matrix federation** page or call the REST APIs from your Matrix appservice.
+
+## Setup (15 minutes)
+
+1. Create a Matrix bot user on your homeserver and generate an **access token**.
+2. Open [**Matrix federation**](/bridges/matrix) in the dashboard (admin JWT required).
+3. **Create bridge** with homeserver URL, token, and `@bot:your.server` user id.
+4. **Connect** the bridge (marks status `connected` and logs a sync event).
+5. **Add mapping**: FluxyChat `roomId` ↔ Matrix `!roomId:server`.
+
+## Admin API
+
+```bash
+# List bridges
+curl "$WORKER/admin/matrix/bridges" -H "Authorization: Bearer $ADMIN_JWT"
+
+# Create bridge
+curl -X POST "$WORKER/admin/matrix/bridges" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "homeserverUrl": "https://matrix.example.com",
+    "accessToken": "syt_...",
+    "botUserId": "@fluxy:example.com",
+    "syncMode": "bidirectional"
+  }'
+
+# Room mapping
+curl -X POST "$WORKER/admin/matrix/mappings" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bridgeId": "mb_abc123",
+    "roomId": "support-eu",
+    "matrixRoomId": "!abcdef:matrix.example.com"
+  }'
+```
+
+## Sync hooks
+
+Three ways to ingest Matrix → FluxyChat messages:
+
+### Appservice webhook (recommended)
+
+Point your Matrix appservice transaction URL at:
+
+```text
+POST {WORKER}/webhooks/matrix/{bridgeId}
+```
+
+Body: standard Matrix transaction JSON with an `events` array. Text messages (`m.text`, `m.notice`) are imported into the mapped FluxyChat room via `importAdminMessage`, deduplicated by Matrix `event_id`, and recorded in `matrix_message_map`.
+
+### Admin sync API
+
+- `POST /admin/matrix/sync/inbound` — single event (admin JWT)
+- `POST /admin/matrix/sync/outbound` — FluxyChat → Matrix
+
+Both require a valid `bridgeId` belonging to the project. Duplicate Matrix events are deduplicated via `matrix_message_map`.
+
+## Stats
+
+`GET /admin/matrix/stats` returns bridge counts by status, mapping totals, and synced message counts by direction.
+
+## Related
+
+- [Slack & Discord bridge](/docs/guides/slack-discord-bridge)
+- [Cross-channel identity](/docs/guides/cross-channel-identity)

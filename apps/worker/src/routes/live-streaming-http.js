@@ -11,13 +11,25 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
   if (!path.startsWith("/api/live")) return null;
 
   const gate = await requireApiProjectAdmin(request, h);
-  if (gate.response) return gate.response;
+  if (gate.response) {
+    const headers = { ...h.corsHeaders, "Content-Type": "application/json" };
+    return new Response(JSON.stringify({ error: gate.response.status === 401 ? "unauthorized" : "forbidden" }), { status: gate.response.status, headers });
+  }
   const { env, projectId, auth } = gate;
+  const json = h.json;
 
   if (path === "/api/live/events" && request.method === "POST") {
-    const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.createEvent(env, body);
-    return json(result);
+    try {
+      const body = withAuthProjectId(await request.json().catch(() => ({})), projectId);
+      if (!body.title || !String(body.title).trim()) {
+        return json({ error: "title required" }, { status: 400 });
+      }
+      const event = await Live.createEvent(env, body);
+      return json({ event });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return json({ error: message }, { status: 500 });
+    }
   }
 
   if (path === "/api/live/events" && request.method === "GET") {
@@ -25,7 +37,7 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
       projectId, status: url.searchParams.get("status"),
       limit: parseInt(url.searchParams.get("limit") || "25"),
     });
-    return json(result);
+    return json({ events: result });
   }
 
   if (path.match(/^\/api\/live\/events\/[^/]+$/) && request.method === "GET") {

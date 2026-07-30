@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { sanitizeMapPopupText } from "@/lib/sanitize-map-popup-text";
 
 interface LatLngPoint { lat: number; lng: number; address?: string | null; }
 interface VehiclePos { lat: number; lng: number; heading: number | null; speed: number | null; }
@@ -93,10 +94,10 @@ export function DeliveryMap({ pickup, dropoff, vehiclePos, status }: DeliveryMap
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <Marker position={[pickup.lat, pickup.lng]} icon={pickupIcon}>
-        <Popup>{pickup.address || "Pickup"}</Popup>
+        <Popup>{sanitizeMapPopupText(pickup.address) || "Pickup"}</Popup>
       </Marker>
       <Marker position={[dropoff.lat, dropoff.lng]} icon={dropoffIcon}>
-        <Popup>{dropoff.address || "Dropoff"}</Popup>
+        <Popup>{sanitizeMapPopupText(dropoff.address) || "Dropoff"}</Popup>
       </Marker>
       {vehiclePos && status !== "completed" && (
         <Marker position={[vehiclePos.lat, vehiclePos.lng]} icon={vehicleIcon(vehiclePos.heading)}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
@@ -11,6 +11,7 @@ import {
 import { Loader2, Sparkles, ArrowRight, Bot, MessageSquare, Zap, Shield, Globe, Cpu } from "lucide-react";
 import { FluxyChat } from "@/components/chat";
 import { cn } from "@/lib/utils";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 interface DemoSession {
   enabled: boolean;
@@ -19,6 +20,9 @@ interface DemoSession {
   token: string;
   expiresIn: number;
   readOnly?: boolean;
+  agentId?: string | null;
+  agentName?: string | null;
+  agentHandle?: string | null;
 }
 
 const SUGGESTED_PROMPTS = [
@@ -29,6 +33,37 @@ const SUGGESTED_PROMPTS = [
   "Can you write a quickstart example?",
   "Show me a demo of real-time features",
 ];
+
+function DemoChatShell({
+  badge,
+  badgeClass,
+  title,
+  children,
+}: {
+  badge: string;
+  badgeClass: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="light overflow-hidden rounded-2xl border-2 border-white/20 bg-[#FDFBF9] shadow-2xl shadow-black/50 ring-1 ring-white/10">
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--fluxy-header-bg)]/20 bg-[var(--fluxy-header-bg)] px-4 py-3 text-white">
+        <div className="flex items-center gap-2">
+          <span className={cn("relative flex size-2", badgeClass)}>
+            {badge === "Live" ? (
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-300/70 motion-reduce:animate-none" />
+            ) : null}
+            <span className="relative inline-flex size-2 rounded-full bg-current" />
+          </span>
+          <span className="text-xs font-semibold">{badge}</span>
+          <span className="text-xs text-white/75">{title}</span>
+        </div>
+        <span className="hidden text-[10px] text-white/70 sm:inline">No signup · guest session</span>
+      </div>
+      <div className="p-4 sm:p-5">{children}</div>
+    </div>
+  );
+}
 
 const SEED_MESSAGES = [
   {
@@ -51,15 +86,22 @@ const SEED_MESSAGES = [
   },
 ];
 
+const FLOATING_ORB_MOTION: Record<number, { duration: string; delay: string }> = {
+  300: { duration: "5.35s", delay: "0.93s" },
+  400: { duration: "5.14s", delay: "0.52s" },
+  500: { duration: "4.52s", delay: "0.27s" },
+};
+
 function FloatingOrb({ className, color = "from-blue-500/20 to-purple-500/20", size = 300 }: { className?: string; color?: string; size?: number }) {
+  const motion = FLOATING_ORB_MOTION[size] ?? FLOATING_ORB_MOTION[300];
   return (
     <div
       className={cn("absolute rounded-full bg-gradient-to-br blur-3xl animate-pulse", color, className)}
       style={{
-        width: size,
-        height: size,
-        animationDuration: `${4 + Math.random() * 3}s`,
-        animationDelay: `${Math.random() * 2}s`,
+        width: `${size}px`,
+        height: `${size}px`,
+        animationDuration: motion.duration,
+        animationDelay: motion.delay,
       }}
     />
   );
@@ -160,11 +202,11 @@ export default function DemoRoomPage() {
   const readOnly = session?.readOnly === true;
 
   return (
-    <main className="min-h-screen bg-slate-950">
+    <main className="min-h-screen bg-slate-950 dark [color-scheme:dark]">
       <DemoHeroSection />
 
       {/* Demo Chat Section */}
-      <div className="relative border-b border-white/10 bg-slate-950/50 px-4 py-12 sm:px-6">
+      <div className="relative border-b border-white/10 bg-gradient-to-b from-slate-950 to-slate-900 px-4 py-12 sm:px-6">
         <div className="mx-auto max-w-4xl">
           {/* Loading State */}
           {!session && !error && !showFallback && (
@@ -218,75 +260,66 @@ export default function DemoRoomPage() {
           )}
 
           {/* Demo Chat — Live */}
-          {session?.enabled && !readOnly && (
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 shadow-2xl shadow-blue-500/5 backdrop-blur-sm">
-              <div className="flex items-center gap-2 border-b border-white/10 bg-slate-900 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex size-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400/60" />
-                    <span className="relative inline-flex size-2 rounded-full bg-green-400" />
-                  </span>
-                  <span className="text-xs font-medium text-green-400">Live</span>
-                </div>
-                <span className="text-xs text-slate-500">Playground Room</span>
-              </div>
+          {session?.enabled && !readOnly && client && (
+            <DemoChatShell badge="Live" badgeClass="text-green-400" title="Playground Room">
+              <p className="mb-3 rounded-lg border border-[var(--fluxy-banner-border)] bg-[var(--fluxy-banner-bg)] px-3 py-2 text-xs text-[var(--fluxy-banner-text)]">
+                Public playground — your messages appear on the right.{" "}
+                {session.agentName ?? "FluxyBot"} replies automatically via AI.
+                Sessions are rate-limited and expire after {Math.round((session.expiresIn ?? 1800) / 60)} minutes.
+              </p>
               <FluxyChat
                 roomId={session.roomId}
-                agentId=""
-                agentName="FluxyBot"
+                agentId={session.agentId ?? ""}
+                agentName={session.agentName ?? "FluxyBot"}
+                agentHandle={session.agentHandle ?? "@assistant"}
+                memberUserId={session.userId}
                 client={client}
                 variant="demo"
+                coPilotConfirm={false}
                 suggestedPrompts={SUGGESTED_PROMPTS}
-                className="min-h-[500px]"
+                className="min-h-[520px]"
               />
-            </div>
+            </DemoChatShell>
           )}
 
           {/* Demo Chat — Read Only */}
-          {session?.enabled && readOnly && (
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 shadow-2xl shadow-blue-500/5 backdrop-blur-sm">
-              <div className="flex items-center gap-2 border-b border-white/10 bg-slate-900 px-4 py-3">
-                <span className="size-2 rounded-full bg-amber-400" />
-                <span className="text-xs font-medium text-amber-400">Read Only</span>
-                <span className="text-xs text-slate-500">Playground Room</span>
-              </div>
+          {session?.enabled && readOnly && client && (
+            <DemoChatShell badge="Read only" badgeClass="text-amber-400" title="Playground Room">
               <FluxyChat
                 roomId={session.roomId}
-                agentId=""
-                agentName="FluxyBot"
+                agentId={session.agentId ?? ""}
+                agentName={session.agentName ?? "FluxyBot"}
+                agentHandle={session.agentHandle ?? "@assistant"}
+                memberUserId={session.userId}
                 client={client}
                 variant="demo"
+                coPilotConfirm={false}
                 suggestedPrompts={SUGGESTED_PROMPTS}
-                className="min-h-[500px]"
+                className="min-h-[520px]"
               />
-            </div>
+            </DemoChatShell>
           )}
 
           {/* Simulated Mode (fallback) */}
           {showSimulated && (
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 shadow-2xl shadow-blue-500/5 backdrop-blur-sm">
-              <div className="flex items-center gap-2 border-b border-white/10 bg-slate-900 px-4 py-3">
-                <span className="size-2 rounded-full bg-blue-400 animate-pulse" />
-                <span className="text-xs font-medium text-blue-400">Preview</span>
-                <span className="text-xs text-slate-500">FluxyChat Playground</span>
-              </div>
-              <div className="p-6 space-y-6">
+            <DemoChatShell badge="Preview" badgeClass="text-blue-400" title="FluxyChat Playground">
+              <div className="space-y-6">
                 <div className="flex items-start gap-3">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--fluxy-logo-color)] to-[var(--fluxy-cta-color)]">
                     <Bot className="size-4 text-white" />
                   </div>
                   <div className="space-y-2">
                     {SEED_MESSAGES.map((msg) => (
-                      <div key={msg.id} className="rounded-xl bg-slate-800/50 border border-white/5 px-4 py-3">
-                        <p className="text-sm text-slate-300">{msg.content}</p>
-                        <p className="mt-1 text-[10px] text-slate-600">
+                      <div key={msg.id} className="rounded-xl border border-border bg-[var(--fluxy-bubble-received-bg)] px-4 py-3">
+                        <p className="text-sm text-foreground">{msg.content}</p>
+                        <p className="mt-1 text-[10px] text-muted-foreground">
                           {new Date(msg.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {SUGGESTED_PROMPTS.slice(0, 6).map((prompt) => (
                     <button
                       key={prompt}
@@ -295,7 +328,7 @@ export default function DemoRoomPage() {
                         setShowSimulated(false);
                         void loadDemoSession();
                       }}
-                      className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5 text-left text-xs text-slate-400 transition-all hover:border-blue-400/20 hover:bg-blue-500/5 hover:text-slate-200"
+                      className="rounded-xl border border-border bg-background px-3 py-2.5 text-left text-xs text-muted-foreground transition-all hover:border-[var(--fluxy-cta-color)]/30 hover:bg-[var(--fluxy-banner-bg)] hover:text-foreground"
                     >
                       {prompt}
                     </button>
@@ -308,7 +341,7 @@ export default function DemoRoomPage() {
                       setShowSimulated(false);
                       void loadDemoSession();
                     }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-medium text-white transition-all hover:from-blue-500 hover:to-purple-500 hover:shadow-lg hover:shadow-blue-500/25"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[var(--fluxy-btn-primary-bg)] px-6 py-3 text-sm font-medium text-[var(--fluxy-btn-primary-text)] transition-all hover:bg-[var(--fluxy-btn-primary-hover-bg)]"
                   >
                     <Sparkles className="size-4" />
                     Connect to Live Demo
@@ -316,7 +349,7 @@ export default function DemoRoomPage() {
                   </button>
                 </div>
               </div>
-            </div>
+            </DemoChatShell>
           )}
         </div>
       </div>
@@ -368,7 +401,7 @@ export default function DemoRoomPage() {
               Get Started Free
             </Link>
             <Link
-              href="/landing"
+              href={HOSTED_PATHS.landing}
               className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-white/10"
             >
               Learn More

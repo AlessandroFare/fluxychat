@@ -1,0 +1,22 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "getting-started",
+    "core",
+    "packages",
+    "platform",
+    "features",
+    "cookbook",
+    "use-cases",
+    "guides",
+    "learn",
+    "api-reference",
+    "reference",
+    "operations",
+    "architecture",
+    "security",
+    "audit",
+    "snippets"
+  ]
+}

@@ -18,7 +18,7 @@ export default function Header() {
           <div className="flex-1" aria-hidden />
         ) : (
           <Link
-            href="/"
+            href={HOSTED_PATHS.landing}
             className="shrink-0 text-slate-900 transition-opacity hover:opacity-80"
             aria-label="Fluxychat home"
           >
@@ -29,7 +29,7 @@ export default function Header() {
         {!inConsole ? (
           <nav className="hidden items-center gap-6 md:flex" aria-label="Top links">
             <Link
-              href="/landing"
+              href={HOSTED_PATHS.landing}
               className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
             >
               Product

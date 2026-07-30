@@ -73,7 +73,7 @@ const PILLARS: readonly PillarBentoItem[] = [
 export function LandingFeaturesClient() {
   return (
     <>
-      <section className="border-b border-border bg-[#0e0e0e]">
+      <section id="features" className="scroll-mt-20 border-b border-border bg-[#0e0e0e]">
         <div className="mx-auto max-w-6xl px-4 pt-14 pb-5 sm:px-6 sm:pt-16">
           <h2 className="mb-2 text-center font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl">
             Messaging basics, on the edge
@@ -132,7 +132,7 @@ export function LandingFeaturesClient() {
           </ul>
           <p className="mx-auto mb-10 max-w-2xl text-center text-sm text-muted-foreground">
             Already set up?{" "}
-            <Link href="/" className="font-medium text-foreground underline-offset-4 hover:underline">
+            <Link href={HOSTED_PATHS.console} className="font-medium text-foreground underline-offset-4 hover:underline">
               Open the console
             </Link>{" "}
             for rooms, agents, and billing.

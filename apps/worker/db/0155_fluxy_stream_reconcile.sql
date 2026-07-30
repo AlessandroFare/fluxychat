@@ -12,7 +12,7 @@
 
 -- Add any missing columns (idempotent — each ALTER fails silently if the column exists).
 -- These cover the case where 0089 created the table and 0134's CREATE TABLE was a no-op.
-
+/*
 ALTER TABLE live_events ADD COLUMN stream_url TEXT;
 ALTER TABLE live_events ADD COLUMN thumbnail_url TEXT;
 ALTER TABLE live_events ADD COLUMN category TEXT;
@@ -31,7 +31,7 @@ ALTER TABLE live_events ADD COLUMN playback_dash TEXT;
 ALTER TABLE live_events ADD COLUMN recording_mode TEXT NOT NULL DEFAULT 'automatic';
 ALTER TABLE live_events ADD COLUMN prefer_low_latency INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE live_events ADD COLUMN provider_state TEXT;
-
+*/
 -- Ensure updated_at has a default for old rows.
 UPDATE live_events SET updated_at = created_at WHERE updated_at IS NULL;
 

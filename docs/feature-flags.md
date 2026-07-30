@@ -11,6 +11,25 @@ FluxyChat evaluates [Cloudflare Flagship](https://developers.cloudflare.com/flag
 | `embed_widget` | `/embed.js`, embed guest sessions | `EMBED_WIDGET_ENABLED` (default on) |
 | `reconnect_backoff_fluxy` | SDK reconnect curve (1s/8s) | `FEATURE_RECONNECT_BACKOFF_FLUXY` (default off) |
 
+## Dashboard console (PL-5)
+
+Incomplete lab and preview routes are hidden from console nav unless enabled via env:
+
+| Key | Gates | Env fallback |
+|-----|-------|--------------|
+| `dashboard_labs` | “Labs & demos” nav group (stream, game, IoT, fleet showcase, …) | `NEXT_PUBLIC_DASHBOARD_LABS=1` (default off) |
+| `dashboard_preview` | Preview dev tools (marketplace, web3, cross-channel, agent platform, …) | `NEXT_PUBLIC_DASHBOARD_PREVIEW=1` (default off) |
+
+Routes remain reachable by direct URL for internal QA; only sidebar / command palette entries are filtered.
+
+```bash
+# .env.local — show all experimental console pages
+NEXT_PUBLIC_DASHBOARD_LABS=1
+NEXT_PUBLIC_DASHBOARD_PREVIEW=1
+```
+
+See `apps/dashboard/lib/dashboard-feature-flags.ts`.
+
 ## API
 
 `GET /client/feature-flags` — public; pass `Authorization: Bearer …` for user/project targeting.

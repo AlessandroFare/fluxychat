@@ -1,14 +1,8 @@
 /**
  * P20-H: Hybrid Event Mode — physical + remote unified experience.
- *
- * Features:
- *   • Hybrid event config (synced polls, shared Q&A, unified chat)
- *   • QR code check-in for physical attendees
- *   • Venue URL for virtual attendees
- *   • Check-in/check-out tracking
- *   • Attendance stats (physical vs remote)
- *   • Synced polls across both audiences
  */
+
+import { fanoutServerEvent } from "./message-realtime-fanout.js";
 
 const HYBRID_MODES = ["synced", "parallel", "hybrid"];
 
@@ -27,6 +21,15 @@ export async function createHybridEvent(env, {
     mode || "synced", venueUrl || null, qrCode,
     syncedPolls !== false ? 1 : 0, sharedQa !== false ? 1 : 0,
     unifiedChat !== false ? 1 : 0).run();
+
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId,
+    name: "event.hybrid.created",
+    userId: "system",
+    data: { hybridEventId: id, name, mode: mode || "synced", qrCode },
+  }).catch(() => {});
+
   return { id, name, mode: mode || "synced", qrCode };
 }
 
@@ -58,6 +61,18 @@ export async function checkIn(env, { projectId, hybridEventId, userId, checkinTy
   await env.DB.prepare(
     `UPDATE hybrid_events SET ${field} = ${field} + 1 WHERE project_id = ? AND id = ?`
   ).bind(projectId, hybridEventId).run();
+
+  const hybrid = await getHybridEvent(env, { projectId, hybridEventId });
+  if (hybrid?.roomId) {
+    await fanoutServerEvent(env, {
+      projectId,
+      roomId: hybrid.roomId,
+      name: "event.hybrid.checkin",
+      userId,
+      data: { hybridEventId, checkinType: checkinType || "remote" },
+    }).catch(() => {});
+  }
+
   return { id, checkinType: checkinType || "remote" };
 }
 

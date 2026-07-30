@@ -1,0 +1,54 @@
+---
+title: Agent platform
+description: Dashboard agent builder, profiles, and deployment workflow.
+---
+
+The agent platform is operated through the **dashboard** (`/agents`) and Worker admin APIs. LLM keys live in Worker secrets — not in client code.
+
+## Create an agent (admin JWT)
+
+```bash
+curl -X POST "$FLUXY_BASE_URL/agents" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Support Bot",
+    "handle": "support",
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "capabilities": ["chat"]
+  }'
+```
+
+## Profile fields
+
+| Field | Purpose |
+|-------|---------|
+| `handle` | Mention trigger (`@support`) |
+| `provider` / `model` | LLM routing on Worker |
+| Instructions | System prompt templates |
+| `toolExecuteUrl` | HTTP endpoint for tool calls |
+| Fallback model | Secondary provider on failure |
+
+## Chat in room
+
+Dashboard **Agents → Chat in room** opens a live WebSocket session (member JWT required). Run banner shows `runId`, latency, and token usage.
+
+## SDK invoke
+
+```ts
+await client.invokeAgentRest(agentId, roomId, "Help with billing");
+const handoff = await client.getRoomHandoff(roomId);
+```
+
+## Versioning workflow
+
+Use dashboard drafts for prompt changes. Test in `assistant:general` or a staging room before pointing production traffic at a new profile.
+
+Platform client (advanced):
+
+```ts
+import { createWorkerAgentPlatformClient } from "@fluxy-chat/sdk";
+```
+
+See [Agents](/docs/core/agents) and [Assistant room](/docs/use-cases/assistant-room).

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Eye, Hand, Users, Video, Loader2, Plus, Radio, Square,
   Gift, Vote, ShoppingBag, Sparkles, BarChart3, Camera,
@@ -9,7 +9,15 @@ import {
 import { ConsoleShell } from "@/app/components/console-shell";
 import { ConsolePageHeader } from "@/app/components/console-page-header";
 import { cn } from "@/lib/utils";
-import { createFluxyStream, type FluxyStreamApi, type StreamViewer, type SentimentBucket, type SentGift, type StreamPoll, type CameraAngle, type LiveProduct, type StreamHighlight, type AIChatMessage } from "@fluxy-chat/sdk";
+import { WorkerBackendBadge } from "@/app/components/worker-backend-badge";
+import { useWorkerChatClient } from "@/lib/use-worker-chat-client";
+import { useDashboardSession } from "@/app/components/dashboard-session";
+import {
+  createFluxyStream,
+  createWorkerFluxyStreamClient,
+  type FluxyStreamApi,
+  type WorkerFluxyStreamEvent,
+  type StreamViewer, type SentimentBucket, type SentGift, type StreamPoll, type CameraAngle, type LiveProduct, type StreamHighlight, type AIChatMessage } from "@fluxy-chat/sdk";
 
 // ─── Seed data for demo ─────────────────────────────
 
@@ -71,15 +79,56 @@ function createSeededStream(): FluxyStreamApi {
 // ─── Main page ───────────────────────────────────────
 
 export default function FluxyStreamDemoPage() {
+  const { activeProject } = useDashboardSession();
+  const chatClient = useWorkerChatClient("stream-demo");
+  const workerStream = useMemo(
+    () => (chatClient ? createWorkerFluxyStreamClient(chatClient) : null),
+    [chatClient],
+  );
   const [stream, setStream] = useState<FluxyStreamApi | null>(null);
-  const [tick, setTick] = useState(0);
+  const [workerEvents, setWorkerEvents] = useState<WorkerFluxyStreamEvent[]>([]);
+  const [workerBusy, setWorkerBusy] = useState(false);
+  const [workerError, setWorkerError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"viewers" | "chat" | "angles" | "highlights" | "sentiment" | "story" | "gifts" | "commerce" | "polls" | "cohost" | "leaderboard">("viewers");
+  const workerEventsRef = useRef(workerEvents);
+  workerEventsRef.current = workerEvents;
 
   useEffect(() => {
     setStream(createSeededStream());
-    const interval = setInterval(() => setTick((t) => t + 1), 5000);
-    return () => clearInterval(interval);
+    return () => {};
   }, []);
+
+  useEffect(() => {
+    if (!workerStream) {
+      setWorkerEvents([]);
+      return;
+    }
+    const fetch = () => {
+      void workerStream.listEvents({ limit: 10 }).then(setWorkerEvents).catch(() => setWorkerEvents([]));
+    };
+    fetch();
+    const interval = setInterval(fetch, 5000);
+    return () => clearInterval(interval);
+  }, [workerStream]);
+
+  async function createWorkerEvent() {
+    if (!workerStream) return;
+    setWorkerBusy(true);
+    setWorkerError(null);
+    try {
+      await workerStream.createEvent({
+        title: `Live ${new Date().toLocaleTimeString()}`,
+        category: "demo",
+        roomId: activeProject?.id ? `stream-${activeProject.id}` : "stream-demo",
+      });
+      const events = await workerStream.listEvents({ limit: 10 });
+      setWorkerEvents(events);
+    } catch (err) {
+      setWorkerError(err instanceof Error ? err.message : "Create event failed");
+    } finally {
+      setWorkerBusy(false);
+    }
+  }
 
   if (!stream) {
     return (
@@ -115,6 +164,7 @@ export default function FluxyStreamDemoPage() {
         description="Live streaming & broadcast — interactive demo with SDK-powered features"
         actions={
           <div className="flex items-center gap-2">
+            <WorkerBackendBadge connected={Boolean(workerStream)} label="FluxyStream" />
             <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-red-600 dark:text-red-400">
               <span className="size-1.5 rounded-full bg-red-600 animate-pulse" />
               LIVE
@@ -126,6 +176,33 @@ export default function FluxyStreamDemoPage() {
         }
       />
 
+      {workerStream ? (
+        <div className="border-b border-border px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void createWorkerEvent()}
+              disabled={workerBusy}
+              className="rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {workerBusy ? <Loader2 className="mr-1 inline size-3.5 animate-spin" /> : <Plus className="mr-1 inline size-3.5" />}
+              Create live event on Worker
+            </button>
+            <span className="text-xs text-muted-foreground">{workerEvents.length} event(s) in D1</span>
+          </div>
+          {workerError ? <p className="mt-2 text-xs text-red-600">{workerError}</p> : null}
+          {workerEvents.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {workerEvents.slice(0, 5).map((event) => (
+                <span key={event.id} className="rounded-lg border border-border bg-card px-2 py-1 text-[10px]">
+                  {event.title} · {event.status}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Stats bar */}
       <div className="grid grid-cols-2 gap-2 border-b border-border px-4 py-2 sm:grid-cols-4 lg:grid-cols-6">
         <StatChip label="Peak" value={stats.peakViewers} icon={<Eye className="size-3" />} />
@@ -135,6 +212,33 @@ export default function FluxyStreamDemoPage() {
         <StatChip label="Revenue" value={`$${(stats.totalRevenue / 100).toFixed(2)}`} icon={<TrendingUp className="size-3" />} />
         <StatChip label="Sentiment" value={`${(stats.sentimentScore * 100).toFixed(0)}%`} icon={stats.sentimentScore > 0.1 ? <TrendingUp className="size-3 text-green-500" /> : stats.sentimentScore < -0.1 ? <TrendingDown className="size-3 text-red-500" /> : <Minus className="size-3 text-muted-foreground" />} />
       </div>
+
+      {workerStream ? (
+        <div className="border-b border-border px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void createWorkerEvent()}
+              disabled={workerBusy}
+              className="rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {workerBusy ? <Loader2 className="mr-1 inline size-3.5 animate-spin" /> : <Plus className="mr-1 inline size-3.5" />}
+              Create live event on Worker
+            </button>
+            <span className="text-xs text-muted-foreground">{workerEvents.length} persisted event(s)</span>
+          </div>
+          {workerError ? <p className="mt-2 text-xs text-red-600">{workerError}</p> : null}
+          {workerEvents.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {workerEvents.map((ev) => (
+                <span key={ev.id} className="rounded-lg border border-primary/20 bg-primary/5 px-2 py-1 text-[10px]">
+                  {ev.title} · {ev.status}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 border-b border-border px-4 py-2">
@@ -156,8 +260,8 @@ export default function FluxyStreamDemoPage() {
         ))}
       </div>
 
-      {/* Tab content */}
-      <div className="flex-1 overflow-auto p-4" key={tick}>
+      {/* Tab content — no key={tick}: remounting cleared all input state every 5s */}
+      <div className="flex-1 overflow-auto p-4">
         {activeTab === "viewers" && <ViewersPanel stream={stream} />}
         {activeTab === "chat" && <ChatPanel stream={stream} />}
         {activeTab === "angles" && <AnglesPanel stream={stream} />}

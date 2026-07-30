@@ -1,0 +1,110 @@
+---
+title: "@fluxy-chat/react-native-sdk"
+description: "React Native SDK for FluxyChat - realtime chat infrastructure for SaaS."
+---
+
+## Installation
+
+```bash
+npm install @fluxy-chat/react-native-sdk
+# or
+yarn add @fluxy-chat/react-native-sdk
+```
+
+## Quick Start
+
+```tsx
+import { FluxyChatClient, useChat, useRooms } from '@fluxy-chat/react-native-sdk';
+
+const client = new FluxyChatClient({
+  apiUrl: 'https://your-worker.workers.dev',
+  wsUrl: 'wss://your-worker.workers.dev',
+  projectId: 'your-project-id',
+  token: 'your-jwt-token',
+});
+
+function ChatScreen({ roomId }) {
+  const { messages, sendMessage, connectionStatus } = useChat(client, { roomId });
+
+  return (
+    <View>
+      <Text>Status: {connectionStatus}</Text>
+      <FlatList
+        data={messages}
+        renderItem={({ item }) => <Text>{item.content}</Text>}
+      />
+      <Button
+        title="Send"
+        onPress={() => sendMessage({ content: 'Hello!' })}
+      />
+    </View>
+  );
+}
+```
+
+## API
+
+### FluxyChatClient
+
+```tsx
+const client = new FluxyChatClient({
+  apiUrl: 'https://api.example.com',
+  wsUrl: 'wss://api.example.com',
+  projectId: 'proj_123',
+  token: 'jwt_token',
+  debug: false,
+});
+```
+
+### Hooks
+
+#### useChat
+
+```tsx
+const {
+  messages,        // Message[]
+  loading,         // boolean
+  error,           // string | null
+  connectionStatus, // ConnectionStatus
+  sendMessage,     // (options: SendMessageOptions) => Promise<Message>
+  loadMore,        // () => Promise<void>
+  hasMore,         // boolean
+} = useChat(client, { roomId: 'room_123' });
+```
+
+#### useRooms
+
+```tsx
+const {
+  rooms,       // Room[]
+  loading,     // boolean
+  error,       // string | null
+  createRoom,  // (name: string, type?: Room['type']) => Promise<Room>
+  refresh,     // () => Promise<void>
+} = useRooms(client);
+```
+
+#### useTyping
+
+```tsx
+const {
+  typingUsers, // string[]
+  startTyping, // () => void
+  stopTyping,  // () => void
+} = useTyping(client, { roomId: 'room_123' });
+```
+
+## Features
+
+- REST API client for rooms, messages, members
+- WebSocket with auto-reconnect and exponential backoff
+- Typing indicators and presence
+- Read receipts
+- Message reactions
+- AI agent invocation
+- Message search
+- Room export
+
+## License
+
+MIT

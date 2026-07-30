@@ -1,0 +1,84 @@
+---
+title: "Concurrency Strategies"
+description: "`createConcurrencyStrategy()` provides 5 strategies for controlling concurrent execution of handlers (e.g., message sending, API calls) with queueing, debouncin"
+---
+
+`createConcurrencyStrategy()` provides 5 strategies for controlling concurrent execution of handlers (e.g., message sending, API calls) with queueing, debouncing, and burst support.
+
+## Usage
+
+```ts
+import { createConcurrencyStrategy } from "@fluxy-chat/sdk";
+
+const s = createConcurrencyStrategy({ strategy: "queue", maxQueueSize: 3 });
+
+await s.enqueue("key1", async () => {
+  // handler runs when it reaches the front of the queue
+  return "done";
+});
+```
+
+## Strategies
+
+| Strategy | Behavior | Best for |
+|----------|----------|----------|
+| `concurrent` | Runs all handlers immediately, no limits | Idempotent, lightweight ops |
+| `drop` | Runs if idle, returns null if busy | Fire-and-forget with backpressure |
+| `queue` | Serial execution (FIFO), max 1 active | Ordered operations, rate-limited APIs |
+| `debounce` | Waits `debounceMs` of inactivity, then runs last handler | Search-as-you-type, save-on-change |
+| `burst` | Up to `maxConcurrent` handlers in parallel, queues rest | Batch processing with concurrency cap |
+
+## Configuration
+
+```ts
+interface ConcurrencyConfig {
+  strategy: "concurrent" | "drop" | "queue" | "debounce" | "burst";
+  debounceMs?: number;       // default 1500 (debounce only)
+  maxConcurrent?: number;    // default Infinity (burst only)
+  maxQueueSize?: number;     // default 10 (queue, burst)
+  onQueueFull?: "drop-oldest" | "drop-newest"; // default "drop-oldest"
+  queueEntryTtlMs?: number;  // default 90000 (queue, burst)
+}
+```
+
+## Queue Overflow
+
+When the queue reaches `maxQueueSize`:
+
+- `drop-oldest`: removes the oldest queued entry (rejected with "Queue full — dropped oldest") and enqueues the new one
+- `drop-newest`: immediately rejects the new entry with "Queue full"
+
+## Example: Debounced Search
+
+```ts
+const search = createConcurrencyStrategy({ strategy: "debounce", debounceMs: 300 });
+
+inputEl.addEventListener("input", () => {
+  search.enqueue(inputEl.value, async () => {
+    const results = await fetchSearch(inputEl.value);
+    renderResults(results);
+  });
+});
+```
+
+## Example: Rate-Limited Upload
+
+```ts
+const uploader = createConcurrencyStrategy({
+  strategy: "queue",
+  maxQueueSize: 5,
+  onQueueFull: "drop-newest",
+});
+
+files.forEach(file => {
+  uploader.enqueue(file.name, () => uploadFile(file));
+});
+```
+
+## Draining
+
+`drain()` cancels all pending operations and resets the strategy to idle:
+
+```ts
+await s.drain(); // resolves when active operations complete
+```

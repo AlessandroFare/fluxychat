@@ -11,20 +11,36 @@ function buildDemoHandlerDeps(overrides = {}) {
       RATE_LIMIT_FALLBACK_ALLOW: "true",
       DB: {
         prepare(sql) {
-          return {
+          const stmt = {
+            async first() {
+              if (sql.includes("FROM rooms")) return { id: "public-demo" };
+              if (sql.includes("jwt_secret")) return { jwt_secret: "demo-jwt-secret-for-tests-32b" };
+              if (sql.includes("FROM bots")) {
+                return {
+                  id: "builtin-assistant-proj-demo",
+                  name: "Assistant",
+                  handle: "@assistant",
+                };
+              }
+              return null;
+            },
+            async all() {
+              if (sql.includes("builtin_agent_templates")) {
+                return { results: [] };
+              }
+              return { results: [] };
+            },
+            async run() {
+              return {};
+            },
             bind() {
-              return {
-                async first() {
-                  if (sql.includes("FROM rooms")) return { id: "public-demo" };
-                  if (sql.includes("jwt_secret")) return { jwt_secret: "demo-jwt-secret-for-tests-32b" };
-                  return null;
-                },
-                async run() {
-                  return {};
-                },
-              };
+              return stmt;
             },
           };
+          return stmt;
+        },
+        async batch() {
+          return [];
         },
       },
       ...overrides.env,
@@ -119,6 +135,8 @@ describe("GET /demo/session", () => {
     expect(body.roomId).toBe("public-demo");
     expect(body.userId).toBe("demo-guest");
     expect(body.token).toBe("demo.jwt.token");
+    expect(body.agentId).toBe("builtin-assistant-proj-demo");
+    expect(body.agentName).toBe("FluxyBot");
   });
 });
 

@@ -1,5 +1,6 @@
 export interface CompareRow {
   label: string;
+  portal: string;
   stream: string;
   ably: string;
   pusher: string;
@@ -9,6 +10,7 @@ export interface CompareRow {
 export const COMPARE_ROWS: readonly CompareRow[] = [
   {
     label: "Edge-native (Cloudflare Workers + DO + D1)",
+    portal: "Managed SaaS — not Workers/DO-first",
     stream: "Managed cloud",
     ably: "Managed cloud",
     pusher: "Managed cloud",
@@ -16,6 +18,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Multi-platform adapters (14 platforms)",
+    portal: "Web/React SDK — not 14 channel adapters",
     stream: "Limited / separate product",
     ably: "N/A",
     pusher: "N/A",
@@ -23,6 +26,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "AI-native streaming (markdown, tool calling)",
+    portal: "Core — streaming agents + tool calls",
     stream: "Add-on / separate product",
     ably: "N/A",
     pusher: "N/A",
@@ -30,6 +34,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "MCP client integration",
+    portal: "MCP apps / tool server integrations",
     stream: "N/A",
     ably: "N/A",
     pusher: "N/A",
@@ -37,6 +42,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "LLM middleware pipeline",
+    portal: "Middleware hooks in SDK",
     stream: "N/A",
     ably: "N/A",
     pusher: "N/A",
@@ -44,6 +50,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Durable agent execution (WorkflowAgent)",
+    portal: "Hosted agent runtime",
     stream: "N/A",
     ably: "N/A",
     pusher: "N/A",
@@ -51,6 +58,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "In-app chat + operator console",
+    portal: "Hosted Portal dashboard",
     stream: "Separate product areas",
     ably: "Console + APIs",
     pusher: "Channels dashboard",
@@ -58,6 +66,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Headless SDK (optimistic sends, reconnect state)",
+    portal: "Excellent DX — package split, SSR-safe hooks",
     stream: "Strong SDKs",
     ably: "Strong SDKs",
     pusher: "Channels SDKs",
@@ -65,6 +74,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Agent tool events on room WebSocket",
+    portal: "Same room timeline",
     stream: "Varies",
     ably: "Separate products",
     pusher: "N/A",
@@ -72,6 +82,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Message templates + member preferences API",
+    portal: "Templates + member prefs",
     stream: "Varies",
     ably: "N/A",
     pusher: "Limited",
@@ -79,6 +90,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Reconnect, replay, and delivery state in SDK",
+    portal: "connectionState + replay patterns",
     stream: "SDK features vary",
     ably: "SDK features vary",
     pusher: "Channels SDK",
@@ -86,6 +98,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Read receipts / unread badges",
+    portal: "Inbox + read watermarks",
     stream: "Product features vary",
     ably: "Varies by product",
     pusher: "Not first-class in Channels",
@@ -93,6 +106,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "In-app notifications (mentions, DMs)",
+    portal: "Unified inbox feed",
     stream: "Separate notification products",
     ably: "Separate products",
     pusher: "Beams (separate SKU)",
@@ -100,13 +114,87 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Message middleware (validate / filter / enrich)",
+    portal: "Server-side hooks",
     stream: "Varies",
     ably: "N/A",
     pusher: "Webhooks only",
     fluxy: "Edge pipeline before persist + broadcast",
   },
   {
+    label: "Unified room WebSocket (chat + server_event + capability)",
+    portal: "Chat timeline only",
+    stream: "Separate channel products",
+    ably: "Pub/sub channels",
+    pusher: "Channels only",
+    fluxy: "One WS: messages, game/IoT/live/fleet/poll fan-out, vertical capability events",
+  },
+  {
+    label: "Live streaming & broadcast (HLS, polls, highlights)",
+    portal: "Not core (chat-first product)",
+    stream: "Video product / add-on",
+    ably: "Separate live product",
+    pusher: "Channels only (no HLS stack)",
+    fluxy: "FluxyStream: events, broadcast, polls, AI co-host on same Worker",
+  },
+  {
+    label: "Real-time collab (Yjs / CRDT whiteboard)",
+    portal: "Not core",
+    stream: "Feeds / activity",
+    ably: "Pub/sub channels",
+    pusher: "N/A",
+    fluxy: "Collab DO adapter + Excalidraw/Yjs in SDK",
+  },
+  {
+    label: "Game multiplayer (matchmaking, replay, NPC)",
+    portal: "N/A",
+    stream: "N/A",
+    ably: "N/A",
+    pusher: "Presence only",
+    fluxy: "FluxyGame: lobbies, authoritative ticks, D1 leaderboard",
+  },
+  {
+    label: "IoT & device sync (MQTT, shadow, rules)",
+    portal: "N/A",
+    stream: "N/A",
+    ably: "IoT messaging (separate)",
+    pusher: "N/A",
+    fluxy: "FluxyIoT: fleets, readings, rules, geofence on Worker",
+  },
+  {
+    label: "Fleet & live location tracking",
+    portal: "N/A",
+    stream: "N/A",
+    ably: "Location / maps partners",
+    pusher: "N/A",
+    fluxy: "FluxyFleet: trips, ETA, driver tracking APIs + fleet.gps_update on room WS",
+  },
+  {
+    label: "Spatial / digital twin rooms",
+    portal: "N/A",
+    stream: "N/A",
+    ably: "N/A",
+    pusher: "N/A",
+    fluxy: "Scenes + spatial.entity_added fan-out on room WS",
+  },
+  {
+    label: "Voice + AI transport pipeline",
+    portal: "Voice varies — chat-first SDK",
+    stream: "Voice / video add-ons",
+    ably: "Separate products",
+    pusher: "N/A",
+    fluxy: "useVoice (production) + transport fallback on room WebSocket",
+  },
+  {
+    label: "Cross-channel continuity & customer memory",
+    portal: "Inbox + continuity focus",
+    stream: "CRM integrations",
+    ably: "N/A",
+    pusher: "N/A",
+    fluxy: "CDP graph + journey mapping + A2A tasks on Worker",
+  },
+  {
     label: "Pricing surprises at scale",
+    portal: "Hosted SaaS tiers",
     stream: "Enterprise / usage tiers",
     ably: "Usage-based",
     pusher: "Free tier small; connections add up",
@@ -114,6 +202,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Self-host / on your own account",
+    portal: "Proprietary cloud — no MIT self-host",
     stream: "Proprietary cloud",
     ably: "Managed-first",
     pusher: "Managed-first",
@@ -121,6 +210,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Socket fleet / VPS to operate",
+    portal: "Managed vendor infra",
     stream: "Managed vendor infra",
     ably: "Managed vendor infra",
     pusher: "Managed vendor infra",
@@ -128,10 +218,27 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Next.js on Vercel + realtime (typical split)",
+    portal: "Frontend-agnostic hosted API",
     stream: "Managed cloud + your frontend",
     ably: "Ably + Vercel tutorial pattern",
     pusher: "Channels + serverless functions",
     fluxy: "Vercel/Netlify UI + CF Worker chat (no Vercel WS limits)",
+  },
+  {
+    label: "Omnichannel inbox (mentions, unread, follow-ups)",
+    portal: "Unified inbox + onItem over user channel",
+    stream: "Separate feeds product",
+    ably: "N/A",
+    pusher: "N/A",
+    fluxy: "useInbox items feed + REST /inbox + console badge",
+  },
+  {
+    label: "MIT license — read and deploy the full stack",
+    portal: "Proprietary hosted service",
+    stream: "Proprietary cloud",
+    ably: "Managed-first",
+    pusher: "Managed-first",
+    fluxy: "MIT monorepo — Worker, SDK, console, no vendor lock-in",
   },
 ];
 
@@ -144,6 +251,12 @@ export interface AlternativeApproach {
 
 /** Cloudflare-adjacent or DIY stacks buyers compare mentally. */
 export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
+  {
+    name: "Portal (chat-first SDK)",
+    bestFor: "Teams optimizing for React DX — SSR-safe hooks, inbox feed, streaming agents, hosted dashboard.",
+    tradeoff: "Proprietary hosted service — no MIT self-host on your Cloudflare account; broader platform modules (stream, IoT, fleet) are on you.",
+    fluxyAngle: "FluxyChat matches Portal on inbox/useInbox, connection UX, and AI timeline — adds MIT self-host, Workers/DO-native deployment, and 14 channel adapters.",
+  },
   {
     name: "PartyKit (+ DO demos on X)",
     bestFor: "Collab sessions, games, generic realtime “party” state — often mentioned beside Durable Objects in builder posts.",
@@ -225,7 +338,7 @@ export const BUYING_FAQ = [
   },
   {
     q: "Do I still need a separate WebSocket vendor?",
-    a: "Not for in-app chat on Cloudflare: FluxyChat uses Workers + one Durable Object per room. You may still want telco APIs for SMS/WhatsApp.",
+    a: "Not for in-app chat, collab, game, or IoT on Cloudflare: FluxyChat uses Workers + one Durable Object per room. You may still want telco APIs for SMS/WhatsApp or a dedicated SFU for large video rooms.",
   },
   {
     q: "What about idle rooms and surprise Cloudflare bills?",
@@ -315,22 +428,22 @@ export const SELF_HOST_POSITIONING = {
 export const BUILD_VS_BUY = {
   title: "Build vs buy",
   intro:
-    "Pusher vs Socket.IO is really build vs buy. FluxyChat is the middle path: less ops than rolling your own socket cluster, more control than a closed channels vendor.",
+    "Pusher vs Socket.IO is really build vs buy. FluxyChat is the middle path: one realtime platform (chat, agents, stream, collab, game, IoT, fleet, spatial, 14 channels) with less ops than rolling your own socket cluster and more control than a closed channels vendor.",
   bullets: [
     "DIY Socket.IO on a VM: you own reconnect, history, multi-tenant auth, and on-call.",
-    "Pusher / Ably / Stream: fast start, usage pricing, less say over schema and retention.",
-    "FluxyChat: room DO + D1 + SDK + console wired up; MIT self-host when lock-in or bill shock is the objection.",
+    "Pusher / Ably / Stream: fast start, usage pricing, separate SKUs for video, push, and AI.",
+    "FluxyChat: room DO + D1 + SDK + console for the full stack; MIT self-host when lock-in or bill shock is the objection.",
   ],
 } as const;
 
 export const PRODUCT_CHAT_VS_SUPPORT = {
-  title: "In-app chat, not a support desk",
+  title: "In-app realtime platform, not a support desk",
   intro:
-    "Most live-chat listicles are written for support teams: inbox, macros, CSAT. FluxyChat is for chat inside your product — tenant rooms, SDK embed, agent events on the same timeline. Wire Salesforce or HubSpot through your own integration layer; we handle the room.",
+    "Most live-chat listicles are written for support teams: inbox, macros, CSAT. FluxyChat is for realtime inside your product — tenant rooms, SDK embed, streaming, collab, game, IoT, fleet, spatial, and agent events on the same timeline. Wire Salesforce or HubSpot through your own integration layer; we handle the room kernel.",
   bullets: [
-    "Helpdesk products sell ticketing and agent assignment. We sell transport, history, JWT rooms, and webhooks.",
+    "Helpdesk products sell ticketing and agent assignment. We sell transport, history, JWT rooms, platform modules, and webhooks.",
     "User messages and agent tool_call / tool_result share one WebSocket stream, so you can replay what happened.",
-    "Middleware and webhooks can call external systems; message state stays in your D1.",
+    "Stream, collab, game, IoT, and fleet modules reuse the same Worker — not a patchwork of vendor SKUs.",
   ],
 } as const;
 
@@ -377,7 +490,7 @@ export const DECISION_FLOW = [
   {
     question: "Need only pub/sub fan-out (no message history UI)?",
     yes: "Consider Ably/Pusher-style channels.",
-    no: "FluxyChat fits: rooms, history, presence, agents.",
+    no: "FluxyChat fits: rooms, history, presence, agents, stream, collab, game, IoT.",
   },
   {
     question: "Must run on your Cloudflare account?",

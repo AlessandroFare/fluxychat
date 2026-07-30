@@ -25,7 +25,6 @@ export function createStreamResumptionStore(kv) {
       const key = `${STREAM_PREFIX}${streamId}`;
       const raw = await kv.get(key, { type: "json" });
       if (!raw) return null;
-      // Check if still active
       if (!raw.active) return null;
       return raw;
     },
@@ -35,7 +34,7 @@ export function createStreamResumptionStore(kv) {
       const raw = await kv.get(key, { type: "json" });
       if (raw) {
         raw.active = false;
-        await kv.put(key, JSON.stringify(raw), { expirationTtl: 60 }); // Keep 1s for cleanup
+        await kv.put(key, JSON.stringify(raw), { expirationTtl: 60 });
       }
     },
 
@@ -88,10 +87,11 @@ export function createStreamResumptionStore(kv) {
 export function createStreamResumptionMiddleware(resumptionStore, opts = {}) {
   return {
     name: "stream-resumption",
-    async wrapStream(params, next) {
+    async *wrapStream(params, next) {
       const streamId = opts.streamId || crypto.randomUUID();
       const entry = {
         streamId,
+        projectId: params.projectId || opts.projectId,
         roomId: params.roomId || opts.roomId,
         userId: params.userId || opts.userId,
         agentId: params.agentId || opts.agentId,
@@ -106,21 +106,17 @@ export function createStreamResumptionMiddleware(resumptionStore, opts = {}) {
 
       try {
         for await (const chunk of next()) {
-          // Update content on text chunks
           if (chunk.type === "text" && chunk.text) {
             entry.content += chunk.text;
             entry.lastActivityAt = new Date().toISOString();
-            // Save periodically (every 5 chunks to reduce KV writes)
             if (Math.random() < 0.2) {
               await resumptionStore.save(entry);
             }
           }
           yield chunk;
         }
-        // Mark as inactive on completion
         await resumptionStore.deactivate(streamId);
       } catch (err) {
-        // Keep active for potential resumption on error
         await resumptionStore.save(entry);
         throw err;
       }

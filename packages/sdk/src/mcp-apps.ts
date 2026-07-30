@@ -183,7 +183,6 @@ export function createMCPAppManager(): MCPAppManager {
     createSandboxedRenderer(resource: MCPAppResource) {
       return createGuiSandboxManager({
         allowedOrigins: ["*"],
-        maxRendersPerMinute: 10,
         cspDirectives: {
           "default-src": ["'self'"],
           "script-src": ["'none'"],

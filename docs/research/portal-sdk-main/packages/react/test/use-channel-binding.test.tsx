@@ -180,19 +180,70 @@ describe("callbacks", () => {
       { wrapper: wrapperFor(fake), initialProps: { cb: () => {} } },
     );
     const ch = fake.channel("room");
-    // One effect subscribes to mention + status → exactly two on() calls, and they must not
-    // grow as the caller passes a fresh inline function on every render.
+    // One effect subscribes to message + mention + status → exactly three on() calls, and
+    // they must not grow as the caller passes a fresh inline function on every render.
     const onCallsAfterMount = (ch?.handle.on as ReturnType<typeof vi.fn>).mock.calls.length;
-    expect(onCallsAfterMount).toBe(2);
+    expect(onCallsAfterMount).toBe(3);
 
     const latest = vi.fn();
     rerender({ cb: latest });
     rerender({ cb: () => {} });
     rerender({ cb: latest });
-    expect((ch?.handle.on as ReturnType<typeof vi.fn>).mock.calls.length).toBe(2);
+    expect((ch?.handle.on as ReturnType<typeof vi.fn>).mock.calls.length).toBe(3);
 
     act(() => ch?.emit("mention", fakeMessage()));
     expect(latest).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps onMessage to the message event", () => {
+    const fake = makeFakePortal();
+    const onMessage = vi.fn();
+    renderHook(() => useChannel({ channelId: "room", onMessage }), {
+      wrapper: wrapperFor(fake),
+    });
+    const msg = fakeMessage();
+    act(() => fake.channel("room")?.emit("message", msg));
+    expect(onMessage).toHaveBeenCalledWith(msg);
+  });
+
+  it("does not re-subscribe onMessage when the inline callback changes, and calls the latest", () => {
+    const fake = makeFakePortal();
+    const { rerender } = renderHook(
+      ({ cb }: { cb: () => void }) => useChannel({ channelId: "room", onMessage: cb }),
+      { wrapper: wrapperFor(fake), initialProps: { cb: () => {} } },
+    );
+    const ch = fake.channel("room");
+    expect((ch?.handle.on as ReturnType<typeof vi.fn>).mock.calls.length).toBe(3);
+
+    const latest = vi.fn();
+    rerender({ cb: latest });
+    rerender({ cb: () => {} });
+    rerender({ cb: latest });
+    expect((ch?.handle.on as ReturnType<typeof vi.fn>).mock.calls.length).toBe(3);
+
+    act(() => ch?.emit("message", fakeMessage()));
+    expect(latest).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("setMetadata", () => {
+  it("passes through to the channel handle's setMetadata", () => {
+    const fake = makeFakePortal();
+    const { result } = renderHook(() => useChannel({ channelId: "room" }), {
+      wrapper: wrapperFor(fake),
+    });
+    act(() => result.current.setMetadata({ cursor: { x: 1, y: 2 } }));
+    expect(fake.channel("room")?.handle.setMetadata).toHaveBeenCalledWith({
+      cursor: { x: 1, y: 2 },
+    });
+  });
+
+  it("is a safe no-op while inert (channelId undefined)", () => {
+    const fake = makeFakePortal();
+    const { result } = renderHook(() => useChannel({ channelId: undefined }), {
+      wrapper: wrapperFor(fake),
+    });
+    expect(() => result.current.setMetadata({ x: 1 })).not.toThrow();
   });
 });
 

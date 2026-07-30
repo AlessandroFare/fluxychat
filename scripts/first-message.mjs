@@ -39,6 +39,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workerDir = join(root, "apps", "worker");
 const devVarsPath = join(workerDir, ".dev.vars");
 const devVarsExamplePath = join(workerDir, ".dev.vars.example");
+const provisionSecretsPath = join(root, "scripts", ".provision-secrets.env");
 const WORKER_URL = process.env.FIRST_MESSAGE_WORKER_URL || "http://127.0.0.1:8787";
 const POLL_INTERVAL_MS = 500;
 const POLL_TIMEOUT_MS = 90_000; // 90 s  wrangler cold start on big monorepos can take a while
@@ -139,6 +140,33 @@ function ensureDevVars() {
   if (!content.endsWith("\n")) content += "\n";
   writeFileSync(devVarsPath, content + banner);
   ok(`added ALLOW_DEV_PROVISION=true to apps/worker/.dev.vars`);
+}
+
+/** When /dev/provision returns reused:true, the plaintext key is not re-emitted — read from local dev files. */
+function readEnvValueFromFile(filePath, key) {
+  if (!existsSync(filePath)) return null;
+  const content = readFileSync(filePath, "utf8");
+  const m = content.match(new RegExp(`^${key}\\s*=\\s*(.+)$`, "m"));
+  if (!m) return null;
+  const raw = m[1].trim().replace(/^["']|["']$/g, "");
+  return raw && raw !== "(keep secret, disable ALLOW_PLATFORM_BOOTSTRAP after setup)" ? raw : null;
+}
+
+function resolveApiKeyFromDevFiles() {
+  for (const key of [
+    process.env.FIRST_MESSAGE_API_KEY,
+    process.env.FLUXY_CONSOLE_API_KEY,
+    process.env.DEMO_API_KEY,
+  ]) {
+    if (key && String(key).startsWith("fc_")) return String(key);
+  }
+  for (const keyName of ["FLUXY_CONSOLE_API_KEY", "DEMO_API_KEY"]) {
+    const fromDevVars = readEnvValueFromFile(devVarsPath, keyName);
+    if (fromDevVars?.startsWith("fc_")) return fromDevVars;
+  }
+  const fromProvision = readEnvValueFromFile(provisionSecretsPath, "FLUXY_CONSOLE_API_KEY");
+  if (fromProvision?.startsWith("fc_")) return fromProvision;
+  return null;
 }
 
 // â”€â”€ Worker lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -242,7 +270,91 @@ async function postJson(path, body, headers = {}) {
   return json ?? {};
 }
 
-// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const QUICKSTART_ROOM_SUFFIX = "general";
+
+function quickstartRoomId(projectId) {
+  return `${projectId}-${QUICKSTART_ROOM_SUFFIX}`;
+}
+
+async function postJsonAllow(path, body, headers, allowedStatuses = []) {
+  const res = await fetchWithTimeout(`${WORKER_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    /* ignore */
+  }
+  if (!res.ok && !allowedStatuses.includes(res.status)) {
+    const detail = json?.error || text || res.statusText;
+    throw new Error(`${path} → HTTP ${res.status}: ${detail}`);
+  }
+  return { ok: res.ok, status: res.status, json: json ?? {} };
+}
+
+async function getJson(path, headers = {}) {
+  const res = await fetchWithTimeout(`${WORKER_URL}${path}`, {
+    method: "GET",
+    headers,
+  });
+  const text = await res.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    /* ignore */
+  }
+  if (!res.ok) {
+    const detail = json?.error || text || res.statusText;
+    throw new Error(`${path} → HTTP ${res.status}: ${detail}`);
+  }
+  return json ?? {};
+}
+
+async function ensureQuickstartRoom(bearerToken, projectId) {
+  const roomId = quickstartRoomId(projectId);
+  const listed = await getJson("/rooms", { Authorization: `Bearer ${bearerToken}` });
+  const rooms = Array.isArray(listed?.rooms) ? listed.rooms : [];
+  if (rooms.some((room) => room?.id === roomId)) {
+    ok(`room \`${roomId}\` already in project`);
+    return roomId;
+  }
+
+  const result = await postJsonAllow(
+    "/rooms",
+    { id: roomId, type: "public", name: "General" },
+    { Authorization: `Bearer ${bearerToken}` },
+    [409],
+  );
+  if (result.ok) {
+    ok(`room \`${roomId}\` created`);
+    return roomId;
+  }
+  if (result.status === 409 || result.json?.error === "room_id_already_exists") {
+    ok(`room \`${roomId}\` exists (global id collision — still usable if same project)`);
+    return roomId;
+  }
+  throw new Error(`/rooms → HTTP ${result.status}: ${result.json?.error || "unknown"}`);
+}
+
+function persistApiKeyToDevVars(apiKey) {
+  if (!apiKey?.startsWith("fc_")) return;
+  let content = readFileSync(devVarsPath, "utf8");
+  if (/^FLUXY_CONSOLE_API_KEY\s*=/.m.test(content)) {
+    content = content.replace(/^FLUXY_CONSOLE_API_KEY\s*=.*$/m, `FLUXY_CONSOLE_API_KEY=${apiKey}`);
+  } else {
+    if (!content.endsWith("\n")) content += "\n";
+    content += `FLUXY_CONSOLE_API_KEY=${apiKey}\n`;
+  }
+  writeFileSync(devVarsPath, content);
+  ok("saved FLUXY_CONSOLE_API_KEY to apps/worker/.dev.vars for reuse");
+}
+
+// ── Main
 let shuttingDown = false;
 let spawnedWorker = null;
 
@@ -274,15 +386,30 @@ async function main() {
 
   step(2, "Provision a dev project (POST /dev/provision)");
   const provision = await postJson("/dev/provision", {});
-  if (!provision.apiKey || !provision.projectId) {
+  let apiKey = provision.apiKey;
+  if (!apiKey && provision.reused) {
+    apiKey = resolveApiKeyFromDevFiles();
+    if (apiKey) {
+      ok(`reusing existing dev-local API key from local dev files (${maskKey(apiKey)})`);
+    } else {
+      warn(
+        "dev-local already provisioned but no fc_… key found in apps/worker/.dev.vars or scripts/.provision-secrets.env",
+      );
+      info("Set FLUXY_CONSOLE_API_KEY=fc_… in apps/worker/.dev.vars, or revoke the key in D1 and re-run.");
+    }
+  }
+  if (!apiKey || !provision.projectId) {
     fail(
-      `/dev/provision did not return apiKey/projectId (projectId=${provision.projectId ?? "<missing>"}, reused=${provision.reused ?? "<missing>"})`,
+      `/dev/provision did not yield a usable apiKey/projectId (projectId=${provision.projectId ?? "<missing>"}, reused=${provision.reused ?? "<missing>"})`,
     );
     cleanupAndExit(1);
     return;
   }
   ok(`projectId = ${provision.projectId}`);
-  ok("apiKey provisioned (not logged â€” use /dev/provision or apps/worker/.dev.vars to copy)");
+  if (!provision.reused) {
+    ok("apiKey provisioned (not logged — copy from this run's D1 insert or save to .dev.vars)");
+    persistApiKeyToDevVars(apiKey);
+  }
 
   step(3, "Mint a JWT (POST /auth/token)");
   const auth = await postJson(
@@ -292,7 +419,7 @@ async function main() {
       roles: ["owner", "admin"],
       ttlSeconds: 3600,
     },
-    { "X-Fluxy-Api-Key": provision.apiKey },
+    { "X-Fluxy-Api-Key": apiKey },
   );
   if (!auth.token) {
     fail(`/auth/token did not return a token: ${JSON.stringify(auth)}`);
@@ -301,12 +428,15 @@ async function main() {
   }
   ok(`JWT minted (${auth.token.length} chars, expires in ${auth.expiresIn}s)`);
 
-  step(4, "Send the first message (POST /messages â†’ room `general`)");
+  step(4, "Ensure quickstart room (GET /rooms + POST /rooms)");
+  const roomId = await ensureQuickstartRoom(auth.token, provision.projectId);
+
+  step(5, `Send the first message (POST /messages → room \`${roomId}\`)`);
   const msgRes = await postJson(
     "/messages",
     {
-      roomId: "general",
-      content: `Hello from the first-message script! ðŸŽ‰ (${new Date().toISOString()})`,
+      roomId,
+      content: `Hello from the first-message script! (${new Date().toISOString()})`,
     },
     { Authorization: `Bearer ${auth.token}` },
   );
@@ -322,7 +452,7 @@ async function main() {
   }
   ok(`messageId = ${messageId}`);
 
-  step(5, "All set");
+  step(6, "All set");
   // Secrets are masked (CodeQL js/clear-text-logging). The full apiKey was
   // already printed once by /dev/provision in the previous step; printing it
   // again here into a persistent log box is the exposure risk. To copy the real
@@ -336,7 +466,7 @@ async function main() {
       `${dim("apiKey")}      (redacted â€” re-run /dev/provision or read .dev.vars)`,
       `${dim("JWT")}         ${maskJwt(auth.token)}`,
       `${dim("messageId")}   ${messageId}`,
-      `${dim("room")}       general`,
+      `${dim("room")}       ${roomId}`,
       "",
       dim("Secrets are masked in logs. Reuse the values from /dev/provision output"),
       dim("or apps/worker/.dev.vars. SDK: new FluxyChatClient({ baseUrl, token })"),
@@ -354,17 +484,8 @@ function cleanupAndExit(code) {
     } catch {
       /* ignore */
     }
-    // Give wrangler 2s to flush, then SIGKILL.
-    const child = spawnedWorker;
-    setTimeout(() => {
-      try {
-        if (!child.killed) child.kill("SIGKILL");
-      } catch {
-        /* ignore */
-      }
-    }, 2_000).unref();
   }
-  // Exit on next tick so any pending stdout flushes.
+  // Exit on next tick so stdout flushes; avoid SIGKILL — it crashes Node on Windows.
   setImmediate(() => process.exit(code));
 }
 

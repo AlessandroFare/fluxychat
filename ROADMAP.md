@@ -502,6 +502,18 @@ Mercato: IoT messaging. 18.8B → 40B dispositivi entro 2030.
 
 ### 5.3 Nuovi mercati verticali
 
+> **Stato implementazione (2026-07):** capability kernel + Worker event router (D1 audit), workflow demo per tutti i verticali, studi console interattivi, gruppi nav Build / Products / Operate / Industries / Labs, landing `#platform` + hero room modes, subpath SDK (`@fluxy-chat/sdk/edu` …). Dettaglio: [docs/architecture/vertical-platform-expansion.md](docs/architecture/vertical-platform-expansion.md).
+
+| Vertical | Console | SDK | Readiness |
+|----------|---------|-----|-----------|
+| FluxyEdu | `/edu` — SFU demo, session report, whiteboard links | `@fluxy-chat/sdk/edu` | Beta (demo) |
+| FluxyHealth | `/health` — consent + FHIR context events | `@fluxy-chat/sdk/health` | Preview |
+| FluxyEvent | `/events` — tickets + Q&A upvote | `@fluxy-chat/sdk/event` | Beta (demo) |
+| FluxyFinance | `/finance` — alerts + invoice approval | `@fluxy-chat/sdk/finance` | Preview |
+| Cross-Reality | `/continuity` — checkpoint handoff simulator | `@fluxy-chat/sdk/continuity` | Prototype |
+
+**Prossimo passo produzione:** DO fan-out live, SFU/FHIR/ticketing/market vendor adapters, Yjs snapshot persistence on Worker, compliance gates (BAA/HIPAA, PCI).
+
 #### FluxyHealth — Healthcare
 
 Mercato healthcare digital twin $25B+. Feature: patient monitoring room (vitali realtime), doctor-patient secure chat (E2E HIPAA), telemedicine WebRTC, medical image sharing (DICOM viewer in room), AI symptom checker, care team coordination.
@@ -523,6 +535,8 @@ Feature: virtual venue (room = venue con stage/backstage/lobby + spatial audio),
 Feature: real-time price alerts in room, trading signals bot, portfolio sync multi-exchange, risk monitoring (AI-powered), fraud detection chat, payment request in chat, invoice generation (AI), expense tracking.
 
 ### 5.4 Cross-Reality Continuity
+
+> **Stato:** simulatore handoff in `/continuity` + checkpoint API client-side. Canonico server-side su DO: vedi [vertical-platform-expansion.md](docs/architecture/vertical-platform-expansion.md).
 
 Feature trasversale che unifica spatial computing + AI swarm + voice-first + digital twin.
 

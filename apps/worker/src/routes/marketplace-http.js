@@ -4,7 +4,7 @@ import { rolesInclude } from "../lib/route-jwt-auth.js";
 import { pickRouteDeps } from "./route-http-deps.js";
 import {
   publishAgent, updateAgent, submitForReview, reviewAgent,
-  getAgent, getAgentBySlug, listAgents,
+  getAgent, getAgentBySlug, listAgents, listPublisherAgents,
   installAgent, uninstallAgent, listInstalledAgents,
   addReview, listReviews, getMarketplaceStats,
 } from "../lib/agent-marketplace.js";
@@ -42,6 +42,15 @@ export async function dispatchMarketplaceRoutes(request, url, h) {
   if (ctx.response) return ctx.response;
   const { projectId, userId } = ctx;
   const isAdmin = rolesInclude(ctx.auth, hasAnyRole, ["owner", "admin"]);
+
+  if (request.method === "GET" && path === "/admin/marketplace/agents") {
+    if (!isAdmin) return respond({ error: "forbidden" }, h, 403);
+    const status = url.searchParams.get("status");
+    const limit = parseInt(url.searchParams.get("limit") || "50", 10);
+    const offset = parseInt(url.searchParams.get("offset") || "0", 10);
+    const agents = await listPublisherAgents(env, { publisherId: userId, status, limit, offset });
+    return respond({ agents }, h);
+  }
 
   if (request.method === "POST" && path === "/admin/marketplace/agents") {
     if (!isAdmin) return respond({ error: "forbidden" }, h, 403);

@@ -1,4 +1,5 @@
-import { fanoutRoomInternal } from "./room-shard.js";
+import { fanoutPersistedMessage } from "./message-realtime-fanout.js";
+import { deriveScopedClientMessageId } from "./client-message-id.js";
 import { maybeEnqueueAgentTaskForInbound } from "./agent-queue.js";
 import { logInfo, logError } from "./worker-log.js";
 
@@ -125,6 +126,7 @@ async function resolveRoomForInbound(env, projectId, userId, fromE164) {
 
 async function insertInboundMessage(env, { projectId, roomId, userId, content, channel, externalId }) {
   const now = new Date().toISOString();
+  const clientMessageId = deriveScopedClientMessageId("telco", externalId);
   const insert = await env.DB.prepare(
     `INSERT INTO messages (
       project_id, room_id, user_id, content, created_at, parent_id, kind, client_message_id
@@ -137,23 +139,23 @@ async function insertInboundMessage(env, { projectId, roomId, userId, content, c
       content,
       now,
       channel === "whatsapp" ? "whatsapp" : "sms",
-      `telco:${externalId}`,
+      clientMessageId,
     )
     .run();
 
   const messageId = insert.meta?.last_row_id;
   if (!messageId) throw new Error("insert_failed");
 
-  await fanoutRoomInternal(env, projectId, roomId, "/announce", {
-    method: "POST",
-    body: JSON.stringify({
-      id: messageId,
-      content,
-      userId,
-      createdAt: now,
-      kind: channel === "whatsapp" ? "whatsapp" : "sms",
-      telco: { channel, fromE164: userId.startsWith("telco:") ? userId.slice(6) : null, externalId },
-    }),
+  await fanoutPersistedMessage(env, {
+    projectId,
+    roomId,
+    messageId,
+    userId,
+    content,
+    createdAt: now,
+    clientMessageId,
+    kind: channel === "whatsapp" ? "whatsapp" : "sms",
+    source: "telco-inbound",
   });
 
   return messageId;

@@ -115,7 +115,10 @@ export function renderParts(
 
     if (part.state === "output-error") {
       const errorText = part.errorText || "Unknown error";
-      if (entry?.errorComponent) return entry.errorComponent.render({ errorText, ...part.output } as any);
+      if (entry?.errorComponent) {
+        const output = typeof part.output === "object" && part.output !== null ? part.output : {};
+        return entry.errorComponent.render({ errorText, ...output } as any);
+      }
       if (options?.onError) return options.onError(part.toolName, part.toolCallId, errorText);
       if (entry) return `[${part.toolName} error: ${errorText}]`;
       return `[${part.toolName}]`;

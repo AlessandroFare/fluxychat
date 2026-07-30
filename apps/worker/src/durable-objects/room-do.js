@@ -11,6 +11,11 @@ import { attachAttachmentsToMessages } from "../lib/messages-attachments.js";
 import { checkAndConsumeProjectQuota } from "../lib/project-plan-quota.js";
 import { validateMessageContent } from "../lib/message-validation.js";
 import { runInboundMessageMiddleware } from "../lib/message-middleware.js";
+import {
+  runFluxyRoomAuthz,
+  runFluxyPublishPipeline,
+  runFluxyDisconnectHooks,
+} from "../lib/fluxy-config-runtime.js";
 import { serializeMessage } from "../lib/message-serialization.js";
 import {
   notifyDmRecipient,
@@ -23,6 +28,7 @@ import {
   fetchOgPreview,
 } from "../lib/message-enrichment.js";
 import { deliverWebhooks } from "../lib/webhook-delivery.js";
+import { normalizeClientMessageId } from "../lib/client-message-id.js";
 import { safeSchedulePostMessageAutomations } from "../lib/post-message-automations-safe.js";
 import { invokeMentionedAgents } from "../lib/agent-runtime.js";
 import {
@@ -45,6 +51,7 @@ import {
 } from "../lib/user-watchlist.js";
 import { runStorageMigrations } from "../lib/do-sql-migrations.js";
 import { YjsSyncHandler } from "../lib/yjs-sync.js";
+import { maybeSyncMatrixOutboundForMessage } from "../lib/matrix-outbound-hook.js";
 
 /**
  * Ordered list of migrations applied to the Room DO's `ctx.storage`.
@@ -140,6 +147,8 @@ export class RoomDurableObject {
     this.userInfoByUserId = new Map();
     /** Per-connection id (exclude-sender / debugging). */
     this.socketIds = new Map();
+    /** @type {Map<WebSocket, Record<string, boolean | undefined>>} */
+    this.wsCapabilities = new Map();
     /** @type {{ event: Record<string, unknown>; cachedAt: string } | null} */
     this.lastCacheEntry = null;
     /** Ephemeral last-known foreground location per track. */
@@ -385,6 +394,12 @@ export class RoomDurableObject {
       webSocket.close(1008, "Forbidden");
       return;
     }
+    const authz = await runFluxyRoomAuthz(roomId, auth);
+    if (authz.action === "block") {
+      webSocket.close(1008, String(authz.reason).slice(0, 120));
+      return;
+    }
+    this.wsCapabilities.set(webSocket, authz.capabilities ?? {});
     try {
       await ensurePublicRoomMembership(
         this.env,
@@ -857,6 +872,18 @@ export class RoomDurableObject {
         roomId,
         this.state.storage,
         (data, excludeWs) => this.broadcastBinary(data, excludeWs),
+        {
+          onActivity: ({ roomId: rid, name, byteLength }) => {
+            const userId = this.userIds.get(webSocket) || "system";
+            this.broadcast({
+              type: "server_event",
+              roomId: rid,
+              name,
+              data: { byteLength, channel: "yjs" },
+              userId,
+            });
+          },
+        },
       );
       return;
     }
@@ -880,6 +907,7 @@ export class RoomDurableObject {
       if (msg.type === "message") {
         const roomId = this.roomId || this.state.id.toString();
         const { id, userId, content, parentId, attachments } = msg;
+        const clientMessageId = normalizeClientMessageId(msg.clientMessageId);
         const { resolveMessageExpiry } = await import("../lib/message-ttl.js");
         const expiryResult = resolveMessageExpiry(msg, this.env);
         if (!expiryResult.ok) {
@@ -915,7 +943,28 @@ export class RoomDurableObject {
           );
           return;
         }
-        const validatedContent = middlewareResult.content;
+        let validatedContent = middlewareResult.content;
+
+        const fluxyPipeline = await runFluxyPublishPipeline(
+          roomId,
+          { userId: this.userIds.get(webSocket) ?? userId },
+          validatedContent,
+          {
+            capabilities: this.wsCapabilities.get(webSocket) ?? {},
+            replyTo: parentId ?? null,
+            attachments,
+          },
+        );
+        if (!fluxyPipeline.ok) {
+          webSocket.send(
+            JSON.stringify({
+              type: "error",
+              message: `blocked: ${fluxyPipeline.reason}`,
+            }),
+          );
+          return;
+        }
+        validatedContent = fluxyPipeline.content;
 
         const quotaResult = await checkAndConsumeProjectQuota(this.env, {
           projectId: this.projectId,
@@ -986,9 +1035,25 @@ export class RoomDurableObject {
         }
 
         let messageId = id;
+        let isDuplicateResend = false;
+
+        if (!messageId && clientMessageId) {
+          const existing = await this.env.DB.prepare(
+            `SELECT id FROM messages
+             WHERE project_id = ? AND room_id = ? AND client_message_id = ? AND deleted_at IS NULL
+             LIMIT 1`,
+          )
+            .bind(projectId, roomId, clientMessageId)
+            .first();
+          if (existing?.id) {
+            messageId = existing.id;
+            isDuplicateResend = true;
+          }
+        }
+
         if (!messageId) {
           const result = await this.env.DB.prepare(
-            "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url, expires_at, visibility, visible_to_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url, expires_at, visibility, visible_to_json, client_message_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
           )
             .bind(
               projectId,
@@ -1005,6 +1070,7 @@ export class RoomDurableObject {
               messageExpiresAt,
               visibility === "room" ? null : visibility,
               visibleToJson,
+              clientMessageId,
             )
             .run();
           messageId = result.meta.last_row_id;
@@ -1013,7 +1079,7 @@ export class RoomDurableObject {
           }
         }
 
-        if (Array.isArray(attachments) && attachments.length) {
+        if (!isDuplicateResend && Array.isArray(attachments) && attachments.length) {
           const stmts = attachments.map((a) =>
             this.env.DB.prepare(
               "INSERT INTO attachments (project_id, room_id, message_id, kind, url, name, size_bytes, content_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -1032,7 +1098,7 @@ export class RoomDurableObject {
           await this.env.DB.batch(stmts);
         }
 
-        if (mentions.length) {
+        if (!isDuplicateResend && mentions.length) {
           const stmts = mentions.map((u) =>
             this.env.DB.prepare(
               "INSERT INTO message_mentions (project_id, room_id, message_id, mentioned_user_id, created_at) VALUES (?, ?, ?, ?, ?)"
@@ -1092,35 +1158,49 @@ export class RoomDurableObject {
           );
         }
 
-        const roomRow = await this.env.DB.prepare(
-          "SELECT type FROM rooms WHERE project_id = ? AND id = ?"
-        )
-          .bind(projectId, roomId)
-          .first();
-        if (roomRow?.type === "dm") {
-          await this.env.DB.prepare(
-            "INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at) VALUES (?, ?, ?, ?, ?)"
+        if (!isDuplicateResend) {
+          const roomRow = await this.env.DB.prepare(
+            "SELECT type FROM rooms WHERE project_id = ? AND id = ?"
           )
-            .bind(
-              projectId,
-              "dm_message",
-              roomId,
-              JSON.stringify({
-                fromUserId: userId,
-                messageId,
-              }),
-              createdAt
+            .bind(projectId, roomId)
+            .first();
+          if (roomRow?.type === "dm") {
+            await this.env.DB.prepare(
+              "INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at) VALUES (?, ?, ?, ?, ?)"
             )
-            .run();
-          void notifyDmRecipient(this.env, {
+              .bind(
+                projectId,
+                "dm_message",
+                roomId,
+                JSON.stringify({
+                  fromUserId: userId,
+                  messageId,
+                }),
+                createdAt
+              )
+              .run();
+            void notifyDmRecipient(this.env, {
+              projectId,
+              roomId,
+              fromUserId: userId,
+              messageId,
+              preview: validatedContent,
+            }).catch((err) =>
+              logError("notifications.dm_failed", err, { projectId, roomId }),
+            );
+          }
+
+          void safeSchedulePostMessageAutomations(this.env, {
             projectId,
             roomId,
-            fromUserId: userId,
+            authorUserId: userId,
             messageId,
-            preview: validatedContent,
-          }).catch((err) =>
-            logError("notifications.dm_failed", err, { projectId, roomId }),
-          );
+            content: validatedContent,
+            traceId: undefined,
+            mentionedUserIds: mentions,
+            roomType: roomRow?.type ?? null,
+            attachments: Array.isArray(attachments) ? attachments : [],
+          });
         }
 
         const payload = {
@@ -1135,6 +1215,7 @@ export class RoomDurableObject {
           mentions,
           preview,
           attachments: Array.isArray(attachments) ? attachments : [],
+          ...(clientMessageId ? { clientMessageId } : {}),
           ...(messageExpiresAt ? { expiresAt: messageExpiresAt } : {}),
           ...(visibility === "whisper"
             ? { visibility, visibleTo }
@@ -1148,17 +1229,16 @@ export class RoomDurableObject {
           whisperRecipients ? { recipientUserIds: whisperRecipients } : {},
         );
 
-        void safeSchedulePostMessageAutomations(this.env, {
-          projectId,
-          roomId,
-          authorUserId: userId,
-          messageId,
-          content: validatedContent,
-          traceId: undefined,
-          mentionedUserIds: mentions,
-          roomType: roomRow?.type ?? null,
-          attachments: Array.isArray(attachments) ? attachments : [],
-        });
+        if (!isDuplicateResend && validatedContent) {
+          void maybeSyncMatrixOutboundForMessage(this.env, {
+            projectId,
+            roomId,
+            messageId,
+            content: validatedContent,
+          }).catch((err) =>
+            logError("matrix.outbound_hook_failed", err, { projectId, roomId }),
+          );
+        }
 
         return;
       }
@@ -1492,10 +1572,12 @@ export class RoomDurableObject {
     this.userIds.delete(webSocket);
     this.socketIds.delete(webSocket);
     this.wsInboundQueues.delete(webSocket);
+    this.wsCapabilities.delete(webSocket);
 
     const roomIdStr = this.roomId || this.state.id.toString();
     let memberLeft = false;
     if (userId && !String(userId).startsWith("recovered:")) {
+      void runFluxyDisconnectHooks(roomIdStr, userId, "close");
       const remaining = this.decrementUserConnection(userId);
       if (remaining === 0) {
         memberLeft = true;
@@ -2045,6 +2127,15 @@ export class RoomDurableObject {
             name: body.name,
             data: body.data ?? {},
             userId: body.userId || "system",
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "capability_event") {
+        this.broadcast(
+          {
+            type: "capability_event",
+            roomId: body.roomId || roomIdStr,
+            event: body.event ?? {},
           },
           broadcastOpts,
         );

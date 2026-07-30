@@ -18,6 +18,8 @@
  *  - Dynamic difficulty
  */
 
+import { fluxyEntityId } from "./fluxy-id";
+
 // ─── Types ────────────────────────────────────────────
 
 export type GameStatus = "lobby" | "countdown" | "playing" | "ended" | "cancelled";
@@ -406,7 +408,7 @@ export function createFluxyGame() {
 
   function inviteToParty(partyId: string, fromPlayer: string, toPlayer: string): PartyInvite {
     const invite: PartyInvite = {
-      id: `inv_${Date.now()}`, partyId, fromPlayer, toPlayer,
+      id: fluxyEntityId("inv"), partyId, fromPlayer, toPlayer,
       timestamp: new Date().toISOString(),
     };
     partyInvites.push(invite);
@@ -496,7 +498,7 @@ export function createFluxyGame() {
   // ── AI NPCs ──
 
   function spawnNPC(name: string, personality: string, difficulty: number): AINPC {
-    const id = `npc_${Date.now()}`;
+    const id = fluxyEntityId("npc");
     const npc: AINPC = {
       id, name, personality, difficulty,
       memory: new Map(), state: "idle",

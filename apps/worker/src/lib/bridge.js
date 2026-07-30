@@ -1,3 +1,6 @@
+import { importAdminMessage } from "./message-import.js";
+import { deriveScopedClientMessageId } from "./client-message-id.js";
+
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -184,20 +187,102 @@ export async function getBridgeStats(env, { projectId }) {
   };
 }
 
-export async function syncInboundMessage(env, { bridgeId, projectId, externalMessageId, externalChannelId, externalUserId, externalUsername, content, timestamp }) {
+export async function syncInboundMessage(env, {
+  bridgeId,
+  projectId,
+  platform,
+  externalMessageId,
+  externalChannelId,
+  externalUserId,
+  externalUsername,
+  content,
+  timestamp,
+}) {
   const mapping = await getChannelMappingByExternal(env, { bridgeId, externalChannelId });
   if (!mapping) return { error: "no_mapping" };
   if (mapping.syncDirection === "outbound") return { error: "inbound_disabled" };
 
   const existing = await findFluxychatMessage(env, { externalMessageId });
-  if (existing) return { error: "already_synced" };
+  if (existing) return { error: "already_synced", messageId: existing.fluxychatMessageId };
 
-  await recordBridgeEvent(env, {
-    bridgeId, projectId, eventType: "message_sync", direction: "inbound",
-    payload: { externalMessageId, externalChannelId, externalUserId, externalUsername, content },
+  const bridge = platform ? null : await getBridgeConfig(env, { bridgeId });
+  const platformName = platform || bridge?.platform || "bridge";
+  const userId = externalUserId || `${platformName}-bridge`;
+
+  const imported = await importAdminMessage(env, {
+    projectId,
+    roomId: mapping.fluxychatRoomId,
+    content,
+    userId,
+    createdAt: timestamp,
+    clientMessageId: deriveScopedClientMessageId(platformName, externalMessageId),
+    importedBy: `${platformName}-bridge`,
+  });
+  if (imported.error) {
+    await recordBridgeEvent(env, {
+      bridgeId,
+      projectId,
+      eventType: "message_sync",
+      direction: "inbound",
+      payload: { externalMessageId, externalChannelId, externalUserId, externalUsername, content, error: imported.error },
+      status: "error",
+    });
+    return imported;
+  }
+  if (imported.skipped) {
+    await mapMessage(env, {
+      bridgeId,
+      projectId,
+      fluxychatMessageId: String(imported.messageId),
+      externalMessageId,
+      externalPlatform: platformName,
+      externalChannelId,
+      direction: "inbound",
+    }).catch(() => {});
+    return {
+      roomId: mapping.fluxychatRoomId,
+      content,
+      externalMessageId,
+      externalUserId,
+      externalUsername,
+      messageId: imported.messageId,
+      skipped: true,
+    };
+  }
+
+  await mapMessage(env, {
+    bridgeId,
+    projectId,
+    fluxychatMessageId: String(imported.messageId),
+    externalMessageId,
+    externalPlatform: platformName,
+    externalChannelId,
+    direction: "inbound",
   });
 
-  return { roomId: mapping.fluxychatRoomId, content, externalMessageId, externalUserId, externalUsername };
+  await recordBridgeEvent(env, {
+    bridgeId,
+    projectId,
+    eventType: "message_sync",
+    direction: "inbound",
+    payload: {
+      externalMessageId,
+      externalChannelId,
+      externalUserId,
+      externalUsername,
+      content,
+      messageId: imported.messageId,
+    },
+  });
+
+  return {
+    roomId: mapping.fluxychatRoomId,
+    content,
+    externalMessageId,
+    externalUserId,
+    externalUsername,
+    messageId: imported.messageId,
+  };
 }
 
 export async function syncOutboundMessage(env, { bridgeId, projectId, fluxychatMessageId, externalChannelId, content }) {

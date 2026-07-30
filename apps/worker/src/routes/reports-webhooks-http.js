@@ -8,6 +8,10 @@ import {
   verifyWebhookSignature,
   verifyWebhookEventBatch,
 } from "../lib/webhook-batch-verify.js";
+import {
+  validateWebhookEventTypes,
+  WEBHOOK_EVENT_TYPES,
+} from "../lib/webhook-event-catalog.js";
 
 export async function dispatchReportsWebhooksRoutes(request, url, h) {
   const {
@@ -123,6 +127,18 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
     return json({ ok: true });
   }
 
+  if (url.pathname === "/webhooks/event-types" && request.method === "GET") {
+    return json(
+      {
+        events: WEBHOOK_EVENT_TYPES,
+        retryScheduleMs: [60_000, 300_000, 1_800_000, 3_600_000],
+        maxAttemptsEnv: "WEBHOOK_MAX_ATTEMPTS",
+        signatureHeader: "X-Fluxy-Signature",
+      },
+      { headers: corsHeaders },
+    );
+  }
+
   // Webhook event delivery for bots/integrations: POST /webhooks/test (simple smoke test)
   if (url.pathname === "/webhooks/register" && request.method === "POST") {
     const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
@@ -142,6 +158,13 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
       return json(
         { error: "url and eventTypes[] required" },
         { status: 400 }
+      );
+    }
+    const eventCheck = validateWebhookEventTypes(body.eventTypes);
+    if (!eventCheck.ok) {
+      return json(
+        { error: "unknown_event_types", unknown: eventCheck.unknown, catalog: "GET /webhooks/event-types" },
+        { status: 400 },
       );
     }
     const id = crypto.randomUUID();
@@ -218,7 +241,18 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
     const updates = [];
     const values = [];
     if (body.url !== undefined) { updates.push("url = ?"); values.push(body.url); }
-    if (body.eventTypes !== undefined) { updates.push("event_types = ?"); values.push(Array.isArray(body.eventTypes) ? body.eventTypes.join(",") : body.eventTypes); }
+    if (body.eventTypes !== undefined) {
+      const nextTypes = Array.isArray(body.eventTypes) ? body.eventTypes : String(body.eventTypes).split(",").map((s) => s.trim()).filter(Boolean);
+      const eventCheck = validateWebhookEventTypes(nextTypes);
+      if (!eventCheck.ok) {
+        return json(
+          { error: "unknown_event_types", unknown: eventCheck.unknown, catalog: "GET /webhooks/event-types" },
+          { status: 400 },
+        );
+      }
+      updates.push("event_types = ?");
+      values.push(nextTypes.join(","));
+    }
     if (body.secret !== undefined) {
       const secretPrep = await prepareWebhookSecretForStorage(
         env,

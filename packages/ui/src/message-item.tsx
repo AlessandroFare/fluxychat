@@ -5,6 +5,8 @@ import {
   MessageHeader,
   MessageContent,
   MessageFooter,
+  MessageHoverToolbar,
+  messageToolbarButtonClass,
 } from "./primitives/message";
 import {
   Bubble,
@@ -262,6 +264,7 @@ export function MessageItem({
 
   // Header: author name + agent badge + delivery status
   const displayName = authorName || m.userId;
+  const hasReactions = Boolean(reactions && Object.keys(reactions).length > 0);
 
   return (
     <Message align={align} className={cn("gap-1", className)} data-testid={testId} data-streaming={dataStreaming} data-message-id={dataMessageId}>
@@ -318,23 +321,16 @@ export function MessageItem({
         ) : null}
 
         {/* ── Bubble ── */}
-        <Bubble variant={bubbleVariant} align={align}>
+        <Bubble variant={bubbleVariant} align={align} className={hasReactions ? "mb-5" : undefined}>
+          {onReply && m.id && !isStreaming ? (
+            <MessageHoverToolbar align={align}>
+              <button type="button" onClick={onReply} className={messageToolbarButtonClass} aria-label="Reply to message">
+                <ReplyIcon className="size-3" />
+                Reply
+              </button>
+            </MessageHoverToolbar>
+          ) : null}
           <BubbleContent>
-            {/* Reply button (visible on hover, hidden while streaming) */}
-            {onReply && m.id && !isStreaming ? (
-              <div className={cn("mb-1 flex", align === "end" ? "justify-end" : "justify-start")}>
-                <button
-                  type="button"
-                  className="inline-flex h-6 items-center gap-1 rounded px-1.5 text-[10px] text-muted-foreground opacity-0 transition-opacity hover:bg-muted/60 hover:text-foreground group-hover/message:opacity-100"
-                  onClick={onReply}
-                  aria-label="Reply to message"
-                >
-                  <ReplyIcon className="size-3" />
-                  Reply
-                </button>
-              </div>
-            ) : null}
-
             {/* ── Message body ── */}
             <p className={cn("whitespace-pre-wrap break-words", isSelf ? "text-primary-foreground" : "text-foreground")}>
               {renderContentWithMentions(m.content)}
@@ -354,10 +350,18 @@ export function MessageItem({
           </BubbleContent>
 
           {/* ── Reactions ── */}
-          {reactions && Object.keys(reactions).length > 0 ? (
-            <BubbleReactions align={align} side="bottom">
-              {Object.entries(reactions).map(([emoji, count]) => (
-                <span key={emoji} className="text-sm">{emoji} {count}</span>
+          {hasReactions ? (
+            <BubbleReactions align={align === "end" ? "end" : "start"} side="bottom">
+              {Object.entries(reactions!).map(([emoji, count]) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => onReact?.(emoji)}
+                  className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[13px] text-slate-700 transition-colors hover:bg-slate-100"
+                >
+                  <span>{emoji}</span>
+                  <span className="text-slate-500">{count}</span>
+                </button>
               ))}
             </BubbleReactions>
           ) : null}

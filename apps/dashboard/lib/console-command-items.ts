@@ -6,10 +6,17 @@ import {
   Signal,
   Sparkles,
 } from "lucide-react";
-import { CONSOLE_NAV_MAIN, CONSOLE_NAV_TOOLS } from "@/app/components/console-nav";
+import {
+  CONSOLE_NAV_BUILD,
+  CONSOLE_NAV_DEV_TOOLS,
+  CONSOLE_NAV_GROUPS,
+  CONSOLE_NAV_INDUSTRIES,
+  CONSOLE_NAV_LABS,
+  CONSOLE_NAV_OPERATE,
+} from "@/app/components/console-nav";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
-export type ConsoleCommandGroup = "Navigate" | "Actions" | "Help";
+export type ConsoleCommandGroup = "Navigate" | "Industries" | "Labs" | "Operate" | "Actions" | "Help";
 
 export type ConsoleCommandAction = "copy-worker-url" | "open-support";
 
@@ -24,28 +31,30 @@ export interface ConsoleCommandItemDef {
   action?: ConsoleCommandAction;
 }
 
-function navItems(quickstartHref: string): ConsoleCommandItemDef[] {
-  const main = CONSOLE_NAV_MAIN.map((item) => ({
+function mapNavItems(
+  items: Array<{ href: string; label: string; description?: string; icon: LucideIcon }>,
+  group: ConsoleCommandGroup,
+  quickstartHref: string,
+): ConsoleCommandItemDef[] {
+  return items.map((item) => ({
     id: `nav-${item.href}`,
-    group: "Navigate" as const,
+    group,
     label: item.label,
     description: item.description,
     icon: item.icon,
     href: item.href === "/onboarding" ? quickstartHref : item.href,
-    keywords: [item.href.replace(/^\//, ""), "go", "open"],
+    keywords: [item.href.replace(/^\//, ""), "go", "open", group.toLowerCase()],
   }));
+}
 
-  const tools = CONSOLE_NAV_TOOLS.map((item) => ({
-    id: `nav-${item.href}`,
-    group: "Navigate" as const,
-    label: item.label,
-    description: item.description,
-    icon: item.icon,
-    href: item.href,
-    keywords: [item.href.replace(/^\//, ""), "go", "open"],
-  }));
-
-  return [...main, ...tools];
+function navItems(quickstartHref: string): ConsoleCommandItemDef[] {
+  return [
+    ...mapNavItems(CONSOLE_NAV_BUILD, "Navigate", quickstartHref),
+    ...mapNavItems(CONSOLE_NAV_DEV_TOOLS, "Navigate", quickstartHref),
+    ...mapNavItems(CONSOLE_NAV_INDUSTRIES, "Industries", quickstartHref),
+    ...mapNavItems(CONSOLE_NAV_OPERATE, "Operate", quickstartHref),
+    ...mapNavItems(CONSOLE_NAV_LABS, "Labs", quickstartHref),
+  ];
 }
 
 export function buildConsoleCommandItems(quickstartHref: string): ConsoleCommandItemDef[] {
@@ -124,15 +133,35 @@ export function filterConsoleCommandItems(
   });
 }
 
-/** Group filtered items preserving Navigate → Actions → Help order. */
+const GROUP_ORDER: ConsoleCommandGroup[] = ["Navigate", "Industries", "Operate", "Labs", "Actions", "Help"];
+
+/** Group filtered items preserving section order. */
 export function groupConsoleCommandItems(
   items: ConsoleCommandItemDef[],
 ): Array<{ group: ConsoleCommandGroup; items: ConsoleCommandItemDef[] }> {
-  const order: ConsoleCommandGroup[] = ["Navigate", "Actions", "Help"];
-  return order
+  return GROUP_ORDER
     .map((group) => ({
       group,
       items: items.filter((item) => item.group === group),
     }))
     .filter((section) => section.items.length > 0);
+}
+
+/** Resolve nav group + item for breadcrumb rendering. */
+export function resolveConsoleNavContext(pathname: string | null): {
+  groupLabel: string;
+  itemLabel: string;
+  itemHref: string;
+} | null {
+  if (!pathname || pathname === HOSTED_PATHS.console) return null;
+
+  for (const group of CONSOLE_NAV_GROUPS) {
+    const match = group.items.find(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+    );
+    if (match) {
+      return { groupLabel: group.label, itemLabel: match.label, itemHref: match.href };
+    }
+  }
+  return null;
 }

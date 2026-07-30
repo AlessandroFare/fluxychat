@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-07-28T12:02:58.939Z",
+  "note": "Artifact sizes only — app bundles tree-shake imports. Compare gzip in your bundler for production.",
+  "entries": [
+    {
+      "package": "@fluxy-chat/sdk",
+      "file": "packages/sdk/dist/index.js",
+      "rawBytes": 114499,
+      "gzipBytes": 18605,
+      "raw": "111.8 kB",
+      "gzip": "18.2 kB"
+    },
+    {
+      "package": "@fluxy-chat/sdk/react",
+      "file": "packages/sdk/dist/react.js",
+      "rawBytes": 763,
+      "gzipBytes": 360,
+      "raw": "0.7 kB",
+      "gzip": "0.4 kB"
+    },
+    {
+      "package": "@fluxy-chat/sdk/testing",
+      "file": "packages/sdk/dist/testing-utils.js",
+      "rawBytes": 5023,
+      "gzipBytes": 1325,
+      "raw": "4.9 kB",
+      "gzip": "1.3 kB"
+    },
+    {
+      "package": "@fluxy-chat/react",
+      "file": "packages/react/dist/index.js",
+      "rawBytes": 639,
+      "gzipBytes": 258,
+      "raw": "0.6 kB",
+      "gzip": "0.3 kB"
+    }
+  ],
+  "maxGzipKb": 18.2
+}

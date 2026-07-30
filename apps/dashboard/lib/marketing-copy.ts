@@ -1,5 +1,5 @@
 /**
- * Marketing UX copy and per-route SEO (avoids keyword cannibalization between /landing, /get-started, /docs).
+ * Marketing UX copy and per-route SEO (avoids keyword cannibalization between homepage, /get-started, /docs).
  */
 
 import type { Metadata } from "next";
@@ -10,10 +10,10 @@ export const SITE_DESCRIPTION =
 
 export const PAGE_METADATA = {
   landing: buildPageMetadata({
-    title: "AI-native chat SDK on Cloudflare — 14 platform adapters",
+    title: "Ship chat and live product from one SDK — FluxyChat",
     description:
-      "Add in-app chat, AI agents, and multi-platform messaging with @fluxy-chat/sdk. Streaming markdown, MCP tools, LLM middleware, WorkflowAgent — self-host on Workers or use hosted cloud.",
-    path: "/landing",
+      "In-app chat, AI agents, live stream, collab, game, and IoT on Cloudflare Workers. Self-host or hosted — SDK, docs, and operator console.",
+    path: "/",
   }),
   why: buildPageMetadata({
     title: "Why Fluxychat",

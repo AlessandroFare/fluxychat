@@ -1,5 +1,6 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
-import { buildFluxyConnectionState, type FluxyConnectionState } from "./connection-state";
+import { buildFluxyConnectionState, type FluxyConnectionState, type FluxyConnectionStateStatus } from "./connection-state";
+import type { FluxyChatTransport } from "./connection-state";
 import type { FluxyRoomConnectionStatus as FluxyWsConnectionStatus } from "./room-connection";
 import type { FluxySendMessageOptions } from "./message-template";
 import type {
@@ -9,11 +10,8 @@ import type {
   FluxyRoomLive,
 } from "./index";
 
-/** WebSocket status plus SSE/polling fallbacks used by {@link useChat}. */
-export type FluxyUseChatConnectionStatus =
-  | FluxyWsConnectionStatus
-  | "polling"
-  | "sse";
+/** WebSocket status plus Portal-style degraded / blocked and legacy SSE/polling aliases. */
+export type FluxyUseChatConnectionStatus = FluxyConnectionStateStatus;
 
 export interface FluxyToolThreadEvent {
   key: string;
@@ -64,7 +62,7 @@ export interface FluxyRoomStoreState {
   loadMore: () => Promise<void>;
   /** Refresh `liveSnapshot` from `GET /rooms/:id/live` (Portal-style). */
   loadLive: () => Promise<void>;
-  setTyping: (isTyping: boolean) => void;
+  setTyping: (isTyping: boolean, intent?: import("./message-template").FluxyPresenceIntent) => void;
   editMessage: (messageId: number, content: string) => void;
   sendReaction: (messageId: number, emoji: string, op?: "add" | "remove") => void;
   sendReadReceipt: (messageId: number) => void;
@@ -86,6 +84,70 @@ function noop(): void {
 function notReady(): never {
   throw new Error("Fluxy room session is not started");
 }
+
+const inertRoomActions: Pick<
+  FluxyRoomStoreState,
+  | "sendMessage"
+  | "retryMessage"
+  | "loadHistory"
+  | "loadMore"
+  | "loadLive"
+  | "setTyping"
+  | "editMessage"
+  | "sendReaction"
+  | "sendReadReceipt"
+  | "deleteMessage"
+  | "invokeAgent"
+  | "clearToolThread"
+  | "sendClientEvent"
+> = Object.freeze({
+  sendMessage: noop,
+  retryMessage: noop,
+  loadHistory: async () => {},
+  loadMore: async () => {},
+  loadLive: async () => {},
+  setTyping: noop,
+  editMessage: noop,
+  sendReaction: noop,
+  sendReadReceipt: noop,
+  deleteMessage: noop,
+  invokeAgent: async () => notReady(),
+  clearToolThread: noop,
+  sendClientEvent: noop,
+});
+
+/**
+ * Frozen snapshot for SSR and pre-session render (Portal-style inert identity).
+ * Referentially stable — safe as `useSyncExternalStore` server snapshot.
+ */
+export const INERT_FLUXY_ROOM_SNAPSHOT: FluxyRoomStoreState = Object.freeze({
+  messages: [] as FluxyChatMessage[],
+  hasMore: false,
+  isLoadingMore: false,
+  historyLoaded: false,
+  online: 0,
+  typingUsers: {} as Record<string, boolean>,
+  typingIntents: {} as Record<string, import("./index").FluxyPresenceIntent>,
+  seenBy: {} as Record<number, string[]>,
+  onlineUsers: [] as string[],
+  presenceMembers: [] as Array<{ userId: string; userInfo?: Record<string, unknown> }>,
+  liveSnapshot: null,
+  subscriptionCount: 0,
+  socketId: null,
+  connected: false,
+  connectionStatus: "idle" as FluxyUseChatConnectionStatus,
+  connectionState: buildFluxyConnectionState({ status: "idle", transport: "none" }),
+  reconnectAttempt: 0,
+  reconnectDelayMs: 0,
+  connectionError: null,
+  agentTyping: false,
+  wsTypingAgentId: null,
+  invokeTypingAgentId: null,
+  reactions: {} as Record<number, Record<string, number>>,
+  toolThreadEvents: [] as FluxyToolThreadEvent[],
+  lastAgentRun: null,
+  ...inertRoomActions,
+});
 
 export function createFluxyRoomStore(): FluxyRoomStore {
   return createStore<FluxyRoomStoreState>()(() => ({
@@ -114,19 +176,7 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     reactions: {},
     toolThreadEvents: [],
     lastAgentRun: null,
-    sendMessage: noop,
-    retryMessage: noop,
-    loadHistory: async () => {},
-    loadMore: async () => {},
-    loadLive: async () => {},
-    setTyping: noop,
-    editMessage: noop,
-    sendReaction: noop,
-    sendReadReceipt: noop,
-    deleteMessage: noop,
-    invokeAgent: async () => notReady(),
-    clearToolThread: noop,
-    sendClientEvent: noop,
+    ...inertRoomActions,
   }));
 }
 
@@ -140,7 +190,7 @@ export function syncRoomConnectionState(
       | "reconnectDelayMs"
       | "connected"
     >
-  >,
+  > & { fallbackTransport?: FluxyChatTransport; canPublishViaHttp?: boolean },
   current: Pick<
     FluxyRoomStoreState,
     | "connectionStatus"
@@ -164,6 +214,7 @@ export function syncRoomConnectionState(
   const reconnectAttempt = patch.reconnectAttempt ?? current.reconnectAttempt;
   const reconnectDelayMs = patch.reconnectDelayMs ?? current.reconnectDelayMs;
   const connected = patch.connected ?? current.connected;
+  const { fallbackTransport, canPublishViaHttp } = patch;
 
   return {
     connectionStatus,
@@ -177,6 +228,8 @@ export function syncRoomConnectionState(
       retryAttempt: reconnectAttempt,
       reconnectDelayMs:
         connectionStatus === "reconnecting" ? reconnectDelayMs : null,
+      transport: fallbackTransport,
+      canPublishViaHttp: canPublishViaHttp ?? false,
     }),
   };
 }

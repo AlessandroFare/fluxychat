@@ -194,6 +194,29 @@ export async function scanContent(env, { projectId, text }) {
 }
 
 /**
+ * Policy version fingerprint for DLP rule sets (builtin + custom).
+ */
+export async function getDlpPolicyVersion(env, { projectId }) {
+  const rules = await listDlpRules(env, { projectId });
+  const enabled = rules.filter((r) => r.enabled);
+  const fingerprint = `${BUILTIN_PATTERNS.length}:${enabled.length}:${enabled.map((r) => `${r.id}:${r.updatedAt}`).join("|")}`;
+  return {
+    version: fingerprint.length > 64 ? `${fingerprint.slice(0, 32)}…${enabled.length}` : fingerprint,
+    builtinPatternCount: BUILTIN_PATTERNS.length,
+    customRuleCount: rules.length,
+    enabledRuleCount: enabled.length,
+    updatedAt: enabled[0]?.updatedAt ?? null,
+  };
+}
+
+export async function scanContentKind(env, { projectId, text, contentKind }) {
+  const kind = ["text", "file", "audio"].includes(contentKind) ? contentKind : "text";
+  const normalized = kind === "text" ? text : typeof text === "string" ? text : "";
+  const matches = await scanContent(env, { projectId, text: normalized });
+  return { contentKind: kind, matches };
+}
+
+/**
  * Redact matched text segments, replacing each match with [REDACTED-{type}].
  */
 export function redactText(text, matches) {

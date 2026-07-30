@@ -1,0 +1,61 @@
+---
+title: AI governance
+description: Register models, prompts, and tools with risk tiers, run pre-deploy evaluations, and export evidence for SOC 2 audits.
+---
+
+Use the [**AI Governance**](/ai-governance) dashboard or `/admin/ai-governance/*` APIs to maintain a registry before deploying agents to production.
+
+## Registry
+
+| Asset | Risk tiers | Auto-approve |
+|-------|------------|--------------|
+| Models | low / medium / high / critical | Manual approval tracked |
+| Prompts | same | low + medium → `approved`; high/critical → `pending` |
+| Tools | same | `requiresApproval` for high/critical |
+
+## Pre-deploy evaluation
+
+```bash
+curl -X POST "$WORKER/admin/ai-governance/evaluate" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"targetId":"gpt-4o-mini","targetType":"model"}'
+```
+
+Returns `passed`, `score`, and `evidence` for auditor packs.
+
+## Evidence export
+
+```bash
+curl "$WORKER/admin/ai-governance/evidence" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -o ai-governance-evidence.json
+```
+
+Combine with [`/soc2`](/soc2) SOC 2 evidence export.
+
+## Runtime enforcement
+
+Execution-time checks use D1-backed action policies:
+
+- `GET /enterprise/ai-policies`
+- `POST /enterprise/ai-policies/check`
+- `GET /enterprise/ai-policies/violations`
+
+## SDK (dev)
+
+```typescript
+import { createAiGovernance } from "@fluxy-chat/sdk";
+
+const gov = createAiGovernance({ autoApproveTiers: ["low", "medium"] });
+gov.registerModel({
+  modelId: "gpt-4o-mini",
+  provider: "openai",
+  version: "2024-07",
+  riskTier: "medium",
+  allowedUseCases: ["support"],
+  approvedBy: "admin@example.com",
+});
+```
+
+Production registries should use Worker KV via `/admin/ai-governance/*`.

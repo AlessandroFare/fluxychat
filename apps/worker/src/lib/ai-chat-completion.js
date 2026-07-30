@@ -32,7 +32,7 @@ export async function chatCompletion(env, input) {
     env.AI_DIGEST_MODEL ||
     env.AI_SUGGEST_MODEL ||
     env.AI_MODEL ||
-    "openai/gpt-4o-mini";
+    "deepseek-v4-flash-free";
 
   const res = await fetch(transport.chatCompletionsUrl, {
     method: "POST",

@@ -1,0 +1,92 @@
+---
+title: "FluxyChat SDK — AI Agent Skill"
+description: "You are coding with FluxyChat SDK (`@fluxychat/sdk`). All imports from `@fluxychat/sdk` or local `./index`. Core pattern: factory functions (`createXyz()`) retu"
+---
+
+## Identity
+You are coding with FluxyChat SDK (`@fluxychat/sdk`). All imports from `@fluxychat/sdk` or local `./index`. Core pattern: factory functions (`createXyz()`) returning interfaces with per-instance state.
+
+## Modules
+
+### Core
+- **ThreadState** — `createThreadState()`, `createThreadStateComposer()`: thread management with state merging
+- **Outbox** — `createOutbox()`: message queue with dedup, flush, bump
+- **Transport** — `createWebSocketTransport()`, `createAdaptiveTransport()`, `createDurableTransport()`, `createWebTransport()`: WebSocket/WebTransport with backpressure
+- **Sync** — `delta-sync.ts`: CRDT-like state sync with patches
+
+### Media & Voice
+- **Voice pipeline** — `createVoicePipeline()`: mic→ASR→LLM→TTS→speaker 5-stage orchestrator with per-stage metrics
+- **Voice realtime** — `createRealtimeProvider()`, `createSemanticEOTDetector()`: realtime audio with WebRTC, semantic endpointing
+- **Voice quality** — `createSloTracker()` (TTFA percentiles), `createNoiseProcessor()` (AEC/noise/gain), `createQualityCollector()` (snapshot breakdown)
+- **Turn detection** — `createTurnDetector()`: VAD energy gate + semantic EOT, dynamic endpointing
+- **Voice controls** — `createProsodyController()` (style/rate/pitch), `createDiarizer()` (speaker ID/overlap/correction)
+- **Call QA** — `createQaAnalyzer()`: topic/outcome/sentiment/compliance scoring with evidence spans
+- **Huddles** — `createHuddle()`: WebRTC join/leave, mute/unmute, screen share, captions, recording consent
+- **Video generation** — `createVideoGenerator()`: polling progress, cancel, multi-job tracking
+
+### AI Tools
+- **Tool system** — `getPresetTools()`, `buildToolList()`, `createChatTools()`: preset tools with approval configs, tool overrides
+- **Dynamic tools** — `dynamicTool()`, `createDynamicToolRegistry()`: runtime tool registration
+- **Call options** — `callOptionsSchema()`, `prepareCall()`, `createAgentWithCallOptions()`: type-safe runtime config
+- **Workflow agent** — `createWorkflowAgent()`: LLM-powered multi-step agent
+- **Agent delegation** — `createAgentDelegation()`: cross-agent routing with skills, retries, fallback
+- **Agent-to-agent** — `createAgentToAgent()`: direct agent messaging
+- **Regex matching** — `createRegexMessageMatching()`: pattern-based message routing
+- **Slash commands** — `createSlashCommands()`: /command parser
+- **Gamification** — `createGamification()`: XP/levels/badges/streaks
+- **Moderation** — `createModeration()`: profanity/spam/PII/content policies
+- **Generative UI** — `createGenerativeUI()`: dynamic React component rendering, approve/revoke
+- **MCP** — `createMcpServer()`, `createMcpClient()`, `createMcpNegotiation()`, `createMcpIntegration()`
+- **Transcripts** — `createTranscriptStore()`: search/tag/export
+- **Message serialization** — `createMessageSerialization()`: compress/decompress, migration
+
+### Real-time Infrastructure
+- **Connections** — `createConnections()`: connection pool with join/leave
+- **Concurrency** — `ConcurrentQueue`, `createSubscriptionSet()`
+- **Relay** — `createDecentralizedRelay()`: peer-to-peer relay with DHT
+- **Failover** — `createRegionalFailover()`: multi-region fallback
+- **Room** — `createRoomConnection()`, `createRoomSession()`, `createRoomSequencer()`, `createBroadcast()`, `createMessageDelivery()`, `createMessageHistory()`, `createRoomRestClient()`
+- **Delivery** — `createDeliverySemantics()`: at-most-once/at-least-once/exactly-once
+- **Streaming** — `createStreamingEnhancements()`, `createStreamingEditBatcher()`
+- **Sync primitives** — `createLockManager()`, `createSyncPrimitives()`, `createMutex()`, `createRWLock()`, `createConditionVariable()`, `createSemaphore()`
+- **Ephemeral** — `createEphemeralStorage()`: auto-expiring key-value
+- **Platform adapter** — `createPlatformAdapter()`: platform abstraction
+
+### Enterprise/Security
+- **MLS E2EE** — `createMlsManager()`: MLS protocol groups, key rotation, encrypt/decrypt, 3 cipher suites
+- **AI governance** — `createAiGovernance()`: model/prompt/tool registry, risk tiering, approvals
+- **eDiscovery** — `createEdiscoveryManager()`: legal hold, export, SHA-256 audit log
+- **DLP** — `createDlpDetector()`: PHI/PCI pattern scan, redact/block/flag
+- **CMK** — `createCmkManager()`: envelope encryption, key rotation/revocation, tenant-isolated audit
+- **Data residency** — `createResidencyValidator()`: region pinning, subprocessors, 8 region codes
+- **Policy engine (OPA)** — `createPolicyEngine()`: enforcing/shadow/disabled, rego-like matching
+- **MCP identity** — `createMcpIdentityManager()`: server registration, instructions, tool provenance
+- **Bot protection** — `createBotProtection()`: rate limits, raid mode, trust scoring
+- **Session replay** — `createSessionReplayManager()`: redacted timeline, consent, deterministic protocol
+- **Federation** — `createFederationBridge()`: Matrix/ActivityPub/DM bridges
+- **Feature flags** — `createFeatureFlagManager()`: tenant rollout, kill switch, metric guardrails
+- **Sandbox** — `createSandboxExecutor()`: isolated runs, quotas, timeouts, multi-runtime
+- **GUI sandbox** — `createGuiSandboxManager()`: iframe sandbox, CSP, capability grants
+
+### Developer Experience
+- **Testing utils** — `createMockAdapter()`, `createMockState()`, `createMockChatInstance()`, `matchers` (Vitest custom)
+- **Telemetry** — `createTelemetryManager()`, `OpenTelemetryIntegration()`, `DevToolsTelemetryIntegration()`
+- **DevTools** — `createDevToolsStore()`, `createDevToolsInspector()`
+- **Deterministic models** — `createDeterministicLanguageModel()`: scripted output/chunks/errors
+- **Stream fixtures** — `streamFixtures`, `simulateStream()`: edge case stream patterns
+- **Dynamic tools** — `dynamicTool()`, `createDynamicToolRegistry()`: runtime tool registration
+- **Call options** — `callOptionsSchema()`, `prepareCall()`: type-safe runtime config
+- **Error hierarchy** — `ChatError`, `RateLimitError`, `LockError`, `NotImplementedError`
+
+## Patterns
+1. Factory functions only (no class exports, no module-level state)
+2. Each factory returns typed interface with per-instance mutable state
+3. In-memory implementations — deployer wires real infrastructure (LiveKit, Redis, MLS provider, etc.)
+4. Tests use `vi.fn()` mocks, no external services
+5. Guide docs in `docs/guides/*.md` with usage examples
+
+## Test Command
+```bash
+cd packages/sdk && npx vitest run
+```
+688+ tests across 82+ files.

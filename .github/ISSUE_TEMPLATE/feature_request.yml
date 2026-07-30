@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a capability aligned with the FluxyChat roadmap
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to accomplish?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: build_first
+    attributes:
+      label: Build-first fit
+      options:
+        - label: Can be implemented without mandatory paid SaaS (OSS/self-host OK)
+          required: false
+
+  - type: input
+    id: roadmap
+    attributes:
+      label: Roadmap ID (if known)
+      placeholder: "MO-9.1, DX-5, etc."

@@ -133,6 +133,54 @@ export default function SettingsPage() {
         />
 
         <SettingsCard
+          title="Identity &amp; access"
+          description="SAML SSO for your IdP and SCIM tokens for automated user provisioning."
+          cta={{ label: "Configure SAML / SCIM →", href: "/settings/identity" }}
+        />
+
+        <SettingsCard
+          title="Retention &amp; legal hold"
+          description="Message retention policies, legal holds, and chain-of-custody export snapshots."
+          cta={{ label: "Open retention →", href: "/settings/retention" }}
+        />
+
+        <SettingsCard
+          title="E-discovery"
+          description="Legal cases, custodians, preservation orders, and evidence chain-of-custody."
+          cta={{ label: "Open e-discovery →", href: "/ediscovery" }}
+        />
+
+        <SettingsCard
+          title="DLP &amp; encryption keys"
+          description="Custom DLP rules, PHI/PCI scan, policy versioning, and customer-managed keys."
+          cta={{ label: "Configure DLP →", href: "/settings/dlp" }}
+        />
+
+        <SettingsCard
+          title="HIPAA &amp; BAA"
+          description="Business Associate Agreement tracking, readiness checklist, and PHI metrics."
+          cta={{ label: "Open HIPAA →", href: "/settings/hipaa" }}
+        />
+
+        <SettingsCard
+          title="SOC 2 evidence"
+          description="Control dashboard, DLP smoke tests, audit log and evidence JSON export."
+          cta={{ label: "Open SOC 2 →", href: "/soc2" }}
+        />
+
+        <SettingsCard
+          title="MCP identity"
+          description="MCP server registry, tool provenance, and tool-call audit log."
+          cta={{ label: "Open MCP settings →", href: "/settings/mcp" }}
+        />
+
+        <SettingsCard
+          title="CRM &amp; helpdesk"
+          description="Salesforce, Zendesk, HubSpot, Intercom — sync contacts, tickets, and agent handoff."
+          cta={{ label: "Configure CRM →", href: "/settings/crm" }}
+        />
+
+        <SettingsCard
           title="Danger zone"
           description="Delete a project, revoke API keys, force-expire sessions. These actions are irreversible."
           cta={{ label: "Open admin →", href: "/admin" }}

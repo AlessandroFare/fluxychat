@@ -2,7 +2,7 @@
 
 Scaffold a new [FluxyChat](https://github.com/AlessandroFare/fluxychat) bot project with a single command.
 
-## Quick Start
+## Quick start
 
 ```bash
 npx create-fluxy-chat my-bot
@@ -10,7 +10,7 @@ npx create-fluxy-chat my-bot
 
 This launches an interactive prompt to configure your bot project.
 
-## Non-Interactive Usage
+## Non-interactive usage
 
 ```bash
 # Create a Slack bot with pnpm
@@ -22,7 +22,7 @@ npx create-fluxy-chat my-bot --adapter telegram --skip-install
 # Create a Discord bot with defaults
 npx create-fluxy-chat my-bot -y --adapter discord
 
-# Create a basic webhook bot
+# Create a basic webhook bot (includes fluxy.config.ts template)
 npx create-fluxy-chat my-bot --adapter basic
 ```
 
@@ -48,20 +48,20 @@ npx create-fluxy-chat my-bot --adapter basic
 | `discord` | Discord interactions bot | Discord |
 | `web` | Web chat HTTP API bot | Any HTTP client |
 
-## What You Get
+## What you get
 
 Each generated project includes:
 
 - **`src/index.ts`** — Cloudflare Workers entry point with route handling
 - **`src/bot.ts`** — Bot handler using `@fluxy-chat/sdk`
+- **`fluxy.config.ts`** — Room authz and publish middleware (basic template)
 - **`wrangler.toml`** — Cloudflare Workers deployment config
 - **`.dev.vars`** — Local development environment variables
 - **`.env.example`** — Example environment variables for your adapter
 - **`tsconfig.json`** — TypeScript configuration (for TS projects)
 - **`README.md`** — Project-specific setup instructions
-- **`.gitignore`** — Standard ignore patterns
 
-## Package Manager Detection
+## Package manager detection
 
 The CLI auto-detects your package manager from lockfiles:
 
@@ -69,20 +69,13 @@ The CLI auto-detects your package manager from lockfiles:
 - `yarn.lock` → yarn
 - `package-lock.json` or none → npm
 
-You can override with `--pm`.
+Override with `--pm`.
 
-## Development
+## Related packages
 
-```bash
-# Install dependencies
-pnpm install
-
-# Build the CLI
-pnpm build
-
-# Run locally
-node dist/index.js my-test-bot -y --adapter basic
-```
+- [`@fluxy-chat/sdk`](https://www.npmjs.com/package/@fluxy-chat/sdk)
+- [`@fluxy-chat/agent`](https://www.npmjs.com/package/@fluxy-chat/agent)
+- [`@fluxy-chat/config`](https://www.npmjs.com/package/@fluxy-chat/config)
 
 ## License
 

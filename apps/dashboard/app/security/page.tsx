@@ -203,7 +203,28 @@ export default function SecurityPage() {
         label: "CORS Configuration",
         description: "Cross-origin requests are restricted to known domains.",
         status: "unknown",
-        detail: "Check your Worker CORS configuration to ensure only trusted origins are allowed.",
+        detail: "Set ALLOWED_ORIGINS on the Worker. Dashboard CSP proxies geocode via /api/geocode/search.",
+      },
+      {
+        id: "csp",
+        label: "Dashboard CSP",
+        description: "Content-Security-Policy blocks untrusted connect-src.",
+        status: "pass",
+        detail: "External geocoding proxied server-side. Worker API uses ALLOWED_ORIGINS.",
+      },
+      {
+        id: "devtools",
+        label: "DevTools LLM playground",
+        description: "POST /api/devtools/chat requires JWT + configured LLM.",
+        status: adminJwt.trim() || memberJwt.trim() ? "pass" : "warn",
+        detail: "Configure AI_BASE_URL + AI_API_KEY in Worker .dev.vars for local LLM tests.",
+      },
+      {
+        id: "gdpr",
+        label: "GDPR tooling",
+        description: "Export and retention flows available.",
+        status: "pass",
+        detail: "See Privacy page for export/delete. Worker routes: /api/gdpr/*.",
       },
     ];
     return items;

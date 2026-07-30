@@ -7,8 +7,8 @@ import { test, expect } from "@playwright/test";
  * CI runs *.smoke.spec.ts; non-smoke specs run only in local dev.
  */
 test.describe("cloudflare cost table", () => {
-  test("renders on /landing with three plan rows", async ({ page }) => {
-    await page.goto("/landing", { waitUntil: "domcontentloaded" });
+  test("renders on / with three plan rows", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(
       page.getByRole("heading", { name: "What does it actually cost on Cloudflare?" }),
     ).toBeVisible({ timeout: 15_000 });

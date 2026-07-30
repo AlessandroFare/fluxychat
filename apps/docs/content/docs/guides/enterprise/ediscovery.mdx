@@ -1,0 +1,60 @@
+---
+title: E-discovery
+description: Manage legal cases, custodians, preservation orders, and evidence chain-of-custody in FluxyChat.
+---
+
+FluxyChat stores e-discovery metadata in D1: cases, custodians, preservation scopes, collected evidence, and chain-of-custody events. Use the dashboard **E-discovery** page or `/admin/ediscovery/*` APIs.
+
+## Workflow
+
+1. **Create case** with a unique case number and matter title.
+2. **Add custodians** (users or external contacts) tied to the case.
+3. **Preserve data** — record room/user scopes before export (pairs with [retention legal hold](/settings/retention)).
+4. **Collect evidence** — register messages, attachments, or exports with hash + collector audit trail.
+5. **Chain of custody** — `GET /admin/ediscovery/evidence/{id}/chain` for auditor handoff.
+
+## Admin API
+
+```bash
+# Stats
+curl "$WORKER/admin/ediscovery/stats" -H "Authorization: Bearer $ADMIN_JWT"
+
+# Create case
+curl -X POST "$WORKER/admin/ediscovery/cases" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"caseNumber":"MAT-2026-001","title":"Customer dispute","priority":"high"}'
+
+# Preserve room messages
+curl -X POST "$WORKER/admin/ediscovery/cases/edc_abc/preserve" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"roomId":"support-1","dataTypes":"messages,attachments","reason":"Litigation hold"}'
+```
+
+## Message history import
+
+When migrating from another vendor, use the admin import API for backdated messages:
+
+```bash
+curl -X POST "$WORKER/admin/messages/import" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roomId": "legacy-room",
+    "userId": "legacy-user-42",
+    "content": "Imported message body",
+    "createdAt": "2024-06-01T12:00:00.000Z",
+    "clientMessageId": "pusher-msg-991"
+  }'
+```
+
+Batch (max 100 per request): `POST /admin/messages/import/batch` with `{ "messages": [ ... ] }`.
+
+CLI: `pnpm import-chat-history ./export.json` (uses the import API when `userId` / `createdAt` are present).
+
+## Related
+
+- [DLP and audit export](/docs/guides/enterprise/dlp-audit-export)
+- [SOC 2 / HIPAA runbook](/docs/guides/enterprise/soc2-hipaa-runbook)
+- [Migrate from Pusher](/docs/guides/migrate-from-pusher)

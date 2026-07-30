@@ -2,7 +2,7 @@
 
 import React, { useCallback, useRef, useState } from "react";
 import { Sparkles, Loader2 } from "lucide-react";
-import { useFluxyChatOptional } from "@fluxy-chat/sdk";
+import { useFluxyChatOptional } from "@fluxy-chat/react";
 import { Button } from "../components/ui";
 
 interface ReplySuggestionsProps {

@@ -1,0 +1,32 @@
+---
+title: "In-app chat vs support desk"
+description: "Intercom-style roundups are written for support teams. FluxyChat is the room layer you embed in your SaaS: SDK, history, webhooks, agent timeline. Not a helpdesk replacement."
+---
+
+## Two different products
+
+- Support desk: shared inbox, tickets, CSAT, macros, help-center widget.
+- In-app chat infra: tenant rooms, JWT members, WebSocket transport, D1 history, your UI.
+- FluxyChat is the second. You can still build support on top — see docs/use-cases/support-chat.md.
+
+## Same benefits, different buyer
+
+Articles about live chat often talk about onboarding and retention inside the product. That applies to embedded chat too. The buyer is just different: your engineering team shipping messaging in the app, not a CS lead shopping for a helpdesk.
+
+FluxyChat is for builders who want a chat layer on Cloudflare they can self-host. Not a full support suite.
+
+## Humans, agents, and CRM hooks
+
+- Users describe what they want in chat; your agent calls tools or external APIs.
+- tool_call and tool_result ride the same WebSocket as user messages — one timeline to replay.
+- Pair with whatever integration runner you use (MCP, CLI skills, webhooks) for Salesforce, HubSpot, etc.
+
+## When you actually need a helpdesk
+
+If you need ticketing, SLA queues, and a standalone support portal on day one, look at Intercom-style or Libredesk-style products. FluxyChat replaces the socket layer when chat lives inside your product UI, not the whole support operation.
+
+## Search intent (for your own landing copy)
+
+- Good fit: embedded chat for SaaS, in-app chat platform, Pusher alternative, realtime chat in Next.js.
+- Usually wrong fit: best live chat software, Zendesk alternatives — unless you want support-team traffic.
+- More detail on /compare and /why#product-chat.

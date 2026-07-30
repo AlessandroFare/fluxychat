@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { serializeFrame } from "@portalsdk/wire-protocol";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Portal } from "@portalsdk/core";
 
@@ -125,5 +125,92 @@ describe("useInbox over the mock server", () => {
     expect(result.current.items.map((i) => i.id)).toEqual(["i1"]);
     expect(result.current.unseen).toBe(1);
     expect(result.current.counter).toBe(3);
+  });
+});
+
+describe("useInbox onItem", () => {
+  it("does not fire for the ready/backlog snapshot", async () => {
+    const server = new MockSocketServer(seeded); // seeded ready carries i1 and i2
+    installMocks(server);
+    const onItem = vi.fn();
+    const { result } = renderHook(() => useInbox({ onItem }), {
+      wrapper: wrapperFor(makePortal()),
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    expect(result.current.items.map((i) => i.id)).toEqual(["i1", "i2"]);
+    expect(onItem).not.toHaveBeenCalled();
+  });
+
+  it("fires once for an item arriving after mount", async () => {
+    const server = new MockSocketServer(seeded);
+    installMocks(server);
+    const onItem = vi.fn();
+    const { result } = renderHook(() => useInbox({ onItem }), {
+      wrapper: wrapperFor(makePortal()),
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    act(() =>
+      emitItem(server, { id: "i3", type: "mention", data: {}, channelId: "c1", at: 3, read: false }),
+    );
+
+    expect(onItem).toHaveBeenCalledTimes(1);
+    expect(onItem.mock.calls[0]?.[0]?.id).toBe("i3");
+  });
+
+  it("does not re-fire when the same item id is redelivered (leans on core's dedup)", async () => {
+    const server = new MockSocketServer(seeded);
+    installMocks(server);
+    const onItem = vi.fn();
+    const { result } = renderHook(() => useInbox({ onItem }), {
+      wrapper: wrapperFor(makePortal()),
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    const frame = { id: "i3", type: "mention", data: { v: 1 }, channelId: "c1", at: 3, read: false };
+    act(() => emitItem(server, frame));
+    act(() => emitItem(server, { ...frame, data: { v: 2 } })); // same id: redelivery / in-place update
+
+    expect(onItem).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-render with a new inline callback fires only the new callback, once", async () => {
+    const server = new MockSocketServer(seeded);
+    installMocks(server);
+    const first = vi.fn();
+    const second = vi.fn();
+    const { result, rerender } = renderHook(({ cb }: { cb: (item: unknown) => void }) => useInbox({ onItem: cb }), {
+      wrapper: wrapperFor(makePortal()),
+      initialProps: { cb: first },
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    rerender({ cb: second });
+
+    act(() =>
+      emitItem(server, { id: "i3", type: "mention", data: {}, channelId: "c1", at: 3, read: false }),
+    );
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops firing after unmount", async () => {
+    const server = new MockSocketServer(seeded);
+    installMocks(server);
+    const onItem = vi.fn();
+    const { result, unmount } = renderHook(() => useInbox({ onItem }), {
+      wrapper: wrapperFor(makePortal()),
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    unmount();
+
+    act(() =>
+      emitItem(server, { id: "i3", type: "mention", data: {}, channelId: "c1", at: 3, read: false }),
+    );
+
+    expect(onItem).not.toHaveBeenCalled();
   });
 });

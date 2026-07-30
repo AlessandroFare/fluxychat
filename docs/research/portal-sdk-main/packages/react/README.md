@@ -5,9 +5,11 @@ React bindings for the Portal client — a thin hook layer over
 over core's reactive stores (via `useSyncExternalStore`); they never own connections, so
 mounting a component opens the socket and unmounting releases it.
 
-Client-only: the hooks connect over WebSockets and read the DOM. They ship `"use client"`
-and throw if run during server-side rendering or inside a React Server Component. There is no
-SSR support in v1.
+Client-only: the hooks connect over WebSockets and read the DOM. They ship `"use client"`.
+During server rendering — including a Next.js Client Component's server prerender pass,
+which runs despite `"use client"` — they render an inert idle snapshot instead of connecting:
+no acquire, no network, nothing thrown. See
+[Using with Next.js App Router](#using-with-nextjs-app-router).
 
 ## Install
 
@@ -79,7 +81,9 @@ or anonymous mode) untouched.
 ## `useChannel`
 
 ```ts
-const result = useChannel<M>({ channelId, readOn, history, metadata, onMention, onError });
+const result = useChannel<M>({
+  channelId, readOn, history, metadata, onMention, onMessage, onError,
+});
 ```
 
 - `channelId` — the room to subscribe to. `undefined` renders inert (no connection) — the
@@ -91,26 +95,103 @@ const result = useChannel<M>({ channelId, readOn, history, metadata, onMention, 
 - `history` — initial backfill on connect (`number`, default 50, or `"none"`).
 - `metadata` — initial presence metadata for this session.
 - `onMention` / `onError` — fire on a mention addressed to you and on a delivered error.
+- `onMessage` — fires on every message delivered to this channel, persistent or ephemeral.
+  Useful for high-frequency ephemeral traffic (live cursors, presence-adjacent signals) that
+  you want to react to as discrete events rather than read off the accumulated `messages`.
 
 The result mirrors the channel: `messages`, `send`, `loadPrevious` / `hasPrevious` /
 `isLoadingPrevious`, `channel` (info), `me`, `presence`, `activity` / `sendActivity` /
-`typing` / `sendTyping`, `unread` / `markAsRead`, and `status`.
+`typing` / `sendTyping`, `unread` / `markAsRead`, `setMetadata`, and `status`.
+
+`setMetadata(metadata)` replaces your own presence metadata mid-session — a direct
+pass-through to the channel handle's `setMetadata`. Previously the only way to reach it was
+holding the core `ChannelHandle` yourself (`portal.channel(id)`) alongside the hook; that
+workaround still works (the handle is unchanged), but isn't necessary anymore.
 
 Content types are per call site: `useChannel<M>({ … })`.
 
 ## `useInbox`
 
 ```ts
-const { channels, items, counter, unseen, markAllRead, status } = useInbox<D>(query);
+const { channels, items, counter, unseen, markAllRead, status } = useInbox<D>({
+  channelId, where, onItem,
+});
 ```
 
 - `channels` / `items` — the (optionally filtered) conversation rows and item feed.
 - `counter` — the **global** badge (ignores this view's filter).
 - `unseen` — unseen items **within this view's filter**.
 - `markAllRead` — global, zero-arg.
-- `query` — `{ channelId?, where? }` to scope the view.
+- `channelId` / `where` — scope the view.
+- `onItem` — fires once per item arriving after mount. Never fires for the items already
+  present when the inbox becomes ready (that's what `items` is for), and never fires twice for
+  the same item — a redelivered item updates its data in `items` but doesn't re-announce
+  itself. A fresh inline callback on every render doesn't drop or duplicate events.
 
 Anonymous users get a permanently-empty ready inbox, so calling code needs no special case.
+
+Each item's `id` **is** the notification's idempotency key (see the sender's own docs), so
+it's the right thing to key a toast list on:
+
+```tsx
+import { useState } from "react";
+import { useInbox } from "@portalsdk/react";
+
+function useAssignmentToasts() {
+  const [toasts, setToasts] = useState<{ id: string; message: string }[]>([]);
+
+  useInbox({
+    onItem: (item) => {
+      if (item.type !== "ticket.assigned") return;
+      setToasts((current) => [...current, { id: item.id, message: item.title ?? "" }]);
+    },
+  });
+
+  return toasts;
+}
+```
+
+## Using with Next.js App Router
+
+`useChannel`/`useInbox` are Client Component hooks (they ship `"use client"`), same as any
+other stateful hook — no special wrapper is required. Put `PortalProvider` in a Client
+Component near the root of the subtree that needs it, and call the hooks from Client
+Components beneath it; everything above can stay a Server Component:
+
+```tsx
+// app/providers.tsx
+"use client";
+import { Portal } from "@portalsdk/core";
+import { PortalProvider } from "@portalsdk/react";
+
+const portal = new Portal({ apiKey: "pk_live_…" });
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return <PortalProvider client={portal}>{children}</PortalProvider>;
+}
+```
+
+```tsx
+// app/layout.tsx (Server Component)
+import { Providers } from "./providers";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+`dynamic(() => import("./room"), { ssr: false })` is **not required** to use these hooks —
+that workaround was for the pre-0.1.2 throwing behavior. During the server's prerender pass a
+component calling `useChannel`/`useInbox` renders its inert idle state (no connection is
+opened there); once the same component re-renders in the browser, it connects normally. You
+only need `ssr: false` for reasons unrelated to Portal (e.g. another dependency that itself
+doesn't tolerate server rendering).
 
 ## License
 

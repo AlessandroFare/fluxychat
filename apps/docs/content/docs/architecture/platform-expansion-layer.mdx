@@ -1,0 +1,57 @@
+---
+title: "Platform expansion — packages & integration map"
+description: "Status: Beta (July 2026)"
+---
+
+**Status:** Beta (July 2026)  
+**Related:** [vertical-platform-expansion.md](/docs/vertical-platform-expansion)
+
+---
+
+## What shipped
+
+| Capability | SDK | Worker | Packages used |
+|------------|-----|--------|---------------|
+| Capability realtime | `onCapabilityEvent`, `isCapabilityRealtimeEvent` | `fanoutRoomInternal` + WS `capability_event` | Native DO fan-out (no new npm) |
+| Customer Memory Graph | `createCustomerMemoryClient` | CDP `/api/cdp/*` + KG `/rooms/:id/kg` | Reuses existing D1 (`0133`, `0063`) |
+| Moderation Labels | `createModerationLabelsClient`, `evaluateModerationRules` | `POST /moderation/labels` | Pattern scan + optional Workers AI via `ai-moderation.js` |
+| Long-horizon agent tasks | `createWorkerAgentTaskClient` | `/agents/tasks` REST + D1 `0157` | Cloudflare Workflows ready for resume (future) |
+| Digital Twin MCP | `createDigitalTwinMcpRegistry` | — | In-process MCP tool registry (no `@modelcontextprotocol/sdk` on edge yet) |
+| Digital Twin persistence | `createWorkerDigitalTwinClient` | `/spatial/scenes` REST + D1 `0158` | Scenes, entities, agent grants |
+| FluxyGame persistence | `createWorkerFluxyGameClient` | `/games/*` REST + D1 `0159` | Lobbies, matches, player profiles |
+| FluxyIoT persistence | `createWorkerFluxyIoTClient` | `/iot/*` REST + D1 `0160` | Devices, readings, rules, shadows |
+| Agent Platform persistence | `createWorkerAgentPlatformClient` | `/agents/platform/*` + D1 `0161` | Configs, versions, deploys, memories |
+| FluxyStream bridge | `createWorkerFluxyStreamClient` | existing `/api/live/*` | Wraps live-streaming Worker routes |
+| Inbox where (server) | `getInbox(\{ where \})` | `GET /inbox?where=` | Server-side filter parity with Portal §6 |
+| Portal parity (prior pass) | `setToken`, `acquireFluxyRoomSession`, `useInbox` where+WS | `POST /tokens/anonymous` | `partysocket@1.3.0` optional transport |
+
+---
+
+## Recommended packages (next production gates)
+
+| Area | Package | Why |
+|------|---------|-----|
+| Graph layout (dashboard) | `ngraph.graph` (MIT) | Pure JS adjacency for memory graph viz |
+| Policy engine | `@open-policy-agent/opa-wasm` (Apache-2.0) | Wire `policy-approvals.ts` to Worker |
+| MCP server on edge | `@modelcontextprotocol/sdk` (MIT) | Remote MCP when twin persistence lands on Worker |
+| Agent schedules | `cron-parser` (MIT) | Deferred step resume for autonomous tasks |
+| Validation | `zod` (MIT) | HTTP boundary schemas for new routes |
+
+---
+
+## Dashboard surfaces
+
+- `/cross-channel` — Memory Graph tab + Worker agent task submit
+- `/spatial` — MCP create scene button on Digital Twin tab
+- Vertical studios — capability events persist + realtime via WS (when room connected)
+
+---
+
+## Honest readiness
+
+Nothing above is labeled **production** until:
+
+1. D1 migrations applied in target environments (`0157_autonomous_agent_tasks.sql`)
+2. `KNOWLEDGE_GRAPH_ENABLED=1` for KG extraction routes
+3. Integration tests against live Worker (not just unit mocks)
+4. Compliance gates per vertical (Health/Finance) unchanged

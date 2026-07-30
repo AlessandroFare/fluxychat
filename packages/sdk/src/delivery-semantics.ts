@@ -1,6 +1,6 @@
 export type DeliverySemantic = "at-most-once" | "at-least-once" | "exactly-once";
 
-export type DeliveryStage = "accepted" | "persisted" | "delivered" | "read";
+export type DeliveryStage = "accepted" | "persisted" | "delivered" | "read" | "failed";
 
 export interface DeliveryReceipt {
   messageId: string;

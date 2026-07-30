@@ -72,7 +72,9 @@ export function createThreadStateStore(kv?: KVNamespace): ThreadStateStore {
     }
   };
   const timer = setInterval(prune, 60_000);
-  if (typeof timer === 'object' && timer?.unref) timer.unref();
+  if (typeof timer === "object" && timer !== null && "unref" in timer) {
+    (timer as NodeJS.Timeout).unref?.();
+  }
 
   return {
     async get<T>(threadId: string): Promise<ThreadState<T> | null> {

@@ -1,0 +1,72 @@
+---
+title: "AI Tool Presets"
+description: "`createChatTools()` generates a set of AI SDK-compatible tools for chat operations (fetching messages, posting, reactions, etc.) with preset-based filtering and"
+---
+
+`createChatTools()` generates a set of AI SDK-compatible tools for chat operations (fetching messages, posting, reactions, etc.) with preset-based filtering and approval controls.
+
+## Usage
+
+```ts
+import { createChatTools } from "@fluxy-chat/sdk";
+
+const chat: ChatBinding = {
+  thread(id) { /* ... */ },
+  channel(id) { /* ... */ },
+  getUser(id) { /* ... */ },
+  openDM(id) { /* ... */ },
+};
+
+const tools = createChatTools({ chat, preset: "reader" });
+
+// Pass to AI SDK
+const result = await streamText({
+  model: openai("gpt-4"),
+  tools,
+});
+```
+
+## Presets
+
+| Preset | Tools | Description |
+|--------|-------|-------------|
+| `reader` | 7 | Read-only: fetch messages, threads, users |
+| `messenger` | 10 | Read + post + reactions + typing |
+| `moderator` | 17 | Full set including edit, delete, subscriptions |
+
+## Approval
+
+Write tools (post, edit, delete, react, subscribe) default to `needsApproval: true`:
+
+```ts
+createChatTools({
+  chat,
+  preset: "messenger",
+  requireApproval: { postMessage: false },  // override specific tools
+});
+```
+
+## Overrides
+
+Customize tool descriptions or other non-core fields:
+
+```ts
+createChatTools({
+  chat,
+  preset: "reader",
+  overrides: {
+    fetchMessages: { description: "Custom description" },
+  },
+});
+```
+
+Protected fields (`execute`, `parameters`) cannot be overridden.
+
+## Tool Definitions
+
+Each tool exports `description`, `parameters` (JSON Schema), `execute` function, and optional `needsApproval` flag. Compatible with Vercel AI SDK, OpenAI, Anthropic, and other tool-calling APIs.
+
+## See Also
+
+- [Message-to-LLM Converter](/docs/messages-to-ai)
+- [LLM Middleware](/docs/llm-middleware)

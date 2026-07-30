@@ -1,0 +1,96 @@
+---
+title: Voice AI pipeline
+description: OpenAI Realtime and Gemini Live adapters with STT→LLM→TTS metrics, VAD, and barge-in.
+---
+
+End-to-end voice AI with **OpenAI Realtime API** as the standard adapter and **Gemini Live** in OpenAI-compatible WS mode.
+
+Dashboard: [**Voice AI**](/voice-ai) · SDK: `useVoice()` hook.
+
+## Providers
+
+```bash
+curl "$WORKER_URL/voice-ai/providers"
+```
+
+Returns `openai-realtime` (300ms target) and `gemini-live` with feature flags: `vad`, `barge_in`, `noise_suppression`, `aec`.
+
+## Create session
+
+```bash
+curl -X POST "$WORKER_URL/admin/voice-ai/sessions" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "providerId": "openai-realtime",
+    "roomId": "room_support",
+    "settings": {
+      "vad": true,
+      "semanticTurnDetection": true,
+      "bargeIn": true,
+      "noiseSuppression": true,
+      "echoCancellation": true
+    }
+  }'
+```
+
+## Quality metrics
+
+Report pipeline latency from the client:
+
+```bash
+curl -X POST "$WORKER_URL/admin/voice-ai/metrics" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "vas_abc123",
+    "providerId": "openai-realtime",
+    "totalLatencyMs": 245,
+    "stages": [{"stage":"asr","durationMs":80},{"stage":"llm","durationMs":120},{"stage":"tts","durationMs":45}]
+  }'
+
+curl "$WORKER_URL/admin/voice-ai/stats" -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+## SDK — useVoice hook
+
+```typescript
+import { useVoice } from "@fluxy-chat/react";
+
+const voice = useVoice({
+  noiseSuppression: true,
+  echoCancellation: true,
+  onMetrics: ({ totalLatencyMs }) => console.log(totalLatencyMs),
+});
+
+await voice.start();
+await voice.processText("What's the weather?");
+```
+
+Production keys (OpenAI/Gemini) are required for live STT/TTS — the dashboard runs pipeline simulation and metrics without billing.
+
+## Latency SLO & fallback
+
+| Path | Target P95 | When |
+|------|------------|------|
+| `realtime` | 300ms | OpenAI Realtime WS (default when mic available) |
+| `chunked` | ~500ms | REST STT/TTS segments when WS unavailable |
+| `text_only` | N/A | Dashboard demo / no mic — LLM+TTS text path |
+
+The SDK auto-falls back: `realtime → chunked → text_only`. Set `autoFallback: false` to surface errors instead.
+
+```typescript
+const voice = useVoice({
+  preferredTransport: "realtime",
+  autoFallback: true,
+  onMetrics: ({ totalLatencyMs }) => {
+    if (totalLatencyMs > 300) console.warn("above SLO");
+  },
+});
+
+await voice.start();
+await voice.processText("Hello");
+console.log(voice.activeTransport); // text_only | realtime | chunked
+```
+
+See [Voice platform doc](/docs/platform/voice) for production checklist.

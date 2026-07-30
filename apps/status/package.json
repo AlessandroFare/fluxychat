@@ -1,0 +1,9 @@
+{
+  "name": "@fluxy-chat/status",
+  "private": true,
+  "description": "Public status page for Cloudflare Pages — health + incidents markdown",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "preview": "npx serve dist"
+  }
+}

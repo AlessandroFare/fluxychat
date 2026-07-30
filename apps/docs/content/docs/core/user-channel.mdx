@@ -1,0 +1,58 @@
+---
+title: User channel
+description: Per-user WebSocket for inbox, notifications, and cross-room events.
+---
+
+Besides room WebSockets, FluxyChat exposes a **user channel** — one socket per authenticated user for inbox updates, notification fan-out, and account-scoped events.
+
+## React hook
+
+```tsx
+import { useUserChannel } from "@fluxy-chat/react";
+
+function NotificationBridge({ client }: { client: FluxyChatClient }) {
+  const { connected, lastEvent } = useUserChannel({
+    client,
+    onEvent: (event) => {
+      if (event.type === "inbox_updated") {
+        // refresh sidebar
+      }
+    },
+  });
+
+  return <span>{connected ? "Live" : "Offline"}</span>;
+}
+```
+
+## Vanilla client
+
+After minting a JWT with `POST /auth/signin`, the response includes user channel paths. Connect with:
+
+```ts
+const ws = client.connectUser(userId);
+ws.onmessage = (ev) => {
+  const event = JSON.parse(ev.data);
+  console.log(event.type, event);
+};
+```
+
+## When to use
+
+| Channel | Scope | Use for |
+|---------|-------|---------|
+| Room WebSocket | Single room | Messages, typing, presence |
+| User channel | Account | Inbox, push triggers, global notifications |
+
+Pair with [`useInbox`](/docs/core/inbox) (`realtime: true`) and [`useNotifications`](/docs/core/notifications).
+
+## HTTP APIs
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /users/{userId}/events` | Push custom events to user channel |
+| `DELETE /users/{userId}/connections` | Force-disconnect all user sockets |
+| `GET/POST/DELETE /users/{userId}/watchlist` | Track rooms or users for notifications |
+
+Caller must be the user or project admin/owner.
+
+See [Wire protocol](/docs/architecture/wire-protocol) for event types.

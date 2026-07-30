@@ -1,0 +1,131 @@
+---
+title: "Provider & Model Management"
+description: "The provider registry lets you manage multiple providers and models centrally, access models through simple string IDs, and pre-configure model settings."
+---
+
+## AIProviderRegistry
+
+The base registry for registering and resolving models:
+
+```ts
+import { AIProviderRegistry, DeterministicLanguageModel } from '@fluxy-chat/agent';
+
+const registry = new AIProviderRegistry();
+registry.register(new DeterministicLanguageModel('hello', undefined, 'my-model'));
+
+const model = registry.resolve('fluxy-test:my-model');
+```
+
+## createCustomProvider
+
+Creates a provider with preset models and optional fallback:
+
+```ts
+import { createCustomProvider } from '@fluxy-chat/agent';
+
+const myProvider = createCustomProvider({
+  languageModels: {
+    fast: someFastModel,
+    reasoning: someReasoningModel,
+  },
+  fallbackProvider: baseRegistry,
+});
+```
+
+## ProviderRegistry
+
+Manages multiple providers and resolves with `providerId:modelId` notation:
+
+```ts
+import { ProviderRegistry, AIProviderRegistry } from '@fluxy-chat/agent';
+
+const registry = new ProviderRegistry({
+  openai: openaiRegistry,
+  anthropic: anthropicRegistry,
+});
+
+const model = registry.languageModel('openai:gpt-4');
+// Or with custom separator:
+// registry.languageModel('anthropic > claude-3')
+```
+
+### Custom Separator
+
+```ts
+const registry = new ProviderRegistry(
+  {
+    openai: openaiRegistry,
+    anthropic: anthropicRegistry,
+  },
+  { separator: ' > ' },
+);
+
+const model = registry.languageModel('openai > gpt-4');
+```
+
+### Aliases with Preconfigured Settings
+
+Combined with middleware for default settings:
+
+```ts
+import { createCustomProvider, wrapLanguageModel, defaultSettingsMiddleware } from '@fluxy-chat/agent';
+
+const myProvider = createCustomProvider({
+  languageModels: {
+    'fast': wrapLanguageModel({
+      model: baseModel,
+      middleware: defaultSettingsMiddleware({
+        settings: { temperature: 0.3 },
+      }),
+    }),
+    'reasoning': wrapLanguageModel({
+      model: baseModel,
+      middleware: defaultSettingsMiddleware({
+        settings: {
+          providerOptions: { openai: { reasoningEffort: 'high' } },
+        },
+      }),
+    }),
+  },
+});
+```
+
+## createProviderRegistry
+
+Factory function for creating a `ProviderRegistry`:
+
+```ts
+import { createProviderRegistry } from '@fluxy-chat/agent';
+
+const registry = createProviderRegistry({
+  openai: openaiRegistry,
+  anthropic: anthropicRegistry,
+});
+
+registry.hasProvider('openai');  // true
+registry.listProviders();        // ['anthropic', 'openai']
+```
+
+## Type Reference
+
+```ts
+interface CustomProviderConfig {
+  languageModels?: Record<string, AILanguageModel>;
+  embeddingModels?: Record<string, AIEmbeddingModel>;
+  rerankModels?: Record<string, AIRerankModel>;
+  fallbackProvider?: AIProviderRegistry | AILanguageModel | (() => AILanguageModel);
+}
+
+interface ProviderRegistryConfig {
+  [providerId: string]: AIProviderRegistry | CustomProviderConfig | AILanguageModel | (() => AILanguageModel);
+}
+
+function createCustomProvider(config: CustomProviderConfig): AIProviderRegistry;
+function createProviderRegistry(config: ProviderRegistryConfig, options?: ProviderRegistryOptions): ProviderRegistry;
+```
+
+## See Also
+
+- [Provider Options](/docs/provider-options) — per-provider settings
+- [LLM Middleware](/docs/llm-middleware) — middleware combined with providers
+- [Available Providers](/docs/reference/providers) — provider implementations

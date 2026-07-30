@@ -9,6 +9,32 @@ One-line install for a support chat bubble on any website, powered by public gue
 3. Add **allowed parent origins** (e.g. `https://www.acme.com`).
 4. Copy the generated `<script>` snippet before `</body>`.
 
+## Live demo
+
+Open the hosted console **Embed widget** at `/embed` to configure origins, theme, and copy the install snippet. For a minimal static test page, paste the snippet into any HTML file served from an allowed origin:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Embed demo</title></head>
+  <body>
+    <h1>Support site</h1>
+    <!-- paste snippet from dashboard -->
+  </body>
+</html>
+```
+
+Script attributes (optional overrides):
+
+| Attribute | Purpose |
+|-----------|---------|
+| `data-fluxy-api-url` | Worker / custom domain origin |
+| `data-room-id` | Default public room |
+| `data-primary-color` | Launcher + header color |
+| `data-position` | `bottom-right` or `bottom-left` |
+| `data-launcher-title` | Accessibility label |
+| `data-z-index` | Stacking above site chrome |
+
 ```html
 <script
   src="https://chat.acme.com/embed.js"

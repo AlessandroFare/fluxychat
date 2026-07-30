@@ -3,7 +3,7 @@
 import { useClerkUser } from "@/lib/clerk-user";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import { isClerkClientConfigured } from "@/lib/hosted-product";
+import { HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
 import {
   isQuickstartComplete,
   loadQuickstartProgress,
@@ -14,7 +14,7 @@ import { useDashboardSession } from "./dashboard-session";
 /**
  * Hosted cloud routing:
  * - Incomplete quickstart → stay on /onboarding (console routes redirect there).
- * - Complete → / overview allowed; /onboarding redirects to / unless ?review=1.
+ * - Complete → /dashboard overview allowed; /onboarding redirects there unless ?review=1.
  */
 export function QuickstartGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -40,7 +40,7 @@ export function QuickstartGate({ children }: { children: React.ReactNode }) {
 
     if (pathname.startsWith("/onboarding")) {
       if (complete && !review) {
-        router.replace("/");
+        router.replace(HOSTED_PATHS.console);
       }
       return;
     }

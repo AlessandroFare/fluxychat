@@ -14,10 +14,10 @@ import {
 
 const LINKS: readonly TopNavLink[] = [
   { href: HOSTED_PATHS.landing, label: "Product" },
-  { href: "/devtools", label: "DevTools" },
-  { href: "/playground", label: "Playground" },
   { href: HOSTED_PATHS.docs, label: "Docs" },
   { href: HOSTED_PATHS.guides, label: "Guides" },
+  { href: "/demo", label: "Demo" },
+  { href: "/pricing", label: "Pricing" },
   { href: HOSTED_PATHS.getStarted, label: "Get started" },
 ];
 

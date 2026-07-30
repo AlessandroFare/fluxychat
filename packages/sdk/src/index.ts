@@ -1,5 +1,8 @@
 export {
   FluxyAuthError,
+  FluxyNotMemberError,
+  FluxyTokenExpiredError,
+  FluxyAnonymousNotAllowedError,
   FluxyConnectionError,
   FluxySendError,
   FluxyTimeoutError,
@@ -7,13 +10,21 @@ export {
   FLUXY_WS_CLOSE_POLICY,
   computeReconnectBackoffMs,
   mapWebSocketCloseToError,
+  parseConnectionRefusal,
+  describeConnectionError,
+  type FluxyConnectionErrorInfo,
 } from "./errors";
 
 export {
+  FluxyChatError,
+  isFluxyChatError,
   ChatError,
   RateLimitError,
+  FluxyRateLimitError,
   LockError,
+  FluxyLockError,
   NotImplementedError,
+  FluxyNotImplementedError,
 } from "./structured-errors";
 
 export {
@@ -153,6 +164,7 @@ export {
   createLLMMiddleware,
   wrapLanguageModel,
   composeMiddlewares,
+  createLoggingMiddleware,
   type LLMCallParams,
   type LLMCallResult,
   type LLMStreamChunk,
@@ -162,28 +174,23 @@ export {
   type WrapStreamFn,
 } from "./llm-middleware";
 
-export {
-  createToolContextManager,
-  createScopedToolContext,
-  type ToolContext,
-  type ScopedToolContext,
-  type ToolContextScope,
-  type ToolContextManager,
+export type {
+  ToolContext,
+  ScopedToolContext,
+  ToolContextScope,
+  ToolContextManager,
 } from "./tool-context";
 
-export {
-  createStreamResumptionStore,
-  type StreamResumptionEntry,
-  type StreamResumptionStore,
+export type {
+  StreamResumptionEntry,
+  StreamResumptionStore,
 } from "./stream-resumption";
 
-export {
-  createApprovalStore,
-  createApprovalGate,
-  type ApprovalRequest,
-  type ApprovalStatus,
-  type ApprovalStore,
-  type ApprovalGate,
+export type {
+  ApprovalRequest,
+  ApprovalStatus,
+  ApprovalStore,
+  ApprovalGate,
 } from "./hitl-approval";
 
 export {
@@ -193,7 +200,6 @@ export {
 } from "./tool-call-streaming";
 
 export {
-  createLoopController,
   LOOP_PRESETS,
   type LoopControlConfig,
   type LoopController,
@@ -248,6 +254,14 @@ export {
 } from "./outbox-lanes";
 
 export {
+  createMessageOutbox,
+  type MessageOutbox,
+  type MessageOutboxOptions,
+  type MessageOutboxSendOptions,
+  type ReconnectSource,
+} from "./transport/outbox";
+
+export {
   routeTask,
   createMemorySharedStateStore,
   createHandoffManager,
@@ -292,18 +306,6 @@ export {
 } from "./ai-moderation";
 
 export {
-  createDevTools,
-  spansToOtlp,
-  type DevToolsConfig,
-  type DevToolsSpanCollector,
-  type Span,
-  type SpanEvent,
-  type SpanAttributes,
-  type TraceExporter,
-  type OtlpTracePayload,
-} from "./devtools";
-
-export {
   createWorkflowAgent,
   createMemoryWorkflowStore,
   type WorkflowStatus,
@@ -315,26 +317,22 @@ export {
   type WorkflowAgent,
 } from "./workflow-agent";
 
-export {
-  createSandboxManager,
-  executeInSandbox,
-  type SandboxStatus,
-  type SandboxConfig,
-  type SandboxExecutionResult,
-  type Sandbox,
-  type SandboxManager,
+export type {
+  SandboxStatus,
+  SandboxConfig,
+  SandboxExecutionResult,
+  Sandbox,
+  SandboxManager,
 } from "./sandbox";
 
-export {
-  createPlatformAdapter,
-  createBotDeploymentManager,
-  type Platform,
-  type PlatformMessage,
-  type PlatformReply,
-  type PlatformAdapter,
-  type BotDeploymentConfig,
-  type BotDeployment,
-  type BotDeploymentManager,
+export type {
+  Platform,
+  PlatformMessage,
+  PlatformReply,
+  PlatformAdapter,
+  BotDeploymentConfig,
+  BotDeployment,
+  BotDeploymentManager,
 } from "./cross-platform";
 
 export {
@@ -353,9 +351,7 @@ export {
 } from "./voice";
 
 export {
-  createProviderToolRegistry,
   PROVIDER_TOOL_SETS,
-  providerToolsToSchema,
   type ProviderDefinedTool,
   type ProviderToolContext,
   type ProviderToolSet,
@@ -381,7 +377,6 @@ export {
   createDataPartRegistry,
   BUILTIN_PARSERS,
   parsePartialJSON,
-  useObject,
   type DataPart,
   type StreamPart,
   type DataPartParser,
@@ -390,17 +385,12 @@ export {
   type UseObjectResult,
 } from "./data-parts";
 
-export {
-  structuredOutputPrompt,
-  parseStructuredOutput,
-  validateAgainstSchema,
-  withStructuredOutput,
-  type StructuredOutputConfig,
-  type StructuredOutputResult,
+export type {
+  StructuredOutputConfig,
+  StructuredOutputResult,
 } from "./structured-output";
 
 export {
-  createImageGenerator,
   IMAGE_GENERATION_TOOL,
   type ImageSize,
   type ImageQuality,
@@ -412,7 +402,6 @@ export {
 } from "./image-generation";
 
 export {
-  createTextToSpeech,
   TTS_TOOL,
   type TTSVoice,
   type TTSConfig,
@@ -451,26 +440,18 @@ export {
 } from "./agent-to-agent";
 
 export {
-  createPromptRenderer,
-  createPromptTemplateRegistry,
   BUILTIN_PROMPT_TEMPLATES,
   type PromptTemplate,
   type PromptRenderer,
   type PromptTemplateRegistry,
 } from "./dynamic-prompts";
 
-export {
-  createToolCallAnnotationStore,
-  createStatusAnnotation,
-  createProgressAnnotation,
-  createResultAnnotation,
-  createErrorAnnotation,
-  type ToolCallAnnotation,
-  type ToolCallAnnotationStore,
+export type {
+  ToolCallAnnotation,
+  ToolCallAnnotationStore,
 } from "./tool-annotations";
 
 export {
-  createMetadataStore,
   METADATA_KEYS,
   type MessageMetadataMap,
   type MetadataStore,
@@ -581,16 +562,16 @@ export {
   type Emphasis,
   type Heading,
   type InlineCode,
-  type Link,
+  type Link as MarkdownLink,
   type List,
   type ListItem,
   type Paragraph,
   type Root,
   type Strong,
-  type Table,
+  type Table as MarkdownTable,
   type TableCell,
   type TableRow,
-  type Text,
+  type Text as MarkdownText,
 } from "./markdown";
 
 export {
@@ -620,6 +601,13 @@ export {
   type LocationTrackState,
   type UseLocationOptions,
 } from "./use-location";
+
+export {
+  useServerEvents,
+  type ServerEventLogEntry,
+  type UseServerEventsOptions,
+  type UseServerEventsResult,
+} from "./use-server-events";
 
 export type {
   LocationSnapshotInbound,
@@ -666,13 +654,60 @@ export {
   useChat,
   type UseChatOptions,
   type UseChatHistoryReplay,
+  type UseChatReadOn,
 } from "./use-chat";
+
+export {
+  useVoice,
+  type UseVoiceOptions,
+  type UseVoiceResult,
+} from "./use-voice";
+
+export {
+  useInbox,
+  type UseInboxOptions,
+  type UseInboxResult,
+} from "./use-inbox";
+
+export {
+  inboxSummaryToItems,
+  mergeInboxItem,
+  countUnseenItems,
+  type FluxyInboxItem,
+  type FluxyInboxItemKind,
+} from "./inbox-items";
 
 export {
   useUserChannel,
   type UseUserChannelOptions,
   type UseUserChannelState,
 } from "./use-user-channel";
+
+export {
+  FluxyClientCredentials,
+  type FluxyClientCredentialsOptions,
+  type FluxyTokenSource,
+} from "./client-credentials";
+
+export {
+  acquireFluxyRoomSession,
+  FLUXY_ROOM_SESSION_GRACE_MS,
+  resetFluxyRoomSessionHandlesForTests,
+} from "./room-session-handle";
+
+export {
+  applyInboxQuery,
+  isInboxRefreshUserEvent,
+  parseInboxItemFromUserEvent,
+  FLUXY_INBOX_REFRESH_EVENT_NAMES,
+  type FluxyWhereOp,
+  type FluxyWhere,
+  type FluxyInboxWhere,
+  type FluxyInboxQuery,
+  type FluxyInboxSummaryLike,
+} from "./inbox-filter";
+
+export { createFluxyWebSocket } from "./websocket-factory";
 
 export {
   isE2eContentEnvelope,
@@ -703,7 +738,7 @@ export {
   type StartFluxyRoomSessionOptions,
 } from "./room-session";
 
-export { useFluxyRoomStore, useFluxyRoomStoreState } from "./use-fluxy-room-store";
+export { useFluxyRoomStore, useFluxyRoomStoreState, INERT_FLUXY_ROOM_SNAPSHOT } from "./use-fluxy-room-store";
 
 export {
   renderMessageTemplate,
@@ -716,6 +751,11 @@ export {
 
 export {
   buildFluxyConnectionState,
+  getConnectionStatusLabel,
+  isBlockedConnectionStatus,
+  isDegradedConnectionStatus,
+  normalizeConnectionStateStatus,
+  type ConnectionStatusLabelOptions,
   type FluxyChatTransport,
   type FluxyConnectionState,
   type FluxyConnectionStateStatus,
@@ -747,6 +787,10 @@ import { FluxyAuthError, FluxySendError } from "./errors";
 import { clampHistoryLimit, sortMessagesChronological } from "./message-history";
 import { normalizeRoomMembers } from "./room-rest";
 import { trimTrailingSlashes } from "./url-utils";
+import { FluxyClientCredentials, type FluxyTokenSource } from "./client-credentials";
+import { applyInboxQuery, type FluxyInboxQuery } from "./inbox-filter";
+import { createFluxyWebSocket } from "./websocket-factory";
+import { decodeFluxyJwtPayload } from "./jwt-utils";
 
 export interface FluxyChatMessage {
   id: number;
@@ -813,6 +857,8 @@ export interface FluxyChatMessage {
    *  - `failed`   : transcription could not be produced (UI may show a
    *                 "transcript unavailable" placeholder) */
   transcriptionStatus?: "pending" | "done" | "failed" | null;
+  /** Rich interactive card payload (inline or parsed from content). */
+  card?: import("./cards").CardElement;
 }
 
 export interface FluxyChatAttachment {
@@ -1369,25 +1415,94 @@ export interface FluxyChatClientOptions {
   /**
    * Optional JWT for authenticated REST calls (POST /messages, reactions, read, reports, etc).
    * When provided, the SDK will prefer REST for writes and use WebSocket mainly for realtime updates.
+   * Omit with `apiKey` to enable anonymous auto-mint via POST /tokens/anonymous (Portal-style).
    */
-  token?: string;
+  token?: FluxyTokenSource;
+  /** Use partysocket auto-reconnect for room/user WebSockets (default false). */
+  usePartySocket?: boolean;
 }
 
 export class FluxyChatClient {
   private baseUrl: string;
-  readonly userId: string;
+  private _userId: string;
   readonly apiKey?: string;
-   readonly token?: string;
+  private readonly credentials: FluxyClientCredentials | null;
+  private readonly usePartySocket: boolean;
 
   constructor(options: FluxyChatClientOptions) {
     this.baseUrl = trimTrailingSlashes(options.baseUrl);
-    this.userId = options.userId;
+    this._userId = options.userId;
     this.apiKey = options.apiKey;
-    this.token = options.token;
+    this.usePartySocket = options.usePartySocket ?? false;
+    if (options.apiKey) {
+      this.credentials = new FluxyClientCredentials({
+        baseUrl: this.baseUrl,
+        apiKey: options.apiKey,
+        token: options.token,
+      });
+    } else {
+      this.credentials = null;
+      if (typeof options.token === "string") {
+        this._cachedToken = options.token;
+      }
+    }
+  }
+
+  private _cachedToken: string | undefined;
+
+  /** Current bearer token (may be undefined until {@link resolveToken}). */
+  get token(): string | undefined {
+    return this.credentials?.getCachedToken() ?? this._cachedToken;
+  }
+
+  /** Effective user id (JWT `sub` after anonymous mint when applicable). */
+  get userId(): string {
+    return this.credentials?.getResolvedUserId(this._userId) ?? this._userId;
   }
 
   isAuthenticated(): boolean {
-    return !!this.token;
+    if (this.token) return true;
+    return Boolean(this.apiKey && this.credentials?.managed);
+  }
+
+  /** True when the SDK auto-mints anonymous credentials (apiKey, no user token). */
+  isAnonymous(): boolean {
+    return Boolean(this.credentials?.managed && this.token);
+  }
+
+  /** Resolve bearer token (mints anonymous JWT when configured). */
+  async resolveToken(): Promise<string | undefined> {
+    if (this.credentials) {
+      const token = await this.credentials.resolve();
+      const sub = decodeFluxyJwtPayload(token).sub;
+      if (sub) this._userId = sub;
+      return token;
+    }
+    return this._cachedToken;
+  }
+
+  /**
+   * Replace session token (login/logout). Returns true when identity changed —
+   * active connections should reconnect.
+   */
+  setToken(next: FluxyTokenSource | undefined): boolean {
+    if (this.credentials) {
+      const changed = this.credentials.setToken(next);
+      const sub = this.token ? decodeFluxyJwtPayload(this.token).sub : undefined;
+      if (sub) this._userId = sub;
+      return changed;
+    }
+    const prev = this._cachedToken;
+    if (typeof next === "string") this._cachedToken = next;
+    else if (next === undefined) this._cachedToken = undefined;
+    else this._cachedToken = undefined;
+    const nextSub = typeof next === "string" ? decodeFluxyJwtPayload(next).sub : undefined;
+    return decodeFluxyJwtPayload(prev ?? "").sub !== nextSub;
+  }
+
+  /** Expire cached anonymous token so the next resolve re-mints (stable anonId). */
+  invalidateCredential(): void {
+    this.credentials?.invalidate();
   }
 
   /** Join a public room without an account (P10-SB6). No API key required. */
@@ -1477,8 +1592,7 @@ export class FluxyChatClient {
     if (options?.cache === "on") {
       url.searchParams.set("cache", "1");
     }
-    const ws = new WebSocket(url.toString());
-    return ws;
+    return createFluxyWebSocket(url.toString(), this.usePartySocket);
   }
 
   /**
@@ -1486,7 +1600,10 @@ export class FluxyChatClient {
    * and optional REST history replay after reconnect.
    */
   connectRoom(roomId: string, options?: FluxyRoomConnectionOptions): FluxyChatRoomConnection {
-    return new FluxyChatRoomConnection(this, roomId, options);
+    return new FluxyChatRoomConnection(this, roomId, {
+      usePartySocket: this.usePartySocket,
+      ...options,
+    });
   }
 
   /**
@@ -1669,7 +1786,7 @@ export class FluxyChatClient {
     if (this.apiKey) url.searchParams.set("apiKey", this.apiKey);
     if (this.token) url.searchParams.set("token", this.token);
     url.searchParams.set("userId", uid);
-    return new WebSocket(url.toString());
+    return createFluxyWebSocket(url.toString(), this.usePartySocket);
   }
 
   /**
@@ -2008,6 +2125,85 @@ export class FluxyChatClient {
     return body.message ?? null;
   }
 
+  /** Ephemeral whisper — visible only to `visibleToUserId` (Portal B-10). */
+  async postEphemeral(
+    roomId: string,
+    content: string,
+    visibleToUserId: string,
+    options?: { expiresInSeconds?: number },
+  ): Promise<FluxyChatMessage | null> {
+    return this.createMessage(roomId, content, null, undefined, undefined, {
+      visibility: "whisper",
+      visibleTo: [visibleToUserId],
+      expiresInSeconds: options?.expiresInSeconds ?? 3600,
+    });
+  }
+
+  /** Send rich interactive card (Portal B-1). */
+  async sendCard(
+    roomId: string,
+    card: import("./cards").CardElement,
+    options?: { parentId?: number | null },
+  ): Promise<FluxyChatMessage | null> {
+    if (!this.token) return null;
+    const res = await fetch(new URL("/api/cards/send", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ roomId, card, parentId: options?.parentId ?? null }),
+    });
+    if (!res.ok) throw new Error(`sendCard failed: ${res.status}`);
+    const body = (await res.json()) as { message?: FluxyChatMessage };
+    return body.message ?? null;
+  }
+
+  /** Chat history → AI SDK messages (Portal B-2). */
+  async toAiMessagesFromRoom(
+    roomId: string,
+    options?: import("./messages-to-ai").ToAiMessagesOptions,
+  ) {
+    const { toAiMessages } = await import("./messages-to-ai");
+    const messages = await this.fetchMessages(roomId, { limit: 50 });
+    return toAiMessages(messages, options);
+  }
+
+  /** Per-thread typed KV state (Portal B-5). */
+  async getThreadState<T = Record<string, unknown>>(threadId: string): Promise<T | null> {
+    if (!this.token) return null;
+    const res = await fetch(
+      new URL(`/api/threads/${encodeURIComponent(threadId)}/state`, this.baseUrl).toString(),
+      { headers: this.authHeaders() },
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as { state?: T | null };
+    return body.state ?? null;
+  }
+
+  async setThreadState(
+    threadId: string,
+    state: Record<string, unknown>,
+    ttlMs?: number,
+  ): Promise<boolean> {
+    if (!this.token) return false;
+    const res = await fetch(
+      new URL(`/api/threads/${encodeURIComponent(threadId)}/state`, this.baseUrl).toString(),
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify({ state, ttlMs }),
+      },
+    );
+    return res.ok;
+  }
+
+  async deleteThreadState(threadId: string): Promise<boolean> {
+    if (!this.token) return false;
+    const res = await fetch(
+      new URL(`/api/threads/${encodeURIComponent(threadId)}/state`, this.baseUrl).toString(),
+      { method: "DELETE", headers: this.authHeaders() },
+    );
+    return res.ok;
+  }
+
   /**
    * Upload a recorded voice message to `POST /messages/voice` (P12-B).
    *
@@ -2313,10 +2509,14 @@ export class FluxyChatClient {
     };
   }
 
-  /** Unified inbox summary (P12-C). */
-  async getInbox(): Promise<FluxyInboxSummary | null> {
+  /** Unified inbox summary (P12-C). Optional `where` filter (Portal §6) — server-side when passed as query params. */
+  async getInbox(query?: FluxyInboxQuery): Promise<FluxyInboxSummary | null> {
+    await this.resolveToken();
     if (!this.token) return null;
-    const res = await fetch(new URL("/inbox", this.baseUrl).toString(), {
+    const url = new URL("/inbox", this.baseUrl);
+    if (query?.roomId) url.searchParams.set("roomId", query.roomId);
+    if (query?.where) url.searchParams.set("where", JSON.stringify(query.where));
+    const res = await fetch(url.toString(), {
       headers: this.authHeaders(),
     });
     if (!res.ok) throw new Error(`getInbox failed: ${res.status}`);
@@ -2580,6 +2780,20 @@ export class FluxyChatClient {
     });
     if (!res.ok) throw new Error(`getFeatureFlags failed: ${res.status}`);
     return (await res.json()) as FluxyClientFeatureFlags;
+  }
+
+  /** Server-authored SDK defaults from `fluxy.config` (`GET /config/client`). */
+  async getClientConfig(): Promise<{
+    client: import("@fluxy-chat/config").FluxyClientDefaults;
+    source: string;
+  } | null> {
+    const res = await fetch(new URL("/config/client", this.baseUrl).toString());
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`getClientConfig failed: ${res.status}`);
+    return (await res.json()) as {
+      client: import("@fluxy-chat/config").FluxyClientDefaults;
+      source: string;
+    };
   }
 
   async getEmbedConfig(): Promise<{ config: FluxyEmbedConfig; snippet: string } | null> {
@@ -4057,6 +4271,39 @@ export {
   type ConcurrencyStrategyInstance,
 } from "./concurrency";
 
+export {
+  serializeCardMessage,
+  parseCardFromContent,
+  parseCardFromMessage,
+  isCardMessage,
+  cardDisplayText,
+} from "./interactive-cards";
+
+export {
+  createInMemoryAgentMemoryProvider,
+  createProjectMemoryProvider,
+  createMem0AgentMemoryProvider,
+  type AgentMemoryProvider,
+  type AgentMemoryEntry,
+  type Mem0AgentMemoryConfig,
+} from "./agent-memory-providers";
+
+export {
+  createAgentLifecycleRunner,
+  type AgentLifecycleCallbacks,
+  type AgentRunContext,
+  type AgentStepContext,
+  type AgentToolContext,
+} from "./agent-lifecycle";
+
+export {
+  createUnifiedDlpAdapter,
+  createWorkerDlpIntegrationAdapter,
+  type UnifiedDlpAdapter,
+  type ExternalDlpAdapter,
+  type DlpScanContext,
+} from "./dlp-adapter";
+
 // P22-F1: Transcripts API
 export {
   createTranscriptsApi,
@@ -4175,12 +4422,18 @@ export {
 // C-1: Durable AI Transport
 export {
   createDurableTransport,
-  type DurableSession,
+  type DurableSession as TransportDurableSession,
   type DurableTransportApi,
   type DurableTransportConfig,
   type StreamChunkEntry,
   type SessionState,
 } from "./durable-transport";
+
+export {
+  createResumableAgentStream,
+  type ResumableAgentStream,
+  type ResumableAgentStreamOptions,
+} from "./durable-ai-resume";
 
 // C-2: Collaborative editing (CRDT)
 export {
@@ -4243,7 +4496,7 @@ export {
 // C-9: Platform adapters (stub wrappers)
 export type {
   AdapterPlatform,
-  PlatformMessage,
+  PlatformMessage as AdapterPlatformMessage,
   PlatformAdapterApi,
 } from "./platform-adapter";
 
@@ -4280,6 +4533,7 @@ export {
   type PipelineEvent,
   type PipelineStatus,
   type PipelineConfig,
+  type VoiceTransportMode,
   type VoicePipeline,
 } from "./voice-pipeline";
 
@@ -4395,7 +4649,7 @@ export {
 export {
   createAiGovernance,
   type RiskTier,
-  type ApprovalStatus,
+  type ApprovalStatus as GovernanceApprovalStatus,
   type ModelRegistryEntry,
   type PromptEntry,
   type ToolRegistryEntry,
@@ -4475,7 +4729,7 @@ export {
   createBotProtection,
   type LimitScope,
   type TrustLevel,
-  type RateLimitConfig,
+  type RateLimitConfig as BotRateLimitConfig,
   type RaidModeConfig,
   type TrustScore,
   type BotProtectionEvent,
@@ -4518,7 +4772,7 @@ export {
 export {
   createSandboxExecutor,
   type SandboxExecutionConfig,
-  type SandboxExecutionResult,
+  type SandboxExecutionResult as ToolSandboxExecutionResult,
   type SandboxQuota,
   type SandboxExecutor,
 } from "./sandbox-execution";
@@ -4533,20 +4787,14 @@ export {
   type GuiSandboxManager,
 } from "./gui-sandbox";
 
-// F-1: Testing utilities
+// F-1: Testing utilities (`@fluxy-chat/sdk/testing` subpath; re-exported here for convenience)
 export {
   createSpyAdapter,
-  createSpyState,
-  createSpyChatInstance,
-  createTestMessage,
-  mockLogger,
-  createMockLogger,
-  matchers,
-  registerMatchers,
+  createFluxyChatMockClient,
+  createFluxyChatMockClient as createSpyChatInstance,
+  registerFluxyChatMatchers,
+  registerFluxyChatMatchers as registerMatchers,
   type SpyAdapter,
-  type SpyStateAdapter,
-  type SpyChatInstance,
-  type AdapterSpy,
 } from "./testing-utils";
 
 // F-2: Error hierarchy (already exported as ChatError, RateLimitError, LockError, NotImplementedError)
@@ -4557,12 +4805,16 @@ export {
   registerTelemetry,
   OpenTelemetryIntegration,
   DevToolsTelemetryIntegration,
+  createConsoleTelemetryIntegration,
+  createOtlpTelemetryIntegration,
   type TelemetryEvent,
   type TelemetrySpan,
   type TelemetryLifecycleEvent,
   type TelemetryIntegration,
   type TelemetryOptions,
   type TelemetryManager,
+  type ConsoleTelemetryOptions,
+  type OtlpTelemetryOptions,
 } from "./telemetry";
 
 // F-4: DevTools local inspector
@@ -4622,9 +4874,10 @@ export {
 export {
   createAppMarketplace,
   type AppManifest,
-  type GrantScope,
-  type ReviewStatus,
-  type ReviewResult,
+  type AppGrantScope,
+  type AppReview,
+  type AppQuota,
+  type InstalledApp,
   type AppMarketplace,
 } from "./app-marketplace";
 
@@ -4632,61 +4885,75 @@ export {
 export {
   createCrmIntegration,
   type CrmProvider,
-  type SyncDirection,
+  type CrmEntityType,
+  type CrmConfig,
   type CrmContact,
   type CrmTicket,
+  type SyncResult,
   type CrmIntegration,
 } from "./crm-integration";
 
 // G-3: Custom chatbot builder
 export {
   createChatbotBuilder,
-  type ChatbotEventType,
-  type ChatbotActionType,
-  type TriggerActionRule,
+  type TriggerEvent,
+  type TriggerEventType as ChatbotEventType,
+  type ActionType as ChatbotActionType,
+  type Action,
+  type WorkflowRule,
+  type WorkflowExecution,
   type ChatbotBuilder,
 } from "./chatbot-builder";
 
 // G-4: Knowledge base integration
 export {
   createKnowledgeBase,
-  type SourceConnector,
-  type ChunkingStrategy,
+  type SourceType,
+  type KnowledgeSource,
   type KnowledgeDocument,
+  type KnowledgeChunk,
+  type SearchQuery,
+  type SearchResult as KnowledgeSearchResult,
+  type RagContext,
   type KnowledgeBase,
 } from "./knowledge-base";
 
 // G-5: Custom workflows/automations
 export {
   createAutomationEngine,
-  type AutomationTrigger,
-  type AutomationAction,
+  type TriggerEventType,
+  type TriggerDef,
+  type ActionDef,
   type AutomationRule,
+  type AutomationExecution,
   type AutomationEngine,
 } from "./automation-engine";
 
 // G-6: Agent marketplace
 export {
   createAgentMarketplace,
-  type AgentSkillCategory,
   type AgentSkill,
+  type AgentSkillTemplate,
   type AgentMarketplace,
 } from "./agent-marketplace";
 
 // G-7: AI provider marketplace
 export {
   createProviderMarketplace,
-  type LlmProvider,
-  type LlmModel,
+  type AiProvider,
+  type AiModel,
+  type ProviderKey,
   type ProviderMarketplace,
 } from "./provider-marketplace";
+
+export type { AiProvider as LlmProvider, AiModel as LlmModel } from "./provider-marketplace";
 
 // G-8: Webhook event catalog
 export {
   createWebhookEventCatalog,
   type WebhookEventType,
-  type DeliveryMethod,
   type WebhookSubscription,
+  type WebhookDelivery,
   type WebhookEventCatalog,
 } from "./webhook-catalog";
 
@@ -4761,7 +5028,7 @@ export {
 export {
   createDurableAITransport,
   type DurableSessionEvent,
-  type DurableSession,
+  type DurableSession as AiDurableSession,
   type DurableAITransport,
 } from "./ai-transport";
 
@@ -4896,7 +5163,7 @@ export {
   type AgentStatus,
   type CostEntry,
   type CostSummary,
-  type RateLimitConfig,
+  type RateLimitConfig as AgentRateLimitConfig,
   type MemoryEntry,
   type DeployStage,
   type SandboxResult,
@@ -4912,7 +5179,7 @@ export {
   type InputCommand,
   type InputAction,
   type MatchResult,
-  type LeaderboardEntry,
+  type LeaderboardEntry as GameLeaderboardEntry,
   type ReplayEntry,
   type Tournament,
   type TournamentRound,
@@ -4941,11 +5208,125 @@ export {
   type VerticalPlatform,
 } from "./vertical-platform";
 
-// 5.2: FluxyIoT � MQTT bridge & IoT device management
+export {
+  createVerticalWorkflow,
+  runVerticalDemoStep,
+  VERTICAL_DEMO_SEEDS,
+  type AttendanceRecord,
+  type BreakoutAssignment,
+  type GradeSuggestion,
+  type ConsentRecord,
+  type TicketVerification,
+  type MarketAlert,
+  type InvoiceDraft,
+  type VerticalWorkflowApi,
+  type VerticalWorkflowState,
+  buildVerticalSessionReport,
+  type SessionReportLine,
+} from "./vertical-workflows";
+
+export {
+  createCapabilityClient,
+  syncWorkflowEventsToWorker,
+  type CapabilityClient,
+  type CapabilityClientConfig,
+  type PublishCapabilityInput,
+} from "./capability-client";
+
+export {
+  isCapabilityRealtimeEvent,
+  onCapabilityEvent,
+  type CapabilityRealtimeEvent,
+} from "./capability-realtime";
+
+export {
+  isServerRealtimeEvent,
+  onServerEvent,
+  type ServerRealtimeEvent,
+  type ServerEventHandler,
+} from "./server-realtime";
+
+export {
+  createCustomerMemoryClient,
+  type CustomerMemoryClient,
+  type CustomerMemoryGraph,
+  type CustomerMemoryNode,
+  type CustomerMemoryEdge,
+} from "./customer-memory";
+
+export {
+  createModerationLabelsClient,
+  evaluateModerationRules,
+  type ModerationLabelResult,
+  type ModerationLabelsClient,
+  type ModerationRuleDefinition,
+  type RuleBuilderContext,
+} from "./moderation-labels";
+
+export {
+  createWorkerAgentTaskClient,
+  type WorkerAgentTaskClient,
+} from "./agent-task-client";
+
+export { createDigitalTwinMcpRegistry, type DigitalTwinMcpRegistry } from "./digital-twin-mcp";
+
+export {
+  createWorkerDigitalTwinClient,
+  type WorkerDigitalTwinClient,
+} from "./worker-digital-twin-client";
+
+export {
+  createWorkerFluxyGameClient,
+  type WorkerFluxyGameClient,
+} from "./worker-fluxy-game-client";
+
+export {
+  createWorkerFluxyIoTClient,
+  type WorkerFluxyIoTClient,
+} from "./worker-fluxy-iot-client";
+
+export {
+  createWorkerAgentPlatformClient,
+  type WorkerAgentPlatformClient,
+} from "./worker-agent-platform-client";
+
+export {
+  createWorkerFluxyStreamClient,
+  type WorkerFluxyStreamClient,
+  type WorkerFluxyStreamEvent,
+} from "./worker-fluxy-stream-client";
+
+export {
+  PLATFORM_READINESS,
+  getReadinessEntry,
+  type PlatformReadinessLabel,
+  type ReadinessEntry,
+} from "./readiness";
+
+export {
+  DEMO_ADAPTERS,
+  type SfuAdapter,
+  type SfuSession,
+  type FhirAdapter,
+  type TicketAdapter,
+  type MarketDataAdapter,
+  type MarketQuote,
+} from "./vertical-adapters";
+
+export {
+  createYjsCollabPort,
+  YJS_SNAPSHOT_POLICY,
+  type YjsCollabPort,
+  type YjsSnapshotPolicy,
+} from "./yjs-collab";
+
+// 5.2: FluxyIoT — MQTT bridge & IoT device management
 export {
   createFluxyIoT,
   type FluxyIoTApi,
   type IoTDevice,
+  type IoTDevicePublic,
+  type RuleActionResult,
   type DeviceType,
   type DeviceStatus,
   type SensorReading,

@@ -1,3 +1,5 @@
+import { fanoutServerEvent } from "./message-realtime-fanout.js";
+
 const BREAKOUT_NAME_MAX = 100;
 const BREAKOUT_AUTO_CLOSE_HOURS = 24;
 
@@ -39,6 +41,14 @@ export async function createBreakout(env, input) {
   )
     .bind(id, input.projectId, input.parentRoomId, input.name, input.createdBy, autoCloseAt, now)
     .run();
+
+  await fanoutServerEvent(env, {
+    projectId: input.projectId,
+    roomId: input.parentRoomId,
+    name: "edu.breakout.created",
+    userId: input.createdBy,
+    data: { breakoutId: id, name: input.name },
+  }).catch(() => {});
 
   return {
     ok: true,
@@ -82,7 +92,7 @@ export async function listBreakouts(env, input) {
  */
 export async function closeBreakout(env, input) {
   const row = await env.DB.prepare(
-    `SELECT id, status FROM breakout_rooms WHERE id = ? AND project_id = ? LIMIT 1`,
+    `SELECT id, status, parent_room_id FROM breakout_rooms WHERE id = ? AND project_id = ? LIMIT 1`,
   )
     .bind(input.breakoutId, input.projectId)
     .first();
@@ -96,6 +106,16 @@ export async function closeBreakout(env, input) {
   )
     .bind(now, input.closedBy, input.breakoutId, input.projectId)
     .run();
+
+  if (row.parent_room_id) {
+    await fanoutServerEvent(env, {
+      projectId: input.projectId,
+      roomId: row.parent_room_id,
+      name: "edu.breakout.closed",
+      userId: input.closedBy,
+      data: { breakoutId: input.breakoutId },
+    }).catch(() => {});
+  }
 
   return { ok: true, closedAt: now };
 }

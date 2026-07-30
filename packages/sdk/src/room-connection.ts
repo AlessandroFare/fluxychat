@@ -14,6 +14,9 @@ import {
   mapWebSocketCloseToError,
 } from "./errors";
 import { dispatchInboundWsFrame } from "./ws-inbound";
+import { isCapabilityRealtimeEvent } from "./capability-realtime";
+import { isServerRealtimeEvent, type ServerEventHandler } from "./server-realtime";
+import type { RoomEvent } from "./vertical-platform";
 
 export type FluxyRoomConnectionStatus =
   | "idle"
@@ -38,6 +41,8 @@ export interface FluxyRoomConnectionOptions {
   presenceInfo?: Record<string, unknown>;
   /** Pusher-style cache channel snapshot on connect. */
   wsCache?: FluxyWebSocketConnectOptions["cache"];
+  /** Delegate transport reconnect to partysocket (disables SDK reconnect scheduling). */
+  usePartySocket?: boolean;
   /** Client ping interval in ms (default 25_000). Set 0 to disable. */
   heartbeatIntervalMs?: number;
   /** Force reconnect if no pong within this window (default 45_000). */
@@ -114,6 +119,8 @@ export class FluxyChatRoomConnection {
   private scheduledReconnectDelayMs = 0;
   private listeners: MessageListener[] = [];
   private anyListeners: AnyEventListener[] = [];
+  private capabilityListeners: Array<(event: RoomEvent) => void> = [];
+  private serverEventListeners: ServerEventHandler[] = [];
   private waitForEntries: WaitForEntry[] = [];
   private seenIds: number[] = [];
   private seenIdsSet = new Set<number>();
@@ -184,6 +191,22 @@ export class FluxyChatRoomConnection {
 
   offAnyEvent(listener: AnyEventListener): void {
     this.anyListeners = this.anyListeners.filter((cb) => cb !== listener);
+  }
+
+  /** Live vertical capability events broadcast by Worker DO fan-out. */
+  onCapabilityEvent(handler: (event: RoomEvent) => void): () => void {
+    this.capabilityListeners.push(handler);
+    return () => {
+      this.capabilityListeners = this.capabilityListeners.filter((cb) => cb !== handler);
+    };
+  }
+
+  /** Labs/vertical server_event fan-out (game ticks, IoT readings, live stats, fleet GPS, polls). */
+  onServerEvent(handler: ServerEventHandler): () => void {
+    this.serverEventListeners.push(handler);
+    return () => {
+      this.serverEventListeners = this.serverEventListeners.filter((cb) => cb !== handler);
+    };
   }
 
   connect(): void {
@@ -364,6 +387,27 @@ export class FluxyChatRoomConnection {
   }
 
   private handleInboundRaw(raw: string): void {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (isCapabilityRealtimeEvent(parsed)) {
+        for (const listener of this.capabilityListeners) {
+          listener(parsed.event);
+        }
+      }
+      if (isServerRealtimeEvent(parsed)) {
+        for (const listener of this.serverEventListeners) {
+          listener({
+            roomId: parsed.roomId,
+            name: parsed.name,
+            data: parsed.data,
+            userId: parsed.userId,
+          });
+        }
+      }
+    } catch {
+      /* not json */
+    }
+
     dispatchInboundWsFrame(raw, {
       onPong: () => {
         this.lastPongAtMs = Date.now();
@@ -381,6 +425,9 @@ export class FluxyChatRoomConnection {
       },
       onDeliver: (event) => {
         this.deliver(event);
+      },
+      onUnknownFrame: (frame) => {
+        this.emitAnyOnly(frame as FluxyChatEvent);
       },
     });
   }
@@ -449,6 +496,11 @@ export class FluxyChatRoomConnection {
       if (mapped) {
         this.lastError = mapped;
         this.options.onConnectionError?.(mapped);
+      }
+
+      if (this.options.usePartySocket) {
+        this.setStatus("reconnecting");
+        return;
       }
 
       this.scheduleReconnect();

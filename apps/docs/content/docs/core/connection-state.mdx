@@ -1,0 +1,57 @@
+---
+title: Connection state
+description: WebSocket lifecycle, reconnect backoff, and transport fallback.
+---
+
+`FluxyChatClient` and `useChat` expose structured connection state — not just a boolean connected flag.
+
+## Status values
+
+| Status | Meaning |
+|--------|---------|
+| `connecting` | First WebSocket handshake |
+| `connected` | Live on WebSocket |
+| `reconnecting` | Socket dropped; backoff retry in progress |
+| `disconnected` | Not connected (manual disconnect or fatal error) |
+
+## Transport fallback
+
+When WebSocket reconnect attempts are exhausted, the SDK degrades automatically:
+
+1. **WebSocket** — primary (`/ws/room/:roomId?token=…`)
+2. **SSE** — `GET /rooms/:id/stream` with member JWT
+3. **Polling** — `GET /api/messages` every ~4s
+
+When WebSocket recovers, SSE/polling stops.
+
+```tsx
+const { connectionState } = useChat({ roomId, client });
+
+if (connectionState.status === "reconnecting" && connectionState.nextRetryAt) {
+  const seconds = Math.max(
+    0,
+    Math.ceil((new Date(connectionState.nextRetryAt).getTime() - Date.now()) / 1000),
+  );
+  return <span>Reconnecting in {seconds}s…</span>;
+}
+
+if (connectionState.transport === "sse") {
+  return <span>Live updates via SSE</span>;
+}
+```
+
+## Client events
+
+```ts
+client.on("connectionStateChange", (state) => {
+  console.log(state.status, state.transport);
+});
+
+await client.connect();
+await client.disconnect();
+```
+
+## Related
+
+- [Transport fallback guide](/docs/guides/realtime/transport-fallback)
+- [Cookbook: transport fallback](/docs/cookbook/transport-fallback)

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Cpu, Thermometer, Activity, AlertTriangle, CheckCircle2,
   Plus, Wifi, WifiOff, Settings, Bell, MapPin, Wrench,
@@ -8,8 +8,19 @@ import {
 } from "lucide-react";
 import { ConsoleShell } from "@/app/components/console-shell";
 import { ConsolePageHeader } from "@/app/components/console-page-header";
+import { ConsoleProjectRoomBar } from "@/app/components/console-project-room-bar";
+import { WorkerBackendBadge } from "@/app/components/worker-backend-badge";
 import { cn } from "@/lib/utils";
-import { createFluxyIoT, type FluxyIoTApi, type IoTDevice, type Alert as IotAlert, type DeviceShadow } from "@fluxy-chat/sdk";
+import { useWorkerChatClient } from "@/lib/use-worker-chat-client";
+import {
+  createFluxyIoT,
+  createWorkerFluxyIoTClient,
+  type FluxyIoTApi,
+  type IoTDevice,
+  type IoTDevicePublic,
+  type Alert as IotAlert,
+  type WorkerFluxyIoTClient,
+} from "@fluxy-chat/sdk";
 
 function createSeededIoT(): FluxyIoTApi {
   const iot = createFluxyIoT();
@@ -51,11 +62,43 @@ function createSeededIoT(): FluxyIoTApi {
 }
 
 export default function FluxyIoTPage() {
+  const chatClient = useWorkerChatClient("iot-demo");
+  const workerIoT = useMemo(
+    () => (chatClient ? createWorkerFluxyIoTClient(chatClient) : null),
+    [chatClient],
+  );
   const [iot] = useState<FluxyIoTApi | null>(createSeededIoT());
   const [tick, setTick] = useState(0);
+  const [workerDevices, setWorkerDevices] = useState<IoTDevicePublic[]>([]);
+  const [workerBusy, setWorkerBusy] = useState(false);
+  const [workerError, setWorkerError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"devices" | "readings" | "rules" | "alerts" | "shadow" | "ota" | "geofence" | "doctor">("devices");
 
+  useEffect(() => {
+    if (!workerIoT) {
+      setWorkerDevices([]);
+      return;
+    }
+    void workerIoT.listDevices().then(setWorkerDevices).catch(() => setWorkerDevices([]));
+  }, [workerIoT, tick]);
+
   if (!iot) return null;
+
+  const workerConnected = Boolean(workerIoT);
+
+  async function registerWorkerDevice(name: string) {
+    if (!workerIoT) return;
+    setWorkerBusy(true);
+    setWorkerError(null);
+    try {
+      await workerIoT.registerDevice({ name, type: "sensor", fleetId: "default" });
+      setTick((t) => t + 1);
+    } catch (err) {
+      setWorkerError(err instanceof Error ? err.message : "Register failed");
+    } finally {
+      setWorkerBusy(false);
+    }
+  }
 
   const tabs: { id: typeof activeTab; label: string; icon: React.ReactNode }[] = [
     { id: "devices", label: "Devices", icon: <Cpu className="size-3.5" /> },
@@ -70,7 +113,18 @@ export default function FluxyIoTPage() {
 
   return (
     <ConsoleShell>
-      <ConsolePageHeader title="FluxyIoT" description="MQTT bridge & IoT device management — provisioning, rule engine, device shadow, OTA, geofencing, AI diagnostics" />
+      <ConsolePageHeader
+        title="FluxyIoT"
+        description="MQTT bridge & IoT device management — provisioning, rule engine, device shadow, OTA, geofencing, AI diagnostics"
+        actions={<WorkerBackendBadge connected={workerConnected} label="FluxyIoT" />}
+      />
+      <ConsoleProjectRoomBar
+        requireProject
+        hint={workerConnected ? "Devices, readings, and rules sync to your Worker fleet APIs." : "Local seeded fleet for exploration; sign in to provision devices on D1."}
+      />
+      {workerError ? (
+        <p className="mx-4 mt-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600">{workerError}</p>
+      ) : null}
       <div className="flex flex-wrap gap-1 border-b border-border px-4 py-2">
         {tabs.map((tab) => (
           <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
@@ -79,12 +133,21 @@ export default function FluxyIoTPage() {
           </button>
         ))}
       </div>
-      <div className="flex-1 overflow-auto p-4" key={tick}>
-        {activeTab === "devices" && <DevicesTab iot={iot} onReload={() => setTick(t => t + 1)} />}
-        {activeTab === "readings" && <ReadingsTab iot={iot} />}
-        {activeTab === "rules" && <RulesTab iot={iot} />}
+      <div className="flex-1 overflow-auto p-4">
+        {activeTab === "devices" && (
+          <DevicesTab
+            iot={iot}
+            workerIoT={workerIoT}
+            workerDevices={workerDevices}
+            workerBusy={workerBusy}
+            onRegisterWorker={() => void registerWorkerDevice(`Sensor-${Date.now()}`)}
+            onReload={() => setTick((t) => t + 1)}
+          />
+        )}
+        {activeTab === "readings" && <ReadingsTab iot={iot} workerIoT={workerIoT} workerDevices={workerDevices} onReload={() => setTick((t) => t + 1)} />}
+        {activeTab === "rules" && <RulesTab iot={iot} workerIoT={workerIoT} onReload={() => setTick((t) => t + 1)} />}
         {activeTab === "alerts" && <AlertsTab iot={iot} onReload={() => setTick(t => t + 1)} />}
-        {activeTab === "shadow" && <ShadowTab iot={iot} />}
+        {activeTab === "shadow" && <ShadowTab iot={iot} workerIoT={workerIoT} workerDevices={workerDevices} />}
         {activeTab === "ota" && <OTATab iot={iot} onReload={() => setTick(t => t + 1)} />}
         {activeTab === "geofence" && <GeofenceTab iot={iot} />}
         {activeTab === "doctor" && <DoctorTab iot={iot} />}
@@ -93,13 +156,36 @@ export default function FluxyIoTPage() {
   );
 }
 
-function DevicesTab({ iot, onReload }: { iot: FluxyIoTApi; onReload: () => void }) {
+function DevicesTab({
+  iot,
+  workerIoT,
+  workerDevices,
+  workerBusy,
+  onRegisterWorker,
+  onReload,
+}: {
+  iot: FluxyIoTApi;
+  workerIoT: WorkerFluxyIoTClient | null;
+  workerDevices: IoTDevicePublic[];
+  workerBusy: boolean;
+  onRegisterWorker: () => void;
+  onReload: () => void;
+}) {
   const fleets = iot.listFleets();
-  const devices = iot.listDevices();
+  const devices = workerDevices.length > 0 ? workerDevices : iot.listDevices();
   const statusColors: Record<string, string> = { online: "bg-green-500/15 text-green-600", offline: "bg-red-500/15 text-red-600", degraded: "bg-amber-500/15 text-amber-600", maintenance: "bg-blue-500/15 text-blue-600" };
 
   return (
     <div>
+      {workerIoT ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <button type="button" onClick={onRegisterWorker} disabled={workerBusy} className="rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50">
+            {workerBusy ? <Loader2 className="mr-1 inline size-3.5 animate-spin" /> : <Plus className="mr-1 inline size-3.5" />}
+            Register device on Worker
+          </button>
+          <span className="text-xs text-muted-foreground">{workerDevices.length} persisted device(s)</span>
+        </div>
+      ) : null}
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {fleets.map((f) => (
           <div key={f.id} className="rounded-xl border border-border bg-card p-3">
@@ -125,9 +211,9 @@ function DevicesTab({ iot, onReload }: { iot: FluxyIoTApi; onReload: () => void 
               </div>
               <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase", statusColors[d.status])}>{d.status}</span>
             </div>
-            <div className="mt-2 text-[10px] text-muted-foreground">
+              <div className="mt-2 text-[10px] text-muted-foreground">
               <div>Type: {d.type} · FW: {d.firmwareVersion}</div>
-              <div>Last seen: {new Date(d.lastSeen).toLocaleTimeString()}</div>
+              <div>Last seen: {d.lastSeen ? new Date(d.lastSeen).toLocaleTimeString() : "—"}</div>
             </div>
           </div>
         ))}
@@ -136,10 +222,23 @@ function DevicesTab({ iot, onReload }: { iot: FluxyIoTApi; onReload: () => void 
   );
 }
 
-function ReadingsTab({ iot }: { iot: FluxyIoTApi }) {
-  const devices = iot.listDevices();
+function ReadingsTab({
+  iot,
+  workerIoT,
+  workerDevices,
+  onReload,
+}: {
+  iot: FluxyIoTApi;
+  workerIoT: WorkerFluxyIoTClient | null;
+  workerDevices: IoTDevicePublic[];
+  onReload: () => void;
+}) {
+  const localDevices = iot.listDevices();
+  const devices = workerDevices.length > 0 ? workerDevices : localDevices;
   const [selected, setSelected] = useState(devices[0]?.id || "");
-  const readings = iot.getReadings(selected, undefined, 30);
+  const readings = workerIoT && workerDevices.some((d) => d.id === selected)
+    ? []
+    : iot.getReadings(selected, undefined, 30);
   const sensorTypes = [...new Set(readings.map((r) => r.sensor))];
   const sensorIcons: Record<string, React.ReactNode> = { temperature: <Thermometer className="size-3" />, pressure: <Activity className="size-3" />, humidity: <Activity className="size-3" /> };
 
@@ -186,16 +285,48 @@ function ReadingsTab({ iot }: { iot: FluxyIoTApi }) {
             </div>
           ))}
         </div>
-        <button type="button" onClick={() => { iot.ingestReading(selected, "temperature", 25 + Math.random() * 15, "°C"); }} className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted">Inject test reading</button>
+        <button type="button" onClick={() => {
+          if (workerIoT && workerDevices.some((d) => d.id === selected)) {
+            void workerIoT.ingestReading(selected, { sensor: "temperature", value: 25 + Math.random() * 15, unit: "°C" }).then(onReload);
+            return;
+          }
+          iot.ingestReading(selected, "temperature", 25 + Math.random() * 15, "°C");
+          onReload();
+        }} className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted">
+          Inject test reading{workerIoT && workerDevices.some((d) => d.id === selected) ? " · Worker" : ""}
+        </button>
       </div>
     </div>
   );
 }
 
-function RulesTab({ iot }: { iot: FluxyIoTApi }) {
+function RulesTab({
+  iot,
+  workerIoT,
+  onReload,
+}: {
+  iot: FluxyIoTApi;
+  workerIoT: WorkerFluxyIoTClient | null;
+  onReload: () => void;
+}) {
   const rules = iot.listRules();
   return (
     <div>
+      {workerIoT ? (
+        <button
+          type="button"
+          onClick={() => {
+            void workerIoT.createRule({
+              name: `Worker rule ${Date.now()}`,
+              condition: { sensor: "temperature", operator: ">", value: 28 },
+              action: { type: "alert", target: "room:alerts", payload: "High temp from Worker" },
+            }).then(onReload);
+          }}
+          className="mb-3 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted"
+        >
+          Create rule on Worker
+        </button>
+      ) : null}
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rule engine ({rules.length})</h3>
       <div className="space-y-2">
         {rules.map((r) => (
@@ -242,10 +373,31 @@ function AlertsTab({ iot, onReload }: { iot: FluxyIoTApi; onReload: () => void }
   );
 }
 
-function ShadowTab({ iot }: { iot: FluxyIoTApi }) {
-  const devices = iot.listDevices();
+function ShadowTab({
+  iot,
+  workerIoT,
+  workerDevices,
+}: {
+  iot: FluxyIoTApi;
+  workerIoT: WorkerFluxyIoTClient | null;
+  workerDevices: IoTDevicePublic[];
+}) {
+  const devices = workerDevices.length > 0 ? workerDevices : iot.listDevices();
   const [selected, setSelected] = useState(devices[0]?.id || "");
-  const shadow = iot.getShadow(selected);
+  const [workerShadow, setWorkerShadow] = useState<{ reported: Record<string, unknown>; desired: Record<string, unknown> } | null>(null);
+
+  useEffect(() => {
+    if (!workerIoT || !selected || !workerDevices.some((d) => d.id === selected)) {
+      setWorkerShadow(null);
+      return;
+    }
+    void workerIoT.getShadow(selected).then(setWorkerShadow).catch(() => setWorkerShadow(null));
+  }, [workerIoT, selected, workerDevices]);
+
+  const localShadow = iot.getShadow(selected);
+  const shadow = workerShadow
+    ? { desired: workerShadow.desired, reported: workerShadow.reported, delta: {} as Record<string, { desired: unknown; reported: unknown }> }
+    : localShadow;
   const deltaKeys = shadow ? Object.keys(shadow.delta) : [];
 
   return (

@@ -1,0 +1,46 @@
+---
+title: Contributing
+description: How to contribute to FluxyChat — setup, PR expectations, and community norms.
+---
+
+FluxyChat is a monorepo (Worker + dashboard + SDK packages). Read the root [`CONTRIBUTING.md`](https://github.com/fluxychat/fluxychat/blob/main/CONTRIBUTING.md) for the full guide.
+
+## Quick start
+
+```bash
+git clone <repo>
+cd Chat
+pnpm install
+pnpm --filter @fluxy-chat/worker dev
+pnpm --filter @fluxy-chat/dashboard dev
+```
+
+Verify: `pnpm first-message` against `http://127.0.0.1:8787`.
+
+## Good first issues
+
+Look for GitHub labels:
+
+- `good first issue` — scoped tasks with pointers in the issue body
+- `help wanted` — design agreed, needs code
+
+## What we merge quickly
+
+- Bug fixes with tests
+- Docs corrections aligned with current Worker routes
+- SDK DX improvements (types, error messages, examples)
+- Dashboard operator workflows (compliance, bridges, inbox)
+
+## What we defer
+
+- Marketing copy and case studies (see roadmap Fase 4 marketing)
+- Stripe billing production wiring (requires Stripe Business)
+- Paid SOC 2 attestation (product controls are in `/soc2`)
+
+## Pull requests
+
+Use the PR template checklist. Link a roadmap ID (`MO-*`, `DX-*`, `MD-*`) when applicable.
+
+## Code of conduct
+
+Be respectful in issues and reviews. Security issues: report privately, not in public issues.

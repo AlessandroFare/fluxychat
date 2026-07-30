@@ -10,12 +10,15 @@ import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
+import { ConsoleProjectRoomBar } from "../components/console-project-room-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "../components/ui";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { cn } from "@/lib/utils";
 import { DynamicPricing } from "@/components/fleet/dynamic-pricing";
+import { FleetModal, AddressSearchField } from "@/components/fleet/fleet-modal";
+import { getCurrentPosition } from "@/lib/geocode";
 
 const FleetMapView = dynamic(
   () => import("@/components/fleet/fleet-map-view").then((m) => m.FleetMapView),
@@ -113,6 +116,22 @@ export default function FleetPage() {
     } finally { setCreating(false); }
   };
 
+  const [locating, setLocating] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  async function useMyLocation() {
+    setLocating(true);
+    try {
+      const pos = await getCurrentPosition();
+      setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not get GPS location");
+    } finally {
+      setLocating(false);
+    }
+  }
+
   const [newTripVehicleId, setNewTripVehicleId] = useState("");
   const [newTripPickupLat, setNewTripPickupLat] = useState("");
   const [newTripPickupLng, setNewTripPickupLng] = useState("");
@@ -146,6 +165,7 @@ export default function FleetPage() {
   const [newGeofenceLat, setNewGeofenceLat] = useState("");
   const [newGeofenceLng, setNewGeofenceLng] = useState("");
   const [newGeofenceRadius, setNewGeofenceRadius] = useState("100");
+  const [newGeofenceSearch, setNewGeofenceSearch] = useState("");
 
   const handleCreateGeofence = async () => {
     if (!client || !newGeofenceName.trim() || !newGeofenceLat || !newGeofenceLng) return;
@@ -191,6 +211,11 @@ export default function FleetPage() {
         description="Real-time GPS tracking, trip management, and geofencing"
       />
 
+      <ConsoleProjectRoomBar
+        requireProject
+        hint="Vehicles, trips, and geofences load from your Worker fleet APIs when authenticated."
+      />
+
       {error && (
         <div className="mx-4 mb-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
           {error}
@@ -204,6 +229,9 @@ export default function FleetPage() {
             <Button variant="ghost" size="sm" onClick={refresh} disabled={loading}>
               <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => void useMyLocation()} disabled={locating} title="Show my location on map">
+              {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => setShowCreateVehicle(true)}><Plus className="h-4 w-4" /> Vehicle</Button>
             <Button variant="ghost" size="sm" onClick={() => setShowCreateTrip(true)}><Route className="h-4 w-4" /> Trip</Button>
             <Button variant="ghost" size="sm" onClick={() => setShowCreateGeofence(true)}><Circle className="h-4 w-4" /> Geofence</Button>
@@ -213,6 +241,7 @@ export default function FleetPage() {
               vehicles={vehicles}
               selectedVehicleId={selectedVehicleId}
               onSelectVehicle={setSelectedVehicleId}
+              userLocation={userLocation}
             />
           </div>
         </div>
@@ -346,72 +375,113 @@ export default function FleetPage() {
         </div>
       </div>
 
-      {/* ── Create Vehicle Dialog ── */}
-      {showCreateVehicle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCreateVehicle(false)}>
-          <div className="w-80 rounded-lg bg-background p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 font-semibold">Add Vehicle</h3>
-            <input className="mb-2 w-full rounded border px-2 py-1.5 text-sm" placeholder="Vehicle name *" value={newVehicleName} onChange={(e) => setNewVehicleName(e.target.value)} />
-            <input className="mb-3 w-full rounded border px-2 py-1.5 text-sm" placeholder="License plate (optional)" value={newVehiclePlate} onChange={(e) => setNewVehiclePlate(e.target.value)} />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowCreateVehicle(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleCreateVehicle} disabled={creating || !newVehicleName.trim()}>
-                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
-              </Button>
-            </div>
-          </div>
+      <FleetModal open={showCreateVehicle} onClose={() => setShowCreateVehicle(false)} className="w-80">
+        <h3 className="mb-3 font-semibold">Add Vehicle</h3>
+        <input className="mb-2 w-full rounded border px-2 py-1.5 text-sm" placeholder="Vehicle name *" value={newVehicleName} onChange={(e) => setNewVehicleName(e.target.value)} />
+        <input className="mb-3 w-full rounded border px-2 py-1.5 text-sm" placeholder="License plate (optional)" value={newVehiclePlate} onChange={(e) => setNewVehiclePlate(e.target.value)} />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowCreateVehicle(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleCreateVehicle} disabled={creating || !newVehicleName.trim()}>
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
+          </Button>
         </div>
-      )}
+      </FleetModal>
 
-      {/* ── Create Trip Dialog ── */}
-      {showCreateTrip && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCreateTrip(false)}>
-          <div className="w-96 rounded-lg bg-background p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 font-semibold">Create Trip</h3>
-            <select className="mb-2 w-full rounded border px-2 py-1.5 text-sm" value={newTripVehicleId} onChange={(e) => setNewTripVehicleId(e.target.value)}>
-              <option value="">Select vehicle *</option>
-              {vehicles.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
-            <div className="mb-2 grid grid-cols-2 gap-2">
-              <input className="rounded border px-2 py-1.5 text-sm" placeholder="Pickup lat *" value={newTripPickupLat} onChange={(e) => setNewTripPickupLat(e.target.value)} />
-              <input className="rounded border px-2 py-1.5 text-sm" placeholder="Pickup lng *" value={newTripPickupLng} onChange={(e) => setNewTripPickupLng(e.target.value)} />
-            </div>
-            <input className="mb-2 w-full rounded border px-2 py-1.5 text-sm" placeholder="Pickup address (optional)" value={newTripPickupAddr} onChange={(e) => setNewTripPickupAddr(e.target.value)} />
-            <div className="mb-2 grid grid-cols-2 gap-2">
-              <input className="rounded border px-2 py-1.5 text-sm" placeholder="Dropoff lat *" value={newTripDropoffLat} onChange={(e) => setNewTripDropoffLat(e.target.value)} />
-              <input className="rounded border px-2 py-1.5 text-sm" placeholder="Dropoff lng *" value={newTripDropoffLng} onChange={(e) => setNewTripDropoffLng(e.target.value)} />
-            </div>
-            <input className="mb-3 w-full rounded border px-2 py-1.5 text-sm" placeholder="Dropoff address (optional)" value={newTripDropoffAddr} onChange={(e) => setNewTripDropoffAddr(e.target.value)} />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowCreateTrip(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleCreateTrip} disabled={creating || !newTripVehicleId || !newTripPickupLat || !newTripPickupLng || !newTripDropoffLat || !newTripDropoffLng}>
-                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
-              </Button>
-            </div>
-          </div>
+      <FleetModal open={showCreateTrip} onClose={() => setShowCreateTrip(false)} className="w-[28rem]">
+        <h3 className="mb-3 font-semibold">Create Trip</h3>
+        <select className="mb-2 w-full rounded border px-2 py-1.5 text-sm" value={newTripVehicleId} onChange={(e) => setNewTripVehicleId(e.target.value)}>
+          <option value="">Select vehicle *</option>
+          {vehicles.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+        </select>
+        <AddressSearchField
+          label="Pickup address"
+          value={newTripPickupAddr}
+          onChange={setNewTripPickupAddr}
+          onSelect={(r) => {
+            setNewTripPickupAddr(r.displayName);
+            setNewTripPickupLat(String(r.lat));
+            setNewTripPickupLng(String(r.lng));
+          }}
+        />
+        <div className="mb-2 flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={locating}
+            onClick={() => {
+              void (async () => {
+                setLocating(true);
+                try {
+                  const pos = await getCurrentPosition();
+                  setNewTripPickupLat(String(pos.coords.latitude));
+                  setNewTripPickupLng(String(pos.coords.longitude));
+                  setNewTripPickupAddr("My current location");
+                  setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "Could not get GPS location");
+                } finally {
+                  setLocating(false);
+                }
+              })();
+            }}
+          >
+            {locating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+            Use my GPS for pickup
+          </Button>
         </div>
-      )}
+        <div className="mb-2 grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+          <span>Lat: {newTripPickupLat || "—"}</span>
+          <span>Lng: {newTripPickupLng || "—"}</span>
+        </div>
+        <AddressSearchField
+          label="Dropoff address"
+          value={newTripDropoffAddr}
+          onChange={setNewTripDropoffAddr}
+          onSelect={(r) => {
+            setNewTripDropoffAddr(r.displayName);
+            setNewTripDropoffLat(String(r.lat));
+            setNewTripDropoffLng(String(r.lng));
+          }}
+        />
+        <div className="mb-3 grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+          <span>Lat: {newTripDropoffLat || "—"}</span>
+          <span>Lng: {newTripDropoffLng || "—"}</span>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowCreateTrip(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleCreateTrip} disabled={creating || !newTripVehicleId || !newTripPickupLat || !newTripPickupLng || !newTripDropoffLat || !newTripDropoffLng}>
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
+          </Button>
+        </div>
+      </FleetModal>
 
-      {/* ── Create Geofence Dialog ── */}
-      {showCreateGeofence && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCreateGeofence(false)}>
-          <div className="w-80 rounded-lg bg-background p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 font-semibold">Create Geofence</h3>
-            <input className="mb-2 w-full rounded border px-2 py-1.5 text-sm" placeholder="Geofence name *" value={newGeofenceName} onChange={(e) => setNewGeofenceName(e.target.value)} />
-            <div className="mb-2 grid grid-cols-2 gap-2">
-              <input className="rounded border px-2 py-1.5 text-sm" placeholder="Center lat *" value={newGeofenceLat} onChange={(e) => setNewGeofenceLat(e.target.value)} />
-              <input className="rounded border px-2 py-1.5 text-sm" placeholder="Center lng *" value={newGeofenceLng} onChange={(e) => setNewGeofenceLng(e.target.value)} />
-            </div>
-            <input className="mb-3 w-full rounded border px-2 py-1.5 text-sm" placeholder="Radius in meters (default: 100)" value={newGeofenceRadius} onChange={(e) => setNewGeofenceRadius(e.target.value)} />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowCreateGeofence(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleCreateGeofence} disabled={creating || !newGeofenceName.trim() || !newGeofenceLat || !newGeofenceLng}>
-                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
-              </Button>
-            </div>
-          </div>
+      <FleetModal open={showCreateGeofence} onClose={() => setShowCreateGeofence(false)} className="w-80">
+        <h3 className="mb-3 font-semibold">Create Geofence</h3>
+        <input className="mb-2 w-full rounded border px-2 py-1.5 text-sm" placeholder="Geofence name *" value={newGeofenceName} onChange={(e) => setNewGeofenceName(e.target.value)} />
+        <AddressSearchField
+          label="Center address"
+          value={newGeofenceSearch}
+          onChange={setNewGeofenceSearch}
+          placeholder="Search center location…"
+          onSelect={(r) => {
+            setNewGeofenceSearch(r.displayName);
+            setNewGeofenceLat(String(r.lat));
+            setNewGeofenceLng(String(r.lng));
+          }}
+        />
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <input className="rounded border px-2 py-1.5 text-sm" placeholder="Center lat *" value={newGeofenceLat} onChange={(e) => setNewGeofenceLat(e.target.value)} />
+          <input className="rounded border px-2 py-1.5 text-sm" placeholder="Center lng *" value={newGeofenceLng} onChange={(e) => setNewGeofenceLng(e.target.value)} />
         </div>
-      )}
+        <input className="mb-3 w-full rounded border px-2 py-1.5 text-sm" placeholder="Radius in meters (default: 100)" value={newGeofenceRadius} onChange={(e) => setNewGeofenceRadius(e.target.value)} />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowCreateGeofence(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleCreateGeofence} disabled={creating || !newGeofenceName.trim() || !newGeofenceLat || !newGeofenceLng}>
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
+          </Button>
+        </div>
+      </FleetModal>
 
       {/* Voice dispatch floating button */}
       <VoiceDispatch client={client} vehicles={vehicles} refresh={refresh} />

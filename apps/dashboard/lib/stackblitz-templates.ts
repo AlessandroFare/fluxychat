@@ -376,11 +376,13 @@ console.log("User:", USER_ID);`,
         "react-dom": "^18.2.0",
         "react-scripts": "5.0.1",
         "@fluxy-chat/sdk": "^0.4.2",
+        "@fluxy-chat/react": "^0.1.0",
         "@fluxy-chat/protocol": "^0.1.0",
       },
       files: {
         "src/App.js": tmpl`import React, { useState, useEffect, useCallback } from "react";
-import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/react";
 import "./App.css";
 
 const BASE_URL = "${WC_BASE_URL}";
@@ -799,11 +801,13 @@ root.render(
         "react-dom": "^18.2.0",
         "react-scripts": "5.0.1",
         "@fluxy-chat/sdk": "^0.4.2",
+        "@fluxy-chat/react": "^0.1.0",
         "@fluxy-chat/protocol": "^0.1.0",
       },
       files: {
         "src/App.js": tmpl`import React, { useState, useEffect, useRef, useCallback } from "react";
-import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/react";
 import "./App.css";
 
 const BASE_URL = "${WC_BASE_URL}";

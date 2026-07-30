@@ -1,0 +1,12 @@
+{
+  "title": "Advanced",
+  "pages": [
+    "index",
+    "adapters",
+    "lifecycle-hooks",
+    "speed-kv-caching",
+    "provider-config",
+    "theming",
+    "devtools-inspector"
+  ]
+}

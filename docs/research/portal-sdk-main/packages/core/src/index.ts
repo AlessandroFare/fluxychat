@@ -23,7 +23,8 @@ export {
 // Explicit type surface — the client SDK contract (§1–8), and nothing beyond it. Types
 // referenced only by method signatures (ChannelSnapshot/ChannelView/InboxSnapshot/InboxView
 // — the return types of getSnapshot()/view()) are exported so those signatures are usable.
-// `InboxStatus` and `Scalar` stay internal: the contract inlines them.
+// `InboxStatus` is exported so consumers (e.g. `@portalsdk/react`'s SSR-inert `useInbox`) can
+// express states beyond what a live `InboxHandle` itself ever produces. `Scalar` stays internal.
 export type {
   Unsubscribe,
   PortalConfig,
@@ -55,6 +56,7 @@ export type {
   InboxItem,
   InboxEvents,
   InboxSnapshot,
+  InboxStatus,
   InboxView,
   InboxHandle,
 } from "./types.js";

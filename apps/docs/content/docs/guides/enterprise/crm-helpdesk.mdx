@@ -1,0 +1,103 @@
+---
+title: CRM and helpdesk integrations
+description: Connect Salesforce, Zendesk, HubSpot, or Intercom for contact sync, tickets, and agent handoff.
+---
+
+Native adapters for **Salesforce**, **Zendesk**, **HubSpot**, and **Intercom** — store connection configs per tenant, sync contacts/tickets, create tickets from chat, and hand off to in-room agents.
+
+Configure from [**Settings → CRM**](/settings/crm) or the admin REST API.
+
+## Save a connection
+
+```bash
+curl -X POST "$WORKER_URL/admin/crm/connections" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "zendesk",
+    "apiKey": "your-api-token",
+    "instanceUrl": "https://yourcompany.zendesk.com",
+    "enabled": true
+  }'
+```
+
+Supported providers: `salesforce`, `zendesk`, `hubspot`, `intercom`.
+
+API keys are stored in KV and never returned in list responses (masked).
+
+## Sync contacts and tickets
+
+```bash
+curl -X POST "$WORKER_URL/admin/crm/sync" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"provider":"zendesk","direction":"bidirectional"}'
+```
+
+Directions: `in`, `out`, `bidirectional`.
+
+Sync history:
+
+```bash
+curl "$WORKER_URL/admin/crm/sync/history" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+## Lookup contact
+
+```bash
+curl "$WORKER_URL/admin/crm/contacts/lookup?provider=zendesk&email=alex@example.com" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+## Create ticket from chat
+
+```bash
+curl -X POST "$WORKER_URL/admin/crm/tickets" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "zendesk",
+    "subject": "Chat escalation — billing question",
+    "description": "User asked about invoice #1234 in room room_support",
+    "contactEmail": "alex@example.com",
+    "priority": "high"
+  }'
+```
+
+## Agent handoff (bi-directional)
+
+Link a CRM ticket to a FluxyChat room and agent:
+
+```bash
+curl -X POST "$WORKER_URL/admin/crm/handoff" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "zendesk",
+    "ticketId": "ticket_abc123",
+    "roomId": "room_support",
+    "agentId": "agent_billing"
+  }'
+```
+
+## SDK (client-side demo)
+
+For in-browser prototyping without Worker persistence:
+
+```typescript
+import { createCrmIntegration } from "@fluxy-chat/sdk";
+
+const crm = createCrmIntegration({
+  provider: "hubspot",
+  apiKey: "demo-key",
+});
+await crm.sync("bidirectional");
+```
+
+Production integrations should use the Worker `/admin/crm/*` routes above.
+
+## Related
+
+- [AI agent handoff](/docs/guides/ai-agents/handoff) — human-in-the-loop escalation
+- [Slack/Discord bridge](/docs/guides/slack-discord-bridge) — omnichannel inbound

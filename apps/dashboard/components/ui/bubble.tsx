@@ -178,12 +178,12 @@ function BubbleActions({
 }
 
 const bubbleReactionsVariants = cva(
-  "absolute z-10 flex h-6 w-fit shrink-0 items-center gap-1 rounded-full border border-[#e5e7eb] bg-white px-2 py-0.5 text-[13px] shadow-[0_1px_3px_rgba(0,0,0,0.1)]",
+  "absolute z-10 flex w-fit shrink-0 items-center gap-1 rounded-full border border-[#e5e7eb] !bg-white px-2 py-0.5 text-[13px] text-slate-900 shadow-[0_1px_3px_rgba(0,0,0,0.1)] has-[button]:p-0 [&_button]:bg-transparent [&_button]:hover:bg-[#f1f5f9]",
   {
     variants: {
       side: {
-        top: "top-0 -translate-y-3/4",
-        bottom: "bottom-[-10px]",
+        top: "top-0 -translate-y-1/2",
+        bottom: "top-full -translate-y-[24%]",
       },
       align: {
         start: "left-2",
@@ -192,7 +192,7 @@ const bubbleReactionsVariants = cva(
     },
     defaultVariants: {
       side: "bottom",
-      align: "end",
+      align: "start",
     },
   }
 )

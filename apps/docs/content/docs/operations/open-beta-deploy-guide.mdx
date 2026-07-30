@@ -1,0 +1,57 @@
+---
+title: "Open beta deploy guide"
+description: "Short path from commit to a smoke-verified hosted stack. For rollback and secrets detail, see repo `RUNBOOK_DEPLOY_ROLLBACK.md` and [M6 checklist](/docs/m6-oper"
+---
+
+Short path from commit to a smoke-verified hosted stack. For rollback and secrets detail, see repo `RUNBOOK_DEPLOY_ROLLBACK.md` and [M6 checklist](/docs/m6-operational-checklist).
+
+## 1. Preflight (CI locally)
+
+```bash
+pnpm install
+pnpm run check:pricing
+pnpm run check:tenant-scope
+pnpm run check:openapi
+pnpm run check:do-bindings
+pnpm --filter @fluxy-chat/worker typecheck
+pnpm test
+pnpm --filter @fluxy-chat/dashboard build
+```
+
+## 2. Database
+
+```bash
+cd apps/worker
+pnpm exec wrangler d1 migrations apply fluxychat --remote
+```
+
+## 3. Worker
+
+```bash
+pnpm exec wrangler deploy src/worker.js
+# Staging: --config wrangler.staging.toml
+```
+
+Set secrets (`wrangler secret put …`) per `apps/worker/.dev.vars.example`.
+
+## 4. Dashboard (Vercel or `next start`)
+
+```bash
+NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL=https://api.yourdomain.com
+# Clerk keys if using hosted sign-in
+pnpm --filter @fluxy-chat/dashboard build
+```
+
+## 5. Smoke
+
+```bash
+pnpm --filter @fluxy-chat/worker smoke:remote -- --base-url https://api.yourdomain.com --admin-jwt "<JWT>"
+cd apps/dashboard && CI=true pnpm test:e2e:smoke
+```
+
+Check `/status` on the dashboard host and `/health` on the Worker.
+
+## 6. First tenant
+
+Dashboard → **Onboarding** → project → member JWT → room → message.  
+**Billing** → load plan. **Analytics** → cost + alerts.

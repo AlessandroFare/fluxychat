@@ -1,0 +1,55 @@
+# @fluxy-chat/ui
+
+React UI components for FluxyChat — shadcn-style chat primitives built on Radix UI and Tailwind.
+
+Pair with [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) for realtime state and [`@fluxy-chat/sdk`](https://www.npmjs.com/package/@fluxy-chat/sdk) for the client.
+
+## Install
+
+```bash
+pnpm add @fluxy-chat/ui @fluxy-chat/react @fluxy-chat/sdk
+```
+
+**Peer dependencies:** `react` (18+), Tailwind CSS in your app, and the Radix/lucide peers listed in `package.json`.
+
+## Quick start
+
+```tsx
+import { ChatWindow, MessageList, MessageInput } from "@fluxy-chat/ui";
+import { useChat } from "@fluxy-chat/react";
+
+function Room({ roomId }: { roomId: string }) {
+  const { messages, sendMessage } = useChat({ roomId });
+
+  return (
+    <ChatWindow>
+      <MessageList messages={messages} />
+      <MessageInput onSend={(text) => sendMessage(text)} />
+    </ChatWindow>
+  );
+}
+```
+
+## Exports
+
+### High-level
+
+- `ChatWindow`, `MessageList`, `MessageItem`, `MessageInput`
+- `ChannelList`, `PresenceList`, `TypingUsersIndicator`
+- `AgentMessage`, `AgentTypingIndicator`
+- `ComposerToolsMenu`, composer prompt helpers
+
+### Primitives (custom layouts)
+
+- `Message`, `Bubble`, `Composer`, `Attachment`
+- `MessageScroller` (virtualized scroll helpers)
+- `ReactionPicker`, `TypingIndicator`, `Marker`
+- `Button`, `cn` utility
+
+## Styling
+
+Components use Tailwind utility classes and expect your app to provide design tokens (CSS variables or Tailwind theme). They do not ship a global stylesheet — import your Tailwind setup as usual.
+
+## License
+
+MIT

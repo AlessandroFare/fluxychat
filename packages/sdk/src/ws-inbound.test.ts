@@ -16,14 +16,23 @@ describe("dispatchInboundWsFrame", () => {
     expect(onDeliver).not.toHaveBeenCalled();
   });
 
-  it("ignores unknown server events", () => {
+  it("forwards unknown server frames without delivering as events", () => {
     const onDeliver = vi.fn();
-    dispatchInboundWsFrame(JSON.stringify({ type: "unknown_future_event" }), {
-      onPong: vi.fn(),
-      onReplay: vi.fn(),
-      onHistoryMarker: vi.fn(),
-      onWorkerError: vi.fn(),
-      onDeliver,
+    const onUnknownFrame = vi.fn();
+    dispatchInboundWsFrame(
+      JSON.stringify({ type: "unknown_future_event", v: 1 }),
+      {
+        onPong: vi.fn(),
+        onReplay: vi.fn(),
+        onHistoryMarker: vi.fn(),
+        onWorkerError: vi.fn(),
+        onDeliver,
+        onUnknownFrame,
+      },
+    );
+    expect(onUnknownFrame).toHaveBeenCalledWith({
+      type: "unknown_future_event",
+      v: 1,
     });
     expect(onDeliver).not.toHaveBeenCalled();
   });

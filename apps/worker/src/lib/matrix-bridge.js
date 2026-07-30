@@ -1,7 +1,25 @@
+import { importAdminMessage } from "./message-import.js";
+import { deriveScopedClientMessageId } from "./client-message-id.js";
+
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function matrixTimestampToIso(originServerTs) {
+  if (!originServerTs) return new Date().toISOString();
+  const ms = Number(originServerTs);
+  if (!Number.isFinite(ms)) return new Date().toISOString();
+  return new Date(ms).toISOString();
+}
+
+function extractMatrixTextContent(content, msgtype) {
+  if (!content || typeof content !== "object") return null;
+  const type = msgtype || content.msgtype || "m.text";
+  if (type !== "m.text" && type !== "m.notice") return null;
+  const body = content.body;
+  return typeof body === "string" && body.length ? body : null;
 }
 
 export async function createMatrixBridge(env, { projectId, homeserverUrl, accessToken, botUserId, botDisplayName, syncMode, settings }) {
@@ -126,19 +144,130 @@ export async function recordMatrixSyncLog(env, { bridgeId, projectId, eventType,
   return { id };
 }
 
-export async function syncMatrixInbound(env, { bridgeId, projectId, matrixEventId, matrixRoomId, senderId, content, msgtype }) {
+export async function syncMatrixInbound(env, {
+  bridgeId,
+  projectId,
+  matrixEventId,
+  matrixRoomId,
+  senderId,
+  content,
+  msgtype,
+  originServerTs,
+}) {
   const mapping = await getMatrixMappingByMatrixRoom(env, { bridgeId, matrixRoomId });
   if (!mapping) return { error: "no_mapping" };
 
   const existing = await findFluxyMessageByMatrix(env, { matrixEventId });
-  if (existing) return { error: "already_synced" };
+  if (existing) return { error: "already_synced", messageId: existing.fluxychatMessageId };
 
-  await recordMatrixSyncLog(env, {
-    bridgeId, projectId, eventType: "message", direction: "inbound",
-    payload: { matrixEventId, matrixRoomId, senderId, content, msgtype },
+  const imported = await importAdminMessage(env, {
+    projectId,
+    roomId: mapping.fluxychatRoomId,
+    content,
+    userId: senderId || "matrix-bridge",
+    createdAt: matrixTimestampToIso(originServerTs),
+    clientMessageId: deriveScopedClientMessageId("matrix", matrixEventId),
+    importedBy: "matrix-bridge",
+  });
+  if (imported.error) {
+    await recordMatrixSyncLog(env, {
+      bridgeId,
+      projectId,
+      eventType: "message",
+      direction: "inbound",
+      payload: { matrixEventId, matrixRoomId, senderId, content, msgtype, error: imported.error },
+      status: "error",
+    });
+    return imported;
+  }
+  if (imported.skipped) {
+    await mapMatrixMessage(env, {
+      bridgeId,
+      projectId,
+      fluxychatMessageId: String(imported.messageId),
+      matrixEventId,
+      matrixRoomId,
+      direction: "inbound",
+    }).catch(() => {});
+    return {
+      roomId: mapping.fluxychatRoomId,
+      content,
+      matrixEventId,
+      senderId,
+      messageId: imported.messageId,
+      skipped: true,
+    };
+  }
+
+  await mapMatrixMessage(env, {
+    bridgeId,
+    projectId,
+    fluxychatMessageId: String(imported.messageId),
+    matrixEventId,
+    matrixRoomId,
+    direction: "inbound",
   });
 
-  return { roomId: mapping.fluxychatRoomId, content, matrixEventId, senderId };
+  await recordMatrixSyncLog(env, {
+    bridgeId,
+    projectId,
+    eventType: "message",
+    direction: "inbound",
+    payload: { matrixEventId, matrixRoomId, senderId, content, msgtype, messageId: imported.messageId },
+  });
+
+  return {
+    roomId: mapping.fluxychatRoomId,
+    content,
+    matrixEventId,
+    senderId,
+    messageId: imported.messageId,
+  };
+}
+
+export async function processMatrixAppserviceTransaction(env, { bridgeId, projectId, transaction }) {
+  const events = Array.isArray(transaction?.events) ? transaction.events : [];
+  const processed = [];
+  const ignored = [];
+
+  for (const event of events) {
+    if (!event || event.type !== "m.room.message") {
+      ignored.push({ eventId: event?.event_id, reason: "not_message" });
+      continue;
+    }
+    const content = extractMatrixTextContent(event.content, event.content?.msgtype);
+    if (!content) {
+      ignored.push({ eventId: event.event_id, reason: "unsupported_msgtype" });
+      continue;
+    }
+
+    const result = await syncMatrixInbound(env, {
+      bridgeId,
+      projectId,
+      matrixEventId: event.event_id,
+      matrixRoomId: event.room_id,
+      senderId: event.sender,
+      content,
+      msgtype: event.content?.msgtype,
+      originServerTs: event.origin_server_ts,
+    });
+
+    if (result.error === "already_synced") {
+      ignored.push({ eventId: event.event_id, reason: "already_synced" });
+      continue;
+    }
+    if (result.error) {
+      return { error: result.error, processed, ignored, failedEventId: event.event_id };
+    }
+    processed.push({
+      eventId: event.event_id,
+      messageId: result.messageId,
+      roomId: result.roomId,
+      skipped: result.skipped === true,
+    });
+  }
+
+  return { ok: true, processed, ignored, count: processed.length };
 }
 
 export async function syncMatrixOutbound(env, { bridgeId, projectId, fluxychatMessageId, matrixRoomId, content, msgtype }) {
@@ -156,7 +285,66 @@ export async function syncMatrixOutbound(env, { bridgeId, projectId, fluxychatMe
     payload: { fluxychatMessageId, matrixRoomId, content, msgtype },
   });
 
-  return { matrixRoomId, content, fluxychatMessageId, msgtype: msgtype || "m.text" };
+  const bridge = await env.DB.prepare(
+    "SELECT homeserver_url, access_token FROM matrix_bridge_configs WHERE id = ? AND project_id = ?",
+  ).bind(bridgeId, projectId).first();
+
+  const base = typeof bridge?.homeserver_url === "string" ? bridge.homeserver_url.replace(/\/$/, "") : "";
+  const token = typeof bridge?.access_token === "string" ? bridge.access_token.trim() : "";
+
+  if (base && token) {
+    const txnId = String(fluxychatMessageId).replace(/[^a-zA-Z0-9._~-]/g, "_").slice(0, 64)
+      || `fc_${Date.now()}`;
+    const sendUrl = `${base}/_matrix/client/v3/rooms/${encodeURIComponent(matrixRoomId)}/send/m.room.message/${encodeURIComponent(txnId)}`;
+    try {
+      const res = await fetch(sendUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          msgtype: msgtype || "m.text",
+          body: content,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        return {
+          error: "homeserver_send_failed",
+          status: res.status,
+          detail: detail.slice(0, 500),
+        };
+      }
+      const body = await res.json().catch(() => ({}));
+      const matrixEventId = body?.event_id;
+      if (matrixEventId) {
+        await mapMatrixMessage(env, {
+          bridgeId,
+          projectId,
+          fluxychatMessageId,
+          matrixEventId,
+          matrixRoomId,
+          direction: "outbound",
+        });
+      }
+      return {
+        matrixRoomId,
+        content,
+        fluxychatMessageId,
+        msgtype: msgtype || "m.text",
+        matrixEventId: matrixEventId || null,
+        sent: true,
+      };
+    } catch (err) {
+      return {
+        error: "homeserver_send_failed",
+        detail: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  return { matrixRoomId, content, fluxychatMessageId, msgtype: msgtype || "m.text", sent: false, queued: true };
 }
 
 export async function getMatrixBridgeStats(env, { projectId }) {

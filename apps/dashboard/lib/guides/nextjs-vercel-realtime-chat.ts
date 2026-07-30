@@ -33,7 +33,8 @@ export const NEXTJS_VERCEL_REALTIME_CHAT_GUIDE: GuideContent = {
       code: `// app/api/fluxy/token/route.ts — mint JWT server-side
 // app/room/[id]/room-chat.tsx — "use client" + useChat
 
-import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/react";
 
 const client = new FluxyChatClient({
   baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL!,

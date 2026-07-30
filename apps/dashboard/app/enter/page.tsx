@@ -7,6 +7,7 @@ import { ArrowRight, Shield } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { ConsoleShell } from "../components/console-shell";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 function EnterConsoleBody() {
   const router = useRouter();
@@ -77,7 +78,7 @@ function EnterConsoleBody() {
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Button>
           <Button type="button" variant="outline" size="lg" asChild>
-            <Link href="/landing">Back to product page</Link>
+            <Link href={HOSTED_PATHS.landing}>Back to product page</Link>
           </Button>
         </div>
         <p className="mt-4 text-xs text-slate-600">

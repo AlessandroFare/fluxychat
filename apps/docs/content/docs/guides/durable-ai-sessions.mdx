@@ -1,0 +1,76 @@
+---
+title: Durable AI sessions
+description: Resume agent token streams after disconnect or device switch with local offset continuity and optional Worker-backed persistence.
+---
+
+Use `createResumableAgentStream()` when an AI agent stream must survive tab refreshes, brief network drops, or switching devices. The SDK keeps chunk offsets in a local durable transport; optionally sync chunks to the Worker for cross-device resume.
+
+## Quick start
+
+```typescript
+import { createResumableAgentStream } from "@fluxy-chat/sdk";
+
+const stream = createResumableAgentStream({
+  deviceId: "mobile-abc",
+  metadata: { roomId: "room_1", agentId: "support-bot" },
+});
+
+await stream.appendText("Hello ");
+await stream.appendText("world");
+
+const { missedChunks, offset } = await stream.reconnect();
+for (const chunk of missedChunks) {
+  process.stdout.write(chunk.data);
+}
+
+stream.close();
+```
+
+## Resume an existing session
+
+Pass `sessionId` and `lastKnownOffset` after reconnecting:
+
+```typescript
+const stream = createResumableAgentStream({
+  deviceId: "desktop-xyz",
+  sessionId: savedSessionId,
+  lastKnownOffset: savedOffset,
+});
+```
+
+## Worker-backed continuity
+
+When `worker` is set, each `appendText` POSTs to `/ai/streams/:streamId/chunk` and `reconnect()` GETs `/ai/streams/:streamId/resume`:
+
+```typescript
+const stream = createResumableAgentStream({
+  deviceId: "web-client",
+  worker: {
+    baseUrl: process.env.FLUXY_WORKER_URL!,
+    token: adminJwt,
+    streamId: runId, // optional — defaults to sessionId
+  },
+});
+```
+
+### Active streams in a room
+
+```typescript
+const res = await fetch(
+  `${workerUrl}/ai/streams/active?roomId=${encodeURIComponent(roomId)}`,
+  { headers: { Authorization: `Bearer ${token}` } },
+);
+const { streams } = await res.json();
+```
+
+Requires `RATE_LIMIT_KV` or `STREAM_RESUME_KV` on the Worker.
+
+## Relationship to other APIs
+
+| API | Use when |
+|-----|----------|
+| `createDurableTransport()` | Low-level chunk store and offset math |
+| `createResumableAgentStream()` | Agent UI with optional Worker sync |
+| `useChat` + `resumeStream()` | Built-in chat hook stream resumption over WebSocket |
+
+See also [Durable AI Transport](/docs/guides/durable-transport) and [Stream Resumption](/docs/guides/stream-resumption).

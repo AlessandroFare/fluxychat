@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Layout, Wrench, Terminal, Shield, ArrowRight } from "lucide-react";
+import { GraduationCap, Mic, Radio, Sparkles, ArrowRight } from "lucide-react";
 import type { OnboardingWizard } from "./use-onboarding-wizard";
 
 interface ExploreFeaturesStepProps {
@@ -10,31 +10,31 @@ interface ExploreFeaturesStepProps {
 
 const FEATURES = [
   {
-    icon: Layout,
-    title: "Card Builder",
-    desc: "Design interactive cards with a live preview.",
-    href: "/playground",
-    color: "text-blue-600 bg-blue-50",
+    icon: Mic,
+    title: "Voice AI",
+    desc: "STT → LLM → TTS with transport fallback on the room WebSocket.",
+    href: "/voice-ai",
+    color: "text-violet-600 bg-violet-50",
   },
   {
-    icon: Wrench,
-    title: "DevTools",
-    desc: "Inspect WebSocket frames, API calls, and logs.",
-    href: "/devtools",
-    color: "text-purple-600 bg-purple-50",
-  },
-  {
-    icon: Terminal,
-    title: "Create a Bot with CLI",
-    desc: "Scaffold a new bot in seconds with create-fluxy-chat.",
-    href: "/cli",
+    icon: GraduationCap,
+    title: "Live classroom",
+    desc: "Polls, breakouts, and stage go-live on /edu with server_event fan-out.",
+    href: "/edu",
     color: "text-emerald-600 bg-emerald-50",
   },
   {
-    icon: Shield,
-    title: "Security",
-    desc: "Manage API keys, JWTs, and access controls.",
-    href: "/security",
+    icon: Radio,
+    title: "Realtime SDK demos",
+    desc: "Chat, stream, collab, IoT, fleet, and spatial — one SDK, live previews.",
+    href: "/features/realtime",
+    color: "text-blue-600 bg-blue-50",
+  },
+  {
+    icon: Sparkles,
+    title: "LLM keys & agents",
+    desc: "Connect OpenCode Zen or your provider, then tag @assistant in any room.",
+    href: "/agents/llm-keys",
     color: "text-amber-600 bg-amber-50",
   },
 ] as const;
@@ -45,7 +45,7 @@ export function ExploreFeaturesStep({ wizard: _w }: ExploreFeaturesStepProps) {
       <div className="text-center">
         <h3 className="text-lg font-semibold text-foreground">Explore FluxyChat</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Here's what you can do next. Click any card to try it — you can always come back.
+          Production-ready modules you can try now. Open any card — or hit Next when you are ready to finish.
         </p>
       </div>
 
@@ -75,8 +75,7 @@ export function ExploreFeaturesStep({ wizard: _w }: ExploreFeaturesStepProps) {
 
       <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
         <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">Tip:</span> You don't need to visit all of these
-          — they're just a preview of what's available. Click "Next" when you're ready to finish.
+          <span className="font-medium text-foreground">Tip:</span> Card Builder, DevTools, and Security stay in the console nav — explore them after you land on the dashboard.
         </p>
       </div>
     </div>

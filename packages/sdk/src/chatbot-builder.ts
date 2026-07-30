@@ -6,6 +6,8 @@ export type TriggerEvent =
   | { type: "ticket_created"; filters?: { priority?: string } }
   | { type: "schedule"; filters?: { cron?: string; timezone?: string } };
 
+export type TriggerEventType = TriggerEvent["type"];
+
 export type ActionType =
   | "send_message"
   | "create_ticket"

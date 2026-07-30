@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
 
 const FLOATING_MESSAGES = [
-  { text: "What can FluxyChat do?", align: "left", delay: 0 },
-  { text: "Real-time chat, AI agents, location tracking, collaborative docs, and more — all on one platform.", align: "right", delay: 1.5 },
+  { text: "Tell me about FluxyChat", align: "left", delay: 0 },
+  { text: "Real-time chat, AI agents, streaming, whiteboards, multiplayer, and IoT — one SDK on Cloudflare.", align: "right", delay: 1.5 },
   { text: "How is it different from Pusher?", align: "left", delay: 3 },
-  { text: "We're open source, self-hostable on Cloudflare, 10x cheaper, and every room comes with an AI agent built in.", align: "right", delay: 4.5 },
-  { text: "Show me a code example", align: "left", delay: 6 },
-  { text: "```\nconst chat = new FluxyChatClient({ baseUrl, userId, token });\nchat.joinRoom('general');\nchat.sendMessage('Hello from FluxyChat!');\n```", align: "right", delay: 7.5 },
+  { text: "Same worker for chat and platform modules. Self-host or hosted. Lower cost at similar message volume.", align: "right", delay: 4.5 },
+  { text: "Can you write a quickstart example?", align: "left", delay: 6 },
+  { text: "pnpm add @fluxy-chat/sdk — then FluxyChatClient + useChat with a roomId and member JWT from your backend.", align: "right", delay: 7.5 },
 ];
 
 function TypewriterText({ text, delay, onComplete }: { text: string; delay: number; onComplete?: () => void }) {

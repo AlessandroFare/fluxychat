@@ -1,0 +1,53 @@
+---
+title: Core SDK
+description: FluxyChatClient, React hooks, and room session helpers.
+---
+
+FluxyChat ships two npm packages for app developers:
+
+<Cards>
+  <Card title="@fluxy-chat/sdk" description="FluxyChatClient, REST helpers, platform clients, createFluxyRoomSession." href="/docs/packages/sdk" />
+  <Card title="@fluxy-chat/react" description="FluxyRealtimeProvider, useChat, useInbox, useNotifications." href="/docs/packages/react" />
+  <Card title="@fluxy-chat/protocol" description="Shared WebSocket event types." href="/docs/packages/protocol" />
+</Cards>
+
+## Minimal client
+
+```ts
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({
+  baseUrl: "https://your-worker.workers.dev",
+  userId: "alice",
+  token: memberJwt,
+});
+
+await client.connect();
+await client.joinRoom("general");
+await client.sendMessage("general", "Hello!");
+```
+
+## Topics
+
+| Guide | What it covers |
+|-------|----------------|
+| [useChat](/docs/core/use-chat) | React hook — messages, send, pagination, agents |
+| [Connection state](/docs/core/connection-state) | WebSocket, SSE, polling fallback |
+| [Agents](/docs/core/agents) | invokeAgent, handoff, mention triggers |
+| [Inbox](/docs/core/inbox) | Cross-room unread and snooze |
+| [User channel](/docs/core/user-channel) | Per-user WebSocket for inbox and notifications |
+| [Notifications](/docs/core/notifications) | User channel events |
+| [Web push](/docs/core/web-push) | `useWebPush` browser hook |
+| [Presence & typing](/docs/core/presence-typing) | Room presence and typing indicators |
+| [Search](/docs/core/search) | Full-text message search |
+| [Read receipts](/docs/core/read-receipts) | Unread counts and mark-read |
+| [Message middleware](/docs/core/message-middleware) | Hooks before send/receive |
+| [Voice messages](/docs/core/voice-huddles) | Upload voice clips with transcription |
+
+Install:
+
+```bash
+npm install @fluxy-chat/sdk @fluxy-chat/react zustand
+```
+
+Peer deps: React 18+ for hooks, zustand 5+ for room store helpers.

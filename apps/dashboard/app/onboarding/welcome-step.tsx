@@ -2,6 +2,7 @@
 
 import { Sparkles, Plug, Bot, Cloud, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { FluxychatMark } from "@/components/FluxychatLogo";
 import { cn } from "@/lib/utils";
 import type { OnboardingWizard } from "./use-onboarding-wizard";
@@ -89,7 +90,7 @@ export function WelcomeStep({ wizard: w }: WelcomeStepProps) {
             <ChevronRight className="h-4 w-4" />
           </button>
           <Link
-            href="/"
+            href={HOSTED_PATHS.console}
             className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
           >
             Skip tour

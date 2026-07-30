@@ -1,0 +1,127 @@
+---
+title: "Knowledge Base + RAG agent"
+description: "Connect Notion, Confluence, or Google Drive to an in-room Fluxy agent using `@fluxy-chat/sdk` knowledge-base helpers and Worker agent invoke."
+---
+
+## Overview
+
+| Piece | Role |
+|-------|------|
+| `createKnowledgeBase()` | In-memory index (dev) or swap for Vectorize/D1 in production |
+| `addSource()` | Register Notion/Confluence/GDrive connector config |
+| `ingestDocument()` | Chunk + index page content |
+| `buildRagContext()` | Top-k chunks → prompt prefix for the agent |
+| `POST /agents/:id/invoke` | Run the agent with RAG-augmented system prompt |
+
+## 1. Register sources
+
+```ts
+import { createKnowledgeBase } from "@fluxy-chat/sdk";
+
+const kb = createKnowledgeBase();
+
+kb.addSource({
+  type: "notion",
+  name: "Product wiki",
+  connectionConfig: {
+    integrationToken: process.env.NOTION_TOKEN!,
+    databaseId: process.env.NOTION_DB_ID!,
+  },
+  enabled: true,
+  syncIntervalMs: 3600_000,
+});
+
+kb.addSource({
+  type: "confluence",
+  name: "Runbooks",
+  connectionConfig: {
+    baseUrl: "https://acme.atlassian.net/wiki",
+    email: process.env.CONFLUENCE_EMAIL!,
+    apiToken: process.env.CONFLUENCE_TOKEN!,
+  },
+  enabled: true,
+  syncIntervalMs: 7200_000,
+});
+```
+
+Store secrets in Worker secrets / your backend — never in the browser.
+
+## 2. Sync documents
+
+Pull pages from each provider on a cron or webhook, then ingest:
+
+```ts
+async function syncNotionPage(sourceId: string, title: string, markdown: string, url: string) {
+  kb.ingestDocument(sourceId, {
+    title,
+    content: markdown,
+    url,
+    metadata: { provider: "notion" },
+  });
+}
+```
+
+For Google Drive, export Docs as plain text or Markdown before `ingestDocument`.
+
+Chunk size defaults to 500 characters; tune per embedding model context window.
+
+## 3. Build RAG context on each user message
+
+```ts
+function augmentPrompt(userMessage: string): string {
+  const { synthesizedPrompt, results } = kb.buildRagContext({
+    text: userMessage,
+    maxResults: 5,
+    minScore: 0.4,
+  });
+
+  if (results.length === 0) return userMessage;
+
+  return `${synthesizedPrompt}\n\n---\nUser question: ${userMessage}`;
+}
+```
+
+`synthesizedPrompt` lists cited chunks with titles and URLs for the model to ground answers.
+
+## 4. Wire to Fluxy agent invoke
+
+```ts
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({ baseUrl, userId: "support-bot", token: serviceJwt });
+
+export async function answerWithKb(roomId: string, userMessage: string) {
+  const prompt = augmentPrompt(userMessage);
+
+  await client.invokeAgent(agentId, {
+    roomId,
+    prompt,
+    // optional: pass source citations back as a card after reply
+  });
+}
+```
+
+In the dashboard, bind the agent to the support room under **Agents** → enable tools only if the KB miss rate is high.
+
+## 5. Production hardening
+
+| Concern | Approach |
+|---------|----------|
+| Embeddings | Replace stub cosine in `createKnowledgeBase()` with Workers AI or external embeddings |
+| Storage | Persist chunks in D1 + Vectorize instead of in-memory Maps |
+| Freshness | Notion webhooks / Confluence polling cron via Worker `scheduled` |
+| PII | Redact emails/phones before ingest; tenant-scoped source lists |
+| Citations | Post a `Card` with doc links when `results.length > 0` |
+
+## 6. Verify locally
+
+1. `pnpm --filter @fluxychat/worker dev`
+2. Ingest a sample markdown doc via a small script calling `kb.ingestDocument`
+3. Ask the agent a question only answerable from that doc
+4. Confirm the reply cites the chunk title/URL
+
+## See also
+
+- [Custom tools](/docs/custom-tools) — expose `search_kb` as an agent tool instead of pre-prompt injection
+- [Agent memory](/docs/agent-memory) — long-term customer context alongside KB
+- [AI agents + handoff](/docs/handoff) — escalate to human when confidence is low

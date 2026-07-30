@@ -1,0 +1,37 @@
+---
+title: "Realtime chat in Next.js on Vercel"
+description: "Ship the App Router on Vercel; run WebSocket rooms on Cloudflare Workers + Durable Objects. Ably and Pusher are not the only path."
+---
+
+## The buyer question Ably owns
+
+Tutorials for “live app on Vercel” often assume Ably or Pusher because serverless functions are not a socket fleet. That is correct — the fix is not forcing WebSockets into Vercel alone, it is a dedicated realtime layer.
+
+## FluxyChat integration shape
+
+- Route Handler or API route mints a member JWT with your fc_... key (server-only).
+- Client component uses useChat(\{ roomId, client \}) with baseUrl = your Worker.
+- Map Ably channels or Pusher channels → FluxyChat roomIds.
+- Use loadMore() after reconnect; connectionState drives UI copy.
+
+## Why not a second vendor
+
+- Room-per-DO on your Cloudflare account — cost and data stay readable.
+- MIT self-host when hosted beta is not enough.
+- Same WebSocket stream for human messages and agent tool events.
+
+## Code placement in Next.js
+
+```
+// app/api/fluxy/token/route.ts — mint JWT server-side
+// app/room/[id]/room-chat.tsx — "use client" + useChat
+
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/react";
+
+const client = new FluxyChatClient({
+  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL!,
+  userId,
+  token: memberJwtFromRouteHandler,
+});
+```

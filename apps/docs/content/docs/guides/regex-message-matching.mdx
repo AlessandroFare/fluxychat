@@ -1,0 +1,49 @@
+---
+title: "Regex Message Matching"
+description: "`createMessagePatternMatcher()` provides pattern-based message routing using regular expressions, enabling keyword-triggered handlers without @-mentions."
+---
+
+## Usage
+
+```ts
+import { createMessagePatternMatcher } from "@fluxy-chat/sdk";
+
+const matcher = createMessagePatternMatcher();
+
+matcher.onNewMessage(/^!help/, async (msg, match) => {
+  console.log(`Help requested by ${msg.userId} in ${msg.roomId}`);
+});
+
+// Wire into event stream
+connection.onAnyEvent((event) => {
+  matcher.match(event);
+});
+```
+
+## API
+
+- `onNewMessage(pattern, handler, options?)` — Register a pattern handler
+- `removeHandler(pattern, handler)` — Remove a specific handler
+- `match(event)` — Test event against all patterns; returns match count
+- `getPatterns()` — List registered patterns
+- `clear()` — Remove all patterns
+
+## Multiple Patterns
+
+Multiple patterns can match the same message; all matching handlers are called:
+
+```ts
+matcher.onNewMessage(/^!ping/, handlePing);
+matcher.onNewMessage(/^!pong/, handlePong);
+```
+
+## Labels
+
+Optional labels and descriptions help identify patterns for debugging:
+
+```ts
+matcher.onNewMessage(/^!status/, handler, {
+  label: "status",
+  description: "Matches !status commands",
+});
+```

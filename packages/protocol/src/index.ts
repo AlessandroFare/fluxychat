@@ -50,6 +50,11 @@ export {
 } from "./parse-inbound-frame.js";
 
 export {
+  isUnknownWsFrame,
+  type UnknownWsFrame,
+} from "./unknown-frame.js";
+
+export {
   dispatchInboundWsFrame,
   type InboundDispatchHandlers,
 } from "./dispatch-inbound-frame.js";
@@ -78,3 +83,9 @@ export {
   type LocationUpdateInbound,
   type LocationUpdateOutbound,
 } from "./location-events.js";
+
+export {
+  isValidServerRealtimeEventFrame,
+  parseServerRealtimeEventFrame,
+  type ServerRealtimeEventFrame,
+} from "./server-realtime-events.js";

@@ -1,18 +1,13 @@
 /**
- * Client-only guard.
+ * Server-environment detection.
  *
- * The React bindings connect over WebSockets and read `document`/`window`; they have no
- * server rendering path in v1. Rather than half-work (render empty on the server, then
- * connect on the client), the hooks fail loudly the moment they run outside a browser — a
- * server-side render or a React Server Component — so the misuse is caught immediately with
- * a clear message instead of surfacing as a confusing hydration or transport error later.
+ * The hooks connect over WebSockets and read `document`/`window`, which don't exist during
+ * server rendering (Next.js runs Client Component code during its server prerender despite
+ * `"use client"`). Rather than fail loudly there, each hook checks this and takes an inert
+ * path instead: no `acquire()`, no network, no effect registration, and a stable idle
+ * snapshot. On an actual client, `window` is always defined, so this never engages there —
+ * client behavior is unchanged.
  */
-export function assertBrowser(): void {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    throw new Error(
-      "@portalsdk/react is client-only: its hooks cannot run during server-side " +
-        "rendering or inside a React Server Component. Call them from a Client Component " +
-        '("use client") that renders on the client. There is no SSR support in v1.',
-    );
-  }
+export function isServerEnvironment(): boolean {
+  return typeof window === "undefined";
 }

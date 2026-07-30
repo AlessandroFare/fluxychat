@@ -1,0 +1,73 @@
+---
+title: Slack and Discord bridge
+description: Sync inbound messages from Slack or Discord channels into FluxyChat rooms via webhooks.
+---
+
+Bridge external chat platforms into FluxyChat rooms with **inbound webhooks** and **channel mappings**.
+
+Manage bridges from the dashboard [**Bridges**](/bridges) page or the admin REST API.
+
+## Create a bridge
+
+```bash
+curl -X POST "$WORKER_URL/admin/bridges" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "platform": "slack",
+    "name": "Support Slack",
+    "token": "xoxb-..."
+  }'
+```
+
+Supported platforms: `slack`, `discord`.
+
+## Inbound webhook URLs
+
+Point your Slack Event Subscriptions or Discord webhook at:
+
+| Platform | URL |
+|----------|-----|
+| Slack | `POST {WORKER_URL}/webhooks/bridge/slack/{bridgeId}` |
+| Discord | `POST {WORKER_URL}/webhooks/bridge/discord/{bridgeId}` |
+
+Slack URL verification (`url_verification` challenge) is handled automatically.
+
+## Channel mappings
+
+Map an external channel ID to a FluxyChat room:
+
+```bash
+curl -X POST "$WORKER_URL/admin/bridges/mappings" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bridgeId": "br_abc123",
+    "roomId": "room_support",
+    "externalChannelId": "C01234567",
+    "externalChannelName": "#support",
+    "syncDirection": "bidirectional"
+  }'
+```
+
+## Connect and monitor
+
+```bash
+# List bridges
+curl "$WORKER_URL/admin/bridges" -H "Authorization: Bearer $ADMIN_JWT"
+
+# Connect / disconnect
+curl -X POST "$WORKER_URL/admin/bridges/br_abc123/connect" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+
+# Stats
+curl "$WORKER_URL/admin/bridges/stats" -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+## Troubleshooting
+
+- **404 on webhook** — verify `bridgeId` and platform match (`slack` bridge only accepts `/slack/` path).
+- **Messages not appearing** — confirm a mapping exists for the external `channel_id` and the bridge status is `connected`.
+- **Slack duplicates** — ignore bot subtypes; the parser skips `message` events with `subtype`.
+
+See also [Webhooks catalog](/docs/webhooks/catalog) for delivery signing and replay tooling, and [Matrix bridge](/docs/guides/matrix-bridge) for federation.

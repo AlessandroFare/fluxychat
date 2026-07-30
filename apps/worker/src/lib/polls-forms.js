@@ -7,6 +7,7 @@
  */
 
 import { logInfo } from "./worker-log.js";
+import { fanoutServerEvent } from "./message-realtime-fanout.js";
 
 const MAX_POLL_OPTIONS = 20;
 const MAX_FORM_FIELDS = 30;
@@ -52,6 +53,14 @@ export async function createPoll(env, input) {
   }
 
   logInfo("poll.created", { projectId, roomId, pollId, createdBy, type, optionCount: ratingOptions.length });
+
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId,
+    name: "poll.created",
+    userId: createdBy,
+    data: { pollId, title: title.trim(), pollType: type, optionCount: ratingOptions.length },
+  }).catch(() => {});
 
   return { ok: true, id: pollId };
 }
@@ -109,6 +118,14 @@ export async function votePoll(env, input) {
   }
 
   logInfo("poll.voted", { projectId, pollId, userId, optionCount: optionIds.length });
+
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId: poll.room_id,
+    name: "poll.voted",
+    userId,
+    data: { pollId, optionIds, pollType: poll.poll_type },
+  }).catch(() => {});
 
   return { ok: true };
 }
@@ -199,6 +216,14 @@ export async function closePoll(env, input) {
     .bind(new Date().toISOString(), pollId)
     .run();
 
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId: poll.room_id,
+    name: "poll.closed",
+    userId,
+    data: { pollId },
+  }).catch(() => {});
+
   return { ok: true };
 }
 
@@ -222,6 +247,16 @@ export async function createForm(env, input) {
     .run();
 
   logInfo("form.created", { projectId, roomId, formId, createdBy, fieldCount: schema.fields.length });
+
+  if (roomId) {
+    await fanoutServerEvent(env, {
+      projectId,
+      roomId,
+      name: "form.created",
+      userId: createdBy,
+      data: { formId, title: title.trim(), fieldCount: schema.fields.length },
+    }).catch(() => {});
+  }
 
   return { ok: true, id: formId };
 }
@@ -262,6 +297,16 @@ export async function submitForm(env, input) {
     .run();
 
   logInfo("form.submitted", { projectId, formId, userId });
+
+  if (form.room_id) {
+    await fanoutServerEvent(env, {
+      projectId,
+      roomId: form.room_id,
+      name: "form.submitted",
+      userId,
+      data: { formId, submissionId },
+    }).catch(() => {});
+  }
 
   return { ok: true, id: submissionId };
 }

@@ -15,7 +15,7 @@ export async function dispatchMatrixBridgeRoutes(request, url, h) {
 
   async function requireBridge(bridgeId) {
     const bridge = await getMatrixBridge(env, { bridgeId });
-    if (!bridge || bridge.project_id !== projectId) {
+    if (!bridge || bridge.projectId !== projectId) {
       return { error: respond({ error: "not_found" }, h, 404) };
     }
     return { bridge };

@@ -1,3 +1,5 @@
+import { fanoutServerEvent } from "./message-realtime-fanout.js";
+
 const GPS_RAW_TTL_SEC = 7 * 86400;
 const AGG_INTERVAL_SEC = 300;
 
@@ -43,6 +45,7 @@ export function parseGpsIngestBody(body) {
       speed: body.speed != null ? Number(body.speed) : null,
       heading: body.heading != null ? Number(body.heading) : null,
       accuracy: body.accuracy != null ? Number(body.accuracy) : null,
+      roomId: body.roomId ? String(body.roomId).trim() : null,
     },
   };
 }
@@ -119,6 +122,24 @@ export async function ingestGps(env, projectId, data) {
       events.push({ id: eid, geofenceId: gf.id, vehicleId: data.vehicleId, eventType: "enter" });
     }
   }
+
+  const dispatchRoomId = data.roomId || `fleet:${projectId}`;
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId: dispatchRoomId,
+    name: "fleet.gps_update",
+    userId: data.vehicleId,
+    data: {
+      vehicleId: data.vehicleId,
+      lat: data.lat,
+      lng: data.lng,
+      speed: data.speed,
+      heading: data.heading,
+      ts,
+      geofenceEvents: events,
+    },
+  }).catch(() => {});
+
   return { ok: true, ts, geofenceEvents: events };
 }
 

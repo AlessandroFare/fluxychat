@@ -3,13 +3,13 @@ import { ALL_GUIDES } from "@/lib/guides/related-guides";
 import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { buildPageMetadata } from "@/lib/site-metadata";
 import { Button } from "~/components/ui/button";
-import { DocSearchButton } from "@/components/doc-search";
-import { HOSTED_PATHS } from "@/lib/hosted-product";
+import { docsSiteHref, guideDocsHref, HOSTED_PATHS } from "@/lib/hosted-product";
+import { ExternalLink } from "lucide-react";
 
 export const metadata = buildPageMetadata({
   title: "Guides — edge chat on Cloudflare",
   description:
-    "Guides for Workers chat, Vercel + Cloudflare split, leaving Pusher, reconnect after DO hibernation, and in-app chat vs support desk.",
+    "Guides for Workers chat, platform modules, Vercel + Cloudflare split, leaving Pusher, and in-app chat vs support desk.",
   path: "/guides",
 });
 
@@ -28,27 +28,55 @@ export default function GuidesIndexPage() {
             Guides
           </h1>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-            Edge-native realtime chat: shared state coordination on Durable Objects,
-            production SDK patterns, and avoiding a second socket vendor on Vercel.
+            Edge-native realtime: chat, AI agents, stream, collab, and IoT on one worker. Each topic
+            below also lives on the{" "}
+            <a
+              href={docsSiteHref("learn")}
+              className="text-brand underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              full docs site
+            </a>{" "}
+            with search and Ask AI. Try{" "}
+            <Link href="/demo" className="text-brand underline underline-offset-2">
+              /demo
+            </Link>{" "}
+            without signup.
           </p>
         </div>
         <div className="shrink-0 sm:pt-9">
-          <DocSearchButton />
+          <Button asChild variant="outline">
+            <a href={docsSiteHref("")} target="_blank" rel="noopener noreferrer">
+              Docs site
+              <ExternalLink className="ml-2 size-4" aria-hidden />
+            </a>
+          </Button>
         </div>
       </div>
 
       <ul className="mt-10 space-y-4">
         {ALL_GUIDES.map((guide) => (
           <li key={guide.href}>
-            <Link
-              href={guide.href}
-              className="block rounded-xl border border-border p-4 transition hover:border-primary/40 hover:bg-muted/30"
-            >
-              <span className="font-semibold text-foreground">{guide.label}</span>
-              <span className="mt-1 block text-sm text-muted-foreground">
-                {guide.href}
-              </span>
-            </Link>
+            <div className="rounded-xl border border-border p-4 transition hover:border-primary/40 hover:bg-muted/30">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <Link href={guide.href} className="font-semibold text-foreground hover:text-primary">
+                    {guide.label}
+                  </Link>
+                  <span className="mt-1 block text-sm text-muted-foreground">{guide.href}</span>
+                </div>
+                <a
+                  href={guideDocsHref(guide.href)}
+                  className="inline-flex items-center gap-1 text-sm text-brand underline underline-offset-2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  On docs site
+                  <ExternalLink className="size-3.5" aria-hidden />
+                </a>
+              </div>
+            </div>
           </li>
         ))}
       </ul>
@@ -69,6 +97,11 @@ export default function GuidesIndexPage() {
 
       <div className="mt-8 flex flex-wrap gap-3">
         <Button asChild>
+          <a href={docsSiteHref("getting-started/quickstart")} target="_blank" rel="noopener noreferrer">
+            Quickstart on docs
+          </a>
+        </Button>
+        <Button asChild variant="outline">
           <Link href={HOSTED_PATHS.compare}>Compare approaches</Link>
         </Button>
         <Button asChild variant="outline">
@@ -78,4 +111,3 @@ export default function GuidesIndexPage() {
     </div>
   );
 }
-

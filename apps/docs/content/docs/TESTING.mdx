@@ -1,0 +1,75 @@
+---
+title: "Testing in FluxyChat monorepo"
+description: Internal monorepo testing guide — not published in the public docs navigation.
+draft: true
+---
+
+What runs when you invoke tests from the repo root and how to run focused suites locally.
+
+## Root commands
+
+| Command | What runs |
+|---------|-----------|
+| `pnpm test` | Unit tests for protocol, sdk, react, ui, config, agent |
+| `pnpm test:packages` | Same as `pnpm test` (explicit alias) |
+| `pnpm test:e2e:smoke` | Dashboard Playwright smoke (`*.smoke.spec.ts`) — no worker/JWT |
+| `pnpm run check:bundle-size` | Gzip report for SDK entrypoints (`bundle-size-report.json`) |
+| `pnpm run check:publish-manifest` | Packed tarball has no `workspace:` ranges; exports resolve |
+| `pnpm run smoke:create-fluxy-chat` | Scaffold smoke for `create-fluxy-chat` CLI |
+
+CI (`.github/workflows/ci.yml`) also runs docs build, pricing/tenant/openapi checks, and integrated E2E on a separate job when configured.
+
+## Per-package unit tests
+
+| Package | Command | Focus |
+|---------|---------|-------|
+| `@fluxy-chat/protocol` | `pnpm --filter @fluxy-chat/protocol test` | WS frame parsing, event registries, conformance |
+| `@fluxy-chat/sdk` | `pnpm --filter @fluxy-chat/sdk test` | Client, hooks, cards, structured errors, testing utils |
+| `@fluxy-chat/react` | `pnpm --filter @fluxy-chat/react test` | React hooks re-exports |
+| `@fluxy-chat/ui` | `pnpm --filter @fluxy-chat/ui test` | Message list, input, safe-url |
+| `@fluxy-chat/config` | `pnpm --filter @fluxy-chat/config test` | Shared config helpers |
+| `@fluxy-chat/agent` | `pnpm --filter @fluxy-chat/agent test` | Agent runtime helpers |
+| `@fluxy-chat/dashboard` | `pnpm --filter @fluxy-chat/dashboard exec vitest run` | Console nav, feature flags, lib helpers |
+
+Worker and docs site do not have root `pnpm test` entries; use package filters:
+
+```bash
+pnpm --filter @fluxychat/worker typecheck
+pnpm run docs:build
+```
+
+## Dashboard E2E (Playwright)
+
+**Smoke** (default in CI, no secrets):
+
+```bash
+pnpm test:e2e:smoke
+```
+
+Covers onboarding UI, inbox shell, portal-parity weak-network smoke, landing, billing shell, status page.
+
+**Integrated** (local worker + dashboard + admin JWT):
+
+```bash
+# Terminal 1
+pnpm --filter @fluxychat/worker dev
+
+# Terminal 2
+E2E_ADMIN_JWT=<your-admin-jwt> pnpm --filter @fluxy-chat/dashboard test:e2e:integrated
+```
+
+Integrated specs: onboarding full path, inbox feed, portal-parity send + offline recovery.
+
+Set `PLAYWRIGHT_SKIP_WEBSERVER=1` if dashboard is already running on port 3000.
+
+## SDK integration testing
+
+Use `@fluxy-chat/sdk/testing` in Vitest — see [Testing integrations](/docs/testing-integration) on the docs site.
+
+## Conformance / protocol
+
+`packages/protocol/src/conformance-synthetic.test.ts` validates synthetic worker↔client frames against `protocol-events.json`. Run after changing `event-types.ts`.
+
+## Environment hints
+
+`pnpm run check:env` prints missing vars for local dev (Worker URL, Clerk, VAPID, etc.) without failing CI.

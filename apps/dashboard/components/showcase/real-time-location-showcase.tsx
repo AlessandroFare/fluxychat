@@ -3,12 +3,8 @@
 import dynamic from "next/dynamic";
 import React from "react";
 import { Loader2, LocateFixed, MapPin, Navigation, Square } from "lucide-react";
-import {
-  locationTrack,
-  useLocation,
-  type LocationTrackController,
-  type LocationTrackState,
-} from "@fluxy-chat/sdk";
+import { locationTrack, type LocationTrackController, type LocationTrackState } from "@fluxy-chat/sdk";
+import { useLocation } from "@fluxy-chat/react";
 import { Button } from "@/components/ui/button";
 import {
   FeatureCodePanel,

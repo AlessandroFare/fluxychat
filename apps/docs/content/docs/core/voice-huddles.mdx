@@ -1,0 +1,48 @@
+---
+title: Voice messages
+description: Upload voice clips to a room with optional transcription.
+---
+
+FluxyChat supports **async voice messages** (record → upload → optional AI transcription). There is no `useHuddle` hook in `@fluxy-chat/react` today — live WebRTC huddles are not part of the public SDK.
+
+Enable the feature on the Worker:
+
+```ini
+FEATURE_VOICE_MESSAGES=true
+```
+
+Bind R2 for attachments (`ATTACHMENTS` in `wrangler.toml`).
+
+## Upload from the client
+
+`POST /messages/voice` accepts multipart form data with a member JWT (same auth as `POST /messages`):
+
+```ts
+const form = new FormData();
+form.append("audio", blob, "recording.webm");
+form.append("roomId", roomId);
+form.append("durationMs", String(durationMs));
+
+const res = await fetch(`${baseUrl}/messages/voice`, {
+  method: "POST",
+  headers: { Authorization: `Bearer ${token}` },
+  body: form,
+});
+
+const { messageId, audioUrl, transcriptionStatus } = await res.json();
+// transcriptionStatus: "pending" → later "ready" via message_updated WS event
+```
+
+Supported formats: webm, ogg, mp3, m4a, wav. Size and duration limits return `413` when exceeded.
+
+## Realtime updates
+
+After upload, the Worker broadcasts a `message_updated` event when transcription completes. Subscribe via the room WebSocket or poll message history if the socket is down.
+
+## Rate limits and quotas
+
+Voice uploads consume message quota and respect `RATE_LIMIT_VOICE_MESSAGES_PER_MINUTE` (default 10/min per user).
+
+## Live voice / huddles
+
+Room presence and typing work over WebSocket today. Full duplex voice rooms (WebRTC + TURN) are on the platform roadmap — use voice **messages** for push-to-talk style clips until a huddle SDK ships.

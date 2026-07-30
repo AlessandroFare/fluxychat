@@ -7,13 +7,13 @@ export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://fluxychat.com"
 ).replace(/\/$/, "");
 
-const DEFAULT_OG_IMAGE = `${SITE_URL}/fluxychat-icon.svg`;
+const DEFAULT_OG_IMAGE = `${SITE_URL}/opengraph-image`;
 
 interface PageMetadataInput {
   /** Short page title (layout template adds " · Fluxychat" unless absoluteTitle is set). */
   title: string;
   description: string;
-  /** Path only, e.g. "/landing". */
+  /** Path only, e.g. "/". */
   path?: string;
   /** Use when the title already includes the brand or must not use the template. */
   absoluteTitle?: boolean;
@@ -42,7 +42,7 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
       images: [{ url: DEFAULT_OG_IMAGE, alt: SITE_NAME }],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description,
       images: [DEFAULT_OG_IMAGE],

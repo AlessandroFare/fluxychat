@@ -137,6 +137,49 @@ export async function listInstalledMarketplaceAgents(
   return res.agents;
 }
 
+export async function listPublisherMarketplaceAgents(
+  token: string,
+  opts?: { status?: string },
+): Promise<MarketplaceAgent[]> {
+  const url = new URL(`${BASE}/admin/marketplace/agents`);
+  if (opts?.status) url.searchParams.set("status", opts.status);
+  const res = await fetchWorkerJson<{ agents: MarketplaceAgent[] }>(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.agents;
+}
+
+export async function submitMarketplaceAgentForReview(
+  token: string,
+  agentId: string,
+): Promise<{ submitted: number }> {
+  return fetchWorkerJson<{ submitted: number }>(
+    `${BASE}/admin/marketplace/agents/${encodeURIComponent(agentId)}/submit`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+
+export async function reviewMarketplaceAgent(
+  token: string,
+  agentId: string,
+  status: "published" | "rejected",
+): Promise<{ reviewed: number }> {
+  return fetchWorkerJson<{ reviewed: number }>(
+    `${BASE}/admin/marketplace/agents/${encodeURIComponent(agentId)}/review`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    },
+  );
+}
+
 export async function publishMarketplaceAgent(
   token: string,
   body: {

@@ -14,6 +14,7 @@ export default function ConditionalHeader() {
   const pathname = usePathname();
 
   if (
+    pathname === "/" ||
     pathname === "/landing" ||
     pathname?.startsWith("/landing/") ||
     pathname === "/why" ||

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { Bell, ArrowRight } from "lucide-react";
-import { FluxyChatClient, useNotifications } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useNotifications } from "@fluxy-chat/react";
 import { Button } from "~/components/ui/button";
 import { useDashboardSession } from "./dashboard-session";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";

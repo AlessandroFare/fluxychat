@@ -1,0 +1,85 @@
+---
+title: React Native quickstart
+description: Install @fluxy-chat/react-native-sdk, connect a room, and load message history.
+---
+
+Use `@fluxy-chat/react-native-sdk` for iOS and Android chat with the same Worker backend as the web SDK.
+
+## Install
+
+```bash
+pnpm add @fluxy-chat/react-native-sdk @fluxy-chat/protocol
+```
+
+Peer dependencies: `react` 18+, `react-native` 0.72+.
+
+## Configure the client
+
+```tsx
+import { FluxyChatClient } from "@fluxy-chat/react-native-sdk";
+
+const client = new FluxyChatClient({
+  baseUrl: "https://api.fluxychat.com",
+  userId: "user_123",
+  token: memberJwtFromYourBackend,
+});
+```
+
+Mint JWTs on your server — never ship admin keys in the mobile app.
+
+## Chat hook
+
+```tsx
+import { useChat } from "@fluxy-chat/react-native-sdk";
+
+function RoomScreen({ roomId }: { roomId: string }) {
+  const {
+    messages,
+    sendMessage,
+    loadHistory,
+    loadMore,
+    connected,
+    connectionStatus,
+  } = useChat({
+    roomId,
+    client,
+    historyLimit: 50,
+    replay: "connect",
+    replayHistoryOnReconnect: true,
+  });
+
+  return (
+    <>
+      <Text>{connectionStatus}</Text>
+      <FlatList
+        data={messages}
+        keyExtractor={(m) => String(m.id)}
+        renderItem={({ item }) => <Text>{item.content}</Text>}
+      />
+      <Button title="Refresh history" onPress={() => void loadHistory()} />
+      <Button title="Load older" onPress={() => void loadMore()} />
+      <Button title="Send" onPress={() => sendMessage("Hello from RN")} />
+    </>
+  );
+}
+```
+
+### `loadHistory`
+
+Call `loadHistory()` to refetch the latest page from REST (useful after app resume or when `replay: "request"` skips auto-load on mount).
+
+## Weak network
+
+The room connection enables automatic reconnect with exponential backoff. On reconnect, if the WebSocket snapshot is missing, the SDK refetches history via REST (`replayHistoryOnReconnect`).
+
+For offline compose-and-send, prefer REST `createMessage` when authenticated; WS sends queue while disconnected and flush on reconnect.
+
+## Protocol parity
+
+Event types match `@fluxy-chat/protocol` — run `pnpm --filter @fluxy-chat/react-native-sdk test` to verify outbound/inbound registries.
+
+## See also
+
+- [Quickstart (web)](/docs/getting-started/quickstart)
+- [Auth & JWT](/docs/auth-jwt)
+- [Testing integrations](/docs/testing-integration)

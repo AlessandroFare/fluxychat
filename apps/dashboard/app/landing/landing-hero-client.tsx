@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { CalendarRange, Check, Copy, GraduationCap, HeartPulse, Landmark, Orbit } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { MARKETING_HERO } from "@/lib/marketing-landing";
 import { HeroCodeInboxDemo } from "~/components/marketing/hero-code-inbox-demo";
 import { SpotlightCard } from "~/components/marketing/spotlight-card";
@@ -197,24 +197,6 @@ export function LandingHeroClient() {
             <span aria-hidden="true">·</span>
             <span>npm &amp; pnpm</span>
           </div>
-
-          <nav className="mt-8 w-full max-w-3xl rounded-2xl border border-black/[0.08] bg-white/80 p-2 shadow-[var(--shadow-subtle-2)] backdrop-blur-md" aria-label="Fluxychat products">
-            <p className="px-2 pb-2 pt-1 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Explore the room platform</p>
-            <div className="grid grid-cols-2 gap-1 sm:grid-cols-5">
-              {[
-                { href: "/edu", label: "Edu", icon: GraduationCap },
-                { href: "/health", label: "Health", icon: HeartPulse },
-                { href: "/events", label: "Events", icon: CalendarRange },
-                { href: "/finance", label: "Finance", icon: Landmark },
-                { href: "/continuity", label: "Continuity", icon: Orbit },
-              ].map(({ href, label, icon: Icon }) => (
-                <Link key={href} href={href} className="am-focus flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-950">
-                  <Icon className="size-4" aria-hidden />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </nav>
         </div>
 
         <SpotlightCard

@@ -1,7 +1,7 @@
 {
     "name":  "@fluxy-chat/protocol",
-    "version":  "0.1.0",
-    "description":  "Shared FluxyChat wire protocol â€” WebSocket event types and validators for SDKs and the worker",
+    "version":  "0.1.1",
+    "description":  "Shared FluxyChat wire protocol — WebSocket event types and validators for SDKs and the worker",
     "license":  "MIT",
     "type":  "module",
     "main":  "dist/index.js",
@@ -14,13 +14,30 @@
                 },
     "files":  [
                   "dist",
-                  "protocol-events.json"
+                  "protocol-events.json",
+                  "README.md"
               ],
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/AlessandroFare/fluxychat.git",
+                       "directory":  "packages/protocol"
+                   },
+    "homepage":  "https://github.com/AlessandroFare/fluxychat/tree/main/packages/protocol#readme",
+    "bugs":  {
+                 "url":  "https://github.com/AlessandroFare/fluxychat/issues"
+             },
+    "keywords":  [
+                     "chat",
+                     "websocket",
+                     "protocol",
+                     "fluxychat"
+                 ],
+    "author":  "Fluxychat",
     "scripts":  {
                     "build":  "pnpm exec tsc -p tsconfig.json",
                     "test":  "vitest run",
                     "typecheck":  "tsc -p tsconfig.json --noEmit",
-                    "prepublishOnly":  "pnpm run build"
+                    "prepublishOnly":  "pnpm run build && node ../../scripts/verify-publish-manifest.mjs"
                 },
     "devDependencies":  {
                             "typescript":  "^5.8.3",

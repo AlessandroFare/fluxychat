@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Bot, Plus, GitBranch, Rocket, FlaskConical, Users,
   DollarSign, Gauge, Palette, Heart, Brain, History,
@@ -8,10 +8,20 @@ import {
 } from "lucide-react";
 import { ConsoleShell } from "@/app/components/console-shell";
 import { ConsolePageHeader } from "@/app/components/console-page-header";
+import { ConsoleProjectRoomBar } from "@/app/components/console-project-room-bar";
+import { WorkerBackendBadge } from "@/app/components/worker-backend-badge";
 import { cn } from "@/lib/utils";
+import { useWorkerChatClient } from "@/lib/use-worker-chat-client";
 import {
-  createAgentPlatform, type AgentPlatformApi, type AgentConfig,
-  type AgentPersonality, type SandboxResult, type AgentTier,
+  createAgentPlatform,
+  createWorkerAgentPlatformClient,
+  type AgentPlatformApi,
+  type AgentConfig,
+  type AgentPersonality,
+  type AgentStatus,
+  type SandboxResult,
+  type AgentTier,
+  type WorkerAgentPlatformClient,
 } from "@fluxy-chat/sdk";
 
 // ─── Seed ────────────────────────────────────────────
@@ -87,9 +97,24 @@ function createSeededPlatform(): AgentPlatformApi {
 // ─── Page ────────────────────────────────────────────
 
 export default function AgentPlatformPage() {
+  const chatClient = useWorkerChatClient("agent-platform");
+  const workerPlatform = useMemo(
+    () => (chatClient ? createWorkerAgentPlatformClient(chatClient) : null),
+    [chatClient],
+  );
   const [platform] = useState<AgentPlatformApi | null>(createSeededPlatform());
+  const [workerAgents, setWorkerAgents] = useState<Array<{ id: string; name: string; status: AgentStatus }>>([]);
+  const [workerError, setWorkerError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"agents" | "builder" | "versioning" | "deploy" | "sandbox" | "tenancy" | "costs" | "rates" | "abtest" | "personality" | "emotion" | "memory">("agents");
   const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!workerPlatform) {
+      setWorkerAgents([]);
+      return;
+    }
+    void workerPlatform.listAgents().then(setWorkerAgents).catch(() => setWorkerAgents([]));
+  }, [workerPlatform, tick]);
 
   if (!platform) {
     return (
@@ -121,7 +146,15 @@ export default function AgentPlatformPage() {
       <ConsolePageHeader
         title="AI Agent Platform"
         description="No-code builder, versioning, CI/CD, sandbox testing, multi-tenancy, cost tracking, rate limiting, A/B testing, personality designer, emotional intelligence, cross-platform memory"
+        actions={<WorkerBackendBadge connected={Boolean(workerPlatform)} label="Agent Platform" />}
       />
+      <ConsoleProjectRoomBar
+        requireProject
+        hint={workerPlatform ? "Agents, sandboxes, and memory sync to D1 on your Worker." : "Local seeded agents for exploration; sign in to create agents on your project."}
+      />
+      {workerError ? (
+        <p className="mx-4 mt-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600">{workerError}</p>
+      ) : null}
 
       <div className="flex flex-wrap gap-1 border-b border-border px-4 py-2">
         {tabs.map((tab) => (
@@ -141,10 +174,25 @@ export default function AgentPlatformPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-4" key={tick}>
-        {activeTab === "agents" && <AgentsPanel platform={platform} />}
-        {activeTab === "builder" && <BuilderPanel platform={platform} onReload={() => setTick(t => t + 1)} />}
+        {activeTab === "agents" && <AgentsPanel platform={platform} workerAgents={workerAgents} />}
+        {activeTab === "builder" && (
+          <BuilderPanel
+            platform={platform}
+            workerPlatform={workerPlatform}
+            onReload={() => setTick((t) => t + 1)}
+            onWorkerError={setWorkerError}
+          />
+        )}
         {activeTab === "versioning" && <VersioningPanel platform={platform} />}
-        {activeTab === "deploy" && <DeployPanel platform={platform} />}
+        {activeTab === "deploy" && (
+          <DeployPanel
+            platform={platform}
+            workerPlatform={workerPlatform}
+            workerAgents={workerAgents}
+            onReload={() => setTick((t) => t + 1)}
+            onWorkerError={setWorkerError}
+          />
+        )}
         {activeTab === "sandbox" && <SandboxPanel platform={platform} />}
         {activeTab === "tenancy" && <TenancyPanel platform={platform} />}
         {activeTab === "costs" && <CostsPanel platform={platform} />}
@@ -152,7 +200,15 @@ export default function AgentPlatformPage() {
         {activeTab === "abtest" && <AbTestPanel platform={platform} />}
         {activeTab === "personality" && <PersonalityPanel platform={platform} />}
         {activeTab === "emotion" && <EmotionPanel platform={platform} />}
-        {activeTab === "memory" && <MemoryPanel platform={platform} />}
+        {activeTab === "memory" && (
+          <MemoryPanel
+            platform={platform}
+            workerPlatform={workerPlatform}
+            workerAgents={workerAgents}
+            onReload={() => setTick((t) => t + 1)}
+            onWorkerError={setWorkerError}
+          />
+        )}
       </div>
     </ConsoleShell>
   );
@@ -160,12 +216,34 @@ export default function AgentPlatformPage() {
 
 // ─── Agents List ─────────────────────────────────────
 
-function AgentsPanel({ platform }: { platform: AgentPlatformApi }) {
+function AgentsPanel({
+  platform,
+  workerAgents,
+}: {
+  platform: AgentPlatformApi;
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus }>;
+}) {
   const agents = platform.listAgents();
   return (
     <div>
+      {workerAgents.length > 0 ? (
+        <div className="mb-6">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Worker persisted ({workerAgents.length})
+          </h3>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {workerAgents.map((agent) => (
+              <div key={agent.id} className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <div className="text-sm font-semibold">{agent.name}</div>
+                <code className="text-[10px] text-muted-foreground">{agent.id}</code>
+                <div className="mt-1 text-[10px] uppercase text-muted-foreground">{agent.status}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        All agents ({agents.length})
+        Local demo agents ({agents.length})
       </h3>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {agents.map(({ id, config }) => (
@@ -206,7 +284,17 @@ function AgentsPanel({ platform }: { platform: AgentPlatformApi }) {
 
 // ─── No-Code Builder ─────────────────────────────────
 
-function BuilderPanel({ platform, onReload }: { platform: AgentPlatformApi; onReload: () => void }) {
+function BuilderPanel({
+  platform,
+  workerPlatform,
+  onReload,
+  onWorkerError,
+}: {
+  platform: AgentPlatformApi;
+  workerPlatform: WorkerAgentPlatformClient | null;
+  onReload: () => void;
+  onWorkerError: (msg: string | null) => void;
+}) {
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -216,7 +304,7 @@ function BuilderPanel({ platform, onReload }: { platform: AgentPlatformApi; onRe
 
   const handleCreate = () => {
     if (!name.trim()) return;
-    platform.createAgent({
+    const config: AgentConfig = {
       name: name.trim(),
       description: desc.trim(),
       systemPrompt: prompt.trim() || "You are a helpful assistant.",
@@ -226,7 +314,17 @@ function BuilderPanel({ platform, onReload }: { platform: AgentPlatformApi; onRe
       tools: tools.split(",").map((t) => t.trim()).filter(Boolean),
       personality: platform.createPersonality("professional"),
       tier,
-    });
+      workspaceId: "default",
+    };
+    platform.createAgent(config);
+    if (workerPlatform) {
+      void workerPlatform.createAgent({ name: config.name, workspaceId: "default", config })
+        .then(() => {
+          onWorkerError(null);
+          onReload();
+        })
+        .catch((err) => onWorkerError(err instanceof Error ? err.message : "Worker create failed"));
+    }
     setName(""); setDesc(""); setPrompt(""); setTools("");
     onReload();
   };
@@ -363,15 +461,45 @@ function VersioningPanel({ platform }: { platform: AgentPlatformApi }) {
 
 // ─── CI/CD Deploy ────────────────────────────────────
 
-function DeployPanel({ platform }: { platform: AgentPlatformApi }) {
+function DeployPanel({
+  platform,
+  workerPlatform,
+  workerAgents,
+  onReload,
+  onWorkerError,
+}: {
+  platform: AgentPlatformApi;
+  workerPlatform: WorkerAgentPlatformClient | null;
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus }>;
+  onReload: () => void;
+  onWorkerError: (msg: string | null) => void;
+}) {
   const [selectedAgent, setSelectedAgent] = useState("agent_1");
   const deploys = platform.getDeploys(selectedAgent);
+  const workerAgentId = workerAgents[0]?.id;
 
   const stages: Array<"dev" | "staging" | "production"> = ["dev", "staging", "production"];
   const stageColors = { dev: "bg-blue-500/15 text-blue-600", staging: "bg-amber-500/15 text-amber-600", production: "bg-green-500/15 text-green-600" };
 
   return (
     <div>
+      {workerPlatform && workerAgentId ? (
+        <button
+          type="button"
+          onClick={() => {
+            void workerPlatform.commitVersion(workerAgentId, { version: `v${Date.now()}`, message: "Dashboard deploy" })
+              .then(({ version }) => workerPlatform.deploy(workerAgentId, { stage: "staging", version }))
+              .then(() => {
+                onWorkerError(null);
+                onReload();
+              })
+              .catch((err) => onWorkerError(err instanceof Error ? err.message : "Worker deploy failed"));
+          }}
+          className="mb-4 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted"
+        >
+          Commit + deploy to staging (Worker)
+        </button>
+      ) : null}
       <div className="mb-4 flex items-center gap-3">
         <label className="text-xs font-medium">Agent:</label>
         <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm">
@@ -768,13 +896,38 @@ function EmotionPanel({ platform }: { platform: AgentPlatformApi }) {
 
 // ─── Cross-Platform Memory ───────────────────────────
 
-function MemoryPanel({ platform }: { platform: AgentPlatformApi }) {
+function MemoryPanel({
+  platform,
+  workerPlatform,
+  workerAgents,
+  onReload,
+  onWorkerError,
+}: {
+  platform: AgentPlatformApi;
+  workerPlatform: WorkerAgentPlatformClient | null;
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus }>;
+  onReload: () => void;
+  onWorkerError: (msg: string | null) => void;
+}) {
   const [agentId, setAgentId] = useState("agent_1");
   const [userId, setUserId] = useState("user_123");
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [platformInput, setPlatformInput] = useState("web");
   const [tick, setTick] = useState(0);
+  const [workerMemories, setWorkerMemories] = useState<Array<{ key: string; value: string; platform: string }>>([]);
+
+  const workerAgentId = workerAgents[0]?.id;
+
+  useEffect(() => {
+    if (!workerPlatform || !workerAgentId) {
+      setWorkerMemories([]);
+      return;
+    }
+    void workerPlatform.listMemories(workerAgentId, { userId })
+      .then((rows) => setWorkerMemories(rows.map((m) => ({ key: m.key, value: m.value, platform: m.platform }))))
+      .catch(() => setWorkerMemories([]));
+  }, [workerPlatform, workerAgentId, userId, tick]);
 
   const memories = platform.getMemory(agentId, userId);
   const unified = platform.getUnifiedMemory(agentId, userId);
@@ -782,8 +935,22 @@ function MemoryPanel({ platform }: { platform: AgentPlatformApi }) {
   const handleStore = () => {
     if (!key.trim() || !value.trim()) return;
     platform.storeMemory(agentId, userId, platformInput, key.trim(), value.trim());
+    if (workerPlatform && workerAgentId) {
+      void workerPlatform.upsertMemory(workerAgentId, {
+        key: key.trim(),
+        value: value.trim(),
+        userId,
+        platform: platformInput,
+      })
+        .then(() => {
+          onWorkerError(null);
+          setTick((t) => t + 1);
+          onReload();
+        })
+        .catch((err) => onWorkerError(err instanceof Error ? err.message : "Worker memory failed"));
+    }
     setKey(""); setValue("");
-    setTick(t => t + 1);
+    setTick((t) => t + 1);
   };
 
   const platformIcons: Record<string, string> = { web: "🌐", whatsapp: "💬", email: "📧", telegram: "✈️", slack: "💼" };
@@ -810,9 +977,17 @@ function MemoryPanel({ platform }: { platform: AgentPlatformApi }) {
         </div>
 
         <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Raw entries ({memories.length})
+          Raw entries ({memories.length}){workerMemories.length ? ` · ${workerMemories.length} on Worker` : ""}
         </h3>
         <div className="space-y-1">
+          {workerMemories.map((m) => (
+            <div key={`w-${m.key}-${m.platform}`} className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs">
+              <span>{platformIcons[m.platform] || "📱"}</span>
+              <span className="font-medium">{m.key}:</span>
+              <span className="text-muted-foreground">{m.value}</span>
+              <span className="ml-auto text-[10px] text-muted-foreground">Worker</span>
+            </div>
+          ))}
           {memories.map((m) => (
             <div key={m.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs">
               <span>{platformIcons[m.platform] || "📱"}</span>

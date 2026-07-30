@@ -1,0 +1,107 @@
+---
+title: DLP and audit export
+description: Detect PHI and PCI in messages, redact or block sensitive content, and export audit logs for SOC 2 evidence packs.
+---
+
+FluxyChat ships built-in data loss prevention (DLP) for chat content plus admin audit log export for compliance workflows. Use the dashboard **SOC 2** page or the Worker REST APIs below.
+
+## Happy path (15 minutes)
+
+1. Sign in to the dashboard and paste an **admin JWT** from **Projects**.
+2. Open [**SOC 2**](/soc2) → **Refresh** to load control counts.
+3. Run a **DLP scan** on sample text containing a test SSN or card number.
+4. **Export audit log** (last 24h JSON) for your auditor pack.
+5. **Export SOC 2 evidence** JSON from the same page.
+
+## SDK — local PHI/PCI detection
+
+Use `createDlpDetector()` in middleware or before sending agent prompts:
+
+```typescript
+import { createDlpDetector } from "@fluxy-chat/sdk";
+
+const dlp = createDlpDetector();
+const result = dlp.scanText("msg-1", "Patient SSN 123-45-6789 paid with 4111 1111 1111 1111");
+
+console.log(result.safe);       // false when critical matches
+console.log(result.matches);    // phi + pci entities
+console.log(result.redacted);   // redacted text when action is redact
+```
+
+Default patterns include US SSN (PHI), credit card (PCI), email, and phone.
+
+## Worker — scan before persist
+
+Admin JWT required.
+
+```bash
+curl -X POST "$WORKER_URL/enterprise/dlp/scan" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Card 4111111111111111","roomId":"room_demo","messageId":42}'
+```
+
+Response:
+
+```json
+{
+  "matches": [{ "type": "credit_card", "severity": "high" }],
+  "matchCount": 1,
+  "redactedText": "Card [REDACTED]"
+}
+```
+
+### Custom DLP rules
+
+```bash
+# List rules
+curl "$WORKER_URL/enterprise/dlp/rules" -H "Authorization: Bearer $ADMIN_JWT"
+
+# Create regex rule
+curl -X POST "$WORKER_URL/enterprise/dlp/rules" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Internal ID","pattern":"EMP-\\d{6}","action":"redact","severity":"medium"}'
+```
+
+## Audit log export
+
+Query events or download a time-window stream:
+
+```bash
+# Filtered events (JSON)
+curl "$WORKER_URL/admin/audit-export/events?limit=100&severity=high" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+
+# Stream export (last 24h default)
+curl "$WORKER_URL/admin/audit-export/stream?format=json" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -o audit-export.json
+
+# Stats for dashboard widgets
+curl "$WORKER_URL/admin/audit-export/stats" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Scheduled exports: `POST /admin/audit-export/schedules` with `frequency`, `format`, and optional webhook destination.
+
+## SOC 2 evidence pack
+
+Dashboard **SOC 2** page calls:
+
+- `GET /api/soc2/dashboard` — control, risk, and incident counts
+- `GET /api/soc2/evidence` — downloadable evidence bundle
+
+Combine with audit export and DLP scan history (`GET /admin/dlp-integrations/scans`) for a complete auditor handoff.
+
+## HIPAA PHI logging
+
+For regulated workloads, log PHI access and detections:
+
+- `POST /api/hipaa/phi/access` — access audit trail
+- `POST /api/hipaa/phi/detections` — detection events
+- `GET /api/hipaa/phi/detections` — review queue
+
+See [SAML signature verification](/docs/security/saml-signature-verification) for signature verification when SSO is enabled alongside compliance exports.
+
+For BAA tracking and the readiness checklist, use dashboard [**Settings → HIPAA**](/settings/hipaa) and the [SOC 2 / HIPAA runbook](/docs/guides/enterprise/soc2-hipaa-runbook).

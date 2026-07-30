@@ -1,23 +1,35 @@
 # Ship in-app chat in one afternoon
 
-Goal: first live message in a room using FluxyChat hosted or local Worker.
+Goal: first live message in a room using FluxyChat local Worker or hosted deployment.
 
-## 1. Install (2 min)
+## 0. Zero-to-message (repo clone, ~90 seconds)
 
 ```bash
-pnpm add @fluxy-chat/sdk
+pnpm install
+pnpm run first-message
+```
+
+Uses `http://127.0.0.1:8787`, project `dev-local`, room `dev-local-general`. The script writes `FLUXY_CONSOLE_API_KEY` to `apps/worker/.dev.vars` when a new key is minted.
+
+## 1. Install in your app (2 min)
+
+```bash
+pnpm add @fluxy-chat/sdk @fluxy-chat/react
 ```
 
 ## 2. Worker URL + JWT (10 min)
 
-**Hosted beta:** sign up at your dashboard → Quickstart → copy **member JWT** and **Worker URL**.
+**Local dev:** use values printed by `pnpm run first-message`.
+
+**Hosted:** sign up at your dashboard → Quickstart → copy **member JWT** and **Worker URL**.
 
 **Self-host:** deploy `apps/worker`, run D1 migrations (`wrangler d1 migrations apply`), mint JWT via `POST /auth/token` with project API key.
 
 ## 3. React hook (15 min)
 
 ```tsx
-import { FluxyChatClient, FluxyRealtimeProvider, useChat } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
 const client = new FluxyChatClient({
   baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,
@@ -68,7 +80,7 @@ function Room({ roomId }: { roomId: string }) {
 export function App({ jwt }: { jwt: string }) {
   return (
     <FluxyRealtimeProvider client={client}>
-      <Room roomId="general" />
+      <Room roomId="dev-local-general" />
     </FluxyRealtimeProvider>
   );
 }
@@ -84,7 +96,7 @@ const rooms = await client.listRooms();
 ## 5. In-app notifications (optional)
 
 ```ts
-import { useNotifications } from "@fluxy-chat/sdk";
+import { useNotifications } from "@fluxy-chat/react";
 
 const { notifications, markRead, markAllRead } = useNotifications(client, {
   unreadOnly: true,

@@ -1,5 +1,15 @@
-import { describe, it, expect } from 'vitest';
-import { createMatrixBridge, connectMatrixBridge, disconnectMatrixBridge, getMatrixBridge, listMatrixBridges, deleteMatrixBridge, createMatrixRoomMapping, listMatrixRoomMappings, getMatrixMappingByFluxyRoom, getMatrixMappingByMatrixRoom, deleteMatrixRoomMapping, mapMatrixMessage, findMatrixEvent, findFluxyMessageByMatrix, recordMatrixSyncLog, syncMatrixInbound, syncMatrixOutbound, getMatrixBridgeStats } from './matrix-bridge.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('./message-import.js', () => ({
+  importAdminMessage: vi.fn(async () => ({ imported: true, messageId: 42 })),
+}));
+
+import { importAdminMessage } from './message-import.js';
+import { createMatrixBridge, connectMatrixBridge, disconnectMatrixBridge, getMatrixBridge, listMatrixBridges, deleteMatrixBridge, createMatrixRoomMapping, listMatrixRoomMappings, getMatrixMappingByFluxyRoom, getMatrixMappingByMatrixRoom, deleteMatrixRoomMapping, mapMatrixMessage, findMatrixEvent, findFluxyMessageByMatrix, recordMatrixSyncLog, syncMatrixInbound, syncMatrixOutbound, getMatrixBridgeStats, processMatrixAppserviceTransaction } from './matrix-bridge.js';
+
+beforeEach(() => {
+  vi.mocked(importAdminMessage).mockResolvedValue({ imported: true, messageId: 42 });
+});
 
 function createEnv(rows = {}) {
   const seq = rows.sequence || null;
@@ -138,6 +148,8 @@ describe('matrix-bridge lib', () => {
       const result = await syncMatrixInbound(env, { bridgeId: 'mb-1', projectId: 'p1', matrixEventId: '$evt1', matrixRoomId: '!abc', senderId: '@user:example.com', content: 'hello' });
       expect(result.roomId).toBe('room-1');
       expect(result.content).toBe('hello');
+      expect(result.messageId).toBe(42);
+      expect(importAdminMessage).toHaveBeenCalled();
     });
     it('returns error if no mapping', async () => {
       const env = createEnv({ sequence: [null] });
@@ -177,6 +189,23 @@ describe('matrix-bridge lib', () => {
       const result = await syncMatrixOutbound(env, { bridgeId: 'mb-1', projectId: 'p1', fluxychatMessageId: 'fc-1', matrixRoomId: '!abc', content: 'world' });
       expect(result.error).toBe('already_synced');
     });
+    it('POSTs to homeserver when bridge token configured', async () => {
+      const fetchMock = vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ event_id: '$evt_123' }),
+      }));
+      vi.stubGlobal('fetch', fetchMock);
+      const env = createEnv({ sequence: [
+        { id: 'mmr-1' },
+        null,
+        { homeserver_url: 'https://matrix.example.com', access_token: 'tok' },
+      ] });
+      const result = await syncMatrixOutbound(env, { bridgeId: 'mb-1', projectId: 'p1', fluxychatMessageId: 'fc-1', matrixRoomId: '!abc', content: 'world' });
+      expect(result.sent).toBe(true);
+      expect(result.matrixEventId).toBe('$evt_123');
+      expect(fetchMock).toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
   });
 
   describe('getMatrixBridgeStats', () => {
@@ -185,6 +214,52 @@ describe('matrix-bridge lib', () => {
       const stats = await getMatrixBridgeStats(env, { projectId: 'p1' });
       expect(stats.totalBridges).toBe(1);
       expect(stats.totalMappings).toBe(3);
+    });
+  });
+
+  describe('processMatrixAppserviceTransaction', () => {
+    it('imports text message events', async () => {
+      const env = createEnv({ sequence: [
+        { id: 'mmr-1', fluxychat_room_id: 'room-1' },
+        null,
+      ] });
+      const result = await processMatrixAppserviceTransaction(env, {
+        bridgeId: 'mb-1',
+        projectId: 'p1',
+        transaction: {
+          events: [{
+            type: 'm.room.message',
+            event_id: '$evt1',
+            room_id: '!abc',
+            sender: '@user:example.com',
+            content: { msgtype: 'm.text', body: 'hello matrix' },
+            origin_server_ts: 1_700_000_000_000,
+          }],
+        },
+      });
+      expect(result.ok).toBe(true);
+      expect(result.count).toBe(1);
+      expect(result.processed[0].messageId).toBe(42);
+    });
+
+    it('ignores non-text events', async () => {
+      const env = createEnv();
+      const result = await processMatrixAppserviceTransaction(env, {
+        bridgeId: 'mb-1',
+        projectId: 'p1',
+        transaction: {
+          events: [{
+            type: 'm.room.message',
+            event_id: '$evt2',
+            room_id: '!abc',
+            sender: '@user:example.com',
+            content: { msgtype: 'm.image', body: 'image.png' },
+          }],
+        },
+      });
+      expect(result.ok).toBe(true);
+      expect(result.count).toBe(0);
+      expect(result.ignored[0].reason).toBe('unsupported_msgtype');
     });
   });
 

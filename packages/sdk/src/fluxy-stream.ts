@@ -17,6 +17,7 @@
 
 import { createModerationEngine, type ModerationResult, type ModerationConfig } from "./ai-moderation";
 import { createGamification, type GamificationApi } from "./gamification";
+import { fluxyEntityId } from "./fluxy-id";
 import type { SentimentLabel } from "./conversation-analytics";
 
 // ─── Types ─────────────────────────────────────────────
@@ -251,7 +252,7 @@ export function createFluxyStream(config?: {
     if (!v || v.isBanned) return { ok: false, reason: "banned" };
     if (v.isMuted) return { ok: false, reason: "muted" };
 
-    const results = moderation.check(content, { messageId: `${Date.now()}`, roomId: "stream", userId });
+    const results = moderation.check(content, { messageId: fluxyEntityId("msg"), roomId: "stream", userId });
     const blocked = results.some((r) => r.action === "block");
     if (blocked) return { ok: false, reason: "blocked_by_moderation", results };
 
@@ -265,7 +266,7 @@ export function createFluxyStream(config?: {
 
   function addAngle(label: string, streamUrl: string, isDefault = false): CameraAngle {
     const angle: CameraAngle = {
-      id: `ang_${Date.now()}`,
+      id: fluxyEntityId("ang"),
       label, streamUrl, isDefault,
       sortOrder: angles.length,
     };
@@ -292,7 +293,7 @@ export function createFluxyStream(config?: {
 
   function suggestHighlight(title: string, startSeconds: number, endSeconds: number, reason: string): StreamHighlight {
     const hl: StreamHighlight = {
-      id: `hl_${Date.now()}`,
+      id: fluxyEntityId("hl"),
       title, startSeconds, endSeconds, reason,
       status: "suggested",
       createdAt: new Date().toISOString(),
@@ -376,7 +377,7 @@ export function createFluxyStream(config?: {
     if (!branch) return false;
     // Check if already voted (unless we allow multiple — for now, one vote per user)
     if (votes.some((v) => v.userId === userId)) return false;
-    votes.push({ id: `vote_${Date.now()}`, branchId, userId, timestamp: new Date().toISOString() });
+    votes.push({ id: fluxyEntityId("vote"), branchId, userId, timestamp: new Date().toISOString() });
     branch.voteCount++;
     gamification.awardXp(userId, 3, "Story vote");
     return true;
@@ -401,7 +402,7 @@ export function createFluxyStream(config?: {
     const gift = giftsCatalog.find((g) => g.type === giftType);
     if (!gift) return null;
     const sent: SentGift = {
-      id: `sg_${Date.now()}`,
+      id: fluxyEntityId("sg"),
       giftType,
       fromUserId,
       fromUsername,
@@ -426,7 +427,7 @@ export function createFluxyStream(config?: {
 
   function addProduct(name: string, checkoutUrl: string, priceAmount: number, currency = "usd", description?: string, imageUrl?: string): LiveProduct {
     const product: LiveProduct = {
-      id: `prod_${Date.now()}`,
+      id: fluxyEntityId("prod"),
       name, description, imageUrl, checkoutUrl, priceAmount, currency,
       active: false,
     };
@@ -456,7 +457,7 @@ export function createFluxyStream(config?: {
 
   function createPoll(question: string, options: string[], allowMultiple = false): StreamPoll {
     const poll: StreamPoll = {
-      id: `poll_${Date.now()}`,
+      id: fluxyEntityId("poll"),
       question, allowMultiple,
       options: options.map((label, i) => ({ id: `opt_${i}`, label, votes: 0 })),
       status: "open",
@@ -511,7 +512,7 @@ export function createFluxyStream(config?: {
     ];
     const content = responses[Math.floor(Math.random() * responses.length)];
     const msg: AIChatMessage = {
-      id: `ai_${Date.now()}`,
+      id: fluxyEntityId("ai"),
       role: "cohost",
       content: `${content}\n\nRegarding "${userQuestion.slice(0, 100)}" — the key thing to remember is that consistency beats intensity.`,
       timestamp: new Date().toISOString(),
@@ -521,7 +522,7 @@ export function createFluxyStream(config?: {
   }
 
   function coHostModerate(content: string): { action: string; reason: string } {
-    const results = moderation.check(content, { messageId: `mod_${Date.now()}`, roomId: "stream", userId: "cohost" });
+    const results = moderation.check(content, { messageId: fluxyEntityId("mod"), roomId: "stream", userId: "cohost" });
     const blocked = results.find((r) => r.action === "block");
     const flagged = results.find((r) => r.action === "flag");
     if (blocked) return { action: "block", reason: blocked.label };

@@ -3,16 +3,17 @@ import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import type { ChannelHandle, ChannelSnapshot, SendAck, SendInput } from "@portalsdk/core";
 
 import { usePortal } from "./context.js";
-import { assertBrowser } from "./ssr.js";
+import { isServerEnvironment } from "./ssr.js";
 import type { UseChannelParams, UseChannelResult } from "./types.js";
 import { useLatest } from "./use-latest.js";
 
 /**
- * Inert snapshot for the "nothing selected" state (`channelId: undefined`).
+ * Inert snapshot for the "nothing selected" state (`channelId: undefined`) and for server
+ * rendering (`typeof window === "undefined"`) alike — both mean no handle exists.
  *
- * A single frozen module constant so `getSnapshot` returns a referentially stable value
- * while inert — `useSyncExternalStore` compares snapshots by identity, and a fresh object
- * each call would loop.
+ * A single frozen module constant so `getSnapshot`/`getServerSnapshot` return a referentially
+ * stable value while inert — `useSyncExternalStore` compares snapshots by identity, and a
+ * fresh object each call would loop.
  */
 const INERT_SNAPSHOT: ChannelSnapshot<never> = Object.freeze({
   messages: Object.freeze([]) as readonly never[],
@@ -30,21 +31,33 @@ const INERT_SNAPSHOT: ChannelSnapshot<never> = Object.freeze({
  * Subscribe to one channel. A thin binding over the core {@link ChannelHandle}: it
  * resolves the handle from the registry, drives the refcount from mount/unmount, and mirrors
  * the handle's store through `useSyncExternalStore`. All state lives in core.
+ *
+ * During server rendering (`typeof window === "undefined"`, which includes a Next.js Client
+ * Component's server prerender pass despite `"use client"`), this renders the same inert
+ * snapshot as `channelId: undefined` — no handle is created, so there is no acquire, no
+ * network, and no effect registration. On an actual client this branch never engages.
  */
 export function useChannel<M = unknown>(
   params: UseChannelParams<M>,
 ): UseChannelResult<M> {
-  assertBrowser();
-
   const portal = usePortal();
-  const { channelId, readOn = "mount", history, metadata, where, onMention, onError } = params;
+  const {
+    channelId,
+    readOn = "mount",
+    history,
+    metadata,
+    where,
+    onMention,
+    onMessage,
+    onError,
+  } = params;
 
   // Same handle object per id (core's registry). `history`/`metadata` are connect-time only
   // and first-creation-wins in core, so they are intentionally not dependencies — changing
   // them without changing `channelId` does not (and should not) re-create the handle.
   const handle = useMemo<ChannelHandle<M> | undefined>(
     () =>
-      channelId === undefined
+      channelId === undefined || isServerEnvironment()
         ? undefined
         : portal.channel<M>(channelId, {
             ...(history !== undefined && { history }),
@@ -60,10 +73,13 @@ export function useChannel<M = unknown>(
   }, [handle, where]);
 
   const onMentionRef = useLatest(onMention);
+  const onMessageRef = useLatest(onMessage);
   const onErrorRef = useLatest(onError);
 
   // Refcount: mount acquires, unmount (or id change) releases. Core's grace window absorbs
-  // StrictMode's double-invoke and fast remounts, so this naive pairing is correct.
+  // StrictMode's double-invoke and fast remounts, so this naive pairing is correct. Never
+  // runs server-side: effects don't fire during server rendering, and handle is undefined
+  // there regardless.
   useEffect(() => {
     if (!handle) return;
     handle.acquire();
@@ -91,15 +107,17 @@ export function useChannel<M = unknown>(
   // there. Reads go through refs so inline callbacks don't churn this subscription.
   useEffect(() => {
     if (!handle) return;
+    const offMessage = handle.on("message", (msg) => onMessageRef.current?.(msg));
     const offMention = handle.on("mention", (msg) => onMentionRef.current?.(msg));
     const offStatus = handle.on("status", (_status, err) => {
       if (err) onErrorRef.current?.(err);
     });
     return () => {
+      offMessage();
       offMention();
       offStatus();
     };
-  }, [handle, onMentionRef, onErrorRef]);
+  }, [handle, onMessageRef, onMentionRef, onErrorRef]);
 
   const subscribe = useCallback(
     (listener: () => void) => (handle ? handle.subscribe(listener) : () => {}),
@@ -109,7 +127,12 @@ export function useChannel<M = unknown>(
     (): ChannelSnapshot<M> => (handle ? handle.getSnapshot() : INERT_SNAPSHOT),
     [handle],
   );
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot);
+  // Called during server rendering, and during the client's first (pre-hydration) render to
+  // check consistency with the server output. `handle` is always undefined server-side, so
+  // this is the same inert value `getSnapshot` would already return there — provided
+  // explicitly because useSyncExternalStore requires it to render on the server at all.
+  const getServerSnapshot = useCallback((): ChannelSnapshot<M> => INERT_SNAPSHOT, []);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const send = useCallback(
     (input: SendInput<M>): Promise<SendAck> =>
@@ -125,6 +148,10 @@ export function useChannel<M = unknown>(
   const sendActivity = useCallback((kind: string) => handle?.sendActivity(kind), [handle]);
   const sendTyping = useCallback(() => handle?.sendTyping(), [handle]);
   const markAsRead = useCallback(() => handle?.markAsRead(), [handle]);
+  const setMetadata = useCallback(
+    (meta: Record<string, unknown>) => handle?.setMetadata(meta),
+    [handle],
+  );
 
   const typing = useMemo(
     () => snapshot.activity.filter((a) => a.kind === "typing").map((a) => a.userId),
@@ -146,6 +173,7 @@ export function useChannel<M = unknown>(
     sendTyping,
     unread: snapshot.unread,
     markAsRead,
+    setMetadata,
     status: snapshot.status,
   };
 }

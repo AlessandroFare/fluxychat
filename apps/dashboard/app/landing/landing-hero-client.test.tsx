@@ -32,15 +32,19 @@ vi.mock("next/dynamic", () => ({
   default: () => () => null,
 }));
 
-// The Copy icon from lucide-react — mock implementation
-vi.mock("lucide-react", () => ({
-  Check: ({ className }: { className?: string }) => (
-    <svg data-testid="check-icon" className={className} />
-  ),
-  Copy: ({ className }: { className?: string }) => (
-    <svg data-testid="copy-icon" className={className} />
-  ),
-}));
+// Partial mock — keep real icons for product nav, stub Copy/Check for clipboard test
+vi.mock("lucide-react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("lucide-react")>();
+  return {
+    ...actual,
+    Check: ({ className }: { className?: string }) => (
+      <svg data-testid="check-icon" className={className} />
+    ),
+    Copy: ({ className }: { className?: string }) => (
+      <svg data-testid="copy-icon" className={className} />
+    ),
+  };
+});
 
 // Mock clipboard API — assign to global (jsdom uses a frozen navigator)
 beforeAll(() => {
@@ -62,13 +66,14 @@ describe("LandingHeroClient", () => {
 
     // The surrounding container should have the dark terminal chip styles
     const chip = codeEl.closest("div");
-    expect(chip).toHaveClass("bg-[#1A1A1A]");
-    expect(chip).toHaveClass("border-white/10");
-    expect(chip).toHaveClass("rounded-lg");
-    expect(chip).toHaveClass("h-[52px]");
+    expect(chip).toBeTruthy();
+    expect(chip!).toHaveClass("bg-[#1A1A1A]");
+    expect(chip!).toHaveClass("border-white/10");
+    expect(chip!).toHaveClass("rounded-lg");
+    expect(chip!).toHaveClass("h-[52px]");
 
     // The parent wrapper (flex container) should center both CTAs
-    const wrapper = chip.parentElement;
+    const wrapper = chip!.parentElement;
     expect(wrapper).toHaveClass("items-center");
     expect(wrapper).toHaveClass("justify-center");
   });

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, Plus, Video, Loader2 } from "lucide-react";
 import { ConsoleShell } from "@/app/components/console-shell";
 import { ConsolePageHeader } from "@/app/components/console-page-header";
+import { ConsoleProjectRoomBar } from "@/app/components/console-project-room-bar";
 import { useDashboardSession } from "@/app/components/dashboard-session";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { cn } from "@/lib/utils";
@@ -81,6 +82,12 @@ export default function StreamPage() {
             <Plus className="size-3.5" /> New stream
           </button>
         }
+      />
+
+      <ConsoleProjectRoomBar
+        requireProject
+        preferRoom
+        hint="Stream events are scoped to your project. Create a stream to bind chat and polls to a live room."
       />
 
       <div className="flex flex-1 flex-col gap-4 p-4 pt-2">

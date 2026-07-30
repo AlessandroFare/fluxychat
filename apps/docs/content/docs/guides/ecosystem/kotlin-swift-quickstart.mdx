@@ -1,0 +1,66 @@
+---
+title: Kotlin and Swift quickstart
+description: Native mobile REST clients for FluxyChat on Android (Kotlin) and iOS/macOS (Swift).
+---
+
+FluxyChat ships starter native SDKs for teams that do not use React Native or Flutter:
+
+| Platform | Package | Status |
+|----------|---------|--------|
+| Android / JVM | `packages/kotlin-sdk` | REST: list/send messages, list rooms |
+| iOS / macOS | `packages/swift-sdk` | REST via async/await |
+| Flutter | `@fluxy-chat/flutter-sdk` | Full client + WS |
+| React Native | `@fluxy-chat/react-native-sdk` | Hooks + reconnect |
+
+## Kotlin (Android)
+
+```kotlin
+val client = FluxyChatClient(
+    FluxyChatConfig(
+        apiUrl = "https://your-worker.workers.dev",
+        wsUrl = "wss://your-worker.workers.dev",
+        projectId = "proj_id",
+        token = jwt,
+    ),
+)
+client.sendMessage("room-1", "Hello")
+```
+
+See [`packages/kotlin-sdk/README.md`](https://github.com/fluxychat/fluxychat/blob/main/packages/kotlin-sdk/README.md).
+
+## Swift (iOS)
+
+```swift
+let client = FluxyChatClient(config: FluxyChatConfig(
+    apiUrl: "https://your-worker.workers.dev",
+    wsUrl: "wss://your-worker.workers.dev",
+    projectId: "proj_id",
+    token: jwt
+))
+let data = try await client.sendMessage(roomId: "room-1", content: "Hello")
+```
+
+Run `swift test` in `packages/swift-sdk`.
+
+## WebSocket
+
+```kotlin
+client.connectRoom("room-1", listener)
+client.webSocket.sendMessage("Hello")
+```
+
+```swift
+client.connectRoom("room-1", listener: listener)
+try await client.webSocket.sendMessage("Hello")
+```
+
+Frames match `@fluxy-chat/protocol` (`message`, `typing`, `ping`, `pong`, …).
+
+## Import legacy history
+
+Admin migration: [Migrate from Pusher](/docs/guides/migrate-from-pusher) + `pnpm import-chat-history`.
+
+## See also
+
+- [React Native quickstart](/docs/guides/ecosystem/react-native-quickstart)
+- [Contributing](/docs/guides/ecosystem/contributing) (monorepo setup)

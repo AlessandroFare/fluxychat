@@ -42,7 +42,8 @@ export const RECONNECT_HIBERNATION_GUIDE: GuideContent = {
     {
       id: "react",
       title: "React example (useChat)",
-      code: `import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+      code: `import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/react";
 
 const client = new FluxyChatClient({ baseUrl, userId, token });
 

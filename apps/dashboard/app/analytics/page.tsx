@@ -121,6 +121,13 @@ interface SloStats {
     requestErrorRate: number;
     webhookSuccessRate: number;
   };
+  counters?: {
+    webhookDeliveriesTotal?: number;
+    webhookDeliveriesDelivered?: number;
+    webhookDeliveriesFailed?: number;
+    requestsTotal?: number;
+    requestsError?: number;
+  };
 }
 
 interface AlertsStats {
@@ -430,7 +437,7 @@ export default function AnalyticsPage() {
         </div>
 
         {roomStats ? (
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <StatCard label="Room" value={roomStats.roomId} hint="Selected channel" />
             <StatCard
               label="Messages"
@@ -438,7 +445,22 @@ export default function AnalyticsPage() {
               hint="Stored in D1"
               accent="success"
             />
-            <StatCard label="Active users" value={String(roomStats.activeUsers)} />
+            <StatCard label="Active users" value={String(roomStats.activeUsers)} hint="Distinct senders" />
+            <StatCard
+              label="Webhook delivery"
+              value={slo ? `${(slo.sli.webhookSuccessRate * 100).toFixed(1)}%` : "—"}
+              hint={slo ? `${slo.counters?.webhookDeliveriesDelivered ?? 0} delivered` : "Load SLO stats"}
+            />
+            <StatCard
+              label="Agent invokes"
+              value={costs ? formatNumber(costs.totals.aiRuns) : "—"}
+              hint={costs ? `${costs.totals.agentRunsFailed} failed` : "Admin JWT"}
+            />
+            <StatCard
+              label="Request errors"
+              value={slo ? `${(slo.sli.requestErrorRate * 100).toFixed(2)}%` : "—"}
+              hint={slo?.sloStatus.overallHealthy ? "SLO healthy" : "Check alerts"}
+            />
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">Enter a room id and refresh.</p>

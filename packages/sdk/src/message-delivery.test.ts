@@ -53,6 +53,29 @@ describe("message-delivery", () => {
     expect(failed[0]?.deliveryError).toBe("network");
   });
 
+  it("matches inbound WS message to pending by clientMessageId", () => {
+    const pending = createOptimisticMessage({
+      roomId: "r1",
+      userId: "alice",
+      content: "hi",
+      clientMessageId: "cmsg_abc12345_xyz",
+    });
+    const merged = tryMatchPendingByInbound(
+      [pending],
+      {
+        id: 99,
+        roomId: "r1",
+        userId: "alice",
+        content: "different-body",
+        createdAt: new Date().toISOString(),
+        clientMessageId: "cmsg_abc12345_xyz",
+      },
+      "alice",
+    );
+    expect(merged[0]?.id).toBe(99);
+    expect(merged[0]?.clientMessageId).toBe("cmsg_abc12345_xyz");
+  });
+
   it("matches inbound WS message to pending", () => {
     const pending = createOptimisticMessage({
       roomId: "r1",

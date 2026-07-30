@@ -1,0 +1,27 @@
+{
+  "title": "Reference",
+  "icon": "FileText",
+  "pages": [
+    "index",
+    "troubleshooting",
+    "dashboard-integration",
+    "hosted-domains",
+    "embed-widget",
+    "pusher-channels-parity",
+    "web-push-vapid",
+    "ai-gateway",
+    "ai-agent-handoff",
+    "message-middleware",
+    "feature-flags",
+    "observability-otel",
+    "billing-overage-policy",
+    "browser-run",
+    "custom-domain-white-label",
+    "daily-ai-digest",
+    "quiet-hours-notifications",
+    "room-export",
+    "scheduled-workflows",
+    "thread-summary",
+    "webhook-secret-migration"
+  ]
+}

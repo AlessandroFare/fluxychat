@@ -1,0 +1,39 @@
+---
+title: FluxyChat Docs
+description: Realtime chat on Cloudflare Workers — SDK, Worker API, and platform modules.
+---
+
+FluxyChat is a realtime messaging platform built on Cloudflare Workers, Durable Objects, and D1. You run a Worker (hosted cloud or self-hosted), mint JWTs from your backend, and connect clients with `@fluxy-chat/sdk` and `@fluxy-chat/react`.
+
+<Banner variant="info">
+  **HTTP API** in the sidebar lists 150+ REST endpoints with method badges and an interactive curl playground — expand the tag groups under API Reference.
+</Banner>
+
+<Cards>
+  <Card title="Quickstart" description="Install the SDK, mint a JWT, send your first message." href="/docs/getting-started/quickstart" />
+  <Card title="Core SDK" description="FluxyChatClient, useChat, connection state, agents." href="/docs/core" />
+  <Card title="Platform" description="Stream, collab, game, IoT, fleet, transport." href="/docs/platform" />
+  <Card title="API reference" description="REST endpoints on your Worker — HTTP API sidebar." href="/docs/api-reference" />
+  <Card title="Cookbook" description="JWT auth, transport fallback, templates, HTTP publish." href="/docs/cookbook" />
+  <Card title="Self-hosting" description="Deploy the Worker on your Cloudflare account." href="/docs/getting-started/self-hosting" />
+</Cards>
+
+## What you need
+
+| Piece | Who sets it | Notes |
+|-------|-------------|-------|
+| Worker URL | You | e.g. `https://your-worker.workers.dev` or custom domain |
+| Project API key (`fc_…`) | Console or provisioning | Server-side only — mints JWTs |
+| Member JWT | Your backend | Passed to the SDK as `token` |
+| LLM keys | Worker secrets | For in-room agents; never in the browser |
+
+## Monorepo layout
+
+- `apps/worker` — Cloudflare Worker (WebSocket, REST, Durable Objects)
+- `apps/dashboard` — Next.js operator console and marketing
+- `apps/docs` — this documentation site
+- `packages/sdk` — TypeScript client
+- `packages/react` — React hooks (`useChat`, `useInbox`, …)
+- `packages/protocol` — shared WebSocket event types
+
+Try hosted at [fluxychat.com](https://fluxychat.com) or run locally with `pnpm install && pnpm run dev:setup && pnpm dev`.

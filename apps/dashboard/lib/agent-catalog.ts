@@ -6,6 +6,10 @@ export interface AgentProviderOption {
   hint?: string;
 }
 
+/** Production default: OpenCode Zen gateway + DeepSeek Flash v4 (free tier). */
+export const DEFAULT_ONBOARDING_AGENT_PROVIDER = "custom";
+export const DEFAULT_ONBOARDING_AGENT_MODEL = "deepseek-v4-flash";
+
 /** Keep in sync with apps/worker/src/lib/llm-providers.js */
 export const AGENT_PROVIDER_OPTIONS: AgentProviderOption[] = [
   {

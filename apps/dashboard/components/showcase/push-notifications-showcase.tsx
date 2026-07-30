@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Loader2, Bell, BellOff, MonitorSmartphone, CheckCircle2 } from "lucide-react";
-import { useWebPush } from "@fluxy-chat/sdk";
+import { useWebPush } from "@fluxy-chat/react";
 import {
   FeatureCodePanel,
   FeaturePreviewFrame,

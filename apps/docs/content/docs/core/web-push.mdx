@@ -1,0 +1,49 @@
+---
+title: Web push (React)
+description: useWebPush hook for browser push notifications.
+---
+
+`useWebPush` registers the browser Push API with the Worker VAPID keys and keeps subscriptions in sync.
+
+```tsx
+import { useWebPush } from "@fluxy-chat/react";
+
+function PushToggle({ client }: { client: FluxyChatClient }) {
+  const {
+    permission,
+    subscriptions,
+    isLoading,
+    requestPermissionAndSubscribe,
+    unsubscribe,
+  } = useWebPush(client, { projectId: "default" });
+
+  if (permission === "unsupported") {
+    return <p>Push not supported in this browser.</p>;
+  }
+
+  return (
+    <button
+      disabled={isLoading}
+      onClick={() =>
+        subscriptions.length
+          ? unsubscribe()
+          : requestPermissionAndSubscribe()
+      }
+    >
+      {subscriptions.length ? "Disable push" : "Enable push"}
+    </button>
+  );
+}
+```
+
+## Requirements
+
+1. **Service worker** at `/sw.js` (or custom `swPath`) that handles `push` events.
+2. Worker VAPID keys — auto-generated per project on first request.
+3. Member JWT on the client.
+
+## Server-side delivery
+
+The Worker sends push on offline paths (mentions, digests). Configure preferences with `PATCH /digest/preferences` (`webPushEnabled`).
+
+See [Web Push (VAPID) guide](/docs/guides/realtime/web-push-vapid) for HTTP routes and manual subscription flow.

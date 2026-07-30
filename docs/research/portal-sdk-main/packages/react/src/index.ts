@@ -10,6 +10,7 @@ export { useInbox } from "./use-inbox.js";
 export type {
   UseChannelParams,
   UseChannelResult,
+  UseInboxParams,
   UseInboxResult,
 } from "./types.js";
 

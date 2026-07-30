@@ -1,5 +1,20 @@
 # @fluxy-chat/sdk
 
+## 0.5.0 (2026-07-28)
+
+### Added
+
+- `@fluxy-chat/sdk/testing` — Vitest/Jest matchers and spy adapters for integration tests.
+- `@fluxy-chat/sdk/react` transitional re-export for hooks migrating from monolithic SDK.
+- `FluxyChatError` hierarchy: `FluxyRateLimitError`, `FluxyLockError`, `FluxyNotImplementedError`.
+- `getConnectionStatusLabel()` for connection UI copy.
+- `FinalizationRegistry` leak warning in `room-session-handle` (dev builds).
+
+### Changed
+
+- Worker-runtime and testing subpath exports validated in publish manifest CI.
+- README bundle size guidance (tree-shaken imports vs full `dist/index.js`).
+
 ## 0.4.0 (2026-06-16)
 
 - Initial public release of the FluxyChat TypeScript SDK.

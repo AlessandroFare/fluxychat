@@ -1,0 +1,73 @@
+---
+title: Cross-channel identity and journey
+description: Bind web, mobile, WhatsApp, SMS, and voice identities to one customer profile with journey history.
+---
+
+Unify the same user across **web, mobile, WhatsApp, SMS, voice, email, Slack, and Discord** with identity binding, profile merge, and journey history stored in CDP.
+
+Configure from [**Customers**](/customers) (Cross-channel section) or the admin API.
+
+## Bind channel identity
+
+Link a channel-specific user ID to a CDP customer profile:
+
+```bash
+curl -X POST "$WORKER_URL/admin/cross-channel/bindings" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "cp_abc123",
+    "channel": "whatsapp",
+    "channelUserId": "+15551234567"
+  }'
+```
+
+Supported channels: `web`, `mobile`, `whatsapp`, `sms`, `voice`, `email`, `slack`, `discord`.
+
+## Merge duplicate profiles
+
+```bash
+curl -X POST "$WORKER_URL/admin/cross-channel/merge" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "primaryCustomerId": "cp_primary",
+    "secondaryCustomerId": "cp_secondary"
+  }'
+```
+
+Bindings and journey events from the secondary profile are moved to the primary.
+
+## Journey history
+
+Record and list touchpoints:
+
+```bash
+curl -X POST "$WORKER_URL/admin/cross-channel/journey" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "cp_abc123",
+    "channel": "web",
+    "step": "checkout_started",
+    "metadata": {"cartValue": 99}
+  }'
+
+curl "$WORKER_URL/admin/cross-channel/journey?customerId=cp_abc123" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+## Unified customer view
+
+```bash
+curl "$WORKER_URL/admin/cross-channel/customers/cp_abc123" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Returns profile, bindings, journey, and linked channels.
+
+## Related
+
+- [Customer data layer](/docs/guides/customer-data-segments)
+- [Slack/Discord bridge](/docs/guides/slack-discord-bridge)
+- Dashboard SDK demo: [**Cross-Channel**](/cross-channel)

@@ -1,0 +1,44 @@
+---
+title: "Staging deploy & public status (OPS-4)"
+description: "Template: `apps/worker/wrangler.staging.toml`"
+---
+
+## Staging Worker
+
+Template: `apps/worker/wrangler.staging.toml`
+
+1. Create staging D1, KV, R2 with unique names.
+2. Replace `REPLACE_WITH_*` IDs in the staging toml.
+3. Deploy:
+
+```bash
+cd apps/worker
+pnpm exec wrangler deploy src/worker.js --config wrangler.staging.toml
+```
+
+4. Point dashboard staging env at the staging Worker:
+
+```bash
+NEXT_PUBLIC_FLUXYCHAT_WORKER_URL=https://<staging-worker-host>
+```
+
+GitHub Actions: workflow **Deploy** → environment `staging` (requires `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`).
+
+## Public status page
+
+Dashboard route: `/status` (server-rendered, polls `GET /health` on the configured Worker).
+
+Optional custom domain:
+
+1. Add `status.fluxychat.com` (or your domain) in Vercel/hosting DNS → dashboard project.
+2. Link from marketing footer and console (already wired to `/status`).
+
+Health payload fields: `ok`, `degraded`, `checks`, `platformBindings`, `paymentsEnabled`.
+
+## Console operational alerts (RD-6)
+
+Signed-in admins with an active project see a banner when `GET /stats/alerts` reports `openAlerts > 0`. Link goes to **Analytics**.
+
+## CI gate before deploy
+
+`.github/workflows/deploy.yml` runs pricing/tenant/openapi/DO checks, worker typecheck, and `pnpm test` before `wrangler deploy`.

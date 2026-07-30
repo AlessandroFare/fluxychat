@@ -135,7 +135,7 @@ export function createDlpDetector(): DlpDetector {
         return Math.max(max, levels[pattern?.severity ?? "low"]);
       }, 0);
 
-      const action: DlpAction = severity >= 3 ? "block" : severity >= 2 ? "quarantine" : "flag";
+      const action: DlpAction = severity >= 3 ? "block" : severity >= 2 ? "quarantine" : severity >= 1 ? "redact" : "flag";
       let redacted: string | undefined;
       if (action === "redact" || action === "block") {
         redacted = text;

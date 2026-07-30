@@ -1,0 +1,25 @@
+---
+title: IoT
+description: Device telemetry and command channels.
+---
+
+# IoT module
+
+Device-facing realtime channels via `createWorkerFluxyIoTClient`.
+
+```ts
+import { createWorkerFluxyIoTClient } from "@fluxy-chat/sdk";
+
+const iot = createWorkerFluxyIoTClient({
+  baseUrl,
+  token: deviceOrOperatorJwt,
+});
+```
+
+Patterns:
+
+- Device rooms with restricted member roles
+- Operator dashboards using `useChat` for alert threads
+- HTTP publish from device gateways when WebSocket is unavailable
+
+Authenticate devices with short-lived JWTs minted by your provisioning service — same `POST /auth/token` flow with device-scoped `userId`.

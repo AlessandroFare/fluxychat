@@ -1,0 +1,70 @@
+---
+title: SOC 2 and HIPAA runbook
+description: Operate FluxyChat controls, export auditor evidence, and track HIPAA BAAs without a paid compliance SaaS.
+---
+
+Use this runbook for **build-first** compliance: product controls and exports in FluxyChat; a **signed SOC 2 Type 2 report** from an audit firm stays deferred until you have revenue and an auditor budget.
+
+## Roles
+
+| Role | Responsibility |
+|------|----------------|
+| **Admin** | Dashboard admin JWT, SOC 2 refresh, evidence export |
+| **Security lead** | Risk register updates via `/api/soc2/risks`, incident logging |
+| **Privacy / compliance** | HIPAA checklist, BAA records, breach runbook |
+
+## Weekly SOC 2 cadence (30 minutes)
+
+1. Open dashboard [**SOC 2**](/soc2) → **Refresh** — confirm control and policy counts are non-zero after seed/migration.
+2. **Export evidence JSON** and store in your evidence bucket (dated filename).
+3. **Export audit log** stream for the last 7 days.
+4. Run **DLP smoke test** on the SOC 2 page (test SSN + test card).
+5. File exports in `evidence/YYYY-MM-DD/` with a one-line change note in your internal log.
+
+## API reference (admin JWT)
+
+```bash
+# Dashboard summary
+curl "$WORKER_URL/api/soc2/dashboard" -H "Authorization: Bearer $ADMIN_JWT"
+
+# Evidence rows
+curl "$WORKER_URL/api/soc2/evidence" -H "Authorization: Bearer $ADMIN_JWT"
+
+# HIPAA summary
+curl "$WORKER_URL/api/hipaa/dashboard" -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+See [DLP and audit export](/docs/guides/enterprise/dlp-audit-export) for scan and audit endpoints.
+
+## HIPAA BAA workflow
+
+1. Download the **BAA template** from dashboard **Settings → HIPAA** (markdown — **not legal advice**).
+2. Legal review and countersign with your customer.
+3. Create a BAA record: `POST /api/hipaa/baa` with `entityName`, `entityType`, contacts.
+4. When signed, `PATCH /api/hipaa/baa/{id}` with `status: "active"` and `signedBy`.
+5. Complete the in-product **readiness checklist** (DLP, training, breach runbook, retention).
+
+## Breach notification (internal)
+
+1. Create breach record: `POST /api/hipaa/breaches` with severity and affected counts.
+2. Contain: revoke tokens, enable legal hold on affected rooms ([retention settings](/settings/retention)).
+3. Notify privacy lead within **24h**; document HHS/individual notification timelines in the breach record fields.
+4. Attach audit export and DLP detection IDs to the incident ticket.
+
+## Pre-audit pack (when you hire an auditor)
+
+Bundle for the firm:
+
+- SOC 2 evidence JSON + audit log export
+- AI Governance evidence export ([AI Governance](/ai-governance))
+- DLP policy version + CMK metadata ([DLP CMK](/docs/guides/enterprise/dlp-cmk-policy))
+- HIPAA BAA list (`GET /api/hipaa/baa`) and checklist completion notes
+- Self-host and access-control docs ([Self-host one command](/docs/guides/self-host-one-command), [Auth JWT](/docs/guides/auth-jwt))
+
+## Explicitly out of scope (zero-budget)
+
+- Paying for SOC 2 Type 2 **signed** attestation
+- HIPAA **legal** BAA review (use your counsel)
+- Third-party MCP marketplace security audits
+
+When revenue allows, engage an audit firm and map this evidence pack to their control library — the product APIs above are designed to feed that process.

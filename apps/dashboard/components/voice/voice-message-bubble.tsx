@@ -97,26 +97,47 @@ function VoicePlayer({
     durationMs ? durationMs / 1000 : null,
   );
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loadingAudio, setLoadingAudio] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  // Fetch audio with JWT auth and create blob URL
+  // Fetch audio with JWT auth when needed (worker attachments require Bearer token).
   useEffect(() => {
     if (!audioUrl) return;
     let revoke: string | null = null;
-    if (authToken && audioUrl.startsWith("http")) {
-      fetch(audioUrl, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      })
-        .then((res) => res.ok ? res.blob() : null)
-        .then((blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob);
-            revoke = url;
-            setBlobUrl(url);
-          }
-        })
-        .catch(() => {});
+    let cancelled = false;
+
+    async function load() {
+      if (!authToken) {
+        setBlobUrl(null);
+        setLoadFailed(false);
+        setLoadingAudio(false);
+        return;
+      }
+      setLoadingAudio(true);
+      setLoadFailed(false);
+      try {
+        const res = await fetch(audioUrl!, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        if (!res.ok) throw new Error(`audio ${res.status}`);
+        const blob = await res.blob();
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        revoke = url;
+        setBlobUrl(url);
+      } catch {
+        if (!cancelled) {
+          setBlobUrl(null);
+          setLoadFailed(true);
+        }
+      } finally {
+        if (!cancelled) setLoadingAudio(false);
+      }
     }
+
+    void load();
     return () => {
+      cancelled = true;
       if (revoke) URL.revokeObjectURL(revoke);
     };
   }, [audioUrl, authToken]);
@@ -153,15 +174,18 @@ function VoicePlayer({
     };
   }, [effectiveSrc]);
 
-  function toggle() {
+  async function toggle() {
     const el = audioRef.current;
-    if (!el) return;
+    if (!el || loadingAudio) return;
+    if (loadFailed) return;
     if (playing) {
       el.pause();
-    } else {
-      void el.play().catch(() => {
-        /* autoplay rejection — ignore, user can retry */
-      });
+      return;
+    }
+    try {
+      await el.play();
+    } catch {
+      /* autoplay rejection — user can retry */
     }
   }
 
@@ -195,8 +219,16 @@ function VoicePlayer({
       />
       <button
         type="button"
-        onClick={toggle}
-        aria-label={playing ? "Pause voice message" : "Play voice message"}
+        onClick={() => void toggle()}
+        disabled={loadingAudio || loadFailed || !effectiveSrc}
+        aria-busy={loadingAudio}
+        aria-label={
+          playing
+            ? "Pause voice message"
+            : loadingAudio
+              ? "Loading voice message"
+              : "Play voice message"
+        }
         className={cn(
           "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
           "bg-primary text-primary-foreground transition hover:opacity-90",

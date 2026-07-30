@@ -1,0 +1,29 @@
+---
+title: Stream
+description: Live streaming chat and event messages.
+---
+
+# Stream module
+
+Live event chat overlays and stream-scoped messaging via `createWorkerFluxyStreamClient`.
+
+```ts
+import { createWorkerFluxyStreamClient } from "@fluxy-chat/sdk";
+
+const stream = createWorkerFluxyStreamClient({
+  baseUrl: process.env.NEXT_PUBLIC_FLUXY_BASE_URL!,
+  token: memberJwt,
+});
+```
+
+## HTTP endpoints
+
+Worker routes under `/api/live/events/:eventId/messages` support posting and listing stream messages for a live event.
+
+Use this for:
+
+- Live stream chat overlays
+- Event-scoped moderation
+- High-volume fan-out with room isolation
+
+See [Realtime modules](/docs/platform/realtime-modules) for the full module map.

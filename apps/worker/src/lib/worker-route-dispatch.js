@@ -25,6 +25,7 @@ import { dispatchSearchEnhancementsRoutes } from "../routes/search-enhancements-
 import { dispatchRichPreviewsRoutes } from "../routes/rich-previews-http.js";
 import { dispatchPinnedMessagesRoutes } from "../routes/pinned-messages-http.js";
 import { dispatchBreakoutRoomsRoutes } from "../routes/breakout-rooms-http.js";
+import { dispatchCapabilitiesRoutes } from "../routes/capabilities-http.js";
 import { dispatchMobileUxRoutes } from "../routes/mobile-ux-http.js";
 import { dispatchPollsFormsRoutes } from "../routes/polls-forms-http.js";
 import { dispatchGamificationRoutes } from "../routes/gamification-http.js";
@@ -53,6 +54,7 @@ import { dispatchIpWhitelistRoutes } from "../routes/ip-whitelist-http.js";
 import { dispatchCustomRetentionRoutes } from "../routes/custom-retention-http.js";
 import { dispatchAuditExportRoutes } from "../routes/audit-export-http.js";
 import { dispatchEdiscoveryRoutes } from "../routes/ediscovery-http.js";
+import { dispatchMessageImportRoutes } from "../routes/message-import-http.js";
 import { dispatchDlpIntegrationRoutes } from "../routes/dlp-integration-http.js";
 import { dispatchWorkspaceRoutes } from "../routes/workspace-http.js";
 import { dispatchMarketplaceRoutes } from "../routes/marketplace-http.js";
@@ -96,6 +98,12 @@ import { dispatchMcpRoutes } from "../routes/mcp-http.js";
 import { dispatchRoomMemoryRoutes } from "../routes/room-memory-http.js";
 import { dispatchAiActionsRoutes } from "../routes/ai-actions-http.js";
 import { dispatchAiModerationRoutes } from "../routes/ai-moderation-http.js";
+import { dispatchModerationLabelsRoutes } from "../routes/moderation-labels-http.js";
+import { dispatchAgentTaskBusRoutes } from "../routes/agent-task-bus-http.js";
+import { dispatchDigitalTwinRoutes } from "../routes/digital-twin-http.js";
+import { dispatchFluxyGameRoutes } from "../routes/fluxy-game-http.js";
+import { dispatchFluxyIoTRoutes } from "../routes/fluxy-iot-http.js";
+import { dispatchAgentPlatformRoutes } from "../routes/agent-platform-http.js";
 import { dispatchKnowledgeGraphRoutes } from "../routes/knowledge-graph-http.js";
 import { dispatchQueueRoutes } from "../routes/queue-http.js";
 import { dispatchEscalationRoutes } from "../routes/escalation-http.js";
@@ -105,6 +113,20 @@ import { dispatchAgentProfilesRoutes } from "../routes/agent-profiles-http.js";
 import { dispatchAdaptersRoutes } from "../routes/adapters-http.js";
 import { dispatchFleetTrackingRoutes } from "../routes/fleet-tracking-http.js";
 import { dispatchCollabHttp } from "../routes/collab-http.js";
+import { dispatchDevtoolsRoutes } from "../routes/devtools-http.js";
+import { dispatchCardsRoutes } from "../routes/cards-http.js";
+import { dispatchThreadStateRoutes } from "../routes/thread-state-http.js";
+import { dispatchHitlApprovalRoutes } from "../routes/hitl-approval-http.js";
+import { dispatchCmkRoutes } from "../routes/cmk-http.js";
+import { dispatchMcpIdentityRoutes } from "../routes/mcp-identity-http.js";
+import { dispatchBridgeWebhookRoutes } from "../routes/bridge-webhook-http.js";
+import { dispatchAiGovernanceRoutes } from "../routes/ai-governance-http.js";
+import { dispatchAiStreamRoutes } from "../routes/ai-stream-http.js";
+import { dispatchKbConnectorRoutes } from "../routes/kb-connectors-http.js";
+import { dispatchMcpAppsRoutes } from "../routes/mcp-apps-http.js";
+import { dispatchCrmRoutes } from "../routes/crm-http.js";
+import { dispatchVoiceAiRoutes } from "../routes/voice-ai-http.js";
+import { dispatchCrossChannelRoutes } from "../routes/cross-channel-http.js";
 
 /** @type {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} */
 export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
@@ -126,6 +148,18 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchRichPreviewsRoutes,
   dispatchPinnedMessagesRoutes,
   dispatchBreakoutRoomsRoutes,
+  dispatchCapabilitiesRoutes,
+  dispatchDevtoolsRoutes,
+  dispatchCardsRoutes,
+  dispatchThreadStateRoutes,
+  dispatchHitlApprovalRoutes,
+  dispatchAiGovernanceRoutes,
+  dispatchKbConnectorRoutes,
+  dispatchAiStreamRoutes,
+  dispatchMcpAppsRoutes,
+  dispatchCrmRoutes,
+  dispatchVoiceAiRoutes,
+  dispatchCrossChannelRoutes,
   dispatchFleetTrackingRoutes,
   dispatchCollabHttp,
   dispatchMobileUxRoutes,
@@ -155,7 +189,10 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchCustomRetentionRoutes,
   dispatchAuditExportRoutes,
   dispatchEdiscoveryRoutes,
+  dispatchMessageImportRoutes,
   dispatchDlpIntegrationRoutes,
+  dispatchCmkRoutes,
+  dispatchMcpIdentityRoutes,
   dispatchWorkspaceRoutes,
   dispatchMarketplaceRoutes,
   dispatchWidgetBuilderRoutes,
@@ -196,6 +233,12 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchAiActionsRoutes,
   dispatchKnowledgeGraphRoutes,
   dispatchAiModerationRoutes,
+  dispatchAgentTaskBusRoutes,
+  dispatchDigitalTwinRoutes,
+  dispatchFluxyGameRoutes,
+  dispatchFluxyIoTRoutes,
+  dispatchAgentPlatformRoutes,
+  dispatchModerationLabelsRoutes,
   dispatchQueueRoutes,
   dispatchEscalationRoutes,
   dispatchIntelligenceRoutes,
@@ -212,6 +255,7 @@ export const WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY = [
   dispatchUserBlocksRoutes,
   dispatchPushRoutes,
   dispatchStripeWebhookRoutes,
+  dispatchBridgeWebhookRoutes,
 ];
 
 const PRIVACY_BILLING_DISPATCHERS = [dispatchGdprRoutes, dispatchBillingRoutes];

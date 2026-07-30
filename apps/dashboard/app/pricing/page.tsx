@@ -13,7 +13,7 @@ import { Check, ArrowRight, MessagesSquare, Bot, Webhook, Shield, Server, Workfl
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing — Fluxychat",
   description:
-    "Self-serve tiers with monthly message, agent, and webhook quotas. Platform fee today; usage add-ons on Growth and above when you outgrow included limits.",
+    "Chat, AI agents, and platform modules on one plan. Free tier to Growth — undercuts Pusher and Ably on message quotas.",
   path: "/pricing",
 });
 
@@ -43,7 +43,8 @@ const COMPARISON_ROWS: { feature: string; values: Record<string, string> }[] = [
   { feature: "Rooms", values: Object.fromEntries(planKeys.map((k) => [k, "Unlimited"])) },
   { feature: "Projects", values: { free: "1", starter: "1", pro: "1", team: "5", growth: "Multiple" } },
   { feature: "Team seats", values: { free: "1", starter: "1", pro: "1", team: "5", growth: "Unlimited" } },
-  { feature: "SDK & Dashboard", values: Object.fromEntries(planKeys.map((k) => [k, "✓"])) },
+  { feature: "SDK & dashboard", values: Object.fromEntries(planKeys.map((k) => [k, "✓"])) },
+  { feature: "Platform modules", values: Object.fromEntries(planKeys.map((k) => [k, "Stream, collab, game, IoT"])) },
   { feature: "AI agents", values: Object.fromEntries(planKeys.map((k) => [k, "✓"])) },
   { feature: "Webhooks", values: { free: "—", starter: "Signed + retries", pro: "✓", team: "✓", growth: "✓" } },
   { feature: "GDPR export", values: { free: "—", starter: "✓", pro: "✓", team: "✓", growth: "✓" } },
@@ -57,23 +58,24 @@ function PricingHero() {
     <section className="relative overflow-hidden border-b border-white/10 bg-slate-950 px-4 pt-24 pb-16 sm:px-6 sm:pt-28 sm:pb-20">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,115,94,0.12)_0%,transparent_70%)]" />
       <div className="relative mx-auto max-w-6xl text-center">
-        <Badge className="mb-4 border border-white/20 bg-slate-800 text-slate-100 hover:bg-slate-700">
+        <Badge className="mb-4 border border-orange-400/40 bg-orange-500/15 px-4 py-1.5 text-sm font-medium text-orange-100 hover:bg-orange-500/20">
           Simple, transparent pricing
         </Badge>
         <h1 className="font-heading text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
           Pricing
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
-          Self-serve tiers with monthly message, agent, and webhook quotas. Scale from free to enterprise without surprises.
+          One plan covers chat, AI agents, webhooks, and platform modules (stream, collab, game, IoT). Starter at
+          $20/mo — less than Pusher Startup at $49/mo for similar traffic.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Button asChild size="lg">
+          <Button asChild size="lg" className="bg-[var(--fluxy-cta-color)] text-white hover:opacity-90">
             <Link href={clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}>
               {HOSTED_COPY.startFree}
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
-          <Button asChild variant="secondary" size="lg" className="bg-slate-800 text-white hover:bg-slate-700">
+          <Button asChild variant="outline" size="lg" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
             <a href="mailto:fluxychat@outlook.com?subject=FluxyChat%20sales">Talk to sales</a>
           </Button>
         </div>
@@ -156,7 +158,12 @@ function PlanCards() {
                 {showCta ? (
                   <Button
                     asChild
-                    className={cn("mt-8 w-full", isFeatured ? "" : "bg-white/10 text-white hover:bg-white/20")}
+                    className={cn(
+                      "mt-8 w-full",
+                      isFeatured
+                        ? "bg-[var(--fluxy-cta-color)] text-white hover:opacity-90"
+                        : "bg-white/10 text-white hover:bg-white/20",
+                    )}
                     variant={isFeatured ? "default" : "secondary"}
                   >
                     <Link href={clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}>
@@ -334,13 +341,13 @@ function PricingCta() {
           No credit card required. Join thousands of developers building real-time apps on FluxyChat.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Button asChild size="lg">
+          <Button asChild size="lg" className="bg-[var(--fluxy-cta-color)] text-white hover:opacity-90">
             <Link href={clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}>
               {HOSTED_COPY.startFree}
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
-          <Button asChild variant="secondary" size="lg" className="bg-slate-800 text-white hover:bg-slate-700">
+          <Button asChild variant="outline" size="lg" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
             <Link href={HOSTED_PATHS.landing}>Learn more about FluxyChat</Link>
           </Button>
         </div>

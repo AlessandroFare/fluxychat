@@ -1,6 +1,6 @@
 {
   "name": "@portalsdk/core",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Transport-agnostic Portal client runtime, built on the wire protocol over a WebSocket.",
   "license": "MIT",
   "type": "module",

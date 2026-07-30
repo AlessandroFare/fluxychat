@@ -1,0 +1,43 @@
+---
+title: Presence & typing
+description: Room presence and typing indicators over WebSocket.
+---
+
+Presence and typing flow over the **room WebSocket** — no separate REST polling required.
+
+## Typing with useChat
+
+`useChat` exposes `setTyping(isTyping)` which sends a `typing` frame to the room Durable Object:
+
+```tsx
+const { typingUsers, setTyping } = useChat({ roomId, client });
+
+<input
+  onFocus={() => setTyping(true)}
+  onBlur={() => setTyping(false)}
+/>
+<p>
+  {Object.entries(typingUsers)
+    .filter(([, active]) => active)
+    .map(([uid]) => uid)
+    .join(", ")}{" "}
+  typing…
+</p>
+```
+
+## Presence members
+
+On connect, the room broadcasts `presence` events with member lists. The room store tracks `presenceMembers`:
+
+```tsx
+const snapshot = useFluxyRoomStoreState(store);
+snapshot.presenceMembers.map((m) => m.userId);
+```
+
+Pass optional profile data when joining via WebSocket query (`presenceInfo` JSON) for richer avatars in the dashboard.
+
+## Intents
+
+Typing intents support `composing`, `away`, `viewing_thread` — surfaced as `typingIntents` in the room store for advanced UX (thread focus indicators).
+
+See [Connection state](/docs/core/connection-state) for transport details.

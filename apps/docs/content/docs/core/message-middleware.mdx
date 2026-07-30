@@ -1,0 +1,46 @@
+---
+title: Message middleware
+description: LLM middleware on the Worker and client-side send hooks.
+---
+
+FluxyChat does not expose a `client.use()` message pipeline in the browser SDK. Middleware patterns split between **Worker-side** processing and **LLM middleware** for agents.
+
+## Worker-side
+
+Message validation, templates, moderation, and rate limits run on the Worker before Durable Object broadcast. Configure via dashboard policies and admin APIs (`/admin/*`).
+
+## LLM middleware (agents)
+
+The SDK exports LLM middleware helpers for composing provider calls on the server:
+
+```ts
+import { composeMiddlewares } from "@fluxy-chat/sdk";
+// Used in custom agent/tool servers — not in browser clients
+```
+
+Agent tool execution flows through `toolExecuteUrl` on the agent profile.
+
+## Client patterns
+
+For client-side filtering (analytics, UI transforms), subscribe to `useChat` messages:
+
+```tsx
+const { messages } = useChat({ roomId, client });
+
+const visible = messages.filter((m) => !m.deletedAt);
+```
+
+For send-time validation, validate in your UI before calling `sendMessage`.
+
+## Templates
+
+Server-rendered template messages bypass free-text middleware:
+
+```ts
+await client.createMessage(roomId, "", null, undefined, clientMessageId, {
+  templateId: "tpl_welcome",
+  templateVars: { name: "Jane" },
+});
+```
+
+See [Message templates](/docs/cookbook/message-templates) and [Moderation](/docs/guides/chat/moderation).

@@ -4,8 +4,57 @@
  * Self-host remains documented under get-started#self-host (backlog tier).
  */
 
+/** Public Fumadocs site home (external). Set NEXT_PUBLIC_DOCS_URL=http://localhost:3001 for local docs dev. */
+export function docsHomeHref(): string {
+  const configured = process.env.NEXT_PUBLIC_DOCS_URL?.trim()?.replace(/\/$/, "");
+  const base =
+    configured && configured.startsWith("http") ? configured : "https://docs.fluxychat.com";
+  return `${base}/docs`;
+}
+
+/** Full URL to a page on the public Fumadocs site (e.g. `quickstart` → docs.fluxychat.com/docs/quickstart). */
+export function docsSiteHref(slug: string): string {
+  const clean = slug.replace(/^\//, "").replace(/^docs\//, "");
+  const configured = process.env.NEXT_PUBLIC_DOCS_URL?.trim()?.replace(/\/$/, "");
+  const base =
+    configured && configured.startsWith("http") ? configured : "https://docs.fluxychat.com";
+  return `${base}/docs/${clean}`;
+}
+
+/** @deprecated Use {@link docsSiteHref} */
+export const fumadocsArticlePath = docsSiteHref;
+
+/** Map dashboard /guides/* paths to Fumadocs learn/* slugs where they differ. */
+export const GUIDE_TO_FUMADOCS: Record<string, string> = {
+  "/guides/cloudflare-workers-chat": "learn/cloudflare-workers-chat",
+  "/guides/durable-objects-for-chat-rooms": "learn/durable-objects-for-chat-rooms",
+  "/guides/vercel-realtime-without-pusher": "learn/vercel-realtime-without-pusher",
+  "/guides/reconnect-durable-objects-hibernation": "learn/reconnect-durable-objects-hibernation",
+  "/guides/after-cloudflare-chat-tutorial": "learn/after-cloudflare-chat-tutorial",
+  "/guides/nextjs-vercel-realtime-chat": "learn/nextjs-vercel-realtime-chat",
+  "/guides/agent-events-same-websocket-stream": "learn/agent-events-same-websocket-stream",
+  "/guides/discord-style-chat-cloudflare": "learn/discord-style-chat-cloudflare",
+  "/guides/durable-objects-hibernation-cost": "learn/durable-objects-hibernation-cost",
+  "/guides/durable-objects-chat-tradeoffs": "learn/durable-objects-chat-tradeoffs",
+  "/guides/build-chat-nextjs-fluxychat": "learn/build-chat-nextjs-fluxychat",
+  "/guides/pusher-alternative-saas": "learn/pusher-alternative-saas",
+  "/guides/in-app-chat-vs-support-desk": "learn/in-app-chat-vs-support-desk",
+  "/guides/llm-memory-vs-room-state": "learn/llm-memory-vs-room-state",
+  "/guides/offline-notify-in-app-plus-sms": "learn/offline-notify-in-app-plus-sms",
+};
+
+export function guideDocsHref(dashboardGuidePath: string): string {
+  const slug = GUIDE_TO_FUMADOCS[dashboardGuidePath];
+  if (slug) return docsSiteHref(slug);
+  const tail = dashboardGuidePath.replace(/^\/guides\//, "");
+  return docsSiteHref(`learn/${tail}`);
+}
+
 export const HOSTED_PATHS = {
-  landing: "/landing",
+  /** Public marketing homepage (fluxychat.com root). */
+  landing: "/",
+  /** @deprecated Use {@link HOSTED_PATHS.landing} — kept for redirects. */
+  legacyLanding: "/landing",
   why: "/why",
   compare: "/compare",
   guides: "/guides",
@@ -21,15 +70,16 @@ export const HOSTED_PATHS = {
   guidesDoTradeoffs: "/guides/durable-objects-chat-tradeoffs",
   guidesBuildNextjs: "/guides/build-chat-nextjs-fluxychat",
   getStarted: "/get-started",
-  docs: "/docs",
+  docs: docsHomeHref(),
   onboarding: "/onboarding",
   signUp: "/sign-up",
   signIn: "/sign-in",
-  console: "/",
+  /** Operator console overview (Clerk-protected). */
+  console: "/dashboard",
   status: "/status",
 } as const;
 
-/** Routes that use marketing layout (no console sidebar). */
+/** Routes that use marketing layout (no console sidebar). Root `/` is handled separately. */
 export const MARKETING_PATH_PREFIXES = [
   "/landing",
   "/pricing",
@@ -44,6 +94,13 @@ export const MARKETING_PATH_PREFIXES = [
   "/sign-in",
   "/sign-up",
 ] as const;
+
+export function isMarketingPath(pathname: string): boolean {
+  if (pathname === "/") return true;
+  return MARKETING_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
 
 export const HOSTED_COPY = {
   startFree: "Create free account",
@@ -73,4 +130,3 @@ export function hostedSignupRedirect(): string {
 export function hostedQuickstartReviewHref(): string {
   return `${HOSTED_PATHS.onboarding}?review=1`;
 }
-

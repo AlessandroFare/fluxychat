@@ -1,0 +1,25 @@
+---
+title: Game
+description: Realtime game state and room messaging.
+---
+
+# Game module
+
+Game session messaging and state sync via `createWorkerFluxyGameClient`.
+
+```ts
+import { createWorkerFluxyGameClient } from "@fluxy-chat/sdk";
+
+const game = createWorkerFluxyGameClient({
+  baseUrl,
+  token: memberJwt,
+});
+```
+
+Use for:
+
+- In-game chat channels
+- Match lobby coordination
+- Server-authoritative events paired with room messages
+
+Pair with low-latency WebSocket transport — see [Transport fallback](/docs/guides/realtime/transport-fallback) for resilience on mobile networks.

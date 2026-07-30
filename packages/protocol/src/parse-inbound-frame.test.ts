@@ -20,8 +20,12 @@ describe("parseInboundWsFrame", () => {
     expect(frame?.event?.type).toBe("message");
   });
 
-  it("ignores unknown inbound types", () => {
-    expect(parseInboundWsFrame(JSON.stringify({ type: "totally_unknown" }))).toEqual({ kind: "ignored" });
+  it("passthrough unknown inbound types (forward-compat)", () => {
+    const raw = JSON.stringify({ type: "totally_unknown", v: 2, payload: { ok: true } });
+    expect(parseInboundWsFrame(raw)).toEqual({
+      kind: "unknown",
+      frame: { type: "totally_unknown", v: 2, payload: { ok: true } },
+    });
   });
 
   it("returns null on invalid JSON", () => {

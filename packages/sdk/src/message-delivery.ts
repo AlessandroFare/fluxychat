@@ -26,11 +26,13 @@ export type FluxyMessageDeliveryStatus = "pending" | "sent" | "failed";
 
 /** Message fields used for optimistic UI (client-only until server ack). */
 export interface FluxyMessageDeliveryFields {
-  /** Stable client id for dedupe / retry (not persisted by Worker today). */
+  /** Stable client id for dedupe / retry. */
   clientMessageId?: string;
   deliveryStatus?: FluxyMessageDeliveryStatus;
   deliveryError?: string;
 }
+
+export type FluxyDeliverableMessageWithClientId = FluxyDeliverableMessage & Pick<FluxyMessageDeliveryFields, "clientMessageId">;
 
 export type FluxyChatMessageWithDelivery = FluxyDeliverableMessage & FluxyMessageDeliveryFields;
 
@@ -107,9 +109,27 @@ export function markMessageDeliveryFailed(
 /** Match an inbound WS/REST message to a pending optimistic row (same author). */
 export function tryMatchPendingByInbound(
   messages: FluxyChatMessageWithDelivery[],
-  inbound: FluxyDeliverableMessage,
+  inbound: FluxyDeliverableMessageWithClientId,
   senderUserId: string,
 ): FluxyChatMessageWithDelivery[] {
+  if (inbound.clientMessageId) {
+    const byClientId = messages.findIndex(
+      (m) =>
+        m.clientMessageId === inbound.clientMessageId &&
+        m.deliveryStatus === "pending",
+    );
+    if (byClientId >= 0) {
+      const next = [...messages];
+      next[byClientId] = {
+        ...inbound,
+        clientMessageId: inbound.clientMessageId,
+        deliveryStatus: "sent",
+        deliveryError: undefined,
+      };
+      return sortMessagesChronological(next);
+    }
+  }
+
   if (inbound.userId !== senderUserId && inbound.senderId !== senderUserId) {
     return messages;
   }

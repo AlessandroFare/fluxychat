@@ -1,0 +1,57 @@
+---
+title: Workflow automations
+description: Create IF-THEN rules — when a message matches a trigger, invoke an agent or send a notification.
+---
+
+Open [**Automations**](/automations) in the dashboard or use `/api/workflows` on the Worker.
+
+## Example rule
+
+**When** a message contains `help` **then**:
+
+1. Invoke agent `support-bot`
+2. Notify the agent queue
+
+```bash
+curl -X POST "$WORKER/api/workflows" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Help keyword → agent",
+    "triggerType": "message.created",
+    "triggerConfig": { "contains": "help" },
+    "conditions": { "textContains": "help" },
+    "actions": [
+      { "type": "invoke_agent", "agentId": "support-bot" },
+      { "type": "notify", "channel": "agent-queue" }
+    ]
+  }'
+```
+
+## Run manually
+
+```bash
+curl -X POST "$WORKER/api/workflows/wf_abc123/run" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"triggerData":{"roomId":"room_demo","keyword":"help"}}'
+```
+
+## SDK (in-process)
+
+For client-side prototyping:
+
+```typescript
+import { createAutomationEngine } from "@fluxy-chat/sdk";
+
+const engine = createAutomationEngine();
+engine.addRule({
+  name: "Escalate urgent",
+  trigger: { event: "message.sent", filters: { contains: "urgent" } },
+  actions: [{ type: "notify", params: { channel: "ops" } }],
+  enabled: true,
+  priority: 1,
+});
+```
+
+Persist rules via Worker workflows for production.

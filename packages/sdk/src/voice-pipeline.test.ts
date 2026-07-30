@@ -74,4 +74,28 @@ describe("voice-pipeline", () => {
     expect(fn1).toHaveBeenCalled();
     expect(fn2).toHaveBeenCalled();
   });
+
+  it("falls back to text_only when realtime fails", async () => {
+    const p = createVoicePipeline({
+      preferredTransport: "realtime",
+      simulateRealtimeFailure: true,
+      autoFallback: true,
+    });
+    const events: string[] = [];
+    p.onEvent((e) => events.push(e.type));
+    await p.start();
+    expect(p.getActiveTransport()).toBe("realtime");
+    await p.processAudio(new ArrayBuffer(8));
+    expect(p.getActiveTransport()).toBe("text_only");
+    expect(events).toContain("transport_fallback");
+    expect(events).toContain("pipeline_complete");
+  });
+
+  it("respects preferredTransport text_only", async () => {
+    const p = createVoicePipeline({ preferredTransport: "text_only" });
+    await p.start();
+    expect(p.getActiveTransport()).toBe("text_only");
+    await p.processAudio(new ArrayBuffer(4));
+    expect(p.getMetrics().map((m) => m.stage)).toEqual(["llm", "tts", "speaker"]);
+  });
 });

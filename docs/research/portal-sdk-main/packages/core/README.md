@@ -2,7 +2,11 @@
 
 The framework-agnostic Portal client. It manages realtime channels and a per-user inbox
 over a WebSocket, and exposes reactive, `useSyncExternalStore`-shaped stores you can bind to
-any UI. Client-only — it ships `"use client"` and is not for server components.
+any UI. Client-only — meant to run in a browser, not inside server code.
+
+This package has no React dependency, so it doesn't ship (or need) the `"use client"`
+directive itself. That directive only matters for `@portalsdk/react` — its dist carries it,
+since its hooks are the actual React Client Component boundary.
 
 For React, use [`@portalsdk/react`](https://www.npmjs.com/package/@portalsdk/react), which is
 a thin hook layer over this package.
@@ -101,6 +105,11 @@ const mentions = inbox.view({ where: { type: { eq: "mention" } } });
 Channels are positional (each has a watermark and `unread`); items are per-item
 (`read` / `markAsRead()`). `counter` is the global badge. Anonymous users get a
 permanently-empty ready inbox, so calling code needs no special case.
+
+Each item's `id` **is** the notification's idempotency key — whatever key was supplied when
+the notification was sent arrives back unchanged as `InboxItem.id`. That makes it the right
+thing to dedupe on (or key a list by) when reacting to arrivals, since a redelivered id is the
+same event, not a new one.
 
 ## Errors
 

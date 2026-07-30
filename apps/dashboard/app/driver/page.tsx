@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Truck, Navigation, MapPin, Clock, Wifi, WifiOff, Crosshair, Play, CheckCircle, XCircle, Loader2, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Truck, Navigation, MapPin, Clock, Wifi, WifiOff, Crosshair, Play, CheckCircle, XCircle, Loader2, RefreshCw, ArrowLeft } from "lucide-react";
 import * as Y from "yjs";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { useDashboardSession } from "../components/dashboard-session";
+import { ConsoleShell } from "../components/console-shell";
+import { ConsolePageHeader } from "../components/console-page-header";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { cn } from "@/lib/utils";
 import { useYDoc } from "@/components/fleet/use-ydoc";
@@ -191,22 +194,38 @@ export default function DriverPage() {
   const myTrips = trips.filter((t) => t.vehicleId === vehicle?.id);
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-gray-50 dark:bg-gray-950">
-      <div className="sticky top-0 z-20 bg-primary px-4 py-3 text-primary-foreground">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Truck className="h-5 w-5" />
-            <span className="font-bold text-sm">FluxyTrack Driver</span>
+    <ConsoleShell className="max-w-none">
+      <ConsolePageHeader
+        title="Driver app"
+        description="Mobile companion for couriers — share GPS with Fleet Tracking, accept trips, and work offline. Pair with the fleet console to dispatch and watch live positions."
+        actions={
+          <Link
+            href="/fleet"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+          >
+            <ArrowLeft className="size-3.5" />
+            Fleet console
+          </Link>
+        }
+      />
+
+      <div className="mx-auto flex max-w-md flex-col pb-8 pt-2">
+        <div className="overflow-hidden rounded-2xl border border-border bg-gray-50 shadow-lg dark:bg-gray-950">
+          <div className="bg-primary px-4 py-3 text-primary-foreground">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                <span className="font-bold text-sm">FluxyTrack Driver</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {ySynced ? <span className="h-2 w-2 rounded-full bg-green-300" title="Y.Doc synced" /> : <span title="Syncing..."><Loader2 className="h-3 w-3 animate-spin" /></span>}
+                {offline ? <WifiOff className="h-4 w-4 text-yellow-200" /> : <Wifi className="h-4 w-4" />}
+                <span className={cn("h-2 w-2 rounded-full", gpsStatus === "active" ? "bg-green-300" : gpsStatus === "error" ? "bg-red-300" : "bg-gray-300")} />
+              </div>
+            </div>
+            {vehicle && <div className="mt-1 text-xs opacity-80">{vehicle.name} {vehicle.plate && `· ${vehicle.plate}`}</div>}
+            {lastSync && <div className="text-[9px] opacity-60">Last sync: {lastSync.toLocaleTimeString()}</div>}
           </div>
-          <div className="flex items-center gap-2">
-            {ySynced ? <span className="h-2 w-2 rounded-full bg-green-300" title="Y.Doc synced" /> : <span title="Syncing..."><Loader2 className="h-3 w-3 animate-spin" /></span>}
-            {offline ? <WifiOff className="h-4 w-4 text-yellow-200" /> : <Wifi className="h-4 w-4" />}
-            <span className={cn("h-2 w-2 rounded-full", gpsStatus === "active" ? "bg-green-300" : gpsStatus === "error" ? "bg-red-300" : "bg-gray-300")} />
-          </div>
-        </div>
-        {vehicle && <div className="mt-1 text-xs opacity-80">{vehicle.name} {vehicle.plate && `· ${vehicle.plate}`}</div>}
-        {lastSync && <div className="text-[9px] opacity-60">Last sync: {lastSync.toLocaleTimeString()}</div>}
-      </div>
 
       {!offline && pendingGpsRef.current > 0 && (
         <div className="mx-3 mt-2">
@@ -307,10 +326,12 @@ export default function DriverPage() {
       )}
 
       {!swReady && (
-        <div className="fixed bottom-16 left-3 right-3 mx-auto max-w-md rounded-xl bg-blue-100 p-2 text-center text-[10px] text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-          Installing offline support...
+        <div className="mx-3 mb-3 rounded-xl bg-blue-100 p-2 text-center text-[10px] text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          Installing offline support…
         </div>
       )}
-    </div>
+        </div>
+      </div>
+    </ConsoleShell>
   );
 }

@@ -1,14 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Gamepad2, Users, Trophy, Play, Square, Eye, Bot,
   PartyPopper, Swords, Target, Skull, Heart, Zap, Loader2, Plus,
 } from "lucide-react";
 import { ConsoleShell } from "@/app/components/console-shell";
 import { ConsolePageHeader } from "@/app/components/console-page-header";
+import { ConsoleProjectRoomBar } from "@/app/components/console-project-room-bar";
+import { WorkerBackendBadge } from "@/app/components/worker-backend-badge";
 import { cn } from "@/lib/utils";
-import { createFluxyGame, type FluxyGameApi, type MatchResult } from "@fluxy-chat/sdk";
+import { useWorkerChatClient } from "@/lib/use-worker-chat-client";
+import {
+  createFluxyGame,
+  createWorkerFluxyGameClient,
+  type FluxyGameApi,
+  type MatchResult,
+} from "@fluxy-chat/sdk";
 
 interface GameLeaderboardEntry {
   playerId: string;
@@ -32,20 +40,78 @@ function createSeededGame(): FluxyGameApi {
 }
 
 export default function FluxyGamePage() {
+  const chatClient = useWorkerChatClient("game-demo");
+  const workerGame = useMemo(
+    () => (chatClient ? createWorkerFluxyGameClient(chatClient) : null),
+    [chatClient],
+  );
   const [game] = useState<FluxyGameApi | null>(createSeededGame());
   const [tick, setTick] = useState(0);
   const [activeTab, setActiveTab] = useState<"match" | "leaderboard" | "npc" | "tournament" | "party">("match");
   const [matchId, setMatchId] = useState<string | null>(null);
+  const [workerMatchId, setWorkerMatchId] = useState<string | null>(null);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
+  const [workerTick, setWorkerTick] = useState(0);
+  const [workerBusy, setWorkerBusy] = useState(false);
+  const [workerError, setWorkerError] = useState<string | null>(null);
   const [spectating, setSpectating] = useState(false);
+  const autoStarted = useRef(false);
+
+  useEffect(() => {
+    if (!game || autoStarted.current) return;
+    autoStarted.current = true;
+    const id = game.findMatch("p1", "deathmatch", 4);
+    game.findMatch("p2", "deathmatch", 4);
+    game.findMatch("p3", "deathmatch", 4);
+    game.findMatch("p4", "deathmatch", 4);
+    if (id) {
+      const mid = game.startMatch(id);
+      if (!mid) return;
+      setMatchId(mid);
+      for (let i = 0; i < 10; i++) {
+        const playerId = ["p1", "p2", "p3", "p4"][i % 4]!;
+        game.processInput(mid, {
+          tick: i, playerId, sequence: i,
+          actions: i % 3 === 0
+            ? [{ type: "shoot", payload: { targetId: ["p1", "p2", "p3", "p4"].filter((p) => p !== playerId)[i % 3] } }]
+            : [{ type: "move", payload: { dx: Math.random() - 0.5, dy: Math.random() - 0.5 } }],
+        });
+        game.tickMatch(mid);
+      }
+      setTick(10);
+    }
+  }, [game]);
 
   if (!game) return null;
 
-  const players = [
-    game["registerPlayer" as never] as never,
-  ];
+  const activeMatchId = workerMatchId ?? matchId;
+  const workerConnected = Boolean(workerGame);
 
-  const handleQuickMatch = () => {
+  const handleQuickMatch = async () => {
+    if (workerGame) {
+      setWorkerBusy(true);
+      setWorkerError(null);
+      setMatchResult(null);
+      try {
+        await workerGame.upsertPlayer({ playerId: "p1", username: "Alice", skillRating: 1200 });
+        await workerGame.upsertPlayer({ playerId: "p2", username: "Bob", skillRating: 1150 });
+        await workerGame.upsertPlayer({ playerId: "p3", username: "Charlie", skillRating: 1300 });
+        await workerGame.upsertPlayer({ playerId: "p4", username: "Diana", skillRating: 950 });
+        const { lobbyId } = await workerGame.matchmake({ gameMode: "deathmatch", playerId: "p1" });
+        await workerGame.matchmake({ gameMode: "deathmatch", playerId: "p2" });
+        await workerGame.matchmake({ gameMode: "deathmatch", playerId: "p3" });
+        await workerGame.matchmake({ gameMode: "deathmatch", playerId: "p4" });
+        const { matchId: mid } = await workerGame.startMatch(lobbyId);
+        setWorkerMatchId(mid);
+        setMatchId(null);
+      } catch (err) {
+        setWorkerError(err instanceof Error ? err.message : "Worker match failed");
+      } finally {
+        setWorkerBusy(false);
+      }
+      return;
+    }
+
     const id1 = game.findMatch("p1", "deathmatch", 4);
     game.findMatch("p2", "deathmatch", 4);
     game.findMatch("p3", "deathmatch", 4);
@@ -53,13 +119,36 @@ export default function FluxyGamePage() {
     if (id1) {
       const mid = game.startMatch(id1);
       setMatchId(mid);
+      setWorkerMatchId(null);
       setMatchResult(null);
     }
   };
 
-  const handleSimulate = () => {
+  const handleSimulate = async () => {
+    if (workerGame && workerMatchId) {
+      setWorkerBusy(true);
+      try {
+        for (let i = 0; i < 20; i++) {
+          const playerId = ["p1", "p2", "p3", "p4"][i % 4];
+          await workerGame.submitInput(workerMatchId, {
+            tick: i,
+            playerId,
+            sequence: i,
+            actions: i % 3 === 0
+              ? [{ type: "shoot", payload: { targetId: "p2" } }]
+              : [{ type: "move", payload: { dx: 0.1, dy: 0.1 } }],
+          });
+        }
+        setWorkerTick((v) => v + 1);
+      } catch (err) {
+        setWorkerError(err instanceof Error ? err.message : "Worker simulate failed");
+      } finally {
+        setWorkerBusy(false);
+      }
+      return;
+    }
+
     if (!matchId) return;
-    // Simulate some inputs
     for (let i = 0; i < 20; i++) {
       const playerId = ["p1", "p2", "p3", "p4"][i % 4];
       const targetId = ["p1", "p2", "p3", "p4"].filter((p) => p !== playerId)[i % 3];
@@ -71,9 +160,38 @@ export default function FluxyGamePage() {
       });
       game.tickMatch(matchId);
     }
+    setTick((v) => v + 1);
   };
 
-  const handleEndMatch = () => {
+  const handleEndMatch = async () => {
+    if (workerGame && workerMatchId) {
+      setWorkerBusy(true);
+      try {
+        await workerGame.endMatch(workerMatchId, {
+          matchId: workerMatchId,
+          winner: "p1",
+          duration: 120,
+          scores: { p1: 10, p2: 6, p3: 4, p4: 2 },
+          mvp: "p1",
+          events: [],
+        });
+        setMatchResult({
+          matchId: workerMatchId,
+          winner: "p1",
+          duration: 120,
+          scores: { p1: 10, p2: 6, p3: 4, p4: 2 },
+          mvp: "p1",
+          events: [],
+        });
+        setWorkerMatchId(null);
+      } catch (err) {
+        setWorkerError(err instanceof Error ? err.message : "Worker end failed");
+      } finally {
+        setWorkerBusy(false);
+      }
+      return;
+    }
+
     if (!matchId) return;
     const result = game.endMatch(matchId);
     setMatchResult(result);
@@ -94,6 +212,12 @@ export default function FluxyGamePage() {
       <ConsolePageHeader
         title="FluxyGame"
         description="Multiplayer game backend — matchmaking, server-authoritative state sync @20fps, AI NPCs, tournaments, replay system"
+        actions={<WorkerBackendBadge connected={workerConnected} label="FluxyGame" />}
+      />
+
+      <ConsoleProjectRoomBar
+        requireProject
+        hint={workerConnected ? "Matches and leaderboards persist to D1 on your Worker." : "Sign in to run matchmaking against your Worker; local demo runs in-memory otherwise."}
       />
 
       <div className="flex flex-wrap gap-1 border-b border-border px-4 py-2">
@@ -105,27 +229,32 @@ export default function FluxyGamePage() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-auto p-4" key={tick}>
+      <div className="flex-1 overflow-auto p-4">
         {activeTab === "match" && (
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Match control</h3>
               <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-                {!matchId && !matchResult && (
-                  <button type="button" onClick={handleQuickMatch} className="w-full rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90">
-                    <Play className="mr-1 inline size-3.5" /> Quick match (4 players)
+                {workerError ? (
+                  <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600">{workerError}</p>
+                ) : null}
+                {!activeMatchId && !matchResult && (
+                  <button type="button" onClick={() => void handleQuickMatch()} disabled={workerBusy} className="w-full rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50">
+                    {workerBusy ? <Loader2 className="mr-1 inline size-3.5 animate-spin" /> : <Play className="mr-1 inline size-3.5" />}
+                    Quick match (4 players){workerConnected ? " · Worker" : ""}
                   </button>
                 )}
-                {matchId && (
+                {activeMatchId && (
                   <>
                     <div className="flex items-center gap-2 text-sm">
                       <span className="size-2 rounded-full bg-green-500 animate-pulse" />
-                      <span className="font-medium">Match active: {matchId}</span>
+                      <span className="font-medium">Match active: {activeMatchId}</span>
+                      {workerMatchId ? <span className="text-[10px] uppercase text-muted-foreground">D1 persisted</span> : null}
                     </div>
-                    <button type="button" onClick={handleSimulate} className="w-full rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted">
+                    <button type="button" onClick={() => void handleSimulate()} disabled={workerBusy} className="w-full rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50">
                       Simulate 20 ticks
                     </button>
-                    <button type="button" onClick={handleEndMatch} className="w-full rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700">
+                    <button type="button" onClick={() => void handleEndMatch()} disabled={workerBusy} className="w-full rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50">
                       <Square className="mr-1 inline size-3.5" /> End match
                     </button>
                   </>

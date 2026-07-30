@@ -5,6 +5,7 @@ import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from "re
 import L from "leaflet";
 import type { LatLngBoundsExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { sanitizeMapPopupText } from "@/lib/sanitize-map-popup-text";
 
 interface FleetVehicle {
   id: string;
@@ -22,12 +23,17 @@ interface FleetMapViewProps {
   vehicles: FleetVehicle[];
   selectedVehicleId?: string | null;
   onSelectVehicle: (id: string) => void;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
-function FitVehicles({ vehicles }: { vehicles: FleetVehicle[] }) {
+function FitVehicles({ vehicles, userLocation }: { vehicles: FleetVehicle[]; userLocation?: { lat: number; lng: number } | null }) {
   const map = useMap();
   React.useEffect(() => {
     const valid = vehicles.filter((v) => v.lat != null && v.lng != null);
+    if (userLocation) {
+      map.setView([userLocation.lat, userLocation.lng], 14);
+      return;
+    }
     if (!valid.length) return;
     if (valid.length === 1) {
       map.setView([valid[0].lat!, valid[0].lng!], 15);
@@ -37,7 +43,7 @@ function FitVehicles({ vehicles }: { vehicles: FleetVehicle[] }) {
       valid.map((v) => [v.lat!, v.lng!] as [number, number]),
     );
     map.fitBounds(bounds as unknown as LatLngBoundsExpression, { padding: [40, 40], maxZoom: 16 });
-  }, [vehicles, map]);
+  }, [vehicles, userLocation, map]);
   return null;
 }
 
@@ -59,9 +65,13 @@ function vehicleIcon(vehicle: FleetVehicle, selected: boolean) {
   });
 }
 
-export function FleetMapView({ vehicles, selectedVehicleId, onSelectVehicle }: FleetMapViewProps) {
+export function FleetMapView({ vehicles, selectedVehicleId, onSelectVehicle, userLocation }: FleetMapViewProps) {
   const active = vehicles.find((v) => v.lat != null && v.lng != null);
-  const center: [number, number] = active ? [active.lat!, active.lng!] : [41.9028, 12.4964];
+  const center: [number, number] = userLocation
+    ? [userLocation.lat, userLocation.lng]
+    : active
+      ? [active.lat!, active.lng!]
+      : [41.9028, 12.4964];
 
   return (
     <MapContainer
@@ -83,15 +93,24 @@ export function FleetMapView({ vehicles, selectedVehicleId, onSelectVehicle }: F
         >
           <Popup>
             <div className="text-sm">
-              <div className="font-semibold">{v.name}</div>
-              {v.plate && <div className="text-muted-foreground">{v.plate}</div>}
+              <div className="font-semibold">{sanitizeMapPopupText(v.name)}</div>
+              {v.plate ? <div className="text-muted-foreground">{sanitizeMapPopupText(v.plate)}</div> : null}
               <div className="text-muted-foreground capitalize">{v.status}</div>
               {v.speed != null && <div>{Math.round(v.speed * 3.6)} km/h</div>}
             </div>
           </Popup>
         </Marker>
       ))}
-      <FitVehicles vehicles={vehicles} />
+      {userLocation ? (
+        <CircleMarker
+          center={[userLocation.lat, userLocation.lng]}
+          radius={10}
+          pathOptions={{ color: "#6366f1", fillColor: "#6366f1", fillOpacity: 0.85, weight: 2 }}
+        >
+          <Popup>You are here</Popup>
+        </CircleMarker>
+      ) : null}
+      <FitVehicles vehicles={vehicles} userLocation={userLocation} />
     </MapContainer>
   );
 }

@@ -15,6 +15,8 @@
  *  - Device as room member (IoT device = chat participant)
  */
 
+import { fluxyEntityId } from "./fluxy-id";
+
 // ─── Types ────────────────────────────────────────────
 
 export type DeviceStatus = "online" | "offline" | "degraded" | "maintenance";
@@ -26,12 +28,34 @@ export interface IoTDevice {
   type: DeviceType;
   fleetId: string;
   status: DeviceStatus;
+  firmwareVersion: string;
+  lastSeen: string;
+  metadata: Record<string, unknown>;
+  location?: { lat: number; lng: number; label?: string };
+}
+
+/** Public-safe device view — never exposes certificate or apiKey. */
+export interface IoTDevicePublic extends IoTDevice {}
+
+interface IoTDeviceInternal {
+  id: string;
+  name: string;
+  type: DeviceType;
+  fleetId: string;
+  status: DeviceStatus;
   certificate: string;
   apiKey: string;
   firmwareVersion: string;
   lastSeen: string;
   metadata: Record<string, unknown>;
   location?: { lat: number; lng: number; label?: string };
+}
+
+export interface RuleActionResult {
+  ruleId: string;
+  action: RuleAction;
+  status: "executed" | "skipped";
+  detail?: string;
 }
 
 export interface SensorReading {
@@ -116,11 +140,13 @@ export interface Geofence {
 // ─── Factory ──────────────────────────────────────────
 
 export function createFluxyIoT() {
-  const devices = new Map<string, IoTDevice>();
+  const devices = new Map<string, IoTDeviceInternal>();
+  const credentials = new Map<string, { certificate: string; apiKey: string }>();
   const readings: SensorReading[] = [];
   const rules: IotRule[] = [];
   const shadows = new Map<string, DeviceShadow>();
   const alerts: Alert[] = [];
+  const actionLog: RuleActionResult[] = [];
   const fleets = new Map<string, Fleet>();
   const otaUpdates: OTAUpdate[] = [];
   const geofences: Geofence[] = [];
@@ -132,23 +158,65 @@ export function createFluxyIoT() {
   let fleetCounter = 0;
   let otaCounter = 0;
 
+  function toPublicDevice(device: IoTDeviceInternal): IoTDevicePublic {
+    const { certificate: _cert, apiKey: _key, ...publicFields } = device;
+    return publicFields;
+  }
+
+  function executeRuleActions(rule: IotRule, deviceId: string, context: Record<string, unknown>): void {
+    for (const action of rule.actions) {
+      const result: RuleActionResult = { ruleId: rule.id, action, status: "executed" };
+      switch (action.type) {
+        case "alert":
+          alerts.push({
+            id: `alert_${++alertCounter}`,
+            deviceId,
+            ruleId: rule.id,
+            severity: "warning",
+            message: action.payload || `Alert from rule ${rule.name}`,
+            timestamp: new Date().toISOString(),
+            acknowledged: false,
+          });
+          break;
+        case "webhook":
+        case "email":
+          result.detail = `Dispatched to ${action.target}`;
+          break;
+        case "command":
+          result.detail = `Command queued: ${action.payload}`;
+          break;
+        case "chat_message": {
+          const msg = deviceToChatMessage(deviceId, action.payload || rule.name);
+          result.detail = msg.content;
+          break;
+        }
+        default:
+          result.status = "skipped";
+          result.detail = "Unknown action type";
+      }
+      actionLog.push(result);
+    }
+    void context;
+  }
+
   // ── Device provisioning ──
 
-  function provisionDevice(name: string, type: DeviceType, fleetId: string, metadata?: Record<string, unknown>): IoTDevice {
+  function provisionDevice(name: string, type: DeviceType, fleetId: string, metadata?: Record<string, unknown>): IoTDevicePublic {
     const id = `dev_${++deviceCounter}`;
     const certBytes = Array.from(crypto.getRandomValues(new Uint8Array(16)))
       .map((b) => b.toString(16).padStart(2, "0")).join("");
     const keyBytes = Array.from(crypto.getRandomValues(new Uint8Array(16)))
       .map((b) => b.toString(16).padStart(2, "0")).join("");
-    const device: IoTDevice = {
+    const device: IoTDeviceInternal = {
       id, name, type, fleetId,
       status: "online",
-      certificate: `cert_${certBytes}`,
-      apiKey: `key_${keyBytes}`,
       firmwareVersion: "1.0.0",
       lastSeen: new Date().toISOString(),
       metadata: metadata || {},
+      certificate: `cert_${certBytes}`,
+      apiKey: `key_${keyBytes}`,
     };
+    credentials.set(id, { certificate: device.certificate, apiKey: device.apiKey });
     devices.set(id, device);
 
     // Update fleet
@@ -158,16 +226,22 @@ export function createFluxyIoT() {
     // Initialize shadow
     shadows.set(id, { deviceId: id, desired: {}, reported: {}, delta: {}, updatedAt: new Date().toISOString() });
 
-    return device;
+    return toPublicDevice(device);
   }
 
-  function getDevice(id: string): IoTDevice | undefined {
-    return devices.get(id);
+  function revealDeviceCredentials(id: string): { certificate: string; apiKey: string } | undefined {
+    return credentials.get(id) ? structuredClone(credentials.get(id)!) : undefined;
   }
 
-  function listDevices(fleetId?: string): IoTDevice[] {
+  function getDevice(id: string): IoTDevicePublic | undefined {
+    const device = devices.get(id);
+    return device ? toPublicDevice(device) : undefined;
+  }
+
+  function listDevices(fleetId?: string): IoTDevicePublic[] {
     const all = [...devices.values()];
-    return fleetId ? all.filter((d) => d.fleetId === fleetId) : all;
+    const filtered = fleetId ? all.filter((d) => d.fleetId === fleetId) : all;
+    return filtered.map(toPublicDevice);
   }
 
   function updateDeviceStatus(id: string, status: DeviceStatus): boolean {
@@ -243,14 +317,14 @@ export function createFluxyIoT() {
         rule.triggeredCount++;
         rule.lastTriggered = new Date().toISOString();
         const severity = value > (matching[0]?.value || 0) * 1.5 ? "critical" : "warning";
-        const alert: Alert = {
+        alerts.push({
           id: `alert_${++alertCounter}`,
           deviceId, ruleId: rule.id, severity,
           message: `Rule "${rule.name}" triggered: ${sensor} ${matching[0].operator} ${matching[0].value} (current: ${value})`,
           timestamp: new Date().toISOString(),
           acknowledged: false,
-        };
-        alerts.push(alert);
+        });
+        executeRuleActions(rule, deviceId, { sensor, value });
       }
     }
   }
@@ -352,7 +426,7 @@ export function createFluxyIoT() {
   // ── Geofencing ──
 
   function createGeofence(name: string, lat: number, lng: number, radiusM: number, deviceId?: string): Geofence {
-    const fence: Geofence = { id: `geo_${Date.now()}`, name, lat, lng, radiusM, deviceId };
+    const fence: Geofence = { id: fluxyEntityId("geo"), name, lat, lng, radiusM, deviceId };
     geofences.push(fence);
     return fence;
   }
@@ -412,10 +486,14 @@ export function createFluxyIoT() {
     return { role: "user", content };
   }
 
+  function listRuleActionLog(limit = 50): RuleActionResult[] {
+    return actionLog.slice(-limit);
+  }
+
   return {
-    provisionDevice, getDevice, listDevices, updateDeviceStatus,
+    provisionDevice, revealDeviceCredentials, getDevice, listDevices, updateDeviceStatus,
     ingestReading, getReadings, getFleetReadings,
-    createRule, listRules, toggleRule,
+    createRule, listRules, toggleRule, listRuleActionLog,
     listAlerts, acknowledgeAlert,
     setDesiredState, getShadow,
     createFleet, listFleets,

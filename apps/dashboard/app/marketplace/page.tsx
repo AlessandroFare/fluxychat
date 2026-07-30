@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   CheckCircle2, Globe, Package, Puzzle, Search, Star, Store,
   Plus, Trash2, Download, Key, Cpu, Layers, Zap, ArrowUpRight,
-  Bot, Sparkles, MessageSquare, Shield, BookOpen, Code,
+  Bot, Sparkles, MessageSquare, Shield, BookOpen, Code, Boxes,
   Loader2, X, AlertCircle, ChevronDown,
 } from "lucide-react";
 import { ConsoleShell } from "../components/console-shell";
@@ -27,10 +27,22 @@ import {
   uninstallMarketplaceAgent,
   listInstalledMarketplaceAgents,
   createAgentFromTemplate,
+  publishMarketplaceAgent,
+  submitMarketplaceAgentForReview,
+  reviewMarketplaceAgent,
+  listPublisherMarketplaceAgents,
   type MarketplaceAgent,
   type MarketplaceInstall,
   type MarketplaceStats,
 } from "@/lib/marketplace-client";
+import {
+  installMcpApp,
+  listInstalledMcpApps,
+  listMcpAppsCatalog,
+  uninstallMcpApp,
+  type McpAppCatalogEntry,
+  type McpAppInstall,
+} from "@/lib/mcp-apps-client";
 
 /* ─── Provider helpers ─── */
 
@@ -55,7 +67,7 @@ const BUILTIN_PROVIDERS: LlmProvider[] = [
 /* ─── Page layout ─── */
 
 export default function MarketplacePage() {
-  const [tab, setTab] = useState<"apps" | "templates" | "providers">("apps");
+  const [tab, setTab] = useState<"apps" | "templates" | "providers" | "mcp-apps">("apps");
 
   return (
     <ConsoleShell>
@@ -68,6 +80,7 @@ export default function MarketplacePage() {
         {([
           { id: "apps", label: "App Marketplace", icon: Package },
           { id: "templates", label: "Agent Templates", icon: Puzzle },
+          { id: "mcp-apps", label: "MCP Apps", icon: Boxes },
           { id: "providers", label: "AI Providers", icon: Cpu },
         ] as const).map((t) => (
           <button
@@ -88,6 +101,7 @@ export default function MarketplacePage() {
       <div role="tabpanel" className="mt-6">
         {tab === "apps" && <AppMarketplaceTab />}
         {tab === "templates" && <AgentTemplateGallery />}
+        {tab === "mcp-apps" && <McpAppsMarketplaceTab />}
         {tab === "providers" && <ProviderMarketplaceTab />}
       </div>
     </ConsoleShell>
@@ -223,6 +237,17 @@ function AgentTemplateGallery() {
   const [deployingId, setDeployingId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const [showPublish, setShowPublish] = useState(false);
+  const [pubName, setPubName] = useState("");
+  const [pubSlug, setPubSlug] = useState("");
+  const [pubDescription, setPubDescription] = useState("");
+  const [pubCategory, setPubCategory] = useState("general");
+  const [pubSystemPrompt, setPubSystemPrompt] = useState("");
+  const [pubVersion, setPubVersion] = useState("1.0.0");
+  const [publishing, setPublishing] = useState(false);
+  const [myAgents, setMyAgents] = useState<MarketplaceAgent[]>([]);
+  const [reviewBusy, setReviewBusy] = useState<string | null>(null);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -236,8 +261,12 @@ function AgentTemplateGallery() {
       setStats(marketplaceStats);
 
       if (token) {
-        const installed = await listInstalledMarketplaceAgents(token);
+        const [installed, publisherAgents] = await Promise.all([
+          listInstalledMarketplaceAgents(token),
+          listPublisherMarketplaceAgents(token),
+        ]);
         setInstalledIds(new Set(installed.map((i) => i.agentId)));
+        setMyAgents(publisherAgents);
       }
     } catch (err: unknown) {
       setError(messageFromUnknown(err, "Failed to load marketplace"));
@@ -263,6 +292,72 @@ function AgentTemplateGallery() {
     else result = [...result].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.installCount - a.installCount);
     return result;
   }, [agents, category, search, sort]);
+
+  const handlePublish = async () => {
+    if (!token) {
+      setError("Admin JWT required — configure a project first.");
+      return;
+    }
+    if (!pubName.trim() || !pubSlug.trim()) {
+      setError("Name and slug are required.");
+      return;
+    }
+    setPublishing(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      const result = await publishMarketplaceAgent(token, {
+        name: pubName.trim(),
+        slug: pubSlug.trim().toLowerCase().replace(/\s+/g, "-"),
+        description: pubDescription || undefined,
+        category: pubCategory,
+        systemPrompt: pubSystemPrompt || undefined,
+        version: pubVersion,
+        configTemplate: { model: "gpt-4o-mini", provider: "openai" },
+        tags: ["dashboard"],
+      });
+      setSuccessMsg(`Template "${pubName}" created as draft (${result.id}). Submit for review when ready.`);
+      setPubName("");
+      setPubSlug("");
+      setPubDescription("");
+      setPubSystemPrompt("");
+      setShowPublish(false);
+      await fetchData();
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Publish failed"));
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleSubmitReview = async (agentId: string) => {
+    if (!token) return;
+    setReviewBusy(agentId);
+    setError(null);
+    try {
+      await submitMarketplaceAgentForReview(token, agentId);
+      setSuccessMsg("Submitted for review.");
+      await fetchData();
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Submit failed"));
+    } finally {
+      setReviewBusy(null);
+    }
+  };
+
+  const handleApproveAgent = async (agentId: string) => {
+    if (!token) return;
+    setReviewBusy(agentId);
+    try {
+      await reviewMarketplaceAgent(token, agentId, "published");
+      setSuccessMsg("Agent published to marketplace.");
+      await fetchData();
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Review failed"));
+    } finally {
+      setReviewBusy(null);
+    }
+  };
 
   const handleInstall = async (agent: MarketplaceAgent) => {
     if (!token) {
@@ -323,6 +418,58 @@ function AgentTemplateGallery() {
         </div>
       )}
 
+      {token && (
+        <Panel className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">Publish agent template</h3>
+              <p className="text-xs text-muted-foreground">Create a draft, then submit for review to list in the gallery.</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setShowPublish((v) => !v)}>
+              {showPublish ? "Hide" : "New template"}
+            </Button>
+          </div>
+          {showPublish && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input placeholder="Name" value={pubName} onChange={(e) => setPubName(e.target.value)} />
+              <Input placeholder="Slug" value={pubSlug} onChange={(e) => setPubSlug(e.target.value)} />
+              <Input placeholder="Description" value={pubDescription} onChange={(e) => setPubDescription(e.target.value)} className="sm:col-span-2" />
+              <select className="rounded-md border border-border bg-background px-2 py-1.5 text-sm" value={pubCategory} onChange={(e) => setPubCategory(e.target.value)}>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <Input placeholder="Version" value={pubVersion} onChange={(e) => setPubVersion(e.target.value)} />
+              <Input placeholder="System prompt (optional)" value={pubSystemPrompt} onChange={(e) => setPubSystemPrompt(e.target.value)} className="sm:col-span-2" />
+              <Button size="sm" disabled={publishing} onClick={() => void handlePublish()}>
+                {publishing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+                Publish draft
+              </Button>
+            </div>
+          )}
+          {myAgents.length > 0 && (
+            <div className="border-t border-border pt-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Your templates</p>
+              {myAgents.map((a) => (
+                <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span>{a.name} <Badge variant="outline" className="text-[9px] ml-1">{a.status}</Badge></span>
+                  <div className="flex gap-1">
+                    {a.status === "draft" && (
+                      <Button size="sm" variant="outline" disabled={reviewBusy === a.id} onClick={() => void handleSubmitReview(a.id)}>
+                        Submit for review
+                      </Button>
+                    )}
+                    {a.status === "review" && (
+                      <Button size="sm" variant="default" disabled={reviewBusy === a.id} onClick={() => void handleApproveAgent(a.id)}>
+                        Approve &amp; publish
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -376,7 +523,7 @@ function AgentTemplateGallery() {
           </p>
           {agents.length === 0 && token && (
             <p className="text-xs text-muted-foreground">
-              Publish templates via the admin API at <code className="rounded bg-muted/50 px-1">POST /admin/marketplace/agents</code>
+              Use <strong>Publish agent template</strong> above to create your first draft.
             </p>
           )}
         </div>
@@ -738,6 +885,145 @@ function ProviderMarketplaceTab() {
           ))}
         </div>
       </details>
+    </div>
+  );
+}
+
+/* ─── MCP Apps marketplace (curated + 1-click install) ─── */
+
+function McpAppsMarketplaceTab() {
+  const { adminJwt } = useDashboardSession();
+  const token = adminJwt.trim();
+
+  const [apps, setApps] = useState<McpAppCatalogEntry[]>([]);
+  const [installed, setInstalled] = useState<McpAppInstall[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState("");
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const catalog = await listMcpAppsCatalog();
+      setApps(catalog.apps ?? []);
+      if (token) {
+        const inst = await listInstalledMcpApps(token);
+        setInstalled(inst.installed ?? []);
+      }
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Failed to load MCP apps"));
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
+
+  const installedIds = useMemo(() => new Set(installed.map((i) => i.appId)), [installed]);
+
+  async function handleInstall(appId: string) {
+    if (!token) {
+      setError("Admin JWT required.");
+      return;
+    }
+    setBusy(appId);
+    setNotice(null);
+    try {
+      await installMcpApp(token, appId, agentId.trim() || undefined);
+      setNotice("MCP app installed — tools registered in MCP identity.");
+      await loadAll();
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Install failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleUninstall(appId: string) {
+    if (!token) return;
+    setBusy(`un-${appId}`);
+    try {
+      await uninstallMcpApp(token, appId, agentId.trim() || undefined);
+      setNotice("MCP app uninstalled.");
+      await loadAll();
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Uninstall failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} className="ml-auto"><X className="h-4 w-4" /></button>
+        </div>
+      )}
+      {notice && (
+        <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>{notice}</span>
+        </div>
+      )}
+
+      <Panel className="p-4 space-y-2 max-w-md">
+        <p className="text-xs text-muted-foreground">Optional agent ID to scope the install (leave empty for project-wide).</p>
+        <Input placeholder="Agent ID (optional)" value={agentId} onChange={(e) => setAgentId(e.target.value)} />
+      </Panel>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {apps.map((app) => {
+          const isInstalled = installedIds.has(app.id);
+          const isBusy = busy === app.id || busy === `un-${app.id}`;
+          return (
+            <Panel key={app.id} className="flex flex-col p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold">{app.name}</h3>
+                  <p className="text-xs text-muted-foreground">{app.vendor}</p>
+                </div>
+                {app.verified && <Badge variant="default" className="text-[9px]">Verified</Badge>}
+              </div>
+              <p className="mt-2 flex-1 text-xs text-muted-foreground line-clamp-3">{app.description}</p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {app.tools.slice(0, 3).map((t) => (
+                  <Badge key={t} variant="outline" className="text-[8px]">{t}</Badge>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                className="mt-3 w-full"
+                variant={isInstalled ? "secondary" : "default"}
+                disabled={!token || isBusy}
+                onClick={() => void (isInstalled ? handleUninstall(app.id) : handleInstall(app.id))}
+              >
+                {isBusy ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                {isInstalled ? "Uninstall" : "Install 1-click"}
+              </Button>
+            </Panel>
+          );
+        })}
+      </div>
+
+      {apps.length === 0 && (
+        <p className="text-center text-sm text-muted-foreground py-8">No curated MCP apps in catalog yet.</p>
+      )}
     </div>
   );
 }

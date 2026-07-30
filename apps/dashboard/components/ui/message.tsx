@@ -200,7 +200,7 @@ function MessageStatus({
 }
 
 const messageActionsVariants = cva(
-  "flex items-center gap-0.5 rounded-full border border-border/60 bg-background/95 p-0.5 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover/message:opacity-100 focus-within:opacity-100 data-[align=end]:flex-row-reverse",
+  "flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-slate-900 shadow-md data-[align=end]:flex-row-reverse",
   {
     variants: {
       align: {
@@ -231,6 +231,35 @@ function MessageActions({
   )
 }
 
+function MessageHoverToolbar({
+  align = "start",
+  className,
+  children,
+}: {
+  align?: "start" | "end"
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      data-slot="message-hover-toolbar"
+      className={cn(
+        "pointer-events-none absolute bottom-full z-30 mb-1 invisible group-hover/message:pointer-events-auto group-hover/message:visible",
+        align === "end" ? "right-0" : "left-0",
+        className,
+      )}
+    >
+      <MessageActions align={align}>{children}</MessageActions>
+    </div>
+  )
+}
+
+const messageToolbarIconButtonClass =
+  "rounded-full p-1 text-slate-600 hover:bg-slate-100"
+
+const messageToolbarButtonClass =
+  "flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+
 function MessageAction({
   className,
   label,
@@ -244,10 +273,7 @@ function MessageAction({
       data-slot="message-action"
       aria-label={label}
       title={label}
-      className={cn(
-        "flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        className
-      )}
+      className={cn(messageToolbarIconButtonClass, className)}
       {...props}
     />
   )
@@ -296,6 +322,9 @@ export {
   MessageTimestamp,
   MessageStatus,
   MessageActions,
+  MessageHoverToolbar,
   MessageAction,
   MessageReactions,
+  messageToolbarButtonClass,
+  messageToolbarIconButtonClass,
 }

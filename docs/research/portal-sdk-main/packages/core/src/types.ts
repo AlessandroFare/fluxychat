@@ -364,7 +364,13 @@ export interface InboxSnapshot {
   status: InboxStatus;
 }
 
-export type InboxStatus = "connecting" | "ready" | "reconnecting";
+/**
+ * `"idle"` is never produced by a live {@link InboxHandle} — a real inbox is always at least
+ * `"connecting"` from the moment it's created (`portal.inbox()` connects immediately). It
+ * exists for consumers that model a handle that hasn't been created yet at all, e.g.
+ * `@portalsdk/react`'s SSR-inert `useInbox` result.
+ */
+export type InboxStatus = "idle" | "connecting" | "ready" | "reconnecting";
 
 export interface InboxView<D = unknown> {
   readonly channels: InboxEntries;

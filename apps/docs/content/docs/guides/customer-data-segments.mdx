@@ -1,0 +1,99 @@
+---
+title: Customer data layer and segments
+description: CDP customer profiles, events, segments, and targeted broadcast campaigns.
+---
+
+FluxyChat includes a **Customer Data Platform (CDP)** for profiles, events, and segments, plus a **broadcast segmentation** engine for targeted in-app campaigns.
+
+Manage everything from the dashboard [**Customers**](/customers) page or the REST APIs below.
+
+## Customer profiles
+
+Upsert a profile by external ID (your CRM user ID, auth subject, etc.):
+
+```bash
+curl -X POST "$WORKER_URL/api/cdp/customers" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "externalId": "user_123",
+    "email": "alex@example.com",
+    "name": "Alex",
+    "lifecycleStage": "customer"
+  }'
+```
+
+List and search:
+
+```bash
+curl "$WORKER_URL/api/cdp/customers?search=alex&limit=25" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Track events:
+
+```bash
+curl -X POST "$WORKER_URL/api/cdp/events" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "cp_abc123",
+    "eventType": "product",
+    "eventName": "page_view",
+    "properties": { "path": "/pricing" }
+  }'
+```
+
+## Segments
+
+Create a CDP segment and add members:
+
+```bash
+curl -X POST "$WORKER_URL/api/cdp/segments" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Trial users","segmentType":"static"}'
+
+curl -X POST "$WORKER_URL/api/cdp/segments/csg_abc/members" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"customerId":"cp_abc123"}'
+```
+
+## Broadcast campaigns
+
+Use `/broadcast/*` for campaign lifecycle (draft → sending → sent):
+
+```bash
+# Create segment
+curl -X POST "$WORKER_URL/broadcast/segments" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Active users","segmentType":"dynamic"}'
+
+# Create campaign
+curl -X POST "$WORKER_URL/broadcast/campaigns" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Product update",
+    "segmentId":"<segment-uuid>",
+    "messageTemplate":"Hello {{name}}, check out the new feature!",
+    "channel":"in_app"
+  }'
+
+# Send
+curl -X POST "$WORKER_URL/broadcast/campaigns/<campaign-uuid>/send" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Channels: `in_app`, `push`, `email`, `webhook`.
+
+## Stats
+
+```bash
+curl "$WORKER_URL/api/cdp/stats" -H "Authorization: Bearer $ADMIN_JWT"
+curl "$WORKER_URL/broadcast/stats/<campaign-uuid>" -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+See also [Broadcast campaigns guide](/docs/guides/broadcast-campaigns) for delivery tracking.

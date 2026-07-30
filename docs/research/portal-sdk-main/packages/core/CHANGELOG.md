@@ -3,6 +3,16 @@
 All notable changes to this package are documented here. This package is versioned
 independently of the other `@portalsdk` packages.
 
+## 0.1.4
+
+### Changed
+
+- **`InboxStatus` is now exported.** Widened to `"idle" | "connecting" | "ready" |
+  "reconnecting"` — types only, no runtime behavior change. A live `InboxHandle` still
+  never reports `"idle"`; the value exists for consumers that model a handle that hasn't
+  been created yet at all, e.g. `@portalsdk/react`'s SSR-inert `useInbox` (see its
+  changelog). Previously this type was internal and inlined by consumers.
+
 ## 0.1.3
 
 ### Fixed

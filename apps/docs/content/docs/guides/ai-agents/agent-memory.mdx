@@ -1,0 +1,54 @@
+---
+title: Agent memory
+description: Provider-agnostic memory store for agents — in-memory, D1, MongoDB-style adapters.
+---
+
+`@fluxy-chat/agent` includes a provider-agnostic memory API for long-running agents: save facts, search semantically, and inject context into prompts.
+
+## Quick start (in-memory)
+
+```typescript
+import {
+  InMemoryMemoryStore,
+  createMemoryTools,
+} from "@fluxy-chat/agent";
+
+const store = new InMemoryMemoryStore();
+const memoryTools = createMemoryTools({ store, defaultUserId: "user_123" });
+
+// Tools: memory_save, memory_search, memory_list, memory_delete
+```
+
+## Store interface
+
+Implement `AIMemoryStore` for D1, MongoDB, Mem0, or Anthropic memory backends:
+
+```typescript
+interface AIMemoryStore {
+  save(entry): Promise<AIMemoryEntry>;
+  search(query): Promise<AIMemoryEntry[]>;
+  get(id): Promise<AIMemoryEntry | null>;
+  list(options?): Promise<AIMemoryEntry[]>;
+  delete(id): Promise<boolean>;
+  clear(userId?): Promise<void>;
+}
+```
+
+## Agent loop integration
+
+Pass memory tools into your agent and let the model call `memory_save` / `memory_search`:
+
+```typescript
+import { runAgentLoop } from "@fluxy-chat/agent";
+
+await runAgentLoop({
+  model,
+  tools: { ...memoryTools, ...otherTools },
+  messages,
+});
+```
+
+## Related
+
+- [KB + RAG cookbook](/docs/cookbook/kb-rag-agent)
+- [Room → AI messages](/docs/cookbook/room-to-ai-messages)

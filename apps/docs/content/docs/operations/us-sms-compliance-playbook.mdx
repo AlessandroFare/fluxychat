@@ -1,0 +1,13 @@
+---
+title: "US SMS compliance (10DLC, STOP)"
+description: "Placeholder for carrier registration and opt-out flows when using Sent.dm / Twilio-style inbound SMS with Fluxychat."
+---
+
+## Minimum checklist
+
+- Register 10DLC brand/campaign before production US SMS.
+- Honor `STOP` / `UNSUBSCRIBE` on inbound webhooks; persist opt-out per E.164 in your tenant DB.
+- Include opt-in language wherever you collect phone numbers.
+- Log consent timestamp and source (form, checkout, etc.).
+
+Worker inbound routing: `TELCO_INBOUND_*` vars and telco HTTP routes. See `docs/twilio-parity-inspiration.md`.

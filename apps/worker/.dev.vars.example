@@ -94,10 +94,11 @@ STRIPE_WEBHOOK_SECRET=
 # AI_GATEWAY_PROVIDER=openai   # gateway path segment (openai, anthropic, workers-ai, …)
 # AI_GATEWAY_ENABLED=false     # kill switch — force legacy AI_BASE_URL even if gateway vars are set
 # Legacy direct OpenAI-compatible fallback when gateway is unset:
-AI_BASE_URL=
+# Local dev default: OpenCode Zen + DeepSeek Flash (free tier)
+AI_BASE_URL=https://opencode.ai/zen/v1
 AI_API_KEY=
+AI_MODEL=deepseek-v4-flash-free
 ANTHROPIC_API_KEY=
-# AI_MODEL=
 # AI_TRANSCRIBE_MODEL=whisper-large-v3-turbo  # override default whisper-1
 
 # Dedicated transcription provider (optional; falls back to AI_BASE_URL / AI_API_KEY).
@@ -177,6 +178,8 @@ ANTHROPIC_API_KEY=
 # DEMO_ROOM_ID=public-demo-room
 # DEMO_API_KEY=fc_your_project_key
 # DEMO_USER_ID=demo-guest
+# DEMO_AGENT_HANDLE=@assistant
+# DEMO_AGENT_NAME=FluxyBot
 # DEMO_TOKEN_TTL_SECONDS=1800
 # DEMO_READ_ONLY=false
 # DEMO_ENABLED=true

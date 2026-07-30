@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { getPublicWorkerUrl, isPublicHostedCloud } from "@/lib/worker-url-client";
 
-const INSTALL = "pnpm add @fluxy-chat/sdk";
+const INSTALL = "pnpm add @fluxy-chat/sdk @fluxy-chat/react";
 
 const USE_CHAT_SNIPPET = `const { messages, sendMessage, loadHistory } = useChat({
   roomId: "assistant-general",

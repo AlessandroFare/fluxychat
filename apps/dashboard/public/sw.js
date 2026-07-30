@@ -15,11 +15,27 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.url.includes("/fleet/gps") && event.request.method === "POST") {
-    return event.respondWith(offlineGpsFallback(event));
+  const url = new URL(event.request.url);
+
+  // Only handle same-origin requests for driver/fleet pages
+  if (url.origin !== self.location.origin) return;
+
+  // Only intercept navigation requests and fleet API calls
+  if (event.request.mode === "navigate" && !url.pathname.startsWith("/driver")) return;
+  if (event.request.mode !== "navigate" && !url.pathname.includes("/fleet/")) return;
+
+  if (url.pathname.includes("/fleet/gps") && event.request.method === "POST") {
+    event.respondWith(offlineGpsFallback(event));
+    return;
   }
+
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => cached)),
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).catch(() =>
+        new Response("Offline", { status: 503, statusText: "Offline" }),
+      );
+    }),
   );
 });
 

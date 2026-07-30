@@ -1,0 +1,19 @@
+{
+  "title": "Core SDK",
+  "icon": "Zap",
+  "pages": [
+    "index",
+    "use-chat",
+    "connection-state",
+    "agents",
+    "inbox",
+    "user-channel",
+    "notifications",
+    "web-push",
+    "presence-typing",
+    "search",
+    "read-receipts",
+    "message-middleware",
+    "voice-huddles"
+  ]
+}
