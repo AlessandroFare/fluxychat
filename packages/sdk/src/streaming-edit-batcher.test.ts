@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createStreamingEditBatcher } from "./streaming-edit-batcher";
+import {
+  createStreamingEditBatcher,
+  mergeStreamingEditIntoMessages,
+} from "./streaming-edit-batcher";
 
 describe("createStreamingEditBatcher", () => {
   beforeEach(() => {
@@ -47,5 +50,40 @@ describe("createStreamingEditBatcher", () => {
     });
     batcher.flush();
     expect(applied).toEqual(["x"]);
+  });
+
+  it("mergeStreamingEditIntoMessages upserts when message frame is not in store yet", () => {
+    type Row = {
+      id: number;
+      roomId: string;
+      userId: string;
+      content: string;
+      createdAt: string;
+      streaming?: boolean;
+    };
+    const sort = (rows: Row[]) => rows;
+    const next = mergeStreamingEditIntoMessages<Row>(
+      [],
+      {
+        id: 42,
+        roomId: "room-a",
+        userId: "bot-1",
+        content: "Hello fluxychat",
+        editedAt: "2026-07-31T16:00:00.000Z",
+        streaming: false,
+      },
+      sort,
+    );
+    expect(next).toEqual([
+      {
+        id: 42,
+        roomId: "room-a",
+        userId: "bot-1",
+        content: "Hello fluxychat",
+        createdAt: "2026-07-31T16:00:00.000Z",
+        editedAt: "2026-07-31T16:00:00.000Z",
+        streaming: false,
+      },
+    ]);
   });
 });

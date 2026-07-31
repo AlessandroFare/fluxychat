@@ -25,6 +25,9 @@ export function createAgentStreamHooks(env, { projectId, roomId, userId, parentI
     getMessageId() {
       return messageId;
     },
+    clearMessageId() {
+      messageId = null;
+    },
     async onStart(content) {
       const res = await roomStreamOp(env, roomId, {
         projectId,
@@ -39,10 +42,10 @@ export function createAgentStreamHooks(env, { projectId, roomId, userId, parentI
       messageId = res.id;
       return messageId;
     },
-    async onDelta(_delta, fullContent) {
+    async onDelta(_delta, fullContent, { force = false } = {}) {
       if (!messageId) return;
       const now = Date.now();
-      if (now - lastPushMs < STREAM_PUSH_FLUSH_MS) return;
+      if (!force && now - lastPushMs < STREAM_PUSH_FLUSH_MS) return;
       lastPushMs = now;
       // P22-E2: Wrap delta as structured stream chunk
       const chunk = markdownTextChunk(fullContent);
@@ -59,6 +62,9 @@ export function createAgentStreamHooks(env, { projectId, roomId, userId, parentI
       if (!messageId) {
         await this.onStart("");
         messageId = this.getMessageId();
+      }
+      if (messageId && typeof fullContent === "string" && fullContent.length > 0) {
+        await this.onDelta("", fullContent, { force: true });
       }
       const res = await roomStreamOp(env, roomId, {
         projectId,

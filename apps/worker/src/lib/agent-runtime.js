@@ -381,11 +381,10 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   const toolsSchema = toolsSchemaRaw ? safeJsonParse(toolsSchemaRaw) : null;
   let tools = Array.isArray(toolsSchema) && toolsSchema.length > 0 ? toolsSchema : null;
 
-  // P22-D1: AI Tool Preset fallback — if no custom toolsSchema,
-  // build from preset + overrides.
-  if (!tools) {
-    const preset = agentRow.config?.toolPreset || "reader";
-    const overrides = agentRow.config?.toolOverrides || {};
+  // P22-D1: AI Tool Preset — only when tools can actually execute.
+  if (!tools && toolExecuteUrl?.trim()) {
+    const preset = agentConfig?.toolPreset || "reader";
+    const overrides = agentConfig?.toolOverrides || {};
     const presetTools = buildToolsWithOverrides(preset, overrides);
     if (presetTools.length > 0) {
       tools = presetTools.map((t) => ({
@@ -397,6 +396,11 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         },
       }));
     }
+  }
+
+  // Builtin / dashboard agents without tool_execute_url cannot run tools.
+  if (!toolExecuteUrl?.trim()) {
+    tools = null;
   }
   // Audit S-35: agent-level tool allow-list. NULL means "not set" (legacy
   // behaviour: trust the declared schema); an empty array means "deny all";
@@ -430,17 +434,17 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   let lastContent = null;
 
   // P24-2: Loop control — configurable stop conditions per agent
-  const loopPreset = agentRow.config?.loopPreset || "standard";
+  const loopPreset = agentConfig?.loopPreset || "standard";
   const loopConfig = LOOP_PRESETS[loopPreset] || LOOP_PRESETS.standard;
   const loopController = createLoopController({
     ...loopConfig,
-    ...(agentRow.config?.loopControl || {}),
+    ...(agentConfig?.loopControl || {}),
   });
 
   // P23-2: HITL approval — gate sensitive tool calls
   const approvalStore = appKv ? createApprovalStore(appKv) : null;
-  const approvalGate = agentRow.config?.approvalGate
-    ? createApprovalGate(agentRow.config.approvalGate)
+  const approvalGate = agentConfig?.approvalGate
+    ? createApprovalGate(agentConfig.approvalGate)
     : null;
 
   // P22-F6: Track multi-step agent run with plan
@@ -509,11 +513,30 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
               await streamHooks.onDelta(delta, fullContent);
             }
           );
-          await streamHooks.onEnd(content);
-          lastContent = content;
           totalInputTokens += usage.prompt_tokens || 0;
           totalOutputTokens += usage.completion_tokens || 0;
-          break;
+
+          if (content?.trim()) {
+            await streamHooks.onEnd(content);
+            lastContent = content;
+            break;
+          }
+
+          agentLog.info("agent.stream_empty_retry_non_stream", {
+            projectId,
+            agentId: agentRow.id,
+            runId,
+            outputTokens: usage.completion_tokens || 0,
+          });
+          if (streamHooks.getMessageId()) {
+            await roomStreamOp(env, roomId, {
+              projectId,
+              userId: agentRow.id,
+              op: "abort",
+            }).catch(() => {});
+            streamHooks.clearMessageId();
+          }
+          // Same iteration: fall through to non-stream completion below.
         } catch (streamErr) {
           if (streamHooks.getMessageId()) {
             await roomStreamOp(env, roomId, {
@@ -521,6 +544,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
               userId: agentRow.id,
               op: "abort",
             }).catch(() => {});
+            streamHooks.clearMessageId();
           }
           if (hasFallback && i === 0 && fallbackResolved?.ok) {
             logInfo("agent.stream_fallback", {
@@ -694,7 +718,16 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     }
 
     const latencyMs = Math.round(performance.now() - startTime);
-    const finalContent = lastContent || "I was unable to generate a response.";
+    const trimmedContent = typeof lastContent === "string" ? lastContent.trim() : "";
+    let finalContent = trimmedContent;
+    if (!finalContent) {
+      if (totalOutputTokens > 0) {
+        finalContent =
+          "The model returned tokens but no visible text. Try again or switch model (e.g. llama-3.1-8b-instant on Groq).";
+      } else {
+        finalContent = "I was unable to generate a response.";
+      }
+    }
 
     // P22-F6: Mark plan as complete
     updateTaskStatus(agentPlan, planTask.id, "complete", {

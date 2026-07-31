@@ -9,7 +9,7 @@ import { isRoomMember, canAccessRoom } from "../lib/room-access.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
 import { attachAttachmentsToMessages } from "../lib/messages-attachments.js";
 import { checkAndConsumeProjectQuota } from "../lib/project-plan-quota.js";
-import { validateMessageContent } from "../lib/message-validation.js";
+import { validateMessageContent, validateStreamStartContent } from "../lib/message-validation.js";
 import { runInboundMessageMiddleware } from "../lib/message-middleware.js";
 import {
   runFluxyRoomAuthz,
@@ -717,7 +717,7 @@ export class RoomDurableObject {
         return { ok: false, error: "stream_already_active" };
       }
 
-      const contentValidation = validateMessageContent(content ?? "");
+      const contentValidation = validateStreamStartContent(content ?? "");
       if (!contentValidation.valid) {
         return { ok: false, error: `invalid_content: ${contentValidation.error}` };
       }
