@@ -1,14 +1,8 @@
 /**
  * P14-G: AI-Powered Analytics Insights.
- *
- * Generate natural language insights from operational data.
- * Features:
- *   • Engagement pattern analysis (peak hours, active days)
- *   • Content performance (message types, voice vs text)
- *   • Agent performance metrics
- *   • Retention and activity trends
- *   • Weekly/monthly insight digests
  */
+
+import { buildOpenAiChatCompletionsUrl } from "./openai-compat-url.js";
 
 const INSIGHT_TYPES = ["engagement", "activity", "performance", "retention", "content", "agent", "custom"];
 
@@ -48,7 +42,7 @@ export async function generateInsights(env, {
 
   try {
     const prompt = INSIGHT_PROMPTS[insightType] || INSIGHT_PROMPTS.custom;
-    const response = await fetch(`${env.AI_BASE_URL}/v1/chat/completions`, {
+    const response = await fetch(buildOpenAiChatCompletionsUrl(env.AI_BASE_URL), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

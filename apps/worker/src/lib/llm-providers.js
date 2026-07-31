@@ -7,6 +7,7 @@
  */
 
 import { buildModelCatalogEntry } from "./llm-model-catalog.js";
+import { buildOpenAiChatCompletionsUrl } from "./openai-compat-url.js";
 import { getProjectLlmCredential } from "./project-llm-credentials.js";
 import { workerSharedLlmAllowed } from "./hosted-saas-policy.js";
 
@@ -191,6 +192,10 @@ export async function resolveLlmConnection(env, { provider: providerField, model
     apiKey,
     model: resolvedModel,
     modelRef: formatModelRef(id, resolvedModel),
+    chatCompletionsUrl:
+      apiStyle === "openai-compatible"
+        ? buildOpenAiChatCompletionsUrl(baseUrl)
+        : null,
     supportsStreaming: def.supportsStreaming && apiStyle === "openai-compatible",
     supportsTools: def.supportsTools,
     apiKeyConfigured: !!apiKey,
