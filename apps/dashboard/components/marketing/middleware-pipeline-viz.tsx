@@ -82,11 +82,11 @@ export function MiddlewarePipelineViz({ className }: { className?: string }) {
         </span>
       </div>
 
-      <div className="relative" style={{ height: "clamp(148px, 22vw, 180px)" }}>
+      <div className="relative hidden sm:block" style={{ height: "clamp(148px, 22vw, 180px)" }}>
         <svg
           className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
           viewBox="0 0 1000 144"
-          preserveAspectRatio="none"
+          preserveAspectRatio="xMidYMid meet"
           aria-hidden
         >
           <defs>
@@ -137,6 +137,33 @@ export function MiddlewarePipelineViz({ className }: { className?: string }) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:hidden">
+        {STEPS.map((step, index) => (
+          <div key={step.id} className="flex items-center gap-3">
+            <span
+              className={cn(
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[10px]",
+                activeIndex === index
+                  ? "border-primary/50 bg-primary/20 text-primary"
+                  : "border-white/10 bg-white/[0.06] text-zinc-400",
+              )}
+            >
+              {index + 1}
+            </span>
+            <div
+              className={cn(
+                "flex-1 rounded-lg border px-3 py-2 font-mono text-[11px] transition duration-300",
+                TONE_CLASS[step.tone],
+                activeIndex === index &&
+                  "border-primary/50 shadow-[0_0_16px_-4px_rgba(255,115,94,0.45)] ring-1 ring-primary/30",
+              )}
+            >
+              {step.label}
+            </div>
+          </div>
+        ))}
       </div>
 
       <p className="mt-3 font-mono text-[10px] leading-relaxed text-zinc-300 sm:text-xs">

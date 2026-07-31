@@ -1,4 +1,3 @@
-import { json } from "../lib/http-json.js";
 import * as CDP from "../lib/customer-data.js";
 import {
   requireApiProjectAdmin,
@@ -6,6 +5,7 @@ import {
 } from "../lib/api-route-project-auth.js";
 
 export async function dispatchCDPRoutes(request, url, h) {
+  const json = h.json;
   const path = url.pathname;
   if (!path.startsWith("/api/cdp")) return null;
 

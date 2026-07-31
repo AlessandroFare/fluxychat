@@ -21,6 +21,7 @@ import {
   type HipaaBaa,
   type HipaaDashboard,
 } from "@/lib/hipaa-client";
+import { docsSiteHref } from "@/lib/hosted-product";
 
 const CHECKLIST_STORAGE_KEY = "fluxy-hipaa-checklist-v1";
 
@@ -153,9 +154,9 @@ export default function HipaaSettingsPage() {
           SOC 2
         </Link>{" "}
         for evidence export and{" "}
-        <Link href="/docs/guides/enterprise/soc2-hipaa-runbook" className="font-medium underline-offset-2 hover:underline">
+        <a href={docsSiteHref("guides/enterprise/soc2-hipaa-runbook")} className="font-medium underline-offset-2 hover:underline">
           SOC 2 / HIPAA runbook
-        </Link>
+        </a>
         .
       </p>
 

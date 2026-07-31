@@ -15,7 +15,7 @@ export function FeatureCodePanel({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
+    <div className={cn("flex flex-col gap-4 min-w-0", className)}>
       <h3 className="text-balance text-xl font-semibold text-foreground">{feature.title}</h3>
       <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
         {feature.description}

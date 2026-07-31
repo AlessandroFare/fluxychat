@@ -1,8 +1,0 @@
-node_modules/
-dist/
-coverage/
-*.tsbuildinfo
-.DS_Store
-.wrangler/
-.pi/
-example/package-lock.json

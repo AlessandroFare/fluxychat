@@ -78,7 +78,7 @@ export default function RealtimeFeaturesPage() {
 
       <div
         id="realtime-feature-panel"
-        className="mt-8"
+        className="mt-8 min-w-0 overflow-x-hidden"
         role="tabpanel"
         aria-labelledby={`realtime-tab-${tab}`}
       >

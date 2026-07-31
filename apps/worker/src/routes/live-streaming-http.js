@@ -1,8 +1,7 @@
-import { json } from "../lib/http-json.js";
 import * as Live from "../lib/live-streaming.js";
 import { createLiveInput, deleteLiveInput } from "../lib/cloudflare-stream.js";
 import {
-  requireApiProjectAdmin,
+  requireApiProjectMember,
   withAuthProjectId,
 } from "../lib/api-route-project-auth.js";
 
@@ -10,7 +9,7 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
   const path = url.pathname;
   if (!path.startsWith("/api/live")) return null;
 
-  const gate = await requireApiProjectAdmin(request, h);
+  const gate = await requireApiProjectMember(request, h);
   if (gate.response) {
     const headers = { ...h.corsHeaders, "Content-Type": "application/json" };
     return new Response(JSON.stringify({ error: gate.response.status === 401 ? "unauthorized" : "forbidden" }), { status: gate.response.status, headers });

@@ -106,11 +106,39 @@ export async function resolveCustomDomainContext(env, hostname) {
 }
 
 /**
+ * @param {string} origin
+ */
+function expandWwwOriginAlias(origin) {
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return [];
+    const port = url.port ? `:${url.port}` : "";
+    const host = url.hostname;
+    if (host.startsWith("www.")) {
+      return [`${url.protocol}//${host.slice(4)}${port}`];
+    }
+    return [`${url.protocol}//www.${host}${port}`];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * @param {string[]} origins
+ */
+function expandOriginAliases(origins) {
+  const merged = new Set(origins);
+  for (const origin of origins) {
+    for (const alias of expandWwwOriginAlias(origin)) merged.add(alias);
+  }
+  return [...merged];
+}
+
+/**
  * @param {*} env
  * @param {import('./custom-domains.js').ReturnType<typeof mapCustomDomainRow> | null} hostCtx
  */
 export function buildAllowedOriginsList(env, hostCtx) {
-  const hosted = env.HOSTED_MULTI_TENANT === "true";
   const configured = env.ALLOWED_ORIGINS?.trim();
   // Audit S-10: never default to "*". The previous fallback to "*" for
   // self-hosted dev was a footgun  it allowed any browser origin to call
@@ -128,7 +156,7 @@ export function buildAllowedOriginsList(env, hostCtx) {
     merged.add(`https://${hostCtx.hostname}`);
     for (const origin of hostCtx.allowedOrigins || []) merged.add(origin);
   }
-  return [...merged];
+  return expandOriginAliases([...merged]);
 }
 
 /**

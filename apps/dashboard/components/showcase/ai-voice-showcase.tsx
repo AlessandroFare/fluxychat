@@ -65,7 +65,7 @@ export function AiTransportShowcase({ session }: Props) {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid min-w-0 gap-6 overflow-x-hidden lg:grid-cols-2">
       <FeatureCodePanel feature={feature} />
       <FeaturePreviewFrame>
         <div className="space-y-3 p-4">
@@ -178,7 +178,7 @@ export function VoiceInterfaceShowcase({ session }: Props) {
   if (session.status === "loading") return <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Connecting demo session...</div>;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid min-w-0 gap-6 overflow-x-hidden lg:grid-cols-2">
       <FeatureCodePanel feature={feature} />
       <FeaturePreviewFrame>
         <div className="space-y-3 p-4">

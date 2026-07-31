@@ -116,6 +116,12 @@ export default function VoiceAiPage() {
       />
       <ConsoleFeedback error={error} notice={notice} />
 
+      <Panel className="p-4 text-sm text-muted-foreground">
+        Voice AI uses your project&apos;s provider keys — OpenAI Realtime and Gemini Live are not included in the hosted Worker secrets.
+        Add <code className="rounded bg-muted px-1 py-0.5 text-xs">OPENAI_API_KEY</code> or{" "}
+        <code className="rounded bg-muted px-1 py-0.5 text-xs">GOOGLE_AI_API_KEY</code> in project settings or Worker secrets before running live sessions.
+      </Panel>
+
       {!token && (
         <Panel className="p-4 text-sm text-muted-foreground">
           Admin JWT required — copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.

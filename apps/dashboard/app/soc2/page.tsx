@@ -13,6 +13,7 @@ import { useDashboardSession } from "../components/dashboard-session";
 import { fetchWorker, fetchWorkerJson } from "@/lib/worker-fetch";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
+import { docsSiteHref } from "@/lib/hosted-product";
 
 interface Soc2Dashboard {
   controls?: Record<string, number>;
@@ -163,13 +164,13 @@ export default function Soc2Page() {
 
       <p className="mt-2 text-xs text-muted-foreground">
         Full happy path in{" "}
-        <Link href="/docs/guides/enterprise/dlp-audit-export" className="font-medium underline-offset-2 hover:underline">
+        <a href={docsSiteHref("guides/enterprise/dlp-audit-export")} className="font-medium underline-offset-2 hover:underline">
           DLP &amp; audit export guide
-        </Link>
+        </a>
         {" · "}
-        <Link href="/docs/guides/enterprise/soc2-hipaa-runbook" className="font-medium underline-offset-2 hover:underline">
+        <a href={docsSiteHref("guides/enterprise/soc2-hipaa-runbook")} className="font-medium underline-offset-2 hover:underline">
           SOC 2 / HIPAA runbook
-        </Link>
+        </a>
         {" · "}
         <Link href="/settings/hipaa" className="font-medium underline-offset-2 hover:underline">
           HIPAA settings
