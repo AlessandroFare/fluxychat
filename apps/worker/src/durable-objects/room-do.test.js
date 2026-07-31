@@ -206,6 +206,25 @@ describe("RoomDurableObject message handlers", () => {
     );
   });
 
+  it("processStreamOp start allows empty content for agent streaming", async () => {
+    vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+    });
+
+    const { roomDo } = createRoomDo();
+    const result = await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "start",
+      content: "",
+      parentId: null,
+    });
+
+    expect(result).toMatchObject({ ok: true, id: 99 });
+    expect(roomDo.activeStreams.get(userId)).toMatchObject({ messageId: 99 });
+  });
+
   it("processStreamOp start returns quota_exceeded when quota is denied", async () => {
     vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
       allowed: false,

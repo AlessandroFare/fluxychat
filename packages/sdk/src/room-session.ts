@@ -17,7 +17,10 @@ import {
   sortMessagesChronological,
 } from "./message-history";
 import { FluxyChatRoomConnection } from "./room-connection";
-import { createStreamingEditBatcher } from "./streaming-edit-batcher";
+import {
+  createStreamingEditBatcher,
+  mergeStreamingEditIntoMessages,
+} from "./streaming-edit-batcher";
 import type {
   FluxyChatAttachment,
   FluxyChatClient,
@@ -142,15 +145,10 @@ export function startFluxyRoomSession(
     setState((s) => {
       let messages = s.messages;
       for (const data of updates) {
-        messages = messages.map((m) =>
-          m.id === data.id
-            ? {
-                ...m,
-                content: data.content,
-                editedAt: data.editedAt,
-                streaming: data.streaming ?? false,
-              }
-            : m,
+        messages = mergeStreamingEditIntoMessages(
+          messages,
+          data,
+          sortMessagesChronological,
         );
       }
       return { messages };
@@ -191,9 +189,8 @@ export function startFluxyRoomSession(
         };
       });
     } else if (data.type === "message") {
-      void (async () => {
-        const decrypted = await maybeDecryptContent(data.content ?? "");
-        const payload = { ...data, content: decrypted };
+      const ingestInboundMessage = (content: string) => {
+        const payload = { ...data, content };
         setState((s) => {
           const normalized = {
             ...payload,
@@ -227,7 +224,13 @@ export function startFluxyRoomSession(
           };
         });
         scheduleMarkLatest();
-      })();
+      };
+      const rawContent = data.content ?? "";
+      if (!e2eKeyRef || !isE2eContentEnvelope(rawContent)) {
+        ingestInboundMessage(rawContent);
+      } else {
+        void maybeDecryptContent(rawContent).then(ingestInboundMessage);
+      }
     } else if (data.type === "presence") {
       setState({
         online: data.online,
@@ -319,20 +322,24 @@ export function startFluxyRoomSession(
           content: data.content,
           editedAt: data.editedAt,
           streaming: true,
+          roomId: data.roomId,
+          userId: data.userId,
         });
         return;
       }
       streamEditBatcher.flush();
       setState((s) => ({
-        messages: s.messages.map((m) =>
-          m.id === data.id
-            ? {
-                ...m,
-                content: data.content,
-                editedAt: data.editedAt,
-                streaming: data.streaming ?? false,
-              }
-            : m,
+        messages: mergeStreamingEditIntoMessages(
+          s.messages,
+          {
+            id: data.id,
+            content: data.content,
+            editedAt: data.editedAt,
+            streaming: false,
+            roomId: data.roomId,
+            userId: data.userId,
+          },
+          sortMessagesChronological,
         ),
       }));
     } else if (data.type === "reaction") {

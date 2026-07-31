@@ -16,3 +16,20 @@ export function validateMessageContent(content) {
   }
   return { valid: true, content: trimmed };
 }
+
+/** Stream start may use empty body; content arrives via delta/end (e.g. agent LLM). */
+export function validateStreamStartContent(content) {
+  if (typeof content !== "string") {
+    return { valid: false, error: "content must be a string" };
+  }
+  if (content.length > MAX_MESSAGE_LENGTH) {
+    return {
+      valid: false,
+      error: `content exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters`,
+    };
+  }
+  if (content.trim().length === 0) {
+    return { valid: true, content: "" };
+  }
+  return validateMessageContent(content);
+}
