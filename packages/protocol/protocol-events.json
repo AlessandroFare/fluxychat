@@ -2,6 +2,7 @@
   "version": "1.0.0",
   "inbound": [
     "message",
+    "edit",
     "message_edit",
     "message_delete",
     "message_expired",
@@ -26,6 +27,7 @@
     "user_subscription_succeeded",
     "state_change",
     "stream",
+    "streamState",
     "location_update",
     "location_snapshot",
     "location_track_ended",

@@ -23,6 +23,18 @@ const INBOUND_SAMPLES: Array<{ label: string; frame: Record<string, unknown> }> 
       createdAt: "2026-01-01T00:00:00.000Z",
     },
   },
+  {
+    label: "edit",
+    frame: {
+      type: "edit",
+      id: 1,
+      roomId: "lobby",
+      userId: "bot-1",
+      content: "partial reply",
+      editedAt: "2026-01-01T00:00:01.000Z",
+      streaming: true,
+    },
+  },
   { label: "typing", frame: { type: "typing", userId: "alice", isTyping: true } },
   {
     label: "subscription_succeeded",

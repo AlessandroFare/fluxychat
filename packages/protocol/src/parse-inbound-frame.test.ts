@@ -20,6 +20,23 @@ describe("parseInboundWsFrame", () => {
     expect(frame?.event?.type).toBe("message");
   });
 
+  it("parses worker streaming edit broadcasts", () => {
+    const frame = parseInboundWsFrame(
+      JSON.stringify({
+        type: "edit",
+        id: 42,
+        roomId: "room-a",
+        userId: "bot-1",
+        content: "Hello",
+        editedAt: "2026-07-31T19:00:00.000Z",
+        streaming: false,
+      }),
+    );
+    expect(frame?.kind).toBe("event");
+    expect(frame?.event?.type).toBe("edit");
+    expect(frame?.event?.content).toBe("Hello");
+  });
+
   it("passthrough unknown inbound types (forward-compat)", () => {
     const raw = JSON.stringify({ type: "totally_unknown", v: 2, payload: { ok: true } });
     expect(parseInboundWsFrame(raw)).toEqual({
