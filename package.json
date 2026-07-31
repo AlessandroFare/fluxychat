@@ -2,7 +2,7 @@
   "name": "fluxychat",
   "private": true,
   "version": "0.1.0",
-  "description": "Fluxychat â€“ ultra-low-cost realtime chat (SaaS + SDK) on Cloudflare Workers and Next.js",
+  "description": "FluxyChat — ultra-low-cost realtime chat (SaaS + SDK) on Cloudflare Workers and Next.js",
   "scripts": {
     "dev": "pnpm --filter \"./apps/*\" --parallel dev",
     "build": "pnpm -r build",
