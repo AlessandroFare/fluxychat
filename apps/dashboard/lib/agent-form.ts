@@ -52,7 +52,7 @@ export function emptyAgentForm(): AgentFormValues {
     systemPrompt: "",
     contextFetchUrl: "",
     toolExecuteUrl: "",
-    llmBaseUrl: "https://opencode.ai/zen/v1",
+    llmBaseUrl: "https://opencode.ai/zen",
     fallbackProvider: "",
     fallbackModel: "",
     temperature: 0.7,

@@ -1,6 +1,7 @@
 /**
  * OpenAI-compatible chat/completions streaming (SSE).
  */
+import { buildOpenAiChatCompletionsUrl } from "./openai-compat-url.js";
 
 export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts, onDelta) {
   const body = {
@@ -16,8 +17,7 @@ export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts
     stream_options: { include_usage: true },
   };
 
-  const url =
-    opts.chatCompletionsUrl || `${baseUrl.replace(/\/$/, "")}/v1/chat/completions`;
+  const url = buildOpenAiChatCompletionsUrl(baseUrl, opts.chatCompletionsUrl);
   const headers = {
     "Content-Type": "application/json",
     ...(opts.gatewayHeaders || {}),

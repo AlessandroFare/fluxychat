@@ -1,3 +1,4 @@
+import { buildOpenAiChatCompletionsUrl } from "./openai-compat-url.js";
 import { isAnthropicConnection } from "./llm-providers.js";
 import {
   extractAnthropicToolCalls,
@@ -20,8 +21,7 @@ export async function callLlmOpenAI(baseUrl, apiKey, model, messages, tools, opt
     ...(opts.stopSequences ? { stop: opts.stopSequences.split(",").map((s) => s.trim()).filter(Boolean) } : {}),
   };
   if (tools && tools.length) body.tools = tools;
-  const url =
-    opts.chatCompletionsUrl || `${baseUrl.replace(/\/$/, "")}/v1/chat/completions`;
+  const url = buildOpenAiChatCompletionsUrl(baseUrl, opts.chatCompletionsUrl);
   const headers = {
     "Content-Type": "application/json",
     ...(opts.gatewayHeaders || {}),

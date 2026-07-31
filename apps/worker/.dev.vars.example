@@ -95,7 +95,7 @@ STRIPE_WEBHOOK_SECRET=
 # AI_GATEWAY_ENABLED=false     # kill switch — force legacy AI_BASE_URL even if gateway vars are set
 # Legacy direct OpenAI-compatible fallback when gateway is unset:
 # Local dev default: OpenCode Zen + DeepSeek Flash (free tier)
-AI_BASE_URL=https://opencode.ai/zen/v1
+AI_BASE_URL=https://opencode.ai/zen
 AI_API_KEY=
 AI_MODEL=deepseek-v4-flash-free
 ANTHROPIC_API_KEY=
