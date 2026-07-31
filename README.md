@@ -1,36 +1,35 @@
-## FluxyChat
+# FluxyChat
 
-Realtime chat on Cloudflare Workers. One worker, WebSocket rooms, a TypeScript SDK, and an operator console for projects, agents, and compliance.
+Realtime chat on Cloudflare Workers — one Worker, WebSocket rooms, a TypeScript SDK, and an operator console for projects, agents, and compliance.
 
-### Quick links
+> **Open beta** — [Try hosted](https://fluxychat.com) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Public docs](https://docs.fluxychat.com) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0) · **Support:** fluxychat@outlook.com
+
+## Quick links
 
 | What | Where |
 |------|-------|
 | Try hosted | [fluxychat.com](https://fluxychat.com) |
-| Operator console | `apps/dashboard` â†’ start at `/onboarding` |
+| Public documentation | [docs.fluxychat.com](https://docs.fluxychat.com) |
+| Operator console | `apps/dashboard` → start at `/onboarding` |
 | SDK (npm) | [@fluxy-chat/sdk](https://www.npmjs.com/package/@fluxy-chat/sdk) |
-| Worker API | `apps/worker` Â· deploy with Wrangler |
-| Documentation | [docs/README.md](docs/README.md) Â· [Features overview](docs/features-overview.md) |
+| React hooks | [@fluxy-chat/react](https://www.npmjs.com/package/@fluxy-chat/react) |
+| Worker API | `apps/worker` · deploy with Wrangler |
+| Repo docs index | [docs/README.md](docs/README.md) · [Features overview](docs/features-overview.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Marketing | [docs/marketing/](docs/marketing/) |
 
-### What you get (at a glance)
+## What you get
 
 - **Realtime:** WebSocket rooms, presence, SSE fallback, inbox, notifications
 - **AI:** in-room agents, voice + transcription, suggestions, digest, room memory
 - **Omnichannel:** SMS/WhatsApp, agent queue, handoff, polls and forms
-- **Enterprise:** SSO/SCIM, audit, retention, SOC2/HIPAA checklist, DLP, IP whitelist
+- **Enterprise:** SSO/SCIM, audit, retention, SOC 2/HIPAA checklist, DLP, IP whitelist
 - **Distribution:** embed widget, custom domain, external bridges, MCP
 
-### Get started in 3 steps
+**Stack:** Cloudflare Workers + Durable Objects (WebSocket, presence) · D1 SQLite at the edge (messages, metadata) · Next.js dashboard · `@fluxy-chat/sdk` + `@fluxy-chat/react`.
 
-1. `pnpm install` and `pnpm run dev:setup` (copy `.dev.vars` / `.env.local` templates), then `pnpm dev`
-2. Open `/onboarding` in the dashboard: project, JWT, first room
-3. Integrate `@fluxy-chat/sdk` in your frontend (see `packages/sdk/README.md`)
+## Get started
 
-### Quickstart (90 seconds)
-
-Skip the dashboard and verify the stack end-to-end from the terminal:
+### Fastest path (terminal)
 
 ```bash
 git clone https://github.com/fluxychat/fluxychat
@@ -39,103 +38,100 @@ pnpm install
 pnpm run first-message
 ```
 
-The script starts a local Worker, provisions a project, and lands your first message.
-It prints a JWT you can use immediately with the SDK.
+Starts a local Worker, provisions a project, and sends your first message. Prints a JWT you can use with the SDK immediately.
 
----
-
-> **Open beta** â€” [Try hosted cloud](https://fluxychat.com/landing) Â· [Guides](https://fluxychat.com/guides) Â· [Compare](https://fluxychat.com/compare) Â· [Dev.to walkthrough](https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh) Â· [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) Â· [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.4.0) Â· **Support:** fluxychat@outlook.com
-
-- **Cloudflare Workers + Durable Objects** for WebSocket handling and presence.
-- **Cloudflare D1 (SQLite edge)** for messages and metadata.
-- **React / JS SDK (`useChat(roomId)`)** and lightweight UI kit.
-- **Next.js 16** dashboard for analytics, moderation, and cost insights.
-
-### What's new (P22â€“P25 â€” AI-native architecture overhaul)
-
-Inspired by the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai) architecture. Full roadmap: [`ROADMAP_EXECUTION.md`](ROADMAP_EXECUTION.md).
-
-| Area | Highlights |
-|------|------------|
-| **P22 adapters** | Multi-platform adapter pattern (14 platforms: Slack, Teams, Discord, Telegram, WhatsApp, Google Chat, GitHub, Linear, Matrix, Resend, IRC, Twitch, Line, API); streaming markdown renderer with table buffering + code fence tracking + inline marker healing; card element builder (JSX + function API) with Slack Block Kit / Teams Adaptive Cards rendering; AI tool presets (reader/messenger/moderator) with per-tool approval gates; concurrency strategies (drop/queue/debounce/burst/concurrent); mdast canonical message format; transcripts API; custom emoji; callback URLs; modal context; lock scope; identity resolver; streaming plan |
-| **P23 AI core** | Stream resumption (reconnect to in-progress AI responses); human-in-the-loop approval workflow; MCP client integration (HTTP/SSE/stdio transports + tool conversion + resources); LLM middleware pipeline (transformParams / wrapGenerate / wrapStream); DevTools web UI for inspecting LLM calls + token usage; OpenTelemetry with GenAI semantic conventions; WorkflowAgent for durable agent execution; sandbox support for untrusted code; bidirectional realtime voice (voice-to-voice AI with tool calling); scoped tool context per-tool secret isolation |
-| **P24 AI medium** | Tool call streaming (progressive input rendering); multi-step loop control (maxSteps / stopWhen); provider-defined & provider-executed tools; pluggable transport architecture; typed UIMessage generics; data parts streaming; extractReasoningMiddleware; RAG middleware; provider-level middleware; image generation; speech generation (TTS); useObject hook for structured JSON streaming; generateObject/streamObject with schema validation; MCP Apps (sandboxed tool UIs); slash commands |
-| **P25 AI low** | experimental_throttle for render throttling; smoothStream for flicker-free text; ephemeral messages with DM fallback; cosine similarity utility; strict tool calling; sendAutomaticallyWhen auto-submit; sensitive context controls for telemetry |
-
-Full feature docs: [`docs/README.md`](docs/README.md) Â· SDK API tables: [`packages/sdk/README.md`](packages/sdk/README.md) Â· Guides: [`docs/guides/`](docs/guides/)
-
-### Monorepo layout
-
-- `apps/dashboard` â€“ Next.js 16 app: marketing **`/landing`**, operator home **`/`**, guided **`/onboarding`**, analytics, rooms, admin, billing.
-- `apps/worker` â€“ Cloudflare Worker entry (WebSocket, APIs, Durable Objects).
-- `apps/ai-agent` â€“ AI Agent Service (processes mention webhooks, calls LLM providers, posts replies).
-- `packages/sdk` â€“ TypeScript client SDK (`useChat`, low-level client).
-- `packages/ui` â€“ Headless, themeable chat UI components.
-
-### What the hosted app does
-
-1. **Sign up** (Clerk) â†’ provisions a Worker project + admin JWT.
-2. **Quickstart** (`/onboarding`) â†’ member JWT, room, first message, optional agent.
-3. **Console** â†’ rooms, agents, webhooks, billing, analytics, GDPR tools.
-
-Backend: your messages and metadata live on **your Cloudflare Worker + D1** (multi-tenant hosted cloud or self-host).
-
-### Publish `@fluxy-chat/sdk` to npm
-
-1. npm org **`fluxy-chat`** (scope `@fluxy-chat`) â€” already created for publish.
-2. `cd packages/sdk && pnpm run build && pnpm test`
-3. `npm login` then `npm publish --access public` (from `packages/sdk`).
-4. Consumers set `baseUrl` to their Worker and mint JWTs server-side â€” see `packages/sdk/README.md`.
-
-`@fluxy-chat/ui` and `@fluxy-chat/agent` are workspace packages today (not published yet).
-
-### Getting started
-
-1. Install dependencies:
+### Full local dev
 
 ```bash
 pnpm install
+pnpm run dev:setup   # copies .dev.vars / .env.local templates
+pnpm dev             # dashboard + worker + docs in parallel
 ```
 
-2. Run all apps in dev mode:
+Then:
+
+1. Open `/onboarding` in the dashboard — project, JWT, first room
+2. Integrate `@fluxy-chat/sdk` in your frontend ([packages/sdk/README.md](packages/sdk/README.md))
+
+**Per-app dev:**
+
+| App | Command |
+|-----|---------|
+| Dashboard | `cd apps/dashboard && pnpm dev` |
+| Worker | `cd apps/worker && pnpm dev` (Wrangler) |
+| Docs site | `pnpm docs:dev` |
+| AI agent service | `cd apps/ai-agent && pnpm dev` |
+
+Copy `apps/worker/.dev.vars.example` → `apps/worker/.dev.vars` (gitignored) for local secrets. Full env guide: [docs/local-development.md](docs/local-development.md).
+
+## Hosted app flow
+
+1. **Sign up** (Clerk) → provisions a Worker project + admin JWT
+2. **Quickstart** (`/onboarding`) → member JWT, room, first message, optional agent
+3. **Console** → rooms, agents, webhooks, billing, analytics, GDPR tools
+
+Your messages and metadata live on **your Cloudflare Worker + D1** (multi-tenant hosted cloud or self-host).
+
+## Monorepo layout
+
+| Path | Role |
+|------|------|
+| `apps/dashboard` | Next.js — marketing, operator console, onboarding, analytics, billing |
+| `apps/worker` | Cloudflare Worker — WebSocket, REST, Durable Objects |
+| `apps/docs` | Fumadocs documentation site (published at docs.fluxychat.com) |
+| `apps/ai-agent` | Optional AI agent service (mention webhooks → LLM → room replies) |
+| `apps/status` | Status page app |
+| `packages/sdk` | TypeScript client (`FluxyChatClient`, transport, REST helpers) |
+| `packages/react` | React hooks (`useChat`, `useInbox`, `FluxyRealtimeProvider`) |
+| `packages/ui` | Headless, themeable chat UI components |
+| `packages/protocol` | Shared WebSocket event types |
+| `packages/agent` | Server-side bot / streaming helpers |
+
+## What's new (P22–P25)
+
+Inspired by the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai). Details: [docs/README.md](docs/README.md) (P22–P25 section) · [features overview](docs/features-overview.md).
+
+| Area | Highlights |
+|------|------------|
+| **P22 adapters** | 14 platform adapters; streaming markdown; card builder; AI tool presets; mdast message format |
+| **P23 AI core** | Stream resumption; HITL approval; MCP client; LLM middleware pipeline; DevTools; WorkflowAgent; voice-to-voice |
+| **P24 AI medium** | Tool call streaming; multi-step loops; pluggable transport; RAG middleware; TTS; structured JSON streaming |
+| **P25 AI low** | Render throttling; smoothStream; ephemeral messages; strict tool calling; telemetry controls |
+
+## Publish to npm
+
+Scope **`@fluxy-chat`** on npm:
 
 ```bash
-pnpm dev
+cd packages/sdk && pnpm run build && pnpm test
+npm login && npm publish --access public
 ```
 
-3. Individual apps:
+Consumers set `baseUrl` to their Worker and mint JWTs server-side — see [packages/sdk/README.md](packages/sdk/README.md).
 
-- `cd apps/dashboard` â€“ `pnpm dev`
-- `cd apps/worker` â€“ `pnpm dev` (via `wrangler dev`)
-- `cd apps/ai-agent` â€“ `pnpm dev` (via `wrangler dev`)
+`@fluxy-chat/ui` and `@fluxy-chat/agent` are workspace packages today (not published yet).
 
-For the Worker, optional local secrets and toggles: copy `apps/worker/.dev.vars.example` to `apps/worker/.dev.vars` (gitignored) and fill only what you need.
+## Documentation
 
-Use case guides, auth cookbook, troubleshooting, and dashboard integration notes live under `docs/` (see `docs/README.md`). HTTP surface vs `SPEC.md`: `docs/spec-implementation-map.md`.
+| Topic | Link |
+|-------|------|
+| Docs home (repo) | [docs/README.md](docs/README.md) |
+| Local dev setup | [docs/local-development.md](docs/local-development.md) |
+| Dashboard integration | [docs/dashboard-integration.md](docs/dashboard-integration.md) |
+| Open beta deploy | [docs/operations/open-beta-deploy-guide.md](docs/operations/open-beta-deploy-guide.md) |
+| SPEC ↔ Worker map | [docs/spec-implementation-map.md](docs/spec-implementation-map.md) |
+| Distribution assets | [docs/distribution/README.md](docs/distribution/README.md) |
 
-### Docs
+## Operations
 
-- Docs home: `docs/README.md`
-- **Local dev setup (env vars, ports, Clerk, first message):** [`docs/local-development.md`](docs/local-development.md)
-- Dashboard (JWT session, `/rooms`, `/admin` webhooks, Privacy/GDPR, `useChat` transport): `docs/dashboard-integration.md`
-- Distribution assets (published Dev.to, InsightScout replies): `docs/distribution/README.md`
+- Deploy / rollback: [RUNBOOK_DEPLOY_ROLLBACK.md](RUNBOOK_DEPLOY_ROLLBACK.md)
+- Tenant recovery drill: `apps/worker/scripts/tenant-recovery-drill.mjs`
+- Post-deploy smoke: `cd apps/worker && pnpm run smoke:remote -- --base-url … --admin-jwt …` ([M6 checklist](docs/m6-operational-checklist.md))
+- End-to-end HTTP smoke: `export TEST_API_KEY=fc_...` then `pnpm smoke:bundled` (requires `bash` + `curl`)
 
-### Operations
+## API quickstart
 
-- **Open beta deploy (step-by-step + env):** [`docs/operations/open-beta-deploy-guide.md`](docs/operations/open-beta-deploy-guide.md)
-- Deploy/rollback runbook: `RUNBOOK_DEPLOY_ROLLBACK.md`
-- Tenant recovery drill script: `apps/worker/scripts/tenant-recovery-drill.mjs`
-- Post-deploy smoke (health + stats): `cd apps/worker && pnpm run smoke:remote -- --base-url â€¦ --admin-jwt â€¦` (see `docs/m6-operational-checklist.md`)
-- End-to-end HTTP smoke (auth â†’ room â†’ message â†’ GDPR): `export TEST_API_KEY=fc_...` then `pnpm smoke:bundled` from repo root (`scripts/smoke-test.sh`; requires `bash` + `curl`)
-
-### API contract (M3)
-
-- Public standard for AI resources is `agents`.
-- Legacy compatibility endpoints under `bots` are still supported for existing integrations.
-
-### Auth token quickstart
-
-Use an API key to mint a project-scoped JWT for SDK/client operations:
+### Mint a JWT
 
 ```bash
 curl -X POST "http://127.0.0.1:8787/auth/token" \
@@ -148,9 +144,11 @@ curl -X POST "http://127.0.0.1:8787/auth/token" \
   }'
 ```
 
-### Agents API quickstart
+### Agents
 
-Create an agent:
+Public standard is **`/agents`**. Legacy **`/bots`** endpoints remain for existing integrations.
+
+Create an agent (default: OpenCode Zen + DeepSeek Flash v4 free tier):
 
 ```bash
 curl -X POST "http://127.0.0.1:8787/agents" \
@@ -159,88 +157,45 @@ curl -X POST "http://127.0.0.1:8787/agents" \
   -d '{
     "name": "Support Assistant",
     "handle": "assistant",
-    "provider": "openai",
-    "model": "gpt-4o-mini",
+    "provider": "custom",
+    "model": "deepseek-v4-flash-free",
+    "llmBaseUrl": "https://opencode.ai/zen/v1",
     "capabilities": ["chat"]
   }'
 ```
 
-List agents:
+List, invoke, and inspect runs:
 
 ```bash
-curl -X GET "http://127.0.0.1:8787/agents" \
-  -H "Authorization: Bearer <JWT>"
+curl -H "Authorization: Bearer <JWT>" http://127.0.0.1:8787/agents
+curl -X POST -H "Authorization: Bearer <JWT>" -H "Content-Type: application/json" \
+  http://127.0.0.1:8787/agents/<agentId>/invoke \
+  -d '{"roomId":"public-demo-room","content":"Give me a short summary"}'
+curl -H "Authorization: Bearer <JWT>" \
+  "http://127.0.0.1:8787/agents/<agentId>/runs?limit=20"
+curl -H "Authorization: Bearer <JWT>" http://127.0.0.1:8787/stats/ai
 ```
 
-Invoke an agent:
+### Ops and SLO
 
 ```bash
-curl -X POST "http://127.0.0.1:8787/agents/<agentId>/invoke" \
-  -H "Authorization: Bearer <JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "roomId": "public-demo-room",
-    "content": "Give me a short summary for this room"
-  }'
+curl -H "Authorization: Bearer <JWT>" "http://127.0.0.1:8787/stats/ops?minutes=60"
+curl -H "Authorization: Bearer <JWT>" "http://127.0.0.1:8787/stats/slo?minutes=60"
+curl -H "Authorization: Bearer <JWT>" http://127.0.0.1:8787/stats/launch-kpis
 ```
 
-Get runs for an agent:
+Default SLO env vars: `SLO_TARGET_REQUEST_ERROR_RATE` (0.01), `SLO_TARGET_WEBHOOK_SUCCESS_RATE` (0.98), `ALERT_DISPATCH_WEBHOOK_URL`.
 
-```bash
-curl -X GET "http://127.0.0.1:8787/agents/<agentId>/runs?limit=20" \
-  -H "Authorization: Bearer <JWT>"
-```
+### Quotas and pricing (M5-C)
 
-Get aggregated AI usage stats:
+- `QUOTAS_ENABLED` (default `true`), `QUOTA_MESSAGES_PER_MONTH` (50000), `QUOTA_AGENT_INVOKES_PER_MONTH` (1000)
+- `GET /stats/costs` — guardrails via `PRICE_PER_MILLION_MESSAGES`, `MIN_GROSS_MARGIN`, etc.
 
-```bash
-curl -X GET "http://127.0.0.1:8787/stats/ai" \
-  -H "Authorization: Bearer <JWT>"
-```
-
-### Ops and SLO snapshot
-
-Read operational counters and SLO status for a project:
-
-```bash
-curl -X GET "http://127.0.0.1:8787/stats/ops?minutes=60" \
-  -H "Authorization: Bearer <JWT>"
-
-curl -X GET "http://127.0.0.1:8787/stats/slo?minutes=60" \
-  -H "Authorization: Bearer <JWT>"
-
-curl -X GET "http://127.0.0.1:8787/stats/launch-kpis" \
-  -H "Authorization: Bearer <JWT>"
-```
-
-Default SLO targets (overridable via env):
-
-- `SLO_TARGET_REQUEST_ERROR_RATE`: max request error rate (default `0.01`)
-- `SLO_TARGET_WEBHOOK_SUCCESS_RATE`: min webhook success rate (default `0.98`)
-- `ALERT_DISPATCH_WEBHOOK_URL`: external endpoint for automatic operational alert dispatch (deduplicated per alert event)
-
-### Quotas (M5-C)
-
-Basic plan enforcement is enabled by default (can be disabled in dev):
-
-- `QUOTAS_ENABLED` (default `true`)
-- `QUOTA_MESSAGES_PER_MONTH` (default `50000`)
-- `QUOTA_AGENT_INVOKES_PER_MONTH` (default `1000`)
-- `QUOTA_WEBHOOK_DELIVERIES_PER_MONTH` (default `10000`)
-
-### Pricing guardrails (M5-C)
-
-`GET /stats/costs` also returns pricing guardrails computed from env assumptions:
-
-- `PRICE_PER_MILLION_MESSAGES` (default `1`)
-- `PRICE_PER_AGENT_INVOKE` (default `0`)
-- `PRICE_PER_WEBHOOK_DELIVERY` (default `0`)
-- `MIN_GROSS_MARGIN` (default `0.3`)
-
-### SDK quickstart for agents
+## SDK example
 
 ```ts
-import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { useChat } from "@fluxy-chat/react";
 
 const client = new FluxyChatClient({
   baseUrl: "http://127.0.0.1:8787",
@@ -248,13 +203,10 @@ const client = new FluxyChatClient({
   token: "<JWT>",
 });
 
-// low-level REST helpers
 const agents = await client.listAgents();
-const runs = await client.getAgentRuns(agents[0].id);
 await client.invokeAgentRest(agents[0].id, "public-demo-room", "Summarize");
 
-// hook-level helper
-const { invokeAgent, agentTyping } = useChat({
+const { invokeAgent } = useChat({
   roomId: "public-demo-room",
   client,
   agentId: agents[0].id,
@@ -262,4 +214,6 @@ const { invokeAgent, agentTyping } = useChat({
 await invokeAgent("Draft a reply for this thread");
 ```
 
+## Examples
 
+- [examples/agent-bot](examples/agent-bot) — server-side bot with streaming via `@fluxy-chat/agent`
