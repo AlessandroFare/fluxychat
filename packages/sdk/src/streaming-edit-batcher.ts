@@ -19,7 +19,7 @@ export function mergeStreamingEditIntoMessages<
     userId: string;
     content: string;
     createdAt: string;
-    editedAt?: string;
+    editedAt?: string | null;
     streaming?: boolean;
   },
 >(messages: T[], edit: StreamingEditUpdate, sort: (rows: T[]) => T[]): T[] {

@@ -1,6 +1,9 @@
 /** Inbound WebSocket events broadcast by the worker / Room DO. */
 export const FLUXY_INBOUND_EVENT_TYPES = [
   "message",
+  /** Worker Room DO broadcast while a message body is updated (streaming deltas + final). */
+  "edit",
+  /** Alias retained for docs / older clients. */
   "message_edit",
   "message_delete",
   "message_expired",
@@ -25,6 +28,8 @@ export const FLUXY_INBOUND_EVENT_TYPES = [
   "user_subscription_succeeded",
   "state_change",
   "stream",
+  /** Active partial stream when (re)connecting to a room mid-generation. */
+  "streamState",
   "location_update",
   "location_snapshot",
   "location_track_ended",

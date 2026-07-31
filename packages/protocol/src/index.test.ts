@@ -38,6 +38,7 @@ describe("@fluxy-chat/protocol", () => {
     expect(overlap.sort()).toEqual([
       "agentTyping",
       "client_event",
+      "edit",
       "location_track_ended",
       "location_update",
       "message",

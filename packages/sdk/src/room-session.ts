@@ -208,9 +208,23 @@ export function startFluxyRoomSession(
           const idx = withPending.findIndex((m) => m.id === payload.id);
           if (idx >= 0) {
             const next = [...withPending];
+            const existing = next[idx];
+            const incomingEmpty = !String(normalized.content ?? "").trim();
+            const existingHasContent = Boolean(String(existing.content ?? "").trim());
+            const staleStreamStart =
+              Boolean(normalized.streaming) &&
+              incomingEmpty &&
+              (existingHasContent || existing.streaming === false);
             next[idx] = {
-              ...next[idx],
+              ...existing,
               ...normalized,
+              ...(staleStreamStart
+                ? {
+                    content: existing.content,
+                    streaming: existing.streaming,
+                    editedAt: existing.editedAt,
+                  }
+                : {}),
               deliveryStatus: "sent",
               deliveryError: undefined,
             };
@@ -315,15 +329,16 @@ export function startFluxyRoomSession(
       });
     } else if (data.type === "agentRun") {
       setState({ lastAgentRun: data.run });
-    } else if (data.type === "edit") {
-      if (data.streaming) {
+    } else if (data.type === "edit" || (data as { type: string }).type === "message_edit") {
+      const edit = data as Extract<FluxyChatEvent, { type: "edit" }>;
+      if (edit.streaming) {
         streamEditBatcher.push({
-          id: data.id,
-          content: data.content,
-          editedAt: data.editedAt,
+          id: edit.id,
+          content: edit.content,
+          editedAt: edit.editedAt,
           streaming: true,
-          roomId: data.roomId,
-          userId: data.userId,
+          roomId: edit.roomId,
+          userId: edit.userId,
         });
         return;
       }
@@ -332,12 +347,12 @@ export function startFluxyRoomSession(
         messages: mergeStreamingEditIntoMessages(
           s.messages,
           {
-            id: data.id,
-            content: data.content,
-            editedAt: data.editedAt,
+            id: edit.id,
+            content: edit.content,
+            editedAt: edit.editedAt,
             streaming: false,
-            roomId: data.roomId,
-            userId: data.userId,
+            roomId: edit.roomId,
+            userId: edit.userId,
           },
           sortMessagesChronological,
         ),
