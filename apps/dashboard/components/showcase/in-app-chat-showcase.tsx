@@ -14,7 +14,7 @@ const feature = getRealtimeFeature("chat");
 
 export function InAppChatShowcase({ session }: { session: ShowcaseSession }) {
   return (
-    <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+    <div className="grid min-w-0 gap-8 overflow-x-hidden lg:grid-cols-2 lg:items-start">
       <FeatureCodePanel feature={feature} />
 
       <FeaturePreviewFrame label="Live in-app chat preview" className="min-h-[28rem]">

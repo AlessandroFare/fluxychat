@@ -374,7 +374,7 @@ export default function MiddlewarePage() {
                       <button
                         onClick={() => toggleStage(stage.id)}
                         className={cn(
-                          "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+                          "inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors",
                           isActive ? "bg-primary" : "bg-muted",
                         )}
                         aria-label={`Toggle ${stage.label}`}
@@ -383,8 +383,8 @@ export default function MiddlewarePage() {
                       >
                         <span
                           className={cn(
-                            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
-                            isActive ? "translate-x-5" : "translate-x-0.5",
+                            "block h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+                            isActive ? "translate-x-5" : "translate-x-0",
                           )}
                         />
                       </button>

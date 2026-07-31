@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Search } from "lucide-react";
+import { Home, Menu, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { useQuickstartHref } from "@/lib/use-quickstart-href";
 import {
   CONSOLE_NAV_GROUPS,
@@ -19,6 +20,13 @@ export function ConsoleMobileNav() {
   return (
     <div className="border-b border-black/[0.06] bg-white/90 px-3 py-2 lg:hidden">
       <div className="mb-2 flex items-center gap-2">
+        <Link
+          href={HOSTED_PATHS.landing}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+        >
+          <Home className="h-3.5 w-3.5" aria-hidden />
+          Home
+        </Link>
         <button
           type="button"
           onClick={openCommandPalette}

@@ -39,6 +39,24 @@ describe("custom-domains", () => {
     expect(list).toContain("https://app.fluxy.chat");
   });
 
+  it("buildAllowedOriginsList expands www apex aliases", () => {
+    const list = buildAllowedOriginsList(
+      { ALLOWED_ORIGINS: "https://fluxychat.com" },
+      null,
+    );
+    expect(list).toContain("https://fluxychat.com");
+    expect(list).toContain("https://www.fluxychat.com");
+  });
+
+  it("buildAllowedOriginsList expands apex when www is configured", () => {
+    const list = buildAllowedOriginsList(
+      { ALLOWED_ORIGINS: "https://www.fluxychat.com" },
+      null,
+    );
+    expect(list).toContain("https://www.fluxychat.com");
+    expect(list).toContain("https://fluxychat.com");
+  });
+
   it("create and activate custom domain", async () => {
     const env = createDomainEnv();
     const created = await createCustomDomain(env, {

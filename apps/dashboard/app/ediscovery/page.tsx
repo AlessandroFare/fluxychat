@@ -28,6 +28,7 @@ import {
   type EdiscoveryPreservation,
   type EdiscoveryStats,
 } from "@/lib/ediscovery-client";
+import { docsSiteHref } from "@/lib/hosted-product";
 
 export default function EdiscoveryPage() {
   const { adminJwt } = useDashboardSession();
@@ -194,9 +195,9 @@ export default function EdiscoveryPage() {
           retention &amp; legal hold
         </Link>{" "}
         and{" "}
-        <Link href="/docs/guides/enterprise/ediscovery" className="font-medium underline-offset-2 hover:underline">
+        <a href={docsSiteHref("guides/enterprise/ediscovery")} className="font-medium underline-offset-2 hover:underline">
           e-discovery guide
-        </Link>
+        </a>
         .
       </p>
 

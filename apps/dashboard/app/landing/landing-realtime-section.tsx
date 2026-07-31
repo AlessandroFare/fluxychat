@@ -87,9 +87,9 @@ export function LandingRealtimeSection() {
           id="landing-realtime-panel"
           role="tabpanel"
           aria-labelledby={`landing-realtime-tab-${active.id}`}
-          className="rt-panel-enter mt-4 grid overflow-hidden rounded-2xl border border-white/10 bg-white/5 lg:grid-cols-[0.9fr_1.1fr]"
+          className="rt-panel-enter mt-4 grid min-w-0 grid-cols-1 overflow-hidden rounded-2xl border border-white/10 bg-white/5 lg:grid-cols-[0.9fr_1.1fr]"
         >
-          <div className="flex flex-col justify-between gap-8 border-b border-white/10 p-6 sm:p-8 lg:border-b-0 lg:border-r">
+          <div className="flex min-w-0 flex-col justify-between gap-8 border-b border-white/10 p-6 sm:p-8 lg:border-b-0 lg:border-r">
             <div className="flex flex-col gap-4">
               <h3 className="text-balance font-heading text-2xl font-semibold text-white">{active.title}</h3>
               <p className="text-pretty text-sm leading-relaxed text-slate-300">{active.description}</p>
@@ -106,7 +106,7 @@ export function LandingRealtimeSection() {
             </Link>
           </div>
 
-          <div className="min-h-80 bg-slate-950/60 p-4 sm:p-8">
+          <div className="min-h-80 min-w-0 overflow-x-auto bg-slate-950/60 p-4 sm:p-8">
             <RealtimePreview featureId={active.id} />
           </div>
         </div>
@@ -147,7 +147,7 @@ export function LandingRealtimeSection() {
 
 function RealtimePreview({ featureId }: { featureId: RealtimeFeatureId }) {
   return (
-    <div className="flex h-full min-h-72 items-center justify-center">
+    <div className="flex h-full min-h-72 w-full min-w-0 items-center justify-center">
       {featureId === "chat" ? <ChatPreview /> : null}
       {featureId === "streaming" ? <StreamingPreview /> : null}
       {featureId === "location" ? <LocationPreview /> : null}
@@ -223,7 +223,7 @@ function ChatPreview() {
   }, [cycle]);
 
   return (
-    <div className="flex w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
+    <div className="flex w-full max-w-full sm:max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
       {/* sidebar */}
       <div className="hidden w-40 shrink-0 border-r border-white/10 bg-slate-950/50 py-2 sm:block">
         {CHAT_SIDEBAR.map((c) => (
@@ -360,7 +360,7 @@ function StreamingPreview() {
   const shown = STREAM_COMMENTS.slice(0, visible);
 
   return (
-    <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
+    <div className="relative w-full max-w-full sm:max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
         <span className="flex items-center gap-1.5 rounded-full bg-blue-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
           <span className="relative flex size-1.5">
@@ -477,7 +477,7 @@ function LocationPreview() {
   const arrived = progress >= 0.995;
 
   return (
-    <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
+    <div className="w-full max-w-full sm:max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
       <div className="relative h-56 overflow-hidden bg-[#e9edf1]">
         {/* map-like base */}
         <div className="absolute inset-0 [background-image:linear-gradient(#d8dee5_1px,transparent_1px),linear-gradient(90deg,#d8dee5_1px,transparent_1px)] [background-size:26px_26px]" />
@@ -615,7 +615,7 @@ function PushPreview() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-xs rounded-[2rem] border border-white/10 bg-slate-900 p-3 shadow-2xl">
+    <div className="mx-auto w-full max-w-full sm:max-w-xs rounded-[2rem] border border-white/10 bg-slate-900 p-3 shadow-2xl">
       <div className="mb-2 flex items-center justify-between px-1 text-[10px] text-slate-500">
         <span>9:41</span>
         <span className="flex items-center gap-2">
@@ -714,7 +714,7 @@ function AiTransportPreview() {
   }, [cycle]);
 
   return (
-    <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
+    <div className="w-full max-w-full sm:max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
       {/* header */}
       <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
         <Cpu className="size-4 text-blue-400" aria-hidden />
@@ -901,7 +901,7 @@ function VoicePreview() {
   };
 
   return (
-    <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
+    <div className="w-full max-w-full sm:max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
       {/* header */}
       <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
         <Mic className="size-4 text-blue-400" aria-hidden />
@@ -997,7 +997,7 @@ function CollabPreview() {
   }, [cycle]);
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
+    <div className="w-full max-w-full sm:max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
       <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white">
         <Pen className="size-4 text-amber-400" aria-hidden />
         sprint-12 board
@@ -1221,7 +1221,7 @@ function FluxyStreamPreview() {
   }, []);
 
   return (
-    <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
+    <div className="relative w-full max-w-full sm:max-w-md overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
       <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 p-4">
         {/* soft webcam vignette so the avatar reads as a lit camera feed */}
         <div
@@ -1289,7 +1289,7 @@ function GamePreview() {
   }, []);
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-4">
+    <div className="w-full max-w-full sm:max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-4">
       <div className="mb-3 flex items-center justify-between text-xs font-semibold text-white">
         <span className="flex items-center gap-2">
           <Gamepad2 className="size-4 text-violet-400" aria-hidden />
@@ -1364,7 +1364,7 @@ function IoTPreview() {
   const gaugePct = Math.min(100, Math.max(0, ((temp - 18) / 8) * 100));
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-4">
+    <div className="w-full max-w-full sm:max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-4">
       <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white">
         <Cpu className="size-4 text-cyan-400" aria-hidden />
         factory-floor · 3 devices
@@ -1416,7 +1416,7 @@ function FleetPreview() {
   const arriving = pos >= 76;
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
+    <div className="w-full max-w-full sm:max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
       <div className="mb-3 flex items-center justify-between text-xs font-semibold text-white">
         <span className="flex items-center gap-2">
           <Truck className="size-4 text-emerald-400" aria-hidden />
@@ -1465,7 +1465,7 @@ function SpatialPreview() {
   }, []);
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
+    <div className="w-full max-w-full sm:max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
       <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white">
         <Boxes className="size-4 text-blue-400" aria-hidden />
         plant-floor twin
@@ -1520,7 +1520,7 @@ function EduLivePreview() {
   const total = votes.reduce((sum, n) => sum + n, 0);
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
+    <div className="w-full max-w-full sm:max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
       <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white">
         <GraduationCap className="size-4 text-emerald-400" aria-hidden />
         classroom:101 · live poll
@@ -1580,7 +1580,7 @@ function OmnichannelPreview() {
   }, []);
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
+    <div className="w-full max-w-full sm:max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4">
       <p className="mb-3 text-xs font-semibold text-white">Message fan-out · same room</p>
       <div className="mb-3 rounded-lg bg-white/5 px-3 py-2 text-xs text-slate-200">Deploy v2.4 is live 🚀</div>
       <div className="flex flex-wrap gap-2">

@@ -1,38 +1,8 @@
 -- FluxyStream schema reconciliation.
--- Ensures all columns from migrations 0089, 0134, and 0154 exist on live_events
--- regardless of which migration created the table first.
--- Also ensures the live_events.status default is 'scheduled' and the CHECK constraint
--- accepts all statuses used by the application.
+-- Ensures supplementary tables/indexes exist and normalizes legacy live_events rows.
+-- Column adds are handled in 0154_fluxy_stream.sql (do not use block comments with semicolons here — D1/wrangler splits on ';').
 
--- Ensure status default is 'scheduled' (0089 used 'draft', 0134 used 'scheduled').
--- SQLite cannot ALTER COLUMN defaults in-place, so we rebuild the constraint via a no-op
--- UPDATE that triggers SQLite's table rebuild when combined with a new default.
--- In practice, D1 applies the default at INSERT time from the most recent CREATE TABLE,
--- so we only need to make sure existing rows are valid.
-
--- Add any missing columns (idempotent — each ALTER fails silently if the column exists).
--- These cover the case where 0089 created the table and 0134's CREATE TABLE was a no-op.
-/*
-ALTER TABLE live_events ADD COLUMN stream_url TEXT;
-ALTER TABLE live_events ADD COLUMN thumbnail_url TEXT;
-ALTER TABLE live_events ADD COLUMN category TEXT;
-ALTER TABLE live_events ADD COLUMN tags TEXT;
-ALTER TABLE live_events ADD COLUMN peak_viewers INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE live_events ADD COLUMN total_viewers INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE live_events ADD COLUMN total_messages INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE live_events ADD COLUMN duration_seconds INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE live_events ADD COLUMN updated_at TEXT;
-ALTER TABLE live_events ADD COLUMN live_input_uid TEXT;
-ALTER TABLE live_events ADD COLUMN rtmps_url TEXT;
-ALTER TABLE live_events ADD COLUMN stream_key TEXT;
-ALTER TABLE live_events ADD COLUMN whip_url TEXT;
-ALTER TABLE live_events ADD COLUMN playback_hls TEXT;
-ALTER TABLE live_events ADD COLUMN playback_dash TEXT;
-ALTER TABLE live_events ADD COLUMN recording_mode TEXT NOT NULL DEFAULT 'automatic';
-ALTER TABLE live_events ADD COLUMN prefer_low_latency INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE live_events ADD COLUMN provider_state TEXT;
-*/
--- Ensure updated_at has a default for old rows.
+-- Ensure updated_at has a default for old rows (0154 adds the column when missing).
 UPDATE live_events SET updated_at = created_at WHERE updated_at IS NULL;
 
 -- Normalize old 'draft' status to 'scheduled'.
