@@ -9,7 +9,7 @@ Custom piece for **self-hosted Activepieces** (MIT, free). No marketplace publis
 | New message | `message.created` |
 | Agent handoff | `handoff.requested` |
 
-Register the Activepieces webhook URL in **Console → Webhooks** for your project. Verify `X-Fluxy-Signature` with the shared secret.
+Register the Activepieces webhook URL in **Console → Webhooks**. Verify `X-Fluxy-Signature` with the shared secret.
 
 ## Actions
 
@@ -20,8 +20,10 @@ Register the Activepieces webhook URL in **Console → Webhooks** for your proje
 
 ## Install in Activepieces
 
-1. Self-host: `docker compose up` from [activepieces/activepieces](https://github.com/activepieces/activepieces)
-2. **Settings → Pieces → Add custom piece** → point at this `src/` folder (or build & upload)
-3. Dashboard embed: `/settings/integrations` + `NEXT_PUBLIC_ACTIVEPIECES_EMBED_URL`
+1. Self-host per [docs/integrations/activepieces.md](../../docs/integrations/activepieces.md)
+2. **Settings → Pieces → Add custom piece** → `examples/integrations/activepieces/src/`
+3. FluxyChat dashboard: set `NEXT_PUBLIC_ACTIVEPIECES_URL` → **Settings → Automation integrations** opens studio in new tab
 
-See `docs/integrations/activepieces.md` and `docs/PRODUCTION-SETUP.md`.
+**Note:** Iframe embed (`NEXT_PUBLIC_ACTIVEPIECES_EMBED_URL`) is not used — Activepieces embedding is enterprise-licensed.
+
+See also `docs/PRODUCTION-SETUP.md`.

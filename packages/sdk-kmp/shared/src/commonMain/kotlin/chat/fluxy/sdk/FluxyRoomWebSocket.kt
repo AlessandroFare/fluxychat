@@ -2,7 +2,6 @@ package chat.fluxy.sdk
 
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
-import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
@@ -14,13 +13,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-expect fun createFluxyHttpClient(): HttpClient
-
 class FluxyRoomWebSocket(
     private val config: FluxyChatConfig,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) {
-    private val client = createFluxyHttpClient().config { install(WebSockets) }
+    private val client = createFluxyHttpClient()
     private var session: DefaultClientWebSocketSession? = null
     private var roomId: String? = null
     private var pingJob: Job? = null

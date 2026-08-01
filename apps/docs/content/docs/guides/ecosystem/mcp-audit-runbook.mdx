@@ -1,0 +1,71 @@
+---
+title: MCP marketplace audit runbook
+description: Run mcp-audit in CI, post results to your Worker, and show verified badges in the console.
+---
+
+# MCP marketplace audit
+
+FluxyChat runs [mcp-audit](https://github.com/adudley78/mcp-audit) on official MCP examples in CI and stores grades in D1 for the console marketplace.
+
+## Zero signup
+
+No mcp-audit account. Only:
+
+- Cloudflare Worker with migration `0163_marketplace_audits.sql`
+- GitHub repository secrets
+
+## Secret parity
+
+| Worker secret | GitHub secret | Must match |
+|---------------|---------------|------------|
+| `MARKETPLACE_AUDIT_HMAC_SECRET` | `WORKER_AUDIT_HMAC_SECRET` | ✅ Same value |
+| — | `WORKER_AUDIT_WEBHOOK_URL` | `https://<worker>/internal/marketplace/audit-result` |
+
+Set Worker secret:
+
+```bash
+cd apps/worker
+wrangler secret put MARKETPLACE_AUDIT_HMAC_SECRET
+```
+
+## Run audit
+
+**Automatic:** push changes under `examples/mcp/**`
+
+**Manual:** GitHub → Actions → **MCP marketplace audit** → Run workflow
+
+Scanned examples (matrix): `github`, `slack`, `notion` under `examples/mcp/`.
+
+## Verify in console
+
+**Marketplace → MCP Apps** — each app shows **Audit A–F** badge after webhook succeeds.
+
+## Regenerate verified docs page
+
+```bash
+node scripts/generate-mcp-verified-page.mjs
+```
+
+Updates:
+
+- `apps/docs/content/docs/guides/ecosystem/mcp-verified-servers.mdx`
+- `apps/dashboard/public/mcp-verified.json`
+
+## Retroactive scan
+
+To refresh all servers already in the catalog:
+
+1. Re-run workflow manually
+2. Or add/update `examples/mcp/<server>/` and push
+
+For third-party MCP servers not in the repo: contact maintainers and ask to add a verified entry or fork into `examples/mcp/` with permission.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Badge never appears | Check webhook URL + HMAC secret match |
+| CI posts but 401 | Worker `MARKETPLACE_AUDIT_HMAC_SECRET` wrong |
+| Empty marketplace | Run workflow at least once after deploy |
+
+See [PRODUCTION-SETUP.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/PRODUCTION-SETUP.md) section 2.
