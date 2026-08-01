@@ -1,3 +1,5 @@
+export { MarkdownBody } from "./markdown-body";
+export type { MarkdownBodyProps } from "./markdown-body";
 export { AgentMessage } from "./agent-message";
 export type { AgentMessageProps } from "./agent-message";
 export { AgentTypingIndicator } from "./agent-typing-indicator";

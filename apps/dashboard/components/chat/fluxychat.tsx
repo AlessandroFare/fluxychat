@@ -11,14 +11,14 @@ import {
   Globe,
   Loader2,
   Paperclip,
-  Pin,
   Reply,
   Search,
   Send,
   Smile,
   Sparkles,
-  Flag,
-  Languages,
+  Copy,
+  Pencil,
+  RotateCw,
   X,
 } from "lucide-react";
 import { useChat, useFluxyChatOptional } from "@fluxy-chat/react";
@@ -61,6 +61,7 @@ import { RoomOfflineNotifySettings } from "@/app/components/room-offline-notify-
 import { ChatCatchUpBanner } from "@/app/components/chat-catch-up-banner";
 import { ChatPresenceStrip } from "@/app/components/chat-presence-strip";
 import { AgentCopilotConfirm } from "@/app/components/agent-copilot-confirm";
+import { ThreadSummary } from "@/app/components/thread-summary";
 import { useRoomDraftSync } from "@/lib/use-room-draft-sync";
 import type { FluxySendMessageOptions, FluxyChatClient } from "@fluxy-chat/sdk";
 import { Button, Input } from "@/app/components/ui";
@@ -122,7 +123,13 @@ import {
 } from "@/components/ui/dialog";
 import { ReactionPicker } from "@/components/ui/reaction-picker";
 import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
-import { ThreadSummary } from "@/app/components/thread-summary";
+import { MarkdownBody } from "@fluxy-chat/ui";
+import {
+  detectToolFromMessageContent,
+  findPriorUserMessage,
+  messageIdsFromIndex,
+  stripComposerToolTags,
+} from "@/lib/chat-message-actions";
 
 const WORKER_URL = getPublicWorkerUrl();
 const RUN_POLL_MS = 2000;
@@ -367,6 +374,7 @@ export function FluxyChat({
   const [reactionPickerAnchor, setReactionPickerAnchor] = useState<DOMRect | null>(null);
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
+  const [branchFromMessageId, setBranchFromMessageId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{
     id: number; content: string; userId: string; createdAt: string; snippet: string;
@@ -515,6 +523,8 @@ export function FluxyChat({
     isLoadingMore,
     sendReadReceipt,
     retryMessage,
+    editMessage,
+    deleteMessage,
     presenceMembers,
     subscriptionCount,
     reactions,
@@ -645,6 +655,8 @@ export function FluxyChat({
   }, [messages, showDemoModeration, agentId, chatUserId, reportedMessageIds]);
 
   const replyTarget = replyToId != null ? messagesById.get(replyToId) : null;
+  const branchTarget =
+    branchFromMessageId != null ? messagesById.get(branchFromMessageId) : null;
 
   function scrollToMessage(messageId: number) {
     const el = listRef.current?.querySelector(`[data-message-id="${messageId}"]`);
@@ -662,6 +674,65 @@ export function FluxyChat({
     const target = e.currentTarget as HTMLElement;
     setReactionPickerAnchor(target.getBoundingClientRect());
     setReactionPickerMessageId(messageId);
+  }
+
+  const truncateFromMessage = useCallback(
+    async (fromMessageId: number, inclusive: boolean) => {
+      const idx = visibleMessages.findIndex((m) => m.id === fromMessageId);
+      if (idx < 0) return;
+      const ids = messageIdsFromIndex(visibleMessages, idx, inclusive);
+      for (const id of [...ids].reverse()) {
+        await deleteMessage(id);
+      }
+    },
+    [visibleMessages, deleteMessage],
+  );
+
+  async function copyMessageContent(content: string) {
+    try {
+      await navigator.clipboard.writeText(content);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
+  function beginEditMessage(message: (typeof messages)[number]) {
+    if (message.id == null) return;
+    setBranchFromMessageId(message.id);
+    setDraft(stripComposerToolTags(message.content || ""));
+    setReplyToId(null);
+    const toolTag = detectToolFromMessageContent(message.content || "");
+    setPendingTool(toolTag ? { type: toolTag } : null);
+  }
+
+  async function retrySentMessage(message: (typeof messages)[number]) {
+    if (message.id == null || !message.content?.trim()) return;
+    const toolTag = detectToolFromMessageContent(message.content);
+    const text = stripComposerToolTags(message.content);
+    await truncateFromMessage(message.id, true);
+    await executeSend({
+      templateSend: null,
+      text,
+      parentId: message.parentId ?? null,
+      attachments: [],
+      tool: toolTag ? { type: toolTag } : null,
+    });
+  }
+
+  async function retryAgentMessage(message: (typeof messages)[number]) {
+    if (message.id == null) return;
+    const idx = visibleMessages.findIndex((m) => m.id === message.id);
+    const priorUser = findPriorUserMessage(visibleMessages, idx, agentId);
+    await truncateFromMessage(message.id, true);
+    if (!priorUser?.content?.trim()) return;
+    const toolTag = detectToolFromMessageContent(priorUser.content);
+    await executeSend({
+      templateSend: null,
+      text: stripComposerToolTags(priorUser.content),
+      parentId: priorUser.parentId ?? null,
+      attachments: [],
+      tool: toolTag ? { type: toolTag } : null,
+    });
   }
 
   const displayToolEvents = useMemo(() => {
@@ -861,6 +932,11 @@ export function FluxyChat({
     setInputError(null);
     beginRunTracking();
     const sendOpts = messageSendOptions(templateSend);
+
+    if (branchFromMessageId != null) {
+      await truncateFromMessage(branchFromMessageId, true);
+      setBranchFromMessageId(null);
+    }
 
     function clearComposer() {
       setDraft("");
@@ -1428,7 +1504,36 @@ export function FluxyChat({
                   const hasReactions = m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0;
 
                   const floatingToolbar = m.id != null && !isStreaming ? (
-                    <MessageHoverToolbar align={isSelf ? "end" : "start"}>
+                    <MessageHoverToolbar align={isSelf ? "end" : "start"} side="below">
+                      <MessageAction
+                        label="Copy"
+                        onClick={() => void copyMessageContent(m.content || "")}
+                      >
+                        <Copy className="size-3.5" />
+                      </MessageAction>
+                      {isSelf ? (
+                        <>
+                          <MessageAction
+                            label="Edit"
+                            onClick={() => beginEditMessage(m)}
+                          >
+                            <Pencil className="size-3.5" />
+                          </MessageAction>
+                          <MessageAction
+                            label="Retry"
+                            onClick={() => void retrySentMessage(m)}
+                          >
+                            <RotateCw className="size-3.5" />
+                          </MessageAction>
+                        </>
+                      ) : isAgent ? (
+                        <MessageAction
+                          label="Retry"
+                          onClick={() => void retryAgentMessage(m)}
+                        >
+                          <RotateCw className="size-3.5" />
+                        </MessageAction>
+                      ) : null}
                       <button
                         type="button"
                         onClick={(e) => openReactionPicker(e, m.id!)}
@@ -1444,60 +1549,6 @@ export function FluxyChat({
                       >
                         <Reply className="size-3" />
                         Reply
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (!fluxyClient || !trimmedRoomId || m.id == null) return;
-                          try {
-                            await fluxyClient.pinRoomMessage(trimmedRoomId, m.id);
-                            const res = await fluxyClient.listRoomPins(trimmedRoomId);
-                            setPins(res.pins ?? []);
-                          } catch {
-                            /* ignore */
-                          }
-                        }}
-                        className={messageToolbarButtonClass}
-                        title="Pin message"
-                      >
-                        <Pin className="size-3" />
-                        Pin
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (m.id == null || !fluxyClient) return;
-                          try {
-                            const res = await fluxyClient.translateMessage(m.id, "en");
-                            const t = res.translation;
-                            const translated = t?.translatedText;
-                            if (translated) setTranslatedMessages((p) => ({ ...p, [String(m.id)]: translated }));
-                          } catch { /* ignore */ }
-                        }}
-                        className={messageToolbarButtonClass}
-                        title="Translate to English"
-                      >
-                        <Languages className="size-3" />
-                        Translate
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (m.id == null || !fluxyClient || !trimmedRoomId) return;
-                          try {
-                            await fluxyClient.reportMessage(trimmedRoomId, m.id);
-                            setReportedMessageIds((prev) => {
-                              const next = new Set(prev);
-                              next.add(m.id!);
-                              return next;
-                            });
-                          } catch { /* ignore */ }
-                        }}
-                        className={messageToolbarButtonClass}
-                        title="Report message"
-                      >
-                        <Flag className="size-3" />
-                        Report
                       </button>
                     </MessageHoverToolbar>
                   ) : null;
@@ -1642,22 +1693,27 @@ export function FluxyChat({
                                               />
                                             );
                                           }
-                                          return (
+                                          return isAgent ? (
+                                            <MarkdownBody
+                                              content={cardDisplayText(m)}
+                                              invert={isSelf}
+                                            />
+                                          ) : (
                                             <p className="whitespace-pre-wrap break-words">
                                               {cardDisplayText(m)}
                                               {!m.content && isStreaming ? "…" : null}
-                                              {isStreaming ? (
-                                                <span
-                                                  className={cn(
-                                                    "ml-0.5 inline-block h-4 w-0.5 animate-pulse align-middle",
-                                                    isSelf ? "bg-white/70" : "bg-foreground/50",
-                                                  )}
-                                                  aria-hidden
-                                                />
-                                              ) : null}
                                             </p>
                                           );
                                         })()}
+                                        {isStreaming ? (
+                                          <span
+                                            className={cn(
+                                              "ml-0.5 inline-block h-4 w-0.5 animate-pulse align-middle",
+                                              isSelf ? "bg-white/70" : "bg-foreground/50",
+                                            )}
+                                            aria-hidden
+                                          />
+                                        ) : null}
                                       </>
                                     )}
 
@@ -1893,6 +1949,33 @@ export function FluxyChat({
           </div>
         </MessageScroller>
       </MessageScrollerProvider>
+
+      {/* ─── Branch edit banner ─── */}
+      {branchFromMessageId != null ? (
+        <div
+          className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs"
+          data-testid="branch-edit-compose-banner"
+        >
+          <div className="min-w-0 flex-1">
+            <span className="font-medium text-amber-700 dark:text-amber-400">Editing message</span>{" "}
+            <span className="text-muted-foreground">
+              {branchTarget
+                ? `${displayUserId(branchTarget)}: ${(branchTarget.content || "").slice(0, 80)}`
+                : `#${branchFromMessageId}`}
+              {" — "}
+              sending will replace this message and everything after it
+            </span>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            onClick={() => setBranchFromMessageId(null)}
+            aria-label="Cancel edit"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
+      ) : null}
 
       {/* ─── Reply banner ─── */}
       {replyToId != null ? (

@@ -233,10 +233,12 @@ function MessageActions({
 
 function MessageHoverToolbar({
   align = "start",
+  side = "above",
   className,
   children,
 }: {
   align?: "start" | "end"
+  side?: "above" | "below"
   className?: string
   children: React.ReactNode
 }) {
@@ -244,7 +246,8 @@ function MessageHoverToolbar({
     <div
       data-slot="message-hover-toolbar"
       className={cn(
-        "pointer-events-none absolute bottom-full z-30 mb-1 invisible group-hover/message:pointer-events-auto group-hover/message:visible",
+        "pointer-events-none absolute z-30 invisible group-hover/message:pointer-events-auto group-hover/message:visible",
+        side === "below" ? "top-full mt-1" : "bottom-full mb-1",
         align === "end" ? "right-0" : "left-0",
         className,
       )}
