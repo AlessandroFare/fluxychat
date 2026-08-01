@@ -8,6 +8,52 @@ plugins {
 group = "com.fluxychat"
 version = findProperty("sdkVersion")?.toString() ?: "1.0.0-SNAPSHOT"
 
+val javadocStubDir = layout.buildDirectory.dir("javadoc-stub")
+val javadocStub by tasks.registering {
+    val outDir = javadocStubDir.get().asFile
+    outputs.dir(outDir)
+    doLast {
+        outDir.mkdirs()
+        java.io.File(outDir, "index.html").writeText(
+            """
+            <!DOCTYPE html>
+            <html><head><title>FluxyChat SDK</title></head>
+            <body><p>Kotlin Multiplatform SDK — API reference in README.</p></body></html>
+            """.trimIndent(),
+        )
+    }
+}
+
+val jvmJavadocJar by tasks.registering(Jar::class) {
+    dependsOn(javadocStub)
+    archiveClassifier.set("javadoc")
+    from(javadocStubDir)
+}
+
+fun org.gradle.api.publish.maven.MavenPom.configureFluxyPom() {
+    name.set("FluxyChat SDK")
+    description.set("Kotlin Multiplatform WebSocket client for FluxyChat")
+    url.set("https://github.com/AlessandroFare/fluxychat")
+    licenses {
+        license {
+            name.set("MIT")
+            url.set("https://opensource.org/licenses/MIT")
+        }
+    }
+    developers {
+        developer {
+            id.set("fluxychat")
+            name.set("FluxyChat")
+            email.set("support@fluxychat.com")
+        }
+    }
+    scm {
+        connection.set("scm:git:git://github.com/AlessandroFare/fluxychat.git")
+        developerConnection.set("scm:git:ssh://github.com/AlessandroFare/fluxychat.git")
+        url.set("https://github.com/AlessandroFare/fluxychat")
+    }
+}
+
 kotlin {
     androidTarget {
         publishLibraryVariants("release")
@@ -87,22 +133,7 @@ android {
 
 publishing {
     publications.withType<MavenPublication>().configureEach {
-        pom {
-            name.set("FluxyChat SDK")
-            description.set("Kotlin Multiplatform WebSocket client for FluxyChat")
-            url.set("https://github.com/AlessandroFare/fluxychat")
-            licenses {
-                license {
-                    name.set("MIT")
-                    url.set("https://opensource.org/licenses/MIT")
-                }
-            }
-            scm {
-                connection.set("scm:git:git://github.com/AlessandroFare/fluxychat.git")
-                developerConnection.set("scm:git:ssh://github.com/AlessandroFare/fluxychat.git")
-                url.set("https://github.com/AlessandroFare/fluxychat")
-            }
-        }
+        pom.configureFluxyPom()
     }
     repositories {
         maven {
@@ -113,6 +144,12 @@ publishing {
                 password = System.getenv("OSSRH_PASS")
             }
         }
+    }
+}
+
+afterEvaluate {
+    publishing.publications.findByName("jvm")?.let { publication ->
+        (publication as MavenPublication).artifact(jvmJavadocJar)
     }
 }
 
