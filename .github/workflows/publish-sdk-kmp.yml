@@ -38,7 +38,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
-      - name: Publish to Maven Central (when OSSRH secrets set)
+      - name: Publish to Maven Central (Central Portal staging API)
         working-directory: packages/sdk-kmp
         env:
           OSSRH_USER: ${{ secrets.OSSRH_USER }}
@@ -46,12 +46,18 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASS }}
         run: |
+          SDK_VERSION="${GITHUB_REF_NAME#sdk-v}"
+          echo "Publishing com.fluxychat:shared:${SDK_VERSION}"
           if [[ -z "$OSSRH_USER" ]]; then
             echo "OSSRH_USER not set — skipping Maven publish (local tag build only)"
-            gradle :shared:assembleRelease
-          else
-            gradle :shared:publishAllPublicationsToSonatypeRepository
+            gradle -PsdkVersion="$SDK_VERSION" :shared:assembleRelease
+            exit 0
           fi
+          gradle -PsdkVersion="$SDK_VERSION" :shared:publishAndroidReleasePublicationToSonatypeRepository :shared:publishJvmPublicationToSonatypeRepository
+          AUTH=$(printf '%s:%s' "$OSSRH_USER" "$OSSRH_PASS" | base64 -w0)
+          curl -sfS -X POST \
+            -H "Authorization: Bearer $AUTH" \
+            "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.fluxychat?publishing_type=automatic"
 
   publish-ios:
     needs: test
@@ -68,7 +74,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
-      - name: Build XCFramework
+      - name: Build iOS frameworks
         working-directory: packages/sdk-kmp
         run: gradle :shared:linkReleaseFrameworkIosArm64 :shared:linkReleaseFrameworkIosSimulatorArm64
       - name: Upload XCFramework zip to release
@@ -78,9 +84,9 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           FRAME_DIR="packages/sdk-kmp/shared/build/bin/iosArm64/releaseFramework"
           if [[ ! -d "$FRAME_DIR" ]]; then
-            echo "XCFramework output not found — skip release asset"
+            echo "Framework output not found — skip release asset"
             exit 0
           fi
           cd "$FRAME_DIR"
-          zip -r FluxyChatSDK.xcframework.zip shared.framework 2>/dev/null || zip -r FluxyChatSDK.xcframework.zip .
+          zip -r FluxyChatSDK.xcframework.zip FluxyChatSDK.framework 2>/dev/null || zip -r FluxyChatSDK.xcframework.zip .
           gh release upload "$TAG" FluxyChatSDK.xcframework.zip --clobber || gh release create "$TAG" FluxyChatSDK.xcframework.zip

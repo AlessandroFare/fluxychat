@@ -1,4 +1,5 @@
 import { decodeFluxyJwtPayload } from "./jwt-utils";
+import { trimTrailingSlashes } from "./url-utils";
 
 /** Re-mint slightly before expiry to absorb clock skew (Portal parity). */
 const EXPIRY_SKEW_MS = 30_000;
@@ -31,7 +32,7 @@ export class FluxyClientCredentials {
   private mintInFlight: Promise<string> | undefined;
 
   constructor(options: FluxyClientCredentialsOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, "");
+    this.baseUrl = trimTrailingSlashes(options.baseUrl);
     this.apiKey = options.apiKey;
     this.userToken = options.token;
     if (typeof options.token === "string") {

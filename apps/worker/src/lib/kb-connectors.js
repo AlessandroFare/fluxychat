@@ -38,12 +38,28 @@ function articleCategory(sourceId) {
 }
 
 function stripHtml(html) {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  let out = String(html);
+  for (const tag of ["script", "style"]) {
+    const open = `<${tag}`;
+    const close = `</${tag}>`;
+    let lower = out.toLowerCase();
+    let idx = lower.indexOf(open);
+    while (idx !== -1) {
+      const endTag = lower.indexOf(close, idx);
+      if (endTag === -1) break;
+      out = `${out.slice(0, idx)} ${out.slice(endTag + close.length)}`;
+      lower = out.toLowerCase();
+      idx = lower.indexOf(open);
+    }
+  }
+  let start = out.indexOf("<");
+  while (start !== -1) {
+    const end = out.indexOf(">", start);
+    if (end === -1) break;
+    out = `${out.slice(0, start)} ${out.slice(end + 1)}`;
+    start = out.indexOf("<");
+  }
+  return out.replace(/\s+/g, " ").trim();
 }
 
 export async function listKbSources(env, { projectId }) {

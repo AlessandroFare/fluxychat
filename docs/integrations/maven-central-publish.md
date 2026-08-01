@@ -129,7 +129,23 @@ Monitor: **GitHub → Actions → Publish SDK KMP**.
 
 ### First release manual step
 
-After the first successful upload, open [central.sonatype.com](https://central.sonatype.com/) → **Deployments** → **Release** the staging deployment. Subsequent releases can use auto-publish once configured.
+After Gradle uploads artifacts, CI triggers the Central Portal **automatic upload** API:
+
+```bash
+curl -sfS -X POST \
+  -H "Authorization: Bearer $(printf '%s:%s' "$OSSRH_USER" "$OSSRH_PASS" | base64 -w0)" \
+  "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.fluxychat?publishing_type=automatic"
+```
+
+The workflow `.github/workflows/publish-sdk-kmp.yml` runs this after `gradle publish*`. Version comes from the tag (`sdk-v1.0.0` → `1.0.0` via `-PsdkVersion`).
+
+Gradle staging URL (replaces legacy `s01.oss.sonatype.org`, which returns **402** after OSSRH sunset):
+
+```
+https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/
+```
+
+Then open [central.sonatype.com](https://central.sonatype.com/) → **Deployments** → **Release** the staging deployment (first time only). Subsequent releases can use `publishing_type=automatic` once namespace auto-publish is enabled.
 
 ---
 
@@ -156,6 +172,7 @@ iOS: download `FluxyChatSDK.xcframework.zip` from the GitHub Release attached to
 |---------|-----|
 | Namespace pending | Wait for Sonatype approval; cannot publish until approved |
 | `401 Unauthorized` on publish | Regenerate user token; update `OSSRH_USER` / `OSSRH_PASS` |
+| `402 Payment Required` on publish | Repo still points at legacy `s01.oss.sonatype.org` — use Central Portal staging API URL above |
 | Signature verification failed | Re-upload public key to keyserver; check `GPG_KEY` is private key armored |
 | CI skips Maven publish | Log says `OSSRH_USER not set` — add secrets or expect build-only |
 | `./gradlew` not found locally | CI uses `gradle/actions/setup-gradle@v4`; local dev optional |

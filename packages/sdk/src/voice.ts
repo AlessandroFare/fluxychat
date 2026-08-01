@@ -1,3 +1,5 @@
+import { createFluxyId } from "./id-utils";
+
 export type VoiceStatus = "idle" | "connecting" | "connected" | "speaking" | "listening" | "disconnected";
 
 export type VoiceInterruptionMode = "none" | "manual" | "semantic" | "barge-in";
@@ -76,7 +78,7 @@ export interface VoiceManagerOptions {
 
 export function createVoiceManager(options: VoiceManagerOptions): VoiceManager {
   const sessions = new Map<string, VoiceSession>();
-  const createId = options.createId ?? (() => globalThis.crypto?.randomUUID?.() ?? `voice-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const createId = options.createId ?? (() => createFluxyId("voice"));
 
   function buildInterrupt(sessionId: string, config: VoiceConfig): (reason?: string) => Promise<void> {
     const mode = config.interruption?.mode ?? "none";
