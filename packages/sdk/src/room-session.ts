@@ -814,6 +814,18 @@ export function startFluxyRoomSession(
     tryWsDelete();
   };
 
+  const branchRoomFromMessage = async (fromMessageId: number) => {
+    if (!client) return;
+    const result = await client.branchRoomFromMessageRest(trimmedRoomId, fromMessageId, {
+      agentId: agentId || undefined,
+    });
+    const deleted = new Set(result.deletedIds);
+    if (deleted.size === 0) return;
+    setState((s) => ({
+      messages: s.messages.filter((m) => m.id == null || !deleted.has(m.id)),
+    }));
+  };
+
   const invokeAgent = async (
     content: string,
     invokeOptions?: { agentId?: string; replyTo?: number | null },
@@ -912,6 +924,7 @@ export function startFluxyRoomSession(
     sendReaction,
     sendReadReceipt,
     deleteMessage,
+    branchRoomFromMessage,
     invokeAgent,
     clearToolThread,
     sendClientEvent,

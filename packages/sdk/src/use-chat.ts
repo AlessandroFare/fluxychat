@@ -180,6 +180,7 @@ export function useChat({
     sendReaction: state.sendReaction,
     sendReadReceipt: state.sendReadReceipt,
     deleteMessage: state.deleteMessage,
+    branchRoomFromMessage: state.branchRoomFromMessage,
     invokeAgent: state.invokeAgent,
     toolThreadEvents: state.toolThreadEvents,
     clearToolThread: state.clearToolThread,

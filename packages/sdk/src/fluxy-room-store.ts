@@ -67,6 +67,7 @@ export interface FluxyRoomStoreState {
   sendReaction: (messageId: number, emoji: string, op?: "add" | "remove") => void;
   sendReadReceipt: (messageId: number) => void;
   deleteMessage: (messageId: number) => void;
+  branchRoomFromMessage: (fromMessageId: number) => Promise<void>;
   invokeAgent: (
     content: string,
     options?: { agentId?: string; replyTo?: number | null },
@@ -97,6 +98,7 @@ const inertRoomActions: Pick<
   | "sendReaction"
   | "sendReadReceipt"
   | "deleteMessage"
+  | "branchRoomFromMessage"
   | "invokeAgent"
   | "clearToolThread"
   | "sendClientEvent"
@@ -111,6 +113,7 @@ const inertRoomActions: Pick<
   sendReaction: noop,
   sendReadReceipt: noop,
   deleteMessage: noop,
+  branchRoomFromMessage: async () => notReady(),
   invokeAgent: async () => notReady(),
   clearToolThread: noop,
   sendClientEvent: noop,

@@ -133,8 +133,21 @@ ANTHROPIC_API_KEY=
 # ZENCODE_BASE_URL=https://your-zencode-host/v1
 # OPENROUTER_API_KEY=
 # GROQ_API_KEY=
-# Brave Search — required for live [web-search] / [deep-research] in agent rooms
+# Web search — [web-search] / [deep-research] in agent rooms (provider chain, first match wins)
+# Recommended: Tavily free tier (tavily.com) — ~1000 credits/month
+# TAVILY_API_KEY=
+#
+# Self-hosted SearXNG fallback — MUST be a public URL reachable from Cloudflare Workers.
+# Do NOT use 127.0.0.1: Workers run on Cloudflare edge, not your VPS.
+# Expose via Caddy (e.g. searxng.fluxychat.com → localhost:8888) with Basic Auth.
+# SEARXNG_BASE_URL=https://searxng.fluxychat.com
+# SEARXNG_BASIC_AUTH_USER=fluxyagent
+# SEARXNG_BASIC_AUTH_PASS=
+#
+# Optional paid legacy fallback (Brave credits since Feb 2026):
 # BRAVE_SEARCH_API_KEY=
+# Override provider order (comma-separated): tavily,searxng[,brave]
+# WEB_SEARCH_PROVIDER=tavily,searxng
 # DEEPSEEK_API_KEY=
 # TOGETHER_API_KEY=
 # FIREWORKS_API_KEY=

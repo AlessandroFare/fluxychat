@@ -2991,6 +2991,36 @@ export class FluxyChatClient {
     }
   }
 
+  async branchRoomFromMessageRest(
+    roomId: string,
+    fromMessageId: number,
+    options?: { agentId?: string; agentIds?: string[] },
+  ): Promise<{ deletedIds: number[] }> {
+    if (!this.token) {
+      throw new Error("branchRoomFromMessage requires authentication");
+    }
+    const url = new URL(`/rooms/${roomId}/branch`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify({
+        fromMessageId,
+        agentId: options?.agentId,
+        agentIds: options?.agentIds,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const reason = typeof body?.error === "string" ? body.error : `HTTP ${res.status}`;
+      throw new Error(`Failed to branch room: ${reason}`);
+    }
+    const body = await res.json();
+    return { deletedIds: Array.isArray(body.deletedIds) ? body.deletedIds : [] };
+  }
+
   async sendReactionRest(
     messageId: number,
     emoji: string,

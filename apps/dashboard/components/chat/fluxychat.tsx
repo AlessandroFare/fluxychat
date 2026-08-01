@@ -19,6 +19,9 @@ import {
   Copy,
   Pencil,
   RotateCw,
+  Pin,
+  Flag,
+  Languages,
   X,
 } from "lucide-react";
 import { useChat, useFluxyChatOptional } from "@fluxy-chat/react";
@@ -125,9 +128,9 @@ import { ReactionPicker } from "@/components/ui/reaction-picker";
 import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
 import { MarkdownBody } from "@fluxy-chat/ui";
 import {
+  canBranchFromMessage,
   detectToolFromMessageContent,
   findPriorUserMessage,
-  messageIdsFromIndex,
   stripComposerToolTags,
 } from "@/lib/chat-message-actions";
 
@@ -375,6 +378,7 @@ export function FluxyChat({
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
   const [branchFromMessageId, setBranchFromMessageId] = useState<number | null>(null);
+  const [branchError, setBranchError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{
     id: number; content: string; userId: string; createdAt: string; snippet: string;
@@ -524,7 +528,7 @@ export function FluxyChat({
     sendReadReceipt,
     retryMessage,
     editMessage,
-    deleteMessage,
+    branchRoomFromMessage,
     presenceMembers,
     subscriptionCount,
     reactions,
@@ -677,15 +681,26 @@ export function FluxyChat({
   }
 
   const truncateFromMessage = useCallback(
-    async (fromMessageId: number, inclusive: boolean) => {
-      const idx = visibleMessages.findIndex((m) => m.id === fromMessageId);
-      if (idx < 0) return;
-      const ids = messageIdsFromIndex(visibleMessages, idx, inclusive);
-      for (const id of [...ids].reverse()) {
-        await deleteMessage(id);
+    async (fromMessageId: number) => {
+      const policy = canBranchFromMessage(visibleMessages, fromMessageId, chatUserId, agentId);
+      if (!policy.allowed) {
+        if (policy.reason === "blocked_by_other_users") {
+          setBranchError("Can't edit or retry: someone else replied after this message.");
+        } else {
+          setBranchError("Can't edit or retry this message.");
+        }
+        return false;
+      }
+      setBranchError(null);
+      try {
+        await branchRoomFromMessage(fromMessageId);
+        return true;
+      } catch {
+        setBranchError("Failed to update conversation. Try again.");
+        return false;
       }
     },
-    [visibleMessages, deleteMessage],
+    [visibleMessages, chatUserId, agentId, branchRoomFromMessage],
   );
 
   async function copyMessageContent(content: string) {
@@ -698,6 +713,16 @@ export function FluxyChat({
 
   function beginEditMessage(message: (typeof messages)[number]) {
     if (message.id == null) return;
+    const policy = canBranchFromMessage(visibleMessages, message.id, chatUserId, agentId);
+    if (!policy.allowed) {
+      setBranchError(
+        policy.reason === "blocked_by_other_users"
+          ? "Can't edit: someone else replied after this message."
+          : "Can't edit this message.",
+      );
+      return;
+    }
+    setBranchError(null);
     setBranchFromMessageId(message.id);
     setDraft(stripComposerToolTags(message.content || ""));
     setReplyToId(null);
@@ -709,7 +734,8 @@ export function FluxyChat({
     if (message.id == null || !message.content?.trim()) return;
     const toolTag = detectToolFromMessageContent(message.content);
     const text = stripComposerToolTags(message.content);
-    await truncateFromMessage(message.id, true);
+    const ok = await truncateFromMessage(message.id);
+    if (!ok) return;
     await executeSend({
       templateSend: null,
       text,
@@ -723,7 +749,8 @@ export function FluxyChat({
     if (message.id == null) return;
     const idx = visibleMessages.findIndex((m) => m.id === message.id);
     const priorUser = findPriorUserMessage(visibleMessages, idx, agentId);
-    await truncateFromMessage(message.id, true);
+    const ok = await truncateFromMessage(message.id);
+    if (!ok) return;
     if (!priorUser?.content?.trim()) return;
     const toolTag = detectToolFromMessageContent(priorUser.content);
     await executeSend({
@@ -934,7 +961,11 @@ export function FluxyChat({
     const sendOpts = messageSendOptions(templateSend);
 
     if (branchFromMessageId != null) {
-      await truncateFromMessage(branchFromMessageId, true);
+      const branched = await truncateFromMessage(branchFromMessageId);
+      if (!branched) {
+        setRunPending(false);
+        return;
+      }
       setBranchFromMessageId(null);
     }
 
@@ -1502,6 +1533,10 @@ export function FluxyChat({
                   const parentMessage = m.parentId != null ? messagesById.get(m.parentId) ?? null : null;
                   const showHeader = !prev || prev.userId !== m.userId || showDate;
                   const hasReactions = m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0;
+                  const branchPolicy =
+                    m.id != null
+                      ? canBranchFromMessage(visibleMessages, m.id, chatUserId, agentId)
+                      : { allowed: false as const };
 
                   const floatingToolbar = m.id != null && !isStreaming ? (
                     <MessageHoverToolbar align={isSelf ? "end" : "start"} side="below">
@@ -1511,7 +1546,7 @@ export function FluxyChat({
                       >
                         <Copy className="size-3.5" />
                       </MessageAction>
-                      {isSelf ? (
+                      {isSelf && branchPolicy.allowed ? (
                         <>
                           <MessageAction
                             label="Edit"
@@ -1526,13 +1561,78 @@ export function FluxyChat({
                             <RotateCw className="size-3.5" />
                           </MessageAction>
                         </>
-                      ) : isAgent ? (
+                      ) : isAgent && branchPolicy.allowed ? (
                         <MessageAction
                           label="Retry"
                           onClick={() => void retryAgentMessage(m)}
                         >
                           <RotateCw className="size-3.5" />
                         </MessageAction>
+                      ) : null}
+                      {showPinnedBar && fluxyClient && trimmedRoomId ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (m.id == null) return;
+                            try {
+                              await fluxyClient.pinRoomMessage(trimmedRoomId, m.id);
+                              const res = await fluxyClient.listRoomPins(trimmedRoomId);
+                              setPins(res.pins ?? []);
+                            } catch {
+                              /* ignore */
+                            }
+                          }}
+                          className={messageToolbarButtonClass}
+                          title="Pin message"
+                        >
+                          <Pin className="size-3" />
+                          Pin
+                        </button>
+                      ) : null}
+                      {fluxyClient ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (m.id == null) return;
+                            try {
+                              const res = await fluxyClient.translateMessage(m.id, "en");
+                              const translated = res.translation?.translatedText;
+                              if (translated) {
+                                setTranslatedMessages((p) => ({ ...p, [String(m.id)]: translated }));
+                              }
+                            } catch {
+                              /* ignore */
+                            }
+                          }}
+                          className={messageToolbarButtonClass}
+                          title="Translate to English"
+                        >
+                          <Languages className="size-3" />
+                          Translate
+                        </button>
+                      ) : null}
+                      {fluxyClient && trimmedRoomId ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (m.id == null) return;
+                            try {
+                              await fluxyClient.reportMessage(trimmedRoomId, m.id);
+                              setReportedMessageIds((prev) => {
+                                const next = new Set(prev);
+                                next.add(m.id!);
+                                return next;
+                              });
+                            } catch {
+                              /* ignore */
+                            }
+                          }}
+                          className={messageToolbarButtonClass}
+                          title="Report message"
+                        >
+                          <Flag className="size-3" />
+                          Report
+                        </button>
                       ) : null}
                       <button
                         type="button"
@@ -1996,6 +2096,23 @@ export function FluxyChat({
             className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             onClick={() => setReplyToId(null)}
             aria-label="Cancel reply"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
+      ) : null}
+
+      {branchError ? (
+        <div
+          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+          data-testid="branch-error-banner"
+        >
+          <span className="min-w-0 flex-1">{branchError}</span>
+          <button
+            type="button"
+            className="shrink-0 rounded p-1 hover:bg-destructive/10"
+            onClick={() => setBranchError(null)}
+            aria-label="Dismiss"
           >
             <X className="h-3.5 w-3.5" aria-hidden />
           </button>
