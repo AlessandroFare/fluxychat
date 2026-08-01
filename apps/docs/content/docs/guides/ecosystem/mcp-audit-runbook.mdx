@@ -18,8 +18,8 @@ No mcp-audit account. Only:
 
 | Worker secret | GitHub secret | Must match |
 |---------------|---------------|------------|
-| `MARKETPLACE_AUDIT_HMAC_SECRET` | `WORKER_AUDIT_HMAC_SECRET` | ✅ Same value |
-| — | `WORKER_AUDIT_WEBHOOK_URL` | `https://<worker>/internal/marketplace/audit-result` |
+| `MARKETPLACE_AUDIT_HMAC_SECRET` | `WORKER_AUDIT_HMAC_SECRET` | Same value |
+| (none) | `WORKER_AUDIT_WEBHOOK_URL` | `https://YOUR-WORKER-HOST/internal/marketplace/audit-result` |
 
 Set Worker secret:
 
@@ -30,7 +30,7 @@ wrangler secret put MARKETPLACE_AUDIT_HMAC_SECRET
 
 ## Run audit
 
-**Automatic:** push changes under `examples/mcp/**`
+**Automatic:** push changes under `examples/mcp/`
 
 **Manual:** GitHub → Actions → **MCP marketplace audit** → Run workflow
 
@@ -38,7 +38,7 @@ Scanned examples (matrix): `github`, `slack`, `notion` under `examples/mcp/`.
 
 ## Verify in console
 
-**Marketplace → MCP Apps** — each app shows **Audit A–F** badge after webhook succeeds.
+**Marketplace → MCP Apps** — each app shows **Audit A-F** badge after webhook succeeds.
 
 ## Regenerate verified docs page
 
@@ -56,7 +56,7 @@ Updates:
 To refresh all servers already in the catalog:
 
 1. Re-run workflow manually
-2. Or add/update `examples/mcp/<server>/` and push
+2. Or add/update `examples/mcp/SERVER_NAME/` and push
 
 For third-party MCP servers not in the repo: contact maintainers and ask to add a verified entry or fork into `examples/mcp/` with permission.
 

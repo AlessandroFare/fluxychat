@@ -9,6 +9,9 @@ on:
       - ".github/workflows/mcp-marketplace-audit.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -18,25 +21,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: "20"
+          python-version: "3.12"
 
-      - uses: adudley78/setup-mcp-audit@v1
+      - name: Install mcp-audit CLI
+        run: pip install mcp-audit-scanner
 
       - name: Scan MCP example
         id: scan
         working-directory: examples/mcp/${{ matrix.server }}
         run: |
-          mcp-audit check --json > audit.json || true
-          SCORE=$(jq -r '.score.value // .score // 0' audit.json)
-          GRADE=$(jq -r '.score.grade // "F"' audit.json)
-          CRITICAL=$(jq '[.findings[]? | select(.severity == "critical" or .severity == "CRITICAL")] | length' audit.json)
-          HIGH=$(jq '[.findings[]? | select(.severity == "high" or .severity == "HIGH")] | length' audit.json)
-          echo "score=$SCORE" >> "$GITHUB_OUTPUT"
-          echo "grade=$GRADE" >> "$GITHUB_OUTPUT"
-          echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
-          echo "high=$HIGH" >> "$GITHUB_OUTPUT"
+          set +e
+          mcp-audit check --path . --json > audit.json
+          set -e
+          bash ../../../scripts/mcp-audit-github-output.sh audit.json
 
       - name: Upload audit artifact
         uses: actions/upload-artifact@v4

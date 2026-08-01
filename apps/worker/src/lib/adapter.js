@@ -737,7 +737,9 @@ export async function dispatchWebhook(request, context) {
   try {
     return await adapter.handleWebhook(request);
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err?.message || err) }), {
+    const isProduction = String(context?.env?.NODE_ENV || "").trim().toLowerCase() === "production";
+    const message = isProduction ? "webhook_dispatch_failed" : String(err?.message || err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

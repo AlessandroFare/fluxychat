@@ -1,3 +1,5 @@
+import { createFluxyId } from "./id-utils";
+
 export type RedactionLevel = "none" | "metadata_only" | "content_safe" | "full";
 
 export interface RedactionRule {
@@ -62,7 +64,7 @@ export function createSessionReplayManager(): SessionReplayManager {
 
   return {
     createReplaySession(originalId: string, redactionLevel: RedactionLevel, retentionDays: number): ReplaySession {
-      const id = `replay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const id = createFluxyId("replay");
       const now = Date.now();
       const session: ReplaySession = {
         sessionId: id,

@@ -3,7 +3,9 @@ package chat.fluxy.sdk
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocketSession
+import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
+import io.ktor.websocket.close
 import io.ktor.websocket.readText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,7 +59,7 @@ class FluxyRoomWebSocket(
         pingJob = null
         scope.launch {
             try {
-                session?.close()
+                session?.close(CloseReason(CloseReason.Codes.NORMAL, "disconnect"))
             } catch (_: Throwable) {
             }
             session = null
