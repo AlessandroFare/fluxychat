@@ -8,26 +8,9 @@ plugins {
 group = "com.fluxychat"
 version = findProperty("sdkVersion")?.toString() ?: "1.0.0-SNAPSHOT"
 
-val javadocStubDir = layout.buildDirectory.dir("javadoc-stub")
-val javadocStub by tasks.registering {
-    val outDir = javadocStubDir.get().asFile
-    outputs.dir(outDir)
-    doLast {
-        outDir.mkdirs()
-        java.io.File(outDir, "index.html").writeText(
-            """
-            <!DOCTYPE html>
-            <html><head><title>FluxyChat SDK</title></head>
-            <body><p>Kotlin Multiplatform SDK — API reference in README.</p></body></html>
-            """.trimIndent(),
-        )
-    }
-}
-
 val jvmJavadocJar by tasks.registering(Jar::class) {
-    dependsOn(javadocStub)
     archiveClassifier.set("javadoc")
-    from(javadocStubDir)
+    from("javadoc-stub")
 }
 
 fun org.gradle.api.publish.maven.MavenPom.configureFluxyPom() {

@@ -34,12 +34,20 @@ export interface JourneyMapping {
   clearUserJourney(userId: string): void;
 }
 
+/** CodeQL-safe step id — crypto.getRandomValues only (see js/insecure-randomness). */
+function createJourneyStepId(): string {
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  const suffix = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `step-${suffix}`;
+}
+
 export function createJourneyMapping(): JourneyMapping {
   const journeys = new Map<string, CustomerJourney>();
 
   return {
     recordStep(userId, input) {
-      const id = `step-${globalThis.crypto.randomUUID()}`;
+      const id = createJourneyStepId();
       const step: JourneyStep = { ...input, id };
 
       let journey = journeys.get(userId);
