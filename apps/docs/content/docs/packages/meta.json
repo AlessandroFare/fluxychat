@@ -1,5 +1,6 @@
 {
   "pages": [
+    "ui-kit",
     "agent",
     "config",
     "create-fluxy-chat",

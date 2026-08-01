@@ -3,16 +3,12 @@ title: "Billing overage policy (v1)"
 description: "This document defines the default overage behavior for FluxyChat plans in the current runtime model."
 ---
 
-# Billing overage policy (v1)
-
-This document defines the default overage behavior for FluxyChat plans in the current runtime model.
-
 ## Current enforcement model
 
 - Quotas are enforced monthly by `project_usage_monthly`.
 - When a project exceeds its quota for a metered metric, the API returns:
-  - HTTP **`402`**
-  - error code **`quota_exceeded`**
+  - HTTP `402`
+  - error code `quota_exceeded`
   - metadata: `metric`, `limit`, `used`, `month`
 
 Affected runtime paths include:

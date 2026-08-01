@@ -3,10 +3,6 @@ title: "Scheduled Workflows (P12-L)"
 description: "Cron jobs run through `FluxyScheduledWorkflow` with Cloudflare Workflows scheduled bindings instead of the Worker `scheduled` handler."
 ---
 
-# Scheduled Workflows (P12-L)
-
-Cron jobs run through `FluxyScheduledWorkflow` with Cloudflare Workflows scheduled bindings instead of the Worker `scheduled` handler.
-
 ## Jobs
 
 | Cron | Task |
@@ -29,7 +25,7 @@ class_name = "FluxyScheduledWorkflow"
 schedules = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *"]
 ```
 
-When `WORKFLOW_SCHEDULES_ENABLED` is **`false`** (default in `wrangler.toml`), cron runs via the Worker **`scheduled`** handler and `[triggers] crons`.
+When `WORKFLOW_SCHEDULES_ENABLED` is `false` (default in `wrangler.toml`), cron runs via the Worker `scheduled` handler and `[triggers] crons`.
 
 Set `WORKFLOW_SCHEDULES_ENABLED=true` and uncomment `[[workflows]]` to move jobs to **Cloudflare Workflows**; the Worker `scheduled` handler becomes a no-op.
 

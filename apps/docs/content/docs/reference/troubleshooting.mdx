@@ -3,10 +3,6 @@ title: "Troubleshooting guide"
 description: "Common failure modes in production and local development."
 ---
 
-# Troubleshooting guide
-
-Common failure modes in production and local development.
-
 ## Quick tools
 
 - **Health**: `GET /health`
@@ -26,7 +22,7 @@ Common failure modes in production and local development.
 
 ### Diagnosis
 
-- **Token**: confirm the WS URL includes `token=&lt;JWT&gt;` and the token is not expired (`exp`)
+- **Token**: confirm the WS URL includes `token=<JWT>` and the token is not expired (`exp`)
 - **Membership**: WS is rejected if the user is not a room member
 - **Rate limit**: aggressive clients may see HTTP 429 and/or rejected WS messages
 
