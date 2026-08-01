@@ -35,6 +35,7 @@ import {
 } from "./message-validation.js";
 import { safeSchedulePostMessageAutomations } from "./post-message-automations-safe.js";
 import { isHumanHandoffActive } from "./room-handoff.js";
+import { buildWebSearchContext, detectResearchMode } from "./web-search.js";
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -502,6 +503,14 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       if (historyMsg) messages.push(historyMsg);
     }
     messages.push({ role: "user", content: userMessage });
+
+    const researchMode = detectResearchMode(userMessage);
+    if (researchMode) {
+      const searchContext = await buildWebSearchContext(env, userMessage, researchMode);
+      if (searchContext) {
+        messages.push({ role: "system", content: searchContext });
+      }
+    }
 
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       iterations++;

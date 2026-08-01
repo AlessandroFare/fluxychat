@@ -12,8 +12,7 @@ import { ConsoleFeedback } from "../components/console-feedback";
 import { Button, Section, Panel } from "../components/ui";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
-import { createJourneyMapping } from "@fluxy-chat/sdk";
-import { createConversationAnalytics } from "@fluxy-chat/sdk";
+import { createJourneyMapping, createConversationAnalytics, secureRandomInt, secureRandomIntInRange } from "@fluxy-chat/sdk";
 
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { downloadBlob } from "@/lib/download-blob";
@@ -516,22 +515,16 @@ function JourneyMappingSection() {
 
   function addLog(msg: string) { setLog((p) => [msg, ...p.slice(0, 9)]); }
 
-  function secureRandomIndex(maxExclusive: number): number {
-    if (!Number.isInteger(maxExclusive) || maxExclusive <= 0) return 0;
-    const random = new Uint32Array(1);
-    const limit = Math.floor(0x100000000 / maxExclusive) * maxExclusive;
-    let value = 0;
-    do {
-      globalThis.crypto.getRandomValues(random);
-      value = random[0]!;
-    } while (value >= limit);
-    return value % maxExclusive;
-  }
-
   function recordRandomStep() {
-    const channel = JOURNEY_CHANNELS[secureRandomIndex(JOURNEY_CHANNELS.length)];
-    const action = JOURNEY_ACTIONS[secureRandomIndex(JOURNEY_ACTIONS.length)];
-    const step = jm.recordStep(userId, { channel, action, timestamp: Date.now(), durationMs: 200 + secureRandomIndex(800), metadata: {} });
+    const channel = JOURNEY_CHANNELS[secureRandomInt(JOURNEY_CHANNELS.length)];
+    const action = JOURNEY_ACTIONS[secureRandomInt(JOURNEY_ACTIONS.length)];
+    const step = jm.recordStep(userId, {
+      channel,
+      action,
+      timestamp: Date.now(),
+      durationMs: secureRandomIntInRange(200, 1000),
+      metadata: {},
+    });
     setSteps((p) => [...p, { channel, action, ts: step.timestamp }]);
     setPaths(jm.getPaths(1));
     addLog(`${channel} → ${action}`);
@@ -539,9 +532,15 @@ function JourneyMappingSection() {
 
   function simulateJourney(n: number) {
     for (let i = 0; i < n; i++) {
-      const channel = JOURNEY_CHANNELS[secureRandomIndex(JOURNEY_CHANNELS.length)];
-      const action = JOURNEY_ACTIONS[secureRandomIndex(JOURNEY_ACTIONS.length)];
-      jm.recordStep(`sim-user-${1 + secureRandomIndex(5)}`, { channel, action, timestamp: Date.now() + i, durationMs: 100 + secureRandomIndex(900), metadata: {} });
+      const channel = JOURNEY_CHANNELS[secureRandomInt(JOURNEY_CHANNELS.length)];
+      const action = JOURNEY_ACTIONS[secureRandomInt(JOURNEY_ACTIONS.length)];
+      jm.recordStep(`sim-user-${1 + secureRandomInt(5)}`, {
+        channel,
+        action,
+        timestamp: Date.now() + i,
+        durationMs: secureRandomIntInRange(100, 1000),
+        metadata: {},
+      });
     }
     setPaths(jm.getPaths(1));
     addLog(`Simulated ${n} steps across random users`);

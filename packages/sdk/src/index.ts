@@ -4982,6 +4982,8 @@ export {
   type JourneyMapping,
 } from "./journey-mapping";
 
+export { secureRandomInt, secureRandomIntInRange } from "./secure-random";
+
 // G-11: Expert routing
 export {
   createExpertRouter,
