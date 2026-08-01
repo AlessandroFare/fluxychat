@@ -44,3 +44,36 @@ export function messageIdsFromIndex(
     .map((m) => m.id)
     .filter((id): id is number => id != null);
 }
+
+export interface BranchPolicyResult {
+  allowed: boolean;
+  reason?: "not_authenticated" | "not_found" | "forbidden_anchor" | "blocked_by_other_users";
+}
+
+/** Client-side mirror of worker branch policy (1:1 agent rooms + no third-party tails). */
+export function canBranchFromMessage(
+  messages: FluxyChatMessage[],
+  fromMessageId: number,
+  userId: string | undefined,
+  agentId: string,
+): BranchPolicyResult {
+  if (!userId) return { allowed: false, reason: "not_authenticated" };
+  const idx = messages.findIndex((m) => m.id === fromMessageId);
+  if (idx < 0) return { allowed: false, reason: "not_found" };
+
+  const anchor = messages[idx];
+  const tail = messages.slice(idx);
+  const anchorIsUser = anchor.userId === userId;
+  const anchorIsAgent = Boolean(agentId && anchor.userId === agentId);
+  if (!anchorIsUser && !anchorIsAgent) {
+    return { allowed: false, reason: "forbidden_anchor" };
+  }
+
+  for (const row of tail) {
+    if (row.userId === userId) continue;
+    if (agentId && row.userId === agentId) continue;
+    return { allowed: false, reason: "blocked_by_other_users" };
+  }
+
+  return { allowed: true };
+}

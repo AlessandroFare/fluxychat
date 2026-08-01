@@ -40,6 +40,7 @@ import {
 // B-4: hoist dynamic imports to top-level so they run once at module init.
 import { resolveMessageExpiry } from "../lib/message-ttl.js";
 import { resolveMessageVisibility, messageVisibilitySql } from "../lib/message-visibility.js";
+import { branchRoomFromMessage } from "../lib/message-branch.js";
 
 export async function dispatchMessagesRoutes(request, url, h) {
   const {
@@ -838,6 +839,81 @@ export async function dispatchMessagesRoutes(request, url, h) {
         editedAt: now,
       },
     });
+  }
+
+  // Branch conversation: POST /rooms/:roomId/branch
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/branch") &&
+    request.method === "POST"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      console.error("JWT verify error", err);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", {
+        status: 401,
+        headers: corsHeaders,
+      });
+    }
+
+    const parts = url.pathname.split("/");
+    const roomId = parts[2];
+    if (!roomId || !isValidId(roomId)) {
+      return json({ error: "roomId required" }, { status: 400 });
+    }
+
+    const canAccess = await canAccessRoom(env, auth, roomId);
+    if (!canAccess) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => null);
+    const fromMessageId = Number(body?.fromMessageId);
+    if (!Number.isFinite(fromMessageId) || fromMessageId <= 0) {
+      return json({ error: "fromMessageId required" }, { status: 400 });
+    }
+
+    const { userId, projectId: authProjectId, roles } = auth;
+    const agentIds = Array.isArray(body?.agentIds)
+      ? body.agentIds.filter((id) => typeof id === "string" && id.trim())
+      : typeof body?.agentId === "string" && body.agentId.trim()
+        ? [body.agentId.trim()]
+        : [];
+
+    const isAdmin = hasAnyRole(roles, ["owner", "admin"]);
+    const result = await branchRoomFromMessage(
+      env,
+      authProjectId,
+      roomId,
+      fromMessageId,
+      userId,
+      agentIds,
+      { isAdmin },
+    );
+
+    if (!result.ok) {
+      const status = result.reason === "not_found" ? 404 : result.reason === "forbidden_anchor" ? 403 : 409;
+      return json({ error: result.reason, blockedUserId: result.blockedUserId ?? null }, { status });
+    }
+
+    for (const messageId of result.deletedIds) {
+      await fanoutRoomInternal(env, authProjectId, roomId, "/announce", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "delete",
+          id: messageId,
+          roomId,
+          userId,
+          deletedAt: result.deletedAt,
+          branch: true,
+        }),
+      });
+    }
+
+    return json({ ok: true, deletedIds: result.deletedIds, deletedAt: result.deletedAt });
   }
 
   // Authenticated message delete endpoint: DELETE /messages/:id
