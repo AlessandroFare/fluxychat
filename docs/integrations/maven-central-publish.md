@@ -173,6 +173,8 @@ iOS: download `FluxyChatSDK.xcframework.zip` from the GitHub Release attached to
 | `401 Unauthorized` on publish | Regenerate user token; update `OSSRH_USER` / `OSSRH_PASS` |
 | `402 Payment Required` on publish | Repo still points at legacy `s01.oss.sonatype.org` — use Central Portal staging API URL above |
 | Signature verification failed | Re-upload public key to keyserver; check `GPG_KEY` is private key armored |
+| `Javadocs must be provided` | JVM publication needs `-javadoc.jar` — see `jvmJavadocJar` in `shared/build.gradle.kts` |
+| `Developers information is missing` | POM must include `<developers>` — configured in `configureFluxyPom()` |
 | CI skips Maven publish | Log says `OSSRH_USER not set` — add secrets or expect build-only |
 | `./gradlew` not found locally | CI uses `gradle/actions/setup-gradle@v4`; local dev optional |
 

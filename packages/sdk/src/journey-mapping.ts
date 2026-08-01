@@ -1,5 +1,3 @@
-import { createFluxyId } from "./id-utils";
-
 export interface JourneyStep {
   id: string;
   channel: string;
@@ -41,7 +39,7 @@ export function createJourneyMapping(): JourneyMapping {
 
   return {
     recordStep(userId, input) {
-      const id = createFluxyId("step");
+      const id = `step-${globalThis.crypto.randomUUID()}`;
       const step: JourneyStep = { ...input, id };
 
       let journey = journeys.get(userId);
