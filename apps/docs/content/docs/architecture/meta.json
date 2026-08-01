@@ -1,8 +1,11 @@
 {
+  "title": "Architecture",
+  "icon": "Landmark",
   "pages": [
     "platform-expansion-layer",
     "response-envelope-extension",
     "vertical-platform-expansion",
-    "worker-splitting-plan"
+    "worker-splitting-plan",
+    "competitive-strategy"
   ]
 }

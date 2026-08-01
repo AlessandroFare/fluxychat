@@ -1,9 +1,7 @@
 ---
 title: "Custom domain white-label (P12-G)"
-description: "Route `https://chat.yourcompany.com` to a FluxyChat **project** on the Worker. Useful for embed widgets (P12-A), guest chat, and branded API endpoints without e"
+description: "Route `https://chat.yourcompany.com` to a FluxyChat project on the Worker. Useful for embed widgets (P12-A), guest chat, and branded API endpoints without e"
 ---
-
-# Custom domain white-label (P12-G)
 
 Route `https://chat.yourcompany.com` to a FluxyChat **project** on the Worker. Useful for embed widgets (P12-A), guest chat, and branded API endpoints without exposing the platform `api.*` hostname.
 
@@ -67,7 +65,7 @@ await client.updateCustomDomain(id, { status: "active" });
 
 White-label the chat shell on your marketing site and embed iframe:
 
-1. Set **`data-theme`** on the host page (or `&lt;html&gt;`) so your CSS can scope brand tokens:
+1. Set `data-theme` on the host page (or `<html>`) so your CSS can scope brand tokens:
 
 ```html
 <html lang="en" data-theme="acme">
@@ -95,6 +93,6 @@ document.documentElement.setAttribute("data-theme", host.brand?.themeId ?? "defa
 
 ## Related
 
-- [Embeddable chat widget](/docs/embed-widget)
-- [Hosted domains (fluxychat.com setup)](/docs/hosted-domains)
+- [Embeddable chat widget](/docs/reference/embed-widget)
+- [Hosted domains (fluxychat.com setup)](/docs/reference/hosted-domains)
 

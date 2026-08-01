@@ -1,4 +1,6 @@
 {
+  "title": "Operations",
+  "icon": "Wrench",
   "pages": [
     "d1-schema-consolidation",
     "environment-setup",
@@ -8,6 +10,8 @@
     "post-launch-checklist",
     "production-demo-and-sms",
     "staging-and-status",
-    "us-sms-compliance-playbook"
+    "us-sms-compliance-playbook",
+    "production-setup",
+    "voice-load-test-report"
   ]
 }

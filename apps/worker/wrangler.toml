@@ -36,6 +36,12 @@ BROWSER_ENABLED = "false"
 # - QUOTA_MESSAGES_PER_MONTH / QUOTA_AGENT_INVOKES_PER_MONTH / QUOTA_WEBHOOK_DELIVERIES_PER_MONTH
 # - ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
 # - tenant JWT secrets stored in D1 project_secrets
+# - Web search ([web-search] / [deep-research] agent prompts):
+#   TAVILY_API_KEY=tvly-...   # primary (free tier ~1000/mo)
+#   SEARXNG_BASE_URL=https://searxng.yourdomain.com   # public HTTPS only — NOT 127.0.0.1
+#   SEARXNG_BASIC_AUTH_USER=fluxyagent
+#   SEARXNG_BASIC_AUTH_PASS=...
+#   WEB_SEARCH_PROVIDER=tavily,searxng
 
 [[durable_objects.bindings]]
 name = "ROOM"
