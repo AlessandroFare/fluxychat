@@ -1,11 +1,15 @@
 export interface CompareRow {
   label: string;
+  /** Hosted proprietary chat SDK column (internal key: legacy `portal`). */
   portal: string;
   stream: string;
   ably: string;
   pusher: string;
   fluxy: string;
 }
+
+/** Public column header for the hosted chat SDK competitor column. */
+export const COMPARE_HOSTED_CHAT_HEADER = "Hosted chat SDK";
 
 export const COMPARE_ROWS: readonly CompareRow[] = [
   {
@@ -58,7 +62,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "In-app chat + operator console",
-    portal: "Hosted Portal dashboard",
+    portal: "Hosted vendor dashboard",
     stream: "Separate product areas",
     ably: "Console + APIs",
     pusher: "Channels dashboard",
@@ -71,6 +75,22 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     ably: "Strong SDKs",
     pusher: "Channels SDKs",
     fluxy: "@fluxy-chat/sdk + vanilla store",
+  },
+  {
+    label: "Time to first message (CLI)",
+    portal: "npx create-* — fast hosted path",
+    stream: "SDK install + dashboard setup",
+    ably: "SDK install + dashboard setup",
+    pusher: "SDK install + dashboard setup",
+    fluxy: "npx create-fluxy-chat my-chat --minimal",
+  },
+  {
+    label: "Drop-in chat widget (no custom UI)",
+    portal: "Pre-built React components + themes",
+    stream: "UI kit / components (separate)",
+    ably: "Headless-first",
+    pusher: "Headless-first",
+    fluxy: "@fluxy-chat/ui-kit — FluxyChatWidget + FluxyInboxPanel",
   },
   {
     label: "Agent tool events on room WebSocket",
@@ -252,10 +272,10 @@ export interface AlternativeApproach {
 /** Cloudflare-adjacent or DIY stacks buyers compare mentally. */
 export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
   {
-    name: "Portal (chat-first SDK)",
+    name: "Hosted chat SDK (proprietary)",
     bestFor: "Teams optimizing for React DX — SSR-safe hooks, inbox feed, streaming agents, hosted dashboard.",
     tradeoff: "Proprietary hosted service — no MIT self-host on your Cloudflare account; broader platform modules (stream, IoT, fleet) are on you.",
-    fluxyAngle: "FluxyChat matches Portal on inbox/useInbox, connection UX, and AI timeline — adds MIT self-host, Workers/DO-native deployment, and 14 channel adapters.",
+    fluxyAngle: "FluxyChat matches inbox/useInbox, connection UX, and AI timeline — adds MIT self-host, Workers/DO-native deployment, and 14 channel adapters.",
   },
   {
     name: "PartyKit (+ DO demos on X)",
@@ -435,6 +455,86 @@ export const BUILD_VS_BUY = {
     "FluxyChat: room DO + D1 + SDK + console for the full stack; MIT self-host when lock-in or bill shock is the objection.",
   ],
 } as const;
+
+/** SDK gzip benchmarks — from `pnpm run check:bundle-size` (artifact sizes; apps tree-shake further). */
+export const SDK_BUNDLE_BENCHMARKS = [
+  {
+    package: "@fluxy-chat/react",
+    gzipKb: 0.3,
+    budgetKb: 20,
+    note: "Chat-only React hooks entry",
+  },
+  {
+    package: "@fluxy-chat/sdk/react",
+    gzipKb: 0.4,
+    budgetKb: 20,
+    note: "Transitional react subpath",
+  },
+  {
+    package: "@fluxy-chat/sdk",
+    gzipKb: 18.3,
+    budgetKb: 160,
+    note: "Full client (import only what you need)",
+  },
+  {
+    package: "Typical hosted chat SDK (reference)",
+    gzipKb: 14,
+    budgetKb: null,
+    note: "Industry reference for chat-only tree-shaken apps",
+  },
+] as const;
+
+/** Internal product excellence tracker — see docs/PORTAL-ZERO-BUDGET-ROADMAP.md */
+export const PRODUCT_EXCELLENCE_TRACKER = [
+  { id: "PG-ZB-1", phase: "DX", label: "create-fluxy-chat React template (60s first message)", status: "done" as const },
+  { id: "PG-ZB-2", phase: "DX", label: "Public bundle benchmark table", status: "done" as const },
+  { id: "PG-ZB-3", phase: "DX", label: "Deploy to Cloudflare one-click", status: "done" as const },
+  { id: "PG-ZB-4", phase: "Docs", label: "Feature parity checklist", status: "done" as const },
+  { id: "PG-ZB-5", phase: "DX", label: "Inbox demo video in README", status: "done" as const },
+  { id: "PG-ZB-6", phase: "MCP", label: "Official MCP server examples (clone & run)", status: "done" as const },
+  { id: "PG-ZB-7", phase: "MCP", label: "mcp-audit CI + marketplace badge", status: "done" as const },
+  { id: "PG-ZB-8", phase: "UI", label: "@fluxy-chat/ui starter themes (4 presets)", status: "done" as const },
+  { id: "PG-ZB-9", phase: "Docs", label: "Chat-only docs nav slice", status: "done" as const },
+  { id: "PG-ZB-10", phase: "Voice", label: "LiveKit self-hosted voice pipeline", status: "done" as const },
+  { id: "PG-ZB-11", phase: "CRM", label: "Activepieces embed for helpdesk flows", status: "done" as const },
+  { id: "PG-ZB-12", phase: "Mobile", label: "Kotlin Multiplatform unified SDK", status: "done" as const },
+  { id: "PG-COMP-1", phase: "UI", label: "@fluxy-chat/ui-kit drop-in widget + inbox", status: "done" as const },
+  { id: "PG-COMP-2", phase: "DX", label: "create-fluxy-chat --minimal chat-only scaffold", status: "done" as const },
+  { id: "PG-COMP-3", phase: "Mobile", label: "KMP Maven Central + iOS XCFramework CI", status: "done" as const },
+  { id: "PG-COMP-4", phase: "Voice", label: "LiveKit load-test scripts + report template", status: "done" as const },
+  { id: "PG-COMP-5", phase: "MCP", label: "MCP verified servers page + audit badge", status: "done" as const },
+  { id: "PG-COMP-6", phase: "Docs", label: "Competitive strategy + production setup guides", status: "done" as const },
+] as const;
+
+export type ProductExcellenceStatus = (typeof PRODUCT_EXCELLENCE_TRACKER)[number]["status"];
+
+/** @deprecated Use PRODUCT_EXCELLENCE_TRACKER for public-facing copy */
+export const PORTAL_GAP_CLOSURE = [
+  { id: "PG-P0-1", phase: "P0", label: "React bundle ≤20 kB gzip (CI gate)", status: "done" as const },
+  { id: "PG-P0-2", phase: "P0", label: "Chat-only quickstart (Portal 3-step path)", status: "done" as const },
+  { id: "PG-P0-3", phase: "P0", label: "Compare page gap tracker", status: "done" as const },
+  { id: "PG-P0-4", phase: "P0", label: "Migrate from Portal guide", status: "done" as const },
+  { id: "PG-P0-5", phase: "P0", label: "Inbox UX parity (onItem, catch-up, mark-read, badge)", status: "done" as const },
+  { id: "PG-P0-6", phase: "P0", label: "Portal-parity E2E smoke + integrated", status: "done" as const },
+  { id: "PG-P0-7", phase: "P0", label: "Tree-shaken bundle measurement docs (Vite)", status: "done" as const },
+  { id: "PG-P1-1", phase: "P1", label: "Embed widget polish (mobile, streaming agent bubble)", status: "done" as const },
+  { id: "PG-P1-2", phase: "P1", label: "@fluxy-chat/ui npm + Storybook", status: "done" as const },
+  { id: "PG-P1-3", phase: "P1", label: "Hosted zero-ops onboarding wizard", status: "done" as const },
+  { id: "PG-P1-4", phase: "P1", label: "Chat-only landing slice on /get-started", status: "done" as const },
+  { id: "PG-P1-5", phase: "P1", label: "Agent reply without speaker prefix + scroll stick-bottom", status: "done" as const },
+  { id: "PG-P1-6", phase: "P1", label: "Streaming edit protocol (edit inbound)", status: "done" as const },
+  { id: "PG-P2-1", phase: "P2", label: "Voice AI pipeline <300ms (MO-9.1)", status: "done" as const },
+  { id: "PG-P2-2", phase: "P2", label: "Huddles A/V + screen share (MO-9.2)", status: "done" as const },
+  { id: "PG-P2-3", phase: "P2", label: "Cross-channel customer memory UI (MO-9.3)", status: "done" as const },
+  { id: "PG-P2-4", phase: "P2", label: "MCP Apps marketplace curated (MO-12.1)", status: "done" as const },
+  { id: "PG-P2-5", phase: "P2", label: "CRM native (Zendesk/HubSpot/Intercom/SF)", status: "done" as const },
+  { id: "PG-P3-1", phase: "P3", label: "Kotlin Android SDK (MD-5)", status: "done" as const },
+  { id: "PG-P3-2", phase: "P3", label: "Swift iOS SDK (MD-5)", status: "done" as const },
+  { id: "PG-P4-1", phase: "P4", label: "SOC 2 Type 2 signed audit", status: "deferred" as const },
+  { id: "PG-P4-2", phase: "P4", label: "HIPAA BAA legal template", status: "deferred" as const },
+] as const;
+
+export type PortalGapStatus = (typeof PORTAL_GAP_CLOSURE)[number]["status"];
 
 export const PRODUCT_CHAT_VS_SUPPORT = {
   title: "In-app realtime platform, not a support desk",

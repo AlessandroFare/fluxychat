@@ -1,0 +1,106 @@
+---
+title: Migrate from Portal
+description: "Map Portal concepts to FluxyChat: rooms, inbox, agents, connection state, and hosted vs self-host."
+---
+
+# Migrate from Portal to FluxyChat
+
+Portal ([useportal.co](https://useportal.co)) and FluxyChat both target **in-app chat with strong React DX**. FluxyChat adds **MIT self-host**, **Cloudflare Workers + D1**, and optional platform modules (stream, collab, game, IoT).
+
+## Concept mapping
+
+| Portal | FluxyChat |
+|--------|-----------|
+| Hosted Portal project | Hosted beta or self-host Worker + D1 |
+| Room / channel | `roomId` (string) — one Durable Object per room |
+| `useChat({ roomId, client })` | Same — `@fluxy-chat/react` |
+| `useInbox` / `onItem` | `useInbox({ client })` + REST `/inbox` |
+| `connectionState` / `degraded` | `connectionState.status` + `getConnectionStatusLabel()` |
+| Streaming agent | `@assistant` mention or `POST /agents/:id/invoke` |
+| Member JWT | `POST /auth/token` with project API key |
+| Templates / member prefs | `POST /templates`, `PATCH /members/:id/preferences` |
+| Middleware hooks | `fluxy.config.ts` + message middleware pipeline |
+| Proprietary cloud only | **MIT self-host** on your Cloudflare account |
+
+## Migration steps
+
+### 1. Provision FluxyChat
+
+- **Hosted:** sign up at [fluxychat.com](https://fluxychat.com) → onboarding → Worker URL + JWT.
+- **Self-host:** [Self-hosting guide](/docs/getting-started/self-hosting) — `wrangler deploy`, D1 migrations.
+
+### 2. Replace client bootstrap
+
+```tsx
+// Before (Portal — illustrative)
+// const client = new PortalClient({ ... });
+
+// After
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({
+  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,
+  userId: session.userId,
+  token: memberJwtFromYourBackend,
+});
+```
+
+Mint JWTs **server-side** only — never expose API keys in the browser.
+
+### 3. Map room IDs
+
+Use the same string IDs where possible (`support-123`, `dm:userA:userB`). FluxyChat scopes rooms by **project** (tenant) via JWT `projectId`.
+
+### 4. History and reconnect
+
+```tsx
+const { messages, loadMore, hasMore, connectionState } = useChat({
+  roomId,
+  client,
+  replay: "connect",
+});
+```
+
+- `loadMore()` — cursor pagination from D1 (not cache-only).
+- `clientMessageId` on send — idempotent retries (Portal-style delivery).
+
+### 5. Inbox feed
+
+Replace Portal user-channel `onItem` with:
+
+```tsx
+import { useInbox } from "@fluxy-chat/react";
+
+const { items, unreadCount } = useInbox({ client });
+```
+
+### 6. Agents
+
+Portal streaming agents → FluxyChat `@mention` in room or REST invoke:
+
+```bash
+curl -X POST "$WORKER/agents/$AGENT_ID/invoke" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"roomId":"support","content":"Summarize this thread"}'
+```
+
+Tool events appear on the **same WebSocket** as chat (`tool_call`, `tool_result`).
+
+## What you gain
+
+- Self-host on your Cloudflare account (no vendor lock-in)
+- 14 omnichannel adapters (Slack, Discord, Telegram, WhatsApp, …)
+- Durable agent runs (D1), HITL, MCP, LLM middleware
+- Enterprise: SSO/SCIM, audit, retention, DLP (same Worker)
+
+## What to plan separately
+
+- **Native iOS/Android SDKs** — FluxyChat: React Native + Flutter today; Kotlin/Swift on roadmap (Portal is also web-first).
+- **Voice <300ms** — enable when MO-9.1 voice pipeline is deployed on your Worker.
+
+## See also
+
+- [Chat-only quickstart](/docs/getting-started/chat-only-quickstart)
+- [Portal gap closure tracker](https://github.com/fluxychat/fluxychat/blob/main/docs/PORTAL-GAP-CLOSURE.md)
+- [Compare page](https://fluxychat.com/compare)

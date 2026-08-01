@@ -1,3 +1,5 @@
+import { mintLiveKitAccessToken } from "./livekit-token.js";
+
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -178,13 +180,31 @@ export async function getCallStats(env, { projectId }) {
   };
 }
 
-export function generateToken(provider, { roomId, userId, displayName, ttl }) {
+export async function generateToken(env, provider, { roomId, userId, displayName, ttl, roomName }) {
+  const livekitRoom = roomName || roomId;
+
+  if (provider === "livekit") {
+    const minted = await mintLiveKitAccessToken(env, {
+      roomName: livekitRoom,
+      identity: userId,
+      displayName,
+      ttlSeconds: ttl || 3600,
+    });
+    if (minted.error) {
+      const exp = Math.floor(Date.now() / 1000) + (ttl || 86400);
+      return {
+        provider: "livekit",
+        stub: true,
+        payload: { room: livekitRoom, sub: userId, name: displayName, exp },
+        note: minted.message,
+      };
+    }
+    return minted;
+  }
+
   const exp = Math.floor(Date.now() / 1000) + (ttl || 86400);
   const payload = { room: roomId, sub: userId, name: displayName, exp };
 
-  if (provider === "livekit") {
-    return { provider: "livekit", payload, note: "Use LiveKit SDK to generate JWT server-side" };
-  }
   if (provider === "daily") {
     return { provider: "daily", payload, note: "Use Daily.co API to create meeting token" };
   }

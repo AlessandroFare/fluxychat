@@ -1,10 +1,54 @@
 import { describe, it, expect } from "vitest";
-import { mapBotRowToAgent, normalizeMentionHandle } from "./agent-runtime.js";
+import {
+  mapBotRowToAgent,
+  normalizeMentionHandle,
+  sanitizeAgentReply,
+  buildHistoryMessage,
+  stripSpeakerPrefix,
+} from "./agent-runtime.js";
 
 describe("normalizeMentionHandle", () => {
   it("strips @ and lowercases", () => {
     expect(normalizeMentionHandle("@Assistant")).toBe("assistant");
     expect(normalizeMentionHandle("onboarding")).toBe("onboarding");
+  });
+});
+
+describe("agent reply formatting", () => {
+  const agentId = "builtin-assistant-6d431418-969c-405d-b4be-f8ad15eb04d5";
+
+  it("strips echoed speaker prefix from agent replies", () => {
+    expect(
+      sanitizeAgentReply(
+        `[${agentId}]: I'm still here and ready to help.`,
+        agentId,
+      ),
+    ).toBe("I'm still here and ready to help.");
+  });
+
+  it("builds history without user_id prefixes for agent and invoking user", () => {
+    expect(
+      buildHistoryMessage(
+        { user_id: agentId, content: "Hello there" },
+        { userId: "user_1", agentId },
+      ),
+    ).toEqual({ role: "assistant", content: "Hello there" });
+    expect(
+      buildHistoryMessage(
+        { user_id: "user_1", content: "@assistant hi" },
+        { userId: "user_1", agentId },
+      ),
+    ).toEqual({ role: "user", content: "@assistant hi" });
+    expect(
+      buildHistoryMessage(
+        { user_id: "user_2", content: "ping" },
+        { userId: "user_1", agentId },
+      ),
+    ).toEqual({ role: "user", content: "[user_2]: ping" });
+  });
+
+  it("stripSpeakerPrefix is case-insensitive", () => {
+    expect(stripSpeakerPrefix(`[${agentId.toUpperCase()}]: Hi`, agentId)).toBe("Hi");
   });
 });
 

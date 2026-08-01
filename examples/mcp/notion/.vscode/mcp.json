@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "fluxy-notion-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["server.mjs"]
+    }
+  }
+}

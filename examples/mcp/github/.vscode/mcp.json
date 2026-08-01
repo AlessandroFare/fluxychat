@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "fluxy-github-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["server.mjs"]
+    }
+  }
+}

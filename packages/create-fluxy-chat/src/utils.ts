@@ -9,7 +9,7 @@ export type PackageManager = "npm" | "yarn" | "pnpm";
 /**
  * Supported adapter types.
  */
-export type AdapterType = "basic" | "slack" | "telegram" | "discord" | "web";
+export type AdapterType = "basic" | "slack" | "telegram" | "discord" | "web" | "react";
 
 /**
  * Supported language options.
@@ -26,6 +26,8 @@ export interface ProjectConfig {
   language: Language;
   shouldInstall: boolean;
   shouldInitGit: boolean;
+  /** Chat-only widget template (ui-kit) — progressive disclosure */
+  minimal?: boolean;
 }
 
 const PACKAGE_NAME_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
@@ -63,7 +65,7 @@ export function isPackageManager(value: string): value is PackageManager {
  * Check whether a string is a supported adapter type.
  */
 export function isAdapterType(value: string): value is AdapterType {
-  return ["basic", "slack", "telegram", "discord", "web"].includes(value);
+  return ["basic", "slack", "telegram", "discord", "web", "react"].includes(value);
 }
 
 /**

@@ -68,6 +68,7 @@ export function MessageList({
         <MessageScrollerViewport className="p-3">
           <MessageScrollerContent className="gap-2">
             {messages.flatMap((m, idx) => {
+              const isLastMessage = idx === messages.length - 1;
               const elements: React.ReactNode[] = [];
 
               // Date separator
@@ -90,7 +91,7 @@ export function MessageList({
                 <MessageScrollerItem
                   key={m.id ?? m.clientMessageId ?? idx}
                   messageId={m.id != null ? String(m.id) : undefined}
-                  scrollAnchor={Boolean(m.userId)}
+                  scrollAnchor={isLastMessage}
                   className={cn(m.streaming && "animate-in fade-in-0 duration-300")}
                 >
                   {renderMessage(m, idx)}

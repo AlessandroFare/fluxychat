@@ -17,6 +17,7 @@ interface PromptInputs {
   packageManager?: PackageManager;
   language?: Language;
   yes: boolean;
+  minimal?: boolean;
   shouldInstall?: boolean;
   shouldInitGit?: boolean;
 }
@@ -53,16 +54,19 @@ export async function runPrompts(
     throw new Error(nameError);
   }
 
-  // --- Adapter selection ---
+  // --- Adapter / minimal ---
+  const minimal = inputs.minimal ?? false;
   let adapter = inputs.adapter;
-  if (!adapter) {
+  if (!minimal && !adapter) {
     if (inputs.yes) {
-      adapter = "basic";
+      adapter = "react";
     } else {
       const result = await select({
         message: "Select an adapter:",
         options: [
-          { label: "Basic (Cloudflare Workers)", value: "basic" },
+          { label: "Minimal chat widget (ui-kit, recommended)", value: "minimal" },
+          { label: "React chat app (Vite + useChat)", value: "react" },
+          { label: "Basic (Cloudflare Workers bot)", value: "basic" },
           { label: "Slack", value: "slack" },
           { label: "Telegram", value: "telegram" },
           { label: "Discord", value: "discord" },
@@ -70,6 +74,9 @@ export async function runPrompts(
         ],
       });
       if (isCancel(result)) return null;
+      if (result === "minimal") {
+        return runPrompts({ ...inputs, minimal: true, adapter: "react" });
+      }
       adapter = result as AdapterType;
     }
   }
@@ -139,10 +146,11 @@ export async function runPrompts(
 
   return {
     name,
-    adapter,
+    adapter: adapter ?? "react",
     packageManager,
     language,
     shouldInstall,
     shouldInitGit,
+    minimal: minimal || inputs.minimal === true,
   };
 }

@@ -79,17 +79,30 @@ export function TopNavMobileMenuPanel({
       aria-label="Mobile links"
     >
       <ul className="flex flex-col gap-1">
-        {links.map((item) => (
-          <li key={`${item.href}-${item.label}`}>
-            <Link
-              href={item.href}
-              className={cn(linkClass, "block rounded-lg px-3 py-2.5")}
-              onClick={onClose}
-            >
-              {item.label}
-            </Link>
-          </li>
-        ))}
+        {links.map((item) => {
+          const isHashLink = item.href.includes("#");
+          const className = cn(linkClass, "block rounded-lg px-3 py-2.5");
+          const closeMenu = () => onClose();
+
+          return (
+            <li key={`${item.href}-${item.label}`}>
+              {isHashLink ? (
+                <a href={item.href} className={className} onClick={closeMenu}>
+                  {item.label}
+                </a>
+              ) : (
+                <Link
+                  href={item.href}
+                  className={className}
+                  onPointerDown={closeMenu}
+                  onClick={closeMenu}
+                >
+                  {item.label}
+                </Link>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

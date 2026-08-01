@@ -4,9 +4,12 @@ import {
   BUILD_VS_BUY,
   BUYING_FAQ,
   COMPARE_ROWS,
+  COMPARE_HOSTED_CHAT_HEADER,
   DECISION_FLOW,
   ABLY_ON_VERCEL,
   DIY_DO_COMPARISON,
+  SDK_BUNDLE_BENCHMARKS,
+  PRODUCT_EXCELLENCE_TRACKER,
   PRODUCT_CHAT_VS_SUPPORT,
   PUSHER_BILL_SHOCK,
   PUSHER_ON_VERCEL,
@@ -20,9 +23,9 @@ import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 export const metadata = buildPageMetadata({
-  title: "Compare FluxyChat — vs Portal, Pusher, Ably, Stream",
+  title: "Compare FluxyChat — vs Pusher, Ably, Stream, hosted chat SDKs",
   description:
-    "How FluxyChat compares to Portal, Pusher, Ably, Stream, and DIY Workers — chat, agents, MIT self-host, voice, omnichannel inbox, 14 channels.",
+    "How FluxyChat compares to hosted chat SDKs, Pusher, Ably, Stream, and DIY Workers — chat, agents, MIT self-host, voice, omnichannel inbox, 14 channels.",
   path: "/compare",
 });
 
@@ -185,14 +188,14 @@ export default function ComparePage() {
         Managed chat APIs
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Side-by-side with Portal (chat-first DX benchmark), Stream, Ably, and Pusher.
+        Side-by-side with proprietary hosted chat SDKs, Stream, Ably, and Pusher.
         Rows are factual — check each vendor&apos;s current docs before you buy.
       </p>
       <div className="mt-4">
         <CompareTable
           headers={[
             "Capability",
-            "Portal",
+            COMPARE_HOSTED_CHAT_HEADER,
             "Stream",
             "Ably",
             "Pusher",
@@ -202,6 +205,79 @@ export default function ComparePage() {
             cells: [row.label, row.portal, row.stream, row.ably, row.pusher, row.fluxy],
           }))}
         />
+      </div>
+
+      <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">
+        SDK bundle size
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        Gzip sizes from CI (<code className="text-xs">pnpm run check:bundle-size</code>).
+        App bundles tree-shake imports — chat-only paths stay small. See the{" "}
+        <Link href="/docs/guides/feature-parity-checklist" className="text-brand underline underline-offset-2">
+          feature parity checklist
+        </Link>
+        .
+      </p>
+      <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
+        <table className="w-full min-w-[480px] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/50">
+              <th className="px-4 py-3 font-medium">Package</th>
+              <th className="px-4 py-3 font-medium">Gzip</th>
+              <th className="px-4 py-3 font-medium">Budget</th>
+              <th className="px-4 py-3 font-medium">Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SDK_BUNDLE_BENCHMARKS.map((row) => (
+              <tr key={row.package} className="border-b border-border last:border-0">
+                <td className="px-4 py-3 font-mono text-xs">{row.package}</td>
+                <td className="px-4 py-3">{row.gzipKb} kB</td>
+                <td className="px-4 py-3">{row.budgetKb != null ? `${row.budgetKb} kB` : "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{row.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">
+        Product roadmap progress
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        Open engineering items for developer experience, MCP, voice, and mobile — updated each sprint.
+      </p>
+      <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
+        <table className="w-full min-w-[480px] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/50">
+              <th className="px-4 py-3 font-medium">ID</th>
+              <th className="px-4 py-3 font-medium">Area</th>
+              <th className="px-4 py-3 font-medium">Task</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {PRODUCT_EXCELLENCE_TRACKER.map((item) => (
+              <tr key={item.id} className="border-b border-border last:border-0">
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{item.id}</td>
+                <td className="px-4 py-3">{item.phase}</td>
+                <td className="px-4 py-3">{item.label}</td>
+                <td className="px-4 py-3">
+                  <span
+                    className={
+                      item.status === "done"
+                        ? "rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400"
+                        : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                    }
+                  >
+                    {item.status === "done" ? "Done" : "Open"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">

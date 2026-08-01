@@ -5,14 +5,21 @@ Scaffold a new [FluxyChat](https://github.com/AlessandroFare/fluxychat) bot proj
 ## Quick start
 
 ```bash
-npx create-fluxy-chat my-bot
+# Minimal chat widget (recommended — 3 lines in App.tsx)
+npx create-fluxy-chat my-chat --minimal
+
+# React + useChat (more control)
+npx create-fluxy-chat my-chat --template react
 ```
 
-This launches an interactive prompt to configure your bot project.
+Interactive mode defaults to the **React chat app** template.
 
 ## Non-interactive usage
 
 ```bash
+# React + Vite + useChat (recommended)
+npx create-fluxy-chat my-chat --template react -y
+
 # Create a Slack bot with pnpm
 npx create-fluxy-chat my-bot --adapter slack --pm pnpm
 
@@ -30,10 +37,12 @@ npx create-fluxy-chat my-bot --adapter basic
 
 | Flag | Short | Description |
 | --- | --- | --- |
-| `--adapter <type>` | `-a` | Adapter: `basic`, `slack`, `telegram`, `discord`, `web` |
+| `--adapter <type>` | `-a` | Adapter: `react`, `basic`, `slack`, `telegram`, `discord`, `web` |
+| `--template <type>` | `-t` | Alias for `--adapter (e.g. react)` |
 | `--pm <manager>` | | Package manager: `npm`, `pnpm`, `yarn` |
 | `--language <lang>` | `-l` | Language: `typescript` (default) or `javascript` |
 | `--yes` | `-y` | Skip prompts and accept defaults |
+| `--minimal` | | Chat-only widget (`@fluxy-chat/ui-kit`) — no platform modules |
 | `--skip-install` | | Skip dependency installation |
 | `--no-git` | | Skip git repository initialization |
 | `--help` | `-h` | Show help |
@@ -42,6 +51,7 @@ npx create-fluxy-chat my-bot --adapter basic
 
 | Adapter | Description | Platform |
 | --- | --- | --- |
+| `react` | Vite + React chat UI with `useChat` | Browser / SPA |
 | `basic` | Generic webhook bot | Cloudflare Workers |
 | `slack` | Slack Events API bot | Slack |
 | `telegram` | Telegram webhook bot | Telegram |

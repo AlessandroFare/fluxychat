@@ -36,6 +36,34 @@ import {
 import { safeSchedulePostMessageAutomations } from "./post-message-automations-safe.js";
 import { isHumanHandoffActive } from "./room-handoff.js";
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Remove legacy `[speakerId]:` prefixes echoed by some models. */
+export function stripSpeakerPrefix(content, speakerId) {
+  if (typeof content !== "string" || !speakerId) return content;
+  const pattern = new RegExp(`^\\[${escapeRegExp(speakerId)}\\]:\\s*`, "i");
+  return content.replace(pattern, "").trimStart();
+}
+
+export function sanitizeAgentReply(content, agentId) {
+  if (typeof content !== "string") return content;
+  return stripSpeakerPrefix(content, agentId).trim();
+}
+
+export function buildHistoryMessage(msg, { userId, agentId }) {
+  const raw = typeof msg.content === "string" ? msg.content.trim() : "";
+  if (!raw) return null;
+  if (msg.user_id === agentId) {
+    return { role: "assistant", content: sanitizeAgentReply(raw, agentId) };
+  }
+  if (msg.user_id === userId) {
+    return { role: "user", content: raw };
+  }
+  return { role: "user", content: `[${msg.user_id}]: ${raw}` };
+}
+
 /** Best-effort realtime tool/run events for connected room clients. */
 async function announceRoomEvent(env, roomId, payload) {
   try {
@@ -470,7 +498,8 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     }
 
     for (const msg of conversationHistory) {
-      messages.push({ role: msg.user_id === userId ? "user" : "assistant", content: `[${msg.user_id}]: ${msg.content}` });
+      const historyMsg = buildHistoryMessage(msg, { userId, agentId: agentRow.id });
+      if (historyMsg) messages.push(historyMsg);
     }
     messages.push({ role: "user", content: userMessage });
 
@@ -510,15 +539,19 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
               gatewayHeaders: connection.gatewayHeaders,
             },
             async (delta, fullContent) => {
-              await streamHooks.onDelta(delta, fullContent);
+              await streamHooks.onDelta(
+                delta,
+                sanitizeAgentReply(fullContent, agentRow.id),
+              );
             }
           );
           totalInputTokens += usage.prompt_tokens || 0;
           totalOutputTokens += usage.completion_tokens || 0;
 
           if (content?.trim()) {
-            await streamHooks.onEnd(content);
-            lastContent = content;
+            const sanitized = sanitizeAgentReply(content, agentRow.id);
+            await streamHooks.onEnd(sanitized);
+            lastContent = sanitized;
             break;
           }
 
@@ -599,7 +632,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           });
         }
       }
-      lastContent = extracted.content;
+      lastContent = sanitizeAgentReply(extracted.content, agentRow.id);
 
       if (isAnthropicConnection(connection)) {
         totalInputTokens += response.usage?.input_tokens || 0;
@@ -718,7 +751,8 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     }
 
     const latencyMs = Math.round(performance.now() - startTime);
-    const trimmedContent = typeof lastContent === "string" ? lastContent.trim() : "";
+    const trimmedContent =
+      typeof lastContent === "string" ? sanitizeAgentReply(lastContent, agentRow.id) : "";
     let finalContent = trimmedContent;
     if (!finalContent) {
       if (totalOutputTokens > 0) {

@@ -999,6 +999,15 @@ function McpAppsMarketplaceTab() {
                   <p className="text-xs text-muted-foreground">{app.vendor}</p>
                 </div>
                 {app.verified && <Badge variant="default" className="text-[9px]">Verified</Badge>}
+                {app.auditGrade && (
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] font-mono"
+                    title={app.auditScore != null ? `Score ${app.auditScore}` : undefined}
+                  >
+                    Audit {app.auditGrade}
+                  </Badge>
+                )}
               </div>
               <p className="mt-2 flex-1 text-xs text-muted-foreground line-clamp-3">{app.description}</p>
               <div className="mt-2 flex flex-wrap gap-1">

@@ -25,6 +25,7 @@ const PACKAGES = [
   "packages/react",
   "packages/agent",
   "packages/ui",
+  "packages/ui-kit",
   "packages/react-native-sdk",
   "packages/create-fluxy-chat",
 ];

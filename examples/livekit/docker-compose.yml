@@ -1,0 +1,21 @@
+# Self-hosted LiveKit SFU (free OSS) — PG-ZB-10
+# Generate keys: docker run --rm livekit/livekit-server generate-keys
+# @see https://docs.livekit.io/home/self-hosting/local/
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --config /etc/livekit.yaml
+    restart: unless-stopped
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"

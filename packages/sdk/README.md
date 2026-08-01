@@ -24,6 +24,39 @@ pnpm add @fluxy-chat/sdk @fluxy-chat/react zustand
 
 Import only what your app needs — the full `dist/index.js` artifact is ~112 KB uncompressed; tree-shaken app bundles (client + hooks via `@fluxy-chat/react`) are typically much smaller. Compare gzip size in your bundler (Vite/webpack) when evaluating against other chat SDKs.
 
+**Industry reference:** ~14 kB gzip for a chat-only React import path in comparable hosted SDKs. FluxyChat CI gates `@fluxy-chat/react` at **≤20 kB gzip** (`pnpm run check:bundle-size`).
+
+#### Measure in your Vite app (tree-shaken)
+
+```bash
+# From monorepo root after building packages
+pnpm --filter @fluxy-chat/react build
+pnpm run check:bundle-size
+# → bundle-size-report.json
+```
+
+Minimal Vite consumer (copy into a scratch app):
+
+```ts
+// src/main.tsx — chat-only import path
+import { useChat } from "@fluxy-chat/react";
+export function App({ roomId }: { roomId: string }) {
+  const { messages, sendMessage } = useChat({ roomId });
+  return null;
+}
+```
+
+```bash
+npm create vite@latest fluxy-bundle-check -- --template react-ts
+cd fluxy-bundle-check
+npm i @fluxy-chat/react @fluxy-chat/sdk zustand
+npm run build
+# Inspect dist/assets/*.js with gzip:
+npx gzip-size dist/assets/*.js
+```
+
+Monorepo script: `node scripts/analyze-sdk-bundle.mjs` reports per-entry gzip budgets. Artifact sizes are upper bounds — your app bundle after tree-shaking is usually smaller.
+
 ## Browser vs Worker runtime
 
 | Import | Use in | Contents |
@@ -58,7 +91,7 @@ pnpm run first-message
 
 Use `describeConnectionError()` from `@fluxy-chat/sdk` for UI copy. Full troubleshooting: [Integration troubleshooting guide](https://github.com/AlessandroFare/fluxychat/blob/main/apps/docs/content/docs/guides/troubleshooting-integration.mdx).
 
-### Connection status labels (Portal parity)
+### Connection status labels (hosted chat SDK parity)
 
 | `status` | UI label (`getConnectionStatusLabel`) |
 |----------|----------------------------------------|

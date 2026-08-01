@@ -36,6 +36,7 @@ test.describe("portal parity smoke", () => {
     await context.setOffline(false);
 
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("onboarding-progress")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("onboarding-page")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("onboarding-playground")).toBeVisible();
   });
 });

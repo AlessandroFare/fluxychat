@@ -1406,6 +1406,7 @@ export function FluxyChat({
             <MessageScrollerContent className="gap-2">
               {visibleMessages.length ? (
                 visibleMessages.map((m, idx) => {
+                  const isLastMessage = idx === visibleMessages.length - 1;
                   const prev = idx > 0 ? visibleMessages[idx - 1] : null;
                   const mTime = (m as { createdAt?: string }).createdAt;
                   const prevTime = prev ? (prev as { createdAt?: string }).createdAt : undefined;
@@ -1512,7 +1513,7 @@ export function FluxyChat({
                       ) : null}
                       <MessageScrollerItem
                         messageId={String(m.id)}
-                        scrollAnchor={isSelf}
+                        scrollAnchor={isLastMessage}
                         className={isStreaming ? "animate-in fade-in-0 duration-300" : undefined}
                       >
                         <div

@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-08-01T08:41:50.323Z",
+  "servers": [
+    {
+      "id": "github-mcp",
+      "dir": "github",
+      "name": "GitHub MCP",
+      "vendor": "FluxyChat example",
+      "score": null,
+      "grade": null,
+      "critical": 0,
+      "clonePath": "examples/mcp/github",
+      "repoUrl": "https://github.com/AlessandroFare/fluxychat/tree/main/examples/mcp/github"
+    },
+    {
+      "id": "slack-mcp",
+      "dir": "slack",
+      "name": "Slack MCP",
+      "vendor": "FluxyChat example",
+      "score": null,
+      "grade": null,
+      "critical": 0,
+      "clonePath": "examples/mcp/slack",
+      "repoUrl": "https://github.com/AlessandroFare/fluxychat/tree/main/examples/mcp/slack"
+    },
+    {
+      "id": "notion-mcp",
+      "dir": "notion",
+      "name": "Notion MCP",
+      "vendor": "FluxyChat example",
+      "score": null,
+      "grade": null,
+      "critical": 0,
+      "clonePath": "examples/mcp/notion",
+      "repoUrl": "https://github.com/AlessandroFare/fluxychat/tree/main/examples/mcp/notion"
+    }
+  ]
+}

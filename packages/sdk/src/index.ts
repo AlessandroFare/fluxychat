@@ -664,6 +664,13 @@ export {
 } from "./use-voice";
 
 export {
+  useLiveKitToken,
+  type UseLiveKitTokenOptions,
+  type UseLiveKitTokenResult,
+  type LiveKitTokenResponse,
+} from "./use-livekit-token";
+
+export {
   useInbox,
   type UseInboxOptions,
   type UseInboxResult,

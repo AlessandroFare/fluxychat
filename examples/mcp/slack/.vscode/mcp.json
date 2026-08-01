@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "fluxy-slack-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["server.mjs"]
+    }
+  }
+}
