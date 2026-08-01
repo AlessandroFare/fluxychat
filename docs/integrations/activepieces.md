@@ -50,7 +50,7 @@ openssl rand -hex 16   # → AP_POSTGRES_PASSWORD
 
 Create `.env` (names match official docker-compose):
 
-```env
+```text
 AP_FRONTEND_URL=https://automation.fluxychat.com
 AP_POSTGRES_DATABASE=activepieces
 AP_POSTGRES_USERNAME=ap_user
@@ -70,7 +70,7 @@ docker compose up -d
 
 ### HTTPS with Caddy (example)
 
-```caddyfile
+```text
 automation.fluxychat.com {
     reverse_proxy localhost:8080
 }
@@ -82,7 +82,7 @@ Point Activepieces container port 80/8080 per their compose file.
 
 Set in Vercel / dashboard env:
 
-```env
+```text
 NEXT_PUBLIC_ACTIVEPIECES_URL=https://automation.fluxychat.com
 ```
 

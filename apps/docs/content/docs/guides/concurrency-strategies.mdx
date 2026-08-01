@@ -3,6 +3,8 @@ title: "Concurrency Strategies"
 description: "`createConcurrencyStrategy()` provides 5 strategies for controlling concurrent execution of handlers (e.g., message sending, API calls) with queueing, debouncin"
 ---
 
+# Concurrency Strategies
+
 `createConcurrencyStrategy()` provides 5 strategies for controlling concurrent execution of handlers (e.g., message sending, API calls) with queueing, debouncing, and burst support.
 
 ## Usage
@@ -45,8 +47,8 @@ interface ConcurrencyConfig {
 
 When the queue reaches `maxQueueSize`:
 
-- `drop-oldest`: removes the oldest queued entry (rejected with "Queue full — dropped oldest") and enqueues the new one
-- `drop-newest`: immediately rejects the new entry with "Queue full"
+- **`drop-oldest`**: removes the oldest queued entry (rejected with "Queue full — dropped oldest") and enqueues the new one
+- **`drop-newest`**: immediately rejects the new entry with "Queue full"
 
 ## Example: Debounced Search
 

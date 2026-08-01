@@ -3,6 +3,10 @@ title: "Single-threaded Durable Objects and chat — honest tradeoffs"
 description: "When the Room DO is the source of truth, when D1 is, and what throughput to expect per room (without pretending one object scales infinite hot rooms)."
 ---
 
+# Single-threaded Durable Objects and chat — honest tradeoffs
+
+When the Room DO is the source of truth, when D1 is, and what throughput to expect per room (without pretending one object scales infinite hot rooms).
+
 ## “DOs are single-threaded” — what it means for chat
 
 Each Durable Object processes requests sequentially. For one chat room, that is often a feature: ordering is straightforward and you avoid distributed locks inside the room.

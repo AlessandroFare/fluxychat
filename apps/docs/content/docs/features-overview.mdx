@@ -1,0 +1,82 @@
+---
+title: "Features overview"
+description: "Index of major FluxyChat capabilities. Follow the links for technical detail."
+---
+
+# Features overview
+
+Index of major FluxyChat capabilities. Follow the links for technical detail.
+
+## Chat & realtime (P9â€“P12)
+
+| Feature | Documentation |
+|---------|----------------|
+| WebSocket rooms + presence | [Pusher parity](pusher-channels-parity) |
+| TypeScript / React SDK | [packages/sdk/README.md](/docs/packages/sdk/README) |
+| Voice + transcription | [thread-summary](thread-summary), worker `voice-messages` |
+| Public demo | [embed-widget](embed-widget) |
+| Custom domain | [custom-domain-white-label](custom-domain-white-label) |
+| Embed widget | [embed-widget](embed-widget) |
+
+## AI & automation (P12â€“P15)
+
+| Feature | Documentation |
+|---------|----------------|
+| AI Gateway | [ai-gateway](ai-gateway) |
+| Agent handoff | [ai-agent-handoff](ai-agent-handoff) |
+| Daily digest | [daily-ai-digest](daily-ai-digest) |
+| Feature flags | [feature-flags](feature-flags) |
+| Scheduled workflows | [scheduled-workflows](scheduled-workflows) |
+| Room memory / AI actions | Worker APIs `/room-memory`, `/ai-actions` |
+
+## Omnichannel & operations (P13, P17)
+
+| Feature | Documentation |
+|---------|----------------|
+| Telco SMS/WA | [twilio-parity-inspiration](twilio-parity-inspiration) |
+| Unified inbox | [dashboard-integration](dashboard-integration) |
+| Agent queue | Console `/agent-queue` |
+| FTS search | [competitive-parity-p10](competitive-parity-p10) |
+| Quiet hours | [quiet-hours-notifications](quiet-hours-notifications) |
+
+## Enterprise & compliance (P18â€“P20)
+
+| Feature | Documentation |
+|---------|----------------|
+| SSO / SAML / SCIM | `identity-access-http` routes |
+| Data classification / retention | `enterprise-compliance` API |
+| SOC2 / HIPAA checklist | `/api/soc2`, `/api/hipaa` |
+| Audit / eDiscovery | `/audit-export`, `/ediscovery` |
+| Incident response | `/incidents` API |
+
+## Integrations (P19â€“P20)
+
+| Feature | Documentation |
+|---------|----------------|
+| MCP server | Worker `mcp-http` |
+| Slack / Discord / Matrix bridges | `bridge-http` |
+| Workflow automation | `workflow-automation` |
+| Marketing copy | [marketing/](marketing/) |
+
+## Marketing & go-to-market
+
+- [Outbound email sequence](marketing/outbound-email-sequence)
+- [Landing page copy](marketing/landing-page-copy)
+- [Pricing](marketing/pricing-table)
+- [Enterprise sales script](marketing/enterprise-sales-script)
+
+## Next (P21)
+
+| Item | Status |
+|------|--------|
+| Shared `@fluxy-chat/protocol` package | Done â€” event registry, parse/dispatch, contract tests |
+| SDK + RN wired to protocol | Done â€” shared `dispatchInboundWsFrame`, worker validates outbound |
+| Cross-SDK contract tests | Done in `packages/protocol` + RN parity test |
+| RN SDK tests (vitest) | Done â€” protocol contract test |
+| D1 schema consolidation | Baseline exported â€” [`db/baseline/0136_schema.sql`](../apps/worker/db/baseline/0136_schema.sql), [`db/README.md`](/docs/apps/worker/db/README) |
+| Flutter SDK tests | Done â€” `test/protocol_contract_test.dart` (requires Flutter SDK) |
+| Observability and alerting | Done â€” [`docs/operations/observability.md`](operations/observability), `operational-alerts` unit tests |
+| Room DO unknown WS events | Done â€” `room-do.test.js` + `ws-protocol.js` |
+
+See [`packages/protocol/README.md`](/docs/packages/protocol/README).
+

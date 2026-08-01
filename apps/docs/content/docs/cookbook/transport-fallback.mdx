@@ -3,6 +3,10 @@ title: "Transport fallback (WebSocket → SSE → polling)"
 description: "`useChat` and `createFluxyRoomSession` automatically degrade transport when the room WebSocket cannot stay connected."
 ---
 
+# Transport fallback (WebSocket → SSE → polling)
+
+`useChat` and `createFluxyRoomSession` automatically degrade transport when the room WebSocket cannot stay connected.
+
 ## Order
 
 1. **WebSocket** — `FluxyChatRoomConnection` with exponential backoff reconnect (default 6 attempts in `useChat`).

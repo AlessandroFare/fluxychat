@@ -3,6 +3,10 @@ title: "How to build instant messaging on Cloudflare Workers"
 description: "cloudflare workers websocket + durable objects chat — shared state coordination per room, D1 history, realtime without a VPS. For Cloudflare Pages, Vercel, or Netlify fronts."
 ---
 
+# How to build instant messaging on Cloudflare Workers
+
+cloudflare workers websocket + durable objects chat — shared state coordination per room, D1 history, realtime without a VPS. For Cloudflare Pages, Vercel, or Netlify fronts.
+
 ## Start with Cloudflare’s chat demo (mental model)
 
 The official Workers WebSocket chat example shows: Worker upgrade → one Durable Object per room → fan-out to connected clients. Treat it as hello-world, not multi-tenant production.

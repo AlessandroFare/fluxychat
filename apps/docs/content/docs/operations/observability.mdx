@@ -1,13 +1,15 @@
 ---
 title: "Observability & scheduled jobs (ENG-09 / ENG-18)"
-description: "New projects receive seeded operational alert rules via `insertNewProject` → `seedDefaultAlertRules` (`apps/worker/src/lib/seed-default-alert-rules.js`)."
+description: "New projects receive seeded operational alert rules via `insertNewProject` â†’ `seedDefaultAlertRules` (`apps/worker/src/lib/seed-default-alert-rules.js`)."
 ---
+
+# Observability & scheduled jobs (ENG-09 / ENG-18)
 
 ## Default alert rules
 
-New projects receive seeded operational alert rules via `insertNewProject` → `seedDefaultAlertRules` (`apps/worker/src/lib/seed-default-alert-rules.js`).
+New projects receive seeded operational alert rules via `insertNewProject` â†’ `seedDefaultAlertRules` (`apps/worker/src/lib/seed-default-alert-rules.js`).
 
-Console: **Analytics** → alerts list; open alerts also surface in the red **System status** banner (owner/admin JWT).
+Console: **Analytics** â†’ alerts list; open alerts also surface in the red **System status** banner (owner/admin JWT).
 
 ## Cron / workflows default
 
@@ -50,5 +52,5 @@ Implementation: `apps/worker/src/lib/scheduled-runners.js`. Full Workflows setup
 
 ## Health & smoke
 
-- Public: dashboard `/status` → Worker `/health`
-- Operator: `pnpm --filter @fluxy-chat/worker smoke:remote -- --base-url … --admin-jwt …`
+- Public: dashboard `/status` â†’ Worker `/health`
+- Operator: `pnpm --filter @fluxy-chat/worker smoke:remote -- --base-url â€¦ --admin-jwt â€¦`

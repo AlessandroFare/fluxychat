@@ -1,8 +1,11 @@
 ---
 title: "@fluxy-chat/sdk"
-description: "Client for a FluxyChat Worker (self-hosted or FluxyChat Cloud): rooms, messages, WebSockets, agents, and vertical SDKs."
+description: "["
 ---
 
+# @fluxy-chat/sdk
+
+[
 Client for a **FluxyChat Worker** (self-hosted or [FluxyChat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and vertical SDKs.
 
 For **React hooks** (`useChat`, `useInbox`, `FluxyRealtimeProvider`), install [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) alongside this package.
@@ -24,6 +27,39 @@ pnpm add @fluxy-chat/sdk @fluxy-chat/react zustand
 ### Bundle size
 
 Import only what your app needs — the full `dist/index.js` artifact is ~112 KB uncompressed; tree-shaken app bundles (client + hooks via `@fluxy-chat/react`) are typically much smaller. Compare gzip size in your bundler (Vite/webpack) when evaluating against other chat SDKs.
+
+**Industry reference:** ~14 kB gzip for a chat-only React import path in comparable hosted SDKs. FluxyChat CI gates `@fluxy-chat/react` at **≤20 kB gzip** (`pnpm run check:bundle-size`).
+
+#### Measure in your Vite app (tree-shaken)
+
+```bash
+# From monorepo root after building packages
+pnpm --filter @fluxy-chat/react build
+pnpm run check:bundle-size
+# → bundle-size-report.json
+```
+
+Minimal Vite consumer (copy into a scratch app):
+
+```ts
+// src/main.tsx — chat-only import path
+import { useChat } from "@fluxy-chat/react";
+export function App({ roomId }: { roomId: string }) {
+  const { messages, sendMessage } = useChat({ roomId });
+  return null;
+}
+```
+
+```bash
+npm create vite@latest fluxy-bundle-check -- --template react-ts
+cd fluxy-bundle-check
+npm i @fluxy-chat/react @fluxy-chat/sdk zustand
+npm run build
+# Inspect dist/assets/*.js with gzip:
+npx gzip-size dist/assets/*.js
+```
+
+Monorepo script: `node scripts/analyze-sdk-bundle.mjs` reports per-entry gzip budgets. Artifact sizes are upper bounds — your app bundle after tree-shaking is usually smaller.
 
 ## Browser vs Worker runtime
 
@@ -59,7 +95,7 @@ pnpm run first-message
 
 Use `describeConnectionError()` from `@fluxy-chat/sdk` for UI copy. Full troubleshooting: [Integration troubleshooting guide](https://github.com/AlessandroFare/fluxychat/blob/main/apps/docs/content/docs/guides/troubleshooting-integration.mdx).
 
-### Connection status labels (Portal parity)
+### Connection status labels (hosted chat SDK parity)
 
 | `status` | UI label (`getConnectionStatusLabel`) |
 |----------|----------------------------------------|
@@ -107,7 +143,7 @@ store.getState().sendMessage("", null, undefined, {
 
 | Piece | Who sets it | Notes |
 |--------|-------------|--------|
-| **Worker `baseUrl`** | You | e.g. `https://fluxychat-worker.<account>.workers.dev` or your custom domain |
+| **Worker `baseUrl`** | You | e.g. `https://fluxychat-worker.&lt;account&gt;.workers.dev` or your custom domain |
 | **Project API key** (`fc_…`) | Worker / console | Mint JWTs via `POST /auth/token` with header `X-Fluxy-Api-Key` — **server-side only** |
 | **Member JWT** | Your backend or Fluxychat console | Passed to `FluxyChatClient` / `useChat` as `token` |
 | **LLM provider keys** | Worker secrets or console | For agents; never embed in the npm package |
@@ -312,14 +348,14 @@ const conn = client.connectRoom(roomId, {
 });
 ```
 
-See [Connection state](/docs/core/connection-state) for reconnect backoff tuning. The defaults are not changing in this minor; P11-B2 stays in the roadmap as a documented decision rather than a code change.
+See [`/docs) § 1 for the upstream reference. The defaults are not changing in this minor; P11-B2 stays in the roadmap as a documented decision rather than a code change.
 
 ## Self-host vs hosted cloud
 
 - **Self-host:** deploy `apps/worker` from the [monorepo](https://github.com/AlessandroFare/fluxychat), run D1 migrations, set secrets. See `apps/worker/.dev.vars.example`.
 - **Hosted cloud:** use the Fluxychat dashboard on Vercel; sign in with Clerk; project + API keys are provisioned for you.
 
-Full operator docs: [Dashboard integration](/docs/reference/dashboard-integration).
+Full operator docs: [docs/dashboard-integration.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/dashboard-integration).
 
 ## Agents
 
@@ -382,7 +418,7 @@ Docs in monorepo: `docs/README.md` · deploy: `docs/operations/open-beta-deploy-
 
 ## Pusher Channels parity (P9)
 
-FluxyChat maps [Pusher Channels](https://pusher.com/docs/channels) features to rooms + JWT. Full matrix: [Pusher Channels parity](/docs/reference/pusher-channels-parity).
+FluxyChat maps [Pusher Channels](https://pusher.com/docs/channels) features to rooms + JWT. Full matrix: [docs/pusher-channels-parity.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/pusher-channels-parity).
 
 | Feature | SDK API |
 |---------|---------|

@@ -3,6 +3,10 @@ title: "Use case: Team chat"
 description: "Goal: internal team workspace chat with multiple rooms, unread counts, and webhooks for integrations."
 ---
 
+# Use case: Team chat
+
+Goal: internal team workspace chat with multiple rooms, unread counts, and webhooks for integrations.
+
 ## 1) Rooms and membership
 
 Create a room with members:
@@ -43,7 +47,7 @@ curl -sS "$FLUXY_BASE_URL/rooms/$ROOM_ID/unread?userId=alice" \
 
 The WebSocket is room-scoped and requires a token:
 
-- URL: `/ws/room/:roomId?token=<JWT>`
+- URL: `/ws/room/:roomId?token=&lt;JWT&gt;`
 - Membership is enforced in the Worker / Durable Object
 
 Conceptual example:

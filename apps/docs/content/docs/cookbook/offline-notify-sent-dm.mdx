@@ -1,7 +1,9 @@
 ---
 title: "Offline notify: in-app chat (FluxyChat) + SMS/WhatsApp (Sent.dm)"
-description: "Use FluxyChat when the user is in your product (WebSocket + in-app notifications). Use [Sent.dm](https://sent.dm) when they are offline and you need tra"
+description: "Use **FluxyChat** when the user is in your product (WebSocket + in-app notifications). Use **[Sent.dm](https://sent.dm)** when they are offline and you need tra"
 ---
+
+# Offline notify: in-app chat (FluxyChat) + SMS/WhatsApp (Sent.dm)
 
 Use **FluxyChat** when the user is in your product (WebSocket + in-app notifications). Use **[Sent.dm](https://sent.dm)** when they are offline and you need transactional SMS or WhatsApp — same mental model as pairing a chat API with a telco API (see `/compare`).
 
@@ -64,7 +66,7 @@ Content-Type: application/json
 }
 ```
 
-Register a Sent.dm template `chat_notify` with parameters: `sender`, `preview`, `room_id`, and optionally `media_url`, `media_name`, `media_type` (`image` | `video` | `document`) for MMS / WhatsApp media (P13-T3). Define a **media** template variable in Sent.dm pointing at `media_url`.
+Register a Sent.dm template `chat_notify` with parameters: `sender`, `preview`, `room_id`, and optionally **`media_url`**, **`media_name`**, **`media_type`** (`image` | `video` | `document`) for MMS / WhatsApp media (P13-T3). Define a **media** template variable in Sent.dm pointing at `media_url`.
 
 Implementation: [`offline-notify-sent.js`](../../apps/worker/src/lib/offline-notify-sent.js) (hooked from `schedulePostMessageAutomations`).
 

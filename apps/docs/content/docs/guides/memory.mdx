@@ -3,6 +3,8 @@ title: "Memory System"
 description: "> A modular memory framework for AI agents. Store, retrieve, and recall information across conversations using pluggable storage backends and agent-integrated t"
 ---
 
+# Memory System
+
 > A modular memory framework for AI agents. Store, retrieve, and recall information across conversations using pluggable storage backends and agent-integrated tools.
 
 ## Overview
@@ -11,9 +13,9 @@ The memory system gives agents persistent memory. Without it, every conversation
 
 Three key components:
 
-- `AIMemoryStore` — pluggable storage backend (in-memory, filesystem, database)
-- `createMemoryTools()` — generates agent tools (`remember`, `recall`, `forget`, `listMemories`)
-- `AUTO_MEMORY_SYSTEM_PROMPT` — ready-to-use instructions for the agent
+- **`AIMemoryStore`** — pluggable storage backend (in-memory, filesystem, database)
+- **`createMemoryTools()`** — generates agent tools (`remember`, `recall`, `forget`, `listMemories`)
+- **`AUTO_MEMORY_SYSTEM_PROMPT`** — ready-to-use instructions for the agent
 
 ## Quick Start
 

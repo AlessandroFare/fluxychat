@@ -3,17 +3,28 @@ title: "create-fluxy-chat"
 description: "Scaffold a new [FluxyChat](https://github.com/AlessandroFare/fluxychat) bot project with a single command."
 ---
 
+# create-fluxy-chat
+
+Scaffold a new [FluxyChat](https://github.com/AlessandroFare/fluxychat) bot project with a single command.
+
 ## Quick start
 
 ```bash
-npx create-fluxy-chat my-bot
+# Minimal chat widget (recommended — 3 lines in App.tsx)
+npx create-fluxy-chat my-chat --minimal
+
+# React + useChat (more control)
+npx create-fluxy-chat my-chat --template react
 ```
 
-This launches an interactive prompt to configure your bot project.
+Interactive mode defaults to the **React chat app** template.
 
 ## Non-interactive usage
 
 ```bash
+# React + Vite + useChat (recommended)
+npx create-fluxy-chat my-chat --template react -y
+
 # Create a Slack bot with pnpm
 npx create-fluxy-chat my-bot --adapter slack --pm pnpm
 
@@ -31,10 +42,12 @@ npx create-fluxy-chat my-bot --adapter basic
 
 | Flag | Short | Description |
 | --- | --- | --- |
-| `--adapter <type>` | `-a` | Adapter: `basic`, `slack`, `telegram`, `discord`, `web` |
-| `--pm <manager>` | | Package manager: `npm`, `pnpm`, `yarn` |
-| `--language <lang>` | `-l` | Language: `typescript` (default) or `javascript` |
+| `--adapter &lt;type&gt;` | `-a` | Adapter: `react`, `basic`, `slack`, `telegram`, `discord`, `web` |
+| `--template &lt;type&gt;` | `-t` | Alias for `--adapter (e.g. react)` |
+| `--pm &lt;manager&gt;` | | Package manager: `npm`, `pnpm`, `yarn` |
+| `--language &lt;lang&gt;` | `-l` | Language: `typescript` (default) or `javascript` |
 | `--yes` | `-y` | Skip prompts and accept defaults |
+| `--minimal` | | Chat-only widget (`@fluxy-chat/ui-kit`) — no platform modules |
 | `--skip-install` | | Skip dependency installation |
 | `--no-git` | | Skip git repository initialization |
 | `--help` | `-h` | Show help |
@@ -43,6 +56,7 @@ npx create-fluxy-chat my-bot --adapter basic
 
 | Adapter | Description | Platform |
 | --- | --- | --- |
+| `react` | Vite + React chat UI with `useChat` | Browser / SPA |
 | `basic` | Generic webhook bot | Cloudflare Workers |
 | `slack` | Slack Events API bot | Slack |
 | `telegram` | Telegram webhook bot | Telegram |
@@ -53,14 +67,14 @@ npx create-fluxy-chat my-bot --adapter basic
 
 Each generated project includes:
 
-- `src/index.ts` — Cloudflare Workers entry point with route handling
-- `src/bot.ts` — Bot handler using `@fluxy-chat/sdk`
-- `fluxy.config.ts` — Room authz and publish middleware (basic template)
-- `wrangler.toml` — Cloudflare Workers deployment config
-- `.dev.vars` — Local development environment variables
-- `.env.example` — Example environment variables for your adapter
-- `tsconfig.json` — TypeScript configuration (for TS projects)
-- `README.md` — Project-specific setup instructions
+- **`src/index.ts`** — Cloudflare Workers entry point with route handling
+- **`src/bot.ts`** — Bot handler using `@fluxy-chat/sdk`
+- **`fluxy.config.ts`** — Room authz and publish middleware (basic template)
+- **`wrangler.toml`** — Cloudflare Workers deployment config
+- **`.dev.vars`** — Local development environment variables
+- **`.env.example`** — Example environment variables for your adapter
+- **`tsconfig.json`** — TypeScript configuration (for TS projects)
+- **`README.md`** — Project-specific setup instructions
 
 ## Package manager detection
 

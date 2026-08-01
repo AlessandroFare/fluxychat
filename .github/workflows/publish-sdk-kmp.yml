@@ -54,10 +54,7 @@ jobs:
             exit 0
           fi
           gradle -PsdkVersion="$SDK_VERSION" :shared:publishAndroidReleasePublicationToSonatypeRepository :shared:publishJvmPublicationToSonatypeRepository
-          AUTH=$(printf '%s:%s' "$OSSRH_USER" "$OSSRH_PASS" | base64 -w0)
-          curl -sfS -X POST \
-            -H "Authorization: Bearer $AUTH" \
-            "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.fluxychat?publishing_type=automatic"
+          bash ../../scripts/sonatype-upload-staging.sh
 
   publish-ios:
     needs: test
@@ -76,7 +73,10 @@ jobs:
           gradle-version: "8.11.1"
       - name: Build iOS frameworks
         working-directory: packages/sdk-kmp
-        run: gradle :shared:linkReleaseFrameworkIosArm64 :shared:linkReleaseFrameworkIosSimulatorArm64
+        env:
+          GRADLE_OPTS: "-Xmx6g -XX:MaxMetaspaceSize=1g -Dorg.gradle.vfs.watch=false"
+          KOTLIN_DAEMON_JVM_OPTIONS: "-Xmx4g"
+        run: gradle --no-daemon :shared:linkReleaseFrameworkIosArm64 :shared:linkReleaseFrameworkIosSimulatorArm64
       - name: Upload XCFramework zip to release
         env:
           GH_TOKEN: ${{ github.token }}

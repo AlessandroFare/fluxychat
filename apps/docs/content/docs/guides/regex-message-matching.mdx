@@ -3,6 +3,10 @@ title: "Regex Message Matching"
 description: "`createMessagePatternMatcher()` provides pattern-based message routing using regular expressions, enabling keyword-triggered handlers without @-mentions."
 ---
 
+# Regex Message Matching
+
+`createMessagePatternMatcher()` provides pattern-based message routing using regular expressions, enabling keyword-triggered handlers without @-mentions.
+
 ## Usage
 
 ```ts
@@ -22,11 +26,11 @@ connection.onAnyEvent((event) => {
 
 ## API
 
-- `onNewMessage(pattern, handler, options?)` — Register a pattern handler
-- `removeHandler(pattern, handler)` — Remove a specific handler
-- `match(event)` — Test event against all patterns; returns match count
-- `getPatterns()` — List registered patterns
-- `clear()` — Remove all patterns
+- **`onNewMessage(pattern, handler, options?)`** — Register a pattern handler
+- **`removeHandler(pattern, handler)`** — Remove a specific handler
+- **`match(event)`** — Test event against all patterns; returns match count
+- **`getPatterns()`** — List registered patterns
+- **`clear()`** — Remove all patterns
 
 ## Multiple Patterns
 

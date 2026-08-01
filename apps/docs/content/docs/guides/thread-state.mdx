@@ -3,6 +3,10 @@ title: "Per-Thread Typed State"
 description: "`createThreadState()` provides a typed state accessor per thread with merge/replace semantics and TTL — designed for multi-turn agent context."
 ---
 
+# Per-Thread Typed State
+
+`createThreadState()` provides a typed state accessor per thread with merge/replace semantics and TTL — designed for multi-turn agent context.
+
 ## Usage
 
 ```ts
@@ -33,7 +37,7 @@ await ts.setState({ mode: "chat" }, { replace: true });
 | Member | Type | Description |
 |--------|------|-------------|
 | `state` | `Promise<T \| null>` | Read current state |
-| `setState(partial, options?)` | `Promise<void>` | Set state (merge/replace) |
+| `setState(partial, options?)` | `Promise&lt;void&gt;` | Set state (merge/replace) |
 | `threadId` | `string` | Thread identifier |
 
 ## Store

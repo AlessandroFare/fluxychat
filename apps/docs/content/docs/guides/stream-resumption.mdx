@@ -3,6 +3,8 @@ title: "Stream Resumption"
 description: "FluxyChat's stream resumption (P23-1) lets users reconnect to in-progress AI responses after a page refresh, network drop, or tab switch — without losing the pa"
 ---
 
+# Stream Resumption
+
 FluxyChat's stream resumption (P23-1) lets users reconnect to in-progress AI responses after a page refresh, network drop, or tab switch — without losing the partial output.
 
 ## The Problem
@@ -60,7 +62,7 @@ During stream resumption, the following events flow over WebSocket:
 
 Stream resumption is enabled by default. Configure via environment variables:
 
-```bash
+```text
 STREAM_RESUMPTION_ENABLED=true          # default: true
 STREAM_RESUMPTION_TTL_SECONDS=300        # how long to keep stream state (default: 5 min)
 STREAM_RESUMPTION_MAX_CONCURRENT=10      # max concurrent resumable streams per room
