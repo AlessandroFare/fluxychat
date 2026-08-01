@@ -54,16 +54,21 @@ const entries = SERVERS.map((s) => {
 fs.mkdirSync(path.dirname(OUT_DATA), { recursive: true });
 fs.writeFileSync(OUT_DATA, JSON.stringify({ generatedAt: new Date().toISOString(), servers: entries }, null, 2));
 
+function cell(value) {
+  if (value == null || value === "") return "n/a";
+  return String(value);
+}
+
 const rows = entries
   .map(
     (e) =>
-      `| [${e.name}](${e.repoUrl}) | ${e.grade ?? "—"} | ${e.score ?? "—"} | ${e.critical} | \`${e.clonePath}\` |`,
+      `| [${e.name}](${e.repoUrl}) | ${cell(e.grade)} | ${cell(e.score)} | ${e.critical} | \`${e.clonePath}\` |`,
   )
   .join("\n");
 
 const mdx = `---
 title: Verified MCP servers
-description: Curated MCP examples scanned with mcp-audit — reproducible grades.
+description: Curated MCP examples scanned with mcp-audit with reproducible grades.
 ---
 
 # Verified MCP servers
@@ -83,11 +88,11 @@ ${rows}
 
 ## Audit policy
 
-- **Grade A–B**, 0 critical → eligible for "Verified" badge in console
-- Scans run on every push to \`examples/mcp/**\`
+- **Grade A-B**, 0 critical findings: eligible for Verified badge in console
+- Scans run on every push to \`examples/mcp/\`
 - Tool: [mcp-audit](https://github.com/adudley78/mcp-audit) (Apache 2.0)
 
-Last generated: ${new Date().toISOString()}
+Regenerate this page after CI: \`node scripts/generate-mcp-verified-page.mjs\`
 `;
 
 fs.mkdirSync(path.dirname(OUT_DOCS), { recursive: true });

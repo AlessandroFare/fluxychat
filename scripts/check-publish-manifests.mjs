@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+const pnpmCmd = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const packages = [
   "packages/protocol",
   "packages/config",
@@ -20,7 +21,13 @@ const packages = [
 
 for (const rel of packages) {
   const cwd = join(root, rel);
-  console.log(`\n→ checking ${rel}`);
+  console.log(`\n→ building ${rel}`);
+  execFileSync(pnpmCmd, ["run", "build"], {
+    cwd,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
+  console.log(`→ checking ${rel}`);
   execFileSync("node", ["../../scripts/verify-publish-manifest.mjs", "--dry-run"], {
     cwd,
     stdio: "inherit",

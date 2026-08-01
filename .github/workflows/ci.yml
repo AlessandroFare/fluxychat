@@ -37,6 +37,9 @@ jobs:
       - name: Tenant-scope audit (P1 ENG-07)
         run: pnpm run check:tenant-scope
 
+      - name: Build publishable packages (docs bin + manifest smoke)
+        run: pnpm --filter @fluxy-chat/create-fluxy-chat build
+
       - name: Publish manifest verify (DX-14 / DX-14.1)
         run: pnpm run check:publish-manifest
 
