@@ -3,6 +3,10 @@ title: "Environment setup -- local, staging, production"
 description: "Step-by-step configuration before first deploy. Run code checks first (`pnpm run check:env`)."
 ---
 
+# Environment setup -- local, staging, production
+
+Step-by-step configuration before first deploy. Run code checks first (`pnpm run check:env`).
+
 ## Quick start (local only, ~10 min)
 
 ```bash
@@ -11,7 +15,7 @@ pnpm run dev:setup          # copies .dev.vars + .env.local from examples (won't
 pnpm dev                    # worker :8787 + dashboard :3000
 ```
 
-Open `http://localhost:3000/onboarding` → paste admin JWT (from Worker `POST /auth/token` with a project API key) → create room → message.
+Open `http://localhost:3000/onboarding` â†’ paste admin JWT (from Worker `POST /auth/token` with a project API key) â†’ create room â†’ message.
 
 **Worker:** edit `apps/worker/.dev.vars` (from example). Minimum:
 
@@ -34,8 +38,8 @@ Leave Clerk keys empty for manual JWT onboarding.
 ## Architecture (what talks to what)
 
 ```text
-Browser → Dashboard (Vercel) → Worker API (Cloudflare)
-                ↓                    ↓
+Browser â†’ Dashboard (Vercel) â†’ Worker API (Cloudflare)
+                â†“                    â†“
            Clerk (optional)      D1 + DO + KV + R2
 ```
 
@@ -56,12 +60,12 @@ Run from `apps/worker`:
 ```bash
 # D1
 pnpm exec wrangler d1 create fluxychat-staging
-# → paste database_id into wrangler.staging.toml
+# â†’ paste database_id into wrangler.staging.toml
 
 # KV (rate limits)
 pnpm exec wrangler kv namespace create RATE_LIMIT_KV
 pnpm exec wrangler kv namespace create RATE_LIMIT_KV --preview
-# → paste id + preview_id into wrangler.staging.toml
+# â†’ paste id + preview_id into wrangler.staging.toml
 
 # R2
 pnpm exec wrangler r2 bucket create fluxychat-attachments-staging
@@ -137,7 +141,7 @@ pnpm --filter @fluxy-chat/worker deploy
 
 ### 1.6 Custom domain (API)
 
-Cloudflare dashboard → Worker → Custom domains → add `api.fluxychat.com` (or staging subdomain).  
+Cloudflare dashboard â†’ Worker â†’ Custom domains â†’ add `api.fluxychat.com` (or staging subdomain).  
 `wrangler.toml` already has `[[routes]]` for production pattern.
 
 ---
@@ -146,7 +150,7 @@ Cloudflare dashboard → Worker → Custom domains → add `api.fluxychat.com` (
 
 One-time per Worker deployment:
 
-1. Set on Worker: `ALLOW_PLATFORM_BOOTSTRAP=true`, `PLATFORM_BOOTSTRAP_SECRET=<random>`.
+1. Set on Worker: `ALLOW_PLATFORM_BOOTSTRAP=true`, `PLATFORM_BOOTSTRAP_SECRET=&lt;random&gt;`.
 2. From repo root:
 
 ```bash
@@ -165,7 +169,7 @@ FLUXY_PLATFORM_PROJECT_ID=<uuid>
 NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL=https://api.fluxychat.com
 ```
 
-5. Copy to **Worker** secret: `FLUXY_PLATFORM_PROJECT_ID=<uuid>`, set `HOSTED_MULTI_TENANT=true`.
+5. Copy to **Worker** secret: `FLUXY_PLATFORM_PROJECT_ID=&lt;uuid&gt;`, set `HOSTED_MULTI_TENANT=true`.
 6. Disable bootstrap: remove `ALLOW_PLATFORM_BOOTSTRAP` or set false.
 
 ---
@@ -191,29 +195,29 @@ See `apps/dashboard/.env.example`, `.env.staging.example`, `.env.production.exam
 
 ### 3.2 Vercel project
 
-1. Import repo → root `apps/dashboard` or monorepo with filter.
+1. Import repo â†’ root `apps/dashboard` or monorepo with filter.
 2. Build: `pnpm --filter @fluxy-chat/dashboard build` (or Turbo from root).
 3. Env vars: paste from `.env.production.example` checklist.
-4. Domains: `app.fluxychat.com`, optional `status.fluxychat.com` → same project (`/status` route exists).
+4. Domains: `app.fluxychat.com`, optional `status.fluxychat.com` â†’ same project (`/status` route exists).
 
 ### 3.3 Clerk (optional)
 
-Clerk Dashboard → Application → API Keys → paste into Vercel.  
+Clerk Dashboard â†’ Application â†’ API Keys â†’ paste into Vercel.  
 Paths: Sign-in `/sign-in`, Sign-up `/sign-up`, after sign-up redirect `/onboarding`.
 
 ---
 
 ## Phase 4 -- Stripe (optional, billing)
 
-1. Stripe Dashboard → Developers → API keys → `STRIPE_SECRET_KEY` on Worker.
-2. Webhook endpoint: `https://api.fluxychat.com/webhooks/stripe` → `STRIPE_WEBHOOK_SECRET`.
+1. Stripe Dashboard â†’ Developers â†’ API keys â†’ `STRIPE_SECRET_KEY` on Worker.
+2. Webhook endpoint: `https://api.fluxychat.com/webhooks/stripe` â†’ `STRIPE_WEBHOOK_SECRET`.
 3. Without Stripe: `/health` shows `paymentsEnabled: false`; users stay on Free tier.
 
 ---
 
 ## Phase 5 -- GitHub Actions (CI deploy)
 
-Repository → Settings → Secrets and variables → Actions:
+Repository â†’ Settings â†’ Secrets and variables â†’ Actions:
 
 | Secret | Purpose |
 |--------|---------|
@@ -221,9 +225,9 @@ Repository → Settings → Secrets and variables → Actions:
 | `CLOUDFLARE_ACCOUNT_ID` | Account ID |
 | `E2E_ADMIN_JWT` | Optional integrated Playwright |
 
-Create environments `staging` and `production` in GitHub → wire approval on `production`.
+Create environments `staging` and `production` in GitHub â†’ wire approval on `production`.
 
-Manual deploy: Actions → **Deploy** → choose environment.
+Manual deploy: Actions â†’ **Deploy** â†’ choose environment.
 
 ---
 
@@ -244,9 +248,9 @@ E2E_ADMIN_JWT=<jwt> pnpm --filter @fluxy-chat/dashboard test:e2e:integrated
 
 Browser checks:
 
-- `https://<dashboard>/status` — public health
-- `https://<dashboard>/onboarding` — wizard
-- `https://<dashboard>/billing` — load plan
+- `https://&lt;dashboard&gt;/status` -- public health
+- `https://&lt;dashboard&gt;/onboarding` -- wizard
+- `https://&lt;dashboard&gt;/billing` -- load plan
 
 ---
 

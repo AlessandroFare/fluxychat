@@ -1,9 +1,11 @@
 ---
 title: "D1 schema consolidation plan (P21)"
-description: "FluxyChat currently ships 136 sequential migrations under `apps/worker/db/` (0001–0136). P15–P20 added many feature-specific tables. This document defin"
+description: "FluxyChat currently ships **136 sequential migrations** under `apps/worker/db/` (0001â€“0136). P15â€“P20 added many feature-specific tables. This document defin"
 ---
 
-FluxyChat currently ships **136 sequential migrations** under `apps/worker/db/` (0001–0136). P15–P20 added many feature-specific tables. This document defines a **safe consolidation strategy** without blocking current deploys.
+# D1 schema consolidation plan (P21)
+
+FluxyChat currently ships **136 sequential migrations** under `apps/worker/db/` (0001â€“0136). P15â€“P20 added many feature-specific tables. This document defines a **safe consolidation strategy** without blocking current deploys.
 
 ## Goals
 
@@ -15,18 +17,18 @@ FluxyChat currently ships **136 sequential migrations** under `apps/worker/db/` 
 
 | Domain | Example migrations | Notes |
 |--------|-------------------|--------|
-| Core chat | 0001–0011, 0005, 0007 | messages, threads, reactions, tenancy |
-| Agents & AI | 0010, 0013, 0060–0063, 0086 | agents, runs, memory, knowledge graph |
-| Omnichannel | 0054–0057, 0079–0080 | telco, inbox, quiet hours |
-| Enterprise | 0082, 0113–0117, 0129–0136 | retention, IP whitelist, eDiscovery, SSO |
-| Integrations | 0124–0125, 0119 | bridges, marketplace |
-| Ops | 0014–0016, 0105 | metrics, alerts, rate-limit dashboard |
+| Core chat | 0001â€“0011, 0005, 0007 | messages, threads, reactions, tenancy |
+| Agents & AI | 0010, 0013, 0060â€“0063, 0086 | agents, runs, memory, knowledge graph |
+| Omnichannel | 0054â€“0057, 0079â€“0080 | telco, inbox, quiet hours |
+| Enterprise | 0082, 0113â€“0117, 0129â€“0136 | retention, IP whitelist, eDiscovery, SSO |
+| Integrations | 0124â€“0125, 0119 | bridges, marketplace |
+| Ops | 0014â€“0016, 0105 | metrics, alerts, rate-limit dashboard |
 
 ## Recommended phases
 
 ### Phase 1 -- Inventory (done in repo)
 
-- Keep applying migrations 0001→0136 on existing DBs (your deploy flow).
+- Keep applying migrations 0001â†’0136 on existing DBs (your deploy flow).
 - Feature map: `docs/features-overview.md` P21 table.
 
 ### Phase 2 -- Baseline snapshot

@@ -1,0 +1,141 @@
+---
+title: "Post-launch checklist (Phase 6)"
+description: "Execution tasks after Worker deploy, npm publish, and GitHub secrets are in place. No new architecture — run, record, publish."
+---
+
+# Post-launch checklist (Phase 6)
+
+Execution tasks after Worker deploy, npm publish, and GitHub secrets are in place. No new architecture — run, record, publish.
+
+---
+
+## 1. Voice load test — real numbers
+
+**Goal:** Fill [VOICE-LOAD-TEST-REPORT.md](/docs/VOICE-LOAD-TEST-REPORT) with verifiable P90/P95, not estimates.
+
+**Prereqs:** LiveKit configured (Cloud or `examples/livekit/` Docker).
+
+```bash
+# Install LiveKit CLI: https://docs.livekit.io/home/cli/cli-setup/
+cp examples/livekit/.env.example examples/livekit/.env
+docker compose -f examples/livekit/docker-compose.yml up -d
+
+export FLUXY_WORKER_URL=https://your-worker
+export FLUXY_MEMBER_JWT=your-member-jwt
+
+# Run 3 times at increasing load
+PUBLISHERS=10 SUBSCRIBERS=50 DURATION=5m ./scripts/voice-load-test.sh
+PUBLISHERS=25 SUBSCRIBERS=100 DURATION=5m ./scripts/voice-load-test.sh
+PUBLISHERS=50 SUBSCRIBERS=200 DURATION=5m ./scripts/voice-load-test.sh
+```
+
+Or direct `lk load-test`:
+
+```bash
+lk load-test --url wss://your-livekit --api-key $KEY --api-secret $SECRET \
+  --room fluxy-loadtest-v1 --publishers 10 --subscribers 50 --duration 5m
+```
+
+Copy raw CLI output + dashboard screenshots into the report. Transparency matters more than perfect scores.
+
+---
+
+## 2. MCP audit — populate marketplace badges
+
+**Goal:** Audit grades visible on **Marketplace → MCP Apps**.
+
+1. Confirm GitHub secrets: `WORKER_AUDIT_WEBHOOK_URL`, `WORKER_AUDIT_HMAC_SECRET`
+2. **Actions → MCP marketplace audit → Run workflow** (or push to `examples/mcp/**`)
+3. Regenerate verified page:
+
+```bash
+node scripts/generate-mcp-verified-page.mjs
+```
+
+4. Commit updated `apps/docs/.../mcp-verified-servers.mdx` and `apps/dashboard/public/mcp-verified.json` if changed
+
+**Retroactive:** Re-run workflow after adding more servers under `examples/mcp/`. For third-party MCP servers, outreach to maintainers — ask permission to list as verified in your catalog.
+
+See: [MCP audit runbook in docs site](/docs/guides/ecosystem/mcp-audit-runbook) (apps/docs).
+
+---
+
+## 3. Inbox demo GIF / video
+
+**Goal:** 15–20s demo for README and `/get-started` — unread badge, realtime message, mark-read.
+
+**With ui-kit:**
+
+```tsx
+import { FluxyInboxPanel, FluxyChatWidget } from "@fluxy-chat/ui-kit";
+```
+
+**Recording (free tools):**
+
+- macOS: QuickTime → export → `ffmpeg -i demo.mov -vf "fps=10,scale=800:-1" docs/assets/inbox-demo.gif`
+- Or ScreenStudio / OBS
+
+**Place assets:**
+
+| Location | File |
+|----------|------|
+| `packages/react/README.md` | Link or embed GIF |
+| `apps/dashboard/public/demos/` | `inbox-demo.gif` (optional, alongside existing SVG) |
+| Docs | [ui-kit quickstart](/docs/packages/ui-kit) |
+
+---
+
+## 4. npm + docs prominence
+
+After publish:
+
+- [ ] `@fluxy-chat/ui-kit@0.1.0` on npm
+- [ ] `@fluxy-chat/sdk@0.6.0`, `create-fluxy-chat@0.3.0`, etc.
+- [ ] Docs homepage card → [UI kit quickstart](/docs/packages/ui-kit)
+- [ ] `/get-started` mentions `npx create-fluxy-chat my-chat --minimal`
+
+---
+
+## 5. KMP Maven Central (Sonatype)
+
+Not blocking console deploy. When ready:
+
+1. Follow [maven-central-publish.md](/docs/integrations/maven-central-publish)
+2. `git tag sdk-v1.0.0 && git push origin sdk-v1.0.0`
+3. Approve first staging release on central.sonatype.com
+4. Update [feature parity checklist](/docs/guides/feature-parity-checklist): Mobile SDK → live
+
+---
+
+## 6. Activepieces (optional, zero-budget)
+
+Skip iframe embed. Self-host + external link only:
+
+1. [activepieces.md](/docs/integrations/activepieces)
+2. Set `NEXT_PUBLIC_ACTIVEPIECES_URL=https://automation.yourdomain.com`
+3. Import piece from `examples/integrations/activepieces/src/`
+
+---
+
+## 7. Smoke test matrix
+
+| URL | Pass criteria |
+|-----|---------------|
+| `/compare` | CLI + ui-kit rows visible |
+| `/marketplace` | MCP tab, audit badges after CI |
+| `/voice-ai` | Voice UI (LiveKit or stub) |
+| `/settings/integrations` | Opens Activepieces in new tab if URL set |
+| `/get-started` | `--minimal` + ui-kit |
+| Landing mobile | Hash links close menu |
+
+---
+
+## What we explicitly skip (by design)
+
+| Item | Reason |
+|------|--------|
+| Hosted zero-ops SaaS | Positioning: MIT self-host first |
+| Activepieces iframe embed | Enterprise license |
+| Native Zendesk/SF connectors | Activepieces POC sufficient until customer demand |
+
+See [COMPETITIVE-STRATEGY.md](/docs/COMPETITIVE-STRATEGY).

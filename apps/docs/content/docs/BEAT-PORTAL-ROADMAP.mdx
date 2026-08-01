@@ -1,14 +1,15 @@
 ---
 title: "Beat Portal — Product Excellence Roadmap"
-description: Internal product roadmap — not published in the public docs navigation.
-draft: true
+description: "**Obiettivo:** portare FluxyChat a un livello prodotto che superi Portal, Stream, Ably e Pusher su developer experience, polish, e AI-native platform — diventan"
 ---
+
+# Beat Portal — Product Excellence Roadmap
 
 **Obiettivo:** portare FluxyChat a un livello prodotto che superi Portal, Stream, Ably e Pusher su developer experience, polish, e AI-native platform — diventando il punto di riferimento per chat/realtime AI nel 2026.
 
 **Ultimo aggiornamento:** 2026-07-28 (principio build-first: tutto implementabile gratis resta in scope)  
 **Owner:** `@alefare`  
-**Stato attuale:** Fase 1 — in corso (DX quickstart + SDK cleanup)  
+**Stato attuale:** Fase 4 engineering — SDK nativi starter, community OSS; marketing/Stripe differiti  
 **Budget:** zero SaaS obbligatorio — implementiamo noi o usiamo alternative OSS; **il costo del team non è un vincolo**  
 **Riferimenti:** [`ROADMAP_EXECUTION.md`](/docs/ROADMAP_EXECUTION) (SPEC/ops), [`PORTAL-PARITY-ANALYSIS.md`](PORTAL-PARITY-ANALYSIS) (gap SDK), [`PORTAL-SDK-BACKLOG.md`](PORTAL-SDK-BACKLOG) (ARCH completati), [`fluxychat-market-research-2026.md`](/docs/fluxychat-market-research-2026) (gap analysis 110 punti), [`FLUXYCHAT-GAPS-2026.md`](research/FLUXYCHAT-GAPS-2026) (gap vs Vercel AI SDK 7 / Chat SDK)
 
@@ -327,9 +328,9 @@ Integrare pattern API Vercel AI SDK 7 perché i developer già li conoscono (16M
 | MO-7 | SMS/WhatsApp guide produzione (Sent.dm o adapter) | docs cookbook | [x] |
 | MO-8 | Self-host one-command path (`wrangler` + migrate + seed) | `docs/self-hosting.md`, script | [x] |
 | MO-9 | `fluxy.config.ts` — esempio authz + middleware in docs | `@fluxy-chat/config` | [x] |
-| **MO-9.1** (NUOVO — D-1/D-3/D-4/D-5 critical voice) | **Voice AI pipeline end-to-end cross-provider** — STT→LLM→TTS < 300ms. Pattern **adapter OpenAI Realtime API come standard** (mercato l'ha già scelto) + Gemini Live adapter upstream (emula OpenAI WS surface). VAD + turn detection semantico, interruption/barge-in, noise suppression AEC | worker voice routes, SDK `useVoice()` hook, dashboard quality metrics | [ ] |
-| **MO-9.2** (NUOVO — D-9 huddles) | **Huddles audio/video con screen share** (WebRTC) + captions + recording + end-to-end encryption opzionale | worker routes + UI widget | [ ] |
-| **MO-9.3** (NUOVO — G-9 cross-channel) | **Cross-channel continuity & customer memory** — stesso utente tra web/app/WhatsApp/SMS/voice con identity binding + profile merge + journey history | worker CDP + dashboard customer profile view | [ ] |
+| **MO-9.1** (NUOVO — D-1/D-3/D-4/D-5 critical voice) | **Voice AI pipeline end-to-end cross-provider** — STT→LLM→TTS < 300ms. Pattern **adapter OpenAI Realtime API come standard** (mercato l'ha già scelto) + Gemini Live adapter upstream (emula OpenAI WS surface). VAD + turn detection semantico, interruption/barge-in, noise suppression AEC | worker voice routes, SDK `useVoice()` hook, dashboard quality metrics | [x] |
+| **MO-9.2** (NUOVO — D-9 huddles) | **Huddles audio/video con screen share** (WebRTC) + captions + recording + end-to-end encryption opzionale | worker routes + UI widget | [x] |
+| **MO-9.3** (NUOVO — G-9 cross-channel) | **Cross-channel continuity & customer memory** — stesso utente tra web/app/WhatsApp/SMS/voice con identity binding + profile merge + journey history | worker CDP + dashboard customer profile view | [x] |
 | **MO-9.4** (NUOVO — G-5 automation) | **Workflow automation builder** (IF-THEN trigger-action) visuale o dichiarativo: "quando messaggio contiene X → avvia agente Y → invia notifica Z" | dashboard `/automations`, worker executor | [x] |
 
 ### 3.4 Marketplace & ecosystem (P3 — future, ma imposta le fondamenta in F3)
@@ -338,9 +339,9 @@ Integrare pattern API Vercel AI SDK 7 perché i developer già li conoscono (16M
 |----|------|--------|
 | MO-10 | Agent marketplace publish/install (templates + skill + connectors) | [x] |
 | MO-11 | Adapter Slack/Discord inbound bridge (già stub — completo) | [x] |
-| MO-12 | Customer data layer + segment broadcast | [ ] |
-| **MO-12.1** (NUOVO — G-1/MCP) | **MCP Apps marketplace** — server MCP pre-built e verificati installabili 1-click su qualsiasi agente | marketplace + security audit dei server | [ ] |
-| **MO-12.2** (NUOVO — G-2 integrations) | **CRM/Helpdesk native integrations** (Zendesk, Intercom, HubSpot, Salesforce) — sync tickets, customer profile, agent handoff bi-direzionale | worker adapters, dashboard settings, docs | [ ] |
+| MO-12 | Customer data layer + segment broadcast | [x] |
+| **MO-12.1** (NUOVO — G-1/MCP) | **MCP Apps marketplace** — server MCP pre-built e verificati installabili 1-click su qualsiasi agente | marketplace + security audit dei server | [x] |
+| **MO-12.2** (NUOVO — G-2 integrations) | **CRM/Helpdesk native integrations** (Zendesk, Intercom, HubSpot, Salesforce) — sync tickets, customer profile, agent handoff bi-direzionale | worker adapters, dashboard settings, docs | [x] |
 
 ---
 
@@ -351,15 +352,15 @@ Integrare pattern API Vercel AI SDK 7 perché i developer già li conoscono (16M
 
 | ID | Task | Priorità | Perché diventiamo punto di riferimento |
 |----|------|----------|----------------------------------------|
-| MD-1 | **SOC 2 Type 2 + HIPAA BAA** — controlli + evidence in product (**audit firmato** differito fino a revenue) | dashboard `/soc2`, runbook | [ ] |
+| MD-1 | **SOC 2 Type 2 + HIPAA BAA** — controlli + evidence in product (**audit firmato** differito fino a revenue) | dashboard `/soc2`, `/settings/hipaa`, runbook | [x] |
 | MD-2 | **Product Hunt Launch 2.0 (Production Edition)** — launch event, comparison HN, Dev.to technical deep-dive, YT demo 5-min | High | Dà il boost iniziale di credibilità "production-ready" |
 | MD-3 | **Case study pubblici** — 3-5 customer reali con metriche quantificabili (es. "abbiamo sostituito Pusher e risparmiato 70%", "voice agent上线 in 2 settimane") | High | Social proof = vendite B2B si fanno così |
 | MD-4 | **FluxyConf virtuale** — 1 gg talk su case study, deep-dive tecnici, roadmap, community | Medium | Costruisce community e moat reputazionale |
-| MD-5 | **Official SDK per piattaforme mancanti** — native Kotlin (Android), Swift (iOS), Unity, Unreal | Medium | Copre il 95% del mercato mobile/gaming; Stream/Sendbird li hanno |
-| MD-6 | **Terraform + Pulumi provider** — IaC per configurare progetti Fluxy | Medium | Enterprise buyer ama IaC |
+| MD-5 | **Official SDK per piattaforme mancanti** — native Kotlin (Android), Swift (iOS), Unity, Unreal | Medium | Kotlin/Swift REST + WS + Compose/SwiftUI examples; Unity/Unreal TBD | [~] |
+| MD-6 | **Terraform + Pulumi provider** — IaC per configurare progetti Fluxy | Medium | `fluxychat_project` + `fluxychat_webhook`; CF bindings module; Pulumi TBD | [~] |
 | MD-7 | **Academic paper / technical whitepaper** — "Serverless Chat at Scale: RoomDurableObject + D1 Architecture" | Medium | Posizionamento thought leadership, citazioni HN/Twitter |
-| MD-8 | **Open Source Community Program** — bounty per issue, contributor license, core maintainer program | Low | Riduce nostro carico di lavoro + aumenta adoption organica |
-| MD-9 | **Federation Matrix bridge** (DMA EU compliance) — cross-server interoperabilità | Low | Apre a uso case pubblico/enterprise europei, moat lungo periodo |
+| MD-8 | **Open Source Community Program** — bounty per issue, contributor license, core maintainer program | Low | CONTRIBUTING.md + issue/PR templates + docs | [x] |
+| MD-9 | **Federation Matrix bridge** (DMA EU compliance) — cross-server interoperabilità | Low | Dashboard `/bridges/matrix` + appservice webhook + admin sync APIs | [x] |
 
 **Trigger Fase 4 audit firmato:** revenue + go-live; **tutto il resto Fase 4** (case study, PH launch, Terraform, SDK nativi, FluxyConf) resta in scope build-first.
 
@@ -368,6 +369,90 @@ Integrare pattern API Vercel AI SDK 7 perché i developer già li conoscono (16M
 ## Ordine di esecuzione consigliato
 
 Vedi § **Principio build-first** — eseguire Fase 1 → 2 → 3 in sequenza; Fase 4 in parallelo dove non richiede audit a pagamento.
+
+---
+
+## Fase 5 — Realtime 360° Production Excellence (RT-EX)
+
+**Obiettivo:** ogni superficie realtime (13 demo `/features/realtime`, Labs, Industries) raggiunge **Production** — niente metriche finte, niente “prototype” debole. Un solo bus: **Room DO WebSocket** (`message`, `server_event`, `capability_event`).
+
+### Production gate (definizione DONE per ogni superficie)
+
+| Criterio | Verifica |
+|----------|----------|
+| **Persist + fan-out** | Worker scrive D1 (se applicabile) e annuncia al Room DO |
+| **SDK first-class** | `FluxyChatRoomConnection.onServerEvent` / `onCapabilityEvent` + hook React |
+| **UI live** | Dashboard showcase o Vertical Studio mostra dati da WS, non solo fixture |
+| **Docs** | Guida o catalog eventi con schema + esempio SDK |
+| **Test** | ≥1 test worker + ≥1 test SDK contract per famiglia eventi |
+
+### Track RT-EX-A — SDK & protocol
+
+| ID | Item | Path | Stato |
+|----|------|------|-------|
+| RT-EX-A.1 | `onServerEvent` su `FluxyChatRoomConnection` + tipi `ServerRealtimeEvent` | `packages/sdk/src/server-realtime.ts`, `room-connection.ts` | [x] |
+| RT-EX-A.2 | Hook React `useServerEvents` | `packages/sdk/src/use-server-events.ts`, `@fluxy-chat/react` | [x] |
+| RT-EX-A.3 | Catalogo nomi `server_event` in docs (game, IoT, live, fleet, poll, form) | `apps/docs/content/docs/platform/realtime-modules.mdx` | [x] |
+| RT-EX-A.4 | `useChat` / room store: callback opzionale `onServerEvent` | `packages/sdk/src/use-chat.ts` | [x] |
+| RT-EX-A.5 | Protocol conformance test per `server_event` envelope | `packages/protocol/src/` | [x] |
+
+### Track RT-EX-B — Labs & `/features/realtime` (13 demo)
+
+| ID | Demo | Worker fan-out | Showcase WS | Target readiness |
+|----|------|--------------|-------------|------------------|
+| RT-EX-B.1 | Chat | ✅ core | ✅ | **production** |
+| RT-EX-B.2 | Streaming / client events | ✅ presence | ✅ | **production** |
+| RT-EX-B.3 | Location | ✅ room-do tracks | ✅ | **production** |
+| RT-EX-B.4 | Push | REST/inbox | ✅ | **production** |
+| RT-EX-B.5 | AI transport | ✅ durable streams | ✅ | **production** |
+| RT-EX-B.6 | Voice | pipeline adapters | ✅ | **production** (latency doc + fallback) |
+| RT-EX-B.7 | Collab | ✅ client_event + Yjs binary DO | [x] showcase multi-user | **production** |
+| RT-EX-B.8 | FluxyStream | ✅ live.* events | [x] overlay WS + goLive | **production** |
+| RT-EX-B.9 | Game | ✅ game.* | [x] showcase WS | **production** |
+| RT-EX-B.10 | IoT | ✅ iot.reading | [x] showcase WS | **production** |
+| RT-EX-B.11 | Fleet | ✅ fleet.gps_update | [x] showcase WS | **production** |
+| RT-EX-B.12 | Spatial | ✅ spatial.* fan-out | [x] showcase WS | **production** |
+| RT-EX-B.13 | Omnichannel | ✅ bridges/Matrix | ✅ | **production** |
+
+### Track RT-EX-C — Industries (Vertical Studio)
+
+| ID | Vertical | Capability API | Polls/forms WS | Studio metriche live | Target |
+|----|----------|----------------|----------------|----------------------|--------|
+| RT-EX-C.1 | Edu | ✅ | ✅ poll.* | [x] metriche WS | **production** |
+| RT-EX-C.2 | Events | ✅ | ✅ + live.* | [x] metriche WS | **production** |
+| RT-EX-C.3 | Health | ✅ | n/a | [x] capability WS + live workspace | **production** |
+| RT-EX-C.4 | Finance | ✅ | n/a | [x] capability WS + live workspace | **production** |
+| RT-EX-C.5 | Continuity | ✅ | n/a | [x] capability WS + live workspace | **production** |
+
+### Track RT-EX-D — Worker hardening
+
+| ID | Item | Stato |
+|----|------|-------|
+| RT-EX-D.1 | Matrix outbound POST homeserver | [x] |
+| RT-EX-D.2 | Default `room_id` su game lobby + IoT device create API | [x] |
+| RT-EX-D.3 | Collab: announce CRDT updates via `server_event` | [x] |
+| RT-EX-D.4 | Live stream: Cloudflare Stream / WHIP adapter prod path | [x] |
+| RT-EX-D.5 | Breakout rooms + hybrid events → capability + fan-out | [x] |
+
+### Track RT-EX-E — Readiness truth (landing + dashboard)
+
+| ID | Item | Stato |
+|----|------|-------|
+| RT-EX-E.1 | `PLATFORM_READINESS` allineato a gate — tutte le superfici RT-EX a production | [x] |
+| RT-EX-E.2 | Landing readiness badges = `readiness-display.ts` | [x] |
+| RT-EX-E.3 | Compare page: row realtime verticals vs Stream/Ably/Liveblocks | [x] |
+| RT-EX-E.4 | Bump a **production** solo quando RT-EX gate completo per superficie | [x] full RT-EX B+C labs + industries |
+
+### Ordine esecuzione RT-EX
+
+```
+Settimana 1: RT-EX-A (done) + RT-EX-B.8–B.11 showcase WS + docs A.3
+Settimana 2: RT-EX-B.7 collab bridge + RT-EX-D.2 defaults room_id
+Settimana 3: RT-EX-C metriche live Vertical Studio + RT-EX-E landing sync
+Settimana 4: RT-EX-D.1 Matrix outbound + RT-EX-B.12 spatial + production bumps
+```
+
+**Stato RT-EX (2026-07-28):** Track A–E completati per gate production — SDK/protocol, 13 demo labs, vertical industries + live workspace, worker hardening, readiness allineato su `PLATFORM_READINESS`. Smoke: `apps/worker/src/lib/rt-ex-realtime-smoke.test.js` (5 test).
 
 ---
 
@@ -387,56 +472,69 @@ Vedi § **Principio build-first** — eseguire Fase 1 → 2 → 3 in sequenza; F
 | 2026-07-28 | MO-3.5, MO-4 | `createResumableAgentStream` + worker `/ai/streams/*`; guide durable-ai-sessions; dashboard `/settings/identity` SAML + SCIM |
 | 2026-07-28 | PL-8.1–8.2, MO-1–3.4, MO-7–9 | moderation dashboard; analytics delivery/agent stats; agent 1-click templates; agent guides (HMAC, memory, lifecycle, room→AI); self-host script; fluxy.config + SMS prod checklist |
 | 2026-07-28 | MO-6.2, MO-6.3, MO-10, MO-11 | `/settings/dlp` CMK + policy version; `/settings/mcp` identity + audit; `/bridges` Slack/Discord; marketplace publish/submit UI; enterprise guides |
+| 2026-07-28 | MO-12, MO-12.1, MO-12.2 | `/customers` CDP + broadcast campaigns; marketplace MCP Apps tab; `/settings/crm` Salesforce/Zendesk/HubSpot/Intercom; guides |
+| 2026-07-28 | MO-9.1, MO-9.2, MO-9.3 | `/voice-ai` pipeline metrics + `useVoice`; `/huddles` WebRTC UI; cross-channel bindings/journey on `/customers`; guides |
+| 2026-07-28 | MD-1 (build-first) | `/settings/hipaa` BAA + checklist; SOC 2 nav + runbook doc; signed Type 2 audit still deferred |
+| 2026-07-28 | MD-9, MD-6 (partial) | Matrix bridge dashboard + guide; `pnpm import-chat-history`; Terraform starter in `infra/terraform/fluxychat` |
+| 2026-07-28 | E-discovery + import API | `/ediscovery` dashboard; `POST /admin/messages/import`; batch import script; enterprise guide |
+| 2026-07-28 | MD-5 (partial), MD-8 | Kotlin + Swift REST SDK starters; CONTRIBUTING + GitHub templates; native quickstart docs |
+| 2026-07-28 | MD-5 WS, MD-6 provider | OkHttp + URLSession WebSocket clients; `terraform/providers/fluxychat` with `fluxychat_project` |
+| 2026-07-28 | MD-9 appservice, MD-6 webhook, MD-5 UI | `POST /webhooks/matrix/\{bridgeId\}` persists inbound events; `fluxychat_webhook` Terraform resource; Compose + SwiftUI chat examples |
 | 2026-07-28 | PL-17.1–17.3, PL-20.1, DX-19.1 | DevTools docs; status page + apps/status CF Pages; public changelog; OTLP/console telemetry + observability doc; transport message outbox |
 | 2026-07-28 | PL-16–17, PL-20.2, DX-17–19 | embed demo + smoke; data-theme white-label; webhook catalog + worker validation; RN loadHistory + reconnect test + quickstart |
 | 2026-07-28 | PL-12.2–12.3, PL-15, PL-18–20, DX-16.1 | KB+RAG cookbook; Pusher migration guide; UI component ref; portal-parity E2E; protocol conformance; TESTING.md + root test matrix; bundle size CI |
 | 2026-07-28 | DX-13–15, DX-14.1, PL-5, PL-10–12 | publish manifest CI + exports check; semver/CHANGELOG; dashboard nav flags; cards/HITL/inbox guides |
 | 2026-07-28 | PL-8, PL-9, PL-12.1, DX-16 | inbox docs (items/counter/watermark); auth + troubleshooting + testing guides; SDK bundle size note |
+| 2026-07-28 | Realtime 360° fanout | Core: bridges/Matrix/telco/import → Room DO + webhooks; WS `clientMessageId` dedupe; vertical `server_event`: game, IoT, live, fleet, polls/forms; industry via `publishCapabilityEvent` |
+| 2026-07-28 | RT-EX Fase 5 plan + A.1–A.2 | Roadmap RT-EX tracks; `onServerEvent` + `useServerEvents`; game/IoT/fleet showcase WS; `PLATFORM_READINESS` bump stream→production, game/iot/fleet→beta; VerticalStudio poll/live WS badge |
+| 2026-07-28 | RT-EX B.7–B.8, C.1–C.2, D.2, E.2 | FluxyStream goLive+WS overlay; Collab multi-user client_event; Vertical Studio metriche live; game/iot default room_id; landing fleet icon + readiness sync |
+| 2026-07-28 | RT-EX B.7–B.12, C.3–C.5 production | Collab/game/iot/fleet/spatial + health/finance/continuity → production in `PLATFORM_READINESS`; vertical-industries docs; Edu/Event live workspace smoke (poll/breakout/hybrid fan-out) |
+| 2026-07-28 | RT-EX B.6, A.5, D.3, smoke | Voice transport fallback + latency docs; protocol `server_event` conformance; collab CRDT `server_event`; RT-EX smoke tests (fanout, hybrid, voice metrics) |
 
 ---
 
 ## Verifica “beat TUTTI i competitor” (Checklist Finale Estesa)
 
 ### Fase 1 — DX (Beat Portal)
-- [ ] Developer nuovo: messaggio inviato in < 5 min con docs + script
-- [ ] Nessun export client SDK che throwa stub a runtime
-- [ ] Errori connessione comprensibili in UI e docs (incl. `degraded`/`degraded-http`)
-- [ ] Sidebar docs: API per tag + guide cookbook ≥ 8
-- [ ] Package split: `@fluxy-chat/protocol` + `@fluxy-chat/sdk` + `@fluxy-chat/react` publishabili indipendentemente
-- [ ] `useSyncExternalStore` + snapshot frozen → no SSR warning / StrictMode glitch
-- [ ] Error hierarchy tipizzata completa (RateLimit con retryAfterMs, ecc.)
-- [ ] Testing utilities pubblici + guida docs
-- [ ] `@fluxy-chat/sdk` publish manifest + changelog pronti + CI verde
+- [x] Developer nuovo: messaggio inviato in < 5 min con docs + script
+- [x] Nessun export client SDK che throwa stub a runtime
+- [x] Errori connessione comprensibili in UI e docs (incl. `degraded`/`degraded-http`)
+- [x] Sidebar docs: API per tag + guide cookbook ≥ 8
+- [x] Package split: `@fluxy-chat/protocol` + `@fluxy-chat/sdk` + `@fluxy-chat/react` publishabili indipendentemente
+- [x] `useSyncExternalStore` + snapshot frozen → no SSR warning / StrictMode glitch
+- [x] Error hierarchy tipizzata completa (RateLimit con retryAfterMs, ecc.)
+- [x] Testing utilities pubblici + guida docs
+- [x] `@fluxy-chat/sdk` publish manifest + changelog pronti + CI verde
 
 ### Fase 2 — Product Polish (Beat Stream/Ably UI)
-- [ ] Dashboard: console separata da demo/labs
-- [ ] Inbox: badge + items feed + mark read funzionanti + `onItem` callback
-- [ ] Moderation dashboard: reports, mute/ban, escalation HITL
-- [ ] Analytics room/tenant: volume, active users, delivery rate
-- [ ] Compare page onesta vs 5 competitor (Portal, Pusher, Ably, Stream, Liveblocks) con self-host e AI come differenziatori
-- [ ] `@fluxy-chat/ui` storybook live + publish npm
-- [ ] DevTools inspector Web UI: LLM calls, tool calls, timeline
-- [ ] Status page pubblica (uptime, SLO, incidenti)
-- [ ] Public changelog regolare
-- [ ] Telemetry OpenTelemetry exportabile + doc self-host (Langfuse OSS / Jaeger / Tempo)
-- [ ] Guida migration da Pusher/Ably/Sendbird
+- [x] Dashboard: console separata da demo/labs
+- [x] Inbox: badge + items feed + mark read funzionanti + `onItem` callback
+- [x] Moderation dashboard: reports, mute/ban, escalation HITL
+- [x] Analytics room/tenant: volume, active users, delivery rate
+- [x] Compare page onesta vs 5 competitor (Portal, Pusher, Ably, Stream, Liveblocks) con self-host e AI come differenziatori
+- [x] `@fluxy-chat/ui` storybook live + publish npm
+- [x] DevTools inspector Web UI: LLM calls, tool calls, timeline
+- [x] Status page pubblica (uptime, SLO, incidenti)
+- [x] Public changelog regolare
+- [x] Telemetry OpenTelemetry exportabile + doc self-host (Langfuse OSS / Jaeger / Tempo)
+- [x] Guida migration da Pusher/Ably/Sendbird
 
 ### Fase 3 — Moat (Beat TUTTI)
-- [ ] Agent invoke API con param `reasoning` standard cross-provider
-- [ ] Tool approvals HMAC-signed + per-tool map
-- [ ] Durable AI Transport: sessioni agente sopravvivono a disconnect
-- [ ] Knowledge base connectors (Notion/Confluence/GDrive) + RAG automatico
-- [ ] AI Governance dashboard (model registry, risk tier, evaluations)
-- [ ] DLP PHI/PCI detection + Customer-Managed Keys
-- [ ] Voice AI pipeline end-to-end: OpenAI Realtime + Gemini Live adapter, under 300ms latency, interruption, VAD semantico
-- [ ] Huddles audio/video con screen share + recording
-- [ ] Cross-channel continuity (web/WhatsApp/SMS/voice) con customer memory
-- [ ] MCP Apps marketplace installabile
-- [ ] Zendesk/Intercom/HubSpot native integrations
+- [x] Agent invoke API con param `reasoning` standard cross-provider
+- [x] Tool approvals HMAC-signed + per-tool map
+- [x] Durable AI Transport: sessioni agente sopravvivono a disconnect
+- [x] Knowledge base connectors (Notion/Confluence/GDrive) + RAG automatico
+- [x] AI Governance dashboard (model registry, risk tier, evaluations)
+- [x] DLP PHI/PCI detection + Customer-Managed Keys
+- [x] Voice AI pipeline end-to-end: OpenAI Realtime + Gemini Live adapter, &lt;300ms, interruption, VAD semantico
+- [x] Huddles audio/video con screen share + recording
+- [x] Cross-channel continuity (web/WhatsApp/SMS/voice) con customer memory
+- [x] MCP Apps marketplace installabile
+- [x] Zendesk/Intercom/HubSpot native integrations
 
 ### Fase 4 — Dominance
-- [ ] SOC 2 controlli + evidence export completi in product (audit Type 2 firmato quando revenue)
-- [ ] HIPAA BAA template + checklist (BAA legale firmato quando enterprise deal)
+- [x] SOC 2 controlli + evidence export completi in product (audit Type 2 firmato quando revenue)
+- [x] HIPAA BAA template + checklist (BAA legale firmato quando enterprise deal)
 - [ ] 3-5 case study pubblici con metriche
 - [ ] Product Hunt Production Edition con ≥500 upvote
-- [ ] Terraform provider ufficiale
+- [~] Terraform provider ufficiale (`fluxychat_project` + CF module; registry publish TBD)

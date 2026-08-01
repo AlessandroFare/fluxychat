@@ -3,6 +3,8 @@ title: "Language Model Middleware"
 description: "Language model middleware intercepts and modifies LLM calls — enabling guardrails, caching, RAG injection, logging, and parameter transformation in a model-agno"
 ---
 
+# Language Model Middleware
+
 Language model middleware intercepts and modifies LLM calls — enabling guardrails, caching, RAG injection, logging, and parameter transformation in a model-agnostic way.
 
 ## Using Middleware
@@ -37,7 +39,7 @@ const wrapped = wrapLanguageModel({
 
 ### extractReasoningMiddleware
 
-Extracts reasoning from `<think>` tags in generated text:
+Extracts reasoning from `&lt;think&gt;` tags in generated text:
 
 ```ts
 import { wrapLanguageModel, extractReasoningMiddleware } from '@fluxy-chat/agent';

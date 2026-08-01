@@ -120,7 +120,7 @@ Worker returns a **stub** token when `LIVEKIT_*` unset. Text pipeline (`useVoice
 
 ## 5. Dashboard env (Vercel / local)
 
-```env
+```text
 NEXT_PUBLIC_FLUXYCHAT_WORKER_URL=https://api.yourdomain.com
 NEXT_PUBLIC_DOCS_URL=https://docs.fluxychat.com
 NEXT_PUBLIC_ACTIVEPIECES_URL=https://automation.yourdomain.com   # optional, section 4 — opens in new tab

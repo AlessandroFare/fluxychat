@@ -3,6 +3,10 @@ title: "OAuth token encryption at rest"
 description: "Encrypt stored OAuth tokens with AES-256-GCM using the FluxyChat TokenCrypto utility."
 ---
 
+# OAuth token encryption at rest
+
+Encrypt stored OAuth tokens with AES-256-GCM using the FluxyChat TokenCrypto utility.
+
 ## Why encrypt OAuth tokens?
 
 When your FluxyChat adapters store OAuth tokens (e.g., Slack, Discord, Telegram bot tokens), they need to be encrypted at rest. Storing plaintext tokens in D1 means a database leak exposes all connected accounts.

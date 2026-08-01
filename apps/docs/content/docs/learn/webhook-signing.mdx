@@ -3,6 +3,10 @@ title: "Webhook signing and verification"
 description: "Verify that webhook payloads came from FluxyChat using HMAC-SHA256 signatures."
 ---
 
+# Webhook signing and verification
+
+Verify that webhook payloads came from FluxyChat using HMAC-SHA256 signatures.
+
 ## Why sign webhooks?
 
 Webhooks allow FluxyChat to notify your backend about events like new messages, agent runs, or reactions. Without signature verification, an attacker could send fake webhook payloads to your endpoint.

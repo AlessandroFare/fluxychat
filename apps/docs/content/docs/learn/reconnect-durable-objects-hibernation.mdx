@@ -3,6 +3,10 @@ title: "Reconnect, replay, and Durable Object hibernation"
 description: "When a Room DO hibernates, WebSockets drop and wake again. FluxyChat’s SDK handles the client experience: backoff, connectionState, and history replay via loadMore."
 ---
 
+# Reconnect, replay, and Durable Object hibernation
+
+When a Room DO hibernates, WebSockets drop and wake again. FluxyChat’s SDK handles the client experience: backoff, connectionState, and history replay via loadMore.
+
 ## What happens on the server
 
 Durable Objects can hibernate idle WebSocket connections to save resources. When clients reconnect, the DO accepts a new upgrade and resumes fan-out — but messages sent while a client was offline are not magically replayed over the socket alone.

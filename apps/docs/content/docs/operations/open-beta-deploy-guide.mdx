@@ -3,6 +3,8 @@ title: "Open beta deploy guide"
 description: "Short path from commit to a smoke-verified hosted stack. For rollback and secrets detail, see repo `RUNBOOK_DEPLOY_ROLLBACK.md` and [M6 checklist](/docs/m6-oper"
 ---
 
+# Open beta deploy guide
+
 Short path from commit to a smoke-verified hosted stack. For rollback and secrets detail, see repo `RUNBOOK_DEPLOY_ROLLBACK.md` and [M6 checklist](/docs/m6-operational-checklist).
 
 ## 1. Preflight (CI locally)
@@ -32,7 +34,7 @@ pnpm exec wrangler deploy src/worker.js
 # Staging: --config wrangler.staging.toml
 ```
 
-Set secrets (`wrangler secret put …`) per `apps/worker/.dev.vars.example`.
+Set secrets (`wrangler secret put â€¦`) per `apps/worker/.dev.vars.example`.
 
 ## 4. Dashboard (Vercel or `next start`)
 
@@ -53,5 +55,5 @@ Check `/status` on the dashboard host and `/health` on the Worker.
 
 ## 6. First tenant
 
-Dashboard → **Onboarding** → project → member JWT → room → message.  
-**Billing** → load plan. **Analytics** → cost + alerts.
+Dashboard â†’ **Onboarding** â†’ project â†’ member JWT â†’ room â†’ message.  
+**Billing** â†’ load plan. **Analytics** â†’ cost + alerts.

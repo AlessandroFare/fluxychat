@@ -3,6 +3,8 @@ title: "Public demo & guest token hardening"
 description: "The dashboard route `/demo` and Worker `GET|POST /demo/session` mint short-lived guest JWTs for a shared room. Without guards, bots can burn quota and pollute t"
 ---
 
+# Public demo & guest token hardening
+
 The dashboard route `/demo` and Worker `GET|POST /demo/session` mint short-lived guest JWTs for a shared room. Without guards, bots can burn quota and pollute the demo room.
 
 This checklist implements patterns from **free4chat** (Turnstile, origin allowlist, rate limits) and FluxyChat P4 hardening (2026-05-28).

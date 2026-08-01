@@ -3,11 +3,13 @@ title: "Multi-Platform Adapter Pattern"
 description: "FluxyChat's adapter system lets you connect any messaging platform through a unified interface. Each adapter handles webhook parsing, message posting, threading"
 ---
 
+# Multi-Platform Adapter Pattern
+
 FluxyChat's adapter system lets you connect any messaging platform through a unified interface. Each adapter handles webhook parsing, message posting, threading, and format conversion for its platform.
 
 ## Overview
 
-The adapter pattern (P22-A) abstracts platform-specific concerns behind a common `Adapter<TRawMessage>` interface. This lets you add new platforms without modifying core worker code.
+The adapter pattern (P22-A) abstracts platform-specific concerns behind a common `Adapter&lt;TRawMessage&gt;` interface. This lets you add new platforms without modifying core worker code.
 
 **14 platforms supported:** Web, Slack, Microsoft Teams, Discord, Telegram, WhatsApp, Google Chat, GitHub, Linear, Matrix, Resend (Email), IRC, Twitch, Line, and a generic API adapter.
 

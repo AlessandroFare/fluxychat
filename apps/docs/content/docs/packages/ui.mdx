@@ -3,6 +3,10 @@ title: "@fluxy-chat/ui"
 description: "React UI components for FluxyChat — shadcn-style chat primitives built on Radix UI and Tailwind."
 ---
 
+# @fluxy-chat/ui
+
+React UI components for FluxyChat — shadcn-style chat primitives built on Radix UI and Tailwind.
+
 Pair with [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) for realtime state and [`@fluxy-chat/sdk`](https://www.npmjs.com/package/@fluxy-chat/sdk) for the client.
 
 ## Install
@@ -50,6 +54,43 @@ function Room({ roomId }: { roomId: string }) {
 ## Styling
 
 Components use Tailwind utility classes and expect your app to provide design tokens (CSS variables or Tailwind theme). They do not ship a global stylesheet — import your Tailwind setup as usual.
+
+### Starter themes (PG-ZB-8)
+
+Four preset token sets ship with the package:
+
+```tsx
+import { ChatWindow, applyFluxyTheme, fluxyThemeStyle, type FluxyThemeId } from "@fluxy-chat/ui";
+
+const theme: FluxyThemeId = "brand";
+
+function App() {
+  useEffect(() => applyFluxyTheme(theme), [theme]);
+  return (
+    <div className="fluxy-theme-brand" style={fluxyThemeStyle(theme)}>
+      <ChatWindow {...props} />
+    </div>
+  );
+}
+```
+
+Presets: `default`, `dark`, `minimal`, `brand`. Use `getAllFluxyThemesCss()` to inject CSS in global stylesheets.
+
+## Storybook
+
+Preview chat primitives locally (default theme):
+
+```bash
+pnpm --filter @fluxy-chat/ui storybook
+```
+
+Build static Storybook for design review:
+
+```bash
+pnpm --filter @fluxy-chat/ui build-storybook
+```
+
+Stories live under `src/**/*.stories.tsx` (e.g. `Bubble` sent/received/typing variants).
 
 ## License
 

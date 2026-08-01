@@ -1,3 +1,5 @@
+import { createFluxyId } from "./id-utils";
+
 export interface JourneyStep {
   id: string;
   channel: string;
@@ -36,11 +38,10 @@ export interface JourneyMapping {
 
 export function createJourneyMapping(): JourneyMapping {
   const journeys = new Map<string, CustomerJourney>();
-  let stepCounter = 0;
 
   return {
     recordStep(userId, input) {
-      const id = `step-${++stepCounter}`;
+      const id = createFluxyId("step");
       const step: JourneyStep = { ...input, id };
 
       let journey = journeys.get(userId);

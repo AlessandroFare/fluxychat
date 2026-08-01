@@ -3,6 +3,8 @@ title: "Staging deploy & public status (OPS-4)"
 description: "Template: `apps/worker/wrangler.staging.toml`"
 ---
 
+# Staging deploy & public status (OPS-4)
+
 ## Staging Worker
 
 Template: `apps/worker/wrangler.staging.toml`
@@ -26,7 +28,7 @@ GitHub Actions: workflow **Deploy** → environment `staging` (requires `CLOUDFL
 
 ## Public status page
 
-Dashboard route: `/status` (server-rendered, polls `GET /health` on the configured Worker).
+Dashboard route: **`/status`** (server-rendered, polls `GET /health` on the configured Worker).
 
 Optional custom domain:
 

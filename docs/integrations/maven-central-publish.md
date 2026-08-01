@@ -129,15 +129,14 @@ Monitor: **GitHub → Actions → Publish SDK KMP**.
 
 ### First release manual step
 
-After Gradle uploads artifacts, CI triggers the Central Portal **automatic upload** API:
+After Gradle uploads artifacts, CI runs `scripts/sonatype-upload-staging.sh`, which:
 
-```bash
-curl -sfS -X POST \
-  -H "Authorization: Bearer $(printf '%s:%s' "$OSSRH_USER" "$OSSRH_PASS" | base64 -w0)" \
-  "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.fluxychat?publishing_type=automatic"
-```
+1. Calls `GET /manual/search/repositories` for **open** staging repos (Android + JVM often create two).
+2. POSTs each to `/manual/upload/repository/{key}?publishing_type=user_managed` (same runner IP as Gradle — required by Sonatype).
 
-The workflow `.github/workflows/publish-sdk-kmp.yml` runs this after `gradle publish*`. Version comes from the tag (`sdk-v1.0.0` → `1.0.0` via `-PsdkVersion`).
+Set `SONATYPE_PUBLISHING_TYPE=automatic` in the workflow env to attempt auto-release after validation.
+
+If upload fails with **400**, check [Central Portal → Deployments](https://central.sonatype.com/publishing) — Gradle may already have uploaded; release manually with **Publish**.
 
 Gradle staging URL (replaces legacy `s01.oss.sonatype.org`, which returns **402** after OSSRH sunset):
 

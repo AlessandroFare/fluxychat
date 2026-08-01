@@ -3,6 +3,10 @@ title: "OAuth Token Encryption"
 description: "FluxyChat's token encryption (P26-B2) provides AES-256-GCM encryption for securely storing OAuth tokens used by platform adapters (Slack, Linear, etc.)."
 ---
 
+# OAuth Token Encryption
+
+FluxyChat's token encryption (P26-B2) provides AES-256-GCM encryption for securely storing OAuth tokens used by platform adapters (Slack, Linear, etc.).
+
 ## Overview
 
 OAuth tokens stored in D1 or external systems should never be plaintext. The `TokenCrypto` class wraps the Web Crypto API's AES-256-GCM implementation with a simple encrypt/decrypt interface. Each encryption uses a random 12-byte IV, ensuring the same plaintext produces different ciphertext every time.

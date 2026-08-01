@@ -3,6 +3,10 @@ title: "JWT Authentication for self-hosted FluxyChat"
 description: "Configure JWT-based auth for your FluxyChat worker without external identity providers — issue, refresh, and verify tokens."
 ---
 
+# JWT Authentication for self-hosted FluxyChat
+
+Configure JWT-based auth for your FluxyChat worker without external identity providers — issue, refresh, and verify tokens.
+
 ## How JWT auth works in FluxyChat
 
 FluxyChat uses HMAC-signed JWTs to authenticate WebSocket connections and REST API calls. Each project has its own jwt_secret stored in the project_secrets table. Tokens are issued on login and verified on every request.
@@ -31,7 +35,7 @@ Response:
 
 ## Token verification
 
-- Every REST request must include Authorization: Bearer `<token>`
+- Every REST request must include Authorization: Bearer &lt;token&gt;
 - WebSocket connections pass the token as a query parameter: /ws?roomId=...&token=...
 - The worker verifies the signature, checks expiry, and extracts projectId/userId
 - Expired tokens return 401 — the client should refresh automatically

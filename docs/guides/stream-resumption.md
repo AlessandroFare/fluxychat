@@ -57,7 +57,7 @@ During stream resumption, the following events flow over WebSocket:
 
 Stream resumption is enabled by default. Configure via environment variables:
 
-```env
+```text
 STREAM_RESUMPTION_ENABLED=true          # default: true
 STREAM_RESUMPTION_TTL_SECONDS=300        # how long to keep stream state (default: 5 min)
 STREAM_RESUMPTION_MAX_CONCURRENT=10      # max concurrent resumable streams per room

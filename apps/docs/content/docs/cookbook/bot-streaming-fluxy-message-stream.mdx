@@ -1,7 +1,9 @@
 ---
 title: "Cookbook: Node bot that streams into a room"
-description: "Use `FluxyMessageStream` from `@fluxy-chat/sdk` when your bot runs outside the Worker (Node script, Cloudflare Worker cron, etc.) but should publish the sam"
+description: "Use `FluxyMessageStream` from `@fluxy-chat/sdk` when your bot runs **outside** the Worker (Node script, Cloudflare Worker cron, etc.) but should publish the sam"
 ---
+
+# Cookbook: Node bot that streams into a room
 
 Use `FluxyMessageStream` from `@fluxy-chat/sdk` when your bot runs **outside** the Worker (Node script, Cloudflare Worker cron, etc.) but should publish the same streaming UX as built-in agents: one message row, `streaming: true` deltas, then a final edit.
 
@@ -99,5 +101,5 @@ Pass `parentId` in `FluxyMessageStreamOptions` to thread under an existing messa
 ## Related
 
 - [Assistant room use case](/docs/use-cases/assistant-room)
-- [Dashboard integration](/docs/reference/dashboard-integration) — `useChat` replay modes
+- [Dashboard integration](/docs/dashboard-integration) — `useChat` replay modes
 

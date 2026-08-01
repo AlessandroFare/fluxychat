@@ -3,6 +3,10 @@ title: "Session security — storage, refresh, and token lifecycle"
 description: "Best practices for managing FluxyChat sessions: secure token storage, refresh strategies, and preventing session fixation."
 ---
 
+# Session security — storage, refresh, and token lifecycle
+
+Best practices for managing FluxyChat sessions: secure token storage, refresh strategies, and preventing session fixation.
+
 ## Session lifecycle
 
 FluxyChat sessions consist of a short-lived access token (1 hour) and a longer-lived refresh token (30 days). The access token is used for API calls and WebSocket connections; the refresh token obtains new access tokens without re-authentication.

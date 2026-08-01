@@ -3,6 +3,10 @@ title: "Adapter Error Hierarchy"
 description: "FluxyChat's adapter error system (P26-B1) provides a standardized error hierarchy for consistent error handling across all adapter implementations."
 ---
 
+# Adapter Error Hierarchy
+
+FluxyChat's adapter error system (P26-B1) provides a standardized error hierarchy for consistent error handling across all adapter implementations.
+
 ## Overview
 
 All adapter errors extend `AdapterError`, which includes `adapter` (the platform name) and `code` (a machine-readable error code) fields. This lets you handle errors programmatically without parsing error messages.

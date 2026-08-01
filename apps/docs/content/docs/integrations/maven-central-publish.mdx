@@ -1,0 +1,196 @@
+---
+title: "Publish KMP SDK to Maven Central (Sonatype)"
+description: "This guide covers **Fase 5** from [PRODUCTION-SETUP.md](/docs/PRODUCTION-SETUP): getting `OSSRH_USER`, `OSSRH_PASS`, `GPG_KEY`, and `GPG_PASS` into GitHub Actio"
+---
+
+# Publish KMP SDK to Maven Central (Sonatype)
+
+This guide covers **Fase 5** from [PRODUCTION-SETUP.md](/docs/PRODUCTION-SETUP): getting `OSSRH_USER`, `OSSRH_PASS`, `GPG_KEY`, and `GPG_PASS` into GitHub Actions so `sdk-v*` tags publish `com.fluxychat` artifacts.
+
+> **Not SonarQube.** The portal at [my.sonatype.com](https://my.sonatype.com) is **Sonatype** (Maven Central / OSSRH). SonarQube is unrelated code quality tooling.
+
+---
+
+## What you are setting up
+
+| GitHub secret | What it is |
+|---------------|------------|
+| `OSSRH_USER` | Sonatype Central Portal username (or token username) |
+| `OSSRH_PASS` | Sonatype Central Portal password (or user token) |
+| `GPG_KEY` | ASCII-armored **private** GPG key used to sign Maven artifacts |
+| `GPG_PASS` | Passphrase for that GPG key |
+
+CI workflow: `.github/workflows/publish-sdk-kmp.yml` — triggered by tags `sdk-v*` (e.g. `sdk-v1.0.0`).
+
+Gradle coordinates: `com.fluxychat:shared` from `packages/sdk-kmp/shared/build.gradle.kts`.
+
+---
+
+## Step 1 — Register on Sonatype Central Portal
+
+1. Go to [central.sonatype.com](https://central.sonatype.com/) (new portal) or sign in via [my.sonatype.com](https://my.sonatype.com).
+2. Create / verify your account (same login as the dashboard you saw).
+3. **Publish namespace** → **Register namespace** → enter:
+
+   ```
+   com.fluxychat
+   ```
+
+4. Prove ownership of the GitHub repo (recommended path):
+   - Add a temporary empty commit or file Sonatype asks for, **or**
+   - Add a DNS TXT record if you prefer domain verification for `fluxychat.com`.
+
+5. Wait for **Approved** status on namespace `com.fluxychat`.  
+   **First-time approval often takes 1–2 business days** — start this early; it is the slowest step.
+
+---
+
+## Step 2 — Generate a user token (OSSRH credentials)
+
+In Central Portal:
+
+1. **Account** (profile icon) → **Generate User Token** (or **Access Tokens**).
+2. Copy the generated **username** and **password** pair immediately (password shown once).
+
+Map to GitHub:
+
+```
+OSSRH_USER  = <token username>
+OSSRH_PASS  = <token password>
+```
+
+These replace legacy OSSRH “JIRA username + password” for the new Central Portal API.
+
+---
+
+## Step 3 — Create a GPG signing key
+
+Maven Central requires signed artifacts. On your machine (Git Bash on Windows is fine):
+
+```bash
+gpg --full-generate-key
+# RSA and RSA, 4096 bits, expiry 0 (no expiry) or 2y
+# Real name: FluxyChat Release
+# Email: your-email@domain.com
+```
+
+List keys:
+
+```bash
+gpg --list-secret-keys --keyid-format=long
+```
+
+Export **private** key (for CI — store only in GitHub Secrets):
+
+```bash
+gpg --armor --export-secret-keys YOUR_KEY_ID > gpg-private.asc
+```
+
+Copy the entire file contents (including `-----BEGIN PGP PRIVATE KEY BLOCK-----`) into GitHub secret **`GPG_KEY`**.
+
+Set **`GPG_PASS`** to the passphrase you chose when creating the key.
+
+### Upload public key to keyserver (required once)
+
+```bash
+gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID
+```
+
+Sonatype verifies signatures against public keys on keyservers.
+
+---
+
+## Step 4 — Add GitHub repository secrets
+
+**GitHub → your repo → Settings → Secrets and variables → Actions → New repository secret**
+
+| Name | Value |
+|------|--------|
+| `OSSRH_USER` | Token username from Step 2 |
+| `OSSRH_PASS` | Token password from Step 2 |
+| `GPG_KEY` | Full armored private key from Step 3 |
+| `GPG_PASS` | GPG passphrase |
+
+No Worker or Vercel env vars needed for Maven publish — this is CI-only.
+
+---
+
+## Step 5 — Tag and publish
+
+After namespace `com.fluxychat` is **Approved** and secrets are set:
+
+```bash
+git tag sdk-v1.0.0
+git push origin sdk-v1.0.0
+```
+
+Workflow jobs:
+
+1. **test** — `gradle :shared:jvmTest`
+2. **publish-android** — Maven Central (skipped if `OSSRH_USER` empty)
+3. **publish-ios** — XCFramework zip attached to GitHub Release
+
+Monitor: **GitHub → Actions → Publish SDK KMP**.
+
+### First release manual step
+
+After Gradle uploads artifacts, CI runs `scripts/sonatype-upload-staging.sh`, which:
+
+1. Calls `GET /manual/search/repositories` for **open** staging repos (Android + JVM often create two).
+2. POSTs each to `/manual/upload/repository/\{key\}?publishing_type=user_managed` (same runner IP as Gradle — required by Sonatype).
+
+Set `SONATYPE_PUBLISHING_TYPE=automatic` in the workflow env to attempt auto-release after validation.
+
+If upload fails with **400**, check [Central Portal → Deployments](https://central.sonatype.com/publishing) — Gradle may already have uploaded; release manually with **Publish**.
+
+Gradle staging URL (replaces legacy `s01.oss.sonatype.org`, which returns **402** after OSSRH sunset):
+
+```
+https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/
+```
+
+Then open [central.sonatype.com](https://central.sonatype.com/) → **Deployments** → **Release** the staging deployment (first time only). Subsequent releases can use `publishing_type=automatic` once namespace auto-publish is enabled.
+
+---
+
+## Step 6 — Consume from Android
+
+```kotlin
+// settings.gradle.kts or build.gradle.kts
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("com.fluxychat\:shared:1.0.0")
+}
+```
+
+iOS: download `FluxyChatSDK.xcframework.zip` from the GitHub Release attached to the same tag.
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Namespace pending | Wait for Sonatype approval; cannot publish until approved |
+| `401 Unauthorized` on publish | Regenerate user token; update `OSSRH_USER` / `OSSRH_PASS` |
+| `402 Payment Required` on publish | Repo still points at legacy `s01.oss.sonatype.org` — use Central Portal staging API URL above |
+| Signature verification failed | Re-upload public key to keyserver; check `GPG_KEY` is private key armored |
+| CI skips Maven publish | Log says `OSSRH_USER not set` — add secrets or expect build-only |
+| `./gradlew` not found locally | CI uses `gradle/actions/setup-gradle@v4`; local dev optional |
+
+---
+
+## Quick checklist
+
+- [ ] Namespace `com.fluxychat` registered and **Approved**
+- [ ] User token → `OSSRH_USER` / `OSSRH_PASS`
+- [ ] GPG key created, public key on keyserver
+- [ ] `GPG_KEY` / `GPG_PASS` in GitHub Secrets
+- [ ] Tag `sdk-v1.0.0` pushed
+- [ ] Release staging deployment on Central Portal (first time only)
+- [ ] Update docs / feature parity: “Mobile native SDK — live on Maven Central”
+
+See also: [kotlin-multiplatform.md](/docs/kotlin-multiplatform), `packages/sdk-kmp/README.md`.

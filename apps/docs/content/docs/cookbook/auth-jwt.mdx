@@ -3,6 +3,10 @@ title: "Cookbook: Auth / Token / JWT (role-based)"
 description: "Fluxychat uses two credential forms:"
 ---
 
+# Cookbook: Auth / Token / JWT (role-based)
+
+Fluxychat uses two credential forms:
+
 - **API key** (`X-Fluxy-Api-Key`): server-to-server, identifies the **tenant/project**.
 - **JWT** (`Authorization: Bearer ...`): client-to-worker/SDK, contains `sub` (userId), `tid` (projectId), `roles`, `exp`.
 
@@ -112,7 +116,7 @@ curl -sS -X POST "$FLUXY_BASE_URL/admin/mute" \
 
 Format:
 
-- `GET /ws/room/:roomId?token=<JWT>`
+- `GET /ws/room/:roomId?token=&lt;JWT&gt;`
 - membership check enforced
 
 ```js
