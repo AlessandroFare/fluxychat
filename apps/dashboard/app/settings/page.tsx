@@ -175,6 +175,12 @@ export default function SettingsPage() {
         />
 
         <SettingsCard
+          title="Automation (Activepieces)"
+          description="Embed no-code flows — FluxyChat webhooks as triggers, CRM connectors via Activepieces."
+          cta={{ label: "Open integrations →", href: "/settings/integrations" }}
+        />
+
+        <SettingsCard
           title="CRM &amp; helpdesk"
           description="Salesforce, Zendesk, HubSpot, Intercom — sync contacts, tickets, and agent handoff."
           cta={{ label: "Configure CRM →", href: "/settings/crm" }}

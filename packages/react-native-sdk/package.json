@@ -1,6 +1,6 @@
 {
     "name":  "@fluxy-chat/react-native-sdk",
-    "version":  "1.1.0",
+    "version":  "1.1.1",
     "description":  "React Native SDK for FluxyChat - realtime chat infrastructure",
     "main":  "dist/index.js",
     "types":  "dist/index.d.ts",

@@ -3,6 +3,7 @@
  */
 
 import { registerMcpServer, registerMcpToolProvenance } from "./mcp-identity-store.js";
+import { getLatestMarketplaceAudit } from "./marketplace-audit.js";
 
 const CATALOG = [
   {
@@ -98,8 +99,38 @@ async function writeInstalls(env, projectId, installs) {
   await kv.put(installsKey(projectId), JSON.stringify(installs));
 }
 
-export function listMcpAppsCatalog() {
-  return CATALOG.map(({ serverConfig, ...rest }) => rest);
+export async function listMcpAppsCatalog(env) {
+  const base = CATALOG.map(({ serverConfig, ...rest }) => rest);
+  if (!env?.DB) return base;
+  return Promise.all(
+    base.map(async (app) => {
+      const audit = await getLatestMarketplaceAudit(env.DB, app.id);
+      if (!audit) return app;
+      return {
+        ...app,
+        auditGrade: audit.grade,
+        auditScore: audit.score,
+        auditScannedAt: audit.scannedAt,
+        auditSeverityCritical: audit.severityCritical,
+      };
+    }),
+  );
+}
+
+export async function getMcpAppByIdWithAudit(env, appId) {
+  const app = getMcpAppById(appId);
+  if (!app) return null;
+  const { serverConfig, ...rest } = app;
+  if (!env?.DB) return rest;
+  const audit = await getLatestMarketplaceAudit(env.DB, appId);
+  if (!audit) return rest;
+  return {
+    ...rest,
+    auditGrade: audit.grade,
+    auditScore: audit.score,
+    auditScannedAt: audit.scannedAt,
+    auditSeverityCritical: audit.severityCritical,
+  };
 }
 
 export function getMcpAppById(appId) {

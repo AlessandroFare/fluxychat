@@ -1,0 +1,10 @@
+{
+  "name": "@fluxy-chat/example-mcp-github",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Official FluxyChat example — GitHub MCP server (stdio)",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

@@ -2,24 +2,67 @@ import { pickRouteDeps } from "./route-http-deps.js";
 import { resolveAdminContext } from "../lib/admin-route-context.js";
 import {
   listMcpAppsCatalog,
-  getMcpAppById,
+  getMcpAppByIdWithAudit,
   listInstalledMcpApps,
   installMcpApp,
   uninstallMcpApp,
 } from "../lib/mcp-apps-catalog.js";
+import { recordMarketplaceAudit } from "../lib/marketplace-audit.js";
+import { verifyWebhookSignature } from "../lib/webhook-batch-verify.js";
 
 export async function dispatchMcpAppsRoutes(request, url, h) {
   const path = url.pathname;
   const { json: respond } = pickRouteDeps(h, ["json"]);
+  const env = h?.env ?? {};
+
+  if (request.method === "POST" && path === "/internal/marketplace/audit-result") {
+    const secret = String(env.MARKETPLACE_AUDIT_HMAC_SECRET || "").trim();
+    if (!secret) return respond({ error: "audit_webhook_not_configured" }, h, 503);
+
+    const rawBody = await request.text();
+    const signature = request.headers.get("X-Fluxy-Signature");
+    const verified = await verifyWebhookSignature(secret, rawBody, signature ?? "");
+    if (!verified.valid) return respond({ error: "invalid_signature" }, h, 401);
+
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return respond({ error: "invalid_json" }, h, 400);
+    }
+
+    if (!body?.serverId || typeof body.serverId !== "string") {
+      return respond({ error: "serverId required" }, h, 400);
+    }
+
+    if (!env.DB) return respond({ error: "db_unavailable" }, h, 503);
+
+    try {
+      const recorded = await recordMarketplaceAudit(env.DB, {
+        serverId: body.serverId,
+        score: body.score,
+        grade: body.grade,
+        severityCritical: body.severityCritical,
+        severityHigh: body.severityHigh,
+        findings: body.findings,
+        scannerVersion: body.scannerVersion,
+        scannerName: body.scannerName ?? "mcp-audit",
+      });
+      return respond({ ok: true, audit: recorded }, h, 201);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "record_failed";
+      return respond({ error: message }, h, 500);
+    }
+  }
 
   if (request.method === "GET" && path === "/marketplace/mcp-apps") {
-    const apps = listMcpAppsCatalog();
+    const apps = await listMcpAppsCatalog(env);
     return respond({ apps, count: apps.length }, h);
   }
 
   const appMatch = path.match(/^\/marketplace\/mcp-apps\/([^/]+)$/);
   if (appMatch && request.method === "GET") {
-    const app = getMcpAppById(decodeURIComponent(appMatch[1]));
+    const app = await getMcpAppByIdWithAudit(env, decodeURIComponent(appMatch[1]));
     if (!app) return respond({ error: "not_found" }, h, 404);
     return respond({ app }, h);
   }
@@ -28,17 +71,17 @@ export async function dispatchMcpAppsRoutes(request, url, h) {
 
   const ctx = await resolveAdminContext(request, h);
   if (ctx.response) return ctx.response;
-  const { env, projectId, userId } = ctx;
+  const { env: adminEnv, projectId, userId } = ctx;
 
   if (request.method === "GET" && path === "/admin/mcp-apps/installed") {
-    const installed = await listInstalledMcpApps(env, { projectId });
+    const installed = await listInstalledMcpApps(adminEnv, { projectId });
     return respond({ installed, count: installed.length }, h);
   }
 
   if (request.method === "POST" && path === "/admin/mcp-apps/install") {
     const body = await request.json().catch(() => null);
     if (!body?.appId) return respond({ error: "appId required" }, h, 400);
-    const result = await installMcpApp(env, {
+    const result = await installMcpApp(adminEnv, {
       projectId,
       appId: body.appId,
       agentId: body.agentId,
@@ -52,7 +95,7 @@ export async function dispatchMcpAppsRoutes(request, url, h) {
     const appId = url.searchParams.get("appId");
     const agentId = url.searchParams.get("agentId");
     if (!appId) return respond({ error: "appId required" }, h, 400);
-    const result = await uninstallMcpApp(env, { projectId, appId, agentId });
+    const result = await uninstallMcpApp(adminEnv, { projectId, appId, agentId });
     return respond(result, h);
   }
 

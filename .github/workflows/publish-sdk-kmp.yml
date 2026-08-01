@@ -1,0 +1,83 @@
+# Publish FluxyChat KMP SDK — Maven Central (Android) + GitHub Release XCFramework (iOS)
+name: Publish SDK KMP
+
+on:
+  push:
+    tags: ["sdk-v*"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+      - name: Run common tests
+        working-directory: packages/sdk-kmp
+        run: gradle :shared:jvmTest
+
+  publish-android:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sdk-v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+      - name: Publish to Maven Central (when OSSRH secrets set)
+        working-directory: packages/sdk-kmp
+        env:
+          OSSRH_USER: ${{ secrets.OSSRH_USER }}
+          OSSRH_PASS: ${{ secrets.OSSRH_PASS }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASS }}
+        run: |
+          if [[ -z "$OSSRH_USER" ]]; then
+            echo "OSSRH_USER not set — skipping Maven publish (local tag build only)"
+            gradle :shared:assembleRelease
+          else
+            gradle :shared:publishAllPublicationsToSonatypeRepository
+          fi
+
+  publish-ios:
+    needs: test
+    runs-on: macos-14
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sdk-v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+      - name: Build XCFramework
+        working-directory: packages/sdk-kmp
+        run: gradle :shared:linkReleaseFrameworkIosArm64 :shared:linkReleaseFrameworkIosSimulatorArm64
+      - name: Upload XCFramework zip to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          FRAME_DIR="packages/sdk-kmp/shared/build/bin/iosArm64/releaseFramework"
+          if [[ ! -d "$FRAME_DIR" ]]; then
+            echo "XCFramework output not found — skip release asset"
+            exit 0
+          fi
+          cd "$FRAME_DIR"
+          zip -r FluxyChatSDK.xcframework.zip shared.framework 2>/dev/null || zip -r FluxyChatSDK.xcframework.zip .
+          gh release upload "$TAG" FluxyChatSDK.xcframework.zip --clobber || gh release create "$TAG" FluxyChatSDK.xcframework.zip

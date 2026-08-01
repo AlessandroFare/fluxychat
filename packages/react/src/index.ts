@@ -28,6 +28,13 @@ export {
 } from "@fluxy-chat/sdk";
 
 export {
+  useLiveKitToken,
+  type UseLiveKitTokenOptions,
+  type UseLiveKitTokenResult,
+  type LiveKitTokenResponse,
+} from "@fluxy-chat/sdk";
+
+export {
   useInbox,
   type UseInboxOptions,
   type UseInboxResult,

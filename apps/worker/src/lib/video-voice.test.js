@@ -128,16 +128,17 @@ describe('Video/Voice lib', () => {
   });
 
   describe('generateToken', () => {
-    it('generates livekit token', () => {
-      const t = generateToken('livekit', { roomId: 'r-1', userId: 'u-1' });
+    it('generates livekit stub when not configured', async () => {
+      const t = await generateToken({}, 'livekit', { roomId: 'r-1', userId: 'u-1' });
       expect(t.provider).toBe('livekit');
+      expect(t.stub).toBe(true);
     });
-    it('generates daily token', () => {
-      const t = generateToken('daily', { roomId: 'r-1', userId: 'u-1' });
+    it('generates daily token', async () => {
+      const t = await generateToken({}, 'daily', { roomId: 'r-1', userId: 'u-1' });
       expect(t.provider).toBe('daily');
     });
-    it('generates custom token', () => {
-      const t = generateToken('custom', { roomId: 'r-1', userId: 'u-1' });
+    it('generates custom token', async () => {
+      const t = await generateToken({}, 'custom', { roomId: 'r-1', userId: 'u-1' });
       expect(t.provider).toBe('custom');
     });
   });

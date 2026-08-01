@@ -1,0 +1,68 @@
+# PG-ZB-7 — Run mcp-audit on official MCP examples and post results to Worker (when configured).
+# @see https://github.com/adudley78/mcp-audit
+name: MCP marketplace audit
+
+on:
+  push:
+    paths:
+      - "examples/mcp/**"
+      - ".github/workflows/mcp-marketplace-audit.yml"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        server: [github, slack, notion]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: adudley78/setup-mcp-audit@v1
+
+      - name: Scan MCP example
+        id: scan
+        working-directory: examples/mcp/${{ matrix.server }}
+        run: |
+          mcp-audit check --json > audit.json || true
+          SCORE=$(jq -r '.score.value // .score // 0' audit.json)
+          GRADE=$(jq -r '.score.grade // "F"' audit.json)
+          CRITICAL=$(jq '[.findings[]? | select(.severity == "critical" or .severity == "CRITICAL")] | length' audit.json)
+          HIGH=$(jq '[.findings[]? | select(.severity == "high" or .severity == "HIGH")] | length' audit.json)
+          echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+          echo "grade=$GRADE" >> "$GITHUB_OUTPUT"
+          echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
+          echo "high=$HIGH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload audit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-audit-${{ matrix.server }}
+          path: examples/mcp/${{ matrix.server }}/audit.json
+          if-no-files-found: ignore
+
+      - name: Post audit result to Worker
+        if: env.WORKER_AUDIT_WEBHOOK_URL != ''
+        env:
+          WORKER_AUDIT_WEBHOOK_URL: ${{ secrets.WORKER_AUDIT_WEBHOOK_URL }}
+          WORKER_AUDIT_HMAC_SECRET: ${{ secrets.WORKER_AUDIT_HMAC_SECRET }}
+        working-directory: examples/mcp/${{ matrix.server }}
+        run: |
+          FINDINGS=$(jq -c '.findings // []' audit.json)
+          BODY=$(jq -n \
+            --arg sid "${{ matrix.server }}-mcp" \
+            --arg grade "${{ steps.scan.outputs.grade }}" \
+            --argjson score "${{ steps.scan.outputs.score }}" \
+            --argjson critical "${{ steps.scan.outputs.critical }}" \
+            --argjson high "${{ steps.scan.outputs.high }}" \
+            --argjson findings "$FINDINGS" \
+            '{ serverId: $sid, score: $score, grade: $grade, severityCritical: $critical, severityHigh: $high, findings: $findings, scannerVersion: "mcp-audit-ci", scannerName: "mcp-audit" }')
+          SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$WORKER_AUDIT_HMAC_SECRET" | awk '{print $2}')
+          curl -sfS -X POST "$WORKER_AUDIT_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Fluxy-Signature: sha256=$SIG" \
+            -d "$BODY" || echo "Webhook not configured — audit ran locally only"

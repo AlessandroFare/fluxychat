@@ -61,3 +61,13 @@ export { ReactionPicker } from "./primitives/reaction-picker";
 export type { ReactionPickerProps } from "./primitives/reaction-picker";
 export { TypingIndicator } from "./primitives/typing-indicator";
 export type { TypingIndicatorProps } from "./primitives/typing-indicator";
+export {
+  FLUXY_THEME_IDS,
+  FLUXY_THEMES,
+  applyFluxyTheme,
+  fluxyThemeClassName,
+  fluxyThemeStyle,
+  getAllFluxyThemesCss,
+  getFluxyThemeCss,
+} from "./themes";
+export type { FluxyThemeId, FluxyThemeTokens } from "./themes";

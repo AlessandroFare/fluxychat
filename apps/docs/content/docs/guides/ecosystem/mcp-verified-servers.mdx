@@ -1,0 +1,29 @@
+---
+title: Verified MCP servers
+description: Curated MCP examples scanned with mcp-audit — reproducible grades.
+---
+
+# Verified MCP servers
+
+Servers in the FluxyChat marketplace catalog with **mcp-audit** scan results. Re-run locally:
+
+```bash
+cd examples/mcp/github
+mcp-audit check --json > audit.json
+```
+
+CI posts results to D1 when `WORKER_AUDIT_WEBHOOK_URL` is configured.
+
+| Server | Grade | Score | Critical | Clone |
+|--------|-------|-------|----------|-------|
+| [GitHub MCP](https://github.com/AlessandroFare/fluxychat/tree/main/examples/mcp/github) | — | — | 0 | `examples/mcp/github` |
+| [Slack MCP](https://github.com/AlessandroFare/fluxychat/tree/main/examples/mcp/slack) | — | — | 0 | `examples/mcp/slack` |
+| [Notion MCP](https://github.com/AlessandroFare/fluxychat/tree/main/examples/mcp/notion) | — | — | 0 | `examples/mcp/notion` |
+
+## Audit policy
+
+- **Grade A–B**, 0 critical → eligible for "Verified" badge in console
+- Scans run on every push to `examples/mcp/**`
+- Tool: [mcp-audit](https://github.com/adudley78/mcp-audit) (Apache 2.0)
+
+Last generated: 2026-08-01T08:41:50.332Z

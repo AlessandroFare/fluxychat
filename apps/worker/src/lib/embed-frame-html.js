@@ -29,6 +29,8 @@ export function buildEmbedFrameHtml(options = {}) {
     .msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 14px; word-break: break-word; }
     .msg.them { align-self: flex-start; background: #fff; border: 1px solid #e2e8f0; }
     .msg.me { align-self: flex-end; background: ${primaryColor}; color: #fff; }
+    .msg[data-streaming="1"] .msg-body::after { content: " ▍"; animation: blink 1s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
     .meta { font-size: 11px; opacity: 0.75; margin-bottom: 4px; }
     footer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #e2e8f0; background: #fff; }
     footer input { flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
@@ -73,10 +75,12 @@ export function buildEmbedFrameHtml(options = {}) {
     seen[key] = true;
     var wrap = document.createElement("div");
     wrap.className = "msg " + (isMe ? "me" : "them");
+    if (msg.id != null) wrap.setAttribute("data-msg-id", String(msg.id));
     var meta = document.createElement("div");
     meta.className = "meta";
     meta.textContent = isMe ? "You" : (msg.userId || "Agent");
     var body = document.createElement("div");
+    body.className = "msg-body";
     body.textContent = msg.content;
     wrap.appendChild(meta);
     wrap.appendChild(body);
@@ -96,6 +100,19 @@ export function buildEmbedFrameHtml(options = {}) {
         var data = JSON.parse(ev.data);
         if (data.type === "message") {
           appendMessage(data, data.userId === session.userId);
+        } else if (data.type === "edit" && data.messageId != null) {
+          var existing = listEl.querySelector('[data-msg-id="' + data.messageId + '"]');
+          if (existing) {
+            var bodyEl = existing.querySelector(".msg-body");
+            if (bodyEl) bodyEl.textContent = data.content || bodyEl.textContent;
+            if (data.streaming) existing.setAttribute("data-streaming", "1");
+            else existing.removeAttribute("data-streaming");
+          } else {
+            appendMessage({ id: data.messageId, content: data.content || "…", userId: data.userId }, data.userId === session.userId);
+            var created = listEl.querySelector('[data-msg-id="' + data.messageId + '"]');
+            if (created && data.streaming) created.setAttribute("data-streaming", "1");
+          }
+          listEl.scrollTop = listEl.scrollHeight;
         } else if (data.type === "history" && Array.isArray(data.messages)) {
           data.messages.forEach(function (m) { appendMessage(m, m.userId === session.userId); });
         } else if (data.type === "replay" && Array.isArray(data.messages)) {

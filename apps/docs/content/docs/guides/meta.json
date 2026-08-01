@@ -7,6 +7,8 @@
     "testing-integration",
     "auth-jwt",
     "migrate-from-pusher",
+    "migrate-from-portal",
+    "feature-parity-checklist",
     "self-host-one-command",
     "fluxy-config",
     "realtime",

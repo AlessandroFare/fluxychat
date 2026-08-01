@@ -1,0 +1,73 @@
+---
+title: Feature parity checklist
+description: Compare FluxyChat against typical hosted chat SDKs — reconnect, inbox, delivery, and AI timeline.
+---
+
+Use this checklist when evaluating **any** hosted chat SDK. FluxyChat targets full parity on transport and inbox; platform modules (stream, IoT, fleet) are optional add-ons.
+
+## Developer experience
+
+| Capability | FluxyChat | Notes |
+|------------|-----------|-------|
+| Time to first message (hosted) | ✅ | [Onboarding wizard](/onboarding) — target ≤5 min |
+| Time to first message (CLI) | ✅ | `npx create-fluxy-chat my-chat --minimal` |
+| Drop-in chat widget | ✅ | `@fluxy-chat/ui-kit` — `FluxyChatWidget` |
+| Tree-shaken React bundle ≤20 kB gzip | ✅ | CI gate — [compare page](https://fluxychat.com/compare) |
+| SSR-safe React hooks | ✅ | `@fluxy-chat/react` — `useChat`, `useInbox` |
+| Chat-only import path | ✅ | [Chat only](/docs/chat-only) |
+
+## Realtime transport
+
+| Capability | FluxyChat | SDK / docs |
+|------------|-----------|------------|
+| WebSocket rooms | ✅ | `connectRoom()` |
+| Exponential reconnect + labels | ✅ | `connectionState` — connected, reconnecting, degraded |
+| Outbound queue while reconnecting | ✅ | Cap 100 frames, 5 min TTL |
+| History replay on connect | ✅ | `replay=connect` + REST fallback |
+| SSE / polling fallback | ✅ | After max reconnect attempts |
+| Heartbeat ping/pong | ✅ | Default 25s |
+| Read receipts | ✅ | `markMessageDelivered`, WS `delivery_updated` |
+| Typing indicators | ✅ | WS events + UI primitives |
+| Message templates + member prefs | ✅ | `POST /templates`, member prefs PATCH |
+
+## Inbox & notifications
+
+| Capability | FluxyChat | SDK / docs |
+|------------|-----------|------------|
+| Unified inbox REST | ✅ | `getInbox()` |
+| Live `onItem` push | ✅ | `useInbox({ onItem })` |
+| Inbox UI panel | ✅ | `FluxyInboxPanel` in ui-kit |
+| Unread badges / counters | ✅ | Console inbox + room list |
+| Mark read | ✅ | `markReadRest` |
+| Snooze / follow-ups | ✅ | Inbox tabs |
+| Catch-up banner | ✅ | `getRoomCatchUp` + room UI |
+
+## AI & agents
+
+| Capability | FluxyChat | Notes |
+|------------|-----------|-------|
+| Streaming agent replies | ✅ | WS `edit` events, batched in SDK |
+| Tool call timeline | ✅ | `tool_call`, `tool_result` on same WS |
+| MCP client | ✅ | `createMcpClient`, marketplace catalog |
+| MCP audit badge | ✅ | mcp-audit CI + [verified servers](/docs/guides/ecosystem/mcp-verified-servers) |
+| Voice AI | ✅ Beta | LiveKit JWT mint + [load-test report](/docs/VOICE-LOAD-TEST-REPORT.md) |
+
+## Mobile
+
+| Capability | FluxyChat | Notes |
+|------------|-----------|-------|
+| React Native SDK | ✅ | `packages/react-native-sdk` |
+| Kotlin Multiplatform | ✅ | `packages/sdk-kmp` — Maven/SPM on tag `sdk-v*` |
+| Web-first parity | ✅ | Primary surface |
+
+## Self-host & lock-in
+
+| Capability | FluxyChat | Notes |
+|------------|-----------|-------|
+| MIT license | ✅ | Full monorepo |
+| Deploy on your Cloudflare account | ✅ | [Self-host one command](/docs/guides/self-host-one-command) |
+| One-click deploy button | ✅ | [Get started](https://fluxychat.com/get-started#self-host) |
+
+Legend: ✅ shipped · 🚧 beta · ❌ not planned (see [competitive strategy](https://github.com/AlessandroFare/fluxychat/blob/main/docs/COMPETITIVE-STRATEGY.md))
+
+For migration from another vendor, see [Migrate from Pusher](/docs/guides/migrate-from-pusher).

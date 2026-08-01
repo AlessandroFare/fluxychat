@@ -65,6 +65,25 @@ Lanciato Maggio 2026, closed source, cloud-only, chat + AI basic.
 **Strategia**: Competere su open source (costo 1/10) + spatial + AI swarm + piattaforma unificata.
 Portal è "Pusher con AI basic" — ignora completamente spatial, voice-first, digital twin, cross-reality.
 
+**Gap closure tracker (Portal parity):** [docs/PORTAL-GAP-CLOSURE.md](docs/PORTAL-GAP-CLOSURE.md) (P0→P3 core) · **[docs/PORTAL-ZERO-BUDGET-ROADMAP.md](docs/PORTAL-ZERO-BUDGET-ROADMAP.md)** (Phase 2 — packaging, OSS integrations, percezione). Aggiornare ad ogni sprint.
+
+### Portal Phase 2 — zero-budget (priorità attuale)
+
+| ID | Task | Status |
+|----|------|--------|
+| PG-ZB-1 | `create-fluxy-chat` template React chat-only (60s first message) | [ ] |
+| PG-ZB-2 | Bundle benchmark table su `/compare` | [-] |
+| PG-ZB-3 | Deploy to Cloudflare button | [-] |
+| PG-ZB-4 | Feature parity checklist docs | [-] |
+| PG-ZB-6 | MCP server esempi clonabili (`examples/mcp/`) | [-] |
+| PG-ZB-7 | mcp-audit CI → D1 → badge marketplace | [-] |
+| PG-ZB-8 | `@fluxy-chat/ui` 4 temi Tailwind | [ ] |
+| PG-ZB-10 | LiveKit self-hosted voice (VPS + Worker JWT) | [ ] |
+| PG-ZB-11 | Activepieces embed CRM | [ ] |
+| PG-ZB-12 | KMP mobile SDK | [ ] |
+
+Dettaglio completo: [PORTAL-ZERO-BUDGET-ROADMAP.md](docs/PORTAL-ZERO-BUDGET-ROADMAP.md).
+
 ---
 
 ## FASE 1 — Foundation (Ora → Mese 1)

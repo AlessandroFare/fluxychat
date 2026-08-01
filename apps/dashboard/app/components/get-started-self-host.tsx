@@ -22,17 +22,24 @@ export function GetStartedSelfHostSection() {
             <li>Set <code className="font-mono text-xs">NEXT_PUBLIC_FLUXYCHAT_WORKER_URL</code> in your app</li>
             <li>Mint JWTs with your project API key — see <code className="font-mono text-xs">docs/cookbook/auth-jwt.md</code></li>
           </ul>
-          <p className="mt-4 text-sm">
+          <p className="mt-4 flex flex-wrap gap-3">
+            <a
+              href="https://deploy.workers.cloudflare.com/?url=https://github.com/AlessandroFare/fluxychat/tree/main/apps/worker"
+              className="inline-flex items-center rounded-lg bg-[#F6821F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e5741a]"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Deploy Worker to Cloudflare
+            </a>
             <Link
               href="https://github.com/AlessandroFare/fluxychat/tree/main/apps/worker"
-              className="font-medium text-primary underline-offset-2 hover:underline"
+              className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted/50"
               target="_blank"
               rel="noopener noreferrer"
             >
               Worker README on GitHub
             </Link>
-            {" · "}
-            <Link href={HOSTED_PATHS.onboarding} className="font-medium text-slate-700 underline-offset-2 hover:underline">
+            <Link href={HOSTED_PATHS.onboarding} className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted/50">
               Manual setup wizard
             </Link>
           </p>

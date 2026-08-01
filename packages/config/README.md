@@ -1,6 +1,6 @@
 # @fluxy-chat/config
 
-Type-safe **`fluxy.config.ts`** authoring for FluxyChat (Portal `@portalsdk/config` parity).
+Type-safe **`fluxy.config.ts`** authoring for FluxyChat — room authz, middleware, and client defaults.
 
 ## Install
 
@@ -43,13 +43,13 @@ Wire it in the Worker (this repo: `apps/worker/fluxy.config.js` → bundled by W
 
 ## What you can configure
 
-| Area | Portal equivalent | Fluxy field |
-|------|-------------------|-------------|
-| Room templates `room-*` | `channels` | `rooms` |
-| Anonymous access | `anonymous` | `rooms.*.anonymous` |
-| Connect authz | `authz` | `rooms.*.authz` |
-| Message middleware | `onPublish` | `rooms.*.onPublish` |
-| Disconnect hooks | `onDisconnect` | `rooms.*.onDisconnect` |
+| Area | Typical hosted SDK | Fluxy field |
+|------|---------------------|-------------|
+| Room templates `room-*` | Channel patterns | `rooms` |
+| Anonymous access | Guest connect | `rooms.*.anonymous` |
+| Connect authz | Join rules | `rooms.*.authz` |
+| Message middleware | Pre-send hooks | `rooms.*.onPublish` |
+| Disconnect hooks | Cleanup | `rooms.*.disconnect` |
 | SDK defaults | — | `client` (via `GET /config/client`) |
 
 ## Client defaults
@@ -63,6 +63,6 @@ GET /config/client
 
 Use in your app to align `useChat` options with server policy.
 
-## Self-hosted vs Portal hosted
+## Self-hosted execution
 
-Portal runs config callbacks on their cloud. Fluxy runs yours **inside your Worker** — same API shape, you own execution and secrets (Wrangler vars / secrets instead of `portal secrets set`).
+Fluxy runs your config callbacks **inside your Worker** — you own execution and secrets (Wrangler vars / secrets).

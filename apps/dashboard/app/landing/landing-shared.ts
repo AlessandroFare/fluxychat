@@ -100,6 +100,7 @@ export const LANDING_NAV_MENUS: readonly LandingNavMenu[] = [
     label: "Resources",
     links: [
       { href: HOSTED_PATHS.docs, label: "Docs" },
+      { href: HOSTED_PATHS.docsChatOnly, label: "Chat only" },
       { href: HOSTED_PATHS.guides, label: "Guides" },
       { href: "/demo", label: "Try demo (no signup)" },
       { href: HOSTED_PATHS.status, label: "Status" },
@@ -114,6 +115,7 @@ export const LANDING_NAV_LINKS: readonly TopNavLink[] = [
   { href: "/#features", label: "Chat & AI" },
   { href: "/#realtime", label: "Realtime" },
   { href: HOSTED_PATHS.docs, label: "Docs" },
+  { href: HOSTED_PATHS.docsChatOnly, label: "Chat only" },
   { href: HOSTED_PATHS.why, label: "Why" },
   { href: "/pricing", label: "Pricing" },
   { href: HOSTED_PATHS.compare, label: "Compare" },

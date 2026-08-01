@@ -39,6 +39,30 @@ export const EMBED_LOADER_SOURCE = `(function () {
   var open = false;
   var panel = null;
   var iframe = null;
+  var closeBtn = null;
+
+  function isMobile() {
+    return window.matchMedia("(max-width: 640px)").matches;
+  }
+
+  function applyLayout() {
+    if (!panel) return;
+    if (isMobile() && open) {
+      panel.style.cssText =
+        "display:block;position:fixed;inset:0;width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0;overflow:hidden;box-shadow:none;background:#fff;z-index:1;";
+      if (closeBtn) closeBtn.style.display = "flex";
+      btn.style.display = "none";
+    } else if (open) {
+      var panelHorizontal =
+        position === "bottom-left" ? "left:0;right:auto;" : "right:0;left:auto;";
+      panel.style.cssText =
+        "display:block;position:absolute;bottom:72px;" +
+        panelHorizontal +
+        "width:380px;max-width:calc(100vw - 40px);height:520px;max-height:calc(100vh - 100px);border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.2);background:#fff;";
+      if (closeBtn) closeBtn.style.display = "none";
+      btn.style.display = "flex";
+    }
+  }
 
   var btn = document.createElement("button");
   btn.type = "button";
@@ -73,6 +97,14 @@ export const EMBED_LOADER_SOURCE = `(function () {
       "allow-scripts allow-same-origin allow-forms allow-popups",
     );
     panel.appendChild(iframe);
+    closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.setAttribute("aria-label", "Close chat");
+    closeBtn.textContent = "\\u00d7";
+    closeBtn.style.cssText =
+      "display:none;position:absolute;top:10px;right:10px;z-index:2;width:36px;height:36px;border:none;border-radius:50%;background:rgba(15,23,42,.65);color:#fff;font-size:22px;line-height:1;cursor:pointer;align-items:center;justify-content:center;";
+    closeBtn.addEventListener("click", function () { setOpen(false); });
+    panel.appendChild(closeBtn);
     root.appendChild(panel);
   }
 
@@ -80,8 +112,15 @@ export const EMBED_LOADER_SOURCE = `(function () {
     open = next;
     btn.setAttribute("aria-expanded", open ? "true" : "false");
     if (!panel && open) buildPanel();
-    if (panel) panel.style.display = open ? "block" : "none";
+    if (panel) {
+      panel.style.display = open ? "block" : "none";
+      applyLayout();
+    }
   }
+
+  window.addEventListener("resize", function () {
+    if (open) applyLayout();
+  });
 
   btn.addEventListener("click", function () {
     setOpen(!open);

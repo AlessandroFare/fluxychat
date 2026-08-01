@@ -4,6 +4,7 @@
   "pages": [
     "index",
     "quickstart",
+    "chat-only-quickstart",
     "client-setup",
     "local-development",
     "self-hosting"

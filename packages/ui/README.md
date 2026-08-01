@@ -50,6 +50,43 @@ function Room({ roomId }: { roomId: string }) {
 
 Components use Tailwind utility classes and expect your app to provide design tokens (CSS variables or Tailwind theme). They do not ship a global stylesheet — import your Tailwind setup as usual.
 
+### Starter themes (PG-ZB-8)
+
+Four preset token sets ship with the package:
+
+```tsx
+import { ChatWindow, applyFluxyTheme, fluxyThemeStyle, type FluxyThemeId } from "@fluxy-chat/ui";
+
+const theme: FluxyThemeId = "brand";
+
+function App() {
+  useEffect(() => applyFluxyTheme(theme), [theme]);
+  return (
+    <div className="fluxy-theme-brand" style={fluxyThemeStyle(theme)}>
+      <ChatWindow {...props} />
+    </div>
+  );
+}
+```
+
+Presets: `default`, `dark`, `minimal`, `brand`. Use `getAllFluxyThemesCss()` to inject CSS in global stylesheets.
+
+## Storybook
+
+Preview chat primitives locally (default theme):
+
+```bash
+pnpm --filter @fluxy-chat/ui storybook
+```
+
+Build static Storybook for design review:
+
+```bash
+pnpm --filter @fluxy-chat/ui build-storybook
+```
+
+Stories live under `src/**/*.stories.tsx` (e.g. `Bubble` sent/received/typing variants).
+
 ## License
 
 MIT

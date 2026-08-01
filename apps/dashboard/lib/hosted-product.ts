@@ -77,6 +77,8 @@ export const HOSTED_PATHS = {
   /** Operator console overview (Clerk-protected). */
   console: "/dashboard",
   status: "/status",
+  /** Fumadocs “Chat only” progressive disclosure slice */
+  docsChatOnly: docsSiteHref("chat-only"),
 } as const;
 
 /** Routes that use marketing layout (no console sidebar). Root `/` is handled separately. */

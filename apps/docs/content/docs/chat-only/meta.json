@@ -1,0 +1,5 @@
+{
+  "title": "Chat only",
+  "icon": "MessageSquare",
+  "pages": ["index"]
+}

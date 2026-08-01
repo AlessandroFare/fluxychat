@@ -41,6 +41,21 @@ function InboxPanel() {
 }
 ```
 
+## Inbox demo
+
+`useInbox` delivers live items, unseen counts, and `onItem` callbacks for badge UX:
+
+![Inbox preview — tabs, unseen badge, mark-read flow](https://raw.githubusercontent.com/AlessandroFare/fluxychat/main/apps/dashboard/public/demos/inbox-preview.svg)
+
+Try it in the hosted console: open **Inbox** after onboarding, or run the [inbox parity E2E smoke](https://github.com/AlessandroFare/fluxychat/blob/main/e2e/inbox-parity.smoke.spec.ts) locally.
+
+```tsx
+const { items, unseen, markRead } = useInbox({
+  client,
+  onItem: (item) => showToast(item.preview),
+});
+```
+
 ## Exports
 
 | Hook / component | Purpose |

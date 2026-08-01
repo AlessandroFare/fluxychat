@@ -22,6 +22,7 @@ import {
   installCommand,
   isAdapterType,
   isPackageManager,
+  templatesDir,
   writeFile,
   writeJson,
 } from "./utils.js";
@@ -40,6 +41,7 @@ interface ParsedArgs {
   pm?: PackageManager;
   language?: "typescript" | "javascript";
   yes: boolean;
+  minimal: boolean;
   skipInstall: boolean;
   noGit: boolean;
   help: boolean;
@@ -48,6 +50,7 @@ interface ParsedArgs {
 function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
     yes: false,
+    minimal: false,
     skipInstall: false,
     noGit: false,
     help: false,
@@ -61,16 +64,28 @@ function parseArgs(argv: string[]): ParsedArgs {
       args.help = true;
     } else if (arg === "-y" || arg === "--yes") {
       args.yes = true;
+    } else if (arg === "--minimal") {
+      args.minimal = true;
     } else if (arg === "--skip-install") {
       args.skipInstall = true;
     } else if (arg === "--no-git") {
       args.noGit = true;
+    } else if (arg === "--template" || arg === "-t") {
+      const value = argv[++i];
+      if (value && isAdapterType(value)) {
+        args.adapter = value;
+      } else if (value === "react") {
+        args.adapter = "react";
+      } else {
+        console.error(`Invalid template: ${value}. Choose: react, basic, slack, telegram, discord, web`);
+        process.exit(1);
+      }
     } else if (arg === "--adapter" || arg === "-a") {
       const value = argv[++i];
       if (value && isAdapterType(value)) {
         args.adapter = value;
       } else {
-        console.error(`Invalid adapter: ${value}. Choose: basic, slack, telegram, discord, web`);
+        console.error(`Invalid adapter: ${value}. Choose: react, basic, slack, telegram, discord, web`);
         process.exit(1);
       }
     } else if (arg === "--pm" || arg === "--package-manager") {
@@ -111,16 +126,20 @@ ${pc.bold("Usage:")}
   npx create-fluxy-chat [project-name] [options]
 
 ${pc.bold("Options:")}
-  -a, --adapter <type>       Adapter: basic, slack, telegram, discord, web
+  -a, --adapter <type>       Adapter: react, basic, slack, telegram, discord, web
+  -t, --template <type>      Alias for --adapter (e.g. react)
   --pm <manager>             Package manager: npm, pnpm, yarn
   -l, --language <lang>      Language: typescript (default) or javascript
   -y, --yes                  Skip prompts and accept defaults
+  --minimal                  Chat-only widget (ui-kit) — no platform modules
   --skip-install             Skip dependency installation
   --no-git                   Skip git repository initialization
   -h, --help                 Show this help
 
 ${pc.bold("Examples:")}
-  ${pc.cyan("npx create-fluxy-chat my-bot")}
+  ${pc.cyan("npx create-fluxy-chat my-chat --minimal")}
+  ${pc.cyan("npx create-fluxy-chat my-chat --template react")}
+  ${pc.cyan("npx create-fluxy-chat my-bot --adapter basic")}
   ${pc.cyan("npx create-fluxy-chat my-bot --adapter slack")}
   ${pc.cyan("npx create-fluxy-chat my-bot --adapter telegram --pm pnpm")}
   ${pc.cyan("npx create-fluxy-chat my-bot -y --adapter discord")}
@@ -143,6 +162,7 @@ async function main(): Promise<void> {
     packageManager: args.pm,
     language: args.language,
     yes: args.yes,
+    minimal: args.minimal,
     shouldInstall: args.skipInstall ? false : undefined,
     shouldInitGit: args.noGit ? false : undefined,
   });
@@ -175,37 +195,55 @@ async function main(): Promise<void> {
   try {
     fs.mkdirSync(projectDir, { recursive: true });
 
-    // Generate package.json
-    writeJson(projectDir, "package.json", generatePackageJson(config));
+    if (config.minimal) {
+      const templateRoot = path.join(templatesDir(), "minimal");
+      copyDir(templateRoot, projectDir);
+      const pkgPath = path.join(projectDir, "package.json");
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as Record<string, unknown>;
+      pkg.name = config.name;
+      writeJson(projectDir, "package.json", pkg);
+      s.stop("Minimal chat widget created.");
+    } else if (config.adapter === "react") {
+      const templateRoot = path.join(templatesDir(), "react");
+      copyDir(templateRoot, projectDir);
+      const pkgPath = path.join(projectDir, "package.json");
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as Record<string, unknown>;
+      pkg.name = config.name;
+      writeJson(projectDir, "package.json", pkg);
+      s.stop("React chat app created.");
+    } else {
+      // Generate package.json
+      writeJson(projectDir, "package.json", generatePackageJson(config));
 
-    // Generate tsconfig.json (for TS projects)
-    if (config.language === "typescript") {
-      writeJson(projectDir, "tsconfig.json", generateTsConfig());
+      // Generate tsconfig.json (for TS projects)
+      if (config.language === "typescript") {
+        writeJson(projectDir, "tsconfig.json", generateTsConfig());
+      }
+
+      // Generate wrangler.toml
+      writeFile(projectDir, "wrangler.toml", generateWranglerToml(config));
+
+      // Generate .dev.vars
+      writeFile(projectDir, ".dev.vars", generateDevVars());
+
+      // Generate .env.example
+      writeFile(projectDir, ".env.example", generateEnvExample(config));
+
+      // Generate .gitignore
+      writeFile(projectDir, ".gitignore", generateGitignore());
+
+      // Generate src/index.ts (worker entry point)
+      const ext = config.language === "typescript" ? "ts" : "js";
+      writeFile(projectDir, `src/index.${ext}`, generateWorkerIndex(config));
+
+      // Generate src/bot.ts (bot handler)
+      writeFile(projectDir, `src/bot.${ext}`, generateBotHandler(config));
+
+      // Generate README.md
+      writeFile(projectDir, "README.md", generateReadme(config));
+
+      s.stop("Project files created.");
     }
-
-    // Generate wrangler.toml
-    writeFile(projectDir, "wrangler.toml", generateWranglerToml(config));
-
-    // Generate .dev.vars
-    writeFile(projectDir, ".dev.vars", generateDevVars());
-
-    // Generate .env.example
-    writeFile(projectDir, ".env.example", generateEnvExample(config));
-
-    // Generate .gitignore
-    writeFile(projectDir, ".gitignore", generateGitignore());
-
-    // Generate src/index.ts (worker entry point)
-    const ext = config.language === "typescript" ? "ts" : "js";
-    writeFile(projectDir, `src/index.${ext}`, generateWorkerIndex(config));
-
-    // Generate src/bot.ts (bot handler)
-    writeFile(projectDir, `src/bot.${ext}`, generateBotHandler(config));
-
-    // Generate README.md
-    writeFile(projectDir, "README.md", generateReadme(config));
-
-    s.stop("Project files created.");
   } catch (error) {
     s.stop("Failed to create project files.");
     throw error;
@@ -245,11 +283,17 @@ async function main(): Promise<void> {
 
   // --- Next steps ---
   note(
-    [
-      `cd ${config.name}`,
-      "cp .env.example .dev.vars",
-      `${config.packageManager === "npm" ? "npm run" : config.packageManager} dev`,
-    ].join("\n"),
+    config.adapter === "react"
+      ? [
+          `cd ${config.name}`,
+          "cp .env.example .env",
+          `${config.packageManager === "npm" ? "npm run" : config.packageManager} dev`,
+        ].join("\n")
+      : [
+          `cd ${config.name}`,
+          "cp .env.example .dev.vars",
+          `${config.packageManager === "npm" ? "npm run" : config.packageManager} dev`,
+        ].join("\n"),
     "Next steps",
   );
 

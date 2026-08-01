@@ -1,0 +1,43 @@
+{
+  "name": "@fluxy-chat/ui-kit",
+  "version": "0.1.0",
+  "description": "Polished drop-in FluxyChat widget and inbox — built on @fluxy-chat/ui with optional assistant-ui runtime",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "pnpm exec tsc -p tsconfig.json",
+    "dev": "pnpm exec tsc -w -p tsconfig.json",
+    "prepublishOnly": "pnpm run build && node ../../scripts/verify-publish-manifest.mjs"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "@fluxy-chat/sdk": "^0.6.0",
+    "@fluxy-chat/react": "^0.1.1",
+    "@fluxy-chat/ui": "^0.1.2",
+    "@assistant-ui/react": ">=0.10.0"
+  },
+  "peerDependenciesMeta": {
+    "@assistant-ui/react": { "optional": true }
+  },
+  "dependencies": {
+    "@fluxy-chat/sdk": "workspace:*",
+    "@fluxy-chat/react": "workspace:*",
+    "@fluxy-chat/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "react": "^19.2.0",
+    "typescript": "^5"
+  },
+  "publishConfig": { "access": "public" }
+}

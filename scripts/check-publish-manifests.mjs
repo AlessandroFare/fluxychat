@@ -6,7 +6,17 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const packages = ["packages/protocol", "packages/config", "packages/sdk", "packages/react"];
+const packages = [
+  "packages/protocol",
+  "packages/config",
+  "packages/sdk",
+  "packages/react",
+  "packages/agent",
+  "packages/ui",
+  "packages/ui-kit",
+  "packages/react-native-sdk",
+  "packages/create-fluxy-chat",
+];
 
 for (const rel of packages) {
   const cwd = join(root, rel);

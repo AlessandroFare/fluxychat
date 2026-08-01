@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LandingNavAuthCta } from "../components/landing-auth-cta";
 import {
   TopNavMobileMenuButton,
@@ -18,6 +19,19 @@ import { LandingMegaNav } from "./landing-mega-nav";
 export function LandingShell({ children }: { children: ReactNode }) {
   const [navDocked, setNavDocked] = useState(false);
   const mobileNav = useTopNavMobileMenu();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    mobileNav.close();
+  }, [pathname, mobileNav.close]);
+
+  useEffect(() => {
+    function onHashChange() {
+      mobileNav.close();
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [mobileNav.close]);
 
   useEffect(() => {
     function onScroll() {

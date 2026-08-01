@@ -12,6 +12,10 @@ export interface McpAppCatalogEntry {
   description: string;
   category: string;
   tools: string[];
+  auditGrade?: string;
+  auditScore?: number;
+  auditScannedAt?: number;
+  auditSeverityCritical?: number;
 }
 
 export interface McpAppInstall {

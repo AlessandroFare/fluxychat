@@ -205,6 +205,16 @@ ANTHROPIC_API_KEY=
 # RATE_LIMIT_PUBLIC_GUEST_PER_MINUTE=30
 # RATE_LIMIT_WS_MESSAGES_PER_MINUTE=60      # per-user WS message sends (Room DO)
 
+# --- Voice / LiveKit (PG-ZB-10 — SFU runs off Workers) ---
+# LIVEKIT_API_KEY=
+# LIVEKIT_API_SECRET=
+# LIVEKIT_URL=wss://livekit.example.com
+
+# --- MCP marketplace audit webhook (PG-ZB-7 — CI posts signed results) ---
+# MARKETPLACE_AUDIT_HMAC_SECRET=random-32-chars
+# GitHub secrets: WORKER_AUDIT_WEBHOOK_URL=https://worker.example.com/internal/marketplace/audit-result
+# WORKER_AUDIT_HMAC_SECRET=<same as MARKETPLACE_AUDIT_HMAC_SECRET>
+
 # --- Security contact (used in /.well-known/security.txt) ---
 # SECURITY_CONTACT_EMAIL=security@fluxychat.com
 # Point this to a DEDICATED, MONITORED inbox before going public.
