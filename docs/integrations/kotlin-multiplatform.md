@@ -1,51 +1,65 @@
 # Kotlin Multiplatform mobile SDK
 
-Long-term mobile strategy: **one KMP module** shared between Android and iOS, wrapping the same WebSocket protocol as `@fluxy-chat/sdk`.
+Shared WebSocket client for Android and iOS — same protocol as `@fluxy-chat/sdk`.
 
 ## Current state
 
 | Package | Status |
 |---------|--------|
-| `packages/kotlin-sdk/` | Android starter (separate) |
-| `packages/swift-sdk/` | iOS starter (separate) |
-| `packages/sdk-kmp/` | **Planned** — PG-ZB-12 scaffold |
+| `packages/sdk-kmp/` | **Active** — Ktor WS, Android / iOS / JVM |
+| `packages/kotlin-sdk/` | Legacy Android starter |
+| `packages/swift-sdk/` | Legacy iOS starter |
 
-## Target layout (PG-ZB-12)
+## Layout
 
 ```
 packages/sdk-kmp/
-  shared/
-    src/commonMain/kotlin/
-      FluxyChatClient.kt      # WS connect, auth, heartbeat
-      FluxyMessage.kt         # parity with TS FluxyChatMessage
-      FluxyRoomApi.kt         # join, send, history cursor
-    src/androidMain/kotlin/   # OkHttp engine
-    src/iosMain/kotlin/       # Darwin engine
-  androidApp/                 # sample Compose chat
-  iosApp/                     # sample SwiftUI shell + KMP framework
+  shared/src/commonMain/kotlin/   FluxyChatClient, FluxyRoomWebSocket
+  shared/src/androidMain/         OkHttp engine
+  shared/src/iosMain/             Darwin engine
+  shared/src/jvmMain/             CIO engine (tests)
 ```
 
-## Protocol port checklist
+## Build locally
 
-Port from `packages/sdk/src/`:
-
-- JWT / API key auth headers on WebSocket upgrade
-- Event types: `message`, `typing`, `presence`, `reaction`
-- Cursor pagination for history (`before` / `after` message id)
-- Reconnect with exponential backoff (match `FluxyChatClient` TS behavior)
-
-## Apple framework export
-
-Follow [Kotlin Apple framework](https://kotlinlang.org/docs/apple-framework.html):
+Requires JDK 17+.
 
 ```bash
-./gradlew :shared:linkReleaseFrameworkIosArm64
+cd packages/sdk-kmp
+gradle :shared:jvmTest
+gradle :shared:compileDebugKotlinAndroid
 ```
 
-Embed `shared.framework` in Xcode; SwiftUI calls `FluxyChatClient` from Kotlin.
+CI uses `gradle/actions/setup-gradle@v4` (no local wrapper required).
+
+## Usage
+
+```kotlin
+val config = FluxyChatConfig(
+    apiUrl = "https://api.example.com",
+    wsUrl = FluxyChatConfig.wsUrlFromApi("https://api.example.com"),
+    projectId = "your-project-uuid",
+    token = memberJwt,
+)
+val client = FluxyChatClient(config)
+client.connectRoom("general")
+client.sendMessage("general", "Hello from KMP")
+```
+
+## Publish to Maven Central
+
+Tag `sdk-v*` triggers `.github/workflows/publish-sdk-kmp.yml`.
+
+**Full setup (Sonatype, GPG, GitHub secrets):** [maven-central-publish.md](./maven-central-publish.md)
+
+Coordinates: `com.fluxychat:shared`
+
+## iOS
+
+XCFramework zip attached to GitHub Release on each `sdk-v*` tag. Embed in Xcode per [Kotlin Apple framework docs](https://kotlinlang.org/docs/apple-framework.html).
 
 ## References
 
-- [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform.html)
-- TS SDK: `packages/sdk/src/client.ts`
-- Mobile starters: `packages/kotlin-sdk/`, `packages/swift-sdk/`
+- [maven-central-publish.md](./maven-central-publish.md)
+- `packages/sdk-kmp/README.md`
+- TS SDK: `packages/sdk/src/`

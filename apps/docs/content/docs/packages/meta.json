@@ -8,6 +8,7 @@
     "react",
     "react-native-sdk",
     "sdk",
-    "ui"
+    "ui",
+    "ui-kit"
   ]
 }

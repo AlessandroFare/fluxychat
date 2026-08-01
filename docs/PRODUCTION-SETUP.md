@@ -1,0 +1,194 @@
+# Production setup guide (free-tier friendly)
+
+Checklist before `wrangler deploy`, dashboard deploy, and GitHub Actions secrets.
+
+---
+
+## 1. Cloudflare (required — you already have this)
+
+| Item | Cost | Action |
+|------|------|--------|
+| Cloudflare account | Free | Workers + D1 + DO on your account |
+| Worker deploy | Pay-as-you-go (generous free tier) | `pnpm --filter worker deploy` |
+| D1 migrations | Included | Apply all `apps/worker/db/*.sql` including `0163_marketplace_audits.sql` |
+| Dashboard (Vercel) | Free hobby tier | Set env vars below |
+
+**Worker secrets** (Wrangler / CF dashboard → Settings → Variables):
+
+```bash
+# Core (from onboarding / provision)
+JWT secrets, API keys, ALLOWED_ORIGINS=https://app.fluxychat.com,...
+
+# PG-ZB-7 MCP audit webhook (CI → Worker)
+MARKETPLACE_AUDIT_HMAC_SECRET=<openssl rand -hex 32>
+
+# PG-ZB-10 LiveKit (see section 3)
+LIVEKIT_API_KEY=
+LIVEKIT_API_SECRET=
+LIVEKIT_URL=wss://...
+```
+
+**GitHub repository secrets** (for MCP audit CI):
+
+| Secret | Value |
+|--------|--------|
+| `WORKER_AUDIT_WEBHOOK_URL` | `https://<your-worker>/internal/marketplace/audit-result` |
+| `WORKER_AUDIT_HMAC_SECRET` | Same string as `MARKETPLACE_AUDIT_HMAC_SECRET` |
+
+No third-party account needed for mcp-audit — it runs in GitHub Actions via `adudley78/setup-mcp-audit@v1` (OSS).
+
+---
+
+## 2. MCP marketplace audit (free — no signup)
+
+**What it does:** CI scans `examples/mcp/*` with [mcp-audit](https://github.com/adudley78/mcp-audit), posts grade to D1, shows badge in console.
+
+**Accounts needed:** None. Only GitHub + your Worker.
+
+**Steps:**
+
+1. Apply D1 migration `0163_marketplace_audits.sql`
+2. Set `MARKETPLACE_AUDIT_HMAC_SECRET` on Worker
+3. Set GitHub secrets `WORKER_AUDIT_WEBHOOK_URL` + `WORKER_AUDIT_HMAC_SECRET`
+4. Push to `main` or run workflow **MCP marketplace audit** manually
+
+**Verify:** Marketplace → MCP Apps → apps show **Audit A–F** badge after CI runs.
+
+---
+
+## 3. LiveKit voice (free options)
+
+WebRTC SFU runs **outside** Workers. Pick one:
+
+### Option A — LiveKit Cloud free tier (easiest)
+
+1. Sign up at [cloud.livekit.io](https://cloud.livekit.io) (free tier: limited participant minutes)
+2. Create a project → copy **API Key**, **API Secret**, **WebSocket URL** (`wss://…livekit.cloud`)
+3. Set Worker secrets:
+   ```
+   LIVEKIT_API_KEY=APIxxxxx
+   LIVEKIT_API_SECRET=xxxxxxxx
+   LIVEKIT_URL=wss://your-project.livekit.cloud
+   ```
+4. Token mint: `POST /admin/calls/token` with member JWT (already wired via `livekit-token.js`)
+5. Client: `useLiveKitToken` from `@fluxy-chat/react` + `livekit-client` npm package
+
+**No VPS.** Good for beta / demos.
+
+### Option B — Self-hosted LiveKit (free software, ~€5 VPS optional)
+
+1. On any Linux host (Hetzner CX11, Fly.io, local Docker):
+   ```bash
+   cd examples/livekit
+   cp .env.example .env   # set LIVEKIT keys (generate with livekit-server generate-keys)
+   docker compose up -d
+   ```
+2. Point `LIVEKIT_URL=wss://livekit.yourdomain.com` (TLS via Caddy/nginx or Cloudflare Tunnel)
+3. Same Worker secrets as Option A
+
+**Accounts:** None for OSS; optional VPS provider.
+
+### Option C — Skip voice SFU for now
+
+Worker returns a **stub** token when `LIVEKIT_*` unset. Text pipeline (`useVoice` simulation) still works on `/voice-ai`.
+
+---
+
+## 4. Activepieces automation (free — self-host, external link)
+
+**What it does:** No-code CRM/helpdesk flows; FluxyChat webhooks as triggers.
+
+**Embed iframe:** Activepieces [embedding](https://www.activepieces.com/docs/embedding/overview) is an **enterprise feature**. FluxyChat opens the self-hosted studio in a **new tab** (zero-budget). See [docs/integrations/activepieces.md](./integrations/activepieces.md).
+
+### Self-host (MIT, free)
+
+1. VPS + subdomain (e.g. `automation.fluxychat.com`)
+2. Clone [activepieces/activepieces](https://github.com/activepieces/activepieces), configure `.env` (`AP_FRONTEND_URL`, `AP_ENCRYPTION_KEY`, `AP_JWT_SECRET`, Postgres/Redis)
+3. `docker compose up -d` + HTTPS reverse proxy (Caddy)
+4. Dashboard env:
+   ```
+   NEXT_PUBLIC_ACTIVEPIECES_URL=https://automation.yourdomain.com
+   ```
+5. **Settings → Automation integrations** → **Open automation studio**
+6. Import FluxyChat piece from `examples/integrations/activepieces/src/`
+
+**API key:** Activepieces **Platform Admin → Security → API Keys** (for piece actions, not dashboard embed).
+
+**FluxyChat webhooks:** Console → Webhooks → Activepieces webhook trigger URL; verify `X-Fluxy-Signature`.
+
+---
+
+## 5. Dashboard env (Vercel / local)
+
+```env
+NEXT_PUBLIC_FLUXYCHAT_WORKER_URL=https://api.yourdomain.com
+NEXT_PUBLIC_DOCS_URL=https://docs.fluxychat.com
+NEXT_PUBLIC_ACTIVEPIECES_URL=https://automation.yourdomain.com   # optional, section 4 — opens in new tab
+# Clerk, Stripe, etc. — existing onboarding vars
+```
+
+---
+
+## 6. Kotlin Multiplatform mobile (Maven Central)
+
+**Package:** `packages/sdk-kmp/` — shared WebSocket client for Android / iOS.
+
+**Publish to Maven Central:** requires Sonatype account + GPG signing. Full guide: [docs/integrations/maven-central-publish.md](./integrations/maven-central-publish.md).
+
+**GitHub secrets** (for tag `sdk-v*`):
+
+| Secret | Source |
+|--------|--------|
+| `OSSRH_USER` | Sonatype Central Portal user token |
+| `OSSRH_PASS` | Sonatype Central Portal token password |
+| `GPG_KEY` | Armored private GPG key |
+| `GPG_PASS` | GPG passphrase |
+
+```bash
+git tag sdk-v1.0.0
+git push origin sdk-v1.0.0
+```
+
+Local build (optional):
+
+```bash
+cd packages/sdk-kmp
+gradle :shared:jvmTest
+```
+
+---
+
+## 7. Deploy order
+
+1. D1 migrations (all pending SQL)
+2. `wrangler secret put MARKETPLACE_AUDIT_HMAC_SECRET`
+3. LiveKit secrets (if using voice)
+4. `wrangler deploy`
+5. GitHub secrets for MCP audit CI
+6. Dashboard deploy with env vars
+7. Smoke: `/compare`, `/marketplace` MCP tab, `/voice-ai`, `/settings/integrations`
+8. Phase 6 execution: [docs/operations/post-launch-checklist.md](./operations/post-launch-checklist.md)
+
+---
+
+## 8. What you do **not** need for Phase 2
+
+| Service | Needed? |
+|---------|---------|
+| Portal / third-party chat SaaS | No |
+| Paid mcp-audit | No (Apache 2.0, full features) |
+| LiveKit paid plan | No for dev (Cloud free or Docker) |
+| Activepieces paid embed | No — use external link + self-host MIT |
+| Separate MongoDB/Redis | No (D1 + DO + KV) |
+| Apple Developer ($99/yr) | Only when shipping iOS app to App Store |
+| Google Play ($25) | Only when shipping Android to Play Store |
+
+---
+
+## Quick reference — secret parity
+
+```
+Worker MARKETPLACE_AUDIT_HMAC_SECRET  ═══  GitHub WORKER_AUDIT_HMAC_SECRET
+GitHub WORKER_AUDIT_WEBHOOK_URL       ───►  POST /internal/marketplace/audit-result
+LiveKit Cloud project keys            ───►  LIVEKIT_API_KEY / SECRET / URL on Worker
+```

@@ -7,7 +7,33 @@ description: "Minimal path: install SDK, mint JWT, useChat — no platform modul
 
 Use this path when you want **in-app chat only** — not stream, IoT, fleet, or spatial modules.
 
-## 1. Install
+## Fastest: ui-kit or minimal CLI
+
+**Drop-in widget (3 lines):**
+
+```bash
+pnpm add @fluxy-chat/ui-kit
+```
+
+```tsx
+import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
+
+<FluxyChatWidget roomId="general" workerUrl={url} token={jwt} theme="brand" height={520} />
+```
+
+See [@fluxy-chat/ui-kit](/docs/packages/ui-kit).
+
+**Scaffold:**
+
+```bash
+npx create-fluxy-chat my-chat --minimal
+```
+
+---
+
+## Headless: SDK hooks
+
+### Install
 
 ```bash
 pnpm add @fluxy-chat/sdk @fluxy-chat/react
@@ -20,7 +46,7 @@ import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 ```
 
-## 2. Client + JWT
+### Client + JWT
 
 **Hosted (fastest):** sign up → **Onboarding** → copy Worker URL + member JWT.
 
@@ -30,7 +56,7 @@ import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 pnpm install && pnpm run first-message
 ```
 
-## 3. Three lines to live chat
+### Three lines to live chat
 
 ```tsx
 "use client";
@@ -67,7 +93,7 @@ export function ChatPanel({ roomId }: { roomId: string }) {
 }
 ```
 
-## 4. Optional: AI agent in the same room
+### Optional: AI agent in the same room
 
 Mention an agent configured in the console:
 
@@ -77,7 +103,7 @@ await sendMessage("@assistant How can you help?");
 
 Streaming replies use the same WebSocket — see [Agents guide](/docs/guides/agents).
 
-## 5. Inbox
+### Inbox
 
 ```tsx
 import { useInbox } from "@fluxy-chat/react";

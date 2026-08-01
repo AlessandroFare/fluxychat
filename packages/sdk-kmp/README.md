@@ -8,6 +8,7 @@ Shared WebSocket + REST client for Android and iOS (Ktor engines).
 - **androidMain** — OkHttp engine
 - **iosMain** — Darwin engine
 - **jvmMain** — CIO engine (tests/desktop)
+- **CI** — `.github/workflows/publish-sdk-kmp.yml` on tags `sdk-v*`
 
 ## Build
 
@@ -15,9 +16,16 @@ Requires JDK 17+ and Android SDK for `androidTarget`.
 
 ```bash
 cd packages/sdk-kmp
-./gradlew :shared:compileKotlinIosSimulatorArm64
-./gradlew :shared:compileDebugKotlinAndroid
-./gradlew :shared:jvmTest
+gradle :shared:jvmTest
+gradle :shared:compileDebugKotlinAndroid
+```
+
+## Publish
+
+Maven Central: see [docs/integrations/maven-central-publish.md](../../docs/integrations/maven-central-publish.md).
+
+```bash
+git tag sdk-v1.0.0 && git push origin sdk-v1.0.0
 ```
 
 ## Usage
@@ -30,13 +38,6 @@ val config = FluxyChatConfig(
     token = memberJwt,
 )
 val client = FluxyChatClient(config)
-client.setEventListener { event ->
-    when (event) {
-        is FluxyWsEvent.Message -> println(event.payload)
-        is FluxyWsEvent.Connection -> println(event.status)
-        is FluxyWsEvent.Error -> println(event.message)
-    }
-}
 client.connectRoom("general")
 client.sendMessage("general", "Hello from KMP")
 ```
