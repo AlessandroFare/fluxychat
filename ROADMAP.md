@@ -2,6 +2,44 @@
 
 Roadmap completa con best practice, architetture, tool gratuiti/open-source e riferimenti al codice già pronto.
 
+**Technical implementation guide (code-mapped, 🔴/🟡/🟢 priorities):** [docs/FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md)
+
+**Research round 3 (Aug 2026) — moonshot + enterprise parity:** [docs/FEATURE_ROADMAP.md#research-round-3--new-features--enterprise-parity-aug-2026](docs/FEATURE_ROADMAP.md) · Technical specs: [Cross-Org Agent Rooms](docs/FLUXYCHAT-CROSS-ORG-AGENT-ROOMS-E-NUOVE-FEATURE.md) · [Counterfactual/Debate/Empathy](docs/FLUXYCHAT-COUNTERFACTUAL-DEBATE-EMPATHY.md) · [Firmware/Merge/Speculative](docs/FLUXYCHAT-ROOM-FIRMWARE-MERGE-SPECULATIVE.md) · [Truth Market/Quorum/Cartography](docs/FLUXYCHAT-TRUTHMARKET-REHEARSAL-QUORUM-CARTOGRAPHY.md)
+
+### Research Round 3 — sintesi priorità
+
+| Priorità | ID | Feature | Effort |
+|----------|-----|---------|--------|
+| 🔴 Now | **52** | ✅ Async Decision Quorum — decisioni vincolanti con quorum per ruolo | MVP shipped |
+| 🔴 Now | **33** | ✅ Smart catch-up digest — "cosa mi sono perso" rilevanza-based | MVP shipped |
+| 🔴 Now | **34** | ✅ Room sentiment dashboard — mood da reazioni + AI | MVP shipped |
+| 🔴 Now | **36** | ✅ Passkeys / WebAuthn — login senza password | MVP shipped |
+| 🔴 Now | **54** | ✅ SSO/SAML + SCIM per console operatore | MVP shipped |
+| 🔴 Now | **58** | ✅ Anti-spam guest/embed — Turnstile + rate limit + `GET /public/guest-hardening` | MVP shipped |
+| 🔴 Now | **62** | ✅ Status page Upptime — CI config + `/settings/status`; deploy repo + DNS | MVP shipped |
+| 🟡 Moonshot | **32** | ✅ Cross-Org Agent Rooms — negoziazione agenti cross-azienda | MVP pilot |
+| 🟡 Next | **44** | ✅ Counterfactual Replay — "cosa sarebbe successo se..." | MVP shipped |
+| 🟡 Next | **45** | ✅ Multi-Agent Debate UX — ragionamento visibile in room | MVP shipped |
+| 🟡 Next | **48** | ✅ Merge-Conflict UI — risoluzione conflitti CRDT/federazione | MVP shipped |
+| 🟡 Next | **49** | ✅ Speculative agent warmup su typing | MVP shipped |
+| 🟡 Next | **51** | ✅ Rehearsal Rooms — simulazione controparte | MVP shipped |
+| 🟡 Next | **53** | ✅ Chat Cartography — mappa cluster room | MVP shipped |
+| 🟡 Next | **38** | ✅ Ambient agents — agenti proattivi event-driven | MVP shipped |
+| 🟡 Next | **57** | ✅ Console moderazione completa (coda report) | MVP shipped |
+| 🟡 Next | **56** | ✅ Pipeline media (AV + thumbnail + limiti tenant) | MVP shipped |
+| 🟡 Next | **59** | ✅ Scheduled send — composer + cron dispatch | MVP shipped |
+| 🟡 Next | **60** | ✅ Slash commands — /poll, /remind, /assign + admin registry | MVP shipped |
+| 🟡 Next | **61** | ✅ Dashboard utilizzo/costi tenant | MVP shipped |
+| 🟢 Later | **50** | ✅ Truth Market — stake su affermazioni verificabili | MVP shipped |
+| 🟢 Later | **46** | ✅ Empathy Layer voice — prosody + silent agent adapt | MVP shipped |
+| 🟢 Later | **47** | ✅ Room Firmware — builtin hooks + audit (WASM reserved) | MVP shipped |
+| 🟢 Later | **55** | ✅ Mobile SDK (wrapper React Native) | MVP shipped |
+| ⚠️ Monitor | **28** | WebTransport — non implementare in prod 2026 | — |
+| 🟢 Research | **37** | ✅ Local-first eval (ElectricSQL/PowerSync) — stay on Yjs | Research closed |
+| 🟢 Research | **25** | AP2/UCP pagamenti agentici | monitoraggio |
+
+Dettaglio architettura, SQL, guardrail e touchpoint codice: [FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md) sezione Research Round 3.
+
 ## Implementation Workflow (LEGGERE PRIMA DI OGNI IMPLEMENTAZIONE)
 
 Per ogni punto del roadmap, **seguire sempre questo flusso**:
@@ -71,16 +109,16 @@ Portal è "Pusher con AI basic" — ignora completamente spatial, voice-first, d
 
 | ID | Task | Status |
 |----|------|--------|
-| PG-ZB-1 | `create-fluxy-chat` template React chat-only (60s first message) | [ ] |
-| PG-ZB-2 | Bundle benchmark table su `/compare` | [-] |
-| PG-ZB-3 | Deploy to Cloudflare button | [-] |
-| PG-ZB-4 | Feature parity checklist docs | [-] |
-| PG-ZB-6 | MCP server esempi clonabili (`examples/mcp/`) | [-] |
-| PG-ZB-7 | mcp-audit CI → D1 → badge marketplace | [-] |
-| PG-ZB-8 | `@fluxy-chat/ui` 4 temi Tailwind | [ ] |
-| PG-ZB-10 | LiveKit self-hosted voice (VPS + Worker JWT) | [ ] |
-| PG-ZB-11 | Activepieces embed CRM | [ ] |
-| PG-ZB-12 | KMP mobile SDK | [ ] |
+| PG-ZB-1 | `create-fluxy-chat` template React chat-only (60s guest mode) | [x] |
+| PG-ZB-2 | Bundle benchmark table su `/compare` | [x] |
+| PG-ZB-3 | Deploy to Cloudflare button | [x] |
+| PG-ZB-4 | Feature parity checklist docs | [x] |
+| PG-ZB-6 | MCP server esempi clonabili (`examples/mcp/`) | [x] |
+| PG-ZB-7 | mcp-audit CI → D1 → badge marketplace | [x] |
+| PG-ZB-8 | `@fluxy-chat/ui` 4 temi Tailwind | [x] |
+| PG-ZB-10 | LiveKit self-hosted voice (VPS + Worker JWT) | [x] |
+| PG-ZB-11 | Activepieces embed CRM | [x] POC |
+| PG-ZB-12 | KMP mobile SDK (RN wrapper ✅ `#55`) | [x] scaffold |
 
 Dettaglio completo: [PORTAL-ZERO-BUDGET-ROADMAP.md](docs/PORTAL-ZERO-BUDGET-ROADMAP.md).
 
@@ -88,35 +126,36 @@ Dettaglio completo: [PORTAL-ZERO-BUDGET-ROADMAP.md](docs/PORTAL-ZERO-BUDGET-ROAD
 
 ## FASE 1 — Foundation (Ora → Mese 1)
 
-### 1.1 Playground pubblico senza signup
+### 1.1 Playground pubblico senza signup ✅
 
 | | |
 |---|---|
 | **Cosa** | `demo.fluxychat.com` — entri, sei in una room con AI agent che risponde. Zero signup. |
-| **Architettura** | Pagina Next.js SENZA Clerk middleware. Usa `FluxyChatClient.joinPublicRoomAsGuest()`. Room pre-popolata con messaggi seed + AI agent. Rate-limit via `IpRateLimiterDO` (già esiste). |
-| **Codice già pronto** | `FluxyChatClient.joinPublicRoomAsGuest()`, `useChat`, `FluxyRealtimeProvider`, `IpRateLimiterDO` |
-| **Deploy** | Cloudflare Pages (gratis, 500K req/giorno) o Vercel Hobby |
-| **Best practice** | Query param `?room=demo` per tracciare sessioni guest senza auth. Rate-limitato via Worker DO. |
+| **Architettura** | Pagina Next.js SENZA Clerk middleware. Guest JWT via `GET|POST /demo/session`. Room pre-popolata con messaggi seed + AI agent. Rate-limit via `IpRateLimiterDO`. Probe pubblico `GET /demo/status`. |
+| **Codice** | `apps/dashboard/app/demo/page.tsx`, `apps/worker/src/lib/demo-session.js`, `demo-room-seed.js`, `public-http.js` (`/demo/status`, `/demo/session`) |
+| **Deploy** | Cloudflare Pages o Vercel Hobby + Worker env: `DEMO_ENABLED`, `DEMO_ROOM_ID`, `DEMO_API_KEY`, Turnstile in prod |
+| **Best practice** | Query param `?room=demo` per tracciare sessioni guest. Rate-limitato via Worker DO. |
 | **Tool** | `@fluxy-chat/sdk`, `@fluxy-chat/ui` |
-| **Effort** | 2 settimane |
+| **Effort** | 2 settimane — **shipped 2026-08-03** |
 
-### 1.2 Docs con search AI
-
-| | |
-|---|---|
-| **Opzione A (gratis OSS)** | Algolia DocSearch — **gratis per open source**. Applicare su `docsearch.algolia.com/apply`, poi `npm install @docsearch/react@3`, aggiungere snippet nel layout docs. Crawler automatico settimanale. |
-| **Opzione B (self-hosted)** | Meilisearch — open source, self-hosted su VPS $5/mese. `npm install meilisearch`, indicizzare docs via scraper. |
-| **Codice già pronto** | Docs in `apps/dashboard/app/guides/` (22 guide tecniche) |
-| **Effort** | 1 settimana |
-
-### 1.3 Runnable code snippets (StackBlitz)
+### 1.2 Docs con search ✅
 
 | | |
 |---|---|
-| **Cosa** | Ogni tutorial nella docs ha "Open in StackBlitz" button che apre un ambiente pre-configurato con `@fluxy-chat/sdk`. |
-| **Tool** | `npm install @stackblitz/sdk` — **gratis**. `sdk.openProject({ files, template: 'node' })` |
-| **Template** | basic (connessione), discord-clone (canali+ruoli), support-widget (embed), location-tracker |
-| **Effort** | 1 settimana |
+| **Algolia DocSearch** | `@docsearch/react` + env `NEXT_PUBLIC_ALGOLIA_*` — apply at docsearch.algolia.com for OSS crawler |
+| **Fallback locale** | `DocsSearch` + `LocalGuideSearch` su `/guides` e `/docs` — indice client-side da 15+ guide |
+| **Codice** | `components/doc-search.tsx`, `local-guide-search.tsx`, `lib/guides-search-index.ts` |
+| **Effort** | 1 settimana — **shipped 2026-08-03** (Algolia opzionale in prod) |
+
+### 1.3 Runnable code snippets (StackBlitz) ✅
+
+| | |
+|---|---|
+| **Cosa** | Tutorial con "Open in StackBlitz" — ambiente pre-configurato con `@fluxy-chat/sdk`. |
+| **Codice** | `stackblitz-templates.ts`, `StackBlitzButton`, `/templates/code`, guide marketing con `stackblitzTemplateId` |
+| **Template** | `basic-connection`, `react-chat-ui`, `agent-chat` |
+| **Docs** | `apps/docs/content/docs/guides/stackblitz-snippets.mdx` |
+| **Effort** | 1 settimana — **shipped 2026-08-03** |
 
 ### 1.4 Pricing page pubblica
 

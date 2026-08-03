@@ -2,10 +2,9 @@
  * Audit D  axe-core a11y suite for FluxyChat dashboard.
  *
  * Scoped to the single public, auth-free, currently-passing page.
- * Auth-gated console routes (`/onboarding`, `/agents`, `/projects`,
- * `/status`, `/`) require a valid Clerk session which we cannot mint
- * in CI without an admin Clerk API key  covered by the manual test
- * plan.
+ * Auth-gated console routes are covered by `a11y.admin.integrated.spec.ts`
+ * (requires E2E_ADMIN_JWT). Public marketing pages below may have known
+ * contrast gaps documented in ROADMAP_EXECUTION.md.
  *
  * KNOWN GAP: the broader marketing surface (`/landing`, `/why`,
  * `/compare`, `/get-started`, `/docs`) currently has ~30 color-

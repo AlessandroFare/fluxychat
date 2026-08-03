@@ -19,6 +19,8 @@
 import { fetchOgPreview } from "./message-enrichment.js";
 import { isPrivateUrl } from "./url-ssrf.js";
 import { logInfo } from "./worker-log.js";
+import { chatCompletion } from "./ai-chat-completion.js";
+import { workerSharedLlmAllowed } from "./hosted-saas-policy.js";
 
 const PREVIEW_CACHE_TTL_HOURS = 24;
 const MAX_CONTENT_LENGTH = 10000;
@@ -210,6 +212,60 @@ export function extractMarkdownFeatures(markdown) {
 
 // ── Link Preview Cache ──
 
+function previewRowToResponse(row, cached) {
+  return {
+    title: row.title,
+    description: row.description,
+    imageUrl: row.image_url,
+    siteName: row.site_name,
+    contentType: row.content_type,
+    aiSummary: row.ai_summary ?? null,
+    url: row.url,
+    cached,
+  };
+}
+
+/**
+ * Generate a 1–2 line AI extract for a link preview (roadmap #23).
+ * @param {object} env
+ * @param {{ projectId: string, url: string, title?: string|null, description?: string|null }} input
+ */
+export async function generateAiLinkSummary(env, input) {
+  if (env.LINK_PREVIEW_AI_ENABLED === "false" || env.LINK_PREVIEW_AI_ENABLED === "0") {
+    return null;
+  }
+  if (!workerSharedLlmAllowed(env, input.projectId)) {
+    return null;
+  }
+
+  const context = [
+    input.title ? `Title: ${input.title}` : null,
+    input.description ? `Description: ${input.description}` : null,
+    `URL: ${input.url}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  if (!context.trim()) return null;
+
+  const ai = await chatCompletion(env, {
+    messages: [
+      {
+        role: "system",
+        content:
+          "Summarize the linked page in 1-2 concise sentences for a chat link preview. Plain text only, no markdown.",
+      },
+      { role: "user", content: context },
+    ],
+    maxTokens: 120,
+    temperature: 0.3,
+    logContext: { projectId: input.projectId, feature: "link_preview_ai" },
+  });
+
+  if (!ai.ok || !ai.content?.trim()) return null;
+  return ai.content.trim().slice(0, 280);
+}
+
 /**
  * Get a cached link preview or fetch and cache a new one.
  *
@@ -230,20 +286,19 @@ export async function getLinkPreview(env, input) {
 
   if (cached) {
     logInfo("link_preview.cache_hit", { projectId, url });
-    return {
-      title: cached.title,
-      description: cached.description,
-      imageUrl: cached.image_url,
-      siteName: cached.site_name,
-      contentType: cached.content_type,
-      url: cached.url,
-      cached: true,
-    };
+    return previewRowToResponse(cached, true);
   }
 
   // Fetch fresh
   const preview = await fetchOgPreview(url, env);
   if (!preview) return null;
+
+  const aiSummary = await generateAiLinkSummary(env, {
+    projectId,
+    url,
+    title: preview.title,
+    description: preview.description,
+  });
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -251,13 +306,34 @@ export async function getLinkPreview(env, input) {
 
   try {
     await env.DB.prepare(
-      `INSERT OR REPLACE INTO link_previews (id, project_id, url, title, description, image_url, site_name, content_type, fetched_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT OR REPLACE INTO link_previews (id, project_id, url, title, description, image_url, site_name, content_type, ai_summary, fetched_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-      .bind(id, projectId, url, preview.title, preview.description, preview.imageUrl, preview.siteName || null, preview.contentType || null, now, expiresAt)
+      .bind(
+        id,
+        projectId,
+        url,
+        preview.title,
+        preview.description,
+        preview.imageUrl,
+        preview.siteName || null,
+        preview.contentType || null,
+        aiSummary,
+        now,
+        expiresAt,
+      )
       .run();
   } catch {
-    // Non-critical — preview still returned
+    try {
+      await env.DB.prepare(
+        `INSERT OR REPLACE INTO link_previews (id, project_id, url, title, description, image_url, site_name, content_type, fetched_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+        .bind(id, projectId, url, preview.title, preview.description, preview.imageUrl, preview.siteName || null, preview.contentType || null, now, expiresAt)
+        .run();
+    } catch {
+      /* non-critical */
+    }
   }
 
   return {
@@ -266,6 +342,7 @@ export async function getLinkPreview(env, input) {
     imageUrl: preview.imageUrl,
     siteName: preview.siteName || null,
     contentType: preview.contentType || null,
+    aiSummary,
     url,
     cached: false,
   };

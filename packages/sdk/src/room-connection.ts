@@ -214,6 +214,27 @@ export class FluxyChatRoomConnection {
     this.openSocket();
   }
 
+  /**
+   * Re-open the socket with the client's current credentials (after JWT refresh).
+   * Preserves outbound queue and reconnect budget.
+   */
+  reconnectWithFreshCredentials(): void {
+    if (this.intentionallyClosed) return;
+    this.clearReconnectTimer();
+    this.stopHeartbeat();
+    if (this.ws) {
+      try {
+        this.ws.close(FLUXY_WS_CLOSE_NORMAL);
+      } catch {
+        /* ignore */
+      }
+      this.ws = null;
+    }
+    this.reconnectAttempt = 0;
+    this.pendingHistoryReplay = true;
+    this.openSocket();
+  }
+
   close(code = FLUXY_WS_CLOSE_NORMAL): void {
     this.intentionallyClosed = true;
     this.rejectAllWaitFor(new FluxySendError("Connection closed."));

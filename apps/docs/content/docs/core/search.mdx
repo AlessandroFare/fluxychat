@@ -1,19 +1,41 @@
 ---
 title: Search
-description: Full-text message search via REST.
+description: Full-text and hybrid semantic message search via REST.
 ---
 
-Search room history with `GET /search/messages` (FTS5-backed). The SDK wraps this as `client.searchMessages()`.
+# Search
+
+Search room history with `GET /search/messages` (FTS5-backed). When semantic search is enabled for your tenant, use hybrid mode for embedding + keyword results.
 
 ```ts
 const { results } = await client.searchMessages("deployment rollback", {
   roomId: "engineering",
   limit: 20,
+  mode: "hybrid", // "fts" | "semantic" | "hybrid"
 });
 
 for (const hit of results) {
   console.log(hit.snippet, hit.roomId, hit.createdAt);
 }
+```
+
+## Semantic search (hybrid)
+
+Per-tenant toggle in the dashboard at **Settings → Search** (`/settings/search`).
+
+| Step | Action |
+|------|--------|
+| 1 | Worker: `SEMANTIC_SEARCH_ENABLED=true` + embeddings provider (`AI_EMBEDDINGS_*`) |
+| 2 | Apply migration `0164_semantic_search_settings.sql` |
+| 3 | Dashboard: enable semantic search → **Run backfill** |
+| 4 | Search on `/search` or the room Search panel in chat |
+
+SDK helpers:
+
+```ts
+await client.getSemanticSearchSettings();
+await client.backfillMessageEmbeddings({ roomId: "general" });
+const { results } = await client.searchMessagesSemantic("onboarding flow", { roomId: "support" });
 ```
 
 ## Query parameters

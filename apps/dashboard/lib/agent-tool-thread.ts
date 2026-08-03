@@ -1,4 +1,5 @@
-import type { FluxyChatEvent } from "@fluxy-chat/sdk";
+import type { FluxyChatEvent, UIPart } from "@fluxy-chat/sdk";
+import { createToolCallPart, createToolResultPart } from "@fluxy-chat/sdk";
 import { parseToolCallsJson, type AgentToolCallDisplay } from "@/lib/agent-run-display";
 
 export type AgentToolThreadKind = "tool_call" | "tool_result" | "tool_error";
@@ -107,6 +108,42 @@ export function mergeToolThreadEvents(
   for (const e of existing) byKey.set(e.key, e);
   for (const e of incoming) byKey.set(e.key, e);
   return Array.from(byKey.values());
+}
+
+/** Map live tool thread events to AG-UI UIParts for AgentUiRenderer (roadmap #5). */
+export function toolThreadEventsToUiParts(events: AgentToolThreadEvent[]): UIPart[] {
+  const parts: UIPart[] = [];
+  for (const ev of events) {
+    if (ev.kind === "tool_call") {
+      let args: Record<string, unknown> = {};
+      if (ev.arguments) {
+        try {
+          const parsed = JSON.parse(ev.arguments);
+          if (parsed && typeof parsed === "object") args = parsed as Record<string, unknown>;
+        } catch {
+          args = { raw: ev.arguments };
+        }
+      }
+      parts.push(createToolCallPart(ev.name, ev.toolCallId, args));
+      continue;
+    }
+    if (ev.kind === "tool_result") {
+      let output: unknown = ev.resultPreview ?? {};
+      if (ev.resultPreview?.startsWith("{") || ev.resultPreview?.startsWith("[")) {
+        try {
+          output = JSON.parse(ev.resultPreview);
+        } catch {
+          output = ev.resultPreview;
+        }
+      }
+      parts.push(createToolResultPart(ev.name, ev.toolCallId, "output-available", output));
+      continue;
+    }
+    if (ev.kind === "tool_error") {
+      parts.push(createToolResultPart(ev.name, ev.toolCallId, "output-error", undefined, ev.error ?? "tool_failed"));
+    }
+  }
+  return parts;
 }
 
 export function toolCallsFromAgentRunPayload(run: Record<string, unknown>): AgentToolCallDisplay[] {

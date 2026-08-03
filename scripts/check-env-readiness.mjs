@@ -79,6 +79,9 @@ if (fileExists("apps/dashboard/.env.local")) {
   }
 }
 
+if (fileExists(".upptime/config.json")) ok(".upptime/config.json present (status page #62)");
+else warn(".upptime/config.json missing");
+
 console.log("\nEnvironment readiness\n");
 
 for (const c of checks) {

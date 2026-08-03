@@ -106,10 +106,15 @@ export interface LiveProduct {
   description?: string;
   imageUrl?: string;
   checkoutUrl: string;
+  checkoutProvider?: "external" | "stripe";
+  stripePriceId?: string;
   priceAmount: number; // cents
   currency: string;
   active: boolean;
   shownAt?: string;
+  inventoryQty?: number | null;
+  moq?: number;
+  unitsSold?: number;
 }
 
 export interface StreamPoll {

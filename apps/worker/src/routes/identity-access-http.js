@@ -9,6 +9,16 @@ import { parseSamlAssertion, validateSamlTiming, validateSamlAudience, createSso
 import { createScimUser, getScimUser, listScimUsers, updateScimUser, deleteScimUser, createScimGroup, listScimGroups, createScimToken, listScimTokens, deleteScimToken, verifyScimToken } from '../lib/scim.js';
 import { enrollTotp, verifyAndEnableTotp, verifyAdminTotp, isTotpEnabled, getTotpStatus, disableTotp } from '../lib/totp-2fa.js';
 import { buildAllowedOriginsList } from "../lib/custom-domains.js";
+import { resolveProjectId } from "../lib/resolve-project-id.js";
+import { isValidId } from "../lib/valid-ids.js";
+import {
+  listWebAuthnCredentials,
+  deleteWebAuthnCredential,
+  createRegistrationOptions,
+  verifyRegistration,
+  createAuthenticationOptions,
+  verifyAuthentication,
+} from "../lib/webauthn-passkeys.js";
 
 function resolveCorsHeaders(request, env, h) {
   // Audit S-9: identity routes (SAML/SCIM/TOTP) must NEVER inherit a wildcard
@@ -40,6 +50,13 @@ function json(data, status = 200, corsHeaders) {
 function hasAnyRole(roles, allowed) {
   if (!roles) return false;
   return roles.some((r) => allowed.includes(r));
+}
+
+function normalizePasskeyLoginRoles(roles) {
+  const allowed = new Set(["member", "moderator", "admin"]);
+  if (!Array.isArray(roles)) return ["member"];
+  const picked = roles.filter((r) => typeof r === "string" && allowed.has(r));
+  return picked.length ? picked.slice(0, 5) : ["member"];
 }
 
 export async function dispatchIdentityRoutes(request, url, h) {
@@ -353,6 +370,124 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const result = await verifyAdminTotp(env, body.projectId, body.userId, body.code);
     if (!result.verified) return respond({ error: 'Invalid 2FA code' }, 401);
     return respond({ ok: true, method: result.method });
+  }
+
+  // ─── Passkeys / WebAuthn ───
+
+  if (path === "/webauthn/credentials" && request.method === "GET") {
+    const auth = await verifyAdmin(request, env);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
+    const credentials = await listWebAuthnCredentials(env, auth.projectId, auth.userId);
+    return respond({ credentials });
+  }
+
+  const webauthnCredDelete = path.match(/^\/webauthn\/credentials\/(\d+)$/);
+  if (webauthnCredDelete && request.method === "DELETE") {
+    const auth = await verifyAdmin(request, env);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
+    const deleted = await deleteWebAuthnCredential(
+      env,
+      auth.projectId,
+      auth.userId,
+      Number(webauthnCredDelete[1]),
+    );
+    if (!deleted) return respond({ error: "not_found" }, 404);
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  if (path === "/webauthn/register/options" && request.method === "POST") {
+    const auth = await verifyAdmin(request, env);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
+    const body = await request.json().catch(() => ({}));
+    const result = await createRegistrationOptions(env, {
+      projectId: auth.projectId,
+      userId: auth.userId,
+      userDisplayName: typeof body.displayName === "string" ? body.displayName : auth.userId,
+      requestOrigin: request.headers.get("Origin"),
+    });
+    return respond({ options: result.options });
+  }
+
+  if (path === "/webauthn/register/verify" && request.method === "POST") {
+    const auth = await verifyAdmin(request, env);
+    if (auth.error) return respond({ error: auth.error }, auth.status);
+    const body = await request.json().catch(() => null);
+    if (!body?.response) return respond({ error: "response required" }, 400);
+    const result = await verifyRegistration(env, {
+      projectId: auth.projectId,
+      userId: auth.userId,
+      response: body.response,
+      requestOrigin: request.headers.get("Origin"),
+    });
+    if (!result.verified) return respond({ error: result.reason || "verification_failed" }, 400);
+    return respond({ ok: true, credentialId: result.credentialId });
+  }
+
+  if (path === "/webauthn/login/options" && request.method === "POST") {
+    const apiKey =
+      request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
+    if (!apiKey) return respond({ error: "api key required" }, 401);
+    const projectId = await resolveProjectId(request, env);
+    if (!projectId || projectId === (env.DEFAULT_PROJECT_ID || "default")) {
+      return respond({ error: "invalid api key" }, 401);
+    }
+    const body = await request.json().catch(() => null);
+    if (!body?.userId || !isValidId(body.userId)) {
+      return respond({ error: "userId required" }, 400);
+    }
+    const result = await createAuthenticationOptions(env, {
+      projectId,
+      userId: body.userId,
+      requestOrigin: request.headers.get("Origin"),
+    });
+    if (result.error) return respond({ error: result.error }, result.status || 404);
+    return respond({ options: result.options });
+  }
+
+  if (path === "/webauthn/login/verify" && request.method === "POST") {
+    const apiKey =
+      request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
+    if (!apiKey) return respond({ error: "api key required" }, 401);
+    const projectId = await resolveProjectId(request, env);
+    if (!projectId || projectId === (env.DEFAULT_PROJECT_ID || "default")) {
+      return respond({ error: "invalid api key" }, 401);
+    }
+    const body = await request.json().catch(() => null);
+    if (!body?.userId || !isValidId(body.userId) || !body?.response) {
+      return respond({ error: "userId and response required" }, 400);
+    }
+    const authResult = await verifyAuthentication(env, {
+      projectId,
+      userId: body.userId,
+      response: body.response,
+      requestOrigin: request.headers.get("Origin"),
+    });
+    if (!authResult.verified) {
+      return respond({ error: authResult.reason || "verification_failed" }, 401);
+    }
+    const row = await env.DB.prepare(
+      "SELECT jwt_secret FROM project_secrets WHERE project_id = ?",
+    )
+      .bind(projectId)
+      .first();
+    if (!row?.jwt_secret) {
+      return respond({ error: "project secret not configured" }, 400);
+    }
+    const roles = normalizePasskeyLoginRoles(body.roles);
+    const ttlSeconds = Math.max(60, Math.min(Number(body.ttlSeconds || 3600), 86_400));
+    const token = await signJwtLocal(row.jwt_secret, {
+      sub: body.userId,
+      tid: projectId,
+      roles,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + ttlSeconds,
+    });
+    return respond({
+      token,
+      expiresIn: ttlSeconds,
+      claims: { sub: body.userId, tid: projectId, roles },
+      method: "passkey",
+    });
   }
 
   return null; // Not handled by this dispatcher

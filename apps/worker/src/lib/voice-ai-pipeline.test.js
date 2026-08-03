@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { listVoiceAiProviders, getVoiceAiProvider } from "./voice-ai-pipeline.js";
+import {
+  listVoiceAiProviders,
+  getVoiceAiProvider,
+  resolveVoicePipelineMode,
+  createVoiceAiSession,
+} from "./voice-ai-pipeline.js";
 
 describe("voice-ai-pipeline", () => {
   it("lists realtime providers", () => {
@@ -12,5 +17,20 @@ describe("voice-ai-pipeline", () => {
   it("exposes latency target for openai-realtime", () => {
     const p = getVoiceAiProvider("openai-realtime");
     expect(p?.targetLatencyMs).toBe(300);
+    expect(p?.features).toContain("unified_multimodal");
+  });
+
+  it("resolveVoicePipelineMode defaults to unified", () => {
+    expect(resolveVoicePipelineMode({})).toBe("unified");
+    expect(resolveVoicePipelineMode({ pipelineMode: "legacy" })).toBe("legacy");
+  });
+
+  it("createVoiceAiSession includes pipelineMode", async () => {
+    const session = await createVoiceAiSession({}, {
+      projectId: "p1",
+      settings: { pipelineMode: "unified" },
+    });
+    expect(session.pipelineMode).toBe("unified");
+    expect(session.settings.pipelineMode).toBe("unified");
   });
 });

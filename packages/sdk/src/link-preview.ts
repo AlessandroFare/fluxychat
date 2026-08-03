@@ -5,6 +5,7 @@ export interface LinkPreviewData {
   imageUrl?: string;
   favicon?: string;
   siteName?: string;
+  aiSummary?: string | null;
 }
 
 export interface LinkPreviewApi {

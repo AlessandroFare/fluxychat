@@ -8,6 +8,7 @@ import { useFluxyRoomStoreState } from "./use-fluxy-room-store";
 import { useFluxyChatOptional } from "./use-fluxy-chat";
 import { describeConnectionError } from "./errors";
 import { isDegradedConnectionStatus } from "./connection-state";
+import { sessionTokenFingerprint } from "./session-token-refresh";
 
 export type UseChatHistoryReplay = "connect" | "request";
 
@@ -51,6 +52,8 @@ export interface UseChatOptions {
   e2eAutoFetch?: boolean;
   /** Overlapping agent invoke strategy (Portal B-4). Default debounce 300ms. */
   concurrency?: import("./concurrency").ConcurrencyConfig;
+  /** Yjs message-list merge on history load (default on). */
+  crdtMessageList?: boolean;
   onAnyEvent?: (event: import("./index").FluxyChatEvent) => void;
   /** Worker vertical/labs fan-out (`server_event` frames on room WS). */
   onServerEvent?: import("./server-realtime").ServerEventHandler;
@@ -71,6 +74,7 @@ export function useChat({
   e2eKey,
   e2eAutoFetch,
   concurrency = { strategy: "debounce", debounceMs: 300 },
+  crdtMessageList = true,
   onAnyEvent,
   onServerEvent,
 }: UseChatOptions) {
@@ -86,8 +90,9 @@ export function useChat({
   );
 
   const sessionKey = React.useMemo(
-    () => `${client?.userId ?? "none"}:${roomId}`,
-    [client?.userId, roomId],
+    () =>
+      `${client?.userId ?? "none"}:${roomId}:${sessionTokenFingerprint(realtime?.token ?? client?.token ?? null)}`,
+    [client?.userId, client?.token, roomId, realtime?.token],
   );
 
   const onAnyEventRef = React.useRef(onAnyEvent);
@@ -116,6 +121,7 @@ export function useChat({
         wsCache,
         e2eKey,
         e2eAutoFetch,
+        crdtMessageList,
         concurrency: concurrencyRef.current,
         onAnyEvent: (event) => onAnyEventRef.current?.(event),
         onServerEvent: (ev) => onServerEventRef.current?.(ev),
@@ -140,12 +146,22 @@ export function useChat({
     wsCache,
     e2eKey,
     e2eAutoFetch,
+    crdtMessageList,
   ]);
 
   const state = useFluxyRoomStoreState(store);
   const connectionErrorInfo = React.useMemo(
     () => describeConnectionError(state.connectionError),
     [state.connectionError],
+  );
+
+  const pendingMessages = React.useMemo(
+    () => state.messages.filter((m) => m.deliveryStatus === "pending"),
+    [state.messages],
+  );
+  const failedMessages = React.useMemo(
+    () => state.messages.filter((m) => m.deliveryStatus === "failed"),
+    [state.messages],
   );
 
   return {
@@ -170,6 +186,8 @@ export function useChat({
     connectionErrorInfo,
     connectionBlocked: connectionErrorInfo?.isTerminal ?? false,
     connectionDegraded: isDegradedConnectionStatus(state.connectionState.status),
+    pendingMessages,
+    failedMessages,
     retryMessage: state.retryMessage,
     agentTyping: state.agentTyping,
     typingAgentId: state.wsTypingAgentId ?? state.invokeTypingAgentId,
@@ -184,6 +202,14 @@ export function useChat({
     invokeAgent: state.invokeAgent,
     toolThreadEvents: state.toolThreadEvents,
     clearToolThread: state.clearToolThread,
+    debateSteps: state.debateSteps,
+    debateSessionId: state.debateSessionId,
+    clearDebateThread: state.clearDebateThread,
+    voiceStage: state.voiceStage,
+    joinVoiceStage: state.joinVoiceStage,
+    leaveVoiceStage: state.leaveVoiceStage,
+    promoteVoiceStageListener: state.promoteVoiceStageListener,
+    sendVoiceStageVad: state.sendVoiceStageVad,
     sendClientEvent: state.sendClientEvent,
     presenceMembers: state.presenceMembers,
     subscriptionCount: state.subscriptionCount,

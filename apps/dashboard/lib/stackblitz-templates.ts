@@ -218,12 +218,11 @@ header h1 {
 // ── Configuration ────────────────────────────────────
 // Replace with your own values or use the hosted demo endpoint.
 const BASE_URL = "${WC_BASE_URL}";
-const ROOM_ID = "demo-" + Math.random().toString(36).slice(2, 8);
-const USER_ID = "stackblitz-user-" + Math.random().toString(36).slice(2, 6);
 
 // ── State ────────────────────────────────────────────
 let client = null;
 let currentRoomId = null;
+let guestUserId = null;
 let messages = [];
 let isConnected = false;
 
@@ -247,7 +246,7 @@ function renderMessages() {
     return;
   }
   chatBox.innerHTML = messages.map((m) => {
-    const isMine = m.userId === USER_ID;
+    const isMine = m.userId === guestUserId;
     const time = new Date(m.timestamp).toLocaleTimeString();
     return \`<div class="message \${isMine ? "mine" : "theirs"}">
       \${!isMine ? '<div class="author">' + m.userName + '</div>' : ""}
@@ -258,18 +257,16 @@ function renderMessages() {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-async function mintToken(userId) {
-  const res = await fetch(BASE_URL + "/auth/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Fluxy-Api-Key": "fc_demo_public",
-    },
-    body: JSON.stringify({ userId, roles: ["member"], ttlSeconds: 3600 }),
-  });
-  if (!res.ok) throw new Error("Token minting failed: " + res.status);
+async function mintDemoSession() {
+  const res = await fetch(BASE_URL + "/demo/session");
+  if (!res.ok) {
+    throw new Error(
+      "Public demo unavailable. Enable DEMO_ENABLED on the Worker, or use POST /auth/token with your fc_ API key."
+    );
+  }
   const data = await res.json();
-  return data.token;
+  if (!data.token) throw new Error("Demo session disabled on this deployment");
+  return data;
 }
 
 // ── Connection ────────────────────────────────────────
@@ -279,14 +276,15 @@ async function connect() {
   setStatus("Connecting...", "connecting");
 
   try {
-    const token = await mintToken(USER_ID);
+    const session = await mintDemoSession();
+    guestUserId = session.userId;
+    currentRoomId = session.roomId;
     client = new FluxyChatClient({
       baseUrl: BASE_URL,
-      userId: USER_ID,
-      token,
+      userId: session.userId,
+      token: session.token,
     });
 
-    currentRoomId = ROOM_ID;
     const room = client.joinRoom(currentRoomId);
 
     // Listen for messages
@@ -305,7 +303,7 @@ async function connect() {
       console.log("Presence:", event);
     });
 
-    setStatus("Connected to " + ROOM_ID, "online");
+    setStatus("Connected to " + currentRoomId, "online");
     isConnected = true;
     sendBtn.disabled = false;
     messageInput.disabled = false;
@@ -340,8 +338,7 @@ messageInput.addEventListener("keydown", (e) => {
 });
 
 console.log("FluxyChat demo ready. Click Connect to start.");
-console.log("Room:", ROOM_ID);
-console.log("User:", USER_ID);`,
+console.log("FluxyChat StackBlitz — uses GET /demo/session guest JWT");`,
         "package.json": JSON.stringify(
           {
             name: "fluxychat-basic-connection",
@@ -516,19 +513,15 @@ export default function App() {
     setError(null);
     const userId = name.toLowerCase().replace(/\\s+/g, "-") + "-" + Math.random().toString(36).slice(2, 6);
     try {
-      const res = await fetch(BASE_URL + "/auth/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fluxy-Api-Key": "fc_demo_public",
-        },
-        body: JSON.stringify({ userId, roles: ["member"], ttlSeconds: 3600 }),
+      const session = await mintDemoSession();
+      const c = new FluxyChatClient({
+        baseUrl: BASE_URL,
+        userId: session.userId,
+        token: session.token,
       });
-      if (!res.ok) throw new Error("Auth failed");
-      const { token } = await res.json();
-      const c = new FluxyChatClient({ baseUrl: BASE_URL, userId, token });
-      setUser(userId);
+      setUser(name || session.userId);
       setClient(c);
+      setActiveRoom(session.roomId);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -811,28 +804,35 @@ import { useChat } from "@fluxy-chat/react";
 import "./App.css";
 
 const BASE_URL = "${WC_BASE_URL}";
-const AGENT_ROOM = "agent-demo";
+
+async function mintDemoSession() {
+  const res = await fetch(BASE_URL + "/demo/session");
+  if (!res.ok) throw new Error("Public demo unavailable on this Worker");
+  const data = await res.json();
+  if (!data.token) throw new Error("Demo disabled");
+  return data;
+}
 
 export default function App() {
   const [client, setClient] = useState(null);
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  const [userId] = useState("demo-user-" + Math.random().toString(36).slice(2, 6));
+  const [agentRoomId, setAgentRoomId] = useState("agent-demo");
+
+  const [guestUserId, setGuestUserId] = useState(null);
 
   useEffect(() => {
     async function init() {
       setConnecting(true);
       try {
-        const res = await fetch(BASE_URL + "/auth/token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Fluxy-Api-Key": "fc_demo_public",
-          },
-          body: JSON.stringify({ userId, roles: ["member"], ttlSeconds: 3600 }),
+        const session = await mintDemoSession();
+        setAgentRoomId(session.roomId);
+        setGuestUserId(session.userId);
+        const c = new FluxyChatClient({
+          baseUrl: BASE_URL,
+          userId: session.userId,
+          token: session.token,
         });
-        const { token } = await res.json();
-        const c = new FluxyChatClient({ baseUrl: BASE_URL, userId, token });
         setClient(c);
         setConnected(true);
       } catch (err) {
@@ -842,7 +842,7 @@ export default function App() {
       }
     }
     init();
-  }, [userId]);
+  }, []);
 
   if (!client) {
     return (
@@ -853,7 +853,7 @@ export default function App() {
     );
   }
 
-  return <AgentChat client={client} roomId={AGENT_ROOM} userId={userId} />;
+  return <AgentChat client={client} roomId={agentRoomId} userId={guestUserId} />;
 }
 
 function AgentChat({ client, roomId, userId }) {

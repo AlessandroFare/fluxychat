@@ -75,5 +75,22 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
   for (const m of mapped) {
     m.attachments = byMessage.get(m.id) || [];
   }
+
+  const previewUrls = [...new Set(mapped.map((m) => m.preview?.url).filter(Boolean))];
+  if (previewUrls.length) {
+    const ph = previewUrls.map(() => "?").join(",");
+    const lpRows = await env.DB.prepare(
+      `SELECT url, ai_summary FROM link_previews WHERE project_id = ? AND url IN (${ph})`,
+    )
+      .bind(projectId, ...previewUrls)
+      .all();
+    const aiByUrl = new Map((lpRows.results || []).map((r) => [r.url, r.ai_summary ?? null]));
+    for (const m of mapped) {
+      if (m.preview?.url && aiByUrl.has(m.preview.url)) {
+        m.preview.aiSummary = aiByUrl.get(m.preview.url);
+      }
+    }
+  }
+
   return mapped;
 }

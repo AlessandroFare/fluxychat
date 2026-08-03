@@ -13,6 +13,11 @@ import { WorkerBackendBadge } from "@/app/components/worker-backend-badge";
 import { useWorkerChatClient } from "@/lib/use-worker-chat-client";
 import { useDashboardSession } from "@/app/components/dashboard-session";
 import {
+  captureDemoFrame,
+  moderateStreamFrame,
+  type VisualModerationFrameResult,
+} from "@/lib/visual-moderation-client";
+import {
   createFluxyStream,
   createWorkerFluxyStreamClient,
   type FluxyStreamApi,
@@ -79,7 +84,7 @@ function createSeededStream(): FluxyStreamApi {
 // ─── Main page ───────────────────────────────────────
 
 export default function FluxyStreamDemoPage() {
-  const { activeProject } = useDashboardSession();
+  const { activeProject, adminJwt, memberJwt } = useDashboardSession();
   const chatClient = useWorkerChatClient("stream-demo");
   const workerStream = useMemo(
     () => (chatClient ? createWorkerFluxyStreamClient(chatClient) : null),
@@ -142,6 +147,8 @@ export default function FluxyStreamDemoPage() {
 
   const stats = stream.getStats();
   const viewerCount = stream.getViewerCount();
+  const authToken = adminJwt.trim() || memberJwt.trim();
+  const liveEventId = workerEvents[0]?.id;
 
   const tabs: { id: typeof activeTab; label: string; icon: React.ReactNode }[] = [
     { id: "viewers", label: "Viewers", icon: <Users className="size-3.5" /> },
@@ -175,33 +182,6 @@ export default function FluxyStreamDemoPage() {
           </div>
         }
       />
-
-      {workerStream ? (
-        <div className="border-b border-border px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void createWorkerEvent()}
-              disabled={workerBusy}
-              className="rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {workerBusy ? <Loader2 className="mr-1 inline size-3.5 animate-spin" /> : <Plus className="mr-1 inline size-3.5" />}
-              Create live event on Worker
-            </button>
-            <span className="text-xs text-muted-foreground">{workerEvents.length} event(s) in D1</span>
-          </div>
-          {workerError ? <p className="mt-2 text-xs text-red-600">{workerError}</p> : null}
-          {workerEvents.length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {workerEvents.slice(0, 5).map((event) => (
-                <span key={event.id} className="rounded-lg border border-border bg-card px-2 py-1 text-[10px]">
-                  {event.title} · {event.status}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
 
       {/* Stats bar */}
       <div className="grid grid-cols-2 gap-2 border-b border-border px-4 py-2 sm:grid-cols-4 lg:grid-cols-6">
@@ -264,12 +244,16 @@ export default function FluxyStreamDemoPage() {
       <div className="flex-1 overflow-auto p-4">
         {activeTab === "viewers" && <ViewersPanel stream={stream} />}
         {activeTab === "chat" && <ChatPanel stream={stream} />}
-        {activeTab === "angles" && <AnglesPanel stream={stream} />}
+        {activeTab === "angles" && (
+          <AnglesPanel stream={stream} liveEventId={liveEventId} authToken={authToken || undefined} />
+        )}
         {activeTab === "highlights" && <HighlightsPanel stream={stream} />}
         {activeTab === "sentiment" && <SentimentPanel stream={stream} />}
         {activeTab === "story" && <StoryPanel stream={stream} />}
         {activeTab === "gifts" && <GiftsPanel stream={stream} />}
-        {activeTab === "commerce" && <CommercePanel stream={stream} />}
+        {activeTab === "commerce" && (
+          <CommercePanel stream={stream} workerStream={workerStream} liveEventId={liveEventId} />
+        )}
         {activeTab === "polls" && <PollsPanel stream={stream} />}
         {activeTab === "cohost" && <CoHostPanel stream={stream} />}
         {activeTab === "leaderboard" && <LeaderboardPanel stream={stream} />}
@@ -530,14 +514,65 @@ function ChatPanel({ stream }: { stream: FluxyStreamApi }) {
 
 // ─── Multi-camera angles ──────────────────────────────
 
-function AnglesPanel({ stream }: { stream: FluxyStreamApi }) {
+function AnglesPanel({
+  stream,
+  liveEventId,
+  authToken,
+}: {
+  stream: FluxyStreamApi;
+  liveEventId?: string;
+  authToken?: string;
+}) {
   const [angles, setAngles] = useState<CameraAngle[]>(stream.getAngles());
   const [active, setActive] = useState<CameraAngle | null>(stream.getActiveAngle());
+  const [modBusy, setModBusy] = useState(false);
+  const [modError, setModError] = useState<string | null>(null);
+  const [modResult, setModResult] = useState<VisualModerationFrameResult | null>(null);
+  const [modLog, setModLog] = useState<string[]>([]);
+  const [autoScan, setAutoScan] = useState(false);
+  const frameIndexRef = useRef(0);
 
   const refresh = () => {
     setAngles([...stream.getAngles()]);
     setActive(stream.getActiveAngle());
   };
+
+  const runVisualModeration = useCallback(async () => {
+    if (!liveEventId || !authToken) {
+      setModError("Create a live event on Worker and sign in to scan frames.");
+      return;
+    }
+    setModBusy(true);
+    setModError(null);
+    try {
+      const frameIndex = frameIndexRef.current++;
+      const imageBase64 = captureDemoFrame(active?.label || "Stream frame");
+      const result = await moderateStreamFrame(authToken, liveEventId, {
+        imageBase64,
+        frameIndex,
+        roomId: liveEventId,
+      });
+      setModResult(result);
+      const summary = result.ok
+        ? result.flagged
+          ? `Frame #${frameIndex}: flagged (${result.categories?.join(", ") || result.action || "review"})`
+          : `Frame #${frameIndex}: clean`
+        : `Frame #${frameIndex}: ${result.error || "scan failed"}`;
+      setModLog((prev) => [summary, ...prev].slice(0, 8));
+    } catch (err) {
+      setModError(err instanceof Error ? err.message : "Visual moderation failed");
+    } finally {
+      setModBusy(false);
+    }
+  }, [active?.label, authToken, liveEventId]);
+
+  useEffect(() => {
+    if (!autoScan || !liveEventId || !authToken) return;
+    const interval = setInterval(() => {
+      void runVisualModeration();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [autoScan, authToken, liveEventId, runVisualModeration]);
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -589,6 +624,52 @@ function AnglesPanel({ stream }: { stream: FluxyStreamApi }) {
         <p className="mt-3 text-[11px] text-muted-foreground">
           Viewers can switch between camera angles in real time. The active angle broadcasts to all new viewers.
         </p>
+
+        <div className="mt-4 rounded-lg border border-border bg-muted/20 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Visual AI moderation (#13)
+          </h4>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Samples a frame and POSTs to Worker <code className="font-mono">/api/live/events/:id/moderate-frame</code>.
+            {liveEventId ? ` Event: ${liveEventId.slice(0, 12)}…` : " Create a Worker event above first."}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void runVisualModeration()}
+              disabled={modBusy}
+              className="rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {modBusy ? <Loader2 className="mr-1 inline size-3 animate-spin" /> : null}
+              Scan frame now
+            </button>
+            <button
+              type="button"
+              onClick={() => setAutoScan((v) => !v)}
+              disabled={!liveEventId || !authToken}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-xs font-medium",
+                autoScan ? "border-emerald-500 bg-emerald-500/10 text-emerald-700" : "border-border hover:bg-muted",
+              )}
+            >
+              {autoScan ? "Auto-scan ON (15s)" : "Auto-scan OFF"}
+            </button>
+          </div>
+          {modError ? <p className="mt-2 text-xs text-red-600">{modError}</p> : null}
+          {modResult?.ok ? (
+            <p className={cn("mt-2 text-xs", modResult.flagged ? "text-amber-700" : "text-emerald-700")}>
+              Last scan: {modResult.flagged ? "flagged for review" : "no policy violations detected"}
+              {modResult.queued ? " · queued for ai_moderation_queue" : ""}
+            </p>
+          ) : null}
+          {modLog.length > 0 ? (
+            <ul className="mt-2 space-y-0.5 text-[10px] text-muted-foreground">
+              {modLog.map((entry, i) => (
+                <li key={i}>{entry}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -931,17 +1012,83 @@ function GiftsPanel({ stream }: { stream: FluxyStreamApi }) {
 
 // ─── Live commerce ────────────────────────────────────
 
-function CommercePanel({ stream }: { stream: FluxyStreamApi }) {
+function CommercePanel({
+  stream,
+  workerStream,
+  liveEventId,
+}: {
+  stream: FluxyStreamApi;
+  workerStream: ReturnType<typeof createWorkerFluxyStreamClient> | null;
+  liveEventId?: string;
+}) {
   const [products, setProducts] = useState<LiveProduct[]>(stream.getProducts());
   const [active, setActive] = useState<LiveProduct | null>(stream.getActiveProduct());
+  const [workerBusy, setWorkerBusy] = useState(false);
+  const [workerNote, setWorkerNote] = useState<string | null>(null);
 
   const refresh = () => {
     setProducts([...stream.getProducts()]);
     setActive(stream.getActiveProduct());
   };
 
+  useEffect(() => {
+    if (!workerStream || !liveEventId) return;
+    void workerStream.listProducts(liveEventId).then((rows) => {
+      if (rows.length) setProducts(rows);
+    }).catch(() => {});
+  }, [workerStream, liveEventId]);
+
+  async function handleShowProduct(productId: string) {
+    if (workerStream && liveEventId) {
+      setWorkerBusy(true);
+      setWorkerNote(null);
+      try {
+        const product = await workerStream.showProduct(liveEventId, productId);
+        setProducts((prev) => prev.map((p) => ({ ...p, active: p.id === product.id })));
+        setActive(product);
+      } catch (err) {
+        setWorkerNote(err instanceof Error ? err.message : "Show product failed");
+      } finally {
+        setWorkerBusy(false);
+      }
+      return;
+    }
+    stream.showProduct(productId);
+    refresh();
+  }
+
+  async function handleCheckout(product: LiveProduct) {
+    if (workerStream && liveEventId) {
+      setWorkerBusy(true);
+      setWorkerNote(null);
+      try {
+        const result = await workerStream.recordCheckoutClick(liveEventId, product.id, product.moq ?? 1);
+        window.open(result.checkoutUrl, "_blank", "noopener,noreferrer");
+        if (result.checkoutProvider === "stripe") {
+          setWorkerNote("Stripe Checkout opened — inventory updates after payment completes.");
+        }
+        setProducts((prev) => prev.map((p) => (p.id === product.id ? result.product : p)));
+        if (active?.id === product.id) setActive(result.product);
+      } catch (err) {
+        setWorkerNote(err instanceof Error ? err.message : "Checkout failed");
+      } finally {
+        setWorkerBusy(false);
+      }
+      return;
+    }
+    window.open(product.checkoutUrl, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
+      {workerNote ? (
+        <p className="col-span-full rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700">{workerNote}</p>
+      ) : null}
+      {workerStream && liveEventId ? (
+        <p className="col-span-full text-[11px] text-muted-foreground">
+          Worker-backed commerce on event <code className="font-mono">{liveEventId}</code> — inventory/MOQ enforced on checkout click.
+        </p>
+      ) : null}
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Product catalog
@@ -963,10 +1110,21 @@ function CommercePanel({ stream }: { stream: FluxyStreamApi }) {
                 <div className="text-sm font-medium">{p.name}</div>
                 {p.description && <div className="text-[11px] text-muted-foreground">{p.description}</div>}
                 <div className="text-sm font-bold">${(p.priceAmount / 100).toFixed(2)}</div>
+                {p.checkoutProvider === "stripe" ? (
+                  <div className="text-[10px] font-medium text-violet-600">Stripe Checkout</div>
+                ) : null}
+                {(p.inventoryQty != null || (p.moq != null && p.moq > 1)) && (
+                  <div className="text-[10px] text-muted-foreground">
+                    {p.inventoryQty != null ? `${p.inventoryQty} left` : "Unlimited stock"}
+                    {p.moq != null && p.moq > 1 ? ` · MOQ ${p.moq}` : ""}
+                    {p.unitsSold ? ` · ${p.unitsSold} sold` : ""}
+                  </div>
+                )}
               </div>
               <button
                 type="button"
-                onClick={() => { stream.showProduct(p.id); refresh(); }}
+                disabled={workerBusy}
+                onClick={() => { void handleShowProduct(p.id); }}
                 className={cn(
                   "rounded-lg px-2.5 py-1 text-xs font-medium",
                   p.active ? "bg-green-500/15 text-green-600" : "bg-muted text-muted-foreground hover:bg-muted/80",
@@ -996,14 +1154,14 @@ function CommercePanel({ stream }: { stream: FluxyStreamApi }) {
               <h4 className="text-sm font-semibold text-white">{active.name}</h4>
               {active.description && <p className="text-center text-[11px] text-white/60">{active.description}</p>}
               <div className="text-lg font-bold text-white">${(active.priceAmount / 100).toFixed(2)}</div>
-              <a
-                href={active.checkoutUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg bg-green-600 px-6 py-2 text-xs font-semibold text-white hover:bg-green-700"
+              <button
+                type="button"
+                disabled={workerBusy}
+                onClick={() => { void handleCheckout(active); }}
+                className="rounded-lg bg-green-600 px-6 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
               >
                 Buy now →
-              </a>
+              </button>
               <p className="text-[10px] text-white/40">
                 Shown at {active.shownAt ? new Date(active.shownAt).toLocaleTimeString() : "—"}
               </p>

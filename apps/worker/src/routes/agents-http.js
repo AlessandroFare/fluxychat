@@ -4,6 +4,7 @@
  */
 import { pickRouteDeps } from "./route-http-deps.js";
 import { isHumanHandoffActive } from "../lib/room-handoff.js";
+import { maybeAutoCaptureFailedAgentRun } from "../lib/agent-eval.js";
 
 export async function dispatchAgentsRoutes(request, url, h) {
   const {
@@ -322,6 +323,9 @@ export async function dispatchAgentsRoutes(request, url, h) {
         .bind(runId, auth.projectId, agentId, body.roomId, "failed", 0, 0, 0, 0, "agent_not_found", createdAt)
         .run();
       await incrementOperationalMetric(env, { metricName: "agent_runs_failed", projectId: auth.projectId, value: 1 }).catch(() => {});
+      ctx.waitUntil(
+        maybeAutoCaptureFailedAgentRun(env, { projectId: auth.projectId, runId }).catch(() => {}),
+      );
       return json({ error: "agent not found" }, { status: 404 });
     }
 
@@ -484,6 +488,11 @@ export async function dispatchAgentsRoutes(request, url, h) {
       )
       .run();
     await incrementOperationalMetric(env, { metricName: "agent_runs_failed", projectId: auth.projectId, value: 1 }).catch(() => {});
+    ctx.waitUntil(
+      maybeAutoCaptureFailedAgentRun(env, { projectId: auth.projectId, runId: result.runId }).catch(
+        () => {},
+      ),
+    );
     logError("agent.invoke_failed", new Error(result.error || "unknown"), { ...requestLogCtx, projectId: auth.projectId, agentId, roomId: body.roomId, runId: result.runId });
     ctx.waitUntil(
       writeAuditEvent(env, {

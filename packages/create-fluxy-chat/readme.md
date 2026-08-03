@@ -8,7 +8,7 @@ Scaffold a new [FluxyChat](https://github.com/AlessandroFare/fluxychat) bot proj
 # Minimal chat widget (recommended — 3 lines in App.tsx)
 npx create-fluxy-chat my-chat --minimal
 
-# React + useChat (more control)
+# React + useChat (guest room ~60s or member JWT)
 npx create-fluxy-chat my-chat --template react
 ```
 

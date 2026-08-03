@@ -84,6 +84,10 @@ export async function updateEvent(env, { projectId, eventId, title, description,
       data: { eventId, status },
     });
   }
+  if (status === "ended") {
+    const { reconcileEventAngleReplays } = await import("./live-stream-replay.js");
+    await reconcileEventAngleReplays(env, { projectId, eventId, userId: "system" }).catch(() => {});
+  }
   return { updated: true };
 }
 

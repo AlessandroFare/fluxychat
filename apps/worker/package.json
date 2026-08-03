@@ -27,6 +27,7 @@
   "dependencies": {
     "@fluxy-chat/config": "workspace:*",
     "@fluxy-chat/protocol": "workspace:*",
+    "@simplewebauthn/server": "^13.3.2",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
     "remark-stringify": "^11.0.0",

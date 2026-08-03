@@ -8,6 +8,11 @@ import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { Banner, Button, EmptyState, Panel, SkeletonCard } from "../components/ui";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
+import {
+  fetchPublicGuestHardening,
+  type PublicGuestHardeningConfig,
+} from "@/lib/public-guest-hardening-client";
+import { Badge } from "~/components/ui/badge";
 
 export default function EmbedWidgetPage() {
   const { adminJwt } = useDashboardSession();
@@ -23,6 +28,7 @@ export default function EmbedWidgetPage() {
   const [primaryColor, setPrimaryColor] = useState("#2563eb");
   const [position, setPosition] = useState<"bottom-right" | "bottom-left">("bottom-right");
   const [zIndex, setZIndex] = useState("2147483000");
+  const [hardening, setHardening] = useState<PublicGuestHardeningConfig | null>(null);
 
   const client = useMemo(() => {
     if (!token) return null;
@@ -62,6 +68,12 @@ export default function EmbedWidgetPage() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    void fetchPublicGuestHardening()
+      .then(setHardening)
+      .catch(() => setHardening(null));
+  }, []);
 
   async function handleSave() {
     if (!client) return;
@@ -127,6 +139,30 @@ export default function EmbedWidgetPage() {
       />
 
       {error ? <Banner variant="error">{error}</Banner> : null}
+
+      <Banner variant="info" className="mb-4">
+        <strong>Guest anti-spam</strong>
+        {hardening ? (
+          <span className="ml-2 inline-flex flex-wrap items-center gap-2">
+            <Badge variant={hardening.turnstile.required ? "default" : "secondary"}>
+              Turnstile {hardening.turnstile.required ? "required" : hardening.turnstile.configured ? "optional" : "off"}
+            </Badge>
+            <Badge variant="outline">{hardening.rateLimitPerMinute}/min IP</Badge>
+            {!hardening.turnstile.configured ? (
+              <span className="text-xs">
+                Set <code className="text-xs">TURNSTILE_SECRET_KEY</code>,{" "}
+                <code className="text-xs">TURNSTILE_SITE_KEY</code>, and{" "}
+                <code className="text-xs">PUBLIC_GUEST_TURNSTILE_REQUIRED=true</code> on the Worker.
+              </span>
+            ) : null}
+          </span>
+        ) : (
+          <span className="ml-1 text-xs">
+            Set <code className="text-xs">PUBLIC_GUEST_TURNSTILE_REQUIRED=true</code> and Turnstile keys on the Worker.
+            See <code className="text-xs">apps/worker/.dev.vars.example</code>.
+          </span>
+        )}
+      </Banner>
 
       {loading && !config ? (
         <SkeletonCard />

@@ -287,6 +287,7 @@ async function main(): Promise<void> {
       ? [
           `cd ${config.name}`,
           "cp .env.example .env",
+          "# Set VITE_FLUXYCHAT_WORKER_URL + VITE_FLUXYCHAT_PUBLIC_ROOM_ID (guest) or MEMBER_JWT",
           `${config.packageManager === "npm" ? "npm run" : config.packageManager} dev`,
         ].join("\n")
       : [

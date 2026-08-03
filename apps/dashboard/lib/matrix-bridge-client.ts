@@ -15,6 +15,8 @@ export interface MatrixBridge {
   settings: Record<string, unknown> | null;
   lastSyncAt: string | null;
   errorMessage: string | null;
+  appserviceTokenConfigured?: boolean;
+  appserviceWebhookPath?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +42,20 @@ export interface MatrixBridgeStats {
 
 function authHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` };
+}
+
+export async function pingMatrixBridgeHealth(token: string, bridgeId: string) {
+  return fetchWorkerJson<{ ok: boolean; health: { ok: boolean; error?: string; versions?: string[] } }>(
+    `${BASE}/admin/matrix/bridges/${encodeURIComponent(bridgeId)}/health`,
+    { headers: authHeaders(token) },
+  );
+}
+
+export async function runMatrixBridgeHealthCheckAll(token: string) {
+  return fetchWorkerJson<{ ok: boolean; checked: number; healthy: number; unhealthy: number }>(
+    `${BASE}/admin/matrix/bridges/health-check-all`,
+    { method: "POST", headers: authHeaders(token) },
+  );
 }
 
 export async function getMatrixStats(token: string): Promise<{ stats: MatrixBridgeStats }> {
@@ -68,7 +84,7 @@ export async function createMatrixBridge(
     botDisplayName?: string;
     syncMode?: string;
   },
-): Promise<{ id: string; status: string }> {
+): Promise<{ id: string; status: string; appserviceToken?: string; appserviceWebhookPath?: string }> {
   return fetchWorkerJson(`${BASE}/admin/matrix/bridges`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
@@ -88,6 +104,16 @@ export async function disconnectMatrixBridge(token: string, bridgeId: string): P
     method: "POST",
     headers: authHeaders(token),
   });
+}
+
+export async function rotateMatrixAppserviceToken(
+  token: string,
+  bridgeId: string,
+): Promise<{ appserviceToken: string; bridgeId: string }> {
+  return fetchWorkerJson(
+    `${BASE}/admin/matrix/bridges/${encodeURIComponent(bridgeId)}/rotate-appservice-token`,
+    { method: "POST", headers: authHeaders(token) },
+  );
 }
 
 export async function deleteMatrixBridge(token: string, bridgeId: string): Promise<{ deleted: number }> {

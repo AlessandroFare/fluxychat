@@ -8,14 +8,14 @@ const PROVIDERS = {
     id: "openai-realtime",
     label: "OpenAI Realtime API",
     model: "gpt-4o-realtime-preview",
-    features: ["vad", "barge_in", "tool_calls", "aec", "noise_suppression"],
+    features: ["vad", "barge_in", "tool_calls", "aec", "noise_suppression", "unified_multimodal"],
     targetLatencyMs: 300,
   },
   "gemini-live": {
     id: "gemini-live",
     label: "Gemini Live",
     model: "gemini-2.0-flash-live",
-    features: ["vad", "barge_in", "multimodal"],
+    features: ["vad", "barge_in", "multimodal", "unified_multimodal"],
     targetLatencyMs: 350,
     wsSurface: "openai-compatible",
   },
@@ -37,9 +37,15 @@ export function getVoiceAiProvider(providerId) {
   return PROVIDERS[providerId] ?? null;
 }
 
+export function resolveVoicePipelineMode(settings) {
+  const mode = settings?.pipelineMode ?? settings?.mode;
+  return mode === "legacy" ? "legacy" : "unified";
+}
+
 export async function createVoiceAiSession(env, { projectId, providerId, roomId, userId, settings }) {
   const provider = getVoiceAiProvider(providerId || "openai-realtime");
   if (!provider) return { error: "unknown_provider" };
+  const pipelineMode = resolveVoicePipelineMode(settings);
   const sessionId = `vas_${crypto.randomUUID().slice(0, 12)}`;
   const now = new Date().toISOString();
   return {
@@ -48,7 +54,9 @@ export async function createVoiceAiSession(env, { projectId, providerId, roomId,
     status: "ready",
     roomId: roomId ?? null,
     userId: userId ?? null,
+    pipelineMode,
     settings: {
+      pipelineMode,
       vad: settings?.vad ?? true,
       semanticTurnDetection: settings?.semanticTurnDetection ?? true,
       bargeIn: settings?.bargeIn ?? true,
@@ -61,7 +69,7 @@ export async function createVoiceAiSession(env, { projectId, providerId, roomId,
   };
 }
 
-export async function recordVoiceAiMetrics(env, { projectId, sessionId, stages, totalLatencyMs, providerId }) {
+export async function recordVoiceAiMetrics(env, { projectId, sessionId, stages, totalLatencyMs, providerId, pipelineMode }) {
   const kv = getKv(env);
   if (!kv) return { recorded: false };
   const raw = await kv.get(metricsKey(projectId));
@@ -77,6 +85,7 @@ export async function recordVoiceAiMetrics(env, { projectId, sessionId, stages, 
   log.unshift({
     sessionId,
     providerId: providerId || "openai-realtime",
+    pipelineMode: pipelineMode ?? null,
     stages: stages || [],
     totalLatencyMs: totalLatencyMs ?? 0,
     recordedAt: new Date().toISOString(),

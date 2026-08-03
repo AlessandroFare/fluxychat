@@ -91,6 +91,16 @@ body {
   cursor: pointer;
 }
 
+.mode-badge {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0 0 0.75rem;
+}
+
+.error {
+  color: #b91c1c;
+}
+
 .room-picker {
   display: flex;
   flex-direction: column;

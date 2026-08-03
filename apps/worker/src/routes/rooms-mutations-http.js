@@ -14,6 +14,13 @@ import {
   decryptRoomE2eKeyFromStorage,
 } from "../lib/room-e2e.js";
 import {
+  addRoomMlsDevice,
+  getRoomMlsGroup,
+  removeRoomMlsDevice,
+  rotateRoomMlsEpoch,
+  upsertRoomMlsGroup,
+} from "../lib/room-mls.js";
+import {
   fetchAggregatedRoomLive,
   normalizeShardCount,
   forEachRoomShard,
@@ -235,6 +242,64 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       userId: auth.userId,
     });
     return json(catchUp);
+  }
+
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/catch-up/digest") &&
+    request.method === "GET"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const parts = url.pathname.split("/");
+    const digestRoomId = parts[2];
+    const canAccess = await canAccessRoom(env, auth, digestRoomId);
+    if (!canAccess) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const { getSmartCatchUpDigest } = await import("../lib/smart-catch-up-digest.js");
+    const digest = await getSmartCatchUpDigest(env, {
+      projectId: auth.projectId,
+      roomId: digestRoomId,
+      userId: auth.userId,
+      logContext: requestLogCtx,
+    });
+    return json(digest);
+  }
+
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/sentiment") &&
+    request.method === "GET"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const parts = url.pathname.split("/");
+    const sentimentRoomId = parts[2];
+    const canAccess = await canAccessRoom(env, auth, sentimentRoomId);
+    if (!canAccess) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const days = Number(url.searchParams.get("days") || 7);
+    const { getRoomSentimentTimeline } = await import("../lib/room-sentiment.js");
+    const data = await getRoomSentimentTimeline(env, {
+      projectId: auth.projectId,
+      roomId: sentimentRoomId,
+      days,
+    });
+    return json(data);
   }
 
   if (
@@ -484,6 +549,39 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     await env.DB.prepare(
       "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)"
     ).bind(roomId, body.userId, role, now).run();
+
+    let e2eRewrapped = false;
+    if (body.rewrapE2eKey === true || body.rewrapE2eKey === 1 || body.rewrapE2eKey === "true") {
+      const roomRow = await env.DB.prepare(
+        "SELECT e2e_enabled FROM rooms WHERE id = ? AND project_id = ?",
+      )
+        .bind(roomId, auth.projectId)
+        .first();
+      if (roomRow?.e2e_enabled) {
+        const keyMaterial = generateRoomE2eKeyMaterial();
+        const enc = await encryptRoomE2eKeyForStorage(env, keyMaterial);
+        if (enc) {
+          await env.DB.prepare(
+            "UPDATE rooms SET e2e_key_ciphertext = ?, e2e_key_iv = ?, updated_at = ? WHERE id = ? AND project_id = ?",
+          )
+            .bind(enc.ciphertext, enc.iv, now, roomId, auth.projectId)
+            .run();
+          e2eRewrapped = true;
+          ctx.waitUntil(
+            writeAuditEvent(env, {
+              projectId: auth.projectId,
+              action: "room.e2e_key_rotated",
+              actorUserId: auth.userId,
+              targetType: "room",
+              targetId: roomId,
+              traceId,
+              metadata: { roomId, reason: "member_join_rewrap", newMemberId: body.userId },
+            }).catch(() => {}),
+          );
+        }
+      }
+    }
+
     ctx.waitUntil(
       writeAuditEvent(env, {
         projectId: auth.projectId,
@@ -495,7 +593,7 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
         metadata: { roomId, role },
       }).catch(() => {})
     );
-    return json({ ok: true, roomId, userId: body.userId, role });
+    return json({ ok: true, roomId, userId: body.userId, role, e2eRewrapped });
   }
 
   if (
@@ -578,6 +676,103 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     return json({ e2eEnabled: true, roomId, e2eKey });
   }
 
+  const mlsGroupMatch = url.pathname.match(/^\/rooms\/([^/]+)\/mls-group$/);
+  if (mlsGroupMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    const roomId = decodeURIComponent(mlsGroupMatch[1]);
+    const canAccess = await canAccessRoom(env, auth, roomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    const result = await getRoomMlsGroup(env, auth, roomId);
+    return json(result);
+  }
+
+  if (mlsGroupMatch && request.method === "PUT") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const roomId = decodeURIComponent(mlsGroupMatch[1]);
+    const body = await request.json().catch(() => ({}));
+    const result = await upsertRoomMlsGroup(env, auth, roomId, body);
+    return json(result);
+  }
+
+  const mlsDeviceMatch = url.pathname.match(/^\/rooms\/([^/]+)\/mls-group\/devices$/);
+  if (mlsDeviceMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    const roomId = decodeURIComponent(mlsDeviceMatch[1]);
+    const canAccess = await canAccessRoom(env, auth, roomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    const body = await request.json().catch(() => null);
+    const result = await addRoomMlsDevice(env, auth, roomId, body ?? {});
+    if (!result.ok) {
+      const status = result.error === "max_devices_exceeded" ? 409 : 400;
+      return json(result, { status });
+    }
+    return json(result);
+  }
+
+  const mlsDeviceRemoveMatch = url.pathname.match(/^\/rooms\/([^/]+)\/mls-group\/devices\/([^/]+)$/);
+  if (mlsDeviceRemoveMatch && request.method === "DELETE") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const roomId = decodeURIComponent(mlsDeviceRemoveMatch[1]);
+    const deviceId = decodeURIComponent(mlsDeviceRemoveMatch[2]);
+    const result = await removeRoomMlsDevice(env, auth, roomId, deviceId);
+    if (!result.ok) return json(result, { status: 404 });
+    return json(result);
+  }
+
+  const mlsRotateMatch = url.pathname.match(/^\/rooms\/([^/]+)\/mls-group\/rotate$/);
+  if (mlsRotateMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const roomId = decodeURIComponent(mlsRotateMatch[1]);
+    const result = await rotateRoomMlsEpoch(env, auth, roomId);
+    if (!result.ok) return json(result, { status: 404 });
+    ctx.waitUntil(
+      writeAuditEvent(env, {
+        projectId: auth.projectId,
+        action: "room.mls_epoch_rotated",
+        actorUserId: auth.userId,
+        targetType: "room",
+        targetId: roomId,
+        traceId,
+        metadata: { epoch: result.group?.epoch },
+      }).catch(() => {}),
+    );
+    return json(result);
+  }
+
   if (
     url.pathname.match(/^\/rooms\/[^/]+$/) &&
     request.method === "PATCH"
@@ -618,6 +813,18 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     if (body.shardCount !== undefined) {
       updates.push("shard_count = ?");
       values.push(normalizeShardCount(body.shardCount));
+    }
+    if (body.rotateE2eKey === true || body.rotateE2eKey === 1 || body.rotateE2eKey === "true") {
+      if (!roomExists.e2e_enabled) {
+        return json({ error: "e2e_not_enabled" }, { status: 400 });
+      }
+      const keyMaterial = generateRoomE2eKeyMaterial();
+      const enc = await encryptRoomE2eKeyForStorage(env, keyMaterial);
+      if (!enc) {
+        return json({ error: "e2e_encryption_key_not_configured" }, { status: 503 });
+      }
+      updates.push("e2e_key_ciphertext = ?", "e2e_key_iv = ?");
+      values.push(enc.ciphertext, enc.iv);
     }
     if (body.e2eEnabled !== undefined) {
       const enable = body.e2eEnabled === true || body.e2eEnabled === 1 || body.e2eEnabled === "true";
@@ -668,6 +875,32 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
         .run();
     }
     ctx.waitUntil(invalidateCache(env, `rooms:${auth.projectId}`).catch(() => {}));
+    if (body.rotateE2eKey === true || body.rotateE2eKey === 1 || body.rotateE2eKey === "true") {
+      ctx.waitUntil(
+        writeAuditEvent(env, {
+          projectId: auth.projectId,
+          action: "room.e2e_key_rotated",
+          actorUserId: auth.userId,
+          targetType: "room",
+          targetId: roomId,
+          traceId,
+          metadata: { roomId },
+        }).catch(() => {}),
+      );
+    }
+    if (body.e2eEnabled !== undefined) {
+      ctx.waitUntil(
+        writeAuditEvent(env, {
+          projectId: auth.projectId,
+          action: body.e2eEnabled ? "room.e2e_enabled" : "room.e2e_disabled",
+          actorUserId: auth.userId,
+          targetType: "room",
+          targetId: roomId,
+          traceId,
+          metadata: { roomId },
+        }).catch(() => {}),
+      );
+    }
     return json({ ok: true, roomId });
   }
 

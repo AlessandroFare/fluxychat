@@ -6,8 +6,10 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { guardDemoSessionRequest } from "../lib/demo-guard.js";
 import { issueDemoSession } from "../lib/demo-session.js";
+import { getDemoStatus } from "../lib/demo-room-seed.js";
 import { issueAnonymousToken } from "../lib/anonymous-token.js";
 import { issuePublicGuestSession } from "../lib/guest-public-session.js";
+import { getPublicGuestHardeningConfig } from "../lib/public-guest-guard.js";
 import {
   parseRoomIdFromChannelName,
   buildChannelAuthResponse,
@@ -170,6 +172,13 @@ export async function dispatchPublicRoutes(request, url, h) {
     return json({ configured: true, ...config }, { headers: corsHeaders });
   }
 
+  if (url.pathname === "/public/guest-hardening" && request.method === "GET") {
+    return json(
+      { ok: true, ...getPublicGuestHardeningConfig(env) },
+      { headers: corsHeaders },
+    );
+  }
+
   if (url.pathname === "/health") {
     const criticalChecks = {
       database: env.DB ? "connected" : "missing",
@@ -270,9 +279,20 @@ export async function dispatchPublicRoutes(request, url, h) {
     }
 
     const fileData = await request.arrayBuffer();
-    const validation = validateFileUpload(fileData, contentType, fileData.byteLength);
+    const {
+      getProjectMediaSettings,
+      validateMediaUpload,
+      enqueueAttachmentMediaPipeline,
+    } = await import("../lib/media-pipeline.js");
+    const mediaSettings = await getProjectMediaSettings(env, auth.projectId);
+    const validation = validateMediaUpload(mediaSettings, {
+      contentType,
+      sizeBytes: fileData.byteLength,
+      fileBytes: fileData,
+    });
     if (!validation.valid) {
-      return json({ error: validation.error }, { status: 400 });
+      const status = validation.error === "malware_detected" ? 422 : 400;
+      return json({ error: validation.error, detail: validation.detail, limitBytes: validation.limitBytes }, { status });
     }
 
     if (!env.ATTACHMENTS) {
@@ -304,6 +324,17 @@ export async function dispatchPublicRoutes(request, url, h) {
     }
 
     const fileUrl = `${url.origin}/attachments/${fileKey}`;
+
+    ctx.waitUntil(
+      enqueueAttachmentMediaPipeline(env, {
+        projectId: auth.projectId,
+        fileKey,
+        contentType,
+        sizeBytes: fileData.byteLength,
+        fileBytes: fileData,
+        origin: url.origin,
+      }).catch(() => {}),
+    );
 
     ctx.waitUntil(
       writeAuditEvent(env, {
@@ -541,6 +572,10 @@ export async function dispatchPublicRoutes(request, url, h) {
       logError("platform.sanitize_plans_failed", err, requestLogCtx);
       return json({ error: message }, { status: 500 });
     }
+  }
+
+  if (url.pathname === "/demo/status" && request.method === "GET") {
+    return json({ ok: true, ...getDemoStatus(env) }, { headers: corsHeaders });
   }
 
   if (

@@ -1,0 +1,31 @@
+---
+title: Usage & cost dashboard
+description: Message volume, MAU, storage, and estimated cost transparency for tenants.
+---
+
+# Usage & cost dashboard
+
+**Settings → Usage** aggregates monthly metrics: messages sent, agent invocations, attachment storage, active users — with optional **estimated cost** from configurable unit rates.
+
+## Metrics
+
+| Metric | Source |
+|--------|--------|
+| Messages | D1 `messages` + usage counters |
+| Agent invokes | `agent_runs` |
+| Storage | R2 attachment sizes |
+| MAU | Distinct `user_id` per month |
+
+## API
+
+```http
+GET /admin/tenant-usage
+```
+
+Admin JWT required.
+
+## Cost estimates
+
+Display-only — rates are configured by your platform operator (`USAGE_COST_*` env). Use for internal chargeback, not invoicing unless paired with Stripe billing.
+
+See [Billing overage policy](/docs/reference/billing-overage-policy).

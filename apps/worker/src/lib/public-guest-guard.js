@@ -66,3 +66,31 @@ export async function guardPublicGuestRequest(env, request, options = {}) {
 
   return { ok: true };
 }
+
+/**
+ * Public config for embed/demo UIs — site key is safe to expose.
+ * @param {*} env
+ */
+export function getPublicGuestHardeningConfig(env) {
+  const turnstileConfigured = isTurnstileConfigured(env);
+  const turnstileRequired =
+    env.PUBLIC_GUEST_TURNSTILE_REQUIRED === "true" ||
+    env.PUBLIC_GUEST_TURNSTILE_REQUIRED === "1";
+  const siteKey = env.TURNSTILE_SITE_KEY?.trim() || null;
+
+  return {
+    publicGuestEnabled:
+      env.PUBLIC_GUEST_ENABLED !== "false" && env.PUBLIC_GUEST_ENABLED !== "0",
+    readOnlyGuest:
+      env.PUBLIC_GUEST_READ_ONLY !== "false" && env.PUBLIC_GUEST_READ_ONLY !== "0",
+    rateLimitPerMinute: Math.min(
+      Math.max(Number(env.RATE_LIMIT_PUBLIC_GUEST_PER_MINUTE || 30), 1),
+      600,
+    ),
+    turnstile: {
+      configured: turnstileConfigured,
+      required: turnstileRequired && turnstileConfigured,
+      siteKey: turnstileConfigured && siteKey ? siteKey : null,
+    },
+  };
+}

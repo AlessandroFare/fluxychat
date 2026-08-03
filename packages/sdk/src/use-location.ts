@@ -3,13 +3,16 @@
 import React from "react";
 import type { LocationTrack } from "@fluxy-chat/protocol";
 import type { FluxyChatClient, FluxyChatEvent } from "./index";
+import { applyLocationPrivacy, type LocationPrivacyOptions } from "./location-privacy";
 import { FluxyChatRoomConnection, type FluxyRoomConnectionStatus } from "./room-connection";
 import { useFluxyChatOptional } from "./use-fluxy-chat";
 
-export interface UseLocationOptions {
+export interface UseLocationOptions extends LocationPrivacyOptions {
   roomId: string;
   client?: FluxyChatClient;
   staleAfterMs?: number;
+  /** When set, only show tracks owned by this user (privacy mode for non-moderators). */
+  viewerUserId?: string;
 }
 
 export interface LocationTrackState extends LocationTrack {
@@ -20,6 +23,9 @@ export function useLocation({
   roomId,
   client: clientProp,
   staleAfterMs = 30_000,
+  precisionMeters,
+  maxAccuracyMeters,
+  viewerUserId,
 }: UseLocationOptions) {
   const realtime = useFluxyChatOptional();
   const client = clientProp ?? realtime?.client ?? null;
@@ -77,18 +83,31 @@ export function useLocation({
   const visibleTracks = React.useMemo<ReadonlyMap<string, LocationTrackState>>(() => {
     const next = new Map<string, LocationTrackState>();
     for (const [trackId, track] of tracks) {
+      if (viewerUserId && track.userId !== viewerUserId) continue;
+
       const staleAt = Math.min(
         Number.isFinite(Date.parse(track.staleAt)) ? Date.parse(track.staleAt) : Infinity,
         Date.parse(track.updatedAt) + staleAfterMs,
       );
-      next.set(trackId, { ...track, stale: now >= staleAt });
+      if (now >= staleAt) continue;
+
+      const sanitized = applyLocationPrivacy(track, { precisionMeters, maxAccuracyMeters });
+      if (!sanitized) continue;
+
+      next.set(trackId, {
+        ...track,
+        latitude: sanitized.latitude,
+        longitude: sanitized.longitude,
+        accuracy: sanitized.accuracy,
+        stale: false,
+      });
     }
     return next;
-  }, [tracks, now, staleAfterMs]);
+  }, [tracks, now, staleAfterMs, precisionMeters, maxAccuracyMeters, viewerUserId]);
 
   return {
     tracks: visibleTracks,
-    activeTracks: [...visibleTracks.values()].filter((track) => !track.stale),
+    activeTracks: [...visibleTracks.values()],
     status,
     connected: status === "connected",
   };

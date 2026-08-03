@@ -1,6 +1,6 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { getBridgeConfig, syncInboundMessage, recordBridgeEvent } from "../lib/bridge.js";
-import { getMatrixBridge, processMatrixAppserviceTransaction, recordMatrixSyncLog } from "../lib/matrix-bridge.js";
+import { getMatrixBridge, processMatrixAppserviceTransaction, recordMatrixSyncLog, verifyMatrixAppserviceWebhook } from "../lib/matrix-bridge.js";
 
 function parseSlackMessage(body) {
   if (body.type === "url_verification") {
@@ -119,6 +119,15 @@ export async function dispatchBridgeWebhookRoutes(request, url, h) {
     const bridge = await getMatrixBridge(env, { bridgeId });
     if (!bridge) {
       return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
+    }
+
+    const auth = await verifyMatrixAppserviceWebhook(env, request, {
+      bridgeId,
+      projectId: bridge.projectId,
+    });
+    if (!auth.ok) {
+      const status = auth.error === "appservice_token_not_configured" ? 503 : 401;
+      return json({ error: auth.error }, { status, headers: corsHeaders });
     }
 
     let body;

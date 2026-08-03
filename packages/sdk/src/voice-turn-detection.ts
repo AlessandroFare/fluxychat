@@ -15,8 +15,23 @@ export interface VadEvent {
   durationMs?: number;
 }
 
+export type VadBackend = "energy" | "silero" | "hybrid";
+
+export interface SileroVadScorer {
+  /** Probability of speech in [0, 1] for the current frame (legacy RMS path). */
+  scoreSpeech(audioLevel: number): number | Promise<number>;
+  /** Frame-accurate score from PCM Int16 mono buffer (production path). */
+  scorePcmBuffer?(audio: ArrayBuffer): number | Promise<number>;
+  readonly mode?: string;
+}
+
 export interface TurnDetectionConfig {
   vad: VadConfig;
+  vadBackend?: VadBackend;
+  silero?: {
+    enabled: boolean;
+    speechThreshold: number;
+  };
   semantic: {
     enabled: boolean;
     minConfidence: number;
@@ -30,7 +45,7 @@ export interface TurnDetectionConfig {
 }
 
 export interface TurnDetector {
-  processAudio(audioLevel: number): VadEvent | null;
+  processAudio(audioLevel: number, pcmBuffer?: ArrayBuffer): VadEvent | null;
   processTranscript(transcript: string): EOTDecision;
   getConfig(): TurnDetectionConfig;
   updateConfig(partial: Partial<TurnDetectionConfig>): void;
@@ -46,6 +61,11 @@ const DEFAULT_TURN_CONFIG: TurnDetectionConfig = {
     minSilenceDurationMs: 300,
     debounceMs: 200,
   },
+  vadBackend: "hybrid",
+  silero: {
+    enabled: true,
+    speechThreshold: 0.5,
+  },
   semantic: {
     enabled: true,
     minConfidence: 0.6,
@@ -58,9 +78,45 @@ const DEFAULT_TURN_CONFIG: TurnDetectionConfig = {
   },
 };
 
-export function createTurnDetector(config: Partial<TurnDetectionConfig> = {}): TurnDetector {
+function isSpeechLevel(
+  cfg: TurnDetectionConfig,
+  audioLevel: number,
+  silero?: SileroVadScorer | null,
+  pcmBuffer?: ArrayBuffer,
+): boolean {
+  const energySpeech = audioLevel > cfg.vad.energyThreshold;
+  const backend = cfg.vadBackend ?? "energy";
+
+  if (backend === "energy" || !cfg.silero?.enabled || !silero) {
+    return energySpeech;
+  }
+
+  let score: number;
+  if (pcmBuffer && silero.scorePcmBuffer) {
+    const raw = silero.scorePcmBuffer(pcmBuffer);
+    score = typeof raw === "number" ? raw : energySpeech ? 1 : 0;
+  } else {
+    const raw = silero.scoreSpeech(audioLevel);
+    score = typeof raw === "number" ? raw : energySpeech ? 1 : 0;
+  }
+
+  const sileroSpeech = score >= (cfg.silero.speechThreshold ?? 0.5);
+
+  if (backend === "silero") {
+    return sileroSpeech;
+  }
+
+  return energySpeech || sileroSpeech;
+}
+
+export function createTurnDetector(
+  config: Partial<TurnDetectionConfig> = {},
+  silero?: SileroVadScorer | null,
+): TurnDetector {
   const cfg: TurnDetectionConfig = {
     vad: { ...DEFAULT_TURN_CONFIG.vad, ...config.vad },
+    vadBackend: config.vadBackend ?? DEFAULT_TURN_CONFIG.vadBackend,
+    silero: { ...DEFAULT_TURN_CONFIG.silero!, ...config.silero },
     semantic: { ...DEFAULT_TURN_CONFIG.semantic, ...config.semantic },
     dynamicEndpointing: { ...DEFAULT_TURN_CONFIG.dynamicEndpointing, ...config.dynamicEndpointing },
   };
@@ -75,10 +131,10 @@ export function createTurnDetector(config: Partial<TurnDetectionConfig> = {}): T
   const semanticEot = createSemanticEOTDetector();
 
   return {
-    processAudio(audioLevel: number): VadEvent | null {
+    processAudio(audioLevel: number, pcmBuffer?: ArrayBuffer): VadEvent | null {
       const now = Date.now();
 
-      if (audioLevel > cfg.vad.energyThreshold) {
+      if (isSpeechLevel(cfg, audioLevel, silero, pcmBuffer)) {
         if (!isSpeaking) {
           isSpeaking = true;
           speechStartTime = now;

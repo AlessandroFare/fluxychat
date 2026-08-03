@@ -160,6 +160,11 @@ export default function Soc2Page() {
           {busy === "audit" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
           Export audit log
         </Button>
+        <Link href="/soc2/audit-chain" className="inline-flex">
+          <Button size="sm" variant="outline" type="button">
+            Verify hash chain
+          </Button>
+        </Link>
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
@@ -174,6 +179,10 @@ export default function Soc2Page() {
         {" · "}
         <Link href="/settings/hipaa" className="font-medium underline-offset-2 hover:underline">
           HIPAA settings
+        </Link>
+        {" · "}
+        <Link href="/settings/status" className="font-medium underline-offset-2 hover:underline">
+          Public status page
         </Link>
         .
       </p>

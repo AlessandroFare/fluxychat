@@ -10,7 +10,8 @@ export async function executeToolCall(
   toolCall,
   projectId,
   runId,
-  traceId
+  traceId,
+  options = {},
 ) {
   if (isPrivateUrl(toolExecuteUrl)) {
     return { success: false, error: "tool_execute_url_blocked_ssrf" };
@@ -24,6 +25,7 @@ export async function executeToolCall(
     } catch {
       args = {};
     }
+    const dryRun = options.dryRun === true;
     const res = await safeOutboundFetch(toolExecuteUrl, {
       method: "POST",
       headers: {
@@ -31,11 +33,13 @@ export async function executeToolCall(
         "X-Fluxy-Project-Id": projectId,
         "X-Fluxy-Tool-Name": toolCall.name,
         "X-Fluxy-Trace-Id": traceId,
+        ...(dryRun ? { "X-Fluxy-Dry-Run": "true" } : {}),
       },
       body: JSON.stringify({
         tool_name: toolCall.name,
         arguments: args,
         tool_call_id: toolCall.id,
+        dry_run: dryRun,
       }),
       signal: controller.signal,
     });

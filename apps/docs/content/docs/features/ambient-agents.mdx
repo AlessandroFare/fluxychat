@@ -1,0 +1,30 @@
+---
+title: Ambient agents
+description: Event-driven agents that react to webhooks and room events within policy bounds — not only @mention.
+---
+
+# Ambient agents
+
+**Ambient agents** run when external events or room conditions match a policy — keyword in message, webhook payload, schedule — without an explicit @mention.
+
+## Console
+
+**Agents → Ambient** — create policies:
+
+| Field | Meaning |
+|-------|---------|
+| Trigger | `webhook`, `keyword`, `schedule`, … |
+| Max autonomy | How far the agent can act without human escalation |
+| Target room | Where to post results |
+
+## Guardrails
+
+- Scoped permissions per policy.
+- Audit log on every autonomous action.
+- Escalation above configured risk threshold.
+
+## Architecture
+
+Webhook → Worker → policy engine (`agent_policies`) → WorkflowAgent → room message + audit.
+
+Pair with [tool approvals](/docs/guides/tool-approvals) for sensitive tools.

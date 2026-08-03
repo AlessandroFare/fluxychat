@@ -1,0 +1,29 @@
+---
+title: Async decision quorum
+description: Weighted role-based approvals on special decision messages with live progress.
+---
+
+# Async decision quorum
+
+Post a **decision** message that requires quorum from specific roles (e.g. 2 of 3 approvers within 48 hours). Progress updates live in the thread.
+
+## In chat
+
+1. Open message menu → **Create decision**.
+2. Set question, required roles, quorum count, and expiry.
+3. Approvers tap **Acknowledge** — progress bar updates server-side.
+
+## SDK
+
+```ts
+await client.createDecision(roomId, {
+  question: "Ship v2 Friday?",
+  requiredRoles: ["owner", "admin"],
+  quorum: 2,
+  expiresInHours: 48,
+});
+
+await client.ackDecision(roomId, decisionMessageId);
+```
+
+Quorum is verified **only on the server** — clients cannot bypass role checks.

@@ -2,7 +2,7 @@
 
 import { Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { AgentRunDisplay } from "@/lib/agent-run-display";
+import type { AgentRunDisplay, AgentToolCallDisplay } from "@/lib/agent-run-display";
 import { runStatusLabel } from "@/lib/agent-run-display";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ interface AgentRunStatusProps {
   /** Hide outer “Agent run” heading (e.g. inside run history list). */
   compact?: boolean;
   className?: string;
+  onTryAlternative?: (toolCall: AgentToolCallDisplay) => void;
 }
 
 function statusVariant(
@@ -22,7 +23,7 @@ function statusVariant(
   return "muted";
 }
 
-export function AgentRunStatus({ run, pending, compact, className }: AgentRunStatusProps) {
+export function AgentRunStatus({ run, pending, compact, className, onTryAlternative }: AgentRunStatusProps) {
   if (!run && !pending) return null;
 
   return (
@@ -72,7 +73,7 @@ export function AgentRunStatus({ run, pending, compact, className }: AgentRunSta
               {run.error}
             </p>
           ) : null}
-          {run.tool_calls && run.tool_calls.length > 0 ? (
+          {!compact && run.tool_calls && run.tool_calls.length > 0 ? (
             <ul className="mt-3 space-y-2" data-testid="agent-tool-calls">
               {run.tool_calls.map((tc) => (
                 <li
@@ -95,6 +96,15 @@ export function AgentRunStatus({ run, pending, compact, className }: AgentRunSta
                     <p className="mt-1 text-[10px] text-muted-foreground">
                       → {tc.resultPreview}
                     </p>
+                  ) : null}
+                  {onTryAlternative ? (
+                    <button
+                      type="button"
+                      className="mt-2 text-[10px] font-medium text-brand underline-offset-2 hover:underline"
+                      onClick={() => onTryAlternative(tc)}
+                    >
+                      Try alternative
+                    </button>
                   ) : null}
                 </li>
               ))}

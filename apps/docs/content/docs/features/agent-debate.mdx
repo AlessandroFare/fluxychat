@@ -1,0 +1,24 @@
+---
+title: Multi-agent debate
+description: Two or three perspective agents debate visibly before a moderator synthesizes the final answer.
+---
+
+# Multi-agent debate
+
+Trigger a **debate thread** where multiple agents argue assigned perspectives; a moderator agent posts a synthesis when rounds complete.
+
+## Console
+
+**Agents → Debate** — configure roles, trigger patterns, max rounds (default 2).
+
+In chat, debates render as grouped `agent_step` events in `DebateThreadPanel`.
+
+## Behaviour
+
+- Token cost telemetry per debate session.
+- Timeout → partial consensus message.
+- Events use `participant_role: "debate"` for UI grouping.
+
+## When to use
+
+High-stakes decisions, policy review, or UX where users benefit from seeing reasoning paths before the final answer.

@@ -7,6 +7,11 @@ import { runDailyDigest } from "./daily-digest.js";
 import { flushDueNotificationBatches } from "./notification-batch.js";
 import { processPendingWebhookDeliveries } from "./webhook-delivery.js";
 import { syncModelsCatalog } from "./llm-models-catalog.js";
+import { purgeAllConfiguredRoomRetention } from "./message-retention-room.js";
+import { exportAllProjectAuditChainsToR2 } from "./audit-chain.js";
+import { expirePendingDecisions } from "./message-decisions.js";
+import { purgeExpiredWebAuthnChallenges } from "./webauthn-passkeys.js";
+import { expireRehearsalRooms } from "./rehearsal-rooms.js";
 
 export const SCHEDULED_CRON_DIGEST = "0 8 * * *";
 export const SCHEDULED_CRON_NOTIFICATION_BATCH = "*/15 * * * *";
@@ -101,6 +106,20 @@ export async function purgeExpiredData(env) {
       .run();
   }
 
+  const roomTtl = await purgeAllConfiguredRoomRetention(env).catch(() => ({ purged: 0, rooms: 0 }));
+  logInfo("retention.purge.room_ttl", roomTtl);
+
+  const auditExport = await exportAllProjectAuditChainsToR2(env).catch(() => ({
+    ok: false,
+    exported: 0,
+  }));
+  logInfo("audit_chain.r2_export", auditExport);
+
+  const matrixHealth = await import("./matrix-bridge.js")
+    .then((m) => m.runMatrixBridgeHealthChecks(env))
+    .catch(() => ({ checked: 0, healthy: 0, unhealthy: 0 }));
+  logInfo("matrix.health_check", matrixHealth);
+
   logInfo("retention.purge.completed", { at: nowIso });
 }
 
@@ -116,6 +135,13 @@ export async function runScheduledCronJob(env, cron) {
       return { job: "daily_digest" };
     case SCHEDULED_CRON_NOTIFICATION_BATCH:
       await flushDueNotificationBatches(env);
+      await expirePendingDecisions(env).catch(() => ({ expired: 0 }));
+      await purgeExpiredWebAuthnChallenges(env).catch(() => {});
+      await expireRehearsalRooms(env).catch(() => ({ expired: 0 }));
+      const { expireOpenTruthClaims } = await import("./truth-market.js");
+      await expireOpenTruthClaims(env).catch(() => ({ expired: 0 }));
+      const { expireStaleCrossOrgCommitments } = await import("./cross-org-rooms.js");
+      await expireStaleCrossOrgCommitments(env).catch(() => ({ expired: 0 }));
       return { job: "notification_batch" };
     case SCHEDULED_CRON_RETENTION:
       await purgeExpiredData(env);

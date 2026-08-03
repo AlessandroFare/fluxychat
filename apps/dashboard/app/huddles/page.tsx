@@ -22,6 +22,7 @@ import {
   toggleCallRecording,
   type CallSession,
 } from "@/lib/huddles-client";
+import { enableVoiceStage } from "@/lib/voice-stage-client";
 
 export default function HuddlesPage() {
   const { adminJwt } = useDashboardSession();
@@ -124,6 +125,19 @@ export default function HuddlesPage() {
     setNotice(`${detail.participants.length} participant(s) in call`);
   }
 
+  async function handleEnableStage() {
+    if (!token || !roomId.trim()) return;
+    setBusy("stage");
+    try {
+      await enableVoiceStage(token, roomId.trim(), { maxSpeakers: 5 });
+      setNotice("Voice stage enabled — join from room chat (Stage · Listen / Speak).");
+    } catch (err) {
+      setError(messageFromUnknown(err, "Enable stage failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <ConsoleShell>
       <ConsolePageHeader
@@ -167,6 +181,9 @@ export default function HuddlesPage() {
                 <Button size="sm" variant="outline" disabled={!activeCallId} onClick={() => void handleToggleRecording()}>
                   <Video className="h-3 w-3 mr-1" /> Record
                 </Button>
+                <Button size="sm" variant="outline" disabled={!token || !roomId || !!busy} onClick={() => void handleEnableStage()}>
+                  Enable voice stage
+                </Button>
               </div>
               <p className="text-xs text-muted-foreground">Local status: <Badge variant="outline">{huddle.getStatus()}</Badge></p>
             </Panel>
@@ -184,9 +201,11 @@ export default function HuddlesPage() {
                   </div>
                 ))
               )}
-              {activeCallId && (
-                <Button size="sm" variant="ghost" onClick={() => void handleRefreshCall()}>Refresh participants</Button>
-              )}
+              {activeCallId ? (
+                <Button size="sm" variant="ghost" onClick={() => void handleRefreshCall()}>
+                  Refresh participants
+                </Button>
+              ) : null}
             </Panel>
           </Section>
 

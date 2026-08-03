@@ -4,6 +4,7 @@
  * @param {*} deps
  */
 import { resolveDemoAgent } from "./resolve-demo-agent.js";
+import { ensureDemoRoomSeeded } from "./demo-room-seed.js";
 
 export async function issueDemoSession(env, deps) {
   const {
@@ -58,6 +59,13 @@ export async function issueDemoSession(env, deps) {
   }
 
   const demoAgent = await resolveDemoAgent(env, demoProjectId);
+
+  await ensureDemoRoomSeeded(
+    env,
+    demoProjectId,
+    roomId,
+    demoAgent?.id ?? "fluxybot",
+  ).catch(() => {});
 
   const ttlSeconds = Math.min(
     3600,

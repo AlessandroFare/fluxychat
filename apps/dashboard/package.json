@@ -45,6 +45,7 @@
     "@schedule-x/react": "^4.1.0",
     "@schedule-x/theme-default": "^4.6.1",
     "@shadcn/react": "^0.1.0",
+    "@simplewebauthn/browser": "^13.3.0",
     "@stackblitz/sdk": "^1.11.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

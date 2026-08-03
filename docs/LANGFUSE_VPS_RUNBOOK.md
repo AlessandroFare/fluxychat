@@ -1,0 +1,48 @@
+# Langfuse OSS on VPS — OTel export runbook
+
+FluxyChat ships agent traces via OTLP to Langfuse (Cloud or self-hosted).
+
+## Dashboard one-click (recommended)
+
+1. Open `/agents/observability`.
+2. Enter Langfuse host (Cloud: `https://cloud.langfuse.com`, OSS: `https://langfuse.example.com`).
+3. Paste **Public** and **Secret** keys from Langfuse project settings.
+4. Click **Create Langfuse OTel export** — creates `POST /otel/configs/langfuse` config and queues flush.
+
+## Self-host Langfuse (Docker)
+
+Follow [Langfuse self-host docs](https://langfuse.com/docs/deployment/self-host). Minimum:
+
+- Postgres
+- Redis (optional but recommended)
+- HTTPS reverse proxy
+
+OTLP ingest endpoint:
+
+```text
+https://<your-langfuse>/api/public/otel/v1/traces
+```
+
+Auth: HTTP Basic `base64(publicKey:secretKey)`.
+
+## Worker env
+
+No global secret required — keys live per-project in D1 `otel_export_config`.
+
+Optional:
+
+```bash
+OTEL_AGENT_EVAL_AUTO=true   # default; set false to skip eval span enqueue
+```
+
+## Verify
+
+1. Run an agent in a room.
+2. Trigger eval dataset or wait for audit→OTel queue.
+3. `POST /otel/flush` (admin) or wait for cron.
+4. Traces appear in Langfuse **Traces** view.
+
+## Ops notes
+
+- Langfuse OSS VPS is **ops-only** (not Workers-hosted).
+- Pair with `/agents/eval` for pass/fail datasets and `/middleware` for pipeline logging.

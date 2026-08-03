@@ -17,7 +17,8 @@ export interface VoiceAiSession {
   status: string;
   wsUrl: string;
   targetLatencyMs: number;
-  settings: Record<string, boolean>;
+  pipelineMode?: "unified" | "legacy";
+  settings: Record<string, boolean | string>;
 }
 
 export interface VoiceAiStats {
@@ -39,7 +40,12 @@ export async function listVoiceAiProviders(token?: string): Promise<{ providers:
 
 export async function createVoiceAiSession(
   token: string,
-  body: { providerId?: string; roomId?: string; userId?: string; settings?: Record<string, boolean> },
+  body: {
+    providerId?: string;
+    roomId?: string;
+    userId?: string;
+    settings?: Record<string, boolean | string> & { pipelineMode?: "unified" | "legacy" };
+  },
 ): Promise<VoiceAiSession> {
   return fetchWorkerJson(`${BASE}/admin/voice-ai/sessions`, {
     method: "POST",
@@ -50,7 +56,13 @@ export async function createVoiceAiSession(
 
 export async function recordVoiceAiMetrics(
   token: string,
-  body: { sessionId: string; stages?: unknown[]; totalLatencyMs?: number; providerId?: string },
+  body: {
+    sessionId: string;
+    stages?: unknown[];
+    totalLatencyMs?: number;
+    providerId?: string;
+    pipelineMode?: "unified" | "legacy";
+  },
 ): Promise<{ recorded: boolean }> {
   return fetchWorkerJson(`${BASE}/admin/voice-ai/metrics`, {
     method: "POST",

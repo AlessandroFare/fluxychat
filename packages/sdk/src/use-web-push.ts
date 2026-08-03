@@ -171,6 +171,10 @@ export function useWebPush(
   const unsubscribe = React.useCallback(
     async (identifier?: string): Promise<{ ok: boolean }> => {
       if (!client?.isAuthenticated()) return { ok: false };
+      if (operationInFlight.current) return { ok: false };
+      operationInFlight.current = true;
+      setLoading(true);
+      setError(null);
       try {
         if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
           const reg = options.swPath
@@ -194,6 +198,9 @@ export function useWebPush(
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
         return { ok: false };
+      } finally {
+        operationInFlight.current = false;
+        setLoading(false);
       }
     },
     [client, options.swPath, reload],

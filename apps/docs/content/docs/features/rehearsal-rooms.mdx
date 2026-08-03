@@ -1,0 +1,29 @@
+---
+title: Rehearsal rooms
+description: Private ephemeral room with read-only snapshot of real context — practice high-stakes conversations with an AI counterparty.
+---
+
+# Rehearsal rooms
+
+Before a difficult negotiation or support escalation, open a **rehearsal room**: a temporary private room cloned from authorized context where an agent simulates the counterparty.
+
+## Console
+
+**Agents → Rehearsal** → pick source room → start session.
+
+Default TTL deletes the rehearsal room automatically.
+
+## Guardrails
+
+- Only data you already have access to is copied.
+- Simulation disclaimer shown in UI.
+- No persistence to production room unless you explicitly copy outcomes.
+
+## API
+
+```http
+POST /rooms/:roomId/rehearsal
+GET /rehearsal/:id
+```
+
+Useful with [cross-org rooms](/docs/features/cross-org-rooms) preparation flows.

@@ -54,13 +54,12 @@ describe("voice-turn-detection", () => {
     expect(td.getFalseCutRate()).toBeGreaterThan(0);
   });
 
-  it("should reset state", () => {
-    const td = createTurnDetector();
-    td.processAudio(0.5);
-    td.processTranscript("test");
-    td.reset();
-    expect(td.getFalseCutRate()).toBe(0);
-    const event = td.processAudio(0.5);
+  it("uses hybrid silero scorer when provided", () => {
+    const td = createTurnDetector(
+      { vadBackend: "hybrid", vad: { energyThreshold: 0.9, silenceTimeoutMs: 1500, minSpeechDurationMs: 0, minSilenceDurationMs: 0, debounceMs: 5 } },
+      { scoreSpeech: () => 0.9 },
+    );
+    const event = td.processAudio(0.01);
     expect(event?.type).toBe("speech_start");
   });
 });

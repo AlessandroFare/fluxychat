@@ -76,7 +76,9 @@ export async function unifiedSearch(env, input) {
 
   // Semantic search
   if (mode === "semantic" || mode === "hybrid") {
-    if (env.SEMANTIC_SEARCH_ENABLED === "true" || env.SEMANTIC_SEARCH_ENABLED === "1") {
+    const { isSemanticSearchActive, getSemanticSearchSettings } = await import("./semantic-search-settings.js");
+    const semSettings = await getSemanticSearchSettings(env, projectId);
+    if (isSemanticSearchActive(semSettings)) {
       try {
         const { searchSemanticMessages } = await import("./message-embeddings.js");
         const semResult = await searchSemanticMessages(env, {

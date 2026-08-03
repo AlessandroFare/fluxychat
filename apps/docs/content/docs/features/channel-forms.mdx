@@ -1,0 +1,26 @@
+---
+title: Channel structured forms
+description: WhatsApp Business Flows and RCS-style multi-step forms that normalize into room messages.
+---
+
+# Channel structured forms
+
+Define a **form schema** once; deliver it on WhatsApp (interactive / Flows) or RCS (suggested replies). Answers arrive as a structured message in the FluxyChat room.
+
+## Console
+
+**Bridges → Forms** — design steps, map fields, test dry-run.
+
+## WhatsApp
+
+Requires Meta Business API credentials. See [Optional integrations — WhatsApp](/docs/guides/ecosystem/optional-integrations#whatsapp-business-structured-forms).
+
+Webhook: `POST /webhooks/channel-forms/whatsapp`
+
+## RCS
+
+Requires paid RCS aggregator — see [Platform status — RCS](/docs/features/platform-status#rcs-17).
+
+## Dry-run
+
+Without vendor credentials, submissions are stored locally for UI testing — useful for schema iteration.

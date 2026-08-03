@@ -50,6 +50,12 @@ export interface MlsManager {
   getGroup(groupId: string): MlsGroup | null;
   listGroups(): MlsGroup[];
   getEpoch(groupId: string): number;
+  importGroup(group: {
+    groupId: string;
+    epoch: number;
+    config?: Partial<MlsGroupConfig>;
+    devices: MlsDevice[];
+  }): MlsGroup;
 }
 
 const DEFAULT_MLS_CONFIG: MlsGroupConfig = {
@@ -131,6 +137,21 @@ export function createMlsManager(): MlsManager {
 
     getEpoch(groupId: string): number {
       return groups.get(groupId)?.epoch ?? 0;
+    },
+
+    importGroup(groupInput): MlsGroup {
+      const group: MlsGroup = {
+        groupId: groupInput.groupId,
+        epoch: Number(groupInput.epoch ?? 0),
+        devices: new Map(),
+        config: { ...DEFAULT_MLS_CONFIG, ...groupInput.config },
+        ratchetTree: [],
+      };
+      for (const device of groupInput.devices) {
+        group.devices.set(device.deviceId, device);
+      }
+      groups.set(group.groupId, group);
+      return group;
     },
   };
 }

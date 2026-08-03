@@ -1,0 +1,28 @@
+---
+title: Smart catch-up digest
+description: Relevance-ranked summary of what you missed since your last visit to a room.
+---
+
+# Smart catch-up digest
+
+When you return to a room, FluxyChat can show a **catch-up banner** with the most relevant updates — mentions, active threads, and semantically related topics — not just the last N messages chronologically.
+
+## Console
+
+Open any room after being away. If new activity exists since your last-read watermark, a banner appears at the top with a short digest.
+
+## SDK
+
+```ts
+const digest = await client.getRoomCatchUpDigest(roomId);
+// digest.summary, digest.highlights[], digest.since
+```
+
+## Requirements
+
+Works best with [semantic search](/docs/core/search) enabled (embeddings for topic ranking). Without embeddings, the digest falls back to mentions and recency.
+
+## Related
+
+- [Search](/docs/core/search)
+- [Thread summary](/docs/reference/thread-summary)

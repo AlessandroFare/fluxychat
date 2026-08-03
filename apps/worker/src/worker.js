@@ -26,6 +26,7 @@ import {
 } from "./lib/webhook-signing.js";
 import { dispatchPublicRoutes } from "./routes/public-http.js";
 import { dispatchWorkerHttpRoutes } from "./lib/worker-route-dispatch.js";
+import { appendRoomAuditChainEvent } from "./lib/audit-chain.js";
 import { maybeHandleDevProvision } from "./routes/dev-provision-http.js";
 import { resolveProjectId } from "./lib/resolve-project-id.js";
 import { provisionBuiltinAgents } from "./lib/provision-builtin-agents.js";
@@ -690,6 +691,7 @@ async function insertNewProject(env, ctx, name, options = {}) {
  * project has something to look at (Area 5.1).
  */
 async function seedDemoRoom(env, projectId) {
+  const { ensureDemoRoomSeeded } = await import("./lib/demo-room-seed.js");
   const now = new Date().toISOString();
   const configuredDemoRoom = String(env.DEMO_ROOM_ID || "").trim();
   const roomIds = configuredDemoRoom
@@ -721,6 +723,10 @@ async function seedDemoRoom(env, projectId) {
       now,
     )
     .run();
+
+  if (configuredDemoRoom && projectId) {
+    await ensureDemoRoomSeeded(env, projectId, configuredDemoRoom, "fluxybot").catch(() => {});
+  }
 }
 
 function canBypassRoomMembership(roles) {
@@ -855,6 +861,21 @@ async function writeAuditEvent(env, event) {
       now
     )
     .run();
+
+  void appendRoomAuditChainEvent(env, {
+    projectId: event.projectId,
+    event: {
+      type: "operational_audit",
+      auditId: id,
+      action: event.action,
+      actorUserId: event.actorUserId,
+      actorRoles: event.actorRoles,
+      targetType: event.targetType,
+      targetId: event.targetId,
+      traceId: event.traceId,
+      metadata: event.metadata,
+    },
+  }).catch(() => {});
 }
 
 /**

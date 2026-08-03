@@ -1,0 +1,35 @@
+---
+title: A2A agent protocol
+description: Discover external agents via Agent Card and delegate tasks over HTTPS (Linux Foundation A2A).
+---
+
+# A2A agent protocol
+
+FluxyChat implements an **A2A adapter**: fetch external **Agent Cards**, validate HTTPS endpoints, and delegate tasks to remote agents while keeping room context on your Worker.
+
+## Console
+
+**Agents → A2A** — register external agent URLs, test delegation, view task status.
+
+## Complementary protocols
+
+| Protocol | Direction |
+|----------|-----------|
+| **AG-UI** | Agent → user UI in chat |
+| **A2A** | Agent → agent |
+| **MCP** | Agent → tools |
+
+## Security
+
+- HTTPS-only Agent Card fetch.
+- SSRF blocks on internal IPs.
+- Optional `A2A_OUTBOUND_BEARER` for authenticated remote endpoints.
+
+## API
+
+```http
+POST /a2a/tasks
+GET /a2a/tasks/:id
+```
+
+See LF A2A spec for Agent Card JSON schema.

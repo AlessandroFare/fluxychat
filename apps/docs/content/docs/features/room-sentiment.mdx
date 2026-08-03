@@ -1,0 +1,28 @@
+---
+title: Room sentiment
+description: Mood timeline from reactions and light message classification for moderators and community leads.
+---
+
+# Room sentiment
+
+Aggregate reaction sentiment and optional message classification into a **mood timeline** — useful for community managers and team leads monitoring room health.
+
+## Console
+
+**Search** (`/search`) with a room filter shows the **Room sentiment** panel: buckets over time and current mood label.
+
+## API
+
+```http
+GET /rooms/:roomId/sentiment
+```
+
+Member JWT required.
+
+## SDK
+
+```ts
+const { buckets, currentMood } = await client.getRoomSentiment(roomId);
+```
+
+Uses existing reaction data — no extra client instrumentation.

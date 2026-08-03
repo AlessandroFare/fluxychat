@@ -26,6 +26,7 @@ export function ChatCatchUpBanner({
   onMarkRead,
 }: ChatCatchUpBannerProps) {
   const [catchUp, setCatchUp] = useState<FluxyRoomCatchUp | null>(null);
+  const [digestLoading, setDigestLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [jumping, setJumping] = useState(false);
 
@@ -36,10 +37,16 @@ export function ChatCatchUpBanner({
     setCatchUp(null);
     if (!client?.isAuthenticated() || !trimmedRoomId) return;
     let cancelled = false;
-    void client.getRoomCatchUp(trimmedRoomId).then((data) => {
+    void client.getRoomCatchUpDigest(trimmedRoomId).then((data) => {
       if (!cancelled) setCatchUp(data);
     }).catch(() => {
-      if (!cancelled) setCatchUp(null);
+      if (!cancelled) {
+        void client.getRoomCatchUp(trimmedRoomId).then((data) => {
+          if (!cancelled) setCatchUp(data);
+        }).catch(() => {
+          if (!cancelled) setCatchUp(null);
+        });
+      }
     });
     return () => {
       cancelled = true;
@@ -100,7 +107,25 @@ export function ChatCatchUpBanner({
       data-testid="chat-catch-up-banner"
     >
       <span>{label}</span>
+      {catchUp.digest ? (
+        <p className="mt-1 w-full whitespace-pre-wrap text-[11px] text-muted-foreground">{catchUp.digest}</p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
+        {!catchUp.digest ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            disabled={digestLoading}
+            onClick={() => {
+              if (!client) return;
+              setDigestLoading(true);
+              void client.getRoomCatchUpDigest(trimmedRoomId).then(setCatchUp).finally(() => setDigestLoading(false));
+            }}
+          >
+            {digestLoading ? "Summarizing…" : "Summarize missed"}
+          </Button>
+        ) : null}
         {catchUp.firstUnreadMessageId != null ? (
           <Button
             type="button"

@@ -54,3 +54,46 @@ export async function createLiveInput(env, { eventId, projectId, title }) {
 export async function deleteLiveInput(env, uid) {
   await streamApi(env, `/live_inputs/${encodeURIComponent(uid)}`, { method: "DELETE" });
 }
+
+function mapCustomerPlayback(env, videoUid) {
+  const customerCode = String(env.CLOUDFLARE_STREAM_CUSTOMER_CODE || "").trim();
+  if (!customerCode || !videoUid) return { playbackHls: null, playbackDash: null, thumbnailUrl: null };
+  const base = `https://customer-${customerCode}.cloudflarestream.com/${videoUid}`;
+  return {
+    playbackHls: `${base}/manifest/video.m3u8`,
+    playbackDash: `${base}/manifest/video.mpd`,
+    thumbnailUrl: `${base}/thumbnails/thumbnail.jpg`,
+  };
+}
+
+/**
+ * List VOD recordings generated from a Cloudflare Stream live input.
+ */
+export async function listLiveInputVideos(env, liveInputUid) {
+  if (!liveInputUid) return [];
+  try {
+    const result = await streamApi(env, `/live_inputs/${encodeURIComponent(liveInputUid)}/videos`, {
+      method: "GET",
+    });
+    const videos = Array.isArray(result) ? result : [];
+    return videos.map((video) => {
+      const uid = video.uid || video.id;
+      const playback = mapCustomerPlayback(env, uid);
+      const state = String(video.status?.state || video.status || "processing").toLowerCase();
+      return {
+        videoUid: uid,
+        status: state === "ready" ? "ready" : state === "error" ? "failed" : "processing",
+        durationSeconds: Number(video.duration ?? video.meta?.duration ?? 0) || null,
+        thumbnailUrl: video.thumbnail || playback.thumbnailUrl,
+        playbackHls: playback.playbackHls,
+        playbackDash: playback.playbackDash,
+        createdAt: video.created || video.created_at || null,
+      };
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message === "cloudflare_stream_not_configured") {
+      return [];
+    }
+    throw err;
+  }
+}

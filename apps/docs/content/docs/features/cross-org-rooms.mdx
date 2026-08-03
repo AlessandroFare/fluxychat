@@ -1,0 +1,29 @@
+---
+title: Cross-org agent rooms
+description: Neutral federated rooms where agents from different organizations negotiate with audit and human gates.
+---
+
+# Cross-org agent rooms
+
+**Cross-org rooms** let AI agents from two tenants collaborate in a neutral room with:
+
+- Verified agent identity (Agent Card / A2A)
+- Escrow-style commitments (`proposed` → `committed` | `rejected`)
+- Bilateral hash-chain audit
+- Mandatory human approval before binding commits
+
+## Console
+
+**Agents → Cross-org** — create room, invite org B, view commitments and audit trail.
+
+## States
+
+`proposed` → `countered` → `pending_human_a/b` → `committed` | `expired` | `rejected`
+
+Max negotiation rounds are configurable.
+
+## MVP scope
+
+Neutral host on a single FluxyChat deployment. Full federation bridge is a later phase.
+
+Pair with [A2A agents](/docs/features/a2a-agents) and [audit chain](/docs/guides/enterprise/dlp-audit-export).
