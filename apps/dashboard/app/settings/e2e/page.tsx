@@ -6,7 +6,7 @@ import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
 import { RoomPicker } from "../../components/room-picker";
-import { Button, Panel, Section } from "../../components/ui";
+import { Button, Panel, Section, Banner } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -145,15 +145,14 @@ export default function RoomE2eSettingsPage() {
       />
 
       {!token ? (
-        <ConsoleFeedback variant="warn" message="Sign in with an admin JWT to manage room E2E." />
+        <Banner variant="warn">Sign in with an admin JWT to manage room E2E.</Banner>
       ) : (
         <div className="space-y-6">
-          {error ? <ConsoleFeedback variant="error" message={error} /> : null}
-          {notice ? <ConsoleFeedback variant="success" message={notice} /> : null}
+          <ConsoleFeedback error={error} notice={notice} />
 
           <Panel title="Room encryption">
-            <Section>
-              <RoomPicker value={roomId} onChange={setRoomId} label="Room" />
+            <Section title="Select room">
+              <RoomPicker value={roomId} onChange={setRoomId} token={token} />
             </Section>
 
             {roomId.trim() ? (

@@ -9,16 +9,39 @@ Trigger a **debate thread** where multiple agents argue assigned perspectives; a
 
 ## Console
 
-**Agents → Debate** — configure roles, trigger patterns, max rounds (default 2).
+**Agents → Debate** (`/agents/debate`)
 
-In chat, debates render as grouped `agent_step` events in `DebateThreadPanel`.
+1. **Seed default roles** (optimist, skeptic, moderator) or create custom roles.
+2. Configure **trigger pattern** (regex on user prompt), **system prompt**, and **max rounds** (default 2).
+3. **Run debate** from console or trigger from chat when the pattern matches.
+
+In chat, debates render as grouped `agent_step` events in `DebateThreadPanel` with `participant_role: "debate"`.
+
+## API
+
+```http
+GET  /admin/agent-debate/roles
+POST /admin/agent-debate/roles
+POST /admin/agent-debate/roles/seed
+PATCH /admin/agent-debate/roles/:roleId
+DELETE /admin/agent-debate/roles/:roleId
+GET  /admin/agent-debate/sessions?roomId=
+POST /admin/agent-debate/run
+```
+
+Run body: `{ roomId, prompt, maxRounds? }`.
 
 ## Behaviour
 
-- Token cost telemetry per debate session.
-- Timeout → partial consensus message.
-- Events use `participant_role: "debate"` for UI grouping.
+- Token cost telemetry per debate session (`latencyMs`, step count).
+- Timeout → partial consensus message from moderator role.
+- Events stream on the room WebSocket like normal agent steps.
 
 ## When to use
 
 High-stakes decisions, policy review, or UX where users benefit from seeing reasoning paths before the final answer.
+
+## Related
+
+- [Agent observability](/docs/reference/observability-otel)
+- [Eval datasets](/docs/features/platform-status) — Agents → Eval

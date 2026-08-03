@@ -9,13 +9,35 @@ description: Event-driven agents that react to webhooks and room events within p
 
 ## Console
 
-**Agents → Ambient** — create policies:
+**Agents → Ambient** (`/agents/ambient`)
+
+Create policies with:
 
 | Field | Meaning |
 |-------|---------|
 | Trigger | `webhook`, `keyword`, `schedule`, … |
 | Max autonomy | How far the agent can act without human escalation |
 | Target room | Where to post results |
+| Agent ID | Which WorkflowAgent executes |
+
+Enable/disable policies without deleting configuration.
+
+## Architecture
+
+```
+Webhook / room event → Worker policy engine (agent_policies)
+  → WorkflowAgent → room message + audit log
+```
+
+## API
+
+```http
+GET  /admin/ambient-agents/policies
+POST /admin/ambient-agents/policies
+PATCH /admin/ambient-agents/policies/:id
+DELETE /admin/ambient-agents/policies/:id
+POST /webhooks/ambient/:policyId
+```
 
 ## Guardrails
 
@@ -23,8 +45,9 @@ description: Event-driven agents that react to webhooks and room events within p
 - Audit log on every autonomous action.
 - Escalation above configured risk threshold.
 
-## Architecture
-
-Webhook → Worker → policy engine (`agent_policies`) → WorkflowAgent → room message + audit.
-
 Pair with [tool approvals](/docs/guides/tool-approvals) for sensitive tools.
+
+## Related
+
+- [A2A agents](/docs/features/a2a-agents)
+- [AI agent handoff](/docs/reference/ai-agent-handoff)

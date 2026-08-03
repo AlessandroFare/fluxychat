@@ -6,7 +6,7 @@ import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
 import { RoomPicker } from "../../components/room-picker";
-import { Button, Panel, Section } from "../../components/ui";
+import { Button, Panel, Section, Banner } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -113,7 +113,7 @@ export default function RoomTranslationSettingsPage() {
       />
 
       {!token ? (
-        <ConsoleFeedback variant="warn" message="Sign in with an admin JWT to configure room translation." />
+        <Banner variant="warn">Sign in with an admin JWT to configure room translation.</Banner>
       ) : loading ? (
         <div className="flex items-center gap-2 py-12 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
@@ -121,12 +121,11 @@ export default function RoomTranslationSettingsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {error ? <ConsoleFeedback variant="error" message={error} /> : null}
-          {notice ? <ConsoleFeedback variant="success" message={notice} /> : null}
+          <ConsoleFeedback error={error} notice={notice} />
 
           <Panel title="Configure room">
-            <Section>
-              <RoomPicker value={roomId} onChange={setRoomId} label="Room" />
+            <Section title="Select room">
+              <RoomPicker value={roomId} onChange={setRoomId} token={token} />
             </Section>
 
             {roomId.trim() ? (

@@ -1,13 +1,22 @@
 ---
 title: "FluxyStream — Live Streaming & Broadcast"
-description: "> ROADMAP 3.3 — Interactive streaming $42.36B (2025) → $147.11B (2030), CAGR 28.2%"
+description: Interactive live video with real-time chat, moderation, commerce, and audience engagement on Cloudflare Stream.
 ---
 
-## Panoramica
+# FluxyStream
 
-FluxyStream è il modulo di live broadcasting integrato in FluxyChat. Combina video streaming WebRTC/RTMP → Cloudflare Stream → HLS, chat in tempo reale, moderazione AI, e feature interattive per il pubblico.
+FluxyStream is FluxyChat's integrated **live broadcasting** module. It combines WebRTC/RTMP ingest → Cloudflare Stream → HLS playback, real-time chat, AI moderation, and interactive audience features.
 
-## Architettura
+## Console
+
+| Route | Purpose |
+|-------|---------|
+| `/stream` | Live events list (live now + scheduled) |
+| `/stream/[eventId]` | Viewer: HLS player + chat + raise hand |
+| `/stream/[eventId]/broadcast` | Broadcaster: camera preview, go live / end |
+| `/stream/demo` | Interactive SDK feature demo |
+
+## Architecture
 
 ```
 OBS / WebRTC camera → Cloudflare Stream (RTMP/WHIP ingest) → HLS adaptive bitrate
@@ -16,153 +25,58 @@ OBS / WebRTC camera → Cloudflare Stream (RTMP/WHIP ingest) → HLS adaptive bi
                                 ↓
                     Next.js Dashboard (viewer + broadcaster UI)
                                 ↓
-                    FluxyChat SDK (interactive features)
+                    FluxyChat SDK (polls, gifts, sentiment, commerce)
 ```
 
-## File principali
+## Key files
 
-| File | Descrizione |
+| File | Description |
 |------|-------------|
-| `apps/dashboard/app/stream/page.tsx` | Lista eventi live (live now + all streams) |
-| `apps/dashboard/app/stream/[eventId]/page.tsx` | Viewer: video player + chat + raise hand |
-| `apps/dashboard/app/stream/[eventId]/broadcast/page.tsx` | Broadcaster: camera preview, RTMP ingest, go live/end |
-| `apps/dashboard/app/stream/demo/page.tsx` | **Demo interattiva** con tutte le feature SDK |
-| `apps/dashboard/components/stream/create-stream-dialog.tsx` | Modal creazione evento |
-| `apps/dashboard/components/stream/stream-player.tsx` | Player HLS con controlli (mute, fullscreen) |
-| `apps/worker/src/routes/live-streaming-http.js` | Route API: CRUD eventi, provision, join/leave, chat, analytics, angles, highlights, products, gifts, sentiment, TURN |
-| `apps/worker/src/lib/live-streaming.js` | Logica DB: eventi, chat rules, viewers, messaggi, analytics |
-| `apps/worker/src/lib/cloudflare-stream.js` | Integrazione Cloudflare Stream API (live inputs) |
-| `apps/worker/db/0089_live_events.sql` | Schema originale tabella `live_events` |
-| `apps/worker/db/0134_live_streaming_chat.sql` | Schema chat rules, viewers, messages, analytics |
-| `apps/worker/db/0154_fluxy_stream.sql` | ALTER TABLE: colonne Cloudflare Stream + tabelle angles/highlights/products/gifts/sentiment |
-| `apps/worker/db/0155_fluxy_stream_reconcile.sql` | Migrazione riconciliazione idempotente |
-| `packages/sdk/src/fluxy-stream.ts` | SDK module: tutte le feature interattive in-memory |
+| `apps/worker/src/routes/live-streaming-http.js` | CRUD events, join/leave, chat, analytics, angles, gifts |
+| `apps/worker/src/lib/cloudflare-stream.js` | Cloudflare Stream API (live inputs) |
+| `packages/sdk/src/fluxy-stream.ts` | In-memory interactive features (polls, gifts, gamification) |
 
-## Feature implementate
+## Features
 
-### Feature base (ROADMAP)
+**Core:** live broadcast, chat overlay, viewer count, AI moderation, polls, virtual gifts, recording/VOD, multi-camera angles, RTMP ingest, HLS adaptive bitrate, analytics.
 
-| Feature | Stato | Note |
-|---------|-------|------|
-| Live video broadcast | ✅ | WebRTC → Cloudflare Stream → HLS |
-| Chat overlay | ✅ | FluxyChat room integrata nel player |
-| Viewer count | ✅ | D1 counter + polling API |
-| AI moderation | ✅ | `createModerationEngine` con DLP patterns |
-| Polls/quizzes | ✅ | `createPoll()` / `votePoll()` SDK + API |
-| Tipping/donations | ✅ | Virtual gifts + Stripe integration (esistente) |
-| Recording + VOD | ✅ | Cloudflare Stream recording mode |
-| Multi-camera switching | ✅ | `addAngle()` / `setActiveAngle()` SDK + API |
-| RTMP ingest | ✅ | OBS → RTMP → Cloudflare Stream |
-| Adaptive bitrate | ✅ | HLS multi-resolution (Cloudflare Stream) |
-| DVR/rewind live | ✅ | HLS DVR (Cloudflare Stream) |
-| Analytics (viewership) | ✅ | D1 + `recordAnalyticsBucket()` / `getEventAnalytics()` |
-| TURN server | ✅ | `/api/live/turn-credentials` — Coturn REST + Metered.ca |
+**Interactive:** stream-as-room (avatars, raise hand), sentiment dashboard, branching narrative voting, live commerce overlay, XP/badges leaderboard, AI co-host highlights.
 
-### Feature innovative (ROADMAP)
+## API (selected)
 
-| Feature | Stato | Demo |
-|---------|-------|------|
-| Stream as a Room | ✅ | Viewer = partecipante con avatar, raise hand, promozioni ruolo |
-| AI-generated highlights | ✅ | Auto-detection da sentiment spike + gift burst |
-| Real-time sentiment dashboard | ✅ | Grafico sentiment in tempo reale con barre positive/negative |
-| Interactive storytelling | ✅ | Voting branching narrative con barre progresso |
-| Virtual gifts with physics | ✅ | 5 gift types con animazioni (fall, burst, float, rain) |
-| Multi-angle viewer choice | ✅ | Switch camera angles in real time |
-| AI co-host | ✅ | Agent risponde a domande, modera chat, genera highlights |
-| Live commerce integration | ✅ | Product catalog + "Buy Now" overlay sincronizzato |
-| Gamification | ✅ | XP, badges, leaderboard per viewer attivi |
+```http
+POST /api/live/events
+GET  /api/live/events/:id
+POST /api/live/events/:id/provision    # Cloudflare Stream live input
+POST /api/live/events/:id/join
+POST /api/live/events/:id/messages
+GET  /api/live/turn-credentials        # WebRTC TURN (1h TTL)
+```
 
-## API endpoints
+Full route list lives in `live-streaming-http.js`.
 
-### Eventi
-- `POST /api/live/events` — Crea evento
-- `GET /api/live/events` — Lista eventi
-- `GET /api/live/events/:id` — Dettaglio evento
-- `PATCH /api/live/events/:id` — Aggiorna evento (status, title, etc.)
-- `GET /api/live/stats` — Stats globali
-
-### Cloudflare Stream
-- `POST /api/live/events/:id/provision` — Crea live input (RTMP/WHIP)
-- `DELETE /api/live/events/:id/input` — Elimina live input
-
-### Viewer
-- `POST /api/live/events/:id/join` — Join (propaga `auth.userId`)
-- `POST /api/live/events/:id/leave` — Leave
-- `GET /api/live/events/:id/viewers` — Lista viewer attivi
-- `GET /api/live/events/:id/viewer-count` — Count viewer attivi
-- `GET /api/live/events/:id/peak` — Peak viewers
-- `POST /api/live/events/:id/peak` — Aggiorna peak
-- `POST /api/live/events/:id/ban` — Banna viewer
-- `POST /api/live/events/:id/mute` — Mute/unmute viewer
-
-### Chat
-- `POST /api/live/events/:id/messages` — Invia messaggio
-- `GET /api/live/events/:id/messages` — Lista messaggi
-- `POST /api/live/events/:id/rules` — Upsert chat rules
-- `GET /api/live/events/:id/rules` — Get chat rules
-
-### Pinning
-- `POST /api/live/events/:id/pin` — Pin messaggio
-- `POST /api/live/events/:id/unpin` — Unpin
-- `GET /api/live/events/:id/pinned` — Lista pinned
-
-### Analytics
-- `POST /api/live/events/:id/analytics` — Registra bucket
-- `GET /api/live/events/:id/analytics` — Query analytics
-
-### Multi-angle
-- `GET /api/live/events/:id/angles` — Lista camera angles
-- `POST /api/live/events/:id/angles` — Aggiungi angle
-
-### Highlights
-- `GET /api/live/events/:id/highlights` — Lista highlights
-- `POST /api/live/events/:id/highlights` — Crea highlight
-
-### Live Commerce
-- `GET /api/live/events/:id/products` — Lista prodotti
-- `POST /api/live/events/:id/products` — Aggiungi prodotto
-
-### Gifts
-- `GET /api/live/events/:id/gifts` — Lista gifts inviati
-- `POST /api/live/events/:id/gifts` — Invia gift
-
-### Sentiment
-- `GET /api/live/events/:id/sentiment` — Query sentiment data
-
-### WebRTC
-- `GET /api/live/turn-credentials` — Credenziali TURN ephemeral (TTL 1h)
-
-## Configurazione
-
-### Variabili ambiente Worker
+## Environment
 
 ```bash
-# Cloudflare Stream
-CLOUDFLARE_ACCOUNT_ID=your_account_id
-CLOUDFLARE_STREAM_API_TOKEN=your_api_token
-CLOUDFLARE_STREAM_CUSTOMER_CODE=your_customer_code
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_STREAM_API_TOKEN=
+CLOUDFLARE_STREAM_CUSTOMER_CODE=
 
-# TURN relay (opzionale per dev, obbligatorio per produzione WebRTC)
-TURN_SECRET=your_hmac_secret          # Coturn REST API pattern
-TURN_SERVERS=turn:turn.example.com:3478,turns:turn.example.com:5349
-# OR
-TURN_API_URL=https://api.metered.live/api/turn  # Metered.ca
-TURN_API_KEY=your_metered_api_key
+# TURN relay — required for production WebRTC
+TURN_SECRET=
+TURN_SERVERS=turn:turn.example.com:3478
+# or Metered.ca:
+TURN_API_URL=https://api.metered.live/api/turn
+TURN_API_KEY=
 ```
 
-## Come modificare
+## Customization
 
-### Aggiungere un nuovo gift type
-Modifica l'array `giftsCatalog` in `packages/sdk/src/fluxy-stream.ts`:
-```ts
-{ id: "g_new", type: "new", label: "New Gift", iconEmoji: "🎁", price: 1000, currency: "usd", animation: "burst", color: "#ff00ff" }
-```
+- **New gift type:** extend `giftsCatalog` in `packages/sdk/src/fluxy-stream.ts`.
+- **Default camera angles:** call `stream.addAngle(label, streamUrl, isDefault)` in stream demo seed.
+- **TURN provider:** Coturn (`TURN_SECRET` + `TURN_SERVERS`) or Metered.ca (`TURN_API_URL` + `TURN_API_KEY`).
 
-### Cambiare colori degli status
-Modifica `statusColor()` in `apps/dashboard/app/stream/page.tsx`.
+## Related
 
-### Aggiungere una camera angle predefinita
-Chiama `stream.addAngle(label, streamUrl, isDefault)` nel seed di `stream/demo/page.tsx`.
-
-### Cambiare il TURN provider
-Imposta `TURN_SECRET` + `TURN_SERVERS` per Coturn, oppure `TURN_API_URL` + `TURN_API_KEY` per Metered.ca.
+- [Live streaming cookbook](/docs/cookbook) — integration patterns
+- [Optional integrations](/docs/guides/ecosystem/optional-integrations) — Stripe checkout for live commerce

@@ -5,15 +5,26 @@ description: Compose now and deliver at a future time — Slack-style scheduled 
 
 # Scheduled messages
 
-Schedule a message to be delivered later. The composer stores content in D1 and the Room DO dispatches at `send_at` through the normal send path.
+Schedule a message to be delivered later. The composer stores content in D1 and the Room DO dispatches at `send_at` through the normal send path (same moderation, firmware, and fan-out rules as immediate sends).
 
 ## In chat
 
-1. Type your message.
-2. Open **+** menu → **Schedule send**.
+1. Type your message in the composer.
+2. Open **+** menu → **Schedule send** (`ScheduleSend` component).
 3. Pick date/time → confirm.
+4. View pending scheduled items in the panel; **cancel** before delivery.
 
-Cancel from the same panel before delivery.
+## Console
+
+Scheduled items appear in room context; no separate admin page required.
+
+## API
+
+```http
+POST /rooms/:roomId/scheduled-messages
+GET  /rooms/:roomId/scheduled-messages
+DELETE /rooms/:roomId/scheduled-messages/:id
+```
 
 ## SDK
 
@@ -26,4 +37,7 @@ await client.scheduleMessage(roomId, {
 await client.cancelScheduledMessage(roomId, scheduledId);
 ```
 
-Pairs with [ephemeral messages](/docs/guides/ephemeral-messages) retention policies.
+## Related
+
+- [Ephemeral messages](/docs/guides/ephemeral-messages)
+- [Room firmware](/docs/features/room-firmware)

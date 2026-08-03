@@ -9,20 +9,37 @@ Every attachment upload passes through tenant **size limits**, optional **ClamAV
 
 ## Console
 
-**Settings → Media** — max file size, allowed MIME types, scan mode.
+**Settings → Media** (`/settings/media`)
+
+| Setting | Purpose |
+|---------|---------|
+| Max file size | Reject oversized uploads early |
+| Allowed MIME types | Block unexpected content types |
+| Scan mode | `off`, `builtin`, `clamav` |
 
 ## Behaviour
 
-1. `POST /upload` → R2.
-2. Async scan/thumbnail job.
-3. Infected files blocked on send; clean files get inline thumbnail URLs.
+1. `POST /upload` → R2 object store.
+2. Async scan + thumbnail job queued.
+3. Infected files blocked on send; clean files get inline thumbnail URLs in messages.
 
 ## Built-in safety
 
-**EICAR** test files are blocked even without ClamAV.
+**EICAR** test files are blocked even without ClamAV (`builtin` mode).
+
+## Environment
+
+| Variable | Purpose |
+|----------|---------|
+| `MEDIA_PIPELINE_ENABLED` | Master toggle |
+| `CLAMAV_HTTP_URL` | Self-hosted ClamAV HTTP wrapper |
+| `MEDIA_MAX_BYTES` | Default max upload size |
 
 ## Optional ClamAV
 
 Self-host HTTP ClamAV wrapper — see [Optional integrations](/docs/guides/ecosystem/optional-integrations#clamav-media-virus-scan).
 
-Pairs with [visual moderation](/docs/features/fluxystream) for image safety in stream.
+## Related
+
+- [Visual moderation](/docs/features/moderation-console)
+- [FluxyStream](/docs/features/fluxystream)

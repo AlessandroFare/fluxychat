@@ -9,15 +9,33 @@ Rooms with EU members or tenant policy requiring GDPR flows show a **consent ban
 
 ## Console
 
-**Settings → Consent** — tenant defaults, DPA text references, export consent log.
+**Settings → Consent** (`/settings/consent`)
+
+- Tenant default: require consent for all rooms or EU-flagged rooms only.
+- DPA version string and link URL shown in banner.
+- **Export consent log** (CSV/JSON) for audits.
 
 ## In chat
 
-`EuConsentBanner` appears until the user acknowledges. No tracking beyond consent timestamp + version.
+`EuConsentBanner` appears until the user acknowledges. Stored fields: user ID, consent version, timestamp — no extra tracking.
+
+## API
+
+```http
+GET  /consent/settings
+PUT  /consent/settings
+POST /rooms/:roomId/consent/ack
+GET  /consent/audit?from=&to=
+```
 
 ## Pairs with
 
-- [Data residency](/docs/guides/enterprise/dlp-audit-export) (region pinning)
-- [Ephemeral messages](/docs/guides/ephemeral-messages) (retention minimization)
+- [Data residency](/docs/guides/enterprise/dlp-audit-export) — region pinning (`/settings/residency`)
+- [Ephemeral messages](/docs/guides/ephemeral-messages) — retention minimization
 
-Not legal advice — configure text with your counsel.
+Not legal advice — configure banner text and DPA links with your counsel.
+
+## Related
+
+- [GDPR compliance](/docs/learn/gdpr-compliance)
+- [Optional integrations](/docs/guides/ecosystem/optional-integrations)

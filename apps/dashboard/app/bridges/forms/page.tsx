@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Copy, Loader2, MessageSquareShare, Send } from "lucide-react";
-import { ConsoleShell } from "../components/console-shell";
-import { ConsolePageHeader } from "../components/console-page-header";
-import { ConsoleFeedback } from "../components/console-feedback";
-import { RoomPicker } from "../components/room-picker";
-import { Button, Input, Panel, Section } from "../components/ui";
+import { ConsoleShell } from "../../components/console-shell";
+import { ConsolePageHeader } from "../../components/console-page-header";
+import { ConsoleFeedback } from "../../components/console-feedback";
+import { RoomPicker } from "../../components/room-picker";
+import { Button, Input, Panel, Section } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
-import { useDashboardSession } from "../components/dashboard-session";
+import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
 import { messageFromUnknown } from "@/lib/error-message";
 import {
@@ -124,7 +124,7 @@ export default function ChannelFormsPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">Room</label>
-                <RoomPicker value={roomId} onChange={setRoomId} />
+                <RoomPicker value={roomId} onChange={setRoomId} token={token} />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">Recipient E.164</label>

@@ -1,20 +1,23 @@
 ---
-title: Usage & cost dashboard
-description: Message volume, MAU, storage, and estimated cost transparency for tenants.
+title: Tenant usage & cost dashboard
+description: Monthly message/agent/webhook usage with rough USD cost estimate for capacity planning.
 ---
 
-# Usage & cost dashboard
+# Tenant usage & cost dashboard
 
-**Settings → Usage** aggregates monthly metrics: messages sent, agent invocations, attachment storage, active users — with optional **estimated cost** from configurable unit rates.
+See **monthly usage**, plan limits, storage totals, and a **rough cost estimate** for your project — useful for billing conversations and capacity planning (not an invoice).
 
-## Metrics
+## Console
 
-| Metric | Source |
-|--------|--------|
-| Messages | D1 `messages` + usage counters |
-| Agent invokes | `agent_runs` |
-| Storage | R2 attachment sizes |
-| MAU | Distinct `user_id` per month |
+**Settings → Usage** (`/settings/usage`)
+
+Displays:
+
+- **Plan** — name, billing status, monthly limits (messages, agent invokes, webhook deliveries).
+- **This month** — messages created, agent invokes, webhook deliveries.
+- **Totals** — all-time messages, rooms, MAU, attachment storage (GB).
+- **Ops (30d)** — breakdown of worker operations.
+- **Cost estimate** — configurable rates × usage + platform base (USD, disclaimer shown).
 
 ## API
 
@@ -22,10 +25,21 @@ description: Message volume, MAU, storage, and estimated cost transparency for t
 GET /admin/tenant-usage
 ```
 
-Admin JWT required.
+Response shape: `usage.plan`, `usage.monthlyUsage`, `usage.totals`, `usage.costEstimate`.
 
-## Cost estimates
+## Environment
 
-Display-only — rates are configured by your platform operator (`USAGE_COST_*` env). Use for internal chargeback, not invoicing unless paired with Stripe billing.
+| Variable | Purpose |
+|----------|---------|
+| `USAGE_COST_ENABLED` | Enable cost estimate block |
+| `USAGE_COST_PER_1K_MESSAGES_USD` | Rate for message volume |
+| `USAGE_COST_PER_AGENT_INVOKE_USD` | Rate per agent run |
+| `USAGE_COST_PER_GB_STORAGE_USD` | Storage monthly rate |
+| `USAGE_COST_PLATFORM_BASE_USD` | Fixed platform fee in estimate |
 
-See [Billing overage policy](/docs/reference/billing-overage-policy).
+Rates are **estimates only** — configure to match your internal unit economics.
+
+## Related
+
+- [Billing overage policy](/docs/reference/billing-overage-policy)
+- [Optional integrations](/docs/guides/ecosystem/optional-integrations)

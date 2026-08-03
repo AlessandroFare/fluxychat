@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, type LucideIcon } from "lucide-react";
 import { resolveConsoleNavContext } from "@/lib/console-command-items";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
@@ -10,10 +10,12 @@ export function ConsolePageHeader({
   title,
   description,
   actions,
+  icon: Icon,
 }: {
   title?: string;
   description?: React.ReactNode;
   actions?: React.ReactNode;
+  icon?: LucideIcon;
 }) {
   const pathname = usePathname();
   const navContext = resolveConsoleNavContext(pathname);
@@ -52,7 +54,10 @@ export function ConsolePageHeader({
       </ol>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{pageTitle}</h1>
+          <h1 className="font-heading flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            {Icon ? <Icon className="h-7 w-7 shrink-0 text-muted-foreground" aria-hidden /> : null}
+            {pageTitle}
+          </h1>
           {description ? (
             <div className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{description}</div>
           ) : null}

@@ -26,8 +26,8 @@ export function captureElementFrame(
   element: HTMLVideoElement | HTMLCanvasElement,
   options: CaptureFrameOptions = {},
 ): string | null {
-  const width = options.width ?? (element instanceof HTMLVideoElement ? element.videoWidth : element.width) || 640;
-  const height = options.height ?? (element instanceof HTMLVideoElement ? element.videoHeight : element.height) || 360;
+  const width = (options.width ?? (element instanceof HTMLVideoElement ? element.videoWidth : element.width)) || 640;
+  const height = (options.height ?? (element instanceof HTMLVideoElement ? element.videoHeight : element.height)) || 360;
   if (width <= 0 || height <= 0) return null;
 
   const canvas = document.createElement("canvas");

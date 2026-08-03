@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Coins, Gavel, Loader2, Plus } from "lucide-react";
-import { ConsoleShell } from "../app/components/console-shell";
-import { ConsolePageHeader } from "../app/components/console-page-header";
-import { ConsoleFeedback } from "../app/components/console-feedback";
-import { Button, Input, Panel, Section } from "../app/components/ui";
+import { ConsoleShell } from "../components/console-shell";
+import { ConsolePageHeader } from "../components/console-page-header";
+import { ConsoleFeedback } from "../components/console-feedback";
+import { Button, Input, Panel, Section } from "../components/ui";
 import { Badge } from "~/components/ui/badge";
-import { useDashboardSession } from "../app/components/dashboard-session";
+import { useDashboardSession } from "../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
 import { messageFromUnknown } from "@/lib/error-message";
 import {

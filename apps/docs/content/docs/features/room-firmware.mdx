@@ -9,7 +9,11 @@ description: Per-room hooks that intercept message.create before fan-out — PII
 
 ## Console
 
-**Settings → Firmware** — enable modules per room:
+**Settings → Firmware** (`/settings/firmware`)
+
+1. Select a **room**.
+2. Enable modules and configure JSON config per module.
+3. Save — hooks apply on the next message in that room.
 
 | Module | Effect |
 |--------|--------|
@@ -19,9 +23,23 @@ description: Per-room hooks that intercept message.create before fan-out — PII
 
 Rejected messages are audited in `room_firmware_audit`.
 
+## API
+
+```http
+GET  /rooms/:roomId/firmware
+PUT  /rooms/:roomId/firmware
+GET  /rooms/:roomId/firmware/audit?limit=
+```
+
 ## Behaviour
 
 - **Fail-open** on hook errors (message delivers; error logged).
 - Hooks run on REST send and Room DO WebSocket path.
+- Per-room config stored in D1 (`room_firmware`).
 
 Use for compliance rooms, negotiation term caps, or custom moderation without forking the Worker.
+
+## Related
+
+- [Message middleware](/docs/reference/message-middleware)
+- [DLP settings](/docs/guides/security)
