@@ -21,6 +21,8 @@ const isClerkPublicRoute = createRouteMatcher([
   "/api/webhooks/clerk(.*)",
   /** Worker JWT in Authorization header — not Clerk session cookies */
   "/api/fluxy/search-messages(.*)",
+  "/api/fluxy/search-messages-semantic(.*)",
+  "/api/fluxy/search-settings(.*)",
   "/api/fluxy/config(.*)",
   /** Worker JWT in Authorization — not Clerk session cookies */
   "/api/gdpr(.*)",

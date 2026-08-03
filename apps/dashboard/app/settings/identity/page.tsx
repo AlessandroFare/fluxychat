@@ -14,14 +14,20 @@ import { formatDateTime } from "@/lib/format-datetime";
 import {
   createScimToken,
   deleteScimToken,
+  deletePasskeyCredential,
   fetchSamlMetadata,
+  finishPasskeyRegistration,
   getSamlConfig,
+  listPasskeyCredentials,
   listScimTokens,
   saveSamlConfig,
   scimGroupsEndpoint,
   scimUsersEndpoint,
+  startPasskeyRegistration,
+  type PasskeyCredentialRow,
   type ScimTokenRow,
 } from "@/lib/identity-client";
+import { startRegistration } from "@simplewebauthn/browser";
 
 export default function IdentitySettingsPage() {
   const { adminJwt, activeProject } = useDashboardSession();
@@ -46,6 +52,9 @@ export default function IdentitySettingsPage() {
   const [createdToken, setCreatedToken] = useState<string | null>(null);
   const [creatingToken, setCreatingToken] = useState(false);
 
+  const [passkeys, setPasskeys] = useState<PasskeyCredentialRow[]>([]);
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
+
   const projectId = activeProject?.id ?? "";
   const scimUsersUrl = useMemo(() => (projectId ? scimUsersEndpoint(projectId) : ""), [projectId]);
   const scimGroupsUrl = useMemo(() => (projectId ? scimGroupsEndpoint(projectId) : ""), [projectId]);
@@ -59,9 +68,10 @@ export default function IdentitySettingsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [saml, scim] = await Promise.all([
+      const [saml, scim, passkeyList] = await Promise.all([
         getSamlConfig(token),
         listScimTokens(token),
+        listPasskeyCredentials(token).catch(() => ({ credentials: [] as PasskeyCredentialRow[] })),
       ]);
       setSamlConfigured(saml.configured);
       if (saml.configured) {
@@ -75,6 +85,7 @@ export default function IdentitySettingsPage() {
         setSpEntityId(`fluxychat-${projectId}`);
       }
       setScimTokens(scim.tokens ?? []);
+      setPasskeys(passkeyList.credentials ?? []);
     } catch (err) {
       setError(messageFromUnknown(err, "Failed to load identity settings"));
     } finally {
@@ -157,6 +168,36 @@ export default function IdentitySettingsPage() {
       await loadAll();
     } catch (err) {
       setError(messageFromUnknown(err, "Failed to revoke SCIM token"));
+    }
+  }
+
+  async function handleRegisterPasskey() {
+    if (!token) return;
+    setPasskeyBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const options = await startPasskeyRegistration(token);
+      const attestation = await startRegistration({ optionsJSON: options });
+      await finishPasskeyRegistration(token, attestation);
+      setNotice("Passkey registered for this admin user.");
+      await loadAll();
+    } catch (err) {
+      setError(messageFromUnknown(err, "Passkey registration failed"));
+    } finally {
+      setPasskeyBusy(false);
+    }
+  }
+
+  async function handleDeletePasskey(id: number) {
+    if (!token || !confirm("Remove this passkey? You will need another sign-in method.")) return;
+    setError(null);
+    try {
+      await deletePasskeyCredential(token, id);
+      setNotice("Passkey removed.");
+      await loadAll();
+    } catch (err) {
+      setError(messageFromUnknown(err, "Failed to remove passkey"));
     }
   }
 
@@ -327,6 +368,44 @@ export default function IdentitySettingsPage() {
                     </div>
                     <Button size="sm" variant="ghost" className="text-red-700" onClick={() => void handleDeleteScimToken(row.id)}>
                       <Trash2 className="mr-1 h-3 w-3" /> Revoke
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+
+          <Section title="Passkeys (WebAuthn)">
+            <p className="mb-4 text-sm text-muted-foreground">
+              Register a passkey for the current admin JWT user. Sign-in with passkey uses{" "}
+              <code className="rounded bg-muted px-1 text-xs">POST /webauthn/login/*</code> and your project API key.
+              Set <code className="text-xs">WEBAUTHN_RP_ID</code> and <code className="text-xs">WEBAUTHN_ORIGIN</code> on the Worker for production.
+            </p>
+            <Button onClick={() => void handleRegisterPasskey()} disabled={passkeyBusy}>
+              {passkeyBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Add passkey
+            </Button>
+            {passkeys.length === 0 ? (
+              <p className="mt-4 text-sm text-muted-foreground">No passkeys registered for this user.</p>
+            ) : (
+              <ul className="mt-4 divide-y rounded-lg border border-black/[0.06] bg-white/90">
+                {passkeys.map((row) => (
+                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                    <div>
+                      <p className="font-medium">{row.deviceType || "Passkey"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Added {formatDateTime(row.createdAt)}
+                        {row.lastUsedAt ? ` · last used ${formatDateTime(row.lastUsedAt)}` : ""}
+                        {row.backedUp ? " · synced" : ""}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-red-700"
+                      onClick={() => void handleDeletePasskey(row.id)}
+                    >
+                      <Trash2 className="mr-1 h-3 w-3" /> Remove
                     </Button>
                   </li>
                 ))}

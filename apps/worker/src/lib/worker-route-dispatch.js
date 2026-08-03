@@ -6,6 +6,7 @@
 import { dispatchStripeWebhookRoutes } from "../routes/billing-stripe-http.js";
 import { dispatchGdprRoutes } from "../routes/gdpr-http.js";
 import { dispatchBillingRoutes } from "../routes/billing-http.js";
+import { dispatchTenantUsageRoutes } from "../routes/tenant-usage-http.js";
 import { dispatchMessagesAgentsRoutes } from "../routes/messages-agents-http.js";
 import { dispatchRealtimeStatsRoutes } from "../routes/realtime-stats-http.js";
 import { dispatchReportsWebhooksRoutes } from "../routes/reports-webhooks-http.js";
@@ -127,6 +128,27 @@ import { dispatchMcpAppsRoutes } from "../routes/mcp-apps-http.js";
 import { dispatchCrmRoutes } from "../routes/crm-http.js";
 import { dispatchVoiceAiRoutes } from "../routes/voice-ai-http.js";
 import { dispatchCrossChannelRoutes } from "../routes/cross-channel-http.js";
+import { dispatchRoomVoiceStageRoutes } from "../routes/room-voice-stage-http.js";
+import { dispatchRoomMessageRetentionRoutes } from "../routes/room-message-retention-http.js";
+import { dispatchRoomTranslationSettingsRoutes } from "../routes/room-translation-settings-http.js";
+import { dispatchSupportRoutingRoutes } from "../routes/support-routing-http.js";
+import { dispatchA2ARoutes } from "../routes/a2a-http.js";
+import { dispatchCrossOrgRoutes } from "../routes/cross-org-http.js";
+import { dispatchAuditChainRoutes } from "../routes/audit-chain-http.js";
+import { dispatchAgentEvalRoutes } from "../routes/agent-eval-http.js";
+import { dispatchAgentDebateRoutes } from "../routes/agent-debate-http.js";
+import { dispatchAmbientAgentsRoutes } from "../routes/ambient-agents-http.js";
+import { dispatchDataResidencyRoutes } from "../routes/data-residency-http.js";
+import { dispatchConsentDpaRoutes } from "../routes/consent-dpa-http.js";
+import { dispatchChannelFormsRoutes } from "../routes/channel-forms-http.js";
+import { dispatchMergeConflictsRoutes } from "../routes/merge-conflicts-http.js";
+import { dispatchRehearsalRoomsRoutes } from "../routes/rehearsal-rooms-http.js";
+import { dispatchCartographyRoutes } from "../routes/cartography-http.js";
+import { dispatchMediaPipelineRoutes } from "../routes/media-pipeline-http.js";
+import { dispatchTruthMarketRoutes } from "../routes/truth-market-http.js";
+import { dispatchRoomEmpathyRoutes } from "../routes/room-empathy-http.js";
+import { dispatchRoomFirmwareRoutes } from "../routes/room-firmware-http.js";
+import { dispatchVisualModerationRoutes } from "../routes/visual-moderation-http.js";
 
 /** @type {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} */
 export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
@@ -156,6 +178,8 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchAiGovernanceRoutes,
   dispatchKbConnectorRoutes,
   dispatchAiStreamRoutes,
+  dispatchA2ARoutes,
+  dispatchCrossOrgRoutes,
   dispatchMcpAppsRoutes,
   dispatchCrmRoutes,
   dispatchVoiceAiRoutes,
@@ -179,6 +203,7 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchWhiteLabelRoutes,
   dispatchRateLimitDashboardRoutes,
   dispatchCommandRoutes,
+  dispatchTenantUsageRoutes,
   dispatchTemplatesRoutes,
   dispatchOtelRoutes,
   dispatchPresenceRoutes,
@@ -188,6 +213,20 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchIpWhitelistRoutes,
   dispatchCustomRetentionRoutes,
   dispatchAuditExportRoutes,
+  dispatchAuditChainRoutes,
+  dispatchDataResidencyRoutes,
+  dispatchConsentDpaRoutes,
+  dispatchChannelFormsRoutes,
+  dispatchMergeConflictsRoutes,
+  dispatchRehearsalRoomsRoutes,
+  dispatchCartographyRoutes,
+  dispatchMediaPipelineRoutes,
+  dispatchTruthMarketRoutes,
+  dispatchRoomEmpathyRoutes,
+  dispatchRoomFirmwareRoutes,
+  dispatchAgentEvalRoutes,
+  dispatchAgentDebateRoutes,
+  dispatchAmbientAgentsRoutes,
   dispatchEdiscoveryRoutes,
   dispatchMessageImportRoutes,
   dispatchDlpIntegrationRoutes,
@@ -233,6 +272,7 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchAiActionsRoutes,
   dispatchKnowledgeGraphRoutes,
   dispatchAiModerationRoutes,
+  dispatchVisualModerationRoutes,
   dispatchAgentTaskBusRoutes,
   dispatchDigitalTwinRoutes,
   dispatchFluxyGameRoutes,
@@ -249,6 +289,10 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
 
 /** @type {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} */
 export const WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY = [
+  dispatchRoomMessageRetentionRoutes,
+  dispatchRoomVoiceStageRoutes,
+  dispatchRoomTranslationSettingsRoutes,
+  dispatchSupportRoutingRoutes,
   dispatchRoomsMutationsRoutes,
   dispatchAdminProjectsRoutes,
   dispatchIntegrationsSentRoutes,
@@ -258,7 +302,7 @@ export const WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY = [
   dispatchBridgeWebhookRoutes,
 ];
 
-const PRIVACY_BILLING_DISPATCHERS = [dispatchGdprRoutes, dispatchBillingRoutes];
+const PRIVACY_BILLING_DISPATCHERS = [dispatchGdprRoutes, dispatchBillingRoutes, dispatchTenantUsageRoutes];
 
 export const WORKER_ROUTE_DISPATCHER_COUNT =
   WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY.length +

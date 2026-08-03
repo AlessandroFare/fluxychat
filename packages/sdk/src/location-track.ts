@@ -1,8 +1,9 @@
 import type { LocationUpdateOutbound } from "@fluxy-chat/protocol";
 import type { FluxyChatClient } from "./index";
+import { applyLocationPrivacy, type LocationPrivacyOptions } from "./location-privacy";
 import { FluxyChatRoomConnection, type FluxyRoomConnectionStatus } from "./room-connection";
 
-export interface LocationTrackOptions {
+export interface LocationTrackOptions extends LocationPrivacyOptions {
   trackId?: string;
   minimumIntervalMs?: number;
   enableHighAccuracy?: boolean;
@@ -58,15 +59,31 @@ export function locationTrack(
     }
 
     const { coords } = position;
+    const sanitized = applyLocationPrivacy(
+      {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy,
+        altitude: coords.altitude,
+        heading: coords.heading,
+        speed: coords.speed,
+      },
+      {
+        precisionMeters: options.precisionMeters,
+        maxAccuracyMeters: options.maxAccuracyMeters,
+      },
+    );
+    if (!sanitized) return;
+
     const payload: LocationUpdateOutbound = {
       type: "location_update",
       trackId,
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-      accuracy: coords.accuracy,
-      altitude: coords.altitude,
-      heading: coords.heading,
-      speed: coords.speed,
+      latitude: sanitized.latitude,
+      longitude: sanitized.longitude,
+      accuracy: sanitized.accuracy,
+      altitude: sanitized.altitude ?? undefined,
+      heading: sanitized.heading ?? undefined,
+      speed: sanitized.speed ?? undefined,
       timestamp: new Date(position.timestamp).toISOString(),
     };
     try {

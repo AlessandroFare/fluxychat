@@ -1,0 +1,26 @@
+---
+title: Passkeys (WebAuthn)
+description: Passwordless sign-in for the operator console with platform authenticators.
+---
+
+# Passkeys (WebAuthn)
+
+Register **passkeys** for your operator account — sign in with Face ID, Touch ID, or a security key instead of pasting JWTs.
+
+## Console
+
+**Settings → Identity** → **Register passkey** → follow browser prompt.
+
+List and remove credentials from the same page.
+
+## Flow
+
+1. `POST /webauthn/register/options` → browser credential creation.
+2. `POST /webauthn/register/verify` → store in D1.
+3. Login: `POST /webauthn/login/options` → `POST /webauthn/login/verify` → member JWT.
+
+## Self-host
+
+Your operator must configure Worker `WEBAUTHN_RP_ID` and `WEBAUTHN_ORIGIN` to match the dashboard hostname. See your platform admin or [optional integrations](/docs/guides/ecosystem/optional-integrations) for hosted setups.
+
+SSO/SAML and SCIM live on the same **Identity** page.

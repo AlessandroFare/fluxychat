@@ -395,3 +395,39 @@ export async function pushMetricToQueue(env, { projectId, metricName, value, buc
     await enqueueExport(env, { configId: cfg.id, projectId, payloadType: "metric", payload });
   }
 }
+
+function encodeBasicAuth(publicKey, secretKey) {
+  const raw = `${String(publicKey).trim()}:${String(secretKey).trim()}`;
+  if (typeof btoa === "function") return btoa(raw);
+  return Buffer.from(raw, "utf8").toString("base64");
+}
+
+/**
+ * Build OTel export config fields for Langfuse OSS or Cloud OTLP ingest.
+ * @see https://langfuse.com/docs/integrations/opentelemetry
+ */
+export function buildLangfuseOtelExportInput({
+  host = "https://cloud.langfuse.com",
+  publicKey,
+  secretKey,
+  name = "Langfuse OTLP",
+}) {
+  if (!publicKey?.trim() || !secretKey?.trim()) {
+    return { error: "publicKey and secretKey are required" };
+  }
+  const base = String(host).replace(/\/$/, "");
+  return {
+    name,
+    endpointUrl: `${base}/api/public/otel/v1/traces`,
+    exportType: "traces",
+    authHeader: `Basic ${encodeBasicAuth(publicKey, secretKey)}`,
+    batchSize: 100,
+    flushIntervalSeconds: 60,
+  };
+}
+
+export async function createLangfuseOtelExportConfig(env, { projectId, host, publicKey, secretKey, name }) {
+  const input = buildLangfuseOtelExportInput({ host, publicKey, secretKey, name });
+  if (input.error) return input;
+  return createExportConfig(env, { projectId, ...input });
+}

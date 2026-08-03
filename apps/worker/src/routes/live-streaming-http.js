@@ -1,4 +1,17 @@
 import * as Live from "../lib/live-streaming.js";
+import {
+  mapProductRow,
+  recordCheckoutClick,
+  showLiveProduct,
+  upsertLiveProduct,
+} from "../lib/live-stream-commerce.js";
+import {
+  getEventReplayBundle,
+  getPrimaryEventReplay,
+  listEventReplays,
+  reconcileEventAngleReplays,
+  registerManualReplay,
+} from "../lib/live-stream-replay.js";
 import { createLiveInput, deleteLiveInput } from "../lib/cloudflare-stream.js";
 import {
   requireApiProjectMember,
@@ -98,6 +111,31 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
   if (path.match(/^\/api\/live\/events\/[^/]+\/rules$/) && request.method === "GET") {
     const eventId = path.split("/")[4];
     const result = await Live.getChatRules(env, { eventId });
+    return json(result);
+  }
+
+  if (path.match(/^\/api\/live\/events\/[^/]+\/moderate-frame$/) && request.method === "POST") {
+    const eventId = path.split("/")[4];
+    const event = await Live.getEvent(env, { eventId, projectId });
+    if (!event) return json({ error: "not_found" }, 404);
+    const body = withAuthProjectId(await request.json().catch(() => ({})), projectId);
+    if (!body.imageBase64 || !String(body.imageBase64).trim()) {
+      return json({ error: "imageBase64 required" }, { status: 400 });
+    }
+    const { analyzeStreamFrame } = await import("../lib/visual-moderation.js");
+    const result = await analyzeStreamFrame(env, {
+      projectId,
+      roomId: event.roomId || body.roomId,
+      userId: auth.userId,
+      eventId,
+      frameIndex: body.frameIndex != null ? Number(body.frameIndex) : undefined,
+      imageBase64: String(body.imageBase64),
+      messageId: body.messageId != null ? Number(body.messageId) : undefined,
+    });
+    if (!result.ok && result.error === "visual_moderation_disabled") {
+      return json(result, { status: 503 });
+    }
+    if (!result.ok) return json(result, { status: 400 });
     return json(result);
   }
 
@@ -220,6 +258,8 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
     return json((rows.results || []).map((r) => ({
       id: r.id, eventId: r.event_id, projectId: r.project_id,
       label: r.label, streamUrl: r.stream_url, sortOrder: r.sort_order, enabled: r.enabled === 1,
+      liveInputUid: r.live_input_uid ?? undefined,
+      playbackHls: r.playback_hls ?? undefined,
     })));
   }
 
@@ -228,10 +268,37 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
     const body = withAuthProjectId(await request.json(), projectId);
     const id = `ang_${crypto.randomUUID().slice(0, 12)}`;
     const now = new Date().toISOString();
+    let liveInputUid = body.liveInputUid ? String(body.liveInputUid) : null;
+    let playbackHls = body.playbackHls ? String(body.playbackHls) : null;
+    if (body.provisionCloudflare && !liveInputUid) {
+      try {
+        const eventRow = await Live.getEvent(env, { eventId, projectId });
+        const input = await createLiveInput(env, {
+          eventId,
+          projectId,
+          title: `${eventRow?.title || "Stream"} — ${body.label || "Angle"}`,
+        });
+        liveInputUid = input.uid;
+        playbackHls = input.playbackHls;
+      } catch {
+        return json({ error: "cloudflare_angle_provision_failed" }, { status: 503 });
+      }
+    }
     await env.DB.prepare(
-      "INSERT INTO live_stream_angles (id, event_id, project_id, label, stream_url, sort_order, enabled, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(id, eventId, projectId, body.label || "Angle", body.streamUrl || "", body.sortOrder || 0, 1, now).run();
-    return json({ id });
+      "INSERT INTO live_stream_angles (id, event_id, project_id, label, stream_url, sort_order, enabled, live_input_uid, playback_hls, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(
+      id,
+      eventId,
+      projectId,
+      body.label || "Angle",
+      body.streamUrl || playbackHls || "",
+      body.sortOrder || 0,
+      1,
+      liveInputUid,
+      playbackHls,
+      now,
+    ).run();
+    return json({ id, liveInputUid, playbackHls });
   }
 
   // --- Highlights ---
@@ -264,23 +331,134 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
     const rows = await env.DB.prepare(
       "SELECT * FROM live_stream_products WHERE event_id = ? AND project_id = ? ORDER BY created_at DESC"
     ).bind(eventId, projectId).all();
-    return json((rows.results || []).map((r) => ({
-      id: r.id, eventId: r.event_id, projectId: r.project_id,
-      name: r.name, description: r.description, imageUrl: r.image_url,
-      checkoutUrl: r.checkout_url, priceAmount: r.price_amount, currency: r.currency,
-      active: r.active === 1, shownAt: r.shown_at, createdAt: r.created_at,
-    })));
+    return json((rows.results || []).map((r) => mapProductRow(r)));
   }
 
   if (path.match(/^\/api\/live\/events\/[^/]+\/products$/) && request.method === "POST") {
     const eventId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const id = `prod_${crypto.randomUUID().slice(0, 12)}`;
-    const now = new Date().toISOString();
-    await env.DB.prepare(
-      "INSERT INTO live_stream_products (id, event_id, project_id, name, description, image_url, checkout_url, price_amount, currency, active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(id, eventId, projectId, body.name || "Product", body.description || null, body.imageUrl || null, body.checkoutUrl || "", body.priceAmount || null, body.currency || "usd", 0, now).run();
-    return json({ id });
+    const result = await upsertLiveProduct(env, {
+      projectId,
+      eventId,
+      productId: body.id || body.productId,
+      name: body.name,
+      description: body.description,
+      imageUrl: body.imageUrl,
+      checkoutUrl: body.checkoutUrl,
+      stripePriceId: body.stripePriceId,
+      checkoutProvider: body.checkoutProvider,
+      priceAmount: body.priceAmount,
+      currency: body.currency,
+      inventoryQty: body.inventoryQty,
+      moq: body.moq,
+    });
+    if (!result.ok) {
+      const status = result.error === "event_not_found" ? 404 : result.error?.includes("url") ? 400 : 400;
+      return json({ error: result.error }, { status });
+    }
+    return json({ product: result.product });
+  }
+
+  const productShowMatch = path.match(/^\/api\/live\/events\/([^/]+)\/products\/([^/]+)\/show$/);
+  if (productShowMatch && request.method === "POST") {
+    const [, eventId, productId] = productShowMatch;
+    const result = await showLiveProduct(env, {
+      projectId,
+      eventId,
+      productId,
+      userId: auth.userId,
+    });
+    if (!result.ok) return json({ error: result.error }, { status: result.error === "product_not_found" ? 404 : 400 });
+    return json({ product: result.product });
+  }
+
+  const productCheckoutMatch = path.match(/^\/api\/live\/events\/([^/]+)\/products\/([^/]+)\/checkout-click$/);
+  if (productCheckoutMatch && request.method === "POST") {
+    const [, eventId, productId] = productCheckoutMatch;
+    const body = withAuthProjectId(await request.json().catch(() => ({})), projectId);
+    const result = await recordCheckoutClick(env, {
+      projectId,
+      eventId,
+      productId,
+      userId: auth.userId,
+      quantity: body.quantity,
+      successUrl: body.successUrl,
+      cancelUrl: body.cancelUrl,
+    });
+    if (!result.ok) {
+      const status = result.error === "product_not_found" ? 404
+        : result.error === "insufficient_inventory" || result.error === "below_moq" ? 409
+        : 400;
+      return json(result, { status });
+    }
+    return json(result);
+  }
+
+  const replaysMatch = path.match(/^\/api\/live\/events\/([^/]+)\/replays$/);
+  if (replaysMatch && request.method === "GET") {
+    const eventId = replaysMatch[1];
+    const replays = await listEventReplays(env, { projectId, eventId });
+    return json({ replays });
+  }
+
+  if (replaysMatch && request.method === "POST") {
+    const eventId = replaysMatch[1];
+    const body = withAuthProjectId(await request.json(), projectId);
+    const result = await registerManualReplay(env, {
+      projectId,
+      eventId,
+      userId: auth.userId,
+      label: body.label,
+      playbackHls: body.playbackHls,
+      playbackDash: body.playbackDash,
+      thumbnailUrl: body.thumbnailUrl,
+      durationSeconds: body.durationSeconds,
+      angleId: body.angleId,
+      offsetMs: body.offsetMs,
+      syncGroupId: body.syncGroupId,
+    });
+    if (!result.ok) return json({ error: result.error }, { status: result.error === "event_not_found" ? 404 : 400 });
+    return json(result);
+  }
+
+  const replayReconcileMatch = path.match(/^\/api\/live\/events\/([^/]+)\/replays\/reconcile$/);
+  if (replayReconcileMatch && request.method === "POST") {
+    const eventId = replayReconcileMatch[1];
+    try {
+      const result = await reconcileEventAngleReplays(env, { projectId, eventId, userId: auth.userId });
+      if (!result.ok) return json({ error: result.error }, { status: result.error === "event_not_found" ? 404 : 400 });
+      return json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return json({ error: message }, { status: message === "cloudflare_stream_not_configured" ? 503 : 502 });
+    }
+  }
+
+  const replayReconcileAnglesMatch = path.match(/^\/api\/live\/events\/([^/]+)\/replays\/reconcile-angles$/);
+  if (replayReconcileAnglesMatch && request.method === "POST") {
+    const eventId = replayReconcileAnglesMatch[1];
+    try {
+      const result = await reconcileEventAngleReplays(env, { projectId, eventId, userId: auth.userId });
+      if (!result.ok) return json({ error: result.error }, { status: 400 });
+      return json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return json({ error: message }, { status: message === "cloudflare_stream_not_configured" ? 503 : 502 });
+    }
+  }
+
+  const replayBundleMatch = path.match(/^\/api\/live\/events\/([^/]+)\/replay$/);
+  if (replayBundleMatch && request.method === "GET") {
+    const eventId = replayBundleMatch[1];
+    const bundle = await getEventReplayBundle(env, { projectId, eventId });
+    return json(bundle);
+  }
+
+  const replayPrimaryMatch = path.match(/^\/api\/live\/events\/([^/]+)\/replay\/primary$/);
+  if (replayPrimaryMatch && request.method === "GET") {
+    const eventId = replayPrimaryMatch[1];
+    const replay = await getPrimaryEventReplay(env, { projectId, eventId });
+    return json({ replay });
   }
 
   // --- Gifts / tips ---

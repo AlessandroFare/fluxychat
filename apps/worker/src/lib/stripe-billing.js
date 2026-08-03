@@ -224,6 +224,16 @@ export async function handleStripeWebhookPost(request, env, h) {
   });
 
   if (eventType === "checkout.session.completed") {
+    const metadata = body.data?.object?.metadata || {};
+    if (metadata.commerce_type === "live_stream" && metadata.click_id) {
+      const { finalizeLiveStreamStripeCheckout } = await import("./live-stream-stripe-checkout.js");
+      await finalizeLiveStreamStripeCheckout(env, {
+        clickId: metadata.click_id,
+        sessionId: body.data?.object?.id,
+        paymentStatus: "paid",
+      });
+    }
+
     const projectId = await resolveStripeProjectId(env, {
       projectId: body.data?.object?.client_reference_id,
       customerId: body.data?.object?.customer,

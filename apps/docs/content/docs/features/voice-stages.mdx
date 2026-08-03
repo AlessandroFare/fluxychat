@@ -1,0 +1,22 @@
+---
+title: Voice stages
+description: Discord Stages-style speaker and listener roles with active-speaker detection in voice rooms.
+---
+
+# Voice stages
+
+Split voice participants into **speakers** and **listeners**. Only speakers publish audio by default; listeners request to speak or are promoted by moderators.
+
+## In chat
+
+Open **Voice stage** panel in a room with voice enabled. Roles sync via Room DO presence (`speaker` | `listener`).
+
+## Active speaker
+
+Silero VAD highlights who is speaking — same pipeline as [voice AI](/docs/guides/voice-ai-pipeline).
+
+## API
+
+Stage state is carried on WebSocket presence events. REST helpers manage role changes for moderators.
+
+Ideal for AMAs, town halls, and large voice rooms without everyone unmuted.

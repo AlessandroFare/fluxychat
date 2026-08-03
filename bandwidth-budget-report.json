@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-08-02T18:04:48.698Z",
+  "botCount": 8,
+  "scenarios": {
+    "chatMessage": {
+      "key": "chatMessage",
+      "bytesPerBot": 151,
+      "fanOutBytesPerBot": 1208,
+      "fanOutMembers": 8
+    },
+    "gameTickInput": {
+      "key": "gameTickInput",
+      "bytesPerBot": 78,
+      "fanOutBytesPerBot": 624,
+      "fanOutMembers": 8
+    },
+    "presenceHeartbeat": {
+      "key": "presenceHeartbeat",
+      "bytesPerBot": 101,
+      "fanOutBytesPerBot": 808,
+      "fanOutMembers": 8
+    },
+    "npcInteract": {
+      "key": "npcInteract",
+      "bytesPerBot": 89,
+      "fanOutBytesPerBot": 356,
+      "fanOutMembers": 4
+    }
+  },
+  "totals": {
+    "bytesPerBotAllScenarios": 419,
+    "fanOutBytesPerBotAllScenarios": 2996
+  },
+  "checks": [
+    {
+      "key": "chatMessage",
+      "ok": true,
+      "bytesPerBot": 151,
+      "maxBytesPerBot": 420,
+      "fanOutBytesPerBot": 1208,
+      "maxFanOutBytesPerBot": 3360
+    },
+    {
+      "key": "gameTickInput",
+      "ok": true,
+      "bytesPerBot": 78,
+      "maxBytesPerBot": 512,
+      "fanOutBytesPerBot": 624,
+      "maxFanOutBytesPerBot": 4096
+    },
+    {
+      "key": "presenceHeartbeat",
+      "ok": true,
+      "bytesPerBot": 101,
+      "maxBytesPerBot": 180,
+      "fanOutBytesPerBot": 808,
+      "maxFanOutBytesPerBot": 1440
+    },
+    {
+      "key": "npcInteract",
+      "ok": true,
+      "bytesPerBot": 89,
+      "maxBytesPerBot": 640,
+      "fanOutBytesPerBot": 356,
+      "maxFanOutBytesPerBot": 1280
+    }
+  ],
+  "passed": true
+}

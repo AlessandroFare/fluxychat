@@ -7,7 +7,9 @@ import {
   BookOpen,
   BrainCircuit,
   BarChart3,
+  Clock,
   FileImage,
+  Gavel,
   Globe,
   Loader2,
   Paperclip,
@@ -29,6 +31,9 @@ import {
   buildDeepResearchPrompt,
   buildImageGenerationCaption,
   buildWebSearchPrompt,
+  buildAgentWorkspaceSteps,
+  isAgentWorkspaceLive,
+  isDebateSessionLive,
   createHuddle,
   getConnectionStatusLabel,
   isDegradedConnectionStatus,
@@ -40,12 +45,14 @@ import { mentionPrefixForAgent, normalizeAgentHandle } from "@/lib/assistant-roo
 import {
   normalizeAgentRun,
   type AgentRunDisplay,
+  type AgentToolCallDisplay,
 } from "@/lib/agent-run-display";
-import { toolCallsToThreadEvents } from "@/lib/agent-tool-thread";
+import { toolCallsToThreadEvents, toolThreadEventsToUiParts } from "@/lib/agent-tool-thread";
 import type { UseChatHistoryReplay, FluxyChatAttachment } from "@fluxy-chat/sdk";
 import { parseCardFromMessage, cardDisplayText } from "@fluxy-chat/sdk";
 import { InteractiveCardRenderer } from "@/components/chat/interactive-card-renderer";
 import { AgentToolThreadCard } from "@/app/components/agent-tool-thread-card";
+import { AgentUiRenderer } from "~/components/chat/agent-ui-renderer";
 import { ToolApprovalPanel } from "@/components/chat/tool-approval-panel";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
@@ -60,8 +67,15 @@ import {
   type AgentRoomTemplateSelection,
 } from "@/app/components/agent-room-template-picker";
 import { AgentRunStatus } from "@/app/components/agent-run-status";
+import { AgentWorkspacePanel } from "@/components/chat/agent-workspace-panel";
+import { DebateThreadPanel } from "@/components/chat/debate-thread-panel";
+import { VoiceStagePanel } from "@/components/voice/voice-stage-panel";
+import { useVoiceStageVad } from "@/lib/use-voice-stage-vad";
+import { findStageParticipant } from "@fluxy-chat/sdk";
 import { RoomOfflineNotifySettings } from "@/app/components/room-offline-notify-settings";
 import { ChatCatchUpBanner } from "@/app/components/chat-catch-up-banner";
+import { EuConsentBanner } from "@/app/components/eu-consent-banner";
+import { MergeConflictPanel } from "@/app/components/merge-conflict-panel";
 import { ChatPresenceStrip } from "@/app/components/chat-presence-strip";
 import { AgentCopilotConfirm } from "@/app/components/agent-copilot-confirm";
 import { ThreadSummary } from "@/app/components/thread-summary";
@@ -74,8 +88,17 @@ import { AgentHandoffBanner } from "@/app/components/agent-handoff-banner";
 import { LinkPreviewCard } from "~/components/ui/link-preview";
 import { PinnedMessagesBar } from "~/components/ui/pinned-messages";
 import { PollView, PollCreate } from "~/components/ui/poll";
+import { DecisionView, DecisionCreate, type DecisionData } from "~/components/ui/decision";
+import { ScheduleSend } from "~/components/ui/schedule-send";
+import {
+  CounterfactualCompare,
+  counterfactualRunFromPayload,
+} from "~/components/ui/counterfactual-compare";
+import { CounterfactualReplayPanel } from "~/components/ui/counterfactual-replay-panel";
+import { isSideEffectToolName } from "@/lib/counterfactual-utils";
 import { BreakoutPanel, useBreakouts } from "~/components/ui/breakout-panel";
 import { SlashCommandMenu } from "~/components/ui/slash-commands";
+import { listSlashCommands, type RoomCommand } from "@/lib/slash-commands-client";
 import { cn } from "@/lib/utils";
 
 // shadcn UI primitives
@@ -320,6 +343,8 @@ export function FluxyChat({
   const showWebSearch = variant === "full" || variant === "demo" || variant === "onboarding";
   const showImageGen = variant === "full" || variant === "demo" || variant === "onboarding";
   const showPollCreate = variant === "full" || variant === "demo" || variant === "onboarding";
+  const showDecisionCreate = variant === "full" || variant === "demo" || variant === "onboarding";
+  const showScheduleSend = variant === "full" || variant === "demo" || variant === "onboarding";
   const showRoomDraftSync = variant === "full";
   const showSuggestedPrompts = (variant === "demo" || variant === "onboarding") && suggestedPrompts && suggestedPrompts.length > 0;
   const showBreakouts = variant === "full";
@@ -356,6 +381,7 @@ export function FluxyChat({
   const [invokeError, setInvokeError] = useState<string | null>(null);
   const [latestRun, setLatestRun] = useState<AgentRunDisplay | null>(null);
   const [runPending, setRunPending] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(true);
   const [runFeedback, setRunFeedback] = useState<string | null>(null);
   const [skipHistoryOnConnect, setSkipHistoryOnConnect] = useState(false);
   const [templateSelection, setTemplateSelection] =
@@ -366,6 +392,18 @@ export function FluxyChat({
   // + menu open state
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const [pollCreateOpen, setPollCreateOpen] = useState(false);
+  const [decisionCreateOpen, setDecisionCreateOpen] = useState(false);
+  const [scheduleSendOpen, setScheduleSendOpen] = useState(false);
+  const [counterfactualTarget, setCounterfactualTarget] = useState<{
+    runId: string;
+    toolCall: AgentToolCallDisplay;
+  } | null>(null);
+  const [counterfactualCompare, setCounterfactualCompare] = useState<{
+    original: AgentRunDisplay;
+    alternative: AgentRunDisplay;
+    toolCallId: string;
+  } | null>(null);
+  const [decisionOverrides, setDecisionOverrides] = useState<Record<number, DecisionData>>({});
   const [reportedMessageIds, setReportedMessageIds] = useState<Set<number>>(() => new Set());
   const demoLastSendAtRef = useRef(0);
   const showDemoModeration = variant === "demo";
@@ -380,8 +418,10 @@ export function FluxyChat({
   const [branchFromMessageId, setBranchFromMessageId] = useState<number | null>(null);
   const [branchError, setBranchError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<"keyword" | "hybrid">("hybrid");
+  const [semanticSearchAvailable, setSemanticSearchAvailable] = useState<boolean | null>(null);
   const [searchResults, setSearchResults] = useState<Array<{
-    id: number; content: string; userId: string; createdAt: string; snippet: string;
+    id: number; content: string; userId: string; createdAt: string; snippet: string; score?: number;
   }>>([]);
   const [searching, setSearching] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -390,11 +430,43 @@ export function FluxyChat({
     return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
   }, []);
 
+  useEffect(() => {
+    const token = adminJwt.trim();
+    if (!token || variant !== "full") return;
+    const baseUrl = getPublicWorkerUrl();
+    void fetch(`${baseUrl}/search/settings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: { settings?: { available?: boolean; defaultMode?: string } } | null) => {
+        if (!json?.settings) {
+          setSemanticSearchAvailable(false);
+          setSearchMode("keyword");
+          return;
+        }
+        setSemanticSearchAvailable(json.settings.available ?? false);
+        if (json.settings.defaultMode === "keyword") setSearchMode("keyword");
+      })
+      .catch(() => {
+        setSemanticSearchAvailable(false);
+        setSearchMode("keyword");
+      });
+  }, [adminJwt, variant]);
+
+  useEffect(() => {
+    const token = adminJwt.trim() || memberJwt.trim();
+    if (!token) return;
+    void listSlashCommands(token)
+      .then((res) => setSlashCommands(res.commands ?? []))
+      .catch(() => {});
+  }, [adminJwt, memberJwt]);
+
   const pollSinceRef = useRef<string | null>(null);
   const runFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashCommands, setSlashCommands] = useState<RoomCommand[]>([]);
   const { user: clerkUser } = useClerkUser();
   const realtime = useFluxyChatOptional();
   const usesExplicitClient = clientProp !== undefined;
@@ -504,6 +576,17 @@ export function FluxyChat({
     [chatUserId],
   );
 
+  const handleAutoTranslated = useCallback(
+    (ev: { name: string; data: Record<string, unknown> }) => {
+      if (ev.name !== "message.auto_translated") return;
+      const messageId = ev.data.messageId;
+      const translatedText = ev.data.translatedText;
+      if (messageId == null || typeof translatedText !== "string" || !translatedText.trim()) return;
+      setTranslatedMessages((prev) => ({ ...prev, [String(messageId)]: translatedText }));
+    },
+    [],
+  );
+
   const {
     messages,
     sendMessage,
@@ -519,6 +602,13 @@ export function FluxyChat({
     toolThreadEvents,
     clearToolThread,
     lastAgentRun,
+    debateSteps,
+    debateSessionId,
+    voiceStage,
+    joinVoiceStage,
+    leaveVoiceStage,
+    promoteVoiceStageListener,
+    sendVoiceStageVad,
     historyLoaded,
     seenBy,
     loadHistory,
@@ -533,6 +623,7 @@ export function FluxyChat({
     subscriptionCount,
     reactions,
     sendReaction,
+    setTyping,
   } = useChat({
     roomId: trimmedRoomId,
     agentId,
@@ -542,6 +633,15 @@ export function FluxyChat({
     historyLimit: deepLinkHistoryLimit ?? 50,
     markReadLatest: false,
     presenceInfo,
+    onServerEvent: handleAutoTranslated,
+    onAnyEvent: (ev) => {
+      if (ev.type === "decision_updated" && ev.messageId != null && ev.decision) {
+        setDecisionOverrides((prev) => ({
+          ...prev,
+          [Number(ev.messageId)]: ev.decision as DecisionData,
+        }));
+      }
+    },
   });
 
   /** Guest JWT / API key can send over REST while WS is still connecting or on HTTP fallback. */
@@ -549,6 +649,21 @@ export function FluxyChat({
     connected ||
     connectionStatus === "connected" ||
     Boolean(fluxyClient?.isAuthenticated());
+
+  useEffect(() => {
+    if (!canSendMessages || !trimmedRoomId) return;
+    const text = draft.trim();
+    if (!text) {
+      setTyping(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setTyping(true, "composing", text);
+    }, 400);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [canSendMessages, draft, setTyping, trimmedRoomId]);
 
   const [reconnectTick, setReconnectTick] = useState(0);
   useEffect(() => {
@@ -770,7 +885,50 @@ export function FluxyChat({
     return [];
   }, [toolThreadEvents, latestRun]);
 
+  const displayToolUiParts = useMemo(
+    () => toolThreadEventsToUiParts(displayToolEvents),
+    [displayToolEvents],
+  );
+
   const isAgentBusy = agentTyping || streamingCount > 0 || runPending;
+
+  const workspaceSteps = useMemo(
+    () =>
+      buildAgentWorkspaceSteps(displayToolEvents, {
+        agentTyping,
+        runPending,
+        runStatus: latestRun?.status ?? null,
+        pendingToolType: pendingTool?.type ?? null,
+        agentName,
+      }),
+    [displayToolEvents, agentTyping, runPending, latestRun?.status, pendingTool?.type, agentName],
+  );
+
+  const workspaceLive = useMemo(
+    () => isAgentWorkspaceLive(workspaceSteps, { agentTyping, runPending }),
+    [workspaceSteps, agentTyping, runPending],
+  );
+
+  const showAgentWorkspace =
+    variant === "full" && (workspaceLive || workspaceSteps.length > 0);
+
+  const showDebateThread =
+    variant === "full" &&
+    (debateSteps.length > 0 || isDebateSessionLive(debateSteps));
+
+  const showVoiceStage =
+    variant === "full" && voiceStage != null && voiceStage.participants.length > 0;
+
+  const stageSelf = findStageParticipant(voiceStage, chatUserId ?? "");
+
+  useVoiceStageVad({
+    enabled: Boolean(stageSelf?.role === "speaker" && connected),
+    onScore: sendVoiceStageVad,
+  });
+
+  useEffect(() => {
+    if (isAgentBusy) setWorkspaceOpen(true);
+  }, [isAgentBusy]);
 
   // ─── Run feedback ───
 
@@ -811,6 +969,34 @@ export function FluxyChat({
       return null;
     }
   }, [adminJwt, agentId, trimmedRoomId]);
+
+  const showCounterfactualReplay =
+    variant === "full" && Boolean(agentId) && Boolean(fluxyClient?.isAuthenticated());
+
+  const handleCounterfactualReplay = useCallback(
+    async (modifiedParams: Record<string, unknown>, dryRun: boolean) => {
+      if (!fluxyClient || !trimmedRoomId || !counterfactualTarget) return;
+      const result = await fluxyClient.replayCounterfactual(trimmedRoomId, {
+        originalRunId: counterfactualTarget.runId,
+        toolCallId: counterfactualTarget.toolCall.id,
+        modifiedParams,
+        dryRun,
+        agentId,
+      });
+      setCounterfactualCompare({
+        original: counterfactualRunFromPayload(result.original),
+        alternative: counterfactualRunFromPayload(result.run),
+        toolCallId: counterfactualTarget.toolCall.id,
+      });
+      setCounterfactualTarget(null);
+      if (result.costWarning) {
+        setRunFeedback(result.costWarning);
+      } else {
+        showRunFeedback(counterfactualRunFromPayload(result.run));
+      }
+    },
+    [fluxyClient, trimmedRoomId, counterfactualTarget, agentId],
+  );
 
   useEffect(() => {
     if (!runPending || !adminJwt.trim()) return;
@@ -970,6 +1156,7 @@ export function FluxyChat({
     }
 
     function clearComposer() {
+      setTyping(false);
       setDraft("");
       setPendingAttachments([]);
       setPendingTool(null);
@@ -1090,6 +1277,13 @@ export function FluxyChat({
       .filter((p) => !p.uploading && !p.error)
       .map((p) => p.attachment);
     if ((!text && readyAttachments.length === 0 && !pendingTool) || !trimmedRoomId) return;
+
+    if (!templateSend && !pendingTool && text.startsWith("/clear")) {
+      setDraft("");
+      setShowSlashMenu(false);
+      setReplyToId(null);
+      return;
+    }
 
     const resolvedText =
       pendingTool?.type === "deep-research"
@@ -1234,15 +1428,37 @@ export function FluxyChat({
     try {
       const token = adminJwt.trim();
       const baseUrl = getPublicWorkerUrl();
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+      const useSemantic = searchMode === "hybrid" && semanticSearchAvailable !== false;
+
+      if (useSemantic) {
+        const semRes = await fetch(`${baseUrl}/search/messages/semantic`, {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: q.trim(),
+            roomId: trimmedRoomId,
+            limit: 20,
+            mode: "hybrid",
+          }),
+        });
+        if (semRes.ok) {
+          const json = await semRes.json();
+          setSearchResults(json.results ?? []);
+          return;
+        }
+        if (semRes.status !== 404) throw new Error(`search failed: ${semRes.status}`);
+      }
+
       const res = await fetch(`${baseUrl}/search/messages?q=${encodeURIComponent(q)}&roomId=${encodeURIComponent(trimmedRoomId)}&limit=20`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers,
       });
       if (!res.ok) throw new Error(`search failed: ${res.status}`);
       const json = await res.json();
       setSearchResults(json.results ?? []);
     } catch { setSearchResults([]); }
     finally { setSearching(false); }
-  }, [trimmedRoomId, adminJwt]);
+  }, [trimmedRoomId, adminJwt, searchMode, semanticSearchAvailable]);
 
   // ─── Render ───
 
@@ -1385,6 +1601,28 @@ export function FluxyChat({
               </button>
             )}
           </div>
+          {semanticSearchAvailable ? (
+            <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
+              <label className="inline-flex cursor-pointer items-center gap-1">
+                <input
+                  type="radio"
+                  name="room-search-mode"
+                  checked={searchMode === "hybrid"}
+                  onChange={() => setSearchMode("hybrid")}
+                />
+                Hybrid semantic
+              </label>
+              <label className="inline-flex cursor-pointer items-center gap-1">
+                <input
+                  type="radio"
+                  name="room-search-mode"
+                  checked={searchMode === "keyword"}
+                  onChange={() => setSearchMode("keyword")}
+                />
+                Keyword
+              </label>
+            </div>
+          ) : null}
           {searching ? (
             <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="size-3 animate-spin" /> Searching...
@@ -1406,7 +1644,16 @@ export function FluxyChat({
                   <span className="text-muted-foreground">
                     {new Date(r.createdAt).toLocaleString()}
                   </span>
-                  <div className="mt-0.5 leading-relaxed text-muted-foreground" dangerouslySetInnerHTML={{ __html: r.snippet }} />
+                  <div className="mt-0.5 leading-relaxed text-muted-foreground">
+                    {r.snippet ? (
+                      <span dangerouslySetInnerHTML={{ __html: r.snippet }} />
+                    ) : (
+                      r.content
+                    )}
+                    {typeof r.score === "number" ? (
+                      <span className="ml-1 text-brand">· {(r.score * 100).toFixed(0)}% match</span>
+                    ) : null}
+                  </div>
                 </button>
               ))}
             </div>
@@ -1426,7 +1673,69 @@ export function FluxyChat({
         </div>
       ) : null}
 
-      <AgentRunStatus run={latestRun} pending={runPending} />
+      <AgentRunStatus
+        run={latestRun}
+        pending={runPending}
+        compact={showAgentWorkspace && workspaceSteps.length > 0}
+        onTryAlternative={
+          showCounterfactualReplay && latestRun?.tool_calls?.length
+            ? (toolCall) => {
+                if (!latestRun?.id) return;
+                setCounterfactualCompare(null);
+                setCounterfactualTarget({ runId: latestRun.id, toolCall });
+              }
+            : undefined
+        }
+      />
+
+      {counterfactualTarget ? (
+        <CounterfactualReplayPanel
+          runId={counterfactualTarget.runId}
+          toolCall={counterfactualTarget.toolCall}
+          sideEffectHint={isSideEffectToolName(counterfactualTarget.toolCall.name)}
+          onCancel={() => setCounterfactualTarget(null)}
+          onReplay={handleCounterfactualReplay}
+        />
+      ) : null}
+
+      {counterfactualCompare ? (
+        <CounterfactualCompare
+          original={counterfactualCompare.original}
+          alternative={counterfactualCompare.alternative}
+          toolCallId={counterfactualCompare.toolCallId}
+          className="mb-2"
+        />
+      ) : null}
+
+      {showVoiceStage && voiceStage && chatUserId ? (
+        <VoiceStagePanel
+          stage={voiceStage}
+          currentUserId={chatUserId}
+          className="mb-1"
+          onJoin={(role) => joinVoiceStage(role, chatUserId)}
+          onLeave={leaveVoiceStage}
+          onPromote={promoteVoiceStageListener}
+        />
+      ) : null}
+
+      {showDebateThread ? (
+        <DebateThreadPanel
+          steps={debateSteps}
+          sessionId={debateSessionId}
+          className="mb-1"
+        />
+      ) : null}
+
+      {showAgentWorkspace ? (
+        <AgentWorkspacePanel
+          steps={workspaceSteps}
+          run={latestRun}
+          isLive={workspaceLive}
+          open={workspaceOpen}
+          onOpenChange={setWorkspaceOpen}
+          className="mb-1"
+        />
+      ) : null}
 
       {showHandoffBanner ? (
         <AgentHandoffBanner
@@ -1454,6 +1763,18 @@ export function FluxyChat({
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
           onMarkRead={sendReadReceipt}
+        />
+      ) : null}
+
+      {variant === "full" && (adminJwt.trim() || memberJwt.trim()) && trimmedRoomId ? (
+        <EuConsentBanner token={adminJwt.trim() || memberJwt.trim()} roomId={trimmedRoomId} />
+      ) : null}
+
+      {variant === "full" && adminJwt.trim() && trimmedRoomId ? (
+        <MergeConflictPanel
+          token={adminJwt.trim()}
+          roomId={trimmedRoomId}
+          onResolved={() => void loadHistory()}
         />
       ) : null}
 
@@ -1831,6 +2152,7 @@ export function FluxyChat({
                                         title={m.preview.title}
                                         description={m.preview.description}
                                         image={m.preview.imageUrl}
+                                        aiSummary={m.preview.aiSummary}
                                       />
                                     ) : null}
 
@@ -1864,10 +2186,39 @@ export function FluxyChat({
                                       />
                                     ) : null}
 
+                                    {/* Decision quorum */}
+                                    {(() => {
+                                      const d =
+                                        (m.id != null ? decisionOverrides[m.id as number] : undefined) ??
+                                        m.decision;
+                                      if (!d) return null;
+                                      return (
+                                        <DecisionView
+                                          decision={d as DecisionData}
+                                          currentUserId={localUserId}
+                                          onAck={async () => {
+                                            if (!fluxyClient || m.id == null) return;
+                                            const res = await fluxyClient.ackDecision(m.id as number);
+                                            if (res.decision) {
+                                              setDecisionOverrides((prev) => ({
+                                                ...prev,
+                                                [m.id as number]: res.decision as DecisionData,
+                                              }));
+                                            }
+                                          }}
+                                        />
+                                      );
+                                    })()}
+
                                     {/* Delivery status */}
                                     {m.deliveryStatus === "pending" ? (
                                       <div className={cn("mt-1 text-[10px]", isSelf ? "text-white/70" : "text-muted-foreground")}>
                                         Sending…
+                                      </div>
+                                    ) : null}
+                                    {m.deliveryConflict ? (
+                                      <div className={cn("mt-1 text-[10px] font-medium", isSelf ? "text-amber-200" : "text-amber-700")}>
+                                        Server version differs from your draft (conflict resolved)
                                       </div>
                                     ) : null}
                                     {m.deliveryStatus === "failed" ? (
@@ -1989,8 +2340,17 @@ export function FluxyChat({
                 <ToolApprovalPanel roomId={trimmedRoomId} enabled={showHitlApprovals} />
               ) : null}
 
-              {/* Tool events */}
-              {displayToolEvents.map((ev) => (
+              {/* Tool events — AG-UI renderer (roadmap #5) */}
+              {displayToolUiParts.length > 0 ? (
+                <MessageScrollerItem>
+                  <div className="mx-6 rounded-md border border-border/60 bg-muted/20 p-3">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Agent tools
+                    </p>
+                    <AgentUiRenderer parts={displayToolUiParts} />
+                  </div>
+                </MessageScrollerItem>
+              ) : displayToolEvents.map((ev) => (
                 <MessageScrollerItem key={ev.key}>
                   <AgentToolThreadCard event={ev} />
                 </MessageScrollerItem>
@@ -2334,10 +2694,10 @@ export function FluxyChat({
         {showSlashMenu ? (
           <SlashCommandMenu
             inputRef={textareaRef}
+            commands={slashCommands}
             onCommand={(cmd) => {
               if (cmd === "/clear") { setDraft(""); setShowSlashMenu(false); return; }
-              if (cmd === "/help") { setDraft("/help — Show available commands"); setShowSlashMenu(false); return; }
-              if (cmd === "/summarize") { setDraft("/summarize"); setShowSlashMenu(false); return; }
+              if (cmd === "/help") { setDraft("/help"); setShowSlashMenu(false); return; }
               setDraft(cmd + " "); setShowSlashMenu(false);
             }}
             onClose={() => setShowSlashMenu(false)}
@@ -2464,12 +2824,52 @@ export function FluxyChat({
                     onClick={() => {
                       setPlusMenuOpen(false);
                       setPollCreateOpen((p) => !p);
+                      setDecisionCreateOpen(false);
+                      setScheduleSendOpen(false);
                     }}
                   >
                     <BarChart3 className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
                     <div className="flex flex-col">
                       <span>Create poll</span>
                       <span className="text-[10px] text-muted-foreground">Vote in chat</span>
+                    </div>
+                  </button>
+                  ) : null}
+                  {showDecisionCreate ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
+                    role="menuitem"
+                    onClick={() => {
+                      setPlusMenuOpen(false);
+                      setDecisionCreateOpen((p) => !p);
+                      setPollCreateOpen(false);
+                      setScheduleSendOpen(false);
+                    }}
+                  >
+                    <Gavel className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
+                    <div className="flex flex-col">
+                      <span>Create decision</span>
+                      <span className="text-[10px] text-muted-foreground">Binding quorum ack</span>
+                    </div>
+                  </button>
+                  ) : null}
+                  {showScheduleSend ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
+                    role="menuitem"
+                    onClick={() => {
+                      setPlusMenuOpen(false);
+                      setScheduleSendOpen((p) => !p);
+                      setPollCreateOpen(false);
+                      setDecisionCreateOpen(false);
+                    }}
+                  >
+                    <Clock className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
+                    <div className="flex flex-col">
+                      <span>Schedule send</span>
+                      <span className="text-[10px] text-muted-foreground">Deliver later</span>
                     </div>
                   </button>
                   ) : null}
@@ -2533,6 +2933,35 @@ export function FluxyChat({
         >
           {huddleActive ? "Leave" : "Huddle"}
         </button>
+        {!stageSelf ? (
+          <>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted/80"
+              onClick={() => chatUserId && joinVoiceStage("listener", chatUserId)}
+              title="Join voice stage as listener"
+            >
+              Stage · Listen
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2.5 py-1 text-xs text-emerald-700 hover:bg-emerald-600/20"
+              onClick={() => chatUserId && joinVoiceStage("speaker", chatUserId)}
+              title="Join voice stage as speaker"
+            >
+              Stage · Speak
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-full bg-emerald-600/15 px-2.5 py-1 text-xs text-emerald-800"
+            onClick={leaveVoiceStage}
+            title="Leave voice stage"
+          >
+            Leave stage ({stageSelf.role})
+          </button>
+        )}
         {huddleActive && (
           <>
             <button
@@ -2586,6 +3015,38 @@ export function FluxyChat({
             if (!fluxyClient || !trimmedRoomId) return;
             await fluxyClient.createPoll(trimmedRoomId, { question, options });
             setPollCreateOpen(false);
+          }}
+        />
+      ) : null}
+
+      {decisionCreateOpen ? (
+        <DecisionCreate
+          onCreate={async (content, requiredRoles, ttlHours) => {
+            if (!fluxyClient || !trimmedRoomId) return;
+            await fluxyClient.createDecision(trimmedRoomId, {
+              content,
+              requiredRoles,
+              ttlSeconds: ttlHours * 3600,
+            });
+            setDecisionCreateOpen(false);
+          }}
+        />
+      ) : null}
+
+      {scheduleSendOpen ? (
+        <ScheduleSend
+          initialContent={draft}
+          onCancel={() => setScheduleSendOpen(false)}
+          onSchedule={async (content, sendAt) => {
+            if (!fluxyClient || !trimmedRoomId) return;
+            await fluxyClient.scheduleMessage(trimmedRoomId, {
+              content,
+              sendAt,
+              replyTo: replyToId,
+            });
+            setScheduleSendOpen(false);
+            setDraft("");
+            setReplyToId(null);
           }}
         />
       ) : null}

@@ -1,0 +1,27 @@
+{
+  "name": "fluxy-game-bandwidth-v1",
+  "note": "Synthetic bot-load budgets — UTF-8 wire bytes per scenario at N=8 concurrent bots. Fan-out multiplies server broadcast cost.",
+  "botCount": 8,
+  "scenarios": {
+    "chatMessage": {
+      "maxBytesPerBot": 420,
+      "maxFanOutBytesPerBot": 3360
+    },
+    "gameTickInput": {
+      "maxBytesPerBot": 512,
+      "maxFanOutBytesPerBot": 4096
+    },
+    "presenceHeartbeat": {
+      "maxBytesPerBot": 180,
+      "maxFanOutBytesPerBot": 1440
+    },
+    "npcInteract": {
+      "maxBytesPerBot": 640,
+      "maxFanOutBytesPerBot": 1280
+    }
+  },
+  "totals": {
+    "maxBytesPerBotAllScenarios": 1752,
+    "maxFanOutBytesPerBotAllScenarios": 10176
+  }
+}

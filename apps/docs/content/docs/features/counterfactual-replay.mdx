@@ -1,0 +1,29 @@
+---
+title: Counterfactual replay
+description: Re-run an agent tool call with modified parameters and compare outcomes side-by-side.
+---
+
+# Counterfactual replay
+
+On any agent **tool call** in chat, choose **Try alternative** to re-execute with edited parameters. Original and alternative results appear side-by-side.
+
+## Guardrails
+
+- Side-effect tools (send message, HTTP POST, etc.) run in **dry-run** mode.
+- Max **one** nested counterfactual level per run.
+
+## SDK
+
+```ts
+const alt = await client.replayCounterfactual(roomId, {
+  runId: originalRunId,
+  toolCallId,
+  modifiedParams: { query: "alternative search terms" },
+});
+```
+
+## Console
+
+Use **Counterfactual compare** in the agent tool thread panel after replay completes.
+
+Requires agent runs stored with tool traces (default for WorkflowAgent).

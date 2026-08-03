@@ -404,6 +404,19 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   let connection = primaryResolved;
   const hasFallback = !!(fallbackResolved && fallbackResolved.ok);
   const systemPrompt = agentRow.system_prompt || "You are a helpful assistant in a chat room.";
+  const { getRehearsalByRoomId, buildRehearsalAgentSystemPrompt } = await import("./rehearsal-rooms.js");
+  const rehearsal = await getRehearsalByRoomId(env, projectId, roomId);
+  const rehearsalPrompt = buildRehearsalAgentSystemPrompt(rehearsal);
+  const { buildEmpathyPromptSuffix } = await import("./room-empathy.js");
+  const empathySuffix = await buildEmpathyPromptSuffix(env, {
+    projectId,
+    roomId,
+    userId,
+  }).catch(() => "");
+  const empathyBlock = empathySuffix ? `\n\n${empathySuffix}` : "";
+  const effectiveSystemPrompt = rehearsalPrompt
+    ? `${systemPrompt}\n\n${rehearsalPrompt}${empathyBlock}`
+    : `${systemPrompt}${empathyBlock}`;
   const toolsSchemaRaw = agentRow.tools_schema;
   const contextFetchUrl = agentRow.context_fetch_url;
   const toolExecuteUrl = agentRow.tool_execute_url;
@@ -487,7 +500,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     ).bind(projectId, roomId).all();
     const conversationHistory = (contextRows.results || []).reverse();
 
-    const messages = [{ role: "system", content: systemPrompt }];
+    const messages = [{ role: "system", content: effectiveSystemPrompt }];
 
     let appContext = null;
     if (contextFetchUrl) {
@@ -503,6 +516,29 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       if (historyMsg) messages.push(historyMsg);
     }
     messages.push({ role: "user", content: userMessage });
+
+    const {
+      fetchConsumedWarmupFromRoomDo,
+      formatWarmupContextForAgent,
+    } = await import("./speculative-warmup.js");
+    const warmup = await fetchConsumedWarmupFromRoomDo(env, {
+      roomId,
+      userId,
+      submittedText: userMessage,
+    });
+    const warmupContext = warmup?.hit ? formatWarmupContextForAgent(warmup.results) : null;
+    if (warmupContext) {
+      contextFetched += 1;
+      messages.push({ role: "system", content: warmupContext });
+      agentLog.info("agent.speculative_warmup_hit", {
+        projectId,
+        agentId: agentRow.id,
+        runId,
+        contextCount: warmup.results?.length ?? 0,
+      });
+    } else if (warmup?.outcome === "miss") {
+      agentLog.info("agent.speculative_warmup_miss", { projectId, agentId: agentRow.id, runId });
+    }
 
     const researchMode = detectResearchMode(userMessage);
     if (researchMode) {

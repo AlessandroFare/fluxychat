@@ -99,3 +99,52 @@ export function scimUsersEndpoint(projectId: string): string {
 export function scimGroupsEndpoint(projectId: string): string {
   return `${BASE}/scim/v2/Groups?projectId=${encodeURIComponent(projectId)}`;
 }
+
+export interface PasskeyCredentialRow {
+  id: number;
+  credentialId: string;
+  deviceType: string | null;
+  backedUp: boolean;
+  createdAt: string;
+  lastUsedAt: string | null;
+  transports: string[];
+}
+
+export async function listPasskeyCredentials(token: string): Promise<{ credentials: PasskeyCredentialRow[] }> {
+  return fetchWorkerJson(`${BASE}/webauthn/credentials`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function deletePasskeyCredential(token: string, credentialId: number): Promise<void> {
+  await fetchWorker(`${BASE}/webauthn/credentials/${credentialId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+export async function startPasskeyRegistration(token: string, displayName?: string): Promise<PublicKeyCredentialCreationOptionsJSON> {
+  const data = await fetchWorkerJson<{ options: PublicKeyCredentialCreationOptionsJSON }>(
+    `${BASE}/webauthn/register/options`,
+    {
+      method: "POST",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(displayName ? { displayName } : {}),
+    },
+  );
+  return data.options;
+}
+
+export async function finishPasskeyRegistration(
+  token: string,
+  response: RegistrationResponseJSON,
+): Promise<{ ok: boolean; credentialId?: string }> {
+  return fetchWorkerJson(`${BASE}/webauthn/register/verify`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ response }),
+  });
+}
+
+export type PublicKeyCredentialCreationOptionsJSON = import("@simplewebauthn/browser").PublicKeyCredentialCreationOptionsJSON;
+export type RegistrationResponseJSON = import("@simplewebauthn/browser").RegistrationResponseJSON;

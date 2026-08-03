@@ -11,6 +11,8 @@ import {
   exportMetrics,
   buildOtelTracePayload,
   buildOtelMetricPayload,
+  buildLangfuseOtelExportInput,
+  createLangfuseOtelExportConfig,
 } from "../lib/otel-export.js";
 
 export async function dispatchOtelRoutes(request, url, h) {
@@ -39,6 +41,19 @@ export async function dispatchOtelRoutes(request, url, h) {
     const gate = await configForProject(id);
     if (gate.error) return gate.error;
     return respond({ config: gate.config }, h);
+  }
+
+  if (request.method === "POST" && path === "/otel/configs/langfuse") {
+    const body = await request.json().catch(() => ({}));
+    const result = await createLangfuseOtelExportConfig(env, {
+      projectId,
+      host: body.host,
+      publicKey: body.publicKey,
+      secretKey: body.secretKey,
+      name: body.name,
+    });
+    if (result.error) return respond(result, h, 400);
+    return respond(result, h, 201);
   }
 
   if (request.method === "POST" && path === "/otel/configs") {

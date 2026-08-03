@@ -1,8 +1,9 @@
 import { resolveAdminContext } from "../lib/admin-route-context.js";
 import {
-  createMatrixBridge, connectMatrixBridge, disconnectMatrixBridge, getMatrixBridge, listMatrixBridges, deleteMatrixBridge,
+  createMatrixBridge, connectMatrixBridge, disconnectMatrixBridge, getMatrixBridge, getMatrixBridgeCredentials, listMatrixBridges, deleteMatrixBridge,
   createMatrixRoomMapping, listMatrixRoomMappings, deleteMatrixRoomMapping,
-  syncMatrixInbound, syncMatrixOutbound, recordMatrixSyncLog, getMatrixBridgeStats,
+  syncMatrixInbound, syncMatrixOutbound, recordMatrixSyncLog, getMatrixBridgeStats, pingMatrixHomeserver, runMatrixBridgeHealthChecks,
+  rotateMatrixAppserviceToken,
 } from "../lib/matrix-bridge.js";
 
 export async function dispatchMatrixBridgeRoutes(request, url, h) {
@@ -53,6 +54,9 @@ export async function dispatchMatrixBridgeRoutes(request, url, h) {
     const gate = await requireBridge(bridgeId);
     if (gate.error) return gate.error;
     const result = await connectMatrixBridge(env, { bridgeId });
+    if (!result.connected) {
+      return respond({ error: result.error || "connect_failed", health: result.health }, h, 502);
+    }
     await recordMatrixSyncLog(env, {
       bridgeId,
       projectId,
@@ -132,6 +136,32 @@ export async function dispatchMatrixBridgeRoutes(request, url, h) {
     });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
+  }
+
+  if (request.method === "POST" && path.match(/^\/admin\/matrix\/bridges\/[^/]+\/rotate-appservice-token$/)) {
+    const bridgeId = path.split("/")[4];
+    const gate = await requireBridge(bridgeId);
+    if (gate.error) return gate.error;
+    const result = await rotateMatrixAppserviceToken(env, { bridgeId, projectId });
+    if (result.error) return respond(result, h, 404);
+    return respond(result, h);
+  }
+
+  if (request.method === "GET" && path.match(/^\/admin\/matrix\/bridges\/[^/]+\/health$/)) {
+    const bridgeId = path.split("/")[4];
+    const gate = await requireBridge(bridgeId);
+    if (gate.error) return gate.error;
+    const creds = await getMatrixBridgeCredentials(env, { bridgeId, projectId });
+    const health = await pingMatrixHomeserver({
+      homeserverUrl: creds?.homeserverUrl ?? gate.bridge.homeserverUrl,
+      accessToken: creds?.accessToken ?? undefined,
+    });
+    return respond({ ok: health.ok, bridgeId, health }, h, health.ok ? 200 : 502);
+  }
+
+  if (request.method === "POST" && path === "/admin/matrix/bridges/health-check-all") {
+    const result = await runMatrixBridgeHealthChecks(env, { projectId });
+    return respond(result, h);
   }
 
   if (request.method === "GET" && path === "/admin/matrix/stats") {

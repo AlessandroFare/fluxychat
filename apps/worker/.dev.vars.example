@@ -126,6 +126,59 @@ ANTHROPIC_API_KEY=
 # AI_EMBEDDINGS_BASE_URL=
 # AI_EMBEDDINGS_API_KEY=
 
+# Semantic search (P15-F) — hybrid FTS + vector embeddings on message history
+# Requires AI embeddings provider above. Per-project toggle in dashboard /settings/search
+SEMANTIC_SEARCH_ENABLED=true
+
+# Speculative agent warmup (#49) — pre-fetch semantic context while user types (Room DO)
+# Requires SEMANTIC_SEARCH_ENABLED and message embeddings in the room
+# SPECULATIVE_WARMUP_ENABLED=true
+
+# Media pipeline (#56) — optional ClamAV HTTP scanner (EICAR always blocked locally)
+# CLAMAV_HTTP_URL=https://clamav.internal/scan
+# CLAMAV_HTTP_TOKEN=
+
+# Link preview AI summary (roadmap #23) — set false to skip Workers AI extract on unfurl
+# LINK_PREVIEW_AI_ENABLED=true
+
+# Smart support routing suggestions on new messages (roadmap #21)
+# SUPPORT_SMART_ROUTING_ENABLED=true
+# Notify suggested assignee (default on when routing enabled)
+# SUPPORT_SMART_ROUTING_NOTIFY=true
+# Increment agent_capacity load on assign (opt-in)
+# SUPPORT_SMART_ROUTING_ASSIGN=false
+
+# A2A outbound delegation bearer (roadmap #24)
+# A2A_OUTBOUND_BEARER=
+
+# Agent eval auto-queue to OTel export configs (roadmap #9)
+# OTEL_AGENT_EVAL_AUTO=true
+
+# Auto-capture failed agent_runs into "Prod failures (auto)" eval dataset (roadmap #40)
+# AGENT_EVAL_AUTO_CAPTURE_FAILED=true
+
+# WhatsApp Cloud API for structured forms (#43)
+# WHATSAPP_PHONE_NUMBER_ID=
+# WHATSAPP_ACCESS_TOKEN=
+# WHATSAPP_VERIFY_TOKEN=fluxychat
+# WHATSAPP_FLOW_ID=
+
+# RCS outbound proxy URL (JSON POST with { to, contentMessage })
+# RCS_OUTBOUND_URL=
+# RCS_API_KEY=
+
+# Silero VAD ONNX model for dashboard voice (roadmap #10) — frame VAD fallback when ONNX unavailable
+# NEXT_PUBLIC_SILERO_VAD_WASM_URL=https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.22/dist/silero_vad.onnx
+
+# Worker deployment region for data residency checks (roadmap #14)
+# DATA_REGION=eu-west
+# DATA_RESIDENCY_ENFORCE=true
+
+# Immutable audit hash chain (roadmap #20) — enable after migration 0168
+AUDIT_CHAIN_ENABLED=true
+# Nightly R2 archive of audit chains (uses ATTACHMENTS bucket under audit-chain/ prefix)
+# AUDIT_CHAIN_R2_EXPORT_ENABLED=true
+
 # Optional per-provider keys / base URLs (see apps/worker/src/lib/llm-providers.js)
 # MINIMAX_API_KEY=
 # MINIMAX_BASE_URL=https://api.minimaxi.com/v1
@@ -185,6 +238,13 @@ ANTHROPIC_API_KEY=
 # --- Optional automations ---
 # BUILTIN_MODERATION_ENABLED=true
 # BUILTIN_MODERATION_BLOCKED_SUBSTRINGS=spam,scam
+# AI_MODERATION_ENABLED=true
+# AI_MODERATION_AUTO_ACTIONS=none,low,log,medium,high,critical
+# AI_MODERATION_MUTE_DURATION_MINUTES=30
+# VISUAL_MODERATION_ENABLED=true
+# AI_VISUAL_MODERATION_MODEL=openai/gpt-4o-mini
+# GAME_NPC_RATE_LIMIT_RPM=20
+# ROOM_AUTO_TRANSLATE_ENABLED=true
 # AUTO_ROOM_SUMMARY_ENABLED=true
 # AUTO_ROOM_SUMMARY_EVERY_N=50
 # AUTO_ROOM_SUMMARY_COOLDOWN_MINUTES=120
@@ -200,6 +260,7 @@ ANTHROPIC_API_KEY=
 # DEMO_ENABLED=true
 # DEMO_ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
 # TURNSTILE_SECRET_KEY=          # wrangler secret; requires POST /demo/session from UI
+# TURNSTILE_SITE_KEY=            # public site key — safe for embed widgets + GET /public/guest-hardening
 # DEMO_ALLOW_GET_WITHOUT_TURNSTILE=true   # local dev only when Turnstile secret is set
 # RATE_LIMIT_DEMO_SESSIONS_PER_MINUTE=20
 # RATE_LIMIT_AUTH_TOKEN_PER_MINUTE=30     # POST /auth/token per IP + api key
@@ -210,6 +271,9 @@ ANTHROPIC_API_KEY=
 # PUBLIC_GUEST_TOKEN_TTL_SECONDS=3600
 # PUBLIC_GUEST_ALLOWED_ORIGINS=https://app.example.com
 # PUBLIC_GUEST_TURNSTILE_REQUIRED=false
+# WEBAUTHN_RP_ID=app.example.com
+# WEBAUTHN_RP_NAME=FluxyChat
+# WEBAUTHN_ORIGIN=https://app.example.com,https://dashboard.example.com
 # FCM_SERVER_KEY=...   # legacy FCM HTTP API for mobile push (P10-SB7)
 # SMS_OTP_ENABLED=true
 # SENT_DM_OTP_TEMPLATE_NAME=authentication
@@ -267,3 +331,30 @@ ANTHROPIC_API_KEY=
 NODE_ENV=development
 ALLOW_DEV_PROVISION=true
 # --- /dev/provision ---
+
+# --- Truth Market (#50) ---
+# TRUTH_MARKET_MIN_STAKE=10
+# TRUTH_MARKET_MAX_STAKE=1000
+# TRUTH_MARKET_INITIAL_CREDITS=100
+
+# --- Tenant usage cost estimates (#61) ---
+# USAGE_COST_PER_1K_MESSAGES_USD=0.50
+# USAGE_COST_PER_AGENT_INVOKE_USD=0.02
+# USAGE_COST_PER_GB_STORAGE_USD=0.10
+# USAGE_COST_PLATFORM_BASE_USD=0
+
+# --- Cloudflare Stream (live angles + replay) ---
+# CLOUDFLARE_ACCOUNT_ID=
+# CLOUDFLARE_STREAM_API_TOKEN=
+# CLOUDFLARE_STREAM_CUSTOMER_CODE=
+
+# --- Matrix appservice (#16) — token stored per-bridge in D1 after migration 0180 ---
+# Configure Bearer token in Synapse + dashboard /bridges/matrix
+
+# --- OTel / Langfuse preset (#9) ---
+# Configure via POST /otel/configs/langfuse or /agents/observability (no extra env required)
+# OTEL_AGENT_EVAL_AUTO=true
+
+# --- Data residency enforce (#14) ---
+# DATA_REGION=eu-west
+# DATA_RESIDENCY_ENFORCE=true

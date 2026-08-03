@@ -49,5 +49,7 @@ const client = new FluxyChatClient({
     "ably alternative next.js",
     "reconnecting connections chat",
   ],
+  stackblitzTemplateId: "react-chat-ui",
+  stackblitzLabel: "Open Next.js chat example in StackBlitz",
 };
 

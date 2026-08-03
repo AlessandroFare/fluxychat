@@ -7,6 +7,7 @@ import { MarketingShell } from "../components/marketing-shell";
 import { StackBlitzButton } from "@/components/stackblitz-button";
 import { STACKBLITZ_TEMPLATES } from "@/lib/stackblitz-templates";
 import { HOSTED_COPY, HOSTED_PATHS, docsSiteHref } from "@/lib/hosted-product";
+import { DocsSearch } from "@/components/doc-search";
 
 export const metadata: Metadata = PAGE_METADATA.docs;
 
@@ -101,6 +102,9 @@ export default function DocsPage() {
             </a>
           </Button>
         </div>
+      </div>
+      <div className="mt-6 max-w-md">
+        <DocsSearch variant="light" />
       </div>
       <p className="mt-3 text-slate-600">
         This page is a quick hub on fluxychat.com. Search, Ask AI, and the full SDK reference live on{" "}

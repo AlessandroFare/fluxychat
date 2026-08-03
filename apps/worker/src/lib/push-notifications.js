@@ -1,6 +1,7 @@
 import { logError, logInfo } from "./worker-log.js";
 import { shouldBatchNotification } from "./quiet-hours.js";
 import { enqueueBatchedNotification } from "./notification-batch.js";
+import { resolveNotificationPriority } from "./notification-priority.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
 import {
   getOrCreateVapidKeyPair,
@@ -194,8 +195,35 @@ export async function maybePushNotifyOnMessage(env, detail) {
       if (!userId || userId === authorUserId) continue;
       if (row.notify_enabled === 0 && !mentionSet.has(userId)) continue;
 
-      const pushTitle = mentionSet.has(userId) ? "Mention" : title;
-      const pushKind = mentionSet.has(userId) ? "mention" : "message";
+      const isMention = mentionSet.has(userId);
+      const priority = await resolveNotificationPriority(env, {
+        projectId,
+        userId,
+        roomId,
+        isMention,
+        preview: body,
+        authorRole: null,
+      });
+
+      if (!priority.pushEnabled) continue;
+      if (priority.shouldBatchLowPriority && priority.level === "low") {
+        await enqueueBatchedNotification(env, {
+          projectId,
+          userId,
+          channel: "push",
+          kind: isMention ? "mention" : "message",
+          title: isMention ? "Mention" : title,
+          body,
+          roomId,
+          messageId,
+          payload: { type: "message.created", priority: priority.level },
+        });
+        logInfo("push.batched_low_priority", { projectId, roomId, userId, messageId, score: priority.score });
+        continue;
+      }
+
+      const pushTitle = isMention ? "Mention" : priority.level === "urgent" ? "Urgent message" : title;
+      const pushKind = isMention ? "mention" : "message";
 
       if (await shouldBatchNotification(env, projectId, userId, "push")) {
         await enqueueBatchedNotification(env, {
@@ -207,7 +235,7 @@ export async function maybePushNotifyOnMessage(env, detail) {
           body,
           roomId,
           messageId,
-          payload: { type: "message.created" },
+          payload: { type: "message.created", priority: priority.level },
         });
         logInfo("push.batched", { projectId, roomId, userId, messageId });
         continue;
@@ -222,6 +250,7 @@ export async function maybePushNotifyOnMessage(env, detail) {
             roomId,
             messageId: String(messageId),
             type: "message.created",
+            priority: priority.level,
           },
         });
       }
@@ -235,7 +264,7 @@ export async function maybePushNotifyOnMessage(env, detail) {
         messageId,
       });
 
-      logInfo("push.sent", { projectId, roomId, userId, messageId, fcm: tokens.length });
+      logInfo("push.sent", { projectId, roomId, userId, messageId, fcm: tokens.length, priority: priority.level });
     }
   } catch (err) {
     logError("push.notify_failed", err, { projectId, roomId, messageId });

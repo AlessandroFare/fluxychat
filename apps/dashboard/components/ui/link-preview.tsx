@@ -9,10 +9,11 @@ interface LinkPreviewProps {
   title?: string | null;
   description?: string | null;
   image?: string | null;
+  aiSummary?: string | null;
   className?: string;
 }
 
-export function LinkPreviewCard({ url, title, description, image, className }: LinkPreviewProps) {
+export function LinkPreviewCard({ url, title, description, image, aiSummary, className }: LinkPreviewProps) {
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const hostname = extractHostname(url);
@@ -62,6 +63,12 @@ export function LinkPreviewCard({ url, title, description, image, className }: L
             {description}
           </p>
         )}
+        {aiSummary && aiSummary !== description ? (
+          <p className="mt-1.5 text-xs leading-snug text-foreground/90 line-clamp-3">
+            <span className="font-medium text-muted-foreground">AI · </span>
+            {aiSummary}
+          </p>
+        ) : null}
       </div>
     </a>
   );

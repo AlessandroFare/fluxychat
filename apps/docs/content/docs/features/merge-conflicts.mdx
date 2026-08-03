@@ -1,0 +1,29 @@
+---
+title: Merge conflicts (CRDT)
+description: Resolve ambiguous CRDT conflicts with a git-style two-column UI instead of silent last-write-wins.
+---
+
+# Merge conflicts (CRDT)
+
+When offline sync or federation produces **two different contents for the same logical slot**, FluxyChat surfaces a merge panel instead of silently picking a winner.
+
+## In chat
+
+The **Merge conflict** banner appears when `message-crdt-yjs` detects ambiguous candidates. Choose:
+
+- Keep version A
+- Keep version B
+- Merge both (concatenate)
+
+## API
+
+```http
+GET /rooms/:roomId/merge-conflicts
+POST /rooms/:roomId/merge-conflicts/:id/resolve
+```
+
+## SDK
+
+Conflict events arrive on the WebSocket as `deliveryConflict`. Use the dashboard `MergeConflictPanel` pattern or build your own resolve UI.
+
+See also: [Connection state](/docs/core/connection-state) for CRDT replay.

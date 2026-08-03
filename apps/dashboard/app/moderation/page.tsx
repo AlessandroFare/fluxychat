@@ -43,6 +43,13 @@ interface FeedbackStats {
   uncertain?: number;
 }
 
+interface ReviewHistoryItem extends QueueEvent {
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewAction?: string;
+  reviewNotes?: string;
+}
+
 async function callAdmin(action: "mute" | "ban", body: Record<string, unknown>, jwt: string) {
   return fetchWorkerJson(`${WORKER_URL}/admin/${action}`, {
     method: "POST",
@@ -58,6 +65,7 @@ export default function ModerationPage() {
   const [queue, setQueue] = useState<QueueEvent[]>([]);
   const [trends, setTrends] = useState<ModerationTrends | null>(null);
   const [feedback, setFeedback] = useState<FeedbackStats | null>(null);
+  const [history, setHistory] = useState<ReviewHistoryItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +90,7 @@ export default function ModerationPage() {
       const trendsUrl = new URL(`${WORKER_URL}/intelligence/analytics/moderation`);
       if (roomId.trim()) trendsUrl.searchParams.set("room_id", roomId.trim());
 
-      const [queueJson, trendsJson, feedbackJson] = await Promise.all([
+      const [queueJson, trendsJson, feedbackJson, historyJson] = await Promise.all([
         fetchWorkerJson<{ events?: QueueEvent[] }>(queueUrl.toString(), {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -92,11 +100,15 @@ export default function ModerationPage() {
         fetchWorkerJson<{ stats?: FeedbackStats }>(`${WORKER_URL}/moderation-queue/feedback/stats?days=30`, {
           headers: { Authorization: `Bearer ${token}` },
         }).catch(() => ({ stats: null })),
+        fetchWorkerJson<{ history?: ReviewHistoryItem[] }>(`${WORKER_URL}/moderation-queue/review-history?limit=25`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => ({ history: [] })),
       ]);
 
       setQueue(queueJson.events ?? []);
       setTrends(trendsJson.trends ?? null);
       setFeedback(feedbackJson.stats ?? null);
+      setHistory(historyJson.history ?? []);
       setNotice(`Loaded ${queueJson.events?.length ?? 0} pending items.`);
     } catch (err: unknown) {
       setError(messageFromUnknown(err, "Failed to load moderation queue"));
@@ -297,6 +309,29 @@ export default function ModerationPage() {
           </Button>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">Requires admin JWT and room filter above.</p>
+      </Section>
+
+      <Section title="Review history" className="mt-8" description="Recent moderator actions logged server-side.">
+        {history.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No reviewed items yet.</p>
+        ) : (
+          <ul className="divide-y divide-border text-sm">
+            {history.map((item) => (
+              <li key={item.id} className="py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">{item.reviewAction || "reviewed"}</Badge>
+                  <Badge variant="secondary">{item.severity}</Badge>
+                  <span className="font-mono text-xs text-muted-foreground">{item.roomId}</span>
+                </div>
+                {item.content ? <p className="mt-1 truncate">{item.content}</p> : null}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {item.reviewedBy ? `by ${item.reviewedBy}` : "moderator"} · {item.reviewedAt ? formatDateTime(item.reviewedAt) : "—"}
+                  {item.reviewNotes ? ` · ${item.reviewNotes}` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </Section>
     </ConsoleShell>
   );

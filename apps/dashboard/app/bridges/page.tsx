@@ -200,12 +200,20 @@ export default function BridgesPage() {
         title="Slack &amp; Discord bridges"
         description="Inbound webhooks sync external channel messages into FluxyChat rooms."
         actions={
-          <Link
-            href="/bridges/matrix"
-            className="inline-flex h-7 items-center justify-center rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/60"
-          >
-            Matrix federation
-          </Link>
+          <>
+            <Link
+              href="/bridges/forms"
+              className="inline-flex h-7 items-center justify-center rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/60"
+            >
+              WhatsApp / RCS forms
+            </Link>
+            <Link
+              href="/bridges/matrix"
+              className="inline-flex h-7 items-center justify-center rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/60"
+            >
+              Matrix federation
+            </Link>
+          </>
         }
       />
       <ConsoleFeedback error={error} notice={notice} />

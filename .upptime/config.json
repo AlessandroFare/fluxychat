@@ -1,0 +1,41 @@
+{
+  "owner": "fluxychat",
+  "repo": "status",
+  "sites": [
+    {
+      "name": "FluxyChat Worker API",
+      "url": "https://api.fluxychat.com/health",
+      "expectedStatusCodes": "200-299",
+      "interval": 5,
+      "maxResponseTime": 5000
+    },
+    {
+      "name": "FluxyChat Dashboard",
+      "url": "https://app.fluxychat.com/",
+      "expectedStatusCodes": "200-399",
+      "interval": 5,
+      "maxResponseTime": 8000
+    },
+    {
+      "name": "FluxyChat Demo",
+      "url": "https://demo.fluxychat.com/",
+      "expectedStatusCodes": "200-399",
+      "interval": 15,
+      "maxResponseTime": 10000
+    }
+  ],
+  "status-website": {
+    "cname": "status.fluxychat.com",
+    "baseUrl": "/status",
+    "name": "FluxyChat Status",
+    "introTitle": "FluxyChat realtime platform",
+    "introMessage": "Current uptime and incident history for FluxyChat edge services.",
+    "navbar": ["History", "Incidents"]
+  },
+  "commit": {
+    "messages": {
+      "commitMessage": "🟩 Up",
+      "commitMessageStatusChange": "🟥 Down"
+    }
+  }
+}

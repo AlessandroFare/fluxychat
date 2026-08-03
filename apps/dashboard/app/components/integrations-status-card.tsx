@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink, Shield, Smartphone } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ExternalLink, Shield, Smartphone, Code2 } from "lucide-react";
 import {
   DEMO_TURNSTILE_SITE_KEY,
   isDemoTurnstileEnabled,
 } from "@/components/demo-turnstile";
+import {
+  fetchPublicGuestHardening,
+  type PublicGuestHardeningConfig,
+} from "@/lib/public-guest-hardening-client";
 import { Panel } from "./ui";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +33,13 @@ function StatusRow({ label, ok, detail }: StatusRowProps) {
 
 export function IntegrationsStatusCard({ className }: { className?: string }) {
   const turnstileSite = isDemoTurnstileEnabled();
+  const [guestHardening, setGuestHardening] = useState<PublicGuestHardeningConfig | null>(null);
+
+  useEffect(() => {
+    void fetchPublicGuestHardening()
+      .then(setGuestHardening)
+      .catch(() => setGuestHardening(null));
+  }, []);
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -73,6 +85,45 @@ export function IntegrationsStatusCard({ className }: { className?: string }) {
             Site key prefix: {DEMO_TURNSTILE_SITE_KEY.slice(0, 8)}…
           </p>
         ) : null}
+      </Panel>
+
+      <Panel className="p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Code2 className="h-4 w-4 text-brand" aria-hidden />
+          <h3 className="text-sm font-semibold text-foreground">Embed guest sessions (#58)</h3>
+        </div>
+        <StatusRow
+          label="Turnstile on Worker"
+          ok={guestHardening?.turnstile.configured ?? false}
+          detail={
+            guestHardening?.turnstile.configured
+              ? guestHardening.turnstile.required
+                ? "Required"
+                : "Configured"
+              : "Not configured"
+          }
+        />
+        <StatusRow
+          label="IP rate limit"
+          ok={true}
+          detail={guestHardening ? `${guestHardening.rateLimitPerMinute}/min` : "30/min default"}
+        />
+        <StatusRow
+          label="Public guest enabled"
+          ok={guestHardening?.publicGuestEnabled ?? false}
+          detail={guestHardening?.publicGuestEnabled ? "Yes" : "Unknown / disabled"}
+        />
+        <p className="mt-3 text-xs text-muted-foreground">
+          Live config from <code className="text-[10px]">GET /public/guest-hardening</code>. Set{" "}
+          <code className="text-[10px]">TURNSTILE_SITE_KEY</code> +{" "}
+          <code className="text-[10px]">PUBLIC_GUEST_TURNSTILE_REQUIRED=true</code> on Worker.
+        </p>
+        <Link
+          href="/embed"
+          className="mt-3 inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted"
+        >
+          Embed widget settings
+        </Link>
       </Panel>
 
       <Panel className="p-4">

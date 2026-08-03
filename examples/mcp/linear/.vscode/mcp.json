@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "linear": {
+      "command": "node",
+      "args": ["${workspaceFolder}/examples/mcp/linear/server.mjs"],
+      "env": {
+        "LINEAR_API_KEY": "${env:LINEAR_API_KEY}"
+      }
+    }
+  }
+}

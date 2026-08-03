@@ -1,10 +1,64 @@
 import { importAdminMessage } from "./message-import.js";
 import { deriveScopedClientMessageId } from "./client-message-id.js";
+import { appendRoomAuditChainEvent } from "./audit-chain.js";
 
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function generateAppserviceToken() {
+  return `as_${generateId().slice(0, 24)}`;
+}
+
+export function extractBearerTokenFromRequest(request) {
+  const auth = String(request.headers.get("Authorization") || "");
+  const match = auth.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : "";
+}
+
+export function verifyMatrixAppserviceToken(provided, expected) {
+  if (!expected || !provided) return false;
+  if (provided.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i += 1) {
+    diff |= provided.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+export async function getMatrixBridgeAppserviceToken(env, { bridgeId, projectId }) {
+  const row = await env.DB.prepare(
+    "SELECT appservice_token FROM matrix_bridge_configs WHERE id = ? AND project_id = ?",
+  )
+    .bind(bridgeId, projectId)
+    .first();
+  const token = row?.appservice_token;
+  return typeof token === "string" && token.trim() ? token.trim() : null;
+}
+
+export async function rotateMatrixAppserviceToken(env, { bridgeId, projectId }) {
+  const bridge = await getMatrixBridge(env, { bridgeId });
+  if (!bridge || bridge.projectId !== projectId) return { error: "not_found" };
+  const token = generateAppserviceToken();
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    "UPDATE matrix_bridge_configs SET appservice_token = ?, updated_at = ? WHERE id = ? AND project_id = ?",
+  )
+    .bind(token, now, bridgeId, projectId)
+    .run();
+  return { appserviceToken: token, bridgeId };
+}
+
+export async function verifyMatrixAppserviceWebhook(env, request, { bridgeId, projectId }) {
+  const expected = await getMatrixBridgeAppserviceToken(env, { bridgeId, projectId });
+  if (!expected) return { ok: false, error: "appservice_token_not_configured" };
+  const provided = extractBearerTokenFromRequest(request);
+  if (!verifyMatrixAppserviceToken(provided, expected)) {
+    return { ok: false, error: "invalid_appservice_token" };
+  }
+  return { ok: true };
 }
 
 function matrixTimestampToIso(originServerTs) {
@@ -22,19 +76,60 @@ function extractMatrixTextContent(content, msgtype) {
   return typeof body === "string" && body.length ? body : null;
 }
 
-export async function createMatrixBridge(env, { projectId, homeserverUrl, accessToken, botUserId, botDisplayName, syncMode, settings }) {
+export async function createMatrixBridge(env, { projectId, homeserverUrl, accessToken, botUserId, botDisplayName, syncMode, settings, appserviceToken }) {
   const id = `mb_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
+  const token = String(appserviceToken || "").trim() || generateAppserviceToken();
   await env.DB.prepare(
-    `INSERT INTO matrix_bridge_configs (id, project_id, homeserver_url, access_token, bot_user_id, bot_display_name, sync_mode, status, settings, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'disconnected', ?, ?, ?)`
+    `INSERT INTO matrix_bridge_configs (id, project_id, homeserver_url, access_token, bot_user_id, bot_display_name, sync_mode, status, settings, appservice_token, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'disconnected', ?, ?, ?, ?)`
   )
-    .bind(id, projectId, homeserverUrl, accessToken || null, botUserId || null, botDisplayName || null, syncMode || "bidirectional", settings ? JSON.stringify(settings) : null, now, now)
+    .bind(id, projectId, homeserverUrl, accessToken || null, botUserId || null, botDisplayName || null, syncMode || "bidirectional", settings ? JSON.stringify(settings) : null, token, now, now)
     .run();
-  return { id, status: "disconnected" };
+  return { id, status: "disconnected", appserviceToken: token, appserviceWebhookPath: `/webhooks/matrix/${id}` };
 }
 
-export async function connectMatrixBridge(env, { bridgeId }) {
+export async function pingMatrixHomeserver({ homeserverUrl, accessToken }) {
+  const base = String(homeserverUrl || "").replace(/\/$/, "");
+  if (!base) return { ok: false, error: "missing_homeserver" };
+  try {
+    const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+    const res = await fetch(`${base}/_matrix/client/versions`, {
+      headers,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return { ok: false, error: `http_${res.status}`, status: res.status };
+    const body = await res.json().catch(() => ({}));
+    return { ok: true, status: res.status, versions: body?.versions ?? [] };
+  } catch (err) {
+    return { ok: false, error: err?.message || "network_error" };
+  }
+}
+
+export async function connectMatrixBridge(env, { bridgeId, skipHealthCheck = false }) {
+  const bridge = await getMatrixBridge(env, { bridgeId });
+  if (!bridge) return { connected: 0, error: "not_found" };
+
+  if (!skipHealthCheck) {
+    const creds = await getMatrixBridgeCredentials(env, {
+      bridgeId,
+      projectId: bridge.projectId,
+    });
+    const health = await pingMatrixHomeserver({
+      homeserverUrl: creds?.homeserverUrl ?? bridge.homeserverUrl,
+      accessToken: creds?.accessToken ?? undefined,
+    });
+    if (!health.ok) {
+      const now = new Date().toISOString();
+      await env.DB.prepare(
+        "UPDATE matrix_bridge_configs SET status = 'error', error_message = ?, updated_at = ? WHERE id = ?",
+      )
+        .bind(health.error || "health_check_failed", now, bridgeId)
+        .run();
+      return { connected: 0, error: health.error, health };
+    }
+  }
+
   const now = new Date().toISOString();
   const result = await env.DB.prepare(
     "UPDATE matrix_bridge_configs SET status = 'connected', error_message = NULL, updated_at = ? WHERE id = ?"
@@ -53,6 +148,24 @@ export async function disconnectMatrixBridge(env, { bridgeId }) {
 export async function getMatrixBridge(env, { bridgeId }) {
   const row = await env.DB.prepare("SELECT * FROM matrix_bridge_configs WHERE id = ?").bind(bridgeId).first();
   return row ? mapConfigRow(row) : null;
+}
+
+/** Server-side bridge row with credentials (never return to clients). */
+export async function getMatrixBridgeCredentials(env, { bridgeId, projectId }) {
+  const row = await env.DB.prepare(
+    "SELECT * FROM matrix_bridge_configs WHERE id = ? AND project_id = ?",
+  )
+    .bind(bridgeId, projectId)
+    .first();
+  if (!row) return null;
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    homeserverUrl: row.homeserver_url,
+    accessToken: row.access_token,
+    botUserId: row.bot_user_id,
+    status: row.status,
+  };
 }
 
 export async function listMatrixBridges(env, { projectId }) {
@@ -141,6 +254,20 @@ export async function recordMatrixSyncLog(env, { bridgeId, projectId, eventType,
   )
     .bind(id, bridgeId, projectId, eventType, direction || null, payload ? JSON.stringify(payload) : null, status || "success", now)
     .run();
+
+  if (projectId) {
+    void appendRoomAuditChainEvent(env, {
+      projectId,
+      event: {
+        type: "matrix_sync",
+        bridgeId,
+        eventType,
+        direction: direction || null,
+        status: status || "success",
+      },
+    }).catch(() => {});
+  }
+
   return { id };
 }
 
@@ -270,7 +397,7 @@ export async function processMatrixAppserviceTransaction(env, { bridgeId, projec
   return { ok: true, processed, ignored, count: processed.length };
 }
 
-export async function syncMatrixOutbound(env, { bridgeId, projectId, fluxychatMessageId, matrixRoomId, content, msgtype }) {
+export async function syncMatrixOutbound(env, { bridgeId, projectId, fluxychatMessageId, matrixRoomId, content, msgtype, maxAttempts = 2 }) {
   const mapping = await env.DB.prepare(
     "SELECT * FROM matrix_room_mappings WHERE bridge_id = ? AND matrix_room_id = ?"
   ).bind(bridgeId, matrixRoomId).first();
@@ -296,55 +423,119 @@ export async function syncMatrixOutbound(env, { bridgeId, projectId, fluxychatMe
     const txnId = String(fluxychatMessageId).replace(/[^a-zA-Z0-9._~-]/g, "_").slice(0, 64)
       || `fc_${Date.now()}`;
     const sendUrl = `${base}/_matrix/client/v3/rooms/${encodeURIComponent(matrixRoomId)}/send/m.room.message/${encodeURIComponent(txnId)}`;
-    try {
-      const res = await fetch(sendUrl, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          msgtype: msgtype || "m.text",
-          body: content,
-        }),
-      });
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        return {
-          error: "homeserver_send_failed",
-          status: res.status,
-          detail: detail.slice(0, 500),
-        };
-      }
-      const body = await res.json().catch(() => ({}));
-      const matrixEventId = body?.event_id;
-      if (matrixEventId) {
-        await mapMatrixMessage(env, {
-          bridgeId,
-          projectId,
-          fluxychatMessageId,
-          matrixEventId,
-          matrixRoomId,
-          direction: "outbound",
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= Math.max(1, maxAttempts); attempt++) {
+      try {
+        const res = await fetch(sendUrl, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            msgtype: msgtype || "m.text",
+            body: content,
+          }),
+          signal: AbortSignal.timeout(12000),
         });
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          lastError = {
+            error: "homeserver_send_failed",
+            status: res.status,
+            detail: detail.slice(0, 500),
+            attempt,
+          };
+          if (attempt < maxAttempts) {
+            await new Promise((r) => setTimeout(r, 400 * attempt));
+            continue;
+          }
+          return lastError;
+        }
+        const body = await res.json().catch(() => ({}));
+        const matrixEventId = body?.event_id;
+        if (matrixEventId) {
+          await mapMatrixMessage(env, {
+            bridgeId,
+            projectId,
+            fluxychatMessageId,
+            matrixEventId,
+            matrixRoomId,
+            direction: "outbound",
+          });
+        }
+        return {
+          matrixRoomId,
+          content,
+          fluxychatMessageId,
+          msgtype: msgtype || "m.text",
+          matrixEventId: matrixEventId || null,
+          sent: true,
+          attempts: attempt,
+        };
+      } catch (err) {
+        lastError = {
+          error: "homeserver_send_failed",
+          detail: err instanceof Error ? err.message : String(err),
+          attempt,
+        };
+        if (attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 400 * attempt));
+          continue;
+        }
       }
-      return {
-        matrixRoomId,
-        content,
-        fluxychatMessageId,
-        msgtype: msgtype || "m.text",
-        matrixEventId: matrixEventId || null,
-        sent: true,
-      };
-    } catch (err) {
-      return {
-        error: "homeserver_send_failed",
-        detail: err instanceof Error ? err.message : String(err),
-      };
     }
+    return lastError ?? { error: "homeserver_send_failed" };
   }
 
   return { matrixRoomId, content, fluxychatMessageId, msgtype: msgtype || "m.text", sent: false, queued: true };
+}
+
+/**
+ * Ping all connected bridges; mark unhealthy bridges as error (production ops cron).
+ */
+export async function runMatrixBridgeHealthChecks(env, { projectId } = {}) {
+  const sql = projectId
+    ? "SELECT id, project_id, homeserver_url, access_token, status FROM matrix_bridge_configs WHERE project_id = ? AND status = 'connected'"
+    : "SELECT id, project_id, homeserver_url, access_token, status FROM matrix_bridge_configs WHERE status = 'connected'";
+  const rows = await env.DB.prepare(sql)
+    .bind(...(projectId ? [projectId] : []))
+    .all();
+
+  const now = new Date().toISOString();
+  let healthy = 0;
+  let unhealthy = 0;
+  const results = [];
+
+  for (const row of rows.results || []) {
+    const health = await pingMatrixHomeserver({
+      homeserverUrl: row.homeserver_url,
+      accessToken: row.access_token ?? undefined,
+    });
+    if (health.ok) {
+      healthy++;
+      results.push({ bridgeId: row.id, ok: true });
+      continue;
+    }
+    unhealthy++;
+    await env.DB.prepare(
+      "UPDATE matrix_bridge_configs SET status = 'error', error_message = ?, updated_at = ? WHERE id = ?",
+    )
+      .bind(health.error || "health_check_failed", now, row.id)
+      .run();
+    await recordMatrixSyncLog(env, {
+      bridgeId: row.id,
+      projectId: row.project_id,
+      eventType: "health_check",
+      direction: "inbound",
+      payload: { ok: false, error: health.error },
+      status: "error",
+    }).catch(() => {});
+    results.push({ bridgeId: row.id, ok: false, error: health.error });
+  }
+
+  return { ok: true, checked: results.length, healthy, unhealthy, results };
 }
 
 export async function getMatrixBridgeStats(env, { projectId }) {
@@ -375,6 +566,8 @@ function mapConfigRow(row) {
     botDisplayName: row.bot_display_name, syncMode: row.sync_mode,
     status: row.status, settings: row.settings ? JSON.parse(row.settings) : null,
     lastSyncAt: row.last_sync_at, errorMessage: row.error_message,
+    appserviceTokenConfigured: Boolean(row.appservice_token),
+    appserviceWebhookPath: `/webhooks/matrix/${row.id}`,
     createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }

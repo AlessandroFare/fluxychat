@@ -1,0 +1,24 @@
+---
+title: Empathy layer (voice)
+description: Opt-in prosody detection adapts agent tone and escalation — without telling the user they seem stressed.
+---
+
+# Empathy layer (voice)
+
+During voice sessions, optional **prosody analysis** (pitch, rate, pauses) on the client feeds a coarse emotion signal to the agent runtime. The agent adjusts tone and escalation hints — never announces "you sound frustrated."
+
+## Console
+
+**Voice AI** — enable empathy per room in settings panel.
+
+## Opt-in
+
+- Per-room toggle in D1 (`room_empathy_settings`).
+- Raw prosody is **not** persisted — only aggregated signal with TTL in KV.
+- Low confidence → no prompt change.
+
+## Client
+
+`useEmpathyProsody` hook sends `POST /rooms/:id/empathy/signal` during voice capture.
+
+Works with [voice AI pipeline](/docs/guides/voice-ai-pipeline) and [Silero VAD](/docs/guides/voice-ai-pipeline).

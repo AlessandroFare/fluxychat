@@ -27,6 +27,7 @@ import {
   extractFirstUrl,
   fetchOgPreview,
 } from "../lib/message-enrichment.js";
+import { getLinkPreview } from "../lib/rich-previews.js";
 import { deliverWebhooks } from "../lib/webhook-delivery.js";
 import { normalizeClientMessageId } from "../lib/client-message-id.js";
 import { safeSchedulePostMessageAutomations } from "../lib/post-message-automations-safe.js";
@@ -38,6 +39,7 @@ import {
   parsePresenceInfoParam,
   CLIENT_EVENT_MAX_PER_MINUTE,
 } from "../lib/room-presence.js";
+import { buildStageSnapshot, pickActiveSpeaker } from "../lib/room-voice-stage.js";
 import {
   ROOM_CACHE_STORAGE_KEY,
   isCacheableBroadcast,
@@ -51,6 +53,16 @@ import {
 } from "../lib/user-watchlist.js";
 import { runStorageMigrations } from "../lib/do-sql-migrations.js";
 import { YjsSyncHandler } from "../lib/yjs-sync.js";
+import {
+  syncMessageDeleteToYjsRoomDoc,
+  syncMessageEditToYjsRoomDoc,
+  syncMessageToYjsRoomDoc,
+  getMessageCrdtSnapshotPayload,
+} from "../lib/yjs-message-list.js";
+import {
+  getGameCheckpointCrdtSnapshotPayload,
+  syncCheckpointToYjsRoomDoc,
+} from "../lib/yjs-game-checkpoint.js";
 import { maybeSyncMatrixOutboundForMessage } from "../lib/matrix-outbound-hook.js";
 
 /**
@@ -149,12 +161,22 @@ export class RoomDurableObject {
     this.socketIds = new Map();
     /** @type {Map<WebSocket, Record<string, boolean | undefined>>} */
     this.wsCapabilities = new Map();
+    /** @type {Map<WebSocket, string[]>} */
+    this.wsRoles = new Map();
     /** @type {{ event: Record<string, unknown>; cachedAt: string } | null} */
     this.lastCacheEntry = null;
+    /** @type {Map<string, { role: string, displayName?: string, vadScore?: number, lastVadAt?: number, joinedAt: string }>} */
+    this.stageByUserId = new Map();
+    this.activeSpeakerUserId = null;
+    this.maxStageSpeakers = 5;
     /** Ephemeral last-known foreground location per track. */
     this.locationTracks = new Map();
     /** Last accepted update time per user/track, enforcing the 1 Hz ceiling. */
     this.locationUpdateTimes = new Map();
+    /** @type {Map<string, number>} */
+    this.speculativeWarmupThrottle = new Map();
+    /** @type {Map<string, object>} */
+    this.speculativeWarmupCache = new Map();
     /** @type {YjsSyncHandler} */
     this.yjsSync = new YjsSyncHandler();
 
@@ -231,6 +253,52 @@ export class RoomDurableObject {
     };
   }
 
+  getStageSnapshot() {
+    return buildStageSnapshot(this.stageByUserId, this.activeSpeakerUserId);
+  }
+
+  broadcastStageState(options = {}) {
+    const roomIdStr = this.roomId || this.state.id.toString();
+    this.broadcast(
+      {
+        type: "stage_updated",
+        roomId: roomIdStr,
+        stage: this.getStageSnapshot(),
+      },
+      options,
+    );
+  }
+
+  refreshActiveSpeaker() {
+    const next = pickActiveSpeaker(this.stageByUserId);
+    if (next === this.activeSpeakerUserId) return;
+    this.activeSpeakerUserId = next;
+    const roomIdStr = this.roomId || this.state.id.toString();
+    this.broadcast({
+      type: "active_speaker",
+      roomId: roomIdStr,
+      userId: next,
+    });
+  }
+
+  removeUserFromStage(userId) {
+    if (!userId || !this.stageByUserId.has(userId)) return false;
+    this.stageByUserId.delete(userId);
+    if (this.activeSpeakerUserId === userId) {
+      this.activeSpeakerUserId = pickActiveSpeaker(this.stageByUserId);
+    }
+    this.broadcastStageState();
+    if (this.activeSpeakerUserId) {
+      const roomIdStr = this.roomId || this.state.id.toString();
+      this.broadcast({
+        type: "active_speaker",
+        roomId: roomIdStr,
+        userId: this.activeSpeakerUserId,
+      });
+    }
+    return true;
+  }
+
   broadcastSubscriptionCount() {
     const roomIdStr = this.roomId || this.state.id.toString();
     const count = this.clients.size;
@@ -281,6 +349,20 @@ export class RoomDurableObject {
     if (this.state.storage) {
       await this.state.storage.put(ROOM_CACHE_STORAGE_KEY, entry);
     }
+  }
+
+  syncYjsMessage(message, op = "upsert") {
+    const roomId = this.roomId || this.state.id.toString();
+    const syncFn =
+      op === "delete"
+        ? syncMessageDeleteToYjsRoomDoc
+        : op === "edit"
+          ? syncMessageEditToYjsRoomDoc
+          : syncMessageToYjsRoomDoc;
+    const broadcastFn = (frame) => this.broadcastBinary(frame);
+    void syncFn(this.yjsSync, roomId, this.state.storage, message, broadcastFn).catch((err) =>
+      logError("yjs.message_sync_failed", err, { roomId, messageId: message.id }),
+    );
   }
 
   /**
@@ -400,6 +482,7 @@ export class RoomDurableObject {
       return;
     }
     this.wsCapabilities.set(webSocket, authz.capabilities ?? {});
+    this.wsRoles.set(webSocket, auth.roles ?? []);
     try {
       await ensurePublicRoomMembership(
         this.env,
@@ -538,6 +621,20 @@ export class RoomDurableObject {
       );
     } catch (err) {
       logError("do.ws_send_subscription_succeeded_failed", err, { roomId });
+    }
+
+    if (this.stageByUserId.size > 0) {
+      try {
+        webSocket.send(
+          JSON.stringify({
+            type: "stage_updated",
+            roomId: roomIdStr,
+            stage: this.getStageSnapshot(),
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
     }
 
     if (userConnCount === 1) {
@@ -908,8 +1005,15 @@ export class RoomDurableObject {
         const roomId = this.roomId || this.state.id.toString();
         const { id, userId, content, parentId, attachments } = msg;
         const clientMessageId = normalizeClientMessageId(msg.clientMessageId);
-        const { resolveMessageExpiry } = await import("../lib/message-ttl.js");
-        const expiryResult = resolveMessageExpiry(msg, this.env);
+        const { resolveMessageExpiryWithRoomPolicy } = await import(
+          "../lib/message-retention-room.js"
+        );
+        const expiryResult = await resolveMessageExpiryWithRoomPolicy(
+          this.env,
+          this.projectId,
+          roomId,
+          msg,
+        );
         if (!expiryResult.ok) {
           webSocket.send(
             JSON.stringify({ type: "error", message: expiryResult.error }),
@@ -927,6 +1031,26 @@ export class RoomDurableObject {
           );
           return;
         }
+
+        if (this.projectId) {
+          const { assertProjectWriteResidency } = await import(
+            "../lib/data-residency-settings.js"
+          );
+          const residencyCheck = await assertProjectWriteResidency(this.env, this.projectId, {
+            operation: "message_create",
+          });
+          if (!residencyCheck.ok) {
+            webSocket.send(
+              JSON.stringify({
+                type: "error",
+                message: "data_residency_violation",
+                code: "data_residency_violation",
+              }),
+            );
+            return;
+          }
+        }
+
         const { visibility, visibleTo } = visibilityResult;
         const visibleToJson =
           visibility === "whisper" ? JSON.stringify(visibleTo) : null;
@@ -965,6 +1089,61 @@ export class RoomDurableObject {
           return;
         }
         validatedContent = fluxyPipeline.content;
+
+        const { runRoomFirmwareHook } = await import("../lib/room-firmware.js");
+        const firmwareResult = await runRoomFirmwareHook(this.env, {
+          projectId: this.projectId,
+          roomId,
+          userId: this.userIds.get(webSocket) ?? userId,
+          eventType: "message.create",
+          event: { content: validatedContent, clientMessageId },
+        });
+        if (firmwareResult.action === "veto") {
+          webSocket.send(
+            JSON.stringify({
+              type: "error",
+              message: firmwareResult.reason ?? "firmware_veto",
+              code: "firmware_veto",
+              moduleId: firmwareResult.moduleId,
+              retryAfterSeconds: firmwareResult.retryAfterSeconds,
+            }),
+          );
+          return;
+        }
+        validatedContent = firmwareResult.content ?? validatedContent;
+
+        const { tryDispatchSlashCommand } = await import("../lib/room-command-dispatch.js");
+        const slashDispatch = await tryDispatchSlashCommand(this.env, {
+          projectId: this.projectId,
+          roomId,
+          userId: this.userIds.get(webSocket) ?? userId,
+          content: validatedContent,
+          jwtRoles: this.wsRoles.get(webSocket) ?? [],
+          parentId: parentId ?? null,
+          clientMessageId,
+        });
+        if (slashDispatch.handled) {
+          if (!slashDispatch.ok) {
+            webSocket.send(
+              JSON.stringify({ type: "error", message: slashDispatch.error, command: true }),
+            );
+            return;
+          }
+          if (slashDispatch.message) {
+            webSocket.send(
+              JSON.stringify({
+                type: "message",
+                ...slashDispatch.message,
+                command: true,
+              }),
+            );
+          } else if (slashDispatch.commandResult?.action === "clear") {
+            webSocket.send(
+              JSON.stringify({ type: "command_ack", action: "clear", ok: true }),
+            );
+          }
+          return;
+        }
 
         const quotaResult = await checkAndConsumeProjectQuota(this.env, {
           projectId: this.projectId,
@@ -1031,7 +1210,10 @@ export class RoomDurableObject {
         const firstUrl = extractFirstUrl(validatedContent);
         let preview = null;
         if (firstUrl && this.env.OG_PREVIEW_ENABLED !== "false") {
-          preview = await fetchOgPreview(firstUrl, this.env);
+          preview = await getLinkPreview(this.env, { projectId, url: firstUrl });
+          if (!preview) {
+            preview = await fetchOgPreview(firstUrl, this.env);
+          }
         }
 
         let messageId = id;
@@ -1229,6 +1411,19 @@ export class RoomDurableObject {
           whisperRecipients ? { recipientUserIds: whisperRecipients } : {},
         );
 
+        if (!isDuplicateResend) {
+          this.syncYjsMessage({
+            id: messageId,
+            roomId,
+            userId,
+            senderId: userId,
+            content: validatedContent,
+            createdAt,
+            parentId: parentId || null,
+            clientMessageId,
+          });
+        }
+
         if (!isDuplicateResend && validatedContent) {
           void maybeSyncMatrixOutboundForMessage(this.env, {
             projectId,
@@ -1307,6 +1502,17 @@ export class RoomDurableObject {
           streaming: false,
         };
         this.broadcast(payload);
+        this.syncYjsMessage(
+          {
+            id: messageId,
+            roomId,
+            userId,
+            content,
+            createdAt: now,
+            editedAt: now,
+          },
+          "edit",
+        );
         return;
       }
 
@@ -1378,7 +1584,7 @@ export class RoomDurableObject {
         }
         const projectId = this.projectId;
         const existing = await this.env.DB.prepare(
-          "SELECT id, user_id FROM messages WHERE id = ? AND project_id = ? AND room_id = ? AND deleted_at IS NULL"
+          "SELECT id, user_id, created_at, client_message_id FROM messages WHERE id = ? AND project_id = ? AND room_id = ? AND deleted_at IS NULL"
         )
           .bind(messageId, projectId, roomId)
           .first();
@@ -1407,6 +1613,18 @@ export class RoomDurableObject {
           userId,
           deletedAt: now,
         });
+        this.syncYjsMessage(
+          {
+            id: messageId,
+            roomId,
+            userId,
+            content: "[deleted]",
+            createdAt: existing.created_at ?? now,
+            deletedAt: now,
+            clientMessageId: existing.client_message_id ?? null,
+          },
+          "delete",
+        );
         return;
       }
 
@@ -1528,6 +1746,81 @@ export class RoomDurableObject {
         return;
       }
 
+      if (msg.type === "stage_join") {
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "stage_requires_auth" }));
+          return;
+        }
+        const role = msg.role === "speaker" ? "speaker" : "listener";
+        const existing = this.stageByUserId.get(userId);
+        if (role === "speaker" && existing?.role !== "speaker") {
+          const speakerCount = [...this.stageByUserId.values()].filter((m) => m.role === "speaker").length;
+          if (speakerCount >= this.maxStageSpeakers) {
+            webSocket.send(JSON.stringify({ type: "error", message: "stage_speaker_limit" }));
+            return;
+          }
+        }
+        this.stageByUserId.set(userId, {
+          role,
+          displayName:
+            typeof msg.displayName === "string" ? msg.displayName.trim().slice(0, 64) : undefined,
+          joinedAt: new Date().toISOString(),
+          vadScore: existing?.vadScore ?? 0,
+          lastVadAt: existing?.lastVadAt ?? 0,
+        });
+        this.broadcastStageState();
+        return;
+      }
+
+      if (msg.type === "stage_leave") {
+        const userId = this.userIds.get(webSocket);
+        if (!userId) return;
+        this.removeUserFromStage(userId);
+        return;
+      }
+
+      if (msg.type === "stage_vad") {
+        const userId = this.userIds.get(webSocket);
+        if (!userId) return;
+        const meta = this.stageByUserId.get(userId);
+        if (!meta || meta.role !== "speaker") return;
+        const vadRate = this.consumeWsRateLimit(
+          `stage-vad:${this.projectId}:${this.roomId}:${userId}`,
+          30,
+          60_000,
+        );
+        if (!vadRate.allowed) return;
+        const score = Math.max(0, Math.min(1, Number(msg.score) || 0));
+        meta.vadScore = score;
+        meta.lastVadAt = Date.now();
+        this.stageByUserId.set(userId, meta);
+        this.refreshActiveSpeaker();
+        return;
+      }
+
+      if (msg.type === "stage_promote") {
+        const actorId = this.userIds.get(webSocket);
+        const targetUserId = typeof msg.targetUserId === "string" ? msg.targetUserId.trim() : "";
+        if (!actorId || !targetUserId) return;
+        const actor = this.stageByUserId.get(actorId);
+        if (!actor || actor.role !== "speaker") {
+          webSocket.send(JSON.stringify({ type: "error", message: "stage_promote_forbidden" }));
+          return;
+        }
+        const target = this.stageByUserId.get(targetUserId);
+        if (!target || target.role !== "listener") return;
+        const speakerCount = [...this.stageByUserId.values()].filter((m) => m.role === "speaker").length;
+        if (speakerCount >= this.maxStageSpeakers) {
+          webSocket.send(JSON.stringify({ type: "error", message: "stage_speaker_limit" }));
+          return;
+        }
+        target.role = "speaker";
+        this.stageByUserId.set(targetUserId, target);
+        this.broadcastStageState();
+        return;
+      }
+
       if (msg.type === "typing") {
         const { normalizePresenceIntent } = await import("../lib/presence-intent.js");
         const isTyping = !!msg.isTyping;
@@ -1538,6 +1831,8 @@ export class RoomDurableObject {
           intent: normalizePresenceIntent(msg.intent, isTyping),
         };
         this.broadcast(payload);
+        const partialText = typeof msg.partialText === "string" ? msg.partialText : "";
+        void this.maybeRunSpeculativeWarmup(msg.userId, partialText, isTyping).catch(() => {});
         return;
       }
 
@@ -1573,6 +1868,7 @@ export class RoomDurableObject {
     this.socketIds.delete(webSocket);
     this.wsInboundQueues.delete(webSocket);
     this.wsCapabilities.delete(webSocket);
+    this.wsRoles.delete(webSocket);
 
     const roomIdStr = this.roomId || this.state.id.toString();
     let memberLeft = false;
@@ -1581,6 +1877,7 @@ export class RoomDurableObject {
       const remaining = this.decrementUserConnection(userId);
       if (remaining === 0) {
         memberLeft = true;
+        this.removeUserFromStage(userId);
         const leftPayload = {
           type: "member_left",
           roomId: roomIdStr,
@@ -1918,6 +2215,84 @@ export class RoomDurableObject {
     return state;
   }
 
+  async maybeRunSpeculativeWarmup(userId, partialText, isTyping) {
+    const {
+      isSpeculativeWarmupEnabled,
+      countWords,
+      normalizeWarmupText,
+      runSpeculativeRetrieval,
+      buildWarmupCacheEntry,
+      recordWarmupTelemetry,
+      WARMUP_THROTTLE_MS,
+      WARMUP_MIN_WORDS,
+    } = await import("../lib/speculative-warmup.js");
+
+    if (!isSpeculativeWarmupEnabled(this.env) || !this.projectId || !userId) return;
+
+    const roomId = this.roomId || this.state.id.toString();
+
+    if (!isTyping) {
+      const cached = this.speculativeWarmupCache.get(userId);
+      if (cached) cached.discarded = true;
+      await recordWarmupTelemetry(this.env, {
+        projectId: this.projectId,
+        roomId,
+        userId,
+        outcome: "discarded",
+      });
+      return;
+    }
+
+    const text = normalizeWarmupText(partialText);
+    if (countWords(text) < WARMUP_MIN_WORDS) return;
+
+    const now = Date.now();
+    const lastRun = this.speculativeWarmupThrottle.get(userId) ?? 0;
+    if (now - lastRun < WARMUP_THROTTLE_MS) return;
+    this.speculativeWarmupThrottle.set(userId, now);
+
+    const result = await runSpeculativeRetrieval(this.env, {
+      projectId: this.projectId,
+      roomId,
+      partialText: text,
+    });
+    if (!result.ok || !Array.isArray(result.results)) return;
+
+    this.speculativeWarmupCache.set(
+      userId,
+      buildWarmupCacheEntry(text, result.results, now),
+    );
+
+    await recordWarmupTelemetry(this.env, {
+      projectId: this.projectId,
+      roomId,
+      userId,
+      outcome: "warmed",
+      contextCount: result.results.length,
+      partialLen: text.length,
+    });
+  }
+
+  async consumeSpeculativeWarmup(userId, submittedText) {
+    const { consumeWarmupCacheEntry, recordWarmupTelemetry } = await import("../lib/speculative-warmup.js");
+    const roomId = this.roomId || this.state.id.toString();
+    const cached = this.speculativeWarmupCache.get(userId);
+    this.speculativeWarmupCache.delete(userId);
+
+    const consumed = consumeWarmupCacheEntry(cached, submittedText);
+    if (this.projectId) {
+      await recordWarmupTelemetry(this.env, {
+        projectId: this.projectId,
+        roomId,
+        userId,
+        outcome: consumed.outcome,
+        contextCount: consumed.results?.length ?? 0,
+        partialLen: consumed.partialText?.length ?? 0,
+      });
+    }
+    return consumed;
+  }
+
   async fetch(request) {
     await this.ensureStorageHydrated();
 
@@ -2011,6 +2386,73 @@ export class RoomDurableObject {
     }
 
     if (
+      new URL(request.url).pathname === "/messages/crdt-snapshot" &&
+      request.method === "GET"
+    ) {
+      const roomId = this.roomId || this.state.id.toString();
+      const payload = await getMessageCrdtSnapshotPayload(
+        this.yjsSync,
+        roomId,
+        this.state.storage,
+      );
+      return new Response(JSON.stringify(payload), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (
+      new URL(request.url).pathname === "/game-checkpoints/sync" &&
+      request.method === "POST"
+    ) {
+      const roomId = this.roomId || this.state.id.toString();
+      const body = await request.json().catch(() => ({}));
+      if (body.checkpoint) {
+        await syncCheckpointToYjsRoomDoc(
+          this.yjsSync,
+          roomId,
+          this.state.storage,
+          body.checkpoint,
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (
+      new URL(request.url).pathname === "/game-checkpoints/crdt-snapshot" &&
+      request.method === "GET"
+    ) {
+      const roomId = this.roomId || this.state.id.toString();
+      const payload = await getGameCheckpointCrdtSnapshotPayload(
+        this.yjsSync,
+        roomId,
+        this.state.storage,
+      );
+      return new Response(JSON.stringify(payload), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (
+      new URL(request.url).pathname === "/stage-sync" &&
+      request.method === "POST"
+    ) {
+      const body = await request.json().catch(() => ({}));
+      if (typeof body.maxSpeakers === "number" && body.maxSpeakers > 0) {
+        this.maxStageSpeakers = Math.min(20, Math.floor(body.maxSpeakers));
+      }
+      if (body.enabled === false) {
+        this.stageByUserId.clear();
+        this.activeSpeakerUserId = null;
+        this.broadcastStageState();
+      }
+      return new Response(JSON.stringify({ ok: true, stage: this.getStageSnapshot() }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (
       new URL(request.url).pathname === "/live-stats" &&
       request.method === "GET"
     ) {
@@ -2084,6 +2526,23 @@ export class RoomDurableObject {
       });
     }
 
+    if (
+      new URL(request.url).pathname === "/speculative-warmup/consume" &&
+      request.method === "POST"
+    ) {
+      const body = await request.json().catch(() => ({}));
+      if (!body.userId || !body.submittedText) {
+        return new Response(JSON.stringify({ error: "userId and submittedText required" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const result = await this.consumeSpeculativeWarmup(body.userId, body.submittedText);
+      return new Response(JSON.stringify(result), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (new URL(request.url).pathname === "/announce" && request.method === "POST") {
       const body = await request.json();
       const roomIdStr = this.state.id.toString();
@@ -2148,6 +2607,17 @@ export class RoomDurableObject {
           content: body.content,
           editedAt: body.editedAt,
         }, broadcastOpts);
+        this.syncYjsMessage(
+          {
+            id: body.id,
+            roomId: body.roomId || roomIdStr,
+            userId: body.userId,
+            content: body.content,
+            createdAt: body.editedAt || new Date().toISOString(),
+            editedAt: body.editedAt,
+          },
+          "edit",
+        );
       } else if (body.type === "delete") {
         this.broadcast(
           {
@@ -2159,6 +2629,17 @@ export class RoomDurableObject {
             ...(body.hard !== undefined ? { hard: !!body.hard } : {}),
           },
           broadcastOpts,
+        );
+        this.syncYjsMessage(
+          {
+            id: body.id,
+            roomId: body.roomId || roomIdStr,
+            userId: body.userId,
+            content: "[deleted]",
+            createdAt: body.deletedAt || new Date().toISOString(),
+            deletedAt: body.deletedAt,
+          },
+          "delete",
         );
       } else if (body.type === "reaction") {
         this.broadcast(
@@ -2213,6 +2694,17 @@ export class RoomDurableObject {
           },
           broadcastOpts,
         );
+      } else if (body.type === "decision_updated") {
+        this.broadcast(
+          {
+            type: "decision_updated",
+            roomId: body.roomId || roomIdStr,
+            messageId: body.messageId,
+            decision: body.decision,
+            userId: body.userId,
+          },
+          broadcastOpts,
+        );
       } else if (body.type === "message_pinned") {
         this.broadcast(
           {
@@ -2246,6 +2738,16 @@ export class RoomDurableObject {
           },
           broadcastOpts,
         );
+      } else if (body.type === "agent_step" && body.step) {
+        this.broadcast(
+          {
+            type: "agent_step",
+            roomId: body.roomId || roomIdStr,
+            sessionId: body.sessionId,
+            step: body.step,
+          },
+          broadcastOpts,
+        );
       } else {
         const messageId = body.id || Date.now();
         const rid = typeof body.roomId === "string" ? body.roomId : roomIdStr;
@@ -2276,6 +2778,16 @@ export class RoomDurableObject {
           ...(body.transcriptionStatus !== undefined ? { transcriptionStatus: body.transcriptionStatus } : {}),
         };
         this.broadcast(payload, broadcastOpts);
+        this.syncYjsMessage({
+          id: messageId,
+          roomId: rid,
+          userId: payload.senderId,
+          senderId: payload.senderId,
+          content: payload.content,
+          createdAt: payload.createdAt,
+          parentId: payload.parentId,
+          clientMessageId: body.clientMessageId ?? null,
+        });
       }
       return new Response(JSON.stringify({ ok: true }), {
         headers: { "Content-Type": "application/json" },

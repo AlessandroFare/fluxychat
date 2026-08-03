@@ -513,6 +513,69 @@ export {
 } from "./generative-ui";
 
 export {
+  buildAgentWorkspaceSteps,
+  isAgentWorkspaceLive,
+  agentWorkspaceStepsToUiParts,
+  toolLabel,
+  toolCategory,
+  normalizeToolName,
+  type AgentWorkspaceStep,
+  type AgentWorkspaceStepStatus,
+  type AgentWorkspaceStepCategory,
+  type AgentWorkspaceToolEvent,
+  type AgentWorkspaceContext,
+} from "./agent-workspace";
+
+export {
+  mergeDebateSteps,
+  isDebateSessionLive,
+  debateStepsByRound,
+  type AgentDebateStep,
+  type AgentDebateStepStatus,
+  type AgentDebateParticipantRole,
+  type AgentDebateSession,
+} from "./agent-debate";
+
+export {
+  findStageParticipant,
+  isUserActiveSpeaker,
+  type VoiceStageRole,
+  type VoiceStageParticipant,
+  type VoiceStageSnapshot,
+} from "./voice-stage";
+
+export {
+  createAgUiAdapter,
+  mergeAgUiTextParts,
+  type AgUiStreamEvent,
+  type AgUiRunState,
+  type AgUiAdapter,
+  type AgUiAdapterOptions,
+} from "./ag-ui-adapter";
+
+export {
+  agentStreamPartToCanonical,
+  canonicalStreamPartToAgUiEvent,
+  canonicalStreamPartsToUiParts,
+  uiPartsToCanonicalStreamParts,
+  mergeCanonicalTextDeltas,
+  canonicalStreamPartsToDisplay,
+  type FluxyCanonicalStreamPart,
+} from "./stream-parts-bridge";
+
+export {
+  scheduleSessionTokenRefresh,
+  sessionTokenFingerprint,
+  type SessionTokenRefreshOptions,
+} from "./session-token-refresh";
+
+export {
+  applyLocationPrivacy,
+  roundLocationCoordinates,
+  type LocationPrivacyOptions,
+} from "./location-privacy";
+
+export {
   createMessagePatternMatcher,
   type MessagePatternRule,
   type MessagePatternHandler,
@@ -724,6 +787,14 @@ export {
 } from "./room-e2e";
 
 export {
+  buildAgentCardPayload,
+  generateAgentIdentityKeyPair,
+  signAgentCard,
+  verifyAgentCardSignature,
+  type FluxyAgentCardPayload,
+} from "./agent-identity";
+
+export {
   buildDeepResearchPrompt,
   buildWebSearchPrompt,
   buildImageGenerationCaption,
@@ -772,13 +843,32 @@ export {
   applyServerMessageAck,
   createClientMessageId,
   createOptimisticMessage,
+  detectDeliveryContentConflict,
   markMessageDeliveryFailed,
+  mergeHistoryWithPendingDelivery,
   tryMatchPendingByInbound,
   type FluxyChatMessageWithDelivery,
   type FluxyDeliverableMessage,
   type FluxyMessageDeliveryFields,
   type FluxyMessageDeliveryStatus,
 } from "./message-delivery";
+
+export {
+  FLUXY_MESSAGES_MAP_KEY,
+  applyCrdtSnapshotUpdate,
+  getRoomMessageCrdtDoc,
+  mergeRestHistoryWithYjsDoc,
+  mergeRestHistoryWithYjsRecords,
+  detectConflictBetweenVersions,
+  detectConflictCandidatesFromMerge,
+  readMessagesFromDoc,
+  subscribeMessageCrdtMultiTabSync,
+  trackInboundMessageInCrdtDoc,
+  type MessageCrdtSnapshot,
+  type YjsMessageRecord,
+  type ConflictCandidate,
+  type ConflictVersion,
+} from "./message-crdt-yjs";
 
 export { useRooms } from "./use-rooms";
 export { useNotifications } from "./use-notifications";
@@ -815,6 +905,7 @@ export interface FluxyChatMessage {
     title?: string | null;
     description?: string | null;
     imageUrl?: string | null;
+    aiSummary?: string | null;
   };
   attachments?: FluxyChatAttachment[];
   /** True while an agent (or user) is still streaming tokens into this message. */
@@ -841,6 +932,22 @@ export interface FluxyChatMessage {
     options: Array<{ index: number; text: string; votes: number }>;
     totalVoters: number;
     closed: boolean;
+  };
+  decision?: {
+    messageId: number;
+    content: string;
+    state: "pending" | "decided" | "expired_no_quorum";
+    progress: Array<{
+      role: string;
+      required: number;
+      current: number;
+      ackedBy: Array<{ userId: string; ackedAt: string }>;
+    }>;
+    totalRequired: number;
+    totalCurrent: number;
+    quorumMet: boolean;
+    expiresAt: string;
+    acks: Array<{ userId: string; role: string; ackedAt: string }>;
   };
   /** Message kind. `text` is the default and is implicit; `voice` is set
    *  by `POST /messages/voice` and carries audio metadata + a possibly
@@ -917,6 +1024,33 @@ export interface FluxyRoomCatchUp {
   unreadCount: number;
   lastReadMessageId: number;
   firstUnreadMessageId: number | null;
+  digest?: string | null;
+  highlights?: Array<{ index?: number; text?: string; messageId?: number; userId?: string; preview?: string }>;
+  messageSampleCount?: number;
+}
+
+/** Reaction mood timeline from `GET /rooms/:id/sentiment`. */
+export interface FluxyRoomSentiment {
+  roomId: string;
+  days: number;
+  aggregate: {
+    mood: "positive" | "negative" | "neutral";
+    score: number;
+    positive: number;
+    negative: number;
+    neutral: number;
+    total: number;
+  };
+  timeline: Array<{
+    day: string;
+    mood: "positive" | "negative" | "neutral";
+    score: number;
+    positive: number;
+    negative: number;
+    neutral: number;
+    total: number;
+    reactions: Record<string, number>;
+  }>;
 }
 
 /** Room-scoped compose draft synced via member preferences. */
@@ -1362,6 +1496,18 @@ export type FluxyChatEvent =
     }
   | { type: "agentRun"; run: FluxyChatAgentRun }
   | {
+      type: "agent_step";
+      roomId: string;
+      sessionId?: string;
+      step: import("./agent-debate").AgentDebateStep;
+    }
+  | {
+      type: "stage_updated";
+      roomId: string;
+      stage: import("./voice-stage").VoiceStageSnapshot;
+    }
+  | { type: "active_speaker"; roomId: string; userId: string | null }
+  | {
       type: "presence";
       online: number;
       users?: string[];
@@ -1510,6 +1656,24 @@ export class FluxyChatClient {
   /** Expire cached anonymous token so the next resolve re-mints (stable anonId). */
   invalidateCredential(): void {
     this.credentials?.invalidate();
+  }
+
+  /** Fetch public guest anti-spam config (Turnstile site key, rate limits). */
+  static async fetchPublicGuestHardening(baseUrl: string): Promise<{
+    ok: boolean;
+    publicGuestEnabled: boolean;
+    readOnlyGuest: boolean;
+    rateLimitPerMinute: number;
+    turnstile: {
+      configured: boolean;
+      required: boolean;
+      siteKey: string | null;
+    };
+  }> {
+    const url = new URL("/public/guest-hardening", trimTrailingSlashes(baseUrl));
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`Failed to fetch guest hardening config: ${res.status}`);
+    return res.json();
   }
 
   /** Join a public room without an account (P10-SB6). No API key required. */
@@ -1702,6 +1866,22 @@ export class FluxyChatClient {
       this._lastFetchReactions = body.reactions;
     }
     return sortMessagesChronological((body.messages ?? []) as FluxyChatMessage[]);
+  }
+
+  /** Yjs-encoded message-list snapshot from Room DO (offline merge). */
+  async fetchMessageCrdtSnapshot(
+    roomId: string,
+  ): Promise<{ update: string; messageCount: number; roomId: string } | null> {
+    const trimmedRoomId = roomId.trim();
+    if (!trimmedRoomId || !this.token) return null;
+    const url = new URL(
+      `/api/rooms/${encodeURIComponent(trimmedRoomId)}/messages/crdt-snapshot`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Failed to fetch message CRDT snapshot: ${res.status}`);
+    return res.json();
   }
 
   /** Reactions map from the most recent fetchMessages call. */
@@ -2480,21 +2660,40 @@ export class FluxyChatClient {
     };
   }
 
-  /** Full-text message search (P12-E). */
+  /** Full-text message search (P12-E). Use `mode: "hybrid"` for semantic+keyword when enabled. */
   async searchMessages(
     query: string,
-    options?: { roomId?: string; from?: string; to?: string; limit?: number },
-  ): Promise<{ query: string; results: Array<{
+    options?: {
+      roomId?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+      mode?: "keyword" | "hybrid" | "semantic";
+    },
+  ): Promise<{ query: string; mode?: string; results: Array<{
     id: number;
     roomId: string;
     userId: string;
     content: string;
     createdAt: string;
     snippet: string;
+    score?: number;
   }> } | null> {
     if (!this.token) return null;
     const trimmed = query?.trim();
     if (!trimmed) return { query: "", results: [] };
+
+    const mode = options?.mode ?? "keyword";
+    if (mode === "hybrid" || mode === "semantic") {
+      return this.searchMessagesSemantic(trimmed, {
+        roomId: options?.roomId,
+        from: options?.from,
+        to: options?.to,
+        limit: options?.limit,
+        mode,
+      });
+    }
+
     const url = new URL("/search/messages", this.baseUrl);
     url.searchParams.set("q", trimmed);
     if (options?.roomId) url.searchParams.set("roomId", options.roomId);
@@ -2505,6 +2704,7 @@ export class FluxyChatClient {
     if (!res.ok) throw new Error(`searchMessages failed: ${res.status}`);
     return (await res.json()) as {
       query: string;
+      mode?: string;
       results: Array<{
         id: number;
         roomId: string;
@@ -2512,7 +2712,158 @@ export class FluxyChatClient {
         content: string;
         createdAt: string;
         snippet: string;
+        score?: number;
       }>;
+    };
+  }
+
+  /** Semantic / hybrid message search (P15-F). Requires SEMANTIC_SEARCH_ENABLED + project toggle. */
+  async searchMessagesSemantic(
+    query: string,
+    options?: {
+      roomId?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+      mode?: "hybrid" | "semantic";
+    },
+  ): Promise<{ query: string; mode: string; results: Array<{
+    id: number;
+    roomId: string;
+    userId: string;
+    content: string;
+    createdAt: string;
+    snippet: string;
+    score?: number;
+  }> } | null> {
+    if (!this.token) return null;
+    const trimmed = query?.trim();
+    if (!trimmed) return { query: "", mode: options?.mode ?? "hybrid", results: [] };
+
+    const res = await fetch(`${this.baseUrl}/search/messages/semantic`, {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: trimmed,
+        roomId: options?.roomId,
+        from: options?.from,
+        to: options?.to,
+        limit: options?.limit,
+        mode: options?.mode ?? "hybrid",
+      }),
+    });
+
+    if (res.status === 404) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (body.error === "semantic_search_disabled") {
+        return this.searchMessages(trimmed, {
+          roomId: options?.roomId,
+          from: options?.from,
+          to: options?.to,
+          limit: options?.limit,
+          mode: "keyword",
+        });
+      }
+    }
+
+    if (!res.ok) throw new Error(`searchMessagesSemantic failed: ${res.status}`);
+    return (await res.json()) as {
+      query: string;
+      mode: string;
+      results: Array<{
+        id: number;
+        roomId: string;
+        userId: string;
+        content: string;
+        createdAt: string;
+        snippet: string;
+        score?: number;
+      }>;
+    };
+  }
+
+  /** Project semantic search settings and embedding stats. */
+  async getSemanticSearchSettings(): Promise<{
+    settings: {
+      globalEnabled: boolean;
+      enabled: boolean;
+      autoEmbed: boolean;
+      defaultMode: "keyword" | "hybrid" | "semantic";
+      embeddingCount: number;
+      updatedAt: string | null;
+      available: boolean;
+    };
+  } | null> {
+    if (!this.token) return null;
+    const res = await fetch(`${this.baseUrl}/search/settings`, { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`getSemanticSearchSettings failed: ${res.status}`);
+    return (await res.json()) as {
+      settings: {
+        globalEnabled: boolean;
+        enabled: boolean;
+        autoEmbed: boolean;
+        defaultMode: "keyword" | "hybrid" | "semantic";
+        embeddingCount: number;
+        updatedAt: string | null;
+        available: boolean;
+      };
+    };
+  }
+
+  /** Admin: update semantic search settings for the project. */
+  async updateSemanticSearchSettings(input: {
+    enabled?: boolean;
+    autoEmbed?: boolean;
+    defaultMode?: "keyword" | "hybrid" | "semantic";
+  }): Promise<{
+    settings: {
+      globalEnabled: boolean;
+      enabled: boolean;
+      autoEmbed: boolean;
+      defaultMode: "keyword" | "hybrid" | "semantic";
+      embeddingCount: number;
+      updatedAt: string | null;
+      available: boolean;
+    };
+  } | null> {
+    if (!this.token) return null;
+    const res = await fetch(`${this.baseUrl}/admin/search/settings`, {
+      method: "PATCH",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(`updateSemanticSearchSettings failed: ${res.status}`);
+    return (await res.json()) as {
+      settings: {
+        globalEnabled: boolean;
+        enabled: boolean;
+        autoEmbed: boolean;
+        defaultMode: "keyword" | "hybrid" | "semantic";
+        embeddingCount: number;
+        updatedAt: string | null;
+        available: boolean;
+      };
+    };
+  }
+
+  /** Admin: backfill embeddings for messages missing vectors. */
+  async backfillMessageEmbeddings(options?: {
+    roomId?: string;
+    limit?: number;
+  }): Promise<{ ok: boolean; processed: number; stored: number; skipped: number; embeddingCount: number } | null> {
+    if (!this.token) return null;
+    const res = await fetch(`${this.baseUrl}/search/messages/backfill`, {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(options ?? {}),
+    });
+    if (!res.ok) throw new Error(`backfillMessageEmbeddings failed: ${res.status}`);
+    return (await res.json()) as {
+      ok: boolean;
+      processed: number;
+      stored: number;
+      skipped: number;
+      embeddingCount: number;
     };
   }
 
@@ -3021,6 +3372,56 @@ export class FluxyChatClient {
     return { deletedIds: Array.isArray(body.deletedIds) ? body.deletedIds : [] };
   }
 
+  async replayCounterfactual(
+    roomId: string,
+    payload: {
+      originalRunId: string;
+      toolCallId: string;
+      modifiedParams?: Record<string, unknown>;
+      fromMessageId?: number | null;
+      dryRun?: boolean;
+      agentId?: string;
+    },
+  ): Promise<{
+    ok: boolean;
+    runId: string;
+    branchId: string;
+    dryRun: boolean;
+    sideEffect?: boolean;
+    costWarning?: string | null;
+    run: Record<string, unknown>;
+    original: Record<string, unknown>;
+  }> {
+    if (!this.token) throw new Error("replayCounterfactual requires authentication");
+    const url = new URL(`/rooms/${encodeURIComponent(roomId)}/counterfactual`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const reason = typeof body?.error === "string" ? body.error : `HTTP ${res.status}`;
+      throw new Error(`Counterfactual replay failed: ${reason}`);
+    }
+    return res.json();
+  }
+
+  async listCounterfactualRuns(
+    roomId: string,
+    originalRunId: string,
+  ): Promise<{ original: Record<string, unknown>; alternatives: Record<string, unknown>[] }> {
+    if (!this.token) throw new Error("listCounterfactualRuns requires authentication");
+    const url = new URL(`/rooms/${encodeURIComponent(roomId)}/counterfactuals`, this.baseUrl);
+    url.searchParams.set("originalRunId", originalRunId);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to list counterfactual runs: ${res.status}`);
+    return res.json();
+  }
+
   async sendReactionRest(
     messageId: number,
     emoji: string,
@@ -3112,6 +3513,58 @@ export class FluxyChatClient {
       lastReadMessageId: Number(body.lastReadMessageId) || 0,
       firstUnreadMessageId:
         body.firstUnreadMessageId != null ? Number(body.firstUnreadMessageId) : null,
+    };
+  }
+
+  async getRoomCatchUpDigest(roomId: string): Promise<FluxyRoomCatchUp> {
+    if (!this.token) {
+      return { unreadCount: 0, lastReadMessageId: 0, firstUnreadMessageId: null };
+    }
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/catch-up/digest`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) {
+      throw new Error(`Failed to get catch-up digest: ${res.status}`);
+    }
+    const body = await res.json();
+    return {
+      unreadCount: Number(body.unreadCount) || 0,
+      lastReadMessageId: Number(body.lastReadMessageId) || 0,
+      firstUnreadMessageId:
+        body.firstUnreadMessageId != null ? Number(body.firstUnreadMessageId) : null,
+      digest: typeof body.digest === "string" ? body.digest : null,
+      highlights: Array.isArray(body.highlights) ? body.highlights : [],
+      messageSampleCount: Number(body.messageSampleCount) || 0,
+    };
+  }
+
+  async getRoomSentiment(roomId: string, days = 7): Promise<FluxyRoomSentiment | null> {
+    if (!this.token) return null;
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/sentiment`,
+      this.baseUrl,
+    );
+    url.searchParams.set("days", String(days));
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) {
+      throw new Error(`Failed to get room sentiment: ${res.status}`);
+    }
+    const body = await res.json();
+    if (!body?.ok) return null;
+    return {
+      roomId: String(body.roomId ?? roomId),
+      days: Number(body.days) || days,
+      aggregate: body.aggregate ?? {
+        mood: "neutral",
+        score: 0,
+        positive: 0,
+        negative: 0,
+        neutral: 0,
+        total: 0,
+      },
+      timeline: Array.isArray(body.timeline) ? body.timeline : [],
     };
   }
 
@@ -3254,6 +3707,61 @@ export class FluxyChatClient {
     });
     if (!res.ok) throw new Error(`Failed to close poll: ${res.status}`);
     return res.json();
+  }
+
+  async createDecision(
+    roomId: string,
+    decision: {
+      content: string;
+      requiredRoles?: Array<{ role: string; count: number }>;
+      requiredAcks?: number;
+      allowedRoles?: string[];
+      ttlSeconds?: number;
+    },
+    opts?: { replyTo?: number | null; clientMessageId?: string },
+  ): Promise<{ message: Record<string, unknown> }> {
+    if (!this.token) throw new Error("createDecision requires JWT token");
+    const res = await fetch(new URL("/messages", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomId,
+        decision,
+        replyTo: opts?.replyTo ?? undefined,
+        clientMessageId: opts?.clientMessageId,
+      }),
+    });
+    if (!res.ok) throw new Error(`Failed to create decision: ${res.status}`);
+    return res.json();
+  }
+
+  async ackDecision(
+    messageId: number,
+  ): Promise<{ ok: boolean; decision: Record<string, unknown> }> {
+    if (!this.token) throw new Error("ackDecision requires JWT token");
+    const url = new URL(
+      `/messages/${encodeURIComponent(String(messageId))}/ack`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) throw new Error(`Failed to ack decision: ${res.status}`);
+    return res.json();
+  }
+
+  async getDecision(messageId: number): Promise<Record<string, unknown>> {
+    if (!this.token) throw new Error("getDecision requires JWT token");
+    const url = new URL(
+      `/messages/${encodeURIComponent(String(messageId))}/decision`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to get decision: ${res.status}`);
+    const body = await res.json();
+    return body.decision ?? body;
   }
 
   async listRoomPins(
@@ -4565,7 +5073,9 @@ export {
 // D-1: Voice AI pipeline end-to-end
 export {
   createVoicePipeline,
+  resolveVoicePipelineStages,
   type PipelineStage,
+  type PipelineMode,
   type PipelineMetrics,
   type PipelineEvent,
   type PipelineStatus,
@@ -4608,7 +5118,20 @@ export {
   type VadEvent,
   type TurnDetectionConfig,
   type TurnDetector,
+  type VadBackend,
+  type SileroVadScorer,
 } from "./voice-turn-detection";
+
+export {
+  createSileroVadScorer,
+  audioLevelFromPcmBuffer,
+  scorePcmFrame,
+  DEFAULT_SILERO_ONNX_MODEL_URL,
+  DEFAULT_SILERO_VAD_WASM_URL,
+  type SileroVadOptions,
+  type SileroVadInstance,
+  type SileroVadMode,
+} from "./silero-vad";
 
 // D-6: Prosody/emotion controls
 export {
@@ -4622,6 +5145,15 @@ export {
   type ProsodyOptions,
   type ProsodyController,
 } from "./voice-prosody";
+
+export {
+  createEmpathyProsodyController,
+  buildEmpathyAgentPromptSuffix,
+  type EmpathyInferredState,
+  type ProsodySignal,
+  type EmpathyProsodySample,
+  type EmpathyProsodyController,
+} from "./empathy-prosody";
 
 // D-7: Speaker diarization
 export {
@@ -4681,6 +5213,12 @@ export {
   type MlsKeyPackage,
   type MlsManager,
 } from "./mls-encryption";
+
+export {
+  hydrateMlsManagerFromRegistry,
+  buildMlsRegistryUpsertFromManager,
+  type RoomMlsRegistryGroup,
+} from "./room-mls-sync";
 
 // E-2: AI governance
 export {

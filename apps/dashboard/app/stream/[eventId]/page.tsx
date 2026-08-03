@@ -8,6 +8,7 @@ import { useDashboardSession } from "@/app/components/dashboard-session";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { cn } from "@/lib/utils";
 import { StreamPlayer } from "@/components/stream/stream-player";
+import { SyncedReplayPlayer, type SyncedAngleReplay } from "@/components/stream/synced-replay-player";
 import { FluxyChat } from "@/components/chat";
 import dynamic from "next/dynamic";
 
@@ -33,6 +34,9 @@ export default function StreamViewerPage() {
   const [error, setError] = useState<string | null>(null);
   const [handRaised, setHandRaised] = useState(false);
   const [showChat, setShowChat] = useState(true);
+  const [replayHls, setReplayHls] = useState<string | null>(null);
+  const [angleReplays, setAngleReplays] = useState<SyncedAngleReplay[]>([]);
+  const [replayTimeline, setReplayTimeline] = useState<Array<{ id: string; username?: string; content: string; createdAt: string }>>([]);
 
   useEffect(() => {
     if (!token || !eventId) return;
@@ -46,6 +50,43 @@ export default function StreamViewerPage() {
         if (!res.ok) throw new Error("not_found");
         const data = await res.json();
         if (!cancelled) setEvent(data);
+        if (!cancelled && (data.status === "ended" || data.status === "post_live")) {
+          const replayRes = await fetch(`${WORKER_URL}/api/live/events/${eventId}/replay`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (replayRes.ok) {
+            const bundle = await replayRes.json() as {
+              replay?: { playbackHls?: string; thumbnailUrl?: string } | null;
+              angleReplays?: Array<{
+                angleId: string;
+                label: string;
+                sortOrder: number;
+                offsetMs: number;
+                replay?: { playbackHls?: string; thumbnailUrl?: string };
+              }>;
+              chatTimeline?: Array<{ id: string; username?: string; content: string; createdAt: string }>;
+            };
+            if (!cancelled) {
+              const mappedAngles: SyncedAngleReplay[] = (bundle.angleReplays ?? [])
+                .filter((a) => a.replay?.playbackHls)
+                .map((a) => ({
+                  angleId: a.angleId,
+                  label: a.label,
+                  sortOrder: a.sortOrder,
+                  offsetMs: a.offsetMs ?? 0,
+                  playbackHls: a.replay!.playbackHls!,
+                  thumbnailUrl: a.replay?.thumbnailUrl,
+                }));
+              setAngleReplays(mappedAngles);
+              setReplayHls(
+                mappedAngles[0]?.playbackHls ??
+                  bundle.replay?.playbackHls ??
+                  null,
+              );
+              setReplayTimeline(bundle.chatTimeline ?? []);
+            }
+          }
+        }
       } catch {
         if (!cancelled) setError("Stream not found");
       }
@@ -105,6 +146,7 @@ export default function StreamViewerPage() {
   }
 
   const isLive = event.status === "live";
+  const isReplay = !isLive && Boolean(replayHls || event.status === "ended" || event.status === "post_live");
 
   return (
     <ConsoleShell>
@@ -119,6 +161,11 @@ export default function StreamViewerPage() {
                   <span className="relative inline-flex size-1.5 rounded-full bg-red-600" />
                 </span>
                 LIVE
+              </span>
+            )}
+            {isReplay && !isLive && (
+              <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                REPLAY
               </span>
             )}
             <h1 className="text-sm font-medium text-foreground">{event.title || "Untitled stream"}</h1>
@@ -147,11 +194,22 @@ export default function StreamViewerPage() {
         <div className="flex flex-1 overflow-hidden">
           {/* Video player */}
           <div className={cn("flex-1", showChat ? "max-lg:hidden" : "")}>
-            <StreamPlayer
-              streamUrl={event.streamUrl}
-              isLive={isLive}
-              title={event.title}
-            />
+            {replayHls ? (
+              angleReplays.length > 0 ? (
+                <SyncedReplayPlayer angles={angleReplays} poster={event.thumbnailUrl ?? undefined} />
+              ) : (
+                <div className="relative aspect-video bg-black">
+                  <video className="h-full w-full" controls playsInline src={replayHls} poster={event.thumbnailUrl ?? undefined} />
+                </div>
+              )
+            ) : (
+              <StreamPlayer streamUrl={event.streamUrl} isLive={isLive} title={event.title} />
+            )}
+            {isReplay && !replayHls ? (
+              <p className="mt-2 px-2 text-xs text-muted-foreground">
+                Replay processing — register an HTTPS HLS URL or reconcile Cloudflare recordings.
+              </p>
+            ) : null}
           </div>
 
           {/* Chat overlay panel */}
@@ -161,16 +219,26 @@ export default function StreamViewerPage() {
           )}>
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                <span className="text-xs font-medium text-foreground">Stream chat</span>
-                <span className="text-[10px] text-muted-foreground">{event.totalMessages} messages</span>
+                <span className="text-xs font-medium text-foreground">{isReplay ? "Replay chat" : "Stream chat"}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {isReplay ? replayTimeline.length : event.totalMessages} messages
+                </span>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <FluxyChat
-                  roomId={event.roomId}
-                  variant="onboarding"
-                  className="h-full"
-                />
-              </div>
+              {isReplay && replayTimeline.length > 0 ? (
+                <div className="flex-1 overflow-auto p-3 text-xs">
+                  {replayTimeline.map((m) => (
+                    <div key={m.id} className="mb-2">
+                      <span className="font-medium">{m.username ?? "viewer"}</span>
+                      <span className="text-muted-foreground"> · {new Date(m.createdAt).toLocaleTimeString()}</span>
+                      <div>{m.content}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex-1 overflow-hidden">
+                  <FluxyChat roomId={event.roomId} variant="onboarding" className="h-full" />
+                </div>
+              )}
               <div className="flex items-center gap-2 border-t border-border p-2">
                 <button
                   type="button"

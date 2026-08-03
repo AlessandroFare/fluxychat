@@ -286,6 +286,39 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     return json({ messages: mapped, reactions: reactionsMap });
   }
 
+  const crdtSnapshotMatch = url.pathname.match(
+    /^\/api\/rooms\/([^/]+)\/messages\/crdt-snapshot$/,
+  );
+  if (crdtSnapshotMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const roomId = decodeURIComponent(crdtSnapshotMatch[1]);
+    const canAccess = await canAccessRoom(env, auth, roomId);
+    if (!canAccess) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    try {
+      const stub = await getRoomStubForProject(env, auth.projectId, roomId, auth.userId);
+      const res = await stub.fetch("https://internal/messages/crdt-snapshot", {
+        method: "GET",
+      });
+      if (!res.ok) {
+        return json({ error: "crdt_snapshot_failed" }, { status: res.status });
+      }
+      const body = await res.json();
+      return json(body, { headers: corsHeaders });
+    } catch (err) {
+      logError("messages.crdt_snapshot_failed", err, requestLogCtx);
+      return json({ error: "crdt_snapshot_failed" }, { status: 500, headers: corsHeaders });
+    }
+  }
+
   // Room stats: message volume & active users (simple version)
   if (
     url.pathname.startsWith("/stats/rooms/") &&

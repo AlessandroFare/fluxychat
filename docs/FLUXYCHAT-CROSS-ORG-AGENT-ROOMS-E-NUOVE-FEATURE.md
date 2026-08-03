@@ -1,0 +1,284 @@
+# FluxyChat — Cross-Org Agent Rooms & Specifiche Tecniche Nuove Feature
+
+> Documento tecnico di dettaglio, complementare a `ROADMAP.md` /
+> `docs/FEATURE_ROADMAP.md`. Copre (1) la specifica completa di
+> **Cross-Org Agent Rooms**, l'idea "moonshot" emersa dalla ricerca, e
+> (2) l'approfondimento tecnico di tutte le altre feature nuove
+> proposte nelle sessioni di ricerca, con architettura, data model,
+> tool free/open-source e stima di effort.
+>
+> Vincolo di progetto invariato: **zero budget**. Ogni componente usa
+> solo librerie open source, free tier reali, o infrastruttura già
+> pagata (Cloudflare Workers/DO/D1/Vectorize).
+
+---
+
+# PARTE 1 — Cross-Org Agent Rooms (flagship spec)
+
+## 1.1 Pitch in una frase
+
+Una room FluxyChat dove i partecipanti non sono persone della stessa
+azienda, ma **agenti AI di due (o più) organizzazioni diverse**, che
+negoziano, si scambiano dati o eseguono transazioni con identità
+verificabile, audit bilaterale immutabile, e gate di approvazione
+umana — senza che nessuna delle due aziende debba fidarsi della
+piattaforma dell'altra.
+
+Analogia: *"Slack, ma i membri sono gli agenti AI di due aziende
+diverse che devono negoziare senza fidarsi ciecamente l'uno
+dell'altro né della piattaforma che li ospita."*
+
+## 1.2 Perché è un gap di mercato reale
+
+- I provider realtime (Ably, Pusher, Portal, Stream) **non hanno
+  agenti nella timeline** — costruiscono infrastruttura di messaggi,
+  non runtime agentico.
+- I provider di protocolli agent-to-agent (Google A2A, IBM ACP) offrono
+  **il protocollo di comunicazione** ma non un layer di stanza
+  persistente, multi-tenant, con audit trail, compliance e UI già
+  pronti.
+- FluxyChat ha *entrambi* i pezzi nello stesso stack: Room DO,
+  `WorkflowAgent`, `room-e2e.ts`/`mls-encryption.ts`, federazione
+  Matrix (#16), audit/observability (`otel-export.js`, `telemetry.ts`).
+  Il gap è **di composizione**, non tecnico.
+
+## 1.3 Architettura — vista d'insieme
+
+```
+ Org A                         FluxyChat (neutral host)                    Org B
+┌──────────────┐        ┌─────────────────────────────────────┐      ┌──────────────┐
+│ Agente        │  A2A   │  Room DO "cross-org-room-<id>"       │ A2A  │ Agente        │
+│ Procurement A │◄──────►│  ┌─────────────────────────────┐    │◄────►│ Sales B       │
+│ (WorkflowAgent│        │  │ Agent Registry (Agent Cards) │    │      │ (WorkflowAgent│
+│  esistente)   │        │  ├─────────────────────────────┤    │      │  esistente)   │
+└──────────────┘        │  │ Escrow State Machine (DO)     │    │      └──────────────┘
+                          │  ├─────────────────────────────┤    │
+      ▲                   │  │ Audit Hash-Chain (bilaterale)│    │              ▲
+      │ Human approval     │  ├─────────────────────────────┤    │              │ Human approval
+      │ (webhook/UI)       │  │ E2EE envelope (opzionale)     │    │              │ (webhook/UI)
+      ▼                   │  └─────────────────────────────┘    │              ▼
+┌──────────────┐        └─────────────────────────────────────┘      ┌──────────────┐
+│ Umano A       │                                                       │ Umano B       │
+│ (dashboard)   │                                                       │ (dashboard)   │
+└──────────────┘                                                       └──────────────┘
+```
+
+Il Worker/Room DO **non deve mai poter leggere** il contenuto negoziale
+sensibile se E2EE è attivo — relay/orchestratore di eventi, come
+`room-e2e.js` oggi.
+
+## 1.4 Componenti in dettaglio
+
+### 1.4.1 Agent Identity Layer
+
+Ogni agente presenta un **Agent Card** A2A firmato dalla propria org.
+
+```jsonc
+{
+  "agent_id": "urn:fluxychat:org-a:procurement-agent-01",
+  "org_id": "org-a.example.com",
+  "public_key": "ed25519:BASE64...",
+  "capabilities": ["negotiate.purchase_order", "read.catalog"],
+  "issued_at": "2026-08-01T00:00:00Z",
+  "signature": "..."
+}
+```
+
+**Implementazione zero-budget:** firma `ed25519` via WebCrypto; verifica
+via `.well-known/fluxychat-agent-keys.json` (stesso pattern Matrix).
+
+**Codice:** `packages/sdk/src/agent-identity.ts` (nuovo), riusa crypto
+di `room-e2e.ts`.
+
+### 1.4.2 Room Federation Layer
+
+1. **Neutral host (MVP):** room su tenant condiviso, `room.type = 'cross_org'`.
+2. **Federata (V2):** `federation-bridge.ts` / Matrix bridge (#16).
+
+### 1.4.3 Escrow State Machine
+
+DO dedicato per ogni **commitment** (prezzo, quantità, SLA):
+
+```ts
+type CommitmentState =
+  | "proposed" | "countered"
+  | "pending_human_a" | "pending_human_b"
+  | "committed" | "expired" | "rejected";
+
+interface Commitment {
+  id: string;
+  room_id: string;
+  proposed_by: string;
+  terms: Record<string, unknown>;
+  state: CommitmentState;
+  ttl_seconds: number;
+  human_a_confirmed_at?: string;
+  human_b_confirmed_at?: string;
+  hash_prev: string;
+}
+```
+
+**Regola:** nessun `committed` senza conferma umana per org.
+
+### 1.4.4 Audit Trail bilaterale
+
+```ts
+function appendAuditEntry(prevHash: string, event: AuditEvent): string {
+  const payload = JSON.stringify({ prevHash, event, ts: Date.now() });
+  return sha256Hex(payload); // SubtleCrypto
+}
+```
+
+### 1.4.5 E2EE opzionale
+
+Riuso `room-e2e.ts` / `mls-encryption.ts` — audit hasha payload cifrato.
+
+### 1.4.6 Pagamento (V2+)
+
+AP2/x402 (#18, #25) ancora commitment finale, non negoziazione intera.
+
+## 1.5 Flusso end-to-end (esempio)
+
+1. Agenti entrano con Agent Card → verifica `.well-known`.
+2. Proposta → `proposed` + hash chain.
+3. Contro-proposta (max N round configurabile) → `countered`.
+4. `pending_human_a` + `pending_human_b` → push (`use-web-push.ts`).
+5. Entrambi approvano → `committed` → opzionale AP2/x402.
+
+## 1.6 Threat model
+
+| Rischio | Mitigazione |
+|---|---|
+| Spoofing agente | Firma + `.well-known` (trust model DKIM-like) |
+| Loop negoziazione | Rate limit + max round |
+| Ripudio approvazione | Hash chain + timestamp firmato umano |
+| Data leakage relay | E2EE opzionale |
+| Commit autonomo | Gate umano non bypassabile in state machine |
+
+## 1.7 Fasi
+
+| Fase | Contenuto | Effort |
+|---|---|---|
+| MVP | Neutral host, Agent Identity, Escrow semplice, audit base | 3–4 sett |
+| V1 | E2EE opzionale, push conferma, UI dashboard | 2–3 sett |
+| V2 | Federazione bridge, AP2/x402 | 4–6 sett |
+| V3 | Multi-org (3+), policy engine autonomia | esplorativo |
+
+## 1.8 Touchpoint codice
+
+| Componente nuovo | Si aggancia a |
+|---|---|
+| `agent-identity.ts` | Crypto `room-e2e.ts` |
+| Escrow DO | Pattern Room DO |
+| Audit hash-chain | `audit-chain.js`, D1 `cross_org_audit_log` |
+| Notifiche | `use-web-push.ts` |
+| Federazione V2 | Matrix bridge (#16) |
+| Pagamento V2 | x402/AP2 (#18, #25) |
+
+---
+
+# PARTE 2 — Altre feature nuove (specifiche sintetiche)
+
+Vedi `docs/FEATURE_ROADMAP.md` sezione **Research Round 3** per
+catalogo numerato (#33–#62). Di seguito architettura per item.
+
+## 2.1 Ambient agents (event-driven)
+
+Webhook/sensori → Policy Engine (`agent_policies` D1) → WorkflowAgent
+→ room (audit per-azione). Effort: 3–4 sett.
+
+## 2.2 A2A adapter
+
+Già shippato (#24). Estensione: discovery Agent Card esterno → timeline.
+
+## 2.3 AP2/UCP
+
+Ricerca/monitoraggio — protocollo troppo giovane per investimento ora.
+
+## 2.4 Agent workspace live
+
+Shippato (#26). Evento `agent_step` con `{step_type, description, progress}`.
+
+## 2.5 Voice pipeline unificata
+
+Shippato (#12). Refactor multimodale singola chiamata.
+
+## 2.6 Traduzione vocale voce clonata (#27)
+
+Whisper → traduzione → RVC/OpenVoice su VPS (non Workers puro).
+
+## 2.7 Smart catch-up digest (#33)
+
+Vectorize + ultimo accesso utente → subset rilevante → summarization.
+
+## 2.8 Sentiment room dashboard (#34)
+
+Reazioni + classificatore leggero Workers AI. Effort: 3–5 gg.
+
+## 2.9 Rich link unfurl AI (#23)
+
+Shippato. `rich-previews.js` + `generateAiLinkSummary`.
+
+## 2.10 Voice rooms stages (#35)
+
+Room DO presence + Silero VAD (#10) + ruoli speaker/listener.
+
+## 2.11 Passkeys / WebAuthn (#36)
+
+`@simplewebauthn/server` (MIT). Effort: ~1 sett.
+
+## 2.12 Local-first alt engine (#37)
+
+ElectricSQL / PowerSync — **valutazione**, non sostituzione Yjs (#7).
+
+## 2.13 Ephemeral retention (#19)
+
+Shippato. `expires_at` + cron purge.
+
+## 2.14 Audit hash chain (#20)
+
+Shippato. Estendibile a cross-org (#32).
+
+## 2.15 Consent/DPA EU (#42)
+
+Banner + log consenso, pairs con data residency (#14).
+
+## 2.16 Visual moderation stream (#13)
+
+Shippato. `visual-moderation.js`.
+
+## 2.17 Bandwidth budget CI (#29)
+
+Shippato. `scripts/bandwidth-budget.mjs`.
+
+## 2.18 WhatsApp/RCS forms (#43)
+
+Form strutturati su canali che li supportano.
+
+## 2.19 WebTransport (#28)
+
+⚠️ Monitor only — non implementare in produzione 2026.
+
+---
+
+## Riepilogo priorità (research round 3)
+
+| # | Feature | Priorità | Effort |
+|---|---|---|---|
+| 33 | Smart catch-up digest | 🔴 Now | Basso |
+| 23 | Rich link unfurl AI | ✅ Done | — |
+| 19 | Ephemeral retention | ✅ Done | — |
+| 36 | Passkeys/WebAuthn | 🔴 Now | Basso-medio |
+| 26 | Agent workspace live | ✅ Done | — |
+| 38 | Ambient agents | 🟡 Next | Medio-alto |
+| 24 | A2A adapter | ✅ Done | — |
+| 12 | Voice pipeline unificata | ✅ Done | — |
+| 35 | Voice rooms/stages | 🟡 Next | Medio |
+| 32 | Cross-Org Agent Rooms MVP | 🟡 Next / moonshot | Alto |
+| 27 | Voce clonata | 🟢 Later | Medio-alto |
+| 25 | AP2/UCP | 🟢 Later | Ricerca |
+| 28 | WebTransport | ⚠️ Monitor | — |
+
+---
+
+*Aggiornato: 2026-08-03. Leggere con gli altri tre documenti FLUXYCHAT-* in `docs/`.*

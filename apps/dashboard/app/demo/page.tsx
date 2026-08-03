@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import {
@@ -23,6 +24,17 @@ interface DemoSession {
   agentId?: string | null;
   agentName?: string | null;
   agentHandle?: string | null;
+}
+
+interface DemoStatus {
+  ok?: boolean;
+  enabled: boolean;
+  configured: boolean;
+  ready: boolean;
+  roomId: string | null;
+  readOnly?: boolean;
+  turnstileRequired?: boolean;
+  agentName?: string;
 }
 
 const SUGGESTED_PROMPTS = [
@@ -146,12 +158,39 @@ function DemoHeroSection() {
 }
 
 export default function DemoRoomPage() {
+  const searchParams = useSearchParams();
+  const roomHint = searchParams.get("room")?.trim() || "demo";
   const workerUrl = getPublicWorkerUrl();
+  const [demoStatus, setDemoStatus] = useState<DemoStatus | null>(null);
   const [session, setSession] = useState<DemoSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSimulated, setShowSimulated] = useState(false);
 
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const sessionLoadedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`${workerUrl}/demo/status`);
+        const body = (await res.json()) as DemoStatus;
+        if (!cancelled) setDemoStatus(body);
+      } catch {
+        if (!cancelled) {
+          setDemoStatus({
+            enabled: false,
+            configured: false,
+            ready: false,
+            roomId: null,
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workerUrl]);
 
   const loadDemoSession = useCallback(
     async (turnstileToken?: string) => {
@@ -164,7 +203,7 @@ export default function DemoRoomPage() {
           headers: usePost ? { "Content-Type": "application/json" } : undefined,
           body:
             usePost && turnstileToken
-              ? JSON.stringify({ turnstileToken })
+              ? JSON.stringify({ turnstileToken, roomHint })
               : undefined,
         });
         const body = await res.json();
@@ -177,18 +216,29 @@ export default function DemoRoomPage() {
         setError("Could not reach the Worker demo endpoint.");
       }
     },
-    [workerUrl],
+    [workerUrl, roomHint],
   );
 
   useEffect(() => {
-    if (isDemoTurnstileEnabled()) return;
+    if (demoStatus === null) return;
+    if (!demoStatus.ready) {
+      if (!demoStatus.enabled) {
+        setError("demo_disabled");
+      } else if (!demoStatus.configured) {
+        setError("demo_not_configured");
+      }
+      return;
+    }
+    if (isDemoTurnstileEnabled() || demoStatus.turnstileRequired) return;
+    if (sessionLoadedRef.current) return;
+    sessionLoadedRef.current = true;
     setLoadingTimeout(false);
     void loadDemoSession();
     const timer = setTimeout(() => setLoadingTimeout(true), 5000);
     return () => clearTimeout(timer);
-  }, [loadDemoSession]);
+  }, [demoStatus, loadDemoSession]);
 
-  const showFallback = !session && !error && loadingTimeout;
+  const showFallback = demoStatus?.ready && !session && !error && loadingTimeout;
 
   const client = useMemo(() => {
     if (!session?.token || !session.userId) return null;
@@ -209,7 +259,7 @@ export default function DemoRoomPage() {
       <div className="relative border-b border-white/10 bg-gradient-to-b from-slate-950 to-slate-900 px-4 py-12 sm:px-6">
         <div className="mx-auto max-w-4xl">
           {/* Loading State */}
-          {!session && !error && !showFallback && (
+          {!session && !error && !showFallback && (demoStatus === null || demoStatus.ready) && (
             <div className="flex flex-col items-center justify-center gap-4 py-24">
               <div className="relative">
                 <div className="absolute inset-0 animate-ping rounded-full bg-blue-400/20" />
@@ -232,7 +282,9 @@ export default function DemoRoomPage() {
                 <p className="mt-2 text-sm text-slate-400">
                   {error === "demo_not_configured"
                     ? "The demo room isn't configured yet. Set DEMO_ROOM_ID and DEMO_API_KEY on the Worker to enable live mode."
-                    : error}
+                    : error === "demo_disabled"
+                      ? "The public demo is disabled on this deployment. Set DEMO_ENABLED=true on the Worker to enable it."
+                      : error}
                 </p>
               </div>
               <button
@@ -247,7 +299,10 @@ export default function DemoRoomPage() {
           )}
 
           {/* Turnstile */}
-          {isDemoTurnstileEnabled() && !session && !error && (
+          {(isDemoTurnstileEnabled() || demoStatus?.turnstileRequired) &&
+            demoStatus?.ready &&
+            !session &&
+            !error && (
             <div className="mx-auto mt-8 max-w-sm space-y-3 rounded-xl border border-blue-400/20 bg-blue-500/5 p-6">
               <p className="text-center text-sm text-slate-300">
                 Complete the check below to enter the demo room.

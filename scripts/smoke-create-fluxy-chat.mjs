@@ -12,7 +12,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -22,7 +22,9 @@ const pkgDir = join(root, "packages", "create-fluxy-chat");
 const projectName = "fluxy-smoke-test-bot";
 
 function run(cmd, args, opts = {}) {
-  const result = spawnSync(cmd, args, {
+  const executable =
+    process.platform === "win32" && cmd === "pnpm" ? "pnpm.cmd" : cmd;
+  const result = spawnSync(executable, args, {
     cwd: opts.cwd ?? root,
     encoding: "utf8",
     stdio: opts.silent ? "pipe" : "inherit",
@@ -49,51 +51,99 @@ function assertContains(projectDir, relPath, needle) {
   }
 }
 
-function main() {
+function scaffoldAndAssert(workDir, projectName, cliArgs, expectedFiles, contentChecks = []) {
+  console.log(`→ Scaffolding "${projectName}" (${cliArgs.join(" ")})`);
+  run(
+    "node",
+    [join(pkgDir, "dist", "index.js"), projectName, ...cliArgs],
+    { cwd: workDir, silent: true },
+  );
+
+  const projectDir = join(workDir, projectName);
+  if (!existsSync(projectDir)) {
+    throw new Error(`Project directory was not created: ${projectDir}`);
+  }
+
+  const entries = readdirSync(projectDir);
+  if (entries.length < 3) {
+    throw new Error(`Project directory looks empty (${entries.length} entries)`);
+  }
+
+  for (const file of expectedFiles) {
+    assertFile(projectDir, file);
+  }
+  for (const [relPath, needle] of contentChecks) {
+    assertContains(projectDir, relPath, needle);
+  }
+
+  console.log(`  ✓ ${projectName}: ${entries.length} top-level entries`);
+  return projectDir;
+}
+
+function ensureCliBuilt() {
+  const dist = join(pkgDir, "dist", "index.js");
+  const src = join(pkgDir, "src", "index.ts");
+  if (
+    existsSync(dist) &&
+    existsSync(src) &&
+    statSync(dist).mtimeMs >= statSync(src).mtimeMs
+  ) {
+    console.log("→ Using existing create-fluxy-chat build");
+    return;
+  }
   console.log("\n→ Building @fluxy-chat/create-fluxy-chat");
-  run("pnpm", ["--filter", "@fluxy-chat/create-fluxy-chat", "build"]);
+  run("pnpm", ["build"], { cwd: pkgDir });
+}
+
+function main() {
+  ensureCliBuilt();
 
   const workDir = mkdtempSync(join(tmpdir(), "fluxy-create-smoke-"));
-  const projectDir = join(workDir, projectName);
 
   try {
-    console.log(`→ Scaffolding "${projectName}" (basic adapter, skip install/git)`);
-    run(
-      "node",
-      [join(pkgDir, "dist", "index.js"), projectName, "-y", "--skip-install", "--no-git", "--adapter", "basic"],
-      { cwd: workDir, silent: true },
+    scaffoldAndAssert(
+      workDir,
+      projectName,
+      ["-y", "--skip-install", "--no-git", "--adapter", "basic"],
+      [
+        "package.json",
+        "wrangler.toml",
+        ".dev.vars",
+        ".env.example",
+        ".gitignore",
+        "README.md",
+        "src/index.ts",
+        "src/bot.ts",
+        "tsconfig.json",
+      ],
+      [
+        ["package.json", projectName],
+        ["wrangler.toml", "name"],
+        ["src/index.ts", "export default"],
+        ["src/bot.ts", "handleWebhook"],
+      ],
     );
 
-    if (!existsSync(projectDir)) {
-      throw new Error(`Project directory was not created: ${projectDir}`);
-    }
-
-    const entries = readdirSync(projectDir);
-    if (entries.length < 4) {
-      throw new Error(`Project directory looks empty (${entries.length} entries)`);
-    }
-
-    for (const file of [
-      "package.json",
-      "wrangler.toml",
-      ".dev.vars",
-      ".env.example",
-      ".gitignore",
-      "README.md",
-      "src/index.ts",
-      "src/bot.ts",
-      "tsconfig.json",
-    ]) {
-      assertFile(projectDir, file);
-    }
-
-    assertContains(projectDir, "package.json", projectName);
-    assertContains(projectDir, "wrangler.toml", "name");
-    assertContains(projectDir, "src/index.ts", "export default");
-    assertContains(projectDir, "src/bot.ts", "handleWebhook");
+    scaffoldAndAssert(
+      workDir,
+      "fluxy-smoke-test-react",
+      ["-y", "--skip-install", "--no-git", "--template", "react"],
+      [
+        "package.json",
+        ".env.example",
+        "README.md",
+        "src/App.tsx",
+        "src/main.tsx",
+        "vite.config.ts",
+        "index.html",
+      ],
+      [
+        ["src/App.tsx", "joinPublicRoomAsGuest"],
+        [".env.example", "VITE_FLUXYCHAT_PUBLIC_ROOM_ID"],
+      ],
+    );
 
     console.log("\n✓ create-fluxy-chat smoke test passed");
-    console.log(`  scaffolded ${entries.length} top-level entries in ${projectDir}`);
   } finally {
     rmSync(workDir, { recursive: true, force: true });
   }

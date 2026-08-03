@@ -1,0 +1,26 @@
+---
+title: Moderation console
+description: Pending reports queue, mute/ban/delete actions, and moderator history.
+---
+
+# Moderation console
+
+Central **moderation queue** for AI-flagged and user-reported content. Moderators review, bulk-act, and audit history.
+
+## Console
+
+**Moderation** (`/moderation`):
+
+- Pending queue (from `ai_moderation_queue` + reports)
+- Stats and trends
+- Action history (`moderation_events`)
+
+## AI moderation
+
+Text and image flags enqueue automatically when `AI_MODERATION_ENABLED` / `VISUAL_MODERATION_ENABLED` on your deployment. Actions: log, mute, delete — per severity config.
+
+## Human-in-the-loop
+
+Bulk approve/reject for HITL workflows. All actions are audited.
+
+See [tool approvals](/docs/guides/tool-approvals) for agent-side moderation tools.

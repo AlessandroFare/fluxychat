@@ -12,6 +12,7 @@ import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
 import { messageFromUnknown } from "@/lib/error-message";
+import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import {
   connectMatrixBridge,
   createMatrixBridge,
@@ -22,10 +23,15 @@ import {
   getMatrixBridge,
   getMatrixStats,
   listMatrixBridges,
+  pingMatrixBridgeHealth,
+  rotateMatrixAppserviceToken,
+  runMatrixBridgeHealthCheckAll,
   type MatrixBridge,
   type MatrixBridgeStats,
   type MatrixRoomMapping,
 } from "@/lib/matrix-bridge-client";
+
+const WORKER_PUBLIC_URL = getPublicWorkerUrl();
 
 function statusBadge(status: string) {
   const variant = status === "connected" ? "default" : status === "error" ? "destructive" : "secondary";
@@ -54,6 +60,7 @@ export default function MatrixBridgesPage() {
   const [mapRoomId, setMapRoomId] = useState("");
   const [matrixRoomId, setMatrixRoomId] = useState("");
   const [matrixSpaceId, setMatrixSpaceId] = useState("");
+  const [revealedAppserviceToken, setRevealedAppserviceToken] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     if (!token) {
@@ -103,7 +110,8 @@ export default function MatrixBridgesPage() {
         syncMode: "bidirectional",
       });
       setAccessToken("");
-      setNotice(`Matrix bridge ${created.id} created.`);
+      if (created.appserviceToken) setRevealedAppserviceToken(created.appserviceToken);
+      setNotice(`Matrix bridge ${created.id} created. Copy the appservice token now — it is shown once.`);
       await loadAll();
       await loadDetail(created.id);
     } catch (err) {
@@ -122,6 +130,33 @@ export default function MatrixBridgesPage() {
       await loadAll();
     } catch (err) {
       setError(messageFromUnknown(err, "Connect failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleHealth(bridgeId: string) {
+    if (!token) return;
+    setBusy(`health-${bridgeId}`);
+    try {
+      const res = await pingMatrixBridgeHealth(token, bridgeId);
+      setNotice(res.health.ok ? "Homeserver reachable." : `Health failed: ${res.health.error ?? res.health.status}`);
+    } catch (err) {
+      setError(messageFromUnknown(err, "Health check failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleHealthAll() {
+    if (!token) return;
+    setBusy("health-all");
+    try {
+      const res = await runMatrixBridgeHealthCheckAll(token);
+      setNotice(`Health check: ${res.healthy}/${res.checked} bridges healthy.`);
+      await loadAll();
+    } catch (err) {
+      setError(messageFromUnknown(err, "Health check failed"));
     } finally {
       setBusy(null);
     }
@@ -195,6 +230,21 @@ export default function MatrixBridgesPage() {
     }
   }
 
+  async function handleRotateAppserviceToken(bridgeId: string) {
+    if (!token) return;
+    setBusy(`rotate-as-${bridgeId}`);
+    try {
+      const res = await rotateMatrixAppserviceToken(token, bridgeId);
+      setRevealedAppserviceToken(res.appserviceToken);
+      setNotice("Appservice token rotated — update Synapse and copy the new token.");
+      await loadAll();
+    } catch (err) {
+      setError(messageFromUnknown(err, "Token rotation failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const selectedBridge = bridges.find((b) => b.id === selectedId) ?? null;
 
   return (
@@ -213,10 +263,9 @@ export default function MatrixBridgesPage() {
       />
 
       <p className="text-xs text-muted-foreground">
-        Docs:{" "}
-        <Link href="/docs/guides/matrix-bridge" className="font-medium underline-offset-2 hover:underline">
-          Matrix bridge guide
-        </Link>
+        Docs: <Link href="/docs/guides/matrix-bridge" className="font-medium underline-offset-2 hover:underline">Matrix bridge guide</Link>
+        {" · "}
+        <a href="https://github.com/fluxychat/Chat/blob/main/docs/MATRIX_SYNAPSE_RUNBOOK.md" className="font-medium underline-offset-2 hover:underline">Synapse runbook</a>
       </p>
 
       <ConsoleFeedback error={error} notice={notice} className="mt-4" />
@@ -228,9 +277,9 @@ export default function MatrixBridgesPage() {
       )}
 
       {stats ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <Badge variant="outline">
-            <Orbit className="mr-1 h-3 w-3" />
+            <Orbit className="mr-1 h-3 w-3" aria-hidden />
             {stats.totalBridges} bridge(s)
           </Badge>
           <Badge variant="outline">{stats.totalMappings} mapping(s)</Badge>
@@ -239,6 +288,16 @@ export default function MatrixBridgesPage() {
               {s.status}: {s.count}
             </Badge>
           ))}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!!busy}
+            onClick={() => void handleHealthAll()}
+            aria-label="Run health check on all connected bridges"
+          >
+            {busy === "health-all" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Zap className="mr-1 h-3 w-3" aria-hidden />}
+            Health check all
+          </Button>
         </div>
       ) : null}
 
@@ -286,6 +345,9 @@ export default function MatrixBridgesPage() {
                           <Button size="sm" variant="outline" onClick={() => void loadDetail(bridge.id)}>
                             Mappings
                           </Button>
+                          <Button size="sm" variant="outline" disabled={!!busy} onClick={() => void handleHealth(bridge.id)}>
+                            Health
+                          </Button>
                           {bridge.status === "connected" ? (
                             <Button size="sm" variant="outline" disabled={!!busy} onClick={() => void handleDisconnect(bridge.id)}>
                               <Unplug className="h-3 w-3" />
@@ -301,6 +363,36 @@ export default function MatrixBridgesPage() {
                         </div>
                       </div>
                       {bridge.errorMessage ? <p className="text-xs text-red-600">{bridge.errorMessage}</p> : null}
+                      {isSelected && bridge.appserviceWebhookPath ? (
+                        <div className="mt-2 space-y-1 rounded-md border border-border bg-muted/30 p-2 text-xs">
+                          <p>
+                            <span className="text-muted-foreground">Webhook:</span>{" "}
+                            <code className="font-mono">{WORKER_PUBLIC_URL}{bridge.appserviceWebhookPath}</code>
+                          </p>
+                          <p className="text-muted-foreground">
+                            Synapse appservice: POST transactions with{" "}
+                            <code className="font-mono">Authorization: Bearer &lt;appservice_token&gt;</code>
+                          </p>
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <Badge variant={bridge.appserviceTokenConfigured ? "default" : "destructive"}>
+                              {bridge.appserviceTokenConfigured ? "Token configured" : "Token missing — rotate"}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!!busy}
+                              onClick={() => void handleRotateAppserviceToken(bridge.id)}
+                            >
+                              Rotate appservice token
+                            </Button>
+                          </div>
+                          {revealedAppserviceToken && selectedId === bridge.id ? (
+                            <pre className="mt-1 max-h-16 overflow-auto rounded border border-amber-200 bg-amber-50 p-2 font-mono text-[10px] text-amber-900">
+                              {revealedAppserviceToken}
+                            </pre>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </Panel>
                   );
                 })}

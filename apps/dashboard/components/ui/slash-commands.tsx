@@ -3,16 +3,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
-const BUILTIN_COMMANDS = [
+const FALLBACK_COMMANDS = [
   { command: "/help", description: "Show available commands" },
-  { command: "/mute", description: "Mute a user in this room", role: "mod" },
-  { command: "/unmute", description: "Unmute a user", role: "mod" },
-  { command: "/pin", description: "Pin the last message or a specific message", role: "mod" },
-  { command: "/unpin", description: "Unpin a pinned message", role: "mod" },
-  { command: "/escalate", description: "Escalate conversation to a human agent" },
-  { command: "/summarize", description: "Get an AI summary of recent messages" },
-  { command: "/broadcast", description: "Send broadcast to all room members", role: "admin" },
-  { command: "/export", description: "Export room history", role: "admin" },
+  { command: "/poll", description: "Create a quick poll", usage: '/poll Question? | A | B' },
+  { command: "/remind", description: "Schedule a reminder", usage: "/remind 30m text" },
+  { command: "/assign", description: "Assign a task", usage: "/assign @user task" },
+  { command: "/summarize", description: "AI summary of recent messages" },
+  { command: "/escalate", description: "Escalate to human agent" },
   { command: "/members", description: "List room members" },
   { command: "/info", description: "Show room information" },
   { command: "/clear", description: "Clear your draft message" },
@@ -20,17 +17,22 @@ const BUILTIN_COMMANDS = [
 
 interface SlashCommandMenuProps {
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  commands?: Array<{ command: string; description: string; usage?: string; required_role?: string }>;
   onCommand: (command: string, args: string) => void;
   onClose: () => void;
 }
 
-export function SlashCommandMenu({ inputRef, onCommand, onClose }: SlashCommandMenuProps) {
+export function SlashCommandMenu({ inputRef, commands, onCommand, onClose }: SlashCommandMenuProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+  const available = commands?.length ? commands : FALLBACK_COMMANDS;
 
-  const filtered = BUILTIN_COMMANDS.filter(
-    (c) => c.command.startsWith("/" + query) && !c.role,
+  const filtered = available.filter(
+    (c) =>
+      c.command.startsWith("/" + query) ||
+      c.command.startsWith(query) ||
+      c.description.toLowerCase().includes(query.toLowerCase()),
   );
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function SlashCommandMenu({ inputRef, onCommand, onClose }: SlashCommandM
   }, [filtered, selectedIndex, onCommand, onClose, inputRef]);
 
   useEffect(() => {
-    const handler = (e: Event) => {
+    const handler = () => {
       const input = inputRef.current;
       if (!input) return;
       const val = input.value;
@@ -74,14 +76,14 @@ export function SlashCommandMenu({ inputRef, onCommand, onClose }: SlashCommandM
   return (
     <div
       ref={menuRef}
-      className="absolute bottom-full left-0 z-50 mb-1 w-64 rounded-lg border border-border bg-popover p-1 shadow-xl"
+      className="absolute bottom-full left-0 z-50 mb-1 w-72 rounded-lg border border-border bg-popover p-1 shadow-xl"
     >
       {filtered.map((cmd, i) => (
         <button
           key={cmd.command}
           type="button"
           className={cn(
-            "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs",
+            "flex w-full flex-col gap-0.5 rounded-md px-2.5 py-1.5 text-left text-xs",
             i === selectedIndex ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
           onMouseDown={(e) => { e.preventDefault(); onCommand(cmd.command, ""); onClose(); }}
@@ -109,3 +111,5 @@ export function useSlashCommand() {
 
   return { showSlash, setShowSlash, handleInput };
 }
+
+export { FALLBACK_COMMANDS };

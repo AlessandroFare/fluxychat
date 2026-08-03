@@ -107,6 +107,7 @@ const SECURITY_GUIDES = [
   { href: "/guides/session-security", label: "Session Security", description: "Best practices for session storage and token refresh." },
   { href: "/guides/oauth-encryption", label: "OAuth Token Encryption", description: "Encrypt stored OAuth tokens at rest." },
   { href: "/guides/gdpr-compliance", label: "GDPR & Data Retention", description: "Export, anonymize, and delete user data." },
+  { href: "https://developers.cloudflare.com/ssl/post-quantum-cryptography/", label: "Post-quantum TLS (Cloudflare)", description: "Edge ML-KEM hybrid key exchange — no Worker code changes." },
 ] as const;
 
 /* -------------------------------------------------------------------------- */
@@ -225,6 +226,14 @@ export default function SecurityPage() {
         description: "Export and retention flows available.",
         status: "pass",
         detail: "See Privacy page for export/delete. Worker routes: /api/gdpr/*.",
+      },
+      {
+        id: "pq-tls",
+        label: "Post-quantum TLS (edge)",
+        description: "Cloudflare terminates TLS with hybrid ML-KEM (Kyber) key exchange.",
+        status: "pass",
+        detail:
+          "No app code required — all *.workers.dev and custom zones on Cloudflare get PQC-capable handshakes automatically. Document for compliance questionnaires.",
       },
     ];
     return items;
@@ -369,6 +378,30 @@ export default function SecurityPage() {
                 No token information available. Configure OAuth in your adapter settings.
               </div>
             )}
+          </Panel>
+
+          {/* Post-quantum TLS */}
+          <Panel title="Post-quantum TLS">
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                FluxyChat runs on Cloudflare Workers. TLS is terminated at the Cloudflare edge with{" "}
+                <strong className="text-foreground">hybrid post-quantum key exchange (ML-KEM / Kyber)</strong>{" "}
+                alongside classical ECDHE — no application changes or extra cost.
+              </p>
+              <ul className="list-disc space-y-1 pl-5 text-xs">
+                <li>Applies to Worker HTTP, WebSocket upgrades, and dashboard traffic proxied through Cloudflare.</li>
+                <li>Use this section when answering SOC2 / procurement questions about harvest-now-decrypt-later risk.</li>
+                <li>End-to-end message encryption (MLS, `#30`) is separate from transport TLS.</li>
+              </ul>
+              <a
+                href="https://developers.cloudflare.com/ssl/post-quantum-cryptography/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex text-xs font-medium text-brand underline underline-offset-2"
+              >
+                Cloudflare post-quantum cryptography docs →
+              </a>
+            </div>
           </Panel>
 
           {/* Security guides */}

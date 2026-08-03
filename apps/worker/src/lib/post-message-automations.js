@@ -1,9 +1,17 @@
 import { logError } from "./worker-log.js";
 import { deliverWebhooks } from "./webhook-delivery.js";
 import { workerSharedLlmAllowed } from "./hosted-saas-policy.js";
+import { shouldAutoEmbedMessage } from "./semantic-search-settings.js";
 import { maybeNotifyOfflineSms } from "./offline-notify-sent.js";
 import { maybePushNotifyOnMessage } from "./push-notifications.js";
 import { fanoutRoomInternal } from "./room-shard.js";
+import { suggestMessageRouting } from "./support-routing.js";
+import { notifyMentionedUsers } from "./in-app-notifications.js";
+import { adjustAgentLoad } from "./queue-management.js";
+import { getRoomTranslationSettings } from "./room-translation-settings.js";
+import { translateMessageContent } from "./message-translation.js";
+import { fanoutServerEvent } from "./message-realtime-fanout.js";
+import { maybeTriggerAmbientAgentsOnMessage } from "./ambient-agents.js";
 
 /** Audit C-3: max allowed depth for nested automations. */
 export const AUTOMATION_MAX_DEPTH = 3;
@@ -61,11 +69,15 @@ export async function schedulePostMessageAutomations(env, detail) {
       maybeTriggerAutoRoomSummary(env, detail.projectId, detail.roomId),
       maybeRunBuiltinModerationScan(env, detail),
       maybeRunAiModerationScan(env, detail),
+      maybeRunVisualModerationScan(env, detail),
       maybeNotifyOfflineSms(env, detail),
       maybePushNotifyOnMessage(env, detail),
       maybeExtractRoomMemory(env, detail),
       maybeStoreMessageEmbedding(env, detail),
       maybeExtractKnowledgeGraph(env, detail),
+      maybeRecordSupportRoutingSuggestion(env, detail),
+      maybeAutoTranslateRoomMessage(env, detail),
+      maybeTriggerAmbientAgentsOnMessage(env, detail),
     ]);
   } catch (err) {
     logError("post_message_automations_failed", err, {
@@ -348,7 +360,7 @@ async function maybeExtractRoomMemory(env, detail) {
  */
 async function maybeStoreMessageEmbedding(env, detail) {
   try {
-    if (env.SEMANTIC_SEARCH_ENABLED !== "true" && env.SEMANTIC_SEARCH_ENABLED !== "1") {
+    if (!(await shouldAutoEmbedMessage(env, detail.projectId))) {
       return;
     }
     if (!workerSharedLlmAllowed(env, detail.projectId)) {
@@ -467,6 +479,33 @@ async function maybeExtractKnowledgeGraph(env, detail) {
  * LLM-based toxicity, spam, PII, and harassment detection.
  * Gated by AI_MODERATION_ENABLED=true + workerSharedLlmAllowed.
  */
+/**
+ * #13: Vision moderation on image attachments (post-send, async).
+ * Gated by VISUAL_MODERATION_ENABLED=true + workerSharedLlmAllowed.
+ */
+async function maybeRunVisualModerationScan(env, detail) {
+  try {
+    if (env.VISUAL_MODERATION_ENABLED !== "true" && env.VISUAL_MODERATION_ENABLED !== "1") {
+      return;
+    }
+    if (!workerSharedLlmAllowed(env, detail.projectId)) {
+      return;
+    }
+    if (!Array.isArray(detail.attachments) || !detail.attachments.length) {
+      return;
+    }
+
+    const { scanMessageVisualContent } = await import("./visual-moderation.js");
+    await scanMessageVisualContent(env, detail);
+  } catch (err) {
+    logError("visual_moderation.scan_failed", err, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      messageId: detail.messageId,
+    });
+  }
+}
+
 async function maybeRunAiModerationScan(env, detail) {
   try {
     if (env.AI_MODERATION_ENABLED !== "true" && env.AI_MODERATION_ENABLED !== "1") {
@@ -521,6 +560,114 @@ async function maybeRunAiModerationScan(env, detail) {
     });
   } catch (err) {
     logError("ai_moderation.scan_failed", err, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      messageId: detail.messageId,
+    });
+  }
+}
+
+async function maybeAutoTranslateRoomMessage(env, detail) {
+  if (env.ROOM_AUTO_TRANSLATE_ENABLED === "false" || env.ROOM_AUTO_TRANSLATE_ENABLED === "0") {
+    return;
+  }
+  const { projectId, roomId, messageId, content, authorUserId } = detail;
+  if (!projectId || !roomId || !messageId || !content?.trim()) return;
+
+  try {
+    const settings = await getRoomTranslationSettings(env, projectId, roomId);
+    if (!settings.enabled || !settings.autoTranslateTarget) return;
+
+    const result = await translateMessageContent(env, {
+      projectId,
+      messageId,
+      content,
+      targetLang: settings.autoTranslateTarget,
+    });
+    if (!result.ok) return;
+
+    await fanoutServerEvent(env, {
+      projectId,
+      roomId,
+      name: "message.auto_translated",
+      userId: authorUserId,
+      data: {
+        messageId,
+        targetLang: settings.autoTranslateTarget,
+        translatedText: result.translation.translatedText,
+        sourceLang: result.translation.sourceLang ?? null,
+        cached: Boolean(result.cached),
+      },
+    }).catch((err) =>
+      logError("translation.auto_fanout_failed", err, { projectId, roomId, messageId }),
+    );
+  } catch (err) {
+    logError("translation.auto_failed", err, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      messageId: detail.messageId,
+    });
+  }
+}
+
+async function maybeRecordSupportRoutingSuggestion(env, detail) {
+  if (env.SUPPORT_SMART_ROUTING_ENABLED === "false" || env.SUPPORT_SMART_ROUTING_ENABLED === "0") {
+    return;
+  }
+  const { projectId, roomId, content, authorUserId, messageId } = detail;
+  if (!projectId || !roomId || !content?.trim()) return;
+
+  try {
+    const suggestion = await suggestMessageRouting(env, {
+      projectId,
+      roomId,
+      messageContent: content,
+      senderUserId: authorUserId,
+    });
+    if (!suggestion.routed || !suggestion.assigneeUserId) return;
+
+    await env.DB.prepare(
+      `INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        projectId,
+        "support_routing_suggestion",
+        roomId,
+        JSON.stringify({
+          messageId,
+          assigneeUserId: suggestion.assigneeUserId,
+          reason: suggestion.reason,
+          score: suggestion.score,
+        }),
+        new Date().toISOString(),
+      )
+      .run();
+
+    if (env.SUPPORT_SMART_ROUTING_NOTIFY !== "false") {
+      await notifyMentionedUsers(env, {
+        projectId,
+        roomId,
+        fromUserId: authorUserId,
+        toUserIds: [suggestion.assigneeUserId],
+        messageId,
+        preview: `Support routing (${suggestion.reason}): new message needs attention`,
+      }).catch((err) =>
+        logError("support_routing.notify_failed", err, { projectId, roomId, messageId }),
+      );
+    }
+
+    if (env.SUPPORT_SMART_ROUTING_ASSIGN === "true") {
+      await adjustAgentLoad(env, {
+        projectId,
+        userId: suggestion.assigneeUserId,
+        delta: 1,
+      }).catch((err) =>
+        logError("support_routing.load_adjust_failed", err, { projectId, roomId }),
+      );
+    }
+  } catch (err) {
+    logError("support_routing.suggestion_failed", err, {
       projectId: detail.projectId,
       roomId: detail.roomId,
       messageId: detail.messageId,

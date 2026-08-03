@@ -13,6 +13,7 @@ function buildDemoHandlerDeps(overrides = {}) {
         prepare(sql) {
           const stmt = {
             async first() {
+              if (sql.includes("COUNT(*)")) return { c: 0 };
               if (sql.includes("FROM rooms")) return { id: "public-demo" };
               if (sql.includes("jwt_secret")) return { jwt_secret: "demo-jwt-secret-for-tests-32b" };
               if (sql.includes("FROM bots")) {
@@ -122,6 +123,23 @@ function buildAuthDeps(projectId = "proj-test", overrides = {}) {
     },
   };
 }
+
+describe("GET /demo/status", () => {
+  it("returns public demo configuration probe", async () => {
+    const request = new Request("https://api.example.com/demo/status");
+    const url = new URL(request.url);
+    const response = await dispatchPublicRoutes(request, url, buildDemoHandlerDeps());
+    expect(response).not.toBeNull();
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.ok).toBe(true);
+    expect(body.enabled).toBe(true);
+    expect(body.configured).toBe(true);
+    expect(body.ready).toBe(true);
+    expect(body.roomId).toBe("public-demo");
+    expect(body.agentName).toBe("FluxyBot");
+  });
+});
 
 describe("GET /demo/session", () => {
   it("returns a guest session when demo env and rate limit deps are wired", async () => {

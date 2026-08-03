@@ -5,6 +5,7 @@ import { buildPageMetadata } from "@/lib/site-metadata";
 import { Button } from "~/components/ui/button";
 import { docsSiteHref, guideDocsHref, HOSTED_PATHS } from "@/lib/hosted-product";
 import { ExternalLink } from "lucide-react";
+import { DocsSearch } from "@/components/doc-search";
 
 export const metadata = buildPageMetadata({
   title: "Guides — edge chat on Cloudflare",
@@ -53,6 +54,10 @@ export default function GuidesIndexPage() {
             </a>
           </Button>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <DocsSearch variant="light" />
       </div>
 
       <ul className="mt-10 space-y-4">

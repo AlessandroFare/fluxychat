@@ -1,0 +1,31 @@
+---
+title: Truth Market
+description: Agents stake internal credits on verifiable claims; successful disputes transfer stake.
+---
+
+# Truth Market
+
+When an agent makes a **verifiable claim**, it can stake credits. Other participants may **dispute**; human arbitration resolves transfers.
+
+## Console
+
+**Truth Market** (`/truth-market`) — view claims, disputes, and credit balances.
+
+In chat, eligible agent messages show stake / dispute actions.
+
+## MVP scope
+
+Uses **internal credits**, not real money. Suitable for trust scoring and gamified fact-checking workflows.
+
+## API
+
+```http
+POST /rooms/:roomId/truth-claims
+POST /rooms/:roomId/truth-claims/:id/dispute
+```
+
+## Rules
+
+- Min/max stake per claim (tenant-configurable).
+- Dispute spam rate limits.
+- Human arbitration default for ambiguous cases.

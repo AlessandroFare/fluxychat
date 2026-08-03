@@ -1,4 +1,10 @@
-export type PipelineStage = "mic" | "asr" | "llm" | "tts" | "speaker";
+export type PipelineStage = "mic" | "asr" | "llm" | "tts" | "speaker" | "multimodal";
+
+import { createTurnDetector, type VadBackend } from "./voice-turn-detection";
+import { audioLevelFromPcmBuffer, createSileroVadScorer, DEFAULT_SILERO_ONNX_MODEL_URL, DEFAULT_SILERO_VAD_WASM_URL } from "./silero-vad";
+
+/** unified = one multimodal realtime call; legacy = separate STT → LLM → TTS hops */
+export type PipelineMode = "unified" | "legacy";
 
 export type VoiceTransportMode = "realtime" | "chunked" | "text_only";
 
@@ -7,15 +13,18 @@ export interface PipelineMetrics {
   startMs: number;
   endMs: number;
   durationMs: number;
+  pipelineMode?: PipelineMode;
 }
 
 export interface PipelineEvent {
-  type: "stage_start" | "stage_end" | "pipeline_complete" | "pipeline_error" | "transport_fallback";
+  type: "stage_start" | "stage_end" | "pipeline_complete" | "pipeline_error" | "transport_fallback" | "vad";
   stage: PipelineStage;
   timestamp: string;
   metrics?: PipelineMetrics;
   error?: string;
   transport?: VoiceTransportMode;
+  pipelineMode?: PipelineMode;
+  vad?: { event: string; energy?: number; speechProb?: number };
 }
 
 export type PipelineStatus = "idle" | "running" | "paused" | "error" | "complete";
@@ -31,6 +40,16 @@ export interface PipelineConfig {
   autoFallback?: boolean;
   /** Force realtime failure for tests. */
   simulateRealtimeFailure?: boolean;
+  /**
+   * `unified` (default): single multimodal session — audio/text in, audio out in one provider call.
+   * `legacy`: separate asr → llm → tts stages (higher latency, migration compat).
+   */
+  pipelineMode?: PipelineMode;
+  /** Turn detection for mic endpointing (roadmap #10). */
+  vadBackend?: VadBackend;
+  sileroWasmUrl?: string;
+  /** Silero ONNX model URL (defaults to jsDelivr vad-web artifact). */
+  sileroOnnxModelUrl?: string;
 }
 
 export interface VoicePipeline {
@@ -44,7 +63,20 @@ export interface VoicePipeline {
   getStatus(): PipelineStatus;
   getLatencyMs(): number;
   getActiveTransport(): VoiceTransportMode;
+  getPipelineMode(): PipelineMode;
   onEvent(callback: (event: PipelineEvent) => void): void;
+}
+
+export function resolveVoicePipelineStages(
+  mode: PipelineMode,
+  transport: VoiceTransportMode,
+): PipelineStage[] {
+  if (mode === "unified") {
+    if (transport === "text_only") return ["multimodal", "speaker"];
+    return ["mic", "multimodal", "speaker"];
+  }
+  if (transport === "text_only") return ["llm", "tts", "speaker"];
+  return ["mic", "asr", "llm", "tts", "speaker"];
 }
 
 export function createVoicePipeline(config: PipelineConfig = {}): VoicePipeline {
@@ -52,6 +84,22 @@ export function createVoicePipeline(config: PipelineConfig = {}): VoicePipeline 
   const metrics: PipelineMetrics[] = [];
   const listeners = new Set<(event: PipelineEvent) => void>();
   const autoFallback = config.autoFallback !== false;
+  const pipelineMode: PipelineMode = config.pipelineMode ?? "unified";
+
+  const modelUrl =
+    config.sileroOnnxModelUrl ??
+    config.sileroWasmUrl ??
+    (DEFAULT_SILERO_VAD_WASM_URL || DEFAULT_SILERO_ONNX_MODEL_URL);
+
+  const silero = createSileroVadScorer({ onnxModelUrl: modelUrl });
+  void silero.loadOnnx();
+  const turnDetector = createTurnDetector(
+    {
+      vadBackend: config.vadBackend ?? "hybrid",
+      silero: { enabled: true, speechThreshold: 0.5 },
+    },
+    silero,
+  );
 
   function detectInitialTransport(): VoiceTransportMode {
     if (config.preferredTransport) return config.preferredTransport;
@@ -63,11 +111,8 @@ export function createVoicePipeline(config: PipelineConfig = {}): VoicePipeline 
 
   let activeTransport: VoiceTransportMode = detectInitialTransport();
 
-  const realtimeStages: PipelineStage[] = ["mic", "asr", "llm", "tts", "speaker"];
-  const textStages: PipelineStage[] = ["llm", "tts", "speaker"];
-
   function emit(event: PipelineEvent): void {
-    for (const listener of listeners) listener(event);
+    for (const listener of listeners) listener({ ...event, pipelineMode });
   }
 
   function setTransport(next: VoiceTransportMode, reason?: string): void {
@@ -75,7 +120,7 @@ export function createVoicePipeline(config: PipelineConfig = {}): VoicePipeline 
     activeTransport = next;
     emit({
       type: "transport_fallback",
-      stage: "mic",
+      stage: pipelineMode === "unified" ? "multimodal" : "mic",
       timestamp: new Date().toISOString(),
       transport: next,
       ...(reason ? { error: reason } : {}),
@@ -85,7 +130,13 @@ export function createVoicePipeline(config: PipelineConfig = {}): VoicePipeline 
   function recordMetrics(stage: PipelineStage): PipelineMetrics {
     const existing = metrics.find((m) => m.stage === stage);
     if (existing) return existing;
-    const entry: PipelineMetrics = { stage, startMs: 0, endMs: 0, durationMs: 0 };
+    const entry: PipelineMetrics = {
+      stage,
+      startMs: 0,
+      endMs: 0,
+      durationMs: 0,
+      pipelineMode,
+    };
     metrics.push(entry);
     return entry;
   }
@@ -100,6 +151,11 @@ export function createVoicePipeline(config: PipelineConfig = {}): VoicePipeline 
       emit({ type: "stage_end", stage, timestamp: new Date().toISOString(), metrics: m });
     }
     emit({ type: "pipeline_complete", stage: "speaker", timestamp: new Date().toISOString() });
+  }
+
+  async function runForCurrentTransport(): Promise<void> {
+    const stages = resolveVoicePipelineStages(pipelineMode, activeTransport);
+    await runStages(stages);
   }
 
   return {
@@ -120,36 +176,52 @@ export function createVoicePipeline(config: PipelineConfig = {}): VoicePipeline 
       if (status === "paused") status = "running";
     },
 
-    async processAudio(_audio: ArrayBuffer): Promise<void> {
+    async processAudio(audio: ArrayBuffer): Promise<void> {
       if (status !== "running") return;
 
-      if (activeTransport === "text_only") {
-        await runStages(textStages);
+      const level = audioLevelFromPcmBuffer(audio);
+      const speechProb = silero.scorePcmBuffer(audio);
+      const vadEvent = turnDetector.processAudio(level, audio);
+      if (vadEvent) {
+        emit({
+          type: "vad",
+          stage: "mic",
+          timestamp: vadEvent.timestamp,
+          vad: {
+            event: vadEvent.type,
+            energy: vadEvent.energy ?? level,
+            speechProb,
+          },
+        });
+      }
+
+      if (activeTransport === "text_only" && pipelineMode === "legacy") {
+        await runForCurrentTransport();
         return;
       }
 
-      if (config.simulateRealtimeFailure) {
+      if (config.simulateRealtimeFailure && activeTransport !== "text_only") {
         emit({
           type: "pipeline_error",
-          stage: "mic",
+          stage: pipelineMode === "unified" ? "multimodal" : "mic",
           timestamp: new Date().toISOString(),
           error: "realtime_unavailable",
         });
         if (autoFallback) {
           setTransport("text_only", "realtime_unavailable");
-          await runStages(textStages);
+          await runForCurrentTransport();
         } else {
           status = "error";
         }
         return;
       }
 
-      await runStages(activeTransport === "chunked" ? realtimeStages : realtimeStages);
+      await runForCurrentTransport();
     },
 
     async processText(_text: string): Promise<void> {
       if (status !== "running") return;
-      await runStages(textStages);
+      await runForCurrentTransport();
     },
 
     getMetrics(): PipelineMetrics[] {
@@ -166,6 +238,10 @@ export function createVoicePipeline(config: PipelineConfig = {}): VoicePipeline 
 
     getActiveTransport(): VoiceTransportMode {
       return activeTransport;
+    },
+
+    getPipelineMode(): PipelineMode {
+      return pipelineMode;
     },
 
     onEvent(callback: (event: PipelineEvent) => void): void {

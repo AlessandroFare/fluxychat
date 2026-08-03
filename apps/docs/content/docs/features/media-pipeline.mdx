@@ -1,0 +1,28 @@
+---
+title: Media pipeline
+description: Upload limits, async virus scan, and thumbnail generation for attachments.
+---
+
+# Media pipeline
+
+Every attachment upload passes through tenant **size limits**, optional **ClamAV** scan, and **thumbnail** jobs before messages reference the file.
+
+## Console
+
+**Settings → Media** — max file size, allowed MIME types, scan mode.
+
+## Behaviour
+
+1. `POST /upload` → R2.
+2. Async scan/thumbnail job.
+3. Infected files blocked on send; clean files get inline thumbnail URLs.
+
+## Built-in safety
+
+**EICAR** test files are blocked even without ClamAV.
+
+## Optional ClamAV
+
+Self-host HTTP ClamAV wrapper — see [Optional integrations](/docs/guides/ecosystem/optional-integrations#clamav-media-virus-scan).
+
+Pairs with [visual moderation](/docs/features/fluxystream) for image safety in stream.

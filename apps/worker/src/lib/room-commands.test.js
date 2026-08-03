@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { parseCommand, listCommands, getAutocompleteSuggestions, executeCommand } from "../lib/room-commands.js";
+import { parseCommand, listCommands, getAutocompleteSuggestions, executeCommand, resolveHighestRole } from "../lib/room-commands.js";
 
 function makeEnv(overrides = {}) {
   return {
@@ -46,10 +46,11 @@ describe("room-commands", () => {
     it("returns built-in commands", async () => {
       const env = makeEnv();
       const commands = await listCommands(env, { projectId: "p1" });
-      expect(commands.length).toBeGreaterThanOrEqual(12);
+      expect(commands.length).toBeGreaterThanOrEqual(15);
       expect(commands.find(c => c.command === "/help")).toBeDefined();
-      expect(commands.find(c => c.command === "/mute")).toBeDefined();
-      expect(commands.find(c => c.command === "/pin")).toBeDefined();
+      expect(commands.find(c => c.command === "/poll")).toBeDefined();
+      expect(commands.find(c => c.command === "/remind")).toBeDefined();
+      expect(commands.find(c => c.command === "/assign")).toBeDefined();
     });
   });
 
@@ -161,6 +162,49 @@ describe("room-commands", () => {
       const result = await executeCommand(env, { projectId: "p1", roomId: "r1", userId: "u1", userRole: "member", command: "/clear", args: [], rawArgs: "" });
       expect(result.ok).toBe(true);
       expect(result.action).toBe("clear");
+      expect(result.suppressMessage).toBe(true);
+    });
+
+    it("executes /poll", async () => {
+      const env = makeEnv();
+      const result = await executeCommand(env, {
+        projectId: "p1", roomId: "r1", userId: "u1", userRole: "member",
+        command: "/poll", args: [], rawArgs: "Lunch? | Pizza | Sushi",
+      });
+      expect(result.ok).toBe(true);
+      expect(result.action).toBe("poll");
+      expect(result.pollCreate.question).toBe("Lunch?");
+      expect(result.pollCreate.options).toEqual(["Pizza", "Sushi"]);
+    });
+
+    it("executes /remind", async () => {
+      const env = makeEnv();
+      const result = await executeCommand(env, {
+        projectId: "p1", roomId: "r1", userId: "u1", userRole: "member",
+        command: "/remind", args: ["30m", "standup"], rawArgs: "30m standup",
+      });
+      expect(result.ok).toBe(true);
+      expect(result.action).toBe("remind");
+      expect(result.sendAt).toBeDefined();
+    });
+
+    it("executes /assign", async () => {
+      const env = makeEnv();
+      const result = await executeCommand(env, {
+        projectId: "p1", roomId: "r1", userId: "u1", userRole: "member",
+        command: "/assign", args: ["@alex", "fix", "login"], rawArgs: "@alex fix login",
+      });
+      expect(result.ok).toBe(true);
+      expect(result.action).toBe("assign");
+      expect(result.assignee).toBe("alex");
+    });
+  });
+
+  describe("resolveHighestRole", () => {
+    it("picks highest role", async () => {
+      const { resolveHighestRole } = await import("../lib/room-commands.js");
+      expect(resolveHighestRole(["member", "admin"])).toBe("admin");
+      expect(resolveHighestRole(["moderator"])).toBe("mod");
     });
   });
 });

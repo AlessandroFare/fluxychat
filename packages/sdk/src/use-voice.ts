@@ -13,6 +13,9 @@ import {
 export interface UseVoiceOptions extends PipelineConfig {
   /** Report metrics to worker when set */
   onMetrics?: (payload: { totalLatencyMs: number; stages: PipelineMetrics[] }) => void;
+  /** VAD backend for mic endpointing (default hybrid). */
+  vadBackend?: import("./voice-turn-detection").VadBackend;
+  sileroWasmUrl?: string;
 }
 
 export interface UseVoiceResult {
@@ -22,6 +25,7 @@ export interface UseVoiceResult {
   metrics: PipelineMetrics[];
   lastEvent: PipelineEvent | null;
   activeTransport: import("./voice-pipeline").VoiceTransportMode;
+  pipelineMode: import("./voice-pipeline").PipelineMode;
   start: () => Promise<void>;
   stop: () => Promise<void>;
   processText: (text: string) => Promise<void>;
@@ -86,6 +90,7 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceResult {
     metrics,
     lastEvent,
     activeTransport,
+    pipelineMode: pipelineRef.current?.getPipelineMode() ?? pipelineConfig.pipelineMode ?? "unified",
     start,
     stop,
     processText,

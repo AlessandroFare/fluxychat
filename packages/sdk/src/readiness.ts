@@ -11,7 +11,7 @@ export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
   chat: { label: "Chat & rooms", readiness: "production", href: "/rooms", description: "Core messaging, presence, agents" },
   collab: { label: "Collab", readiness: "production", href: "/collab", description: "Yjs CRDT + client_event + collab.* server_event on room WS" },
   stream: { label: "Stream", readiness: "production", href: "/stream/demo", description: "Live events, HLS, WHIP auto-provision + room fan-out" },
-  voice: { label: "Voice AI", readiness: "production", href: "/voice-ai", description: "STT→LLM→TTS pipeline with latency SLO and transport fallback" },
+  voice: { label: "Voice AI", readiness: "production", href: "/voice-ai", description: "Unified multimodal voice pipeline with legacy STT→LLM→TTS fallback" },
   game: { label: "FluxyGame", readiness: "production", href: "/game", description: "Edge matchmaking + authoritative ticks via room WS" },
   iot: { label: "FluxyIoT", readiness: "production", href: "/iot", description: "Device shadow, rules + live readings in room" },
   fleet: { label: "Fleet", readiness: "production", href: "/fleet", description: "GPS ingest + dispatch room live updates" },

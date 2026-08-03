@@ -28,6 +28,14 @@ import {
   closeMessagePoll,
   castPollVote,
 } from "../lib/message-polls.js";
+import { tryDispatchSlashCommand } from "../lib/room-command-dispatch.js";
+import { runRoomFirmwareHook } from "../lib/room-firmware.js";
+import {
+  parseDecisionCreateInput,
+  insertMessageDecision,
+  getMessageDecision,
+  ackMessageDecision,
+} from "../lib/message-decisions.js";
 import { translateMessageContent } from "../lib/message-translation.js";
 import {
   upsertMessageDelivery,
@@ -38,9 +46,16 @@ import {
   getRoomStubForProject,
 } from "../lib/room-shard.js";
 // B-4: hoist dynamic imports to top-level so they run once at module init.
-import { resolveMessageExpiry } from "../lib/message-ttl.js";
+import { resolveMessageExpiryWithRoomPolicy } from "../lib/message-retention-room.js";
+import { assertProjectWriteResidency } from "../lib/data-residency-settings.js";
 import { resolveMessageVisibility, messageVisibilitySql } from "../lib/message-visibility.js";
 import { branchRoomFromMessage } from "../lib/message-branch.js";
+import {
+  getAgentRunRecord,
+  listCounterfactualRuns,
+  mapAgentRunRow,
+  replayCounterfactualToolCall,
+} from "../lib/counterfactual-replay.js";
 
 export async function dispatchMessagesRoutes(request, url, h) {
   const {
@@ -134,6 +149,21 @@ export async function dispatchMessagesRoutes(request, url, h) {
       return json({ error: authz.reason, code: "blocked" }, { status: 403 });
     }
 
+    const residencyCheck = await assertProjectWriteResidency(env, authProjectId, {
+      operation: "message_create",
+    });
+    if (!residencyCheck.ok) {
+      return json(
+        {
+          error: residencyCheck.error,
+          code: "data_residency_violation",
+          workerRegion: residencyCheck.workerRegion,
+          allowedRegions: residencyCheck.allowedRegions,
+        },
+        { status: 403 },
+      );
+    }
+
     const roomAccessRow = await env.DB.prepare(
       "SELECT type FROM rooms WHERE project_id = ? AND id = ? LIMIT 1",
     )
@@ -157,6 +187,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     let pollCreate = null;
+    let decisionCreate = null;
     let content = "";
     const templateId =
       typeof body.templateId === "string" ? body.templateId.trim() : "";
@@ -166,6 +197,12 @@ export async function dispatchMessagesRoutes(request, url, h) {
         return json({ error: pollCreate.error }, { status: 400 });
       }
       content = pollCreate.question;
+    } else if (body.decision) {
+      decisionCreate = parseDecisionCreateInput(body.decision);
+      if (!decisionCreate.ok) {
+        return json({ error: decisionCreate.error }, { status: 400 });
+      }
+      content = decisionCreate.content;
     } else if (templateId) {
       const tpl = await env.DB.prepare(
         `SELECT body FROM message_templates WHERE id = ? AND project_id = ?`
@@ -183,6 +220,32 @@ export async function dispatchMessagesRoutes(request, url, h) {
         return json({ error: contentValidation.error }, { status: 400 });
       }
       content = contentValidation.content;
+    }
+
+    if (!pollCreate && !decisionCreate && !templateId && !body.attachments?.length) {
+      const slashDispatch = await tryDispatchSlashCommand(env, {
+        projectId: authProjectId,
+        roomId,
+        userId: authUserId,
+        content,
+        jwtRoles: auth.roles ?? [],
+        parentId: body.replyTo ? Number(body.replyTo) || null : null,
+        clientMessageId: normalizeClientMessageId(body.clientMessageId),
+      });
+      if (slashDispatch.handled) {
+        if (!slashDispatch.ok) {
+          return json({ error: slashDispatch.error, command: true }, { status: slashDispatch.status || 400 });
+        }
+        if (slashDispatch.suppressMessage) {
+          return json({ ok: true, command: true, ...slashDispatch.commandResult });
+        }
+        return json({
+          ok: true,
+          command: true,
+          ...slashDispatch.commandResult,
+          message: slashDispatch.message ?? undefined,
+        });
+      }
     }
 
     const middlewareResult = await runInboundMessageMiddleware(env, { content });
@@ -207,7 +270,41 @@ export async function dispatchMessagesRoutes(request, url, h) {
       return json({ error: fluxyPipeline.reason, code: "blocked" }, { status: 403 });
     }
     content = fluxyPipeline.content;
-    const expiryResult = resolveMessageExpiry(body, env);
+
+    const firmwareResult = await runRoomFirmwareHook(env, {
+      projectId: authProjectId,
+      roomId,
+      userId: authUserId,
+      eventType: "message.create",
+      event: {
+        content,
+        clientMessageId: normalizeClientMessageId(body.clientMessageId),
+      },
+    });
+    if (firmwareResult.action === "veto") {
+      return json(
+        {
+          error: firmwareResult.reason ?? "firmware_veto",
+          code: "firmware_veto",
+          moduleId: firmwareResult.moduleId,
+          retryAfterSeconds: firmwareResult.retryAfterSeconds,
+        },
+        {
+          status: firmwareResult.retryAfterSeconds ? 429 : 403,
+          headers: firmwareResult.retryAfterSeconds
+            ? { "Retry-After": String(firmwareResult.retryAfterSeconds) }
+            : undefined,
+        },
+      );
+    }
+    content = firmwareResult.content ?? content;
+
+    const expiryResult = await resolveMessageExpiryWithRoomPolicy(
+      env,
+      authProjectId,
+      roomId,
+      body,
+    );
     if (!expiryResult.ok) {
       return json({ error: expiryResult.error }, { status: 400 });
     }
@@ -341,7 +438,28 @@ export async function dispatchMessagesRoutes(request, url, h) {
       });
     }
 
+    let decisionSnapshot = null;
+    if (decisionCreate?.ok) {
+      decisionSnapshot = await insertMessageDecision(env, {
+        messageId,
+        projectId: authProjectId,
+        roomId,
+        content: decisionCreate.content,
+        requiredRoles: decisionCreate.requiredRoles,
+        ttlSeconds: decisionCreate.ttlSeconds,
+        createdBy: authUserId,
+      });
+    }
+
     const sanitizedAttachments = sanitizeMessageAttachments(body.attachments);
+
+    if (sanitizedAttachments.length) {
+      const { assertAttachmentsMediaClean } = await import("../lib/media-pipeline.js");
+      const mediaCheck = await assertAttachmentsMediaClean(env, authProjectId, sanitizedAttachments);
+      if (!mediaCheck.ok) {
+        return json({ error: mediaCheck.error, fileKey: mediaCheck.fileKey }, { status: 422 });
+      }
+    }
 
     if (sanitizedAttachments.length) {
       const attStmts = sanitizedAttachments.map((a) =>
@@ -454,6 +572,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
         ...(messageExpiresAt ? { expiresAt: messageExpiresAt } : {}),
         ...(visibility === "whisper" ? { visibility, visibleTo } : {}),
         ...(pollSnapshot ? { poll: pollSnapshot, contentType: "poll" } : {}),
+        ...(decisionSnapshot ? { decision: decisionSnapshot, contentType: "decision" } : {}),
         clientMessageId: clientMessageId ?? undefined,
         mentions,
         preview,
@@ -560,8 +679,70 @@ export async function dispatchMessagesRoutes(request, url, h) {
         ...(messageExpiresAt ? { expiresAt: messageExpiresAt } : {}),
         ...(visibility === "whisper" ? { visibility, visibleTo } : {}),
         ...(pollSnapshot ? { poll: pollSnapshot } : {}),
+        ...(decisionSnapshot ? { decision: decisionSnapshot } : {}),
       },
     });
+  }
+
+  const decisionGetMatch = url.pathname.match(/^\/messages\/([^/]+)\/decision$/);
+  if (decisionGetMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(decisionGetMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const decision = await getMessageDecision(env, messageId, auth.projectId);
+    if (!decision) return json({ error: "decision not found" }, { status: 404 });
+    return json({ decision });
+  }
+
+  const decisionAckMatch = url.pathname.match(/^\/messages\/([^/]+)\/ack$/);
+  if (decisionAckMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(decisionAckMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const msgRow = await env.DB.prepare(
+      "SELECT room_id FROM messages WHERE id = ? AND project_id = ? AND deleted_at IS NULL LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!msgRow) return json({ error: "message not found" }, { status: 404 });
+
+    const result = await ackMessageDecision(env, {
+      messageId,
+      projectId: auth.projectId,
+      roomId: msgRow.room_id,
+      userId: auth.userId,
+      jwtRoles: auth.roles,
+    });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: result.status || 400 });
+    }
+
+    await fanoutRoomInternal(env, auth.projectId, msgRow.room_id, "/announce", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "decision_updated",
+        roomId: msgRow.room_id,
+        messageId,
+        decision: result.decision,
+        userId: auth.userId,
+      }),
+    });
+
+    return json({ ok: true, decision: result.decision });
   }
 
   const pollGetMatch = url.pathname.match(/^\/messages\/([^/]+)\/poll$/);
@@ -766,6 +947,8 @@ export async function dispatchMessagesRoutes(request, url, h) {
     !url.pathname.endsWith("/deliveries") &&
     !url.pathname.endsWith("/poll") &&
     !url.pathname.endsWith("/vote") &&
+    !url.pathname.endsWith("/decision") &&
+    !url.pathname.endsWith("/ack") &&
     request.method === "PATCH"
   ) {
     const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
@@ -914,6 +1097,131 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     return json({ ok: true, deletedIds: result.deletedIds, deletedAt: result.deletedAt });
+  }
+
+  // Counterfactual replay: GET /rooms/:roomId/counterfactuals?originalRunId=
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/counterfactuals") &&
+    request.method === "GET"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const parts = url.pathname.split("/");
+    const roomId = parts[2];
+    if (!roomId || !isValidId(roomId)) {
+      return json({ error: "roomId required" }, { status: 400 });
+    }
+    const canAccess = await canAccessRoom(env, auth, roomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+
+    const originalRunId = String(url.searchParams.get("originalRunId") || "").trim();
+    if (!originalRunId) {
+      return json({ error: "originalRunId query param required" }, { status: 400 });
+    }
+
+    const original = await getAgentRunRecord(env, auth.projectId, originalRunId);
+    if (!original || String(original.room_id || "") !== roomId) {
+      return json({ error: "original_run_not_found" }, { status: 404 });
+    }
+
+    const alternatives = await listCounterfactualRuns(env, auth.projectId, originalRunId);
+    return json({
+      original: mapAgentRunRow(original),
+      alternatives,
+    });
+  }
+
+  // Counterfactual replay: POST /rooms/:roomId/counterfactual
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/counterfactual") &&
+    request.method === "POST"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const parts = url.pathname.split("/");
+    const roomId = parts[2];
+    if (!roomId || !isValidId(roomId)) {
+      return json({ error: "roomId required" }, { status: 400 });
+    }
+    const canAccess = await canAccessRoom(env, auth, roomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+
+    const body = await request.json().catch(() => null);
+    const originalRunId = String(body?.originalRunId || "").trim();
+    const toolCallId = String(body?.toolCallId || "").trim();
+    if (!originalRunId || !toolCallId) {
+      return json({ error: "originalRunId and toolCallId required" }, { status: 400 });
+    }
+
+    const modifiedParams =
+      body?.modifiedParams && typeof body.modifiedParams === "object" ? body.modifiedParams : {};
+    const fromMessageId =
+      body?.fromMessageId != null && Number.isFinite(Number(body.fromMessageId))
+        ? Number(body.fromMessageId)
+        : null;
+    const agentIds = Array.isArray(body?.agentIds)
+      ? body.agentIds.filter((id) => typeof id === "string" && id.trim())
+      : typeof body?.agentId === "string" && body.agentId.trim()
+        ? [body.agentId.trim()]
+        : [];
+
+    const isAdmin = hasAnyRole(auth.roles, ["owner", "admin"]);
+    const result = await replayCounterfactualToolCall(env, {
+      projectId: auth.projectId,
+      roomId,
+      userId: auth.userId,
+      originalRunId,
+      toolCallId,
+      modifiedParams,
+      fromMessageId,
+      dryRun: body?.dryRun === true,
+      agentIds,
+      isAdmin,
+      traceId: request.headers.get("X-Fluxy-Trace-Id") || crypto.randomUUID(),
+    });
+
+    if (!result.ok) {
+      const status =
+        result.reason === "original_run_not_found" || result.reason === "tool_call_not_found"
+          ? 404
+          : result.reason === "nested_counterfactual_not_allowed"
+            ? 409
+            : result.reason === "branch_failed" || result.reason === "blocked_by_other_users"
+              ? 409
+              : 400;
+      return json({ error: result.reason, sideEffect: result.sideEffect ?? false }, { status });
+    }
+
+    for (const messageId of result.branchDeletedIds || []) {
+      await fanoutRoomInternal(env, auth.projectId, roomId, "/announce", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "delete",
+          id: messageId,
+          roomId,
+          userId: auth.userId,
+          branch: true,
+          counterfactual: true,
+        }),
+      });
+    }
+
+    return json({
+      ok: true,
+      branchId: result.branchId,
+      runId: result.runId,
+      dryRun: result.dryRun,
+      sideEffect: result.sideEffect,
+      costWarning: result.costWarning,
+      run: result.run,
+      original: result.original,
+    });
   }
 
   // Authenticated message delete endpoint: DELETE /messages/:id

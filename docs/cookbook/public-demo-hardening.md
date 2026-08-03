@@ -2,6 +2,8 @@
 
 The dashboard route `/demo` and Worker `GET|POST /demo/session` mint short-lived guest JWTs for a shared room. Without guards, bots can burn quota and pollute the demo room.
 
+`GET /demo/status` exposes a safe public probe (`enabled`, `configured`, `ready`, `turnstileRequired`, `roomId`) so the demo UI can show accurate loading/error states before minting a session.
+
 This checklist implements patterns from **free4chat** (Turnstile, origin allowlist, rate limits) and FluxyChat P4 hardening (2026-05-28).
 
 ## Checklist

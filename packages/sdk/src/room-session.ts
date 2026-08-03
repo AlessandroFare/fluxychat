@@ -1,4 +1,5 @@
 import { FluxyAuthError, FluxySendError } from "./errors";
+import { mergeDebateSteps, type AgentDebateStep } from "./agent-debate";
 import {
   createFluxyRoomStore,
   syncRoomConnectionState,
@@ -6,10 +7,20 @@ import {
   type FluxyToolThreadEvent,
 } from "./fluxy-room-store";
 import {
+  applyCrdtSnapshotUpdate,
+  getRoomMessageCrdtDoc,
+  mergeRestHistoryWithYjsDoc,
+  subscribeMessageCrdtMultiTabSync,
+  trackInboundMessageInCrdtDoc,
+  upsertMessageInDoc,
+} from "./message-crdt-yjs";
+import type { FluxyDeliverableMessage } from "./message-delivery";
+import {
   applyServerMessageAck,
   createClientMessageId,
   createOptimisticMessage,
   markMessageDeliveryFailed,
+  mergeHistoryWithPendingDelivery,
   tryMatchPendingByInbound,
 } from "./message-delivery";
 import {
@@ -37,6 +48,7 @@ import {
   encryptE2eContent,
   isE2eContentEnvelope,
 } from "./room-e2e";
+import { scheduleSessionTokenRefresh } from "./session-token-refresh";
 
 export interface StartFluxyRoomSessionOptions {
   roomId: string;
@@ -58,6 +70,8 @@ export interface StartFluxyRoomSessionOptions {
   e2eKey?: string;
   /** When true, fetch GET /rooms/:id/e2e-key on session start if e2eKey is unset. */
   e2eAutoFetch?: boolean;
+  /** When true, fetch GET /rooms/:id/messages/crdt-snapshot and merge Yjs message-list on history load. */
+  crdtMessageList?: boolean;
   onAnyEvent?: (event: FluxyChatEvent) => void;
   /** Worker vertical/labs fan-out (`server_event` frames). */
   onServerEvent?: ServerEventHandler;
@@ -82,6 +96,7 @@ export function startFluxyRoomSession(
     e2eKey: e2eKeyOption,
     e2eAutoFetch = false,
     concurrency,
+    crdtMessageList = true,
     onAnyEvent,
     onServerEvent,
     onRefreshSession,
@@ -106,6 +121,21 @@ export function startFluxyRoomSession(
   let connectionRef: FluxyChatRoomConnection | null = null;
   let sseRef: EventSource | null = null;
   let pollTimerRef: ReturnType<typeof setInterval> | null = null;
+
+  const mergeHistoryWithYjs = async (
+    history: FluxyDeliverableMessage[],
+  ): Promise<FluxyDeliverableMessage[]> => {
+    if (!crdtMessageList || !client) return history;
+    try {
+      const snapshot = await client.fetchMessageCrdtSnapshot(trimmedRoomId);
+      if (!snapshot?.update) return history;
+      const doc = getRoomMessageCrdtDoc(trimmedRoomId);
+      applyCrdtSnapshotUpdate(doc, snapshot.update);
+      return mergeRestHistoryWithYjsDoc(history, doc);
+    } catch {
+      return history;
+    }
+  };
 
   const patchConnection = (
     patch: Parameters<typeof syncRoomConnectionState>[0],
@@ -237,6 +267,25 @@ export function startFluxyRoomSession(
             ]),
           };
         });
+        if (crdtMessageList && typeof payload.id === "number") {
+          trackInboundMessageInCrdtDoc(trimmedRoomId, {
+            id: payload.id,
+            roomId: String(payload.roomId ?? trimmedRoomId),
+            userId: String(
+              payload.userId ??
+                ("senderId" in payload && typeof payload.senderId === "string"
+                  ? payload.senderId
+                  : ""),
+            ),
+            content,
+            createdAt: String(payload.createdAt ?? new Date().toISOString()),
+            parentId: payload.parentId ?? null,
+            clientMessageId:
+              "clientMessageId" in payload && typeof payload.clientMessageId === "string"
+                ? payload.clientMessageId
+                : undefined,
+          });
+        }
         scheduleMarkLatest();
       };
       const rawContent = data.content ?? "";
@@ -329,6 +378,30 @@ export function startFluxyRoomSession(
       });
     } else if (data.type === "agentRun") {
       setState({ lastAgentRun: data.run });
+    } else if (data.type === "agent_step") {
+      const step = data.step as AgentDebateStep;
+      setState((s) => ({
+        debateSessionId: data.sessionId ?? s.debateSessionId,
+        debateSteps: mergeDebateSteps(s.debateSteps, step),
+      }));
+    } else if (data.type === "stage_updated") {
+      setState({ voiceStage: data.stage ?? null });
+    } else if (data.type === "active_speaker") {
+      setState((s) => {
+        if (!s.voiceStage) return s;
+        const activeSpeakerUserId =
+          typeof data.userId === "string" ? data.userId : s.voiceStage.activeSpeakerUserId;
+        return {
+          voiceStage: {
+            ...s.voiceStage,
+            activeSpeakerUserId,
+            participants: s.voiceStage.participants.map((p) => ({
+              ...p,
+              isActiveSpeaker: p.userId === activeSpeakerUserId,
+            })),
+          },
+        };
+      });
     } else if (data.type === "edit" || (data as { type: string }).type === "message_edit") {
       const edit = data as Extract<FluxyChatEvent, { type: "edit" }>;
       if (edit.streaming) {
@@ -357,6 +430,16 @@ export function startFluxyRoomSession(
           sortMessagesChronological,
         ),
       }));
+      if (crdtMessageList && typeof edit.id === "number") {
+        upsertMessageInDoc(getRoomMessageCrdtDoc(trimmedRoomId), {
+          id: edit.id,
+          roomId: String(edit.roomId ?? trimmedRoomId),
+          userId: String(edit.userId ?? ""),
+          content: String(edit.content ?? ""),
+          createdAt: String(edit.editedAt ?? new Date().toISOString()),
+          editedAt: edit.editedAt ?? null,
+        });
+      }
     } else if (data.type === "reaction") {
       // Skip WS echo for reactions we already applied optimistically
       const reactionKey = `${data.messageId}:${data.emoji}:${data.op}`;
@@ -404,6 +487,16 @@ export function startFluxyRoomSession(
         ),
       }));
     } else if (data.type === "delete") {
+      if (crdtMessageList && typeof data.id === "number") {
+        upsertMessageInDoc(getRoomMessageCrdtDoc(trimmedRoomId), {
+          id: data.id,
+          roomId: String(data.roomId ?? trimmedRoomId),
+          userId: String(data.userId ?? ""),
+          content: "[deleted]",
+          createdAt: String(data.deletedAt ?? new Date().toISOString()),
+          deletedAt: data.deletedAt ?? new Date().toISOString(),
+        });
+      }
       if (data.hard) {
         setState((s) => ({
           messages: s.messages.filter((m) => m.id !== data.id),
@@ -519,12 +612,13 @@ export function startFluxyRoomSession(
     replyTo?: number | null,
     attachments?: FluxyChatAttachment[],
     options?: FluxySendMessageOptions,
+    existingClientMessageId?: string,
   ) => {
     if (!client || !trimmedRoomId) return;
 
     void (async () => {
       const outboundContent = await maybeEncryptContent(content);
-      const clientMessageId = createClientMessageId();
+      const clientMessageId = existingClientMessageId?.trim() || createClientMessageId();
       const displayContent = options?.templateId
         ? content || `[template:${options.templateId}]`
         : content;
@@ -623,18 +717,25 @@ export function startFluxyRoomSession(
     setState((s) => ({
       messages: s.messages.filter((m) => m.clientMessageId !== clientMessageId),
     }));
-    sendMessage(failed.content, failed.parentId ?? null, failed.attachments);
+    sendMessage(
+      failed.content,
+      failed.parentId ?? null,
+      failed.attachments,
+      undefined,
+      clientMessageId,
+    );
   };
 
   const loadHistory = async () => {
     if (!client || !trimmedRoomId) return;
     try {
       const initial = await client.fetchMessages(trimmedRoomId, { limit: historyLimit });
-      setState({
-        messages: initial,
+      const merged = await mergeHistoryWithYjs(initial);
+      setState((s) => ({
+        messages: mergeHistoryWithPendingDelivery(s.messages, merged),
         hasMore: initial.length >= historyLimit,
         historyLoaded: true,
-      });
+      }));
       scheduleMarkLatest();
     } catch {
       /* best-effort */
@@ -678,15 +779,22 @@ export function startFluxyRoomSession(
     ? createConcurrencyStrategy(concurrency)
     : null;
 
-  const setTyping = (isTyping: boolean, intent?: FluxyPresenceIntent) => {
+  const setTyping = (
+    isTyping: boolean,
+    intent?: FluxyPresenceIntent,
+    partialText?: string,
+  ) => {
     if (!client) return;
     try {
-      connectionRef?.sendJson({
+      const payload: Record<string, unknown> = {
         type: "typing",
         userId: client.userId,
         isTyping,
         intent: intent ?? (isTyping ? "composing" : "idle"),
-      });
+      };
+      const trimmedPartial = partialText?.trim();
+      if (trimmedPartial) payload.partialText = trimmedPartial.slice(0, 2000);
+      connectionRef?.sendJson(payload);
     } catch {
       /* ignore */
     }
@@ -861,6 +969,46 @@ export function startFluxyRoomSession(
     setState({ toolThreadEvents: [], lastAgentRun: null });
   };
 
+  const clearDebateThread = () => {
+    setState({ debateSteps: [], debateSessionId: null });
+  };
+
+  const joinVoiceStage = (role: import("./voice-stage").VoiceStageRole, displayName?: string) => {
+    try {
+      connectionRef?.sendJson({
+        type: "stage_join",
+        role,
+        ...(displayName ? { displayName } : {}),
+      });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const leaveVoiceStage = () => {
+    try {
+      connectionRef?.sendJson({ type: "stage_leave" });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const promoteVoiceStageListener = (targetUserId: string) => {
+    try {
+      connectionRef?.sendJson({ type: "stage_promote", targetUserId });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const sendVoiceStageVad = (score: number) => {
+    try {
+      connectionRef?.sendJson({ type: "stage_vad", score: Math.max(0, Math.min(1, score)) });
+    } catch {
+      /* ignore */
+    }
+  };
+
   const sendClientEvent = (eventName: string, data: unknown) => {
     if (!client) return;
     const name = eventName.startsWith("client-") ? eventName : `client-${eventName}`;
@@ -927,6 +1075,11 @@ export function startFluxyRoomSession(
     branchRoomFromMessage,
     invokeAgent,
     clearToolThread,
+    clearDebateThread,
+    joinVoiceStage,
+    leaveVoiceStage,
+    promoteVoiceStageListener,
+    sendVoiceStageVad,
     sendClientEvent,
   });
 
@@ -955,10 +1108,11 @@ export function startFluxyRoomSession(
             content: await maybeDecryptContent(m.content ?? ""),
           })),
         );
+        const merged = await mergeHistoryWithYjs(decrypted);
         // Merge reactions from REST response into state
         const restReactions = client?.lastFetchReactions ?? {};
         setState((s) => ({
-          messages: decrypted,
+          messages: mergeHistoryWithPendingDelivery(s.messages, merged),
           hasMore: initial.length >= historyLimit,
           historyLoaded: true,
           reactions: Object.keys(restReactions).length > 0
@@ -978,6 +1132,18 @@ export function startFluxyRoomSession(
   }
 
   let connection: FluxyChatRoomConnection | null = null;
+  let stopTokenRefresh: (() => void) | undefined;
+  let stopCrdtMultiTab: (() => void) | undefined;
+
+  if (crdtMessageList) {
+    stopCrdtMultiTab = subscribeMessageCrdtMultiTabSync(trimmedRoomId, () => {
+      if (!active) return;
+      const doc = getRoomMessageCrdtDoc(trimmedRoomId);
+      setState((s) => ({
+        messages: mergeRestHistoryWithYjsDoc(s.messages, doc),
+      }));
+    });
+  }
 
   void (async () => {
     let reconnectBackoff: { baseBackoffMs?: number; maxBackoffMs?: number } = {};
@@ -1036,7 +1202,15 @@ export function startFluxyRoomSession(
           connected: false,
           connectionError: err,
         });
-        onRefreshSession?.();
+        void (async () => {
+          try {
+            if (client.resolveToken) await client.resolveToken();
+            connection?.reconnectWithFreshCredentials();
+          } catch {
+            /* provider refresh handles next attempt */
+          }
+          onRefreshSession?.();
+        })();
       },
       onConnectionError: (err) => {
         if (!active || err instanceof FluxyAuthError) return;
@@ -1067,10 +1241,25 @@ export function startFluxyRoomSession(
     }
     connectionRef = connection;
     connection.connect();
+
+    stopTokenRefresh = scheduleSessionTokenRefresh(client, {
+      onRefresh: async () => {
+        if (!active || !connectionRef) return;
+        try {
+          if (client.resolveToken) await client.resolveToken();
+          connectionRef.reconnectWithFreshCredentials();
+          onRefreshSession?.();
+        } catch {
+          /* provider/onRefreshSession handles recovery */
+        }
+      },
+    });
   })();
 
   return () => {
     active = false;
+    stopCrdtMultiTab?.();
+    stopTokenRefresh?.();
     visibilityCleanup?.();
     streamEditBatcher.flush();
     stopPollingFallback();

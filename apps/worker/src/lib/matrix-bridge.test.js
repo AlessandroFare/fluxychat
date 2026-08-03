@@ -5,7 +5,7 @@ vi.mock('./message-import.js', () => ({
 }));
 
 import { importAdminMessage } from './message-import.js';
-import { createMatrixBridge, connectMatrixBridge, disconnectMatrixBridge, getMatrixBridge, listMatrixBridges, deleteMatrixBridge, createMatrixRoomMapping, listMatrixRoomMappings, getMatrixMappingByFluxyRoom, getMatrixMappingByMatrixRoom, deleteMatrixRoomMapping, mapMatrixMessage, findMatrixEvent, findFluxyMessageByMatrix, recordMatrixSyncLog, syncMatrixInbound, syncMatrixOutbound, getMatrixBridgeStats, processMatrixAppserviceTransaction } from './matrix-bridge.js';
+import { createMatrixBridge, connectMatrixBridge, disconnectMatrixBridge, getMatrixBridge, listMatrixBridges, deleteMatrixBridge, createMatrixRoomMapping, listMatrixRoomMappings, getMatrixMappingByFluxyRoom, getMatrixMappingByMatrixRoom, deleteMatrixRoomMapping, mapMatrixMessage, findMatrixEvent, findFluxyMessageByMatrix, recordMatrixSyncLog, syncMatrixInbound, syncMatrixOutbound, getMatrixBridgeStats, processMatrixAppserviceTransaction, verifyMatrixAppserviceToken, extractBearerTokenFromRequest } from './matrix-bridge.js';
 
 beforeEach(() => {
   vi.mocked(importAdminMessage).mockResolvedValue({ imported: true, messageId: 42 });
@@ -42,13 +42,46 @@ describe('matrix-bridge lib', () => {
       const result = await createMatrixBridge(env, { projectId: 'p1', homeserverUrl: 'https://matrix.example.com' });
       expect(result.id).toMatch(/^mb_/);
       expect(result.status).toBe('disconnected');
+      expect(result.appserviceToken).toMatch(/^as_/);
+      expect(result.appserviceWebhookPath).toMatch(/^\/webhooks\/matrix\//);
+    });
+  });
+
+  describe('verifyMatrixAppserviceToken', () => {
+    it('accepts matching tokens', () => {
+      expect(verifyMatrixAppserviceToken('as_secret123', 'as_secret123')).toBe(true);
+    });
+
+    it('rejects mismatched tokens', () => {
+      expect(verifyMatrixAppserviceToken('as_wrong', 'as_secret123')).toBe(false);
+    });
+
+    it('extracts bearer token from request', () => {
+      const req = { headers: { get: (k) => (k === 'Authorization' ? 'Bearer as_tok' : null) } };
+      expect(extractBearerTokenFromRequest(req)).toBe('as_tok');
     });
   });
 
   describe('connectMatrixBridge', () => {
     it('connects', async () => {
-      const env = createEnv();
-      const result = await connectMatrixBridge(env, { bridgeId: 'mb-1' });
+      const env = createEnv({
+        first: {
+          id: 'mb-1',
+          project_id: 'p1',
+          homeserver_url: 'https://matrix.example.com',
+          access_token: null,
+          bot_user_id: null,
+          bot_display_name: null,
+          sync_mode: 'bidirectional',
+          status: 'disconnected',
+          settings: null,
+          last_sync_at: null,
+          error_message: null,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      });
+      const result = await connectMatrixBridge(env, { bridgeId: 'mb-1', skipHealthCheck: true });
       expect(result.connected).toBe(1);
     });
   });

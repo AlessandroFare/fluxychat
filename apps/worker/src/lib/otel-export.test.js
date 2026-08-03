@@ -7,6 +7,8 @@ import {
   traceToSpan,
   metricToOtel,
   logEntryToOtel,
+  buildLangfuseOtelExportInput,
+  createLangfuseOtelExportConfig,
 } from "./otel-export.js";
 
 describe("otel-export", () => {
@@ -125,6 +127,25 @@ describe("otel-export", () => {
       const log = logEntryToOtel({ level: "info", event: "test", ts: "2026-06-12T00:00:00Z" });
       expect(log.severityNumber).toBe(9);
       expect(log.severityText).toBe("INFO");
+    });
+  });
+
+  describe("buildLangfuseOtelExportInput", () => {
+    it("builds Langfuse OTLP trace endpoint with Basic auth", () => {
+      const input = buildLangfuseOtelExportInput({
+        host: "https://langfuse.example.com",
+        publicKey: "pk-lf-abc",
+        secretKey: "sk-lf-xyz",
+      });
+      expect(input.error).toBeUndefined();
+      expect(input.endpointUrl).toBe("https://langfuse.example.com/api/public/otel/v1/traces");
+      expect(input.exportType).toBe("traces");
+      expect(input.authHeader).toMatch(/^Basic /);
+    });
+
+    it("requires public and secret keys", () => {
+      const input = buildLangfuseOtelExportInput({ publicKey: "", secretKey: "sk" });
+      expect(input.error).toBe("publicKey and secretKey are required");
     });
   });
 });

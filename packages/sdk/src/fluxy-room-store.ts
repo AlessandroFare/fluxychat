@@ -51,6 +51,9 @@ export interface FluxyRoomStoreState {
   reactions: Record<number, Record<string, number>>;
   toolThreadEvents: FluxyToolThreadEvent[];
   lastAgentRun: FluxyChatAgentRun | null;
+  debateSteps: import("./agent-debate").AgentDebateStep[];
+  debateSessionId: string | null;
+  voiceStage: import("./voice-stage").VoiceStageSnapshot | null;
   sendMessage: (
     content: string,
     replyTo?: number | null,
@@ -62,7 +65,7 @@ export interface FluxyRoomStoreState {
   loadMore: () => Promise<void>;
   /** Refresh `liveSnapshot` from `GET /rooms/:id/live` (Portal-style). */
   loadLive: () => Promise<void>;
-  setTyping: (isTyping: boolean, intent?: import("./message-template").FluxyPresenceIntent) => void;
+  setTyping: (isTyping: boolean, intent?: import("./message-template").FluxyPresenceIntent, partialText?: string) => void;
   editMessage: (messageId: number, content: string) => void;
   sendReaction: (messageId: number, emoji: string, op?: "add" | "remove") => void;
   sendReadReceipt: (messageId: number) => void;
@@ -73,6 +76,11 @@ export interface FluxyRoomStoreState {
     options?: { agentId?: string; replyTo?: number | null },
   ) => Promise<unknown>;
   clearToolThread: () => void;
+  clearDebateThread: () => void;
+  joinVoiceStage: (role: import("./voice-stage").VoiceStageRole, displayName?: string) => void;
+  leaveVoiceStage: () => void;
+  promoteVoiceStageListener: (targetUserId: string) => void;
+  sendVoiceStageVad: (score: number) => void;
   sendClientEvent: (eventName: string, data: unknown) => void;
 }
 
@@ -101,6 +109,11 @@ const inertRoomActions: Pick<
   | "branchRoomFromMessage"
   | "invokeAgent"
   | "clearToolThread"
+  | "clearDebateThread"
+  | "joinVoiceStage"
+  | "leaveVoiceStage"
+  | "promoteVoiceStageListener"
+  | "sendVoiceStageVad"
   | "sendClientEvent"
 > = Object.freeze({
   sendMessage: noop,
@@ -116,6 +129,11 @@ const inertRoomActions: Pick<
   branchRoomFromMessage: async () => notReady(),
   invokeAgent: async () => notReady(),
   clearToolThread: noop,
+  clearDebateThread: noop,
+  joinVoiceStage: noop,
+  leaveVoiceStage: noop,
+  promoteVoiceStageListener: noop,
+  sendVoiceStageVad: noop,
   sendClientEvent: noop,
 });
 
@@ -149,6 +167,9 @@ export const INERT_FLUXY_ROOM_SNAPSHOT: FluxyRoomStoreState = Object.freeze({
   reactions: {} as Record<number, Record<string, number>>,
   toolThreadEvents: [] as FluxyToolThreadEvent[],
   lastAgentRun: null,
+  debateSteps: [],
+  debateSessionId: null,
+  voiceStage: null,
   ...inertRoomActions,
 });
 
@@ -179,6 +200,9 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     reactions: {},
     toolThreadEvents: [],
     lastAgentRun: null,
+    debateSteps: [],
+    debateSessionId: null,
+    voiceStage: null,
     ...inertRoomActions,
   }));
 }

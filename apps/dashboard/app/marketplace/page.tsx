@@ -1002,8 +1002,14 @@ function McpAppsMarketplaceTab() {
                 {app.auditGrade && (
                   <Badge
                     variant="outline"
-                    className="text-[9px] font-mono"
-                    title={app.auditScore != null ? `Score ${app.auditScore}` : undefined}
+                    className={`text-[9px] font-mono ${app.auditGrade === "A" || app.auditGrade === "B" ? "border-emerald-300 text-emerald-700" : app.auditSeverityCritical ? "border-red-300 text-red-700" : ""}`}
+                    title={
+                      [
+                        app.auditScore != null ? `Score ${app.auditScore}` : null,
+                        app.auditScannedAt ? `Scanned ${new Date(app.auditScannedAt).toLocaleDateString()}` : null,
+                        app.auditSeverityCritical ? `${app.auditSeverityCritical} critical findings` : null,
+                      ].filter(Boolean).join(" · ") || undefined
+                    }
                   >
                     Audit {app.auditGrade}
                   </Badge>

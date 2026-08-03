@@ -48,6 +48,7 @@ export async function dispatchVoiceAiRoutes(request, url, h) {
       stages: body.stages,
       totalLatencyMs: body.totalLatencyMs,
       providerId: body.providerId,
+      pipelineMode: body.pipelineMode,
     });
     return respond(result, h);
   }

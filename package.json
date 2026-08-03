@@ -10,6 +10,7 @@
     "test": "pnpm run test:packages",
     "test:packages": "pnpm --filter @fluxy-chat/protocol test && pnpm --filter @fluxy-chat/sdk test && pnpm --filter @fluxy-chat/react test && pnpm --filter @fluxy-chat/ui test && pnpm --filter @fluxy-chat/config test && pnpm --filter @fluxy-chat/agent test",
     "check:bundle-size": "node scripts/analyze-sdk-bundle.mjs",
+    "check:bandwidth-budget": "node scripts/bandwidth-budget.mjs",
     "test:e2e:smoke": "pnpm --filter @fluxy-chat/dashboard test:e2e:smoke",
     "smoke:worker": "pnpm --filter @fluxy-chat/worker smoke:remote",
     "smoke:bundled": "bash scripts/smoke-test.sh",
@@ -29,6 +30,7 @@
     "import-chat-history": "node scripts/import-chat-history.mjs",
     "smoke:create-fluxy-chat": "node scripts/smoke-create-fluxy-chat.mjs",
     "check:env": "node scripts/check-env-readiness.mjs",
+    "check:upptime": "node scripts/validate-upptime-config.mjs",
     "docs:sync": "node scripts/sync-docs-content.mjs",
     "docs:dev": "pnpm docs:sync && pnpm --filter docs dev",
     "docs:build": "pnpm docs:sync && pnpm --filter docs build"

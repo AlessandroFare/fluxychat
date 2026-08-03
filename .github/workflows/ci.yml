@@ -46,6 +46,9 @@ jobs:
       - name: SDK bundle size report (DX-16.1)
         run: pnpm run check:bundle-size
 
+      - name: Bandwidth budget gate (#29)
+        run: pnpm run check:bandwidth-budget
+
       - name: OpenAPI route smoke (ENG-14)
         run: pnpm run check:openapi
 
@@ -54,6 +57,9 @@ jobs:
 
       - name: Environment readiness hints
         run: pnpm run check:env
+
+      - name: Upptime config validate (#62)
+        run: pnpm run check:upptime
 
       - name: Worker typecheck (ENG-06)
         run: pnpm --filter @fluxychat/worker typecheck

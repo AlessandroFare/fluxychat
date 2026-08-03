@@ -22,6 +22,13 @@ import {
   type VoiceAiProvider,
   type VoiceAiStats,
 } from "@/lib/voice-ai-client";
+import {
+  getRoomEmpathySettings,
+  updateRoomEmpathySettings,
+} from "@/lib/room-empathy-client";
+import { useEmpathyProsody } from "@/lib/use-empathy-prosody";
+import { useClerkUser } from "@/lib/clerk-user";
+import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 
 export default function VoiceAiPage() {
   const { adminJwt } = useDashboardSession();
@@ -37,9 +44,25 @@ export default function VoiceAiPage() {
   const [providerId, setProviderId] = useState("openai-realtime");
   const [roomId, setRoomId] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [pipelineMode, setPipelineMode] = useState<"unified" | "legacy">("unified");
+  const [vadBackend, setVadBackend] = useState<"hybrid" | "energy" | "silero">("hybrid");
   const [testText, setTestText] = useState("Hello, what is the weather today?");
+  const [empathyEnabled, setEmpathyEnabled] = useState(false);
+  const [empathyMinConfidence, setEmpathyMinConfidence] = useState("0.6");
+
+  const { user: clerkUser } = useClerkUser();
+  const empathyUserId = clerkUser?.id ? fluxyUserIdFromClerk(clerkUser.id) : "voice-operator";
+
+  useEmpathyProsody({
+    enabled: empathyEnabled && Boolean(token && roomId.trim()),
+    token,
+    roomId: roomId.trim(),
+    userId: empathyUserId,
+  });
 
   const voice = useVoice({
+    pipelineMode,
+    vadBackend,
     noiseSuppression: true,
     echoCancellation: true,
     onMetrics: token && sessionId
@@ -49,6 +72,7 @@ export default function VoiceAiPage() {
             totalLatencyMs: payload.totalLatencyMs,
             stages: payload.stages,
             providerId,
+            pipelineMode,
           }).then(() => loadStats()).catch(() => undefined);
         }
       : undefined,
@@ -82,11 +106,43 @@ export default function VoiceAiPage() {
     void loadAll();
   }, [loadAll]);
 
+  useEffect(() => {
+    if (!token || !roomId.trim()) return;
+    void getRoomEmpathySettings(token, roomId.trim())
+      .then((res) => {
+        setEmpathyEnabled(res.settings.enabled);
+        setEmpathyMinConfidence(String(res.settings.minConfidence));
+      })
+      .catch(() => undefined);
+  }, [token, roomId]);
+
+  async function handleEmpathyToggle(enabled: boolean) {
+    if (!token || !roomId.trim()) return;
+    setBusy("empathy");
+    try {
+      const res = await updateRoomEmpathySettings(token, roomId.trim(), {
+        enabled,
+        minConfidence: Number(empathyMinConfidence) || 0.6,
+        escalateOnStressed: true,
+      });
+      setEmpathyEnabled(res.settings.enabled);
+      setNotice(enabled ? "Empathy layer enabled for room (silent adaptation only)" : "Empathy layer disabled");
+    } catch (err) {
+      setError(messageFromUnknown(err, "Failed to update empathy settings"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function handleCreateSession() {
     if (!token) return;
     setBusy("session");
     try {
-      const session = await createVoiceAiSession(token, { providerId, roomId: roomId || undefined });
+      const session = await createVoiceAiSession(token, {
+        providerId,
+        roomId: roomId || undefined,
+        settings: { pipelineMode },
+      });
       setSessionId(session.sessionId);
       setNotice(`Session ${session.sessionId} ready (target ${session.targetLatencyMs}ms)`);
     } catch (err) {
@@ -107,7 +163,7 @@ export default function VoiceAiPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Voice AI pipeline"
-        description="OpenAI Realtime and Gemini Live adapters — STT→LLM→TTS metrics with VAD, barge-in, and AEC."
+        description="Unified multimodal voice (default) or legacy STT→LLM→TTS — OpenAI Realtime and Gemini Live with VAD, barge-in, and latency metrics."
         actions={
           <Badge className={readinessBadgeClass(PLATFORM_READINESS.voice.readiness)}>
             {formatReadinessLabel(PLATFORM_READINESS.voice.readiness)}
@@ -120,6 +176,12 @@ export default function VoiceAiPage() {
         Voice AI uses your project&apos;s provider keys — OpenAI Realtime and Gemini Live are not included in the hosted Worker secrets.
         Add <code className="rounded bg-muted px-1 py-0.5 text-xs">OPENAI_API_KEY</code> or{" "}
         <code className="rounded bg-muted px-1 py-0.5 text-xs">GOOGLE_AI_API_KEY</code> in project settings or Worker secrets before running live sessions.
+      </Panel>
+
+      <Panel className="p-4 text-sm text-muted-foreground">
+        Turn detection uses Silero VAD in the browser (WASM). To self-host the ONNX bundle, set{" "}
+        <code className="rounded bg-muted px-1 py-0.5 text-xs">NEXT_PUBLIC_SILERO_VAD_WASM_URL</code> in the dashboard env or pass{" "}
+        <code className="rounded bg-muted px-1 py-0.5 text-xs">onnxModelUrl</code> to the SDK voice pipeline.
       </Panel>
 
       {!token && (
@@ -170,6 +232,41 @@ export default function VoiceAiPage() {
 
           <Section title="Pipeline test (useVoice hook)">
             <Panel className="p-4 space-y-3 max-w-xl">
+              <fieldset className="flex flex-wrap gap-3 text-xs">
+                <legend className="sr-only">Pipeline mode</legend>
+                <label className="inline-flex cursor-pointer items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name="pipeline-mode"
+                    checked={pipelineMode === "unified"}
+                    onChange={() => setPipelineMode("unified")}
+                  />
+                  Unified (one multimodal call)
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name="pipeline-mode"
+                    checked={pipelineMode === "legacy"}
+                    onChange={() => setPipelineMode("legacy")}
+                  />
+                  Legacy (STT → LLM → TTS)
+                </label>
+              </fieldset>
+              <fieldset className="flex flex-wrap gap-3 text-xs">
+                <legend className="sr-only">VAD backend</legend>
+                {(["hybrid", "energy", "silero"] as const).map((mode) => (
+                  <label key={mode} className="inline-flex cursor-pointer items-center gap-1.5">
+                    <input
+                      type="radio"
+                      name="vad-backend"
+                      checked={vadBackend === mode}
+                      onChange={() => setVadBackend(mode)}
+                    />
+                    VAD {mode}
+                  </label>
+                ))}
+              </fieldset>
               <Input value={testText} onChange={(e) => setTestText(e.target.value)} />
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => void handlePipelineTest()} disabled={voice.status === "running"}>
@@ -180,9 +277,37 @@ export default function VoiceAiPage() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Status: {voice.status} · Transport: {voice.activeTransport} · Latency: {voice.latencyMs}ms
-                {voice.activeTransport === "text_only" ? " · demo fallback (see docs/platform/voice)" : ""}
+                Status: {voice.status} · Mode: {voice.pipelineMode} · Transport: {voice.activeTransport} · Latency: {voice.latencyMs}ms
+                {voice.lastEvent?.type === "vad" ? (
+                  <> · VAD: {voice.lastEvent.vad?.event}</>
+                ) : null}
+                {voice.metrics.length > 0 ? (
+                  <> · Stages: {voice.metrics.map((m) => m.stage).join(" → ")}</>
+                ) : null}
               </p>
+            </Panel>
+          </Section>
+
+          <Section title="Empathy layer (#46)" description="Opt-in prosody signals adapt agent tone silently — never shown to the user.">
+            <Panel className="p-4 space-y-3 max-w-xl">
+              <p className="text-xs text-muted-foreground">
+                Requires a room ID. Mic samples stay client-side; only classified state + confidence are posted ephemerally (5 min TTL).
+              </p>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={empathyEnabled}
+                  disabled={!token || !roomId.trim() || busy === "empathy"}
+                  onChange={(e) => void handleEmpathyToggle(e.target.checked)}
+                />
+                Enable empathy adaptation for this room
+              </label>
+              <Input
+                value={empathyMinConfidence}
+                onChange={(e) => setEmpathyMinConfidence(e.target.value)}
+                placeholder="Min confidence (0.5–0.95)"
+                disabled={!token || !roomId.trim()}
+              />
             </Panel>
           </Section>
         </div>

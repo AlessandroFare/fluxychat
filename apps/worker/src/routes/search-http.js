@@ -2,6 +2,11 @@ import { pickRouteDeps } from "./route-http-deps.js";
 import { validateLimit } from "../lib/validation.js";
 import { searchMessages } from "../lib/message-search.js";
 import { searchSemanticMessages, backfillEmbeddings } from "../lib/message-embeddings.js";
+import {
+  getSemanticSearchSettings,
+  isSemanticSearchActive,
+  upsertSemanticSearchSettings,
+} from "../lib/semantic-search-settings.js";
 import { workerSharedLlmAllowed } from "../lib/hosted-saas-policy.js";
 
 export async function dispatchSearchRoutes(request, url, h) {
@@ -13,6 +18,12 @@ export async function dispatchSearchRoutes(request, url, h) {
   }
   if (url.pathname === "/search/messages/backfill" && request.method === "POST") {
     return dispatchBackfill(request, url, h);
+  }
+  if (url.pathname === "/search/settings" && request.method === "GET") {
+    return dispatchSearchSettingsGet(request, url, h);
+  }
+  if (url.pathname === "/admin/search/settings" && request.method === "PATCH") {
+    return dispatchSearchSettingsPatch(request, url, h);
   }
   return null;
 }
@@ -77,7 +88,7 @@ async function dispatchKeywordSearch(request, url, h) {
   }
 
   return json(
-    { query: result.query, results: result.results },
+    { query: result.query, results: result.results, mode: "keyword" },
     { headers: corsHeaders },
   );
 }
@@ -110,8 +121,16 @@ async function dispatchSemanticSearch(request, url, h) {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
-  if (env.SEMANTIC_SEARCH_ENABLED !== "true" && env.SEMANTIC_SEARCH_ENABLED !== "1") {
-    return json({ error: "semantic_search_disabled" }, { status: 404, headers: corsHeaders });
+  const settings = await getSemanticSearchSettings(env, auth.projectId);
+  if (!isSemanticSearchActive(settings)) {
+    return json(
+      {
+        error: "semantic_search_disabled",
+        globalEnabled: settings.globalEnabled,
+        enabled: settings.enabled,
+      },
+      { status: 404, headers: corsHeaders },
+    );
   }
 
   if (!workerSharedLlmAllowed(env, auth.projectId)) {
@@ -131,7 +150,7 @@ async function dispatchSemanticSearch(request, url, h) {
     return json({ error: "invalid_room_id" }, { status: 400, headers: corsHeaders });
   }
 
-  const mode = body.mode || "hybrid";
+  const mode = body.mode || settings.defaultMode || "hybrid";
   if (!["semantic", "hybrid"].includes(mode)) {
     return json({ error: "invalid_mode" }, { status: 400, headers: corsHeaders });
   }
@@ -161,13 +180,95 @@ async function dispatchSemanticSearch(request, url, h) {
     return json({ error: result.error }, { status, headers: corsHeaders });
   }
 
+  const results = (result.results || []).map((row) => ({
+    ...row,
+    snippet: buildContentSnippet(row.content, query),
+  }));
+
   return json(
-    { query: result.query, results: result.results, mode: result.mode },
+    { query: result.query, results, mode: result.mode },
     { headers: corsHeaders },
   );
 }
 
 async function dispatchBackfill(request, url, h) {
+  const {
+    env,
+    json,
+    corsHeaders,
+    requestLogCtx,
+    verifyJwtAndGetContext,
+    logError,
+    isValidId,
+  } = pickRouteDeps(h, [
+    "env",
+    "json",
+    "corsHeaders",
+    "requestLogCtx",
+    "verifyJwtAndGetContext",
+    "logError",
+    "isValidId",
+  ]);
+
+  const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+    if (err instanceof Response) throw err;
+    logError("auth.jwt_verify_failed", err, requestLogCtx);
+    return null;
+  });
+  if (!auth) {
+    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  }
+
+  if (!auth.roles?.includes("admin") && !auth.roles?.includes("owner")) {
+    return json({ error: "admin_required" }, { status: 403, headers: corsHeaders });
+  }
+
+  const settings = await getSemanticSearchSettings(env, auth.projectId);
+  if (!isSemanticSearchActive(settings)) {
+    return json({ error: "semantic_search_disabled" }, { status: 404, headers: corsHeaders });
+  }
+
+  if (!workerSharedLlmAllowed(env, auth.projectId)) {
+    return json({ error: "llm_not_allowed" }, { status: 403, headers: corsHeaders });
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    body = {};
+  }
+
+  const roomId = body.roomId?.trim() || null;
+  if (roomId && !isValidId(roomId)) {
+    return json({ error: "invalid_room_id" }, { status: 400, headers: corsHeaders });
+  }
+
+  const result = await backfillEmbeddings(env, {
+    projectId: auth.projectId,
+    roomId,
+    limit: body.limit || 500,
+  });
+
+  if (!result.ok) {
+    return json({ error: result.error }, { status: 500, headers: corsHeaders });
+  }
+
+  const refreshed = await getSemanticSearchSettings(env, auth.projectId);
+
+  return json(
+    {
+      ok: true,
+      processed: result.processed,
+      stored: result.stored,
+      skipped: result.skipped,
+      embeddingCount: refreshed.embeddingCount,
+    },
+    { headers: corsHeaders },
+  );
+}
+
+async function dispatchSearchSettingsGet(request, url, h) {
   const {
     env,
     json,
@@ -193,33 +294,71 @@ async function dispatchBackfill(request, url, h) {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
-  if (!auth.roles?.includes("admin")) {
-    return json({ error: "admin_required" }, { status: 403, headers: corsHeaders });
+  const settings = await getSemanticSearchSettings(env, auth.projectId);
+  return json({ settings }, { headers: corsHeaders });
+}
+
+async function dispatchSearchSettingsPatch(request, url, h) {
+  const {
+    env,
+    json,
+    corsHeaders,
+    requestLogCtx,
+    verifyJwtAndGetContext,
+    logError,
+  } = pickRouteDeps(h, [
+    "env",
+    "json",
+    "corsHeaders",
+    "requestLogCtx",
+    "verifyJwtAndGetContext",
+    "logError",
+  ]);
+
+  const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+    if (err instanceof Response) throw err;
+    logError("auth.jwt_verify_failed", err, requestLogCtx);
+    return null;
+  });
+  if (!auth) {
+    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
-  if (!workerSharedLlmAllowed(env, auth.projectId)) {
-    return json({ error: "llm_not_allowed" }, { status: 403, headers: corsHeaders });
+  if (!auth.roles?.includes("admin") && !auth.roles?.includes("owner")) {
+    return json({ error: "admin_required" }, { status: 403, headers: corsHeaders });
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    body = {};
+    return json({ error: "invalid_json" }, { status: 400, headers: corsHeaders });
   }
 
-  const result = await backfillEmbeddings(env, {
-    projectId: auth.projectId,
-    roomId: body.roomId || null,
-    limit: body.limit || 500,
+  const result = await upsertSemanticSearchSettings(env, auth.projectId, {
+    enabled: body.enabled,
+    autoEmbed: body.autoEmbed,
+    defaultMode: body.defaultMode,
   });
 
   if (!result.ok) {
-    return json({ error: result.error }, { status: 500, headers: corsHeaders });
+    return json({ error: result.error }, { status: 400, headers: corsHeaders });
   }
 
-  return json(
-    { ok: true, processed: result.processed, stored: result.stored, skipped: result.skipped },
-    { headers: corsHeaders },
-  );
+  return json({ settings: result.settings }, { headers: corsHeaders });
+}
+
+function buildContentSnippet(content, query, maxLen = 160) {
+  const text = String(content || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  const needle = String(query || "").trim().toLowerCase();
+  if (needle && text.toLowerCase().includes(needle)) {
+    const idx = text.toLowerCase().indexOf(needle);
+    const start = Math.max(0, idx - 40);
+    const end = Math.min(text.length, idx + needle.length + 80);
+    const prefix = start > 0 ? "…" : "";
+    const suffix = end < text.length ? "…" : "";
+    return `${prefix}${text.slice(start, end)}${suffix}`;
+  }
+  return text.length > maxLen ? `${text.slice(0, maxLen)}…` : text;
 }
