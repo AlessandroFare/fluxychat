@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
@@ -158,6 +158,20 @@ function DemoHeroSection() {
 }
 
 export default function DemoRoomPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-slate-950">
+          <Loader2 className="size-8 animate-spin text-blue-400" />
+        </main>
+      }
+    >
+      <DemoRoomPageContent />
+    </Suspense>
+  );
+}
+
+function DemoRoomPageContent() {
   const searchParams = useSearchParams();
   const roomHint = searchParams.get("room")?.trim() || "demo";
   const workerUrl = getPublicWorkerUrl();

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { Activity, ExternalLink } from "lucide-react";
-import { ConsoleShell } from "../components/console-shell";
-import { ConsolePageHeader } from "../components/console-page-header";
-import { Banner, Panel } from "../components/ui";
+import { ConsoleShell } from "../../components/console-shell";
+import { ConsolePageHeader } from "../../components/console-page-header";
+import { Banner, Panel } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 
 const STATUS_URL = process.env.NEXT_PUBLIC_STATUS_PAGE_URL?.trim() || "https://status.fluxychat.com";

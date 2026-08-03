@@ -5,25 +5,40 @@ description: Private ephemeral room with read-only snapshot of real context — 
 
 # Rehearsal rooms
 
-Before a difficult negotiation or support escalation, open a **rehearsal room**: a temporary private room cloned from authorized context where an agent simulates the counterparty.
+Before a difficult negotiation or support escalation, open a **rehearsal room**: a temporary private room cloned from authorized context where an agent simulates the counterparty — not the real person.
 
 ## Console
 
-**Agents → Rehearsal** → pick source room → start session.
+**Agents → Rehearsal** (`/agents/rehearsal`)
 
-Default TTL deletes the rehearsal room automatically.
+1. Pick a **source room** you already have access to.
+2. Set optional **counterparty role** (e.g. "skeptical buyer") and **stated goal**.
+3. **Start rehearsal** — worker creates an ephemeral room and copies an authorized message snapshot.
+4. Open the rehearsal room from the session list; default TTL is **1 hour**.
+5. Delete sessions manually or let them expire.
 
 ## Guardrails
 
 - Only data you already have access to is copied.
-- Simulation disclaimer shown in UI.
-- No persistence to production room unless you explicitly copy outcomes.
+- Simulation disclaimer is shown in UI and injected into the agent system prompt.
+- Outcomes are **not** written back to the production room unless you copy them manually.
 
 ## API
 
 ```http
 POST /rooms/:roomId/rehearsal
-GET /rehearsal/:id
+GET  /rehearsals?sourceRoomId=&limit=
+GET  /rehearsals/:rehearsalId
+DELETE /rehearsals/:rehearsalId
 ```
 
-Useful with [cross-org rooms](/docs/features/cross-org-rooms) preparation flows.
+Create body fields: `statedGoal`, `counterpartyRole`, `agentId`, `ttlSeconds`, `persistAfterSession`.
+
+## Agent behaviour
+
+When an agent runs in a rehearsal room, `agent-runtime` appends a rehearsal system prompt so the model stays in character as a **simulated** counterparty.
+
+## Related
+
+- [Cross-org rooms](/docs/features/cross-org-rooms) — preparation before federated negotiations
+- [Multi-agent debate](/docs/features/agent-debate) — structured multi-perspective reasoning

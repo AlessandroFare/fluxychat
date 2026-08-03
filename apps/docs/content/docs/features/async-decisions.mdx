@@ -9,9 +9,22 @@ Post a **decision** message that requires quorum from specific roles (e.g. 2 of 
 
 ## In chat
 
-1. Open message menu → **Create decision**.
-2. Set question, required roles, quorum count, and expiry.
+1. Open message menu → **Create decision** (or use the `Decision` UI component).
+2. Set **question**, **required roles**, **quorum count**, and **expiry**.
 3. Approvers tap **Acknowledge** — progress bar updates server-side.
+4. When quorum is met or time expires, state transitions to `approved` / `expired`.
+
+## Console UI
+
+The `Decision` component (`apps/dashboard/components/ui/decision.tsx`) renders quorum progress inline on decision messages.
+
+## API
+
+```http
+POST /rooms/:roomId/decisions
+POST /rooms/:roomId/decisions/:messageId/ack
+GET  /rooms/:roomId/decisions/:messageId
+```
 
 ## SDK
 
@@ -27,3 +40,7 @@ await client.ackDecision(roomId, decisionMessageId);
 ```
 
 Quorum is verified **only on the server** — clients cannot bypass role checks.
+
+## Related
+
+- [Message middleware](/docs/reference/message-middleware)

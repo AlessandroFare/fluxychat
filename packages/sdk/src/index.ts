@@ -915,6 +915,8 @@ export interface FluxyChatMessage {
   /** Client-only delivery state for optimistic UI. */
   deliveryStatus?: "pending" | "sent" | "failed";
   deliveryError?: string;
+  /** Server ack content differed from optimistic draft (CRDT/offline conflict). */
+  deliveryConflict?: boolean;
   /** ISO timestamp when the message self-deletes (ephemeral / TTL). */
   expiresAt?: string | null;
   visibility?: "room" | "whisper";
@@ -1367,6 +1369,28 @@ export type FluxyChatEvent =
       transcription?: string | null;
       transcriptionStatus?: "pending" | "done" | "failed" | null;
       transcriptionModel?: string;
+    }
+  | {
+      type: "decision_updated";
+      roomId: string;
+      messageId: number;
+      userId?: string;
+      decision: {
+        messageId: number;
+        content: string;
+        state: "pending" | "decided" | "expired_no_quorum";
+        progress: Array<{
+          role: string;
+          required: number;
+          current: number;
+          ackedBy: Array<{ userId: string; ackedAt: string }>;
+        }>;
+        totalRequired: number;
+        totalCurrent: number;
+        quorumMet: boolean;
+        expiresAt: string;
+        acks: Array<{ userId: string; role: string; ackedAt: string }>;
+      };
     }
   | {
       type: "edit";

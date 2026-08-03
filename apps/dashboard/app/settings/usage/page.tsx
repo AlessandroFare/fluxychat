@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart3, Loader2 } from "lucide-react";
-import { ConsoleShell } from "../components/console-shell";
-import { ConsolePageHeader } from "../components/console-page-header";
-import { ConsoleFeedback } from "../components/console-feedback";
-import { Panel, Section } from "../components/ui";
+import { ConsoleShell } from "../../components/console-shell";
+import { ConsolePageHeader } from "../../components/console-page-header";
+import { ConsoleFeedback } from "../../components/console-feedback";
+import { Panel, Section } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
-import { useDashboardSession } from "../components/dashboard-session";
+import { useDashboardSession } from "../../components/dashboard-session";
 import { formatNumber } from "@/lib/format-number";
 import { messageFromUnknown } from "@/lib/error-message";
 import { getTenantUsage, type TenantUsageSnapshot } from "@/lib/tenant-usage-client";

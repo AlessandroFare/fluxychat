@@ -141,8 +141,8 @@ export default function AgentObservabilityPage() {
         </Link>
       </p>
 
-      {error ? <Banner variant="destructive">{error}</Banner> : null}
-      {langfuseNotice ? <Banner variant="default">{langfuseNotice}</Banner> : null}
+      {error ? <Banner variant="error">{error}</Banner> : null}
+      {langfuseNotice ? <Banner variant="info">{langfuseNotice}</Banner> : null}
 
       <Panel className="mb-6 space-y-3 p-4">
         <h2 className="text-sm font-semibold">Langfuse OTLP (OSS or Cloud)</h2>

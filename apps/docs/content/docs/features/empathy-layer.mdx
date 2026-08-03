@@ -9,16 +9,31 @@ During voice sessions, optional **prosody analysis** (pitch, rate, pauses) on th
 
 ## Console
 
-**Voice AI** — enable empathy per room in settings panel.
+**Voice AI** (`/voice-ai`) — enable empathy per room in the settings panel.
+
+**Settings** — room-level empathy toggles stored in `room_empathy_settings`.
 
 ## Opt-in
 
-- Per-room toggle in D1 (`room_empathy_settings`).
+- Per-room toggle in D1.
 - Raw prosody is **not** persisted — only aggregated signal with TTL in KV.
 - Low confidence → no prompt change.
 
 ## Client
 
-`useEmpathyProsody` hook sends `POST /rooms/:id/empathy/signal` during voice capture.
+`useEmpathyProsody` hook sends:
 
-Works with [voice AI pipeline](/docs/guides/voice-ai-pipeline) and [Silero VAD](/docs/guides/voice-ai-pipeline).
+```http
+POST /rooms/:roomId/empathy/signal
+```
+
+Body: coarse bucket (`calm`, `tense`, `elevated`) + confidence — not raw audio.
+
+## Agent runtime
+
+When signal is present, `agent-runtime` appends a short empathy block to the system prompt (adjust tone, offer pause) without exposing detection to the user.
+
+## Related
+
+- [Voice stages](/docs/features/voice-stages)
+- [Voice AI pipeline](/docs/guides/voice-ai-pipeline)

@@ -9,19 +9,31 @@ Visualize a room's history as a **2D map** of thematic clusters (from message em
 
 ## Console
 
-**Cartography** (`/cartography`) — select room → generate or refresh map → click clusters.
+**Cartography** (`/cartography`)
+
+1. Select a **room**.
+2. **Generate / refresh map** — worker runs k-means on message embeddings and stores 2D coordinates.
+3. Pan and zoom the canvas (`RoomCartographyMap`).
+4. Click a cluster to list representative messages.
 
 ## API
 
 ```http
-GET /rooms/:roomId/cartography
+GET  /rooms/:roomId/cartography
 POST /rooms/:roomId/cartography/rebuild
 ```
 
+Rebuild is rate-limited; cached coords live in D1 (`room_cartography`).
+
 ## Requirements
 
-Message embeddings must exist ([semantic search](/docs/core/search) + backfill). Map coords are cached in D1 after batch k-means.
+Message embeddings must exist — enable [semantic search](/docs/core/search) and run backfill from **Settings → Search**.
 
 ## Honesty note
 
-Concept precedents exist in research (conversation maps). This is an **exploratory UX** for large rooms — not a replacement for search.
+Concept precedents exist in research (conversation maps). This is an **exploratory UX** for large rooms — not a replacement for keyword or semantic search.
+
+## Related
+
+- [Search](/docs/core/search)
+- [Room sentiment](/docs/features/room-sentiment)

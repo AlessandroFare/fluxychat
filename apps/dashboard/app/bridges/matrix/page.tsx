@@ -140,7 +140,7 @@ export default function MatrixBridgesPage() {
     setBusy(`health-${bridgeId}`);
     try {
       const res = await pingMatrixBridgeHealth(token, bridgeId);
-      setNotice(res.health.ok ? "Homeserver reachable." : `Health failed: ${res.health.error ?? res.health.status}`);
+      setNotice(res.health.ok ? "Homeserver reachable." : `Health failed: ${res.health.error ?? "unreachable"}`);
     } catch (err) {
       setError(messageFromUnknown(err, "Health check failed"));
     } finally {

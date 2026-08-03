@@ -5,22 +5,45 @@ description: Pending reports queue, mute/ban/delete actions, and moderator histo
 
 # Moderation console
 
-Central **moderation queue** for AI-flagged and user-reported content. Moderators review, bulk-act, and audit history.
+Central **moderation queue** for AI-flagged and user-reported content. Moderators review, act, and audit history.
 
 ## Console
 
-**Moderation** (`/moderation`):
+**Moderation** (`/moderation`)
 
-- Pending queue (from `ai_moderation_queue` + reports)
-- Stats and trends
-- Action history (`moderation_events`)
+| Section | Purpose |
+|---------|---------|
+| Pending queue | AI flags + user reports awaiting review |
+| Stats | Queue depth, top categories, period totals |
+| Actions | Mute, ban, delete message, dismiss flag |
+| History | `moderation_events` audit trail |
+
+Use **Room picker** to scope queue to a specific room.
 
 ## AI moderation
 
-Text and image flags enqueue automatically when `AI_MODERATION_ENABLED` / `VISUAL_MODERATION_ENABLED` on your deployment. Actions: log, mute, delete — per severity config.
+Text and image flags enqueue automatically when enabled:
+
+| Variable | Purpose |
+|----------|---------|
+| `AI_MODERATION_ENABLED` | Text/content classification |
+| `VISUAL_MODERATION_ENABLED` | Frame capture + image moderation on live/video |
+
+Actions per severity: log only, mute user, delete message — configured in worker moderation engine.
+
+## Visual moderation
+
+Dashboard helper `visual-moderation-client.ts` captures video/canvas frames for server-side scoring when visual moderation is on.
 
 ## Human-in-the-loop
 
-Bulk approve/reject for HITL workflows. All actions are audited.
+Bulk approve/reject for HITL workflows. All actions are written to the audit log.
 
-See [tool approvals](/docs/guides/tool-approvals) for agent-side moderation tools.
+## API
+
+Moderation routes are under `/admin/moderation/*` and room-scoped moderation actions on message endpoints. See worker `post-message-automations.js` for enqueue logic.
+
+## Related
+
+- [Tool approvals](/docs/guides/tool-approvals) — agent-side moderation tools
+- [Security](/docs/security)

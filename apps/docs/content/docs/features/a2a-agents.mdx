@@ -9,7 +9,11 @@ FluxyChat implements an **A2A adapter**: fetch external **Agent Cards**, validat
 
 ## Console
 
-**Agents → A2A** — register external agent URLs, test delegation, view task status.
+**Agents → A2A** (`/agents/a2a`)
+
+1. Register external agent **base URL** (Agent Card discovery).
+2. **Test delegation** with a sample task payload.
+3. View task status and responses in the task list.
 
 ## Complementary protocols
 
@@ -28,8 +32,16 @@ FluxyChat implements an **A2A adapter**: fetch external **Agent Cards**, validat
 ## API
 
 ```http
+GET  /a2a/agents
+POST /a2a/agents
 POST /a2a/tasks
-GET /a2a/tasks/:id
+GET  /a2a/tasks/:taskId
+POST /a2a/tasks/:taskId/cancel
 ```
 
-See LF A2A spec for Agent Card JSON schema.
+Agent Card JSON follows the [Linux Foundation A2A](https://github.com/a2aproject/A2A) spec.
+
+## Related
+
+- [Cross-org rooms](/docs/features/cross-org-rooms)
+- [Ambient agents](/docs/features/ambient-agents)

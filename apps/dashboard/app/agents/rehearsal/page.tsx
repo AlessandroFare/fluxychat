@@ -154,12 +154,13 @@ export default function RehearsalRoomsPage() {
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/rooms?room=${encodeURIComponent(r.rehearsalRoomId)}`}>
-                        <ExternalLink className="mr-1 h-3.5 w-3.5" />
-                        Open
-                      </Link>
-                    </Button>
+                    <Link
+                      href={`/rooms?room=${encodeURIComponent(r.rehearsalRoomId)}`}
+                      className="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted/60"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open
+                    </Link>
                     <Button
                       variant="ghost"
                       size="sm"

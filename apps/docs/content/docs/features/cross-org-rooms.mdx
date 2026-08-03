@@ -14,16 +14,38 @@ description: Neutral federated rooms where agents from different organizations n
 
 ## Console
 
-**Agents → Cross-org** — create room, invite org B, view commitments and audit trail.
+**Agents → Cross-org** (`/agents/cross-org`)
+
+1. **Create room** — invite org B by project ID or invite code.
+2. Post **commitments** (terms, deliverables, deadlines).
+3. Counterparty responds with `countered` or acceptance path.
+4. **Human gate** — each org approves before `committed`.
+5. Export **audit trail** for compliance review.
 
 ## States
 
-`proposed` → `countered` → `pending_human_a/b` → `committed` | `expired` | `rejected`
+```
+proposed → countered → pending_human_a | pending_human_b → committed | expired | rejected
+```
 
-Max negotiation rounds are configurable.
+Max negotiation rounds are configurable per room.
+
+## API
+
+```http
+POST /cross-org/rooms
+GET  /cross-org/rooms/:roomId
+POST /cross-org/rooms/:roomId/commitments
+POST /cross-org/rooms/:roomId/commitments/:id/approve
+GET  /cross-org/rooms/:roomId/audit
+```
 
 ## MVP scope
 
-Neutral host on a single FluxyChat deployment. Full federation bridge is a later phase.
+Neutral host on a **single FluxyChat deployment** (two projects, one worker). Full multi-deployment federation bridge is a later phase.
 
-Pair with [A2A agents](/docs/features/a2a-agents) and [audit chain](/docs/guides/enterprise/dlp-audit-export).
+## Related
+
+- [A2A agents](/docs/features/a2a-agents)
+- [Audit chain](/docs/guides/enterprise/dlp-audit-export)
+- [Rehearsal rooms](/docs/features/rehearsal-rooms)

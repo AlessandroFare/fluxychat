@@ -2202,7 +2202,7 @@ export function FluxyChat({
                                             if (res.decision) {
                                               setDecisionOverrides((prev) => ({
                                                 ...prev,
-                                                [m.id as number]: res.decision as DecisionData,
+                                                [m.id as number]: res.decision as unknown as DecisionData,
                                               }));
                                             }
                                           }}
