@@ -180,7 +180,9 @@ export function createVoicePipeline(config: PipelineConfig = {}): VoicePipeline 
       if (status !== "running") return;
 
       const level = audioLevelFromPcmBuffer(audio);
-      const speechProb = silero.scorePcmBuffer(audio);
+      const speechProbRaw = silero.scorePcmBuffer(audio);
+      const speechProb =
+        typeof speechProbRaw === "number" ? speechProbRaw : await speechProbRaw;
       const vadEvent = turnDetector.processAudio(level, audio);
       if (vadEvent) {
         emit({
