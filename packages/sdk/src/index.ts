@@ -2756,13 +2756,15 @@ export class FluxyChatClient {
     if (res.status === 404) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       if (body.error === "semantic_search_disabled") {
-        return this.searchMessages(trimmed, {
+        const fallback = await this.searchMessages(trimmed, {
           roomId: options?.roomId,
           from: options?.from,
           to: options?.to,
           limit: options?.limit,
           mode: "keyword",
         });
+        if (!fallback) return null;
+        return { ...fallback, mode: fallback.mode ?? "keyword" };
       }
     }
 

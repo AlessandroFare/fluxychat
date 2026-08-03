@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import type { FluxyDeliverableMessage } from "./message-delivery";
+import type { FluxyDeliverableMessage, FluxyDeliverableMessageWithClientId } from "./message-delivery";
 import { sortMessagesChronological } from "./message-history";
 
 /** Y.Map key inside the room Y.Doc for persisted chat messages. */
@@ -173,7 +173,7 @@ export function applyCrdtSnapshotUpdate(doc: Y.Doc, updateBase64: string): void 
   Y.applyUpdate(doc, base64ToUint8Array(updateBase64), "remote");
 }
 
-function yjsRecordToMessage(record: YjsMessageRecord): FluxyDeliverableMessage {
+function yjsRecordToMessage(record: YjsMessageRecord): FluxyDeliverableMessageWithClientId {
   return {
     id: record.id,
     roomId: record.roomId,
@@ -197,7 +197,7 @@ export function mergeRestHistoryWithYjsRecords(
   yjsRecords: YjsMessageRecord[],
 ): FluxyDeliverableMessage[] {
   const byId = new Map<number, FluxyDeliverableMessage>();
-  const byClientId = new Map<string, FluxyDeliverableMessage>();
+  const byClientId = new Map<string, FluxyDeliverableMessageWithClientId>();
 
   for (const row of history) {
     byId.set(row.id, row);

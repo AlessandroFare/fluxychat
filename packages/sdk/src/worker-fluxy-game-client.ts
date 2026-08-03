@@ -15,6 +15,15 @@ export interface WorkerFluxyGameClient {
   getCheckpoint(checkpointKey: string, playerId?: string, options?: { roomId?: string; crdt?: boolean }): Promise<{ checkpointKey: string; state: Record<string, unknown>; version: number; updatedAt: string } | null>;
   upsertCheckpoint(input: { checkpointKey: string; state: Record<string, unknown>; expectedVersion?: number; playerId?: string; roomId?: string }): Promise<{ checkpoint: { checkpointKey: string; state: Record<string, unknown>; version: number; updatedAt: string }; conflict?: boolean }>;
   fetchCheckpointCrdtSnapshot(roomId: string): Promise<{ update: string; checkpointCount: number; roomId: string }>;
+  federateCheckpoint(
+    checkpointKey: string,
+    input: { sourceRoomId: string; targetRoomId: string; playerId?: string; roomId?: string },
+  ): Promise<{
+    ok?: boolean;
+    checkpoint?: { checkpointKey: string; state: Record<string, unknown>; version: number };
+    federated?: boolean;
+    error?: string;
+  }>;
   listQuests(filter?: { status?: string }): Promise<Array<{ id: string; title: string; moderationStatus: string; objectives: unknown[] }>>;
   createQuest(input: { title: string; description?: string; roomId?: string; objectives?: unknown[] }): Promise<{ quest: { id: string; title: string; moderationStatus: string }; pendingModeration?: boolean }>;
   moderateQuest(questId: string, decision: "approve" | "reject"): Promise<void>;
@@ -160,7 +169,10 @@ export function createWorkerFluxyGameClient(client: FluxyChatClient): WorkerFlux
       if (!res.ok) throw new Error(`fetchCheckpointCrdtSnapshot failed: ${res.status}`);
       return (await res.json()) as { update: string; checkpointCount: number; roomId: string };
     },
-    async federateCheckpoint(checkpointKey, input) {
+    async federateCheckpoint(
+      checkpointKey: string,
+      input: { sourceRoomId: string; targetRoomId: string; playerId?: string; roomId?: string },
+    ) {
       const res = await fetch(`${base(client)}/games/checkpoints/${encodeURIComponent(checkpointKey)}/federate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await headers(client)) },
