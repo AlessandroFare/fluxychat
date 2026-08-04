@@ -2663,6 +2663,7 @@ export function FluxyChat({
           if (!canSend) return;
           void requestSend();
         }}
+        className="relative"
       >
         {/* Deep Research / Web Search chips above textarea */}
         {pendingTool?.type === "deep-research" || pendingTool?.type === "web-search" ? (
@@ -2691,20 +2692,21 @@ export function FluxyChat({
           </div>
         ) : null}
 
-        {showSlashMenu ? (
-          <SlashCommandMenu
-            inputRef={textareaRef}
-            commands={slashCommands}
-            onCommand={(cmd) => {
-              if (cmd === "/clear") { setDraft(""); setShowSlashMenu(false); return; }
-              if (cmd === "/help") { setDraft("/help"); setShowSlashMenu(false); return; }
-              setDraft(cmd + " "); setShowSlashMenu(false);
-            }}
-            onClose={() => setShowSlashMenu(false)}
-          />
-        ) : null}
+        <div className="relative">
+          {showSlashMenu ? (
+            <SlashCommandMenu
+              inputRef={textareaRef}
+              commands={slashCommands}
+              onCommand={(cmd) => {
+                if (cmd === "/clear") { setDraft(""); setShowSlashMenu(false); return; }
+                if (cmd === "/help") { setDraft("/help"); setShowSlashMenu(false); return; }
+                setDraft(cmd + " "); setShowSlashMenu(false);
+              }}
+              onClose={() => setShowSlashMenu(false)}
+            />
+          ) : null}
 
-        <ComposerTextarea
+          <ComposerTextarea
           ref={textareaRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -2724,6 +2726,8 @@ export function FluxyChat({
             void requestSend();
           }}
         />
+        </div>
+
         <ComposerToolbar>
           <ComposerToolbarLeft>
             {/* + button menu */}

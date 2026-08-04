@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import {
   FeatureCodePanel,
   FeaturePreviewFrame,
-  ShowcaseUnavailable,
 } from "./feature-code-panel";
+import { ShowcaseSessionGate } from "./showcase-session-gate";
 import { getRealtimeFeature } from "./realtime-feature-content";
 import type { ShowcaseSession } from "./use-showcase-session";
 
@@ -27,16 +27,9 @@ export function RealTimeLocationShowcase({ session }: { session: ShowcaseSession
       <FeatureCodePanel feature={feature} />
 
       <FeaturePreviewFrame label="Real-time location preview" className="min-h-[28rem]">
-        {session.status === "loading" ? (
-          <div className="flex min-h-64 items-center justify-center">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
-            <span className="sr-only">Connecting to the live location room</span>
-          </div>
-        ) : session.status === "unavailable" || !session.client || !session.roomId ? (
-          <ShowcaseUnavailable error={session.error} onRetry={session.retry} />
-        ) : (
+        <ShowcaseSessionGate session={session}>
           <LocationPanel session={session} />
-        )}
+        </ShowcaseSessionGate>
       </FeaturePreviewFrame>
     </div>
   );

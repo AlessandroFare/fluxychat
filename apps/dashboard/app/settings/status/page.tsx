@@ -9,14 +9,6 @@ import { Badge } from "~/components/ui/badge";
 
 const STATUS_URL = process.env.NEXT_PUBLIC_STATUS_PAGE_URL?.trim() || "https://status.fluxychat.com";
 
-const DEPLOY_STEPS = [
-  "Create a public GitHub repo (e.g. fluxychat/status) from the Upptime template.",
-  "Copy `.upptime/config.json` from this monorepo into that repo.",
-  "Enable GitHub Actions + GitHub Pages on the status repo.",
-  "Point DNS: CNAME `status.fluxychat.com` → `<org>.github.io` (or custom Pages URL).",
-  "Verify `/health` returns 200 on your Worker before going live.",
-];
-
 const MONITORED = [
   { name: "Worker API", path: "/health", interval: "5 min" },
   { name: "Dashboard", path: "/", interval: "5 min" },
@@ -75,12 +67,17 @@ export default function StatusPageSettings() {
         </Panel>
       </div>
 
-      <Panel title="Deploy checklist" className="mt-6">
-        <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
-          {DEPLOY_STEPS.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
+      <Panel title="Operator notes" className="mt-6">
+        <p className="text-sm text-muted-foreground">
+          Upptime runs in a <strong>separate public GitHub repo</strong> (not this dashboard). Copy{" "}
+          <code className="text-xs">.upptime/config.json</code> from the monorepo, enable GitHub Pages + Actions, then point DNS.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Full runbook:{" "}
+          <Link href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/STATUS_PAGE_UPPTIME.md" className="underline">
+            docs/STATUS_PAGE_UPPTIME.md
+          </Link>
+        </p>
       </Panel>
     </ConsoleShell>
   );

@@ -11,6 +11,7 @@ import {
   CONSOLE_NAV_GROUPS,
   isConsoleNavItemActive,
   type ConsoleNavItem,
+  type ConsoleNavSubgroup,
 } from "./console-nav";
 import { QuickstartNavLink } from "./quickstart-nav-link";
 import { InboxNavLink } from "./inbox-nav-link";
@@ -36,18 +37,67 @@ function NavLink({ href, label, icon: Icon }: ConsoleNavItem) {
   );
 }
 
+function NavItemRow({ item }: { item: ConsoleNavItem }) {
+  if (item.href === "/onboarding") {
+    return <QuickstartNavLink label={item.label} icon={item.icon} />;
+  }
+  if (item.href === "/inbox") {
+    return <InboxNavLink />;
+  }
+  return <NavLink {...item} />;
+}
+
+function NavSubgroup({ subgroup }: { subgroup: ConsoleNavSubgroup }) {
+  const pathname = usePathname();
+  const hasActiveChild = subgroup.items.some((item) => isConsoleNavItemActive(item.href, pathname));
+  const [open, setOpen] = useState(hasActiveChild);
+
+  if (subgroup.items.length === 0) return null;
+
+  return (
+    <div className="mb-2">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:bg-slate-100/80"
+        aria-expanded={open}
+      >
+        {subgroup.label}
+        <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} aria-hidden />
+      </button>
+      {open ? (
+        <ul className="flex flex-col gap-0.5 border-l border-slate-200/80 pl-2 ml-1">
+          {subgroup.items.map((item) => (
+            <li key={item.href}>
+              <NavItemRow item={item} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function CollapsibleNavGroup({
   label,
   items,
+  subgroups,
   defaultOpen = false,
 }: {
   label: string;
-  items: ConsoleNavItem[];
+  items?: ConsoleNavItem[];
+  subgroups?: ConsoleNavSubgroup[];
   defaultOpen?: boolean;
 }) {
   const pathname = usePathname();
-  const hasActiveChild = items.some((item) => isConsoleNavItemActive(item.href, pathname));
+  const flatItems = [
+    ...(items ?? []),
+    ...(subgroups ?? []).flatMap((sg) => sg.items),
+  ];
+  const hasActiveChild = flatItems.some((item) => isConsoleNavItemActive(item.href, pathname));
   const [open, setOpen] = useState(defaultOpen || hasActiveChild);
+
+  if (flatItems.length === 0) return null;
 
   return (
     <div>
@@ -61,19 +111,20 @@ function CollapsibleNavGroup({
         <ChevronDown className={cn("size-3.5 transition-transform", open && "rotate-180")} aria-hidden />
       </button>
       {open ? (
-        <ul className="flex flex-col gap-0.5">
-          {items.map((item) => (
-            <li key={`${label}-${item.href}`}>
-              {item.href === "/onboarding" ? (
-                <QuickstartNavLink label={item.label} icon={item.icon} />
-              ) : item.href === "/inbox" ? (
-                <InboxNavLink />
-              ) : (
-                <NavLink {...item} />
-              )}
-            </li>
+        <div className="flex flex-col gap-0.5">
+          {subgroups?.map((sg) => (
+            <NavSubgroup key={sg.label} subgroup={sg} />
           ))}
-        </ul>
+          {items?.length ? (
+            <ul className="flex flex-col gap-0.5">
+              {items.map((item) => (
+                <li key={item.href}>
+                  <NavItemRow item={item} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -93,6 +144,7 @@ export function ConsoleSidebar() {
             key={group.label}
             label={group.label}
             items={group.items}
+            subgroups={group.subgroups}
             defaultOpen={group.defaultOpen}
           />
         ))}

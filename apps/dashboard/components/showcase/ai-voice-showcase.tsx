@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Mic, MicOff, Radio } from "lucide-react";
 import { createDurableAITransport } from "@fluxy-chat/sdk";
 import { createVoiceInterfaceManager } from "@fluxy-chat/sdk";
-import { FeatureCodePanel, FeaturePreviewFrame, ShowcaseUnavailable } from "@/components/showcase/feature-code-panel";
+import { FeatureCodePanel, FeaturePreviewFrame } from "@/components/showcase/feature-code-panel";
+import { ShowcaseSessionGate } from "@/components/showcase/showcase-session-gate";
 import { getRealtimeFeature } from "@/components/showcase/realtime-feature-content";
 import type { ShowcaseSession } from "@/components/showcase/use-showcase-session";
 
@@ -56,9 +57,6 @@ export function AiTransportShowcase({ session }: Props) {
   const [pulse, setPulse] = useState(false);
   const { entries, push } = useLog();
 
-  if (session.status === "unavailable") return <ShowcaseUnavailable error={session.error} onRetry={session.retry} />;
-  if (session.status === "loading") return <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Connecting demo session...</div>;
-
   const bump = () => {
     setPulse(true);
     window.setTimeout(() => setPulse(false), 260);
@@ -68,7 +66,8 @@ export function AiTransportShowcase({ session }: Props) {
     <div className="grid min-w-0 gap-6 overflow-x-hidden lg:grid-cols-2">
       <FeatureCodePanel feature={feature} />
       <FeaturePreviewFrame>
-        <div className="space-y-3 p-4">
+        <ShowcaseSessionGate session={session} requireRoom={false}>
+          <div className="space-y-3 p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Durable AI session</span>
             <span
@@ -134,7 +133,8 @@ export function AiTransportShowcase({ session }: Props) {
           <div className={`h-0.5 origin-left rounded-full bg-[var(--fluxy-cta-color)] transition-transform duration-300 ${pulse ? "scale-x-100" : "scale-x-0"}`} />
 
           <LogList entries={entries} placeholder="Click buttons to interact" />
-        </div>
+          </div>
+        </ShowcaseSessionGate>
       </FeaturePreviewFrame>
     </div>
   );
@@ -174,14 +174,12 @@ export function VoiceInterfaceShowcase({ session }: Props) {
   const [listening, setListening] = useState(false);
   const { entries, push } = useLog();
 
-  if (session.status === "unavailable") return <ShowcaseUnavailable error={session.error} onRetry={session.retry} />;
-  if (session.status === "loading") return <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Connecting demo session...</div>;
-
   return (
     <div className="grid min-w-0 gap-6 overflow-x-hidden lg:grid-cols-2">
       <FeatureCodePanel feature={feature} />
       <FeaturePreviewFrame>
-        <div className="space-y-3 p-4">
+        <ShowcaseSessionGate session={session} requireRoom={false}>
+          <div className="space-y-3 p-4">
           <select
             className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs transition-colors"
             value={mode}
@@ -248,7 +246,8 @@ export function VoiceInterfaceShowcase({ session }: Props) {
           </div>
 
           <LogList entries={entries} placeholder="Voice state will appear here" />
-        </div>
+          </div>
+        </ShowcaseSessionGate>
       </FeaturePreviewFrame>
     </div>
   );

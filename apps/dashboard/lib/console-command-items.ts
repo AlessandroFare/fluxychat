@@ -7,12 +7,16 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
+  CONSOLE_NAV_AGENTS,
   CONSOLE_NAV_BUILD,
-  CONSOLE_NAV_DEV_TOOLS,
+  CONSOLE_NAV_CONNECT,
   CONSOLE_NAV_GROUPS,
   CONSOLE_NAV_INDUSTRIES,
-  CONSOLE_NAV_LABS,
   CONSOLE_NAV_OPERATE,
+  CONSOLE_NAV_PLATFORM,
+  CONSOLE_NAV_TOOLS,
+  CONSOLE_NAV_TRUST,
+  flattenConsoleNavItems,
 } from "@/app/components/console-nav";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
@@ -50,10 +54,13 @@ function mapNavItems(
 function navItems(quickstartHref: string): ConsoleCommandItemDef[] {
   return [
     ...mapNavItems(CONSOLE_NAV_BUILD, "Navigate", quickstartHref),
-    ...mapNavItems(CONSOLE_NAV_DEV_TOOLS, "Navigate", quickstartHref),
+    ...mapNavItems(CONSOLE_NAV_AGENTS, "Navigate", quickstartHref),
+    ...mapNavItems(CONSOLE_NAV_CONNECT, "Navigate", quickstartHref),
+    ...mapNavItems(CONSOLE_NAV_TOOLS, "Navigate", quickstartHref),
+    ...mapNavItems(CONSOLE_NAV_PLATFORM, "Labs", quickstartHref),
     ...mapNavItems(CONSOLE_NAV_INDUSTRIES, "Industries", quickstartHref),
     ...mapNavItems(CONSOLE_NAV_OPERATE, "Operate", quickstartHref),
-    ...mapNavItems(CONSOLE_NAV_LABS, "Labs", quickstartHref),
+    ...mapNavItems(CONSOLE_NAV_TRUST, "Operate", quickstartHref),
   ];
 }
 
@@ -156,12 +163,23 @@ export function resolveConsoleNavContext(pathname: string | null): {
   if (!pathname || pathname === HOSTED_PATHS.console) return null;
 
   for (const group of CONSOLE_NAV_GROUPS) {
-    const match = group.items.find(
+    const items = [
+      ...(group.items ?? []),
+      ...(group.subgroups ?? []).flatMap((sg) => sg.items),
+    ];
+    const match = items.find(
       (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
     );
     if (match) {
       return { groupLabel: group.label, itemLabel: match.label, itemHref: match.href };
     }
+  }
+
+  const fallback = flattenConsoleNavItems().find(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
+  if (fallback) {
+    return { groupLabel: "Console", itemLabel: fallback.label, itemHref: fallback.href };
   }
   return null;
 }

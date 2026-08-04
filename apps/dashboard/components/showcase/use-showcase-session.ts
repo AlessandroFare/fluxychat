@@ -3,8 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
+import { isDemoTurnstileEnabled } from "@/components/demo-turnstile";
 
-export type ShowcaseSessionStatus = "loading" | "ready" | "unavailable";
+export type ShowcaseSessionStatus = "loading" | "ready" | "unavailable" | "turnstile";
+
+interface DemoStatusResponse {
+  ok?: boolean;
+  enabled: boolean;
+  configured: boolean;
+  ready: boolean;
+  turnstileRequired?: boolean;
+}
 
 interface DemoSessionResponse {
   enabled: boolean;
@@ -23,34 +32,27 @@ export interface ShowcaseSession {
   readOnly: boolean;
   error: string | null;
   retry: () => void;
+  /** Call after Turnstile succeeds (same flow as /demo). */
+  completeTurnstile: (turnstileToken: string) => void;
 }
 
-/**
- * Guest session for the realtime feature showcase.
- *
- * Reuses the Worker's `/demo/session` endpoint (same as /demo) so every
- * showcase panel runs REAL SDK calls against a live room — no Clerk signup
- * required. When the endpoint is not configured on the Worker the panels
- * degrade to an "unavailable" state instead of mocking data.
- */
 export function useShowcaseSession(): ShowcaseSession {
   const workerUrl = getPublicWorkerUrl();
+  const [demoStatus, setDemoStatus] = useState<DemoStatusResponse | null>(null);
   const [session, setSession] = useState<DemoSessionResponse | null>(null);
   const [status, setStatus] = useState<ShowcaseSessionStatus>("loading");
   const [error, setError] = useState<string | null>(null);
-
   const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const load = async () => {
-      setStatus("loading");
+  const loadDemoSession = useCallback(
+    async (turnstileToken?: string) => {
       setError(null);
       try {
+        const usePost = isDemoTurnstileEnabled() || demoStatus?.turnstileRequired;
         const res = await fetch(`${workerUrl}/demo/session`, {
-          signal: controller.signal,
+          method: usePost ? "POST" : "GET",
+          headers: usePost ? { "Content-Type": "application/json" } : undefined,
+          body: usePost && turnstileToken ? JSON.stringify({ turnstileToken }) : undefined,
           cache: "no-store",
         });
         const body = (await res.json()) as DemoSessionResponse & { error?: string };
@@ -62,13 +64,7 @@ export function useShowcaseSession(): ShowcaseSession {
         }
         setSession(body);
         setStatus("ready");
-
-        // Refresh before the guest token expires so open showcase tabs keep
-        // their authenticated realtime connection without a hard failure.
-        const refreshAfterMs = Math.max(5_000, body.expiresIn * 1_000 - 30_000);
-        refreshTimer = setTimeout(() => setReloadKey((key) => key + 1), refreshAfterMs);
       } catch (nextError) {
-        if (controller.signal.aborted) return;
         setSession(null);
         setStatus("unavailable");
         setError(
@@ -77,14 +73,50 @@ export function useShowcaseSession(): ShowcaseSession {
             : "Could not reach the Worker demo endpoint.",
         );
       }
-    };
+    },
+    [demoStatus?.turnstileRequired, workerUrl],
+  );
 
-    void load();
-    return () => {
-      controller.abort();
-      if (refreshTimer) clearTimeout(refreshTimer);
-    };
-  }, [reloadKey, workerUrl]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      setStatus("loading");
+      setError(null);
+      try {
+        const res = await fetch(`${workerUrl}/demo/status`, { signal: controller.signal, cache: "no-store" });
+        const body = (await res.json()) as DemoStatusResponse;
+        if (controller.signal.aborted) return;
+        setDemoStatus(body);
+        if (!body.ready) {
+          setSession(null);
+          setStatus("unavailable");
+          setError(
+            !body.enabled
+              ? "Public demo is disabled on this Worker (set DEMO_ENABLED=true)."
+              : "Demo room not configured (set DEMO_ROOM_ID and DEMO_API_KEY).",
+          );
+          return;
+        }
+        if (isDemoTurnstileEnabled() || body.turnstileRequired) {
+          setStatus("turnstile");
+          return;
+        }
+        await loadDemoSession();
+      } catch {
+        if (controller.signal.aborted) return;
+        setStatus("unavailable");
+        setError("Could not reach the Worker demo endpoint.");
+      }
+    })();
+    return () => controller.abort();
+  }, [loadDemoSession, reloadKey, workerUrl]);
+
+  useEffect(() => {
+    if (!session?.expiresIn) return;
+    const refreshAfterMs = Math.max(5_000, session.expiresIn * 1_000 - 30_000);
+    const timer = setTimeout(() => setReloadKey((key) => key + 1), refreshAfterMs);
+    return () => clearTimeout(timer);
+  }, [session?.expiresIn]);
 
   const client = useMemo(() => {
     if (!session?.token || !session.userId) return null;
@@ -95,6 +127,14 @@ export function useShowcaseSession(): ShowcaseSession {
     });
   }, [session, workerUrl]);
 
+  const completeTurnstile = useCallback(
+    (turnstileToken: string) => {
+      setStatus("loading");
+      void loadDemoSession(turnstileToken);
+    },
+    [loadDemoSession],
+  );
+
   return {
     status,
     roomId: session?.roomId ?? null,
@@ -103,5 +143,6 @@ export function useShowcaseSession(): ShowcaseSession {
     readOnly: session?.readOnly === true,
     error,
     retry: () => setReloadKey((key) => key + 1),
+    completeTurnstile,
   };
 }

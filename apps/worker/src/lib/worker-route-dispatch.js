@@ -139,6 +139,7 @@ import { dispatchAgentEvalRoutes } from "../routes/agent-eval-http.js";
 import { dispatchAgentDebateRoutes } from "../routes/agent-debate-http.js";
 import { dispatchAmbientAgentsRoutes } from "../routes/ambient-agents-http.js";
 import { dispatchDataResidencyRoutes } from "../routes/data-residency-http.js";
+import { dispatchEuAiActRoutes } from "../routes/eu-ai-act-http.js";
 import { dispatchConsentDpaRoutes } from "../routes/consent-dpa-http.js";
 import { dispatchChannelFormsRoutes } from "../routes/channel-forms-http.js";
 import { dispatchMergeConflictsRoutes } from "../routes/merge-conflicts-http.js";
@@ -215,6 +216,7 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchAuditExportRoutes,
   dispatchAuditChainRoutes,
   dispatchDataResidencyRoutes,
+  dispatchEuAiActRoutes,
   dispatchConsentDpaRoutes,
   dispatchChannelFormsRoutes,
   dispatchMergeConflictsRoutes,

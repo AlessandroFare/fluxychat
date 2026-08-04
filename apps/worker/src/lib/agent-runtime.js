@@ -468,6 +468,61 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     });
   }
 
+  const { resolveEuAiActRuntimePolicy, logEuAiActEvent } = await import("./eu-ai-act-compliance.js");
+  const euAiActPolicy = await resolveEuAiActRuntimePolicy(env, {
+    projectId,
+    agentId: agentRow.id,
+    agentName: agentRow.name,
+    tools,
+    agentConfig,
+  });
+
+  if (euAiActPolicy.blocked) {
+    const latencyMs = Math.round(performance.now() - startTime);
+    const errorText = euAiActPolicy.error || "eu_ai_act_blocked";
+    await logEuAiActEvent(env, {
+      projectId,
+      agentId: agentRow.id,
+      roomId,
+      eventType: "agent_run_blocked",
+      euRiskCategory: euAiActPolicy.profile?.euRiskCategory,
+      metadata: { error: errorText, runId },
+    }).catch(() => {});
+    await announceRoomEvent(env, roomId, {
+      type: "agentRun",
+      run: {
+        id: runId,
+        status: "failed",
+        latency_ms: latencyMs,
+        input_tokens: 0,
+        output_tokens: 0,
+        estimated_cost: 0,
+        room_id: roomId,
+        tool_calls: [],
+        iterations: 0,
+        error: euAiActPolicy.message || errorText,
+        created_at: new Date().toISOString(),
+      },
+    });
+    return {
+      runId,
+      status: "failed",
+      content: null,
+      latencyMs,
+      inputTokens: 0,
+      outputTokens: 0,
+      estimatedCost: 0,
+      toolCalls: [],
+      contextFetched: 0,
+      iterations: 0,
+      error: euAiActPolicy.message || errorText,
+      euAiActMetadata: euAiActPolicy.messageMetadata ?? null,
+    };
+  }
+
+  const euAiActSystemSuffix = euAiActPolicy.systemPromptSuffix || "";
+  const euAiActMessageMetadata = euAiActPolicy.messageMetadata ?? null;
+
   const allToolCalls = [];
   let contextFetched = 0;
   let totalInputTokens = 0;
@@ -483,11 +538,11 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     ...(agentConfig?.loopControl || {}),
   });
 
-  // P23-2: HITL approval — gate sensitive tool calls
+  // P23-2: HITL approval — gate sensitive tool calls (EU AI Act may override for high-risk)
   const approvalStore = appKv ? createApprovalStore(appKv) : null;
-  const approvalGate = agentConfig?.approvalGate
-    ? createApprovalGate(agentConfig.approvalGate)
-    : null;
+  const approvalGate =
+    euAiActPolicy.approvalGate ??
+    (agentConfig?.approvalGate ? createApprovalGate(agentConfig.approvalGate) : null);
 
   // P22-F6: Track multi-step agent run with plan
   const agentPlan = createPlan(`Agent run: ${agentRow.name}`);
@@ -500,7 +555,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     ).bind(projectId, roomId).all();
     const conversationHistory = (contextRows.results || []).reverse();
 
-    const messages = [{ role: "system", content: effectiveSystemPrompt }];
+    const messages = [{ role: "system", content: `${effectiveSystemPrompt}${euAiActSystemSuffix}` }];
 
     let appContext = null;
     if (contextFetchUrl) {
@@ -818,7 +873,17 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       runId,
       latencyMs,
       planProgress: getPlanProgress(agentPlan),
+      euAiActRiskCategory: euAiActMessageMetadata?.euAiActRiskCategory,
     });
+
+    await logEuAiActEvent(env, {
+      projectId,
+      agentId: agentRow.id,
+      roomId,
+      eventType: "agent_run_completed",
+      euRiskCategory: euAiActMessageMetadata?.euAiActRiskCategory,
+      metadata: { runId, toolCalls: allToolCalls.length, latencyMs },
+    }).catch(() => {});
 
     // P22-F10: Update thread state on completion
     if (threadStateStore) {
