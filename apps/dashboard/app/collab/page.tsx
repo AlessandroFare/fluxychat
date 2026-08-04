@@ -30,9 +30,18 @@ export default function CollabPage() {
   const loadRooms = useCallback(async () => {
     if (!client) return;
     try {
-      const res = await client.listRooms?.() ?? { rooms: [] };
-      setRooms((res as any).rooms || []);
-    } catch { /* noop */ }
+      const rooms = await client.listRooms();
+      setRooms(
+        rooms.map((r) => ({
+          id: r.id,
+          name: r.name ?? r.id,
+          createdAt: r.created_at ?? new Date().toISOString(),
+          type: r.type ?? "group",
+        })),
+      );
+    } catch {
+      setRooms([]);
+    }
     setLoading(false);
   }, [client]);
 
@@ -71,12 +80,26 @@ export default function CollabPage() {
           ))}
         </div>
 
-        {!loading && rooms.length === 0 && (
+        {!loading && !token && (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
             <Pen className="h-12 w-12 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">No collaborative workspaces yet</h2>
+            <h2 className="text-lg font-semibold">Sign in to list workspaces</h2>
             <p className="max-w-sm text-sm text-muted-foreground">
-              Open any room to start collaborating with whiteboard, notes, and kanban.
+              FluxyCollab attaches a whiteboard, notes, and kanban to each room. Sign in with your project JWT, then pick a room below.
+            </p>
+            <Link href="/enter" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              Connect session
+            </Link>
+          </div>
+        )}
+
+        {!loading && token && rooms.length === 0 && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+            <Pen className="h-12 w-12 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">No rooms in this project yet</h2>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Create or join a room first — each room gets its own collab workspace (whiteboard, notes, kanban) at{" "}
+              <code className="text-xs">/collab/[roomId]</code>.
             </p>
             <Link href="/rooms" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
               Browse rooms

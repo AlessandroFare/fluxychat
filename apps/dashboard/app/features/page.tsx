@@ -33,14 +33,20 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "MCP client",
         description: "Consume any MCP-compatible tool server. Auto-convert tools to LLM function-calling format.",
+        href: "/settings/mcp",
+        hrefLabel: "MCP settings",
       },
       {
         title: "LLM middleware pipeline",
         description: "Pluggable hooks: guardrails, caching, RAG injection, PII redaction, logging — wrapGenerate / wrapStream / transformParams.",
+        href: "/middleware",
+        hrefLabel: "Middleware",
       },
       {
         title: "WorkflowAgent",
         description: "Durable agent execution that survives deploys and restarts. State persisted to D1, automatic resume from last step.",
+        href: "/agents/platform",
+        hrefLabel: "Agent platform",
       },
       {
         title: "Streaming markdown",
@@ -53,6 +59,8 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Realtime voice",
         description: "Bidirectional voice-to-voice AI conversations with real-time tool calling and provider-agnostic abstraction.",
+        href: "/voice-ai",
+        hrefLabel: "Voice AI",
       },
       {
         title: "AI tool presets",
@@ -63,6 +71,8 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Room memory & knowledge graph",
         description: "Persistent room context and links between conversations (worker API).",
+        href: "/knowledge",
+        hrefLabel: "Knowledge base",
       },
       {
         title: "AI suggestions & digest",
@@ -85,6 +95,8 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Card element builder",
         description: "Compose rich interactive messages with buttons, tables, and sections — JSX or function API, Slack Block Kit & Teams Adaptive Cards.",
+        href: "/playground",
+        hrefLabel: "Card builder",
       },
       {
         title: "Unified inbox",
@@ -137,10 +149,14 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "SOC2 / HIPAA checklist",
         description: "Controls, evidence, and compliance reports (admin API).",
+        href: "/soc2",
+        hrefLabel: "SOC 2",
       },
       {
         title: "IP whitelist & DLP",
         description: "Network restrictions and content scans to external DLP providers.",
+        href: "/settings/dlp",
+        hrefLabel: "DLP settings",
       },
     ],
   },
@@ -163,14 +179,20 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Incident response & on-call",
         description: "Incident management, alerts, and on-call rotations tied to rooms.",
+        href: "/webhooks",
+        hrefLabel: "Webhooks",
       },
       {
         title: "Gamification & reputation",
         description: "XP, badges, and leaderboards for active communities.",
+        href: "/analytics",
+        hrefLabel: "Analytics",
       },
       {
         title: "Hybrid events & streaming overlays",
         description: "Hybrid events and overlays for live streams.",
+        href: "/stream",
+        hrefLabel: "FluxyStream",
       },
     ],
   },
@@ -181,14 +203,20 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "create-fluxy-chat CLI",
         description: "Scaffold a new FluxyChat project with one command. Worker, SDK, and config wired up.",
+        href: "/cli",
+        hrefLabel: "CLI",
       },
       {
         title: "DevTools web UI",
         description: "Visual inspector for LLM calls, tool executions, and token usage. OpenTelemetry with GenAI semantic conventions.",
+        href: "/devtools",
+        hrefLabel: "DevTools",
       },
       {
         title: "Sandbox support",
         description: "Safely execute untrusted code in isolated environments with portable command execution.",
+        href: "/agents/platform",
+        hrefLabel: "Agent sandbox",
       },
       {
         title: "Embed widget",
@@ -217,6 +245,8 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Slash commands",
         description: "Built-in command parser with positional/named args, flags, quoted values, aliases, and auto-generated help.",
+        href: "/settings/commands",
+        hrefLabel: "Slash commands",
       },
       {
         title: "Regex message routing",
@@ -249,7 +279,7 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "A2A Protocol",
         description: "Agent-to-agent communication using Google-standard envelope/task/artifact mapping with extension preservation.",
-        href: "/cross-channel",
+        href: "/agents/a2a",
         hrefLabel: "A2A protocol",
       },
       {
@@ -289,10 +319,14 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Real-time Translation",
         description: "Per-user language preference, auto-detect, glossary terms, and live translate.",
+        href: "/settings/translation",
+        hrefLabel: "Translation",
       },
       {
         title: "Automation Engine",
         description: "IF-THEN trigger-action rules with 9 event types, 7 action types, cooldown, and execution history.",
+        href: "/automations",
+        hrefLabel: "Automations",
       },
       {
         title: "AST markdown system",

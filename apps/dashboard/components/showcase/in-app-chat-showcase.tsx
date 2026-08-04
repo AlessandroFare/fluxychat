@@ -1,12 +1,10 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { FluxyChat } from "@/components/chat";
-import {
-  FeatureCodePanel,
+import {  FeatureCodePanel,
   FeaturePreviewFrame,
-  ShowcaseUnavailable,
 } from "./feature-code-panel";
+import { ShowcaseSessionGate } from "./showcase-session-gate";
 import { getRealtimeFeature } from "./realtime-feature-content";
 import type { ShowcaseSession } from "./use-showcase-session";
 
@@ -18,14 +16,7 @@ export function InAppChatShowcase({ session }: { session: ShowcaseSession }) {
       <FeatureCodePanel feature={feature} />
 
       <FeaturePreviewFrame label="Live in-app chat preview" className="min-h-[28rem]">
-        {session.status === "loading" ? (
-          <div className="flex h-full min-h-64 items-center justify-center">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
-            <span className="sr-only">Connecting to the live demo room</span>
-          </div>
-        ) : session.status === "unavailable" || !session.client || !session.roomId ? (
-          <ShowcaseUnavailable error={session.error} onRetry={session.retry} />
-        ) : (
+        <ShowcaseSessionGate session={session}>
           <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300 p-3">
             <div className="mb-2 flex items-center gap-1.5 px-1">
               <span className="relative flex size-2">
@@ -37,14 +28,14 @@ export function InAppChatShowcase({ session }: { session: ShowcaseSession }) {
               </span>
             </div>
             <FluxyChat
-              roomId={session.roomId}
+              roomId={session.roomId!}
               agentId=""
               agentName="Agent"
-              client={session.client}
+              client={session.client!}
               variant="minimal"
             />
           </div>
-        )}
+        </ShowcaseSessionGate>
       </FeaturePreviewFrame>
     </div>
   );

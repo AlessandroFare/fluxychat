@@ -13,50 +13,20 @@ function readEnvFlag(name: string, defaultValue = false): boolean {
 export function getDashboardFeatureFlags() {
   return {
     /** Labs & demos nav group (stream, game, IoT, fleet showcase, …). */
-    labsShowcase: readEnvFlag("NEXT_PUBLIC_DASHBOARD_LABS", false),
-    /** Preview dev tools (marketplace, web3, cross-channel, …). */
-    previewTools: readEnvFlag("NEXT_PUBLIC_DASHBOARD_PREVIEW", false),
+    labsShowcase: readEnvFlag("NEXT_PUBLIC_DASHBOARD_LABS", true),
+    /** Preview dev tools (web3, driver, …). */
+    previewTools: readEnvFlag("NEXT_PUBLIC_DASHBOARD_PREVIEW", true),
   };
 }
 
 /** @deprecated Use getDashboardFeatureFlags() — kept for static nav module init. */
 export const dashboardFeatureFlags = getDashboardFeatureFlags();
 
-/** Showcase routes grouped under “Labs & demos”. */
-export const DASHBOARD_LAB_HREFS = new Set([
-  "/stream",
-  "/stream/demo",
-  "/game",
-  "/iot",
-  "/fleet",
-  "/web3",
-  "/spatial",
-  "/collab",
-  "/transport",
-  "/cross-channel",
-  "/driver",
-  "/continuity",
-]);
+/** Truly experimental routes — hidden unless NEXT_PUBLIC_DASHBOARD_LABS=false explicitly. */
+export const DASHBOARD_LAB_HREFS = new Set(["/continuity"]);
 
-/** Dev-tool routes that are preview-quality (hidden unless preview flag). */
-export const DASHBOARD_PREVIEW_HREFS = new Set([
-  "/fleet",
-  "/driver",
-  "/marketplace",
-  "/chatbot-builder",
-  "/cross-channel",
-  "/spatial",
-  "/web3",
-  "/collab",
-  "/stream",
-  "/stream/demo",
-  "/agents/platform",
-  "/game",
-  "/iot",
-  "/transport",
-  "/templates/code",
-  "/continuity",
-]);
+/** Early-preview routes — hidden only when NEXT_PUBLIC_DASHBOARD_PREVIEW=false. */
+export const DASHBOARD_PREVIEW_HREFS = new Set(["/web3", "/driver"]);
 
 export function isDashboardNavHrefVisible(
   href: string,

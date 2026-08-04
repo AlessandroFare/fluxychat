@@ -131,6 +131,15 @@ export default function AiGovernancePage() {
 
       <ConsoleFeedback error={error} notice={notice} />
 
+      {token ? (
+        <Panel className="mb-4 p-4 text-sm">
+          <Link href="/ai-governance/eu-ai-act" className="font-medium underline-offset-2 hover:underline">
+            EU AI Act compliance →
+          </Link>
+          <span className="text-muted-foreground"> — risk profiles, gap assessment, Annex IV export, runtime HITL enforcement.</span>
+        </Panel>
+      ) : null}
+
       {!token ? (
         <Panel className="p-6 text-sm text-muted-foreground">
           Admin JWT required — open <Link href="/projects" className="font-medium underline-offset-2 hover:underline">Projects</Link>.

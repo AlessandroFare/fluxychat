@@ -1,7 +1,20 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { streamText } from "ai";
 
-const PROVIDERS = [
+interface ProviderConfig {
+  name: string;
+  baseURL: string;
+  apiKey: string | undefined;
+  model: string;
+}
+
+const PROVIDERS: ProviderConfig[] = [
+  {
+    name: "groq",
+    baseURL: "https://api.groq.com/openai/v1",
+    apiKey: process.env.GROQ_API_KEY,
+    model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+  },
   {
     name: "opencode",
     baseURL: (process.env.AI_BASE_URL || "https://opencode.ai/zen").replace(/\/+$/, "") + "/v1",
@@ -12,21 +25,27 @@ const PROVIDERS = [
     name: "mistral",
     baseURL: "https://api.mistral.ai/v1",
     apiKey: process.env.MISTRAL_API_KEY,
-    model: "open-mistral-nemo",
+    model: process.env.MISTRAL_MODEL || "open-mistral-nemo",
+  },
+  {
+    name: "openai",
+    baseURL: "https://api.openai.com/v1",
+    apiKey: process.env.OPENAI_API_KEY,
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
   },
 ];
 
-const active = PROVIDERS.find((p) => p.apiKey);
+const active = PROVIDERS.find((p) => p.apiKey?.trim());
 const providerName = active?.name || "none";
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  if (!active) {
+  if (!active?.apiKey) {
     return Response.json(
       {
         error:
-          "No AI provider configured. Set AI_API_KEY (OpenCode) or MISTRAL_API_KEY in apps/docs/.env.local.",
+          "No AI provider configured. Set one of: GROQ_API_KEY, AI_API_KEY (OpenCode), MISTRAL_API_KEY, OPENAI_API_KEY in apps/docs/.env.local.",
       },
       { status: 501 },
     );
@@ -41,7 +60,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: provider.languageModel(active.model),
     system:
-      `You are a documentation assistant for FluxyChat (provider: ${providerName}). ` +
+      `You are a documentation assistant for FluxyChat (provider: ${providerName}, model: ${active.model}). ` +
       "Answer in English, concisely and technically. " +
       "Use accurate API paths: POST /auth/token, POST /messages, FluxyChatClient, useChat, FluxyRealtimeProvider. " +
       "Never expose API keys in browser code. Include code examples when helpful. Say when unsure.",

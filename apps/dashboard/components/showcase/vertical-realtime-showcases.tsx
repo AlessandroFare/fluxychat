@@ -1,12 +1,11 @@
 "use client";
 
 import React from "react";
-import { Loader2 } from "lucide-react";
 import {
   FeatureCodePanel,
   FeaturePreviewFrame,
-  ShowcaseUnavailable,
 } from "./feature-code-panel";
+import { ShowcaseSessionGate } from "./showcase-session-gate";
 import {
   getRealtimeFeature,
   type RealtimeFeatureId,
@@ -49,16 +48,9 @@ export function VerticalRealtimeShowcase({
       <FeatureCodePanel feature={feature} />
 
       <FeaturePreviewFrame label={`${feature.label} preview`} className="min-h-[28rem]">
-        {session.status === "loading" ? (
-          <div className="flex min-h-64 items-center justify-center">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
-            <span className="sr-only">Connecting to the live demo room</span>
-          </div>
-        ) : session.status === "unavailable" || !session.client || !session.roomId ? (
-          <ShowcaseUnavailable error={session.error} onRetry={session.retry} />
-        ) : Panel ? (
-          <Panel session={session} />
-        ) : null}
+        <ShowcaseSessionGate session={session}>
+          {Panel ? <Panel session={session} /> : null}
+        </ShowcaseSessionGate>
       </FeaturePreviewFrame>
     </div>
   );

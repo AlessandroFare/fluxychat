@@ -10,7 +10,7 @@ import { ConsolePageHeader } from "../components/console-page-header";
 import { NotificationsOverviewCard } from "../components/notifications-overview-card";
 import { InboxOverviewCard } from "../components/inbox-overview-card";
 import { useConsoleSetupPhase, useDashboardSession } from "../components/dashboard-session";
-import { CONSOLE_NAV_BUILD, CONSOLE_NAV_LABS, CONSOLE_NAV_OPERATE } from "../components/console-nav";
+import { CONSOLE_NAV_BUILD, CONSOLE_NAV_OPERATE, CONSOLE_NAV_PLATFORM } from "../components/console-nav";
 import { WorkerHealthCard } from "../components/worker-health-card";
 import { SloOverviewCard } from "../components/slo-overview-card";
 import { ReadinessBadge } from "~/components/ui/readiness-badge";
@@ -290,9 +290,9 @@ export default function DashboardOverviewPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Labs</h2>
+        <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Platform modules</h2>
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {CONSOLE_NAV_LABS.map((item) => (
+          {CONSOLE_NAV_PLATFORM.map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
