@@ -94,7 +94,7 @@ export default function AiGovernancePage() {
       a.download = `ai-governance-evidence-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      setNotice("Evidence pack downloaded — attach to SOC 2 export.");
+      setNotice("Evidence pack downloaded. Attach it to your SOC 2 export.");
     } catch (err) {
       setError(messageFromUnknown(err, "Export failed"));
     } finally {
@@ -136,13 +136,13 @@ export default function AiGovernancePage() {
           <Link href="/ai-governance/eu-ai-act" className="font-medium underline-offset-2 hover:underline">
             EU AI Act compliance →
           </Link>
-          <span className="text-muted-foreground"> — risk profiles, gap assessment, Annex IV export, runtime HITL enforcement.</span>
+          <span className="text-muted-foreground">: risk profiles, gap assessment, Annex IV export, runtime HITL enforcement.</span>
         </Panel>
       ) : null}
 
       {!token ? (
         <Panel className="p-6 text-sm text-muted-foreground">
-          Admin JWT required — open <Link href="/projects" className="font-medium underline-offset-2 hover:underline">Projects</Link>.
+          Admin JWT required. Open <Link href="/projects" className="font-medium underline-offset-2 hover:underline">Projects</Link>.
         </Panel>
       ) : loading ? (
         <p className="text-sm text-muted-foreground"><Loader2 className="inline h-4 w-4 animate-spin" /> Loading…</p>

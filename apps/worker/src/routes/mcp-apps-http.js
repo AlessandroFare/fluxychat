@@ -8,6 +8,7 @@ import {
   uninstallMcpApp,
 } from "../lib/mcp-apps-catalog.js";
 import { recordMarketplaceAudit } from "../lib/marketplace-audit.js";
+import { listTemplateMarketplace, registerTemplateCommit } from "../lib/template-marketplace.js";
 import { verifyWebhookSignature } from "../lib/webhook-batch-verify.js";
 
 export async function dispatchMcpAppsRoutes(request, url, h) {
@@ -51,6 +52,43 @@ export async function dispatchMcpAppsRoutes(request, url, h) {
       return respond({ ok: true, audit: recorded }, h, 201);
     } catch (err) {
       const message = err instanceof Error ? err.message : "record_failed";
+      return respond({ error: message }, h, 500);
+    }
+  }
+
+  if (request.method === "GET" && path === "/marketplace/templates") {
+    const category = url.searchParams.get("category") || undefined;
+    const templates = await listTemplateMarketplace(env, { category });
+    return respond({ templates, count: templates.length }, h);
+  }
+
+  if (request.method === "POST" && path === "/internal/marketplace/template-commit") {
+    const secret = String(env.MARKETPLACE_AUDIT_HMAC_SECRET || "").trim();
+    if (!secret) return respond({ error: "webhook_not_configured" }, h, 503);
+
+    const rawBody = await request.text();
+    const signature = request.headers.get("X-Fluxy-Signature");
+    const verified = await verifyWebhookSignature(secret, rawBody, signature ?? "");
+    if (!verified.valid) return respond({ error: "invalid_signature" }, h, 401);
+
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return respond({ error: "invalid_json" }, h, 400);
+    }
+    if (!body?.templateId) return respond({ error: "templateId required" }, h, 400);
+    if (!env.DB) return respond({ error: "db_unavailable" }, h, 503);
+
+    try {
+      const result = await registerTemplateCommit(env, {
+        templateId: body.templateId,
+        version: body.version,
+        lastCommitAt: body.lastCommitAt,
+      });
+      return respond({ ok: true, ...result }, h, 201);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "register_failed";
       return respond({ error: message }, h, 500);
     }
   }

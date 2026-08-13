@@ -213,7 +213,7 @@ export default function FluxyGamePage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="FluxyGame"
-        description="Multiplayer game backend — matchmaking, server-authoritative state sync @20fps, AI NPCs, tournaments, replay system"
+        description="Multiplayer game backend: matchmaking, server-authoritative state sync @20fps, AI NPCs, tournaments, replay system"
         actions={<WorkerBackendBadge connected={workerConnected} label="FluxyGame" />}
       />
 
@@ -284,12 +284,12 @@ export default function FluxyGamePage() {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Game design info</h3>
               <div className="space-y-2 rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">
-                <p>🎯 <span className="font-medium text-foreground">Server-authoritative</span> — DO @20fps tick, client @60fps interpolation</p>
-                <p>⚠️ <span className="font-medium text-foreground">NO setAlarm()</span> — $810/DO/day at 60fps. Direct WebSocket loop only.</p>
-                <p>🎮 <span className="font-medium text-foreground">Anti-cheat</span> — all decisions server-side, client sends input only</p>
-                <p>📺 <span className="font-medium text-foreground">Spectator</span> — read-only WebSocket, same DO</p>
-                <p>🔄 <span className="font-medium text-foreground">Replay</span> — journal of all inputs+events per tick</p>
-                <p>🏆 <span className="font-medium text-foreground">ELO rating</span> — +25 win, -15 loss, dynamic adjustment</p>
+                <p>🎯 <span className="font-medium text-foreground">Server-authoritative</span>: DO @20fps tick, client @60fps interpolation</p>
+                <p>⚠️ <span className="font-medium text-foreground">NO setAlarm()</span>: $810/DO/day at 60fps. Direct WebSocket loop only.</p>
+                <p>🎮 <span className="font-medium text-foreground">Anti-cheat</span>: all decisions server-side, client sends input only</p>
+                <p>📺 <span className="font-medium text-foreground">Spectator</span>: read-only WebSocket, same DO</p>
+                <p>🔄 <span className="font-medium text-foreground">Replay</span>: journal of all inputs+events per tick</p>
+                <p>🏆 <span className="font-medium text-foreground">ELO rating</span>: +25 win, -15 loss, dynamic adjustment</p>
               </div>
             </div>
           </div>
@@ -412,7 +412,7 @@ function NPCTab({ game, workerGame }: { game: FluxyGameApi; workerGame: WorkerFl
         <div className="rounded-xl border border-border bg-card p-4">
           {rateLimitSec ? (
             <div className="mb-3 rounded-lg bg-amber-500/10 p-2 text-sm text-amber-700">
-              Rate limited — retry in {rateLimitSec}s
+              Rate limited. Retry in {rateLimitSec}s
             </div>
           ) : null}
           {response && !rateLimitSec ? (
@@ -498,7 +498,7 @@ function QuestsTab({ workerGame }: { workerGame: WorkerFluxyGameClient | null })
       });
       if (result.conflict) {
         setConflict(true);
-        setNote("Checkpoint version conflict — reload before save.");
+        setNote("Checkpoint version conflict. Reload before save.");
         setCheckpoint({ version: result.checkpoint.version, state: result.checkpoint.state });
         return;
       }

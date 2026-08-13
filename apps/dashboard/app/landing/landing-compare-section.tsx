@@ -14,7 +14,7 @@ export function LandingCompareSection() {
           How we compare
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-muted-foreground">
-          Not a feature shootout — rough fit vs Stream, Ably, Pusher, and DIY DO repos.{" "}
+          Not a feature shootout: rough fit vs Stream, Ably, Pusher, and DIY DO repos.{" "}
           <Link href={HOSTED_PATHS.compare} className="text-brand underline underline-offset-2">
             Full compare
           </Link>

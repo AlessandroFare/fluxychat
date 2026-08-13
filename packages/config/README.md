@@ -1,6 +1,6 @@
 # @fluxy-chat/config
 
-Type-safe **`fluxy.config.ts`** authoring for FluxyChat — room authz, middleware, and client defaults.
+Type-safe **`fluxy.config.ts`** authoring for FluxyChat: room authz, middleware, and client defaults.
 
 ## Install
 
@@ -65,4 +65,4 @@ Use in your app to align `useChat` options with server policy.
 
 ## Self-hosted execution
 
-Fluxy runs your config callbacks **inside your Worker** — you own execution and secrets (Wrangler vars / secrets).
+Fluxy runs your config callbacks **inside your Worker**. You own execution and secrets (Wrangler vars / secrets).

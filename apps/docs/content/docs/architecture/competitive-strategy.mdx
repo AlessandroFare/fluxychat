@@ -1,43 +1,8 @@
 ---
-title: "Competitive strategy vs hosted chat SDKs"
-description: "Framework for closing remaining gaps vs Portal and similar vendors."
+title: "Competitive strategy (internal)"
+description: "Internal product strategy notes for contributors."
 ---
 
-# Competitive strategy vs hosted chat SDKs
+This page is for the core team only and is not part of the public product documentation.
 
-Framework for closing remaining gaps vs Portal and similar vendors.  
-**Level A** = win outright · **Level B** = sufficient + narrative · **Level C** = concede with clear positioning
-
-## Level A — Win
-
-| # | Gap | Implementation | Status |
-|---|-----|----------------|--------|
-| 5 | UI out-of-the-box | `@fluxy-chat/ui-kit` — `FluxyChatWidget`, `FluxyInboxPanel`, optional `useFluxyAssistantRuntime` | ✅ |
-| 6 | Mobile native packaging | `packages/sdk-kmp` + Ktor WS + `.github/workflows/publish-sdk-kmp.yml` | ✅ pipeline |
-
-## Level B — Sufficient + proof
-
-| # | Gap | Implementation | Status |
-|---|-----|----------------|--------|
-| 1, 3 | DX / chat-only focus | `create-fluxy-chat --minimal` + docs slice `/docs/chat-only` | ✅ |
-| 4 | Inbox UX | `FluxyInboxPanel` + inbox preview in README | ✅ |
-| 7 | Voice production | `livekit-token.js`, `examples/livekit/`, `scripts/voice-load-test.sh` | ✅ run & publish report |
-| 8 | MCP verified ecosystem | mcp-audit CI + `scripts/generate-mcp-verified-page.mjs` | ✅ |
-| 10 | Reconnect/receipts/templates | [Feature parity checklist](/docs/guides/feature-parity-checklist) | ✅ comms |
-
-## Level C — Concede (positioning)
-
-| # | Gap | Position |
-|---|-----|----------|
-| 2 | Hosted zero-ops | Fluxy = MIT self-host + optional hosted beta; Portal = closed SaaS only |
-| 9 | CRM native deep | Activepieces self-host + webhooks (external tab); not native Salesforce SKU |
-
-## Execution order (done)
-
-1. `@fluxy-chat/ui-kit`
-2. KMP publish CI
-3. Voice load-test script + report template
-4. `--minimal` CLI
-5. MCP verified page generator + parity docs
-
-See also: [PRODUCTION-SETUP.md](/docs/PRODUCTION-SETUP)
+For integrators comparing FluxyChat to other providers, see [Pusher Channels parity](/docs/reference/pusher-channels-parity) and the landing compare table on [fluxychat.com](https://fluxychat.com).

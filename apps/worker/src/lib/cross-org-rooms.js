@@ -251,12 +251,29 @@ export async function registerCrossOrgAgent(env, input) {
  *   ttlSeconds?: number,
  * }} input
  */
+/**
+ * Optional private floor: reject offers below floorPrice / min_price.
+ * @param {Record<string, unknown>} terms
+ */
+export function assertNegotiationFloorPrice(terms) {
+  if (!terms || typeof terms !== "object") return { ok: true };
+  const floor = Number(terms.floorPrice ?? terms.min_price ?? terms.minPrice);
+  const price = Number(terms.unit_price_usd ?? terms.price ?? terms.amount);
+  if (!Number.isFinite(floor)) return { ok: true };
+  if (!Number.isFinite(price)) return { ok: false, reason: "price_required_with_floor" };
+  if (price < floor) return { ok: false, reason: "below_floor_price", floor, price };
+  return { ok: true };
+}
+
 export async function proposeCommitment(env, input) {
   const room = await getCrossOrgRoom(env, input.projectId, input.crossOrgRoomId);
   if (!room) return { ok: false, reason: "room_not_found" };
   if (input.proposedByOrg !== room.orgAId && input.proposedByOrg !== room.orgBId) {
     return { ok: false, reason: "org_not_in_room" };
   }
+
+  const floorCheck = assertNegotiationFloorPrice(input.terms ?? {});
+  if (!floorCheck.ok) return floorCheck;
 
   const now = new Date().toISOString();
   const commitmentId = crypto.randomUUID();
@@ -341,6 +358,9 @@ export async function counterCommitment(env, input) {
   if (input.counterByOrg === existing.proposedByOrg) {
     return { ok: false, reason: "cannot_counter_own_proposal" };
   }
+
+  const floorCheck = assertNegotiationFloorPrice(input.terms ?? {});
+  if (!floorCheck.ok) return floorCheck;
 
   const nextRound = existing.roundNumber + 1;
   if (nextRound > room.maxRounds) {

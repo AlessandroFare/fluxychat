@@ -12,7 +12,7 @@ const USE_CHAT_SNIPPET = `const { messages, sendMessage, loadHistory } = useChat
 });`;
 
 const STREAM_BOT_HINT =
-  "Custom bots: FluxyMessageStream — see docs/cookbook/bot-streaming-fluxy-message-stream.md";
+  "Custom bots: FluxyMessageStream. See docs/cookbook/bot-streaming-fluxy-message-stream.md";
 
 export function QuickstartSdkSnippet() {
   const [workerUrl, setWorkerUrl] = useState(getPublicWorkerUrl());

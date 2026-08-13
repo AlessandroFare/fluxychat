@@ -6,10 +6,10 @@ import {
   COMPARE_ROWS,
   COMPARE_HOSTED_CHAT_HEADER,
   DECISION_FLOW,
+  HACKATHON_ROOM_OS_LINKS,
   ABLY_ON_VERCEL,
   DIY_DO_COMPARISON,
   SDK_BUNDLE_BENCHMARKS,
-  PRODUCT_EXCELLENCE_TRACKER,
   PRODUCT_CHAT_VS_SUPPORT,
   PUSHER_BILL_SHOCK,
   PUSHER_ON_VERCEL,
@@ -23,9 +23,9 @@ import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 export const metadata = buildPageMetadata({
-  title: "Compare FluxyChat — vs Pusher, Ably, Stream, hosted chat SDKs",
+  title: "Compare FluxyChat vs Pusher, Ably, Stream, hosted chat SDKs",
   description:
-    "How FluxyChat compares to hosted chat SDKs, Pusher, Ably, Stream, and DIY Workers — chat, agents, MIT self-host, voice, omnichannel inbox, 14 channels.",
+    "How FluxyChat compares to hosted chat SDKs, Pusher, Ably, Stream, and DIY Workers: chat, agents, MIT self-host, voice, omnichannel inbox, 14 channels.",
   path: "/compare",
 });
 
@@ -92,8 +92,8 @@ export default function ComparePage() {
       </h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">
         Positioning for teams evaluating Stream, Ably, Pusher, TalkJS, Firebase, or a DIY Workers stack.
-        FluxyChat is a realtime platform on Cloudflare — chat, agents, streaming, collab, game, IoT, fleet,
-        spatial, and 14 channel adapters in one SDK — MIT self-host or hosted beta, not a helpdesk widget.{" "}
+        FluxyChat is a realtime platform on Cloudflare: chat, agents, streaming, collab, game, IoT, fleet,
+        spatial, and 14 channel adapters in one SDK. MIT self-host or hosted beta, not a helpdesk widget.{" "}
         <Link href={MARKETING_GUIDE_PATHS.pusherAlternativeSaas} className="text-brand underline underline-offset-2">
           Pusher alternative guide →
         </Link>
@@ -157,7 +157,7 @@ export default function ComparePage() {
         <p className="font-medium">One platform, not a patchwork of SKUs</p>
         <p className="mt-1 text-muted-foreground">
           Pusher and Ably excel at pub/sub channels. Stream bundles chat and feeds with separate video products.
-          FluxyChat ships stream, collab, game, IoT, fleet, and spatial modules on the same Worker and room kernel —
+          FluxyChat ships stream, collab, game, IoT, fleet, and spatial modules on the same Worker and room kernel,
           so you are not stitching five vendor bills for one product experience.
         </p>
       </div>
@@ -189,7 +189,7 @@ export default function ComparePage() {
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Side-by-side with proprietary hosted chat SDKs, Stream, Ably, and Pusher.
-        Rows are factual — check each vendor&apos;s current docs before you buy.
+        Rows are factual. Check each vendor&apos;s current docs before you buy.
       </p>
       <div className="mt-4">
         <CompareTable
@@ -212,7 +212,7 @@ export default function ComparePage() {
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Gzip sizes from CI (<code className="text-xs">pnpm run check:bundle-size</code>).
-        App bundles tree-shake imports — chat-only paths stay small. See the{" "}
+        App bundles tree-shake imports, so chat-only paths stay small. See the{" "}
         <Link href="/docs/guides/feature-parity-checklist" className="text-brand underline underline-offset-2">
           feature parity checklist
         </Link>
@@ -242,43 +242,15 @@ export default function ComparePage() {
       </div>
 
       <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">
-        Product roadmap progress
+        Platform readiness
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Open engineering items for developer experience, MCP, voice, and mobile — updated each sprint.
+        Each product and vertical on the docs site shows a production, beta, or preview badge. Check the{" "}
+        <Link href="https://docs.fluxychat.com/platform/overview" className="text-brand underline underline-offset-2">
+          platform overview
+        </Link>{" "}
+        before you plan a launch around stream, voice, collab, or mobile SDKs.
       </p>
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
-        <table className="w-full min-w-[480px] border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 font-medium">ID</th>
-              <th className="px-4 py-3 font-medium">Area</th>
-              <th className="px-4 py-3 font-medium">Task</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {PRODUCT_EXCELLENCE_TRACKER.map((item) => (
-              <tr key={item.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{item.id}</td>
-                <td className="px-4 py-3">{item.phase}</td>
-                <td className="px-4 py-3">{item.label}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={
-                      item.status === "done"
-                        ? "rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400"
-                        : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-                    }
-                  >
-                    {item.status === "done" ? "Done" : "Open"}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
 
       <h2 className="mt-16 font-heading text-xl font-bold sm:text-2xl">
         {ABLY_ON_VERCEL.title}
@@ -358,7 +330,7 @@ export default function ComparePage() {
         <p className="font-medium">PartyKit vs FluxyChat (SaaS chat)</p>
         <p className="mt-1 text-muted-foreground">
           PartyKit wins collab parties and generic edge realtime. FluxyChat wins when you ship
-          tenant-scoped in-app messaging with history, JWT, and operator tooling — see the PartyKit
+          tenant-scoped in-app messaging with history, JWT, and operator tooling. See the PartyKit
           row in the table below.
         </p>
       </div>
@@ -379,7 +351,7 @@ export default function ComparePage() {
         Other approaches on Cloudflare
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Common mental models from Reddit and CF threads — when to use something else vs
+        Common mental models from Reddit and CF threads: when to use something else vs
         FluxyChat.
       </p>
       <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
@@ -435,9 +407,33 @@ export default function ComparePage() {
       <p className="mt-4 text-sm text-muted-foreground">
         Cost guardrails, operator console, and DO capacity:{" "}
         <Link href="/why#cost" className="text-brand underline underline-offset-2">
-          /why — cost & architecture
+          /why: cost & architecture
         </Link>
       </p>
+
+      <h2 id="room-os" className="mt-16 font-heading text-xl font-bold sm:text-2xl">
+        Room OS for humans + agents
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        Patterns from real hackathon builds: external agents join rooms, negotiate across orgs,
+        and react to live signals. Not a chat widget SKU.
+      </p>
+      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+        {HACKATHON_ROOM_OS_LINKS.map((item) => (
+          <li key={item.id} className="rounded-xl border border-border p-4 text-sm">
+            <span className="text-xs font-medium text-muted-foreground">{item.id}</span>
+            <p className="mt-1 font-semibold">{item.label}</p>
+            <p className="mt-2 flex flex-wrap gap-3 text-xs">
+              <a href={item.href} className="text-brand underline underline-offset-2" target="_blank" rel="noopener noreferrer">
+                Docs
+              </a>
+              <Link href={item.console} className="text-brand underline underline-offset-2">
+                Console
+              </Link>
+            </p>
+          </li>
+        ))}
+      </ul>
 
       <h2 className="mt-16 font-heading text-2xl font-bold">Decision flow</h2>
       <ol className="mt-6 space-y-6">

@@ -120,7 +120,7 @@ export default function AgentObservabilityPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Agent observability"
-        description="Recent agent runs from the activity feed — latency and failure rate for eval loops. Pair with OTel export for Langfuse."
+        description="Recent agent runs from the activity feed: latency and failure rate for eval loops. Pair with OTel export for Langfuse."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">

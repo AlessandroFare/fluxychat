@@ -24,7 +24,7 @@ export const LANDING_BADGES = [
     href: "https://www.producthunt.com/products/fluxychat?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-fluxychat",
     imgSrc:
       "https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1155224&theme=dark&t=1779972380375",
-    alt: "Fluxychat - Realtime chat API on Cloudflare — hosted or self-host | Product Hunt",
+    alt: "Fluxychat on Product Hunt: realtime chat API on Cloudflare, hosted or self-host",
     width: 250,
     height: 54,
   },

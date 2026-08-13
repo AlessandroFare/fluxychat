@@ -4,6 +4,10 @@
 import { parseAllowedOriginsField } from "./custom-domains.js";
 import { parseAllowedOrigins, isDemoOriginAllowed } from "./demo-guard.js";
 import {
+  parseProactiveTriggers,
+  sanitizeProactiveTriggersInput,
+} from "./embed-proactive-triggers.js";
+import {
   FEATURE_FLAG_KEYS,
   envFallbackBoolean,
   getFeatureFlagBoolean,
@@ -65,6 +69,7 @@ export function mapEmbedConfigRow(row) {
     zIndex: clampZIndex(row.z_index),
     launcherTitle: row.launcher_title?.slice(0, 80) ?? "Chat",
     theme,
+    proactiveTriggers: parseProactiveTriggers(row.proactive_triggers_json),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -195,6 +200,7 @@ export async function getPublicEmbedConfig(env, projectId, hostname) {
     zIndex: config.zIndex,
     launcherTitle: config.launcherTitle,
     theme: config.theme,
+    proactiveTriggers: config.proactiveTriggers ?? [],
     readOnly:
       env.PUBLIC_GUEST_READ_ONLY !== "false" && env.PUBLIC_GUEST_READ_ONLY !== "0",
     scriptUrl: "/embed.js",
@@ -238,6 +244,7 @@ export async function getAdminEmbedConfig(env, projectId) {
  *   zIndex?: number,
  *   launcherTitle?: string | null,
  *   theme?: { primaryColor?: string, position?: string },
+ *   proactiveTriggers?: Array<{ id?: string, enabled?: boolean, urlPattern?: string, dwellSeconds?: number, message?: string, autoOpen?: boolean }>,
  * }} input
  * @param {{ isValidId: (id: string) => boolean }} deps
  */
@@ -286,6 +293,13 @@ export async function upsertEmbedConfig(env, input, deps) {
   const defaultRoomId =
     input.defaultRoomId !== undefined ? input.defaultRoomId : existing?.defaultRoomId ?? null;
 
+  const proactiveTriggersJson =
+    input.proactiveTriggers !== undefined
+      ? JSON.stringify(sanitizeProactiveTriggersInput(input.proactiveTriggers))
+      : existing
+        ? JSON.stringify(existing.proactiveTriggers ?? [])
+        : "[]";
+
   if (defaultRoomId && !isValidId(defaultRoomId)) {
     return { ok: false, error: "invalid_room_id" };
   }
@@ -299,6 +313,7 @@ export async function upsertEmbedConfig(env, input, deps) {
          z_index = ?,
          launcher_title = ?,
          theme_json = ?,
+         proactive_triggers_json = ?,
          updated_at = ?
        WHERE project_id = ?`,
     )
@@ -309,6 +324,7 @@ export async function upsertEmbedConfig(env, input, deps) {
         zIndex,
         launcherTitle,
         JSON.stringify(theme),
+        proactiveTriggersJson,
         now,
         input.projectId,
       )
@@ -316,8 +332,8 @@ export async function upsertEmbedConfig(env, input, deps) {
   } else {
     await env.DB.prepare(
       `INSERT INTO project_embed_configs
-       (project_id, enabled, default_room_id, allowed_origins, z_index, launcher_title, theme_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (project_id, enabled, default_room_id, allowed_origins, z_index, launcher_title, theme_json, proactive_triggers_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         input.projectId,
@@ -327,6 +343,7 @@ export async function upsertEmbedConfig(env, input, deps) {
         zIndex,
         launcherTitle,
         JSON.stringify(theme),
+        proactiveTriggersJson,
         now,
         now,
       )

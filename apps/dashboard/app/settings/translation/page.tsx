@@ -18,6 +18,11 @@ import {
   type RoomTranslationListItem,
   type RoomTranslationSettings,
 } from "@/lib/room-translation-settings-client";
+import {
+  getViewerTranslationLang,
+  setViewerTranslationLang,
+  VIEWER_LANG_OPTIONS,
+} from "@/lib/translation-viewer-prefs";
 
 const LANG_OPTIONS = [
   { value: "en", label: "English" },
@@ -44,6 +49,11 @@ export default function RoomTranslationSettingsPage() {
   const [configuredRooms, setConfiguredRooms] = useState<RoomTranslationListItem[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [targetLang, setTargetLang] = useState("en");
+  const [viewerLang, setViewerLang] = useState("en");
+
+  useEffect(() => {
+    setViewerLang(getViewerTranslationLang());
+  }, []);
 
   const loadRoom = useCallback(async () => {
     if (!token || !roomId.trim()) {
@@ -109,7 +119,7 @@ export default function RoomTranslationSettingsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Room auto-translate"
-        description="Per-room target language — new messages are translated and cached in D1 (#4)."
+        description="Per-room target language. New messages are translated and cached in D1."
       />
 
       {!token ? (
@@ -122,6 +132,35 @@ export default function RoomTranslationSettingsPage() {
       ) : (
         <div className="space-y-6">
           <ConsoleFeedback error={error} notice={notice} />
+
+          <Panel title="Your viewer language">
+            <p className="text-sm text-muted-foreground">
+              Manual &quot;Translate&quot; in chat uses this language. Stored in your browser.
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <div>
+                <label htmlFor="viewer-lang" className="mb-1 block text-xs font-medium text-muted-foreground">
+                  Viewer language
+                </label>
+                <select
+                  id="viewer-lang"
+                  value={viewerLang}
+                  onChange={(e) => {
+                    setViewerLang(e.target.value);
+                    setViewerTranslationLang(e.target.value);
+                    setNotice(`Viewer language set to ${e.target.value.toUpperCase()}.`);
+                  }}
+                  className="w-full min-w-[12rem] rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                >
+                  {VIEWER_LANG_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label} ({opt.value})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </Panel>
 
           <Panel title="Configure room">
             <Section title="Select room">

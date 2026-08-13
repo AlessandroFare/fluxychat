@@ -3,7 +3,7 @@ import type { GuideContent } from "@/lib/guides/types";
 export const JWT_AUTH_GUIDE: GuideContent = {
   title: "JWT Authentication for self-hosted FluxyChat",
   subtitle:
-    "Configure JWT-based auth for your FluxyChat worker without external identity providers — issue, refresh, and verify tokens.",
+    "Configure JWT-based auth for your FluxyChat worker without external identity providers: issue, refresh, and verify tokens.",
   sections: [
     {
       id: "overview",
@@ -40,7 +40,7 @@ Response:
         "Every REST request must include Authorization: Bearer <token>",
         "WebSocket connections pass the token as a query parameter: /ws?roomId=...&token=...",
         "The worker verifies the signature, checks expiry, and extracts projectId/userId",
-        "Expired tokens return 401 — the client should refresh automatically",
+        "Expired tokens return 401. The client should refresh automatically.",
       ],
     },
     {

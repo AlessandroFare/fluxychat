@@ -31,7 +31,7 @@ export const WHY_SECTIONS: readonly WhySection[] = [
       "Messages and metadata sit in D1 so you keep queryable history without handing everything to a third-party BaaS.",
       "The same Worker serves HTTP (JWT mint, REST writes, webhooks, GDPR export) and upgrades to WebSockets. One deploy surface, Cloudflare billing you can read.",
       "If you already run APIs or static apps on Cloudflare, chat can live on that account instead of adding Pusher, Ably, or another region somewhere else.",
-      "Cloudflare’s own docs vocabulary — coordination, shared state, chat rooms, WebSocket hibernation — is the same story FluxyChat implements with one Room Durable Object per channel.",
+      "Cloudflare's own docs vocabulary (coordination, shared state, chat rooms, WebSocket hibernation) matches what FluxyChat implements with one Room Durable Object per channel.",
     ],
   },
   {
@@ -57,7 +57,7 @@ export const WHY_SECTIONS: readonly WhySection[] = [
     id: "vercel",
     title: "Vercel / Netlify front, Cloudflare chat",
     paragraphs: [
-      "REST on Vercel is easy; long-lived WebSockets often are not — limits, pricing, and workarounds (managed Vercel WebSocket products or DIY functions) show up in every builder thread.",
+      "REST on Vercel is easy. Long-lived WebSockets often are not, because of limits, pricing, and workarounds on serverless hosts.",
       "FluxyChat keeps your Next.js or Nuxt app where it is and runs room WebSockets on Workers + one Durable Object per room. You skip a separate Pusher/Ably line item and avoid running your own socket VPS.",
       "See /guides/cloudflare-workers-chat for the step-by-step mental model after Cloudflare’s official chat demo.",
     ],
@@ -66,12 +66,12 @@ export const WHY_SECTIONS: readonly WhySection[] = [
     id: "product-chat",
     title: "In-app chat vs support desk",
     paragraphs: [
-      "Most live-chat listicles target support teams: inbox, ticketing, CSAT. FluxyChat is different. It is the room layer for chat inside your SaaS UI — tenant-scoped rooms, @fluxy-chat/sdk, D1 history, operator console.",
+      "Most live-chat listicles target support teams: inbox, ticketing, CSAT. FluxyChat is the room layer for chat inside your SaaS UI: tenant-scoped rooms, @fluxy-chat/sdk, D1 history, operator console.",
       "You can still build a support experience on top (see docs/use-cases/support-chat.md). I am not trying to replace Intercom. I am trying to replace the part where you either rent generic channels or run your own socket cluster.",
       "Agentic products fit here too: user messages and agent tool_call / tool_result share one WebSocket timeline, so you can see what happened before wiring Salesforce, HubSpot, or whatever integration runner you use.",
     ],
     bullets: [
-      "Onboarding and retention language from support marketing still applies to in-product chat — just do not claim to be a helpdesk.",
+      "Onboarding and retention language from support marketing still applies to in-product chat. Just do not claim to be a helpdesk.",
       "Chat transport here; CRM and long-tail connectors on your side.",
       "More on /compare and /guides/in-app-chat-vs-support-desk.",
     ],
@@ -93,11 +93,11 @@ export const WHY_SECTIONS: readonly WhySection[] = [
     title: "How to think about alternatives",
     paragraphs: [
       "Stream and TalkJS get you to polished chat UI fast. Fluxychat is for people who want messages on their Worker, readable source, and a hosted trial that can become self-host without rewriting transport.",
-      "PartyKit and generic edge realtime tools excel at collab sessions and custom party state — not tenant-scoped chat with history, templates, and operator tooling. See the comparison table on /compare.",
+      "PartyKit and generic edge realtime tools excel at collab sessions and custom party state, not tenant-scoped chat with history, templates, and operator tooling. See the comparison table on /compare.",
       "Supabase Realtime and Convex bundle realtime with their database. Fluxychat does not ask you to migrate Postgres. You deploy Worker + D1, or use our hosted stack.",
       "Pusher and Ably are strong managed channels at scale. Fluxychat fits if you'd rather pay Cloudflare and own the schema, or try hosted first and fork when you need to.",
       "Workers + Upstash Redis DIY is valid if you want to build every piece. Fluxychat is the pre-wired chat layer (room DO, D1, SDK, reconnect semantics).",
-      "Vercel WebSocket workarounds and Ably’s Next.js tutorials solve adjacent problems; FluxyChat targets in-app chat on Cloudflare with room-per-DO scaling — see /compare.",
+      "Vercel WebSocket workarounds and Ably's Next.js tutorials solve adjacent problems. FluxyChat targets in-app chat on Cloudflare with room-per-DO scaling. See /compare.",
     ],
   },
   {
@@ -111,7 +111,7 @@ export const WHY_SECTIONS: readonly WhySection[] = [
     bullets: [
       "Set Cloudflare budget alerts and test in staging before production traffic.",
       "Avoid hot loops that write to D1 on every keystroke; use DO state for ephemeral signals (typing) and batch persistence where it makes sense.",
-      "Room-scoped Durable Objects limit blast radius vs one monolithic socket server — idle rooms still cost something; monitor and archive old rooms.",
+      "Room-scoped Durable Objects limit blast radius compared to one monolithic socket server. Idle rooms still cost something; monitor and archive old rooms.",
       "Read Cloudflare’s DO and D1 pricing pages when sizing; FluxyChat does not hide CF usage behind a flat “connections” SKU.",
     ],
   },
@@ -150,12 +150,12 @@ export const WHY_FAQ = [
     a: "Any edge stack can spike if you write unbounded data or leave abusive loops running. Use CF budget alerts, quotas in the console, and the guardrails above. Compare approaches at /compare.",
   },
   {
-    q: "We use Vercel — do we need Pusher or Ably?",
+    q: "We use Vercel. Do we need Pusher or Ably?",
     a: "Only if you want a general realtime bus. For tenant-scoped in-app chat, many teams pair Vercel/Netlify with FluxyChat on Cloudflare instead of a second socket vendor or a DIY WebSocket fleet on Functions.",
   },
   {
     q: "Are Durable Objects too slow or single-threaded for chat?",
-    a: "Each room is one DO — sequential processing is usually fine for ordering. Ultra-hot single channels may need sharding; see /guides/durable-objects-chat-tradeoffs.",
+    a: "Each room is one Durable Object, so sequential processing is usually fine for ordering. Ultra-hot single channels may need sharding. See /guides/durable-objects-chat-tradeoffs.",
   },
   {
     q: "Will idle WebSockets bankrupt me on Cloudflare?",

@@ -1,11 +1,11 @@
 ---
-title: Tenant usage & cost dashboard
-description: Monthly message/agent/webhook usage with rough USD cost estimate for capacity planning.
+title: Tenant usage and cost dashboard
+description: Monthly message, agent, and webhook usage with a rough USD cost estimate for capacity planning.
 ---
 
-# Tenant usage & cost dashboard
+# Tenant usage and cost dashboard
 
-See **monthly usage**, plan limits, storage totals, and a **rough cost estimate** for your project — useful for billing conversations and capacity planning (not an invoice).
+See monthly usage, plan limits, storage totals, and a rough cost estimate for your project. Useful for billing conversations and capacity planning. This is not an invoice.
 
 ## Console
 
@@ -13,11 +13,11 @@ See **monthly usage**, plan limits, storage totals, and a **rough cost estimate*
 
 Displays:
 
-- **Plan** — name, billing status, monthly limits (messages, agent invokes, webhook deliveries).
-- **This month** — messages created, agent invokes, webhook deliveries.
-- **Totals** — all-time messages, rooms, MAU, attachment storage (GB).
-- **Ops (30d)** — breakdown of worker operations.
-- **Cost estimate** — configurable rates × usage + platform base (USD, disclaimer shown).
+- Plan: name, billing status, monthly limits (messages, agent invokes, webhook deliveries).
+- This month: messages created, agent invokes, webhook deliveries.
+- Totals: all-time messages, rooms, MAU, attachment storage (GB).
+- Ops (30d): breakdown of worker operations.
+- Cost estimate: configurable rates times usage plus platform base (USD, disclaimer shown).
 
 ## API
 
@@ -37,7 +37,7 @@ Response shape: `usage.plan`, `usage.monthlyUsage`, `usage.totals`, `usage.costE
 | `USAGE_COST_PER_GB_STORAGE_USD` | Storage monthly rate |
 | `USAGE_COST_PLATFORM_BASE_USD` | Fixed platform fee in estimate |
 
-Rates are **estimates only** — configure to match your internal unit economics.
+Rates are estimates only. Configure them to match your internal unit economics.
 
 ## Related
 

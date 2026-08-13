@@ -3,29 +3,33 @@ title: SOC 2 and HIPAA runbook
 description: Operate FluxyChat controls, export auditor evidence, and track HIPAA BAAs without a paid compliance SaaS.
 ---
 
-Use this runbook for **build-first** compliance: product controls and exports in FluxyChat; a **signed SOC 2 Type 2 report** from an audit firm stays deferred until you have revenue and an auditor budget.
+Use this runbook for build-first compliance: product controls and exports in FluxyChat. A signed SOC 2 Type 2 report from an audit firm stays deferred until you have revenue and an auditor budget.
 
 ## Roles
 
 | Role | Responsibility |
 |------|----------------|
-| **Admin** | Dashboard admin JWT, SOC 2 refresh, evidence export |
-| **Security lead** | Risk register updates via `/api/soc2/risks`, incident logging |
-| **Privacy / compliance** | HIPAA checklist, BAA records, breach runbook |
+| Admin | Dashboard admin JWT, SOC 2 refresh, evidence export |
+| Security lead | Risk register updates via `/api/soc2/risks`, incident logging |
+| Privacy / compliance | HIPAA checklist, BAA records, breach runbook |
 
 ## Weekly SOC 2 cadence (30 minutes)
 
 1. Open dashboard [**SOC 2**](/soc2) → **Refresh** — confirm control and policy counts are non-zero after seed/migration.
-2. **Export evidence JSON** and store in your evidence bucket (dated filename).
-3. **Export audit log** stream for the last 7 days.
-4. Run **DLP smoke test** on the SOC 2 page (test SSN + test card).
-5. File exports in `evidence/YYYY-MM-DD/` with a one-line change note in your internal log.
+2. **Export self-assessment JSON** ([readiness checklist](/docs/guides/enterprise/soc2-readiness-checklist)) and store with evidence.
+3. **Export evidence JSON** and store in your evidence bucket (dated filename).
+4. **Export audit log** stream for the last 7 days.
+5. Run **DLP smoke test** on the SOC 2 page (test SSN + test card).
+6. File exports in `evidence/YYYY-MM-DD/` with a one-line change note in your internal log.
 
 ## API reference (admin JWT)
 
 ```bash
 # Dashboard summary
 curl "$WORKER_URL/api/soc2/dashboard" -H "Authorization: Bearer $ADMIN_JWT"
+
+# Self-assessment export
+curl "$WORKER_URL/api/soc2/self-assessment" -H "Authorization: Bearer $ADMIN_JWT"
 
 # Evidence rows
 curl "$WORKER_URL/api/soc2/evidence" -H "Authorization: Bearer $ADMIN_JWT"
@@ -42,7 +46,7 @@ See [DLP and audit export](/docs/guides/enterprise/dlp-audit-export) for scan an
 2. Legal review and countersign with your customer.
 3. Create a BAA record: `POST /api/hipaa/baa` with `entityName`, `entityType`, contacts.
 4. When signed, `PATCH /api/hipaa/baa/{id}` with `status: "active"` and `signedBy`.
-5. Complete the in-product **readiness checklist** (DLP, training, breach runbook, retention).
+5. Engage an auditor when enterprise deals require it. See the [Type II engagement guide](/docs/guides/enterprise/soc2-type-ii-audit).
 
 ## Breach notification (internal)
 
@@ -55,7 +59,8 @@ See [DLP and audit export](/docs/guides/enterprise/dlp-audit-export) for scan an
 
 Bundle for the firm:
 
-- SOC 2 evidence JSON + audit log export
+- SOC 2 evidence JSON + self-assessment export + audit log export
+- [ISO 27001 mapping one-pager](/docs/guides/enterprise/iso27001-mapping) for vendor questionnaires
 - AI Governance evidence export ([AI Governance](/ai-governance))
 - DLP policy version + CMK metadata ([DLP CMK](/docs/guides/enterprise/dlp-cmk-policy))
 - HIPAA BAA list (`GET /api/hipaa/baa`) and checklist completion notes

@@ -159,5 +159,11 @@ export async function dispatchSOC2Routes(request, url, h) {
     return json(result);
   }
 
+  if (path === "/api/soc2/self-assessment" && request.method === "GET") {
+    const { buildSoc2SelfAssessment } = await import("../lib/soc2-readiness-checklist.js");
+    const result = await buildSoc2SelfAssessment(env, projectId);
+    return json(result);
+  }
+
   return null;
 }

@@ -55,6 +55,7 @@ export function saveQuickstartProgress(
     clerkUserId,
   };
   window.localStorage.setItem(progressKey(clerkUserId), JSON.stringify(next));
+  window.dispatchEvent(new CustomEvent("quickstart-progress-updated", { detail: { clerkUserId } }));
 }
 
 export function markQuickstartFirstMessage(clerkUserId: string): void {
@@ -69,7 +70,7 @@ export function markQuickstartComplete(clerkUserId: string): void {
 }
 
 function progressBelongsToUser(progress: QuickstartProgress, clerkUserId: string): boolean {
-  if (!progress.clerkUserId) return false;
+  if (!progress.clerkUserId) return true;
   return progress.clerkUserId === clerkUserId;
 }
 

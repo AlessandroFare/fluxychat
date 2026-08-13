@@ -31,7 +31,7 @@ export function LandingRealtimeSection() {
             One SDK for chat, location, stream, and more
           </h2>
           <p className="mx-auto max-w-2xl text-pretty leading-relaxed text-slate-300">
-            Start with in-app chat. Add location, push, voice AI, collab, HLS stream, multiplayer, IoT, fleet GPS, spatial twins, or 14 channel adapters — one SDK, one worker, one room WebSocket.
+            Start with in-app chat. Add location, push, voice AI, collab, HLS stream, multiplayer, IoT, fleet GPS, spatial twins, or 14 channel adapters: one SDK, one worker, one room WebSocket.
           </p>
         </div>
 
@@ -177,7 +177,7 @@ const CHAT_SIDEBAR = [
 
 const CHAT_MESSAGES = [
   { id: 1, from: "Dana", side: "left" as const, text: "Are we still hitting today for the chat rollout?", reactions: [{ emoji: "\uD83D\uDC40", count: 9 }, { emoji: "\uD83D\uDD25", count: 6 }] },
-  { id: 2, from: "You", side: "right" as const, text: "Yep — the channel layer's already live.", reactions: [{ emoji: "+5", count: null }, { emoji: "\u2764\uFE0F", count: 17 }] },
+  { id: 2, from: "You", side: "right" as const, text: "Yep, the channel layer's already live.", reactions: [{ emoji: "+5", count: null }, { emoji: "\u2764\uFE0F", count: 17 }] },
   { id: 3, from: "Leo", side: "left" as const, text: "Nice. Add me to the room.", reactions: [{ emoji: "\uD83C\uDF89", count: 4 }] },
 ];
 
@@ -929,7 +929,7 @@ function VoicePreview() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-500/40 opacity-75 motion-reduce:animate-none" />
                 <span className="relative inline-flex size-3 rounded-full bg-slate-500" />
               </span>
-              idle — waiting for input
+              idle, waiting for input
             </div>
         }
       </div>

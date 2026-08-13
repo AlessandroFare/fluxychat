@@ -8,8 +8,8 @@ export const LLM_MEMORY_VS_ROOM_STATE_GUIDE: GuideContent = {
     {
       title: "Two different problems",
       bullets: [
-        "LLM memory — what the model keeps in context or RAG; vendor-specific, prompt-sized.",
-        "Room state — messages, tool_call, tool_result, who is connected; your product's job.",
+        "LLM memory: what the model keeps in context or RAG; vendor-specific, prompt-sized.",
+        "Room state: messages, tool_call, tool_result, who is connected; your product's job.",
       ],
     },
     {

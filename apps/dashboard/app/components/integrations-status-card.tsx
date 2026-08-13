@@ -90,7 +90,7 @@ export function IntegrationsStatusCard({ className }: { className?: string }) {
       <Panel className="p-4">
         <div className="mb-3 flex items-center gap-2">
           <Code2 className="h-4 w-4 text-brand" aria-hidden />
-          <h3 className="text-sm font-semibold text-foreground">Embed guest sessions (#58)</h3>
+          <h3 className="text-sm font-semibold text-foreground">Embed guest sessions</h3>
         </div>
         <StatusRow
           label="Turnstile on Worker"

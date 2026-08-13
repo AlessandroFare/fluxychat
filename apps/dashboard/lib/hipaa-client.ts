@@ -83,7 +83,7 @@ export const HIPAA_READINESS_CHECKLIST = [
   { id: "retention", label: "Retention and legal hold aligned with BA obligations" },
 ] as const;
 
-export const BAA_TEMPLATE_MARKDOWN = `# Business Associate Agreement (template — not legal advice)
+export const BAA_TEMPLATE_MARKDOWN = `# Business Associate Agreement (template, not legal advice)
 
 **Between:** [Covered Entity Name] ("Covered Entity")  
 **And:** [Your Organization] ("Business Associate")

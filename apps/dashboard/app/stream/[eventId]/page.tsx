@@ -207,7 +207,7 @@ export default function StreamViewerPage() {
             )}
             {isReplay && !replayHls ? (
               <p className="mt-2 px-2 text-xs text-muted-foreground">
-                Replay processing — register an HTTPS HLS URL or reconcile Cloudflare recordings.
+                Replay processing. Register an HTTPS HLS URL or reconcile Cloudflare recordings.
               </p>
             ) : null}
           </div>

@@ -1,92 +1,92 @@
 ---
 title: Platform roadmap status
-description: Features not shipped yet, paid-vendor dependencies, and monitor-only specs — honest expectations for integrators.
+description: Features not shipped yet, paid-vendor dependencies, and monitor-only specs. Honest expectations for integrators.
 ---
 
 # Platform roadmap status
 
-FluxyChat ships a large surface area. This page documents items that are **not** fully productized yet — so you can plan integrations without surprise.
+FluxyChat ships a large surface area. This page lists items that are not fully productized yet, so you can plan integrations without surprise.
 
 ---
 
-## Research only — do not build on yet
+## Research only: do not build on yet
 
-### Agent commerce — x402 (#18) and AP2/UCP (#25)
+### Agent commerce (x402 and AP2/UCP)
 
-**Status:** ⚠️ Monitor spec maturity.
+Status: monitor spec maturity.
 
-- **x402:** HTTP micropayments per tool call (Coinbase facilitator pattern).
-- **AP2/UCP:** Google agent payment mandates for agentic commerce.
+- x402: HTTP micropayments per tool call (Coinbase facilitator pattern).
+- AP2/UCP: Google agent payment mandates for agentic commerce.
 
-FluxyChat has **no production x402 or AP2 handler**. Track [FEATURE_ROADMAP](https://github.com/AlessandroFare/fluxychat/blob/main/docs/FEATURE_ROADMAP.md) for spikes.
+FluxyChat has no production x402 or AP2 handler. Wait for explicit release notes before building on either spec.
 
-**Action for you:** None — wait for explicit release notes.
-
----
-
-## Monitor only — WebTransport (#28)
-
-**Status:** ⚠️ Not for production 2026.
-
-WebSocket remains the default transport. Safari/Firefox WebTransport maturity and server deployment are insufficient for chat production.
-
-**Action for you:** Use WebSocket / SDK reconnect — ignore WebTransport mentions in research docs.
+What to do: nothing for now.
 
 ---
 
-## Paid vendor — RCS channel (#17)
+## Monitor only: WebTransport
 
-**Status:** ⬜ Adapter scaffold; **requires Twilio or MessageBird RCS account**.
+Status: not recommended for production in 2026.
 
-WhatsApp + web native channels work today. RCS outbound needs vendor credentials.
+WebSocket remains the default transport. Safari and Firefox WebTransport maturity, plus server deployment options, are not enough for chat production today.
 
-**Action for you:**
+What to do: use WebSocket and SDK reconnect. Treat WebTransport mentions in research docs as experimental.
 
-1. Open a Twilio/MessageBird RCS program (paid).
-2. Set `RCS_OUTBOUND_URL` on Worker when approved.
+---
+
+## Paid vendor: RCS channel
+
+Status: adapter scaffold only. Requires a Twilio or MessageBird RCS account.
+
+WhatsApp and web native channels work today. RCS outbound needs vendor credentials.
+
+What to do:
+
+1. Open a Twilio or MessageBird RCS program (paid).
+2. Set `RCS_OUTBOUND_URL` on the Worker when approved.
 3. Use [Channel forms](/docs/features/channel-forms) for structured RCS replies.
 
-Until then: use WhatsApp forms or in-app chat.
+Until then, use WhatsApp forms or in-app chat.
 
 ---
 
-## VPS / GPU — voice clone translation (#27)
+## VPS or GPU: voice clone translation
 
-**Status:** ⬜ Not on Cloudflare Workers.
+Status: not on Cloudflare Workers.
 
-Unified [voice pipeline](/docs/guides/voice-ai-pipeline) runs on Workers AI. **Voice cloning + translation in target language** needs OmniVoice/RVC-style pipeline on a GPU or strong CPU VPS.
+The unified [voice pipeline](/docs/guides/voice-ai-pipeline) runs on Workers AI. Voice cloning plus translation in a target language needs an OmniVoice/RVC-style pipeline on a GPU or strong CPU VPS.
 
-**Action for you:**
+What to do:
 
 1. Use standard voice AI on Workers today.
-2. For clone-quality translation, plan a separate media server (2027 roadmap).
+2. For clone-quality translation, plan a separate media server.
 
 ---
 
-## Partial — omnichannel adapters (Slack, Teams, Discord, …)
+## Partial: omnichannel adapters (Slack, Teams, Discord, …)
 
-**Status:** 🟨 Webhook stubs exist; **production needs per-vendor OAuth + signature verification**.
+Status: webhook stubs exist. Production needs per-vendor OAuth and signature verification.
 
 15 adapters are listed in code (`cross-platform.js`). Each vendor requires:
 
 - Developer app registration
 - OAuth or bot token storage in `channel_configs`
-- Webhook URL + signing secret
+- Webhook URL and signing secret
 
-**Action for you:** Pick one channel → follow vendor docs → configure in console **Bridges**. Do not assume all 15 are turnkey.
+What to do: pick one channel, follow vendor docs, configure it in console **Bridges**. Do not assume all 15 are turnkey.
 
-Native **web** channel is fully supported.
+The native web channel is fully supported.
 
 ---
 
-## Partial — IoT fleet & spatial (#29 adjacent)
+## Partial: IoT fleet and spatial
 
-**Status:** 🟨 Location tracking + FluxyTrack SDK exist; **predictive fleet layer not shipped**.
+Status: location tracking and FluxyTrack SDK exist. Predictive fleet layer is not shipped.
 
-- **Today:** [Platform IoT](/docs/platform/iot), geofencing in SDK, location privacy TTL.
-- **Not yet:** Predictive maintenance, digital twin spatial audio product layer.
+- Today: [Platform IoT](/docs/platform/iot), geofencing in the SDK, location privacy TTL.
+- Not yet: predictive maintenance, digital twin spatial audio product layer.
 
-**Action for you:** Use location SDK for fleet visibility; treat predictive features as roadmap.
+What to do: use the location SDK for fleet visibility. Treat predictive features as roadmap.
 
 ---
 

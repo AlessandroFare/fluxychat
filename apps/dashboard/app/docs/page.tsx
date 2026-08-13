@@ -35,7 +35,7 @@ const GUIDES = [
     icon: KeyRound,
     title: "Auth and JWT",
     summary:
-      "Keep API keys on the server. Mint member JWTs with POST /auth/token — never expose admin tokens in the browser.",
+      "Keep API keys on the server. Mint member JWTs with POST /auth/token. Never expose admin tokens in the browser.",
     href: docsSiteHref("cookbook/auth-jwt"),
     cta: "Auth guide",
     external: true,
@@ -176,7 +176,7 @@ export default function DocsPage() {
             <code className="font-mono text-xs">tid</code> (project id), and <code className="font-mono text-xs">roles</code>.
           </p>
           <p>
-            With Clerk enabled, the dashboard provisions your tenant and mints operator JWTs server-side — you do not
+            With Clerk enabled, the dashboard provisions your tenant and mints operator JWTs server-side. You do not
             paste bootstrap keys in the browser.
           </p>
         </div>
@@ -253,7 +253,7 @@ export default function DocsPage() {
       <section id="web-push" className="mt-12 scroll-mt-24">
         <h2 className="font-heading text-xl font-semibold text-slate-900">Web Push (browser notifications)</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          VAPID + RFC 8188 encrypted browser push, self-hosted — wire-compatible with Pusher Beams. Fetch the project
+          VAPID + RFC 8188 encrypted browser push, self-hosted and wire-compatible with Pusher Beams. Fetch the project
           public key from <code className="font-mono text-xs">GET /push/web/vapid-public-key</code> and register the
           browser's <code className="font-mono text-xs">PushSubscription</code> via{" "}
           <code className="font-mono text-xs">POST /push/web/subscribe</code>. No third-party push service required.

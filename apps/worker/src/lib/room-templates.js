@@ -7,7 +7,10 @@
  *   • Custom template CRUD
  *   • Template install (creates room from template config)
  *   • Usage tracking
+ *   • CP-017: Auto-apply behavior presets on install when roomId is provided
  */
+
+import { resolveTemplatePreset, applyRoomBehaviorPreset } from "./room-template-presets.js";
 
 const SYSTEM_TEMPLATES = [
   {
@@ -217,11 +220,16 @@ export async function deleteTemplate(env, { projectId, id }) {
  * Install a template (creates room from template config).
  * Returns the room config for the caller to create the room.
  */
-export async function installTemplate(env, { projectId, templateId, roomName }) {
+export async function installTemplate(env, { projectId, templateId, roomName, roomId }) {
   const template = await getTemplate(env, { projectId, idOrSlug: templateId });
   if (!template) return { ok: false, error: "template_not_found" };
 
   const config = typeof template.config === "string" ? tryParse(template.config) : template.config;
+  const preset = resolveTemplatePreset({
+    slug: template.slug,
+    category: template.category,
+    config,
+  });
 
   // Increment usage count
   try {
@@ -229,6 +237,17 @@ export async function installTemplate(env, { projectId, templateId, roomName }) 
       `UPDATE room_templates SET usage_count = usage_count + 1 WHERE id = ?`
     ).bind(template.id).run();
   } catch (_) { /* non-critical */ }
+
+  if (roomId) {
+    await applyRoomBehaviorPreset(env, {
+      projectId,
+      roomId,
+      templateSlug: template.slug,
+      preset,
+      welcomeMessage: config?.welcomeMessage,
+      inputPlaceholder: config?.inputPlaceholder,
+    }).catch(() => {});
+  }
 
   return {
     ok: true,
@@ -245,6 +264,7 @@ export async function installTemplate(env, { projectId, templateId, roomName }) 
       features: config.features,
       welcomeMessage: config.welcomeMessage,
     },
+    behaviorPreset: preset,
   };
 }
 

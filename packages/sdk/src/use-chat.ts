@@ -215,6 +215,8 @@ export function useChat({
     subscriptionCount: state.subscriptionCount,
     socketId: state.socketId,
     lastAgentRun: state.lastAgentRun,
+    syncStatus: state.syncStatus,
+    pendingOutboxCount: state.pendingOutboxCount,
     /** Vanilla store for non-React consumers (Vue, Solid, etc.). */
     store,
   };

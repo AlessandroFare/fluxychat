@@ -1,0 +1,58 @@
+---
+title: "SOC 2 readiness checklist"
+description: "Self-assessment checklist mapping SOC 2 Trust Services Criteria to FluxyChat controls, exports, and dashboard surfaces."
+---
+
+Use this checklist before engaging a CPA firm for SOC 2 Type I or II. FluxyChat ships product controls and evidence exports. A signed attestation still requires an external auditor.
+
+## Self-assessment export
+
+Dashboard [SOC 2](/soc2): click Export self-assessment JSON.
+
+Or API:
+
+```bash
+curl "$WORKER_URL/api/soc2/self-assessment" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Returns:
+
+- `summary.readinessScore`: automated signal coverage (not a pass/fail audit)
+- `checklist`: TSC items with FluxyChat module mapping
+- `dashboard`, `controls`, `evidence`, `policies` snapshots
+
+Store exports in `evidence/YYYY-MM-DD/` with your change log.
+
+## Trust Services Criteria coverage
+
+| TSC area | FluxyChat surfaces |
+|----------|-------------------|
+| Security | JWT auth, RBAC, DLP, audit export, incidents, agent tool policy, EU AI Act |
+| Availability | Upptime status page, Cloudflare edge, retention/backup exports |
+| Processing integrity | Message idempotency, delivery ack, audit chain |
+| Confidentiality | E2E/MLS, data residency, CMK options |
+| Privacy | GDPR export/delete, consent/DPA, retention/legal hold |
+
+## Weekly operator cadence
+
+1. Refresh `/soc2` dashboard
+2. Export evidence JSON and audit log
+3. Export self-assessment JSON
+4. Run DLP smoke test
+5. Review open incidents and risks
+
+See [SOC 2 / HIPAA runbook](/docs/guides/enterprise/soc2-hipaa-runbook).
+
+## What auditors still need from you
+
+- Signed policies (HR, access review cadence)
+- Vendor risk assessments (subprocessors list)
+- Penetration test report (annual)
+- Formal SOC 2 Type II report from a licensed CPA ([Type II engagement guide](/docs/guides/enterprise/soc2-type-ii-audit))
+
+## Related
+
+- [DLP and audit export](/docs/guides/enterprise/dlp-audit-export)
+- [ISO 27001 mapping](/docs/guides/enterprise/iso27001-mapping)
+- [EU AI Act](/docs/features/eu-ai-act)

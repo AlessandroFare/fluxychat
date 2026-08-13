@@ -131,3 +131,15 @@ export type {
   FluxyChatAttachment,
   FluxyWebSocketConnectOptions,
 } from './types';
+
+export {
+  createRnOfflineQueue,
+  createAsyncStorageOutboxStore,
+  createMemoryRnOutboxStore,
+  createRnOutboxProcessor,
+  type RnOfflineQueue,
+  type RnOutboxStore,
+  type RnOutboxEntry,
+  type RnSyncStatus,
+  type RnKeyValueStorage,
+} from './offline-queue';

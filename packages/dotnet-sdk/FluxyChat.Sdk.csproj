@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>FluxyChat</RootNamespace>
+    <AssemblyName>FluxyChat.Sdk</AssemblyName>
+    <Version>0.1.0</Version>
+    <Description>FluxyChat .NET SDK skeleton — REST client for rooms, messages, inbox, push.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+</Project>

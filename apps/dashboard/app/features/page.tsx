@@ -38,7 +38,7 @@ const GROUPS: FeatureGroup[] = [
       },
       {
         title: "LLM middleware pipeline",
-        description: "Pluggable hooks: guardrails, caching, RAG injection, PII redaction, logging — wrapGenerate / wrapStream / transformParams.",
+        description: "Pluggable hooks: guardrails, caching, RAG injection, PII redaction, logging via wrapGenerate, wrapStream, and transformParams.",
         href: "/middleware",
         hrefLabel: "Middleware",
       },
@@ -54,7 +54,7 @@ const GROUPS: FeatureGroup[] = [
       },
       {
         title: "Stream resumption",
-        description: "Reconnect to in-progress AI responses after page refresh or network drop — no lost tokens.",
+        description: "Reconnect to in-progress AI responses after page refresh or network drop without losing partial output.",
       },
       {
         title: "Realtime voice",
@@ -88,13 +88,13 @@ const GROUPS: FeatureGroup[] = [
     items: [
       {
         title: "14 platform adapters",
-        description: "Slack, Discord, Telegram, WhatsApp, Teams, Email, SMS, Webhook, Matrix, and 5 more — one unified interface.",
+        description: "Slack, Discord, Telegram, WhatsApp, Teams, Email, SMS, Webhook, Matrix, and 5 more on one unified interface.",
         href: "/integrations",
         hrefLabel: "Integrations",
       },
       {
         title: "Card element builder",
-        description: "Compose rich interactive messages with buttons, tables, and sections — JSX or function API, Slack Block Kit & Teams Adaptive Cards.",
+        description: "Compose rich interactive messages with buttons, tables, and sections. JSX or function API, Slack Block Kit and Teams Adaptive Cards.",
         href: "/playground",
         hrefLabel: "Card builder",
       },
@@ -166,7 +166,7 @@ const GROUPS: FeatureGroup[] = [
     items: [
       {
         title: "Realtime feature showcase",
-        description: "Live demos of in-app chat, high fan-out live streaming, and web push — real SDK calls against the demo room.",
+        description: "Live demos of in-app chat, high fan-out live streaming, and web push with real SDK calls against the demo room.",
         href: "/features/realtime",
         hrefLabel: "Open live demos",
       },

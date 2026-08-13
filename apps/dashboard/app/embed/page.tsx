@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Copy, RefreshCw } from "lucide-react";
-import { FluxyChatClient, type FluxyEmbedConfig } from "@fluxy-chat/sdk";
+import { Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { FluxyChatClient, type FluxyEmbedConfig, type FluxyEmbedProactiveTrigger } from "@fluxy-chat/sdk";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
@@ -28,6 +28,7 @@ export default function EmbedWidgetPage() {
   const [primaryColor, setPrimaryColor] = useState("#2563eb");
   const [position, setPosition] = useState<"bottom-right" | "bottom-left">("bottom-right");
   const [zIndex, setZIndex] = useState("2147483000");
+  const [proactiveTriggers, setProactiveTriggers] = useState<FluxyEmbedProactiveTrigger[]>([]);
   const [hardening, setHardening] = useState<PublicGuestHardeningConfig | null>(null);
 
   const client = useMemo(() => {
@@ -57,6 +58,7 @@ export default function EmbedWidgetPage() {
           cfg.theme?.position === "bottom-left" ? "bottom-left" : "bottom-right",
         );
         setZIndex(String(cfg.zIndex ?? 2147483000));
+        setProactiveTriggers(cfg.proactiveTriggers ?? []);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load embed config");
@@ -103,12 +105,13 @@ export default function EmbedWidgetPage() {
         launcherTitle: launcherTitle.trim() || "Chat",
         zIndex: Number(zIndex) || 2147483000,
         theme: { primaryColor, position },
+        proactiveTriggers,
       });
       setConfig(data?.config ?? null);
       setSnippet(data?.snippet ?? "");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to save";
-      setError(msg.includes("400") ? `${msg} — check the default room exists and origins are valid.` : msg);
+      setError(msg.includes("400") ? `${msg}. Check the default room exists and origins are valid.` : msg);
     }
   }
 
@@ -175,7 +178,7 @@ export default function EmbedWidgetPage() {
               <label className="block text-sm">
                 <span className="mb-1 block text-muted-foreground">
                   Default public room ID
-                  <span className="ml-1 font-normal text-xs">(must exist — see Rooms)</span>
+                  <span className="ml-1 font-normal text-xs">(must exist; see Rooms)</span>
                 </span>
                 <input
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -237,6 +240,120 @@ export default function EmbedWidgetPage() {
                   </select>
                 </label>
               </div>
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Proactive triggers</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setProactiveTriggers((prev) => [
+                        ...prev,
+                        {
+                          id: `rule_${prev.length + 1}`,
+                          urlPattern: "/pricing*",
+                          dwellSeconds: 30,
+                          message: "Questions? Chat with us.",
+                          autoOpen: false,
+                          enabled: true,
+                        },
+                      ])
+                    }
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> Add rule
+                  </Button>
+                </div>
+                {proactiveTriggers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Open the widget after dwell time on matching URLs (e.g. <code>/pricing*</code>).
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {proactiveTriggers.map((rule, index) => (
+                      <li key={rule.id ?? index} className="rounded-md border p-3 space-y-2">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <label className="text-xs">
+                            <span className="mb-1 block text-muted-foreground">URL pattern</span>
+                            <input
+                              className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm font-mono"
+                              value={rule.urlPattern ?? ""}
+                              onChange={(e) =>
+                                setProactiveTriggers((prev) =>
+                                  prev.map((r, i) =>
+                                    i === index ? { ...r, urlPattern: e.target.value } : r,
+                                  ),
+                                )
+                              }
+                              placeholder="/pricing*"
+                            />
+                          </label>
+                          <label className="text-xs">
+                            <span className="mb-1 block text-muted-foreground">Dwell (seconds)</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={600}
+                              className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+                              value={rule.dwellSeconds ?? 0}
+                              onChange={(e) =>
+                                setProactiveTriggers((prev) =>
+                                  prev.map((r, i) =>
+                                    i === index
+                                      ? { ...r, dwellSeconds: Number(e.target.value) || 0 }
+                                      : r,
+                                  ),
+                                )
+                              }
+                            />
+                          </label>
+                        </div>
+                        <label className="block text-xs">
+                          <span className="mb-1 block text-muted-foreground">Tooltip message</span>
+                          <input
+                            className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+                            value={rule.message ?? ""}
+                            onChange={(e) =>
+                              setProactiveTriggers((prev) =>
+                                prev.map((r, i) =>
+                                  i === index ? { ...r, message: e.target.value } : r,
+                                ),
+                              )
+                            }
+                          />
+                        </label>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <label className="flex items-center gap-2 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={rule.autoOpen ?? false}
+                              onChange={(e) =>
+                                setProactiveTriggers((prev) =>
+                                  prev.map((r, i) =>
+                                    i === index ? { ...r, autoOpen: e.target.checked } : r,
+                                  ),
+                                )
+                              }
+                            />
+                            Auto-open widget
+                          </label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="ml-auto text-destructive"
+                            onClick={() =>
+                              setProactiveTriggers((prev) => prev.filter((_, i) => i !== index))
+                            }
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => void handleSave()}>Save & enable</Button>
                 {config?.enabled ? (
@@ -263,7 +380,7 @@ export default function EmbedWidgetPage() {
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   Paste before <code className="text-xs">&lt;/body&gt;</code> on pages listed in the
-                  allowlist. Use your custom domain Worker URL when white-labeling (P12-G).
+                  allowlist. Use your custom domain Worker URL when white-labeling.
                 </p>
               </div>
             ) : (

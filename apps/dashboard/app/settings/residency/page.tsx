@@ -99,7 +99,7 @@ export default function DataResidencySettingsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Data residency"
-        description="Pin tenant data and inference to allowed regions. Writes are blocked when the worker region is outside policy (#14)."
+        description="Pin tenant data and inference to allowed regions. Writes are blocked when the worker region is outside policy."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">

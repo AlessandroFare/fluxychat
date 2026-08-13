@@ -22,14 +22,14 @@ export function LandingPricingSection() {
         <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-white">Pricing</h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
           One plan covers chat, AI agents, webhooks, and platform modules. Undercuts Pusher and Ably on message
-          quotas — Starter at $20/mo vs Pusher Startup at $49/mo for similar traffic.
+          quotas. Starter at $20/mo vs Pusher Startup at $49/mo for similar traffic.
         </p>
         <p className="mx-auto mt-2 max-w-xl text-center text-xs text-slate-400">
           Console routes can require a one-time ack on your dashboard host. Billable usage still needs your Worker
           credentials.
         </p>
         <p className="mx-auto mt-8 max-w-xl text-center text-sm font-medium text-slate-300">
-          Self-serve — checkout today
+          Self-serve checkout today
         </p>
 
         {/* Free vs Pro summary card — qualifies traffic before the detailed grid */}
@@ -53,8 +53,7 @@ export function LandingPricingSection() {
             <span className="text-primary">Pro</span>{" "}
             <span className="text-slate-300">raises each to{" "}
               <span className="font-semibold text-slate-200">10×</span>{" "}for{" "}
-              <span className="text-white">$50/mo</span>{" "}
-              — ideal for production rooms with active agents.</span>
+              <span className="text-white">$50/mo</span>, ideal for production rooms with active agents.</span>
           </p>
         </div>
 
@@ -151,7 +150,7 @@ export function LandingPricingSection() {
         </div>
 
         <p className="mx-auto mt-14 max-w-xl text-center text-sm font-medium text-slate-300">
-          Sales-led — governance and higher limits
+          Sales-led plans for governance and higher limits
         </p>
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           {SALES_PLAN_CATALOG.map((plan) => (

@@ -227,6 +227,20 @@ export async function handleTelcoInboundMessage(env, body) {
       channel: parsed.channel,
     });
 
+    let telephonyHandoff = null;
+    try {
+      const { maybeTelephonyHandoffOnInbound } = await import("./telephony-handoff.js");
+      telephonyHandoff = await maybeTelephonyHandoffOnInbound(env, {
+        projectId,
+        roomId,
+        userId,
+        fromE164: parsed.fromE164,
+        channel: parsed.channel,
+      });
+    } catch {
+      telephonyHandoff = null;
+    }
+
     logInfo("telco.inbound.delivered", {
       projectId,
       roomId,
@@ -236,7 +250,7 @@ export async function handleTelcoInboundMessage(env, body) {
       agentQueue: queue.skipped ? "skipped" : queue.ok ? "enqueued" : queue.error,
     });
 
-    return { ok: true, messageId, roomId, channel: parsed.channel, agentQueue: queue };
+    return { ok: true, messageId, roomId, channel: parsed.channel, agentQueue: queue, telephonyHandoff };
   } catch (err) {
     logError("telco.inbound.failed", err, { projectId, fromE164: parsed.fromE164 });
     return { ok: false, error: "processing_failed" };

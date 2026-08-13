@@ -9,13 +9,15 @@ export interface FluxyMessageTemplate {
   updatedAt: string;
 }
 
+export type FluxyMessageVisibility = "room" | "whisper" | `role:${string}`;
+
 export interface FluxySendMessageOptions {
   templateId?: string;
   templateVars?: Record<string, string | number | boolean | null | undefined>;
   /** Ephemeral message TTL in seconds (server max applies, default cap 7 days). */
   expiresInSeconds?: number;
   expiresAt?: string;
-  visibility?: "room" | "whisper";
+  visibility?: FluxyMessageVisibility;
   visibleTo?: string[];
 }
 

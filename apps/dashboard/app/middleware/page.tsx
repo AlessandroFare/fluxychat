@@ -282,7 +282,7 @@ export default function MiddlewarePage() {
       results.push({
         stage: "cache-layer",
         status: "pass",
-        message: `Cache check complete (TTL: ${state.cacheTtl}s). Cache miss — forwarding to LLM.`,
+        message: `Cache check complete (TTL: ${state.cacheTtl}s). Cache miss. Forwarding to LLM.`,
       });
     }
 
@@ -614,7 +614,7 @@ export default function MiddlewarePage() {
           <div>
             <h3 className="text-sm font-semibold">Call Options Schema (callOptionsSchema)</h3>
             <p className="text-xs text-muted-foreground">
-              Type-safe runtime config for AI calls: models, instructions, tools, temperature, maxTokens — all dynamic via prepareCall().
+              Type-safe runtime config for AI calls: models, instructions, tools, temperature, maxTokens, all dynamic via prepareCall().
               Supports InferCallOptions for full type inference at the call site.
             </p>
             <div className="mt-2 flex flex-wrap gap-4 text-[10px] text-muted-foreground">

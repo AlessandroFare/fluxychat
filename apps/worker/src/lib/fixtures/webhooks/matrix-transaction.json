@@ -1,0 +1,27 @@
+{
+  "name": "matrix-transaction",
+  "platform": "matrix",
+  "bridgeId": "mb_fixture",
+  "headers": {
+    "Authorization": "Bearer as_fixture_token"
+  },
+  "payload": {
+    "transactionId": "txn_fixture_001",
+    "events": [
+      {
+        "type": "m.room.message",
+        "event_id": "$fixture_event_1",
+        "room_id": "!fixture:matrix.example.com",
+        "sender": "@user:matrix.example.com",
+        "origin_server_ts": 1710000000000,
+        "content": {
+          "msgtype": "m.text",
+          "body": "Hello from Matrix replay fixture"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": 200
+  }
+}

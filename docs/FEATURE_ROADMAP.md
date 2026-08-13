@@ -1,7 +1,7 @@
 # FluxyChat — Feature Roadmap & Implementation Guide
 
 > Consolidated technical roadmap (Aug 2026). Merges product research, zero-budget constraints, and **verified code inventory**.
-> Companion docs: [ROADMAP.md](../ROADMAP.md) (business/phases), [ROADMAP_REALTIME_FEATURES.md](../ROADMAP_REALTIME_FEATURES.md) (AI SDK parity matrix).
+> Companion docs: [ROADMAP.md](../ROADMAP.md) (business/phases), [ROADMAP_REALTIME_FEATURES.md](../ROADMAP_REALTIME_FEATURES.md) (AI SDK parity matrix), [COMPETITOR-PARITY-ROADMAP-2026.md](./COMPETITOR-PARITY-ROADMAP-2026.md) (Sendbird/Stream/PubNub/Vercel gaps CP-001–CP-083), [NEXT-WAVE-ROADMAP-2026.md](./NEXT-WAVE-ROADMAP-2026.md) (post-parity NW-100–NW-206).
 
 ## How to use this document
 
@@ -119,6 +119,26 @@ The gap is not feature count but **productization**: wire partial modules into o
 | 36 | Passkeys / WebAuthn | ✅ Production | D1 `0182`, `webauthn-passkeys.js`, `/webauthn/*`, `/settings/identity` register UI |
 | 44 | Counterfactual Replay | ✅ Production (MVP) | D1 `0183`, `counterfactual-replay.js`, `/rooms/:id/counterfactual`, compare UI in chat |
 | 62 | Public status page | ✅ Production | `.upptime/config.json`, `check:upptime` CI, `/settings/status` |
+
+**Research Round 4 — Next Wave (NW-100–NW-206, Aug 2026 online research):**
+
+| ID | Item | Ship status | Production gate |
+|----|------|-------------|-----------------|
+| NW-100 | Offline-first SDK | ⬜ | IndexedDB event log + pending queue + reconnect sync in `packages/sdk` |
+| NW-101 | Live translation toggle | ⬜ | `translatedText` on messages + UI pill in `fluxychat.tsx` |
+| NW-102 | Cross-device drafts | ⬜ | D1 `message_drafts` + REST + composer restore |
+| NW-103 | Enhanced mentions | ⬜ | `@here` / `@channel` / role + push prefs |
+| NW-104 | Polls UI | ⬜ | Composer + results using existing poll API |
+| NW-105 | Room info panel | ⬜ | Member/actions slide-over in chat |
+| NW-106 | Threads view | ⬜ | `/threads` or sidebar with unread |
+| NW-110–114 | DX (CLI, Vue/Svelte, adapters, conformance, RN offline) | ⬜ | See [NEXT-WAVE-ROADMAP-2026.md](./NEXT-WAVE-ROADMAP-2026.md) |
+| NW-120–121 | DO agent streaming + edge docs | ⬜ / 📋 | Outbound keep-alive verify + Fumadocs |
+| NW-130–132 | Telephony, broadcast, social graph | ⬜ | Enterprise comms extensions |
+| NW-200 | Duplex voice agent + on-hold | ⬜ | Tool policy `onHoldPhrase` + voice pipeline |
+| NW-201 | Decision Rooms GTM | 📋 | Template + landing — bundles quorum/debate/counterfactual |
+| NW-202–206 | Enterprise agent room, empathy, cartography routing, IoT bus | ⬜ / 🟨 | Productize Round 3 moonshots |
+
+Full sprint order: [NEXT-WAVE-ROADMAP-2026.md](./NEXT-WAVE-ROADMAP-2026.md).
 
 ---
 

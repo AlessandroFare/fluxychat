@@ -43,7 +43,7 @@ export default function IntegrationsSettingsPage() {
           </div>
           <p className="text-sm text-muted-foreground">
             Self-host Activepieces (free MIT) and open the automation studio in a new tab. Iframe
-            embed inside FluxyChat requires an Activepieces enterprise license — we link out instead.
+            embed inside FluxyChat requires an Activepieces enterprise license. We link out instead.
           </p>
           <p className="text-sm text-muted-foreground">
             Set{" "}
@@ -65,6 +65,9 @@ export default function IntegrationsSettingsPage() {
             )}
             <Button type="button" size="sm" variant="secondary" asChild>
               <Link href="/settings/crm">CRM adapters</Link>
+            </Button>
+            <Button type="button" size="sm" variant="secondary" asChild>
+              <Link href="/settings/telephony">Telephony handoff</Link>
             </Button>
           </div>
         </Panel>

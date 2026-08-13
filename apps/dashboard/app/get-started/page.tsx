@@ -16,7 +16,7 @@ const HOSTED_STEPS = [
   {
     icon: Cloud,
     title: "Create your account",
-    body: "Sign up on Fluxychat Cloud. We provision a project and API credentials — no Worker deploy on day one.",
+    body: "Sign up on Fluxychat Cloud. We provision a project and API credentials. No Worker deploy on day one.",
   },
   {
     icon: Package,
@@ -50,7 +50,7 @@ export default function GetStartedPage() {
         Get your first message live
       </h1>
       <p className="mt-3 text-slate-600">
-        Account, SDK, first room on hosted cloud. Self-hosting is optional — see{" "}
+        Account, SDK, first room on hosted cloud. Self-hosting is optional; see{" "}
         <a href="#self-host" className="font-medium text-primary underline-offset-2 hover:underline">
           advanced
         </a>

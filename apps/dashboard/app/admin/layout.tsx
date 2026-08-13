@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Moderation — FluxyChat",
+  title: "Moderation: FluxyChat",
   description:
     "Mute, ban, announcements, reports queue, audit events, and webhook management for project admins.",
   path: "/admin",

@@ -86,9 +86,9 @@ Export **private** key (for CI — store only in GitHub Secrets):
 gpg --armor --export-secret-keys YOUR_KEY_ID > gpg-private.asc
 ```
 
-Copy the entire file contents (including `-----BEGIN PGP PRIVATE KEY BLOCK-----`) into GitHub secret **`GPG_KEY`**.
+Copy the entire file contents (including `-----BEGIN PGP PRIVATE KEY BLOCK-----`) into GitHub secret `GPG_KEY`.
 
-Set **`GPG_PASS`** to the passphrase you chose when creating the key.
+Set `GPG_PASS` to the passphrase you chose when creating the key.
 
 ### Upload public key to keyserver (required once)
 

@@ -8,6 +8,8 @@ import { logInfo, logError } from "../lib/worker-log.js";
 import { isRoomMember, canAccessRoom } from "../lib/room-access.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
 import { attachAttachmentsToMessages } from "../lib/messages-attachments.js";
+import { attachPollsToMessages } from "../lib/message-polls.js";
+import { expandMentions } from "../lib/message-mentions.js";
 import { checkAndConsumeProjectQuota } from "../lib/project-plan-quota.js";
 import { validateMessageContent, validateStreamStartContent } from "../lib/message-validation.js";
 import { runInboundMessageMiddleware } from "../lib/message-middleware.js";
@@ -678,15 +680,16 @@ export class RoomDurableObject {
    * @param {{ projectId: string, roomId: string, limit: number, envelopeType: "history" | "replay" }} opts
    */
   async loadConnectSnapshotRows(projectId, roomId, limit, viewerUserId, extendedSchema) {
-    const { messageVisibilitySql } = await import("../lib/message-visibility.js");
-    const vis = messageVisibilitySql(viewerUserId || "");
+    const { getMessageVisibilityFilter } = await import("../lib/message-visibility.js");
+    const vis = await getMessageVisibilityFilter(this.env, roomId, viewerUserId || "");
     const voiceCols = extendedSchema
       ? ", kind, audio_url, duration_ms, transcription, transcription_status"
       : "";
     const visibilityCols = extendedSchema ? ", visibility, visible_to_json" : "";
     const result = await this.env.DB.prepare(
       `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
-              mentions, og_title, og_description, og_image, og_url, client_message_id
+              mentions, og_title, og_description, og_image, og_url, client_message_id,
+              seq, version
               ${visibilityCols}${voiceCols}
        FROM messages
        WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL${extendedSchema ? vis.sql : ""}
@@ -737,6 +740,7 @@ export class RoomDurableObject {
     let mapped = [];
     try {
       mapped = await attachAttachmentsToMessages(this.env, projectId, roomId, rows);
+      mapped = await attachPollsToMessages(this.env, projectId, mapped, viewerUserId);
     } catch (err) {
       logError("do.connect_snapshot_attach_failed", err, { roomId, projectId });
       mapped = [];
@@ -1001,6 +1005,35 @@ export class RoomDurableObject {
         return;
       }
 
+      if (msg.type === "resume") {
+        const roomId = this.roomId || this.state.id.toString();
+        const projectId = this.projectId;
+        const lastSeq = Math.max(0, Number(msg.lastSeq) || 0);
+        try {
+          const { getRoomMessageEventsSince, getRoomCurrentSeq } = await import(
+            "../lib/room-message-seq.js"
+          );
+          const replay = await getRoomMessageEventsSince(this.env, {
+            projectId,
+            roomId,
+            afterSeq: lastSeq,
+          });
+          const currentSeq = await getRoomCurrentSeq(this.env, projectId, roomId);
+          webSocket.send(
+            JSON.stringify({
+              type: "replay",
+              events: replay.events,
+              lastSeq: replay.lastSeq,
+              currentSeq,
+            }),
+          );
+        } catch (err) {
+          logError("do.resume_replay_failed", err, { roomId, projectId });
+          webSocket.send(JSON.stringify({ type: "error", message: "resume_failed" }));
+        }
+        return;
+      }
+
       if (msg.type === "message") {
         const roomId = this.roomId || this.state.id.toString();
         const { id, userId, content, parentId, attachments } = msg;
@@ -1021,9 +1054,8 @@ export class RoomDurableObject {
           return;
         }
         const messageExpiresAt = expiryResult.expiresAt;
-        const { resolveMessageVisibility, whisperRecipientSet } = await import(
-          "../lib/message-visibility.js"
-        );
+        const { resolveMessageVisibility, resolveVisibilityRecipientUserIds } =
+          await import("../lib/message-visibility.js");
         const visibilityResult = resolveMessageVisibility(msg);
         if (!visibilityResult.ok) {
           webSocket.send(
@@ -1206,7 +1238,15 @@ export class RoomDurableObject {
 
         const createdAt = new Date().toISOString();
         const projectId = this.projectId;
-        const mentions = extractMentions(validatedContent);
+        const mentionsRaw = extractMentions(validatedContent);
+        const presenceForMentions = this.getPresenceSnapshot();
+        const mentions = await expandMentions(this.env, {
+          projectId,
+          roomId,
+          authorUserId: userId,
+          tokens: mentionsRaw,
+          onlineUserIds: presenceForMentions.users,
+        });
         const firstUrl = extractFirstUrl(validatedContent);
         let preview = null;
         if (firstUrl && this.env.OG_PREVIEW_ENABLED !== "false") {
@@ -1385,6 +1425,39 @@ export class RoomDurableObject {
           });
         }
 
+        let messageSeq = null;
+        let messageVersion = 1;
+        if (!isDuplicateResend) {
+          try {
+            const { recordRoomMessageEvent } = await import("../lib/room-message-seq.js");
+            const recorded = await recordRoomMessageEvent(this.env, {
+              projectId,
+              roomId,
+              messageId,
+              eventType: "create",
+              version: 1,
+              payload: {
+                id: messageId,
+                content: validatedContent,
+                userId,
+                createdAt,
+                clientMessageId: clientMessageId ?? null,
+              },
+            });
+            messageSeq = recorded?.seq ?? null;
+          } catch (err) {
+            logError("do.message_seq_create_failed", err, { roomId, messageId });
+          }
+        } else {
+          const existingSeq = await this.env.DB.prepare(
+            "SELECT seq, version FROM messages WHERE id = ? AND project_id = ? AND room_id = ?",
+          )
+            .bind(messageId, projectId, roomId)
+            .first();
+          messageSeq = existingSeq?.seq ?? null;
+          messageVersion = existingSeq?.version ?? 1;
+        }
+
         const payload = {
           type: "message",
           id: messageId,
@@ -1399,16 +1472,23 @@ export class RoomDurableObject {
           attachments: Array.isArray(attachments) ? attachments : [],
           ...(clientMessageId ? { clientMessageId } : {}),
           ...(messageExpiresAt ? { expiresAt: messageExpiresAt } : {}),
-          ...(visibility === "whisper"
-            ? { visibility, visibleTo }
+          ...(messageSeq != null ? { seq: messageSeq, version: messageVersion } : {}),
+          ...(visibility !== "room"
+            ? { visibility, ...(visibleTo.length ? { visibleTo } : {}) }
             : {}),
           ...(middlewareResult.meta ? { middleware: middlewareResult.meta } : {}),
         };
 
-        const whisperRecipients = whisperRecipientSet(visibility, visibleTo, userId);
+        const scopedRecipients = await resolveVisibilityRecipientUserIds(
+          this.env,
+          roomId,
+          visibility,
+          visibleTo,
+          userId,
+        );
         this.broadcast(
           payload,
-          whisperRecipients ? { recipientUserIds: whisperRecipients } : {},
+          scopedRecipients ? { recipientUserIds: scopedRecipients } : {},
         );
 
         if (!isDuplicateResend) {
@@ -1483,14 +1563,44 @@ export class RoomDurableObject {
 
       if (msg.type === "edit") {
         const roomId = this.roomId || this.state.id.toString();
+        const projectId = this.projectId;
         const { userId, messageId, content } = msg;
         const now = new Date().toISOString();
 
-        await this.env.DB.prepare(
-          "UPDATE messages SET content = ?, edited_at = ? WHERE id = ? AND room_id = ? AND user_id = ?"
+        const existing = await this.env.DB.prepare(
+          "SELECT version, seq FROM messages WHERE id = ? AND project_id = ? AND room_id = ? AND deleted_at IS NULL",
         )
-          .bind(content, now, messageId, roomId, userId)
+          .bind(messageId, projectId, roomId)
+          .first();
+        const nextVersion = (existing?.version ?? 1) + 1;
+
+        await this.env.DB.prepare(
+          "UPDATE messages SET content = ?, edited_at = ?, version = ? WHERE id = ? AND room_id = ? AND user_id = ?",
+        )
+          .bind(content, now, nextVersion, messageId, roomId, userId)
           .run();
+
+        let eventSeq = existing?.seq ?? null;
+        try {
+          const { recordRoomMessageEvent } = await import("../lib/room-message-seq.js");
+          const recorded = await recordRoomMessageEvent(this.env, {
+            projectId,
+            roomId,
+            messageId,
+            eventType: "update",
+            version: nextVersion,
+            payload: {
+              id: messageId,
+              content,
+              userId,
+              editedAt: now,
+              version: nextVersion,
+            },
+          });
+          eventSeq = recorded?.seq ?? eventSeq;
+        } catch (err) {
+          logError("do.message_seq_update_failed", err, { roomId, messageId });
+        }
 
         const payload = {
           type: "edit",
@@ -1500,8 +1610,20 @@ export class RoomDurableObject {
           content,
           editedAt: now,
           streaming: false,
+          version: nextVersion,
+          ...(eventSeq != null ? { seq: eventSeq } : {}),
         };
         this.broadcast(payload);
+        this.broadcast({
+          type: "message_updated",
+          id: messageId,
+          roomId,
+          userId,
+          content,
+          editedAt: now,
+          version: nextVersion,
+          ...(eventSeq != null ? { seq: eventSeq } : {}),
+        });
         this.syncYjsMessage(
           {
             id: messageId,
@@ -1584,7 +1706,7 @@ export class RoomDurableObject {
         }
         const projectId = this.projectId;
         const existing = await this.env.DB.prepare(
-          "SELECT id, user_id, created_at, client_message_id FROM messages WHERE id = ? AND project_id = ? AND room_id = ? AND deleted_at IS NULL"
+          "SELECT id, user_id, created_at, client_message_id, seq, version FROM messages WHERE id = ? AND project_id = ? AND room_id = ? AND deleted_at IS NULL",
         )
           .bind(messageId, projectId, roomId)
           .first();
@@ -1602,16 +1724,50 @@ export class RoomDurableObject {
         }
         const now = new Date().toISOString();
         await this.env.DB.prepare(
-          "UPDATE messages SET deleted_at = ?, content = ? WHERE id = ? AND project_id = ? AND user_id = ?"
+          "UPDATE messages SET deleted_at = ?, content = ?, version = COALESCE(version, 1) + 1 WHERE id = ? AND project_id = ? AND user_id = ?",
         )
           .bind(now, "[deleted]", messageId, projectId, userId)
           .run();
+
+        const deletedVersion = (existing.version ?? 1) + 1;
+        let deleteSeq = existing.seq ?? null;
+        try {
+          const { recordRoomMessageEvent } = await import("../lib/room-message-seq.js");
+          const recorded = await recordRoomMessageEvent(this.env, {
+            projectId,
+            roomId,
+            messageId,
+            eventType: "delete",
+            version: deletedVersion,
+            payload: {
+              id: messageId,
+              userId,
+              deletedAt: now,
+              version: deletedVersion,
+            },
+          });
+          deleteSeq = recorded?.seq ?? deleteSeq;
+        } catch (err) {
+          logError("do.message_seq_delete_failed", err, { roomId, messageId });
+        }
+
         this.broadcast({
           type: "delete",
           id: messageId,
           roomId,
           userId,
           deletedAt: now,
+          version: deletedVersion,
+          ...(deleteSeq != null ? { seq: deleteSeq } : {}),
+        });
+        this.broadcast({
+          type: "message_deleted",
+          id: messageId,
+          roomId,
+          userId,
+          deletedAt: now,
+          version: deletedVersion,
+          ...(deleteSeq != null ? { seq: deleteSeq } : {}),
         });
         this.syncYjsMessage(
           {
@@ -2350,7 +2506,8 @@ export class RoomDurableObject {
         "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50"
       ).bind(projectId, roomId).all().then(async (result) => {
         const rows = result.results || [];
-        const mapped = await attachAttachmentsToMessages(this.env, projectId, roomId, rows);
+        const mappedRaw = await attachAttachmentsToMessages(this.env, projectId, roomId, rows);
+        const mapped = await attachPollsToMessages(this.env, projectId, mappedRaw, auth.userId);
         const historyPayload = JSON.stringify({ type: "history", messages: mapped.reverse() });
         await writer.write(encoder.encode(`data: ${historyPayload}\n\n`));
       }).catch(() => {});

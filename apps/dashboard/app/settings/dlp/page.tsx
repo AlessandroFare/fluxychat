@@ -119,7 +119,7 @@ export default function DlpSettingsPage() {
     try {
       const result = await scanDlpContent(token, { text: scanText, contentKind });
       setScanResult(result);
-      setNotice(`Scan complete — ${result.matchCount} match(es), action: ${result.action}`);
+      setNotice(`Scan complete: ${result.matchCount} match(es), action: ${result.action}`);
     } catch (err) {
       setError(messageFromUnknown(err, "DLP scan failed"));
     } finally {
@@ -179,7 +179,7 @@ export default function DlpSettingsPage() {
 
       {!token && (
         <Panel className="p-4 text-sm text-muted-foreground">
-          Admin JWT required — copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
+          Admin JWT required. Copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
         </Panel>
       )}
 

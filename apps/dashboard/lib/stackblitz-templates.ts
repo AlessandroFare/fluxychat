@@ -45,7 +45,7 @@ export const STACKBLITZ_TEMPLATES: FluxyTemplate[] = [
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FluxyChat — Basic Connection</title>
+  <title>FluxyChat: Basic Connection</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -338,7 +338,7 @@ messageInput.addEventListener("keydown", (e) => {
 });
 
 console.log("FluxyChat demo ready. Click Connect to start.");
-console.log("FluxyChat StackBlitz — uses GET /demo/session guest JWT");`,
+console.log("FluxyChat StackBlitz: uses GET /demo/session guest JWT");`,
         "package.json": JSON.stringify(
           {
             name: "fluxychat-basic-connection",

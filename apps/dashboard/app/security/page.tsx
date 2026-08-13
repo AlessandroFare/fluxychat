@@ -107,7 +107,7 @@ const SECURITY_GUIDES = [
   { href: "/guides/session-security", label: "Session Security", description: "Best practices for session storage and token refresh." },
   { href: "/guides/oauth-encryption", label: "OAuth Token Encryption", description: "Encrypt stored OAuth tokens at rest." },
   { href: "/guides/gdpr-compliance", label: "GDPR & Data Retention", description: "Export, anonymize, and delete user data." },
-  { href: "https://developers.cloudflare.com/ssl/post-quantum-cryptography/", label: "Post-quantum TLS (Cloudflare)", description: "Edge ML-KEM hybrid key exchange — no Worker code changes." },
+  { href: "https://developers.cloudflare.com/ssl/post-quantum-cryptography/", label: "Post-quantum TLS (Cloudflare)", description: "Edge ML-KEM hybrid key exchange. No Worker code changes." },
 ] as const;
 
 /* -------------------------------------------------------------------------- */
@@ -186,7 +186,7 @@ export default function SecurityPage() {
         label: "Session Storage",
         description: "JWT tokens stored in sessionStorage (cleared on tab close).",
         status: "pass",
-        detail: "Tokens use sessionStorage, not localStorage — cleared when the browser tab closes.",
+        detail: "Tokens use sessionStorage, not localStorage. Cleared when the browser tab closes.",
       },
       {
         id: "oauth",
@@ -233,7 +233,7 @@ export default function SecurityPage() {
         description: "Cloudflare terminates TLS with hybrid ML-KEM (Kyber) key exchange.",
         status: "pass",
         detail:
-          "No app code required — all *.workers.dev and custom zones on Cloudflare get PQC-capable handshakes automatically. Document for compliance questionnaires.",
+          "No app code required. All *.workers.dev and custom zones on Cloudflare get PQC-capable handshakes automatically. Document for compliance questionnaires.",
       },
     ];
     return items;
@@ -386,7 +386,7 @@ export default function SecurityPage() {
               <p>
                 FluxyChat runs on Cloudflare Workers. TLS is terminated at the Cloudflare edge with{" "}
                 <strong className="text-foreground">hybrid post-quantum key exchange (ML-KEM / Kyber)</strong>{" "}
-                alongside classical ECDHE — no application changes or extra cost.
+                alongside classical ECDHE. No application changes or extra cost.
               </p>
               <ul className="list-disc space-y-1 pl-5 text-xs">
                 <li>Applies to Worker HTTP, WebSocket upgrades, and dashboard traffic proxied through Cloudflare.</li>

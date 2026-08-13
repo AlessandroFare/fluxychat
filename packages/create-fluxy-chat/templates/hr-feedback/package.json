@@ -1,0 +1,19 @@
+{
+  "name": "hr-feedback-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fluxy-chat/sdk": "latest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^3.0.0"
+  }
+}

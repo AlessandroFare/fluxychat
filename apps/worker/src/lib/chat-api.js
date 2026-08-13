@@ -71,12 +71,14 @@ export class ThreadRef {
    * @param {Object} [opts.adapterInfo] - Adapter catalog info
    * @param {Object} [opts.context] - Worker context for posting (env, D1, etc.)
    */
-  constructor({ id, adapterSlug, channelId, adapterInfo, context }) {
+  constructor({ id, adapterSlug, channelId, adapterInfo, context, roomId, created }) {
     this.id = id;
     this.adapterSlug = adapterSlug;
     this.channelId = channelId || id.split(":")[1] || null;
+    this.roomId = roomId || (adapterSlug === "web" ? this.channelId : null);
     this.adapterInfo = adapterInfo;
     this._context = context;
+    this.created = created;
   }
 
   /** Serialize to JSON */
@@ -152,11 +154,11 @@ export function createChatApi(context = {}) {
    * @param {string} userId - Platform-specific user ID
    * @returns {Promise<ThreadRef|null>} Thread reference or null
    */
-  async function openDM(userId) {
-    const slug = inferAdapterFromUserId(userId);
+  async function openDM(targetUserId, options = {}) {
+    const slug = inferAdapterFromUserId(targetUserId);
     if (!slug) {
       throw new ChatApiError(
-        `Cannot infer adapter from userId "${userId}"`,
+        `Cannot infer adapter from userId "${targetUserId}"`,
         "UNKNOWN_USER_ID_FORMAT"
       );
     }
@@ -169,15 +171,41 @@ export function createChatApi(context = {}) {
       );
     }
 
-    // For web adapter, DMs are just rooms with 2 members
-    // For external adapters, this would call the platform's openDM API
-    // Currently FluxyChat doesn't have platform-specific DM opening,
-    // so we return a ThreadRef with a synthesized ID
-    const threadId = `${slug}:dm:${userId}`;
+    const callerUserId = options.userId || context.userId;
+
+    if (slug === "web" && context.env && context.projectId && callerUserId) {
+      const { findOrCreateDmRoom } = await import("./dm-rooms.js");
+      const result = await findOrCreateDmRoom(context.env, {
+        projectId: context.projectId,
+        userA: callerUserId,
+        userB: targetUserId,
+      });
+      if (!result.ok) {
+        throw new ChatApiError(result.error || "dm_failed", "DM_CREATE_FAILED");
+      }
+      const roomId = result.room.id;
+      return new ThreadRef({
+        id: `web:${roomId}:`,
+        adapterSlug: slug,
+        channelId: roomId,
+        roomId,
+        adapterInfo: info,
+        context,
+        created: result.created,
+      });
+    }
+
+    const adapterInstance = context.adapterRegistry?.[slug];
+    if (adapterInstance && typeof adapterInstance.openDM === "function") {
+      const threadId = await adapterInstance.openDM(targetUserId);
+      return thread(threadId);
+    }
+
+    const threadId = `${slug}:dm:${targetUserId}`;
     return new ThreadRef({
       id: threadId,
       adapterSlug: slug,
-      channelId: `dm:${userId}`,
+      channelId: `dm:${targetUserId}`,
       adapterInfo: info,
       context,
     });

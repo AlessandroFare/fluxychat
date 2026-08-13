@@ -4,7 +4,7 @@ import { CF_REALTIME_CHAT_TUTORIAL, CF_WORKERS_CHAT_DEMO } from "@/lib/marketing
 export const AFTER_CF_CHAT_TUTORIAL_GUIDE: GuideContent = {
   title: "After Cloudflare’s real-time chat tutorial",
   subtitle:
-    "You finished the official Workers + Durable Objects walkthrough — here is what production SaaS chat still needs, and how FluxyChat packages it.",
+    "You finished the official Workers + Durable Objects walkthrough. Here is what production SaaS chat still needs, and how FluxyChat packages it.",
   sections: [
     {
       title: "What the tutorial proves",
@@ -17,8 +17,8 @@ export const AFTER_CF_CHAT_TUTORIAL_GUIDE: GuideContent = {
     {
       title: "What teams add next (the long tail)",
       bullets: [
-        "Project-scoped JWT and room membership — not open rooms.",
-        "D1 (or equivalent) for history, search, and export — not memory-only fan-out.",
+        "Project-scoped JWT and room membership, not open rooms.",
+        "D1 (or equivalent) for history, search, and export, not memory-only fan-out.",
         "Reconnect, loadMore, and delivery status on the client.",
         "Quotas, webhooks, GDPR flows, and an operator console.",
         "Agent tool_call / tool_result on the same timeline as user messages.",
@@ -28,8 +28,8 @@ export const AFTER_CF_CHAT_TUTORIAL_GUIDE: GuideContent = {
     {
       title: "FluxyChat as the production layer",
       bullets: [
-        "One RoomDurableObject per room — same architecture as the tutorial, maintained in MIT source.",
-        "Self-host on your Cloudflare account or try hosted beta — no second socket vendor.",
+        "One RoomDurableObject per room: same architecture as the tutorial, maintained in MIT source.",
+        "Self-host on your Cloudflare account or try hosted beta. No second socket vendor.",
         "@fluxy-chat/sdk for React/Next.js; vanilla store for other stacks.",
         "Dashboard for projects, rooms, agents, and billing hooks.",
       ],

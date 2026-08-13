@@ -104,12 +104,12 @@ export function CreateProjectStep({ wizard: w }: CreateProjectStepProps) {
                 {isClerkClientConfigured() && w.clerkSignedIn ? (
                   <>
                     <Cloud className="h-3 w-3" aria-hidden />
-                    Hosted cloud — provisions via Clerk
+                    Hosted cloud: provisions via Clerk
                   </>
                 ) : (
                   <>
                     <Server className="h-3 w-3" aria-hidden />
-                    Self-host — creates via Worker admin API
+                    Self-host: creates via Worker admin API
                   </>
                 )}
               </div>

@@ -1,0 +1,71 @@
+---
+title: "Live knowledge graph"
+description: "Extract entities and relations from room conversations with reagraph visualization (PH-130)."
+---
+
+# Live knowledge graph
+
+While a discussion runs, FluxyChat can extract ideas, tasks, decisions, and contradictions into a queryable graph. The graph is a **semantic index**, not source of truth: every node links to the message that introduced it.
+
+## Enable
+
+On the Worker:
+
+```bash
+KNOWLEDGE_GRAPH_ENABLED=true
+```
+
+Configure an LLM provider (same as other AI features). Tenants can opt out via hosted LLM policy.
+
+## Extract
+
+```http
+POST /rooms/:roomId/kg/extract
+Authorization: Bearer <member-jwt>
+Content-Type: application/json
+
+{}
+```
+
+Optional body: `{ "since": "2026-08-13T10:00:00.000Z" }` to limit the transcript window.
+
+Response:
+
+```json
+{
+  "nodesExtracted": 4,
+  "edgesExtracted": 3,
+  "nodesInserted": 2,
+  "edgesInserted": 1
+}
+```
+
+Extraction is **idempotent**: duplicate nodes/edges are skipped; high-confidence updates supersede older nodes with provenance preserved.
+
+## Query
+
+```http
+GET /rooms/:roomId/kg?limit=80
+Authorization: Bearer <member-jwt>
+```
+
+Returns `nodes`, `edges`, and `stats` (counts by type).
+
+## Dashboard (reagraph)
+
+Open **Rooms → Live knowledge graph**. The console uses [reagraph](https://reagraph.dev) (WebGL) for force-directed layout:
+
+- Color by node type (task, decision, concept, user, …)
+- Click a node to see confidence, source message id, and properties
+- Drag nodes; curved directed edges with labels
+
+## Node and edge types
+
+| Nodes | Edges |
+|-------|-------|
+| user, task, decision, concept, external_entity, file | decided_by, assigned_to, references, depends_on, affects, linked_to |
+
+## Related
+
+- [Room memory](/docs/guides/room-memory) (PH-132)
+- [Community decision simulation](/docs/guides/community-decision-simulation) (PH-131)

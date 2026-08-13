@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Analytics & costs — FluxyChat",
+  title: "Analytics & costs: FluxyChat",
   description:
     "Room stats, cost estimates, SLO indicators, launch KPIs, and performance benchmarks.",
   path: "/analytics",

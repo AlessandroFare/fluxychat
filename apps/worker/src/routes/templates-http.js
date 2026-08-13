@@ -49,7 +49,12 @@ export async function dispatchTemplatesRoutes(request, url, h) {
     if (!a) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const id = decodeURIComponent(installMatch[1]);
     const body = await request.json().catch(() => ({}));
-    const result = await installTemplate(env, { projectId: a.projectId, templateId: id, roomName: body.roomName });
+    const result = await installTemplate(env, {
+      projectId: a.projectId,
+      templateId: id,
+      roomName: body.roomName,
+      roomId: body.roomId,
+    });
     return json(result, { status: result.ok ? 200 : 404 });
   }
 

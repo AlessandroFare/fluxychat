@@ -10,6 +10,7 @@ import { dispatchActivitiesRoutes } from "./activities-http.js";
 import { dispatchVoiceMessagesRoutes } from "./voice-messages-http.js";
 import { dispatchSuggestRepliesRoutes } from "./suggest-replies-http.js";
 import { dispatchThreadSummaryRoutes } from "./thread-summary-http.js";
+import { dispatchMessageThreadsRoutes } from "./message-threads-http.js";
 import { dispatchUsersRoutes } from "./users-http.js";
 
 /**
@@ -33,6 +34,8 @@ export async function dispatchMessagesAgentsRoutes(request, url, h) {
   if (resSuggest) return resSuggest;
   const resThreadSummary = await dispatchThreadSummaryRoutes(request, url, h);
   if (resThreadSummary) return resThreadSummary;
+  const resMessageThreads = await dispatchMessageThreadsRoutes(request, url, h);
+  if (resMessageThreads) return resMessageThreads;
   const resUsers = await dispatchUsersRoutes(request, url, h);
   if (resUsers) return resUsers;
   const resVoice = await dispatchVoiceMessagesRoutes(request, url, h);

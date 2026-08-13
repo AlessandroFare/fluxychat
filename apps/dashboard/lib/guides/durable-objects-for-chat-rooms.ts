@@ -8,7 +8,7 @@ import type { GuideContent } from "@/lib/guides/types";
 export const DURABLE_OBJECTS_CHAT_ROOMS_GUIDE: GuideContent = {
   title: "Durable Objects for chat rooms",
   subtitle:
-    "Shared state coordination, transactional consistency, and WebSocket hibernation — the Cloudflare primitives behind edge-native chat without a socket fleet.",
+    "Shared state coordination, transactional consistency, and WebSocket hibernation: the Cloudflare primitives behind edge-native chat without a socket fleet.",
   sections: [
     {
       id: "why-do",
@@ -23,11 +23,11 @@ export const DURABLE_OBJECTS_CHAT_ROOMS_GUIDE: GuideContent = {
       id: "vocabulary",
       title: "Vocabulary buyers search for",
       bullets: [
-        "Shared state coordination — one Room DO holds live connections and ephemeral signals (typing, presence).",
-        "Transactional consistency — membership and message writes go through D1 with clear project scoping.",
-        "WebSocket hibernation — the DO can sleep while clients reconnect; your app still needs client-side replay semantics.",
-        "cloudflare workers websocket — HTTP + upgrade on the Worker, sticky room state on the DO.",
-        "durable objects chat — one object name per roomId, not one global socket server.",
+        "Shared state coordination: one Room DO holds live connections and ephemeral signals (typing, presence).",
+        "Transactional consistency: membership and message writes go through D1 with clear project scoping.",
+        "WebSocket hibernation: the DO can sleep while clients reconnect; your app still needs client-side replay semantics.",
+        "cloudflare workers websocket: HTTP + upgrade on the Worker, sticky room state on the DO.",
+        "durable objects chat: one object name per roomId, not one global socket server.",
       ],
       link: CF_DURABLE_OBJECTS_OVERVIEW,
     },
@@ -35,17 +35,17 @@ export const DURABLE_OBJECTS_CHAT_ROOMS_GUIDE: GuideContent = {
       id: "fluxy-mapping",
       title: "How FluxyChat maps the primitives",
       bullets: [
-        "RoomDurableObject — one DO per room for fan-out, ordering, and connection lifecycle.",
-        "D1 — queryable history, templates, webhooks metadata; not every keystroke as a hot write.",
-        "Worker — JWT mint, REST writes, GDPR export, and `/ws/room/:roomId` upgrade routing.",
-        "SDK — connectionState, loadMore (history replay), clientMessageId idempotency on reconnect.",
+        "RoomDurableObject: one DO per room for fan-out, ordering, and connection lifecycle.",
+        "D1: queryable history, templates, webhooks metadata; not every keystroke as a hot write.",
+        "Worker: JWT mint, REST writes, GDPR export, and `/ws/room/:roomId` upgrade routing.",
+        "SDK: connectionState, loadMore (history replay), clientMessageId idempotency on reconnect.",
       ],
     },
     {
       id: "partykit",
       title: "PartyKit vs chat-layer DOs",
       paragraphs: [
-        "PartyKit and DO demos excel at collab “party” state and tutorials. FluxyChat targets SaaS in-app messaging: multi-tenant JWT, operator console, billing hooks, and production reconnect — not a generic party runtime.",
+        "PartyKit and DO demos excel at collab \"party\" state and tutorials. FluxyChat targets SaaS in-app messaging: multi-tenant JWT, operator console, billing hooks, and production reconnect, not a generic party runtime.",
       ],
     },
     {
@@ -58,7 +58,7 @@ export const DURABLE_OBJECTS_CHAT_ROOMS_GUIDE: GuideContent = {
     {
       title: "From official demo to production",
       paragraphs: [
-        "Start with Cloudflare’s Workers chat example, then add auth, history pagination, quotas, and operator tooling — or adopt FluxyChat as the maintained layer.",
+        "Start with Cloudflare's Workers chat example, then add auth, history pagination, quotas, and operator tooling, or adopt FluxyChat as the maintained layer.",
       ],
       link: CF_WORKERS_CHAT_DEMO,
     },

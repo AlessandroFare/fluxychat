@@ -24,6 +24,15 @@ export async function createTicket(env, { projectId, subject, description, prior
 
 export async function updateTicket(env, { ticketId, projectId, status, priority, severity, assignedTo, assignedGroup, satisfactionRating, satisfactionComment }) {
   const now = new Date().toISOString();
+  let previousStatus;
+  if (status && projectId) {
+    const prev = await env.DB.prepare(
+      "SELECT status FROM support_tickets WHERE id = ? AND project_id = ?",
+    )
+      .bind(ticketId, projectId)
+      .first();
+    previousStatus = prev?.status;
+  }
   const sets = ["updated_at = ?"];
   const params = [now];
   if (status) { sets.push("status = ?"); params.push(status); if (status === "resolved") { sets.push("resolved_at = ?"); params.push(now); } if (status === "closed") { sets.push("closed_at = ?"); params.push(now); } }
@@ -37,6 +46,21 @@ export async function updateTicket(env, { ticketId, projectId, status, priority,
   params.push(ticketId);
   if (projectId) { where += " AND project_id = ?"; params.push(projectId); }
   await env.DB.prepare(`UPDATE support_tickets SET ${sets.join(", ")} ${where}`).bind(...params).run();
+
+  if (status && projectId && (status === "resolved" || status === "closed")) {
+    try {
+      const { maybeTriggerCsatOnTicketStatus } = await import("./support-csat.js");
+      await maybeTriggerCsatOnTicketStatus(env, {
+        projectId,
+        ticketId,
+        previousStatus,
+        newStatus: status,
+      });
+    } catch {
+      /* CSAT trigger is best-effort */
+    }
+  }
+
   return { updated: true };
 }
 

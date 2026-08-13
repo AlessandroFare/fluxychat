@@ -95,7 +95,7 @@ export default function ChatbotBuilderPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Chatbot Builder"
-        description="Visual trigger-action rule engine — create rules with conditions, test them, and see execution logs. SDK-powered in-memory demo."
+        description="Visual trigger-action rule engine: create rules with conditions, test them, and see execution logs. SDK-powered in-memory demo."
       />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[420px_1fr]">

@@ -10,6 +10,7 @@ import {
   resolveSnoozeUntil,
 } from "../lib/inbox.js";
 import { applyInboxQuery, parseInboxQueryParams } from "../lib/inbox-where.js";
+import { notifyInboxUpdated } from "../lib/user-inbox-push.js";
 
 export async function dispatchInboxRoutes(request, url, h) {
   const {
@@ -83,6 +84,12 @@ export async function dispatchInboxRoutes(request, url, h) {
       roomId,
       snoozeUntil,
     });
+    void notifyInboxUpdated(env, {
+      projectId: auth.projectId,
+      userId: auth.userId,
+      roomId,
+      kind: "snooze",
+    }).catch(() => {});
     return json(result, { headers: corsHeaders });
   }
 

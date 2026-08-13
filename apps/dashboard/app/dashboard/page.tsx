@@ -112,9 +112,9 @@ export default function DashboardOverviewPage() {
               {quickstartComplete && activeProject
                 ? `Quickstart complete · ${activeProject.name}`
                 : phase === "ready" && activeProject
-                  ? `Signed in · ${activeProject.name} — finish the quickstart to use the console`
+                  ? `Signed in · ${activeProject.name}. Finish the quickstart to use the console.`
                   : phase === "jwt_only"
-                    ? "JWT saved — pick a project in the quickstart"
+                    ? "JWT saved. Pick a project in the quickstart."
                     : "Run the quickstart to connect and send a first message"}
             </p>
           </div>
@@ -219,7 +219,7 @@ export default function DashboardOverviewPage() {
       <section className="mb-8">
         <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Operate</h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          Webhooks, moderation, analytics, privacy, and billing — day-two operator tools.
+          Webhooks, moderation, analytics, privacy, and billing: day-two operator tools.
         </p>
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {CONSOLE_NAV_OPERATE.map((item) => (

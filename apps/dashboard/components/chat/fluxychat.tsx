@@ -88,6 +88,11 @@ import { AgentHandoffBanner } from "@/app/components/agent-handoff-banner";
 import { LinkPreviewCard } from "~/components/ui/link-preview";
 import { PinnedMessagesBar } from "~/components/ui/pinned-messages";
 import { PollView, PollCreate } from "~/components/ui/poll";
+import {
+  MessageTranslationBlock,
+  type MessageTranslationEntry,
+} from "~/components/chat/message-translation-block";
+import { getViewerTranslationLang } from "@/lib/translation-viewer-prefs";
 import { DecisionView, DecisionCreate, type DecisionData } from "~/components/ui/decision";
 import { ScheduleSend } from "~/components/ui/schedule-send";
 import {
@@ -98,7 +103,15 @@ import { CounterfactualReplayPanel } from "~/components/ui/counterfactual-replay
 import { isSideEffectToolName } from "@/lib/counterfactual-utils";
 import { BreakoutPanel, useBreakouts } from "~/components/ui/breakout-panel";
 import { SlashCommandMenu } from "~/components/ui/slash-commands";
+import {
+  MentionMenu,
+  detectMentionQuery,
+  insertMentionAtCursor,
+  type MentionSuggestion,
+} from "~/components/ui/mention-menu";
 import { listSlashCommands, type RoomCommand } from "@/lib/slash-commands-client";
+import { fetchMentionSuggestions } from "@/lib/mentions-client";
+import { RoomInfoPanel, RoomInfoToggle } from "~/components/chat/room-info-panel";
 import { cn } from "@/lib/utils";
 
 // shadcn UI primitives
@@ -214,6 +227,18 @@ const AgentAvatar = () => (
     </svg>
   </div>
 );
+
+function messageVisibilityBadge(
+  message: { visibility?: string; userId?: string | null },
+  agentId: string,
+): { label: string; scoped: boolean } | null {
+  const visibility = message.visibility?.trim().toLowerCase();
+  if (visibility === "whisper") return { label: "whisper", scoped: true };
+  if (visibility?.startsWith("role:")) return { label: visibility, scoped: true };
+  const author = message.userId?.trim() || "";
+  if (author === agentId) return { label: "room", scoped: false };
+  return null;
+}
 
 function ChatAvatar({
   isAgent,
@@ -408,7 +433,12 @@ export function FluxyChat({
   const demoLastSendAtRef = useRef(0);
   const showDemoModeration = variant === "demo";
   const [pins, setPins] = useState<Array<Record<string, unknown>>>([]);
-  const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
+  const [translatedMessages, setTranslatedMessages] = useState<Record<string, MessageTranslationEntry>>({});
+  const [showOriginalByMessageId, setShowOriginalByMessageId] = useState<Record<string, boolean>>({});
+  const [viewerTranslationLang, setViewerTranslationLang] = useState("en");
+  const [pollOverrides, setPollOverrides] = useState<
+    Record<number, NonNullable<import("@fluxy-chat/sdk").FluxyChatMessage["poll"]>>
+  >({});
   const plusMenuRef = useRef<HTMLDivElement>(null);
   // Reaction picker state
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState<number | null>(null);
@@ -466,7 +496,11 @@ export function FluxyChat({
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
+  const [roomInfoOpen, setRoomInfoOpen] = useState(false);
   const [slashCommands, setSlashCommands] = useState<RoomCommand[]>([]);
+  const chatToken = adminJwt.trim() || memberJwt.trim();
   const { user: clerkUser } = useClerkUser();
   const realtime = useFluxyChatOptional();
   const usesExplicitClient = clientProp !== undefined;
@@ -576,15 +610,29 @@ export function FluxyChat({
     [chatUserId],
   );
 
+  useEffect(() => {
+    setViewerTranslationLang(getViewerTranslationLang());
+  }, []);
+
   const handleAutoTranslated = useCallback(
     (ev: { name: string; data: Record<string, unknown> }) => {
       if (ev.name !== "message.auto_translated") return;
       const messageId = ev.data.messageId;
       const translatedText = ev.data.translatedText;
+      const targetLang = ev.data.targetLang;
       if (messageId == null || typeof translatedText !== "string" || !translatedText.trim()) return;
-      setTranslatedMessages((prev) => ({ ...prev, [String(messageId)]: translatedText }));
+      setTranslatedMessages((prev) => ({
+        ...prev,
+        [String(messageId)]: {
+          translatedText,
+          targetLang: typeof targetLang === "string" ? targetLang : viewerTranslationLang,
+          sourceLang: typeof ev.data.sourceLang === "string" ? ev.data.sourceLang : null,
+          cached: ev.data.cached === true,
+        },
+      }));
+      setShowOriginalByMessageId((prev) => ({ ...prev, [String(messageId)]: false }));
     },
-    [],
+    [viewerTranslationLang],
   );
 
   const {
@@ -599,6 +647,8 @@ export function FluxyChat({
     typingUsers,
     typingIntents,
     connected,
+    syncStatus,
+    pendingOutboxCount,
     toolThreadEvents,
     clearToolThread,
     lastAgentRun,
@@ -639,6 +689,14 @@ export function FluxyChat({
         setDecisionOverrides((prev) => ({
           ...prev,
           [Number(ev.messageId)]: ev.decision as DecisionData,
+        }));
+      }
+      if (ev.type === "poll_updated" && ev.messageId != null && ev.poll) {
+        setPollOverrides((prev) => ({
+          ...prev,
+          [Number(ev.messageId)]: ev.poll as NonNullable<
+            import("@fluxy-chat/sdk").FluxyChatMessage["poll"]
+          >,
         }));
       }
     },
@@ -726,6 +784,27 @@ export function FluxyChat({
       if (restoredReply != null) setReplyToId(restoredReply);
     },
   });
+
+  useEffect(() => {
+    if (!showMentionMenu || !chatToken || !trimmedRoomId) {
+      setMentionSuggestions([]);
+      return;
+    }
+    const input = textareaRef.current;
+    const cursor = input?.selectionStart ?? draft.length;
+    const query = detectMentionQuery(draft, cursor) ?? "";
+    let cancelled = false;
+    void fetchMentionSuggestions(chatToken, trimmedRoomId, query)
+      .then((suggestions) => {
+        if (!cancelled) setMentionSuggestions(suggestions);
+      })
+      .catch(() => {
+        if (!cancelled) setMentionSuggestions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showMentionMenu, draft, chatToken, trimmedRoomId]);
 
   const streamingCount = useMemo(
     () => messages.filter((m) => m.streaming).length,
@@ -1129,7 +1208,7 @@ export function FluxyChat({
       const now = Date.now();
       const elapsed = now - demoLastSendAtRef.current;
       if (elapsed < DEMO_SEND_COOLDOWN_MS) {
-        setInputError(`Slow down — wait ${Math.ceil((DEMO_SEND_COOLDOWN_MS - elapsed) / 1000)}s before sending again.`);
+        setInputError(`Slow down. Wait ${Math.ceil((DEMO_SEND_COOLDOWN_MS - elapsed) / 1000)}s before sending again.`);
         setRunPending(false);
         return;
       }
@@ -1462,8 +1541,16 @@ export function FluxyChat({
 
   // ─── Render ───
 
+  const isOnboarding = variant === "onboarding";
+
   return (
-    <div className={cn("flex flex-col gap-3", className)}>
+    <div
+      className={cn(
+        "relative flex flex-col gap-3",
+        isOnboarding && "max-h-[min(520px,72vh)]",
+        className,
+      )}
+    >
       {showConnectionBanner ? (
         <div
           role="status"
@@ -1481,6 +1568,17 @@ export function FluxyChat({
           {connectionState.status === "degraded-http" && connectionState.canPublishViaHttp ? (
             <span className="ml-2 opacity-80">· Messages still send via HTTP</span>
           ) : null}
+        </div>
+      ) : null}
+      {syncStatus === "pending" || syncStatus === "offline" ? (
+        <div
+          role="status"
+          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+        >
+          {syncStatus === "offline" ? "Offline" : "Syncing"}
+          {pendingOutboxCount > 0
+            ? ` · ${pendingOutboxCount} message${pendingOutboxCount === 1 ? "" : "s"} queued`
+            : " · changes will sync when reconnected"}
         </div>
       ) : null}
       {/* Status bar */}
@@ -1512,6 +1610,12 @@ export function FluxyChat({
             <Search className="size-3" aria-hidden />
             {searchOpen ? "Close" : "Search"}
           </button>
+          {trimmedRoomId && chatToken ? (
+            <>
+              <span className="mx-1.5 text-muted-foreground/40">|</span>
+              <RoomInfoToggle onClick={() => setRoomInfoOpen((open) => !open)} />
+            </>
+          ) : null}
           <span className="mx-1.5 text-muted-foreground/40">|</span>
           Room <code className="font-mono">{trimmedRoomId || ""}</code>
           {usesMentionInvoke ? (
@@ -1827,6 +1931,7 @@ export function FluxyChat({
           className={cn(
             "h-[min(420px,50vh)] scroll-fade-b rounded-xl border border-border bg-muted/30",
             variant === "demo" && "h-[min(480px,58vh)] border-border/80 bg-[#F4F4F5]",
+            isOnboarding && "h-[min(200px,26vh)] shrink-0 border-border/80 bg-muted/20",
           )}
           data-testid="fluxychat-message-list"
         >
@@ -1853,6 +1958,7 @@ export function FluxyChat({
                   const bubbleVariant = isSelf ? ("sent" as const) : ("received" as const);
                   const parentMessage = m.parentId != null ? messagesById.get(m.parentId) ?? null : null;
                   const showHeader = !prev || prev.userId !== m.userId || showDate;
+                  const visibilityBadge = messageVisibilityBadge(m, agentId);
                   const hasReactions = m.id != null && reactions[m.id] && Object.keys(reactions[m.id]).length > 0;
                   const branchPolicy =
                     m.id != null
@@ -1916,17 +2022,32 @@ export function FluxyChat({
                           onClick={async () => {
                             if (m.id == null) return;
                             try {
-                              const res = await fluxyClient.translateMessage(m.id, "en");
-                              const translated = res.translation?.translatedText;
-                              if (translated) {
-                                setTranslatedMessages((p) => ({ ...p, [String(m.id)]: translated }));
+                              const res = await fluxyClient.translateMessage(
+                                m.id,
+                                viewerTranslationLang,
+                              );
+                              const tr = res.translation;
+                              if (tr?.translatedText) {
+                                setTranslatedMessages((p) => ({
+                                  ...p,
+                                  [String(m.id)]: {
+                                    translatedText: tr.translatedText,
+                                    targetLang: tr.targetLang ?? viewerTranslationLang,
+                                    sourceLang: tr.sourceLang ?? null,
+                                    cached: res.cached,
+                                  },
+                                }));
+                                setShowOriginalByMessageId((p) => ({
+                                  ...p,
+                                  [String(m.id)]: false,
+                                }));
                               }
                             } catch {
                               /* ignore */
                             }
                           }}
                           className={messageToolbarButtonClass}
-                          title="Translate to English"
+                          title={`Translate to ${viewerTranslationLang.toUpperCase()}`}
                         >
                           <Languages className="size-3" />
                           Translate
@@ -2027,6 +2148,18 @@ export function FluxyChat({
                                     agent
                                   </span>
                                 ) : null}
+                                {visibilityBadge ? (
+                                  <span
+                                    className={cn(
+                                      "ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium ring-1",
+                                      visibilityBadge.scoped
+                                        ? "bg-amber-500/10 text-amber-800 ring-amber-500/25 dark:text-amber-200"
+                                        : "bg-muted text-muted-foreground ring-border",
+                                    )}
+                                  >
+                                    {visibilityBadge.label}
+                                  </span>
+                                ) : null}
                                 {isStreaming ? (
                                   <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
                                     <span className="relative flex h-1.5 w-1.5">
@@ -2119,6 +2252,19 @@ export function FluxyChat({
                                               content={cardDisplayText(m)}
                                               invert={isSelf}
                                             />
+                                          ) : m.id != null && translatedMessages[String(m.id)] ? (
+                                            <MessageTranslationBlock
+                                              originalText={cardDisplayText(m)}
+                                              translation={translatedMessages[String(m.id)]}
+                                              showOriginal={showOriginalByMessageId[String(m.id)] ?? false}
+                                              onToggle={() =>
+                                                setShowOriginalByMessageId((prev) => ({
+                                                  ...prev,
+                                                  [String(m.id)]: !(prev[String(m.id)] ?? false),
+                                                }))
+                                              }
+                                              isSelf={isSelf}
+                                            />
                                           ) : (
                                             <p className="whitespace-pre-wrap break-words">
                                               {cardDisplayText(m)}
@@ -2138,13 +2284,6 @@ export function FluxyChat({
                                       </>
                                     )}
 
-                                    {/* Translated text */}
-                                    {m.id != null && translatedMessages[String(m.id)] ? (
-                                      <p className={cn("mt-1 whitespace-pre-wrap break-words text-xs italic opacity-80", isSelf ? "text-white/70" : "text-muted-foreground")}>
-                                        {translatedMessages[String(m.id)]}
-                                      </p>
-                                    ) : null}
-
                                     {/* Link preview */}
                                     {m.preview?.url ? (
                                       <LinkPreviewCard
@@ -2157,34 +2296,63 @@ export function FluxyChat({
                                     ) : null}
 
                                     {/* Poll */}
-                                    {m.poll ? (
-                                      <PollView
-                                        poll={{
-                                          id: String(m.id),
-                                          question: m.poll.question,
-                                          options: m.poll.options.map((o) => ({
-                                            id: String(o.index),
-                                            text: o.text,
-                                            votes: o.votes,
-                                          })),
-                                          totalVotes: m.poll.totalVoters,
-                                          userVote: null,
-                                          closed: m.poll.closed,
-                                          type: m.poll.allowMultiple ? "multi" : "single",
-                                        }}
-                                        onVote={async (optionId) => {
-                                          await fluxyClient?.votePoll(m.id as number, Number(optionId));
-                                        }}
-                                        onClose={
-                                          localUserId === m.userId
-                                            ? async () => {
-                                                await fluxyClient?.closePoll(m.id as number);
-                                              }
-                                            : undefined
-                                        }
-                                        canManage={localUserId === m.userId}
-                                      />
-                                    ) : null}
+                                    {(() => {
+                                      const pollData =
+                                        (m.id != null ? pollOverrides[m.id as number] : undefined) ?? m.poll;
+                                      if (!pollData) return null;
+                                      return (
+                                        <PollView
+                                          poll={{
+                                            id: String(m.id),
+                                            question: pollData.question,
+                                            options: pollData.options.map((o) => ({
+                                              id: String(o.index),
+                                              text: o.text,
+                                              votes: o.votes,
+                                            })),
+                                            totalVotes: pollData.totalVoters,
+                                            userVote:
+                                              pollData.userVote != null
+                                                ? String(pollData.userVote)
+                                                : null,
+                                            closed: pollData.closed,
+                                            type: pollData.allowMultiple ? "multi" : "single",
+                                          }}
+                                          onVote={async (optionId) => {
+                                            if (m.id == null || !fluxyClient) return;
+                                            const res = await fluxyClient.votePoll(
+                                              m.id as number,
+                                              Number(optionId),
+                                            );
+                                            if (res.poll) {
+                                              setPollOverrides((prev) => ({
+                                                ...prev,
+                                                [m.id as number]: res.poll as NonNullable<
+                                                  import("@fluxy-chat/sdk").FluxyChatMessage["poll"]
+                                                >,
+                                              }));
+                                            }
+                                          }}
+                                          onClose={
+                                            localUserId === m.userId
+                                              ? async () => {
+                                                  if (m.id == null || !fluxyClient) return;
+                                                  const res = await fluxyClient.closePoll(m.id as number);
+                                                  if (res.poll) {
+                                                    setPollOverrides((prev) => ({
+                                                      ...prev,
+                                                      [m.id as number]: res.poll as NonNullable<
+                                                        import("@fluxy-chat/sdk").FluxyChatMessage["poll"]
+                                                      >,
+                                                    }));
+                                                  }
+                                                }
+                                              : undefined
+                                          }
+                                          canManage={localUserId === m.userId}
+                                        />
+                                      );
+                                    })()}
 
                                     {/* Decision quorum */}
                                     {(() => {
@@ -2321,6 +2489,20 @@ export function FluxyChat({
                     </React.Fragment>
                   );
                 })
+              ) : isOnboarding ? (
+                <MessageScrollerItem>
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Sparkles className="size-5" aria-hidden />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">Your room is ready</p>
+                    <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
+                      Type in the box below and press Enter. Mention{" "}
+                      <span className="font-medium text-foreground">@{agentHandle ?? "assistant"}</span>{" "}
+                      to talk to the AI.
+                    </p>
+                  </div>
+                </MessageScrollerItem>
               ) : (
                 <MessageScrollerItem>
                   <Marker>
@@ -2328,7 +2510,7 @@ export function FluxyChat({
                       <Loader2 className="size-3 animate-spin" />
                     </MarkerIcon>
                     <MarkerContent>
-                      Ask {agentName} — replies stream over WebSocket; tool calls appear inline when
+                      Ask {agentName}. Replies stream over WebSocket; tool calls appear inline when
                       the agent uses tools.
                     </MarkerContent>
                   </Marker>
@@ -2693,6 +2875,19 @@ export function FluxyChat({
         ) : null}
 
         <div className="relative">
+          {showMentionMenu && !showSlashMenu ? (
+            <MentionMenu
+              inputRef={textareaRef}
+              suggestions={mentionSuggestions}
+              onSelect={(item) => {
+                const input = textareaRef.current;
+                if (!input) return;
+                insertMentionAtCursor(input, item.label, setDraft);
+                setShowMentionMenu(false);
+              }}
+              onClose={() => setShowMentionMenu(false)}
+            />
+          ) : null}
           {showSlashMenu ? (
             <SlashCommandMenu
               inputRef={textareaRef}
@@ -2709,7 +2904,18 @@ export function FluxyChat({
           <ComposerTextarea
           ref={textareaRef}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setDraft(val);
+            const cursor = e.target.selectionStart ?? val.length;
+            const mentionQuery = detectMentionQuery(val, cursor);
+            if (mentionQuery !== null) {
+              setShowMentionMenu(true);
+              setShowSlashMenu(false);
+            } else {
+              setShowMentionMenu(false);
+            }
+          }}
           placeholder={
             templateSelection
               ? "Optional note (template message will be sent)"
@@ -2719,7 +2925,12 @@ export function FluxyChat({
           }
           disabled={!trimmedRoomId || isAgentBusy || Boolean(templateSelection)}
           onKeyDown={(e) => {
-            if (e.key === "/" && (e.currentTarget.selectionStart ?? 0) === 0) { setShowSlashMenu(true); return; }
+            if (showMentionMenu && (e.key === "ArrowDown" || e.key === "ArrowUp" || (e.key === "Enter" && mentionSuggestions.length))) return;
+            if (e.key === "/" && (e.currentTarget.selectionStart ?? 0) === 0) {
+              setShowSlashMenu(true);
+              setShowMentionMenu(false);
+              return;
+            }
             if (e.key !== "Enter" || e.shiftKey) return;
             e.preventDefault();
             if (!canSend) return;
@@ -2894,7 +3105,7 @@ export function FluxyChat({
                     parentId: replyToId,
                   });
                   if (!sent) {
-                    setInputError("Voice message not sent — check authentication.");
+                    setInputError("Voice message not sent. Check authentication.");
                     return;
                   }
                   void loadHistory();
@@ -3003,7 +3214,7 @@ export function FluxyChat({
             ) : (
               <span
                 className="ml-auto flex size-8 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground"
-                title="Camera off — enable Cam to preview video"
+                title="Camera off. Enable Cam to preview video"
               >
                 You
               </span>
@@ -3140,6 +3351,16 @@ export function FluxyChat({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {trimmedRoomId && chatToken ? (
+        <RoomInfoPanel
+          roomId={trimmedRoomId}
+          token={chatToken}
+          open={roomInfoOpen}
+          onClose={() => setRoomInfoOpen(false)}
+          onJumpToMessage={scrollToMessage}
+        />
+      ) : null}
     </div>
   );
 }

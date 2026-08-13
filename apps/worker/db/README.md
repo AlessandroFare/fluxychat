@@ -1,6 +1,6 @@
 # FluxyChat worker — D1 database
 
-Migrations live in this directory (`0001_*.sql` … `0136_*.sql`). Wrangler applies them in filename order via `migrations_dir = "db"` in `wrangler.toml`.
+Migrations live in this directory (`0001_*.sql` … `0213_*.sql`). Wrangler applies them in filename order via `migrations_dir = "db"` in `wrangler.toml`.
 
 ## Existing environments (production / staging)
 

@@ -25,7 +25,7 @@ const TEMPLATES = [
   {
     id: "basic",
     name: "basic",
-    description: "Minimal FluxyChat setup — one room, real-time messaging, no auth.",
+    description: "Minimal FluxyChat setup: one room, real-time messaging, no auth.",
     features: ["WebSocket rooms", "REST API", "One-line embed"],
     command: "npx create-fluxy-chat my-app --template basic",
   },
@@ -255,7 +255,7 @@ export default function CLIPage() {
               <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
               <span className="h-3 w-3 rounded-full bg-green-500/80" />
             </div>
-            <span className="ml-2 font-mono text-xs text-slate-400">Terminal — create-fluxy-chat</span>
+            <span className="ml-2 font-mono text-xs text-slate-400">Terminal: create-fluxy-chat</span>
           </div>
           {/* Terminal body */}
           <div className="max-h-80 min-h-[200px] overflow-x-hidden overflow-y-auto p-3 font-mono text-xs">

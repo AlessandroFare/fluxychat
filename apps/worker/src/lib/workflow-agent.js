@@ -120,7 +120,19 @@ export function createWorkflowAgent({ store, executeStep, onStepComplete, onWork
       state.status = "running";
       state.updatedAt = new Date().toISOString();
       await store.save(state);
-      // Note: actual execution would need to be re-triggered by the caller
+      return state;
+    },
+
+    /** CP-071: Continue execution from persisted state (resume after restart). */
+    async continue(workflow, state) {
+      if (!state) throw new Error("Workflow state required");
+      if (state.status === "completed" || state.status === "cancelled") {
+        return state;
+      }
+      state.status = "running";
+      state.updatedAt = new Date().toISOString();
+      await store.save(state);
+      return processWorkflow(workflow, state);
     },
 
     async cancel(workflowId) {

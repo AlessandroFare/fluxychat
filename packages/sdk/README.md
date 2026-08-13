@@ -6,7 +6,7 @@ Client for a **FluxyChat Worker** (self-hosted or [FluxyChat Cloud](https://gith
 
 For **React hooks** (`useChat`, `useInbox`, `FluxyRealtimeProvider`), install [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) alongside this package.
 
-The SDK talks to **your** Worker URL. It does **not** include LLM API keys — only your Fluxy **project API key** or **member JWT**.
+The SDK talks to **your** Worker URL. It does **not** include LLM API keys; only your Fluxy **project API key** or **member JWT**.
 
 ## Install
 
@@ -18,11 +18,11 @@ npm install @fluxy-chat/react react
 pnpm add @fluxy-chat/sdk @fluxy-chat/react zustand
 ```
 
-**Peer dependencies:** install `react` (18+) when you use hooks from `@fluxy-chat/react`, and `zustand` (5+) for `createFluxyRoomSession` or room store helpers. The SDK has **no runtime npm dependencies** beyond protocol/types — only your Worker URL is contacted over the network ([Socket network-access note](https://socket.dev/alerts/networkAccess)).
+**Peer dependencies:** install `react` (18+) when you use hooks from `@fluxy-chat/react`, and `zustand` (5+) for `createFluxyRoomSession` or room store helpers. The SDK has **no runtime npm dependencies** beyond protocol/types; only your Worker URL is contacted over the network ([Socket network-access note](https://socket.dev/alerts/networkAccess)).
 
 ### Bundle size
 
-Import only what your app needs — the full `dist/index.js` artifact is ~112 KB uncompressed; tree-shaken app bundles (client + hooks via `@fluxy-chat/react`) are typically much smaller. Compare gzip size in your bundler (Vite/webpack) when evaluating against other chat SDKs.
+Import only what your app needs. The full `dist/index.js` artifact is ~112 KB uncompressed; tree-shaken app bundles (client + hooks via `@fluxy-chat/react`) are typically much smaller. Compare gzip size in your bundler (Vite/webpack) when evaluating against other chat SDKs.
 
 **Industry reference:** ~14 kB gzip for a chat-only React import path in comparable hosted SDKs. FluxyChat CI gates `@fluxy-chat/react` at **≤20 kB gzip** (`pnpm run check:bundle-size`).
 
@@ -323,7 +323,7 @@ const conn = client.connectRoom(roomId, {
 
 - **Shorter transient drops recover faster.** Mobile networks flap in the 1–3 s window; a 500 ms first step lands a reconnect before most apps show a "disconnected" toast, which is what the dashboard UX relies on (`connectionState.status` is rendered in the room header).
 - **Longer outages still give up reasonably fast.** The 20 s cap means a 10-minute Worker outage costs ~30 reconnect attempts' worth of traffic, and the SSE/polling fallback (`useChat`) kicks in well before users notice.
-- **It's configurable per-room.** Call sites that want the Fluxy-style curve set `baseBackoffMs: 1_000, maxBackoffMs: 8_000` on `connectRoom` options; see the [P11-B2 entry in `ROADMAP_EXECUTION.md`](https://github.com/AlessandroFare/fluxychat/blob/main/ROADMAP_EXECUTION.md#p11--research-synthesis-backup-docsresearch--started-2026-06-04).
+- It's configurable per-room. Call sites that want the Fluxy-style curve set `baseBackoffMs: 1_000, maxBackoffMs: 8_000` on `connectRoom` options. See [public SDK docs](https://docs.fluxychat.com/packages/sdk).
 
 **When to flip to the Fluxy profile**
 
@@ -344,7 +344,7 @@ const conn = client.connectRoom(roomId, {
 });
 ```
 
-See [`docs/research/ws-client-benchmark-fluxy.md`](https://github.com/AlessandroFare/fluxychat/blob/main/docs/research/ws-client-benchmark-fluxy.md) § 1 for the upstream reference. The defaults are not changing in this minor; P11-B2 stays in the roadmap as a documented decision rather than a code change.
+The current defaults favor fast recovery on mobile networks. Use `baseBackoffMs` and `maxBackoffMs` on `connectRoom` when you need the Fluxy profile instead.
 
 ## Self-host vs hosted cloud
 
@@ -390,7 +390,7 @@ stream.end();
 
 See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/bot-streaming-fluxy-message-stream.md) in the monorepo.
 
-## P12 / open beta APIs (2026)
+## Console and admin APIs (2026)
 
 | Feature | SDK method |
 |---------|------------|
@@ -407,14 +407,14 @@ See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/Ale
 | Digest preferences | `getDigestPreferences()`, `updateDigestPreferences()` |
 | Agent handoff | `getRoomHandoff()`, `requestRoomHandoff()`, `resolveRoomHandoff()` |
 | Agent queue | `getAgentQueue()`, `claimAgentTask()`, `resolveAgentTask()` |
-| Feature flags (P12-J) | `getFeatureFlags()` — backoff applied on room session connect |
+| Feature flags | `getFeatureFlags()` (backoff applied on room session connect) |
 | Public host / embed | `getPublicHostConfig()`, `getPublicEmbedConfig()` |
 
-Docs in monorepo: `docs/README.md` · deploy: `docs/operations/open-beta-deploy-guide.md`
+Docs: [docs.fluxychat.com](https://docs.fluxychat.com) · deploy: [production setup](https://docs.fluxychat.com/docs/operations/production-setup)
 
-## Pusher Channels parity (P9)
+## Pusher Channels parity
 
-FluxyChat maps [Pusher Channels](https://pusher.com/docs/channels) features to rooms + JWT. Full matrix: [docs/pusher-channels-parity.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/pusher-channels-parity.md).
+FluxyChat maps [Pusher Channels](https://pusher.com/docs/channels) features to rooms plus JWT. Full matrix: [Pusher Channels parity](https://docs.fluxychat.com/docs/reference/pusher-channels-parity).
 
 | Feature | SDK API |
 |---------|---------|
@@ -461,9 +461,9 @@ function Inbox({ userId }: { userId: string }) {
 }
 ```
 
-### P10 — Sendbird / Sent / remaining Pusher
+### Sendbird, Sent, and remaining Pusher gaps
 
-See [docs/competitive-parity-p10.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/competitive-parity-p10.md).
+See [messaging parity checklist](https://docs.fluxychat.com/docs/reference/messaging-parity-checklist).
 
 | Feature | SDK API |
 |---------|---------|
@@ -496,7 +496,7 @@ await client.registerPushDevice("fcm", fcmToken);
 
 ## Architecture features
 
-FluxyChat includes a full-stack adapter system, streaming markdown renderer, card builder, and AI tool presets — all designed for multi-platform chat deployments.
+FluxyChat includes a full-stack adapter system, streaming markdown renderer, card builder, and AI tool presets for multi-platform chat deployments.
 
 | Feature | What it does |
 |---------|-------------|
@@ -527,11 +527,11 @@ const card = Card(Text("Hello"), Button("Click me", "https://example.com"));
 const markdown = cardToMarkdown(card);
 ```
 
-## P22–P25: AI-Native Architecture (2026-07)
+## AI-native architecture
 
-Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai) architecture. See [ROADMAP_EXECUTION.md](../../ROADMAP_EXECUTION.md) for full details.
+Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai) architecture.
 
-### P22 — Adapter Pattern, Streaming Markdown, Cards, Tool Presets
+### Adapters, streaming, and cards
 
 | Feature | SDK export |
 |---------|------------|
@@ -556,7 +556,7 @@ Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sd
 | Thread state | Per-thread key-value with TTL |
 | Mock adapter | `MockAdapter` for testing |
 
-### P23 — AI SDK Core Features
+### AI SDK core features
 
 | Feature | SDK export |
 |---------|------------|
@@ -575,7 +575,7 @@ Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sd
 | Realtime voice | Bidirectional voice-to-voice AI with tool calling |
 | Scoped tool context | Per-tool secret/config isolation via `contextSchema` |
 
-### P24 — AI SDK Medium Features
+### AI SDK medium features
 
 | Feature | SDK export |
 |---------|------------|
@@ -596,7 +596,7 @@ Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sd
 | MCP Apps | Sandboxed iframe rendering of tool UIs |
 | Slash commands | Cross-platform `/command` handling |
 
-### P25 — AI SDK Low Features
+### AI SDK advanced features
 
 | Feature | SDK export |
 |---------|------------|

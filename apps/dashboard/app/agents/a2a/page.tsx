@@ -141,12 +141,20 @@ export default function A2AAgentsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="A2A protocol"
-        description="Agent Card registry, task delegation, and envelope delivery — Worker-backed spike (#24)."
+        description="Register agent cards, delegate tasks, and deliver envelopes on your Worker."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">
         <Link href="/agents" className="font-medium underline-offset-4 hover:underline">
           ← Agents
+        </Link>
+        {" · "}
+        <Link href="/agents/cross-org" className="font-medium underline-offset-4 hover:underline">
+          Cross-org negotiation
+        </Link>
+        {" · "}
+        <Link href="/compare#room-os" className="font-medium underline-offset-4 hover:underline">
+          Compare: room OS
         </Link>
         {" · "}
         <Link href="/cross-channel" className="font-medium underline-offset-4 hover:underline">

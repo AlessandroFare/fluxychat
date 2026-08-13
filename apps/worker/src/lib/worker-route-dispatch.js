@@ -108,6 +108,10 @@ import { dispatchAgentPlatformRoutes } from "../routes/agent-platform-http.js";
 import { dispatchKnowledgeGraphRoutes } from "../routes/knowledge-graph-http.js";
 import { dispatchQueueRoutes } from "../routes/queue-http.js";
 import { dispatchEscalationRoutes } from "../routes/escalation-http.js";
+import { dispatchPresenceEscalationRoutes } from "../routes/presence-escalation-http.js";
+import { dispatchRoomConfigRoutes } from "../routes/room-config-http.js";
+import { dispatchAnonymousFeedbackRoutes } from "../routes/anonymous-feedback-http.js";
+import { dispatchRoomIntelligenceRoutes } from "../routes/room-intelligence-http.js";
 import { dispatchIntelligenceRoutes } from "../routes/intelligence-http.js";
 import { dispatchModerationQueueRoutes } from "../routes/moderation-queue-http.js";
 import { dispatchAgentProfilesRoutes } from "../routes/agent-profiles-http.js";
@@ -145,11 +149,20 @@ import { dispatchChannelFormsRoutes } from "../routes/channel-forms-http.js";
 import { dispatchMergeConflictsRoutes } from "../routes/merge-conflicts-http.js";
 import { dispatchRehearsalRoomsRoutes } from "../routes/rehearsal-rooms-http.js";
 import { dispatchCartographyRoutes } from "../routes/cartography-http.js";
+import { dispatchDecisionRoomsPackRoutes } from "../routes/decision-rooms-pack-http.js";
+import { dispatchEnterpriseAgentRoomRoutes } from "../routes/enterprise-agent-room-http.js";
+import { dispatchTelephonyHandoffRoutes } from "../routes/telephony-handoff-http.js";
+import { dispatchIotEventRoutes } from "../routes/iot-event-http.js";
 import { dispatchMediaPipelineRoutes } from "../routes/media-pipeline-http.js";
 import { dispatchTruthMarketRoutes } from "../routes/truth-market-http.js";
 import { dispatchRoomEmpathyRoutes } from "../routes/room-empathy-http.js";
 import { dispatchRoomFirmwareRoutes } from "../routes/room-firmware-http.js";
 import { dispatchVisualModerationRoutes } from "../routes/visual-moderation-http.js";
+import { dispatchCompetitorParityRoutes } from "../routes/competitor-parity-http.js";
+import { dispatchChatApiRoutes } from "../routes/chat-api-http.js";
+import { dispatchAgentToolPolicyRoutes } from "../routes/agent-tool-policy-http.js";
+import { dispatchAgentDurableWorkflowRoutes } from "../routes/agent-durable-workflow-http.js";
+import { dispatchUrlFetchAuditRoutes } from "../routes/url-fetch-audit-http.js";
 
 /** @type {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} */
 export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
@@ -222,6 +235,10 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchMergeConflictsRoutes,
   dispatchRehearsalRoomsRoutes,
   dispatchCartographyRoutes,
+  dispatchDecisionRoomsPackRoutes,
+  dispatchEnterpriseAgentRoomRoutes,
+  dispatchTelephonyHandoffRoutes,
+  dispatchIotEventRoutes,
   dispatchMediaPipelineRoutes,
   dispatchTruthMarketRoutes,
   dispatchRoomEmpathyRoutes,
@@ -275,6 +292,11 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchKnowledgeGraphRoutes,
   dispatchAiModerationRoutes,
   dispatchVisualModerationRoutes,
+  dispatchCompetitorParityRoutes,
+  dispatchChatApiRoutes,
+  dispatchAgentToolPolicyRoutes,
+  dispatchAgentDurableWorkflowRoutes,
+  dispatchUrlFetchAuditRoutes,
   dispatchAgentTaskBusRoutes,
   dispatchDigitalTwinRoutes,
   dispatchFluxyGameRoutes,
@@ -283,6 +305,10 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchModerationLabelsRoutes,
   dispatchQueueRoutes,
   dispatchEscalationRoutes,
+  dispatchPresenceEscalationRoutes,
+  dispatchRoomConfigRoutes,
+  dispatchAnonymousFeedbackRoutes,
+  dispatchRoomIntelligenceRoutes,
   dispatchIntelligenceRoutes,
   dispatchModerationQueueRoutes,
   dispatchAdaptersRoutes,

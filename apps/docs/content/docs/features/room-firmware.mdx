@@ -1,19 +1,19 @@
 ---
 title: Room firmware
-description: Per-room hooks that intercept message.create before fan-out — PII veto, rate limits, denylist.
+description: Per-room hooks that intercept message.create before fan-out: PII veto, rate limits, denylist.
 ---
 
 # Room firmware
 
-**Room firmware** runs synchronous hooks on `message.create` **before** messages fan out to the room. Builtin modules ship today; custom WASM is reserved for a future release.
+Room firmware runs synchronous hooks on `message.create` before messages fan out to the room. Builtin modules ship today. Custom WASM is reserved for a future release.
 
 ## Console
 
 **Settings → Firmware** (`/settings/firmware`)
 
-1. Select a **room**.
+1. Select a room.
 2. Enable modules and configure JSON config per module.
-3. Save — hooks apply on the next message in that room.
+3. Save. Hooks apply on the next message in that room.
 
 | Module | Effect |
 |--------|--------|
@@ -33,7 +33,7 @@ GET  /rooms/:roomId/firmware/audit?limit=
 
 ## Behaviour
 
-- **Fail-open** on hook errors (message delivers; error logged).
+- Fail-open on hook errors (message delivers; error logged).
 - Hooks run on REST send and Room DO WebSocket path.
 - Per-room config stored in D1 (`room_firmware`).
 

@@ -47,6 +47,11 @@ export function scoreMessageNotification(input) {
     reasons.push(input.topic);
   }
 
+  if (input.topic === "announcement") {
+    score += 8;
+    reasons.push("announcement");
+  }
+
   let level = "normal";
   if (score >= 18) level = "urgent";
   else if (score >= 12) level = "high";
@@ -71,9 +76,21 @@ export async function resolveNotificationPriority(env, {
   isMention,
   preview,
   authorRole,
+  topic = "message",
 }) {
-  const computed = scoreMessageNotification({ isMention, preview, authorRole, topic: "message" });
-  const pref = await getPreference(env.DB, { projectId, userId, topic: isMention ? "mention" : "message", roomId });
+  const effectiveTopic = topic === "announcement" ? "announcement" : isMention ? "mention" : topic || "message";
+  const computed = scoreMessageNotification({
+    isMention,
+    preview,
+    authorRole,
+    topic: effectiveTopic,
+  });
+  const pref = await getPreference(env.DB, {
+    projectId,
+    userId,
+    topic: effectiveTopic === "announcement" ? "message" : effectiveTopic,
+    roomId,
+  });
   const prefLevel = pref?.priorityLevel ?? "normal";
   const weight = Math.max(computed.weight, priorityWeight(prefLevel));
   const level = weight >= 4 ? "urgent" : weight >= 3 ? "high" : weight >= 2 ? "normal" : "low";

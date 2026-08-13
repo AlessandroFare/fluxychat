@@ -523,7 +523,7 @@ function VoiceDispatch({ client, vehicles, refresh }: { client: FluxyChatClient 
           const dropoffLng = dropoffMatch ? Number(dropoffMatch[2]) : 12.51;
           client?.matchDelivery({ pickupLat, pickupLng, dropoffLat, dropoffLng })
             .then((r) => {
-              setResult(`Matched with ${r.driver.name} — ETA ${r.driver.etaMinutes} min`);
+              setResult(`Matched with ${r.driver.name}. ETA ${r.driver.etaMinutes} min`);
               refresh();
             })
             .catch((e) => setResult(`Dispatch failed: ${e.message}`));
@@ -547,7 +547,7 @@ function VoiceDispatch({ client, vehicles, refresh }: { client: FluxyChatClient 
           "fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-xl transition-all",
           listening ? "bg-red-500 animate-pulse" : "bg-primary hover:scale-105",
         )}
-        title="Voice dispatch — say 'assign nearest driver'"
+        title="Voice dispatch: say 'assign nearest driver'"
       >
         <Mic className={cn("h-6 w-6 text-white", listening && "animate-pulse")} />
       </button>

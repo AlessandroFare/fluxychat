@@ -220,7 +220,7 @@ export default function EdiscoveryPage() {
       ) : null}
 
       {!token && !loading ? (
-        <Panel className="mt-6 p-6 text-sm text-muted-foreground">Admin JWT required — copy from Projects.</Panel>
+        <Panel className="mt-6 p-6 text-sm text-muted-foreground">Admin JWT required. Copy from Projects.</Panel>
       ) : null}
 
       <Section title="New case" className="mt-8">
@@ -263,7 +263,7 @@ export default function EdiscoveryPage() {
 
       {selectedCase ? (
         <>
-          <Section title={`Custodians — ${selectedCase.caseNumber}`} className="mt-8">
+          <Section title={`Custodians: ${selectedCase.caseNumber}`} className="mt-8">
             <Panel className="space-y-3 p-4">
               <div className="grid gap-2 sm:grid-cols-2">
                 <Input placeholder="Name" value={custodianName} onChange={(e) => setCustodianName(e.target.value)} />

@@ -3,10 +3,11 @@ import { buildFluxyConnectionState, type FluxyConnectionState, type FluxyConnect
 import type { FluxyChatTransport } from "./connection-state";
 import type { FluxyRoomConnectionStatus as FluxyWsConnectionStatus } from "./room-connection";
 import type { FluxySendMessageOptions } from "./message-template";
+import type { FluxySyncStatus } from "./offline-sync";
 import type {
-  FluxyChatAgentRun,
-  FluxyChatAttachment,
   FluxyChatMessage,
+  FluxyChatAttachment,
+  FluxyChatAgentRun,
   FluxyRoomLive,
 } from "./index";
 
@@ -54,6 +55,9 @@ export interface FluxyRoomStoreState {
   debateSteps: import("./agent-debate").AgentDebateStep[];
   debateSessionId: string | null;
   voiceStage: import("./voice-stage").VoiceStageSnapshot | null;
+  /** NW-100: offline-first sync status. */
+  syncStatus: FluxySyncStatus;
+  pendingOutboxCount: number;
   sendMessage: (
     content: string,
     replyTo?: number | null,
@@ -170,6 +174,8 @@ export const INERT_FLUXY_ROOM_SNAPSHOT: FluxyRoomStoreState = Object.freeze({
   debateSteps: [],
   debateSessionId: null,
   voiceStage: null,
+  syncStatus: "synced" as FluxySyncStatus,
+  pendingOutboxCount: 0,
   ...inertRoomActions,
 });
 
@@ -203,6 +209,8 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     debateSteps: [],
     debateSessionId: null,
     voiceStage: null,
+    syncStatus: "synced",
+    pendingOutboxCount: 0,
     ...inertRoomActions,
   }));
 }

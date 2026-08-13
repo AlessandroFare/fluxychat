@@ -15,6 +15,10 @@ import { pickDefaultAssistantAgent } from "@/lib/assistant-room";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
 import { loadQuickstartProgress, markQuickstartFirstMessage } from "@/lib/quickstart-progress";
+import {
+  readFirstMessageSentForUser,
+  resolveQuickstartUserKey,
+} from "@/lib/onboarding-user-key";
 import { assistantRoomId } from "@/lib/assistant-room";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -82,15 +86,16 @@ export function useOnboardingWizard() {
     });
   }, [fluxyClient, memberJwt, userId]);
 
-  // Track whether the *current user* has sent a message during this onboarding
-  // session.
+  // Track whether the *current user* has sent a message during this onboarding session.
   const [userSentMessage, setUserSentMessage] = useState(false);
+  const [progressHydrated, setProgressHydrated] = useState(false);
   const celebratedRef = useRef(false);
+  const initStepRef = useRef(false);
 
   const markMessageSent = useCallback(() => {
     setUserSentMessage(true);
-    const key = clerkUser?.id ?? `self-host-${userId.trim() || "owner"}`;
-    markQuickstartFirstMessage(key);
+    const key = resolveQuickstartUserKey(clerkUser?.id, userId);
+    if (key) markQuickstartFirstMessage(key);
     if (!celebratedRef.current) {
       celebratedRef.current = true;
       setShowCelebration(true);
@@ -110,11 +115,19 @@ export function useOnboardingWizard() {
   }, []);
 
   useEffect(() => {
-    if (!isClerkClientConfigured() || !clerkSignedIn || !clerkUser?.id) return;
-    setUserId(fluxyUserIdFromClerk(clerkUser?.id));
-    const progress = loadQuickstartProgress(clerkUser.id);
-    if (progress.firstMessageSent && !userSentMessage) setUserSentMessage(true);
-  }, [clerkSignedIn, clerkUser?.id]);
+    if (isClerkClientConfigured() && !clerkSignedIn) {
+      setProgressHydrated(true);
+      return;
+    }
+    if (isClerkClientConfigured() && clerkSignedIn && !clerkUser?.id) return;
+
+    const sent = readFirstMessageSentForUser(clerkUser?.id, userId);
+    if (sent) {
+      setUserSentMessage(true);
+      celebratedRef.current = true;
+    }
+    setProgressHydrated(true);
+  }, [clerkSignedIn, clerkUser?.id, userId]);
 
   useEffect(() => {
     if (room?.id || !lastRoom?.id) return;
@@ -127,13 +140,35 @@ export function useOnboardingWizard() {
     setExistingRoomId(lastRoom.id);
   }, [lastRoom, room?.id]);
 
-  // Auto-advance to first incomplete step on mount — but if the user hasn't
-  // even connected yet, start at the Welcome screen (step 0).
   useEffect(() => {
-    const first = firstIncompleteOnboardingStep({ adminJwt, activeProject: project, memberJwt, room, messageCount: userSentMessage ? 1 : 0, userSentMessage });
-    // Only auto-advance past welcome if there's real progress
+    if (!isClerkClientConfigured() || !clerkSignedIn || !clerkUser?.id) return;
+    setUserId(fluxyUserIdFromClerk(clerkUser.id));
+  }, [clerkSignedIn, clerkUser?.id]);
+
+  // Auto-advance to first incomplete step once progress is hydrated from storage.
+  useEffect(() => {
+    if (!progressHydrated || initStepRef.current) return;
+    initStepRef.current = true;
+    const sent = userSentMessage || readFirstMessageSentForUser(clerkUser?.id, userId);
+    const first = firstIncompleteOnboardingStep({
+      adminJwt,
+      activeProject: project,
+      memberJwt,
+      room,
+      messageCount: sent ? 1 : 0,
+      userSentMessage: sent,
+    });
     if (first > 1) setActiveStep(first);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    progressHydrated,
+    userSentMessage,
+    adminJwt,
+    project,
+    memberJwt,
+    room,
+    clerkUser?.id,
+    userId,
+  ]);
 
   // Auto-mint member JWT the first time we have a project + admin JWT.
   const autoMintMemberKeyRef = useRef("");
@@ -276,7 +311,7 @@ export function useOnboardingWizard() {
       const message = messageFromUnknown(err, "Failed to create project");
       setError(
         message.includes("forbidden")
-          ? `${message} (likely HOSTED_MULTI_TENANT=true with FLUXY_PLATFORM_PROJECT_ID not matching this project). On hosted multi-tenant mode, use "Provision via Clerk" instead of manual create — or set HOSTED_MULTI_TENANT=false in apps/worker/.dev.vars for local-only dev.`
+          ? `${message} (likely HOSTED_MULTI_TENANT=true with FLUXY_PLATFORM_PROJECT_ID not matching this project). On hosted multi-tenant mode, use "Provision via Clerk" instead of manual create, or set HOSTED_MULTI_TENANT=false in apps/worker/.dev.vars for local-only dev.`
           : message,
       );
     } finally {
@@ -309,7 +344,7 @@ export function useOnboardingWizard() {
         | { ok: false; error?: string };
       if (!res.ok || !json.ok) throw new Error((!json.ok && json.error) || "Failed to mint JWT");
       setMemberJwt(json.data.memberJwt || "");
-      setNotice("Member JWT minted (server-side — API key not exposed to the browser).");
+      setNotice("Member JWT minted server-side (API key not exposed to the browser).");
     } catch (err: unknown) {
       setError(messageFromUnknown(err, "Failed to mint JWT"));
     } finally {
@@ -368,7 +403,7 @@ export function useOnboardingWizard() {
       setLastRoom(json.room);
       setNotice(
         json.room.id === (project?.id ? assistantRoomId(project.id) : "assistant-general")
-          ? "Assistant room ready — you can chat with built-in agents from the Agents page."
+          ? "Assistant room ready. You can chat with built-in agents from the Agents page."
           : "Room created.",
       );
     } catch (err: unknown) {
@@ -383,7 +418,7 @@ export function useOnboardingWizard() {
         };
         setRoom(existingRoom);
         setLastRoom(existingRoom);
-        setNotice("Room already exists — reusing it.");
+        setNotice("Room already exists. Reusing it.");
         setError(null);
       } else {
         setError(msg);
@@ -489,7 +524,7 @@ export function useOnboardingWizard() {
       const msg = messageFromUnknown(err, "Failed to invoke agent");
       setError(
         msg.includes("quota_exceeded") || msg.includes("quota")
-          ? `${msg} — monthly agent invoke limit reached (see Billing).`
+          ? `${msg}. Monthly agent invoke limit reached (see Billing).`
           : msg,
       );
     } finally {

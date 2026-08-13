@@ -4,7 +4,9 @@
     "message",
     "edit",
     "message_edit",
+    "message_updated",
     "message_delete",
+    "message_deleted",
     "message_expired",
     "typing",
     "subscription_succeeded",
@@ -46,6 +48,7 @@
     "client_event",
     "location_update",
     "location_track_ended",
-    "agentTyping"
+    "agentTyping",
+    "resume"
   ]
 }

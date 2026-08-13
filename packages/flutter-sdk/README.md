@@ -1,6 +1,6 @@
 # fluxychat_sdk
 
-Flutter SDK for [FluxyChat](https://fluxychat.com) — realtime chat infrastructure for SaaS.
+Flutter SDK for [FluxyChat](https://fluxychat.com): realtime chat infrastructure for SaaS.
 
 Add in-app chat, AI agents, and multi-platform messaging with real-time WebSocket rooms, REST API, and full state management.
 

@@ -10,9 +10,9 @@ export const SITE_DESCRIPTION =
 
 export const PAGE_METADATA = {
   landing: buildPageMetadata({
-    title: "Ship chat and live product from one SDK — FluxyChat",
+    title: "Ship chat and live product from one SDK",
     description:
-      "In-app chat, AI agents, live stream, collab, game, and IoT on Cloudflare Workers. Self-host or hosted — SDK, docs, and operator console.",
+      "In-app chat, AI agents, live stream, collab, game, and IoT on Cloudflare Workers. Self-host or hosted with SDK, docs, and operator console.",
     path: "/",
   }),
   why: buildPageMetadata({
@@ -36,7 +36,7 @@ export const PAGE_METADATA = {
   cloudflareWorkersChatGuide: buildPageMetadata({
     title: "Cloudflare Workers chat with Durable Objects",
     description:
-      "Build instant messaging on Cloudflare Workers: WebSockets, Durable Objects, D1 — Pusher alternative without a VPS. Vercel front + edge chat.",
+      "Build instant messaging on Cloudflare Workers: WebSockets, Durable Objects, D1. Pusher alternative without a VPS. Vercel front plus edge chat.",
     path: "/guides/cloudflare-workers-chat",
   }),
   onboarding: buildPageMetadata({

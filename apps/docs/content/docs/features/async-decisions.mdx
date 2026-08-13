@@ -5,14 +5,14 @@ description: Weighted role-based approvals on special decision messages with liv
 
 # Async decision quorum
 
-Post a **decision** message that requires quorum from specific roles (e.g. 2 of 3 approvers within 48 hours). Progress updates live in the thread.
+Post a decision message that requires quorum from specific roles (e.g. 2 of 3 approvers within 48 hours). Progress updates live in the thread.
 
 ## In chat
 
 1. Open message menu → **Create decision** (or use the `Decision` UI component).
-2. Set **question**, **required roles**, **quorum count**, and **expiry**.
-3. Approvers tap **Acknowledge** — progress bar updates server-side.
-4. When quorum is met or time expires, state transitions to `approved` / `expired`.
+2. Set question, required roles, quorum count, and expiry.
+3. Approvers tap **Acknowledge**. The progress bar updates server-side.
+4. When quorum is met or time expires, state transitions to `approved` or `expired`.
 
 ## Console UI
 
@@ -39,7 +39,7 @@ await client.createDecision(roomId, {
 await client.ackDecision(roomId, decisionMessageId);
 ```
 
-Quorum is verified **only on the server** — clients cannot bypass role checks.
+Quorum is verified only on the server. Clients cannot bypass role checks.
 
 ## Related
 

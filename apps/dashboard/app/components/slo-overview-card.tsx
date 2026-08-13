@@ -146,7 +146,7 @@ export function SloOverviewCard() {
       {!loading && slo && !healthy ? (
         <p className="mt-3 flex items-center gap-2 text-xs text-amber-800">
           <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          One or more SLO targets missed — review alerts in Analytics.
+          One or more SLO targets missed. Review alerts in Analytics.
         </p>
       ) : null}
     </section>

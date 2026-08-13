@@ -156,7 +156,7 @@ export default function KnowledgePage() {
 
       {!token ? (
         <Panel className="p-6 text-sm text-muted-foreground">
-          Admin JWT required — open{" "}
+          Admin JWT required. Open{" "}
           <Link href="/projects" className="font-medium underline-offset-2 hover:underline">
             Projects
           </Link>{" "}

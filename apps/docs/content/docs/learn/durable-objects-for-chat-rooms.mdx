@@ -1,11 +1,11 @@
 ---
 title: "Durable Objects for chat rooms"
-description: "Shared state coordination, transactional consistency, and WebSocket hibernation — the Cloudflare primitives behind edge-native chat without a socket fleet."
+description: "Shared state coordination, transactional consistency, and WebSocket hibernation: the Cloudflare primitives behind edge-native chat without a socket fleet."
 ---
 
 # Durable Objects for chat rooms
 
-Shared state coordination, transactional consistency, and WebSocket hibernation — the Cloudflare primitives behind edge-native chat without a socket fleet.
+Shared state coordination, transactional consistency, and WebSocket hibernation: the Cloudflare primitives behind edge-native chat without a socket fleet.
 
 ## Why Durable Objects fit chat
 
@@ -15,22 +15,22 @@ A chat room is exactly that pattern: one coordination point per room, many WebSo
 
 ## Vocabulary buyers search for
 
-- Shared state coordination — one Room DO holds live connections and ephemeral signals (typing, presence).
-- Transactional consistency — membership and message writes go through D1 with clear project scoping.
-- WebSocket hibernation — the DO can sleep while clients reconnect; your app still needs client-side replay semantics.
-- cloudflare workers websocket — HTTP + upgrade on the Worker, sticky room state on the DO.
-- durable objects chat — one object name per roomId, not one global socket server.
+- Shared state coordination: one Room DO holds live connections and ephemeral signals (typing, presence).
+- Transactional consistency: membership and message writes go through D1 with clear project scoping.
+- WebSocket hibernation: the DO can sleep while clients reconnect; your app still needs client-side replay semantics.
+- cloudflare workers websocket: HTTP + upgrade on the Worker, sticky room state on the DO.
+- durable objects chat: one object name per roomId, not one global socket server.
 
 ## How FluxyChat maps the primitives
 
-- RoomDurableObject — one DO per room for fan-out, ordering, and connection lifecycle.
-- D1 — queryable history, templates, webhooks metadata; not every keystroke as a hot write.
-- Worker — JWT mint, REST writes, GDPR export, and `/ws/room/:roomId` upgrade routing.
-- SDK — connectionState, loadMore (history replay), clientMessageId idempotency on reconnect.
+- RoomDurableObject: one DO per room for fan-out, ordering, and connection lifecycle.
+- D1: queryable history, templates, webhooks metadata; not every keystroke as a hot write.
+- Worker: JWT mint, REST writes, GDPR export, and `/ws/room/:roomId` upgrade routing.
+- SDK: connectionState, loadMore (history replay), clientMessageId idempotency on reconnect.
 
 ## PartyKit vs chat-layer DOs
 
-PartyKit and DO demos excel at collab “party” state and tutorials. FluxyChat targets SaaS in-app messaging: multi-tenant JWT, operator console, billing hooks, and production reconnect — not a generic party runtime.
+PartyKit and DO demos excel at collab "party" state and tutorials. FluxyChat targets SaaS in-app messaging: multi-tenant JWT, operator console, billing hooks, and production reconnect, not a generic party runtime.
 
 ## Shared human + agent workspace
 
@@ -38,4 +38,4 @@ Agentic products need the same durable room state for people and bots: tool_call
 
 ## From official demo to production
 
-Start with Cloudflare’s Workers chat example, then add auth, history pagination, quotas, and operator tooling — or adopt FluxyChat as the maintained layer.
+Start with Cloudflare's Workers chat example, then add auth, history pagination, quotas, and operator tooling, or adopt FluxyChat as the maintained layer.

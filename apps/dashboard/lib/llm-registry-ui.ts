@@ -56,7 +56,7 @@ export function credentialStatusSummary(
   status: LlmCatalogProvider["credentialStatus"] | undefined,
 ): { ready: boolean; label: string } {
   if (!status) {
-    return { ready: false, label: "Keys unknown — load catalog" };
+    return { ready: false, label: "Keys unknown. Load catalog." };
   }
   const projectOk = status.project === "configured";
   const workerOk = status.worker === "configured";
@@ -66,6 +66,6 @@ export function credentialStatusSummary(
   if (workerOk) {
     return { ready: true, label: "Worker env key" };
   }
-  return { ready: false, label: "No API key — add under LLM keys" };
+  return { ready: false, label: "No API key. Add under LLM keys." };
 }
 

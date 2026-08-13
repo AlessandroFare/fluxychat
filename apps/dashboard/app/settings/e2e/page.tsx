@@ -141,7 +141,7 @@ export default function RoomE2eSettingsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Room E2E encryption"
-        description="Shared AES-GCM room key distributed to members. Rotate keys on compromise or member offboarding (#6)."
+        description="Shared AES-GCM room key distributed to members. Rotate keys on compromise or member offboarding."
       />
 
       {!token ? (
@@ -219,7 +219,7 @@ export default function RoomE2eSettingsPage() {
           </Panel>
 
           {roomId.trim() ? (
-            <Panel title="MLS group registry (#30)">
+            <Panel title="MLS group registry">
               <p className="mb-3 text-xs text-muted-foreground">
                 Server-side coordination for MLS groups: epoch and device roster in D1.
                 Client encryption uses SDK <code className="font-mono">createMlsManager</code>.

@@ -3,6 +3,7 @@ import {
   ingestProsodySignal,
   buildEmpathyPromptSuffix,
   upsertRoomEmpathySettings,
+  describeEmpathyAdaptationHint,
 } from "./room-empathy.js";
 
 vi.mock("./room-access.js", () => ({
@@ -85,5 +86,13 @@ describe("room-empathy", () => {
     const { env } = makeEnv();
     const settings = await upsertRoomEmpathySettings(env, "p1", "r1", { enabled: true });
     expect(settings.enabled).toBe(true);
+  });
+
+  it("NW-203 describeEmpathyAdaptationHint is operator-safe", () => {
+    const hint = describeEmpathyAdaptationHint("stressed", { confidence: 0.82 });
+    expect(hint.tone).toBe("calm");
+    expect(hint.showEscalationCue).toBe(true);
+    expect(hint.operatorHint).toContain("calm");
+    expect(hint.operatorHint).toContain("82%");
   });
 });

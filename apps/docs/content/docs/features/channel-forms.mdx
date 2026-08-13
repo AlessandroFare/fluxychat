@@ -5,17 +5,17 @@ description: WhatsApp Business Flows and RCS-style multi-step forms that normali
 
 # Channel structured forms
 
-Define a **form schema** once; deliver it on WhatsApp (interactive messages / Flows) or RCS (suggested replies). Answers arrive as a structured message in the FluxyChat room.
+Define a form schema once. Deliver it on WhatsApp (interactive messages or Flows) or RCS (suggested replies). Answers arrive as a structured message in the FluxyChat room.
 
 ## Console
 
 **Bridges → Forms** (`/bridges/forms`)
 
-1. Pick a **room** and recipient **E.164** number.
-2. Choose channel: **WhatsApp** or **RCS**.
-3. **Send structured form** — worker creates a delivery record and calls the channel adapter.
-4. Copy **inbound webhook URLs** for Meta / RCS aggregator configuration.
-5. Review **Recent deliveries** (status, responses, timestamps).
+1. Pick a room and recipient E.164 number.
+2. Choose channel: WhatsApp or RCS.
+3. Send structured form. The worker creates a delivery record and calls the channel adapter.
+4. Copy inbound webhook URLs for Meta or RCS aggregator configuration.
+5. Review recent deliveries (status, responses, timestamps).
 
 ## Field types
 
@@ -39,17 +39,17 @@ Dispatch body: `{ roomId, channel, recipientE164, schema?, formId?, channelConfi
 
 ## WhatsApp
 
-Requires Meta Business API credentials. See [Optional integrations — WhatsApp](/docs/guides/ecosystem/optional-integrations#whatsapp-business-structured-forms).
+Requires Meta Business API credentials. See [Optional integrations: WhatsApp](/docs/guides/ecosystem/optional-integrations#whatsapp-business-structured-forms).
 
 Set `WHATSAPP_*` env vars on the Worker (token, phone number ID, verify token).
 
 ## RCS
 
-Requires a paid RCS aggregator — see [Platform status — RCS](/docs/features/platform-status#rcs-17).
+Requires a paid RCS aggregator. See [Platform status](/docs/features/platform-status) for current RCS support.
 
 ## Dry-run
 
-Without vendor credentials, submissions are stored locally for UI testing — useful for schema iteration before going live.
+Without vendor credentials, submissions are stored locally for UI testing. Useful for schema iteration before going live.
 
 ## Related
 

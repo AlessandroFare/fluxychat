@@ -216,6 +216,28 @@ export function useWebPush(
     requestPermissionAndSubscribe,
     unsubscribe,
     reload,
+    acknowledgeDelivery: React.useCallback(
+      async (input: {
+        roomId?: string;
+        messageId?: number;
+        platform?: string;
+        deliveryLogId?: string;
+        clientMeta?: Record<string, unknown>;
+      }) => {
+        if (!client?.isAuthenticated()) return { ok: false as const, error: "not_authenticated" };
+        try {
+          const result = await client.acknowledgePushDelivery({
+            platform: "web",
+            ...input,
+          });
+          return { ok: true as const, id: result.id };
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          return { ok: false as const, error: msg };
+        }
+      },
+      [client],
+    ),
   };
 }
 

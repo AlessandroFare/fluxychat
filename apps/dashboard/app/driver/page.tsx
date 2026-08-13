@@ -197,7 +197,7 @@ export default function DriverPage() {
     <ConsoleShell className="max-w-none">
       <ConsolePageHeader
         title="Driver app"
-        description="Mobile companion for couriers — share GPS with Fleet Tracking, accept trips, and work offline. Pair with the fleet console to dispatch and watch live positions."
+        description="Mobile companion for couriers: share GPS with Fleet Tracking, accept trips, and work offline. Pair with the fleet console to dispatch and watch live positions."
         actions={
           <Link
             href="/fleet"
@@ -230,7 +230,7 @@ export default function DriverPage() {
       {!offline && pendingGpsRef.current > 0 && (
         <div className="mx-3 mt-2">
           <button onClick={syncFromYDoc} className="w-full rounded-lg bg-blue-100 py-1.5 text-[10px] text-blue-700 dark:bg-blue-900 dark:text-blue-200 flex items-center justify-center gap-1">
-            <RefreshCw className="h-3 w-3" /> {pendingGpsRef.current} pending GPS points — restore from local store
+            <RefreshCw className="h-3 w-3" /> {pendingGpsRef.current} pending GPS points. Restore from local store.
           </button>
         </div>
       )}
@@ -321,7 +321,7 @@ export default function DriverPage() {
       {offline && (
         <div className="sticky bottom-0 mx-3 mb-3 rounded-xl bg-yellow-100 p-3 text-xs text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 flex items-center gap-2">
           <WifiOff className="h-4 w-4 shrink-0" />
-          Offline — GPS &amp; trip data stored locally via Y.js CRDT — syncs automatically when online
+          Offline. GPS and trip data stored locally via Y.js CRDT and syncs automatically when online.
         </div>
       )}
 

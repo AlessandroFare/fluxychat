@@ -25,6 +25,51 @@ function buildEmpathyAgentPromptSuffix(state) {
   }
 }
 
+/**
+ * NW-203 — Operator-facing adaptation hint for voice stage console.
+ * Does not expose emotion labels to end users; console-only copy.
+ *
+ * @param {string | null | undefined} inferredState
+ * @param {{ confidence?: number }} [opts]
+ */
+export function describeEmpathyAdaptationHint(inferredState, opts = {}) {
+  const state = String(inferredState || "neutral").toLowerCase();
+  const confidence = Number(opts.confidence);
+  const confLabel = Number.isFinite(confidence)
+    ? ` · confidence ${Math.round(confidence * 100)}%`
+    : "";
+  switch (state) {
+    case "frustrated":
+      return {
+        state: "frustrated",
+        tone: "concise",
+        operatorHint: `Adapting: shorter replies, clear next step${confLabel}`,
+        showEscalationCue: true,
+      };
+    case "stressed":
+      return {
+        state: "stressed",
+        tone: "calm",
+        operatorHint: `Adapting: calm pacing, fewer questions${confLabel}`,
+        showEscalationCue: true,
+      };
+    case "calm":
+      return {
+        state: "calm",
+        tone: "matched",
+        operatorHint: `Adapting: match calm pace${confLabel}`,
+        showEscalationCue: false,
+      };
+    default:
+      return {
+        state: "neutral",
+        tone: "neutral",
+        operatorHint: `Baseline tone${confLabel}`,
+        showEscalationCue: false,
+      };
+  }
+}
+
 function kvKey(projectId, roomId, userId) {
   return `empathy:${projectId}:${roomId}:${userId}`;
 }

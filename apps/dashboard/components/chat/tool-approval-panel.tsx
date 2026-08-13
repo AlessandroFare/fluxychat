@@ -4,16 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useDashboardSession } from "@/app/components/dashboard-session";
-import { fetchWorkerJson } from "@/lib/worker-fetch";
-import { getPublicWorkerUrl } from "@/lib/worker-url-client";
-
-interface HitlApproval {
-  id: string;
-  toolName: string;
-  toolInput?: unknown;
-  roomId?: string;
-  status: string;
-}
+import {
+  fetchPendingApprovalsForRoom,
+  postApprovalDecision,
+  type HitlApprovalRequest,
+} from "@/lib/hitl-approval-client";
+import { messageFromUnknown } from "@/lib/error-message";
 
 interface ToolApprovalPanelProps {
   roomId: string;
@@ -23,23 +19,17 @@ interface ToolApprovalPanelProps {
 export function ToolApprovalPanel({ roomId, enabled = true }: ToolApprovalPanelProps) {
   const { adminJwt, memberJwt } = useDashboardSession();
   const token = (adminJwt || memberJwt).trim();
-  const [pending, setPending] = useState<HitlApproval[]>([]);
+  const [pending, setPending] = useState<HitlApprovalRequest[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const disabledRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!enabled || disabledRef.current || !token || !roomId) return;
     try {
-      const body = await fetchWorkerJson<{ approvals?: HitlApproval[] }>(
-        `${getPublicWorkerUrl()}/api/hitl/approvals?roomId=${encodeURIComponent(roomId)}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      setPending(body.approvals ?? []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes("kv_not_configured") || message.includes("(503)")) {
-        disabledRef.current = true;
-      }
+      const list = await fetchPendingApprovalsForRoom(token, roomId);
+      setPending(list);
+    } catch {
       setPending([]);
     }
   }, [enabled, token, roomId]);
@@ -55,16 +45,19 @@ export function ToolApprovalPanel({ roomId, enabled = true }: ToolApprovalPanelP
     return () => clearInterval(t);
   }, [enabled, load]);
 
-  async function decide(id: string, action: "approve" | "deny") {
+  async function decide(id: string, decision: "approve" | "reject") {
     if (!token) return;
+    if (pending.length >= 2 && confirmId !== id) {
+      setConfirmId(id);
+      return;
+    }
     setBusy(id);
     try {
-      await fetchWorkerJson(`${getPublicWorkerUrl()}/api/hitl/approvals/${encodeURIComponent(id)}/${action}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
+      await postApprovalDecision(token, id, decision);
+      setConfirmId(null);
       await load();
+    } catch (err) {
+      console.error(messageFromUnknown(err, "Approval decision failed"));
     } finally {
       setBusy(null);
     }
@@ -73,18 +66,29 @@ export function ToolApprovalPanel({ roomId, enabled = true }: ToolApprovalPanelP
   if (!enabled || pending.length === 0) return null;
 
   return (
-    <div className="mx-4 mb-2 space-y-2 rounded-lg border border-amber-300/60 bg-amber-50/80 p-3">
-      <p className="text-xs font-semibold text-amber-900">Tool approvals pending</p>
+    <div className="mx-4 mb-2 space-y-2 rounded-lg border border-amber-300/60 bg-amber-50/80 p-3 dark:bg-amber-950/20">
+      <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">Tool approvals pending</p>
       {pending.map((a) => (
-        <div key={a.id} className="flex flex-wrap items-center gap-2 text-xs">
-          <code className="font-semibold">{a.toolName}</code>
-          <Button size="sm" variant="default" disabled={busy === a.id} onClick={() => void decide(a.id, "approve")}>
-            {busy === a.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-            Approve
-          </Button>
-          <Button size="sm" variant="outline" disabled={busy === a.id} onClick={() => void decide(a.id, "deny")}>
-            <X className="h-3 w-3" /> Deny
-          </Button>
+        <div key={a.id} className="rounded-md border bg-background/80 p-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="font-semibold">{a.toolName}</code>
+            <span className="text-muted-foreground">#{a.id.slice(0, 8)}</span>
+          </div>
+          {confirmId === a.id && pending.length >= 2 ? (
+            <p className="mt-2 text-[11px] text-amber-900 dark:text-amber-100">
+              Confirm: approve/reject <strong>{a.toolName}</strong> (request {a.id.slice(0, 8)}…)?
+              {pending.length > 1 ? ` ${pending.length - 1} other pending.` : ""}
+            </p>
+          ) : null}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button size="sm" variant="default" disabled={busy === a.id} onClick={() => void decide(a.id, "approve")}>
+              {busy === a.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              Approve
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={busy === a.id} onClick={() => void decide(a.id, "reject")}>
+              <X className="h-3 w-3" /> Reject
+            </Button>
+          </div>
         </div>
       ))}
     </div>

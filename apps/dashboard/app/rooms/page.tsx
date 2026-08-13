@@ -8,6 +8,16 @@ import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import { RoomOfflineNotifySettings } from "../components/room-offline-notify-settings";
+import { RoomMcpConnectPanel } from "../components/room-mcp-connect-panel";
+import { RoomPresenceEscalationPanel } from "../components/room-presence-escalation-panel";
+import { RoomRoleVisibilityPanel } from "../components/room-role-visibility-panel";
+import { RoomDecisionQuorumPanel } from "../components/room-decision-quorum-panel";
+import { RoomExternalEventPanel } from "../components/room-external-event-panel";
+import { RoomAsymmetryPanel } from "../components/room-asymmetry-panel";
+import { RoomAudienceScorePanel } from "../components/room-audience-score-panel";
+import { RoomMemoryPanel } from "../components/room-memory-panel";
+import { RoomKnowledgeGraphPanel } from "../components/room-knowledge-graph-panel";
+import { RoomApprovalChainPanel } from "../components/room-approval-chain-panel";
 import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { readJwtSub } from "@/lib/jwt-claims";
@@ -20,12 +30,16 @@ import { fetchWorkerJson } from "@/lib/worker-fetch";
 import { AssistantRoomPanel } from "../components/assistant-room-panel";
 import { RoomHealthCard } from "../components/room-health-card";
 import { RoomScheduledCompose } from "../components/room-scheduled-compose";
+import { FluxyChat } from "@/components/chat";
+import { provisionDecisionRoomPack } from "@/lib/decision-rooms-client";
+import { provisionEnterpriseAgentRoom } from "@/lib/enterprise-agent-room-client";
 
 const WORKER_URL = getPublicWorkerUrl();
 
 export default function RoomsPage() {
   const searchParams = useSearchParams();
   const roomFromQuery = searchParams.get("room")?.trim() || null;
+  const messageIdFromQuery = Number(searchParams.get("messageId")) || undefined;
   const { adminJwt, memberJwt, activeProject } = useDashboardSession();
   const { user: clerkUser } = useClerkUser();
   const memberToken = memberJwt.trim();
@@ -45,6 +59,8 @@ export default function RoomsPage() {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("group");
   const [creating, setCreating] = useState(false);
+  const [creatingDecisionRoom, setCreatingDecisionRoom] = useState(false);
+  const [creatingEnterpriseRoom, setCreatingEnterpriseRoom] = useState(false);
 
   const [editName, setEditName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -84,6 +100,18 @@ export default function RoomsPage() {
         token: adminJwt.trim() || undefined,
       }),
     [adminJwt]
+  );
+
+  const chatClient = useMemo(
+    () =>
+      memberToken
+        ? new FluxyChatClient({
+            baseUrl: WORKER_URL,
+            userId: fluxyMemberUserId || "dashboard-member",
+            token: memberToken,
+          })
+        : null,
+    [memberToken, fluxyMemberUserId],
   );
 
   const loadRooms = useCallback(async () => {
@@ -136,6 +164,52 @@ export default function RoomsPage() {
       setError(messageFromUnknown(e, "Create failed"));
     } finally {
       setCreating(false);
+    }
+  };
+
+  const createDecisionRoom = async () => {
+    const patchToken = adminJwt.trim();
+    if (!patchToken) {
+      setError("Decision Rooms pack requires an admin JWT.");
+      return;
+    }
+    const name = newName.trim() || "Decision Room";
+    setCreatingDecisionRoom(true);
+    setError(null);
+    try {
+      const result = await provisionDecisionRoomPack(patchToken, name);
+      setNewName("");
+      setNotice(
+        `Decision Room created (${result.templatesCreated} templates seeded). Open ${result.room.id}`,
+      );
+      setSelectedId(result.room.id);
+      await loadRooms();
+    } catch (e: unknown) {
+      setError(messageFromUnknown(e, "Decision Room creation failed"));
+    } finally {
+      setCreatingDecisionRoom(false);
+    }
+  };
+
+  const createEnterpriseAgentRoom = async () => {
+    const patchToken = adminJwt.trim();
+    if (!patchToken) {
+      setError("Enterprise Agent Room requires an admin JWT.");
+      return;
+    }
+    const name = newName.trim() || "Enterprise Agent Room";
+    setCreatingEnterpriseRoom(true);
+    setError(null);
+    try {
+      const result = await provisionEnterpriseAgentRoom(patchToken, name);
+      setNewName("");
+      setNotice(`Enterprise Agent Room created: ${result.room.id}`);
+      setSelectedId(result.room.id);
+      await loadRooms();
+    } catch (e: unknown) {
+      setError(messageFromUnknown(e, "Enterprise room creation failed"));
+    } finally {
+      setCreatingEnterpriseRoom(false);
     }
   };
 
@@ -281,7 +355,31 @@ export default function RoomsPage() {
           >
             {creating ? "Creating…" : "Create"}
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => void createDecisionRoom()}
+            disabled={creatingDecisionRoom || !adminJwt.trim()}
+            title="Quorum, debate, counterfactual replay, and Truth Market preset"
+          >
+            {creatingDecisionRoom ? "Creating…" : "Create Decision Room"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => void createEnterpriseAgentRoom()}
+            disabled={creatingEnterpriseRoom || !adminJwt.trim()}
+            title="Multi-agent room with audit trail and cross-org flows"
+          >
+            {creatingEnterpriseRoom ? "Creating…" : "Enterprise Agent Room"}
+          </Button>
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          <strong>Decision Room</strong> seeds templates and links{" "}
+          <a href="/agents/debate" className="text-primary underline">debate</a> +{" "}
+          <a href="/truth-market" className="text-primary underline">Truth Market</a>.{" "}
+          <strong>Enterprise Agent Room</strong> bundles multi-agent RBAC,{" "}
+          <a href="/audit-chain" className="text-primary underline">audit chain</a>, and{" "}
+          <a href="/agents/cross-org" className="text-primary underline">cross-org</a> flows.
+        </p>
         </Section>
       </div>
 
@@ -432,6 +530,80 @@ export default function RoomsPage() {
                 <div className="mt-6 space-y-4">
                   <RoomHealthCard client={listClient} roomId={selectedId} />
                   <RoomScheduledCompose client={listClient} roomId={selectedId} />
+                </div>
+              ) : null}
+
+              {chatClient?.isAuthenticated() ? (
+                <div className="mt-6">
+                  <h3 className="mb-2 text-sm font-semibold">Live chat</h3>
+                  <div className="min-h-[24rem] rounded-lg border border-border">
+                    <FluxyChat
+                      roomId={selectedId}
+                      client={chatClient}
+                      scrollToMessageId={messageIdFromQuery}
+                      variant="minimal"
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomMcpConnectPanel roomId={selectedId} memberJwt={memberToken} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomPresenceEscalationPanel roomId={selectedId} memberJwt={memberToken} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomRoleVisibilityPanel roomId={selectedId} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomDecisionQuorumPanel roomId={selectedId} memberJwt={memberToken} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomExternalEventPanel roomId={selectedId} memberJwt={memberToken} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomAsymmetryPanel roomId={selectedId} memberJwt={memberToken} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomAudienceScorePanel roomId={selectedId} memberJwt={memberToken} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomMemoryPanel roomId={selectedId} memberJwt={memberToken} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomApprovalChainPanel roomId={selectedId} memberJwt={memberToken} />
+                </div>
+              ) : null}
+
+              {memberToken ? (
+                <div className="mt-6">
+                  <RoomKnowledgeGraphPanel roomId={selectedId} memberJwt={memberToken} />
                 </div>
               ) : null}
 

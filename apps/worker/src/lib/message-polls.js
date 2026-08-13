@@ -97,11 +97,103 @@ export function buildPollSnapshot(
 }
 
 /**
+ * Batch-attach poll snapshots (with optional userVote) to history messages.
+ *
+ * @param {*} env
+ * @param {string} projectId
+ * @param {Array<{ id: number, [key: string]: unknown }>} messages
+ * @param {string} [userId]
+ */
+export async function attachPollsToMessages(env, projectId, messages, userId) {
+  if (!messages?.length) return messages;
+  const ids = messages.map((m) => m.id).filter((id) => Number.isFinite(id));
+  if (!ids.length) return messages;
+
+  const placeholders = ids.map(() => "?").join(",");
+  const pollRows = await env.DB.prepare(
+    `SELECT message_id, question, options_json, allow_multiple, closed
+     FROM message_polls WHERE project_id = ? AND message_id IN (${placeholders})`,
+  )
+    .bind(projectId, ...ids)
+    .all();
+
+  if (!pollRows.results?.length) return messages;
+
+  const voteRows = await env.DB.prepare(
+    `SELECT message_id, option_index, COUNT(*) as c
+     FROM message_poll_votes WHERE message_id IN (${placeholders})
+     GROUP BY message_id, option_index`,
+  )
+    .bind(...ids)
+    .all();
+
+  /** @type {Record<number, Record<number, number>>} */
+  const voteCountsByMessage = {};
+  for (const v of voteRows.results || []) {
+    const mid = Number(v.message_id);
+    if (!voteCountsByMessage[mid]) voteCountsByMessage[mid] = {};
+    voteCountsByMessage[mid][Number(v.option_index)] = Number(v.c) || 0;
+  }
+
+  const voterRows = await env.DB.prepare(
+    `SELECT message_id, COUNT(DISTINCT user_id) as c
+     FROM message_poll_votes WHERE message_id IN (${placeholders})
+     GROUP BY message_id`,
+  )
+    .bind(...ids)
+    .all();
+
+  /** @type {Record<number, number>} */
+  const votersByMessage = {};
+  for (const v of voterRows.results || []) {
+    votersByMessage[Number(v.message_id)] = Number(v.c) || 0;
+  }
+
+  /** @type {Record<number, number | null>} */
+  let userVotesByMessage = {};
+  if (userId) {
+    const userVoteRows = await env.DB.prepare(
+      `SELECT message_id, option_index FROM message_poll_votes
+       WHERE user_id = ? AND message_id IN (${placeholders})`,
+    )
+      .bind(userId, ...ids)
+      .all();
+    for (const v of userVoteRows.results || []) {
+      userVotesByMessage[Number(v.message_id)] = Number(v.option_index);
+    }
+  }
+
+  /** @type {Record<number, object>} */
+  const pollByMessageId = {};
+  for (const row of pollRows.results || []) {
+    const messageId = Number(row.message_id);
+    const options = JSON.parse(String(row.options_json || "[]"));
+    pollByMessageId[messageId] = {
+      ...buildPollSnapshot(
+        row.question,
+        options,
+        row.allow_multiple === 1,
+        voteCountsByMessage[messageId] ?? {},
+        messageId,
+        votersByMessage[messageId] ?? 0,
+      ),
+      closed: row.closed === 1,
+      userVote: userVotesByMessage[messageId] ?? null,
+    };
+  }
+
+  return messages.map((m) =>
+    pollByMessageId[m.id] ? { ...m, poll: pollByMessageId[m.id] } : m,
+  );
+}
+
+/**
  * @param {*} env
  * @param {number} messageId
  * @param {string} projectId
+ * @param {string} [userId]
  */
-export async function getMessagePoll(env, messageId, projectId) {
+export async function getMessagePoll(env, messageId, projectId, userId) {
   const row = await env.DB.prepare(
     `SELECT message_id, question, options_json, allow_multiple, closed
      FROM message_polls WHERE message_id = ? AND project_id = ? LIMIT 1`,
@@ -130,6 +222,17 @@ export async function getMessagePoll(env, messageId, projectId) {
     .bind(messageId)
     .first();
 
+  let userVote = null;
+  if (userId) {
+    const voteRow = await env.DB.prepare(
+      `SELECT option_index FROM message_poll_votes
+       WHERE message_id = ? AND user_id = ? LIMIT 1`,
+    )
+      .bind(messageId, userId)
+      .first();
+    if (voteRow) userVote = Number(voteRow.option_index);
+  }
+
   return {
     ...buildPollSnapshot(
       row.question,
@@ -140,6 +243,7 @@ export async function getMessagePoll(env, messageId, projectId) {
       Number(votersRow?.c) || 0,
     ),
     closed: row.closed === 1,
+    userVote,
   };
 }
 
@@ -216,6 +320,6 @@ export async function castPollVote(env, input) {
     .bind(input.messageId, input.userId, input.optionIndex, now)
     .run();
 
-  const snapshot = await getMessagePoll(env, input.messageId, input.projectId);
+  const snapshot = await getMessagePoll(env, input.messageId, input.projectId, input.userId);
   return { ok: true, poll: snapshot };
 }

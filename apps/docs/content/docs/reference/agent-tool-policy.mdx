@@ -1,0 +1,80 @@
+---
+title: "Agent tool policy"
+description: "JSON policy-as-code for agent tool allow, deny, and require_approval, aligned with EU AI Act HITL."
+---
+
+FluxyChat evaluates a per-project JSON policy before every agent tool call. Policies merge with existing HITL gates and EU AI Act high-risk overrides.
+
+## Effects
+
+| Effect | Behavior |
+|--------|----------|
+| `allow` | Tool runs normally (subject to HITL gate / EU AI Act) |
+| `require_approval` | Forces human approval even if tool not in `alwaysRequire` |
+| `deny` | Tool blocked with `policy_denied`; audit row written |
+
+## Policy shape
+
+```json
+{
+  "version": 1,
+  "defaultEffect": "allow",
+  "rules": [
+    {
+      "id": "approve-send",
+      "tools": ["sendMessage", "postMessage"],
+      "effect": "require_approval",
+      "priority": 10,
+      "reason": "Outbound messages require HITL"
+    },
+    {
+      "id": "hold-search",
+      "tools": ["web_search", "search_*"],
+      "effect": "allow",
+      "onHoldPhrase": "Searching the knowledge base…",
+      "priority": 5
+    },
+    {
+      "id": "deny-delete",
+      "tools": ["delete_*"],
+      "effect": "deny",
+      "priority": 20
+    }
+  ]
+}
+```
+
+Tool patterns support exact names, `prefix*` wildcards, or regex.
+
+### On-hold narration
+
+Add `onHoldPhrase` to a rule to emit an `agent_on_hold` room event during tool execution (voice duplex or console preview). Barge-in cancels the filler on the client.
+
+```json
+{
+  "id": "hold-search",
+  "tools": ["web_search"],
+  "effect": "allow",
+  "onHoldPhrase": "Searching the knowledge base…"
+}
+```
+
+## API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/agents/tool-policy` | Load policy |
+| PUT | `/agents/tool-policy` | Upsert policy |
+| POST | `/agents/tool-policy/evaluate` | Dry-run evaluator |
+
+Dashboard: **Settings → Agent tool policy** (`/settings/agent-tools`).
+
+## Audit
+
+Every evaluation inserts into `agent_tool_policy_audit` (tool, effect, rule_id, run_id, room_id).
+
+## Related
+
+- [Tool approvals guide](/docs/guides/tool-approvals)
+- [EU AI Act compliance](/docs/features/eu-ai-act)
+- [Durable agent workflows](/docs/reference/durable-agent-workflows)

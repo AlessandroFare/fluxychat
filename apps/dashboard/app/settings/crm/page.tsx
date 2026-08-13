@@ -116,7 +116,7 @@ export default function CrmSettingsPage() {
     setLookupResult(null);
     try {
       const res = await lookupCrmContact(token, provider, lookupEmail.trim());
-      setLookupResult(res.contact ? JSON.stringify(res.contact) : "Not found — run sync first.");
+      setLookupResult(res.contact ? JSON.stringify(res.contact) : "Not found. Run sync first.");
     } catch (err) {
       setError(messageFromUnknown(err, "Lookup failed"));
     } finally {
@@ -167,13 +167,13 @@ export default function CrmSettingsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="CRM &amp; helpdesk"
-        description="Connect Salesforce, Zendesk, HubSpot, or Intercom — sync contacts, tickets, and agent handoff."
+        description="Connect Salesforce, Zendesk, HubSpot, or Intercom: sync contacts, tickets, and agent handoff."
       />
       <ConsoleFeedback error={error} notice={notice} />
 
       {!token && (
         <Panel className="p-4 text-sm text-muted-foreground">
-          Admin JWT required — copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
+          Admin JWT required. Copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
         </Panel>
       )}
 

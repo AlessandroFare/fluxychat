@@ -46,9 +46,9 @@ export function BetaBanner() {
   if (!visible) return null;
 
   const message = workerUnreachable
-    ? "Beta — cannot reach the chat API. Check worker URL / deployment."
+    ? "Beta: cannot reach the chat API. Check worker URL / deployment."
     : workerPaymentsDisabled
-      ? "Beta — billing upgrades are disabled on this host (payments not configured)."
+      ? "Beta: billing upgrades are disabled on this host (payments not configured)."
       : "Beta build. Report issues to your operator channel.";
 
   return (

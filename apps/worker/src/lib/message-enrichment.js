@@ -1,6 +1,6 @@
 import { browserOgPreview, isBrowserRunConfigured } from "./browser-run.js";
 import { logInfo } from "./worker-log.js";
-import { isPrivateUrl, safeOutboundFetch } from "./url-ssrf.js";
+import { isPrivateUrl } from "./url-ssrf.js";
 
 export function quotaResetInfo(now = new Date()) {
   const next = new Date(
@@ -15,7 +15,7 @@ export function quotaResetInfo(now = new Date()) {
 }
 
 export function extractMentions(content) {
-  const regex = /@([a-zA-Z0-9_]+)/g;
+  const regex = /@([a-zA-Z0-9_:]+)/g;
   const mentions = new Set();
   let m;
   while ((m = regex.exec(content))) {
@@ -47,22 +47,42 @@ function parseHtmlOgPreview(html, url) {
   return { title, description, imageUrl: image, url, source: "html_fetch" };
 }
 
-export async function fetchOgPreview(url, env) {
+export async function fetchOgPreview(url, env, options = {}) {
+  const projectId = options.projectId;
+  const feature = options.feature || "og_preview";
+
   try {
-    if (isPrivateUrl(url)) {
-      logInfo("og_preview.blocked_ssrf", { url });
+    const { validateUrl, fetchUrlWithAudit, recordUrlFetchAudit } = await import("./url-fetch-audit.js");
+    const validation = validateUrl(url, env);
+    if (!validation.ok) {
+      await recordUrlFetchAudit(env, {
+        projectId,
+        feature,
+        url,
+        outcome: "blocked",
+        blockedReason: validation.reason,
+      });
+      logInfo("og_preview.blocked_ssrf", { url, reason: validation.reason });
       return null;
     }
 
     if (isBrowserRunConfigured(env)) {
       const browserPreview = await browserOgPreview(env, url);
       if (browserPreview?.title || browserPreview?.description || browserPreview?.imageUrl) {
+        await recordUrlFetchAudit(env, {
+          projectId,
+          feature: "og_preview_browser",
+          url,
+          outcome: "success",
+        });
         return browserPreview;
       }
     }
 
-    const res = await safeOutboundFetch(url);
-    const html = await res.text();
+    const fetched = await fetchUrlWithAudit(env, { url, projectId, feature });
+    if (!fetched.ok || !fetched.response) return null;
+
+    const html = await fetched.response.text();
     const htmlPreview = parseHtmlOgPreview(html, url);
     if (htmlPreview.title || htmlPreview.description || htmlPreview.imageUrl) {
       return htmlPreview;

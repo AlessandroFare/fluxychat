@@ -122,11 +122,11 @@ export default function AgentDebatePage() {
         maxRounds: 1,
       });
       setNotice(
-        `Debate ${result.session?.status ?? "done"} — open the room to watch live agent_step events.`,
+        `Debate ${result.session?.status ?? "done"}. Open the room to watch live agent_step events.`,
       );
       await load();
     } catch (err) {
-      setError(messageFromUnknown(err, "Run failed — is AI configured?"));
+      setError(messageFromUnknown(err, "Run failed. Is AI configured?"));
     } finally {
       setBusy(null);
     }
@@ -164,7 +164,7 @@ export default function AgentDebatePage() {
               </Button>
             </div>
             {roles.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No roles — seed defaults to start.</p>
+              <p className="text-sm text-muted-foreground">No roles yet. Seed defaults to start.</p>
             ) : (
               <ul className="space-y-2">
                 {roles.map((role) => (

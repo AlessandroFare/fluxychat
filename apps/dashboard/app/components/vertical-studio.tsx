@@ -192,7 +192,7 @@ export function VerticalStudio({ config }: { config: VerticalStudioConfig }) {
         role: "host",
       });
       setSfuJoinUrl(session.joinUrl);
-      setAdapterNotice(`${session.provider} session ${session.sessionId} ready (demo adapter — configure your SFU vendor for production).`);
+      setAdapterNotice(`${session.provider} session ${session.sessionId} ready (demo adapter; configure your SFU vendor for production).`);
     } catch (error) {
       setAdapterNotice(error instanceof Error ? error.message : "SFU adapter failed");
     }
@@ -233,7 +233,7 @@ export function VerticalStudio({ config }: { config: VerticalStudioConfig }) {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-background/60">{config.eyebrow}</p>
               <h2 className="mt-2 text-balance font-heading text-2xl font-semibold sm:text-3xl">One room, the complete {config.id} workflow.</h2>
               <p className="mt-3 text-pretty text-sm leading-6 text-background/70">
-                This studio runs the shared vertical workflow SDK against deterministic demo seeds. Events, polls, attendance and checkpoints are real domain calls — not hidden React state.
+                This studio runs the shared vertical workflow SDK against deterministic demo seeds. Events, polls, attendance and checkpoints are real domain calls, not hidden React state.
               </p>
             </div>
             <Button type="button" onClick={advance} className="shrink-0 bg-background text-foreground hover:bg-background/90">
@@ -341,7 +341,7 @@ export function VerticalStudio({ config }: { config: VerticalStudioConfig }) {
           <Card>
             <CardHeader>
               <CardTitle>Live classroom adapters</CardTitle>
-              <CardDescription>Provider-neutral ports — demo adapters only until SFU and Yjs persistence are configured.</CardDescription>
+              <CardDescription>Provider-neutral ports. Demo adapters only until SFU and Yjs persistence are configured.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -378,7 +378,7 @@ export function VerticalStudio({ config }: { config: VerticalStudioConfig }) {
           <Card>
             <CardHeader>
               <CardTitle>Session report</CardTitle>
-              <CardDescription>Aggregated from versioned room events — same data shape a teacher or operator console would export.</CardDescription>
+              <CardDescription>Aggregated from versioned room events. Same data shape a teacher or operator console would export.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {sessionReport.map((line) => (

@@ -151,7 +151,7 @@ export default function IdentitySettingsPage() {
       setCreatedToken(result.token);
       setNewTokenDesc("");
       await loadAll();
-      setNotice("SCIM token created — copy it now; it will not be shown again.");
+      setNotice("SCIM token created. Copy it now; it will not be shown again.");
     } catch (err) {
       setError(messageFromUnknown(err, "Failed to create SCIM token"));
     } finally {
@@ -334,7 +334,7 @@ export default function IdentitySettingsPage() {
                 <Input
                   value={newTokenDesc}
                   onChange={(e) => setNewTokenDesc(e.target.value)}
-                  placeholder="Okta SCIM — production"
+                  placeholder="Okta SCIM (production)"
                 />
               </label>
               <Button onClick={() => void handleCreateScimToken()} disabled={creatingToken}>

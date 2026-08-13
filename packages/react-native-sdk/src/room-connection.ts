@@ -1,6 +1,12 @@
 import { FluxyAuthError, FluxyConnectionError, FluxySendError, FluxyTimeoutError, computeReconnectBackoffMs, mapWebSocketCloseToError } from './errors';
 import { dispatchInboundWsFrame } from '@fluxy-chat/protocol';
 import type { FluxyChatClient, FluxyChatEvent, FluxyChatMessage, FluxyWebSocketConnectOptions } from './index';
+import {
+  createRnOfflineQueue,
+  type RnOfflineQueue,
+  type RnOutboxStore,
+  type RnSyncStatus,
+} from './offline-queue';
 
 export type FluxyRoomConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
@@ -17,6 +23,9 @@ export interface FluxyRoomConnectionOptions {
   heartbeatTimeoutMs?: number;
   maxOutboundQueue?: number;
   maxOutboundQueueAgeMs?: number;
+  /** NW-114 — persist unsent frames across app restarts (AsyncStorage-backed store recommended). */
+  persistentOutbox?: RnOutboxStore;
+  onSyncStatusChange?: (status: RnSyncStatus, pending: number) => void;
   onAuthError?: (error: FluxyAuthError) => void;
   onConnectionError?: (error: Error) => void;
   onStatusChange?: (status: FluxyRoomConnectionStatus) => void;
@@ -61,6 +70,8 @@ export class FluxyRoomConnection {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private lastPongAtMs = 0;
   private wsSnapshotReceived = false;
+  private offlineQueue: RnOfflineQueue | null = null;
+  private offlineQueueUnsub: (() => void) | null = null;
 
   constructor(client: FluxyChatClient, roomId: string, options: FluxyRoomConnectionOptions = {}) {
     this.client = client;
@@ -77,6 +88,33 @@ export class FluxyRoomConnection {
       maxOutboundQueueAgeMs: options.maxOutboundQueueAgeMs ?? DEFAULT_MAX_OUTBOUND_QUEUE_AGE_MS,
       ...options,
     };
+    if (options.persistentOutbox) {
+      this.offlineQueue = createRnOfflineQueue({
+        store: options.persistentOutbox,
+        send: async (entry) => {
+          if (entry.roomId !== this.roomId) return false;
+          if (!this.canSendImmediately()) return false;
+          try {
+            this.ws!.send(JSON.stringify(entry.payload));
+            return true;
+          } catch {
+            return false;
+          }
+        },
+      });
+      this.offlineQueueUnsub = this.offlineQueue.onStatusChange((status, pending) => {
+        this.options.onSyncStatusChange?.(status, pending);
+      });
+      this.offlineQueue.start();
+    }
+  }
+
+  getSyncStatus(): RnSyncStatus {
+    return this.offlineQueue?.getStatus() ?? 'synced';
+  }
+
+  pendingOutboxCount(): Promise<number> {
+    return this.offlineQueue?.pendingCount() ?? Promise.resolve(0);
   }
 
   get connectionStatus(): FluxyRoomConnectionStatus { return this.status; }
@@ -100,6 +138,9 @@ export class FluxyRoomConnection {
     this.clearReconnectTimer();
     this.stopHeartbeat();
     this.clearOutboundQueue();
+    this.offlineQueue?.stop();
+    this.offlineQueueUnsub?.();
+    this.offlineQueueUnsub = null;
     if (this.ws) { try { this.ws.close(code); } catch {} this.ws = null; }
     this.setStatus('disconnected');
   }
@@ -107,6 +148,14 @@ export class FluxyRoomConnection {
   sendJson(payload: Record<string, unknown>): void {
     if (this.canSendImmediately()) { this.ws!.send(JSON.stringify(payload)); return; }
     if (this.canQueueOutbound()) { this.enqueueOutbound(payload); return; }
+    if (this.offlineQueue) {
+      void this.offlineQueue.enqueue({
+        roomId: this.roomId,
+        payload,
+        type: String(payload.type ?? 'message'),
+      });
+      return;
+    }
     throw new FluxySendError('Cannot send: WebSocket is not open.');
   }
 
@@ -156,7 +205,13 @@ export class FluxyRoomConnection {
     if (this.status === next) return;
     const previous = this.status;
     this.status = next;
-    if (next === 'connected') { this.nextReconnectAtMs = null; this.scheduledReconnectDelayMs = 0; }
+    if (next === 'connected') {
+      this.nextReconnectAtMs = null;
+      this.scheduledReconnectDelayMs = 0;
+      this.offlineQueue?.setConnected(true);
+    } else if (next === 'disconnected' || next === 'reconnecting' || next === 'connecting') {
+      this.offlineQueue?.setConnected(false);
+    }
     this.options.onStatusChange?.(next);
     this.emitAnyOnly({ type: 'state_change', roomId: this.roomId, previous, current: next } as any);
   }

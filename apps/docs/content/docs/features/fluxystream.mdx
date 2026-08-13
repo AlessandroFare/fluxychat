@@ -1,18 +1,18 @@
 ---
-title: "FluxyStream — Live Streaming & Broadcast"
-description: Interactive live video with real-time chat, moderation, commerce, and audience engagement on Cloudflare Stream.
+title: FluxyStream
+description: Interactive live video with realtime chat, moderation, commerce, and audience engagement on Cloudflare Stream.
 ---
 
 # FluxyStream
 
-FluxyStream is FluxyChat's integrated **live broadcasting** module. It combines WebRTC/RTMP ingest → Cloudflare Stream → HLS playback, real-time chat, AI moderation, and interactive audience features.
+FluxyStream is FluxyChat's live broadcasting module. It combines WebRTC/RTMP ingest, Cloudflare Stream, HLS playback, realtime chat, AI moderation, and interactive audience features.
 
 ## Console
 
 | Route | Purpose |
 |-------|---------|
-| `/stream` | Live events list (live now + scheduled) |
-| `/stream/[eventId]` | Viewer: HLS player + chat + raise hand |
+| `/stream` | Live events list (live now and scheduled) |
+| `/stream/[eventId]` | Viewer: HLS player, chat, raise hand |
 | `/stream/[eventId]/broadcast` | Broadcaster: camera preview, go live / end |
 | `/stream/demo` | Interactive SDK feature demo |
 
@@ -38,9 +38,9 @@ OBS / WebRTC camera → Cloudflare Stream (RTMP/WHIP ingest) → HLS adaptive bi
 
 ## Features
 
-**Core:** live broadcast, chat overlay, viewer count, AI moderation, polls, virtual gifts, recording/VOD, multi-camera angles, RTMP ingest, HLS adaptive bitrate, analytics.
+Core: live broadcast, chat overlay, viewer count, AI moderation, polls, virtual gifts, recording/VOD, multi-camera angles, RTMP ingest, HLS adaptive bitrate, analytics.
 
-**Interactive:** stream-as-room (avatars, raise hand), sentiment dashboard, branching narrative voting, live commerce overlay, XP/badges leaderboard, AI co-host highlights.
+Interactive: stream-as-room (avatars, raise hand), sentiment dashboard, branching narrative voting, live commerce overlay, XP/badges leaderboard, AI co-host highlights.
 
 ## API (selected)
 
@@ -62,7 +62,7 @@ CLOUDFLARE_ACCOUNT_ID=
 CLOUDFLARE_STREAM_API_TOKEN=
 CLOUDFLARE_STREAM_CUSTOMER_CODE=
 
-# TURN relay — required for production WebRTC
+# TURN relay (required for production WebRTC)
 TURN_SECRET=
 TURN_SERVERS=turn:turn.example.com:3478
 # or Metered.ca:
@@ -72,11 +72,11 @@ TURN_API_KEY=
 
 ## Customization
 
-- **New gift type:** extend `giftsCatalog` in `packages/sdk/src/fluxy-stream.ts`.
-- **Default camera angles:** call `stream.addAngle(label, streamUrl, isDefault)` in stream demo seed.
-- **TURN provider:** Coturn (`TURN_SECRET` + `TURN_SERVERS`) or Metered.ca (`TURN_API_URL` + `TURN_API_KEY`).
+- New gift type: extend `giftsCatalog` in `packages/sdk/src/fluxy-stream.ts`.
+- Default camera angles: call `stream.addAngle(label, streamUrl, isDefault)` in stream demo seed.
+- TURN provider: Coturn (`TURN_SECRET` + `TURN_SERVERS`) or Metered.ca (`TURN_API_URL` + `TURN_API_KEY`).
 
 ## Related
 
-- [Live streaming cookbook](/docs/cookbook) — integration patterns
-- [Optional integrations](/docs/guides/ecosystem/optional-integrations) — Stripe checkout for live commerce
+- [Live streaming cookbook](/docs/cookbook): integration patterns
+- [Optional integrations](/docs/guides/ecosystem/optional-integrations): Stripe checkout for live commerce

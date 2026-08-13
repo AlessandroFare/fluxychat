@@ -4,6 +4,8 @@ import {
   getVoiceAiProvider,
   resolveVoicePipelineMode,
   createVoiceAiSession,
+  buildOnHoldNarration,
+  applyDuplexBargeIn,
 } from "./voice-ai-pipeline.js";
 
 describe("voice-ai-pipeline", () => {
@@ -32,5 +34,24 @@ describe("voice-ai-pipeline", () => {
     });
     expect(session.pipelineMode).toBe("unified");
     expect(session.settings.pipelineMode).toBe("unified");
+  });
+
+  it("NW-200 buildOnHoldNarration + barge-in cancel", () => {
+    const hold = buildOnHoldNarration({
+      phrase: "Checking inventory…",
+      toolName: "inventory_lookup",
+      toolCallId: "tc_1",
+    });
+    expect(hold.type).toBe("agent_on_hold");
+    expect(hold.phrase).toContain("inventory");
+    expect(hold.bargeInCancels).toBe(true);
+    expect(hold.targetBargeInMs).toBe(500);
+
+    expect(
+      applyDuplexBargeIn({ bargeIn: true, userSpeaking: true, onHoldActive: true }),
+    ).toEqual({ cancelOnHold: true, resumeListening: true });
+    expect(
+      applyDuplexBargeIn({ bargeIn: true, userSpeaking: false, onHoldActive: true }),
+    ).toEqual({ cancelOnHold: false, resumeListening: true });
   });
 });

@@ -262,6 +262,22 @@ export {
 } from "./transport/outbox";
 
 export {
+  createOfflineSyncController,
+  type FluxySyncStatus,
+  type OfflineSyncController,
+  type CreateOfflineSyncOptions,
+} from "./offline-sync";
+
+export {
+  createOfflineEventLog,
+  createMemoryEventLog,
+  type OfflineEventLog,
+  type OfflineEventRecord,
+} from "./offline-event-log";
+
+export { createIndexedDbOutboxStore } from "./transport/indexed-db-outbox";
+
+export {
   routeTask,
   createMemorySharedStateStore,
   createHandoffManager,
@@ -822,6 +838,7 @@ export {
   renderMessageTemplate,
   extractTemplateVarNames,
   type FluxyMessageTemplate,
+  type FluxyMessageVisibility,
   type FluxySendMessageOptions,
   type FluxyPresenceIntent,
   type FluxyProjectActivity,
@@ -873,6 +890,21 @@ export {
 export { useRooms } from "./use-rooms";
 export { useNotifications } from "./use-notifications";
 export { useWebPush } from "./use-web-push";
+export {
+  POSTABLE_OBJECT,
+  isPostableObject,
+  postPostableObject,
+  withPostable,
+  type PostableObject,
+  type PostableObjectContext,
+} from "./postable-object";
+export {
+  inferAdapterFromUserId,
+  parseAdapterSlug,
+  buildThreadId,
+  type FluxyThreadRef,
+  type FluxyOpenDmResult,
+} from "./chat-api";
 export type {
   WebPushPermissionState,
   WebPushSubscriptionRow,
@@ -919,7 +951,7 @@ export interface FluxyChatMessage {
   deliveryConflict?: boolean;
   /** ISO timestamp when the message self-deletes (ephemeral / TTL). */
   expiresAt?: string | null;
-  visibility?: "room" | "whisper";
+  visibility?: import("./message-template").FluxyMessageVisibility;
   visibleTo?: string[];
   /**
    * Reaction tallies keyed by emoji (e.g. `{ "ðŸ‘": 2 }`). Client-side for now;
@@ -934,6 +966,7 @@ export interface FluxyChatMessage {
     options: Array<{ index: number; text: string; votes: number }>;
     totalVoters: number;
     closed: boolean;
+    userVote?: number | null;
   };
   decision?: {
     messageId: number;
@@ -1199,6 +1232,15 @@ export interface FluxyEmbedTheme {
   position: "bottom-right" | "bottom-left" | string;
 }
 
+export interface FluxyEmbedProactiveTrigger {
+  id?: string;
+  enabled?: boolean;
+  urlPattern?: string;
+  dwellSeconds?: number;
+  message?: string;
+  autoOpen?: boolean;
+}
+
 export interface FluxyEmbedConfig {
   projectId: string;
   enabled: boolean;
@@ -1207,6 +1249,7 @@ export interface FluxyEmbedConfig {
   zIndex: number;
   launcherTitle: string;
   theme: FluxyEmbedTheme;
+  proactiveTriggers?: FluxyEmbedProactiveTrigger[];
   createdAt: string;
   updatedAt: string;
 }
@@ -1229,6 +1272,7 @@ export interface FluxyPublicEmbedConfig {
   zIndex?: number;
   launcherTitle?: string;
   theme?: FluxyEmbedTheme;
+  proactiveTriggers?: FluxyEmbedProactiveTrigger[];
   readOnly?: boolean;
   scriptUrl?: string;
   framePath?: string;
@@ -1369,6 +1413,12 @@ export type FluxyChatEvent =
       transcription?: string | null;
       transcriptionStatus?: "pending" | "done" | "failed" | null;
       transcriptionModel?: string;
+    }
+  | {
+      type: "poll_updated";
+      roomId: string;
+      messageId: number;
+      poll: NonNullable<FluxyChatMessage["poll"]>;
     }
   | {
       type: "decision_updated";
@@ -2296,6 +2346,28 @@ export class FluxyChatClient {
     return body.rooms ?? [];
   }
 
+  /** CP-063: Open or resolve a DM thread (web → D1 room; external → adapter). */
+  async openDM(userId: string): Promise<{
+    ok: boolean;
+    thread: { id: string; adapterSlug: string; channelId: string; roomId?: string; created?: boolean };
+    room?: { id: string; type: string };
+  }> {
+    if (!this.token) throw new Error("openDM requires JWT token");
+    const res = await fetch(new URL("/chat/open-dm", this.baseUrl).toString(), {
+      method: "POST",
+      headers: {
+        ...(this.authHeaders() as Record<string, string>),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`openDM failed: ${res.status} ${(err as { error?: string }).error || ""}`);
+    }
+    return res.json();
+  }
+
   // --- Authenticated REST helpers (used opportunistically by hooks) ---
 
   async createMessage(
@@ -3196,6 +3268,7 @@ export class FluxyChatClient {
     zIndex?: number;
     launcherTitle?: string | null;
     theme?: Partial<FluxyEmbedTheme>;
+    proactiveTriggers?: FluxyEmbedProactiveTrigger[];
   }): Promise<{ config: FluxyEmbedConfig; snippet: string } | null> {
     if (!this.token) return null;
     const res = await fetch(new URL("/admin/embed-config", this.baseUrl).toString(), {
@@ -4141,6 +4214,27 @@ export class FluxyChatClient {
       headers: this.authHeaders(),
     });
     if (!res.ok) throw new Error(`Failed to list push devices: ${res.status}`);
+    return res.json();
+  }
+
+  /** CP-003: Report that a push notification was received on the client. */
+  async acknowledgePushDelivery(input: {
+    roomId?: string;
+    messageId?: number;
+    platform?: string;
+    deliveryLogId?: string;
+    clientMeta?: Record<string, unknown>;
+  }): Promise<{ ok: boolean; id?: string }> {
+    if (!this.token) throw new Error("acknowledgePushDelivery requires JWT token");
+    const res = await fetch(new URL("/push/delivery-ack", this.baseUrl).toString(), {
+      method: "POST",
+      headers: {
+        ...(this.authHeaders() as Record<string, string>),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(`Failed to acknowledge push delivery: ${res.status}`);
     return res.json();
   }
 

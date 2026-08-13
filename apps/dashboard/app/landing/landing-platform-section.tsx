@@ -19,7 +19,7 @@ const PLATFORM_PRIMITIVES = [
   { title: "Room kernel", body: "One WebSocket per room: messages, presence, client events, and server_event fan-out for polls, breakouts, and live stage." },
   { title: "Capability layer", body: "Attach polls, whiteboard, attendance, market data, or device shadow without standing up a second realtime backend." },
   { title: "Policy + audit", body: "RBAC, retention, consent gates, and signed event envelopes enforced on the worker before data leaves the room." },
-  { title: "Honest readiness", body: "Each product and vertical shows production, beta, or preview — no hidden gaps between the docs and what ships." },
+  { title: "Honest readiness", body: "Each product and vertical shows production, beta, or preview. No hidden gaps between the docs and what ships." },
 ] as const;
 
 const PRODUCT_ICONS = {
@@ -46,7 +46,7 @@ export function LandingPlatformSection() {
             Chat stays the core. The platform grows around it.
           </h2>
           <p className="mt-4 text-pretty text-lg text-slate-600">
-            Chat is the core. The same room kernel runs classrooms, care teams, live venues, and trading desks — voice, stream, collab, and industry modules plug in with labeled readiness.
+            Chat is the core. The same room kernel runs classrooms, care teams, live venues, and trading desks. Voice, stream, collab, and industry modules plug in with labeled readiness.
           </p>
         </div>
 

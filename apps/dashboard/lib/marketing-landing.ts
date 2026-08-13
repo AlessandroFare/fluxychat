@@ -7,7 +7,7 @@ export const MARKETING_HERO = {
   headlineLead: "Ship chat and live product",
   headlineAccent: "from one SDK",
   subhead:
-    "In-app chat, voice AI, live location, stream, collab, and device sync — plus Slack, Discord, and 12 more channels. Self-host on Workers or start on hosted cloud.",
+    "In-app chat, voice AI, live location, stream, collab, and device sync, plus Slack, Discord, and 12 more channels. Self-host on Workers or start on hosted cloud.",
 } as const;
 
 export const MARKETING_WHY = {
@@ -37,17 +37,17 @@ export const MARKETING_USE_CASES = [
   },
   {
     title: "Regulated & compliance-heavy teams",
-    body: "GDPR export, erasure, audit trails, retention policies, and signed webhooks — all enforced at the edge, not bolted on as a separate SKU.",
+    body: "GDPR export, erasure, audit trails, retention policies, and signed webhooks, enforced at the edge rather than sold as a separate SKU.",
   },
   {
     title: "Developer teams shipping fast",
-    body: "JWT auth, SDK hooks, create-fluxy-chat CLI scaffolding, and a console for day-two ops — without becoming WebSocket infrastructure experts.",
+    body: "JWT auth, SDK hooks, create-fluxy-chat CLI scaffolding, and a console for day-two ops, without becoming WebSocket infrastructure experts.",
   },
 ] as const;
 
 export const MARKETING_ENTERPRISE = {
   title: "Enterprise-ready",
-  intro: "Self-serve plans cover most production traffic. When governance matters, these capabilities are built into the worker — not a separate SKU bolted on later.",
+  intro: "Self-serve plans cover most production traffic. When governance matters, these capabilities are built into the worker, not a separate SKU bolted on later.",
   items: [
     "SSO / SAML & SCIM provisioning",
     "Audit logs with export schedules",
@@ -79,7 +79,7 @@ export const PRICING_FAQ = [
   },
   {
     q: "Are stream, collab, game, and IoT modules extra?",
-    a: "No separate SKU. Platform modules run on the same room and worker — quotas apply to messages and agent invokes like chat.",
+    a: "No separate SKU. Platform modules run on the same room and worker. Quotas apply to messages and agent invokes like chat.",
   },
   {
     q: "Enterprise vs Business?",

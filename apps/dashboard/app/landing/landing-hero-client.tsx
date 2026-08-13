@@ -145,7 +145,7 @@ export function LandingHeroClient() {
               New
             </span>
             <span className="truncate text-left sm:text-center">
-              Free hosted tier — SDK live in minutes →
+              Free hosted tier. SDK live in minutes →
             </span>
           </Link>
 

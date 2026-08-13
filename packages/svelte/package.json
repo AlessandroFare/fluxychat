@@ -1,0 +1,37 @@
+{
+  "name": "@fluxy-chat/svelte",
+  "version": "0.1.0",
+  "description": "Svelte 5 stores/composables for FluxyChat — useChat parity",
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "prebuild": "pnpm --filter @fluxy-chat/sdk build",
+    "build": "pnpm exec tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm run build && node ../../scripts/verify-publish-manifest.mjs",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "svelte": ">=5",
+    "@fluxy-chat/sdk": "^0.6.0"
+  },
+  "dependencies": {
+    "@fluxy-chat/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "svelte": "^5.28.2",
+    "vitest": "^4.1.5"
+  },
+  "license": "MIT"
+}

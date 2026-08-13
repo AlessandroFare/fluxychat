@@ -12,10 +12,16 @@ import {
   unregisterWebPushSubscription,
   listWebPushSubscriptions,
   getVapidPublicKeyForProject,
+  recordPushDeliveryAck,
 } from "../lib/push-notifications.js";
+import {
+  getProjectPushConfig,
+  listProjectPushConfigs,
+  upsertProjectPushConfig,
+} from "../lib/push-config.js";
 
 export async function dispatchPushRoutes(request, url, h) {
-  const { env, corsHeaders, json, verifyJwtAndGetContext, logError, requestLogCtx } =
+  const { env, corsHeaders, json, verifyJwtAndGetContext, logError, requestLogCtx, hasAnyRole } =
     pickRouteDeps(h, [
       "env",
       "corsHeaders",
@@ -23,6 +29,7 @@ export async function dispatchPushRoutes(request, url, h) {
       "verifyJwtAndGetContext",
       "logError",
       "requestLogCtx",
+      "hasAnyRole",
     ]);
 
   if (url.pathname === "/push/devices" && request.method === "GET") {
@@ -155,6 +162,82 @@ export async function dispatchPushRoutes(request, url, h) {
       return json({ error: result.error }, { status: 400 });
     }
     return json({ ok: true, removed: result.removed });
+  }
+
+  // ---------- CP-003: Delivery ack ----------
+
+  if (url.pathname === "/push/delivery-ack" && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const body = await request.json().catch(() => null);
+    const result = await recordPushDeliveryAck(env, {
+      projectId: auth.projectId,
+      userId: auth.userId,
+      roomId: body?.roomId,
+      messageId: body?.messageId,
+      platform: body?.platform || "web",
+      deliveryLogId: body?.deliveryLogId,
+      clientMeta: body?.clientMeta,
+    });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: 400 });
+    }
+    return json({ ok: true, id: result.id });
+  }
+
+  // ---------- CP-005: Per-project push config (admin) ----------
+
+  if (url.pathname === "/push/config" && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth || !hasAnyRole(auth, ["owner", "admin"])) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const environment = url.searchParams.get("environment") || undefined;
+    if (environment) {
+      const config = await getProjectPushConfig(env, auth.projectId, environment);
+      return json({ config });
+    }
+    const configs = await listProjectPushConfigs(env, auth.projectId);
+    return json({ configs });
+  }
+
+  if (url.pathname === "/push/config" && request.method === "PUT") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth || !hasAnyRole(auth, ["owner", "admin"])) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const body = await request.json().catch(() => null);
+    const result = await upsertProjectPushConfig(env, {
+      projectId: auth.projectId,
+      environment: body?.environment,
+      fcmServerKey: body?.fcmServerKey,
+      fcmProjectId: body?.fcmProjectId,
+      fcmServiceAccountJson: body?.fcmServiceAccountJson,
+      apnsKeyId: body?.apnsKeyId,
+      apnsTeamId: body?.apnsTeamId,
+      apnsBundleId: body?.apnsBundleId,
+      apnsPrivateKeyPem: body?.apnsPrivateKeyPem,
+      apnsUseSandbox: body?.apnsUseSandbox,
+      webPushEnabled: body?.webPushEnabled,
+    });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: 400 });
+    }
+    return json({ ok: true, id: result.id, environment: result.environment });
   }
 
   return null;

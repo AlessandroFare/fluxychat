@@ -45,8 +45,12 @@ export default function CrossOrgAgentsPage() {
   const [name, setName] = useState("Pilot negotiation");
   const [orgAId, setOrgAId] = useState("org-alpha.example.com");
   const [orgBId, setOrgBId] = useState("org-beta.example.com");
-  const [termsJson, setTermsJson] = useState('{"sku":"WIDGET-1","quantity":100,"unit_price_usd":12.5}');
-  const [counterTermsJson, setCounterTermsJson] = useState('{"sku":"WIDGET-1","quantity":80,"unit_price_usd":11.75}');
+  const [termsJson, setTermsJson] = useState(
+    '{"sku":"WIDGET-1","quantity":100,"unit_price_usd":12.5,"floorPrice":10}',
+  );
+  const [counterTermsJson, setCounterTermsJson] = useState(
+    '{"sku":"WIDGET-1","quantity":80,"unit_price_usd":11.75,"floorPrice":10}',
+  );
 
   const selected = rooms.find((r) => r.id === selectedId) ?? null;
 
@@ -101,7 +105,7 @@ export default function CrossOrgAgentsPage() {
         orgAId: orgAId.trim(),
         orgBId: orgBId.trim(),
       });
-      setNotice(`Cross-org room created — chat room ${result.room.roomId}`);
+      setNotice(`Cross-org room created. Chat room ${result.room.roomId}.`);
       setSelectedId(result.room.id);
       await loadRooms();
     } catch (err) {
@@ -150,10 +154,10 @@ export default function CrossOrgAgentsPage() {
         proposedByAgent: selected.orgAAgentId ?? "procurement-agent",
         terms,
       });
-      setNotice("Commitment proposed — awaiting counter or human approval.");
+      setNotice("Commitment proposed. Awaiting counter or human approval.");
       await loadRoomDetail();
     } catch (err) {
-      setError(messageFromUnknown(err, "Propose failed — check JSON terms"));
+      setError(messageFromUnknown(err, "Propose failed. Check JSON terms."));
     } finally {
       setBusy(null);
     }
@@ -198,10 +202,10 @@ export default function CrossOrgAgentsPage() {
         proposedByAgent: selected.orgBAgentId ?? "sales-agent",
         terms,
       });
-      setNotice("Counter-offer submitted — awaiting approval or next round.");
+      setNotice("Counter-offer submitted. Awaiting approval or next round.");
       await loadRoomDetail();
     } catch (err) {
-      setError(messageFromUnknown(err, "Counter failed — check JSON terms"));
+      setError(messageFromUnknown(err, "Counter failed. Check JSON terms."));
     } finally {
       setBusy(null);
     }
@@ -225,13 +229,26 @@ export default function CrossOrgAgentsPage() {
     <ConsoleShell className="max-w-4xl">
       <ConsolePageHeader
         title="Cross-org agent rooms"
-        description="Neutral-host pilot: two orgs, agent identities, escrow commitments, bilateral audit chain."
+        description="Two orgs negotiate in one room. Agents propose terms; humans approve before anything executes."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">
         <Link href="/agents/a2a" className="underline underline-offset-2">
           A2A protocol
         </Link>
+        {" · "}
+        <Link href="/compare#room-os" className="underline underline-offset-2">
+          Compare: room OS for agents
+        </Link>
+        {" · "}
+        <a
+          href="https://docs.fluxy.chat/docs/guides/cross-org-negotiation"
+          className="underline underline-offset-2"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Negotiation cookbook
+        </a>
       </p>
 
       <ConsoleFeedback error={error} notice={notice} />
@@ -304,6 +321,10 @@ export default function CrossOrgAgentsPage() {
 
               <label className="mt-4 block text-sm">
                 <span className="mb-1 block font-medium">Commitment terms (JSON)</span>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Include <code className="text-[10px]">floorPrice</code> or{" "}
+                  <code className="text-[10px]">min_price</code> to reject counters below your minimum.
+                </p>
                 <textarea
                   className="min-h-[80px] w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-xs"
                   value={termsJson}

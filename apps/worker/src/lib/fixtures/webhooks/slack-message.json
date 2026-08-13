@@ -1,0 +1,19 @@
+{
+  "name": "slack-message",
+  "platform": "slack",
+  "bridgeId": "br_slack_fixture",
+  "payload": {
+    "type": "event_callback",
+    "event": {
+      "type": "message",
+      "channel": "C_fixture_general",
+      "user": "U_fixture_user",
+      "text": "Hello from Slack replay fixture",
+      "ts": "1710000000.000100"
+    }
+  },
+  "expect": {
+    "status": 200,
+    "ok": true
+  }
+}

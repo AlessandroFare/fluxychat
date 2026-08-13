@@ -1,3 +1,8 @@
+import { canAccessRoom } from "./room-access.js";
+import { publishMcpRoomMessage } from "./mcp-room-message.js";
+import { checkAndConsumeRateLimit } from "./rate-limit.js";
+import { messageVisibilitySql } from "./message-visibility.js";
+
 /**
  * MCP (Model Context Protocol) Server for FluxyChat.
  *
@@ -67,7 +72,7 @@ export const MCP_TOOLS = [
         },
         before: {
           type: "string",
-          description: "ISO timestamp — fetch messages before this time (for pagination)",
+          description: "ISO timestamp: fetch messages before this time (for pagination)",
         },
       },
       required: ["roomId"],
@@ -299,13 +304,20 @@ async function toolGetRoomMessages(args, { env, auth }) {
     return { content: [{ type: "text", text: "Error: roomId is required" }], isError: true };
   }
 
-  const limit = Math.min(Math.max(Number(args?.limit) || 50, 1), 200);
+  const allowed = await canAccessRoom(env, auth, roomId);
+  if (!allowed) {
+    return { content: [{ type: "text", text: "Error: forbidden" }], isError: true };
+  }
 
-  const params = [auth.projectId, roomId];
+  const limit = Math.min(Math.max(Number(args?.limit) || 50, 1), 200);
+  const vis = messageVisibilitySql(auth.userId);
+
+  const params = [auth.projectId, roomId, ...vis.binds];
   let sql = `
     SELECT id, user_id, content, kind, created_at, updated_at
     FROM messages
     WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL
+    ${vis.sql}
   `;
 
   if (before) {
@@ -349,32 +361,53 @@ async function toolSendMessage(args, { env, auth, logError }) {
     };
   }
 
-  if (content.length > 4000) {
+  const toolRate = await checkAndConsumeRateLimit(env, {
+    key: `mcp-msg:${auth.projectId}:${auth.userId}:${roomId}`,
+    limit: Number(env.RATE_LIMIT_MCP_MESSAGES_PER_MINUTE || 30),
+    windowSeconds: 60,
+  });
+  if (!toolRate.allowed) {
     return {
-      content: [{ type: "text", text: "Error: content exceeds 4000 character limit" }],
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            error: "rate_limit_exceeded",
+            retryAfterSeconds: toolRate.retryAfterSeconds,
+          }),
+        },
+      ],
       isError: true,
     };
   }
 
-  const msgId = crypto.randomUUID();
-  const now = new Date().toISOString();
+  const published = await publishMcpRoomMessage(env, {
+    auth,
+    roomId,
+    content,
+    clientMessageId: args?.clientMessageId,
+  });
 
-  await env.DB.prepare(
-    `INSERT INTO messages (id, project_id, room_id, user_id, content, kind, created_at)
-     VALUES (?, ?, ?, ?, ?, 'text', ?)`
-  )
-    .bind(msgId, auth.projectId, roomId, auth.userId, content, now)
-    .run();
+  if (!published.ok) {
+    logError?.("mcp.send_message_failed", new Error(published.error), {
+      roomId,
+      projectId: auth.projectId,
+    });
+    return {
+      content: [{ type: "text", text: `Error: ${published.error}` }],
+      isError: true,
+    };
+  }
 
   return {
     content: [
       {
         type: "text",
         text: JSON.stringify({
-          id: msgId,
-          roomId,
-          content,
-          createdAt: now,
+          id: published.message.id,
+          roomId: published.message.roomId,
+          content: published.message.content,
+          createdAt: published.message.createdAt,
           status: "sent",
         }),
       },
@@ -428,6 +461,11 @@ async function toolGetRoomInfo(args, { env, auth }) {
   const { roomId } = args;
   if (!roomId) {
     return { content: [{ type: "text", text: "Error: roomId is required" }], isError: true };
+  }
+
+  const allowed = await canAccessRoom(env, auth, roomId);
+  if (!allowed) {
+    return { content: [{ type: "text", text: `Room not found: ${roomId}` }], isError: true };
   }
 
   const roomRow = await env.DB.prepare(

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * P19-D: Activity Feed Layer — collaborative project activity stream.
  *
  * Features:
@@ -127,4 +127,3 @@ function formatEvent(row) {
     metadata: JSON.parse(row.metadata || "{}"), timestamp: row.timestamp, createdAt: row.created_at,
   };
 }
-

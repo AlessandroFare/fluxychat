@@ -7,7 +7,7 @@ description: "The dashboard route `/demo` and Worker `GET|POST /demo/session` mi
 
 The dashboard route `/demo` and Worker `GET|POST /demo/session` mint short-lived guest JWTs for a shared room. Without guards, bots can burn quota and pollute the demo room.
 
-This checklist implements patterns from **free4chat** (Turnstile, origin allowlist, rate limits) and FluxyChat P4 hardening (2026-05-28).
+This checklist covers Turnstile, origin allowlists, rate limits, and guest-token hardening for public demo rooms.
 
 ## Checklist
 
@@ -21,7 +21,7 @@ This checklist implements patterns from **free4chat** (Turnstile, origin allowli
 | Read-only demo | `DEMO_READ_ONLY=true` | ✅ UI + no send |
 | Short JWT TTL | `DEMO_TOKEN_TTL_SECONDS` (300–3600) | ✅ default 1800 |
 | Auth token mint RL | `RATE_LIMIT_AUTH_TOKEN_PER_MINUTE` | ✅ `/auth/token` per IP + key fingerprint |
-| WS connect RL | `RATE_LIMIT_WS_CONNECTIONS_PER_MINUTE` | ✅ optional per-IP (P2) |
+| WS connect RL | `RATE_LIMIT_WS_CONNECTIONS_PER_MINUTE` | ✅ optional per-IP |
 
 ## Turnstile (production demo)
 

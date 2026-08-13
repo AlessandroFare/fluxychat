@@ -1,0 +1,30 @@
+---
+title: "Interview eval template"
+description: "ReclIA-style: AI notes visible only to evaluators (PH-120)."
+---
+
+# Interview eval template
+
+Candidate and evaluators share one live room. AI analysis stays on `role:evaluator` messages.
+
+## Setup
+
+1. Create room `interview-{candidateId}`.
+2. Add candidate as `member` or `guest`.
+3. Add evaluators and AI agent with `room_members.role = evaluator`.
+
+## Agent posts evaluator-only notes
+
+```ts
+await client.createMessage(roomId, analysis, {
+  visibility: "role:evaluator",
+});
+```
+
+## Candidate view
+
+Candidate JWT timeline shows public questions only. Evaluator dashboard shows public plus role-scoped notes.
+
+## Docs
+
+[Role-scoped visibility](/docs/guides/role-scoped-visibility) · [Room as MCP server](/docs/guides/room-as-mcp-server) for external Claude evaluator.

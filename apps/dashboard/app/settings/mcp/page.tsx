@@ -119,7 +119,7 @@ export default function McpIdentitySettingsPage() {
 
       {!token && (
         <Panel className="p-4 text-sm text-muted-foreground">
-          Admin JWT required — copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
+          Admin JWT required. Copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
         </Panel>
       )}
 

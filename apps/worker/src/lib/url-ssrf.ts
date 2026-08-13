@@ -175,6 +175,22 @@ export function isPrivateUrl(urlString: string, env?: unknown): boolean {
   }
 }
 
+export function validateUrl(urlString: string, env?: unknown): { ok: true; url: URL } | { ok: false; reason: string } {
+  if (!urlString || typeof urlString !== "string") {
+    return { ok: false, reason: "invalid_url" };
+  }
+  if (isPrivateUrl(urlString, env)) {
+    return { ok: false, reason: "ssrf_blocked" };
+  }
+  try {
+    const url = assertSafeOutboundUrl(urlString, env);
+    return { ok: true, url };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "ssrf_blocked";
+    return { ok: false, reason: message };
+  }
+}
+
 export function assertSafeOutboundUrl(urlString: string, env?: unknown): URL {
   if (isPrivateUrl(urlString, env)) {
     throw new Error("ssrf_blocked");

@@ -18,6 +18,7 @@ export const EMBED_LOADER_SOURCE = `(function () {
   apiUrl = apiUrl.replace(/\\/$/, "");
 
   var roomId = script.getAttribute("data-room-id") || "";
+  var projectId = script.getAttribute("data-project-id") || "";
   var zIndex = script.getAttribute("data-z-index") || "2147483000";
   var position = script.getAttribute("data-position") || "bottom-right";
   var launcherTitle = script.getAttribute("data-launcher-title") || "Chat";
@@ -125,6 +126,69 @@ export const EMBED_LOADER_SOURCE = `(function () {
   btn.addEventListener("click", function () {
     setOpen(!open);
   });
+
+  function matchUrlPattern(pattern, href) {
+    if (!pattern) return true;
+    var path = href;
+    try {
+      var u = new URL(href, window.location.origin);
+      path = u.pathname + u.search;
+    } catch (e) {
+      path = href;
+    }
+    if (pattern.charAt(0) === "/") {
+      if (pattern.slice(-1) === "*") return path.indexOf(pattern.slice(0, -1)) === 0;
+      return path === pattern || path.indexOf(pattern + "?") === 0;
+    }
+    try {
+      return new RegExp(pattern).test(href);
+    } catch (e2) {
+      return href.indexOf(pattern) >= 0;
+    }
+  }
+
+  function setupProactiveTriggers(rules) {
+    if (!rules || !rules.length) return;
+    var fired = {};
+    rules.forEach(function (rule) {
+      if (!rule || rule.enabled === false) return;
+      var key = rule.id || rule.urlPattern || "default";
+      if (fired[key]) return;
+      if (!matchUrlPattern(rule.urlPattern || "", window.location.href)) return;
+      var dwell = Math.max(0, Number(rule.dwellSeconds) || 0) * 1000;
+      setTimeout(function () {
+        if (fired[key]) return;
+        if (!matchUrlPattern(rule.urlPattern || "", window.location.href)) return;
+        fired[key] = true;
+        if (rule.message) btn.setAttribute("title", rule.message);
+        if (rule.autoOpen) setOpen(true);
+        else btn.style.transform = "scale(1.08)";
+      }, dwell);
+    });
+  }
+
+  var configUrl = apiUrl + "/public/embed-config";
+  if (projectId) configUrl += "?projectId=" + encodeURIComponent(projectId);
+  fetch(configUrl)
+    .then(function (res) {
+      return res.ok ? res.json() : null;
+    })
+    .then(function (cfg) {
+      if (!cfg) return;
+      if (cfg.proactiveTriggers && cfg.proactiveTriggers.length) {
+        setupProactiveTriggers(cfg.proactiveTriggers);
+      }
+      if (!roomId && cfg.defaultRoomId) roomId = cfg.defaultRoomId;
+      if (cfg.launcherTitle && !script.getAttribute("data-launcher-title")) {
+        launcherTitle = cfg.launcherTitle;
+        btn.setAttribute("aria-label", launcherTitle);
+      }
+      if (cfg.theme && cfg.theme.primaryColor && !script.getAttribute("data-primary-color")) {
+        primaryColor = cfg.theme.primaryColor;
+        btn.style.background = primaryColor;
+      }
+    })
+    .catch(function () {});
 
   root.appendChild(btn);
   (document.body || document.documentElement).appendChild(root);

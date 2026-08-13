@@ -1,13 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { useClerkUser } from "@/lib/clerk-user";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
 import { HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
-import {
-  isQuickstartComplete,
-  loadQuickstartProgress,
-} from "@/lib/quickstart-progress";
+import { isQuickstartComplete } from "@/lib/quickstart-progress";
+import { resolveQuickstartUserKey } from "@/lib/onboarding-user-key";
+import { useQuickstartProgress } from "@/lib/use-quickstart-progress";
 import { isConsoleRoute } from "./console-nav";
 import { useDashboardSession } from "./dashboard-session";
 
@@ -23,10 +22,12 @@ export function QuickstartGate({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn, user } = useClerkUser();
   const { hasHydrated, clerkUserId, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
 
+  const userKey = resolveQuickstartUserKey(user?.id ?? clerkUserId, "");
+  const progress = useQuickstartProgress(userKey);
+
   useEffect(() => {
-    if (!isClerkClientConfigured() || !isLoaded || !isSignedIn || !hasHydrated) return;
-    const activeClerkId = user?.id ?? null;
-    if (!activeClerkId || clerkUserId !== activeClerkId) return;
+    if (!isClerkClientConfigured() || !isLoaded || !isSignedIn || !hasHydrated || !userKey) return;
+    if (clerkUserId && user?.id && clerkUserId !== user.id) return;
 
     const session = {
       adminJwt,
@@ -34,8 +35,7 @@ export function QuickstartGate({ children }: { children: React.ReactNode }) {
       activeProjectId: activeProject?.id ?? null,
       lastRoomId: lastRoom?.id ?? null,
     };
-    const progress = loadQuickstartProgress(activeClerkId);
-    const complete = isQuickstartComplete(activeClerkId, session, progress);
+    const complete = isQuickstartComplete(userKey, session, progress);
     const review = searchParams.get("review") === "1";
 
     if (pathname.startsWith("/onboarding")) {
@@ -61,6 +61,8 @@ export function QuickstartGate({ children }: { children: React.ReactNode }) {
     memberJwt,
     activeProject?.id,
     lastRoom?.id,
+    userKey,
+    progress,
   ]);
 
   return <>{children}</>;

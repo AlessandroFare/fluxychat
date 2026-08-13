@@ -4,11 +4,11 @@ Shared WebSocket + REST client for Android and iOS (Ktor engines).
 
 ## Status
 
-- **commonMain** — `FluxyChatClient`, `FluxyRoomWebSocket` (Ktor WS)
-- **androidMain** — OkHttp engine
-- **iosMain** — Darwin engine
-- **jvmMain** — CIO engine (tests/desktop)
-- **CI** — `.github/workflows/publish-sdk-kmp.yml` on tags `sdk-v*`
+- **commonMain**: `FluxyChatClient`, `FluxyRoomWebSocket` (Ktor WS)
+- **androidMain**: OkHttp engine
+- **iosMain**: Darwin engine
+- **jvmMain**: CIO engine (tests/desktop)
+- **CI**: `.github/workflows/publish-sdk-kmp.yml` on tags `sdk-v*`
 
 ## Build
 

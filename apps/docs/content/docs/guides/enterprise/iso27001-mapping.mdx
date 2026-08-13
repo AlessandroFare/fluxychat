@@ -1,0 +1,68 @@
+---
+title: "ISO 27001 mapping one-pager"
+description: "Map ISO/IEC 27001:2022 Annex A controls to FluxyChat product capabilities for enterprise security questionnaires."
+---
+
+Use this one-pager when prospects ask **"Do you support ISO 27001?"** FluxyChat is not ISO-certified by default; this maps **Annex A control themes** to built-in product features so your security team can complete vendor questionnaires faster.
+
+## Scope
+
+| Item | FluxyChat |
+|------|-----------|
+| **Certification** | Not pre-certified — customer may certify their deployment |
+| **Hosting** | Cloudflare Workers (shared responsibility) |
+| **Data** | D1 + R2 per tenant project |
+
+## Annex A mapping (selected controls)
+
+| ISO 27001 theme | Control intent | FluxyChat capability |
+|-----------------|----------------|------------------------|
+| A.5 Organizational | Policies | `soc2_policies`, `/soc2`, agent tool policy |
+| A.5.15 Access control | RBAC | JWT roles: owner/admin/agent/member/guest |
+| A.5.16 Identity mgmt | SSO/SCIM | `/settings/identity` SAML + SCIM |
+| A.5.23 Cloud services | Shared responsibility | Cloudflare + tenant config docs |
+| A.5.28 Collection of evidence | Audit logs | `/admin/audit-export`, audit chain, OTel |
+| A.5.29 Info security during disruption | DR | Retention export, R2 audit chain, status page |
+| A.5.30 ICT readiness | Monitoring | Upptime, operational alerts, `/analytics` |
+| A.8.2 Privileged access | Admin JWT | Scoped admin tokens, API key rotation |
+| A.8.9 Configuration mgmt | Tenant config | Settings hub, feature flags, env separation |
+| A.8.10 Information deletion | GDPR | Export/delete APIs, retention purge |
+| A.8.11 Data masking | DLP | `POST /enterprise/dlp/scan`, moderation labels |
+| A.8.12 Data leakage prevention | SSRF + URL audit | `validateUrl`, `url_fetch_audit` |
+| A.8.15 Logging | Security events | `operational_audit_events`, webhook delivery log |
+| A.8.16 Monitoring activities | Moderation queue | `/moderation`, SLA breaches |
+| A.8.23 Web filtering | Embed allowlist | `project_embed_configs.allowed_origins` |
+| A.8.24 Use of cryptography | TLS + E2E | Edge TLS, room MLS, CMK options |
+| A.8.25 Secure development | CI + tests | GitHub Actions, Vitest, security review skill |
+| A.8.26 App security requirements | Input validation | Zod/validation on routes, rate limits |
+| A.8.28 Secure coding | SSRF hardening | `url-ssrf.ts`, safe redirect handling |
+
+## Evidence bundle (recommended export set)
+
+1. SOC 2 self-assessment JSON (`GET /api/soc2/self-assessment`)
+2. Audit log export (`/admin/audit-export/stream`)
+3. DLP scan sample output
+4. Data residency + retention settings screenshot
+5. Subprocessor list (Cloudflare, optional AI providers)
+
+## Gap areas (typical customer responsibility)
+
+- Physical security of offices (not applicable to SaaS-only)
+- HR security training records
+- Formal ISMS documentation outside FluxyChat
+- Penetration testing schedule
+- Business continuity tabletop exercises
+
+## Related frameworks
+
+| Framework | FluxyChat module |
+|-----------|------------------|
+| SOC 2 TSC | [SOC 2 readiness checklist](/docs/guides/enterprise/soc2-readiness-checklist) |
+| HIPAA | `/settings/hipaa`, BAA workflow |
+| EU AI Act | `/settings/consent`, `eu-ai-act-compliance.js` |
+| GDPR | GDPR export, consent/DPA, residency |
+
+## Related
+
+- [SOC 2 / HIPAA runbook](/docs/guides/enterprise/soc2-hipaa-runbook)
+- [SOC 2 readiness checklist](/docs/guides/enterprise/soc2-readiness-checklist)

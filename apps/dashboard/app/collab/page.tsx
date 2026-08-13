@@ -98,7 +98,7 @@ export default function CollabPage() {
             <Pen className="h-12 w-12 text-muted-foreground" />
             <h2 className="text-lg font-semibold">No rooms in this project yet</h2>
             <p className="max-w-sm text-sm text-muted-foreground">
-              Create or join a room first — each room gets its own collab workspace (whiteboard, notes, kanban) at{" "}
+              Create or join a room first. Each room gets its own collab workspace (whiteboard, notes, kanban) at{" "}
               <code className="text-xs">/collab/[roomId]</code>.
             </p>
             <Link href="/rooms" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">

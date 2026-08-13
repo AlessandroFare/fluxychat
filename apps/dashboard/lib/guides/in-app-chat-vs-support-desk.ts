@@ -11,7 +11,7 @@ export const IN_APP_CHAT_VS_SUPPORT_DESK_GUIDE: GuideContent = {
       bullets: [
         "Support desk: shared inbox, tickets, CSAT, macros, help-center widget.",
         "In-app chat infra: tenant rooms, JWT members, WebSocket transport, D1 history, your UI.",
-        "FluxyChat is the second. You can still build support on top — see docs/use-cases/support-chat.md.",
+        "FluxyChat is the second. You can still build support on top. See docs/use-cases/support-chat.md.",
       ],
     },
     {
@@ -25,7 +25,7 @@ export const IN_APP_CHAT_VS_SUPPORT_DESK_GUIDE: GuideContent = {
       title: "Humans, agents, and CRM hooks",
       bullets: [
         "Users describe what they want in chat; your agent calls tools or external APIs.",
-        "tool_call and tool_result ride the same WebSocket as user messages — one timeline to replay.",
+        "tool_call and tool_result ride the same WebSocket as user messages. One timeline to replay.",
         "Pair with whatever integration runner you use (MCP, CLI skills, webhooks) for Salesforce, HubSpot, etc.",
       ],
       link: {
@@ -43,7 +43,7 @@ export const IN_APP_CHAT_VS_SUPPORT_DESK_GUIDE: GuideContent = {
       title: "Search intent (for your own landing copy)",
       bullets: [
         "Good fit: embedded chat for SaaS, in-app chat platform, Pusher alternative, realtime chat in Next.js.",
-        "Usually wrong fit: best live chat software, Zendesk alternatives — unless you want support-team traffic.",
+        "Usually wrong fit: best live chat software, Zendesk alternatives, unless you want support-team traffic.",
         "More detail on /compare and /why#product-chat.",
       ],
     },

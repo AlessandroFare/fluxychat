@@ -160,7 +160,7 @@ export default function SearchPage() {
               </fieldset>
             </div>
             {semanticDisabled ? (
-              <p className="mt-2 text-xs text-amber-700">Semantic modes unavailable — using keyword search.</p>
+              <p className="mt-2 text-xs text-amber-700">Semantic modes unavailable. Using keyword search.</p>
             ) : null}
           </Panel>
 

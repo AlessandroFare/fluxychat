@@ -1,0 +1,49 @@
+---
+title: "Live translation toggle"
+description: "Per-room auto-translate, manual translate, and Show original toggle in chat."
+---
+
+FluxyChat supports live translation similar to Stream: auto-translate on ingest, cached translations in D1, and a Show original pill in the chat UI.
+
+## Room auto-translate
+
+In the dashboard, open **Settings → Translation** (`/settings/translation`):
+
+1. Pick a room
+2. Enable auto-translate
+3. Set target language (for example `en`, `it`, `fr`)
+
+New messages trigger `message.auto_translated` on the room WebSocket with `translatedText` and `targetLang`.
+
+## Viewer language (manual translate)
+
+On the same page, set your viewer language. The chat toolbar uses it when you click **Translate** on a message.
+
+The value is stored in browser `localStorage` under `fluxy-translation-viewer-lang`.
+
+## API
+
+```bash
+# Translate (LLM + cache)
+curl -X POST "$WORKER_URL/messages/123/translate" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"targetLang":"en"}'
+
+# Cached translation only
+curl "$WORKER_URL/messages/123/translate?targetLang=en" \
+  -H "Authorization: Bearer $JWT"
+```
+
+Translations persist in `message_translations` (per message and target language).
+
+## UI behavior
+
+- Auto-translated messages show the translation by default
+- The pill toggles between Show original and Show translation
+- Agent messages follow the same toggle when translated
+
+## Related
+
+- [Room translation settings](/settings/translation)
+- [Messaging parity checklist](/docs/reference/messaging-parity-checklist)

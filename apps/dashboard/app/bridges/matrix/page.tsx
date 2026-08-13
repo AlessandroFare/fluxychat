@@ -111,7 +111,7 @@ export default function MatrixBridgesPage() {
       });
       setAccessToken("");
       if (created.appserviceToken) setRevealedAppserviceToken(created.appserviceToken);
-      setNotice(`Matrix bridge ${created.id} created. Copy the appservice token now — it is shown once.`);
+      setNotice(`Matrix bridge ${created.id} created. Copy the appservice token now; it is shown once.`);
       await loadAll();
       await loadDetail(created.id);
     } catch (err) {
@@ -236,7 +236,7 @@ export default function MatrixBridgesPage() {
     try {
       const res = await rotateMatrixAppserviceToken(token, bridgeId);
       setRevealedAppserviceToken(res.appserviceToken);
-      setNotice("Appservice token rotated — update Synapse and copy the new token.");
+      setNotice("Appservice token rotated. Update Synapse and copy the new token.");
       await loadAll();
     } catch (err) {
       setError(messageFromUnknown(err, "Token rotation failed"));
@@ -272,7 +272,7 @@ export default function MatrixBridgesPage() {
 
       {!token && (
         <Panel className="mt-4 p-4 text-sm text-muted-foreground">
-          Admin JWT required — copy from <Link href="/projects" className="text-primary underline">Projects</Link>.
+          Admin JWT required. Copy from <Link href="/projects" className="text-primary underline">Projects</Link>.
         </Panel>
       )}
 
@@ -375,7 +375,7 @@ export default function MatrixBridgesPage() {
                           </p>
                           <div className="flex flex-wrap gap-2 pt-1">
                             <Badge variant={bridge.appserviceTokenConfigured ? "default" : "destructive"}>
-                              {bridge.appserviceTokenConfigured ? "Token configured" : "Token missing — rotate"}
+                              {bridge.appserviceTokenConfigured ? "Token configured" : "Token missing (rotate)"}
                             </Badge>
                             <Button
                               size="sm"
@@ -401,7 +401,7 @@ export default function MatrixBridgesPage() {
           </Section>
 
           {selectedBridge && (
-            <Section title={`Room mappings — ${selectedBridge.id}`}>
+            <Section title={`Room mappings: ${selectedBridge.id}`}>
               <Panel className="space-y-3 p-4">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <RoomPicker token={token} value={mapRoomId} onChange={setMapRoomId} />

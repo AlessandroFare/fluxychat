@@ -2,6 +2,7 @@
  * OpenAI-compatible chat/completions streaming (SSE).
  */
 import { buildOpenAiChatCompletionsUrl } from "./openai-compat-url.js";
+import { fetchWithDoKeepalive, outboundStreamTags } from "./do-outbound-keepalive.js";
 
 /**
  * @param {unknown} parsed
@@ -92,11 +93,24 @@ export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts
   ) {
     headers.Authorization = `Bearer ${apiKey}`;
   }
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
+  const streamHeaders = {
+    ...headers,
+    ...outboundStreamTags({
+      feature: "llm_stream",
+      projectId: opts.projectId,
+      roomId: opts.roomId,
+      runId: opts.runId,
+    }),
+  };
+  const res = await fetchWithDoKeepalive(
+    url,
+    {
+      method: "POST",
+      headers: streamHeaders,
+      body: JSON.stringify(body),
+    },
+    { feature: "llm_stream", projectId: opts.projectId, roomId: opts.roomId, runId: opts.runId },
+  );
 
   if (!res.ok) {
     const text = await res.text();

@@ -93,7 +93,7 @@ const SEED_MESSAGES = [
   {
     id: 3,
     userId: "fluxybot",
-    content: "💡 **Tip**: You can ask me to generate images, do deep research, or search the web — just click the **+** button next to the composer.",
+    content: "💡 **Tip**: You can ask me to generate images, do deep research, or search the web. Just click the **+** button next to the composer.",
     createdAt: new Date(Date.now() - 105000).toISOString(),
   },
 ];
@@ -332,7 +332,7 @@ function DemoRoomPageContent() {
           {session?.enabled && !readOnly && client && (
             <DemoChatShell badge="Live" badgeClass="text-green-400" title="Playground Room">
               <p className="mb-3 rounded-lg border border-[var(--fluxy-banner-border)] bg-[var(--fluxy-banner-bg)] px-3 py-2 text-xs text-[var(--fluxy-banner-text)]">
-                Public playground — your messages appear on the right.{" "}
+                Public playground. Your messages appear on the right.{" "}
                 {session.agentName ?? "FluxyBot"} replies automatically via AI.
                 Sessions are rate-limited and expire after {Math.round((session.expiresIn ?? 1800) / 60)} minutes.
               </p>
@@ -431,7 +431,7 @@ function DemoRoomPageContent() {
               {
                 icon: Bot,
                 title: "AI Agent Built In",
-                desc: "Every room comes with an AI agent that responds to questions, generates images, and searches the web — all on the same WebSocket.",
+                desc: "Every room comes with an AI agent that responds to questions, generates images, and searches the web, all on the same WebSocket.",
               },
               {
                 icon: Zap,
@@ -459,7 +459,7 @@ function DemoRoomPageContent() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-heading text-2xl font-bold text-white">Ready to build?</h2>
           <p className="mt-3 text-sm text-slate-400">
-            Deploy FluxyChat on your own Cloudflare account in minutes. Self-hosted or hosted — your choice.
+            Deploy FluxyChat on your own Cloudflare account in minutes. Self-hosted or hosted: your choice.
           </p>
           <div className="mt-8 flex items-center justify-center gap-4">
             <Link

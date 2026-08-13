@@ -96,7 +96,7 @@ export default function ConsentSettingsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="EU consent &amp; DPA"
-        description="Auto consent banner for EU-regulated workspaces — audit log pairs with data residency (#14, #42)."
+        description="Auto consent banner for EU-regulated workspaces. Audit log pairs with data residency settings."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">

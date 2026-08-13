@@ -46,7 +46,7 @@ export function NotificationsOverviewCard() {
                 ? "Loading…"
                 : unreadCount > 0
                   ? `${unreadCount} unread mention or DM alert${unreadCount === 1 ? "" : "s"}`
-                  : "No unread alerts — mentions and DMs show up here"}
+                  : "No unread alerts. Mentions and DMs show up here"}
             </p>
           </div>
         </div>

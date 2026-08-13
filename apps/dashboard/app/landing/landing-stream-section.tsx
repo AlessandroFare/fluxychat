@@ -57,7 +57,7 @@ const CHAT_MSGS = [
   { user: "reyna", text: "love the low-latency demo", color: "text-orange-400" },
   { user: "otisq", text: "how's the ABR working?", color: "text-emerald-400" },
   { user: "zaraa", text: "please share the docs link", color: "text-pink-400" },
-  { user: "finch", text: "first time seeing this — wow", color: "text-blue-300" },
+  { user: "finch", text: "first time seeing this, wow", color: "text-blue-300" },
   { user: "talia", text: "the chat overlay is seamless", color: "text-orange-300" },
 ];
 
@@ -148,7 +148,7 @@ export function LandingStreamSection() {
           </h2>
           <p className="mx-auto max-w-2xl text-pretty leading-relaxed text-slate-300">
             Broadcast live video via WebRTC, RTMP, or OBS. Viewers watch with integrated chat,
-            polls, virtual gifts, and AI moderation — all in one room.
+            polls, virtual gifts, and AI moderation, all in one room.
           </p>
         </div>
 

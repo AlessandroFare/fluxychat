@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, MessageSquare, Terminal } from "lucide-react";
 import { finishQuickstartAndOpenConsole } from "./onboarding-finish";
+import { resolveQuickstartUserKey } from "@/lib/onboarding-user-key";
+import { markQuickstartComplete } from "@/lib/quickstart-progress";
 import type { OnboardingWizard } from "./use-onboarding-wizard";
 
 interface FinishStepProps {
@@ -15,6 +17,12 @@ export function FinishStep({ wizard: w }: FinishStepProps) {
 
   const installCommand = "npx create-fluxy-chat my-bot";
 
+  // Mark complete as soon as the user reaches the final step — not only on "Go to Dashboard".
+  useEffect(() => {
+    const key = resolveQuickstartUserKey(w.clerkUser?.id, w.userId);
+    if (key) markQuickstartComplete(key);
+  }, [w.clerkUser?.id, w.userId]);
+
   function handleCopyCommand() {
     void navigator.clipboard.writeText(installCommand);
     setCopied(true);
@@ -22,9 +30,10 @@ export function FinishStep({ wizard: w }: FinishStepProps) {
   }
 
   function handleOpenConsole() {
-    const clerkUserId = w.clerkUser?.id ?? `self-host-${w.userId.trim() || "owner"}`;
+    const userKey = resolveQuickstartUserKey(w.clerkUser?.id, w.userId);
+    if (!userKey) return;
     void finishQuickstartAndOpenConsole(w.router, {
-      clerkUserId,
+      clerkUserId: userKey,
       memberJwt: w.memberJwt,
       memberUserId: w.userId.trim() || "alice",
       projectId: w.activeProject?.id ?? "",

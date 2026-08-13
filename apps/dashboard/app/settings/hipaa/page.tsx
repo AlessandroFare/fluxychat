@@ -96,7 +96,7 @@ export default function HipaaSettingsPage() {
     a.download = "fluxy-chat-baa-template.md";
     a.click();
     URL.revokeObjectURL(url);
-    setNotice("BAA template downloaded — have counsel review before signing.");
+    setNotice("BAA template downloaded. Have counsel review before signing.");
   }
 
   async function handleCreateBaa() {
@@ -124,7 +124,7 @@ export default function HipaaSettingsPage() {
     setBusy(baaId);
     try {
       await updateHipaaBaa(token, baaId, { status: "active", signedBy: "dashboard-admin" });
-      setNotice("BAA marked active — attach signed PDF URL in API when available.");
+      setNotice("BAA marked active. Attach signed PDF URL in API when available.");
       await loadAll();
     } catch (err) {
       setError(messageFromUnknown(err, "Failed to update BAA"));
@@ -170,7 +170,7 @@ export default function HipaaSettingsPage() {
 
       {!token && !loading ? (
         <Panel className="mt-6 p-6 text-sm text-muted-foreground">
-          Admin JWT required — copy from Projects after onboarding.
+          Admin JWT required. Copy from Projects after onboarding.
         </Panel>
       ) : null}
 

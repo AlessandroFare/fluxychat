@@ -123,3 +123,42 @@ export async function getVoiceAiStats(env, { projectId }) {
     under300Ms: latencies.filter((l) => l <= 300).length,
   };
 }
+
+/**
+ * NW-200 — Build an on-hold narration event for duplex voice while a tool runs.
+ * Barge-in cancels the filler (client responsibility when bargeInCancels is true).
+ *
+ * @param {{
+ *   phrase: string,
+ *   toolName?: string,
+ *   toolCallId?: string,
+ *   runId?: string,
+ *   bargeInCancels?: boolean,
+ * }} input
+ */
+export function buildOnHoldNarration(input) {
+  const phrase = String(input?.phrase || "").trim() || "One moment — I'm looking that up.";
+  return {
+    type: "agent_on_hold",
+    phrase,
+    toolName: input?.toolName ?? null,
+    toolCallId: input?.toolCallId ?? null,
+    runId: input?.runId ?? null,
+    bargeInCancels: input?.bargeInCancels !== false,
+    targetBargeInMs: 500,
+  };
+}
+
+/**
+ * @param {{ bargeIn?: boolean, userSpeaking?: boolean, onHoldActive?: boolean }} state
+ * @returns {{ cancelOnHold: boolean, resumeListening: boolean }}
+ */
+export function applyDuplexBargeIn(state = {}) {
+  const bargeIn = state.bargeIn !== false;
+  const userSpeaking = Boolean(state.userSpeaking);
+  const onHoldActive = Boolean(state.onHoldActive);
+  if (bargeIn && userSpeaking && onHoldActive) {
+    return { cancelOnHold: true, resumeListening: true };
+  }
+  return { cancelOnHold: false, resumeListening: !userSpeaking };
+}

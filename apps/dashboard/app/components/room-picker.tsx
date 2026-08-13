@@ -134,7 +134,7 @@ export function RoomPicker({
         >
           {allowEmpty ? <option value="">{emptyLabel}</option> : null}
           {!loading && rooms.length === 0 ? (
-            <option value="">{allowEmpty ? emptyLabel : "No rooms yet — create one in Rooms"}</option>
+            <option value="">{allowEmpty ? emptyLabel : "No rooms yet. Create one in Rooms."}</option>
           ) : null}
           {!loading && rooms.length > 0 && !value && !allowEmpty ? (
             <option value="" disabled>

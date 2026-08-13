@@ -8,7 +8,7 @@ export const NEXTJS_VERCEL_REALTIME_CHAT_GUIDE: GuideContent = {
     {
       title: "The buyer question Ably owns",
       paragraphs: [
-        "Tutorials for “live app on Vercel” often assume Ably or Pusher because serverless functions are not a socket fleet. That is correct — the fix is not forcing WebSockets into Vercel alone, it is a dedicated realtime layer.",
+        "Tutorials for “live app on Vercel” often assume Ably or Pusher because serverless functions are not a socket fleet. That is correct. The fix is not forcing WebSockets into Vercel alone; it is a dedicated realtime layer.",
       ],
     },
     {
@@ -23,15 +23,15 @@ export const NEXTJS_VERCEL_REALTIME_CHAT_GUIDE: GuideContent = {
     {
       title: "Why not a second vendor",
       bullets: [
-        "Room-per-DO on your Cloudflare account — cost and data stay readable.",
+        "Room-per-DO on your Cloudflare account: cost and data stay readable.",
         "MIT self-host when hosted beta is not enough.",
         "Same WebSocket stream for human messages and agent tool events.",
       ],
     },
     {
       title: "Code placement in Next.js",
-      code: `// app/api/fluxy/token/route.ts — mint JWT server-side
-// app/room/[id]/room-chat.tsx — "use client" + useChat
+      code: `// app/api/fluxy/token/route.ts: mint JWT server-side
+// app/room/[id]/room-chat.tsx: "use client" + useChat
 
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { useChat } from "@fluxy-chat/react";

@@ -127,7 +127,7 @@ export function WebhookPlaygroundCard() {
       setVerifyResult(
         json.valid
           ? `Batch valid (${json.mode ?? "batch"})`
-          : `Batch invalid — ${perEvent} event(s) failed`,
+          : `Batch invalid: ${perEvent} event(s) failed`,
       );
     } catch (err: unknown) {
       setError(messageFromUnknown(err, "Verify failed"));

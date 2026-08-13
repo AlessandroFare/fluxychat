@@ -20,7 +20,7 @@ export function GetStartedSelfHostSection() {
           <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-muted-foreground">
             <li>Fork or clone the repo, deploy <code className="font-mono text-xs">apps/worker</code></li>
             <li>Set <code className="font-mono text-xs">NEXT_PUBLIC_FLUXYCHAT_WORKER_URL</code> in your app</li>
-            <li>Mint JWTs with your project API key — see <code className="font-mono text-xs">docs/cookbook/auth-jwt.md</code></li>
+            <li>Mint JWTs with your project API key. See <code className="font-mono text-xs">docs/cookbook/auth-jwt.md</code></li>
           </ul>
           <p className="mt-4 flex flex-wrap gap-3">
             <a

@@ -138,11 +138,11 @@ export default function PrivacyPage() {
 
       <Section title="Platform features & data" description="How new capabilities handle personal data">
         <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
-          <li><strong className="text-foreground">Fleet & geocode</strong> — address search is proxied via the dashboard API; queries go to OpenStreetMap Nominatim, not stored as search history.</li>
-          <li><strong className="text-foreground">Live streaming</strong> — event metadata (title, room, schedule) in D1; no viewer PII unless you attach it.</li>
-          <li><strong className="text-foreground">Devtools chat</strong> — debug prompts stream through your Worker; treat like production chat for retention.</li>
-          <li><strong className="text-foreground">Digital twin / IoT</strong> — device and telemetry IDs are project-scoped; export via GDPR endpoints below.</li>
-          <li><strong className="text-foreground">Cross-channel</strong> — linked identities (web/mobile/voice) stored per project session in Worker memory or D1 when persisted.</li>
+          <li><strong className="text-foreground">Fleet & geocode</strong>: address search is proxied via the dashboard API; queries go to OpenStreetMap Nominatim, not stored as search history.</li>
+          <li><strong className="text-foreground">Live streaming</strong>: event metadata (title, room, schedule) in D1; no viewer PII unless you attach it.</li>
+          <li><strong className="text-foreground">Devtools chat</strong>: debug prompts stream through your Worker; treat like production chat for retention.</li>
+          <li><strong className="text-foreground">Digital twin / IoT</strong>: device and telemetry IDs are project-scoped; export via GDPR endpoints below.</li>
+          <li><strong className="text-foreground">Cross-channel</strong>: linked identities (web/mobile/voice) stored per project session in Worker memory or D1 when persisted.</li>
         </ul>
       </Section>
 
@@ -232,7 +232,7 @@ export default function PrivacyPage() {
           <ul className="list-disc space-y-2 pl-5">
             {SUB_PROCESSORS.map((sp) => (
               <li key={sp.name}>
-                <strong className="text-slate-800">{sp.name}</strong> — {sp.role}
+                <strong className="text-slate-800">{sp.name}</strong>: {sp.role}
               </li>
             ))}
           </ul>

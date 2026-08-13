@@ -1,11 +1,16 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { canAccessRoom } from "../lib/room-access.js";
-import { buildRoomCartography, getOrBuildRoomCartography } from "../lib/chat-cartography.js";
+import {
+  buildRoomCartography,
+  getOrBuildRoomCartography,
+  getCartographyRoutingSuggestions,
+} from "../lib/chat-cartography.js";
 
 export async function dispatchCartographyRoutes(request, url, h) {
   const path = url.pathname;
+  const routingMatch = path.match(/^\/rooms\/([^/]+)\/cartography\/routing$/);
   const roomMatch = path.match(/^\/rooms\/([^/]+)\/cartography$/);
-  if (!roomMatch) return null;
+  if (!routingMatch && !roomMatch) return null;
 
   const {
     env,
@@ -30,11 +35,26 @@ export async function dispatchCartographyRoutes(request, url, h) {
   });
   if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
 
-  const roomId = decodeURIComponent(roomMatch[1]);
+  const roomId = decodeURIComponent((routingMatch || roomMatch)[1]);
   const allowed = await canAccessRoom(env, auth, roomId);
   if (!allowed) return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
 
   try {
+    // NW-205: proactive routing from hot clusters
+    if (routingMatch && request.method === "GET") {
+      const result = await getCartographyRoutingSuggestions(env, {
+        projectId: auth.projectId,
+        roomId,
+      });
+      if (!result.ok) {
+        const status = result.error === "forbidden" ? 403 : 404;
+        return json(result, { status, headers: corsHeaders });
+      }
+      return json(result, { headers: corsHeaders });
+    }
+
+    if (!roomMatch) return null;
+
     if (request.method === "GET") {
       const rebuild = url.searchParams.get("rebuild") === "1";
       const result = rebuild
