@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3001",
-    "build": "pnpm --filter @fluxy-chat/create-fluxy-chat build && next build --webpack",
+    "build": "next build --webpack",
     "start": "next start --port 3001",
     "postinstall": "fumadocs-mdx",
     "generate:api": "node --experimental-strip-types scripts/generate-api-docs.mts"

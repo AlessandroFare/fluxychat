@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   Target, DollarSign, Calendar, Clock, CheckCircle2, Circle, AlertCircle,
   Users, MessageSquare, FileText, Columns3, Folder,
@@ -20,7 +21,7 @@ interface ProjectMeta {
   project_status: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: LucideIcon }> = {
   planning: { label: "Planning", color: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300", icon: Circle },
   active: { label: "Active", color: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300", icon: CheckCircle2 },
   review: { label: "Review", color: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300", icon: AlertCircle },
@@ -74,7 +75,7 @@ export default function ProjectOverview({ roomId }: { roomId: string }) {
     } catch { /* ignore */ }
   };
 
-  const StatCard = ({ label, value, icon: Icon, color }: { label: string; value: string; icon: React.ElementType; color: string }) => (
+  const StatCard = ({ label, value, icon: Icon, color }: { label: string; value: string; icon: LucideIcon; color: string }) => (
     <div className="rounded-xl border bg-white p-4 dark:bg-gray-900">
       <div className="flex items-start justify-between">
         <div>
@@ -211,15 +212,18 @@ export default function ProjectOverview({ roomId }: { roomId: string }) {
             { label: "Tasks", icon: Columns3, desc: "Kanban board" },
             { label: "Files", icon: Folder, desc: "Shared storage" },
             { label: "Notes", icon: FileText, desc: "Documentation" },
-          ].map((item) => (
+          ].map((item) => {
+            const ItemIcon = item.icon;
+            return (
             <div key={item.label} className="flex items-center gap-2 rounded-lg border p-3 text-xs hover:bg-muted/50 cursor-pointer">
-              <item.icon className="h-4 w-4 text-muted-foreground" />
+              <ItemIcon className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="font-medium">{item.label}</p>
                 <p className="text-muted-foreground">{item.desc}</p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
