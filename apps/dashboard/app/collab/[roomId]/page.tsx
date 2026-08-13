@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -27,7 +28,7 @@ const SpatialWhiteboard = dynamic(() => import("@/components/collab/spatial-whit
 
 type CollabTab = "overview" | "whiteboard" | "notes" | "kanban" | "document" | "spreadsheet" | "files" | "calendar" | "summaries" | "versions" | "spatial" | "spatialBoard";
 
-const ALL_TABS: { key: CollabTab; label: string; icon: React.ElementType }[] = [
+const ALL_TABS: { key: CollabTab; label: string; icon: LucideIcon }[] = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "whiteboard", label: "Board", icon: Pen },
   { key: "notes", label: "Notes", icon: FileText },
@@ -90,7 +91,9 @@ function CollabLayout({ roomId, tab, setTab }: { roomId: string; tab: CollabTab;
       </header>
 
       <div className="flex gap-0.5 overflow-x-auto border-b bg-white px-2 dark:bg-gray-900 scrollbar-none">
-        {ALL_TABS.map((t) => (
+        {ALL_TABS.map((t) => {
+          const TabIcon = t.icon;
+          return (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -99,10 +102,11 @@ function CollabLayout({ roomId, tab, setTab }: { roomId: string; tab: CollabTab;
               tab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
-            <t.icon className="h-3.5 w-3.5" />
+            <TabIcon className="h-3.5 w-3.5" />
             {t.label}
           </button>
-        ))}
+          );
+        })}
       </div>
 
       <div className="flex-1 overflow-hidden">

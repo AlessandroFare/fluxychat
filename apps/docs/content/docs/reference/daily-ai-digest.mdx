@@ -3,27 +3,27 @@ title: "Daily AI digest"
 description: "Cron-driven recap of yesterday's chat activity with AI highlights per opted-in user, delivered via in-app notification, web push, and optional email."
 ---
 
-Cron-driven recap of yesterday's chat activity: three AI-generated highlights per opted-in user, delivered via in-app notification, web push, and optional email.
+Cron-driven recap of yesterday's chat activity — three AI-generated highlights per opted-in user, delivered via in-app notification, web push, and optional email.
 
 ## Enable in production
 
 1. Apply migration `0051_daily_digest.sql`.
-2. Set Worker env:
+2. Set Worker env —
    - `DAILY_DIGEST_ENABLED=true`
    - `AI_BASE_URL` and `AI_API_KEY` (same stack as reply suggestions)
-   - Optional: `AI_DIGEST_MODEL`, `DIGEST_EMAIL_FROM`, `RESEND_API_KEY`, or Cloudflare Email binding (`env.EMAIL.send`)
+   - Optional — `AI_DIGEST_MODEL`, `DIGEST_EMAIL_FROM`, `RESEND_API_KEY`, or Cloudflare Email binding (`env.EMAIL.send`)
    - `PUBLIC_APP_URL` for links in email and push
-3. Cron `0 8 * * *` is registered in `wrangler.toml` (08:00 UTC daily).
-4. Deploy: `wrangler deploy`
+3. Cron `0 8 * * *` is registered in `wrangler.toml` (daily at 08h00 UTC).
+4. Deploy with `wrangler deploy`
 
 ## User opt-in
 
-Users enable digest via:
+Users enable digest via —
 
-- `PATCH /digest/preferences` with `{ "enabled": true, "email": "you@co.com", ... }`
+- `PATCH /digest/preferences` with a JSON body (`enabled`, `email`, etc.)
 - Dashboard **Notifications → Daily AI digest** card
 
-Default when no row exists: disabled (explicit opt-in).
+Default when no row exists — disabled (explicit opt-in).
 
 ## Channels
 
