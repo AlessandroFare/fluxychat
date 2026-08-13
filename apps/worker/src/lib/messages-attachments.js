@@ -36,6 +36,8 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
       }
     })(),
     clientMessageId: r.client_message_id ?? undefined,
+    seq: r.seq ?? undefined,
+    version: r.version ?? 1,
     mentions: parseMentionsJson(r.mentions),
     preview: r.og_url
       ? {

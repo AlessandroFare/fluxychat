@@ -146,11 +146,11 @@ export function LlmProviderCredentials({
   return (
     <Section
       title="Project LLM credentials"
-      description="Bring your own LLM keys per project (encrypted in D1 when WEBHOOK_SECRET_ENCRYPTION_KEY is set). Keys override Worker env defaults. The @fluxy-chat/sdk npm package never includes provider secrets — only your Fluxy JWT/API key for chat."
+      description="Bring your own LLM keys per project (encrypted in D1 when WEBHOOK_SECRET_ENCRYPTION_KEY is set). Keys override Worker env defaults. The @fluxy-chat/sdk npm package never includes provider secrets; only your Fluxy JWT/API key for chat."
     >
       {focusProviderId ? (
         <p className="mb-3 text-sm text-muted-foreground">
-          Configuring <code className="font-mono text-xs">{focusProviderId}</code> — paste the
+          Configuring <code className="font-mono text-xs">{focusProviderId}</code>. Paste the
           project API key below, then Save.
         </p>
       ) : null}

@@ -43,7 +43,7 @@ function CrmDemo() {
   return (
     <Panel className="rounded-2xl border border-border/80 p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4 text-blue-500" /> CRM / Helpdesk</h3>
-      <p className="mt-1 text-xs text-muted-foreground">Salesforce, Zendesk, HubSpot, Intercom — lookup contacts, create/update tickets with sync direction.</p>
+      <p className="mt-1 text-xs text-muted-foreground">Salesforce, Zendesk, HubSpot, Intercom: lookup contacts, create/update tickets with sync direction.</p>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {/* Config */}
@@ -155,7 +155,7 @@ function KnowledgeBaseDemo() {
   return (
     <Panel className="rounded-2xl border border-border/80 p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold"><BookOpen className="h-4 w-4 text-emerald-500" /> Knowledge Base</h3>
-      <p className="mt-1 text-xs text-muted-foreground">Confluence, Notion, SharePoint, Google Drive — document ingest, chunking, semantic search, RAG context.</p>
+      <p className="mt-1 text-xs text-muted-foreground">Confluence, Notion, SharePoint, Google Drive: document ingest, chunking, semantic search, RAG context.</p>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {/* Source config */}
@@ -436,12 +436,12 @@ export function IntegrationsConsolePage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Integrations"
-        description="Turnstile, SMS, CRM, knowledge bases, translation, and resource links — live SDK-powered demos from @fluxy-chat/sdk."
+        description="Turnstile, SMS, CRM, knowledge bases, translation, and resource links. Live SDK-powered demos from @fluxy-chat/sdk."
       />
 
       <IntegrationsStatusCard />
 
-      <h2 className="mt-10 text-sm font-semibold">SDK Integration Modules — Interactive</h2>
+      <h2 className="mt-10 text-sm font-semibold">SDK Integration Modules (Interactive)</h2>
       <p className="text-xs text-muted-foreground">Each module runs in-memory using the real SDK factory. Try creating contacts, searching docs, validating links, and translating text.</p>
 
       <div className="mt-4 space-y-6">

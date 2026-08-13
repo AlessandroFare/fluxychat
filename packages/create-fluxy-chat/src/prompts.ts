@@ -66,6 +66,7 @@ export async function runPrompts(
         options: [
           { label: "Minimal chat widget (ui-kit, recommended)", value: "minimal" },
           { label: "React chat app (Vite + useChat)", value: "react" },
+          { label: "HR anonymous feedback (compliance starter)", value: "hr-feedback" },
           { label: "Basic (Cloudflare Workers bot)", value: "basic" },
           { label: "Slack", value: "slack" },
           { label: "Telegram", value: "telegram" },

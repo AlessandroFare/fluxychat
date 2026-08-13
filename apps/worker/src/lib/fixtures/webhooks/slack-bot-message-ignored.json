@@ -1,0 +1,19 @@
+{
+  "name": "slack-bot-message-ignored",
+  "platform": "slack",
+  "bridgeId": "br_slack_fixture",
+  "payload": {
+    "type": "event_callback",
+    "event": {
+      "type": "message",
+      "subtype": "bot_message",
+      "channel": "C_fixture_general",
+      "text": "Should be ignored"
+    }
+  },
+  "expect": {
+    "status": 200,
+    "ok": true,
+    "ignored": true
+  }
+}

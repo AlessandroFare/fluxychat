@@ -139,6 +139,24 @@ export default function SettingsPage() {
         />
 
         <SettingsCard
+          title="Push notifications"
+          description="Per-environment FCM, APNs, and Web Push credentials."
+          cta={{ label: "Configure push →", href: "/settings/push" }}
+        />
+
+        <SettingsCard
+          title="Support vertical"
+          description="Canned responses, business hours, and ticket stats for agent workflows."
+          cta={{ label: "Configure support →", href: "/settings/support" }}
+        />
+
+        <SettingsCard
+          title="Agent tool policy"
+          description="JSON policy-as-code: allow, deny, or require approval per tool."
+          cta={{ label: "Configure tool policy →", href: "/settings/agent-tools" }}
+        />
+
+        <SettingsCard
           title="Semantic search"
           description="Hybrid FTS + vector search, auto-embed toggle, and embedding backfill for existing messages."
           cta={{ label: "Open search settings →", href: "/settings/search" }}
@@ -152,61 +170,61 @@ export default function SettingsPage() {
 
         <SettingsCard
           title="Data residency"
-          description="Region pinning for message writes and AI inference — GDPR/HIPAA data location controls (#14)."
+          description="Region pinning for message writes and AI inference. GDPR and HIPAA data location controls."
           cta={{ label: "Configure residency →", href: "/settings/residency" }}
         />
 
         <SettingsCard
           title="EU consent &amp; DPA"
-          description="Auto consent banner for EU tenants with auditable accept/decline events — pairs with residency (#42)."
+          description="Auto consent banner for EU tenants with auditable accept/decline events. Pairs with data residency settings."
           cta={{ label: "Configure consent →", href: "/settings/consent" }}
         />
 
         <SettingsCard
           title="Room auto-translate"
-          description="Per-room target language — auto-translate new messages and cache in D1 (#4)."
+          description="Per-room target language. Auto-translate new messages and cache in D1."
           cta={{ label: "Configure translation →", href: "/settings/translation" }}
         />
 
         <SettingsCard
           title="Media pipeline"
-          description="Upload size limits, async AV scan (EICAR + optional ClamAV), and image thumbnail jobs (#56)."
+          description="Upload size limits, async AV scan (EICAR plus optional ClamAV), and image thumbnail jobs."
           cta={{ label: "Configure media →", href: "/settings/media" }}
         />
 
         <SettingsCard
           title="Slash commands"
-          description="Built-in /poll, /remind, /assign plus tenant custom commands in room_commands (#60)."
+          description="Built-in /poll, /remind, /assign plus tenant custom commands in room_commands."
           cta={{ label: "Configure commands →", href: "/settings/commands" }}
         />
 
         <SettingsCard
           title="Room firmware"
-          description="Per-room PII veto, rate limits, and denylist hooks before message fan-out (#47)."
+          description="Per-room PII veto, rate limits, and denylist hooks before message fan-out."
           cta={{ label: "Configure firmware →", href: "/settings/firmware" }}
         />
 
         <SettingsCard
           title="Public status page"
-          description="Upptime config and deploy checklist for status.fluxychat.com (#62)."
+          description="Upptime config and deploy checklist for status.fluxychat.com."
           cta={{ label: "Status page ops →", href: "/settings/status" }}
         />
 
         <SettingsCard
           title="Usage & cost"
-          description="Monthly message volume, MAU, attachment storage, and indicative cost estimate (#61)."
+          description="Monthly message volume, MAU, attachment storage, and indicative cost estimate."
           cta={{ label: "View usage →", href: "/settings/usage" }}
         />
 
         <SettingsCard
           title="Room E2E encryption"
-          description="Enable shared-key encryption, rotate keys on compromise, and distribute to members (#6)."
+          description="Enable shared-key encryption, rotate keys on compromise, and distribute to members."
           cta={{ label: "Configure E2E →", href: "/settings/e2e" }}
         />
 
         <SettingsCard
           title="Ephemeral room TTL"
-          description="Per-room ephemeral mode and message TTL — complements compliance retention (#19)."
+          description="Per-room ephemeral mode and message TTL. Complements compliance retention policies."
           cta={{ label: "Configure ephemeral →", href: "/settings/ephemeral" }}
         />
 
@@ -242,14 +260,20 @@ export default function SettingsPage() {
 
         <SettingsCard
           title="Automation (Activepieces)"
-          description="Embed no-code flows — FluxyChat webhooks as triggers, CRM connectors via Activepieces."
+          description="No-code flows with FluxyChat webhooks as triggers and CRM connectors via Activepieces."
           cta={{ label: "Open integrations →", href: "/settings/integrations" }}
         />
 
         <SettingsCard
           title="CRM &amp; helpdesk"
-          description="Salesforce, Zendesk, HubSpot, Intercom — sync contacts, tickets, and agent handoff."
+          description="Salesforce, Zendesk, HubSpot, Intercom. Sync contacts, tickets, and agent handoff."
           cta={{ label: "Configure CRM →", href: "/settings/crm" }}
+        />
+
+        <SettingsCard
+          title="Telephony handoff"
+          description="Telnyx/Twilio inbound to human handoff, Voice AI, and support routing."
+          cta={{ label: "Configure telephony →", href: "/settings/telephony" }}
         />
 
         <SettingsCard

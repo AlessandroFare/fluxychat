@@ -1,6 +1,6 @@
 # @fluxy-chat/ui-kit
 
-Drop-in **polished chat widget** and **inbox panel** for FluxyChat — closes the "headless only" gap vs hosted SDKs.
+Drop-in polished chat widget and inbox panel for FluxyChat. Closes the "headless only" gap compared to hosted SDKs.
 
 Built on `@fluxy-chat/ui` + `@fluxy-chat/react`. Optional bridge to [`assistant-ui`](https://assistant-ui.com) via `useFluxyAssistantRuntime`.
 

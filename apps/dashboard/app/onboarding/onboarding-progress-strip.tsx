@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { ONBOARDING_STEPS, isOnboardingStepComplete } from "./onboarding-shared";
+import { ONBOARDING_STEPS, isOnboardingStepComplete, firstIncompleteOnboardingStep } from "./onboarding-shared";
 import type { OnboardingWizard } from "./use-onboarding-wizard";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,8 @@ export function OnboardingProgressStrip({ stepContext, activeStep, onStepClick }
         {ONBOARDING_STEPS.map((step, index) => {
           const done = isOnboardingStepComplete(index, stepContext);
           const current = index === activeStep;
-          const canNavigate = index <= activeStep || done;
+          const firstIncomplete = firstIncompleteOnboardingStep(stepContext);
+          const canNavigate = done || index <= firstIncomplete;
           const Icon = step.icon;
 
           return (

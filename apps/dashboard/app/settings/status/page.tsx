@@ -20,7 +20,7 @@ export default function StatusPageSettings() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Public status page"
-        description="Zero-cost uptime history with Upptime (MIT) — enterprise pre-contract expectation (#62)."
+        description="Zero-cost uptime history with Upptime (MIT). Common enterprise pre-contract ask."
         icon={Activity}
       />
 

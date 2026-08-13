@@ -9,7 +9,7 @@ Ship the App Router on Vercel; run WebSocket rooms on Cloudflare Workers + Durab
 
 ## The buyer question Ably owns
 
-Tutorials for “live app on Vercel” often assume Ably or Pusher because serverless functions are not a socket fleet. That is correct — the fix is not forcing WebSockets into Vercel alone, it is a dedicated realtime layer.
+Tutorials for "live app on Vercel" often assume Ably or Pusher because serverless functions are not a socket fleet. That is correct. The fix is not forcing WebSockets into Vercel alone; it is a dedicated realtime layer.
 
 ## FluxyChat integration shape
 
@@ -20,15 +20,15 @@ Tutorials for “live app on Vercel” often assume Ably or Pusher because serve
 
 ## Why not a second vendor
 
-- Room-per-DO on your Cloudflare account — cost and data stay readable.
+- Room-per-DO on your Cloudflare account: cost and data stay readable.
 - MIT self-host when hosted beta is not enough.
 - Same WebSocket stream for human messages and agent tool events.
 
 ## Code placement in Next.js
 
 ```
-// app/api/fluxy/token/route.ts — mint JWT server-side
-// app/room/[id]/room-chat.tsx — "use client" + useChat
+// app/api/fluxy/token/route.ts: mint JWT server-side
+// app/room/[id]/room-chat.tsx: "use client" + useChat
 
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { useChat } from "@fluxy-chat/react";

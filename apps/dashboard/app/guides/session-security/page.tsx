@@ -5,7 +5,7 @@ import { MARKETING_GUIDE_PATHS } from "@/lib/marketing-links";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const metadata = buildPageMetadata({
-  title: "Session security — storage, refresh, and token lifecycle",
+  title: "Session security: storage, refresh, and token lifecycle",
   description:
     "Best practices for managing FluxyChat sessions: secure token storage, refresh strategies, and preventing session fixation.",
   path: MARKETING_GUIDE_PATHS.sessionSecurity,

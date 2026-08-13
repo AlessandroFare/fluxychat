@@ -7,7 +7,7 @@ import { buildPageMetadata } from "@/lib/site-metadata";
 export const metadata = buildPageMetadata({
   title: "JWT Authentication for self-hosted FluxyChat",
   description:
-    "Configure JWT-based auth for your FluxyChat worker — issue, refresh, and verify tokens with HMAC signing.",
+    "Configure JWT-based auth for your FluxyChat worker: issue, refresh, and verify tokens with HMAC signing.",
   path: MARKETING_GUIDE_PATHS.jwtAuth,
 });
 

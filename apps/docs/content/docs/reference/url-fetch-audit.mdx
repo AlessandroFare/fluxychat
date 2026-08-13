@@ -1,0 +1,44 @@
+---
+title: "URL fetch audit"
+description: "validateUrl and audit logging for OG preview and outbound enrichment fetches."
+---
+
+All link preview fetches go through `validateUrl` and `fetchUrlWithAudit` before HTTP. Blocked SSRF attempts and successful fetches are logged to `url_fetch_audit`.
+
+## validateUrl
+
+```js
+import { validateUrl } from "./url-fetch-audit.js";
+
+const result = validateUrl("https://example.com", env);
+// { ok: true, url: URL } | { ok: false, reason: "ssrf_blocked" }
+```
+
+Also exported from `url-ssrf.ts` for TypeScript call sites.
+
+## Audit API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/security/url-fetch-audit` | List audit rows (`?feature=link_preview`) |
+| POST | `/security/url-fetch-audit/validate` | Dry-run URL validation |
+
+## Features logged
+
+| Feature | Call site |
+|---------|-----------|
+| `link_preview` | `rich-previews.js` → `fetchOgPreview` |
+| `og_preview` | Direct OG fetch |
+| `og_preview_browser` | Browser Run fallback |
+
+## Outcomes
+
+- `blocked` — SSRF / invalid URL
+- `success` — HTTP 2xx
+- `http_error` — non-2xx response
+- `error` — network / redirect failure
+
+## Related
+
+- [Web Push / SSRF hardening](/docs/reference/web-push-vapid)
+- [Messaging parity checklist](/docs/reference/messaging-parity-checklist)

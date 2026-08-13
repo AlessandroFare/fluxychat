@@ -76,8 +76,10 @@ function parseArgs(argv: string[]): ParsedArgs {
         args.adapter = value;
       } else if (value === "react") {
         args.adapter = "react";
+      } else if (value === "hr-feedback") {
+        args.adapter = "hr-feedback";
       } else {
-        console.error(`Invalid template: ${value}. Choose: react, basic, slack, telegram, discord, web`);
+        console.error(`Invalid template: ${value}. Choose: react, basic, slack, telegram, discord, web, hr-feedback`);
         process.exit(1);
       }
     } else if (arg === "--adapter" || arg === "-a") {
@@ -85,7 +87,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       if (value && isAdapterType(value)) {
         args.adapter = value;
       } else {
-        console.error(`Invalid adapter: ${value}. Choose: react, basic, slack, telegram, discord, web`);
+        console.error(`Invalid adapter: ${value}. Choose: react, basic, slack, telegram, discord, web, hr-feedback`);
         process.exit(1);
       }
     } else if (arg === "--pm" || arg === "--package-manager") {
@@ -126,8 +128,8 @@ ${pc.bold("Usage:")}
   npx create-fluxy-chat [project-name] [options]
 
 ${pc.bold("Options:")}
-  -a, --adapter <type>       Adapter: react, basic, slack, telegram, discord, web
-  -t, --template <type>      Alias for --adapter (e.g. react)
+  -a, --adapter <type>       Adapter: react, basic, slack, telegram, discord, web, hr-feedback
+  -t, --template <type>      Alias for --adapter (e.g. react, hr-feedback)
   --pm <manager>             Package manager: npm, pnpm, yarn
   -l, --language <lang>      Language: typescript (default) or javascript
   -y, --yes                  Skip prompts and accept defaults
@@ -138,6 +140,7 @@ ${pc.bold("Options:")}
 
 ${pc.bold("Examples:")}
   ${pc.cyan("npx create-fluxy-chat my-chat --minimal")}
+  ${pc.cyan("npx create-fluxy-chat my-hr-bot --template hr-feedback")}
   ${pc.cyan("npx create-fluxy-chat my-chat --template react")}
   ${pc.cyan("npx create-fluxy-chat my-bot --adapter basic")}
   ${pc.cyan("npx create-fluxy-chat my-bot --adapter slack")}
@@ -211,6 +214,14 @@ async function main(): Promise<void> {
       pkg.name = config.name;
       writeJson(projectDir, "package.json", pkg);
       s.stop("React chat app created.");
+    } else if (config.adapter === "hr-feedback") {
+      const templateRoot = path.join(templatesDir(), "hr-feedback");
+      copyDir(templateRoot, projectDir);
+      const pkgPath = path.join(projectDir, "package.json");
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as Record<string, unknown>;
+      pkg.name = config.name;
+      writeJson(projectDir, "package.json", pkg);
+      s.stop("HR feedback starter created.");
     } else {
       // Generate package.json
       writeJson(projectDir, "package.json", generatePackageJson(config));

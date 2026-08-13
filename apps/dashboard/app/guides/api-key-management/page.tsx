@@ -5,7 +5,7 @@ import { MARKETING_GUIDE_PATHS } from "@/lib/marketing-links";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const metadata = buildPageMetadata({
-  title: "API key management — rotate, scope, and revoke",
+  title: "API key management: rotate, scope, and revoke",
   description:
     "Best practices for managing FluxyChat API keys: project-scoped keys, rotation, and emergency revocation.",
   path: MARKETING_GUIDE_PATHS.apiKeyManagement,

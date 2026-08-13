@@ -1,0 +1,19 @@
+{
+  "name": "discord-message",
+  "platform": "discord",
+  "bridgeId": "br_discord_fixture",
+  "payload": {
+    "id": "1234567890123456789",
+    "channel_id": "987654321098765432",
+    "author": {
+      "id": "111222333444555666",
+      "username": "fixture-user"
+    },
+    "content": "Hello from Discord replay fixture",
+    "timestamp": "2026-01-15T12:00:00.000Z"
+  },
+  "expect": {
+    "status": 200,
+    "ok": true
+  }
+}

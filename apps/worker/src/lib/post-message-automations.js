@@ -12,6 +12,8 @@ import { getRoomTranslationSettings } from "./room-translation-settings.js";
 import { translateMessageContent } from "./message-translation.js";
 import { fanoutServerEvent } from "./message-realtime-fanout.js";
 import { maybeTriggerAmbientAgentsOnMessage } from "./ambient-agents.js";
+import { appendMentionActivities } from "./user-activity-feed.js";
+import { notifyInboxUpdatedForRoomMembers } from "./user-inbox-push.js";
 
 /** Audit C-3: max allowed depth for nested automations. */
 export const AUTOMATION_MAX_DEPTH = 3;
@@ -78,6 +80,8 @@ export async function schedulePostMessageAutomations(env, detail) {
       maybeRecordSupportRoutingSuggestion(env, detail),
       maybeAutoTranslateRoomMessage(env, detail),
       maybeTriggerAmbientAgentsOnMessage(env, detail),
+      maybeAppendMentionActivities(env, detail),
+      maybePushInboxUpdated(env, detail),
     ]);
   } catch (err) {
     logError("post_message_automations_failed", err, {
@@ -85,6 +89,32 @@ export async function schedulePostMessageAutomations(env, detail) {
       roomId: detail.roomId,
     });
   }
+}
+
+async function maybePushInboxUpdated(env, detail) {
+  const { projectId, roomId, authorUserId, messageId, content } = detail;
+  if (!projectId || !roomId) return;
+  await notifyInboxUpdatedForRoomMembers(env, {
+    projectId,
+    roomId,
+    excludeUserId: authorUserId,
+    kind: "unread",
+    messageId,
+    preview: content,
+  }).catch(() => {});
+}
+
+async function maybeAppendMentionActivities(env, detail) {
+  const { projectId, roomId, messageId, authorUserId, mentionedUserIds, content } = detail;
+  if (!mentionedUserIds?.length) return;
+  await appendMentionActivities(env, {
+    projectId,
+    roomId,
+    messageId,
+    authorUserId,
+    mentionedUserIds,
+    preview: content,
+  });
 }
 
 async function maybeRunBuiltinModerationScan(env, opts) {

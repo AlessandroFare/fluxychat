@@ -1,0 +1,13 @@
+{
+  "name": "slack-url-verification",
+  "platform": "slack",
+  "bridgeId": "br_slack_fixture",
+  "payload": {
+    "type": "url_verification",
+    "challenge": "fixture_challenge_token_abc123"
+  },
+  "expect": {
+    "status": 200,
+    "challenge": "fixture_challenge_token_abc123"
+  }
+}

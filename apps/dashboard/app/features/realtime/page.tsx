@@ -32,7 +32,7 @@ export default function RealtimeFeaturesPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Realtime features"
-        description="Live SDK demos for chat, streaming, location, collab, game, IoT, fleet, spatial, and omnichannel — against your Worker demo room or guest session."
+        description="Live SDK demos for chat, streaming, location, collab, game, IoT, fleet, spatial, and omnichannel against your Worker demo room or guest session."
       />
 
       <ConsoleProjectRoomBar

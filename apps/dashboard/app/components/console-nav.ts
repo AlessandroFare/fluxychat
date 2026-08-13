@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   MessageSquare,
+  MessagesSquare,
   Plug,
   Search,
   Settings2,
@@ -81,6 +82,7 @@ export const CONSOLE_NAV_BUILD: ConsoleNavItem[] = [
   { href: "/projects", label: "Projects", icon: FolderKanban, description: "API keys, plans, quotas" },
   { href: "/rooms", label: "Rooms", icon: MessageSquare, description: "Join rooms and read traffic" },
   { href: "/inbox", label: "Inbox", icon: Inbox, description: "Mentions, unread, snooze, follow-ups" },
+  { href: "/threads", label: "Threads", icon: MessagesSquare, description: "Reply threads, unread, jump to parent" },
   { href: "/profile", label: "Profile", icon: UserCircle, description: "Your user profile" },
 ];
 
@@ -113,6 +115,7 @@ export const CONSOLE_NAV_OPERATE: ConsoleNavItem[] = [
   { href: "/webhooks", label: "Webhooks", icon: Plug, description: "Register, verify, and replay deliveries" },
   { href: "/settings", label: "Settings", icon: Settings2, description: "Tenant and project configuration" },
   { href: "/notifications", label: "Notifications", icon: Bell, description: "Mentions, DMs, and read state" },
+  { href: "/user-activity", label: "My activity", icon: Bell, description: "Cross-room mentions feed" },
   { href: "/agent-queue", label: "Agent queue", icon: Headphones, description: "Claim rooms, SLA timers, handoffs" },
   { href: "/automations", label: "Automations", icon: Zap, description: "IF-THEN workflow rules" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, description: "Room stats and cost estimates" },

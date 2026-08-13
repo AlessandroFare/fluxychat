@@ -67,7 +67,7 @@ export function SentContactsCard({ adminJwt }: { adminJwt: string }) {
       );
       setSyncMsg(
         json.contact?.optOut
-          ? "Synced — contact opted out (SMS disabled in preferences)"
+          ? "Synced. Contact opted out (SMS disabled in preferences)"
           : "Synced from Sent.dm",
       );
       void load();

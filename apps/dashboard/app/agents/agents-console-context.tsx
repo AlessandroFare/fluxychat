@@ -160,7 +160,7 @@ export function AgentsConsoleProvider({
 
   const loadAgents = useCallback(async () => {
     if (!adminJwt.trim()) {
-      setError("Admin JWT required — configure session in Projects or use a valid token.");
+      setError("Admin JWT required. Configure session in Projects or use a valid token.");
       setAgents([]);
       return;
     }
@@ -356,7 +356,7 @@ export function AgentsConsoleProvider({
         await client.invokeAgentRest(agentId, invokeRoomId, invokeText.trim());
         setInvokeText("");
         await loadRuns(agentId);
-        setNotice("Invoke completed — check run history below.");
+        setNotice("Invoke completed. Check run history below.");
       } catch (err: unknown) {
         setError(messageFromUnknown(err, "Invoke failed"));
       } finally {

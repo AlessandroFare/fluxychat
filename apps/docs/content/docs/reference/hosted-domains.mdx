@@ -51,7 +51,7 @@ Canonical marketing URL: pick **either** apex **or** `www` and stick to it for `
    - **Worker-only DNS** (Cloudflare "Worker" record type) pointing to the worker, **Proxied** (orange), or  
    - **AAAA/CNAME** as Cloudflare suggests when adding the custom domain in the Worker settings.
 
-4. **`ALLOWED_ORIGINS` (or equivalent) on the Worker** must include the real dashboard origins, e.g.:
+4. `ALLOWED_ORIGINS` (or equivalent) on the Worker must include the real dashboard origins, for example:
    - `https://www.fluxychat.com`
    - `https://fluxychat.com` (if you use apex without always redirecting before first request)
 

@@ -60,7 +60,7 @@ export function MergeConflictPanel({ token, roomId, onResolved }: MergeConflictP
     <div className="mb-3 space-y-3 rounded-lg border border-amber-500/40 bg-amber-50/50 p-3 dark:bg-amber-950/20">
       <div className="flex items-center gap-2 text-sm font-medium text-amber-950 dark:text-amber-50">
         <GitMerge className="h-4 w-4" />
-        {conflicts.length} merge conflict{conflicts.length === 1 ? "" : "s"} need resolution (#48)
+        {conflicts.length} merge conflict{conflicts.length === 1 ? "" : "s"} need resolution
       </div>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
       {conflicts.map((conflict) => (

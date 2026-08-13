@@ -118,3 +118,39 @@ export async function notifyDmRecipient(
     ),
   );
 }
+
+/** NW-131 — Fan-out in-app notifications for announcement channel posts. */
+export async function notifyAnnouncementMembers(
+  env,
+  { projectId, roomId, fromUserId, messageId, preview, roomName },
+) {
+  const members = await env.DB.prepare(
+    `SELECT user_id FROM room_members WHERE project_id = ? AND room_id = ?`,
+  )
+    .bind(projectId, roomId)
+    .all();
+  const recipients = (members.results || [])
+    .map((r) => r.user_id)
+    .filter((uid) => uid && uid !== fromUserId);
+  if (!recipients.length) return;
+
+  const title = roomName ? `Announcement: ${roomName}` : "New announcement";
+  const snippet =
+    typeof preview === "string" && preview.length
+      ? preview.slice(0, 120)
+      : "A new announcement was posted.";
+
+  await Promise.all(
+    recipients.map((userId) =>
+      createInAppNotification(env, {
+        projectId,
+        userId,
+        kind: "announcement",
+        title,
+        body: snippet,
+        roomId,
+        messageId,
+      }),
+    ),
+  );
+}

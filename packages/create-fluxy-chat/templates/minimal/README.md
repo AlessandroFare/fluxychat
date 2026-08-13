@@ -1,6 +1,6 @@
 # FluxyChat minimal starter
 
-Three-line chat widget — no platform modules in the generated project.
+Three-line chat widget with no platform modules in the generated project.
 
 ```bash
 cp .env.example .env

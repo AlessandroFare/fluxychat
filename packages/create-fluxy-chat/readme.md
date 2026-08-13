@@ -5,7 +5,7 @@ Scaffold a new [FluxyChat](https://github.com/AlessandroFare/fluxychat) bot proj
 ## Quick start
 
 ```bash
-# Minimal chat widget (recommended — 3 lines in App.tsx)
+# Minimal chat widget (recommended: 3 lines in App.tsx)
 npx create-fluxy-chat my-chat --minimal
 
 # React + useChat (guest room ~60s or member JWT)
@@ -42,7 +42,7 @@ npx create-fluxy-chat my-bot --adapter basic
 | `--pm <manager>` | | Package manager: `npm`, `pnpm`, `yarn` |
 | `--language <lang>` | `-l` | Language: `typescript` (default) or `javascript` |
 | `--yes` | `-y` | Skip prompts and accept defaults |
-| `--minimal` | | Chat-only widget (`@fluxy-chat/ui-kit`) — no platform modules |
+| `--minimal` | | Chat-only widget (`@fluxy-chat/ui-kit`), no platform modules |
 | `--skip-install` | | Skip dependency installation |
 | `--no-git` | | Skip git repository initialization |
 | `--help` | `-h` | Show help |
@@ -62,14 +62,14 @@ npx create-fluxy-chat my-bot --adapter basic
 
 Each generated project includes:
 
-- **`src/index.ts`** — Cloudflare Workers entry point with route handling
-- **`src/bot.ts`** — Bot handler using `@fluxy-chat/sdk`
-- **`fluxy.config.ts`** — Room authz and publish middleware (basic template)
-- **`wrangler.toml`** — Cloudflare Workers deployment config
-- **`.dev.vars`** — Local development environment variables
-- **`.env.example`** — Example environment variables for your adapter
-- **`tsconfig.json`** — TypeScript configuration (for TS projects)
-- **`README.md`** — Project-specific setup instructions
+- **`src/index.ts`**: Cloudflare Workers entry point with route handling
+- **`src/bot.ts`**: Bot handler using `@fluxy-chat/sdk`
+- **`fluxy.config.ts`**: Room authz and publish middleware (basic template)
+- **`wrangler.toml`**: Cloudflare Workers deployment config
+- **`.dev.vars`**: Local development environment variables
+- **`.env.example`**: Example environment variables for your adapter
+- **`tsconfig.json`**: TypeScript configuration (for TS projects)
+- **`README.md`**: Project-specific setup instructions
 
 ## Package manager detection
 

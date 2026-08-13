@@ -8,7 +8,7 @@ import { ExternalLink } from "lucide-react";
 import { DocsSearch } from "@/components/doc-search";
 
 export const metadata = buildPageMetadata({
-  title: "Guides — edge chat on Cloudflare",
+  title: "Guides: edge chat on Cloudflare",
   description:
     "Guides for Workers chat, platform modules, Vercel + Cloudflare split, leaving Pusher, and in-app chat vs support desk.",
   path: "/guides",

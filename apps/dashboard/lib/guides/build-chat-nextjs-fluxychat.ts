@@ -60,7 +60,7 @@ export function RoomChat({ roomId }: { roomId: string }) {
     {
       title: "4. Deploy split",
       paragraphs: [
-        "Keep Next on Vercel; Worker on Cloudflare. Same pattern as the Nuxt-on-Pages tutorials — different import, same split.",
+        "Keep Next on Vercel; Worker on Cloudflare. Same pattern as the Nuxt-on-Pages tutorials: different import, same split.",
         "If you landed here from a Next.js realtime chat tutorial and do not want Socket.IO on a VPS, this is the packaged version of that split.",
       ],
       link: DEVTO_SOCKET_FLEET_ARTICLE,

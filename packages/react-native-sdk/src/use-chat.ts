@@ -7,6 +7,7 @@ import { FluxyRoomConnection, type FluxyRoomConnectionOptions } from "./room-con
 import { createOptimisticMessage, createClientMessageId, applyServerMessageAck, markMessageDeliveryFailed, tryMatchPendingByInbound } from "./message-delivery";
 import { sortMessagesChronological, mergeMessagesChronological } from "./message-history";
 import { createStreamingEditBatcher } from "./streaming-edit-batcher";
+import type { RnOutboxStore, RnSyncStatus } from "./offline-queue";
 
 export type UseChatHistoryReplay = "connect" | "request";
 
@@ -22,6 +23,8 @@ export interface UseChatOptions {
   presenceInfo?: Record<string, unknown>;
   wsCache?: "on" | "off";
   e2eKey?: string;
+  /** NW-114 — AsyncStorage-backed outbox for offline sends */
+  persistentOutbox?: RnOutboxStore;
   onAnyEvent?: (event: FluxyChatEvent) => void;
 }
 
@@ -36,6 +39,7 @@ export function useChat({
   presenceInfo,
   wsCache,
   e2eKey,
+  persistentOutbox,
   onAnyEvent,
 }: UseChatOptions) {
   const ctxClient = React.useContext(React.createContext<FluxyChatClient | null>(null));
@@ -44,6 +48,8 @@ export function useChat({
     const store = createFluxyRoomStore();
     return store.getState();
   });
+  const [syncStatus, setSyncStatus] = React.useState<RnSyncStatus>("synced");
+  const [pendingOutboxCount, setPendingOutboxCount] = React.useState(0);
   const storeRef = React.useRef<FluxyRoomStore | null>(null);
   const connRef = React.useRef<FluxyRoomConnection | null>(null);
   const roomIdRef = React.useRef(roomId);
@@ -63,7 +69,12 @@ export function useChat({
       replayHistoryOnReconnect,
       presenceInfo,
       wsCache,
+      persistentOutbox,
       wsReplay: replay === "connect" ? "connect" : "off",
+      onSyncStatusChange: (status: RnSyncStatus, pending: number) => {
+        setSyncStatus(status);
+        setPendingOutboxCount(pending);
+      },
       onStatusChange: (status: string) => {
         const patch: any = {};
         if (status === "connected") { patch.connectionStatus = "connected"; patch.connected = true; patch.reconnectAttempt = 0; patch.connectionError = null; }
@@ -119,7 +130,7 @@ export function useChat({
     }
 
     return () => { unsub(); conn.close(); storeRef.current = null; connRef.current = null; };
-  }, [client, roomId, historyLimit, replay, replayHistoryOnReconnect, presenceInfo, wsCache]);
+  }, [client, roomId, historyLimit, replay, replayHistoryOnReconnect, presenceInfo, wsCache, persistentOutbox]);
 
   const sendMessage = React.useCallback((content: string, replyTo?: number | null, attachments?: any[], options?: FluxySendMessageOptions) => {
     if (!client || !connRef.current) return;
@@ -164,6 +175,8 @@ export function useChat({
     connected: state.connected,
     connectionStatus: state.connectionStatus,
     connectionState: state.connectionState,
+    syncStatus,
+    pendingOutboxCount,
     agentTyping: state.agentTyping,
     reactions: state.reactions,
     sendMessage,

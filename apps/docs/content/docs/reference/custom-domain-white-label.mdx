@@ -1,9 +1,9 @@
 ---
-title: "Custom domain white-label (P12-G)"
-description: "Route `https://chat.yourcompany.com` to a FluxyChat project on the Worker. Useful for embed widgets (P12-A), guest chat, and branded API endpoints without e"
+title: "Custom domain white-label"
+description: "Route chat.yourcompany.com to a FluxyChat project on the Worker for embed widgets, guest chat, and branded API endpoints."
 ---
 
-Route `https://chat.yourcompany.com` to a FluxyChat **project** on the Worker. Useful for embed widgets (P12-A), guest chat, and branded API endpoints without exposing the platform `api.*` hostname.
+Route `https://chat.yourcompany.com` to a FluxyChat project on the Worker. Useful for embed widgets, guest chat, and branded API endpoints without exposing the platform `api.*` hostname.
 
 ## How it works
 
@@ -61,7 +61,7 @@ await client.updateCustomDomain(id, { status: "active" });
 - Guest sessions on a custom host only work for rooms in that project.
 - Cross-tenant JWTs are rejected on white-label hosts.
 
-## Theming and `data-theme` (P14-I)
+## Theming and `data-theme`
 
 White-label the chat shell on your marketing site and embed iframe:
 

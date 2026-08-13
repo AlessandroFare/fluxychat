@@ -283,7 +283,7 @@ export default function ProjectsPage() {
       ) : null}
       {hostedCloud && !isPlatformOperator ? (
         <div className="mb-4 rounded-xl border border-amber-200/80 bg-amber-50 p-3 text-sm text-amber-950">
-          Hosted cloud includes one project per account — use <strong>Rename</strong> to change its display name.
+          Hosted cloud includes one project per account. Use <strong>Rename</strong> to change its display name.
           Plan tiers and quotas are managed by the platform; use{" "}
           <a href="/billing" className="font-medium underline underline-offset-2">
             Billing
@@ -520,7 +520,7 @@ export default function ProjectsPage() {
                     ) : null}
                     {PLAN_NAME_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
-                        {opt.label} — {opt.description}
+                        {opt.label}: {opt.description}
                       </option>
                     ))}
                   </select>
@@ -543,7 +543,7 @@ export default function ProjectsPage() {
                     ) : null}
                     {BILLING_STATUS_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
-                        {opt.label} — {opt.description}
+                        {opt.label}: {opt.description}
                       </option>
                     ))}
                   </select>
@@ -553,7 +553,7 @@ export default function ProjectsPage() {
                   <a href="/billing" className="font-medium text-primary underline-offset-2 hover:underline">
                     Billing (Stripe)
                   </a>
-                  . This form is an operator override for self-hosted or dev tenants — it does not charge a card.
+                  . This form is an operator override for self-hosted or dev tenants. It does not charge a card.
                   Compare tiers on{" "}
                   <a href="/#pricing" className="font-medium text-primary underline-offset-2 hover:underline">
                     pricing

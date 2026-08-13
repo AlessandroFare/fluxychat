@@ -74,6 +74,25 @@ The room connection enables automatic reconnect with exponential backoff. On rec
 
 For offline compose-and-send, prefer REST `createMessage` when authenticated; WS sends queue while disconnected and flush on reconnect.
 
+### Persistent outbox
+
+Pass an AsyncStorage-backed store to survive app restarts:
+
+```tsx
+import { useChat, createAsyncStorageOutboxStore } from "@fluxy-chat/react-native-sdk";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const outbox = createAsyncStorageOutboxStore(AsyncStorage);
+
+const { sendMessage, syncStatus, pendingOutboxCount } = useChat({
+  roomId,
+  client,
+  persistentOutbox: outbox,
+});
+```
+
+`syncStatus` is `synced`, `syncing`, `offline`, or `pending`. Show it in your composer banner when the device is offline or catching up.
+
 ## Protocol parity
 
 Event types match `@fluxy-chat/protocol` — run `pnpm --filter @fluxy-chat/react-native-sdk test` to verify outbound/inbound registries.

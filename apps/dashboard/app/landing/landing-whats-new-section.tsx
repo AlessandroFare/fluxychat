@@ -44,7 +44,7 @@ const AI_FEATURES = [
     icon: CreditCard,
     title: "Card element builder",
     description:
-      "Compose rich interactive messages with buttons, tables, and sections — JSX or function API, Slack Block Kit & Teams Adaptive Cards.",
+      "Compose rich interactive messages with buttons, tables, and sections: JSX or function API, Slack Block Kit and Teams Adaptive Cards.",
   },
   {
     icon: Bot,
@@ -56,7 +56,7 @@ const AI_FEATURES = [
     icon: GitBranch,
     title: "Stream resumption",
     description:
-      "Reconnect to in-progress AI responses after page refresh or network drop — no lost tokens.",
+      "Reconnect to in-progress AI responses after page refresh or network drop. No lost tokens.",
   },
   {
     icon: Boxes,
@@ -68,7 +68,7 @@ const AI_FEATURES = [
     icon: Settings2,
     title: "LLM middleware",
     description:
-      "Pluggable pipeline: guardrails, caching, RAG injection, PII redaction, logging — wrapGenerate / wrapStream / transformParams.",
+      "Pluggable pipeline: guardrails, caching, RAG injection, PII redaction, logging. wrapGenerate, wrapStream, transformParams.",
   },
   {
     icon: FileCode2,
@@ -98,7 +98,7 @@ const AI_FEATURES = [
     icon: MessageSquare,
     title: "Conversation transcripts",
     description:
-      "Per-user message persistence keyed by cross-platform identity. Append, list, filter by platform/thread/role, and delete — with configurable retention and capping.",
+      "Per-user message persistence keyed by cross-platform identity. Append, list, filter by platform/thread/role, and delete, with configurable retention and capping.",
   },
   {
     icon: Slash,
@@ -116,7 +116,7 @@ const AI_FEATURES = [
     icon: Radio,
     title: "Platform modules",
     description:
-      "Stream, game, IoT, spatial twins, cross-channel continuity, and marketplace apps — each with docs, demos, and readiness badges.",
+      "Stream, game, IoT, spatial twins, cross-channel continuity, and marketplace apps, each with docs, demos, and readiness badges.",
   },
 ] as const;
 
@@ -159,7 +159,7 @@ const PLATFORM_EXTENSIONS = [
   },
   {
     icon: Radio,
-    title: "FluxyStream — Live Broadcasting",
+    title: "FluxyStream: Live Broadcasting",
     description: "Create events, provision ingest, go live with HLS playback. Chat overlay and reactions on the same room.",
     href: "/stream/demo",
   },
@@ -177,19 +177,19 @@ const PLATFORM_EXTENSIONS = [
   },
   {
     icon: Gamepad2,
-    title: "FluxyGame — Multiplayer SDK",
+    title: "FluxyGame: Multiplayer SDK",
     description: "Matchmaking, server-authoritative state sync @20fps, AI NPCs with memory, tournaments, replay system, party system. Game room = chat room.",
     href: "/game",
   },
   {
     icon: Cpu,
-    title: "FluxyIoT — MQTT Bridge & Device Fleet",
+    title: "FluxyIoT: MQTT Bridge & Device Fleet",
     description: "Device provisioning, rule engine, device shadow (desired vs reported), OTA updates, geofencing, AI device doctor, device-as-room-member.",
     href: "/iot",
   },
   {
     icon: GraduationCap,
-    title: "FluxyEdu — Live classroom",
+    title: "FluxyEdu: Live classroom",
     description: "Polls, breakouts, attendance, and stage go-live with server_event fan-out on the room WebSocket.",
     href: "/edu",
   },
@@ -204,7 +204,7 @@ export function LandingWhatsNewSection() {
       <div className="mx-auto max-w-6xl">
         <div className="text-center">
           <span className="inline-flex items-center rounded-full bg-blue-500/10 px-3 py-1 text-sm font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20">
-            RT-EX · Production
+            Production ready
           </span>
           <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Live verticals, voice, and the server event bus
@@ -212,7 +212,7 @@ export function LandingWhatsNewSection() {
           <p className="mx-auto mt-3 max-w-2xl text-slate-300">
             Polls, breakouts, stage go-live, collab CRDT, fleet GPS, and hybrid check-in fan out as{" "}
             <code className="rounded bg-white/10 px-1 py-0.5 text-sm text-blue-200">server_event</code> frames on the
-            room WebSocket. Voice AI, streaming AI, MCP tools, and durable agents sit on the same worker — with
+            room WebSocket. Voice AI, streaming AI, MCP tools, and durable agents sit on the same worker, with
             production readiness labels on every surface.
           </p>
         </div>

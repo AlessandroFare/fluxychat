@@ -61,4 +61,4 @@ cd packages/swift-sdk && swift test
 
 ## Status
 
-Starter package (MD-5) — REST + WebSocket. SwiftUI chat UI TBD.
+Starter package: REST + WebSocket. SwiftUI chat UI TBD.

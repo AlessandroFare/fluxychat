@@ -553,7 +553,7 @@ function JourneyMappingSection() {
   };
 
   return (
-    <Section title="Customer Journey Mapping" description="Track user touchpoints across channels and visualize transition paths via createJourneyMapping() — interactive in-memory demo.">
+    <Section title="Customer Journey Mapping" description="Track user touchpoints across channels and visualize transition paths via createJourneyMapping(). Interactive in-memory demo.">
       <div className="flex flex-wrap gap-2 mb-4">
         <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="User ID" className="max-w-[140px]" />
         <Button size="sm" onClick={recordRandomStep}><Play className="h-3.5 w-3.5 mr-1" /> Record step</Button>
@@ -651,7 +651,7 @@ function ConversationAnalyticsSection() {
   const SENTIMENT_COLOR: Record<string, string> = { positive: "text-emerald-400", negative: "text-red-400", neutral: "text-slate-400", mixed: "text-amber-400" };
 
   return (
-    <Section title="Conversation Analytics" description="Sentiment, intent detection, topic clustering, and knowledge gap identification via createConversationAnalytics() — in-memory NLP demo.">
+    <Section title="Conversation Analytics" description="Sentiment, intent detection, topic clustering, and knowledge gap identification via createConversationAnalytics(). In-memory NLP demo.">
       <div className="flex gap-2 mb-4">
         <Input value={text} onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleAnalyze(); }}

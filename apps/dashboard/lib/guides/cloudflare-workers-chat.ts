@@ -8,7 +8,7 @@ import {
 export const CF_WORKERS_CHAT_GUIDE: GuideContent = {
   title: "How to build instant messaging on Cloudflare Workers",
   subtitle:
-    "cloudflare workers websocket + durable objects chat — shared state coordination per room, D1 history, realtime without a VPS. For Cloudflare Pages, Vercel, or Netlify fronts.",
+    "WebSocket chat on Cloudflare Workers and Durable Objects: shared state per room, D1 history, realtime without a VPS. Works with Cloudflare Pages, Vercel, or Netlify fronts.",
   sections: [
     {
       title: "Start with Cloudflare’s chat demo (mental model)",
@@ -42,7 +42,7 @@ export const CF_WORKERS_CHAT_GUIDE: GuideContent = {
     {
       title: "Go deeper with a walkthrough",
       paragraphs: [
-        "Worker routing at `/ws/room/:roomId`, RoomDurableObject, SDK useChat, and self-host commands — in the long-form Dev.to article.",
+        "Worker routing at `/ws/room/:roomId`, RoomDurableObject, SDK useChat, and self-host commands in the long-form Dev.to article.",
       ],
       link: DEVTO_SOCKET_FLEET_ARTICLE,
     },

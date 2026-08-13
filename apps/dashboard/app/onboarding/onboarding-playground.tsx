@@ -63,15 +63,27 @@ export function OnboardingPlayground({ wizard: w }: OnboardingPlaygroundProps) {
               )}
 
               {step === 2 && (
-                <Button
-                  variant="primary"
-                  onClick={() => w.goNext()}
-                  disabled={!w.userSentMessage}
-                  title={!w.userSentMessage ? "Send a message first" : undefined}
-                >
-                  Continue
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
+                <>
+                  <p
+                    className={cn(
+                      "mr-3 hidden text-xs sm:block",
+                      w.userSentMessage ? "text-emerald-600" : "text-muted-foreground",
+                    )}
+                  >
+                    {w.userSentMessage
+                      ? "Message sent. Continue when ready"
+                      : "Send a message to continue"}
+                  </p>
+                  <Button
+                    variant="primary"
+                    onClick={() => w.goNext()}
+                    disabled={!w.userSentMessage}
+                    title={!w.userSentMessage ? "Send a message first" : undefined}
+                  >
+                    Continue
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </>
               )}
 
               {step === 3 && (

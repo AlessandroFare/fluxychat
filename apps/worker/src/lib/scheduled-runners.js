@@ -138,6 +138,8 @@ export async function runScheduledCronJob(env, cron) {
       await expirePendingDecisions(env).catch(() => ({ expired: 0 }));
       await purgeExpiredWebAuthnChallenges(env).catch(() => {});
       await expireRehearsalRooms(env).catch(() => ({ expired: 0 }));
+      const { resumeStuckDurableWorkflows } = await import("./agent-durable-workflow.js");
+      await resumeStuckDurableWorkflows(env, { limit: 5 }).catch(() => ({ resumed: 0 }));
       const { expireOpenTruthClaims } = await import("./truth-market.js");
       await expireOpenTruthClaims(env).catch(() => ({ expired: 0 }));
       const { expireStaleCrossOrgCommitments } = await import("./cross-org-rooms.js");
@@ -148,6 +150,12 @@ export async function runScheduledCronJob(env, cron) {
       return { job: "retention_purge" };
     case SCHEDULED_CRON_WEBHOOK_FLUSH:
       await processPendingWebhookDeliveries(env);
+      const { tickPresenceEscalations } = await import("./presence-escalation.js");
+      await tickPresenceEscalations(env).catch(() => ({ processed: 0 }));
+      const { tickHitlApprovalEscalations } = await import("./hitl-approval-tick.js");
+      await tickHitlApprovalEscalations(env).catch(() => ({ processed: 0 }));
+      const { runEscalationScan } = await import("./escalation-rules.js");
+      await runEscalationScan(env).catch(() => ({ scanned: 0, escalated: 0 }));
       return { job: "webhook_flush" };
     case SCHEDULED_CRON_MODELS_SYNC:
       await syncModelsCatalog(env);

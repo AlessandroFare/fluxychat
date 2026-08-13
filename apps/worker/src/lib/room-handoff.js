@@ -279,6 +279,17 @@ export async function resolveRoomHandoff(env, opts) {
     }),
   });
 
+  try {
+    const { maybeTriggerCsatOnRoomEnd } = await import("./support-csat.js");
+    await maybeTriggerCsatOnRoomEnd(env, {
+      projectId: opts.projectId,
+      roomId: opts.roomId,
+      userId: opts.userId,
+    });
+  } catch {
+    /* CSAT trigger is best-effort */
+  }
+
   return { ok: true, resolvedAt: now, disposition: disposition.code };
 }
 

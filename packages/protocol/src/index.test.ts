@@ -63,6 +63,7 @@ describe("outbound client events", () => {
       "location_track_ended",
       "typing",
       "agentTyping",
+      "resume",
     ];
     expect([...FLUXY_OUTBOUND_EVENT_TYPES].sort()).toEqual(roomDoTypes.sort());
   });

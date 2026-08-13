@@ -84,7 +84,7 @@ export function DigestPreferencesCard({ token, className }: DigestPreferencesCar
         <h2 className="text-sm font-semibold text-foreground">Daily AI digest</h2>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        Every day at 08:00 UTC, get three AI highlights from yesterday across your rooms — in-app,
+        Every day at 08:00 UTC, get three AI highlights from yesterday across your rooms: in-app,
         web push, and optional email.
       </p>
 

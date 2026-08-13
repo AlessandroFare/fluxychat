@@ -96,7 +96,7 @@ export default function AutomationsPage() {
 
       {!token ? (
         <Panel className="p-6 text-sm text-muted-foreground">
-          Admin JWT required — <Link href="/projects" className="font-medium underline-offset-2 hover:underline">Projects</Link>.
+          Admin JWT required. <Link href="/projects" className="font-medium underline-offset-2 hover:underline">Projects</Link>.
         </Panel>
       ) : (
         <div className="space-y-8">

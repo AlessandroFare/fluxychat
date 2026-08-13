@@ -220,7 +220,7 @@ export default function BridgesPage() {
 
       {!token && (
         <Panel className="p-4 text-sm text-muted-foreground">
-          Admin JWT required — copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
+          Admin JWT required. Copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
         </Panel>
       )}
 
@@ -297,7 +297,7 @@ export default function BridgesPage() {
           </Section>
 
           {selectedBridge && (
-            <Section title={`Mappings — ${selectedBridge.name}`}>
+            <Section title={`Mappings: ${selectedBridge.name}`}>
               <Panel className="p-4 space-y-3">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <RoomPicker token={token} value={mapRoomId} onChange={setMapRoomId} />

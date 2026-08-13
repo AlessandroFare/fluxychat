@@ -1,8 +1,8 @@
 # FluxyChat
 
-Realtime chat on Cloudflare Workers — one Worker, WebSocket rooms, a TypeScript SDK, and an operator console for projects, agents, and compliance.
+Realtime chat on Cloudflare Workers: one Worker, WebSocket rooms, a TypeScript SDK, and an operator console for projects, agents, and compliance.
 
-> **Open beta** — [Try hosted](https://fluxychat.com) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Public docs](https://docs.fluxychat.com) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0) · **Support:** fluxychat@outlook.com
+> **Open beta.** [Try hosted](https://fluxychat.com) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Public docs](https://docs.fluxychat.com) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0) · **Support:** fluxychat@outlook.com
 
 ## Quick links
 
@@ -50,7 +50,7 @@ pnpm dev             # dashboard + worker + docs in parallel
 
 Then:
 
-1. Open `/onboarding` in the dashboard — project, JWT, first room
+1. Open `/onboarding` in the dashboard for project, JWT, and first room
 2. Integrate `@fluxy-chat/sdk` in your frontend ([packages/sdk/README.md](packages/sdk/README.md))
 
 **Per-app dev:**
@@ -76,8 +76,8 @@ Your messages and metadata live on **your Cloudflare Worker + D1** (multi-tenant
 
 | Path | Role |
 |------|------|
-| `apps/dashboard` | Next.js — marketing, operator console, onboarding, analytics, billing |
-| `apps/worker` | Cloudflare Worker — WebSocket, REST, Durable Objects |
+| `apps/dashboard` | Next.js: marketing, operator console, onboarding, analytics, billing |
+| `apps/worker` | Cloudflare Worker: WebSocket, REST, Durable Objects |
 | `apps/docs` | Fumadocs documentation site (published at docs.fluxychat.com) |
 | `apps/ai-agent` | Optional AI agent service (mention webhooks → LLM → room replies) |
 | `apps/status` | Status page app |
@@ -87,16 +87,16 @@ Your messages and metadata live on **your Cloudflare Worker + D1** (multi-tenant
 | `packages/protocol` | Shared WebSocket event types |
 | `packages/agent` | Server-side bot / streaming helpers |
 
-## What's new (P22–P25)
+## What's new (AI-native SDK)
 
-Inspired by the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai). Details: [docs/README.md](docs/README.md) (P22–P25 section) · [features overview](docs/features-overview.md).
+Inspired by the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai). Public docs: [docs.fluxychat.com](https://docs.fluxychat.com/packages/sdk).
 
 | Area | Highlights |
 |------|------------|
-| **P22 adapters** | 14 platform adapters; streaming markdown; card builder; AI tool presets; mdast message format |
-| **P23 AI core** | Stream resumption; HITL approval; MCP client; LLM middleware pipeline; DevTools; WorkflowAgent; voice-to-voice |
-| **P24 AI medium** | Tool call streaming; multi-step loops; pluggable transport; RAG middleware; TTS; structured JSON streaming |
-| **P25 AI low** | Render throttling; smoothStream; ephemeral messages; strict tool calling; telemetry controls |
+| Adapters | 14 platform adapters; streaming markdown; card builder; AI tool presets; mdast message format |
+| AI core | Stream resumption; HITL approval; MCP client; LLM middleware; DevTools; WorkflowAgent; voice-to-voice |
+| AI medium | Tool call streaming; multi-step loops; pluggable transport; RAG middleware; TTS; structured JSON streaming |
+| AI advanced | Render throttling; smoothStream; ephemeral messages; strict tool calling; telemetry controls |
 
 ## Publish to npm
 
@@ -107,7 +107,7 @@ cd packages/sdk && pnpm run build && pnpm test
 npm login && npm publish --access public
 ```
 
-Consumers set `baseUrl` to their Worker and mint JWTs server-side — see [packages/sdk/README.md](packages/sdk/README.md).
+Consumers set `baseUrl` to their Worker and mint JWTs server-side. See [packages/sdk/README.md](packages/sdk/README.md).
 
 `@fluxy-chat/ui` and `@fluxy-chat/agent` are workspace packages today (not published yet).
 
@@ -118,7 +118,7 @@ Consumers set `baseUrl` to their Worker and mint JWTs server-side — see [packa
 | Docs home (repo) | [docs/README.md](docs/README.md) |
 | Local dev setup | [docs/local-development.md](docs/local-development.md) |
 | Dashboard integration | [docs/dashboard-integration.md](docs/dashboard-integration.md) |
-| Open beta deploy | [docs/operations/open-beta-deploy-guide.md](docs/operations/open-beta-deploy-guide.md) |
+| Production setup | [docs/operations/production-setup.md](docs/operations/production-setup.md) |
 | SPEC ↔ Worker map | [docs/spec-implementation-map.md](docs/spec-implementation-map.md) |
 | Distribution assets | [docs/distribution/README.md](docs/distribution/README.md) |
 
@@ -126,7 +126,7 @@ Consumers set `baseUrl` to their Worker and mint JWTs server-side — see [packa
 
 - Deploy / rollback: [RUNBOOK_DEPLOY_ROLLBACK.md](RUNBOOK_DEPLOY_ROLLBACK.md)
 - Tenant recovery drill: `apps/worker/scripts/tenant-recovery-drill.mjs`
-- Post-deploy smoke: `cd apps/worker && pnpm run smoke:remote -- --base-url … --admin-jwt …` ([M6 checklist](docs/m6-operational-checklist.md))
+- Post-deploy smoke: `cd apps/worker && pnpm run smoke:remote -- --base-url … --admin-jwt …` ([operational checklist](docs/m6-operational-checklist.md))
 - End-to-end HTTP smoke: `export TEST_API_KEY=fc_...` then `pnpm smoke:bundled` (requires `bash` + `curl`)
 
 ## API quickstart
@@ -186,10 +186,10 @@ curl -H "Authorization: Bearer <JWT>" http://127.0.0.1:8787/stats/launch-kpis
 
 Default SLO env vars: `SLO_TARGET_REQUEST_ERROR_RATE` (0.01), `SLO_TARGET_WEBHOOK_SUCCESS_RATE` (0.98), `ALERT_DISPATCH_WEBHOOK_URL`.
 
-### Quotas and pricing (M5-C)
+### Quotas and pricing
 
 - `QUOTAS_ENABLED` (default `true`), `QUOTA_MESSAGES_PER_MONTH` (50000), `QUOTA_AGENT_INVOKES_PER_MONTH` (1000)
-- `GET /stats/costs` — guardrails via `PRICE_PER_MILLION_MESSAGES`, `MIN_GROSS_MARGIN`, etc.
+- `GET /stats/costs` with guardrails via `PRICE_PER_MILLION_MESSAGES`, `MIN_GROSS_MARGIN`, etc.
 
 ## SDK example
 
@@ -216,4 +216,4 @@ await invokeAgent("Draft a reply for this thread");
 
 ## Examples
 
-- [examples/agent-bot](examples/agent-bot) — server-side bot with streaming via `@fluxy-chat/agent`
+- [examples/agent-bot](examples/agent-bot): server-side bot with streaming via `@fluxy-chat/agent`

@@ -1,0 +1,7 @@
+name = "hr-feedback-bot"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[vars]
+FLUXY_BASE_URL = "https://your-fluxychat-worker.example.com"
+HR_FEEDBACK_ROOM_ID = "hr-anonymous-feedback"

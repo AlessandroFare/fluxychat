@@ -5,11 +5,11 @@ description: Mood timeline from reactions and light message classification for m
 
 # Room sentiment
 
-Aggregate reaction sentiment and optional message classification into a **mood timeline** — useful for community managers and team leads monitoring room health.
+Aggregate reaction sentiment and optional message classification into a mood timeline. Useful for community managers and team leads monitoring room health.
 
 ## Console
 
-**Search** (`/search`) with a room filter shows the **Room sentiment** panel:
+**Search** (`/search`) with a room filter shows the Room sentiment panel:
 
 - Time buckets (positive / neutral / negative)
 - Current mood label
@@ -21,7 +21,7 @@ Component: `RoomSentimentPanel` in the dashboard.
 
 1. Collect emoji reactions and lightweight text signals from recent messages.
 2. Bucket scores over configurable time windows.
-3. Expose aggregates via REST — no extra client instrumentation required.
+3. Expose aggregates via REST. No extra client instrumentation required.
 
 ## API
 
@@ -39,5 +39,5 @@ const { buckets, currentMood } = await client.getRoomSentiment(roomId);
 
 ## Related
 
-- [Smart catch-up](/docs/features/smart-catch-up) — relevance-ranked digests
+- [Smart catch-up](/docs/features/smart-catch-up): relevance-ranked digests
 - [Moderation console](/docs/features/moderation-console)

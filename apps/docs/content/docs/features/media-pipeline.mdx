@@ -5,7 +5,7 @@ description: Upload limits, async virus scan, and thumbnail generation for attac
 
 # Media pipeline
 
-Every attachment upload passes through tenant **size limits**, optional **ClamAV** scan, and **thumbnail** jobs before messages reference the file.
+Every attachment upload passes through tenant size limits, optional ClamAV scan, and thumbnail jobs before messages reference the file.
 
 ## Console
 
@@ -19,13 +19,13 @@ Every attachment upload passes through tenant **size limits**, optional **ClamAV
 
 ## Behaviour
 
-1. `POST /upload` → R2 object store.
-2. Async scan + thumbnail job queued.
-3. Infected files blocked on send; clean files get inline thumbnail URLs in messages.
+1. `POST /upload` stores the object in R2.
+2. Async scan and thumbnail job queued.
+3. Infected files blocked on send. Clean files get inline thumbnail URLs in messages.
 
 ## Built-in safety
 
-**EICAR** test files are blocked even without ClamAV (`builtin` mode).
+EICAR test files are blocked even without ClamAV (`builtin` mode).
 
 ## Environment
 
@@ -37,7 +37,7 @@ Every attachment upload passes through tenant **size limits**, optional **ClamAV
 
 ## Optional ClamAV
 
-Self-host HTTP ClamAV wrapper — see [Optional integrations](/docs/guides/ecosystem/optional-integrations#clamav-media-virus-scan).
+Self-host an HTTP ClamAV wrapper. See [Optional integrations](/docs/guides/ecosystem/optional-integrations#clamav-media-virus-scan).
 
 ## Related
 

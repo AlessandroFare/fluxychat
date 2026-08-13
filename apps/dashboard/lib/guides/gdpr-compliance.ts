@@ -16,7 +16,7 @@ export const GDPR_COMPLIANCE_GUIDE: GuideContent = {
       id: "export",
       title: "Data export",
       bullets: [
-        "GET /users/:userId/export — returns all user data as JSON",
+        "GET /users/:userId/export returns all user data as JSON",
         "Includes messages, reactions, room memberships, and file metadata",
         "Attachments can be downloaded via their R2 URLs",
         "Export is rate-limited to once per 24 hours per user",

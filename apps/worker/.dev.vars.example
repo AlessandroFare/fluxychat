@@ -275,6 +275,13 @@ AUDIT_CHAIN_ENABLED=true
 # WEBAUTHN_RP_NAME=FluxyChat
 # WEBAUTHN_ORIGIN=https://app.example.com,https://dashboard.example.com
 # FCM_SERVER_KEY=...   # legacy FCM HTTP API for mobile push (P10-SB7)
+# FCM_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'  # FCM HTTP v1 when legacy key absent (CP-002)
+# FCM_PROJECT_ID=...   # optional override when using v1 (defaults to JSON project_id)
+# APNS_KEY_ID=...      # Apple Push Notification service key ID (CP-001)
+# APNS_TEAM_ID=...     # Apple Developer Team ID
+# APNS_BUNDLE_ID=...   # iOS app bundle identifier (apns-topic)
+# APNS_PRIVATE_KEY=... # ES256 private key PEM (single line or base64)
+# APNS_USE_SANDBOX=true  # use api.sandbox.push.apple.com for dev builds
 # SMS_OTP_ENABLED=true
 # SENT_DM_OTP_TEMPLATE_NAME=authentication
 # RATE_LIMIT_SMS_OTP_PER_MINUTE=5
@@ -293,6 +300,13 @@ AUDIT_CHAIN_ENABLED=true
 # MARKETPLACE_AUDIT_HMAC_SECRET=random-32-chars
 # GitHub secrets: WORKER_AUDIT_WEBHOOK_URL=https://worker.example.com/internal/marketplace/audit-result
 # WORKER_AUDIT_HMAC_SECRET=<same as MARKETPLACE_AUDIT_HMAC_SECRET>
+# Template commit webhook: POST /internal/marketplace/template-commit (same HMAC secret)
+
+# --- Room intelligence (PH-130 / PH-132) ---
+# KNOWLEDGE_GRAPH_ENABLED=true
+# KNOWLEDGE_GRAPH_EVERY_N=30
+# ROOM_MEMORY_ENABLED=true
+# ROOM_MEMORY_EVERY_N=20
 
 # --- Security contact (used in /.well-known/security.txt) ---
 # SECURITY_CONTACT_EMAIL=security@fluxychat.com

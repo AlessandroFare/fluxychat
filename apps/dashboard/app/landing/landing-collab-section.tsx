@@ -201,7 +201,7 @@ export function LandingCollabSection() {
             Everything teams need to build together
           </h2>
           <p className="mx-auto max-w-2xl text-pretty leading-relaxed text-slate-300">
-            Whiteboard, kanban, documents, spreadsheets, and AI — all synced in real-time via CRDT.
+            Whiteboard, kanban, documents, spreadsheets, and AI, all synced in real-time via CRDT.
             No save button required.
           </p>
         </div>

@@ -101,7 +101,7 @@ export default function WebTransportPage() {
             <p className="text-sm font-medium">
               {negotiation?.supported
                 ? "WebTransport is available in this browser"
-                : "WebTransport NOT available — using WebSocket fallback"}
+                : "WebTransport NOT available. Using WebSocket fallback"}
             </p>
             <p className="text-xs text-muted-foreground">
               {negotiation?.supported
@@ -231,10 +231,10 @@ export default function WebTransportPage() {
             Implementation status
           </h3>
           <div className="space-y-1.5 text-xs text-muted-foreground">
-            <p>✅ <span className="font-medium text-foreground">SDK ready</span> — <code className="rounded bg-muted px-1">createWebTransportAdapter()</code> with feature detection + <code className="rounded bg-muted px-1">createAdaptiveTransport()</code> with auto-fallback chain</p>
-            <p>✅ <span className="font-medium text-foreground">Client negotiation</span> — tries WebTransport first, falls back to WebSocket automatically</p>
-            <p>⚠️ <span className="font-medium text-foreground">Cloudflare Workers</span> — does NOT support WebTransport (issue <a href="https://github.com/cloudflare/workerd/issues/6451" className="text-blue-500 underline underline-offset-2" target="_blank" rel="noopener noreferrer">cloudflare/workerd#6451</a>). WebSocket is production transport.</p>
-            <p>📊 <span className="font-medium text-foreground">Browser support</span> — Safari 26.4+, Chrome 97+. Firefox behind flag.</p>
+            <p>✅ <span className="font-medium text-foreground">SDK ready</span>: <code className="rounded bg-muted px-1">createWebTransportAdapter()</code> with feature detection + <code className="rounded bg-muted px-1">createAdaptiveTransport()</code> with auto-fallback chain</p>
+            <p>✅ <span className="font-medium text-foreground">Client negotiation</span>: tries WebTransport first, falls back to WebSocket automatically</p>
+            <p>⚠️ <span className="font-medium text-foreground">Cloudflare Workers</span>: does NOT support WebTransport (issue <a href="https://github.com/cloudflare/workerd/issues/6451" className="text-blue-500 underline underline-offset-2" target="_blank" rel="noopener noreferrer">cloudflare/workerd#6451</a>). WebSocket is production transport.</p>
+            <p>📊 <span className="font-medium text-foreground">Browser support</span>: Safari 26.4+, Chrome 97+. Firefox behind flag.</p>
           </div>
         </div>
       </div>

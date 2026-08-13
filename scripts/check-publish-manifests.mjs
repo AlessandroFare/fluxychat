@@ -17,6 +17,8 @@ const packages = [
   "packages/ui-kit",
   "packages/react-native-sdk",
   "packages/create-fluxy-chat",
+  "packages/vue",
+  "packages/svelte",
 ];
 
 for (const rel of packages) {

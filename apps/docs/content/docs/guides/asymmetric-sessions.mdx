@@ -1,0 +1,40 @@
+---
+title: "Asymmetric session profiles"
+description: "Role packs where evaluators and candidates see different panels (PH-113)."
+---
+
+# Asymmetric session profiles
+
+Built on [role-scoped visibility](/docs/guides/role-scoped-visibility). Store a profile on the room so dashboards and agents know which roles get private hints vs the public thread.
+
+## API
+
+```http
+GET /rooms/:roomId/session-profile
+PUT /rooms/:roomId/session-profile
+Authorization: Bearer <member-jwt>
+```
+
+Example profile (interview eval):
+
+```json
+{
+  "profile": {
+    "name": "interview_eval",
+    "roles": {
+      "evaluator": { "privateHints": true, "aiNotes": true, "panel": "notes" },
+      "member": { "privateHints": false, "aiNotes": false, "panel": "candidate" }
+    }
+  }
+}
+```
+
+Pair with messages sent using `visibility: "role:evaluator"`.
+
+## Dashboard
+
+**Rooms → Asymmetric session** applies the interview-eval pack in one click.
+
+## Cookbook
+
+[Interview eval template](/docs/guides/cookbook-interview-eval) walks through the full flow.

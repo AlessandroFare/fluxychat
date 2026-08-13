@@ -1,0 +1,37 @@
+{
+  "name": "@fluxy-chat/vue",
+  "version": "0.1.0",
+  "description": "Vue 3 composables for FluxyChat — useChat parity with @fluxy-chat/react",
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "prebuild": "pnpm --filter @fluxy-chat/sdk build",
+    "build": "pnpm exec tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm run build && node ../../scripts/verify-publish-manifest.mjs",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "vue": ">=3.4",
+    "@fluxy-chat/sdk": "^0.6.0"
+  },
+  "dependencies": {
+    "@fluxy-chat/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vue": "^3.5.13",
+    "vitest": "^4.1.5"
+  },
+  "license": "MIT"
+}

@@ -9,7 +9,7 @@ export const OFFLINE_NOTIFY_IN_APP_PLUS_SMS_GUIDE: GuideContent = {
       id: "split",
       title: "Split transport by context",
       paragraphs: [
-        "FluxyChat is room-based in-app transport: WebSocket history, mentions, agents on the same stream. Telco APIs (Sent.dm, Twilio, etc.) are for offline reach — password resets, mention alerts, DM summaries — not for replacing your message list UI.",
+        "FluxyChat is room-based in-app transport: WebSocket history, mentions, agents on the same stream. Telco APIs (Sent.dm, Twilio, etc.) are for offline reach (password resets, mention alerts, DM summaries), not for replacing your message list UI.",
       ],
       bullets: [
         "Online: FluxyChat WS + optional in-app notification inbox",

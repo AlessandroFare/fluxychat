@@ -144,7 +144,7 @@ export default function AmbientAgentsPage() {
     <ConsoleShell className="max-w-4xl">
       <ConsolePageHeader
         title="Ambient agents"
-        description="Event-driven agent policies — react to keywords, webhooks, and room events without @mention."
+        description="Event-driven agent policies: react to keywords, webhooks, and room events without @mention."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">

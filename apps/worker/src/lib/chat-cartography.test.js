@@ -29,4 +29,30 @@ describe("chat-cartography", () => {
     expect(layout.points).toHaveLength(3);
     expect(layout.clusters[0].messageCount).toBe(2);
   });
+
+  it("NW-205 suggests handoff for hot billing cluster", async () => {
+    const { suggestCartographyRouting } = await import("./chat-cartography.js");
+    const map = {
+      messageCount: 20,
+      clusters: [
+        { id: 0, label: "invoice refund charges", messageCount: 12, sampleSnippet: "refund my invoice" },
+        { id: 1, label: "general chat", messageCount: 8, sampleSnippet: "hello" },
+      ],
+      points: Array.from({ length: 12 }, (_, i) => ({
+        clusterId: 0,
+        userId: i % 2 === 0 ? "u1" : "u2",
+      })),
+    };
+    const routing = suggestCartographyRouting(map, {
+      routingCandidates: [
+        { userId: "agent-billing", online: true, skills: ["billing", "refunds"] },
+        { userId: "agent-eng", online: true, skills: ["engineering"] },
+      ],
+      hotMinCount: 8,
+    });
+    expect(routing.hot).toBe(true);
+    expect(routing.suggestions[0].suggestedAction).toBe("handoff_agent");
+    expect(routing.suggestions[0].suggestedAgentUserId).toBe("agent-billing");
+    expect(routing.suggestions[0].suggestedSkills).toContain("billing");
+  });
 });

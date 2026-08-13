@@ -10,6 +10,7 @@
     "async-decisions",
     "scheduled-messages",
     "merge-conflicts",
+    "federation-merge-story",
     "voice-stages",
     "empathy-layer",
     "---Agents & AI---",

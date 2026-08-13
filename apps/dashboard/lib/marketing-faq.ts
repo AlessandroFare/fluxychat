@@ -10,7 +10,7 @@ export const LANDING_FAQ = [
   },
   {
     q: "Is this Intercom, Zendesk, or a live-chat widget?",
-    a: "No. Those are support desks. FluxyChat is the room layer for chat inside your app — SDK, webhooks, agent timeline. You build the UI. Guide: /guides/in-app-chat-vs-support-desk.",
+    a: "No. Those are support desks. FluxyChat is the room layer for chat inside your app: SDK, webhooks, agent timeline. You build the UI. Guide: /guides/in-app-chat-vs-support-desk.",
   },
   {
     q: "Is this a Pusher or Ably replacement?",
@@ -26,7 +26,7 @@ export const LANDING_FAQ = [
   },
   {
     q: "What are Durable Objects for chat?",
-    a: "Cloudflare puts shared state in a DO — chat rooms are the textbook case. FluxyChat uses one Room object per room and D1 for history. Guide: /guides/durable-objects-for-chat-rooms.",
+    a: "Cloudflare puts shared state in a Durable Object. Chat rooms are the textbook case. FluxyChat uses one Room object per room and D1 for history. Guide: /guides/durable-objects-for-chat-rooms.",
   },
   {
     q: "Humans and AI agents in the same room?",
@@ -38,19 +38,19 @@ export const LANDING_FAQ = [
   },
   {
     q: "What is MCP and how does FluxyChat use it?",
-    a: "Model Context Protocol lets your agents consume external tool servers. FluxyChat acts as an MCP client — auto-converting tools to LLM function-calling format. Point your agent at any MCP-compatible server and it just works.",
+    a: "Model Context Protocol lets your agents consume external tool servers. FluxyChat acts as an MCP client and auto-converts tools to LLM function-calling format. Point your agent at any MCP-compatible server.",
   },
   {
     q: "Can I add guardrails or RAG to AI responses?",
-    a: "Yes. The LLM middleware pipeline supports wrapGenerate, wrapStream, and transformParams hooks. Plug in guardrails, caching, RAG injection, PII redaction, or logging — all on the edge, before responses reach users.",
+    a: "Yes. The LLM middleware pipeline supports wrapGenerate, wrapStream, and transformParams hooks. Plug in guardrails, caching, RAG injection, PII redaction, or logging on the edge before responses reach users.",
   },
   {
     q: "Does WorkflowAgent survive deploys?",
-    a: "Yes. WorkflowAgent persists state to D1 after each step. If the Worker restarts or you deploy a new version, the agent resumes from the last completed step — no lost work.",
+    a: "Yes. WorkflowAgent persists state to D1 after each step. If the Worker restarts or you deploy a new version, the agent resumes from the last completed step.",
   },
   {
-    q: "I finished Cloudflare's chat tutorial — now what?",
-    a: "That tutorial is the right start. FluxyChat adds JWT, D1 history, reconnect in the SDK, and a console — /guides/after-cloudflare-chat-tutorial.",
+    q: "I finished Cloudflare's chat tutorial. Now what?",
+    a: "That tutorial is the right start. FluxyChat adds JWT, D1 history, reconnect in the SDK, and a console. See /guides/after-cloudflare-chat-tutorial.",
   },
   {
     q: "Why not stay on Pusher?",

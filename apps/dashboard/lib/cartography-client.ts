@@ -53,3 +53,28 @@ export async function rebuildRoomCartography(token: string, roomId: string) {
     { method: "POST", headers: authHeaders(token) },
   );
 }
+
+export interface CartographyRoutingSuggestion {
+  clusterId: number;
+  label: string;
+  messageCount: number;
+  share: number;
+  sampleSnippet: string | null;
+  participantUserIds: string[];
+  suggestedAction: "handoff_agent" | "digest";
+  suggestedAgentUserId: string | null;
+  suggestedSkills: string[];
+  reason: string;
+}
+
+export async function fetchCartographyRouting(token: string, roomId: string) {
+  return fetchWorkerJson<{
+    ok: boolean;
+    hot: boolean;
+    hotClusterCount: number;
+    suggestions: CartographyRoutingSuggestion[];
+    error?: string;
+  }>(`${BASE}/rooms/${encodeURIComponent(roomId)}/cartography/routing`, {
+    headers: authHeaders(token),
+  });
+}

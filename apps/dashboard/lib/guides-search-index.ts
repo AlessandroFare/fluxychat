@@ -23,7 +23,7 @@ export const DOC_SEARCH_INDEX: readonly DocSearchEntry[] = [
   {
     title: "Public demo playground",
     href: "/demo",
-    snippet: "Live chat with AI agent — no signup",
+    snippet: "Live chat with AI agent, no signup",
   },
   {
     title: "Full docs site",

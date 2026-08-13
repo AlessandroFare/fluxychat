@@ -1,7 +1,7 @@
 import type { GuideContent } from "@/lib/guides/types";
 
 export const SESSION_SECURITY_GUIDE: GuideContent = {
-  title: "Session security — storage, refresh, and token lifecycle",
+  title: "Session security: storage, refresh, and token lifecycle",
   subtitle:
     "Best practices for managing FluxyChat sessions: secure token storage, refresh strategies, and preventing session fixation.",
   sections: [
@@ -28,7 +28,7 @@ export const SESSION_SECURITY_GUIDE: GuideContent = {
       title: "Token refresh flow",
       paragraphs: [
         "When the access token expires, the SDK automatically calls POST /auth/refresh with the refresh token. If the refresh token is also expired, the user must re-authenticate.",
-        "The SDK's FluxyRealtimeProvider handles refresh transparently — configure refreshTokenBufferMs to refresh before expiry.",
+        "The SDK's FluxyRealtimeProvider handles refresh transparently. Configure refreshTokenBufferMs to refresh before expiry.",
       ],
       code: `// SDK auto-refresh configuration
 <FluxyRealtimeProvider
@@ -40,7 +40,7 @@ export const SESSION_SECURITY_GUIDE: GuideContent = {
 >`,
     },
     {
-      id: " fixation",
+      id: "fixation",
       title: "Preventing session fixation",
       paragraphs: [
         "FluxyChat rotates the refresh token on every use (refresh token rotation). If a stolen refresh token is used, the legitimate user's next refresh will fail, forcing re-authentication.",

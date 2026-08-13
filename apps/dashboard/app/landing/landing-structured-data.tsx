@@ -16,7 +16,7 @@ export function LandingStructuredData() {
         "@type": "Offer",
         price: "0",
         priceCurrency: "USD",
-        description: `${entry.readiness} — transparent readiness, not implied production certification`,
+        description: `${entry.readiness}: transparent readiness, not implied production certification`,
       },
     }));
 

@@ -1,0 +1,31 @@
+---
+title: "Community decision simulation"
+description: "Humans vote; AI proposes alternatives; visualize outcomes without fake forecasting (PH-131)."
+---
+
+# Community decision simulation
+
+KUSKA-style flow: the room proposes options, humans ack or vote, and optional graph extraction shows how arguments relate. This is **not** predictive ML. It is structured deliberation with audit.
+
+## Building blocks
+
+| Piece | Guide |
+|-------|-------|
+| N-of-M ack before risky action | [Critical action quorum](/docs/guides/critical-action-quorum) |
+| Live knowledge graph | Room `POST /rooms/:id/kg/extract` + [Room intelligence panel](/docs/guides/hackathon-cookbooks) |
+| Polls | SDK `createPoll` / `votePoll` on the same room |
+
+## Demo flow
+
+1. Post a decision proposal with `createDecision` (requires admin/owner acks).
+2. Let members discuss in the open channel; agents broadcast summaries to the room.
+3. Trigger graph extract after N messages to surface claims and contradictions.
+4. Close with poll or quorum execute when threshold is met.
+
+## Dashboard
+
+Use **Rooms → Critical action quorum** and **Room intelligence** on the same room.
+
+## Opt-out
+
+Tenants can disable AI graph/memory extract via existing knowledge-graph and LLM policy flags.

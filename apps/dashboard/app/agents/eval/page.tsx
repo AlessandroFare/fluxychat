@@ -99,7 +99,7 @@ export default function AgentEvalPage() {
     setBusy("otel");
     try {
       const res = await exportAgentRunsOtel(token, 50);
-      setNotice(`Exported ${res.spanCount} OTel spans — paste payload into Langfuse OTLP ingest.`);
+      setNotice(`Exported ${res.spanCount} OTel spans. Paste the payload into Langfuse OTLP ingest.`);
     } catch (err) {
       setError(messageFromUnknown(err, "OTel export failed"));
     } finally {
@@ -120,7 +120,7 @@ export default function AgentEvalPage() {
       setCaptureRunId("");
       await load();
     } catch (err) {
-      setError(messageFromUnknown(err, "Capture failed — run must exist and have status failed"));
+      setError(messageFromUnknown(err, "Capture failed. The run must exist and have status failed."));
     } finally {
       setBusy(null);
     }
@@ -130,7 +130,7 @@ export default function AgentEvalPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Agent eval datasets"
-        description="Regression datasets scored against agent_runs — capture prod failures as test cases (#40)."
+        description="Regression datasets scored against agent_runs. Capture prod failures as test cases."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">
@@ -169,7 +169,7 @@ export default function AgentEvalPage() {
             </div>
           </Section>
 
-          <Section title="Prod → test capture (#40)">
+          <Section title="Prod to test capture">
             <p className="mb-3 text-sm text-muted-foreground">
               Paste a failed <code className="text-xs">agent_run</code> id from{" "}
               <Link href="/agents/observability" className="underline-offset-4 hover:underline">

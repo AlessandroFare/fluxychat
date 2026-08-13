@@ -290,7 +290,7 @@ export async function getLinkPreview(env, input) {
   }
 
   // Fetch fresh
-  const preview = await fetchOgPreview(url, env);
+  const preview = await fetchOgPreview(url, env, { projectId, feature: "link_preview" });
   if (!preview) return null;
 
   const aiSummary = await generateAiLinkSummary(env, {

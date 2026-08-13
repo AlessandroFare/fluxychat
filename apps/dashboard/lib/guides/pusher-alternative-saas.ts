@@ -16,9 +16,9 @@ export const PUSHER_ALTERNATIVE_SAAS_GUIDE: GuideContent = {
     {
       title: "Three paths",
       bullets: [
-        "Roll your own Socket.IO on a VM — full control, full ops.",
-        "Pusher / Ably / Stream — fast start, vendor bill, less schema ownership.",
-        "FluxyChat — room-per-DO on Workers + D1, MIT self-host or hosted beta, SDK with loadMore.",
+        "Roll your own Socket.IO on a VM: full control, full ops.",
+        "Pusher / Ably / Stream: fast start, vendor bill, less schema ownership.",
+        "FluxyChat: room-per-DO on Workers + D1, MIT self-host or hosted beta, SDK with loadMore.",
       ],
     },
     {

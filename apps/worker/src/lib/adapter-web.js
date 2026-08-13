@@ -315,6 +315,37 @@ export class WebAdapter extends Adapter {
   async healthCheck(context) {
     return { healthy: true };
   }
+
+  /** @type {boolean} */
+  disconnected = false;
+
+  async disconnect() {
+    this.disconnected = true;
+  }
+
+  async postChannelMessage(channelId, message) {
+    return this.postMessage(channelId, message);
+  }
+
+  async fetchChannelMessages(channelId, options = {}) {
+    const limit = Math.min(Math.max(Number(options.limit) || 50, 1), 200);
+    return {
+      messages: [],
+      nextCursor: undefined,
+      hasMore: false,
+      channelId,
+      limit,
+    };
+  }
+
+  async listThreads(channelId, options = {}) {
+    return {
+      threads: [],
+      nextCursor: undefined,
+      channelId,
+      limit: options.limit ?? 20,
+    };
+  }
 }
 
 // =============================================================================

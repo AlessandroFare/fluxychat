@@ -3,6 +3,10 @@ import { shouldBatchNotification } from "./quiet-hours.js";
 import { enqueueBatchedNotification } from "./notification-batch.js";
 import { resolveNotificationPriority } from "./notification-priority.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
+import { logPushDelivery } from "./mobile-ux.js";
+import { resolveFcmServerKey, resolveFcmServiceAccount } from "./push-config.js";
+import { sendApnsNotification, getApnsTokensForUser } from "./apns.js";
+import { sendFcmV1Notification } from "./fcm-v1.js";
 import {
   getOrCreateVapidKeyPair,
   getVapidPublicKeyRaw,
@@ -11,13 +15,20 @@ import {
   classifyPushResponse,
 } from "./vapid.js";
 
-const VALID_PLATFORMS = new Set(["fcm", "web"]);
+const VALID_PLATFORMS = new Set(["fcm", "web", "apns", "ios"]);
 
 /**
  * @param {*} env
  */
 export function isPushEnabled(env) {
-  return Boolean(env.FCM_SERVER_KEY?.trim() || env.PUSH_ENABLED === "true");
+  return Boolean(
+    env.FCM_SERVER_KEY?.trim() ||
+    env.PUSH_ENABLED === "true" ||
+    (env.APNS_KEY_ID?.trim() &&
+      env.APNS_TEAM_ID?.trim() &&
+      env.APNS_PRIVATE_KEY?.trim() &&
+      env.APNS_BUNDLE_ID?.trim()),
+  );
 }
 
 /**
@@ -125,14 +136,14 @@ export async function getFcmTokensForUser(env, projectId, userId) {
  * @param {string[]} tokens
  * @param {{ title: string, body: string, data?: Record<string, string> }} payload
  */
-export async function sendFcmNotification(env, tokens, payload) {
-  const serverKey = env.FCM_SERVER_KEY?.trim();
-  if (!serverKey || !tokens.length) return { sent: 0 };
+export async function sendFcmNotification(env, tokens, payload, serverKey) {
+  const key = serverKey || env.FCM_SERVER_KEY?.trim();
+  if (!key || !tokens.length) return { sent: 0 };
 
   const res = await fetch("https://fcm.googleapis.com/fcm/send", {
     method: "POST",
     headers: {
-      Authorization: `key=${serverKey}`,
+      Authorization: `key=${key}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -177,6 +188,8 @@ export async function maybePushNotifyOnMessage(env, detail) {
     messageId,
     preview = "",
     mentionedUserIds = [],
+    roomType,
+    roomName,
   } = detail;
 
   try {
@@ -187,13 +200,18 @@ export async function maybePushNotifyOnMessage(env, detail) {
       .all();
 
     const mentionSet = new Set(mentionedUserIds);
-    const title = "New message";
-    const body = String(preview).slice(0, 120) || "You have a new message";
+    const isAnnouncement = roomType === "announcement";
+    const title = isAnnouncement
+      ? roomName
+        ? `Announcement: ${roomName}`
+        : "New announcement"
+      : "New message";
+    const body = String(preview).slice(0, 120) || (isAnnouncement ? "New announcement posted" : "You have a new message");
 
     for (const row of members.results || []) {
       const userId = row.user_id;
       if (!userId || userId === authorUserId) continue;
-      if (row.notify_enabled === 0 && !mentionSet.has(userId)) continue;
+      if (!isAnnouncement && row.notify_enabled === 0 && !mentionSet.has(userId)) continue;
 
       const isMention = mentionSet.has(userId);
       const priority = await resolveNotificationPriority(env, {
@@ -202,7 +220,8 @@ export async function maybePushNotifyOnMessage(env, detail) {
         roomId,
         isMention,
         preview: body,
-        authorRole: null,
+        authorRole: isAnnouncement ? "admin" : null,
+        topic: isAnnouncement ? "announcement" : "message",
       });
 
       if (!priority.pushEnabled) continue;
@@ -211,19 +230,28 @@ export async function maybePushNotifyOnMessage(env, detail) {
           projectId,
           userId,
           channel: "push",
-          kind: isMention ? "mention" : "message",
+          kind: isMention ? "mention" : isAnnouncement ? "announcement" : "message",
           title: isMention ? "Mention" : title,
           body,
           roomId,
           messageId,
-          payload: { type: "message.created", priority: priority.level },
+          payload: {
+            type: isAnnouncement ? "announcement.created" : "message.created",
+            priority: priority.level,
+          },
         });
         logInfo("push.batched_low_priority", { projectId, roomId, userId, messageId, score: priority.score });
         continue;
       }
 
-      const pushTitle = isMention ? "Mention" : priority.level === "urgent" ? "Urgent message" : title;
-      const pushKind = isMention ? "mention" : "message";
+      const pushTitle = isMention
+        ? "Mention"
+        : isAnnouncement
+          ? title
+          : priority.level === "urgent"
+            ? "Urgent message"
+            : title;
+      const pushKind = isMention ? "mention" : isAnnouncement ? "announcement" : "message";
 
       if (await shouldBatchNotification(env, projectId, userId, "push")) {
         await enqueueBatchedNotification(env, {
@@ -241,9 +269,33 @@ export async function maybePushNotifyOnMessage(env, detail) {
         continue;
       }
 
+      const fcmKey = await resolveFcmServerKey(env, projectId);
+      const fcmServiceAccount = await resolveFcmServiceAccount(env, projectId);
       const tokens = await getFcmTokensForUser(env, projectId, userId);
-      if (tokens.length) {
-        await sendFcmNotification(env, tokens, {
+      if (tokens.length && fcmKey) {
+        const fcmResult = await sendFcmNotification(env, tokens, {
+          title: pushTitle,
+          body,
+          data: {
+            roomId,
+            messageId: String(messageId),
+            type: "message.created",
+            priority: priority.level,
+          },
+        }, fcmKey);
+        await logPushDelivery(env, {
+          projectId,
+          userId,
+          roomId,
+          messageId,
+          platform: "fcm",
+          status: fcmResult.sent ? "sent" : "failed",
+        }).catch(() => {});
+      } else if (tokens.length && fcmServiceAccount) {
+        const fcmResult = await sendFcmV1Notification(env, {
+          projectId,
+          serviceAccount: fcmServiceAccount,
+          tokens,
           title: pushTitle,
           body,
           data: {
@@ -253,9 +305,41 @@ export async function maybePushNotifyOnMessage(env, detail) {
             priority: priority.level,
           },
         });
+        await logPushDelivery(env, {
+          projectId,
+          userId,
+          roomId,
+          messageId,
+          platform: "fcm_v1",
+          status: fcmResult.sent ? "sent" : "failed",
+        }).catch(() => {});
       }
 
-      await sendWebPushToUser(env, {
+      const apnsTokens = await getApnsTokensForUser(env, projectId, userId);
+      if (apnsTokens.length) {
+        const apnsResult = await sendApnsNotification(env, {
+          projectId,
+          tokens: apnsTokens,
+          title: pushTitle,
+          body,
+          data: {
+            roomId,
+            messageId: String(messageId),
+            type: "message.created",
+            priority: priority.level,
+          },
+        });
+        await logPushDelivery(env, {
+          projectId,
+          userId,
+          roomId,
+          messageId,
+          platform: "apns",
+          status: apnsResult.sent ? "sent" : apnsResult.failed ? "failed" : "skipped",
+        }).catch(() => {});
+      }
+
+      const webResult = await sendWebPushToUser(env, {
         projectId,
         userId,
         title: pushTitle,
@@ -263,8 +347,27 @@ export async function maybePushNotifyOnMessage(env, detail) {
         roomId,
         messageId,
       });
+      if (webResult.sent) {
+        await logPushDelivery(env, {
+          projectId,
+          userId,
+          roomId,
+          messageId,
+          platform: "web",
+          status: "sent",
+        }).catch(() => {});
+      }
 
-      logInfo("push.sent", { projectId, roomId, userId, messageId, fcm: tokens.length, priority: priority.level });
+      logInfo("push.sent", {
+        projectId,
+        roomId,
+        userId,
+        messageId,
+        fcm: tokens.length,
+        apns: apnsTokens.length,
+        web: webResult.sent,
+        priority: priority.level,
+      });
     }
   } catch (err) {
     logError("push.notify_failed", err, { projectId, roomId, messageId });
@@ -476,5 +579,70 @@ export async function sendWebPushToUser(env, { projectId, userId, title, body, r
     logError("push.web_notify_failed", err, { projectId, userId });
     return { sent: 0 };
   }
+}
+
+/**
+ * CP-003: Client-reported push delivery acknowledgment.
+ */
+export async function recordPushDeliveryAck(env, input) {
+  const {
+    projectId,
+    userId,
+    roomId,
+    messageId,
+    platform,
+    deliveryLogId,
+    clientMeta,
+  } = input;
+
+  if (!projectId || !userId || !platform) {
+    return { ok: false, error: "missing_required_fields" };
+  }
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  try {
+    await env.DB.prepare(
+      `INSERT INTO push_delivery_acks (
+         id, project_id, user_id, delivery_log_id, room_id, message_id, platform, received_at, client_meta_json
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        id,
+        projectId,
+        userId,
+        deliveryLogId || null,
+        roomId || null,
+        messageId ?? null,
+        platform,
+        now,
+        clientMeta ? JSON.stringify(clientMeta) : null,
+      )
+      .run();
+
+    if (deliveryLogId) {
+      await env.DB.prepare(
+        `UPDATE push_delivery_log SET status = 'delivered', delivered_at = ? WHERE id = ? AND project_id = ?`,
+      )
+        .bind(now, deliveryLogId, projectId)
+        .run()
+        .catch(() => {});
+    }
+
+    await logPushDelivery(env, {
+      projectId,
+      userId,
+      roomId,
+      messageId,
+      platform,
+      status: "delivered",
+    }).catch(() => {});
+  } catch (err) {
+    logError("push.delivery_ack_failed", err, { projectId, userId, platform });
+    return { ok: false, error: "ack_failed" };
+  }
+
+  return { ok: true, id };
 }
 

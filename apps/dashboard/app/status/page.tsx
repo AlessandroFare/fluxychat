@@ -5,7 +5,7 @@ import { loadStatusIncidents } from "@/lib/status-incidents";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "System status — FluxyChat",
+  title: "System status: FluxyChat",
   description:
     "Public health endpoint for the FluxyChat chat API. Check operational status, bindings, and feature modes.",
   path: "/status",
@@ -114,7 +114,7 @@ export default async function StatusPage() {
         <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <h2 className="font-heading text-lg font-semibold">Incidents</h2>
           {incidents.active.length === 0 ? (
-            <p className="mt-3 text-sm text-emerald-600">All systems operational — no active incidents.</p>
+            <p className="mt-3 text-sm text-emerald-600">All systems operational. No active incidents.</p>
           ) : (
             <ul className="mt-4 space-y-4">
               {incidents.active.map((incident) => (

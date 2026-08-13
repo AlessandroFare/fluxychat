@@ -4,7 +4,7 @@ const LANDING_STATS = [
   {
     icon: Globe,
     value: "14 platforms",
-    label: "Slack, Discord, Telegram, WhatsApp, Teams, and 9 more — one unified adapter interface.",
+    label: "Slack, Discord, Telegram, WhatsApp, Teams, and 9 more on one unified adapter interface.",
   },
   {
     icon: Cpu,
@@ -14,7 +14,7 @@ const LANDING_STATS = [
   {
     icon: Layers,
     value: "30+ SDK modules",
-    label: "Rooms, presence, typing, history, agents, webhooks, cards, and more — all on @fluxy-chat/sdk.",
+    label: "Rooms, presence, typing, history, agents, webhooks, cards, and more, all on @fluxy-chat/sdk.",
   },
   {
     icon: Workflow,
@@ -38,7 +38,7 @@ export function LandingStatsSection() {
     <section className="border-b border-border bg-white px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <p className="mx-auto mb-10 max-w-2xl text-center text-sm text-muted-foreground">
-          Deploy in your account. Quotas live in D1. Console access can require a one-time ack — usage still runs
+          Deploy in your account. Quotas live in D1. Console access can require a one-time ack; usage still runs
           through your Worker with your keys.
         </p>
         <div className="grid gap-10 md:grid-cols-3">

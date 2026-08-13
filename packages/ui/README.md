@@ -1,6 +1,6 @@
 # @fluxy-chat/ui
 
-React UI components for FluxyChat — shadcn-style chat primitives built on Radix UI and Tailwind.
+React UI components for FluxyChat: shadcn-style chat primitives built on Radix UI and Tailwind.
 
 Pair with [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) for realtime state and [`@fluxy-chat/sdk`](https://www.npmjs.com/package/@fluxy-chat/sdk) for the client.
 
@@ -48,7 +48,7 @@ function Room({ roomId }: { roomId: string }) {
 
 ## Styling
 
-Components use Tailwind utility classes and expect your app to provide design tokens (CSS variables or Tailwind theme). They do not ship a global stylesheet — import your Tailwind setup as usual.
+Components use Tailwind utility classes and expect your app to provide design tokens (CSS variables or Tailwind theme). They do not ship a global stylesheet. Import your Tailwind setup as usual.
 
 ### Starter themes (PG-ZB-8)
 

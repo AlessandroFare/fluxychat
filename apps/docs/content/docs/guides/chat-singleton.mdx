@@ -1,11 +1,11 @@
 ---
 title: "Chat Singleton for Thread Deserialization"
-description: "FluxyChat's chat singleton (P26-C3) provides a global registry so that `ThreadRef.fromJSON()` can resolve adapters without an explicit `Chat` instance being pas"
+description: "FluxyChat's chat singleton provides a global registry so ThreadRef.fromJSON() can resolve adapters without passing a Chat instance through every call."
 ---
 
 # Chat Singleton for Thread Deserialization
 
-FluxyChat's chat singleton (P26-C3) provides a global registry so that `ThreadRef.fromJSON()` can resolve adapters without an explicit `Chat` instance being passed through every call.
+FluxyChat's chat singleton provides a global registry so that `ThreadRef.fromJSON()` can resolve adapters without an explicit `Chat` instance being passed through every call.
 
 ## Overview
 

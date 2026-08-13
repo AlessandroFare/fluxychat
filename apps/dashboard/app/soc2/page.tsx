@@ -16,10 +16,23 @@ import { messageFromUnknown } from "@/lib/error-message";
 import { docsSiteHref } from "@/lib/hosted-product";
 
 interface Soc2Dashboard {
-  controls?: Record<string, number>;
-  risks?: Array<{ risk_level: string; status: string; count: number }>;
+  controls?: Array<{ status: string; count: number }>;
+  risks?: Array<{ riskLevel: string; status: string; count: number }>;
   incidents?: Array<{ severity: string; status: string; count: number }>;
-  policies?: Record<string, number>;
+  policies?: Array<{ status: string; count: number }>;
+}
+
+interface Soc2SelfAssessment {
+  summary?: {
+    readinessScore?: number;
+    checklistItems?: number;
+    automatedMetSignals?: number;
+    controlsTracked?: number;
+    evidenceArtifacts?: number;
+    activePolicies?: number;
+    openIncidents?: number;
+  };
+  disclaimer?: string;
 }
 
 interface DlpScanResult {
@@ -31,8 +44,9 @@ interface DlpScanResult {
 export default function Soc2Page() {
   const { adminJwt } = useDashboardSession();
   const [dashboard, setDashboard] = useState<Soc2Dashboard | null>(null);
-  const [busy, setBusy] = useState<"load" | "export" | "audit" | "dlp" | null>(null);
+  const [busy, setBusy] = useState<"load" | "export" | "audit" | "dlp" | "self" | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [selfAssessment, setSelfAssessment] = useState<Soc2SelfAssessment | null>(null);
   const [dlpSample, setDlpSample] = useState("Test PCI 4111111111111111 and PHI SSN 123-45-6789");
   const [dlpResult, setDlpResult] = useState<DlpScanResult | null>(null);
   const workerUrl = getPublicWorkerUrl();
@@ -40,7 +54,7 @@ export default function Soc2Page() {
   const loadDashboard = useCallback(async () => {
     const token = adminJwt.trim();
     if (!token) {
-      setStatus("Admin JWT required — complete onboarding first.");
+      setStatus("Admin JWT required. Complete onboarding first.");
       return;
     }
     setBusy("load");
@@ -79,6 +93,34 @@ export default function Soc2Page() {
       setStatus("Evidence export downloaded.");
     } catch (e: unknown) {
       setStatus(messageFromUnknown(e, "Export failed."));
+    } finally {
+      setBusy(null);
+    }
+  }, [adminJwt, workerUrl]);
+
+  const exportSelfAssessment = useCallback(async () => {
+    const token = adminJwt.trim();
+    if (!token) {
+      setStatus("Admin JWT required.");
+      return;
+    }
+    setBusy("self");
+    try {
+      const data = await fetchWorkerJson<Soc2SelfAssessment & Record<string, unknown>>(
+        `${workerUrl}/api/soc2/self-assessment`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setSelfAssessment(data);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `soc2-self-assessment-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus(`Self-assessment exported (${data.summary?.readinessScore ?? 0}% automated signal coverage).`);
+    } catch (e: unknown) {
+      setStatus(messageFromUnknown(e, "Self-assessment export failed."));
     } finally {
       setBusy(null);
     }
@@ -142,7 +184,7 @@ export default function Soc2Page() {
     <ConsoleShell className="max-w-4xl">
       <ConsolePageHeader
         title="SOC 2 Compliance"
-        description="Controls, evidence, risks, and policy acknowledgments — Portal E-4 automation surface."
+        description="Controls, evidence, risks, and policy acknowledgments for SOC 2 prep."
         actions={
           <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void loadDashboard()}>
             {busy === "load" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1 h-3.5 w-3.5" />}
@@ -155,6 +197,10 @@ export default function Soc2Page() {
         <Button size="sm" disabled={busy !== null} onClick={() => void exportEvidence()}>
           {busy === "export" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
           Export evidence JSON
+        </Button>
+        <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void exportSelfAssessment()}>
+          {busy === "self" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
+          Export self-assessment
         </Button>
         <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void exportAuditLog()}>
           {busy === "audit" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
@@ -173,8 +219,20 @@ export default function Soc2Page() {
           DLP &amp; audit export guide
         </a>
         {" · "}
+        <a href={docsSiteHref("guides/enterprise/soc2-readiness-checklist")} className="font-medium underline-offset-2 hover:underline">
+          SOC 2 readiness checklist
+        </a>
+        {" · "}
+        <a href={docsSiteHref("guides/enterprise/iso27001-mapping")} className="font-medium underline-offset-2 hover:underline">
+          ISO 27001 mapping
+        </a>
+        {" · "}
         <a href={docsSiteHref("guides/enterprise/soc2-hipaa-runbook")} className="font-medium underline-offset-2 hover:underline">
           SOC 2 / HIPAA runbook
+        </a>
+        {" · "}
+        <a href={docsSiteHref("guides/enterprise/soc2-type-ii-audit")} className="font-medium underline-offset-2 hover:underline">
+          SOC 2 Type II audit guide
         </a>
         {" · "}
         <Link href="/settings/hipaa" className="font-medium underline-offset-2 hover:underline">
@@ -215,16 +273,16 @@ export default function Soc2Page() {
           <Panel className="p-4">
             <h3 className="text-sm font-semibold">Controls</h3>
             <div className="mt-2 flex flex-wrap gap-2">
-              {Object.entries(dashboard.controls ?? {}).map(([k, v]) => (
-                <Badge key={k} variant="outline">{k}: {v}</Badge>
+              {(dashboard.controls ?? []).map((row) => (
+                <Badge key={row.status} variant="outline">{row.status}: {row.count}</Badge>
               ))}
             </div>
           </Panel>
           <Panel className="p-4">
             <h3 className="text-sm font-semibold">Policies</h3>
             <div className="mt-2 flex flex-wrap gap-2">
-              {Object.entries(dashboard.policies ?? {}).map(([k, v]) => (
-                <Badge key={k} variant="outline">{k}: {v}</Badge>
+              {(dashboard.policies ?? []).map((row) => (
+                <Badge key={row.status} variant="outline">{row.status}: {row.count}</Badge>
               ))}
             </div>
           </Panel>
@@ -232,7 +290,7 @@ export default function Soc2Page() {
             <h3 className="text-sm font-semibold">Open risks & incidents</h3>
             <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
               {(dashboard.risks ?? []).map((r, i) => (
-                <li key={`r-${i}`}>{r.risk_level} / {r.status}: {r.count}</li>
+                <li key={`r-${i}`}>{r.riskLevel} / {r.status}: {r.count}</li>
               ))}
               {(dashboard.incidents ?? []).map((r, i) => (
                 <li key={`i-${i}`}>{r.severity} / {r.status}: {r.count}</li>
@@ -245,6 +303,22 @@ export default function Soc2Page() {
           Load dashboard with admin JWT to view SOC2 control status and export evidence packs for auditors.
         </Panel>
       )}
+
+      {selfAssessment?.summary ? (
+        <Panel className="mt-4 p-4">
+          <h3 className="text-sm font-semibold">Self-assessment snapshot</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Automated signal coverage. Not a formal SOC 2 attestation. {selfAssessment.disclaimer}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Badge variant="secondary">Score: {selfAssessment.summary.readinessScore}%</Badge>
+            <Badge variant="outline">Checklist: {selfAssessment.summary.checklistItems}</Badge>
+            <Badge variant="outline">Met signals: {selfAssessment.summary.automatedMetSignals}</Badge>
+            <Badge variant="outline">Controls: {selfAssessment.summary.controlsTracked}</Badge>
+            <Badge variant="outline">Evidence: {selfAssessment.summary.evidenceArtifacts}</Badge>
+          </div>
+        </Panel>
+      ) : null}
     </ConsoleShell>
   );
 }

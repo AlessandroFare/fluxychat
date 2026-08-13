@@ -110,7 +110,7 @@ export default function SlashCommandsSettingsPage() {
       ) : (
         <div className="space-y-6">
           <Panel>
-            <Section title="Built-in commands" description="Deterministic handlers — intercepted on message send.">
+            <Section title="Built-in commands" description="Deterministic handlers intercepted on message send.">
               <div className="space-y-2">
                 {builtIn.map((cmd) => (
                   <div key={cmd.command} className="flex items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm">

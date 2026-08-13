@@ -1,0 +1,46 @@
+---
+title: "Critical action quorum"
+description: "Require N acks from specific roles before a high-risk action counts as decided (PH-110)."
+---
+
+# Critical action quorum
+
+Use **message decisions**: a room message that stays `pending` until enough role acks arrive (StrixX / Cable Rush pattern).
+
+## Create with a message
+
+```http
+POST /messages
+```
+
+```json
+{
+  "roomId": "ops",
+  "content": "Approve production deploy v2.4.1?",
+  "decision": {
+    "content": "Deploy v2.4.1 to production",
+    "requiredRoles": [
+      { "role": "admin", "count": 2 },
+      { "role": "owner", "count": 1 }
+    ],
+    "ttlSeconds": 3600
+  }
+}
+```
+
+## Ack
+
+```http
+POST /messages/{messageId}/ack
+Authorization: Bearer <jwt>
+```
+
+Each eligible member acks once. When quorum is met, state becomes `decided` and fans out on the room WebSocket.
+
+## Timeout
+
+Cron expires pending decisions past TTL as `expired_no_quorum`.
+
+## SDK
+
+Poll `GET /messages/{id}/decision` for progress arrays (`required`, `current`, `ackedBy`).

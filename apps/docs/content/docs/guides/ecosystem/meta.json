@@ -10,6 +10,8 @@
     "mcp-verified-servers",
     "mcp-audit-runbook",
     "react-native-quickstart",
+    "../vue-quickstart",
+    "../svelte-quickstart",
     "optional-integrations",
     "sms-whatsapp-production"
   ]

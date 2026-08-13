@@ -280,7 +280,7 @@ export default function CrossChannelPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Cross-Channel & Multi-Agent"
-        description="Cross-channel continuity, journey mapping, A/B testing, and A2A protocol — SDK-powered interactive demos."
+        description="Cross-channel continuity, journey mapping, A/B testing, and A2A protocol. SDK-powered interactive demos."
       />
 
       <ConsoleProjectRoomBar

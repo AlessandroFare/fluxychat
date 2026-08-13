@@ -49,6 +49,8 @@ export default function VoiceAiPage() {
   const [testText, setTestText] = useState("Hello, what is the weather today?");
   const [empathyEnabled, setEmpathyEnabled] = useState(false);
   const [empathyMinConfidence, setEmpathyMinConfidence] = useState("0.6");
+  const [empathyOperatorHint, setEmpathyOperatorHint] = useState<string | null>(null);
+  const [onHoldPhrase, setOnHoldPhrase] = useState<string | null>(null);
 
   const { user: clerkUser } = useClerkUser();
   const empathyUserId = clerkUser?.id ? fluxyUserIdFromClerk(clerkUser.id) : "voice-operator";
@@ -58,6 +60,19 @@ export default function VoiceAiPage() {
     token,
     roomId: roomId.trim(),
     userId: empathyUserId,
+    onSignal: (signal) => {
+      // Operator console hint only; never shown to end users in-room
+      const conf = Math.round((signal.confidence || 0) * 100);
+      const tone =
+        signal.inferredState === "stressed"
+          ? "calm pacing"
+          : signal.inferredState === "frustrated"
+            ? "concise next-step"
+            : signal.inferredState === "calm"
+              ? "matched pace"
+              : "baseline";
+      setEmpathyOperatorHint(`Adaptation active: ${tone} · ${conf}%`);
+    },
   });
 
   const voice = useVoice({
@@ -156,14 +171,14 @@ export default function VoiceAiPage() {
     setNotice(null);
     await voice.start();
     await voice.processText(testText);
-    setNotice(`Pipeline complete — ${voice.latencyMs}ms total latency`);
+    setNotice(`Pipeline complete in ${voice.latencyMs}ms.`);
   }
 
   return (
     <ConsoleShell>
       <ConsolePageHeader
         title="Voice AI pipeline"
-        description="Unified multimodal voice (default) or legacy STT→LLM→TTS — OpenAI Realtime and Gemini Live with VAD, barge-in, and latency metrics."
+        description="Unified multimodal voice (default) or legacy STT→LLM→TTS with OpenAI Realtime and Gemini Live, VAD, barge-in, and latency metrics."
         actions={
           <Badge className={readinessBadgeClass(PLATFORM_READINESS.voice.readiness)}>
             {formatReadinessLabel(PLATFORM_READINESS.voice.readiness)}
@@ -173,7 +188,7 @@ export default function VoiceAiPage() {
       <ConsoleFeedback error={error} notice={notice} />
 
       <Panel className="p-4 text-sm text-muted-foreground">
-        Voice AI uses your project&apos;s provider keys — OpenAI Realtime and Gemini Live are not included in the hosted Worker secrets.
+        Voice AI uses your project&apos;s provider keys. OpenAI Realtime and Gemini Live are not included in the hosted Worker secrets.
         Add <code className="rounded bg-muted px-1 py-0.5 text-xs">OPENAI_API_KEY</code> or{" "}
         <code className="rounded bg-muted px-1 py-0.5 text-xs">GOOGLE_AI_API_KEY</code> in project settings or Worker secrets before running live sessions.
       </Panel>
@@ -186,7 +201,7 @@ export default function VoiceAiPage() {
 
       {!token && (
         <Panel className="p-4 text-sm text-muted-foreground">
-          Admin JWT required — copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
+          Admin JWT required. Copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
         </Panel>
       )}
 
@@ -288,7 +303,7 @@ export default function VoiceAiPage() {
             </Panel>
           </Section>
 
-          <Section title="Empathy layer (#46)" description="Opt-in prosody signals adapt agent tone silently — never shown to the user.">
+          <Section title="Empathy layer" description="Opt-in prosody signals adapt agent tone in the room without showing hints to end users. This console shows adaptation hints for operators only.">
             <Panel className="p-4 space-y-3 max-w-xl">
               <p className="text-xs text-muted-foreground">
                 Requires a room ID. Mic samples stay client-side; only classified state + confidence are posted ephemerally (5 min TTL).
@@ -308,6 +323,39 @@ export default function VoiceAiPage() {
                 placeholder="Min confidence (0.5–0.95)"
                 disabled={!token || !roomId.trim()}
               />
+              {empathyEnabled && empathyOperatorHint ? (
+                <p className="rounded border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  {empathyOperatorHint}
+                </p>
+              ) : empathyEnabled ? (
+                <p className="text-xs text-muted-foreground">Waiting for prosody signal…</p>
+              ) : null}
+            </Panel>
+          </Section>
+
+          <Section title="Duplex on-hold" description="During tool calls the agent can speak a short on-hold phrase. Barge-in cancels the filler (target under 500ms).">
+            <Panel className="p-4 space-y-3 max-w-xl">
+              <p className="text-xs text-muted-foreground">
+                Configure <code className="rounded bg-muted px-1 py-0.5">onHoldPhrase</code> per tool rule in{" "}
+                <Link href="/settings/agent-tools" className="text-primary underline">
+                  Agent tool policy
+                </Link>
+                . Room events use type <code className="rounded bg-muted px-1 py-0.5">agent_on_hold</code>.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setOnHoldPhrase("One moment. I'm looking that up.")
+                }
+              >
+                Preview on-hold phrase
+              </Button>
+              {onHoldPhrase ? (
+                <p className="rounded border border-border bg-muted/40 px-3 py-2 text-sm italic">
+                  “{onHoldPhrase}”
+                </p>
+              ) : null}
             </Panel>
           </Section>
         </div>

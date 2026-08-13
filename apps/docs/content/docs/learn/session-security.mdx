@@ -1,9 +1,9 @@
 ---
-title: "Session security — storage, refresh, and token lifecycle"
+title: "Session security: storage, refresh, and token lifecycle"
 description: "Best practices for managing FluxyChat sessions: secure token storage, refresh strategies, and preventing session fixation."
 ---
 
-# Session security — storage, refresh, and token lifecycle
+# Session security: storage, refresh, and token lifecycle
 
 Best practices for managing FluxyChat sessions: secure token storage, refresh strategies, and preventing session fixation.
 
@@ -23,7 +23,7 @@ FluxyChat sessions consist of a short-lived access token (1 hour) and a longer-l
 
 When the access token expires, the SDK automatically calls POST /auth/refresh with the refresh token. If the refresh token is also expired, the user must re-authenticate.
 
-The SDK's FluxyRealtimeProvider handles refresh transparently — configure refreshTokenBufferMs to refresh before expiry.
+The SDK's FluxyRealtimeProvider handles refresh transparently. Configure refreshTokenBufferMs to refresh before expiry.
 
 ```
 // SDK auto-refresh configuration

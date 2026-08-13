@@ -253,6 +253,123 @@ export async function getRoomCartography(env, { projectId, roomId }) {
   return { ok: true, map };
 }
 
+/**
+ * NW-205 — Detect hot thematic clusters and suggest support handoff / digest actions.
+ *
+ * A cluster is "hot" when its share of messages exceeds `hotShare` (default 0.35)
+ * or its absolute count exceeds `hotMinCount` (default 8).
+ *
+ * @param {{
+ *   clusters?: Array<{ id: number, label?: string, messageCount?: number, sampleSnippet?: string }>,
+ *   points?: Array<{ clusterId: number, userId?: string }>,
+ *   messageCount?: number,
+ * }} map
+ * @param {{
+ *   hotShare?: number,
+ *   hotMinCount?: number,
+ *   routingCandidates?: Array<{ userId: string, online?: boolean, skills?: string[] }>,
+ * }} [opts]
+ */
+export function suggestCartographyRouting(map, opts = {}) {
+  const clusters = Array.isArray(map?.clusters) ? map.clusters : [];
+  const points = Array.isArray(map?.points) ? map.points : [];
+  const total = Number(map?.messageCount) || points.length || 0;
+  const hotShare = opts.hotShare ?? 0.35;
+  const hotMinCount = opts.hotMinCount ?? 8;
+  const candidates = Array.isArray(opts.routingCandidates) ? opts.routingCandidates : [];
+
+  const hotClusters = [];
+  for (const cluster of clusters) {
+    const count = Number(cluster.messageCount) || 0;
+    const share = total > 0 ? count / total : 0;
+    const isHot = count >= hotMinCount || (total >= 5 && share >= hotShare);
+    if (!isHot) continue;
+
+    const clusterPoints = points.filter((p) => p.clusterId === cluster.id);
+    const userIds = [...new Set(clusterPoints.map((p) => p.userId).filter(Boolean))];
+    const label = String(cluster.label || `Cluster ${cluster.id + 1}`);
+    const skillsGuess = guessSkillsFromLabel(label);
+
+    let suggestedAgent = null;
+    if (candidates.length) {
+      let best = null;
+      let bestScore = -1;
+      for (const agent of candidates) {
+        if (agent.online === false) continue;
+        let score = agent.online ? 2 : 0;
+        for (const skill of skillsGuess) {
+          if ((agent.skills || []).some((s) => String(s).toLowerCase().includes(skill))) {
+            score += 5;
+          }
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          best = agent;
+        }
+      }
+      if (best && bestScore > 0) suggestedAgent = best.userId;
+    }
+
+    hotClusters.push({
+      clusterId: cluster.id,
+      label,
+      messageCount: count,
+      share: Math.round(share * 1000) / 1000,
+      sampleSnippet: cluster.sampleSnippet || null,
+      participantUserIds: userIds.slice(0, 20),
+      suggestedAction: suggestedAgent ? "handoff_agent" : "digest",
+      suggestedAgentUserId: suggestedAgent,
+      suggestedSkills: skillsGuess,
+      reason:
+        count >= hotMinCount
+          ? `Cluster has ${count} messages (hot volume)`
+          : `Cluster is ${Math.round(share * 100)}% of room traffic`,
+    });
+  }
+
+  hotClusters.sort((a, b) => b.messageCount - a.messageCount);
+
+  return {
+    hot: hotClusters.length > 0,
+    hotClusterCount: hotClusters.length,
+    suggestions: hotClusters,
+  };
+}
+
+function guessSkillsFromLabel(label) {
+  const lower = label.toLowerCase();
+  const skills = [];
+  if (/bill|invoice|payment|refund|charg/.test(lower)) skills.push("billing");
+  if (/deploy|infra|outage|latency|api|bug|error/.test(lower)) skills.push("engineering");
+  if (/login|auth|password|access|sso/.test(lower)) skills.push("identity");
+  if (/ship|order|deliver|fulfill/.test(lower)) skills.push("fulfillment");
+  if (/legal|gdpr|privacy|compliance/.test(lower)) skills.push("compliance");
+  return skills;
+}
+
+export async function getCartographyRoutingSuggestions(env, { projectId, roomId }) {
+  const carto = await getOrBuildRoomCartography(env, { projectId, roomId, rebuild: false });
+  if (!carto.ok || !carto.map) {
+    return { ok: false, error: carto.error || "not_built", suggestions: [] };
+  }
+
+  let routingCandidates = [];
+  try {
+    const { loadRoomRoutingCandidates } = await import("./support-routing.js");
+    routingCandidates = await loadRoomRoutingCandidates(env, { projectId, roomId });
+  } catch {
+    routingCandidates = [];
+  }
+
+  const routing = suggestCartographyRouting(carto.map, { routingCandidates });
+  return {
+    ok: true,
+    mapId: carto.map.id,
+    roomId,
+    ...routing,
+  };
+}
+
 export async function getOrBuildRoomCartography(env, { projectId, roomId, rebuild = false }) {
   if (!rebuild) {
     const existing = await getRoomCartography(env, { projectId, roomId });

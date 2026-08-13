@@ -1,11 +1,11 @@
 ---
 title: "WorkflowAgent — Durable Execution"
-description: "FluxyChat's `WorkflowAgent` (P23-6) runs long-lived AI agents that survive deploys, restarts, and interruptions. State is persisted to D1/KV, so agents resume e"
+description: "FluxyChat's WorkflowAgent runs long-lived AI agents that survive deploys, restarts, and interruptions. State is persisted to D1/KV, so agents resume exactly where they left off."
 ---
 
 # WorkflowAgent — Durable Execution
 
-FluxyChat's `WorkflowAgent` (P23-6) runs long-lived AI agents that survive deploys, restarts, and interruptions. State is persisted to D1/KV, so agents resume exactly where they left off.
+FluxyChat's `WorkflowAgent` runs long-lived AI agents that survive deploys, restarts, and interruptions. State is persisted to D1/KV, so agents resume exactly where they left off.
 
 ## Overview
 
@@ -13,7 +13,7 @@ Standard agent invocations are ephemeral — if the Worker restarts mid-run, the
 
 - **State persistence:** Every step, tool call, and intermediate result is saved to D1
 - **Automatic resume:** On restart, the agent picks up from the last completed step
-- **Typed context:** Shared typed context across steps, tools, and calls (P23-6a)
+- **Typed context:** Shared typed context across steps, tools, and calls
 - **Step boundaries:** Each step is atomic — either completes fully or doesn't start
 
 ## When to Use
@@ -61,7 +61,7 @@ workflow.step("report", async (ctx) => {
 const run = await workflow.run({ maxSteps: 10 });
 ```
 
-## Typed Runtime Context (P23-6a)
+## Typed runtime context
 
 Define a typed context schema for type-safe data sharing across steps:
 
@@ -98,7 +98,7 @@ Step 3: report    → 💥 Worker restart
 Step 3: report    → ✅ completed
 ```
 
-## Multi-Step Loop Control (P24-2)
+## Multi-step loop control
 
 Configure stop conditions for agent loops:
 
@@ -139,7 +139,7 @@ const status = await client.getWorkflowStatus(runId);
 
 ## Integration with Cloudflare Workflows
 
-`WorkflowAgent` integrates with Cloudflare's `Workflows` binding (P12-L) for native durable execution:
+`WorkflowAgent` integrates with Cloudflare Workflows binding for native durable execution:
 
 ```ts
 export class FluxyScheduledWorkflow extends Workflow {

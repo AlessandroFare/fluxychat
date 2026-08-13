@@ -26,8 +26,11 @@ import {
   forEachRoomShard,
   getRoomShardCount,
 } from "../lib/room-shard.js";
+import { dispatchRoomInfoRoutes } from "./room-info-http.js";
 
 export async function dispatchRoomsMutationsRoutes(request, url, h) {
+  const roomInfoRes = await dispatchRoomInfoRoutes(request, url, h);
+  if (roomInfoRes) return roomInfoRes;
   const {
     env,
     ctx,
@@ -85,7 +88,7 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     if (!nameValidation.valid) {
       return json({ error: nameValidation.error }, { status: 400 });
     }
-    const validRoomTypes = ["dm", "group", "public"];
+    const validRoomTypes = ["dm", "group", "public", "announcement"];
     if (!validRoomTypes.includes(body?.type)) {
       return json(
         { error: `type must be one of: ${validRoomTypes.join(", ")}` },
@@ -169,32 +172,20 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     if (auth.userId !== a && auth.userId !== b && !canBypassRoomMembership(auth.roles)) {
       return json({ error: "forbidden" }, { status: 403 });
     }
-    const { isBlockedBetween } = await import("../lib/user-blocks.js");
-    if (await isBlockedBetween(env, auth.projectId, a, b)) {
-      return json({ error: "user_blocked" }, { status: 403 });
+    const { findOrCreateDmRoom } = await import("../lib/dm-rooms.js");
+    const result = await findOrCreateDmRoom(env, {
+      projectId: auth.projectId,
+      userA: a,
+      userB: b,
+    });
+    if (!result.ok) {
+      const status = result.error === "user_blocked" ? 403 : 400;
+      return json({ error: result.error }, { status });
     }
-    const pairKey = [a, b].sort().join(":");
-    const existing = await env.DB.prepare(
-      "SELECT id, type, name, created_at FROM rooms WHERE project_id = ? AND type = 'dm' AND name = ? LIMIT 1"
-    )
-      .bind(auth.projectId, pairKey)
-      .first();
-    if (existing) return json({ room: existing });
+    if (!result.created) return json({ room: result.room });
 
-    const now = new Date().toISOString();
-    const newRoomId = crypto.randomUUID();
-
-    await env.DB.batch([
-      env.DB.prepare(
-        "INSERT INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, 'dm', ?, ?)"
-      ).bind(newRoomId, auth.projectId, pairKey, now),
-      env.DB.prepare(
-        "INSERT INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)"
-      ).bind(newRoomId, a, now),
-      env.DB.prepare(
-        "INSERT INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)"
-      ).bind(newRoomId, b, now),
-    ]);
+    const newRoomId = result.room.id;
+    const now = result.room.createdAt;
 
     ctx.waitUntil(
       Promise.all([
@@ -212,7 +203,7 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     );
 
     return json({
-      room: { id: newRoomId, type: "dm", name: pairKey, created_at: now },
+      room: { id: newRoomId, type: "dm", name: result.room.name, created_at: now },
     });
   }
 
@@ -429,6 +420,16 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     )
       .bind(authProjectId, roomId, userId, body.messageId, now)
       .run();
+
+    const { notifyInboxUpdated } = await import("../lib/user-inbox-push.js");
+    void notifyInboxUpdated(env, {
+      projectId: authProjectId,
+      userId,
+      roomId,
+      kind: "unread",
+      messageId: body.messageId,
+      unreadCount: 0,
+    }).catch(() => {});
 
     return json({ ok: true });
   }

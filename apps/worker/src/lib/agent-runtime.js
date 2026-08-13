@@ -29,6 +29,10 @@ import { resolveAppKv } from "./app-kv.js";
 import { createLLMMiddleware, wrapLanguageModel, createLoggingMiddleware } from "./llm-middleware.js";
 import { createLoopController, LOOP_PRESETS } from "./loop-control.js";
 import { createApprovalStore, createApprovalGate } from "./hitl-approval.js";
+import { createD1ApprovalStore } from "./hitl-approval-d1.js";
+import { getRoomApprovalChain } from "./room-config.js";
+import { snapshotApprovalChain } from "./room-approval-chain.js";
+import { createPolicyAwareApprovalGate, getProjectToolPolicy, resolveOnHoldPhrase } from "./agent-tool-policy.js";
 import {
   MAX_MESSAGE_LENGTH,
   validateMessageContent,
@@ -361,6 +365,9 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     frequencyPenalty: modelParams.frequencyPenalty,
     presencePenalty: modelParams.presencePenalty,
     stopSequences: modelParams.stopSequences,
+    projectId,
+    roomId,
+    runId,
   };
   const { primary: primaryResolved, fallback: fallbackResolved } = await resolveLlmConnectionWithFallback(env, {
     provider: agentRow.provider || null,
@@ -540,9 +547,12 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
   // P23-2: HITL approval — gate sensitive tool calls (EU AI Act may override for high-risk)
   const approvalStore = appKv ? createApprovalStore(appKv) : null;
-  const approvalGate =
+  const d1ApprovalStore = createD1ApprovalStore(env);
+  const activeApprovalStore = d1ApprovalStore ?? approvalStore;
+  const baseApprovalGate =
     euAiActPolicy.approvalGate ??
     (agentConfig?.approvalGate ? createApprovalGate(agentConfig.approvalGate) : null);
+  const approvalGate = createPolicyAwareApprovalGate(baseApprovalGate, env, projectId);
 
   // P22-F6: Track multi-step agent run with plan
   const agentPlan = createPlan(`Agent run: ${agentRow.name}`);
@@ -774,27 +784,75 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
       for (const tc of extracted.toolCalls) {
         // P23-2: HITL approval — check if tool call needs approval
-        if (approvalStore && approvalGate) {
+        if (approvalGate) {
           let input = {};
           try { input = JSON.parse(tc.arguments); } catch { input = {}; }
-          const needsApproval = await approvalGate.needsApproval(tc.name, input, { userId, roomId });
+          let needsApproval = false;
+          try {
+            needsApproval = await approvalGate.needsApproval(tc.name, input, {
+              userId,
+              roomId,
+              runId,
+              projectId,
+            });
+          } catch (policyErr) {
+            if (policyErr?.code === "policy_denied") {
+              allToolCalls.push({
+                id: tc.id,
+                name: tc.name,
+                arguments: tc.arguments,
+                success: false,
+                error: "policy_denied",
+              });
+              const resultMsg = buildToolResultMessage(connection, tc, {
+                success: false,
+                error: policyErr.message || "Tool denied by policy",
+              });
+              messages.push(resultMsg);
+              continue;
+            }
+            throw policyErr;
+          }
           if (needsApproval) {
-            const request = await approvalStore.create({
+            if (!activeApprovalStore) {
+              allToolCalls.push({
+                id: tc.id,
+                name: tc.name,
+                arguments: tc.arguments,
+                success: false,
+                error: "approval_required_no_store",
+              });
+              const resultMsg = buildToolResultMessage(connection, tc, {
+                success: false,
+                error: "Tool requires approval but HITL store is not configured",
+              });
+              messages.push(resultMsg);
+              continue;
+            }
+            const roomChain = await getRoomApprovalChain(env, projectId, roomId);
+            const chainSnapshot = snapshotApprovalChain(roomChain);
+            const request = await activeApprovalStore.create({
+              projectId,
               toolName: tc.name,
               toolInput: input,
+              toolCallId: tc.id,
               roomId,
               userId,
               agentId: agentRow.id,
               runId,
+              approvalChainSnapshot: chainSnapshot,
               reason: `Tool "${tc.name}" requires human approval`,
             });
             await announceRoomEvent(env, roomId, {
-              type: "approval_request",
+              type: "approval_requested",
               runId,
               agentId: agentRow.id,
-              requestId: request.id,
+              approvalRequestId: request.id,
+              toolCallId: tc.id,
               toolName: tc.name,
               arguments: tc.arguments,
+              currentApproverId: request.currentApproverId ?? null,
+              approvalChainSnapshot: chainSnapshot,
             });
             agentLog.info("agent_run_approval_required", { projectId, agentId: agentRow.id, runId, toolName: tc.name, requestId: request.id });
             allToolCalls.push({
@@ -819,6 +877,24 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           name: tc.name,
           arguments: tc.arguments,
         });
+        // NW-200: announce on-hold phrase for voice duplex / UI filler during tool exec
+        try {
+          const toolPolicy = await getProjectToolPolicy(env, projectId);
+          const onHoldPhrase = resolveOnHoldPhrase(toolPolicy, tc.name);
+          if (onHoldPhrase) {
+            await announceRoomEvent(env, roomId, {
+              type: "agent_on_hold",
+              runId,
+              agentId: agentRow.id,
+              toolCallId: tc.id,
+              toolName: tc.name,
+              phrase: onHoldPhrase,
+              bargeInCancels: true,
+            });
+          }
+        } catch {
+          /* non-fatal */
+        }
         agentLog.info("agent_lifecycle_onToolExecutionStart", { runId, toolName: tc.name, toolCallId: tc.id });
         const toolResult = await executeToolCall(env, toolExecuteUrl, tc, projectId, runId, traceId);
         agentLog.info("agent_lifecycle_onToolExecutionEnd", {

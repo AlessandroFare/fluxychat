@@ -184,7 +184,7 @@ export function LlmProviderModelPicker({
         ) : null}
         {!keysReady && onConfigureKeys ? (
           <p className="mt-1 text-xs text-amber-800">
-            No API key for this provider yet — configure project or Worker env keys.
+            No API key for this provider yet. Configure project or Worker env keys.
           </p>
         ) : null}
       </FormField>
@@ -192,7 +192,7 @@ export function LlmProviderModelPicker({
       {allowBaseUrl ? (
         <FormField
           label="API base URL"
-          hint="OpenAI-compatible /v1 — gateways, Ollama, proxies."
+          hint="OpenAI-compatible /v1: gateways, Ollama, proxies."
           className="sm:col-span-2"
         >
           <Input

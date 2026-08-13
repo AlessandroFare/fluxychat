@@ -468,7 +468,7 @@ export default function SpatialPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Spatial & AR/VR"
-        description="Digital-twin rooms with live 2D visualization, 3D entity management, spatial audio, and shared AR canvas — interactive SDK demos."
+        description="Digital-twin rooms with live 2D visualization, 3D entity management, spatial audio, and shared AR canvas. Interactive SDK demos."
       />
 
       <ConsoleProjectRoomBar

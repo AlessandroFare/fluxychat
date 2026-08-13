@@ -154,7 +154,7 @@ export default function TruthMarketPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Truth Market"
-        description="Stake internal credits on verifiable claims. Disputes go to human arbitration — MVP uses credits, not real money."
+        description="Stake internal credits on verifiable claims. Disputes go to human arbitration. MVP uses credits, not real money."
         icon={Gavel}
       />
       <ConsoleFeedback error={error} notice={notice} />

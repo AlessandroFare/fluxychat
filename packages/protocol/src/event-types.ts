@@ -5,7 +5,11 @@ export const FLUXY_INBOUND_EVENT_TYPES = [
   "edit",
   /** Alias retained for docs / older clients. */
   "message_edit",
+  /** Stable alias for in-place edits (version bump, same logical id). */
+  "message_updated",
   "message_delete",
+  /** Tombstone alias for soft deletes (deletedAt set, no ghost row). */
+  "message_deleted",
   "message_expired",
   "typing",
   "subscription_succeeded",
@@ -51,6 +55,8 @@ export const FLUXY_OUTBOUND_EVENT_TYPES = [
   "location_update",
   "location_track_ended",
   "agentTyping",
+  /** Reconnect: client sends lastSeq; server replays room_message_events with seq > lastSeq. */
+  "resume",
 ] as const;
 
 /** Worker → client transport frames handled before dispatch. */

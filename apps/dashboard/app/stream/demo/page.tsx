@@ -43,7 +43,7 @@ function createSeededStream(): FluxyStreamApi {
   stream.addAngle("Wide shot", "https://customer-demo.cloudflarestream.com/wide/iframe");
 
   // Seed products
-  stream.addProduct("FluxyChat Pro — Annual", "https://checkout.fluxychat.dev/pro-annual", 9900, "usd", "Full platform access, 1 year", "https://placehold.co/100x100/6366f1/fff?text=PRO");
+  stream.addProduct("FluxyChat Pro Annual", "https://checkout.fluxychat.dev/pro-annual", 9900, "usd", "Full platform access, 1 year", "https://placehold.co/100x100/6366f1/fff?text=PRO");
   stream.addProduct("Premium Support Pack", "https://checkout.fluxychat.dev/support", 4900, "usd", "Priority support, 10 tickets", "https://placehold.co/100x100/10b981/fff?text=SUP");
   stream.addProduct("Custom Bot Bundle", "https://checkout.fluxychat.dev/bots", 19900, "usd", "5 custom AI bots", "https://placehold.co/100x100/f59e0b/fff?text=BOT");
 
@@ -168,7 +168,7 @@ export default function FluxyStreamDemoPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="FluxyStream"
-        description="Live streaming & broadcast — interactive demo with SDK-powered features"
+        description="Live streaming and broadcast. Interactive demo with SDK-powered features."
         actions={
           <div className="flex items-center gap-2">
             <WorkerBackendBadge connected={Boolean(workerStream)} label="FluxyStream" />
@@ -381,11 +381,11 @@ function ViewersPanel({ stream }: { stream: FluxyStreamApi }) {
           Roles
         </h3>
         <div className="space-y-1 text-xs text-muted-foreground">
-          <p>🔴 Host — full control</p>
-          <p>🔵 Moderator — manage chat & viewers</p>
-          <p>🟣 VIP — special badge</p>
-          <p>🟢 Subscriber — paid supporter</p>
-          <p>⚪ Viewer — default</p>
+          <p>🔴 Host: full control</p>
+          <p>🔵 Moderator: manage chat and viewers</p>
+          <p>🟣 VIP: special badge</p>
+          <p>🟢 Subscriber: paid supporter</p>
+          <p>⚪ Viewer: default</p>
         </div>
 
         <h3 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -429,7 +429,7 @@ function ChatPanel({ stream }: { stream: FluxyStreamApi }) {
     };
     setMessages((prev) => [...prev, msg]);
     if (!result.ok) {
-      setModLog((prev) => [...prev, `🚫 Blocked: "${input.trim().slice(0, 40)}..." — ${result.reason}`]);
+      setModLog((prev) => [...prev, `🚫 Blocked: "${input.trim().slice(0, 40)}..." (${result.reason})`]);
     }
     setInput("");
   };
@@ -449,7 +449,7 @@ function ChatPanel({ stream }: { stream: FluxyStreamApi }) {
       timestamp: new Date().toISOString(),
     }]);
     if (!result.ok) {
-      setModLog((prev) => [...prev, `🚫 Auto-mod blocked: "${random.slice(0, 40)}" — ${result.reason}`]);
+      setModLog((prev) => [...prev, `🚫 Auto-mod blocked: "${random.slice(0, 40)}" (${result.reason})`]);
     }
   };
 
@@ -627,7 +627,7 @@ function AnglesPanel({
 
         <div className="mt-4 rounded-lg border border-border bg-muted/20 p-3">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Visual AI moderation (#13)
+            Visual AI moderation
           </h4>
           <p className="mt-1 text-[11px] text-muted-foreground">
             Samples a frame and POSTs to Worker <code className="font-mono">/api/live/events/:id/moderate-frame</code>.
@@ -715,7 +715,7 @@ function HighlightsPanel({ stream }: { stream: FluxyStreamApi }) {
                     <h4 className="text-sm font-medium">{hl.title}</h4>
                     <p className="text-[11px] text-muted-foreground">{hl.reason}</p>
                     <p className="mt-1 text-[10px] text-muted-foreground">
-                      {hl.startSeconds}s — {hl.endSeconds}s · {hl.status}
+                      {hl.startSeconds}s to {hl.endSeconds}s · {hl.status}
                     </p>
                   </div>
                   <span className={cn(
@@ -866,7 +866,7 @@ function StoryPanel({ stream }: { stream: FluxyStreamApi }) {
   return (
     <div>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Interactive storytelling — audience votes change stream direction
+        Interactive storytelling. Audience votes change stream direction.
       </h3>
       {voted && (
         <p className="mb-2 text-xs text-brand">✓ Vote cast! {winning && `Currently winning: "${winning.label}"`}</p>
@@ -999,7 +999,7 @@ function GiftsPanel({ stream }: { stream: FluxyStreamApi }) {
                   <span className="text-xl">{g.iconEmoji}</span>
                   <span className="font-semibold">{g.fromUsername}</span>
                   <span className="text-muted-foreground">sent a gift</span>
-                  {g.message && <span className="text-xs italic">— "{g.message}"</span>}
+                  {g.message && <span className="text-xs italic">&ldquo;{g.message}&rdquo;</span>}
                 </div>
               ))
             )}
@@ -1065,7 +1065,7 @@ function CommercePanel({
         const result = await workerStream.recordCheckoutClick(liveEventId, product.id, product.moq ?? 1);
         window.open(result.checkoutUrl, "_blank", "noopener,noreferrer");
         if (result.checkoutProvider === "stripe") {
-          setWorkerNote("Stripe Checkout opened — inventory updates after payment completes.");
+          setWorkerNote("Stripe Checkout opened. Inventory updates after payment completes.");
         }
         setProducts((prev) => prev.map((p) => (p.id === product.id ? result.product : p)));
         if (active?.id === product.id) setActive(result.product);
@@ -1086,7 +1086,7 @@ function CommercePanel({
       ) : null}
       {workerStream && liveEventId ? (
         <p className="col-span-full text-[11px] text-muted-foreground">
-          Worker-backed commerce on event <code className="font-mono">{liveEventId}</code> — inventory/MOQ enforced on checkout click.
+          Worker-backed commerce on event <code className="font-mono">{liveEventId}</code>. Inventory and MOQ are enforced on checkout click.
         </p>
       ) : null}
       <div>
@@ -1385,10 +1385,10 @@ function CoHostPanel({ stream }: { stream: FluxyStreamApi }) {
           AI Co-Host capabilities
         </h3>
         <div className="space-y-2 text-xs text-muted-foreground">
-          <p>🤖 <span className="font-medium text-foreground">Auto-respond</span> — Answers viewer questions in real time</p>
-          <p>⚙️ <span className="font-medium text-foreground">Moderation</span> — Scans messages for spam, PII, and policy violations</p>
-          <p>📝 <span className="font-medium text-foreground">Summaries</span> — Generates stream summaries at key moments</p>
-          <p>🎯 <span className="font-medium text-foreground">Highlight detection</span> — Tags moments for clip generation</p>
+          <p>🤖 <span className="font-medium text-foreground">Auto-respond</span>: answers viewer questions in real time</p>
+          <p>⚙️ <span className="font-medium text-foreground">Moderation</span>: scans messages for spam, PII, and policy violations</p>
+          <p>📝 <span className="font-medium text-foreground">Summaries</span>: generates stream summaries at key moments</p>
+          <p>🎯 <span className="font-medium text-foreground">Highlight detection</span>: tags moments for clip generation</p>
         </div>
         <button
           type="button"
@@ -1412,7 +1412,7 @@ function LeaderboardPanel({ stream }: { stream: FluxyStreamApi }) {
   return (
     <div>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Viewer leaderboard — XP & engagement
+        Viewer leaderboard: XP and engagement
       </h3>
       <div className="space-y-1.5">
         {board.length === 0 ? (

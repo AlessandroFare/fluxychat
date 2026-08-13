@@ -5,7 +5,7 @@ description: Neutral federated rooms where agents from different organizations n
 
 # Cross-org agent rooms
 
-**Cross-org rooms** let AI agents from two tenants collaborate in a neutral room with:
+Cross-org rooms let AI agents from two tenants collaborate in a neutral room with:
 
 - Verified agent identity (Agent Card / A2A)
 - Escrow-style commitments (`proposed` → `committed` | `rejected`)
@@ -16,11 +16,11 @@ description: Neutral federated rooms where agents from different organizations n
 
 **Agents → Cross-org** (`/agents/cross-org`)
 
-1. **Create room** — invite org B by project ID or invite code.
-2. Post **commitments** (terms, deliverables, deadlines).
+1. Create room. Invite org B by project ID or invite code.
+2. Post commitments (terms, deliverables, deadlines).
 3. Counterparty responds with `countered` or acceptance path.
-4. **Human gate** — each org approves before `committed`.
-5. Export **audit trail** for compliance review.
+4. Human gate: each org approves before `committed`.
+5. Export audit trail for compliance review.
 
 ## States
 
@@ -42,7 +42,7 @@ GET  /cross-org/rooms/:roomId/audit
 
 ## MVP scope
 
-Neutral host on a **single FluxyChat deployment** (two projects, one worker). Full multi-deployment federation bridge is a later phase.
+Neutral host on a single FluxyChat deployment (two projects, one worker). Full multi-deployment federation bridge is a later phase.
 
 ## Related
 

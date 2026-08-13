@@ -9,7 +9,7 @@ Keep FluxyChat for realtime rooms and webhooks; fan out transactional SMS or Wha
 
 ## Split transport by context
 
-FluxyChat is room-based in-app transport: WebSocket history, mentions, agents on the same stream. Telco APIs (Sent.dm, Twilio, etc.) are for offline reach — password resets, mention alerts, DM summaries — not for replacing your message list UI.
+FluxyChat is room-based in-app transport: WebSocket history, mentions, agents on the same stream. Telco APIs (Sent.dm, Twilio, etc.) are for offline reach (password resets, mention alerts, DM summaries), not for replacing your message list UI.
 
 - Online: FluxyChat WS + optional in-app notification inbox
 - Offline: webhook consumer → Sent.dm template send

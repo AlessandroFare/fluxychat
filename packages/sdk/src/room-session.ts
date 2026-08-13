@@ -49,6 +49,7 @@ import {
   isE2eContentEnvelope,
 } from "./room-e2e";
 import { scheduleSessionTokenRefresh } from "./session-token-refresh";
+import { createOfflineSyncController, type OfflineSyncController } from "./offline-sync";
 
 export interface StartFluxyRoomSessionOptions {
   roomId: string;
@@ -72,6 +73,8 @@ export interface StartFluxyRoomSessionOptions {
   e2eAutoFetch?: boolean;
   /** When true, fetch GET /rooms/:id/messages/crdt-snapshot and merge Yjs message-list on history load. */
   crdtMessageList?: boolean;
+  /** NW-100: queue sends in IndexedDB outbox when offline; flush on reconnect. Default true. */
+  offlineFirst?: boolean;
   onAnyEvent?: (event: FluxyChatEvent) => void;
   /** Worker vertical/labs fan-out (`server_event` frames). */
   onServerEvent?: ServerEventHandler;
@@ -97,6 +100,7 @@ export function startFluxyRoomSession(
     e2eAutoFetch = false,
     concurrency,
     crdtMessageList = true,
+    offlineFirst = true,
     onAnyEvent,
     onServerEvent,
     onRefreshSession,
@@ -119,6 +123,8 @@ export function startFluxyRoomSession(
   const POLL_INTERVAL_MS = 4000;
 
   let connectionRef: FluxyChatRoomConnection | null = null;
+  let offlineSyncRef: OfflineSyncController | null = null;
+  let offlineSyncCleanup: (() => void) | null = null;
   let sseRef: EventSource | null = null;
   let pollTimerRef: ReturnType<typeof setInterval> | null = null;
 
@@ -186,6 +192,9 @@ export function startFluxyRoomSession(
   });
 
   const handleEvent = (data: FluxyChatEvent) => {
+    if (offlineSyncRef) {
+      void offlineSyncRef.recordEvent(trimmedRoomId, data);
+    }
     if (data.type === "history" || data.type === "replay") {
       if (!historyOnConnect && data.type === "history") return;
       setState((s) => ({
@@ -529,6 +538,13 @@ export function startFluxyRoomSession(
         if (!found) return s;
         return { messages: sortMessagesChronological(next) };
       });
+    } else if (data.type === "poll_updated" && data.messageId != null && data.poll) {
+      const pollPayload = data.poll as FluxyChatMessage["poll"];
+      setState((s) => ({
+        messages: s.messages.map((m) =>
+          m.id === data.messageId ? { ...m, poll: pollPayload } : m,
+        ),
+      }));
     }
   };
 
@@ -640,6 +656,28 @@ export function startFluxyRoomSession(
         }));
       };
 
+      const enqueueOffline = async () => {
+        if (!offlineSyncRef) {
+          failOptimistic("not_connected");
+          return;
+        }
+        await offlineSyncRef.outbox.enqueue({
+          roomId: trimmedRoomId,
+          id: clientMessageId,
+          payload: {
+            content: outboundContent,
+            replyTo: replyTo ?? null,
+            clientMessageId,
+            attachments: attachments ?? [],
+            options: options ?? {},
+          },
+        });
+        setState((s) => ({
+          syncStatus: offlineSyncRef!.status,
+          pendingOutboxCount: offlineSyncRef!.pendingCount,
+        }));
+      };
+
       if (client.isAuthenticated()) {
         try {
           const serverMessage = await client.createMessage(
@@ -676,7 +714,11 @@ export function startFluxyRoomSession(
               ...(options?.visibleTo?.length ? { visibleTo: options.visibleTo } : {}),
             });
           } catch (wsErr) {
-            failOptimistic(message);
+            if (offlineFirst) {
+              await enqueueOffline();
+            } else {
+              failOptimistic(message);
+            }
             if (!(wsErr instanceof FluxySendError)) throw wsErr;
           }
         }
@@ -700,7 +742,11 @@ export function startFluxyRoomSession(
         });
       } catch (err) {
         if (err instanceof FluxySendError) {
-          failOptimistic("not_connected");
+          if (offlineFirst) {
+            await enqueueOffline();
+          } else {
+            failOptimistic("not_connected");
+          }
           return;
         }
         throw err;
@@ -1145,6 +1191,51 @@ export function startFluxyRoomSession(
     });
   }
 
+  if (offlineFirst && client) {
+    void createOfflineSyncController({
+      send: async (entry) => {
+        if (!client) return false;
+        try {
+          const payload = entry.payload;
+          if (client.isAuthenticated()) {
+            const serverMessage = await client.createMessage(
+              entry.roomId,
+              String(payload.content ?? ""),
+              (payload.replyTo as number | null | undefined) ?? null,
+              (payload.attachments as FluxyChatAttachment[] | undefined) ?? undefined,
+              String(payload.clientMessageId ?? entry.id),
+            );
+            if (!serverMessage) return false;
+            const ackId = String(payload.clientMessageId ?? entry.id);
+            setState((s) => ({
+              messages: applyServerMessageAck(s.messages, serverMessage, ackId),
+            }));
+            return true;
+          }
+          connectionRef?.sendJson({
+            type: "message",
+            userId: client.userId,
+            content: String(payload.content ?? ""),
+            clientMessageId: String(payload.clientMessageId ?? entry.id),
+            parentId: (payload.replyTo as number | null | undefined) ?? null,
+            attachments: (payload.attachments as FluxyChatAttachment[] | undefined) ?? [],
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+    }).then((sync) => {
+      if (!active) return;
+      offlineSyncRef = sync;
+      offlineSyncCleanup = sync.onStatusChange((syncStatus, pending) => {
+        if (!active) return;
+        setState({ syncStatus, pendingOutboxCount: pending });
+      });
+      sync.setConnected(getState().connected);
+    });
+  }
+
   void (async () => {
     let reconnectBackoff: { baseBackoffMs?: number; maxBackoffMs?: number } = {};
     try {
@@ -1169,6 +1260,7 @@ export function startFluxyRoomSession(
         if (status === "connected") {
           stopPollingFallback();
           stopSSEFallback();
+          offlineSyncRef?.setConnected(true);
           patchConnection({
             connectionStatus: "connected",
             connected: true,
@@ -1189,6 +1281,7 @@ export function startFluxyRoomSession(
             reconnectDelayMs: connection.getScheduledReconnectDelayMs(),
           });
         } else if (status === "disconnected") {
+          offlineSyncRef?.setConnected(false);
           patchConnection({
             connectionStatus: "disconnected",
             connected: false,
@@ -1266,6 +1359,8 @@ export function startFluxyRoomSession(
     stopSSEFallback();
     connection?.close();
     connectionRef = null;
+    offlineSyncCleanup?.();
+    offlineSyncRef = null;
     patchConnection({ connectionStatus: "disconnected", connected: false });
   };
 }

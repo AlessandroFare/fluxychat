@@ -1,10 +1,27 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   handleMcpRequest,
   MCP_SERVER_INFO,
   MCP_PROTOCOL_VERSION,
   MCP_TOOLS,
 } from "./mcp-server.js";
+
+vi.mock("./mcp-room-message.js", () => ({
+  publishMcpRoomMessage: vi.fn(async (_env, input) => ({
+    ok: true,
+    message: {
+      id: 99,
+      roomId: input.roomId,
+      content: input.content,
+      createdAt: "2026-08-12T12:00:00.000Z",
+      clientMessageId: "mcp_test",
+    },
+  })),
+}));
+
+vi.mock("./room-access.js", () => ({
+  canAccessRoom: vi.fn(async (_env, _auth, roomId) => roomId === "room_1"),
+}));
 
 describe("MCP Server", () => {
   const auth = {
@@ -63,6 +80,8 @@ describe("MCP Server", () => {
           };
         },
       },
+      RATE_LIMIT_MCP_MESSAGES_PER_MINUTE: "1000",
+      RATE_LIMIT_FALLBACK_ALLOW: "true",
       ...overrides,
     };
   }
@@ -203,7 +222,7 @@ describe("MCP Server", () => {
       const data = JSON.parse(result.result.content[0].text);
       expect(data.status).toBe("sent");
       expect(data.content).toBe("Hello from MCP!");
-      expect(data.id).toBeTruthy();
+      expect(data.id).toBe(99);
     });
 
     it("returns error when content is empty", async () => {

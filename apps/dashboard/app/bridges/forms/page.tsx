@@ -78,7 +78,7 @@ export default function ChannelFormsPage() {
         },
       });
       if (res.dryRun) {
-        setNotice(`Dry-run delivery ${res.deliveryId} — configure WhatsApp/RCS credentials on the worker.`);
+        setNotice(`Dry-run delivery ${res.deliveryId}. Configure WhatsApp/RCS credentials on the worker.`);
       } else {
         setNotice(`Form dispatched (${res.fieldCount} fields) → ${res.deliveryId}`);
       }
@@ -99,7 +99,7 @@ export default function ChannelFormsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="WhatsApp / RCS forms"
-        description="Structured forms on omnichannel — schema → provider interactive payload → normalized room message (#43)."
+        description="Structured forms on omnichannel: schema to provider interactive payload to normalized room message."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">

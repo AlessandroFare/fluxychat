@@ -13,7 +13,7 @@ export interface FluxySendMessageOptions {
   templateVars?: Record<string, string | number | boolean | null | undefined>;
   expiresInSeconds?: number;
   expiresAt?: string;
-  visibility?: 'room' | 'whisper';
+  visibility?: 'room' | 'whisper' | `role:${string}`;
   visibleTo?: string[];
 }
 

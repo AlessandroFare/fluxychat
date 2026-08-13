@@ -295,7 +295,7 @@ function AgentTemplateGallery() {
 
   const handlePublish = async () => {
     if (!token) {
-      setError("Admin JWT required — configure a project first.");
+      setError("Admin JWT required. Configure a project first.");
       return;
     }
     if (!pubName.trim() || !pubSlug.trim()) {
@@ -361,7 +361,7 @@ function AgentTemplateGallery() {
 
   const handleInstall = async (agent: MarketplaceAgent) => {
     if (!token) {
-      setError("Admin JWT required — configure a project first.");
+      setError("Admin JWT required. Configure a project first.");
       return;
     }
     setDeployingId(agent.id);
@@ -803,7 +803,7 @@ function ProviderMarketplaceTab() {
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <Star className="h-4 w-4" /> Add your own API key
         </h3>
-        <p className="text-xs text-muted-foreground mt-1">Keys stored in-memory — this is a client-side demo.</p>
+        <p className="text-xs text-muted-foreground mt-1">Keys stored in-memory. This is a client-side demo.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <select className="rounded-md border border-border bg-background px-3 py-2 text-sm" value={selectedProvider} onChange={(e) => setSelectedProvider(e.target.value)}>
             {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -935,7 +935,7 @@ function McpAppsMarketplaceTab() {
     setNotice(null);
     try {
       await installMcpApp(token, appId, agentId.trim() || undefined);
-      setNotice("MCP app installed — tools registered in MCP identity.");
+      setNotice("MCP app installed. Tools registered in MCP identity.");
       await loadAll();
     } catch (err: unknown) {
       setError(messageFromUnknown(err, "Install failed"));

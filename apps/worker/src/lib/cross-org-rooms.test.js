@@ -21,7 +21,7 @@ describe("cross-org mappers", () => {
     expect(room?.maxRounds).toBe(5);
   });
 
-  it("maps commitment row with parsed terms", () => {
+    it("maps commitment row with parsed terms", () => {
     const c = mapCommitmentRow({
       id: "c1",
       cross_org_room_id: "co1",
@@ -29,7 +29,7 @@ describe("cross-org mappers", () => {
       room_id: "room1",
       proposed_by_org: "org-a",
       proposed_by_agent: "agent-a",
-      terms_json: '{"price":100}',
+      terms_json: '{"price":100,"floorPrice":90}',
       state: "proposed",
       round_number: 1,
       ttl_seconds: 3600,

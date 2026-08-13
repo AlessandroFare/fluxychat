@@ -3,7 +3,7 @@ import type { GuideContent } from "@/lib/guides/types";
 export const AGENT_EVENTS_SAME_STREAM_GUIDE: GuideContent = {
   title: "Agent events on the same WebSocket as chat",
   subtitle:
-    "When humans and copilots share a room, debugging and handoffs are easier if tool_call, tool_result, and user messages share one ordered stream — not a side channel.",
+    "When humans and copilots share a room, debugging and handoffs are easier if tool_call, tool_result, and user messages share one ordered stream, not a side channel.",
   sections: [
     {
       title: "Pain from AI-at-work threads",
@@ -18,7 +18,7 @@ export const AGENT_EVENTS_SAME_STREAM_GUIDE: GuideContent = {
       bullets: [
         "User messages with deliveryStatus and clientMessageId.",
         "tool_call, tool_result, tool_error, and agentRun events on the same timeline.",
-        "Optional webhooks for downstream automation — still keyed to room + project.",
+        "Optional webhooks for downstream automation, still keyed to room + project.",
         "Console + D1 for history export when you need audit, not only live fan-out.",
       ],
     },

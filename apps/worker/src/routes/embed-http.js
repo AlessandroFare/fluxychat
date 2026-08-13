@@ -86,7 +86,11 @@ export async function dispatchEmbedRoutes(request, url, h) {
 
   if (url.pathname === "/public/embed-config" && request.method === "GET") {
     const hostname = url.hostname;
-    const resolvedProjectId = customDomain?.projectId || projectId;
+    const queryProjectId = url.searchParams.get("projectId");
+    const resolvedProjectId =
+      (queryProjectId && isValidId(queryProjectId) ? queryProjectId : null) ||
+      customDomain?.projectId ||
+      projectId;
     if (!resolvedProjectId) {
       return json({ enabled: false, reason: "no_project" }, { headers: corsHeaders });
     }
@@ -155,6 +159,9 @@ export async function dispatchEmbedRoutes(request, url, h) {
                   typeof body.theme.position === "string" ? body.theme.position : undefined,
               }
             : undefined,
+        proactiveTriggers: Array.isArray(body?.proactiveTriggers)
+          ? body.proactiveTriggers
+          : undefined,
       },
       { isValidId },
     );
@@ -180,6 +187,9 @@ function buildEmbedSnippet(apiOrigin, config) {
     `data-fluxy-api-url="${apiOrigin}"`,
     "async",
   ];
+  if (config?.projectId) {
+    attrs.push(`data-project-id="${config.projectId}"`);
+  }
   if (config?.defaultRoomId) {
     attrs.push(`data-room-id="${config.defaultRoomId}"`);
   }

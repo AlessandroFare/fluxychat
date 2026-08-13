@@ -122,7 +122,7 @@ export default function RoomFirmwareSettingsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Room firmware"
-        description="Per-room synchronous hooks before message fan-out — PII veto, rate limits, denylist (builtin MVP; WASM reserved)."
+        description="Per-room synchronous hooks before message fan-out: PII veto, rate limits, denylist (builtin MVP; WASM reserved)."
         icon={Cpu}
       />
       <ConsoleFeedback error={error} notice={notice} />

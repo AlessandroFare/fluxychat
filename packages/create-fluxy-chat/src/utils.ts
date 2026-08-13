@@ -9,7 +9,7 @@ export type PackageManager = "npm" | "yarn" | "pnpm";
 /**
  * Supported adapter types.
  */
-export type AdapterType = "basic" | "slack" | "telegram" | "discord" | "web" | "react";
+export type AdapterType = "basic" | "slack" | "telegram" | "discord" | "web" | "react" | "hr-feedback";
 
 /**
  * Supported language options.
@@ -65,7 +65,7 @@ export function isPackageManager(value: string): value is PackageManager {
  * Check whether a string is a supported adapter type.
  */
 export function isAdapterType(value: string): value is AdapterType {
-  return ["basic", "slack", "telegram", "discord", "web", "react"].includes(value);
+  return ["basic", "slack", "telegram", "discord", "web", "react", "hr-feedback"].includes(value);
 }
 
 /**

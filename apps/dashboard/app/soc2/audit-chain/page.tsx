@@ -74,7 +74,7 @@ export default function AuditChainPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Immutable audit chain"
-        description="Append-only SHA-256 hash chain for tamper-evident audit export (#20)."
+        description="Append-only SHA-256 hash chain for tamper-evident audit export."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">

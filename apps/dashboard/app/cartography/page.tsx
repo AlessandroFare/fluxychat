@@ -13,7 +13,9 @@ import { messageFromUnknown } from "@/lib/error-message";
 import {
   fetchRoomCartography,
   rebuildRoomCartography,
+  fetchCartographyRouting,
   type RoomCartographyMap,
+  type CartographyRoutingSuggestion,
 } from "@/lib/cartography-client";
 import { RoomCartographyMap as CartographyCanvas } from "@/components/ui/room-cartography-map";
 
@@ -28,6 +30,8 @@ export default function CartographyPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [map, setMap] = useState<RoomCartographyMap | null>(null);
   const [selectedClusterId, setSelectedClusterId] = useState<number | null>(null);
+  const [routing, setRouting] = useState<CartographyRoutingSuggestion[]>([]);
+  const [routingHot, setRoutingHot] = useState(false);
 
   const load = useCallback(
     async (rebuild = false) => {
@@ -48,6 +52,14 @@ export default function CartographyPage() {
         setMap(result.map);
         setSelectedClusterId(null);
         setNotice(rebuild ? "Cartography rebuilt" : null);
+        try {
+          const routeRes = await fetchCartographyRouting(token, roomId.trim());
+          setRoutingHot(Boolean(routeRes.hot));
+          setRouting(routeRes.suggestions ?? []);
+        } catch {
+          setRouting([]);
+          setRoutingHot(false);
+        }
       } catch (err) {
         setError(messageFromUnknown(err, "Failed to load cartography"));
       } finally {
@@ -79,7 +91,7 @@ export default function CartographyPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Chat cartography"
-        description="Zoom-out thematic clusters from message embeddings. Batch-built map — not live layout per keystroke."
+        description="Zoom-out thematic clusters from message embeddings. Batch-built map, not live layout per keystroke."
         icon={Map}
       />
 
@@ -130,6 +142,46 @@ export default function CartographyPage() {
           ) : null}
         </Panel>
       </Section>
+
+      {routingHot && routing.length > 0 ? (
+        <Section
+          title="Proactive routing"
+          description="Hot thematic clusters suggest handoff agents or digests."
+        >
+          <Panel className="space-y-3">
+            {routing.map((s) => (
+              <div
+                key={s.clusterId}
+                className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"
+              >
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{s.label}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {s.messageCount} msgs · {Math.round(s.share * 100)}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{s.reason}</p>
+                  {s.sampleSnippet ? (
+                    <p className="truncate text-xs text-muted-foreground">{s.sampleSnippet}</p>
+                  ) : null}
+                </div>
+                <div className="text-right text-xs">
+                  <Badge variant="outline">
+                    {s.suggestedAction === "handoff_agent" ? "Handoff agent" : "Digest"}
+                  </Badge>
+                  {s.suggestedAgentUserId ? (
+                    <p className="mt-1 font-mono text-muted-foreground">{s.suggestedAgentUserId}</p>
+                  ) : null}
+                  {s.suggestedSkills.length > 0 ? (
+                    <p className="mt-1 text-muted-foreground">skills: {s.suggestedSkills.join(", ")}</p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </Panel>
+        </Section>
+      ) : null}
 
       {selectedCluster ? (
         <Section title={`Cluster: ${selectedCluster.label}`} description={selectedCluster.sampleSnippet}>

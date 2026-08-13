@@ -9,6 +9,7 @@ import { useInbox, type FluxyInboxItem } from "@fluxy-chat/react";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
+import { ApprovalsInboxPanel } from "../components/approvals-inbox-panel";
 import { Banner, Button, EmptyState, Panel, SkeletonCard } from "../components/ui";
 import { formatDateTime } from "@/lib/format-datetime";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
@@ -125,6 +126,12 @@ export default function InboxPage() {
         title="Inbox"
         description={`Mentions, unread rooms, snoozed channels, and follow-ups.${unreadCounter > 0 ? ` ${unreadCounter} unread room${unreadCounter === 1 ? "" : "s"}.` : ""}${unseen > 0 ? ` ${unseen} in view.` : ""}`}
       />
+
+      {token ? (
+        <div className="mb-8">
+          <ApprovalsInboxPanel memberJwt={token} />
+        </div>
+      ) : null}
 
       {tab === "all" && items.length > 0 ? (
         <section className="mb-6" data-testid="inbox-items-feed">

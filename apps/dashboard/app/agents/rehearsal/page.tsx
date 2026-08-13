@@ -69,7 +69,7 @@ export default function RehearsalRoomsPage() {
         counterpartyRole: counterpartyRole.trim() || undefined,
         agentId: agentId.trim() || undefined,
       });
-      setNotice(`Rehearsal created — open room ${result.rehearsal.rehearsalRoomId}`);
+      setNotice(`Rehearsal created. Open room ${result.rehearsal.rehearsalRoomId}.`);
       await load();
     } catch (err) {
       setError(messageFromUnknown(err, "Failed to create rehearsal"));
@@ -96,7 +96,7 @@ export default function RehearsalRoomsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Rehearsal rooms"
-        description="Clone authorized room context into an ephemeral private room. Agents simulate a counterparty — not the real person."
+        description="Clone authorized room context into an ephemeral private room. Agents simulate a counterparty, not the real person."
         icon={Theater}
       />
 

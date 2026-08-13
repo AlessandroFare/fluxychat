@@ -4,6 +4,10 @@ Roadmap completa con best practice, architetture, tool gratuiti/open-source e ri
 
 **Technical implementation guide (code-mapped, 🔴/🟡/🟢 priorities):** [docs/FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md)
 
+**Competitor parity (Sendbird/Stream/PubNub/CometChat/Vercel — CP-001–CP-083):** [docs/COMPETITOR-PARITY-ROADMAP-2026.md](docs/COMPETITOR-PARITY-ROADMAP-2026.md)
+
+**Next wave (Aug 2026 research — NW-100–NW-206):** [docs/NEXT-WAVE-ROADMAP-2026.md](docs/NEXT-WAVE-ROADMAP-2026.md) · [Docs tracker](/docs/operations/next-wave-roadmap)
+
 **Research round 3 (Aug 2026) — moonshot + enterprise parity:** [docs/FEATURE_ROADMAP.md#research-round-3--new-features--enterprise-parity-aug-2026](docs/FEATURE_ROADMAP.md) · Technical specs: [Cross-Org Agent Rooms](docs/FLUXYCHAT-CROSS-ORG-AGENT-ROOMS-E-NUOVE-FEATURE.md) · [Counterfactual/Debate/Empathy](docs/FLUXYCHAT-COUNTERFACTUAL-DEBATE-EMPATHY.md) · [Firmware/Merge/Speculative](docs/FLUXYCHAT-ROOM-FIRMWARE-MERGE-SPECULATIVE.md) · [Truth Market/Quorum/Cartography](docs/FLUXYCHAT-TRUTHMARKET-REHEARSAL-QUORUM-CARTOGRAPHY.md)
 
 ### Research Round 3 — sintesi priorità
@@ -37,6 +41,23 @@ Roadmap completa con best practice, architetture, tool gratuiti/open-source e ri
 | ⚠️ Monitor | **28** | WebTransport — non implementare in prod 2026 | — |
 | 🟢 Research | **37** | ✅ Local-first eval (ElectricSQL/PowerSync) — stay on Yjs | Research closed |
 | 🟢 Research | **25** | AP2/UCP pagamenti agentici | monitoraggio |
+
+### Research Round 4 — Next Wave (NW-100–NW-206)
+
+| Priorità | ID | Feature | Effort |
+|----------|-----|---------|--------|
+| 🔴 Sprint F | **NW-101** | Live translation toggle UX | S |
+| 🔴 Sprint F | **NW-104** | Polls UI end-to-end | S |
+| 🔴 Sprint G | **NW-106** | Threads first-class view | M |
+| 🔴 Sprint G | **NW-105** | Room info panel | M |
+| 🔴 Sprint G | **NW-102** | Message drafts cross-device | M |
+| 🔴 Sprint G | **NW-103** | Enhanced mentions | M |
+| 🟡 Sprint H | **NW-100** | Offline-first SDK | L |
+| 🟡 Sprint I | **NW-200** | Duplex room agent + on-hold | L |
+| 🟡 Sprint I | **NW-201** | Decision Rooms™ product pack | M |
+| 🟢 Sprint J | **NW-110** | create-fluxy-chat CLI | M |
+
+Tracker completo: [docs/NEXT-WAVE-ROADMAP-2026.md](docs/NEXT-WAVE-ROADMAP-2026.md) · [Docs site](/docs/operations/next-wave-roadmap)
 
 Dettaglio architettura, SQL, guardrail e touchpoint codice: [FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md) sezione Research Round 3.
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parsePollCreateInput, buildPollSnapshot } from "./message-polls.js";
+import { parsePollCreateInput, buildPollSnapshot, attachPollsToMessages } from "./message-polls.js";
 import { blockUser } from "./user-blocks.js";
 
 function mockEnv() {
@@ -43,6 +43,50 @@ describe("message-polls", () => {
     const snap = buildPollSnapshot("Pick one", ["A", "B"], false, { 0: 3, 1: 1 }, 42, 4);
     expect(snap.options[0].votes).toBe(3);
     expect(snap.totalVoters).toBe(4);
+  });
+
+  it("attachPollsToMessages adds poll with userVote", async () => {
+    const pollRow = {
+      message_id: 10,
+      question: "Lunch?",
+      options_json: '["Pizza","Sushi"]',
+      allow_multiple: 0,
+      closed: 0,
+    };
+    const env = {
+      DB: {
+        prepare: (sql) => ({
+          bind: (...args) => ({
+            all: () => {
+              if (sql.includes("message_polls")) {
+                return Promise.resolve({ results: [pollRow] });
+              }
+              if (sql.includes("GROUP BY message_id, option_index")) {
+                return Promise.resolve({
+                  results: [
+                    { message_id: 10, option_index: 0, c: 2 },
+                    { message_id: 10, option_index: 1, c: 1 },
+                  ],
+                });
+              }
+              if (sql.includes("COUNT(DISTINCT user_id)")) {
+                return Promise.resolve({ results: [{ message_id: 10, c: 3 }] });
+              }
+              if (sql.includes("user_id = ?")) {
+                return Promise.resolve({ results: [{ message_id: 10, option_index: 1 }] });
+              }
+              return Promise.resolve({ results: [] });
+            },
+          }),
+        }),
+      },
+    };
+    const messages = [{ id: 10, text: "poll msg" }, { id: 11, text: "plain" }];
+    const out = await attachPollsToMessages(env, "p1", messages, "user-1");
+    expect(out[0].poll).toBeDefined();
+    expect(out[0].poll.userVote).toBe(1);
+    expect(out[0].poll.options[0].votes).toBe(2);
+    expect(out[1].poll).toBeUndefined();
   });
 });
 

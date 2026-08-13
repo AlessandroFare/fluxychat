@@ -54,7 +54,7 @@ const PILLARS: readonly PillarBentoItem[] = [
     icon: Zap,
     label: "Realtime",
     title: "Runs on your edge",
-    body: "WebSockets and Durable Objects handle presence, typing, and delivery. One Room DO per room — no socket fleet to babysit.",
+    body: "WebSockets and Durable Objects handle presence, typing, and delivery. One Room DO per room, so no socket fleet to babysit.",
   },
   {
     icon: Shield,
@@ -99,7 +99,7 @@ export function LandingFeaturesClient() {
 
         <div className="mx-auto max-w-6xl px-4 pb-10 pt-4 sm:px-6">
           <p className="text-center text-xs text-zinc-400">
-            Threads, polls, and translation are up to your product layer. FluxyChat ships the realtime core — rooms, presence, typing, delivery, and AI agent events.
+            Threads, polls, and translation are up to your product layer. FluxyChat ships the realtime core: rooms, presence, typing, delivery, and AI agent events.
           </p>
         </div>
       </section>
@@ -150,10 +150,10 @@ export function LandingFeaturesClient() {
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: "14 platform adapters", desc: "Slack, Discord, Telegram, WhatsApp, Teams, Email, SMS, Webhook, Matrix, and 5 more — one unified interface" },
-              { label: "Streaming markdown", desc: "Table buffering, code fence tracking, inline marker healing — clean partial renders during AI streaming" },
+              { label: "14 platform adapters", desc: "Slack, Discord, Telegram, WhatsApp, Teams, Email, SMS, Webhook, Matrix, and 5 more on one unified interface" },
+              { label: "Streaming markdown", desc: "Table buffering, code fence tracking, inline marker healing for clean partial renders during AI streaming" },
               { label: "MCP client + tool calling", desc: "Consume any MCP-compatible tool server. Auto-convert to LLM function-calling format with HITL approval gates" },
-              { label: "Card builder", desc: "Composable rich messaging with JSX or function API — Slack Block Kit and Teams Adaptive Card renderers built in" },
+              { label: "Card builder", desc: "Composable rich messaging with JSX or function API. Slack Block Kit and Teams Adaptive Card renderers built in" },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 px-5 py-4">
                 <p className="text-sm font-semibold text-white">{item.label}</p>

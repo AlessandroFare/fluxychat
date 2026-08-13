@@ -29,7 +29,7 @@ export function LlmProviderRegistryOverview({
   return (
     <div className={cn("space-y-3", className)}>
       <p className="text-sm text-muted-foreground">
-        Registry from your Worker — same providers as{" "}
+        Registry from your Worker, same providers as{" "}
         <code className="text-xs">GET /llm/providers</code>. Project keys override Worker env.
       </p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

@@ -46,7 +46,7 @@ export function InboxOverviewCard() {
                 ? "Loading…"
                 : counter > 0 || mentionCount > 0
                   ? `${counter} unread room${counter === 1 ? "" : "s"}${mentionCount > 0 ? ` · ${mentionCount} mention${mentionCount === 1 ? "" : "s"}` : ""}`
-                  : "All caught up — mentions, snoozes and follow-ups live here"}
+                  : "All caught up. Mentions, snoozes and follow-ups live here"}
             </p>
           </div>
         </div>

@@ -53,7 +53,7 @@ Copy-paste Jetpack Compose chat screen: [`examples/MinimalChatScreen.kt`](exampl
 
 ## Status
 
-Starter package (MD-5) — REST + WebSocket (OkHttp). Compose/SwiftUI UI TBD.
+Starter package: REST + WebSocket (OkHttp). Compose/SwiftUI UI TBD.
 
 ## Test
 

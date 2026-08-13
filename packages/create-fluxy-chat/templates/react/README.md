@@ -1,8 +1,8 @@
 # FluxyChat React starter
 
-Minimal Vite + React app with `useChat` — **first message in ~60 seconds** via public guest room.
+Minimal Vite + React app with `useChat`. First message in about 60 seconds via the public guest room.
 
-## Quick start (guest — fastest)
+## Quick start (guest, fastest)
 
 ```bash
 cp .env.example .env
@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — guest JWT is minted automatically via `joinPublicRoomAsGuest`.
+Open http://localhost:5173. A guest JWT is minted automatically via `joinPublicRoomAsGuest`.
 
 ## Quick start (member JWT)
 
@@ -24,8 +24,8 @@ npm run dev
 
 ## Get credentials
 
-1. **Guest:** create a **public** room in console → copy room ID → `VITE_FLUXYCHAT_PUBLIC_ROOM_ID`
-2. **Member:** [fluxychat.com/onboarding](https://fluxychat.com/onboarding) → Worker URL + JWT
+1. **Guest:** create a **public** room in console, copy room ID, set `VITE_FLUXYCHAT_PUBLIC_ROOM_ID`
+2. **Member:** [fluxychat.com/onboarding](https://fluxychat.com/onboarding) for Worker URL and JWT
 3. **Local monorepo:** `pnpm run first-message` from the FluxyChat repo
 
 ## Scripts

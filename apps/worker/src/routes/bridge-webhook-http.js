@@ -1,35 +1,12 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { getBridgeConfig, syncInboundMessage, recordBridgeEvent } from "../lib/bridge.js";
-import { getMatrixBridge, processMatrixAppserviceTransaction, recordMatrixSyncLog, verifyMatrixAppserviceWebhook } from "../lib/matrix-bridge.js";
-
-function parseSlackMessage(body) {
-  if (body.type === "url_verification") {
-    return { challenge: body.challenge };
-  }
-  const event = body.event;
-  if (!event || event.type !== "message" || event.subtype) return null;
-  return {
-    externalMessageId: event.ts || event.client_msg_id || `slack_${Date.now()}`,
-    externalChannelId: event.channel,
-    externalUserId: event.user,
-    externalUsername: event.username || event.user,
-    content: event.text || "",
-    timestamp: event.ts ? new Date(Number(event.ts) * 1000).toISOString() : new Date().toISOString(),
-  };
-}
-
-function parseDiscordMessage(body) {
-  if (!body.content && !body.message?.content) return null;
-  const msg = body.message ?? body;
-  return {
-    externalMessageId: msg.id || `discord_${Date.now()}`,
-    externalChannelId: msg.channel_id || body.channel_id,
-    externalUserId: msg.author?.id || body.author?.id,
-    externalUsername: msg.author?.username || "discord-user",
-    content: msg.content || "",
-    timestamp: msg.timestamp || new Date().toISOString(),
-  };
-}
+import {
+  getMatrixBridge,
+  processMatrixAppserviceTransaction,
+  recordMatrixSyncLog,
+  verifyMatrixAppserviceWebhook,
+} from "../lib/matrix-bridge.js";
+import { parseDiscordWebhookBody, parseSlackWebhookBody } from "../lib/bridge-webhook-parsers.js";
 
 export async function dispatchBridgeWebhookRoutes(request, url, h) {
   const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
@@ -50,12 +27,11 @@ export async function dispatchBridgeWebhookRoutes(request, url, h) {
       return json({ error: "invalid_json" }, { status: 400, headers: corsHeaders });
     }
 
-    if (body.challenge) {
-      return json({ challenge: body.challenge }, { headers: corsHeaders });
+    const parsed = parseSlackWebhookBody(body);
+    if (parsed.kind === "challenge") {
+      return json({ challenge: parsed.challenge }, { headers: corsHeaders });
     }
-
-    const parsed = parseSlackMessage(body);
-    if (!parsed) {
+    if (parsed.kind === "ignored") {
       return json({ ok: true, ignored: true }, { headers: corsHeaders });
     }
 
@@ -63,7 +39,12 @@ export async function dispatchBridgeWebhookRoutes(request, url, h) {
       bridgeId,
       projectId: bridge.projectId,
       platform: bridge.platform,
-      ...parsed,
+      externalMessageId: parsed.externalMessageId,
+      externalChannelId: parsed.externalChannelId,
+      externalUserId: parsed.externalUserId,
+      externalUsername: parsed.externalUsername,
+      content: parsed.content,
+      timestamp: parsed.timestamp,
     });
     if (result.error) {
       await recordBridgeEvent(env, {
@@ -95,8 +76,8 @@ export async function dispatchBridgeWebhookRoutes(request, url, h) {
       return json({ error: "invalid_json" }, { status: 400, headers: corsHeaders });
     }
 
-    const parsed = parseDiscordMessage(body);
-    if (!parsed) {
+    const parsed = parseDiscordWebhookBody(body);
+    if (parsed.kind === "ignored") {
       return json({ ok: true, ignored: true }, { headers: corsHeaders });
     }
 
@@ -104,7 +85,12 @@ export async function dispatchBridgeWebhookRoutes(request, url, h) {
       bridgeId,
       projectId: bridge.projectId,
       platform: bridge.platform,
-      ...parsed,
+      externalMessageId: parsed.externalMessageId,
+      externalChannelId: parsed.externalChannelId,
+      externalUserId: parsed.externalUserId,
+      externalUsername: parsed.externalUsername,
+      content: parsed.content,
+      timestamp: parsed.timestamp,
     });
     if (result.error) {
       return json(result, { status: 400, headers: corsHeaders });

@@ -121,7 +121,7 @@ export function VerticalLiveWorkspace({
           Live workspace
         </CardTitle>
         <CardDescription>
-          Production Worker calls on room <span className="font-mono text-xs">{roomId}</span> — polls, breakouts, stage, hybrid check-in and capability events fan out on the room WebSocket.
+          Production Worker calls on room <span className="font-mono text-xs">{roomId}</span>. Polls, breakouts, stage, hybrid check-in and capability events fan out on the room WebSocket.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -149,7 +149,7 @@ export function VerticalLiveWorkspace({
                   });
                   if (!result.ok) throw new Error(result.error || "poll_failed");
                   pushFeed(`Poll created · ${result.poll?.id ?? "ok"}`);
-                  setNotice("Poll is open — votes fan out as poll.* server events.");
+                  setNotice("Poll is open. Votes fan out as poll.* server events.");
                 })}
               >
                 {busy === "poll" ? <Loader2 className="size-3 animate-spin" /> : null}
@@ -198,7 +198,7 @@ export function VerticalLiveWorkspace({
                     if (!result.event?.id) throw new Error(result.error || "stage_create_failed");
                     setLiveEventId(result.event.id);
                     pushFeed(`Stage scheduled · ${result.event.id}`);
-                    setNotice("Live event created — go live to auto-provision WHIP/RTMPS when Cloudflare Stream is configured.");
+                    setNotice("Live event created. Go live to auto-provision WHIP/RTMPS when Cloudflare Stream is configured.");
                   })}
                 >
                   Schedule stage
@@ -216,7 +216,7 @@ export function VerticalLiveWorkspace({
                     pushFeed("Stage live · live.event_live");
                     setNotice(result.event.whipUrl
                       ? `WHIP ingest ready. HLS: ${result.event.playbackHls ?? "pending"}`
-                      : "Stage is live — configure CLOUDFLARE_STREAM_* on Worker for WHIP auto-provision.");
+                      : "Stage is live. Configure CLOUDFLARE_STREAM_* on Worker for WHIP auto-provision.");
                   })}
                 >
                   Go live
@@ -237,7 +237,7 @@ export function VerticalLiveWorkspace({
                     const ev = await createHybridEvent(adminToken, { roomId, name: stageTitle, mode: "hybrid" });
                     setHybridEventId(ev.id);
                     pushFeed(`Hybrid event · ${ev.qrCode ?? ev.id}`);
-                    setNotice("Hybrid event created — remote attendees can check in next.");
+                    setNotice("Hybrid event created. Remote attendees can check in next.");
                   })}
                 >
                   Create hybrid event
@@ -264,7 +264,7 @@ export function VerticalLiveWorkspace({
           <div className="rounded-xl border border-border p-4">
             <p className="font-medium">Compliance signal</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Publish a versioned capability event for audit trails — {verticalCapabilityType(verticalId)}.
+              Publish a versioned capability event for audit trails: {verticalCapabilityType(verticalId)}.
             </p>
             <Button
               type="button"

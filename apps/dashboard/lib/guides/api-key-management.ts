@@ -1,7 +1,7 @@
 import type { GuideContent } from "@/lib/guides/types";
 
 export const API_KEY_MANAGEMENT_GUIDE: GuideContent = {
-  title: "API key management — rotate, scope, and revoke",
+  title: "API key management: rotate, scope, and revoke",
   subtitle:
     "Best practices for managing FluxyChat API keys: project-scoped keys, rotation, and emergency revocation.",
   sections: [
@@ -21,14 +21,14 @@ export const API_KEY_MANAGEMENT_GUIDE: GuideContent = {
         "Update your application to use the new key",
         "Verify all services work with the new key",
         "Delete the old key via DELETE /projects/api-keys/:id",
-        "Never have zero active keys — always overlap during rotation",
+        "Never have zero active keys. Overlap during rotation.",
       ],
     },
     {
       id: "scoping",
       title: "Key scoping",
       paragraphs: [
-        "Each project has its own set of API keys. In multi-tenant deployments (HOSTED_MULTI_TENANT=true), tenant projects cannot use worker-level keys — they must use their own project-scoped credentials.",
+        "Each project has its own set of API keys. In multi-tenant deployments (HOSTED_MULTI_TENANT=true), tenant projects cannot use worker-level keys. They must use their own project-scoped credentials.",
         "Use ALLOW_WORKER_LLM_FALLBACK=true to let all projects use the worker's shared AI credentials as a fallback.",
       ],
     },
@@ -37,7 +37,7 @@ export const API_KEY_MANAGEMENT_GUIDE: GuideContent = {
       title: "Emergency revocation",
       paragraphs: [
         "To immediately revoke access, delete the API key from the dashboard or via DELETE /projects/api-keys/:id. All active sessions using that key will be disconnected on the next WebSocket heartbeat.",
-        "For project-wide revocation, rotate the project's jwt_secret — all existing JWTs become invalid immediately.",
+        "For project-wide revocation, rotate the project's jwt_secret. All existing JWTs become invalid immediately.",
       ],
     },
   ],

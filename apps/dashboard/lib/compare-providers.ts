@@ -14,7 +14,7 @@ export const COMPARE_HOSTED_CHAT_HEADER = "Hosted chat SDK";
 export const COMPARE_ROWS: readonly CompareRow[] = [
   {
     label: "Edge-native (Cloudflare Workers + DO + D1)",
-    portal: "Managed SaaS — not Workers/DO-first",
+    portal: "Managed SaaS, not Workers/DO-first",
     stream: "Managed cloud",
     ably: "Managed cloud",
     pusher: "Managed cloud",
@@ -22,15 +22,15 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Multi-platform adapters (14 platforms)",
-    portal: "Web/React SDK — not 14 channel adapters",
+    portal: "Web/React SDK, not 14 channel adapters",
     stream: "Limited / separate product",
     ably: "N/A",
     pusher: "N/A",
-    fluxy: "Slack, Discord, Telegram, WhatsApp, Teams, +9 — unified interface",
+    fluxy: "Slack, Discord, Telegram, WhatsApp, Teams, +9, unified interface",
   },
   {
     label: "AI-native streaming (markdown, tool calling)",
-    portal: "Core — streaming agents + tool calls",
+    portal: "Core, streaming agents + tool calls",
     stream: "Add-on / separate product",
     ably: "N/A",
     pusher: "N/A",
@@ -42,7 +42,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     stream: "N/A",
     ably: "N/A",
     pusher: "N/A",
-    fluxy: "Consume any MCP tool server — auto-convert to function-calling",
+    fluxy: "Consume any MCP tool server, auto-convert to function-calling",
   },
   {
     label: "LLM middleware pipeline",
@@ -50,7 +50,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     stream: "N/A",
     ably: "N/A",
     pusher: "N/A",
-    fluxy: "wrapGenerate / wrapStream / transformParams — guardrails, RAG, PII",
+    fluxy: "wrapGenerate / wrapStream / transformParams, guardrails, RAG, PII",
   },
   {
     label: "Durable agent execution (WorkflowAgent)",
@@ -70,7 +70,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Headless SDK (optimistic sends, reconnect state)",
-    portal: "Excellent DX — package split, SSR-safe hooks",
+    portal: "Excellent DX, package split, SSR-safe hooks",
     stream: "Strong SDKs",
     ably: "Strong SDKs",
     pusher: "Channels SDKs",
@@ -78,7 +78,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Time to first message (CLI)",
-    portal: "npx create-* — fast hosted path",
+    portal: "npx create-*, fast hosted path",
     stream: "SDK install + dashboard setup",
     ably: "SDK install + dashboard setup",
     pusher: "SDK install + dashboard setup",
@@ -90,7 +90,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     stream: "UI kit / components (separate)",
     ably: "Headless-first",
     pusher: "Headless-first",
-    fluxy: "@fluxy-chat/ui-kit — FluxyChatWidget + FluxyInboxPanel",
+    fluxy: "@fluxy-chat/ui-kit, FluxyChatWidget + FluxyInboxPanel",
   },
   {
     label: "Agent tool events on room WebSocket",
@@ -131,6 +131,38 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     ably: "Separate products",
     pusher: "Beams (separate SKU)",
     fluxy: "REST + SDK useNotifications on same Worker",
+  },
+  {
+    label: "Mobile push (FCM + APNs + Web Push)",
+    portal: "Hosted push via vendor",
+    stream: "FCM/APNs via Stream Push",
+    ably: "Push notifications add-on",
+    pusher: "Beams (separate product)",
+    fluxy: "FCM + APNs HTTP/2 + VAPID; per-env project_push_config; client delivery ack",
+  },
+  {
+    label: "Cross-room activity feed",
+    portal: "Inbox onItem feed",
+    stream: "Activity feeds product",
+    ably: "N/A",
+    pusher: "N/A",
+    fluxy: "user_activity_feed + GET /user/activity-feed + mention fan-out",
+  },
+  {
+    label: "Support macros / canned responses",
+    portal: "Agent macros in dashboard",
+    stream: "Moderation / automations",
+    ably: "N/A",
+    pusher: "N/A",
+    fluxy: "support_canned_responses + /support/canned-responses",
+  },
+  {
+    label: "Client SDKs (mobile + game)",
+    portal: "React + React Native",
+    stream: "iOS, Android, Flutter, Unity",
+    ably: "Broad SDK coverage",
+    pusher: "iOS, Android, web",
+    fluxy: "Flutter, Swift, KMP, React Native + Unity/.NET skeletons",
   },
   {
     label: "Message middleware (validate / filter / enrich)",
@@ -198,7 +230,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Voice + AI transport pipeline",
-    portal: "Voice varies — chat-first SDK",
+    portal: "Voice varies, chat-first SDK",
     stream: "Voice / video add-ons",
     ably: "Separate products",
     pusher: "N/A",
@@ -222,11 +254,11 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   },
   {
     label: "Self-host / on your own account",
-    portal: "Proprietary cloud — no MIT self-host",
+    portal: "Proprietary cloud, no MIT self-host",
     stream: "Proprietary cloud",
     ably: "Managed-first",
     pusher: "Managed-first",
-    fluxy: "Full MIT monorepo — deploy Worker + D1 in your CF account",
+    fluxy: "Full MIT monorepo, deploy Worker + D1 in your CF account",
   },
   {
     label: "Socket fleet / VPS to operate",
@@ -253,12 +285,12 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     fluxy: "useInbox items feed + REST /inbox + console badge",
   },
   {
-    label: "MIT license — read and deploy the full stack",
+    label: "MIT license, read and deploy the full stack",
     portal: "Proprietary hosted service",
     stream: "Proprietary cloud",
     ably: "Managed-first",
     pusher: "Managed-first",
-    fluxy: "MIT monorepo — Worker, SDK, console, no vendor lock-in",
+    fluxy: "MIT monorepo, Worker, SDK, console, no vendor lock-in",
   },
 ];
 
@@ -273,13 +305,13 @@ export interface AlternativeApproach {
 export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
   {
     name: "Hosted chat SDK (proprietary)",
-    bestFor: "Teams optimizing for React DX — SSR-safe hooks, inbox feed, streaming agents, hosted dashboard.",
-    tradeoff: "Proprietary hosted service — no MIT self-host on your Cloudflare account; broader platform modules (stream, IoT, fleet) are on you.",
-    fluxyAngle: "FluxyChat matches inbox/useInbox, connection UX, and AI timeline — adds MIT self-host, Workers/DO-native deployment, and 14 channel adapters.",
+    bestFor: "Teams optimizing for React DX, SSR-safe hooks, inbox feed, streaming agents, hosted dashboard.",
+    tradeoff: "Proprietary hosted service, no MIT self-host on your Cloudflare account; broader platform modules (stream, IoT, fleet) are on you.",
+    fluxyAngle: "FluxyChat matches inbox/useInbox, connection UX, and AI timeline, adds MIT self-host, Workers/DO-native deployment, and 14 channel adapters.",
   },
   {
     name: "PartyKit (+ DO demos on X)",
-    bestFor: "Collab sessions, games, generic realtime “party” state — often mentioned beside Durable Objects in builder posts.",
+    bestFor: "Collab sessions, games, generic realtime “party” state, often mentioned beside Durable Objects in builder posts.",
     tradeoff: "Not tenant-scoped SaaS chat: no first-class multi-tenant JWT, D1 history ops, billing hooks, or operator console for your product.",
     fluxyAngle: "Pick FluxyChat when buyers need in-app messaging for customers, not a party runtime you extend into a full chat product.",
   },
@@ -298,7 +330,7 @@ export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
   {
     name: "Full Cloudflare app frameworks",
     bestFor: "Auth, RBAC, queues, uploads, AI helpers in one starter kit.",
-    tradeoff: "Realtime chat is one module among many — scope blur.",
+    tradeoff: "Realtime chat is one module among many, scope blur.",
     fluxyAngle: "FluxyChat replaces the chat/realtime slice, not your whole framework.",
   },
   {
@@ -310,7 +342,7 @@ export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
   {
     name: "DIY WebSockets on Vercel Functions (Rivet-style)",
     bestFor: "Builders assembling their own WS layer on serverless functions.",
-    tradeoff: "You own connection lifecycle, scaling, auth, and ops — easy to underestimate.",
+    tradeoff: "You own connection lifecycle, scaling, auth, and ops, easy to underestimate.",
     fluxyAngle: "FluxyChat removes the DIY socket fleet for SaaS in-app chat; you integrate the SDK.",
   },
   {
@@ -322,8 +354,8 @@ export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
   {
     name: "Chatsemble (GPL workspace app)",
     bestFor: "Self-hosted team chat + in-room agents + workflows/MCP in one React app (one DO per org, SQLite inside the DO).",
-    tradeoff: "GPL-3.0; not a headless API — you adopt their product shape or fork the monolith.",
-    fluxyAngle: "FluxyChat is MIT chat infrastructure: room-per-DO, D1, SDK, operator console — embed in your SaaS without their UI.",
+    tradeoff: "GPL-3.0; not a headless API, you adopt their product shape or fork the monolith.",
+    fluxyAngle: "FluxyChat is MIT chat infrastructure: room-per-DO, D1, SDK, operator console, embed in your SaaS without their UI.",
   },
   {
     name: "Vask (Pusher-compatible on Cloudflare)",
@@ -335,12 +367,12 @@ export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
     name: "Self-hosted helpdesk (Libredesk-style)",
     bestFor: "Full support desk, ticketing, and customer-facing helpdesk UI.",
     tradeoff: "Not a drop-in chat API for your SaaS product’s in-app threads.",
-    fluxyAngle: "FluxyChat is infrastructure for your app’s messaging — pair with your own support UI if needed.",
+    fluxyAngle: "FluxyChat is infrastructure for your app’s messaging, pair with your own support UI if needed.",
   },
   {
     name: "Node-RED WebSocket nodes",
     bestFor: "Teams that already orchestrate telco/CRM/call-center logic in flows they operate.",
-    tradeoff: "You own socket reliability, scaling, and upgrades on your Node-RED runtime — not edge room isolation.",
+    tradeoff: "You own socket reliability, scaling, and upgrades on your Node-RED runtime, not edge room isolation.",
     fluxyAngle: "FluxyChat when you want room fan-out + history on Cloudflare without maintaining WS infra; Node-RED when flows are the product and alerts are mostly pub/sub.",
   },
   {
@@ -353,8 +385,8 @@ export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
 
 export const BUYING_FAQ = [
   {
-    q: "We deploy on Vercel — can’t we use Vercel WebSockets?",
-    a: "Many teams hit WebSocket limits, pricing, or ops friction on serverless hosts. A common pattern is Vercel/Netlify for the UI and FluxyChat on Cloudflare for room state — no second Pusher bill, no VPS socket fleet.",
+    q: "We deploy on Vercel, can’t we use Vercel WebSockets?",
+    a: "Many teams hit WebSocket limits, pricing, or ops friction on serverless hosts. A common pattern is Vercel/Netlify for the UI and FluxyChat on Cloudflare for room state, no second Pusher bill, no VPS socket fleet.",
   },
   {
     q: "Do I still need a separate WebSocket vendor?",
@@ -362,7 +394,7 @@ export const BUYING_FAQ = [
   },
   {
     q: "What about idle rooms and surprise Cloudflare bills?",
-    a: "Room-scoped DOs limit blast radius vs one global socket server. You still need budget alerts, staging tests, and avoiding unbounded write loops into storage — see cost guardrails on /why.",
+    a: "Room-scoped DOs limit blast radius vs one global socket server. You still need budget alerts, staging tests, and avoiding unbounded write loops into storage, see cost guardrails on /why.",
   },
   {
     q: "Reconnect and history on refresh?",
@@ -374,11 +406,11 @@ export const BUYING_FAQ = [
   },
   {
     q: "Should I fork a DIY Durable Objects chat repo on GitHub?",
-    a: "Great for learning. For SaaS in-app chat, compare the DIY checklist on this page — FluxyChat ships the same Room DO pattern plus JWT, history, reconnect SDK, and console.",
+    a: "Great for learning. For SaaS in-app chat, compare the DIY checklist on this page, FluxyChat ships the same Room DO pattern plus JWT, history, reconnect SDK, and console.",
   },
   {
     q: "Shared state for humans and AI agents in one room?",
-    a: "FluxyChat streams agent tool events on the same WebSocket as user messages — useful for copilots and agentic SaaS. See /guides/durable-objects-for-chat-rooms.",
+    a: "FluxyChat streams agent tool events on the same WebSocket as user messages, useful for copilots and agentic SaaS. See /guides/durable-objects-for-chat-rooms.",
   },
 ] as const;
 
@@ -393,7 +425,7 @@ export const DIY_DO_COMPARISON: readonly DiyComparisonRow[] = [
   {
     concern: "One Room DO per channel + WS fan-out",
     diy: "You implement accept(), broadcast, and cleanup",
-    fluxy: "RoomDurableObject in MIT repo — same pattern, maintained",
+    fluxy: "RoomDurableObject in MIT repo, same pattern, maintained",
   },
   {
     concern: "Multi-thread / multi-tenant chat",
@@ -425,19 +457,19 @@ export const DIY_DO_COMPARISON: readonly DiyComparisonRow[] = [
 export const PUSHER_BILL_SHOCK = {
   title: "When the Pusher bill catches up",
   intro:
-    "Same story in every thread: the free tier is fine for a demo, then connection and message pricing climbs faster than the app. FluxyChat is not a flat-fee miracle — you still pay Cloudflare — but you can self-host on your account, read the MIT source, and drop a second vendor's connection counter.",
+    "Same story in every thread: the free tier is fine for a demo, then connection and message pricing climbs faster than the app. FluxyChat is not a flat-fee miracle, you still pay Cloudflare, but you can self-host on your account, read the MIT source, and drop a second vendor's connection counter.",
   bullets: [
     "Try hosted beta first; self-host when pricing starts to matter in the evaluation.",
     "One Durable Object per room keeps cost and failure scoped to that room, not one global socket server.",
     "D1 history and REST pagination instead of cache-only channel events you stitch back together.",
-    "Same SDK for hosted and self-host — swap Worker URL and keys, not your client code.",
+    "Same SDK for hosted and self-host, swap Worker URL and keys, not your client code.",
   ],
 } as const;
 
 export const SELF_HOST_POSITIONING = {
   title: "Self-host on your Cloudflare account",
   intro:
-    "A lot of teams shopping Pusher or Ably alternatives ask the same thing: can we run it ourselves? With FluxyChat, yes — that is the default story, not a footnote in the pricing page.",
+    "A lot of teams shopping Pusher or Ably alternatives ask the same thing: can we run it ourselves? With FluxyChat, yes, that is the default story, not a footnote in the pricing page.",
   bullets: [
     "Deploy apps/worker and run D1 migrations on your Cloudflare account (MIT monorepo).",
     "Same console and @fluxy-chat/sdk as hosted beta; you wire Clerk and Stripe if you want them.",
@@ -456,7 +488,7 @@ export const BUILD_VS_BUY = {
   ],
 } as const;
 
-/** SDK gzip benchmarks — from `pnpm run check:bundle-size` (artifact sizes; apps tree-shake further). */
+/** SDK gzip benchmarks, from `pnpm run check:bundle-size` (artifact sizes; apps tree-shake further). */
 export const SDK_BUNDLE_BENCHMARKS = [
   {
     package: "@fluxy-chat/react",
@@ -484,7 +516,7 @@ export const SDK_BUNDLE_BENCHMARKS = [
   },
 ] as const;
 
-/** Internal product excellence tracker — see docs/PORTAL-ZERO-BUDGET-ROADMAP.md */
+/** Internal product excellence tracker, see docs/PORTAL-ZERO-BUDGET-ROADMAP.md */
 export const PRODUCT_EXCELLENCE_TRACKER = [
   { id: "PG-ZB-1", phase: "DX", label: "create-fluxy-chat React template (60s first message)", status: "done" as const },
   { id: "PG-ZB-2", phase: "DX", label: "Public bundle benchmark table", status: "done" as const },
@@ -539,11 +571,11 @@ export type PortalGapStatus = (typeof PORTAL_GAP_CLOSURE)[number]["status"];
 export const PRODUCT_CHAT_VS_SUPPORT = {
   title: "In-app realtime platform, not a support desk",
   intro:
-    "Most live-chat listicles are written for support teams: inbox, macros, CSAT. FluxyChat is for realtime inside your product — tenant rooms, SDK embed, streaming, collab, game, IoT, fleet, spatial, and agent events on the same timeline. Wire Salesforce or HubSpot through your own integration layer; we handle the room kernel.",
+    "Most live-chat listicles are written for support teams: inbox, macros, CSAT. FluxyChat is for realtime inside your product, tenant rooms, SDK embed, streaming, collab, game, IoT, fleet, spatial, and agent events on the same timeline. Wire Salesforce or HubSpot through your own integration layer; we handle the room kernel.",
   bullets: [
     "Helpdesk products sell ticketing and agent assignment. We sell transport, history, JWT rooms, platform modules, and webhooks.",
     "User messages and agent tool_call / tool_result share one WebSocket stream, so you can replay what happened.",
-    "Stream, collab, game, IoT, and fleet modules reuse the same Worker — not a patchwork of vendor SKUs.",
+    "Stream, collab, game, IoT, and fleet modules reuse the same Worker, not a patchwork of vendor SKUs.",
   ],
 } as const;
 
@@ -553,7 +585,7 @@ export const PUSHER_ON_VERCEL = {
     "Vercel documents Pusher as a common path for live features. FluxyChat keeps the socket layer on Cloudflare so you avoid a second vendor SKU and room limits on serverless functions.",
   bullets: [
     "Keep Next.js on Vercel; point @fluxy-chat/sdk at your Worker URL.",
-    "Mint member JWTs in a Route Handler — no Pusher app keys in the browser.",
+    "Mint member JWTs in a Route Handler, no Pusher app keys in the browser.",
     "Map old channel names to roomIds; use REST + D1 for history instead of cache-only events.",
     "Self-host the Worker on your CF account when you need cost governance and opaque-socket-bill control.",
   ],
@@ -562,10 +594,10 @@ export const PUSHER_ON_VERCEL = {
 export const ABLY_ON_VERCEL = {
   title: "FluxyChat vs Ably for in-app chat on Vercel",
   intro:
-    "Ably’s Next.js starters own “realtime chat on Vercel” search. FluxyChat is the chat layer on Cloudflare Workers + DO — general pub/sub stays on Ably; tenant rooms, history, and operator tooling stay in FluxyChat.",
+    "Ably’s Next.js starters own “realtime chat on Vercel” search. FluxyChat is the chat layer on Cloudflare Workers + DO, general pub/sub stays on Ably; tenant rooms, history, and operator tooling stay in FluxyChat.",
   bullets: [
     "Same split: Vercel for SSR/UI, Worker for WebSockets.",
-    "Room-per-DO ordering and D1 history — not only channel events.",
+    "Room-per-DO ordering and D1 history, not only channel events.",
     "Agent tool events on the room stream for copilot products.",
     "MIT self-host when lock-in and per-connection bills are the objection.",
   ],
@@ -595,7 +627,53 @@ export const DECISION_FLOW = [
   {
     question: "Must run on your Cloudflare account?",
     yes: "MIT self-host FluxyChat.",
-    no: "Try hosted beta or self-host — same API shape.",
+    no: "Try hosted beta or self-host, same API shape.",
+  },
+] as const;
+
+/** Portal hackathon patterns: room as OS for humans + agents (PH-*). */
+export const HACKATHON_ROOM_OS_LINKS = [
+  {
+    id: "PH-100",
+    label: "Room as MCP server",
+    href: "https://docs.fluxy.chat/docs/guides/room-as-mcp-server",
+    console: "/rooms",
+  },
+  {
+    id: "PH-103",
+    label: "Cross-org agent negotiation",
+    href: "https://docs.fluxy.chat/docs/guides/cross-org-negotiation",
+    console: "/agents/cross-org",
+  },
+  {
+    id: "PH-110",
+    label: "Critical action quorum",
+    href: "https://docs.fluxy.chat/docs/guides/critical-action-quorum",
+    console: "/rooms",
+  },
+  {
+    id: "PH-111",
+    label: "External event ingest",
+    href: "https://docs.fluxy.chat/docs/guides/external-event-ingest",
+    console: "/rooms",
+  },
+  {
+    id: "PH-112",
+    label: "Audience score rollup",
+    href: "https://docs.fluxy.chat/docs/guides/audience-score",
+    console: "/rooms",
+  },
+  {
+    id: "PH-113",
+    label: "Asymmetric session profiles",
+    href: "https://docs.fluxy.chat/docs/guides/asymmetric-sessions",
+    console: "/rooms",
+  },
+  {
+    id: "PH-130",
+    label: "Live knowledge graph",
+    href: "https://docs.fluxy.chat/docs/guides/live-knowledge-graph",
+    console: "/rooms",
   },
 ] as const;
 

@@ -1,0 +1,62 @@
+{
+  "name": "room-connect-history",
+  "description": "NW-113: connect snapshot with history + presence + one new message",
+  "frames": [
+    {
+      "type": "subscription_succeeded",
+      "atMs": 0,
+      "payload": { "roomId": "room-demo", "socketId": "sock_1", "subscriptionCount": 1 }
+    },
+    {
+      "type": "history",
+      "atMs": 10,
+      "payload": {
+        "messages": [
+          {
+            "id": 1,
+            "roomId": "room-demo",
+            "userId": "alice",
+            "content": "hello",
+            "createdAt": "2026-08-01T10:00:00Z"
+          },
+          {
+            "id": 2,
+            "roomId": "room-demo",
+            "userId": "bob",
+            "content": "hi alice",
+            "createdAt": "2026-08-01T10:00:05Z",
+            "parentId": 1
+          }
+        ],
+        "reactions": { "1": { "👍": 2 } }
+      }
+    },
+    {
+      "type": "presence",
+      "atMs": 20,
+      "payload": { "online": 2, "users": ["alice", "bob"] }
+    },
+    {
+      "type": "message",
+      "atMs": 100,
+      "payload": {
+        "id": 3,
+        "roomId": "room-demo",
+        "userId": "alice",
+        "content": "thread reply",
+        "createdAt": "2026-08-01T10:01:00Z",
+        "parentId": 1
+      }
+    },
+    {
+      "type": "reaction",
+      "atMs": 110,
+      "payload": { "messageId": 3, "emoji": "🔥", "op": "add" }
+    }
+  ],
+  "expect": {
+    "messageCount": 3,
+    "finalOnline": 2,
+    "eventTypes": ["subscription_succeeded", "history", "presence", "message", "reaction"]
+  }
+}

@@ -17,9 +17,11 @@ import {
 import {
   notifyDmRecipient,
   notifyMentionedUsers,
+  notifyAnnouncementMembers,
 } from "../lib/in-app-notifications.js";
 import { isBlockedBetween, filterBlockedUserIds } from "../lib/user-blocks.js";
 import { assertGuestCanWrite } from "../lib/guest-auth.js";
+import { assertCanPostToRoom } from "../lib/room-post-policy.js";
 import { isValidEmoji, normalizeEmoji } from "../lib/emoji.js";
 import {
   parsePollCreateInput,
@@ -29,6 +31,8 @@ import {
   castPollVote,
 } from "../lib/message-polls.js";
 import { tryDispatchSlashCommand } from "../lib/room-command-dispatch.js";
+import { expandMentions } from "../lib/message-mentions.js";
+import { fetchAggregatedRoomLive } from "../lib/room-shard.js";
 import { runRoomFirmwareHook } from "../lib/room-firmware.js";
 import {
   parseDecisionCreateInput,
@@ -48,7 +52,7 @@ import {
 // B-4: hoist dynamic imports to top-level so they run once at module init.
 import { resolveMessageExpiryWithRoomPolicy } from "../lib/message-retention-room.js";
 import { assertProjectWriteResidency } from "../lib/data-residency-settings.js";
-import { resolveMessageVisibility, messageVisibilitySql } from "../lib/message-visibility.js";
+import { resolveMessageVisibility } from "../lib/message-visibility.js";
 import { branchRoomFromMessage } from "../lib/message-branch.js";
 import {
   getAgentRunRecord,
@@ -184,6 +188,19 @@ export async function dispatchMessagesRoutes(request, url, h) {
           return json({ error: "user_blocked" }, { status: 403 });
         }
       }
+    }
+
+    const postPolicy = await assertCanPostToRoom(env, {
+      projectId: authProjectId,
+      roomId,
+      userId: authUserId,
+      jwtRoles: auth.roles ?? [],
+    });
+    if (!postPolicy.ok) {
+      return json(
+        { error: postPolicy.error, code: postPolicy.error, roomType: postPolicy.roomType },
+        { status: postPolicy.status || 403 },
+      );
     }
 
     let pollCreate = null;
@@ -379,11 +396,25 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     const mentionsRaw = extractMentions(content);
+    let onlineUserIds = [];
+    try {
+      const live = await fetchAggregatedRoomLive(env, authProjectId, roomId);
+      onlineUserIds = live.users || [];
+    } catch {
+      onlineUserIds = [];
+    }
+    const expandedMentions = await expandMentions(env, {
+      projectId: authProjectId,
+      roomId,
+      authorUserId: authUserId,
+      tokens: mentionsRaw,
+      onlineUserIds,
+    });
     const mentions = await filterBlockedUserIds(
       env,
       authProjectId,
       authUserId,
-      mentionsRaw,
+      expandedMentions,
     );
     const firstUrl = extractFirstUrl(content);
     let preview = null;
@@ -425,6 +456,18 @@ export async function dispatchMessagesRoutes(request, url, h) {
     );
 
     const messageId = insertRes.meta.last_row_id;
+
+    ctx.waitUntil(
+      import("../lib/presence-escalation.js")
+        .then((m) =>
+          m.markPresenceEscalationResponded(env, {
+            projectId: authProjectId,
+            roomId,
+            responderUserId: authUserId,
+          }),
+        )
+        .catch(() => null),
+    );
 
     let pollSnapshot = null;
     if (pollCreate?.ok) {
@@ -534,7 +577,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     const roomRow = await env.DB.prepare(
-      "SELECT type FROM rooms WHERE project_id = ? AND id = ?",
+      "SELECT type, name FROM rooms WHERE project_id = ? AND id = ?",
     )
       .bind(authProjectId, roomId)
       .first();
@@ -551,12 +594,37 @@ export async function dispatchMessagesRoutes(request, url, h) {
         ),
       );
     }
+    if (roomRow?.type === "announcement") {
+      ctx.waitUntil(
+        notifyAnnouncementMembers(env, {
+          projectId: authProjectId,
+          roomId,
+          fromUserId: authUserId,
+          messageId,
+          preview: content,
+          roomName: roomRow.name,
+        }).catch((err) =>
+          logError("notifications.announcement_failed", err, requestLogCtx),
+        ),
+      );
+    }
 
     const roomStub = await getRoomStubForProject(env, authProjectId, roomId, authUserId);
     ctx.waitUntil(
       roomStub
         .fetch("https://internal/schedule-expiry", { method: "POST" })
         .catch((err) => logError("message.expiry_schedule_failed", err, requestLogCtx)),
+    );
+
+    const { resolveVisibilityRecipientUserIds } = await import(
+      "../lib/message-visibility.js",
+    );
+    const scopedRecipients = await resolveVisibilityRecipientUserIds(
+      env,
+      roomId,
+      visibility,
+      visibleTo,
+      authUserId,
     );
 
     await fanoutRoomInternal(env, authProjectId, roomId, "/announce", {
@@ -570,7 +638,10 @@ export async function dispatchMessagesRoutes(request, url, h) {
         createdAt,
         parentId,
         ...(messageExpiresAt ? { expiresAt: messageExpiresAt } : {}),
-        ...(visibility === "whisper" ? { visibility, visibleTo } : {}),
+        ...(visibility !== "room"
+          ? { visibility, ...(visibleTo.length ? { visibleTo } : {}) }
+          : {}),
+        ...(scopedRecipients ? { recipientUserIds: [...scopedRecipients] } : {}),
         ...(pollSnapshot ? { poll: pollSnapshot, contentType: "poll" } : {}),
         ...(decisionSnapshot ? { decision: decisionSnapshot, contentType: "decision" } : {}),
         clientMessageId: clientMessageId ?? undefined,
@@ -628,6 +699,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
         traceId,
         mentionedUserIds: mentions,
         roomType: roomRow?.type ?? null,
+        roomName: roomRow?.name ?? null,
         attachments: sanitizedAttachments,
       }).catch(async (err) => {
         // Audit S-41: surface automation failures to the operator.
@@ -677,7 +749,9 @@ export async function dispatchMessagesRoutes(request, url, h) {
           contentType: a.contentType ?? undefined,
         })),
         ...(messageExpiresAt ? { expiresAt: messageExpiresAt } : {}),
-        ...(visibility === "whisper" ? { visibility, visibleTo } : {}),
+        ...(visibility !== "room"
+          ? { visibility, ...(visibleTo.length ? { visibleTo } : {}) }
+          : {}),
         ...(pollSnapshot ? { poll: pollSnapshot } : {}),
         ...(decisionSnapshot ? { decision: decisionSnapshot } : {}),
       },
@@ -755,7 +829,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
     if (!Number.isFinite(messageId)) {
       return json({ error: "invalid message id" }, { status: 400 });
     }
-    const poll = await getMessagePoll(env, messageId, auth.projectId);
+    const poll = await getMessagePoll(env, messageId, auth.projectId, auth.userId);
     if (!poll) return json({ error: "poll not found" }, { status: 404 });
     return json({ poll });
   }
@@ -831,7 +905,56 @@ export async function dispatchMessagesRoutes(request, url, h) {
     if (!result.ok) {
       return json({ error: result.error }, { status: result.status || 400 });
     }
+    const msgRow = await env.DB.prepare(
+      "SELECT room_id FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (msgRow?.room_id) {
+      await fanoutRoomInternal(env, auth.projectId, msgRow.room_id, "/announce", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "poll_updated",
+          roomId: msgRow.room_id,
+          messageId,
+          poll: result.poll,
+          userId: auth.userId,
+        }),
+      });
+    }
     return json({ ok: true, poll: result.poll });
+  }
+
+  const translateGetMatch = url.pathname.match(/^\/messages\/([^/]+)\/translate$/);
+  if (translateGetMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(translateGetMatch[1]);
+    if (!Number.isFinite(messageId)) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const targetLang = url.searchParams.get("targetLang") ?? url.searchParams.get("target_lang");
+    if (!targetLang) {
+      return json({ error: "targetLang query required" }, { status: 400 });
+    }
+    const msgRow = await env.DB.prepare(
+      `SELECT id, room_id FROM messages
+       WHERE id = ? AND project_id = ? AND deleted_at IS NULL LIMIT 1`,
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!msgRow) return json({ error: "message not found" }, { status: 404 });
+    const allowed = await canAccessRoom(env, auth, msgRow.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+
+    const { getCachedTranslation, normalizeTargetLang } = await import("../lib/message-translation.js");
+    const normalized = normalizeTargetLang(targetLang);
+    if (!normalized) return json({ error: "invalid_target_lang" }, { status: 400 });
+    const cached = await getCachedTranslation(env, messageId, normalized);
+    if (!cached) return json({ messageId, translation: null }, { status: 404 });
+    return json({ messageId, cached: true, translation: cached });
   }
 
   const translateMatch = url.pathname.match(/^\/messages\/([^/]+)\/translate$/);

@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils";
 import { Check, ArrowRight, MessagesSquare, Bot, Webhook, Shield, Server, Workflow, GitFork, GanttChartSquare, Zap } from "lucide-react";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Pricing — Fluxychat",
+  title: "Pricing: Fluxychat",
   description:
-    "Chat, AI agents, and platform modules on one plan. Free tier to Growth — undercuts Pusher and Ably on message quotas.",
+    "Chat, AI agents, and platform modules on one plan. Free tier to Growth, undercutting Pusher and Ably on message quotas.",
   path: "/pricing",
 });
 
@@ -66,7 +66,7 @@ function PricingHero() {
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
           One plan covers chat, AI agents, webhooks, and platform modules (stream, collab, game, IoT). Starter at
-          $20/mo — less than Pusher Startup at $49/mo for similar traffic.
+          $20/mo, less than Pusher Startup at $49/mo for similar traffic.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="bg-[var(--fluxy-cta-color)] text-white hover:opacity-90">

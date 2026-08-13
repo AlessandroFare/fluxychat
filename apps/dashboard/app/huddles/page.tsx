@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2, Mic, MicOff, Monitor, Phone, PhoneOff, Video } from "lucide-react";
+import { Loader2, Video } from "lucide-react";
 import { createHuddle } from "@fluxy-chat/sdk";
+import { CallButton, CallScreen } from "@fluxy-chat/ui";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { ConsoleFeedback } from "../components/console-feedback";
@@ -21,6 +22,7 @@ import {
   startCall,
   toggleCallRecording,
   type CallSession,
+  type CallParticipant as HuddleParticipant,
 } from "@/lib/huddles-client";
 import { enableVoiceStage } from "@/lib/voice-stage-client";
 
@@ -36,6 +38,9 @@ export default function HuddlesPage() {
   const [calls, setCalls] = useState<CallSession[]>([]);
   const [roomId, setRoomId] = useState("");
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const [callParticipants, setCallParticipants] = useState<HuddleParticipant[]>([]);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(true);
   const [displayName, setDisplayName] = useState("Console user");
   const [eventLog, setEventLog] = useState<string[]>([]);
 
@@ -78,6 +83,12 @@ export default function HuddlesPage() {
     void loadCalls();
   }, [loadCalls]);
 
+  async function refreshParticipants(callId: string) {
+    if (!token) return;
+    const detail = await getCall(token, callId);
+    setCallParticipants(detail.participants ?? []);
+  }
+
   async function handleCreateAndStart() {
     if (!token || !roomId.trim()) return;
     setBusy("create");
@@ -86,6 +97,7 @@ export default function HuddlesPage() {
       await startCall(token, created.id);
       await joinCall(token, { callId: created.id, displayName });
       setActiveCallId(created.id);
+      await refreshParticipants(created.id);
       await huddle.join();
       setNotice(`Huddle ${created.id} started`);
       await loadCalls();
@@ -103,6 +115,9 @@ export default function HuddlesPage() {
       await huddle.leave();
       await endCall(token, activeCallId);
       setActiveCallId(null);
+      setCallParticipants([]);
+      setIsMuted(false);
+      setIsVideoOff(true);
       setNotice("Huddle ended");
       await loadCalls();
     } catch (err) {
@@ -122,7 +137,29 @@ export default function HuddlesPage() {
   async function handleRefreshCall() {
     if (!token || !activeCallId) return;
     const detail = await getCall(token, activeCallId);
-    setNotice(`${detail.participants.length} participant(s) in call`);
+    const participants = detail.participants ?? [];
+    setCallParticipants(participants);
+    setNotice(`${participants.length} participant(s) in call`);
+  }
+
+  function handleToggleMute() {
+    if (isMuted) {
+      huddle.unmute();
+      setIsMuted(false);
+      setNotice("Unmuted");
+    } else {
+      huddle.mute();
+      setIsMuted(true);
+      setNotice("Muted");
+    }
+  }
+
+  function handleToggleVideo() {
+    setIsVideoOff((prev) => {
+      const next = !prev;
+      setNotice(next ? "Camera off" : "Camera on");
+      return next;
+    });
   }
 
   async function handleEnableStage() {
@@ -130,7 +167,7 @@ export default function HuddlesPage() {
     setBusy("stage");
     try {
       await enableVoiceStage(token, roomId.trim(), { maxSpeakers: 5 });
-      setNotice("Voice stage enabled — join from room chat (Stage · Listen / Speak).");
+      setNotice("Voice stage enabled. Join from room chat (Stage · Listen / Speak).");
     } catch (err) {
       setError(messageFromUnknown(err, "Enable stage failed"));
     } finally {
@@ -148,7 +185,7 @@ export default function HuddlesPage() {
 
       {!token && (
         <Panel className="p-4 text-sm text-muted-foreground">
-          Admin JWT required — copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
+          Admin JWT required. Copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
         </Panel>
       )}
 
@@ -163,21 +200,13 @@ export default function HuddlesPage() {
               <RoomPicker token={token} value={roomId} onChange={setRoomId} />
               <Input placeholder="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" disabled={!token || !roomId || !!busy} onClick={() => void handleCreateAndStart()}>
-                  <Phone className="h-3 w-3 mr-1" /> Start huddle
-                </Button>
-                <Button size="sm" variant="outline" disabled={!activeCallId || !!busy} onClick={() => void handleEnd()}>
-                  <PhoneOff className="h-3 w-3 mr-1" /> End
-                </Button>
-                <Button size="sm" variant="outline" disabled={!activeCallId} onClick={() => { huddle.mute(); setNotice("Muted"); }}>
-                  <MicOff className="h-3 w-3" />
-                </Button>
-                <Button size="sm" variant="outline" disabled={!activeCallId} onClick={() => { huddle.unmute(); setNotice("Unmuted"); }}>
-                  <Mic className="h-3 w-3" />
-                </Button>
-                <Button size="sm" variant="outline" disabled={!activeCallId} onClick={() => void huddle.startScreenShare()}>
-                  <Monitor className="h-3 w-3" />
-                </Button>
+                <CallButton
+                  isActive={!!activeCallId}
+                  mode="video"
+                  disabled={!token || !roomId || !!busy}
+                  onStart={() => void handleCreateAndStart()}
+                  onEnd={() => void handleEnd()}
+                />
                 <Button size="sm" variant="outline" disabled={!activeCallId} onClick={() => void handleToggleRecording()}>
                   <Video className="h-3 w-3 mr-1" /> Record
                 </Button>
@@ -185,6 +214,24 @@ export default function HuddlesPage() {
                   Enable voice stage
                 </Button>
               </div>
+              {activeCallId ? (
+                <CallScreen
+                  className="mt-4"
+                  title={`Huddle · ${roomId}`}
+                  localUserId={displayName}
+                  isMuted={isMuted}
+                  isVideoOff={isVideoOff}
+                  participants={callParticipants.map((p) => ({
+                    userId: p.user_id,
+                    displayName: p.display_name ?? p.user_id,
+                    isMuted: !p.audio_enabled,
+                    isVideoOff: !p.video_enabled,
+                  }))}
+                  onToggleMute={handleToggleMute}
+                  onToggleVideo={handleToggleVideo}
+                  onEndCall={() => void handleEnd()}
+                />
+              ) : null}
               <p className="text-xs text-muted-foreground">Local status: <Badge variant="outline">{huddle.getStatus()}</Badge></p>
             </Panel>
           </Section>

@@ -112,7 +112,7 @@ console.log("Discord clone ready! Channels:", channels.join(", "));
     mainFile: "widget.js",
     dependencies: { "@fluxy-chat/sdk": "latest" },
     files: {
-      "widget.js": `// Drop-in support widget — 15 lines
+      "widget.js": `// Drop-in support widget (15 lines)
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 
 export function mountSupportWidget(container, { projectId, theme = "light" }) {
@@ -133,7 +133,7 @@ export function mountSupportWidget(container, { projectId, theme = "light" }) {
 
   setTimeout(() => {
     if (!humanResponded) {
-      room.invokeAgent("support-bot", "Customer waiting — please assist.");
+      room.invokeAgent("support-bot", "Customer waiting. Please assist.");
     }
   }, 30000);
 
@@ -190,7 +190,7 @@ function haversine(lat1, lon1, lat2, lon2) {
 room.onLocationUpdate((update) => {
   const dist = haversine(office.lat, office.lng, update.lat, update.lng);
   const inside = dist * 1000 <= office.radius;
-  console.log(\`\${update.deviceId}: (\${update.lat.toFixed(4)}, \${update.lng.toFixed(4)}) — \${inside ? "✅ inside geofence" : "⚠️ outside"} (\${(dist*1000).toFixed(0)}m)\`);
+  console.log(\`\${update.deviceId}: (\${update.lat.toFixed(4)}, \${update.lng.toFixed(4)}): \${inside ? "✅ inside geofence" : "⚠️ outside"} (\${(dist*1000).toFixed(0)}m)\`);
 
   if (!inside) {
     room.sendMessage(\`⚠️ Device \${update.deviceId} left the geofence!\`);
@@ -225,7 +225,7 @@ export default function TemplatesPage() {
     try {
       const stackblitz = (await import("@stackblitz/sdk")).default;
       stackblitz.openProject({
-        title: `FluxyChat — ${selected.title}`,
+        title: `FluxyChat: ${selected.title}`,
         description: selected.description,
         template: "node",
         files: selected.files,

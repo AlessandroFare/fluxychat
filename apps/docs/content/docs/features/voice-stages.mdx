@@ -5,20 +5,20 @@ description: Discord Stages-style speaker and listener roles with active-speaker
 
 # Voice stages
 
-Split voice participants into **speakers** and **listeners**. Only speakers publish audio by default; listeners request to speak or are promoted by moderators.
+Split voice participants into speakers and listeners. Only speakers publish audio by default. Listeners request to speak or are promoted by moderators.
 
 ## Console / in-room UI
 
-**Voice AI** (`/voice-ai`) and the in-room **Voice stage panel** (`VoiceStagePanel`):
+**Voice AI** (`/voice-ai`) and the in-room Voice stage panel (`VoiceStagePanel`):
 
 - Toggle speaker / listener role
-- **Request to speak** queue for listeners
+- Request to speak queue for listeners
 - Moderator promote / demote
 - Active speaker highlight (Silero VAD)
 
 ## Active speaker
 
-`useVoiceStageVad` + Silero VAD highlights who is speaking — same pipeline as [voice AI](/docs/guides/voice-ai-pipeline).
+`useVoiceStageVad` plus Silero VAD highlights who is speaking. Same pipeline as [voice AI](/docs/guides/voice-ai-pipeline).
 
 ## API
 
@@ -39,5 +39,5 @@ Ideal for AMAs, town halls, and large voice rooms without everyone unmuted.
 
 ## Related
 
-- [FluxyStream](/docs/features/fluxystream) — live audience modes
-- [Empathy layer](/docs/features/empathy-layer) — prosody hints
+- [FluxyStream](/docs/features/fluxystream): live audience modes
+- [Empathy layer](/docs/features/empathy-layer): prosody hints

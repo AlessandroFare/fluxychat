@@ -5,7 +5,7 @@ description: Pending reports queue, mute/ban/delete actions, and moderator histo
 
 # Moderation console
 
-Central **moderation queue** for AI-flagged and user-reported content. Moderators review, act, and audit history.
+Central moderation queue for AI-flagged and user-reported content. Moderators review, act, and audit history.
 
 ## Console
 
@@ -13,12 +13,12 @@ Central **moderation queue** for AI-flagged and user-reported content. Moderator
 
 | Section | Purpose |
 |---------|---------|
-| Pending queue | AI flags + user reports awaiting review |
+| Pending queue | AI flags and user reports awaiting review |
 | Stats | Queue depth, top categories, period totals |
 | Actions | Mute, ban, delete message, dismiss flag |
 | History | `moderation_events` audit trail |
 
-Use **Room picker** to scope queue to a specific room.
+Use Room picker to scope queue to a specific room.
 
 ## AI moderation
 
@@ -27,9 +27,9 @@ Text and image flags enqueue automatically when enabled:
 | Variable | Purpose |
 |----------|---------|
 | `AI_MODERATION_ENABLED` | Text/content classification |
-| `VISUAL_MODERATION_ENABLED` | Frame capture + image moderation on live/video |
+| `VISUAL_MODERATION_ENABLED` | Frame capture and image moderation on live/video |
 
-Actions per severity: log only, mute user, delete message — configured in worker moderation engine.
+Actions per severity: log only, mute user, delete message. Configured in worker moderation engine.
 
 ## Visual moderation
 
@@ -45,5 +45,5 @@ Moderation routes are under `/admin/moderation/*` and room-scoped moderation act
 
 ## Related
 
-- [Tool approvals](/docs/guides/tool-approvals) — agent-side moderation tools
+- [Tool approvals](/docs/guides/tool-approvals): agent-side moderation tools
 - [Security](/docs/security)

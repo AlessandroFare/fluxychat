@@ -215,7 +215,7 @@ export default function EuAiActCompliancePage() {
       />
 
       <Banner variant="info" className="mb-4">
-        Technical controls only — not legal advice. Pair with counsel for formal conformity assessment.
+        Technical controls only, not legal advice. Pair with counsel for formal conformity assessment.
         See also{" "}
         <Link href="/ai-governance" className="underline">
           AI Governance registry
@@ -227,7 +227,7 @@ export default function EuAiActCompliancePage() {
 
       {!token ? (
         <Panel className="p-6 text-sm text-muted-foreground">
-          Admin JWT required — open{" "}
+          Admin JWT required. Open{" "}
           <Link href="/projects" className="font-medium underline-offset-2 hover:underline">
             Projects
           </Link>
@@ -378,7 +378,7 @@ export default function EuAiActCompliancePage() {
                   <option value="">Select agent…</option>
                   {agents.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name} {profileByAgent.has(a.id) ? "✓" : "— no profile"}
+                      {a.name} {profileByAgent.has(a.id) ? "✓" : "(no profile)"}
                     </option>
                   ))}
                 </select>
@@ -404,7 +404,7 @@ export default function EuAiActCompliancePage() {
                   rows={2}
                   value={intendedPurpose}
                   onChange={(e) => setIntendedPurpose(e.target.value)}
-                  placeholder="e.g. Internal support triage — not used for hiring decisions"
+                  placeholder="e.g. Internal support triage, not used for hiring decisions"
                 />
               </div>
               <div>
@@ -489,7 +489,7 @@ export default function EuAiActCompliancePage() {
                   return (
                     <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">
                       <span>
-                        {agent?.name ?? p.agentId} — {p.intendedPurpose.slice(0, 60)}
+                        {agent?.name ?? p.agentId}: {p.intendedPurpose.slice(0, 60)}
                         {p.intendedPurpose.length > 60 ? "…" : ""}
                       </span>
                       <div className="flex items-center gap-2">
