@@ -64,6 +64,7 @@ export async function listMarketplaceAgents(opts?: {
   sort?: string;
   limit?: number;
   offset?: number;
+  token?: string;
 }): Promise<MarketplaceAgent[]> {
   const url = new URL("/marketplace/agents", BASE);
   url.searchParams.set("status", "published");
@@ -72,7 +73,8 @@ export async function listMarketplaceAgents(opts?: {
   if (opts?.sort) url.searchParams.set("sort", opts.sort);
   if (opts?.limit) url.searchParams.set("limit", String(opts.limit));
   if (opts?.offset) url.searchParams.set("offset", String(opts.offset));
-  const res = await fetchWorkerJson<{ agents: MarketplaceAgent[] }>(url.toString());
+  const headers = opts?.token ? { Authorization: `Bearer ${opts.token}` } : undefined;
+  const res = await fetchWorkerJson<{ agents: MarketplaceAgent[] }>(url.toString(), { headers });
   return res.agents;
 }
 
@@ -86,9 +88,10 @@ export async function getMarketplaceAgent(slug: string): Promise<MarketplaceAgen
   }
 }
 
-export async function getMarketplaceStats(): Promise<MarketplaceStats> {
+export async function getMarketplaceStats(token?: string): Promise<MarketplaceStats> {
   const url = new URL("/marketplace/stats", BASE);
-  const res = await fetchWorkerJson<{ stats: MarketplaceStats }>(url.toString());
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const res = await fetchWorkerJson<{ stats: MarketplaceStats }>(url.toString(), { headers });
   return res.stats;
 }
 

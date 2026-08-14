@@ -41,7 +41,8 @@ import {
 } from "@fluxy-chat/sdk";
 import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
-import { mentionPrefixForAgent, normalizeAgentHandle } from "@/lib/assistant-room";
+import { mentionPrefixForAgent, normalizeAgentHandle, projectIdFromAssistantRoomId } from "@/lib/assistant-room";
+import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
 import {
   normalizeAgentRun,
   type AgentRunDisplay,
@@ -295,6 +296,8 @@ export interface FluxyChatProps {
   agentId?: string;
   agentName?: string;
   agentHandle?: string | null;
+  /** When set with an assistant room id, auto-provisions the room before connecting. */
+  projectId?: string;
   adminJwt?: string;
   memberJwt?: string;
   memberUserId?: string;
@@ -353,6 +356,7 @@ export function FluxyChat({
   className,
   variant = "full",
   suggestedPrompts,
+  projectId = "",
 }: FluxyChatProps) {
   // Variant-based feature flags
   const showPlusMenu = variant === "full" || variant === "demo" || variant === "onboarding";
@@ -517,6 +521,52 @@ export function FluxyChat({
     undefined;
 
   const trimmedRoomId = roomId.trim();
+  const assistantProjectId = projectId.trim() || projectIdFromAssistantRoomId(trimmedRoomId) || "";
+  const shouldBootstrapAssistant =
+    trimmedRoomId.startsWith("assistant-") &&
+    Boolean(assistantProjectId) &&
+    Boolean(memberJwt.trim());
+  const [resolvedRoomId, setResolvedRoomId] = useState<string | null>(
+    shouldBootstrapAssistant ? null : trimmedRoomId,
+  );
+  const [roomBootstrapError, setRoomBootstrapError] = useState<string | null>(null);
+  const activeRoomId = shouldBootstrapAssistant ? (resolvedRoomId ?? "") : trimmedRoomId;
+
+  useEffect(() => {
+    if (shouldBootstrapAssistant) {
+      setResolvedRoomId(null);
+      return;
+    }
+    setResolvedRoomId(trimmedRoomId);
+  }, [trimmedRoomId, shouldBootstrapAssistant]);
+
+  useEffect(() => {
+    if (!shouldBootstrapAssistant) return;
+
+    let cancelled = false;
+    setRoomBootstrapError(null);
+
+    void ensureAssistantRoom({
+      workerUrl: WORKER_URL,
+      memberJwt: memberJwt.trim(),
+      memberUserId: memberUserId?.trim() || chatUserId || "dashboard",
+      projectId: assistantProjectId,
+      adminJwt: adminJwt.trim() || undefined,
+    })
+      .then(({ room }) => {
+        if (!cancelled) setResolvedRoomId(room.id);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setRoomBootstrapError(messageFromUnknown(err, "Could not open assistant room"));
+          setResolvedRoomId(trimmedRoomId);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldBootstrapAssistant, trimmedRoomId, memberJwt, assistantProjectId, adminJwt, memberUserId, chatUserId]);
 
   // ─── Huddle state ───
   const [huddleActive, setHuddleActive] = useState(false);
@@ -675,7 +725,7 @@ export function FluxyChat({
     sendReaction,
     setTyping,
   } = useChat({
-    roomId: trimmedRoomId,
+    roomId: activeRoomId,
     agentId,
     client: usesExplicitClient ? (clientProp ?? undefined) : undefined,
     replay,
@@ -1568,6 +1618,25 @@ export function FluxyChat({
           {connectionState.status === "degraded-http" && connectionState.canPublishViaHttp ? (
             <span className="ml-2 opacity-80">· Messages still send via HTTP</span>
           ) : null}
+        </div>
+      ) : null}
+      {shouldBootstrapAssistant && !activeRoomId ? (
+        <div
+          role="status"
+          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800"
+        >
+          <span className="inline-flex items-center gap-1.5 font-medium">
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+            Opening assistant room…
+          </span>
+        </div>
+      ) : null}
+      {roomBootstrapError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900"
+        >
+          {roomBootstrapError}
         </div>
       ) : null}
       {syncStatus === "pending" || syncStatus === "offline" ? (

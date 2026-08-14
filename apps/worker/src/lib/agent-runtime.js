@@ -182,6 +182,35 @@ export function normalizeMentionHandle(handle) {
     .toLowerCase();
 }
 
+async function persistMentionAgentRun(env, { runId, projectId, agentId, roomId, result, createdAt, errorOverride = null }) {
+  const status = result.status === "completed" ? "completed" : "failed";
+  const errorText = errorOverride ?? result.error ?? null;
+  try {
+    await env.DB.prepare(
+      "INSERT INTO agent_runs (id, project_id, agent_id, room_id, status, latency_ms, input_tokens, output_tokens, estimated_cost, error, tool_calls_json, context_fetched, iterations, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )
+      .bind(
+        runId,
+        projectId,
+        agentId,
+        roomId,
+        status,
+        result.latencyMs ?? 0,
+        result.inputTokens ?? 0,
+        result.outputTokens ?? 0,
+        result.estimatedCost ?? 0,
+        errorText,
+        result.toolCalls?.length ? JSON.stringify(result.toolCalls) : null,
+        result.contextFetched ?? 0,
+        result.iterations ?? 0,
+        createdAt,
+      )
+      .run();
+  } catch (err) {
+    logError("agent.mention_invoke_persist_failed", err, { projectId, agentId, roomId, runId });
+  }
+}
+
 export async function invokeMentionedAgents(
   env,
   projectId,
@@ -294,20 +323,25 @@ export async function invokeMentionedAgents(
           });
         }
 
-        await env.DB.prepare(
-          "INSERT INTO agent_runs (id, project_id, agent_id, room_id, status, latency_ms, input_tokens, output_tokens, estimated_cost, error, tool_calls_json, context_fetched, iterations, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        )
-          .bind(
-            result.runId, projectId, agentRow.id, roomId, "completed",
-            result.latencyMs, result.inputTokens, result.outputTokens, result.estimatedCost,
-            null,
-            result.toolCalls.length ? JSON.stringify(result.toolCalls) : null,
-            result.contextFetched, result.iterations, createdAt
-          )
-          .run();
-
         logInfo("agent.mention_invoke_completed", { projectId, agentId: agentRow.id, roomId, runId: result.runId, streamed: true });
+      } else if (result.status === "failed") {
+        logInfo("agent.mention_invoke_failed", {
+          projectId,
+          agentId: agentRow.id,
+          roomId,
+          runId: result.runId,
+          error: result.error,
+        });
       }
+
+      await persistMentionAgentRun(env, {
+        runId: result.runId,
+        projectId,
+        agentId: agentRow.id,
+        roomId,
+        result,
+        createdAt: new Date().toISOString(),
+      });
 
       await stub.fetch("https://internal/announce", {
         method: "POST",
@@ -319,6 +353,27 @@ export async function invokeMentionedAgents(
       }).catch(() => {});
     } catch (err) {
       logError("agent.mention_invoke_error", err, { projectId, agentId: agentRow.id, roomId });
+      const failedRunId = crypto.randomUUID();
+      const errorText = truncateForStorage(err instanceof Error ? err.message : "agent_mention_invoke_failed");
+      await persistMentionAgentRun(env, {
+        runId: failedRunId,
+        projectId,
+        agentId: agentRow.id,
+        roomId,
+        result: {
+          status: "failed",
+          latencyMs: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          estimatedCost: 0,
+          toolCalls: [],
+          contextFetched: 0,
+          iterations: 0,
+          error: errorText,
+        },
+        createdAt: new Date().toISOString(),
+        errorOverride: errorText,
+      });
       const id = env.ROOM.idFromName(roomId);
       const stub = env.ROOM.get(id);
       await stub.fetch("https://internal/announce", {

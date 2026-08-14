@@ -20,8 +20,14 @@ export async function dispatchMarketplaceRoutes(request, url, h) {
     const sort = url.searchParams.get("sort");
     const limit = parseInt(url.searchParams.get("limit") || "50", 10);
     const offset = parseInt(url.searchParams.get("offset") || "0", 10);
-    const agents = await listAgents(env, { category, status: "published", search, sort, limit, offset });
-    return respond({ agents }, h);
+    try {
+      const agents = await listAgents(env, { category, status: "published", search, sort, limit, offset });
+      return respond({ agents }, h);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/no such table/i.test(message)) return respond({ agents: [] }, h);
+      throw err;
+    }
   }
 
   if (request.method === "GET" && path.match(/^\/marketplace\/agents\/[^/]+$/)) {
@@ -32,8 +38,18 @@ export async function dispatchMarketplaceRoutes(request, url, h) {
   }
 
   if (request.method === "GET" && path === "/marketplace/stats") {
-    const stats = await getMarketplaceStats(env);
-    return respond({ stats }, h);
+    try {
+      const stats = await getMarketplaceStats(env);
+      return respond({ stats }, h);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/no such table/i.test(message)) {
+        return respond({
+          stats: { totalAgents: 0, totalInstalls: 0, avgRating: 0, byCategory: [] },
+        }, h);
+      }
+      throw err;
+    }
   }
 
   if (!path.startsWith("/admin/marketplace")) return null;

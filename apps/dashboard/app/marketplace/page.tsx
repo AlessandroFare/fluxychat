@@ -220,10 +220,10 @@ const CATEGORY_ICONS: Record<string, typeof Bot> = {
 };
 
 function AgentTemplateGallery() {
-  const { adminJwt, activeProject } = useDashboardSession();
+  const { adminJwt, memberJwt, activeProject } = useDashboardSession();
   const { user: clerkUser } = useClerkUser();
   const memberUserId = clerkUser?.id ? fluxyUserIdFromClerk(clerkUser.id) : "dashboard";
-  const token = adminJwt.trim();
+  const token = (adminJwt || memberJwt).trim();
 
   const [agents, setAgents] = useState<MarketplaceAgent[]>([]);
   const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
@@ -254,8 +254,13 @@ function AgentTemplateGallery() {
     setSuccessMsg(null);
     try {
       const [agentList, marketplaceStats] = await Promise.all([
-        listMarketplaceAgents({ category: category || undefined, search: search || undefined, sort: sort || undefined }),
-        getMarketplaceStats(),
+        listMarketplaceAgents({
+          category: category || undefined,
+          search: search || undefined,
+          sort: sort || undefined,
+          token: token || undefined,
+        }),
+        getMarketplaceStats(token || undefined),
       ]);
       setAgents(agentList);
       setStats(marketplaceStats);

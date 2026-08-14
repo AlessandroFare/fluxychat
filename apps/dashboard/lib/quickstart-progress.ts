@@ -74,23 +74,14 @@ function progressBelongsToUser(progress: QuickstartProgress, clerkUserId: string
   return progress.clerkUserId === clerkUserId;
 }
 
-/** Required steps done for this Clerk user only. */
+/** Quickstart wizard finished (finish step). Session hints alone do not count. */
 export function isQuickstartComplete(
   clerkUserId: string | null | undefined,
-  session: QuickstartSessionSnapshot,
+  _session: QuickstartSessionSnapshot,
   progress: QuickstartProgress = loadQuickstartProgress(clerkUserId),
 ): boolean {
   if (!clerkUserId) return false;
   if (!progressBelongsToUser(progress, clerkUserId)) return false;
-
-  if (progress.completedAt) return true;
-
-  return (
-    session.adminJwt.trim().length >= 12 &&
-    Boolean(session.activeProjectId) &&
-    session.memberJwt.trim().length >= 12 &&
-    Boolean(session.lastRoomId) &&
-    Boolean(progress.firstMessageSent)
-  );
+  return Boolean(progress.completedAt);
 }
 

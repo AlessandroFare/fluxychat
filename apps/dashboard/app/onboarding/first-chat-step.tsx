@@ -113,6 +113,7 @@ export function FirstChatStep({ wizard: w }: FirstChatStepProps) {
       {canChat ? (
         <FluxyChat
           roomId={w.room!.id}
+          projectId={w.project?.id ?? ""}
           agentId={agentId}
           agentName={agentName}
           agentHandle="assistant"

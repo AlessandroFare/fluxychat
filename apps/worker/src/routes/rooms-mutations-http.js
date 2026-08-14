@@ -284,13 +284,24 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       return json({ error: "forbidden" }, { status: 403 });
     }
     const days = Number(url.searchParams.get("days") || 7);
-    const { getRoomSentimentTimeline } = await import("../lib/room-sentiment.js");
-    const data = await getRoomSentimentTimeline(env, {
-      projectId: auth.projectId,
-      roomId: sentimentRoomId,
-      days,
-    });
-    return json(data);
+    try {
+      const { getRoomSentimentTimeline } = await import("../lib/room-sentiment.js");
+      const data = await getRoomSentimentTimeline(env, {
+        projectId: auth.projectId,
+        roomId: sentimentRoomId,
+        days,
+      });
+      return json(data);
+    } catch (err) {
+      logError("room.sentiment_failed", err, requestLogCtx);
+      return json({
+        ok: true,
+        roomId: sentimentRoomId,
+        days,
+        aggregate: { mood: "neutral", score: 0, positive: 0, negative: 0, neutral: 0, total: 0 },
+        timeline: [],
+      });
+    }
   }
 
   if (
@@ -772,6 +783,43 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       }).catch(() => {}),
     );
     return json(result);
+  }
+
+  if (
+    url.pathname.match(/^\/rooms\/[^/]+$/) &&
+    request.method === "GET"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const roomId = decodeURIComponent(url.pathname.split("/")[2] || "");
+    const canAccess = await canAccessRoom(env, auth, roomId);
+    if (!canAccess) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    let room;
+    try {
+      room = await env.DB.prepare(
+        `SELECT id, type, name, created_at, pinned_message_id, pinned_at, pinned_by_user_id,
+                project_goal, project_budget, project_timeline_start, project_timeline_end, project_status
+         FROM rooms WHERE id = ? AND project_id = ? LIMIT 1`,
+      )
+        .bind(roomId, auth.projectId)
+        .first();
+    } catch {
+      room = await env.DB.prepare(
+        `SELECT id, type, name, created_at FROM rooms WHERE id = ? AND project_id = ? LIMIT 1`,
+      )
+        .bind(roomId, auth.projectId)
+        .first();
+    }
+    if (!room) return json({ error: "room not found" }, { status: 404 });
+    return json({ room });
   }
 
   if (

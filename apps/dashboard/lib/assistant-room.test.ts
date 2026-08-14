@@ -3,6 +3,7 @@ import {
   assistantRoomId,
   mentionPrefixForAgent,
   pickDefaultAssistantAgent,
+  projectIdFromAssistantRoomId,
 } from "./assistant-room";
 
 describe("assistant-room", () => {
@@ -27,5 +28,7 @@ describe("assistant-room", () => {
   it("mentionPrefixForAgent strips leading @", () => {
     expect(mentionPrefixForAgent("@assistant")).toBe("@assistant ");
     expect(assistantRoomId("general")).toBe("assistant-general");
+    expect(projectIdFromAssistantRoomId("assistant-general")).toBe("general");
+    expect(projectIdFromAssistantRoomId("support-room")).toBeNull();
   });
 });
