@@ -31,7 +31,7 @@ import {
   castPollVote,
 } from "../lib/message-polls.js";
 import { tryDispatchSlashCommand } from "../lib/room-command-dispatch.js";
-import { expandMentions } from "../lib/message-mentions.js";
+import { expandMentions, mentionHandlesForAgentInvoke } from "../lib/message-mentions.js";
 import { fetchAggregatedRoomLive } from "../lib/room-shard.js";
 import { runRoomFirmwareHook } from "../lib/room-firmware.js";
 import {
@@ -672,7 +672,8 @@ export async function dispatchMessagesRoutes(request, url, h) {
       )
     );
 
-    if (mentions.length) {
+    const agentHandles = mentionHandlesForAgentInvoke(mentionsRaw);
+    if (agentHandles.length) {
       ctx.waitUntil(
         invokeMentionedAgents(
           env,
@@ -680,7 +681,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
           roomId,
           authUserId,
           content,
-          mentions,
+          agentHandles,
           traceId,
           parentId,
         ).catch((err) =>

@@ -529,19 +529,13 @@ export function FluxyChat({
     trimmedRoomId.startsWith("assistant-") &&
     Boolean(assistantProjectId) &&
     Boolean(memberJwt.trim());
-  const [resolvedRoomId, setResolvedRoomId] = useState<string | null>(
-    shouldBootstrapAssistant ? null : trimmedRoomId,
-  );
+  const [resolvedRoomId, setResolvedRoomId] = useState<string | null>(trimmedRoomId || null);
   const [roomBootstrapError, setRoomBootstrapError] = useState<string | null>(null);
-  const activeRoomId = shouldBootstrapAssistant ? (resolvedRoomId ?? "") : trimmedRoomId;
+  const activeRoomId = resolvedRoomId || trimmedRoomId;
 
   useEffect(() => {
-    if (shouldBootstrapAssistant) {
-      setResolvedRoomId(null);
-      return;
-    }
-    setResolvedRoomId(trimmedRoomId);
-  }, [trimmedRoomId, shouldBootstrapAssistant]);
+    setResolvedRoomId(trimmedRoomId || null);
+  }, [trimmedRoomId]);
 
   useEffect(() => {
     if (!shouldBootstrapAssistant) return;

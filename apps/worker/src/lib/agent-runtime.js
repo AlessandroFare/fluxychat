@@ -245,6 +245,11 @@ export async function invokeMentionedAgents(
     .bind(projectId, ...normalized)
     .all();
 
+  if (!(agentRows.results || []).length) {
+    logInfo("agent.mention_invoke_no_matching_bot", { projectId, roomId, handles: normalized });
+    return;
+  }
+
   for (const agentRow of agentRows.results || []) {
     try {
       const id = env.ROOM.idFromName(roomId);
@@ -332,6 +337,42 @@ export async function invokeMentionedAgents(
           runId: result.runId,
           error: result.error,
         });
+        const createdAt = new Date().toISOString();
+        const errorContent = `I couldn't reply (${result.error || "agent_run_failed"}). Check the agent LLM provider and Worker AI_BASE_URL / AI_API_KEY.`;
+        try {
+          const insert = await env.DB.prepare(
+            "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          )
+            .bind(
+              projectId,
+              roomId,
+              agentRow.id,
+              errorContent,
+              createdAt,
+              resolvedParentId,
+              null,
+              null,
+              null,
+              null,
+              null,
+            )
+            .run();
+          await stub.fetch("https://internal/announce", {
+            method: "POST",
+            body: JSON.stringify({
+              id: insert.meta.last_row_id,
+              content: errorContent,
+              userId: agentRow.id,
+              parentId: resolvedParentId,
+            }),
+          }).catch(() => {});
+        } catch (announceErr) {
+          logError("agent.mention_invoke_error_announce_failed", announceErr, {
+            projectId,
+            agentId: agentRow.id,
+            roomId,
+          });
+        }
       }
 
       await persistMentionAgentRun(env, {
@@ -430,9 +471,11 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     config: agentConfig,
     projectId,
   });
-  if (!primaryResolved.ok) {
+  if (!primaryResolved.ok || !primaryResolved.apiKey) {
     const latencyMs = Math.round(performance.now() - startTime);
-    const errorText = primaryResolved.error || "llm_provider_not_configured";
+    const errorText = !primaryResolved.ok
+      ? (primaryResolved.error || "llm_provider_not_configured")
+      : "llm_api_key_not_configured";
     await announceRoomEvent(env, roomId, {
       type: "agentRun",
       run: {

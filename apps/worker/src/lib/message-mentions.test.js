@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { expandMentions, listMentionSuggestions, normalizeMentionToken } from "./message-mentions.js";
+import {
+  expandMentions,
+  listMentionSuggestions,
+  mentionHandlesForAgentInvoke,
+  normalizeMentionToken,
+} from "./message-mentions.js";
 
 function mockEnv(members) {
   return {
@@ -53,6 +58,13 @@ describe("message-mentions", () => {
       onlineUserIds: ["u1", "u2"],
     });
     expect(out).toEqual(["u2"]);
+  });
+
+  it("keeps @assistant handles for agent invoke after expandMentions would drop them", () => {
+    expect(mentionHandlesForAgentInvoke(["assistant", "here", "channel", "u2"])).toEqual([
+      "assistant",
+      "u2",
+    ]);
   });
 
   it("lists mention suggestions", async () => {
