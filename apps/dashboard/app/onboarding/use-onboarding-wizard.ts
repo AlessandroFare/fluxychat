@@ -11,7 +11,8 @@ import {
   DEFAULT_ONBOARDING_AGENT_MODEL,
   DEFAULT_ONBOARDING_AGENT_PROVIDER,
 } from "@/lib/agent-catalog";
-import { pickDefaultAssistantAgent } from "@/lib/assistant-room";
+import { assistantRoomId, pickDefaultAssistantAgent } from "@/lib/assistant-room";
+import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
 import { loadQuickstartProgress, markQuickstartFirstMessage } from "@/lib/quickstart-progress";
@@ -19,7 +20,6 @@ import {
   readFirstMessageSentForUser,
   resolveQuickstartUserKey,
 } from "@/lib/onboarding-user-key";
-import { assistantRoomId } from "@/lib/assistant-room";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
@@ -131,6 +131,10 @@ export function useOnboardingWizard() {
 
   useEffect(() => {
     if (room?.id || !lastRoom?.id) return;
+    if (project?.id && lastRoom.id.startsWith("assistant-") && lastRoom.id !== assistantRoomId(project.id)) {
+      setLastRoom(null);
+      return;
+    }
     setRoom({
       id: lastRoom.id,
       type: lastRoom.type || "group",
@@ -138,7 +142,7 @@ export function useOnboardingWizard() {
       created_at: lastRoom.created_at || new Date().toISOString(),
     });
     setExistingRoomId(lastRoom.id);
-  }, [lastRoom, room?.id]);
+  }, [lastRoom, room?.id, project?.id, setLastRoom]);
 
   useEffect(() => {
     if (!isClerkClientConfigured() || !clerkSignedIn || !clerkUser?.id) return;
@@ -181,16 +185,15 @@ export function useOnboardingWizard() {
     void mintMemberJwt();
   }, [clerkSignedIn, adminJwt, project?.id, memberJwt, clerkUser?.id]);
 
-  // Auto-create room when we have a member JWT but no room yet
+  // Auto-open assistant room when project + member JWT are ready
   const autoRoomKeyRef = useRef("");
   useEffect(() => {
-    if (!memberJwt.trim() || room?.id) return;
-    const key = `${memberJwt.slice(0, 20)}:${project?.id ?? ""}`;
+    if (!memberJwt.trim() || room?.id || !project?.id) return;
+    const key = `${memberJwt.slice(0, 20)}:${project.id}`;
     if (autoRoomKeyRef.current === key) return;
     autoRoomKeyRef.current = key;
-    const defaultRoomName = project?.id ? assistantRoomId(project.id) : "assistant-general";
-    setRoomName(defaultRoomName);
-    void createRoom(defaultRoomName);
+    setRoomName(assistantRoomId(project.id));
+    void ensureOnboardingAssistantRoom(project.id);
   }, [memberJwt, room?.id, project?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-create or reuse @assistant agent for First Chat
@@ -372,6 +375,36 @@ export function useOnboardingWizard() {
     setError(null);
   }
 
+  async function ensureOnboardingAssistantRoom(projectId: string) {
+    if (!memberJwt.trim()) {
+      setError("Mint a member JWT first.");
+      return;
+    }
+    setCreatingRoom(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const { room: ensured, created } = await ensureAssistantRoom({
+        workerUrl: WORKER_URL,
+        memberJwt: memberJwt.trim(),
+        memberUserId: userId.trim() || (clerkUser?.id ? fluxyUserIdFromClerk(clerkUser.id) : "dashboard"),
+        projectId,
+        adminJwt: adminJwt.trim() || undefined,
+      });
+      setRoom(ensured);
+      setLastRoom(ensured);
+      setNotice(
+        created
+          ? "Assistant room ready. You can chat with @assistant below."
+          : "Assistant room opened.",
+      );
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Failed to open assistant room"));
+    } finally {
+      setCreatingRoom(false);
+    }
+  }
+
   async function createRoom(overrideName?: string) {
     if (!memberJwt) {
       setError("Mint a member JWT first.");
@@ -380,6 +413,11 @@ export function useOnboardingWizard() {
     const name = (overrideName ?? roomName).trim();
     if (!name) {
       setError("Enter a room id.");
+      return;
+    }
+    const targetProjectId = project?.id ?? "";
+    if (targetProjectId && name === assistantRoomId(targetProjectId)) {
+      await ensureOnboardingAssistantRoom(targetProjectId);
       return;
     }
     setCreatingRoom(true);
@@ -401,28 +439,18 @@ export function useOnboardingWizard() {
       });
       setRoom(json.room);
       setLastRoom(json.room);
-      setNotice(
-        json.room.id === (project?.id ? assistantRoomId(project.id) : "assistant-general")
-          ? "Assistant room ready. You can chat with built-in agents from the Agents page."
-          : "Room created.",
-      );
+      setNotice("Room created.");
     } catch (err: unknown) {
       const msg = messageFromUnknown(err, "Failed to create room");
-      // If room already exists, reuse it instead of erroring
-      if (msg.includes("already") || msg.includes("exists") || msg.includes("409") || msg.includes("conflict")) {
-        const existingRoom: CreatedRoom = {
-          id: name,
-          type: "group",
-          name: name,
-          created_at: new Date().toISOString(),
-        };
-        setRoom(existingRoom);
-        setLastRoom(existingRoom);
-        setNotice("Room already exists. Reusing it.");
-        setError(null);
-      } else {
-        setError(msg);
+      if (
+        targetProjectId &&
+        name.startsWith("assistant-") &&
+        (msg.includes("already") || msg.includes("exists") || msg.includes("409") || msg.includes("conflict"))
+      ) {
+        await ensureOnboardingAssistantRoom(targetProjectId);
+        return;
       }
+      setError(msg);
     } finally {
       setCreatingRoom(false);
     }

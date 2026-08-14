@@ -376,6 +376,7 @@ export function FluxyChat({
   const showScheduleSend = variant === "full" || variant === "demo" || variant === "onboarding";
   const showRoomDraftSync = variant === "full";
   const showSuggestedPrompts = (variant === "demo" || variant === "onboarding") && suggestedPrompts && suggestedPrompts.length > 0;
+  const showRoomInfo = variant === "full";
   const showBreakouts = variant === "full";
   const showHitlApprovals = variant === "full";
   const showPinnedBar = variant === "full";
@@ -505,6 +506,8 @@ export function FluxyChat({
   const [roomInfoOpen, setRoomInfoOpen] = useState(false);
   const [slashCommands, setSlashCommands] = useState<RoomCommand[]>([]);
   const chatToken = adminJwt.trim() || memberJwt.trim();
+  /** Prefer member JWT for room membership checks (matches WebSocket auth). */
+  const roomAccessToken = memberJwt.trim() || adminJwt.trim();
   const { user: clerkUser } = useClerkUser();
   const realtime = useFluxyChatOptional();
   const usesExplicitClient = clientProp !== undefined;
@@ -631,7 +634,10 @@ export function FluxyChat({
     if (stream) el.srcObject = stream;
     else el.srcObject = null;
   }, [huddleActive, huddleVideoOn]);
-  const { breakouts, fetchBreakouts } = useBreakouts(fluxyClient, trimmedRoomId);
+  const { breakouts, fetchBreakouts } = useBreakouts(
+    showBreakouts ? fluxyClient : null,
+    showBreakouts ? activeRoomId || null : null,
+  );
   const mentionHandle = normalizeAgentHandle(agentHandle);
   const usesMentionInvoke = Boolean(mentionHandle);
 
@@ -836,7 +842,7 @@ export function FluxyChat({
   });
 
   useEffect(() => {
-    if (!showMentionMenu || !chatToken || !trimmedRoomId) {
+    if (!showMentionMenu || !roomAccessToken || !activeRoomId) {
       setMentionSuggestions([]);
       return;
     }
@@ -844,7 +850,7 @@ export function FluxyChat({
     const cursor = input?.selectionStart ?? draft.length;
     const query = detectMentionQuery(draft, cursor) ?? "";
     let cancelled = false;
-    void fetchMentionSuggestions(chatToken, trimmedRoomId, query)
+    void fetchMentionSuggestions(roomAccessToken, activeRoomId, query)
       .then((suggestions) => {
         if (!cancelled) setMentionSuggestions(suggestions);
       })
@@ -854,7 +860,7 @@ export function FluxyChat({
     return () => {
       cancelled = true;
     };
-  }, [showMentionMenu, draft, chatToken, trimmedRoomId]);
+  }, [showMentionMenu, draft, roomAccessToken, activeRoomId]);
 
   const streamingCount = useMemo(
     () => messages.filter((m) => m.streaming).length,
@@ -1089,7 +1095,7 @@ export function FluxyChat({
         : null;
       for (const row of json.runs ?? []) {
         const run = normalizeAgentRun(row);
-        if (run.room_id && run.room_id !== trimmedRoomId) continue;
+        if (run.room_id && run.room_id !== activeRoomId) continue;
         if (sinceWithBuffer && run.created_at && run.created_at < sinceWithBuffer) continue;
         if (run.status === "completed" || run.status === "failed") return run;
       }
@@ -1097,7 +1103,7 @@ export function FluxyChat({
     } catch {
       return null;
     }
-  }, [adminJwt, agentId, trimmedRoomId]);
+  }, [adminJwt, agentId, activeRoomId]);
 
   const showCounterfactualReplay =
     variant === "full" && Boolean(agentId) && Boolean(fluxyClient?.isAuthenticated());
@@ -1145,7 +1151,14 @@ export function FluxyChat({
     void tick();
     const intervalId = window.setInterval(() => void tick(), RUN_POLL_MS);
     const timeoutId = window.setTimeout(() => {
-      if (!cancelled) setRunPending(false);
+      if (!cancelled) {
+        setRunPending(false);
+        setInvokeError(
+          (prev) =>
+            prev ||
+            "Assistant did not finish in time. Verify worker LLM settings (AI_BASE_URL / AI_API_KEY) and redeploy.",
+        );
+      }
     }, RUN_POLL_TIMEOUT_MS);
 
     return () => {
@@ -1156,8 +1169,31 @@ export function FluxyChat({
   }, [runPending, adminJwt, fetchLatestRunForRoom]);
 
   useEffect(() => {
+    if (!runPending || agentTyping) return;
+    let cancelled = false;
+    const id = window.setTimeout(() => {
+      if (cancelled) return;
+      void fetchLatestRunForRoom().then((run) => {
+        if (cancelled) return;
+        if (run) {
+          setLatestRun(run);
+          if (run.status === "failed") {
+            setInvokeError(run.error || "Agent run failed");
+          }
+          showRunFeedback(run);
+        }
+        setRunPending(false);
+      });
+    }, 2000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [runPending, agentTyping, fetchLatestRunForRoom]);
+
+  useEffect(() => {
     if (!lastAgentRun) return;
-    if (lastAgentRun.room_id && lastAgentRun.room_id !== trimmedRoomId) return;
+    if (lastAgentRun.room_id && lastAgentRun.room_id !== activeRoomId) return;
     const run = normalizeAgentRun(lastAgentRun as unknown as Record<string, unknown>);
     setLatestRun(run);
     setRunPending(false);
@@ -1165,7 +1201,7 @@ export function FluxyChat({
       setInvokeError(run.error || "Agent run failed");
     }
     showRunFeedback(run);
-  }, [lastAgentRun, trimmedRoomId]);
+  }, [lastAgentRun, activeRoomId]);
 
   useEffect(
     () => () => {
@@ -1679,14 +1715,14 @@ export function FluxyChat({
             <Search className="size-3" aria-hidden />
             {searchOpen ? "Close" : "Search"}
           </button>
-          {trimmedRoomId && chatToken ? (
+          {activeRoomId && roomAccessToken && showRoomInfo ? (
             <>
               <span className="mx-1.5 text-muted-foreground/40">|</span>
               <RoomInfoToggle onClick={() => setRoomInfoOpen((open) => !open)} />
             </>
           ) : null}
           <span className="mx-1.5 text-muted-foreground/40">|</span>
-          Room <code className="font-mono">{trimmedRoomId || ""}</code>
+          Room <code className="font-mono">{activeRoomId || trimmedRoomId || ""}</code>
           {usesMentionInvoke ? (
             <span className="ml-2 text-brand">· @{mentionHandle} mention invoke</span>
           ) : (
@@ -3421,10 +3457,10 @@ export function FluxyChat({
         </DialogContent>
       </Dialog>
 
-      {trimmedRoomId && chatToken ? (
+      {activeRoomId && roomAccessToken && showRoomInfo ? (
         <RoomInfoPanel
-          roomId={trimmedRoomId}
-          token={chatToken}
+          roomId={activeRoomId}
+          token={roomAccessToken}
           open={roomInfoOpen}
           onClose={() => setRoomInfoOpen(false)}
           onJumpToMessage={scrollToMessage}
