@@ -9,7 +9,7 @@ import { isRoomMember, canAccessRoom } from "../lib/room-access.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
 import { attachAttachmentsToMessages } from "../lib/messages-attachments.js";
 import { attachPollsToMessages } from "../lib/message-polls.js";
-import { expandMentions } from "../lib/message-mentions.js";
+import { expandMentions, mentionHandlesForAgentInvoke } from "../lib/message-mentions.js";
 import { checkAndConsumeProjectQuota } from "../lib/project-plan-quota.js";
 import { validateMessageContent, validateStreamStartContent } from "../lib/message-validation.js";
 import { runInboundMessageMiddleware } from "../lib/message-middleware.js";
@@ -1355,19 +1355,6 @@ export class RoomDurableObject {
             console.error("webhook mention error", err)
           );
 
-          void invokeMentionedAgents(
-            this.env,
-            projectId,
-            roomId,
-            userId,
-            validatedContent,
-            mentions,
-            undefined,
-            parentId || null,
-          ).catch((err) =>
-            logError("agent.mention_invoke_error", err, { projectId, roomId }),
-          );
-
           void notifyMentionedUsers(this.env, {
             projectId,
             roomId,
@@ -1377,6 +1364,22 @@ export class RoomDurableObject {
             preview: validatedContent,
           }).catch((err) =>
             logError("notifications.mention_failed", err, { projectId, roomId }),
+          );
+        }
+
+        const agentHandles = mentionHandlesForAgentInvoke(mentionsRaw);
+        if (!isDuplicateResend && agentHandles.length) {
+          void invokeMentionedAgents(
+            this.env,
+            projectId,
+            roomId,
+            userId,
+            validatedContent,
+            agentHandles,
+            undefined,
+            parentId || null,
+          ).catch((err) =>
+            logError("agent.mention_invoke_error", err, { projectId, roomId }),
           );
         }
 

@@ -78,7 +78,7 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "", projectId }: Assi
     } finally {
       setBusy(false);
     }
-  }, [memberJwt, adminJwt, memberUserId]);
+  }, [memberJwt, adminJwt, memberUserId, projectId]);
 
   useEffect(() => {
     if (!memberJwt.trim()) return;
@@ -124,10 +124,13 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "", projectId }: Assi
           </p>
           <AgentRoomChat
             roomId={resolvedRoomId ?? assistantRoomId(projectId)}
+            projectId={projectId}
             agentId={agent.id}
             agentName={agent.name}
             agentHandle={agent.handle}
             adminJwt={adminJwt}
+            memberJwt={memberJwt}
+            memberUserId={memberUserId}
           />
           <Link href="/agents" className="text-xs text-brand underline underline-offset-2">
             Full agent console →

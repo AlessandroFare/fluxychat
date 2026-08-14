@@ -39,6 +39,21 @@ export function normalizeMentionToken(token) {
 }
 
 /**
+ * Agent invoke looks up bots by handle (`@assistant`), not room member user ids.
+ * `expandMentions` drops those handles, so callers must keep the raw tokens.
+ */
+export function mentionHandlesForAgentInvoke(tokens) {
+  const handles = [];
+  for (const raw of tokens || []) {
+    const token = normalizeMentionToken(raw);
+    if (!token) continue;
+    if (token === "here" || token === "channel" || token.startsWith("role:")) continue;
+    handles.push(token.replace(/^@/, ""));
+  }
+  return [...new Set(handles)];
+}
+
+/**
  * @param {*} env
  * @param {string} roomId
  */
