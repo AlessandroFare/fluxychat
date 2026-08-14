@@ -106,6 +106,38 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     } catch (dbErr) {
       const msg = String(dbErr?.message || dbErr || "");
       if (msg.includes("UNIQUE") || msg.toLowerCase().includes("primary key")) {
+        const existing = await env.DB.prepare(
+          "SELECT id, project_id, type, name, created_at FROM rooms WHERE id = ? LIMIT 1",
+        )
+          .bind(newRoomId)
+          .first();
+        if (existing?.id && String(existing.project_id) === String(auth.projectId)) {
+          const members = Array.isArray(body.members) ? body.members.slice() : [];
+          const validMembers = members.filter((m) => m && isValidId(m.userId));
+          if (!validMembers.some((m) => m.userId === auth.userId)) {
+            validMembers.push({ userId: auth.userId, role: "owner" });
+          }
+          if (validMembers.length) {
+            const rolesValidation = validMembers.map((m) => {
+              const roleCheck = validateRoles([m.role]);
+              return { ...m, role: roleCheck.roles[0] };
+            });
+            const stmts = rolesValidation.map((m) =>
+              env.DB.prepare(
+                "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)",
+              ).bind(newRoomId, m.userId, m.role, now),
+            );
+            await env.DB.batch(stmts);
+          }
+          return json({
+            room: {
+              id: existing.id,
+              type: existing.type,
+              name: existing.name,
+              created_at: existing.created_at,
+            },
+          });
+        }
         return json({ error: "room_id_already_exists" }, { status: 409 });
       }
       logError("room.create_insert_failed", dbErr, requestLogCtx);
