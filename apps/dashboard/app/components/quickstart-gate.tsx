@@ -39,7 +39,9 @@ export function QuickstartGate({ children }: { children: React.ReactNode }) {
     const review = searchParams.get("review") === "1";
 
     if (pathname.startsWith("/onboarding")) {
-      if (complete && !review) {
+      // Only leave the wizard after the finish step. firstMessageSent must
+      // not bounce suggested-prompt clicks to /dashboard overview.
+      if (progress.completedAt && !review) {
         router.replace(HOSTED_PATHS.console);
       }
       return;

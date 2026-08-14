@@ -1,4 +1,5 @@
 import { pickRouteDeps } from "./route-http-deps.js";
+import { workerSharedLlmAllowed } from "../lib/hosted-saas-policy.js";
 import {
   extractKnowledgeGraph,
   persistKnowledgeGraph,
@@ -6,7 +7,11 @@ import {
   getEntityTimeline,
   getRoomGraph,
 } from "../lib/knowledge-graph.js";
-import { workerSharedLlmAllowed } from "../lib/hosted-saas-policy.js";
+
+function roomIdFromKgPath(pathname) {
+  const match = String(pathname || "").match(/^\/rooms\/([^/]+)\/kg(?:\/extract)?$/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
 
 export async function dispatchKnowledgeGraphRoutes(request, url, h) {
   const path = url.pathname;
@@ -119,9 +124,8 @@ async function dispatchGetRoomGraph(request, url, h) {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
-  const pathParts = url.pathname.split("/");
-  const roomId = pathParts[1];
-  if (!isValidId(roomId)) {
+  const roomId = roomIdFromKgPath(url.pathname);
+  if (!roomId || !isValidId(roomId)) {
     return json({ error: "invalid_room_id" }, { status: 400, headers: corsHeaders });
   }
 
@@ -162,9 +166,8 @@ async function dispatchExtractForRoom(request, url, h) {
     return json({ error: "llm_not_allowed" }, { status: 403, headers: corsHeaders });
   }
 
-  const pathParts = url.pathname.split("/");
-  const roomId = pathParts[1];
-  if (!isValidId(roomId)) {
+  const roomId = roomIdFromKgPath(url.pathname);
+  if (!roomId || !isValidId(roomId)) {
     return json({ error: "invalid_room_id" }, { status: 400, headers: corsHeaders });
   }
 

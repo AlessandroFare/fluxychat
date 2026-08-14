@@ -2,6 +2,16 @@
 export function assistantRoomId(projectId: string): string {
   return `assistant-${projectId}`;
 }
+
+const ASSISTANT_ROOM_PREFIX = "assistant-";
+
+/** Derive project id from a default assistant room id (`assistant-<projectId>`). */
+export function projectIdFromAssistantRoomId(roomId: string): string | null {
+  const trimmed = roomId.trim();
+  if (!trimmed.startsWith(ASSISTANT_ROOM_PREFIX)) return null;
+  const projectId = trimmed.slice(ASSISTANT_ROOM_PREFIX.length);
+  return projectId || null;
+}
 export const ASSISTANT_ROOM_DISPLAY_NAME = "Assistant (general)";
 /** Legacy id from early betas (colon invalid for worker room ids). */
 export const LEGACY_ASSISTANT_ROOM_ID = "assistant:general";

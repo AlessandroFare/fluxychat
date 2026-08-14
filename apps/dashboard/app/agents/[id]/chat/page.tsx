@@ -21,6 +21,7 @@ export default function AgentChatPage() {
     memberUserId,
     chatRoomId,
     setChatRoomId,
+    activeProject,
   } = useAgentsConsole();
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function AgentChatPage() {
       />
       <FluxyChat
         roomId={roomId}
+        projectId={activeProject?.id ?? ""}
         agentId={selectedAgent.id}
         agentName={selectedAgent.name}
         agentHandle={selectedAgent.handle}

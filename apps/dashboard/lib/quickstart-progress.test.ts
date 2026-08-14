@@ -3,6 +3,7 @@ import {
   isQuickstartComplete,
   loadQuickstartProgress,
   markQuickstartComplete,
+  saveQuickstartProgress,
   QUICKSTART_STORAGE_BASE,
 } from "./quickstart-progress";
 import { scopedStorageKey } from "./scoped-browser-storage";
@@ -37,6 +38,19 @@ describe("quickstart-progress", () => {
     expect(loadQuickstartProgress(USER_B)).toEqual({});
     expect(
       isQuickstartComplete(USER_B, {
+        adminJwt: "x".repeat(12),
+        memberJwt: "y".repeat(12),
+        activeProjectId: "proj_1",
+        lastRoomId: "room_1",
+      }),
+    ).toBe(false);
+  });
+
+  it("does not treat first message alone as complete", () => {
+    saveQuickstartProgress(USER_A, { firstMessageSent: true });
+
+    expect(
+      isQuickstartComplete(USER_A, {
         adminJwt: "x".repeat(12),
         memberJwt: "y".repeat(12),
         activeProjectId: "proj_1",

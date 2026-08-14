@@ -16,7 +16,7 @@
                   "README.md"
               ],
     "scripts":  {
-                    "build":  "tsup src/index.ts --format esm --dts",
+                    "build":  "tsup src/index.ts --format esm",
                     "prepare":  "node -e \"try{require('fs').accessSync('dist/index.js')}catch{require('child_process').execSync('pnpm run build',{stdio:'inherit'})}\"",
                     "dev":  "tsup src/index.ts --format esm --watch",
                     "typecheck":  "tsc --noEmit",
