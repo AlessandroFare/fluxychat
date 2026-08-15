@@ -81,8 +81,9 @@ export function useChat({
   const effectiveHistoryLimit = replayLimit ?? historyLimit;
   const effectiveReadOn: UseChatReadOn = markReadLatest ? "mount" : (readOn ?? "manual");
   const realtime = useFluxyChatOptional();
+  /** `null` from an explicit prop means no client; `undefined` falls back to provider. */
   const client =
-    clientProp !== undefined ? clientProp : (realtime?.client ?? null);
+    clientProp === undefined ? (realtime?.client ?? null) : clientProp;
 
   const store = React.useMemo(
     () => createFluxyRoomStore(),

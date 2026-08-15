@@ -19,7 +19,7 @@ interface FirstChatStepProps {
 }
 
 export function FirstChatStep({ wizard: w }: FirstChatStepProps) {
-  const canChat = Boolean(w.memberJwt.trim() && w.room?.id && w.fluxyClient);
+  const canChat = Boolean(w.memberJwt.trim() && w.room?.id);
   const agentId = w.agent?.id ?? "";
   const agentName = w.agent?.name ?? "Assistant";
   const roomLabel = w.room?.name ?? w.room?.id ?? "your assistant room";
@@ -120,7 +120,6 @@ export function FirstChatStep({ wizard: w }: FirstChatStepProps) {
           memberJwt={w.memberJwt}
           adminJwt={w.adminJwt}
           memberUserId={w.userId}
-          client={w.fluxyClient}
           variant="onboarding"
           coPilotConfirm={false}
           suggestedPrompts={[...SUGGESTED_PROMPTS]}

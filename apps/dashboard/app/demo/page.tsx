@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { createMemberFluxyClient } from "@/lib/fluxy-member-client";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import {
   DemoTurnstile,
@@ -255,11 +255,11 @@ function DemoRoomPageContent() {
   const showFallback = demoStatus?.ready && !session && !error && loadingTimeout;
 
   const client = useMemo(() => {
-    if (!session?.token || !session.userId) return null;
-    return new FluxyChatClient({
-      baseUrl: workerUrl,
-      userId: session.userId,
-      token: session.token,
+    if (!session?.token) return null;
+    return createMemberFluxyClient({
+      memberJwt: session.token,
+      memberUserId: session.userId,
+      workerUrl,
     });
   }, [session, workerUrl]);
 

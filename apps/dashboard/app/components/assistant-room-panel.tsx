@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Bot, Loader2 } from "lucide-react";
-import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import {
@@ -42,19 +41,6 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "", projectId }: Assi
   const [agent, setAgent] = useState<AgentRow | null>(null);
 
   const memberUserId = clerkUser?.id ? fluxyUserIdFromClerk(clerkUser.id) : "dashboard";
-
-  const chatClient = useMemo(
-    () => {
-      const token = memberJwt.trim();
-      if (!token) return null;
-      return new FluxyChatClient({
-        baseUrl: WORKER_URL,
-        userId: memberUserId,
-        token,
-      });
-    },
-    [memberJwt, memberUserId],
-  );
 
   const bootstrap = useCallback(async () => {
     const token = memberJwt.trim();
@@ -145,7 +131,6 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "", projectId }: Assi
             adminJwt={adminJwt}
             memberJwt={memberJwt}
             memberUserId={memberUserId}
-            client={chatClient ?? undefined}
           />
           <Link href="/agents" className="text-xs text-brand underline underline-offset-2">
             Full agent console →
