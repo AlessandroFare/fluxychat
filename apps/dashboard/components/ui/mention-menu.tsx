@@ -55,7 +55,7 @@ export function MentionMenu({ inputRef, suggestions, onSelect, onClose }: Mentio
   return (
     <div
       ref={menuRef}
-      className="absolute bottom-full left-0 z-50 mb-1 max-h-56 w-80 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-xl"
+      className="absolute bottom-full left-0 z-50 mb-1 max-h-56 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 text-slate-900 shadow-2xl"
       role="listbox"
       aria-label="Mention suggestions"
     >
@@ -68,8 +68,8 @@ export function MentionMenu({ inputRef, suggestions, onSelect, onClose }: Mentio
           className={cn(
             "flex w-full flex-col gap-0.5 rounded-md px-2.5 py-1.5 text-left text-xs",
             i === selectedIndex
-              ? "bg-muted text-foreground"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              ? "bg-slate-100 text-slate-900"
+              : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
           )}
           onMouseDown={(e) => {
             e.preventDefault();
@@ -79,7 +79,7 @@ export function MentionMenu({ inputRef, suggestions, onSelect, onClose }: Mentio
           onMouseEnter={() => setSelectedIndex(i)}
         >
           <span className="font-mono font-semibold">{item.label}</span>
-          <span className="text-muted-foreground/70">{item.description}</span>
+          <span className="text-slate-500">{item.description}</span>
         </button>
       ))}
     </div>

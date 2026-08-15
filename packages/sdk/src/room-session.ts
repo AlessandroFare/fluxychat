@@ -1237,18 +1237,16 @@ export function startFluxyRoomSession(
   }
 
   void (async () => {
-    let reconnectBackoff: { baseBackoffMs?: number; maxBackoffMs?: number } = {};
     try {
       if (client.resolveToken) await client.resolveToken();
-      const flags = await client.getFeatureFlags();
-      reconnectBackoff = flags.reconnectBackoff;
     } catch {
-      /* keep SDK defaults */
+      /* static JWT clients continue; provider may refresh on auth error */
     }
+    void client.getFeatureFlags().catch(() => {});
+
     if (!active) return;
 
     connection = client.connectRoom(trimmedRoomId, {
-      ...reconnectBackoff,
       maxReconnectAttempts: MAX_WS_RECONNECT_ATTEMPTS,
       historyLimit,
       presenceInfo,

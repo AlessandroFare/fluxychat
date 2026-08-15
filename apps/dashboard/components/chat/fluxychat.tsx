@@ -43,6 +43,7 @@ import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { mentionPrefixForAgent, normalizeAgentHandle, projectIdFromAssistantRoomId } from "@/lib/assistant-room";
 import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
+import { createMemberFluxyClient } from "@/lib/fluxy-member-client";
 import {
   normalizeAgentRun,
   type AgentRunDisplay,
@@ -510,8 +511,20 @@ export function FluxyChat({
   const chatToken = adminJwt.trim() || memberJwt.trim();
   const { user: clerkUser } = useClerkUser();
   const realtime = useFluxyChatOptional();
-  const usesExplicitClient = clientProp !== undefined;
-  const fluxyClient = usesExplicitClient ? clientProp : (realtime?.client ?? null);
+
+  const memberClient = useMemo(
+    () =>
+      createMemberFluxyClient({
+        memberJwt,
+        memberUserId,
+        clerkUserId: clerkUser?.id ?? null,
+        workerUrl: WORKER_URL,
+      }),
+    [memberJwt, memberUserId, clerkUser?.id],
+  );
+
+  /** Prefer JWT-bound client (matches WS `sub`); explicit `client` wins for guest/demo. */
+  const fluxyClient = clientProp ?? memberClient ?? realtime?.client ?? null;
   /** Prefer member JWT for room APIs; fall back to explicit/guest SDK client token. */
   const roomAccessToken =
     memberJwt.trim() || adminJwt.trim() || fluxyClient?.token?.trim() || "";
@@ -730,7 +743,7 @@ export function FluxyChat({
   } = useChat({
     roomId: activeRoomId,
     agentId,
-    client: usesExplicitClient ? (clientProp ?? undefined) : undefined,
+    client: fluxyClient ?? undefined,
     replay,
     replayLimit: deepLinkHistoryLimit,
     historyLimit: deepLinkHistoryLimit ?? 50,

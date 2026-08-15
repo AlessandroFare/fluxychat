@@ -3,8 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClerkUser } from "@/lib/clerk-user";
-import { FluxyChatClient } from "@fluxy-chat/sdk";
-import { useFluxyChatOptional } from "@fluxy-chat/react";
+import { createMemberFluxyClient } from "@/lib/fluxy-member-client";
 import { useDashboardSession } from "../components/dashboard-session";
 import {
   applyModelInput,
@@ -72,19 +71,19 @@ export function useOnboardingWizard() {
   const projectNameInputRef = useRef<HTMLInputElement>(null);
 
   const { user: clerkUser, isSignedIn: clerkSignedIn } = useClerkUser();
-  const fluxyClient = useFluxyChatOptional()?.client ?? null;
   const project = activeProject as CreatedProject | null;
   const activeRoomId = room?.id ?? "";
 
-  const chatClient = useMemo(() => {
-    if (fluxyClient) return fluxyClient;
-    if (!memberJwt.trim()) return null;
-    return new FluxyChatClient({
-      baseUrl: WORKER_URL,
-      userId: userId.trim() || "owner",
-      token: memberJwt.trim(),
-    });
-  }, [fluxyClient, memberJwt, userId]);
+  const chatClient = useMemo(
+    () =>
+      createMemberFluxyClient({
+        memberJwt,
+        memberUserId: userId,
+        clerkUserId: clerkUser?.id ?? null,
+        workerUrl: WORKER_URL,
+      }),
+    [memberJwt, userId, clerkUser?.id],
+  );
 
   // Track whether the *current user* has sent a message during this onboarding session.
   const [userSentMessage, setUserSentMessage] = useState(false);
