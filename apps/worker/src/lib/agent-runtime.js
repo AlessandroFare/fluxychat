@@ -40,6 +40,8 @@ import {
 import { safeSchedulePostMessageAutomations } from "./post-message-automations-safe.js";
 import { isHumanHandoffActive } from "./room-handoff.js";
 import { buildWebSearchContext, detectResearchMode } from "./web-search.js";
+import { composeAgentSystemPrompt } from "./fluxychat-product-knowledge.js";
+import { listCommands } from "./room-commands.js";
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -508,7 +510,6 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   }
   let connection = primaryResolved;
   const hasFallback = !!(fallbackResolved && fallbackResolved.ok);
-  const systemPrompt = agentRow.system_prompt || "You are a helpful assistant in a chat room.";
   const { getRehearsalByRoomId, buildRehearsalAgentSystemPrompt } = await import("./rehearsal-rooms.js");
   const rehearsal = await getRehearsalByRoomId(env, projectId, roomId);
   const rehearsalPrompt = buildRehearsalAgentSystemPrompt(rehearsal);
@@ -518,10 +519,15 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     roomId,
     userId,
   }).catch(() => "");
-  const empathyBlock = empathySuffix ? `\n\n${empathySuffix}` : "";
-  const effectiveSystemPrompt = rehearsalPrompt
-    ? `${systemPrompt}\n\n${rehearsalPrompt}${empathyBlock}`
-    : `${systemPrompt}${empathyBlock}`;
+  const commandCatalog = await listCommands(env, { projectId }).catch(() => []);
+  const customCommands = commandCatalog.filter((c) => !c.handler || !["help", "poll", "remind", "assign", "mute", "unmute", "pin", "unpin", "escalate", "summarize", "broadcast", "export", "members", "info", "clear"].includes(c.handler));
+  const effectiveSystemPrompt = composeAgentSystemPrompt({
+    tenantPrompt: agentRow.system_prompt,
+    agentRow,
+    rehearsalPrompt,
+    empathyBlock: empathySuffix,
+    customCommands,
+  });
   const toolsSchemaRaw = agentRow.tools_schema;
   const contextFetchUrl = agentRow.context_fetch_url;
   const toolExecuteUrl = agentRow.tool_execute_url;

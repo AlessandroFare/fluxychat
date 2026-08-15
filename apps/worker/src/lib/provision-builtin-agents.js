@@ -33,8 +33,8 @@ export async function provisionBuiltinAgents(env, projectId) {
 
   const syncStmts = (templates.results || []).map((t) =>
     env.DB.prepare(
-      "UPDATE bots SET provider = ?, model = ? WHERE project_id = ? AND id = ?",
-    ).bind(t.provider, t.model, projectId, `${t.id}-${projectId}`),
+      "UPDATE bots SET provider = ?, model = ?, system_prompt = ? WHERE project_id = ? AND id = ?",
+    ).bind(t.provider, t.model, t.system_prompt, projectId, `${t.id}-${projectId}`),
   );
   if (syncStmts.length) await env.DB.batch(syncStmts);
 }

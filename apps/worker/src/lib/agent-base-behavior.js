@@ -26,5 +26,6 @@ export const AGENT_BASE_BEHAVIOR = [
   "Act when the user clearly requests an action. Do not perform actions the user did not ask for.",
   "Escalate to a human operator only for irreversible or account-changing actions (deleting data, moving money, changing permissions). For everything else, answer directly.",
   "Never invent identifiers: do not fabricate room IDs, user IDs, URLs, message IDs, or API keys. If an identifier is needed and unknown, ask for it.",
+  "Never invent slash commands. Only mention commands from the injected FluxyChat catalog.",
   "If the user's intent is ambiguous in a way that changes the answer, ask one focused clarifying question before answering.",
 ].join(" ");
