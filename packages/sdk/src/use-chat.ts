@@ -57,6 +57,12 @@ export interface UseChatOptions {
   onAnyEvent?: (event: import("./index").FluxyChatEvent) => void;
   /** Worker vertical/labs fan-out (`server_event` frames on room WS). */
   onServerEvent?: import("./server-realtime").ServerEventHandler;
+  /**
+   * Isolate this hook from other `useChat` instances on the same room/user/token.
+   * Two widgets on `/rooms` (Assistant panel + Live chat) must not share a session:
+   * the second store would stay on "connecting" forever.
+   */
+  sessionScope?: string;
 }
 
 export function useChat({
@@ -77,6 +83,7 @@ export function useChat({
   crdtMessageList = true,
   onAnyEvent,
   onServerEvent,
+  sessionScope,
 }: UseChatOptions) {
   const effectiveHistoryLimit = replayLimit ?? historyLimit;
   const effectiveReadOn: UseChatReadOn = markReadLatest ? "mount" : (readOn ?? "manual");
@@ -84,6 +91,8 @@ export function useChat({
   /** `null` from an explicit prop means no client; `undefined` falls back to provider. */
   const client =
     clientProp === undefined ? (realtime?.client ?? null) : clientProp;
+  const instanceId = React.useId();
+  const scope = sessionScope?.trim() || instanceId;
 
   const store = React.useMemo(
     () => createFluxyRoomStore(),
@@ -92,8 +101,8 @@ export function useChat({
 
   const sessionKey = React.useMemo(
     () =>
-      `${client?.userId ?? "none"}:${roomId}:${sessionTokenFingerprint(realtime?.token ?? client?.token ?? null)}`,
-    [client?.userId, client?.token, roomId, realtime?.token],
+      `${scope}:${client?.userId ?? "none"}:${roomId}:${sessionTokenFingerprint(realtime?.token ?? client?.token ?? null)}`,
+    [scope, client?.userId, client?.token, roomId, realtime?.token],
   );
 
   const onAnyEventRef = React.useRef(onAnyEvent);
