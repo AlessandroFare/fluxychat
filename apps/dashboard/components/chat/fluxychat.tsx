@@ -111,7 +111,7 @@ import {
   type MentionSuggestion,
 } from "~/components/ui/mention-menu";
 import { listSlashCommands, type RoomCommand } from "@/lib/slash-commands-client";
-import { fetchMentionSuggestions } from "@/lib/mentions-client";
+import { fetchMentionSuggestions, localMentionSuggestions } from "@/lib/mentions-client";
 import { RoomInfoPanel, RoomInfoToggle } from "~/components/chat/room-info-panel";
 import { cn } from "@/lib/utils";
 
@@ -168,6 +168,8 @@ import {
   canBranchFromMessage,
   detectToolFromMessageContent,
   findPriorUserMessage,
+  messageAuthorIsAgent,
+  messageContentUsesMarkdown,
   stripComposerToolTags,
 } from "@/lib/chat-message-actions";
 
@@ -506,12 +508,13 @@ export function FluxyChat({
   const [roomInfoOpen, setRoomInfoOpen] = useState(false);
   const [slashCommands, setSlashCommands] = useState<RoomCommand[]>([]);
   const chatToken = adminJwt.trim() || memberJwt.trim();
-  /** Prefer member JWT for room membership checks (matches WebSocket auth). */
-  const roomAccessToken = memberJwt.trim() || adminJwt.trim();
   const { user: clerkUser } = useClerkUser();
   const realtime = useFluxyChatOptional();
   const usesExplicitClient = clientProp !== undefined;
   const fluxyClient = usesExplicitClient ? clientProp : (realtime?.client ?? null);
+  /** Prefer member JWT for room APIs; fall back to explicit/guest SDK client token. */
+  const roomAccessToken =
+    memberJwt.trim() || adminJwt.trim() || fluxyClient?.token?.trim() || "";
 
   const localUserId = clerkUser?.id
     ? fluxyUserIdFromClerk(clerkUser.id)
@@ -836,25 +839,30 @@ export function FluxyChat({
   });
 
   useEffect(() => {
-    if (!showMentionMenu || !roomAccessToken || !activeRoomId) {
+    if (!showMentionMenu || !activeRoomId) {
       setMentionSuggestions([]);
       return;
     }
     const input = textareaRef.current;
     const cursor = input?.selectionStart ?? draft.length;
     const query = detectMentionQuery(draft, cursor) ?? "";
+    const local = localMentionSuggestions(query, mentionHandle);
+    if (!roomAccessToken) {
+      setMentionSuggestions(local);
+      return;
+    }
     let cancelled = false;
     void fetchMentionSuggestions(roomAccessToken, activeRoomId, query)
       .then((suggestions) => {
-        if (!cancelled) setMentionSuggestions(suggestions);
+        if (!cancelled) setMentionSuggestions(suggestions.length ? suggestions : local);
       })
       .catch(() => {
-        if (!cancelled) setMentionSuggestions([]);
+        if (!cancelled) setMentionSuggestions(local);
       });
     return () => {
       cancelled = true;
     };
-  }, [showMentionMenu, draft, roomAccessToken, activeRoomId]);
+  }, [showMentionMenu, draft, roomAccessToken, activeRoomId, mentionHandle]);
 
   const streamingCount = useMemo(
     () => messages.filter((m) => m.streaming).length,
@@ -1564,10 +1572,15 @@ export function FluxyChat({
       ? `Blocked · ${connectionErrorInfo.message}`
       : connectionLabel;
 
+  const agentAuthorContext = useMemo(
+    () => ({ agentId, presenceMembers }),
+    [agentId, presenceMembers],
+  );
+
   /** Single source of truth for author display names (message header + reply quotes). */
   function resolveDisplayName(uid: string | null | undefined, maxLen = 12): string {
     const id = uid?.trim() || "";
-    if (id && id === agentId) return agentName;
+    if (id && messageAuthorIsAgent(id, agentAuthorContext)) return agentName;
     if (chatUserId && id === chatUserId) {
       if (variant === "demo") return "You";
       return (
@@ -2045,7 +2058,7 @@ export function FluxyChat({
                   const showDate = !prevTime || !mTime || !isSameDay(prevTime, mTime);
 
                   const author = m.userId?.trim() || "unknown";
-                  const isAgent = author === agentId;
+                  const isAgent = messageAuthorIsAgent(author, agentAuthorContext);
                   const isSelf = Boolean(chatUserId && m.userId === chatUserId);
                   const isStreaming = Boolean(m.streaming);
                   const isVoice = m.kind === "voice";
@@ -2346,9 +2359,13 @@ export function FluxyChat({
                                               />
                                             );
                                           }
-                                          return isAgent ? (
+                                          const bodyText = cardDisplayText(m);
+                                          const useMarkdown =
+                                            isAgent ||
+                                            (!isSelf && messageContentUsesMarkdown(bodyText));
+                                          return useMarkdown ? (
                                             <MarkdownBody
-                                              content={cardDisplayText(m)}
+                                              content={bodyText}
                                               invert={isSelf}
                                             />
                                           ) : m.id != null && translatedMessages[String(m.id)] ? (

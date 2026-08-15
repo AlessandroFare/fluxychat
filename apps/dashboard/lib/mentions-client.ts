@@ -22,3 +22,38 @@ export async function fetchMentionSuggestions(
   );
   return data.suggestions ?? [];
 }
+
+/** Offline fallback when room autocomplete is unavailable (guest demo, WS-only JWT). */
+export function localMentionSuggestions(
+  query = "",
+  agentHandle = "assistant",
+): MentionSuggestion[] {
+  const handle = agentHandle.replace(/^@/, "");
+  const base: MentionSuggestion[] = [
+    {
+      id: "special:here",
+      label: "@here",
+      description: "Notify active members in this room",
+      kind: "special",
+    },
+    {
+      id: "special:channel",
+      label: "@channel",
+      description: "Notify everyone in this room",
+      kind: "special",
+    },
+    {
+      id: `agent:${handle}`,
+      label: `@${handle}`,
+      description: "Mention the assistant agent",
+      kind: "user",
+    },
+  ];
+  const q = query.trim().toLowerCase();
+  if (!q) return base;
+  return base.filter(
+    (s) =>
+      s.label.toLowerCase().includes(q) ||
+      s.description.toLowerCase().includes(q),
+  );
+}
