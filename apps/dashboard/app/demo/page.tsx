@@ -342,6 +342,7 @@ function DemoRoomPageContent() {
                 agentName={session.agentName ?? "FluxyBot"}
                 agentHandle={session.agentHandle ?? "@assistant"}
                 memberUserId={session.userId}
+                memberJwt={session.token}
                 client={client}
                 variant="demo"
                 coPilotConfirm={false}
@@ -360,6 +361,7 @@ function DemoRoomPageContent() {
                 agentName={session.agentName ?? "FluxyBot"}
                 agentHandle={session.agentHandle ?? "@assistant"}
                 memberUserId={session.userId}
+                memberJwt={session.token}
                 client={client}
                 variant="demo"
                 coPilotConfirm={false}

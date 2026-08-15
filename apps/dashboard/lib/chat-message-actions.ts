@@ -1,5 +1,33 @@
 import type { FluxyChatMessage } from "@fluxy-chat/sdk";
 
+export interface AgentAuthorContext {
+  agentId?: string;
+  presenceMembers?: Array<{ userId: string; userInfo?: Record<string, unknown> }>;
+}
+
+/** Detect agent-authored messages when `agentId` prop is missing (e.g. minimal Live chat). */
+export function messageAuthorIsAgent(
+  author: string | null | undefined,
+  ctx: AgentAuthorContext,
+): boolean {
+  const id = author?.trim() || "";
+  if (!id) return false;
+  const agentId = ctx.agentId?.trim();
+  if (agentId && id === agentId) return true;
+  if (id.startsWith("agent_") || id.startsWith("agent-")) return true;
+  for (const member of ctx.presenceMembers ?? []) {
+    const uid = member.userId?.trim();
+    if (!uid || uid !== id) continue;
+    const infoAgentId = member.userInfo?.agentId;
+    if (typeof infoAgentId === "string" && infoAgentId.trim()) return true;
+  }
+  return false;
+}
+
+export function messageContentUsesMarkdown(content: string): boolean {
+  return /\*\*|^#{1,6}\s|^\s*[-*]\s|\[.+\]\(.+\)/m.test(content);
+}
+
 /** Strip composer tool tags for edit/retry display. */
 export function stripComposerToolTags(content: string): string {
   return content
