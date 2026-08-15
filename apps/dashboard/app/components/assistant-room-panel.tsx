@@ -16,6 +16,7 @@ import { fetchWorkerJson } from "@/lib/worker-fetch";
 import { messageFromUnknown } from "@/lib/error-message";
 import { FluxyChat as AgentRoomChat } from "@/components/chat";
 import { Banner, Button, Section } from "./ui";
+import type { FluxyChatClient } from "@fluxy-chat/sdk";
 
 const WORKER_URL = getPublicWorkerUrl();
 
@@ -29,10 +30,12 @@ export interface AssistantRoomPanelProps {
   memberJwt: string;
   adminJwt?: string;
   projectId: string;
+  /** Same member client as Live chat — avoids a second JWT/userId mismatch. */
+  client?: FluxyChatClient | null;
 }
 
 /** Ensures per-project assistant room and embeds agent chat (Rooms page CTA). */
-export function AssistantRoomPanel({ memberJwt, adminJwt = "", projectId }: AssistantRoomPanelProps) {
+export function AssistantRoomPanel({ memberJwt, adminJwt = "", projectId, client }: AssistantRoomPanelProps) {
   const { user: clerkUser } = useClerkUser();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +134,10 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "", projectId }: Assi
             adminJwt={adminJwt}
             memberJwt={memberJwt}
             memberUserId={memberUserId}
+            client={client ?? undefined}
+            sessionScope="assistant-room"
+            bootstrapAssistantRoom={false}
+            variant="onboarding"
           />
           <Link href="/agents" className="text-xs text-brand underline underline-offset-2">
             Full agent console →

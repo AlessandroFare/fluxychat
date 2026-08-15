@@ -311,6 +311,10 @@ export interface FluxyChatProps {
   scrollToMessageId?: number;
   /** Called after a message is successfully sent (for onboarding tracking, etc.). */
   onMessageSent?: () => void;
+  /** Isolate WS session from other FluxyChat widgets on the same page. */
+  sessionScope?: string;
+  /** Skip auto-provision; parent already created/joined the assistant room. */
+  bootstrapAssistantRoom?: boolean;
   className?: string;
   /** Page-specific variant. Controls which UI elements are shown. */
   variant?: FluxyChatVariant;
@@ -356,6 +360,8 @@ export function FluxyChat({
   deepLinkHistoryLimit: deepLinkHistoryLimitProp,
   scrollToMessageId: scrollToMessageIdProp,
   onMessageSent,
+  sessionScope,
+  bootstrapAssistantRoom = true,
   className,
   variant = "full",
   suggestedPrompts,
@@ -542,6 +548,7 @@ export function FluxyChat({
   const trimmedRoomId = roomId.trim();
   const assistantProjectId = projectId.trim() || projectIdFromAssistantRoomId(trimmedRoomId) || "";
   const shouldBootstrapAssistant =
+    bootstrapAssistantRoom &&
     trimmedRoomId.startsWith("assistant-") &&
     Boolean(assistantProjectId) &&
     Boolean(memberJwt.trim());
@@ -744,6 +751,7 @@ export function FluxyChat({
     roomId: activeRoomId,
     agentId,
     client: fluxyClient ?? undefined,
+    sessionScope,
     replay,
     replayLimit: deepLinkHistoryLimit,
     historyLimit: deepLinkHistoryLimit ?? 50,

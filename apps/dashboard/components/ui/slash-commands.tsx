@@ -76,7 +76,7 @@ export function SlashCommandMenu({ inputRef, commands, onCommand, onClose }: Sla
   return (
     <div
       ref={menuRef}
-      className="absolute bottom-full left-0 z-50 mb-1 w-72 rounded-lg border border-slate-200 bg-white p-1 text-slate-900 shadow-2xl"
+      className="absolute bottom-full left-0 z-50 mb-1 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 text-slate-900 shadow-2xl"
     >
       {filtered.map((cmd, i) => (
         <button

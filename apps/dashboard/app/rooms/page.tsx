@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FluxyChatClient, type FluxyChatRoom } from "@fluxy-chat/sdk";
+import { createMemberFluxyClient } from "@/lib/fluxy-member-client";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
@@ -104,14 +105,12 @@ export default function RoomsPage() {
 
   const chatClient = useMemo(
     () =>
-      memberToken
-        ? new FluxyChatClient({
-            baseUrl: WORKER_URL,
-            userId: fluxyMemberUserId || "dashboard-member",
-            token: memberToken,
-          })
-        : null,
-    [memberToken, fluxyMemberUserId],
+      createMemberFluxyClient({
+        memberJwt: memberToken,
+        memberUserId: fluxyMemberUserId || undefined,
+        clerkUserId: clerkUser?.id ?? null,
+      }),
+    [memberToken, fluxyMemberUserId, clerkUser?.id],
   );
 
   const loadRooms = useCallback(async () => {
@@ -322,7 +321,12 @@ export default function RoomsPage() {
       {error ? <Banner variant="error">Error: {error}</Banner> : null}
       {notice ? <Banner variant="success">{notice}</Banner> : null}
 
-      <AssistantRoomPanel memberJwt={memberJwt} adminJwt={adminJwt} projectId={activeProject?.id ?? ""} />
+      <AssistantRoomPanel
+        memberJwt={memberJwt}
+        adminJwt={adminJwt}
+        projectId={activeProject?.id ?? ""}
+        client={chatClient}
+      />
 
       <Section title="Session">
         <Button onClick={loadRooms} disabled={loading || !token}>
