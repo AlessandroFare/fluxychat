@@ -12,7 +12,7 @@
 
 import { parsePollCreateInput } from "./message-polls.js";
 
-const BUILT_IN_COMMANDS = [
+export const BUILT_IN_COMMANDS = [
   { command: "/help", description: "Show available commands", usage: "/help", handler: "help", required_role: "member" },
   { command: "/poll", description: "Create a quick poll", usage: '/poll Question? | Option A | Option B', handler: "poll", required_role: "member" },
   { command: "/remind", description: "Schedule a reminder message", usage: "/remind 30m Your reminder text", handler: "remind", required_role: "member" },
