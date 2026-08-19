@@ -1,0 +1,398 @@
+{
+  "typography": [
+    {
+      "role": "display",
+      "fontFamily": "Geist",
+      "fontSize": "72px",
+      "fontWeight": "700",
+      "lineHeight": "72px",
+      "letterSpacing": "-2.52px",
+      "color": "#111111",
+      "sampleText": "Ship chat and live productfrom one SDK."
+    },
+    {
+      "role": "heading",
+      "fontFamily": "Geist",
+      "fontSize": "36px",
+      "fontWeight": "700",
+      "lineHeight": "40px",
+      "letterSpacing": "-0.9px",
+      "color": "#FFFFFF",
+      "sampleText": "Try it right now.No signup required."
+    },
+    {
+      "role": "heading-2",
+      "fontFamily": "Geist",
+      "fontSize": "30px",
+      "fontWeight": "700",
+      "lineHeight": "36px",
+      "letterSpacing": "-0.75px",
+      "color": "#FFFFFF",
+      "sampleText": "Messaging basics, on the edge"
+    },
+    {
+      "role": "body",
+      "fontFamily": "Geist",
+      "fontSize": "20px",
+      "fontWeight": "400",
+      "lineHeight": "28px",
+      "letterSpacing": "normal",
+      "color": "#475569",
+      "sampleText": "In-app chat, voice AI, live location, stream, collab, and de"
+    },
+    {
+      "role": "heading-3",
+      "fontFamily": "Geist",
+      "fontSize": "16px",
+      "fontWeight": "600",
+      "lineHeight": "24px",
+      "letterSpacing": "normal",
+      "color": "#0E1316",
+      "sampleText": "Runs on your edge"
+    },
+    {
+      "role": "label",
+      "fontFamily": "Geist",
+      "fontSize": "12px",
+      "fontWeight": "500",
+      "lineHeight": "16px",
+      "letterSpacing": "normal",
+      "color": "#FFFFFF",
+      "sampleText": "Most teams start here"
+    },
+    {
+      "role": "code",
+      "fontFamily": "ui-monospace",
+      "fontSize": "12px",
+      "fontWeight": "500",
+      "lineHeight": "16px",
+      "letterSpacing": "normal",
+      "color": "#F1F5F9",
+      "sampleText": "pnpm add @fluxy-chat/sdk"
+    }
+  ],
+  "spacing": {
+    "observed": [
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      16,
+      24,
+      32,
+      40
+    ],
+    "baseUnit": 8
+  },
+  "radius": [
+    "8px",
+    "12px",
+    "16px",
+    "9999px"
+  ],
+  "shadows": [
+    {
+      "value": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+      "count": 21
+    },
+    {
+      "value": "rgb(255, 255, 255) 0px 0px 0px 0px, rgba(14, 19, 22, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+      "count": 19
+    },
+    {
+      "value": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(17, 17, 17, 0.16) 0px 12px 40px -8px",
+      "count": 1
+    },
+    {
+      "value": "rgb(255, 255, 255) 0px 0px 0px 0px, rgba(255, 255, 255, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+      "count": 1
+    }
+  ],
+  "buttons": [
+    {
+      "label": "Dismiss",
+      "background": "transparent",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#451A03",
+      "padding": "0px",
+      "borderRadius": "0px",
+      "border": "0px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "height": "20px"
+    },
+    {
+      "label": "Sign in",
+      "background": "#FFFFFF",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#10054D",
+      "padding": "0px 12px",
+      "borderRadius": "0px",
+      "border": "1px solid oklab(0.177637 0.00000810623 0.00000356138 / 0.1)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "height": "36px"
+    },
+    {
+      "label": "Create free accountFree",
+      "background": "#111111",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#FFFFFF",
+      "padding": "0px 12px",
+      "borderRadius": "0px",
+      "border": "1px solid rgba(0, 0, 0, 0)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "height": "36px"
+    },
+    {
+      "label": "Create free account",
+      "background": "#111111",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#FFFFFF",
+      "padding": "0px 32px",
+      "borderRadius": "12px",
+      "border": "1px solid rgba(0, 0, 0, 0)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "600",
+      "height": "52px"
+    },
+    {
+      "label": "Chat",
+      "background": "#F1F5F9",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#475569",
+      "padding": "2px 8px",
+      "borderRadius": "9999px",
+      "border": "0px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "none",
+      "fontSize": "10px",
+      "fontWeight": "500",
+      "height": "19px"
+    },
+    {
+      "label": "Collab",
+      "background": "#111111",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#FFFFFF",
+      "padding": "2px 8px",
+      "borderRadius": "9999px",
+      "border": "0px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "none",
+      "fontSize": "10px",
+      "fontWeight": "500",
+      "height": "19px"
+    }
+  ],
+  "cards": [
+    {
+      "label": "card",
+      "background": "#FFFFFF",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#0E1316",
+      "padding": "24px",
+      "borderRadius": "16px",
+      "border": "1px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "229px"
+    },
+    {
+      "label": "card",
+      "background": "#FFFFFF",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#0E1316",
+      "padding": "16px 0px",
+      "borderRadius": "16px",
+      "border": "0px solid rgba(0, 0, 0, 0.06)",
+      "boxShadow": "rgb(255, 255, 255) 0px 0px 0px 0px, rgba(14, 19, 22, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "height": "233.75px"
+    },
+    {
+      "label": "card",
+      "background": "transparent",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#0E1316",
+      "padding": "28px 16px 0px",
+      "borderRadius": "0px",
+      "border": "0px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "height": "201.75px"
+    }
+  ],
+  "nav": {
+    "label": "navigation",
+    "background": "#FFFFFF",
+    "backgroundImage": "",
+    "backdropFilter": "blur(24px)",
+    "color": "#0E1316",
+    "padding": "8px 12px 8px 16px",
+    "borderRadius": "9999px",
+    "border": "1px solid rgba(0, 0, 0, 0.06)",
+    "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(17, 17, 17, 0.16) 0px 12px 40px -8px",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "height": "54px"
+  },
+  "chips": [
+    {
+      "label": "Most teams start here",
+      "background": "#C2410C",
+      "color": "#FFFFFF",
+      "padding": "2px 8px",
+      "borderRadius": "0px",
+      "border": "1px solid rgba(0, 0, 0, 0)",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+      "fontSize": "12px",
+      "fontWeight": "500",
+      "height": "20px"
+    },
+    {
+      "label": "Syncing",
+      "background": "#F1F5F9",
+      "color": "#475569",
+      "padding": "2px 8px",
+      "borderRadius": "9999px",
+      "border": "0px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "none",
+      "fontSize": "10px",
+      "fontWeight": "600",
+      "height": "19px"
+    },
+    {
+      "label": "Sam",
+      "background": "#6366F1",
+      "color": "#FFFFFF",
+      "padding": "2px 6px",
+      "borderRadius": "9999px",
+      "border": "0px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+      "fontSize": "9px",
+      "fontWeight": "600",
+      "height": "17.5px"
+    },
+    {
+      "label": "Live Playground",
+      "background": "#3B82F6",
+      "color": "#93C5FD",
+      "padding": "6px 16px",
+      "borderRadius": "9999px",
+      "border": "1px solid rgba(96, 165, 250, 0.2)",
+      "boxShadow": "none",
+      "fontSize": "12px",
+      "fontWeight": "500",
+      "height": "30px"
+    }
+  ],
+  "statCells": [],
+  "tabs": [
+    {
+      "label": "Chat",
+      "background": "#F1F5F9",
+      "color": "#475569",
+      "padding": "2px 8px",
+      "borderRadius": "9999px",
+      "border": "0px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "none",
+      "fontSize": "10px",
+      "fontWeight": "500",
+      "height": "19px"
+    },
+    {
+      "label": "Collab",
+      "background": "#111111",
+      "color": "#FFFFFF",
+      "padding": "2px 8px",
+      "borderRadius": "9999px",
+      "border": "0px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "none",
+      "fontSize": "10px",
+      "fontWeight": "500",
+      "height": "19px"
+    },
+    {
+      "label": "848",
+      "background": "transparent",
+      "color": "#94A3B8",
+      "padding": "0px",
+      "borderRadius": "0px",
+      "border": "0px solid rgba(14, 19, 22, 0.1)",
+      "boxShadow": "none",
+      "fontSize": "12px",
+      "fontWeight": "400",
+      "height": "16px"
+    }
+  ],
+  "backgrounds": [
+    {
+      "value": "radial-gradient(75% 55% at 50% 0%, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.4) 45%, rgba(0, 0, 0, 0) 68%)",
+      "area": 2319360
+    },
+    {
+      "value": "linear-gradient(rgba(59, 130, 246, 0.1), rgba(168, 85, 247, 0.05), rgba(0, 0, 0, 0))",
+      "area": 484176
+    },
+    {
+      "value": "radial-gradient(circle at 42% 40%, rgba(215, 55, 8, 0.72) 0%, rgba(235, 90, 25, 0.48) 24%, rgba(248, 140, 70, 0.22) 48%, rgba(0, 0, 0, 0) 74%)",
+      "area": 377487
+    },
+    {
+      "value": "radial-gradient(85% 65% at 50% -8%, rgba(255, 115, 94, 0.38), rgba(255, 115, 94, 0.12) 42%, rgba(0, 0, 0, 0) 58%)",
+      "area": 409452
+    },
+    {
+      "value": "radial-gradient(220px, rgba(232, 69, 10, 0) 0%, rgba(232, 69, 10, 0) 32%, rgba(0, 0, 0, 0) 62%)",
+      "area": 252816
+    },
+    {
+      "value": "radial-gradient(circle at 58% 42%, rgba(139, 92, 246, 0.28) 0%, rgba(255, 149, 128, 0.16) 36%, rgba(0, 0, 0, 0) 70%)",
+      "area": 280000
+    }
+  ],
+  "glass": [
+    {
+      "backdropFilter": "blur(4px)",
+      "background": "rgb(255, 255, 255)",
+      "border": "1px solid rgba(0, 0, 0, 0.14)",
+      "borderRadius": "16px",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.18) 0px 8px 40px -8px, rgba(0, 0, 0, 0.08) 0px 2px 8px -2px",
+      "area": 514048
+    },
+    {
+      "backdropFilter": "blur(4px)",
+      "background": "rgba(15, 23, 42, 0.9)",
+      "border": "1px solid rgba(255, 255, 255, 0.1)",
+      "borderRadius": "16px",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(59, 130, 246, 0.1) 0px 25px 50px -12px",
+      "area": 388248
+    },
+    {
+      "backdropFilter": "blur(24px)",
+      "background": "rgba(255, 255, 255, 0.9)",
+      "border": "1px solid rgba(0, 0, 0, 0.06)",
+      "borderRadius": "9999px",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(17, 17, 17, 0.16) 0px 12px 40px -8px",
+      "area": 62208
+    }
+  ]
+}

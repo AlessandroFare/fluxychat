@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+.env.local
+.fluxy/setup.json
+*.log
+.DS_Store

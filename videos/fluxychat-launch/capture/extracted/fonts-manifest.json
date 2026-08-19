@@ -1,0 +1,96 @@
+{
+  "files": [
+    {
+      "file": "53b9e256198e5412-s.390ncx5urfkfu.woff2",
+      "family": "Geist",
+      "rawFamily": "Geist",
+      "subfamily": "Regular",
+      "postscript": "Geist-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "7178b3e590c64307-s.21jp631_3pja2.woff2",
+      "family": "Geist",
+      "rawFamily": "Geist",
+      "subfamily": "Regular",
+      "postscript": "Geist-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "8a480f0b521d4e75-s.1qq4vpdcun5oj.woff2",
+      "family": "Geist",
+      "rawFamily": "Geist",
+      "subfamily": "Regular",
+      "postscript": "Geist-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "family": "Geist",
+      "rawFamily": "Geist",
+      "subfamily": "Regular",
+      "postscript": "Geist-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "fef07dbb0973bf53-s.3p2_lha1f2xer.woff2",
+      "family": "Geist",
+      "rawFamily": "Geist",
+      "subfamily": "Regular",
+      "postscript": "Geist-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    }
+  ],
+  "families": [
+    {
+      "family": "Geist",
+      "weights": [
+        400
+      ],
+      "variable": true,
+      "fileCount": 5,
+      "files": [
+        "53b9e256198e5412-s.390ncx5urfkfu.woff2",
+        "7178b3e590c64307-s.21jp631_3pja2.woff2",
+        "8a480f0b521d4e75-s.1qq4vpdcun5oj.woff2",
+        "caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+        "fef07dbb0973bf53-s.3p2_lha1f2xer.woff2"
+      ]
+    }
+  ],
+  "unidentified": [],
+  "meta": {
+    "generatedAt": "2026-08-17T15:06:50.487Z",
+    "tool": "fontkit"
+  }
+}

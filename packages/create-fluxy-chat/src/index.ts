@@ -42,15 +42,21 @@ interface ParsedArgs {
   language?: "typescript" | "javascript";
   yes: boolean;
   minimal: boolean;
+  full: boolean;
+  mode?: "local" | "hosted";
   skipInstall: boolean;
   noGit: boolean;
   help: boolean;
 }
 
+const TEMPLATE_CHOICES =
+  "react, full, basic, slack, telegram, discord, web, hr-feedback";
+
 function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
     yes: false,
     minimal: false,
+    full: false,
     skipInstall: false,
     noGit: false,
     help: false,
@@ -66,6 +72,21 @@ function parseArgs(argv: string[]): ParsedArgs {
       args.yes = true;
     } else if (arg === "--minimal") {
       args.minimal = true;
+    } else if (arg === "--full") {
+      args.full = true;
+      args.adapter = "full";
+    } else if (arg === "--mode") {
+      const value = argv[++i]?.trim().toLowerCase();
+      if (value === "local" || value === "hosted") {
+        args.mode = value;
+        if (value === "hosted") {
+          args.full = true;
+          args.adapter = "full";
+        }
+      } else {
+        console.error(`Invalid mode: ${value}. Choose: local, hosted`);
+        process.exit(1);
+      }
     } else if (arg === "--skip-install") {
       args.skipInstall = true;
     } else if (arg === "--no-git") {
@@ -79,7 +100,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       } else if (value === "hr-feedback") {
         args.adapter = "hr-feedback";
       } else {
-        console.error(`Invalid template: ${value}. Choose: react, basic, slack, telegram, discord, web, hr-feedback`);
+        console.error(`Invalid template: ${value}. Choose: ${TEMPLATE_CHOICES}`);
         process.exit(1);
       }
     } else if (arg === "--adapter" || arg === "-a") {
@@ -87,7 +108,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       if (value && isAdapterType(value)) {
         args.adapter = value;
       } else {
-        console.error(`Invalid adapter: ${value}. Choose: react, basic, slack, telegram, discord, web, hr-feedback`);
+        console.error(`Invalid adapter: ${value}. Choose: ${TEMPLATE_CHOICES}`);
         process.exit(1);
       }
     } else if (arg === "--pm" || arg === "--package-manager") {
@@ -128,17 +149,21 @@ ${pc.bold("Usage:")}
   npx create-fluxy-chat [project-name] [options]
 
 ${pc.bold("Options:")}
-  -a, --adapter <type>       Adapter: react, basic, slack, telegram, discord, web, hr-feedback
-  -t, --template <type>      Alias for --adapter (e.g. react, hr-feedback)
+  -a, --adapter <type>       Adapter: ${TEMPLATE_CHOICES}
+  -t, --template <type>      Alias for --adapter (e.g. full, react)
   --pm <manager>             Package manager: npm, pnpm, yarn
   -l, --language <lang>      Language: typescript (default) or javascript
   -y, --yes                  Skip prompts and accept defaults
+  --full                     Full stack: chat + @assistant + setup scripts (recommended)
+  --mode <local|hosted>      hosted = no wrangler (uses fluxychat.com demo session)
   --minimal                  Chat-only widget (ui-kit) — no platform modules
   --skip-install             Skip dependency installation
   --no-git                   Skip git repository initialization
   -h, --help                 Show this help
 
 ${pc.bold("Examples:")}
+  ${pc.cyan("npx create-fluxy-chat my-app --mode hosted -y")}
+  ${pc.cyan("npx create-fluxy-chat my-app --full -y")}
   ${pc.cyan("npx create-fluxy-chat my-chat --minimal")}
   ${pc.cyan("npx create-fluxy-chat my-hr-bot --template hr-feedback")}
   ${pc.cyan("npx create-fluxy-chat my-chat --template react")}
@@ -166,6 +191,8 @@ async function main(): Promise<void> {
     language: args.language,
     yes: args.yes,
     minimal: args.minimal,
+    full: args.full,
+    mode: args.mode,
     shouldInstall: args.skipInstall ? false : undefined,
     shouldInitGit: args.noGit ? false : undefined,
   });
@@ -206,6 +233,27 @@ async function main(): Promise<void> {
       pkg.name = config.name;
       writeJson(projectDir, "package.json", pkg);
       s.stop("Minimal chat widget created.");
+    } else if (config.full || config.adapter === "full") {
+      const templateRoot = path.join(templatesDir(), "full");
+      copyDir(templateRoot, projectDir);
+      const pkgPath = path.join(projectDir, "package.json");
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as Record<string, unknown>;
+      pkg.name = config.name;
+      writeJson(projectDir, "package.json", pkg);
+      if (config.full || config.adapter === "full") {
+        fs.mkdirSync(path.join(projectDir, ".fluxy"), { recursive: true });
+        const setupMode = config.mode === "hosted" ? "hosted" : "local";
+        writeFile(
+          projectDir,
+          ".fluxy/mode",
+          `${setupMode}\n`,
+        );
+      }
+      s.stop(
+        config.mode === "hosted"
+          ? "Full stack app created (hosted mode — run pnpm setup:hosted)."
+          : "Full stack app created (chat + agent + setup scripts).",
+      );
     } else if (config.adapter === "react") {
       const templateRoot = path.join(templatesDir(), "react");
       copyDir(templateRoot, projectDir);
@@ -293,21 +341,39 @@ async function main(): Promise<void> {
   }
 
   // --- Next steps ---
-  note(
-    config.adapter === "react"
-      ? [
-          `cd ${config.name}`,
-          "cp .env.example .env",
-          "# Set VITE_FLUXYCHAT_WORKER_URL + VITE_FLUXYCHAT_PUBLIC_ROOM_ID (guest) or MEMBER_JWT",
-          `${config.packageManager === "npm" ? "npm run" : config.packageManager} dev`,
-        ].join("\n")
-      : [
-          `cd ${config.name}`,
-          "cp .env.example .dev.vars",
-          `${config.packageManager === "npm" ? "npm run" : config.packageManager} dev`,
-        ].join("\n"),
-    "Next steps",
-  );
+  const devCmd = config.packageManager === "npm" ? "npm run" : config.packageManager;
+  const nextSteps =
+    config.full || config.adapter === "full"
+      ? config.mode === "hosted"
+        ? [
+            `cd ${config.name}`,
+            `${devCmd} setup:hosted   # guest JWT from fluxychat.com`,
+            `${devCmd} dev            # http://localhost:5173`,
+            `# Keep this project: https://fluxychat.com/onboarding?from=cli`,
+          ].join("\n")
+        : [
+            `# Terminal 1 — FluxyChat monorepo (if not already running)`,
+            `pnpm --filter @fluxy-chat/worker dev`,
+            ``,
+            `cd ${config.name}`,
+            `${devCmd} setup   # provision worker → writes .env`,
+            `${devCmd} dev     # http://localhost:5173 (+ dashboard if monorepo nearby)`,
+            `# Keep / import .env: http://localhost:3000/onboarding?from=cli`,
+          ].join("\n")
+      : config.adapter === "react" || config.minimal
+        ? [
+            `cd ${config.name}`,
+            "cp .env.example .env",
+            "# Set VITE_FLUXYCHAT_WORKER_URL + JWT or public room ID",
+            `${devCmd} dev`,
+          ].join("\n")
+        : [
+            `cd ${config.name}`,
+            "cp .env.example .dev.vars",
+            `${devCmd} dev`,
+          ].join("\n");
+
+  note(nextSteps, "Next steps");
 
   outro(
     `${pc.green("Done!")} Visit ${pc.cyan("https://github.com/AlessandroFare/fluxychat")} for the docs.`,

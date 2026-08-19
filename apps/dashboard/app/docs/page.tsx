@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PAGE_METADATA } from "@/lib/marketing-copy";
-import { ArrowRight, BookOpen, Bot, Cloud, Code2, ExternalLink, KeyRound, Package, Server, Webhook, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, Cloud, Code2, ExternalLink, KeyRound, Package, Server, Sparkles, Webhook, Zap } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { MarketingShell } from "../components/marketing-shell";
 import { StackBlitzButton } from "@/components/stackblitz-button";
@@ -220,7 +220,9 @@ export default function DocsPage() {
                 ? Zap
                 : tmpl.id === "react-chat-ui"
                   ? Code2
-                  : Bot;
+                  : tmpl.id === "full-hosted"
+                    ? Sparkles
+                    : Bot;
             return (
               <div
                 key={tmpl.id}

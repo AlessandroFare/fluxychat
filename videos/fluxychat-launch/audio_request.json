@@ -1,0 +1,49 @@
+{
+  "provider": "kokoro",
+  "speed": 1,
+  "lines": [
+    {
+      "id": "01",
+      "text": "Deploying a REST API is easy. But what about handling real-time WebSockets, or building AI agents that actually live inside the conversation? Real-time vendors are expensive — and most AI chat tools bolt agents on as a separate feature."
+    },
+    {
+      "id": "02",
+      "text": "There's a better way. That's why I built FluxyChat — an open-source realtime platform where chat and AI agents share the same timeline, with tool calls you can actually see."
+    },
+    {
+      "id": "03",
+      "text": "Powered by Cloudflare Workers, Durable Objects, and D1 — globally distributed infrastructure. Self-hostable on your own account, or hosted by us in seconds."
+    },
+    {
+      "id": "04",
+      "text": "Use our SDK and hooks to wire your client in minutes. Then manage everything from a dedicated console. Let me show you how it works."
+    },
+    {
+      "id": "05",
+      "text": "Scaffold a project with one command. Real terminal, real output — a working chat app in seconds."
+    },
+    {
+      "id": "06",
+      "text": "Open two tabs. Message in one — it appears instantly in the other. That's edge-native WebSockets, no polling hacks."
+    },
+    {
+      "id": "07",
+      "text": "Now the part nobody else has. Type at-assistant, ask it to do something — the agent responds in the same timeline, and you see every tool call right there. Not hidden in a log. Not a separate DM."
+    },
+    {
+      "id": "08",
+      "text": "Operator console for rooms, agents, and billing. Self-host on Cloudflare, or go hosted — your choice."
+    },
+    {
+      "id": "09",
+      "text": "FluxyChat is in open beta. MIT licensed. Try it at fluxychat.com."
+    }
+  ],
+  "bgm": {
+    "mode": "retrieve",
+    "query": "tech-launch-upbeat",
+    "blob": "Chat and AI agents share one realtime timeline — with visible tool calls",
+    "arc": "Hook → Problem → Solution → Infrastructure → Demo proof → CTA"
+  },
+  "voice": "am_michael"
+}

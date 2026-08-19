@@ -29,7 +29,33 @@ Realtime chat on Cloudflare Workers: one Worker, WebSocket rooms, a TypeScript S
 
 ## Get started
 
-### Fastest path (terminal)
+### Fastest path — hosted (no wrangler)
+
+```bash
+npx create-fluxy-chat@latest my-app --mode hosted -y
+cd my-app && pnpm install && pnpm setup:hosted && pnpm dev
+```
+
+Uses the public demo on [api.fluxychat.com](https://api.fluxychat.com) — chat + FluxyBot in ~60s.
+
+### Full stack — local worker
+
+```bash
+npx create-fluxy-chat@latest my-app --full -y
+cd my-app
+
+# Terminal 1 — from a FluxyChat monorepo checkout (or self-host worker)
+pnpm --filter @fluxy-chat/worker dev
+
+# Terminal 2 — in my-app
+pnpm install
+pnpm setup    # provision project, JWT, @assistant → .env
+pnpm dev      # Vite + optional dashboard if monorepo nearby
+```
+
+Chat + realtime + `@assistant` + tool thread in one Vite app. See [choose your path](apps/docs/content/docs/getting-started/choose-your-path.mdx) and [one-click roadmap](docs/ONE-CLICK-PRODUCT-ROADMAP.md).
+
+### Monorepo contributor path
 
 ```bash
 git clone https://github.com/fluxychat/fluxychat

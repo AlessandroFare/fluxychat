@@ -5,19 +5,24 @@ Scaffold a new [FluxyChat](https://github.com/AlessandroFare/fluxychat) bot proj
 ## Quick start
 
 ```bash
-# Minimal chat widget (recommended: 3 lines in App.tsx)
+# Full stack — chat + @assistant + setup scripts (recommended)
+npx create-fluxy-chat my-app --full -y
+cd my-app && pnpm setup && pnpm dev
+
+# Minimal chat widget
 npx create-fluxy-chat my-chat --minimal
 
-# React + useChat (guest room ~60s or member JWT)
+# React + useChat only (bring your own worker URL)
 npx create-fluxy-chat my-chat --template react
 ```
-
-Interactive mode defaults to the **React chat app** template.
 
 ## Non-interactive usage
 
 ```bash
-# React + Vite + useChat (recommended)
+# Full stack (chat + agent + setup)
+npx create-fluxy-chat my-app --full -y
+
+# React + Vite + useChat
 npx create-fluxy-chat my-chat --template react -y
 
 # Create a Slack bot with pnpm
@@ -37,11 +42,12 @@ npx create-fluxy-chat my-bot --adapter basic
 
 | Flag | Short | Description |
 | --- | --- | --- |
-| `--adapter <type>` | `-a` | Adapter: `react`, `basic`, `slack`, `telegram`, `discord`, `web` |
-| `--template <type>` | `-t` | Alias for `--adapter (e.g. react)` |
+| `--adapter <type>` | `-a` | Adapter: `full`, `react`, `basic`, `slack`, `telegram`, `discord`, `web`, `hr-feedback` |
+| `--template <type>` | `-t` | Alias for `--adapter (e.g. full, react)` |
 | `--pm <manager>` | | Package manager: `npm`, `pnpm`, `yarn` |
 | `--language <lang>` | `-l` | Language: `typescript` (default) or `javascript` |
 | `--yes` | `-y` | Skip prompts and accept defaults |
+| `--full` | | Full stack template: chat + `@assistant` + `pnpm setup` / `pnpm dev` |
 | `--minimal` | | Chat-only widget (`@fluxy-chat/ui-kit`), no platform modules |
 | `--skip-install` | | Skip dependency installation |
 | `--no-git` | | Skip git repository initialization |

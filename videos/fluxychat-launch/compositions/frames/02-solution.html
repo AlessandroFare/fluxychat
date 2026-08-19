@@ -1,0 +1,98 @@
+<template>
+  <div id="root" data-composition-id="02-solution" data-width="1920" data-height="1080" data-start="0" data-duration="12.553">
+    <div class="clip fx-02-solution-bg" data-start="0" data-duration="12.553" data-track-index="0"></div>
+    
+    <img class="fx-02-solution-logo" id="fx-02-solution-logo" src="assets/logo.svg" alt="" />
+    <div class="fx-02-solution-title" id="fx-02-solution-brand">FluxyChat</div>
+    <div class="fx-02-solution-headline" id="fx-02-solution-h1">Chat + agents.<br><span>One timeline.</span></div>
+    <div class="fx-02-solution-badges">
+      <div class="fx-02-solution-badge oss" id="fx-02-solution-b1">Open source</div>
+      <div class="fx-02-solution-badge mit" id="fx-02-solution-b2">MIT</div>
+    </div>
+    <div class="fx-02-solution-rail" id="fx-02-solution-rail">
+      <div class="fx-02-solution-msg human" id="fx-02-solution-m1">
+        <div class="fx-02-solution-avatar"></div><div>@assistant summarize this room</div>
+      </div>
+      <div class="fx-02-solution-msg agent" id="fx-02-solution-m2">
+        <div class="fx-02-solution-avatar"></div><div>On it — checking room history…</div>
+      </div>
+      <div class="fx-02-solution-tool" id="fx-02-solution-tool">tool_call · search_messages · { roomId: "…" }</div>
+    </div>
+  </div>
+  <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("assets/fonts/Geist-Regular.woff2") format("woff2");
+      font-weight: 400;
+      font-style: normal;
+    }
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "Geist", system-ui, sans-serif;
+      color: #el-0E1316;
+    }
+    .fx-02-solution-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+    
+    .fx-02-solution-bg { background: #FDFBF9; }
+    .fx-02-solution-logo { position: absolute; left: 80px; top: 72px; width: 48px; height: 48px; }
+    .fx-02-solution-title {
+      position: absolute; left: 140px; top: 78px; font-size: 36px; font-weight: 700; color: #el-0E1316;
+    }
+    .fx-02-solution-headline {
+      position: absolute; left: 80px; top: 180px; width: 900px; font-size: 72px; font-weight: 700;
+      line-height: 1.05; letter-spacing: -0.03em; color: #el-0E1316;
+    }
+    .fx-02-solution-headline span { color: #c2410c; }
+    .fx-02-solution-rail {
+      position: absolute; left: 80px; top: 520px; width: 1760px; height: 280px;
+      background: #fff; border: 1px solid #e5e0d8; border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(14,19,22,0.08); padding: 32px 40px;
+    }
+    .fx-02-solution-msg {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 20px; font-size: 22px;
+    }
+    .fx-02-solution-msg.human .fx-02-solution-avatar { background: #el-3b82f6; }
+    .fx-02-solution-msg.agent .fx-02-solution-avatar { background: #c2410c; }
+    .fx-02-solution-avatar {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    }
+    .fx-02-solution-tool {
+      margin-left: 52px; padding: 12px 16px; background: #F3F0EC; border-left: 3px solid #c2410c;
+      border-radius: 8px; font-family: ui-monospace, monospace; font-size: 16px; color: #el-475569;
+    }
+    .fx-02-solution-badges { position: absolute; right: 80px; top: 200px; display: flex; gap: 12px; }
+    .fx-02-solution-badge {
+      padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .fx-02-solution-badge.oss { background: rgba(194,65,12,0.1); color: #c2410c; }
+    .fx-02-solution-badge.mit { background: #el-0E1316; color: #fff; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    
+    gsap.set("#fx-02-solution-logo, #fx-02-solution-brand", { opacity: 0, y: -20 });
+    gsap.set("#fx-02-solution-h1", { opacity: 0, y: 40 });
+    gsap.set("#fx-02-solution-rail", { opacity: 0, y: 60 });
+    gsap.set("#fx-02-solution-m1, #fx-02-solution-m2, #fx-02-solution-tool", { opacity: 0, x: -30 });
+    gsap.set("#fx-02-solution-b1, #fx-02-solution-b2", { opacity: 0, scale: 0.8 });
+    tl.fromTo("#fx-02-solution-logo, #fx-02-solution-brand", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.5 }, 0.2);
+    tl.fromTo("#fx-02-solution-h1", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.8);
+    tl.fromTo("#fx-02-solution-rail", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.6 }, 3.0);
+    tl.fromTo("#fx-02-solution-m1", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.4 }, 3.4);
+    tl.fromTo("#fx-02-solution-m2", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.4 }, 5.2);
+    tl.fromTo("#fx-02-solution-tool", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.45, ease: "back.out(1.2)" }, 7.0);
+    tl.fromTo("#fx-02-solution-b1", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.35 }, 9.5);
+    tl.fromTo("#fx-02-solution-b2", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.35 }, 10.0);
+    window.__timelines["02-solution"] = tl;
+  </script>
+</template>

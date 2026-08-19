@@ -5,10 +5,12 @@ Scaffold a new FluxyChat bot project with a single command. The CLI generates a 
 ## Quick Start
 
 ```bash
+# Full stack — chat + @assistant + setup (recommended)
+npx create-fluxy-chat my-app --full -y
+
+# Interactive mode (defaults to template picker including Full stack)
 npx create-fluxy-chat my-bot
 ```
-
-This launches an interactive prompt to configure your bot project.
 
 ## Non-Interactive Usage
 

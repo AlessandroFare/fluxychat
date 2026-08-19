@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Supported package managers.
@@ -9,7 +10,7 @@ export type PackageManager = "npm" | "yarn" | "pnpm";
 /**
  * Supported adapter types.
  */
-export type AdapterType = "basic" | "slack" | "telegram" | "discord" | "web" | "react" | "hr-feedback";
+export type AdapterType = "basic" | "slack" | "telegram" | "discord" | "web" | "react" | "hr-feedback" | "full";
 
 /**
  * Supported language options.
@@ -28,6 +29,10 @@ export interface ProjectConfig {
   shouldInitGit: boolean;
   /** Chat-only widget template (ui-kit) — progressive disclosure */
   minimal?: boolean;
+  /** Full stack: chat + agent + setup scripts */
+  full?: boolean;
+  /** Setup target: local worker or hosted demo */
+  mode?: "local" | "hosted";
 }
 
 const PACKAGE_NAME_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
@@ -65,7 +70,7 @@ export function isPackageManager(value: string): value is PackageManager {
  * Check whether a string is a supported adapter type.
  */
 export function isAdapterType(value: string): value is AdapterType {
-  return ["basic", "slack", "telegram", "discord", "web", "react", "hr-feedback"].includes(value);
+  return ["basic", "slack", "telegram", "discord", "web", "react", "hr-feedback", "full"].includes(value);
 }
 
 /**
@@ -168,9 +173,5 @@ export function copyDir(source: string, destination: string): void {
  * Resolve the templates directory path.
  */
 export function templatesDir(): string {
-  return path.resolve(
-    path.dirname(new URL(import.meta.url).pathname.replace(/^\//, "")),
-    "..",
-    "templates",
-  );
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "templates");
 }

@@ -56,8 +56,9 @@ Roadmap completa con best practice, architetture, tool gratuiti/open-source e ri
 | 🟡 Sprint I | **NW-200** | Duplex room agent + on-hold | L |
 | 🟡 Sprint I | **NW-201** | Decision Rooms™ product pack | M |
 | 🟢 Sprint J | **NW-110** | create-fluxy-chat CLI | M |
+| 🔴 **Now** | **OC-1 → OC-32** | **One-click full product** — CLI → chat + agent + console in ≤90s; vedi [docs/ONE-CLICK-PRODUCT-ROADMAP.md](docs/ONE-CLICK-PRODUCT-ROADMAP.md) | L |
 
-Tracker completo: [docs/NEXT-WAVE-ROADMAP-2026.md](docs/NEXT-WAVE-ROADMAP-2026.md) · [Docs site](/docs/operations/next-wave-roadmap)
+Tracker completo: [docs/NEXT-WAVE-ROADMAP-2026.md](docs/NEXT-WAVE-ROADMAP-2026.md) · [Docs site](/docs/operations/next-wave-roadmap) · **One-click epic:** [docs/ONE-CLICK-PRODUCT-ROADMAP.md](docs/ONE-CLICK-PRODUCT-ROADMAP.md)
 
 Dettaglio architettura, SQL, guardrail e touchpoint codice: [FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md) sezione Research Round 3.
 
