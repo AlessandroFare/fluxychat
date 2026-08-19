@@ -6,7 +6,7 @@ Scaffold a new [FluxyChat](https://github.com/AlessandroFare/fluxychat) bot proj
 
 ```bash
 # Full stack — chat + @assistant + setup scripts (recommended)
-npx create-fluxy-chat my-app --full -y
+npx @fluxy-chat/create-fluxy-chat my-app --full -y
 cd my-app && pnpm setup && pnpm dev
 
 # Minimal chat widget

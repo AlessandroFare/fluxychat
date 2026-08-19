@@ -32,7 +32,7 @@ Realtime chat on Cloudflare Workers: one Worker, WebSocket rooms, a TypeScript S
 ### Fastest path — hosted (no wrangler)
 
 ```bash
-npx create-fluxy-chat@latest my-app --mode hosted -y
+npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
 cd my-app && pnpm install && pnpm setup:hosted && pnpm dev
 ```
 
@@ -41,7 +41,7 @@ Uses the public demo on [api.fluxychat.com](https://api.fluxychat.com) — chat 
 ### Full stack — local worker
 
 ```bash
-npx create-fluxy-chat@latest my-app --full -y
+npx @fluxy-chat/create-fluxy-chat@latest my-app --full -y
 cd my-app
 
 # Terminal 1 — from a FluxyChat monorepo checkout (or self-host worker)

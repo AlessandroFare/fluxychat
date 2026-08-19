@@ -146,7 +146,7 @@ const HELP_TEXT = `
 ${pc.bold("create-fluxy-chat")} — Scaffold a new FluxyChat bot project
 
 ${pc.bold("Usage:")}
-  npx create-fluxy-chat [project-name] [options]
+  npx @fluxy-chat/create-fluxy-chat [project-name] [options]
 
 ${pc.bold("Options:")}
   -a, --adapter <type>       Adapter: ${TEMPLATE_CHOICES}
@@ -162,8 +162,8 @@ ${pc.bold("Options:")}
   -h, --help                 Show this help
 
 ${pc.bold("Examples:")}
-  ${pc.cyan("npx create-fluxy-chat my-app --mode hosted -y")}
-  ${pc.cyan("npx create-fluxy-chat my-app --full -y")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat my-app --mode hosted -y")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat my-app --full -y")}
   ${pc.cyan("npx create-fluxy-chat my-chat --minimal")}
   ${pc.cyan("npx create-fluxy-chat my-hr-bot --template hr-feedback")}
   ${pc.cyan("npx create-fluxy-chat my-chat --template react")}
