@@ -1,0 +1,73 @@
+---
+title: Choose your path
+description: What each FluxyChat entry command gives you — and what still requires manual setup.
+---
+
+# Choose your path
+
+FluxyChat has several entry points. Pick the one that matches your goal.
+
+## Comparison
+
+| Command / path | Chat UI | Realtime | `@assistant` | Console | Worker |
+| --- | --- | --- | --- | --- | --- |
+| **`npx create-fluxy-chat --mode hosted`** | ✅ Vite app | ✅ | ✅ (demo session) | Link | Managed API |
+| **`npx create-fluxy-chat --full`** | ✅ Vite app | ✅ | ✅ (after `pnpm setup`) | Link / local | Local worker |
+| `npx create-fluxy-chat --template react` | ✅ | ✅ | ❌ | ❌ | Bring `.env` credentials |
+| `npx create-fluxy-chat --minimal` | Widget only | ✅ | ❌ | ❌ | Bring `.env` credentials |
+| `pnpm run first-message` (monorepo) | ❌ (terminal) | ✅ API | ❌ | ❌ | Starts local worker |
+| [fluxychat.com](https://fluxychat.com) hosted | ✅ | ✅ | ✅ | ✅ | Managed |
+
+## Recommended: hosted (zero wrangler)
+
+```bash
+npx create-fluxy-chat@latest my-app --mode hosted -y
+cd my-app
+pnpm install
+pnpm setup:hosted
+pnpm dev
+```
+
+## Recommended: full stack local
+
+```bash
+npx create-fluxy-chat@latest my-app --full -y
+cd my-app
+pnpm install
+
+# Start worker (from FluxyChat monorepo clone)
+pnpm --filter @fluxy-chat/worker dev
+
+# In my-app
+pnpm setup
+pnpm dev
+```
+
+`pnpm setup` calls `POST /dev/provision` (local) or `GET /demo/session` (hosted). After setup, open `{console}/onboarding?from=cli` and paste `.env` to jump to First Chat.
+
+## Monorepo contributors
+
+```bash
+git clone https://github.com/AlessandroFare/fluxychat
+cd fluxychat
+pnpm install
+pnpm run self-host    # env + D1 migrations
+pnpm --filter @fluxy-chat/worker dev
+pnpm run first-message
+```
+
+## Hosted (no wrangler)
+
+1. Sign up at [fluxychat.com](https://fluxychat.com)
+2. Complete [/onboarding](https://fluxychat.com/onboarding)
+3. Copy Worker URL + member JWT into your app's `.env`
+
+## Roadmap
+
+One-command **hosted sandbox** (no local worker) is tracked in [ONE-CLICK-PRODUCT-ROADMAP.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/ONE-CLICK-PRODUCT-ROADMAP.md).
+
+## Related
+
+- [Client setup](/docs/getting-started/client-setup)
+- [Self-host one command](/docs/guides/self-host-one-command)
+- [create-fluxy-chat guide](/docs/guides/create-fluxy-chat)

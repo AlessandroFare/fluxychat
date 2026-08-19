@@ -29,6 +29,7 @@
     "first-message": "node scripts/first-message.mjs",
     "import-chat-history": "node scripts/import-chat-history.mjs",
     "smoke:create-fluxy-chat": "node scripts/smoke-create-fluxy-chat.mjs",
+    "smoke:one-click": "node scripts/one-click-smoke.mjs",
     "check:env": "node scripts/check-env-readiness.mjs",
     "check:upptime": "node scripts/validate-upptime-config.mjs",
     "docs:sync": "node scripts/sync-docs-content.mjs",

@@ -1165,4 +1165,174 @@ root.render(<App />);`,
       },
     },
   },
+  {
+    id: "full-hosted",
+    label: "Full stack (hosted demo)",
+    description: "Vite-style React chat with @assistant invoke against the public demo session",
+    icon: "Sparkles",
+    project: {
+      title: "FluxyChat Full Hosted",
+      description: "Chat + agent using GET /demo/session — no wrangler",
+      template: "create-react-app",
+      dependencies: {
+        react: "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-scripts": "5.0.1",
+        "@fluxy-chat/sdk": "^0.6.0",
+        "@fluxy-chat/react": "^0.1.1",
+      },
+      files: {
+        "src/App.js": tmpl`import React, { useEffect, useMemo, useState } from "react";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+import "./App.css";
+
+const BASE_URL = "${WC_BASE_URL}";
+
+function ChatRoom({ roomId, agentId, agentHandle, userId }) {
+  const { messages, sendMessage, invokeAgent, connectionState, agentTyping, toolThreadEvents } = useChat({
+    roomId,
+    agentId: agentId || undefined,
+    markReadLatest: true,
+  });
+  const [draft, setDraft] = useState("");
+
+  return (
+    <section className="chat">
+      <header>
+        <strong>{roomId}</strong>
+        <span>{connectionState.status}</span>
+      </header>
+      <ul>
+        {messages.map((m) => (
+          <li key={m.id || m.createdAt}>
+            <small>{m.userId}</small>
+            <div>{m.content}</div>
+          </li>
+        ))}
+      </ul>
+      {agentTyping ? <p className="hint">{agentHandle} is thinking…</p> : null}
+      {toolThreadEvents.length > 0 ? (
+        <p className="hint">Tools: {toolThreadEvents.length} event(s)</p>
+      ) : null}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const text = draft.trim();
+          if (!text) return;
+          sendMessage(text);
+          setDraft("");
+        }}
+      >
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Message…" />
+        <button type="submit">Send</button>
+        <button
+          type="button"
+          onClick={() => {
+            const text = draft.trim();
+            if (!text || !agentId) return;
+            invokeAgent(text.startsWith("@") ? text : agentHandle + " " + text, { agentId });
+            setDraft("");
+          }}
+        >
+          Ask agent
+        </button>
+      </form>
+    </section>
+  );
+}
+
+export default function App() {
+  const [session, setSession] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch(BASE_URL + "/demo/session")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.token) throw new Error(data.error || "demo unavailable");
+        setSession(data);
+      })
+      .catch((err) => setError(err.message));
+  }, []);
+
+  const client = useMemo(() => {
+    if (!session) return null;
+    return new FluxyChatClient({
+      baseUrl: BASE_URL,
+      userId: session.userId,
+      token: session.token,
+    });
+  }, [session]);
+
+  if (error) return <main className="shell"><p>{error}</p></main>;
+  if (!session || !client) return <main className="shell"><p>Connecting to hosted demo…</p></main>;
+
+  return (
+    <main className="shell">
+      <h1>FluxyChat hosted demo</h1>
+      <p>
+        Guest session · <a href="https://fluxychat.com/onboarding?from=cli">Keep this project</a>
+      </p>
+      <FluxyRealtimeProvider client={client}>
+        <ChatRoom
+          roomId={session.roomId}
+          agentId={session.agentId}
+          agentHandle={session.agentHandle || "@assistant"}
+          userId={session.userId}
+        />
+      </FluxyRealtimeProvider>
+    </main>
+  );
+}
+`,
+        "src/App.css": tmpl`.shell { font-family: system-ui; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+.chat { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+header { display: flex; justify-content: space-between; padding: 0.75rem 1rem; background: #0f172a; color: #fff; }
+ul { list-style: none; margin: 0; padding: 1rem; min-height: 280px; }
+li { margin-bottom: 0.5rem; padding: 0.5rem; background: #f8fafc; border-radius: 8px; }
+small { color: #64748b; }
+form { display: flex; gap: 0.5rem; padding: 0.75rem; border-top: 1px solid #e2e8f0; }
+input { flex: 1; padding: 0.5rem; }
+button { background: #c2410c; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 0.75rem; cursor: pointer; }
+.hint { padding: 0 1rem; font-size: 0.8rem; color: #64748b; }
+a { color: #c2410c; }`,
+        "public/index.html": tmpl`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FluxyChat Full Hosted</title>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>`,
+        "src/index.js": tmpl`import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);`,
+        "package.json": JSON.stringify(
+          {
+            name: "fluxychat-full-hosted",
+            private: true,
+            dependencies: {
+              react: "^18.2.0",
+              "react-dom": "^18.2.0",
+              "react-scripts": "5.0.1",
+              "@fluxy-chat/sdk": "^0.6.0",
+              "@fluxy-chat/react": "^0.1.1",
+            },
+            scripts: {
+              start: "react-scripts start",
+              build: "react-scripts build",
+            },
+          },
+          null,
+          2,
+        ),
+      },
+    },
+  },
 ];

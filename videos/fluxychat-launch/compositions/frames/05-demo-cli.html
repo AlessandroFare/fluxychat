@@ -1,0 +1,67 @@
+<template>
+  <div id="root" data-composition-id="05-demo-cli" data-width="1920" data-height="1080" data-start="0" data-duration="6.955">
+    <div class="clip fx-05-demo-cli-bg" data-start="0" data-duration="6.955" data-track-index="0"></div>
+    
+    <div class="fx-05-demo-cli-window" id="el-05-cli-win">
+      <div class="fx-05-demo-cli-bar">
+        <div class="fx-05-demo-cli-dot" style="background:#ef4444"></div>
+        <div class="fx-05-demo-cli-dot" style="background:#fbbf24"></div>
+        <div class="fx-05-demo-cli-dot" style="background:#el-22c55e"></div>
+      </div>
+      <div class="fx-05-demo-cli-body">
+        <div id="el-05-cli-l1" class="fx-05-demo-cli-line">$ npx create-fluxy-chat@latest my-app</div>
+        <div id="el-05-cli-l2">Creating project…</div>
+        <div id="el-05-cli-l3" class="fx-05-demo-cli-success">✓ Done in 4.2s — cd my-app && pnpm dev</div>
+      </div>
+    </div>
+  </div>
+  <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("assets/fonts/Geist-Regular.woff2") format("woff2");
+      font-weight: 400;
+      font-style: normal;
+    }
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "Geist", system-ui, sans-serif;
+      color: #el-0E1316;
+    }
+    .fx-05-demo-cli-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+    
+    .fx-05-demo-cli-bg { background: #el-0E1316; }
+    .fx-05-demo-cli-window {
+      position: absolute; left: 120px; top: 80px; width: 1680px; height: 920px;
+      background: #el-18181b; border-radius: 12px; border: 1px solid #el-27272a; overflow: hidden;
+    }
+    .fx-05-demo-cli-bar {
+      height: 40px; background: #el-27272a; display: flex; align-items: center; padding: 0 16px; gap: 8px;
+    }
+    .fx-05-demo-cli-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .fx-05-demo-cli-body {
+      padding: 32px; font-family: ui-monospace, monospace; font-size: 20px; color: #a1a1aa; line-height: 1.8;
+    }
+    .fx-05-demo-cli-line { color: #fafafa; }
+    .fx-05-demo-cli-success { color: #el-4ade80; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    
+    gsap.set("#el-05-cli-win", { opacity: 0, scale: 0.96 });
+    gsap.set("#el-05-cli-l1, #el-05-cli-l2, #el-05-cli-l3", { opacity: 0 });
+    tl.fromTo("#el-05-cli-win", { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.5 }, 0.2);
+    tl.fromTo("#el-05-cli-l1", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 1.0);
+    tl.fromTo("#el-05-cli-l2", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 2.5);
+    tl.fromTo("#el-05-cli-l3", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "back.out(1.2)" }, 4.5);
+    window.__timelines["05-demo-cli"] = tl;
+  </script>
+</template>

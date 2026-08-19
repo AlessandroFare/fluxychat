@@ -1,0 +1,69 @@
+<template>
+  <div id="root" data-composition-id="04-sdk-tease" data-width="1920" data-height="1080" data-start="0" data-duration="9.216">
+    <div class="clip fx-04-sdk-tease-bg" data-start="0" data-duration="9.216" data-track-index="0"></div>
+    
+    <div class="fx-04-sdk-tease-terminal" id="el-04-sdk-term">
+      <span class="fx-04-sdk-tease-prompt">$</span> <span id="el-04-sdk-cmd"></span><span class="fx-04-sdk-tease-cursor" id="el-04-sdk-cursor"></span>
+    </div>
+    <div class="fx-04-sdk-tease-shot" id="el-04-sdk-shot">
+      <img src="assets/sdk-steps.png" alt="" />
+    </div>
+  </div>
+  <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("assets/fonts/Geist-Regular.woff2") format("woff2");
+      font-weight: 400;
+      font-style: normal;
+    }
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "Geist", system-ui, sans-serif;
+      color: #el-0E1316;
+    }
+    .fx-04-sdk-tease-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+    
+    .fx-04-sdk-tease-bg { background: #el-020617; }
+    .fx-04-sdk-tease-terminal {
+      position: absolute; left: 80px; top: 120px; width: 900px; padding: 24px;
+      background: #el-0f172a; border-radius: 12px; border: 1px solid #el-1e293b;
+      font-family: ui-monospace, monospace; font-size: 22px; color: #e2e8f0;
+    }
+    .fx-04-sdk-tease-prompt { color: #el-4ade80; }
+    .fx-04-sdk-tease-cursor {
+      display: inline-block; width: 12px; height: 24px; background: #c2410c; margin-left: 4px;
+      vertical-align: middle;
+    }
+    .fx-04-sdk-tease-shot {
+      position: absolute; right: 60px; top: 100px; width: 780px; height: 440px;
+      border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    }
+    .fx-04-sdk-tease-shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    
+    const cmd = "pnpm add @fluxy-chat/sdk";
+    gsap.set("#el-04-sdk-term", { opacity: 0, y: 20 });
+    gsap.set("#el-04-sdk-shot", { opacity: 0, x: 80 });
+    gsap.set("#el-04-sdk-cursor", { opacity: 1 });
+    tl.fromTo("#el-04-sdk-term", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4 }, 0.2);
+    for (let i = 0; i <= cmd.length; i++) {
+      const slice = cmd.slice(0, i);
+      tl.call(() => { document.getElementById("04-sdk-cmd").textContent = slice; }, null, 0.8 + i * 0.06);
+    }
+    tl.to("#el-04-sdk-cursor", { opacity: 0, duration: 0.1, repeat: 5, yoyo: true, repeatDelay: 0.4 }, 0.8);
+    tl.fromTo("#el-04-sdk-shot", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.out" }, 4.5);
+    window.__timelines["04-sdk-tease"] = tl;
+  </script>
+</template>

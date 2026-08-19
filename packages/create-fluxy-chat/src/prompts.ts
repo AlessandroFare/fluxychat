@@ -18,11 +18,14 @@ interface PromptInputs {
   language?: Language;
   yes: boolean;
   minimal?: boolean;
+  full?: boolean;
+  mode?: "local" | "hosted";
   shouldInstall?: boolean;
   shouldInitGit?: boolean;
 }
 
 const DEFAULT_PROJECT_NAME = "my-fluxy-bot";
+const DEFAULT_FULL_PROJECT_NAME = "my-fluxy-app";
 
 /**
  * Run interactive prompts to collect project configuration.
@@ -34,10 +37,12 @@ export async function runPrompts(
   inputs: PromptInputs,
 ): Promise<ProjectConfig | null> {
   // --- Project name ---
+  const full = inputs.full ?? inputs.adapter === "full";
+  const mode = inputs.mode ?? (full ? "local" : undefined);
   let name = inputs.name;
   if (!name) {
     if (inputs.yes) {
-      name = DEFAULT_PROJECT_NAME;
+      name = full ? DEFAULT_FULL_PROJECT_NAME : DEFAULT_PROJECT_NAME;
     } else {
       const result = await text({
         message: "Project name:",
@@ -57,14 +62,17 @@ export async function runPrompts(
   // --- Adapter / minimal ---
   const minimal = inputs.minimal ?? false;
   let adapter = inputs.adapter;
-  if (!minimal && !adapter) {
+  if (full) {
+    adapter = "full";
+  } else if (!minimal && !adapter) {
     if (inputs.yes) {
       adapter = "react";
     } else {
       const result = await select({
-        message: "Select an adapter:",
+        message: "Select a template:",
         options: [
-          { label: "Minimal chat widget (ui-kit, recommended)", value: "minimal" },
+          { label: "Full stack — chat + @assistant + setup (recommended)", value: "full" },
+          { label: "Minimal chat widget (ui-kit)", value: "minimal" },
           { label: "React chat app (Vite + useChat)", value: "react" },
           { label: "HR anonymous feedback (compliance starter)", value: "hr-feedback" },
           { label: "Basic (Cloudflare Workers bot)", value: "basic" },
@@ -82,9 +90,14 @@ export async function runPrompts(
     }
   }
 
-  // --- Language ---
+  // --- Language (worker bots only) ---
   let language = inputs.language;
-  if (!language) {
+  const isWorkerBot =
+    !minimal &&
+    adapter !== "react" &&
+    adapter !== "full" &&
+    adapter !== "hr-feedback";
+  if (isWorkerBot && !language) {
     if (inputs.yes) {
       language = "typescript";
     } else {
@@ -98,6 +111,8 @@ export async function runPrompts(
       if (isCancel(result)) return null;
       language = result as Language;
     }
+  } else if (!language) {
+    language = "typescript";
   }
 
   // --- Package manager ---
@@ -149,9 +164,11 @@ export async function runPrompts(
     name,
     adapter: adapter ?? "react",
     packageManager,
-    language,
+    language: language ?? "typescript",
     shouldInstall,
     shouldInitGit,
     minimal: minimal || inputs.minimal === true,
+    full: full || adapter === "full",
+    mode: mode ?? (adapter === "full" ? "local" : undefined),
   };
 }

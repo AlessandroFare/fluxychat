@@ -73,6 +73,9 @@ jobs:
       - name: Smoke test create-fluxy-chat scaffold
         run: pnpm run smoke:create-fluxy-chat
 
+      - name: Smoke test one-click full template
+        run: pnpm run smoke:one-click
+
       - name: Dependency audit (high/critical)
         run: pnpm audit --audit-level=high
 

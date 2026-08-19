@@ -7,6 +7,7 @@ import { Button, Input } from "../components/ui";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
 import { cn } from "@/lib/utils";
 import type { OnboardingWizard } from "./use-onboarding-wizard";
+import { OnboardingCliImportCard } from "./onboarding-cli-import-card";
 
 interface CreateProjectStepProps {
   wizard: OnboardingWizard;
@@ -25,6 +26,8 @@ export function CreateProjectStep({ wizard: w }: CreateProjectStepProps) {
 
   return (
     <div className="mx-auto space-y-6">
+      <OnboardingCliImportCard wizard={w} defaultOpen={w.cliImportOpen} />
+
       {/* Auth section — shown only if not yet authenticated */}
       {!w.adminJwt.trim() && (
         <div className="space-y-4">

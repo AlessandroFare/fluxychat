@@ -45,7 +45,7 @@ export const AGENT_EVENTS_SAME_STREAM_GUIDE: GuideContent = {
     "ai agent observability",
     "shared workspace chat",
   ],
-  stackblitzTemplateId: "agent-chat",
-  stackblitzLabel: "Run AI agent example in StackBlitz",
+  stackblitzTemplateId: "full-hosted",
+  stackblitzLabel: "Run full hosted chat + agent in StackBlitz",
 };
 

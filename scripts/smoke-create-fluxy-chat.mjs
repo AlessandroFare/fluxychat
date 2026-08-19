@@ -22,16 +22,16 @@ const pkgDir = join(root, "packages", "create-fluxy-chat");
 const projectName = "fluxy-smoke-test-bot";
 
 function run(cmd, args, opts = {}) {
-  const executable =
-    process.platform === "win32" && cmd === "pnpm" ? "pnpm.cmd" : cmd;
+  const useShell = process.platform === "win32";
+  const executable = useShell ? cmd : cmd;
   const result = spawnSync(executable, args, {
     cwd: opts.cwd ?? root,
     encoding: "utf8",
     stdio: opts.silent ? "pipe" : "inherit",
-    shell: false,
+    shell: useShell,
   });
   if (result.status !== 0) {
-    const detail = result.stderr?.trim() || result.stdout?.trim() || `exit ${result.status}`;
+    const detail = result.stderr?.trim() || result.stdout?.trim() || `exit ${result.status ?? "null"}`;
     throw new Error(`${cmd} ${args.join(" ")} failed: ${detail}`);
   }
   return result;
@@ -141,6 +141,40 @@ function main() {
         ["src/App.tsx", "joinPublicRoomAsGuest"],
         [".env.example", "VITE_FLUXYCHAT_PUBLIC_ROOM_ID"],
       ],
+    );
+
+    scaffoldAndAssert(
+      workDir,
+      "fluxy-smoke-test-full",
+      ["-y", "--skip-install", "--no-git", "--full"],
+      [
+        "package.json",
+        ".env.example",
+        "README.md",
+        "src/App.tsx",
+        "scripts/fluxy-setup.mjs",
+        "scripts/fluxy-dev.mjs",
+        "scripts/fluxy-doctor.mjs",
+        ".fluxy/mode",
+        "vite.config.ts",
+      ],
+      [
+        ["src/App.tsx", "invokeAgent"],
+        ["package.json", '"setup:hosted"'],
+        [".fluxy/mode", "local"],
+      ],
+    );
+
+    scaffoldAndAssert(
+      workDir,
+      "fluxy-smoke-test-hosted",
+      ["-y", "--skip-install", "--no-git", "--mode", "hosted"],
+      [
+        "package.json",
+        "scripts/fluxy-setup.mjs",
+        ".fluxy/mode",
+      ],
+      [[".fluxy/mode", "hosted"]],
     );
 
     console.log("\n✓ create-fluxy-chat smoke test passed");

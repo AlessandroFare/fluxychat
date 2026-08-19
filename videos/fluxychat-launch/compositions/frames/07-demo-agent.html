@@ -1,0 +1,76 @@
+<template>
+  <div id="root" data-composition-id="07-demo-agent" data-width="1920" data-height="1080" data-start="0" data-duration="14.367">
+    <div class="clip fx-07-demo-agent-bg" data-start="0" data-duration="14.367" data-track-index="0"></div>
+    
+    <div class="fx-07-demo-agent-highlight" id="el-07-ag-hl">KEY DIFFERENTIATOR</div>
+    <div class="fx-07-demo-agent-wrap" id="el-07-ag-wrap">
+      <img src="assets/playground.png" alt="" />
+      <div class="fx-07-demo-agent-overlay">
+        <div class="fx-07-demo-agent-input" id="el-07-ag-in">@assistant list active tools in this room</div>
+        <div class="fx-07-demo-agent-reply" id="el-07-ag-reply">I'll check what's available and run the search…</div>
+        <div class="fx-07-demo-agent-tool" id="el-07-ag-tool">⟫ tool_call search_messages({"query":"…"})</div>
+      </div>
+    </div>
+  </div>
+  <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("assets/fonts/Geist-Regular.woff2") format("woff2");
+      font-weight: 400;
+      font-style: normal;
+    }
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "Geist", system-ui, sans-serif;
+      color: #el-0E1316;
+    }
+    .fx-07-demo-agent-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+    
+    .fx-07-demo-agent-bg { background: #FDFBF9; }
+    .fx-07-demo-agent-wrap {
+      position: absolute; left: 80px; top: 60px; width: 1760px; height: 960px;
+      border-radius: 20px; overflow: hidden; border: 1px solid #e5e0d8;
+      box-shadow: 0 24px 80px rgba(14,19,22,0.12);
+    }
+    .fx-07-demo-agent-wrap img { width: 100%; height: 55%; object-fit: cover; object-position: top; }
+    .fx-07-demo-agent-overlay {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: #fff; padding: 32px 40px;
+    }
+    .fx-07-demo-agent-input {
+      padding: 16px 20px; background: #F3F0EC; border-radius: 12px; font-size: 20px; margin-bottom: 20px;
+      border: 2px solid #c2410c;
+    }
+    .fx-07-demo-agent-reply { font-size: 18px; color: #el-475569; margin-bottom: 16px; }
+    .fx-07-demo-agent-tool {
+      padding: 16px 20px; background: #el-0E1316; color: #el-4ade80; border-radius: 10px;
+      font-family: ui-monospace, monospace; font-size: 16px;
+    }
+    .fx-07-demo-agent-highlight {
+      position: absolute; left: 80px; top: 24px; z-index: 20; padding: 12px 20px; background: #c2410c; color: #fff;
+      border-radius: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.05em;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    
+    gsap.set("#el-07-ag-wrap", { opacity: 0, y: 40 });
+    gsap.set("#el-07-ag-hl", { opacity: 0, x: 40 });
+    gsap.set("#el-07-ag-in, #el-07-ag-reply, #el-07-ag-tool", { opacity: 0, y: 20 });
+    tl.fromTo("#el-07-ag-wrap", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.6 }, 0.3);
+    tl.fromTo("#el-07-ag-hl", { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.4 }, 1.0);
+    tl.fromTo("#el-07-ag-in", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4 }, 2.5);
+    tl.fromTo("#el-07-ag-reply", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4 }, 5.0);
+    tl.fromTo("#el-07-ag-tool", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: "back.out(1.3)" }, 7.5);
+    tl.to("#el-07-ag-tool", { boxShadow: "0 0 30px rgba(74,222,128,0.4)", duration: 0.8, repeat: 2, yoyo: true }, 9.0);
+    window.__timelines["07-demo-agent"] = tl;
+  </script>
+</template>

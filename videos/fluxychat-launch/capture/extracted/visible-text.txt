@@ -1,0 +1,797 @@
+[span] Beta build. Report issues to your operator channel.
+[button] Dismiss
+[span] fluxychat
+[a] Chat & messaging
+[a] Realtime SDK
+[a] Live demo
+[p] Platform
+[a] Location & push
+[a] Stream & collab
+[a] Game, IoT & fleet
+[a] 14 channel adapters
+[button] Solutions
+[a] Why FluxyChat
+[a] Compare vendors
+[a] Education & events
+[a] Health & finance
+[a] Next.js quickstart
+[button] Resources
+[a] Chat only
+[a] Try demo (no signup)
+[button] Sign in
+[span] Create free account
+[span] Open menu
+[span] New
+[span] Free hosted tier. SDK live in minutes →
+[p] Realtime platform on Cloudflare
+[span] Ship chat and live product
+[span] from one SDK
+[p] In-app chat, voice AI, live location, stream, collab, and device sync, plus Slack, Discord, and 12 more channels. Self-host on Workers or start on hosted cloud.
+[button] Create free account
+[code] pnpm add @fluxy-chat/sdk
+[span] Self-host on Cloudflare
+[span] MIT licensed
+[span] npm & pnpm
+[p] Your app
+[button] Chat
+[button] AI agents
+[button] Location
+[button] Stream
+[button] Collab
+[button] Game
+[button] IoT
+[button] 14 channels
+[p] Live preview
+[span] app/chat/page.tsx
+[span] import
+[span] { FluxyChatClient, useChat }
+[span] from
+[span] "@fluxy-chat/sdk"
+[span] import { useChat } from "@fluxy-chat/react";
+[span] const client = new FluxyChatClient({
+[span] baseUrl
+[span] "https://your-worker.example.com"
+[span] userId
+[span] "alice"
+[span] token
+[span] "your_member_jwt"
+[span] });
+[span] const { messages, sendMessage } = useChat({
+[span] roomId
+[span] "support-room"
+[span] client
+[span] });
+[span] delivery-42
+[span] Tracking
+[div] courier:maya · updated now
+[p] ETA
+[p] min · geofence: customer zone
+[div] Write a message…
+[button] Send
+[p] Wire the client once. Tabs cycle chat, agents, location, stream, collab, game, IoT, and channel adapters — same SDK, same room.
+[div] Live Playground
+[h2] Try it right now.
+[span] No signup required.
+[p] Jump into a live room with an AI agent. Ask questions, test real-time messaging, see how Durable Objects work. Everything runs on Cloudflare's edge network.
+[p] FluxyBot
+[p] Online
+[div] Cloudflare Edge
+[span] Tell me about FluxyChat
+[span] Real-time chat, AI a
+[span] How is it diff
+[span] Same worker
+[span] Can you w
+[span] pnpm add
+[a] Open Playground
+[a] Read the Docs
+[p] Works with stacks you already use
+[p] One SDK across common frontends and runtimes. Fork the repo when you want full control.
+[span] Next.js
+[span] React
+[span] Vue
+[span] Vite
+[span] Node
+[span] Workers
+[span] React Native
+[span] Svelte
+[span] Remix
+[span] TanStack
+[span] Express
+[span] Fastify
+[span] Next.js
+[span] React
+[span] Vue
+[span] Vite
+[span] Node
+[span] Workers
+[span] React Native
+[span] Svelte
+[span] Remix
+[span] TanStack
+[span] Express
+[span] Fastify
+[p] Featured on
+[p] Deploy in your account. Quotas live in D1. Console access can require a one-time ack; usage still runs through your Worker with your keys.
+[p] 14 platforms
+[p] Slack, Discord, Telegram, WhatsApp, Teams, and 9 more on one unified adapter interface.
+[p] AI-native
+[p] Streaming markdown, tool calling, MCP client, and LLM middleware pipeline built in.
+[p] 30+ SDK modules
+[p] Rooms, presence, typing, history, agents, webhooks, cards, and more, all on @fluxy-chat/sdk.
+[p] Durable agents
+[p] WorkflowAgent persists to D1, survives deploys, and resumes from the last step.
+[p] Realtime voice
+[p] Bidirectional voice-to-voice AI with provider-agnostic abstraction.
+[p] MIT self-host
+[p] Deploy the Worker + D1 in your Cloudflare account. Read every line of source.
+[h2] Messaging basics, on the edge
+[p] Channels, presence, mentions, and webhooks without bolting on another realtime vendor. Tap or hover a row on desktop.
+[a] Channels that scale
+[span] Channels that scale
+[span] Channels that scale
+[span] Channels that scale
+[span] Channels that scale
+[span] Channels that scale
+[span] Channels that scale
+[a] Presence & typing
+[span] Presence & typing
+[span] Presence & typing
+[span] Presence & typing
+[span] Presence & typing
+[span] Presence & typing
+[span] Presence & typing
+[a] Mentions & reactions
+[span] Mentions & reactions
+[span] Mentions & reactions
+[span] Mentions & reactions
+[span] Mentions & reactions
+[span] Mentions & reactions
+[span] Mentions & reactions
+[a] AI-ready rooms
+[span] AI-ready rooms
+[span] AI-ready rooms
+[span] AI-ready rooms
+[span] AI-ready rooms
+[span] AI-ready rooms
+[span] AI-ready rooms
+[a] Post-event webhooks
+[span] Post-event webhooks
+[span] Post-event webhooks
+[span] Post-event webhooks
+[span] Post-event webhooks
+[span] Post-event webhooks
+[span] Post-event webhooks
+[a] Moderation & safety
+[span] Moderation & safety
+[span] Moderation & safety
+[span] Moderation & safety
+[span] Moderation & safety
+[span] Moderation & safety
+[span] Moderation & safety
+[a] Searchable history
+[span] Searchable history
+[span] Searchable history
+[span] Searchable history
+[span] Searchable history
+[span] Searchable history
+[span] Searchable history
+[p] Threads, polls, and translation are up to your product layer. FluxyChat ships the realtime core: rooms, presence, typing, delivery, and AI agent events.
+[h2] From blank repo to live threads
+[p] Install, connect, hooks, live messages — loops below and pauses when you scroll away.
+[p] Step 1
+[h3] Install
+[p] One dependency. No native binaries, no sidecar.
+[span] pnpm add
+[span] @fluxy-chat/sdk
+[p] Step 2
+[h3] Point at your edge
+[p] Worker URL + scoped JWT — the client never sees admin keys.
+[span] baseUrl
+[span] "https://chat…"
+[span] token
+[span] "eyJ…"
+[p] Step 3
+[h3] Open a room
+[p] Hooks subscribe, send, and reconcile — you keep your UI primitives.
+[span] useChat
+[span] { roomId, client }
+[p] Live
+[h3] Ship the inbox
+[p] Typing, delivery, and history — already moving on the wire.
+[div] Hey — is the edge worker up?
+[div] Yes. Messages are live.
+[h2] What ships in the box
+[p] Edge delivery, AI-native streaming, 14 platform adapters, and a console for day-two work. You own the UI; we handle rooms, delivery, agents, and ops hooks.
+[p] Most teams glue together chat, AI, support, and compliance from different vendors. That gets expensive and hard to audit. FluxyChat puts 14 platform adapters, streaming AI, MCP tools, and governance hooks on the edge you already run.
+[li] 14 platform adapters (Slack, Discord, Telegram, WhatsApp, Teams, +9)
+[li] AI-native streaming with tool calling & HITL approval
+[li] MCP client for external tool servers
+[li] LLM middleware pipeline (guardrails, caching, RAG, PII redaction)
+[li] WorkflowAgent for durable agent execution
+[li] Card builder with Slack Block Kit & Teams Adaptive Cards
+[li] DevTools playground & OpenTelemetry tracing
+[li] GDPR export, audit trails, and retention policies
+[p] Already set up?
+[a] Open the console
+[p] for rooms, agents, and billing.
+[span] Realtime
+[h3] Runs on your edge
+[p] WebSockets and Durable Objects handle presence, typing, and delivery. One Room DO per room, so no socket fleet to babysit.
+[span] Trust
+[h3] GDPR & compliance tools included
+[p] Export, erasure, audit trails, retention policies, and signed webhooks when you need to answer security questionnaires.
+[span] AI-native
+[h3] Agents and humans, one stream
+[p] Tool events, streaming markdown, and MCP calls ride the same room WebSocket as user messages. Debug copilots without a second realtime pipe.
+[p] Built-in architecture
+[p] 14 platform adapters
+[p] Slack, Discord, Telegram, WhatsApp, Teams, Email, SMS, Webhook, Matrix, and 5 more on one unified interface
+[p] Streaming markdown
+[p] Table buffering, code fence tracking, inline marker healing for clean partial renders during AI streaming
+[p] MCP client + tool calling
+[p] Consume any MCP-compatible tool server. Auto-convert to LLM function-calling format with HITL approval gates
+[p] Card builder
+[p] Composable rich messaging with JSX or function API. Slack Block Kit and Teams Adaptive Card renderers built in
+[p] Middleware pipeline
+[h2] Transform messages and AI responses before they land
+[p] Moderate, validate, enrich, and fan out from the edge. LLM middleware supports guardrails, caching, RAG injection, PII redaction, and logging via wrapGenerate / wrapStream / transformParams. Policy code stays on the data path, not in a sidecar you forget to deploy.
+[span] edge middleware
+[span] live
+[div] Client publish
+[div] moderate()
+[div] validate()
+[div] enrich()
+[div] Subscribers
+[div] Client publish
+[div] moderate()
+[div] validate()
+[div] enrich()
+[div] Subscribers
+[p] hooks run on your Worker before delivery — policy stays on the edge.
+[p] Developers
+[h2] SDK, CLI, docs, and console in one repo
+[p] Auth, rooms, and retries sit behind hooks and route handlers. Scaffold a new project with create-fluxy-chat CLI. When you need keys, quotas, or billing, open the operator UI instead of wiring another admin surface.
+[a] Create free account
+[a] View docs
+[h3] Where teams start
+[h4] AI-powered SaaS with in-app chat
+[p] Stream AI responses with tool calling, build copilots with HITL approval, and ship agent features on the same WebSocket as user messages.
+[h4] Multi-platform messaging apps
+[p] One adapter interface across Slack, Discord, Telegram, WhatsApp, Teams, and 9 more. Unified card builder for rich messages across platforms.
+[h4] Regulated & compliance-heavy teams
+[p] GDPR export, erasure, audit trails, retention policies, and signed webhooks, enforced at the edge rather than sold as a separate SKU.
+[h4] Developer teams shipping fast
+[p] JWT auth, SDK hooks, create-fluxy-chat CLI scaffolding, and a console for day-two ops, without becoming WebSocket infrastructure experts.
+[span] Production ready
+[h2] Live verticals, voice, and the server event bus
+[p] Polls, breakouts, stage go-live, collab CRDT, fleet GPS, and hybrid check-in fan out as
+[code] server_event
+[p] frames on the room WebSocket. Voice AI, streaming AI, MCP tools, and durable agents sit on the same worker, with production readiness labels on every surface.
+[h3] Multi-platform adapters
+[p] 14 platform adapters (Slack, Teams, Discord, Telegram, WhatsApp, and more) behind a unified interface.
+[h3] Streaming markdown
+[p] Table buffering, code fence tracking, and inline marker healing for clean partial renders during AI streaming.
+[h3] Card element builder
+[p] Compose rich interactive messages with buttons, tables, and sections: JSX or function API, Slack Block Kit and Teams Adaptive Cards.
+[h3] AI tool presets
+[p] Reader, messenger, and moderator tool groups with per-tool approval gates for enterprise governance.
+[h3] Stream resumption
+[p] Reconnect to in-progress AI responses after page refresh or network drop. No lost tokens.
+[h3] MCP client
+[p] Consume any MCP-compatible tool server. Auto-convert tools to LLM function-calling format.
+[h3] LLM middleware
+[p] Pluggable pipeline: guardrails, caching, RAG injection, PII redaction, logging. wrapGenerate, wrapStream, transformParams.
+[h3] DevTools web UI
+[p] Visual inspector for LLM calls, tool executions, and token usage. OpenTelemetry with GenAI semantic conventions.
+[h3] WorkflowAgent
+[p] Durable agent execution that survives deploys and restarts. State persisted to D1, automatic resume from last step.
+[h3] Sandbox support
+[p] Safely execute untrusted code in isolated environments with portable command execution.
+[h3] Realtime voice
+[p] STT → LLM → TTS pipeline with latency metrics. WebRTC realtime with automatic fallback to chunked audio or text-only.
+[h3] Conversation transcripts
+[p] Per-user message persistence keyed by cross-platform identity. Append, list, filter by platform/thread/role, and delete, with configurable retention and capping.
+[h3] Slash commands & regex routing
+[p] Built-in slash command parser with positional/named args, aliases, and help. Regex-based message pattern matching for keyword triggers without @-mentions.
+[h3] Ephemeral & chainable messages
+[p] Post ephemeral messages with DM fallback. Chainable SentMessage with .edit(), .delete(), .addReaction(), .removeReaction().
+[h3] Platform modules
+[p] Stream, game, IoT, spatial twins, cross-channel continuity, and marketplace apps, each with docs, demos, and readiness badges.
+[span] Platform Extensions
+[h3] App Marketplace · Cross-Channel · Spatial · Web3
+[p] Extend FluxyChat with apps, unify sessions across devices, build spatial experiences, and add Web3 auth.
+[h4] App Marketplace
+[p] Publish and install apps with OAuth scoped grants. App review, versioning, and tenant installation.
+[span] Try it
+[h4] Cross-Channel Continuity
+[p] Unify user sessions across web, mobile, voice, and bot. Identity linking, channel switching, device replay.
+[span] Try it
+[h4] Spatial & Digital Twins
+[p] Create 3D room scenes with entities, agent access grants, AR overlays, and spatial audio presences.
+[span] Try it
+[h4] Web3 Chat
+[p] Wallet-based authentication, token-gated rooms, on-chain message commitments with hash verification.
+[span] Try it
+[h4] Agent Marketplace
+[p] Browse and install pre-built agent skills by category. Community templates with versioning and config schemas.
+[span] Try it
+[h4] Chatbot Builder
+[p] Visual trigger-action rule engine with conditions, priorities, and simulated event testing.
+[span] Try it
+[h4] FluxyStream: Live Broadcasting
+[p] Create events, provision ingest, go live with HLS playback. Chat overlay and reactions on the same room.
+[span] Try it
+[h4] WebTransport Readiness
+[p] Auto-negotiation WebTransport → WebSocket → SSE → Long Poll. Feature detection with automatic fallback chain.
+[span] Try it
+[h4] AI Agent Platform
+[p] No-code agent builder, versioning, CI/CD deploy, sandbox testing, cost tracking, rate limiting, A/B testing, personality designer, emotional intelligence, cross-platform memory.
+[span] Try it
+[h4] FluxyGame: Multiplayer SDK
+[p] Matchmaking, server-authoritative state sync @20fps, AI NPCs with memory, tournaments, replay system, party system. Game room = chat room.
+[span] Try it
+[h4] FluxyIoT: MQTT Bridge & Device Fleet
+[p] Device provisioning, rule engine, device shadow (desired vs reported), OTA updates, geofencing, AI device doctor, device-as-room-member.
+[span] Try it
+[h4] FluxyEdu: Live classroom
+[p] Polls, breakouts, attendance, and stage go-live with server_event fan-out on the room WebSocket.
+[span] Try it
+[a] Try DevTools Playground
+[a] Try Card Builder
+[a] Try Middleware Configurator
+[a] Read the guides →
+[p] Realtime SDK
+[h2] One SDK for chat, location, stream, and more
+[p] Start with in-app chat. Add location, push, voice AI, collab, HLS stream, multiplayer, IoT, fleet GPS, spatial twins, or 14 channel adapters: one SDK, one worker, one room WebSocket.
+[span] In-App Chat
+[span] Live Streaming
+[span] Real-Time Location
+[span] Push Notifications
+[span] AI Transport
+[span] Voice AI
+[span] FluxyCollab
+[span] FluxyStream
+[span] FluxyGame
+[span] FluxyIoT
+[span] Fleet & GPS
+[span] Spatial / Twin
+[span] FluxyEdu
+[span] 14 channels
+[h3] Ship a chat feature in an afternoon.
+[p] Rooms, presence, threads, and reactions over one WebSocket. Vertical events (polls, breakouts, stage live) arrive on the same connection via onServerEvent — no second subscription layer.
+[span] const
+[span] { messages, sendMessage } =
+[span] useChat
+[span] ({
+  roomId:
+[span] "chat:room-42"
+[span] ,
+  client,
+  onServerEvent: (ev) => {
+    if (ev.name ===
+[span] "edu.poll.created"
+[span] ) showPoll(ev.data);
+  },
+});
+[span] sendMessage
+[span] "Hello from FluxyChat"
+[a] Open the live SDK demos
+[p] Ship Squad
+[p] Leo: on it, adding you now.
+[p] Dana Ortiz
+[p] sounds great, will ping...
+[p] Design Circle
+[p] Wren: fresh comps up...
+[p] Leo Martins
+[p] You: deployed to staging
+[span] Ship Squad
+[span] 3 online
+[div] typing
+[div] Type your message...
+[p] FluxyCollab
+[h2] Everything teams need to build together
+[p] Whiteboard, kanban, documents, spreadsheets, and AI, all synced in real-time via CRDT. No save button required.
+[span] Whiteboard
+[p] Infinite canvas with Excalidraw. Real-time sync via CRDT.
+[span] Kanban
+[span] To Do
+[span] In Progress
+[span] Done
+[div] API design
+[div] Auth flow
+[div] UI kit
+[div] Tests
+[p] Drag-and-drop tasks across columns. Y.Array-powered sync.
+[span] Notes
+[div] # Planning
+
+- Q3 roadmap
+-
+[p] Rich markdown with Y.Text. See collaborators type in real-time.
+[span] Spatial View
+[span] Document
+[span] Spreadsheet
+[span] Files
+[span] AI Summaries
+[a] Explore all
+[p] FluxyStream
+[h2] Live streaming with real-time chat
+[p] Broadcast live video via WebRTC, RTMP, or OBS. Viewers watch with integrated chat, polls, virtual gifts, and AI moderation, all in one room.
+[h3] Live video broadcast
+[p] WebRTC + Cloudflare Stream HLS relay with adaptive bitrate, DVR, and multi-resolution.
+[h3] Chat overlay
+[p] Integrated FluxyChat room inside the player. Viewers chat, react, and engage in real-time.
+[h3] Polls & quizzes
+[p] Create polls and quizzes during the stream. Results update in real-time for everyone.
+[h3] AI moderation
+[p] Automated content moderation powered by DLP and AI agents. Keep chat clean at scale.
+[h3] Virtual gifts & tipping
+[p] Viewers send virtual gifts with physics animations. Stripe-powered tipping for creators.
+[h3] AI highlights
+[p] Automatic highlight reels generated from chat spikes, reactions, and viewer sentiment.
+[span] LIVE
+[p] Today we're diving deep into real-time architecture.
+[span] 890
+[span] 4.2K
+[span] Stream chat
+[span] 2.1K viewers
+[span] milo
+[span] this is incredible 🔥
+[div] 4 more typing...
+[div] Type a message...
+[h2] Enterprise-ready
+[p] Self-serve plans cover most production traffic. When governance matters, these capabilities are built into the worker, not a separate SKU bolted on later.
+[li] SSO / SAML & SCIM provisioning
+[li] Audit logs with export schedules
+[li] Retention policies & legal hold
+[li] IP whitelisting & DLP integrations
+[li] GDPR export and erasure tools
+[li] Signed webhooks with retry & delivery logs
+[li] Per-tool approval gates for AI agents
+[li] OpenTelemetry tracing with GenAI semantic conventions
+[p] Explore capabilities in the
+[a] features console
+[h2] Pricing
+[p] One plan covers chat, AI agents, webhooks, and platform modules. Undercuts Pusher and Ably on message quotas. Starter at $20/mo vs Pusher Startup at $49/mo for similar traffic.
+[p] Console routes can require a one-time ack on your dashboard host. Billable usage still needs your Worker credentials.
+[p] Self-serve checkout today
+[span] Free
+[p] includes
+[span] 200,000
+[p] messages,
+[span] 5,000
+[p] agent invokes, and
+[span] 50,000
+[p] webhook deliveries
+[span] /mo
+[span] Pro
+[span] raises each to
+[span] 10×
+[span] for
+[span] $50/mo
+[span] , ideal for production rooms with active agents.
+[h3] Free
+[div] $0/mo
+[p] Try the stack without a card.
+[span] 200,000 messages / month
+[span] 5,000 agent invokes / month
+[span] 50,000 webhook deliveries / month
+[span] SDK, dashboard, and platform modules
+[span] Community support (GitHub + Discord: https://discord.gg/fluxychat)
+[span] One project, fair-use limits
+[span] Upgrade without migrating data
+[a] Create free account
+[span] Most teams start here
+[h3] Starter
+[div] $20/mo
+[p] Production traffic with fixed monthly limits.
+[span] 500,000 messages / month
+[span] 10,000 agent invokes / month
+[span] 100,000 webhook deliveries / month
+[span] Chat, agents, stream, collab, game, IoT on one worker
+[span] Signed webhooks with retries
+[span] GDPR export and erasure endpoints
+[span] Email support (best effort)
+[a] Choose Starter
+[h3] Pro
+[div] $50/mo
+[p] Heavy rooms, agents, and webhook volume.
+[span] 5,000,000 messages / month
+[span] 100,000 agent invokes / month
+[span] 1,000,000 webhook deliveries / month
+[span] 5M messages, 100k agent invokes, 1M webhook deliveries per month
+[span] Priority support
+[span] Custom retention and audit (contact us)
+[span] Annual invoicing on request
+[a] Choose Pro
+[h3] Team
+[div] $99/mo
+[p] Multiple projects, more seats, same compliance posture as Pro.
+[span] 20,000,000 messages / month
+[span] 200,000 agent invokes / month
+[span] 1,000,000 webhook deliveries / month
+[span] 20M messages, 200k agent invokes, 1M webhook deliveries per month
+[span] Up to 5 projects and 5 team seats
+[span] Team member management and RBAC
+[span] Priority support, annual invoicing on request
+[a] Choose Team
+[h3] Growth
+[div] From $199/mo
+[p] B2B SaaS with omnichannel, AI memory, and FTS search.
+[span] 100,000,000 messages / month
+[span] 1,000,000 agent invokes / month
+[span] 5,000,000 webhook deliveries / month
+[span] Multiple projects, omnichannel inbox (base)
+[span] AI memory and full-text search
+[span] Light moderation tooling
+[span] Annual invoicing on request
+[a] Choose Growth
+[a] talk to us first →
+[p] Sales-led plans for governance and higher limits
+[h3] Business
+[div] From $699/mo
+[p] Serious teams needing SSO and audit at scale.
+[span] SSO add-on
+[span] Custom domain and higher limits
+[span] Audit export schedules
+[span] Priority support, white-label lite
+[a] Contact sales
+[h3] Enterprise
+[div] Custom
+[p] Regulated and large deployments.
+[span] SCIM and SLA
+[span] Retention and DLP pack
+[span] Compliance review
+[span] Dedicated support
+[a] Talk to us
+[span] Why usage-based quotas?
+[p] Cost tracks messages, AI invokes, and webhook volume. Self-serve plans include fixed monthly quotas; heavy usage can be metered on Growth and above.
+[span] Do AI agent invokes count against my quota?
+[p] Yes. Each plan includes a monthly agent invoke limit. Streaming AI, tool calls, and MCP interactions count as invokes.
+[span] Are stream, collab, game, and IoT modules extra?
+[p] No separate SKU. Platform modules run on the same room and worker. Quotas apply to messages and agent invokes like chat.
+[span] Enterprise vs Business?
+[p] Business is high-limit self-serve with SSO add-on and audit export. Enterprise adds SCIM, SLA, DLP, security review, and dedicated support.
+[span] Self-host vs hosted?
+[p] Same worker and SDK. Hosted is fastest to start; self-host gives full control on your Cloudflare account with MIT source.
+[p] Need enterprise SSO, VPC-style isolation, or custom SLOs? Email
+[a] fluxychat@outlook.com
+[h2] Message lifecycle you can show users
+[p] Per-message delivery state, connection UI with scheduled reconnect, and transport fallback when WebSockets drop.
+[code] deliveryStatus
+[code] connectionState
+[code] nextRetryAt
+[li] WS → SSE → polling
+[h3] Pending
+[p] Optimistic bubble in UI
+[h3] Sent
+[p] Server ack + WS fan-out
+[h3] Failed
+[p] Retry via clientMessageId
+[p] connectionState example
+[pre] {
+  status: "reconnecting",
+  retryAttempt: 2,
+  nextRetryAt: "2026-05-20T12:00:03.000Z",
+  transport: "websocket"
+}
+[p] Render "Reconnecting in 3s…" without custom timers
+[h2] How we compare
+[p] Not a feature shootout: rough fit vs Stream, Ably, Pusher, and DIY DO repos.
+[a] Full compare
+[a] Leaving Pusher
+[th] Capability
+[th] Typical stream APIs
+[th] Typical Ably-style
+[th] Typical Channels (Pusher-style)
+[th] Fluxychat
+[td] Edge-native (Cloudflare Workers + DO + D1)
+[td] Managed cloud
+[td] Managed cloud
+[td] Managed cloud
+[td] Designed for Workers + DO + D1
+[td] Multi-platform adapters (14 platforms)
+[td] Limited / separate product
+[td] N/A
+[td] N/A
+[td] Slack, Discord, Telegram, WhatsApp, Teams, +9, unified interface
+[td] AI-native streaming (markdown, tool calling)
+[td] Add-on / separate product
+[td] N/A
+[td] N/A
+[td] Streaming markdown, tool_call/tool_result, HITL approval
+[td] MCP client integration
+[td] N/A
+[td] N/A
+[td] N/A
+[td] Consume any MCP tool server, auto-convert to function-calling
+[td] LLM middleware pipeline
+[td] N/A
+[td] N/A
+[td] N/A
+[td] wrapGenerate / wrapStream / transformParams, guardrails, RAG, PII
+[td] Durable agent execution (WorkflowAgent)
+[td] N/A
+[td] N/A
+[td] N/A
+[td] Persists to D1, survives deploys, auto-resume from last step
+[td] In-app chat + operator console
+[td] Separate product areas
+[td] Console + APIs
+[td] Channels dashboard
+[td] First-party console in monorepo
+[td] Headless SDK (optimistic sends, reconnect state)
+[td] Strong SDKs
+[td] Strong SDKs
+[td] Channels SDKs
+[td] @fluxy-chat/sdk + vanilla store
+[td] Time to first message (CLI)
+[td] SDK install + dashboard setup
+[td] SDK install + dashboard setup
+[td] SDK install + dashboard setup
+[td] npx create-fluxy-chat my-chat --minimal
+[td] Drop-in chat widget (no custom UI)
+[td] UI kit / components (separate)
+[td] Headless-first
+[td] Headless-first
+[td] @fluxy-chat/ui-kit, FluxyChatWidget + FluxyInboxPanel
+[td] Agent tool events on room WebSocket
+[td] Varies
+[td] Separate products
+[td] N/A
+[td] tool_call / tool_result on same timeline
+[td] Message templates + member preferences API
+[td] Varies
+[td] N/A
+[td] Limited
+[td] POST /templates, member prefs PATCH
+[td] Reconnect, replay, and delivery state in SDK
+[td] SDK features vary
+[td] SDK features vary
+[td] Channels SDK
+[td] connectionState, loadMore, clientMessageId idempotency
+[td] Read receipts / unread badges
+[td] Product features vary
+[td] Varies by product
+[td] Not first-class in Channels
+[td] markReadLatest + room list unread in SDK/console
+[td] In-app notifications (mentions, DMs)
+[td] Separate notification products
+[td] Separate products
+[td] Beams (separate SKU)
+[td] REST + SDK useNotifications on same Worker
+[td] Mobile push (FCM + APNs + Web Push)
+[td] FCM/APNs via Stream Push
+[td] Push notifications add-on
+[td] Beams (separate product)
+[td] FCM + APNs HTTP/2 + VAPID; per-env project_push_config; client delivery ack
+[td] Cross-room activity feed
+[td] Activity feeds product
+[td] N/A
+[td] N/A
+[td] user_activity_feed + GET /user/activity-feed + mention fan-out
+[td] Support macros / canned responses
+[td] Moderation / automations
+[td] N/A
+[td] N/A
+[td] support_canned_responses + /support/canned-responses
+[td] Client SDKs (mobile + game)
+[td] iOS, Android, Flutter, Unity
+[td] Broad SDK coverage
+[td] iOS, Android, web
+[td] Flutter, Swift, KMP, React Native + Unity/.NET skeletons
+[td] Message middleware (validate / filter / enrich)
+[td] Varies
+[td] N/A
+[td] Webhooks only
+[td] Edge pipeline before persist + broadcast
+[td] Unified room WebSocket (chat + server_event + capability)
+[td] Separate channel products
+[td] Pub/sub channels
+[td] Channels only
+[td] One WS: messages, game/IoT/live/fleet/poll fan-out, vertical capability events
+[td] Live streaming & broadcast (HLS, polls, highlights)
+[td] Video product / add-on
+[td] Separate live product
+[td] Channels only (no HLS stack)
+[td] FluxyStream: events, broadcast, polls, AI co-host on same Worker
+[td] Real-time collab (Yjs / CRDT whiteboard)
+[td] Feeds / activity
+[td] Pub/sub channels
+[td] N/A
+[td] Collab DO adapter + Excalidraw/Yjs in SDK
+[td] Game multiplayer (matchmaking, replay, NPC)
+[td] N/A
+[td] N/A
+[td] Presence only
+[td] FluxyGame: lobbies, authoritative ticks, D1 leaderboard
+[td] IoT & device sync (MQTT, shadow, rules)
+[td] N/A
+[td] IoT messaging (separate)
+[td] N/A
+[td] FluxyIoT: fleets, readings, rules, geofence on Worker
+[td] Fleet & live location tracking
+[td] N/A
+[td] Location / maps partners
+[td] N/A
+[td] FluxyFleet: trips, ETA, driver tracking APIs + fleet.gps_update on room WS
+[td] Spatial / digital twin rooms
+[td] N/A
+[td] N/A
+[td] N/A
+[td] Scenes + spatial.entity_added fan-out on room WS
+[td] Voice + AI transport pipeline
+[td] Voice / video add-ons
+[td] Separate products
+[td] N/A
+[td] useVoice (production) + transport fallback on room WebSocket
+[td] Cross-channel continuity & customer memory
+[td] CRM integrations
+[td] N/A
+[td] N/A
+[td] CDP graph + journey mapping + A2A tasks on Worker
+[td] Pricing surprises at scale
+[td] Enterprise / usage tiers
+[td] Usage-based
+[td] Free tier small; connections add up
+[td] Cloudflare pricing you can read; MIT self-host option
+[td] Self-host / on your own account
+[td] Proprietary cloud
+[td] Managed-first
+[td] Managed-first
+[td] Full MIT monorepo, deploy Worker + D1 in your CF account
+[td] Socket fleet / VPS to operate
+[td] Managed vendor infra
+[td] Managed vendor infra
+[td] Managed vendor infra
+[td] No VPS; one Room DO per room on CF edge
+[td] Next.js on Vercel + realtime (typical split)
+[td] Managed cloud + your frontend
+[td] Ably + Vercel tutorial pattern
+[td] Channels + serverless functions
+[td] Vercel/Netlify UI + CF Worker chat (no Vercel WS limits)
+[td] Omnichannel inbox (mentions, unread, follow-ups)
+[td] Separate feeds product
+[td] N/A
+[td] N/A
+[td] useInbox items feed + REST /inbox + console badge
+[td] MIT license, read and deploy the full stack
+[td] Proprietary cloud
+[td] Managed-first
+[td] Managed-first
+[td] MIT monorepo, Worker, SDK, console, no vendor lock-in
+[h2] What does it actually cost on Cloudflare?
+[p] Real numbers, not vague "contact sales" ranges. The free tier is generous; the paid tier scales with usage; self-host is just your Cloudflare bill. No per-connection pricing surprises.
+[p] FluxyChat runs entirely on your Cloudflare account. You pay Cloudflare directly  no per-seat or per-message markup from us on the self-host path.
+[th] Plan
+[th] Monthly messages
+[th] D1 reads / day
+[th] Cost (USD)
+[th] Best for
+[td] Workers Free
+[td] ~3M / mo (100k req/day × 30)
+[td] 5M / day
+[td] Hobby · early beta · <1k MAU
+[td] Workers Paid ($5/mo)
+[td] ~300M+ / mo
+[td] 25M+ / day
+[td] $5 + usage
+[td] Growing SaaS · 1k–100k MAU
+[td] Self-host on your CF account
+[td] Unlimited*
+[td] Your plan limits
+[td] Your plan cost
+[td] Enterprise · cost-sensitive · compliance
+[p] * D1 storage cap: 10 GB on the free plan, unlimited on paid. Message fanout uses Durable Object egress  see
+[a] Cloudflare's current pricing
+[p] for live numbers. Run
+[code] pnpm run check:pricing
+[p] to verify your env assumptions match the published rates.
+[h2] FAQs
+[p] Questions we hear when teams compare hosted chat APIs and edge deployments.
+[span] What is the chat API vs the SDK?
+[p] Your backend talks to the Worker over HTTP. The browser uses @fluxy-chat/sdk to join a room, send, and render. Same product, two surfaces.
+[span] Can I keep the frontend on Vercel?
+[p] Yes. Lots of teams leave Next on Vercel or Netlify and run chat on Workers + Durable Objects. You skip the platform WebSocket limits and a second Pusher-style bill.
+[span] Is this Intercom
+[...truncated]

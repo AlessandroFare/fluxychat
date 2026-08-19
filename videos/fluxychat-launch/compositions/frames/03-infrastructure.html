@@ -1,0 +1,84 @@
+<template>
+  <div id="root" data-composition-id="03-infrastructure" data-width="1920" data-height="1080" data-start="0" data-duration="11.861">
+    <div class="clip fx-03-infrastructure-bg" data-start="0" data-duration="11.861" data-track-index="0"></div>
+    
+    <div class="fx-03-infrastructure-title" id="el-03-inf-title">Built on Cloudflare's edge</div>
+    <div class="fx-03-infrastructure-nodes">
+      <div class="fx-03-infrastructure-node" id="el-03-inf-n1"><h3>Workers</h3><p>HTTP + WebSocket at the edge</p></div>
+      <div class="fx-03-infrastructure-node" id="el-03-inf-n2"><h3>Durable Objects</h3><p>Stateful rooms & presence</p></div>
+      <div class="fx-03-infrastructure-node" id="el-03-inf-n3"><h3>D1</h3><p>Messages & metadata</p></div>
+    </div>
+    <div class="fx-03-infrastructure-globe" id="el-03-inf-globe">Globally distributed</div>
+    <div class="fx-03-infrastructure-paths">
+      <div class="fx-03-infrastructure-path self" id="el-03-inf-self">Self-host</div>
+      <div class="fx-03-infrastructure-path hosted" id="el-03-inf-hosted">Hosted by us</div>
+    </div>
+  </div>
+  <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("assets/fonts/Geist-Regular.woff2") format("woff2");
+      font-weight: 400;
+      font-style: normal;
+    }
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "Geist", system-ui, sans-serif;
+      color: #el-0E1316;
+    }
+    .fx-03-infrastructure-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+    
+    .fx-03-infrastructure-bg { background: #FDFBF9; }
+    .fx-03-infrastructure-title {
+      position: absolute; left: 80px; top: 80px; font-size: 56px; font-weight: 700;
+      letter-spacing: -0.02em; max-width: 800px;
+    }
+    .fx-03-infrastructure-nodes { position: absolute; left: 80px; top: 280px; display: flex; gap: 32px; }
+    .fx-03-infrastructure-node {
+      width: 320px; padding: 32px; border-radius: 16px; background: #fff;
+      border: 1px solid #e5e0d8; box-shadow: 0 8px 32px rgba(14,19,22,0.06);
+    }
+    .fx-03-infrastructure-node h3 { font-size: 22px; margin-bottom: 8px; color: #c2410c; }
+    .fx-03-infrastructure-node p { font-size: 16px; color: #el-475569; line-height: 1.5; }
+    .fx-03-infrastructure-globe {
+      position: absolute; right: 100px; top: 200px; width: 480px; height: 480px;
+      border-radius: 50%; border: 2px dashed rgba(194,65,12,0.3);
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      color: #c2410c; letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .fx-03-infrastructure-paths {
+      position: absolute; left: 80px; bottom: 120px; display: flex; gap: 24px;
+    }
+    .fx-03-infrastructure-path {
+      padding: 20px 36px; border-radius: 12px; font-size: 24px; font-weight: 600;
+    }
+    .fx-03-infrastructure-path.self { background: #el-0E1316; color: #fff; }
+    .fx-03-infrastructure-path.hosted { background: #c2410c; color: #fff; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    
+    gsap.set("#el-03-inf-title", { opacity: 0, y: 30 });
+    gsap.set("#el-03-inf-n1, #el-03-inf-n2, #el-03-inf-n3", { opacity: 0, y: 50 });
+    gsap.set("#el-03-inf-globe", { opacity: 0, scale: 0.6 });
+    gsap.set("#el-03-inf-self, #el-03-inf-hosted", { opacity: 0, y: 30 });
+    tl.fromTo("#el-03-inf-title", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5 }, 0.3);
+    tl.fromTo("#el-03-inf-n1", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.45 }, 1.5);
+    tl.fromTo("#el-03-inf-n2", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.45 }, 2.2);
+    tl.fromTo("#el-03-inf-n3", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.45 }, 2.9);
+    tl.fromTo("#el-03-inf-globe", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.8, ease: "power2.out" }, 4.5);
+    tl.to("#el-03-inf-globe", { rotation: 360, duration: 8, ease: "none" }, 5.0);
+    tl.fromTo("#el-03-inf-self", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4 }, 8.5);
+    tl.fromTo("#el-03-inf-hosted", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4 }, 9.2);
+    window.__timelines["03-infrastructure"] = tl;
+  </script>
+</template>

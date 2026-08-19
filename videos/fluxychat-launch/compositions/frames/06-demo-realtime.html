@@ -1,0 +1,80 @@
+<template>
+  <div id="root" data-composition-id="06-demo-realtime" data-width="1920" data-height="1080" data-start="0" data-duration="8.043">
+    <div class="clip fx-06-demo-realtime-bg" data-start="0" data-duration="8.043" data-track-index="0"></div>
+    
+    <div class="fx-06-demo-realtime-live" id="el-06-rt-live">● LIVE</div>
+    <div class="fx-06-demo-realtime-tabs">
+      <div class="fx-06-demo-realtime-tab" id="el-06-rt-tab1">
+        <div class="fx-06-demo-realtime-tabbar">Tab A — User 1</div>
+        <div class="fx-06-demo-realtime-chat">
+          <div class="fx-06-demo-realtime-bubble sent" id="el-06-rt-msg">Hey — realtime check ✓</div>
+        </div>
+      </div>
+      <div class="fx-06-demo-realtime-tab" id="el-06-rt-tab2">
+        <div class="fx-06-demo-realtime-tabbar">Tab B — User 2</div>
+        <div class="fx-06-demo-realtime-chat">
+          <div class="fx-06-demo-realtime-bubble recv" id="el-06-rt-echo"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("assets/fonts/Geist-Regular.woff2") format("woff2");
+      font-weight: 400;
+      font-style: normal;
+    }
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "Geist", system-ui, sans-serif;
+      color: #el-0E1316;
+    }
+    .fx-06-demo-realtime-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+    
+    .fx-06-demo-realtime-bg { background: #el-020617; }
+    .fx-06-demo-realtime-tabs { position: absolute; inset: 60px 80px; display: flex; gap: 24px; }
+    .fx-06-demo-realtime-tab {
+      flex: 1; background: #el-0f172a; border-radius: 16px; border: 1px solid #el-1e293b; overflow: hidden;
+    }
+    .fx-06-demo-realtime-tabbar {
+      padding: 12px 16px; background: #el-1e293b; font-size: 14px; color: #el-94a3b8;
+    }
+    .fx-06-demo-realtime-chat { padding: 24px; }
+    .fx-06-demo-realtime-bubble {
+      max-width: 80%; padding: 14px 18px; border-radius: 14px; margin-bottom: 12px; font-size: 18px;
+    }
+    .fx-06-demo-realtime-bubble.sent { background: #c2410c; color: #fff; margin-left: auto; }
+    .fx-06-demo-realtime-bubble.recv { background: #el-334155; color: #f1f5f9; }
+    .fx-06-demo-realtime-live {
+      position: absolute; top: 40px; right: 100px; padding: 8px 16px; background: #el-16a34a;
+      color: #fff; border-radius: 999px; font-size: 14px; font-weight: 700; letter-spacing: 0.1em;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    
+    gsap.set("#el-06-rt-tab1", { opacity: 0, x: -60 });
+    gsap.set("#el-06-rt-tab2", { opacity: 0, x: 60 });
+    gsap.set("#el-06-rt-live", { opacity: 0, scale: 0.8 });
+    gsap.set("#el-06-rt-msg", { opacity: 0 });
+    gsap.set("#el-06-rt-echo", { opacity: 0, scale: 0.9 });
+    tl.fromTo("#el-06-rt-tab1", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.5 }, 0.3);
+    tl.fromTo("#el-06-rt-tab2", { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.5 }, 0.5);
+    tl.fromTo("#el-06-rt-msg", { opacity: 0 }, { opacity: 1, duration: 0.35 }, 2.0);
+    tl.fromTo("#el-06-rt-echo", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)" }, 3.2);
+    tl.call(() => { document.getElementById("06-rt-echo").textContent = "Hey — realtime check ✓"; }, null, 3.2);
+    tl.fromTo("#el-06-rt-live", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.35 }, 4.5);
+    tl.to("#el-06-rt-live", { scale: 1.05, duration: 0.6, repeat: 3, yoyo: true, ease: "sine.inOut" }, 5.0);
+    window.__timelines["06-demo-realtime"] = tl;
+  </script>
+</template>

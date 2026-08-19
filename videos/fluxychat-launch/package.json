@@ -1,0 +1,11 @@
+{
+  "name": "fluxychat-launch",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.7.109 preview",
+    "check": "npx --yes hyperframes@0.7.109 check",
+    "render": "npx --yes hyperframes@0.7.109 render",
+    "publish": "npx --yes hyperframes@0.7.109 publish"
+  }
+}

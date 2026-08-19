@@ -15,6 +15,8 @@ import { ensureAssistantRoom } from "@/lib/ensure-assistant-room";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
 import { loadQuickstartProgress, markQuickstartFirstMessage } from "@/lib/quickstart-progress";
+import type { ParsedCliEnv } from "@/lib/parse-cli-env";
+import { validateCliEnvImport } from "@/lib/parse-cli-env";
 import {
   readFirstMessageSentForUser,
   resolveQuickstartUserKey,
@@ -68,6 +70,7 @@ export function useOnboardingWizard() {
   const [activeStep, setActiveStep] = useState(0);
   const [skipHistoryOnConnect, setSkipHistoryOnConnect] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [cliImportOpen, setCliImportOpen] = useState(false);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
 
   const { user: clerkUser, isSignedIn: clerkSignedIn } = useClerkUser();
@@ -111,6 +114,11 @@ export function useOnboardingWizard() {
 
   useEffect(() => {
     setIsReviewMode(new URLSearchParams(window.location.search).get("review") === "1");
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("cli") === "1" || params.get("from") === "cli") {
+      setCliImportOpen(true);
+      setActiveStep(1);
+    }
   }, []);
 
   useEffect(() => {
@@ -152,6 +160,11 @@ export function useOnboardingWizard() {
   useEffect(() => {
     if (!progressHydrated || initStepRef.current) return;
     initStepRef.current = true;
+    const fromCli =
+      typeof window !== "undefined" &&
+      (new URLSearchParams(window.location.search).get("from") === "cli" ||
+        new URLSearchParams(window.location.search).get("cli") === "1");
+    if (fromCli) return;
     const sent = userSentMessage || readFirstMessageSentForUser(clerkUser?.id, userId);
     const first = firstIncompleteOnboardingStep({
       adminJwt,
@@ -519,6 +532,55 @@ export function useOnboardingWizard() {
     }
   }
 
+  function importCliEnv(parsed: ParsedCliEnv): boolean {
+    setError(null);
+    setNotice(null);
+    const validationError = validateCliEnvImport(parsed);
+    if (validationError) {
+      setError(validationError);
+      return false;
+    }
+    const normalize = (url: string) => url.replace(/\/$/, "");
+    if (
+      parsed.workerUrl?.trim() &&
+      normalize(parsed.workerUrl) !== normalize(WORKER_URL)
+    ) {
+      setError(
+        `Worker URL in .env (${parsed.workerUrl}) does not match this dashboard (${WORKER_URL}). ` +
+          "Set NEXT_PUBLIC_FLUXYCHAT_WORKER_URL to the same worker and reload.",
+      );
+      return false;
+    }
+
+    setMemberJwt(parsed.memberJwt!.trim());
+    setActiveProject({
+      id: parsed.projectId!.trim(),
+      name:
+        parsed.projectId === "hosted-demo"
+          ? "Hosted demo"
+          : parsed.projectId!.trim(),
+      created_at: new Date().toISOString(),
+    });
+    const importedRoom: CreatedRoom = {
+      id: parsed.roomId!.trim(),
+      type: "public",
+      name: parsed.roomId!.trim(),
+      created_at: new Date().toISOString(),
+    };
+    setRoom(importedRoom);
+    setLastRoom(importedRoom);
+    if (parsed.agentId?.trim()) {
+      setAgent({
+        id: parsed.agentId.trim(),
+        name: parsed.agentHandle?.replace(/^@/, "") ?? "Assistant",
+      });
+    }
+    if (parsed.userId?.trim()) setUserId(parsed.userId.trim());
+    setActiveStep(2);
+    setNotice("Imported CLI .env — you're on First Chat.");
+    return true;
+  }
+
   async function invokeAgent() {
     if (!agent?.id) {
       setError("Create/select an agent first.");
@@ -610,6 +672,9 @@ export function useOnboardingWizard() {
     showCelebration,
     setShowCelebration,
     projectNameInputRef,
+    cliImportOpen,
+    setCliImportOpen,
+    importCliEnv,
     activeProject: project,
     goNext,
     goBack,
