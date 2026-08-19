@@ -1,221 +1,200 @@
 import { useMemo, useState } from "react";
-import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+import { ChatWindow } from "@fluxy-chat/ui";
+import { loadCliSession, type CliSession } from "./session";
 
-const workerUrl = import.meta.env.VITE_FLUXYCHAT_WORKER_URL?.trim();
-const memberJwt = import.meta.env.VITE_FLUXYCHAT_MEMBER_JWT?.trim();
-const roomId = import.meta.env.VITE_FLUXYCHAT_ROOM_ID?.trim() || "general";
-const agentId = import.meta.env.VITE_FLUXYCHAT_AGENT_ID?.trim() || "";
-const agentHandle = import.meta.env.VITE_FLUXYCHAT_AGENT_HANDLE?.trim() || "@assistant";
-const projectId = import.meta.env.VITE_FLUXYCHAT_PROJECT_ID?.trim() || "";
-const consoleUrl = import.meta.env.VITE_FLUXYCHAT_CONSOLE_URL?.trim() || "http://localhost:3000";
-const memberUserId =
-  import.meta.env.VITE_FLUXYCHAT_USER_ID?.trim() || "demo-user";
+const envWorkerUrl = import.meta.env.VITE_FLUXYCHAT_WORKER_URL?.trim() ?? "";
+const envJwt = import.meta.env.VITE_FLUXYCHAT_MEMBER_JWT?.trim() ?? "";
+const envRoomId = import.meta.env.VITE_FLUXYCHAT_ROOM_ID?.trim() ?? "";
+const envAgentId = import.meta.env.VITE_FLUXYCHAT_AGENT_ID?.trim() ?? "";
+const envAgentHandle = import.meta.env.VITE_FLUXYCHAT_AGENT_HANDLE?.trim() || "@assistant";
+const envProjectId = import.meta.env.VITE_FLUXYCHAT_PROJECT_ID?.trim() ?? "";
+const envUserId = import.meta.env.VITE_FLUXYCHAT_USER_ID?.trim() ?? "";
+const consoleUrl = import.meta.env.VITE_FLUXYCHAT_CONSOLE_URL?.trim() || "https://fluxychat.com";
 
-function ChatRoom() {
-  const {
-    messages,
-    sendMessage,
-    invokeAgent,
-    connectionState,
-    agentTyping,
-    toolThreadEvents,
-    lastAgentRun,
-  } = useChat({
-    roomId,
-    agentId: agentId || undefined,
-    markReadLatest: true,
-  });
+const SUGGESTED_PROMPTS = [
+  "Tell me about FluxyChat features",
+  "What can this assistant do?",
+];
 
-  const [draft, setDraft] = useState("");
-  const [invokeError, setInvokeError] = useState<string | null>(null);
+function sessionFromEnv(): CliSession | null {
+  if (!envWorkerUrl || !envJwt || !envRoomId) return null;
+  return {
+    workerUrl: envWorkerUrl,
+    memberJwt: envJwt,
+    roomId: envRoomId,
+    agentId: envAgentId,
+    agentHandle: envAgentHandle,
+    projectId: envProjectId,
+    userId: envUserId || "demo-user",
+  };
+}
 
-  async function handleSendMessage(text: string) {
-    setInvokeError(null);
-    await sendMessage(text);
-  }
+function SignInGate() {
+  const returnTo = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+  const href = `${consoleUrl.replace(/\/$/, "")}/cli-auth?redirect_uri=${encodeURIComponent(returnTo)}`;
 
-  async function handleInvokeAgent(text: string) {
-    if (!agentId) {
-      setInvokeError("Set VITE_FLUXYCHAT_AGENT_ID in .env (run pnpm setup).");
-      return;
-    }
-    setInvokeError(null);
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <img src={`${consoleUrl.replace(/\/$/, "")}/fluxychat-icon.svg`} alt="" width={28} height={28} />
+          <span>FluxyChat</span>
+        </div>
+      </header>
+      <div className="signin-card">
+        <p className="eyebrow">Local starter</p>
+        <h1>Sign in to open your room</h1>
+        <p>
+          Use the same Clerk account as the console. We create your project and
+          assistant room, then you chat here.
+        </p>
+        <a className="btn-primary" href={href}>
+          Continue with FluxyChat
+        </a>
+        <p className="fine-print">
+          Opens {consoleUrl.replace(/^https?:\/\//, "")} for sign in, then returns to this app.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function ChatRoom({ session }: { session: CliSession }) {
+  const { messages, sendMessage, invokeAgent, connectionState, agentTyping, typingUsers, online } =
+    useChat({
+      roomId: session.roomId,
+      agentId: session.agentId || undefined,
+      markReadLatest: true,
+    });
+
+  const [error, setError] = useState<string | null>(null);
+  const connected = connectionState.status === "connected";
+
+  async function onSend(content: string) {
+    setError(null);
+    const mentionsAgent = content.toLowerCase().includes(
+      (session.agentHandle || "@assistant").replace(/^@/, "").toLowerCase(),
+    );
     try {
-      await invokeAgent(text, { agentId });
+      if (mentionsAgent && session.agentId) {
+        await invokeAgent(content, { agentId: session.agentId });
+      } else {
+        await sendMessage(content);
+      }
     } catch (err) {
-      setInvokeError(err instanceof Error ? err.message : "Agent invoke failed");
+      setError(err instanceof Error ? err.message : "Failed to send");
     }
   }
 
   return (
-    <section className="chat-panel">
-      <header className="chat-header">
-        <strong>{roomId}</strong>
-        <span className="status">{connectionState.status}</span>
-      </header>
+    <div className="chat-column">
+      <div className="status-row">
+        <span className="inline-flex items-center gap-2">
+          <span className={`status-dot ${connected ? "on" : "off"}`} />
+          <span className="font-medium text-foreground">
+            {connected ? "Connected" : connectionState.status}
+          </span>
+          <span className="text-muted-foreground">· {session.roomId}</span>
+        </span>
+      </div>
 
-      <ul className="messages">
-        {messages.map((m) => {
-          const isSelf = m.userId === memberUserId || m.userId === "first-message-user";
-          const isAgent = m.userId?.includes("agent") || m.userId === "assistant";
-          return (
-            <li
-              key={m.id ?? `${m.createdAt}-${m.userId}`}
-              className={`message${isSelf ? " self" : ""}${isAgent ? " agent" : ""}`}
-            >
-              <span className="author">{m.userId}</span>
-              <span>{m.content}</span>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="chat-frame">
+        <ChatWindow
+          messages={messages}
+          online={online ?? 0}
+          typingUsers={typingUsers ?? {}}
+          onSend={(content) => {
+            void onSend(content);
+          }}
+          agentTyping={Boolean(agentTyping)}
+          agentTypingLabel={session.agentHandle || "@assistant"}
+          mentionSuggestions={[
+            {
+              handle: (session.agentHandle || "@assistant").replace(/^@/, ""),
+              label: session.agentHandle || "@assistant",
+              agentId: session.agentId,
+            },
+          ]}
+        />
+      </div>
 
-      {agentTyping ? <p className="typing">{agentHandle} is thinking…</p> : null}
-
-      {(toolThreadEvents.length > 0 || lastAgentRun?.toolCalls?.length) ? (
-        <div className="tools">
-          <h3>Agent tools</h3>
-          <ul>
-            {toolThreadEvents.map((ev) => (
-              <li key={ev.key}>
-                {String(ev.kind ?? "tool")}: {String(ev.title ?? ev.toolName ?? ev.key)}
-              </li>
-            ))}
-            {(lastAgentRun?.toolCalls ?? []).map((tc) => (
-              <li key={tc.id}>
-                {tc.name}: {tc.status ?? "done"}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {invokeError ? <p className="hint" style={{ color: "#b91c1c", padding: "0 1rem" }}>{invokeError}</p> : null}
-
-      <form
-        className="composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const text = draft.trim();
-          if (!text) return;
-          void handleSendMessage(text);
-          setDraft("");
-        }}
-      >
-        <div className="composer-row">
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Message or ask @assistant…"
-            aria-label="Message"
-          />
-          <button type="submit">Send</button>
+      <div className="prompts">
+        {SUGGESTED_PROMPTS.map((prompt) => (
           <button
+            key={prompt}
             type="button"
-            className="secondary"
-            disabled={!draft.trim()}
             onClick={() => {
-              const text = draft.trim();
-              if (!text) return;
-              const payload = text.startsWith("@") ? text : `${agentHandle} ${text}`;
-              void handleInvokeAgent(payload);
-              setDraft("");
+              const handle = session.agentHandle || "@assistant";
+              void onSend(`${handle} ${prompt}`);
             }}
           >
-            Ask agent
+            {prompt}
           </button>
-        </div>
-        <p className="hint">
-          Realtime via WebSocket · Agent replies stream in-room · Tool calls appear above
-        </p>
-      </form>
-    </section>
+        ))}
+      </div>
+      {error ? <p className="chat-error">{error}</p> : null}
+    </div>
   );
 }
 
 export function App() {
-  const client = useMemo(() => {
-    if (!workerUrl || !memberJwt) return null;
-    return new FluxyChatClient({
-      baseUrl: workerUrl,
-      userId: memberUserId,
-      token: memberJwt,
-    });
-  }, []);
+  const session = useMemo(() => loadCliSession() ?? sessionFromEnv(), []);
 
-  if (!workerUrl || !memberJwt) {
-    return (
-      <main className="shell">
-        <div className="error-box">
-          <p>
-            <strong>Setup required.</strong> Run provisioning against a local FluxyChat worker:
-          </p>
-          <pre>
-            <code>{`# Terminal 1 — from FluxyChat monorepo
-pnpm --filter @fluxy-chat/worker dev
-
-# Terminal 2 — in this project
-pnpm setup
-pnpm dev`}</code>
-          </pre>
-          <p>
-            Or copy <code>.env.example</code> → <code>.env</code> with credentials from{" "}
-            <a href="https://fluxychat.com/onboarding" target="_blank" rel="noreferrer">
-              fluxychat.com/onboarding
-            </a>
-            .
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  if (!client) return null;
+  if (!session) return <SignInGate />;
 
   return (
-    <main className="shell">
-      <div className="hero">
-        <h1>FluxyChat — full stack starter</h1>
-        <p>
-          Your app · Worker {workerUrl} ·{" "}
+    <main className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <img src={`${consoleUrl.replace(/\/$/, "")}/fluxychat-icon.svg`} alt="" width={28} height={28} />
+          <span>FluxyChat</span>
+        </div>
+        <nav className="top-links">
+          <span className="meta">{session.projectName || session.projectId || "project"}</span>
           <a href={`${consoleUrl.replace(/\/$/, "")}/onboarding?from=cli`} target="_blank" rel="noreferrer">
-            Keep this project
+            Open console
           </a>
-        </p>
-      </div>
-
-      <div className="layout">
-        <FluxyRealtimeProvider client={client}>
-          <ChatRoom />
+        </nav>
+      </header>
+      <div className="page">
+        <FluxyRealtimeProvider
+          workerUrl={session.workerUrl}
+          authTokenProvider={session.memberJwt}
+          userId={session.userId}
+        >
+          <ChatRoom session={session} />
         </FluxyRealtimeProvider>
-
         <aside className="side">
-          <div className="card">
+          <section>
             <h2>Project</h2>
             <dl>
               <div>
-                <dt>Project ID</dt>
-                <dd>{projectId || "—"}</dd>
+                <dt>ID</dt>
+                <dd>{session.projectId || "—"}</dd>
               </div>
               <div>
                 <dt>Room</dt>
-                <dd>{roomId}</dd>
+                <dd>{session.roomId}</dd>
               </div>
               <div>
                 <dt>Agent</dt>
-                <dd>{agentHandle}{agentId ? ` (${agentId.slice(0, 12)}…)` : ""}</dd>
+                <dd>{session.agentHandle}</dd>
               </div>
             </dl>
-          </div>
-          <div className="card">
-            <h2>Try next</h2>
-            <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
-              <li>Open a second tab — same URL — for realtime</li>
-              <li>Ask the agent about FluxyChat architecture</li>
-              <li>Manage rooms & agents in the console</li>
+          </section>
+          <section>
+            <h2>Next</h2>
+            <ul>
+              <li>Send a message, or mention the agent to invoke it</li>
+              <li>Open a second tab on this URL for realtime</li>
+              <li>
+                <a href={`${consoleUrl.replace(/\/$/, "")}/onboarding?from=cli`} target="_blank" rel="noreferrer">
+                  Continue onboarding in the console
+                </a>
+              </li>
             </ul>
-          </div>
+          </section>
         </aside>
       </div>
     </main>

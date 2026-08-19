@@ -1037,7 +1037,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     if (!finalContent) {
       if (totalOutputTokens > 0) {
         finalContent =
-          "The model returned tokens but no visible text. Try again or switch model (e.g. llama-3.1-8b-instant on Groq).";
+          "The model returned tokens but no visible text. Try again or switch model (e.g. openai/gpt-oss-20b on Groq).";
       } else {
         finalContent = "I was unable to generate a response.";
       }

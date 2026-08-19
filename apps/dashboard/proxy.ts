@@ -15,6 +15,7 @@ const isClerkPublicRoute = createRouteMatcher([
   "/compare(.*)",
   "/guides(.*)",
   "/demo(.*)",
+  "/cli-auth(.*)",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/console-ack(.*)",
@@ -41,6 +42,7 @@ function isPublicPath(pathname: string): boolean {
     "/compare",
     "/guides",
     "/demo",
+    "/cli-auth",
     "/api/webhooks",
     "/api",
   ];

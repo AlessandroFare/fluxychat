@@ -71,8 +71,11 @@ async function main() {
   if (!workerUrl) fail("VITE_FLUXYCHAT_WORKER_URL unset");
   else pass(`worker URL: ${workerUrl}`);
 
-  if (!jwt) fail("VITE_FLUXYCHAT_MEMBER_JWT unset");
-  else pass(`JWT present (${jwt.length} chars)`);
+  const hosted = (env.VITE_FLUXYCHAT_CONSOLE_URL || "").includes("fluxychat.com");
+  if (!jwt) {
+    if (hosted) warn("VITE_FLUXYCHAT_MEMBER_JWT unset — sign in from the app (Clerk)");
+    else fail("VITE_FLUXYCHAT_MEMBER_JWT unset");
+  } else pass(`JWT present (${jwt.length} chars)`);
 
   if (!roomId) warn("VITE_FLUXYCHAT_ROOM_ID unset");
   else pass(`room: ${roomId}`);

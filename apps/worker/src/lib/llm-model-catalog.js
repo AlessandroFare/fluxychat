@@ -19,6 +19,9 @@ const MODEL_CAPABILITIES_BY_ID = {
   "deepseek-chat": { toolUsage: true, toolStreaming: true },
   "deepseek-reasoner": { objectGeneration: true, toolUsage: true, toolStreaming: true },
   "llama-3.3-70b-versatile": { toolUsage: true, toolStreaming: true },
+  "openai/gpt-oss-20b": { objectGeneration: true, toolUsage: true, toolStreaming: true },
+  "openai/gpt-oss-120b": { objectGeneration: true, toolUsage: true, toolStreaming: true },
+  "qwen/qwen3.6-27b": { objectGeneration: true, toolUsage: true, toolStreaming: true },
   "grok-2-latest": { toolUsage: true, toolStreaming: true },
   "mistral-large-latest": { toolUsage: true, toolStreaming: true },
 };
