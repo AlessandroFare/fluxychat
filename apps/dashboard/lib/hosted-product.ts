@@ -92,6 +92,7 @@ export const MARKETING_PATH_PREFIXES = [
   "/compare",
   "/guides",
   "/demo",
+  "/cli-auth",
   "/status",
   "/sign-in",
   "/sign-up",

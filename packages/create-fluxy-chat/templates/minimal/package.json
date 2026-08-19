@@ -12,7 +12,7 @@
     "@fluxy-chat/ui-kit": "^0.1.0",
     "@fluxy-chat/ui": "^0.1.2",
     "@fluxy-chat/react": "^0.1.1",
-    "@fluxy-chat/sdk": "^0.6.0",
+    "@fluxy-chat/sdk": "^0.6.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

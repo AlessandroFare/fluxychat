@@ -189,47 +189,32 @@ async function setupHosted() {
 
   console.log(dim(`  mode: hosted · worker: ${workerUrl}`));
 
-  const status = await getJson(workerUrl, "/demo/status").catch(() => null);
-  if (!status?.ready) {
-    fail(
-      `Public demo not available at ${workerUrl}\n` +
-        "  Try: pnpm setup -- --mode local (with local worker)\n" +
-        "  Or: https://fluxychat.com/demo",
-    );
-  }
-  ok("public demo ready");
-
-  const session = await getJson(workerUrl, "/demo/session");
-  if (!session?.token || !session?.roomId) {
-    fail("/demo/session did not return token + roomId");
-  }
-  ok(`guest session · room ${session.roomId}`);
-
   writeEnv({
     workerUrl,
-    token: session.token,
-    roomId: session.roomId,
-    agentId: session.agentId ?? "",
-    agentHandle: session.agentHandle ?? "@assistant",
-    projectId: "hosted-demo",
-    userId: session.userId ?? "demo-guest",
+    token: "",
+    roomId: "",
+    agentId: "",
+    agentHandle: "@assistant",
+    projectId: "",
+    userId: "",
     consoleUrl,
   });
 
   writeMeta({
     mode: "hosted",
     workerUrl,
-    projectId: "hosted-demo",
-    roomId: session.roomId,
-    agentId: session.agentId ?? null,
-    agentHandle: session.agentHandle ?? "@assistant",
-    expiresIn: session.expiresIn ?? null,
+    projectId: null,
+    roomId: null,
+    agentId: null,
+    agentHandle: "@assistant",
     setupAt: new Date().toISOString(),
+    auth: "clerk",
   });
 
+  ok("wrote hosted endpoints (sign in with Clerk on pnpm dev)");
   console.log(dim("  Run: pnpm dev"));
-  console.log(dim(`  Keep this project: ${consoleUrl}/onboarding?from=cli`));
-  console.log(dim("  Paste your .env in the console to continue onboarding."));
+  console.log(dim("  Sign in with Clerk. We create your project and assistant room."));
+  console.log(dim(`  Console: ${consoleUrl}/onboarding`));
 }
 
 async function setupLocal() {
