@@ -7,7 +7,7 @@ Chat + AI agent + tool calls in one Vite app. Provisions against a local FluxyCh
 **Hosted (no wrangler):**
 
 ```bash
-npx create-fluxy-chat my-app --mode hosted -y
+npx @fluxy-chat/create-fluxy-chat my-app --mode hosted -y
 cd my-app
 pnpm install
 pnpm setup:hosted

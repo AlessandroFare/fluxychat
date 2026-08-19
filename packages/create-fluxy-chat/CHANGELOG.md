@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.1] - 2026-08-19
+
+### Changed
+
+- Docs and CLI help use the scoped npm name: `npx @fluxy-chat/create-fluxy-chat@latest` (unscoped `create-fluxy-chat` 404s on the registry)
+
 ## [0.5.0] - 2026-08-19
 
 ### Added
