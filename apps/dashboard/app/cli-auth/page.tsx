@@ -10,16 +10,24 @@ export const dynamic = "force-dynamic";
 
 function CliAuthRedirect() {
   const [error, setError] = useState<string | null>(null);
-  const redirectUri = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("redirect_uri")?.trim() || "";
+  const [status, setStatus] = useState("Opening your project…");
+  const params = useMemo(() => {
+    if (typeof window === "undefined") return { redirectUri: "", goDashboard: false };
+    const search = new URLSearchParams(window.location.search);
+    return {
+      redirectUri: search.get("redirect_uri")?.trim() || "",
+      goDashboard: search.get("next") === "dashboard" || !search.get("redirect_uri"),
+    };
   }, []);
 
   useEffect(() => {
-    if (!redirectUri) {
-      setError("Missing redirect_uri. Start the app with pnpm dev from create-fluxy-chat.");
+    const { redirectUri, goDashboard } = params;
+
+    if (goDashboard && !redirectUri) {
+      window.location.assign("/dashboard");
       return;
     }
+
     if (!isAllowedCliRedirectUri(redirectUri)) {
       setError("redirect_uri must be http://localhost or http://127.0.0.1");
       return;
@@ -29,9 +37,11 @@ function CliAuthRedirect() {
     void (async () => {
       try {
         const res = await fetch("/api/cli/bootstrap", { method: "POST" });
-        const json = (await res.json()) as Record<string, string> & { error?: string };
+        const json = (await res.json()) as Record<string, unknown> & { error?: string; createdNewProject?: boolean };
         if (!res.ok) throw new Error(json.error || "Bootstrap failed");
         if (cancelled) return;
+        if (json.createdNewProject) setStatus("Project ready. Sending you back…");
+        else setStatus("Project already exists. Sending you back…");
         const encoded = btoa(JSON.stringify(json));
         const target = new URL(redirectUri);
         target.hash = `fluxy_cli=${encoded}`;
@@ -46,7 +56,7 @@ function CliAuthRedirect() {
     return () => {
       cancelled = true;
     };
-  }, [redirectUri]);
+  }, [params]);
 
   if (error) {
     return (
@@ -58,9 +68,9 @@ function CliAuthRedirect() {
 
   return (
     <div className="rounded-2xl border border-border bg-white px-5 py-6 text-center shadow-sm">
-      <p className="text-sm font-medium text-foreground">Setting up your project…</p>
+      <p className="text-sm font-medium text-foreground">{status}</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Creating a room and member token, then sending you back to the local app.
+        If you already have a project we reuse it. We only mint a fresh member token.
       </p>
     </div>
   );
@@ -84,7 +94,8 @@ export default function CliAuthPage() {
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-foreground">Sign in to continue</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Same account as the console. We create your project and assistant room, then open chat locally.
+            Same account as the console. First visit creates your project and assistant room.
+            Later visits reuse them.
           </p>
         </div>
         <SignedOut>

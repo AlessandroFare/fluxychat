@@ -76,14 +76,14 @@ body {
 }
 
 .top-links a,
-.side a {
+.side a:not(.btn-primary) {
   color: var(--fluxy-cta-color);
   font-weight: 500;
   text-decoration: none;
 }
 
 .top-links a:hover,
-.side a:hover {
+.side a:not(.btn-primary):hover {
   text-decoration: underline;
 }
 
@@ -226,6 +226,78 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
+.onboard {
+  margin: auto;
+  max-width: 520px;
+  width: calc(100% - 32px);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.onboard h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+.onboard p {
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.dot-step {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--border);
+}
+
+.dot-step.active {
+  background: var(--fluxy-cta-color);
+  width: 22px;
+}
+
+.onboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-ghost {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-primary.side-btn {
+  margin-top: 10px;
+  width: 100%;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.side-copy {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
 .eyebrow {
   font-size: 11px;
   font-weight: 650;
@@ -248,14 +320,19 @@ body {
 
 .btn-primary {
   display: inline-flex;
-  margin-top: 16px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
   background: var(--fluxy-cta-color);
   color: #fff;
+  border: none;
   border-radius: 10px;
   padding: 10px 16px;
   font-weight: 600;
   font-size: 14px;
   text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .btn-primary:hover {

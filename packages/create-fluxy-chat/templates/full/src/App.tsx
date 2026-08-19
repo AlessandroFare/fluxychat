@@ -17,6 +17,19 @@ const SUGGESTED_PROMPTS = [
   "What can this assistant do?",
 ];
 
+function consoleOrigin(): string {
+  return consoleUrl.replace(/\/$/, "");
+}
+
+function clerkAuthHref(): string {
+  const returnTo = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+  return `${consoleOrigin()}/cli-auth?redirect_uri=${encodeURIComponent(returnTo)}`;
+}
+
+function dashboardHref(): string {
+  return `${consoleOrigin()}/dashboard`;
+}
+
 function sessionFromEnv(): CliSession | null {
   if (!envWorkerUrl || !envJwt || !envRoomId) return null;
   return {
@@ -30,31 +43,73 @@ function sessionFromEnv(): CliSession | null {
   };
 }
 
-function SignInGate() {
-  const returnTo = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
-  const href = `${consoleUrl.replace(/\/$/, "")}/cli-auth?redirect_uri=${encodeURIComponent(returnTo)}`;
+function Brand() {
+  return (
+    <div className="brand">
+      <img src={`${consoleOrigin()}/fluxychat-icon.svg`} alt="" width={28} height={28} />
+      <span>FluxyChat</span>
+    </div>
+  );
+}
+
+const TOUR_STEPS = [
+  {
+    title: "You already have an app",
+    body: "This folder is a real Vite chat app. After a short sign-in we create your project and a private room. No public playground.",
+  },
+  {
+    title: "Realtime is the point",
+    body: "After you are in, open this same URL in a second tab. Send a message in one window and watch it land in the other.",
+  },
+  {
+    title: "Then the console",
+    body: "Sign in is required: that is what creates (or reuses) your project and assistant room. After that the two-tab demo works. The dashboard is a separate button once you are in chat.",
+  },
+] as const;
+
+function LocalOnboarding() {
+  const [step, setStep] = useState(0);
+  const last = step === TOUR_STEPS.length - 1;
+  const current = TOUR_STEPS[step];
 
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="brand">
-          <img src={`${consoleUrl.replace(/\/$/, "")}/fluxychat-icon.svg`} alt="" width={28} height={28} />
-          <span>FluxyChat</span>
-        </div>
+        <Brand />
+        <span className="meta">
+          {step + 1} / {TOUR_STEPS.length}
+        </span>
       </header>
-      <div className="signin-card">
-        <p className="eyebrow">Local starter</p>
-        <h1>Sign in to open your room</h1>
-        <p>
-          Use the same Clerk account as the console. We create your project and
-          assistant room, then you chat here.
-        </p>
-        <a className="btn-primary" href={href}>
-          Continue with FluxyChat
-        </a>
-        <p className="fine-print">
-          Opens {consoleUrl.replace(/^https?:\/\//, "")} for sign in, then returns to this app.
-        </p>
+      <div className="onboard">
+        <div className="dots" aria-hidden>
+          {TOUR_STEPS.map((_, i) => (
+            <span key={i} className={`dot-step ${i === step ? "active" : ""}`} />
+          ))}
+        </div>
+        <p className="eyebrow">Quick start</p>
+        <h1>{current.title}</h1>
+        <p>{current.body}</p>
+        <div className="onboard-actions">
+          {step > 0 ? (
+            <button type="button" className="btn-ghost" onClick={() => setStep((s) => s - 1)}>
+              Back
+            </button>
+          ) : null}
+          {last ? (
+            <a className="btn-primary" href={clerkAuthHref()}>
+              Sign in or create account
+            </a>
+          ) : (
+            <button type="button" className="btn-primary" onClick={() => setStep((s) => s + 1)}>
+              Continue
+            </button>
+          )}
+        </div>
+        {last ? (
+          <p className="fine-print">
+            Clerk on fluxychat.com, then back here with your room ready.
+          </p>
+        ) : null}
       </div>
     </main>
   );
@@ -73,9 +128,9 @@ function ChatRoom({ session }: { session: CliSession }) {
 
   async function onSend(content: string) {
     setError(null);
-    const mentionsAgent = content.toLowerCase().includes(
-      (session.agentHandle || "@assistant").replace(/^@/, "").toLowerCase(),
-    );
+    const mentionsAgent = content
+      .toLowerCase()
+      .includes((session.agentHandle || "@assistant").replace(/^@/, "").toLowerCase());
     try {
       if (mentionsAgent && session.agentId) {
         await invokeAgent(content, { agentId: session.agentId });
@@ -95,7 +150,7 @@ function ChatRoom({ session }: { session: CliSession }) {
           <span className="font-medium text-foreground">
             {connected ? "Connected" : connectionState.status}
           </span>
-          <span className="text-muted-foreground">· {session.roomId}</span>
+          <span className="text-muted-foreground"> · {session.roomId}</span>
         </span>
       </div>
 
@@ -141,19 +196,16 @@ function ChatRoom({ session }: { session: CliSession }) {
 export function App() {
   const session = useMemo(() => loadCliSession() ?? sessionFromEnv(), []);
 
-  if (!session) return <SignInGate />;
+  if (!session) return <LocalOnboarding />;
 
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="brand">
-          <img src={`${consoleUrl.replace(/\/$/, "")}/fluxychat-icon.svg`} alt="" width={28} height={28} />
-          <span>FluxyChat</span>
-        </div>
+        <Brand />
         <nav className="top-links">
-          <span className="meta">{session.projectName || session.projectId || "project"}</span>
-          <a href={`${consoleUrl.replace(/\/$/, "")}/onboarding?from=cli`} target="_blank" rel="noreferrer">
-            Open console
+          <span className="meta">{session.projectName || session.projectId || "your room"}</span>
+          <a href={dashboardHref()} target="_blank" rel="noreferrer">
+            Open dashboard
           </a>
         </nav>
       </header>
@@ -167,12 +219,16 @@ export function App() {
         </FluxyRealtimeProvider>
         <aside className="side">
           <section>
+            <h2>Try this</h2>
+            <ul>
+              <li>Open a second tab on this same URL</li>
+              <li>Send a message in one tab. It should appear in the other.</li>
+              <li>Mention the agent to get a reply</li>
+            </ul>
+          </section>
+          <section>
             <h2>Project</h2>
             <dl>
-              <div>
-                <dt>ID</dt>
-                <dd>{session.projectId || "—"}</dd>
-              </div>
               <div>
                 <dt>Room</dt>
                 <dd>{session.roomId}</dd>
@@ -184,16 +240,11 @@ export function App() {
             </dl>
           </section>
           <section>
-            <h2>Next</h2>
-            <ul>
-              <li>Send a message, or mention the agent to invoke it</li>
-              <li>Open a second tab on this URL for realtime</li>
-              <li>
-                <a href={`${consoleUrl.replace(/\/$/, "")}/onboarding?from=cli`} target="_blank" rel="noreferrer">
-                  Continue onboarding in the console
-                </a>
-              </li>
-            </ul>
+            <h2>Console</h2>
+            <p className="side-copy">Rooms, agents, and settings live in the dashboard.</p>
+            <a className="btn-primary side-btn" href={dashboardHref()} target="_blank" rel="noreferrer">
+              Open dashboard
+            </a>
           </section>
         </aside>
       </div>

@@ -21,7 +21,7 @@
   },
   "peerDependencies": {
     "react": ">=18",
-    "@fluxy-chat/sdk": "^0.6.0",
+    "@fluxy-chat/sdk": "^0.6.2",
     "@fluxy-chat/react": "^0.1.1",
     "@fluxy-chat/ui": "^0.1.2",
     "@assistant-ui/react": ">=0.10.0"

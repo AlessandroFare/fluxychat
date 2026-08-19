@@ -1,10 +1,10 @@
 # FluxyChat full stack starter
 
-Chat + AI agent in a Vite app. Hosted mode signs you in with Clerk (same as the console), then creates your project and assistant room.
+Chat + AI agent in a Vite app. Hosted mode starts with a short local tour, then Clerk, then your own room.
 
 ## Quick start
 
-**Hosted (Clerk, no wrangler):**
+**Hosted (no wrangler):**
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
@@ -14,7 +14,7 @@ pnpm setup:hosted
 pnpm dev
 ```
 
-The app opens on localhost. Click Continue with FluxyChat, sign in, then you land in your own room (not the public playground).
+Localhost opens a 3-step tour. Last step is sign in. After Clerk you come back to a simple chat. Open a second tab to try realtime. Use Open dashboard for rooms and agents.
 
 **Local worker:**
 
@@ -40,7 +40,7 @@ pnpm dev
 
 `.env` from `pnpm setup:hosted` only needs worker and console URLs. Member JWT, room, and agent come from Clerk after sign in.
 
-Open console: [fluxychat.com/onboarding](https://fluxychat.com/onboarding)
+Dashboard: [fluxychat.com/dashboard](https://fluxychat.com/dashboard)
 
 ## Learn more
 

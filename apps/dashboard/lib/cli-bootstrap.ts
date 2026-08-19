@@ -24,6 +24,7 @@ export interface CliBootstrapPayload {
   projectId: string;
   userId: string;
   projectName: string;
+  createdNewProject: boolean;
 }
 
 export function isAllowedCliRedirectUri(raw: string): boolean {
@@ -110,5 +111,6 @@ export async function buildCliBootstrapForClerkUser(
     projectId,
     userId,
     projectName: provisioned.activeProject?.name || "My project",
+    createdNewProject: provisioned.createdNewProject,
   };
 }
