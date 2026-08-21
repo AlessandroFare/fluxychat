@@ -1,41 +1,33 @@
 # create-fluxy-chat
 
-Scaffold a new [FluxyChat](https://github.com/AlessandroFare/fluxychat) bot project with a single command.
+Scaffold a FluxyChat Vite app or bot worker.
 
 ## Quick start
 
 ```bash
-# Full stack — chat + @assistant + setup scripts (recommended)
-npx @fluxy-chat/create-fluxy-chat my-app --full -y
-cd my-app && pnpm setup && pnpm dev
+# Hosted — Clerk, no wrangler
+npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
+cd my-app && pnpm setup:hosted && pnpm dev
 
-# Minimal chat widget
-npx create-fluxy-chat my-chat --minimal
+# Your Worker
+npx @fluxy-chat/create-fluxy-chat@latest my-app --mode self-host
+cd my-app && pnpm setup:local && pnpm dev
 
-# React + useChat only (bring your own worker URL)
-npx create-fluxy-chat my-chat --template react
+# Minimal widget
+npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal
 ```
+
+Always use `@fluxy-chat/create-fluxy-chat`. Bare `npx create-fluxy-chat` is not this package.
+
+Self-host writes `.fluxy/worker.dev.vars` (Worker URL, Groq key, signing key). Merge that into `apps/worker/.dev.vars` after `pnpm run self-host` in the FluxyChat repo.
 
 ## Non-interactive usage
 
 ```bash
-# Full stack (chat + agent + setup)
-npx create-fluxy-chat my-app --full -y
-
-# React + Vite + useChat
-npx create-fluxy-chat my-chat --template react -y
-
-# Create a Slack bot with pnpm
-npx create-fluxy-chat my-bot --adapter slack --pm pnpm
-
-# Create a Telegram bot, skip install
-npx create-fluxy-chat my-bot --adapter telegram --skip-install
-
-# Create a Discord bot with defaults
-npx create-fluxy-chat my-bot -y --adapter discord
-
-# Create a basic webhook bot (includes fluxy.config.ts template)
-npx create-fluxy-chat my-bot --adapter basic
+npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
+npx @fluxy-chat/create-fluxy-chat@latest my-app --full -y
+npx @fluxy-chat/create-fluxy-chat@latest my-chat --template react -y
+npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter slack --pm pnpm
 ```
 
 ## Options

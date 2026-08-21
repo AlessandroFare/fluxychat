@@ -5,7 +5,7 @@ description: Bootstrap a local FluxyChat stack with wrangler D1 migrations and d
 
 # Self-host in one command
 
-Run the monorepo bootstrap script to install dependencies, copy dev env templates, and apply **local D1 migrations** (includes built-in agent template seeds).
+`pnpm run self-host` copies env templates, then asks for a Groq key if the terminal is interactive. It also writes `API_KEY_HASH_SALT` if missing. Agent model on Groq: `openai/gpt-oss-20b`.
 
 ```bash
 pnpm run self-host

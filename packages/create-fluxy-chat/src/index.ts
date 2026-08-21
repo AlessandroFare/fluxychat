@@ -77,14 +77,12 @@ function parseArgs(argv: string[]): ParsedArgs {
       args.adapter = "full";
     } else if (arg === "--mode") {
       const value = argv[++i]?.trim().toLowerCase();
-      if (value === "local" || value === "hosted") {
-        args.mode = value;
-        if (value === "hosted") {
-          args.full = true;
-          args.adapter = "full";
-        }
+      if (value === "local" || value === "hosted" || value === "self-host") {
+        args.mode = value === "self-host" ? "local" : value;
+        args.full = true;
+        args.adapter = "full";
       } else {
-        console.error(`Invalid mode: ${value}. Choose: local, hosted`);
+        console.error(`Invalid mode: ${value}. Choose: local, self-host, hosted`);
         process.exit(1);
       }
     } else if (arg === "--skip-install") {
@@ -143,7 +141,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 }
 
 const HELP_TEXT = `
-${pc.bold("create-fluxy-chat")} — Scaffold a new FluxyChat bot project
+${pc.bold("create-fluxy-chat")} — Scaffold a FluxyChat app or bot worker
 
 ${pc.bold("Usage:")}
   npx @fluxy-chat/create-fluxy-chat [project-name] [options]
@@ -155,22 +153,19 @@ ${pc.bold("Options:")}
   -l, --language <lang>      Language: typescript (default) or javascript
   -y, --yes                  Skip prompts and accept defaults
   --full                     Full stack: chat + @assistant + setup scripts (recommended)
-  --mode <local|hosted>      hosted = no wrangler (uses fluxychat.com demo session)
-  --minimal                  Chat-only widget (ui-kit) — no platform modules
+  --mode <hosted|local|self-host>
+                             hosted = Clerk on fluxychat.com (no wrangler)
+                             local / self-host = your Worker (asks for URL + keys)
+  --minimal                  Chat-only widget (ui-kit)
   --skip-install             Skip dependency installation
   --no-git                   Skip git repository initialization
   -h, --help                 Show this help
 
 ${pc.bold("Examples:")}
-  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat my-app --mode hosted -y")}
-  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat my-app --full -y")}
-  ${pc.cyan("npx create-fluxy-chat my-chat --minimal")}
-  ${pc.cyan("npx create-fluxy-chat my-hr-bot --template hr-feedback")}
-  ${pc.cyan("npx create-fluxy-chat my-chat --template react")}
-  ${pc.cyan("npx create-fluxy-chat my-bot --adapter basic")}
-  ${pc.cyan("npx create-fluxy-chat my-bot --adapter slack")}
-  ${pc.cyan("npx create-fluxy-chat my-bot --adapter telegram --pm pnpm")}
-  ${pc.cyan("npx create-fluxy-chat my-bot -y --adapter discord")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-app --mode self-host")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter slack")}
 `;
 
 async function main(): Promise<void> {
@@ -243,11 +238,39 @@ async function main(): Promise<void> {
       if (config.full || config.adapter === "full") {
         fs.mkdirSync(path.join(projectDir, ".fluxy"), { recursive: true });
         const setupMode = config.mode === "hosted" ? "hosted" : "local";
+        writeFile(projectDir, ".fluxy/mode", `${setupMode}\n`);
         writeFile(
           projectDir,
-          ".fluxy/mode",
-          `${setupMode}\n`,
+          ".fluxy/answers.json",
+          `${JSON.stringify(
+            {
+              mode: setupMode,
+              workerUrl: config.workerUrl ?? null,
+              consoleUrl: config.consoleUrl ?? null,
+              createdAt: new Date().toISOString(),
+            },
+            null,
+            2,
+          )}\n`,
         );
+        if (setupMode === "local") {
+          const groqLine = config.groqApiKey
+            ? `GROQ_API_KEY=${config.groqApiKey}`
+            : "# GROQ_API_KEY=";
+          writeFile(
+            projectDir,
+            ".fluxy/worker.dev.vars",
+            [
+              "# Merge into fluxychat/apps/worker/.dev.vars (or paste after clone).",
+              "# Member JWTs are per-project in D1. This signing key is for bootstrap/secrets.",
+              "ALLOW_DEV_PROVISION=true",
+              `JWT_SIGNING_KEY=${config.jwtSigningKey ?? ""}`,
+              groqLine,
+              "AI_MODEL=openai/gpt-oss-20b",
+              "",
+            ].join("\n"),
+          );
+        }
       }
       s.stop(
         config.mode === "hosted"
@@ -352,13 +375,12 @@ async function main(): Promise<void> {
             `# Keep this project: https://fluxychat.com/onboarding?from=cli`,
           ].join("\n")
         : [
-            `# Terminal 1 — FluxyChat monorepo (if not already running)`,
-            `pnpm --filter @fluxy-chat/worker dev`,
-            ``,
             `cd ${config.name}`,
-            `${devCmd} setup   # provision worker → writes .env`,
-            `${devCmd} dev     # http://localhost:5173 (+ dashboard if monorepo nearby)`,
-            `# Keep / import .env: http://localhost:3000/onboarding?from=cli`,
+            `# 1. Clone FluxyChat and run: pnpm run self-host`,
+            `#    Merge .fluxy/worker.dev.vars into apps/worker/.dev.vars`,
+            `# 2. Start Worker: pnpm --filter @fluxy-chat/worker dev`,
+            `${devCmd} setup:local   # POST /dev/provision → writes .env`,
+            `${devCmd} dev           # http://localhost:5173`,
           ].join("\n")
       : config.adapter === "react" || config.minimal
         ? [

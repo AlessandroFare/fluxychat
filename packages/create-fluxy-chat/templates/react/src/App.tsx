@@ -8,7 +8,9 @@ const publicRoomId = import.meta.env.VITE_FLUXYCHAT_PUBLIC_ROOM_ID?.trim();
 const configuredRoomId = import.meta.env.VITE_FLUXYCHAT_ROOM_ID?.trim() || "demo";
 
 interface FluxySession {
-  client: FluxyChatClient;
+  workerUrl: string;
+  token: string;
+  userId: string;
   roomId: string;
   mode: "member" | "guest";
 }
@@ -30,11 +32,9 @@ function useFluxySession(): {
 
     if (memberJwt) {
       setSession({
-        client: new FluxyChatClient({
-          baseUrl: workerUrl,
-          userId: "demo-user",
-          token: memberJwt,
-        }),
+        workerUrl,
+        token: memberJwt,
+        userId: "demo-user",
         roomId: configuredRoomId,
         mode: "member",
       });
@@ -50,11 +50,9 @@ function useFluxySession(): {
         .then((guest) => {
           if (cancelled) return;
           setSession({
-            client: new FluxyChatClient({
-              baseUrl: workerUrl,
-              userId: guest.userId,
-              token: guest.token,
-            }),
+            workerUrl,
+            token: guest.token,
+            userId: guest.userId,
             roomId: guest.roomId,
             mode: "guest",
           });
@@ -180,7 +178,11 @@ export function App() {
           <input value={roomId} onChange={(e) => setRoomId(e.target.value)} />
         </label>
       ) : null}
-      <FluxyRealtimeProvider client={session.client}>
+      <FluxyRealtimeProvider
+        workerUrl={session.workerUrl}
+        authTokenProvider={session.token}
+        userId={session.userId}
+      >
         <ChatPanel roomId={activeRoomId} />
       </FluxyRealtimeProvider>
     </main>

@@ -3,6 +3,9 @@
   "icon": "BookOpen",
   "pages": [
     "index",
+    "create-fluxy-chat",
+    "adapter-pattern",
+    "unified-chat-api",
     "troubleshooting-integration",
     "testing-integration",
     "auth-jwt",
@@ -10,6 +13,7 @@
     "migrate-from-portal",
     "feature-parity-checklist",
     "self-host-one-command",
+    "loop-control",
     "stackblitz-snippets",
     "fluxy-config",
     "realtime",

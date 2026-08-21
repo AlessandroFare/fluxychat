@@ -33,14 +33,7 @@ pnpm add @fluxy-chat/sdk @fluxy-chat/react
 ## 3. React hook (15 min)
 
 ```tsx
-import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
-
-const client = new FluxyChatClient({
-  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,
-  userId: "user-1",
-  token: memberJwt,
-});
 
 function Room({ roomId }: { roomId: string }) {
   const {
@@ -51,13 +44,12 @@ function Room({ roomId }: { roomId: string }) {
     loadMore,
   } = useChat({
     roomId,
-    client,
     markReadLatest: true,
   });
 
   return (
     <div>
-      <p>Status: {connectionState}</p>
+      <p>Status: {connectionState.status}</p>
       <ul>
         {messages.map((m) => (
           <li key={m.id ?? m.clientMessageId}>{m.content}</li>
@@ -82,13 +74,14 @@ function Room({ roomId }: { roomId: string }) {
   );
 }
 
-export function App({ jwt }: { jwt: string }) {
+export function App({ workerUrl, jwt }: { workerUrl: string; jwt: string }) {
   return (
-    <FluxyRealtimeProvider client={client}>
+    <FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={jwt}>
       <Room roomId="dev-local-general" />
     </FluxyRealtimeProvider>
   );
 }
+```
 ```
 
 ## 4. Rooms + unread (5 min)
@@ -112,6 +105,6 @@ Mentions and DM messages create rows automatically (requires migration `0037_in_
 
 ## Next
 
-- [Message middleware](/docs/message-middleware)
+- [Message middleware](/docs/core/message-middleware)
 - [Transport fallback](/docs/cookbook/transport-fallback)
-- [Dashboard integration](/docs/dashboard-integration)
+- [Dashboard integration](/docs/reference/dashboard-integration)

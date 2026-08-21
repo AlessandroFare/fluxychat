@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.9] - 2026-08-21
+
+### Added
+
+- `--mode self-host` (alias of `local`). Interactive Worker URL, console URL, and optional Groq key. Writes `.fluxy/answers.json` and `.fluxy/worker.dev.vars` to paste into `apps/worker/.dev.vars`.
+- `pnpm setup:self-host` on the full template. If the Worker is down, setup asks for a URL instead of exiting immediately.
+
 ## [0.5.8] - 2026-08-19
 
 ### Fixed

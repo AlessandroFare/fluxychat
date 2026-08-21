@@ -31,8 +31,12 @@ export interface ProjectConfig {
   minimal?: boolean;
   /** Full stack: chat + agent + setup scripts */
   full?: boolean;
-  /** Setup target: local worker or hosted demo */
+  /** Setup target: local/self-host worker or hosted cloud */
   mode?: "local" | "hosted";
+  workerUrl?: string;
+  consoleUrl?: string;
+  groqApiKey?: string;
+  jwtSigningKey?: string;
 }
 
 const PACKAGE_NAME_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;

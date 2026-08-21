@@ -33,9 +33,18 @@ describe("dashboard-feature-flags", () => {
     expect(filtered.map((i) => i.href)).toEqual(["/rooms", "/inbox"]);
   });
 
-  it("documents preview and lab overlap", () => {
+  it("keeps lab and preview href sets disjoint", () => {
     for (const href of DASHBOARD_LAB_HREFS) {
-      expect(DASHBOARD_PREVIEW_HREFS.has(href)).toBe(true);
+      expect(DASHBOARD_PREVIEW_HREFS.has(href)).toBe(false);
     }
+  });
+
+  it("shows lab hrefs when labs flag is set", () => {
+    expect(isDashboardNavHrefVisible("/game", { labsShowcase: true, previewTools: false })).toBe(
+      true,
+    );
+    expect(isDashboardNavHrefVisible("/marketplace", { labsShowcase: true, previewTools: false })).toBe(
+      false,
+    );
   });
 });

@@ -28,7 +28,7 @@ const card = Card({
 console.log(cardToFallbackText(card)); // plain-text fallback for SMS/email
 ```
 
-See [Card Element Builder](/docs/card-builder) for all element types.
+See [Card Element Builder](/docs/guides/card-builder) for all element types.
 
 ## 2. Send to a room
 
@@ -100,7 +100,7 @@ if (event.type === "card_action" && event.actionId === "approve-deploy") {
 }
 ```
 
-For approval gates that require human confirmation, combine cards with [AI tool presets](/docs/ai-tool-presets) so destructive actions pause until a moderator approves.
+For approval gates that require human confirmation, combine cards with [AI tool presets](/docs/guides/ai-tool-presets) so destructive actions pause until a moderator approves.
 
 ## 5. Test locally
 
@@ -110,6 +110,6 @@ For approval gates that require human confirmation, combine cards with [AI tool 
 
 ## See also
 
-- [Card Element Builder](/docs/card-builder)
-- [Adapter pattern](/docs/adapter-pattern) — platform-specific card rendering
-- [Testing integrations](/docs/testing-integration) — mock client for Vitest
+- [Card Element Builder](/docs/guides/card-builder)
+- [Adapter pattern](/docs/guides/adapter-pattern) — platform-specific card rendering
+- [Testing integrations](/docs/guides/testing-integration) — mock client for Vitest

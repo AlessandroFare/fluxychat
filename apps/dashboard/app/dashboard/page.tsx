@@ -11,6 +11,7 @@ import { NotificationsOverviewCard } from "../components/notifications-overview-
 import { InboxOverviewCard } from "../components/inbox-overview-card";
 import { useConsoleSetupPhase, useDashboardSession } from "../components/dashboard-session";
 import { CONSOLE_NAV_BUILD, CONSOLE_NAV_OPERATE, CONSOLE_NAV_PLATFORM } from "../components/console-nav";
+import { filterDashboardNavItems, isDashboardNavHrefVisible } from "@/lib/dashboard-feature-flags";
 import { WorkerHealthCard } from "../components/worker-health-card";
 import { SloOverviewCard } from "../components/slo-overview-card";
 import { ReadinessBadge } from "~/components/ui/readiness-badge";
@@ -79,6 +80,9 @@ export default function DashboardOverviewPage() {
   const primaryCta = quickstartComplete
     ? { href: "/rooms", label: "Open rooms" }
     : { href: HOSTED_PATHS.onboarding, label: "Continue quickstart" };
+  const operateLinks = filterDashboardNavItems(CONSOLE_NAV_OPERATE);
+  const platformLinks = filterDashboardNavItems(CONSOLE_NAV_PLATFORM);
+  const industryLinks = listIndustryReadiness().filter((entry) => isDashboardNavHrefVisible(entry.href));
 
   return (
     <ConsoleShell>
@@ -222,7 +226,7 @@ export default function DashboardOverviewPage() {
           Webhooks, moderation, analytics, privacy, and billing: day-two operator tools.
         </p>
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {CONSOLE_NAV_OPERATE.map((item) => (
+          {operateLinks.map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
@@ -266,47 +270,51 @@ export default function DashboardOverviewPage() {
         </ul>
       </section>
 
-      <section className="mt-8">
-        <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Industry studios</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Test vertical workflows built on the shared room kernel. Each studio runs live SDK demos with honest readiness labels.
-        </p>
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {listIndustryReadiness().map((entry) => (
-            <li key={entry.id}>
-              <Link
-                href={entry.href}
-                className="block rounded-xl border border-black/[0.06] bg-white/80 px-4 py-3 text-sm transition hover:border-primary/20 hover:shadow-sm"
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-slate-900">{entry.label}</span>
-                  <ReadinessBadge label={entry.readinessLabel} />
-                </span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">{entry.description}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {industryLinks.length > 0 ? (
+        <section className="mt-8">
+          <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Industry studios</h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Test vertical workflows built on the shared room kernel. Each studio runs live SDK demos with honest readiness labels.
+          </p>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {industryLinks.map((entry) => (
+              <li key={entry.id}>
+                <Link
+                  href={entry.href}
+                  className="block rounded-xl border border-black/[0.06] bg-white/80 px-4 py-3 text-sm transition hover:border-primary/20 hover:shadow-sm"
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-900">{entry.label}</span>
+                    <ReadinessBadge label={entry.readinessLabel} />
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{entry.description}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
-      <section className="mt-8">
-        <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Platform modules</h2>
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {CONSOLE_NAV_PLATFORM.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className="block rounded-xl border border-dashed border-black/[0.12] bg-slate-50/80 px-4 py-3 text-sm transition hover:border-primary/20 hover:bg-white/80"
-              >
-                <span className="font-medium text-slate-900">{item.label}</span>
-                {item.description ? (
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
-                ) : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {platformLinks.length > 0 ? (
+        <section className="mt-8">
+          <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Platform modules</h2>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {platformLinks.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="block rounded-xl border border-dashed border-black/[0.12] bg-slate-50/80 px-4 py-3 text-sm transition hover:border-primary/20 hover:bg-white/80"
+                >
+                  <span className="font-medium text-slate-900">{item.label}</span>
+                  {item.description ? (
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
+                  ) : null}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </ConsoleShell>
   );
 }

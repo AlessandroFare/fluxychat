@@ -3,5 +3,6 @@ dist/
 .env
 .env.local
 .fluxy/setup.json
+.fluxy/worker.dev.vars
 *.log
 .DS_Store

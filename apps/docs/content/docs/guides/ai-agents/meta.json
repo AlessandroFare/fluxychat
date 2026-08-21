@@ -2,12 +2,10 @@
   "title": "AI Agents",
   "pages": [
     "index",
-    "custom-tools",
     "agent-memory",
     "agent-lifecycle",
     "tool-approval-hmac",
     "handoff",
-    "agent-queue",
-    "evaluation"
+    "agent-queue"
   ]
 }
