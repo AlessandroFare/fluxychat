@@ -4,6 +4,7 @@ import {
   DASHBOARD_PREVIEW_HREFS,
   filterDashboardNavItems,
   isDashboardNavHrefVisible,
+  getDashboardSurfaceKind,
 } from "./dashboard-feature-flags";
 
 describe("dashboard-feature-flags", () => {
@@ -39,12 +40,25 @@ describe("dashboard-feature-flags", () => {
     }
   });
 
-  it("shows lab hrefs when labs flag is set", () => {
-    expect(isDashboardNavHrefVisible("/game", { labsShowcase: true, previewTools: false })).toBe(
+  it("always shows the labs catalog hub", () => {
+    expect(isDashboardNavHrefVisible("/labs", { labsShowcase: false, previewTools: false })).toBe(
       true,
     );
-    expect(isDashboardNavHrefVisible("/marketplace", { labsShowcase: true, previewTools: false })).toBe(
-      false,
-    );
+  });
+
+  it("hides agent observability behind preview", () => {
+    expect(
+      isDashboardNavHrefVisible("/agents/observability", {
+        labsShowcase: false,
+        previewTools: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("classifies deep lab and preview paths", () => {
+    expect(getDashboardSurfaceKind("/game")).toBe("labs");
+    expect(getDashboardSurfaceKind("/stream/abc/broadcast")).toBe("labs");
+    expect(getDashboardSurfaceKind("/agents/platform")).toBe("preview");
+    expect(getDashboardSurfaceKind("/rooms")).toBe("ga");
   });
 });

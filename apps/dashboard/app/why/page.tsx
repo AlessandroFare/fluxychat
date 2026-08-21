@@ -23,24 +23,24 @@ export default function WhyPage() {
       </Link>
 
       <p className="mt-8 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Why Fluxychat</p>
-      <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+      <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
         Why I built Fluxychat
       </h1>
-      <p className="mt-4 text-lg leading-relaxed text-slate-600">{WHY_THESIS}</p>
+      <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{WHY_THESIS}</p>
 
       <div className="mt-10 space-y-12">
         {WHY_SECTIONS.map((section) => (
           <section key={section.id} id={section.id} className="scroll-mt-24">
-            <h2 className="font-heading text-xl font-semibold text-slate-900 sm:text-2xl">{section.title}</h2>
+            <h2 className="font-heading text-xl font-semibold text-foreground sm:text-2xl">{section.title}</h2>
             {"paragraphs" in section && section.paragraphs ? (
-              <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-600 sm:text-base">
+              <div className="mt-3 space-y-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
                 {section.paragraphs.map((p) => (
                   <p key={p.slice(0, 48)}>{p}</p>
                 ))}
               </div>
             ) : null}
             {section.bullets ? (
-              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-600 sm:text-base">
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground sm:text-base">
                 {section.bullets.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -51,14 +51,14 @@ export default function WhyPage() {
       </div>
 
       <section className="mt-14">
-        <h2 className="font-heading text-xl font-semibold text-slate-900">Common questions</h2>
+        <h2 className="font-heading text-xl font-semibold text-foreground">Common questions</h2>
         <div className="mt-4 space-y-3">
           {WHY_FAQ.map((item) => (
             <details
               key={item.q}
-              className="group rounded-xl border border-black/[0.06] bg-white/90 px-4 py-3 shadow-[var(--shadow-subtle-2)] open:shadow-md"
+              className="group rounded-xl border border-border bg-card px-4 py-3 shadow-[var(--shadow-subtle-2)] open:shadow-md"
             >
-              <summary className="cursor-pointer list-none font-medium text-slate-900 [&::-webkit-details-marker]:hidden">
+              <summary className="cursor-pointer list-none font-medium text-foreground [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center justify-between gap-3">
                   {item.q}
                   <span className="text-muted-foreground transition group-open:rotate-180">▾</span>
@@ -72,9 +72,9 @@ export default function WhyPage() {
         </div>
       </section>
 
-      <div className="mt-14 flex flex-col gap-4 rounded-2xl border border-black/[0.06] bg-white/90 p-6 shadow-[var(--shadow-subtle-2)] sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-14 flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-subtle-2)] sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-heading text-lg font-semibold text-slate-900">{WHY_CTA.title}</p>
+          <p className="font-heading text-lg font-semibold text-foreground">{WHY_CTA.title}</p>
           <p className="mt-1 text-sm text-muted-foreground">{WHY_CTA.body}</p>
         </div>
         <div className="flex flex-wrap gap-3">

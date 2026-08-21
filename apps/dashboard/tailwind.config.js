@@ -9,65 +9,51 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#FDFBF9",
-        foreground: "#0E1316",
+        background: "rgb(var(--background-rgb) / <alpha-value>)",
+        foreground: "rgb(var(--foreground-rgb) / <alpha-value>)",
         brand: {
-          // Orange brand color. #c2410c (orange-700) passes WCAG AA
-          // (5.0:1) against #FDFBF9. The original #ff725e (coral) is kept
-          // as `brand.light` for non-text uses (badges, fills, gradients).
-          DEFAULT: "#c2410c",
+          DEFAULT: "rgb(var(--fluxy-cta-rgb) / <alpha-value>)",
           dark: "#F28069",
           muted: "rgba(194, 65, 12, 0.1)",
           light: "rgba(255, 114, 94, 0.05)",
           hover: "#9a3412",
         },
         text: {
-          DEFAULT: "#0E1316",
-          muted: "#745050",
-          secondary: "#979797",
+          DEFAULT: "var(--text-primary)",
+          muted: "var(--text-muted)",
+          secondary: "var(--text-muted)",
           light: "#c9c9cf",
         },
-        // shadcn semantic tokens
         primary: {
-          DEFAULT: "#c2410c",
+          DEFAULT: "rgb(var(--fluxy-cta-rgb) / <alpha-value>)",
           foreground: "#FFFFFF",
         },
         destructive: {
-          DEFAULT: "#dc2626",
+          DEFAULT: "var(--destructive)",
           foreground: "#ffffff",
         },
         muted: {
-          DEFAULT: "#F3F0EC",
-          // Audit D: WCAG AA contrast on the page background #FDFBF9
-          // (and on the muted surface #F3F0EC). The previous #6b7280
-          // measured 4.25:1  too low for normal-weight body text. #4b5563
-          // is 5.4:1 on #FDFBF9 and 4.6:1 on #F3F0EC, both passing
-          // WCAG AA at 4.5:1. This single change fixes ~30 axe
-          // color-contrast violations across the marketing pages
-          // without touching every component.
-          foreground: "#4b5563",
+          DEFAULT: "rgb(var(--surface-muted-rgb) / <alpha-value>)",
+          foreground: "var(--text-muted)",
         },
         accent: {
-          DEFAULT: "#F3F0EC",
-          foreground: "#1a1a1a",
+          DEFAULT: "rgb(var(--surface-muted-rgb) / <alpha-value>)",
+          foreground: "rgb(var(--foreground-rgb) / <alpha-value>)",
         },
-        background: "#FDFBF9",
-        foreground: "#0E1316",
         card: {
-          DEFAULT: "#FFFFFF",
-          foreground: "#0E1316",
+          DEFAULT: "rgb(var(--surface-card-rgb) / <alpha-value>)",
+          foreground: "rgb(var(--foreground-rgb) / <alpha-value>)",
         },
-        border: "#e5e0d8",
-        // semantic surface tokens
+        border: "rgb(var(--border-rgb) / <alpha-value>)",
         surface: {
-          DEFAULT: "#FDFBF9",
-          muted: "#F3F0EC",
-          card: "#FFFFFF",
+          DEFAULT: "rgb(var(--background-rgb) / <alpha-value>)",
+          muted: "rgb(var(--surface-muted-rgb) / <alpha-value>)",
+          card: "rgb(var(--surface-card-rgb) / <alpha-value>)",
         },
         "dark-mode": {
-          DEFAULT: "#020617",
-          muted: "#111827",
-          card: "#0f172a",
+          DEFAULT: "#1e1e1e",
+          muted: "#252525",
+          card: "#2a2a2a",
         },
         "dark-text": {
           primary: "#f9fafb",
@@ -77,8 +63,6 @@ export default {
         "dark-destructive": "#ef4444",
         "dark-success": "#22c55e",
         "light-success": "#16a34a",
-        card: "rgba(255, 255, 255, 0.6)",
-        border: "rgba(14, 19, 22, 0.1)",
       },
       borderRadius: {
         '3xl': '24px',
@@ -95,6 +79,7 @@ export default {
       },
       fontFamily: {
         sans: [
+          "var(--font-sans)",
           "system-ui",
           "-apple-system",
           "BlinkMacSystemFont",
@@ -102,7 +87,14 @@ export default {
           "Roboto",
           "sans-serif",
         ],
+        heading: [
+          "var(--font-heading)",
+          "var(--font-sans)",
+          "system-ui",
+          "sans-serif",
+        ],
         mono: [
+          "var(--font-mono)",
           "ui-monospace",
           "SFMono-Regular",
           "Menlo",

@@ -55,13 +55,40 @@ export const DASHBOARD_PREVIEW_HREFS = new Set([
   "/agents/debate",
   "/agents/rehearsal",
   "/agents/ambient",
+  "/agents/observability",
+  "/agents/eval",
   "/chatbot-builder",
 ]);
+
+export type DashboardSurfaceKind = "ga" | "labs" | "preview";
+
+function pathMatchesHref(pathname: string, href: string): boolean {
+  const path = pathname.replace(/\/$/, "") || "/";
+  return path === href || path.startsWith(`${href}/`);
+}
+
+export function matchFlaggedHref(pathname: string, hrefs: Set<string>): string | null {
+  const path = pathname.replace(/\/$/, "") || "/";
+  let best: string | null = null;
+  for (const href of hrefs) {
+    if (!pathMatchesHref(path, href)) continue;
+    if (!best || href.length > best.length) best = href;
+  }
+  return best;
+}
+
+export function getDashboardSurfaceKind(pathname: string | null): DashboardSurfaceKind {
+  if (!pathname) return "ga";
+  if (matchFlaggedHref(pathname, DASHBOARD_PREVIEW_HREFS)) return "preview";
+  if (matchFlaggedHref(pathname, DASHBOARD_LAB_HREFS)) return "labs";
+  return "ga";
+}
 
 export function isDashboardNavHrefVisible(
   href: string,
   flags = getDashboardFeatureFlags(),
 ): boolean {
+  if (href === "/labs") return true;
   if (DASHBOARD_LAB_HREFS.has(href)) return flags.labsShowcase;
   if (DASHBOARD_PREVIEW_HREFS.has(href)) return flags.previewTools;
   return true;

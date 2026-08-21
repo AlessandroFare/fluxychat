@@ -63,6 +63,31 @@
       "import": "./dist/react.js",
       "default": "./dist/react.js"
     },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "default": "./dist/core.js"
+    },
+    "./chat": {
+      "types": "./dist/chat.d.ts",
+      "import": "./dist/chat.js",
+      "default": "./dist/chat.js"
+    },
+    "./verticals": {
+      "types": "./dist/verticals.d.ts",
+      "import": "./dist/verticals.js",
+      "default": "./dist/verticals.js"
+    },
+    "./markdown": {
+      "types": "./dist/markdown.d.ts",
+      "import": "./dist/markdown.js",
+      "default": "./dist/markdown.js"
+    },
+    "./yjs": {
+      "types": "./dist/yjs.d.ts",
+      "import": "./dist/yjs.js",
+      "default": "./dist/yjs.js"
+    },
     "./testing": {
       "types": "./dist/testing-utils.d.ts",
       "import": "./dist/testing-utils.js",

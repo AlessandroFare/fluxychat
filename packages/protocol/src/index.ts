@@ -50,6 +50,11 @@ export {
 } from "./parse-inbound-frame.js";
 
 export {
+  FLUXY_MAX_WS_FRAME_CHARS,
+  isWsFrameWithinSizeLimit,
+} from "./frame-size.js";
+
+export {
   isUnknownWsFrame,
   type UnknownWsFrame,
 } from "./unknown-frame.js";
@@ -89,3 +94,5 @@ export {
   parseServerRealtimeEventFrame,
   type ServerRealtimeEventFrame,
 } from "./server-realtime-events.js";
+
+export { isValidChatMessageEvent } from "./message-event.js";

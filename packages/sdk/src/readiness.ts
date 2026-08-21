@@ -7,20 +7,24 @@ export interface ReadinessEntry {
   description: string;
 }
 
+/**
+ * Keep in sync with dashboard `DASHBOARD_LAB_HREFS` / preview flags.
+ * Chat is GA. Verticals ship in the Worker but are Labs until they share the same ops bar.
+ */
 export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
   chat: { label: "Chat & rooms", readiness: "production", href: "/rooms", description: "Core messaging, presence, agents" },
-  collab: { label: "Collab", readiness: "production", href: "/collab", description: "Yjs CRDT + client_event + collab.* server_event on room WS" },
-  stream: { label: "Stream", readiness: "production", href: "/stream/demo", description: "Live events, HLS, WHIP auto-provision + room fan-out" },
-  voice: { label: "Voice AI", readiness: "production", href: "/voice-ai", description: "Unified multimodal voice pipeline with legacy STT→LLM→TTS fallback" },
-  game: { label: "FluxyGame", readiness: "production", href: "/game", description: "Edge matchmaking + authoritative ticks via room WS" },
-  iot: { label: "FluxyIoT", readiness: "production", href: "/iot", description: "Device shadow, rules + live readings in room" },
-  fleet: { label: "Fleet", readiness: "production", href: "/fleet", description: "GPS ingest + dispatch room live updates" },
-  spatial: { label: "Spatial", readiness: "production", href: "/spatial", description: "Digital twin scenes, entity fan-out + MCP spatial grants" },
-  edu: { label: "FluxyEdu", readiness: "production", href: "/edu", description: "Live classroom, polls, breakouts + capability events" },
-  health: { label: "FluxyHealth", readiness: "production", href: "/health", description: "Consent capability events, compliance live workspace + audit trail" },
-  event: { label: "FluxyEvent", readiness: "production", href: "/events", description: "Venue control, stage live, hybrid check-in + Q&A" },
-  finance: { label: "FluxyFinance", readiness: "production", href: "/finance", description: "Risk signals, audit capability events + compliance live workspace" },
-  continuity: { label: "Continuity", readiness: "production", href: "/continuity", description: "Checkpoint/handoff capability events + cross-device live workspace" },
+  collab: { label: "Collab", readiness: "labs", href: "/collab", description: "Yjs CRDT + collab events on the room WebSocket" },
+  stream: { label: "Stream", readiness: "labs", href: "/stream/demo", description: "Live events, HLS, WHIP + room fan-out" },
+  voice: { label: "Voice AI", readiness: "labs", href: "/voice-ai", description: "Realtime voice pipeline (STT → LLM → TTS)" },
+  game: { label: "FluxyGame", readiness: "labs", href: "/game", description: "Matchmaking + ticks on the room WebSocket" },
+  iot: { label: "FluxyIoT", readiness: "labs", href: "/iot", description: "Device shadow, rules, live readings" },
+  fleet: { label: "Fleet", readiness: "labs", href: "/fleet", description: "GPS ingest + dispatch room updates" },
+  spatial: { label: "Spatial", readiness: "labs", href: "/spatial", description: "Digital twin scenes + spatial grants" },
+  edu: { label: "FluxyEdu", readiness: "labs", href: "/edu", description: "Live classroom, polls, breakouts" },
+  health: { label: "FluxyHealth", readiness: "labs", href: "/health", description: "Consent events + care workspace" },
+  event: { label: "FluxyEvent", readiness: "labs", href: "/events", description: "Venue, stage, check-in, Q&A" },
+  finance: { label: "FluxyFinance", readiness: "labs", href: "/finance", description: "Risk signals + compliance workspace" },
+  continuity: { label: "Continuity", readiness: "labs", href: "/continuity", description: "Cross-device handoff / checkpoints" },
 };
 
 export function getReadinessEntry(id: keyof typeof PLATFORM_READINESS): ReadinessEntry {

@@ -7,12 +7,12 @@ export function GetStartedSelfHostSection() {
   return (
     <section
       id="self-host"
-      className="mt-12 scroll-mt-24 rounded-2xl border border-dashed border-black/[0.12] bg-slate-50/80 p-5 sm:p-6"
+      className="mt-12 scroll-mt-24 rounded-2xl border border-dashed border-border bg-muted/50 p-5 sm:p-6"
     >
       <div className="flex gap-3">
-        <Server className="mt-0.5 h-5 w-5 shrink-0 text-slate-600" aria-hidden />
+        <Server className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
         <div>
-          <h2 className="font-heading text-lg font-semibold text-slate-900">Self-host on Cloudflare (advanced)</h2>
+          <h2 className="font-heading text-lg font-semibold text-foreground">Self-host on Cloudflare (advanced)</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             Deploy the Worker and D1 from the monorepo when you need your own Cloudflare account or an isolated tenant.
             Most teams start on hosted cloud and move here when compliance or scale asks for it.

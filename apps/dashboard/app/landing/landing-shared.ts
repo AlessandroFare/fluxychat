@@ -6,12 +6,10 @@ export const INSTALL_CMD = "pnpm add @fluxy-chat/sdk";
 export const STACK_LOGOS = [
   "Next.js",
   "React",
-  "Vue",
   "Vite",
   "Node",
   "Workers",
   "React Native",
-  "Svelte",
   "Remix",
   "TanStack",
   "Express",

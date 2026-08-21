@@ -33,7 +33,6 @@ import {
   Coins,
   Truck,
   Smartphone,
-  Mic,
   Pen,
   Video,
   Radio,
@@ -43,18 +42,12 @@ import {
   HeartPulse,
   CalendarRange,
   Landmark,
-  Orbit,
   Network,
   ClipboardCheck,
   Handshake,
-  Map,
-  Gavel,
 } from "lucide-react";
 import { HOSTED_PATHS, isMarketingPath } from "@/lib/hosted-product";
-import {
-  dashboardFeatureFlags,
-  filterDashboardNavItems,
-} from "@/lib/dashboard-feature-flags";
+import { filterDashboardNavItems } from "@/lib/dashboard-feature-flags";
 
 export interface ConsoleNavItem {
   href: string;
@@ -100,8 +93,6 @@ export const CONSOLE_NAV_AGENTS: ConsoleNavItem[] = [
 export const CONSOLE_NAV_CONNECT: ConsoleNavItem[] = [
   { href: "/knowledge", label: "Knowledge base", icon: BookOpen, description: "KB connectors and RAG search" },
   { href: "/customers", label: "Customers", icon: Users, description: "CDP profiles and campaigns" },
-  { href: "/voice-ai", label: "Voice AI", icon: Mic, description: "Realtime voice pipeline" },
-  { href: "/huddles", label: "Huddles", icon: Video, description: "Audio/video huddles" },
   { href: "/integrations", label: "Integrations", icon: Plug, description: "Turnstile, SMS, WhatsApp" },
   { href: "/bridges", label: "Bridges", icon: ArrowRightLeft, description: "Slack, Discord, Matrix" },
   { href: "/bridges/forms", label: "Channel forms", icon: MessageSquare, description: "WhatsApp / RCS structured forms" },
@@ -121,6 +112,7 @@ export const CONSOLE_NAV_OPERATE: ConsoleNavItem[] = [
   { href: "/activities", label: "Activities", icon: Activity, description: "Webhooks, agents, automation" },
   { href: "/billing", label: "Billing", icon: CreditCard, description: "Usage and plan changes" },
   { href: "/admin", label: "Admin", icon: Shield, description: "Mute, ban, webhooks" },
+  { href: "/labs", label: "Labs", icon: Sparkles, description: "Verticals and experiments" },
 ];
 
 export const CONSOLE_NAV_TRUST: ConsoleNavItem[] = [
@@ -146,8 +138,6 @@ export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
   { href: "/templates", label: "Templates", icon: FileText, description: "Message templates" },
   { href: "/templates/code", label: "Code templates", icon: Code2, description: "StackBlitz starters" },
   { href: "/search", label: "Search", icon: Search, description: "Keyword + semantic search" },
-  { href: "/cartography", label: "Cartography", icon: Map, description: "Thematic room map" },
-  { href: "/truth-market", label: "Truth Market", icon: Gavel, description: "Stake + dispute claims" },
   { href: "/transcripts", label: "Transcripts", icon: Users, description: "Cross-platform transcripts" },
 ];
 
@@ -174,25 +164,6 @@ export const CONSOLE_NAV_INDUSTRIES: ConsoleNavItem[] = [
   { href: "/finance", label: "Finance", icon: Landmark, description: "Market rooms, risk alerts and approvals" },
 ];
 
-export interface ConsoleNavSubgroup {
-  label: string;
-  items: ConsoleNavItem[];
-}
-
-export interface ConsoleNavGroup {
-  label: string;
-  items?: ConsoleNavItem[];
-  subgroups?: ConsoleNavSubgroup[];
-  defaultOpen?: boolean;
-}
-
-const CONTINUITY_LAB: ConsoleNavItem = {
-  href: "/continuity",
-  label: "Cross-Reality",
-  icon: Orbit,
-  description: "Cross-device capability simulator",
-};
-
 function filterItems(items: ConsoleNavItem[]): ConsoleNavItem[] {
   return filterDashboardNavItems(items);
 }
@@ -217,18 +188,8 @@ function buildConsoleNavGroups(): ConsoleNavGroup[] {
       defaultOpen: true,
     },
     {
-      label: "Platform",
-      items: filterItems([...CONSOLE_NAV_PLATFORM, ...(dashboardFeatureFlags.labsShowcase ? [CONTINUITY_LAB] : [])]),
-      defaultOpen: false,
-    },
-    {
       label: "AI & dev tools",
       items: filterItems(CONSOLE_NAV_TOOLS),
-      defaultOpen: false,
-    },
-    {
-      label: "Industries",
-      items: filterItems(CONSOLE_NAV_INDUSTRIES),
       defaultOpen: false,
     },
   ];
@@ -244,8 +205,14 @@ export function flattenConsoleNavItems(): ConsoleNavItem[] {
   ]);
 }
 
-/** @deprecated Use CONSOLE_NAV_PLATFORM */
-export const CONSOLE_NAV_LABS = CONSOLE_NAV_PLATFORM;
+/** Labs catalog (not in the main sidebar — single /labs entry). */
+export const CONSOLE_NAV_LABS_CATALOG: ConsoleNavItem[] = [
+  ...CONSOLE_NAV_PLATFORM,
+  ...CONSOLE_NAV_INDUSTRIES,
+];
+
+/** @deprecated Use CONSOLE_NAV_LABS_CATALOG */
+export const CONSOLE_NAV_LABS = CONSOLE_NAV_LABS_CATALOG;
 
 /** @deprecated Use CONSOLE_NAV_TOOLS */
 export const CONSOLE_NAV_DEV_TOOLS = CONSOLE_NAV_TOOLS;

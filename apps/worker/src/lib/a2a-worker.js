@@ -2,6 +2,8 @@
  * D1-backed A2A tasks and agent cards (roadmap #24 spike).
  */
 
+import { safeOutboundFetch, assertSafeOutboundUrl } from "./url-ssrf.js";
+
 function generateId(prefix) {
   const hex = Array.from(crypto.getRandomValues(new Uint8Array(8)))
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -247,22 +249,26 @@ export async function receiveA2AEnvelopes(env, { projectId, agentId, markDeliver
 export async function pingA2AAgentHealth(env, { healthUrl, endpointUrl }) {
   const url = String(healthUrl || endpointUrl || "").trim();
   if (!url) return { ok: false, error: "missing_url" };
-  const validated = validateExternalHttpsUrl(url);
+  const validated = validateExternalHttpsUrl(url, env);
   if (!validated.ok) return { ok: false, error: validated.error };
   try {
-    const res = await fetch(validated.url, { method: "GET", signal: AbortSignal.timeout(8000) });
+    const res = await safeOutboundFetch(
+      validated.url,
+      { method: "GET", signal: AbortSignal.timeout(8000) },
+      env,
+    );
     return { ok: res.ok, status: res.status };
   } catch (err) {
     return { ok: false, error: err?.message || "network_error" };
   }
 }
 
-const BLOCKED_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
-
 /**
  * HTTPS-only external URL validation (blocks obvious SSRF targets).
+ * @param {string} raw
+ * @param {unknown} [env]
  */
-export function validateExternalHttpsUrl(raw) {
+export function validateExternalHttpsUrl(raw, env) {
   const input = String(raw || "").trim();
   if (!input) return { ok: false, error: "missing_url" };
   let parsed;
@@ -272,10 +278,10 @@ export function validateExternalHttpsUrl(raw) {
     return { ok: false, error: "invalid_url" };
   }
   if (parsed.protocol !== "https:") return { ok: false, error: "https_required" };
-  const host = parsed.hostname.toLowerCase();
-  if (BLOCKED_HOSTS.has(host)) return { ok: false, error: "blocked_host" };
-  if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) {
-    return { ok: false, error: "private_network_blocked" };
+  try {
+    assertSafeOutboundUrl(parsed.toString(), env);
+  } catch {
+    return { ok: false, error: "ssrf_blocked" };
   }
   return { ok: true, url: parsed.toString() };
 }
@@ -283,19 +289,23 @@ export function validateExternalHttpsUrl(raw) {
 /**
  * Fetch remote Agent Card JSON (A2A discovery).
  */
-export async function fetchExternalAgentCard(cardUrl, { bearerToken } = {}) {
-  const validated = validateExternalHttpsUrl(cardUrl);
+export async function fetchExternalAgentCard(cardUrl, { bearerToken, env } = {}) {
+  const validated = validateExternalHttpsUrl(cardUrl, env);
   if (!validated.ok) return { ok: false, error: validated.error };
 
   const headers = { Accept: "application/json" };
   if (bearerToken) headers.Authorization = `Bearer ${bearerToken}`;
 
   try {
-    const res = await fetch(validated.url, {
-      method: "GET",
-      headers,
-      signal: AbortSignal.timeout(10000),
-    });
+    const res = await safeOutboundFetch(
+      validated.url,
+      {
+        method: "GET",
+        headers,
+        signal: AbortSignal.timeout(10000),
+      },
+      env,
+    );
     if (!res.ok) return { ok: false, error: `http_${res.status}` };
     const card = await res.json();
     if (!card || typeof card !== "object") return { ok: false, error: "invalid_card" };
@@ -315,7 +325,7 @@ export async function delegateA2ATaskToRemote(env, { projectId, taskId, targetAg
   const card = await getA2AAgentCard(env, { projectId, agentId: targetAgentId ?? task.targetAgentId });
   if (!card?.endpointUrl) return { ok: false, error: "missing_endpoint" };
 
-  const validated = validateExternalHttpsUrl(card.endpointUrl);
+  const validated = validateExternalHttpsUrl(card.endpointUrl, env);
   if (!validated.ok) return { ok: false, error: validated.error };
 
   const token = bearerToken || env.A2A_OUTBOUND_BEARER || "";
@@ -328,21 +338,25 @@ export async function delegateA2ATaskToRemote(env, { projectId, taskId, targetAg
   await updateA2ATaskStatus(env, { projectId, taskId, status: "working" });
 
   try {
-    const res = await fetch(validated.url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "tasks/send",
-        id: taskId,
-        params: {
+    const res = await safeOutboundFetch(
+      validated.url,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "tasks/send",
           id: taskId,
-          message: task.input,
-          metadata: { sourceAgentId: task.sourceAgentId, projectId },
-        },
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
+          params: {
+            id: taskId,
+            message: task.input,
+            metadata: { sourceAgentId: task.sourceAgentId, projectId },
+          },
+        }),
+        signal: AbortSignal.timeout(30000),
+      },
+      env,
+    );
 
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {

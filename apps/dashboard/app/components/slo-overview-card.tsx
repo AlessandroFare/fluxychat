@@ -73,7 +73,7 @@ export function SloOverviewCard() {
   if (!adminJwt.trim()) {
     return (
       <section className="mb-8 rounded-2xl border border-dashed border-black/[0.1] bg-slate-50/80 p-5">
-        <h2 className="font-heading text-base font-semibold text-slate-900">SLO (7 days)</h2>
+        <h2 className="font-heading text-base font-semibold text-foreground">SLO (7 days)</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Mint an admin JWT in quickstart to see request error rate and webhook delivery SLO.
         </p>
@@ -87,7 +87,7 @@ export function SloOverviewCard() {
   const webhookPct = slo ? slo.sli.webhookSuccessRate * 100 : 0;
 
   return (
-    <section className="mb-8 rounded-2xl border border-black/[0.06] bg-white/90 p-5 shadow-[var(--shadow-subtle-2)]">
+    <section className="mb-8 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           {loading ? (
@@ -99,7 +99,7 @@ export function SloOverviewCard() {
             />
           )}
           <div>
-            <h2 className="font-heading text-base font-semibold text-slate-900">SLO · last 7 days</h2>
+            <h2 className="font-heading text-base font-semibold text-foreground">SLO · last 7 days</h2>
             {error ? (
               <p className="mt-1 text-sm text-red-600">{error}</p>
             ) : slo ? (
@@ -136,7 +136,7 @@ export function SloOverviewCard() {
           </div>
           <div className="rounded-lg border border-black/[0.06] bg-slate-50/80 px-3 py-2">
             <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">Error rate</dt>
-            <dd className="mt-1 text-lg font-semibold text-slate-900">
+            <dd className="mt-1 text-lg font-semibold text-foreground">
               {formatPct(slo.sli.requestErrorRate)}
             </dd>
           </div>

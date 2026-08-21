@@ -27,7 +27,7 @@ export function InboxNavLink() {
         "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
         isActive
           ? "bg-primary/10 text-primary"
-          : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900",
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
       <Inbox className="h-4 w-4 shrink-0 opacity-80" aria-hidden />

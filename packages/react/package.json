@@ -42,7 +42,8 @@
     "prebuild": "pnpm --filter @fluxy-chat/sdk build",
     "build": "pnpm exec tsc -p tsconfig.json",
     "prepublishOnly": "pnpm run build && node ../../scripts/verify-publish-manifest.mjs",
-    "dev": "tsc -w -p tsconfig.json"
+    "dev": "tsc -w -p tsconfig.json",
+    "test": "pnpm exec vitest run"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -54,6 +55,8 @@
   "devDependencies": {
     "@types/react": "^19.2.14",
     "react": "^19.2.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.5"
   }
 }

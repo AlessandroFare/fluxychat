@@ -36,12 +36,12 @@ export function ConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="border border-slate-200 bg-white text-slate-900 shadow-[var(--shadow-modal)] sm:max-w-md"
+        className="border border-border bg-card text-foreground shadow-[var(--shadow-modal)] sm:max-w-md"
       >
         <DialogHeader>
-          <DialogTitle className="text-slate-900">{title}</DialogTitle>
+          <DialogTitle className="text-foreground">{title}</DialogTitle>
           {description ? (
-            <DialogDescription className="text-slate-600">{description}</DialogDescription>
+            <DialogDescription className="text-muted-foreground">{description}</DialogDescription>
           ) : null}
         </DialogHeader>
         <DialogFooter className="gap-2 sm:justify-end">

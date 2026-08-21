@@ -147,20 +147,24 @@ export async function validateEmbedParentOrigin(env, request, options) {
   );
 
   const allowed = [...new Set([...globalOrigins, ...embedOrigins])];
-  if (!allowed.length) return { ok: true };
+  if (!allowed.length) {
+    const nodeEnv = String(env?.NODE_ENV || "").trim().toLowerCase();
+    if (nodeEnv === "development" || nodeEnv === "test") return { ok: true };
+    return { ok: false, error: "embed_origin_forbidden" };
+  }
 
   const parent = String(parentOrigin || "").trim();
   if (parent) {
     const fakeRequest = new Request(request.url, {
       headers: { Origin: parent },
     });
-    if (isDemoOriginAllowed(fakeRequest, allowed)) {
+    if (isDemoOriginAllowed(fakeRequest, allowed, env)) {
       return { ok: true };
     }
     return { ok: false, error: "embed_origin_forbidden" };
   }
 
-  if (isDemoOriginAllowed(request, allowed)) {
+  if (isDemoOriginAllowed(request, allowed, env)) {
     return { ok: true };
   }
 

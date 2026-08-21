@@ -1,20 +1,16 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Check, Copy } from "lucide-react";
 import { MARKETING_HERO } from "@/lib/marketing-landing";
 import { HeroCodeInboxDemo } from "~/components/marketing/hero-code-inbox-demo";
 import { SpotlightCard } from "~/components/marketing/spotlight-card";
+import BlurText from "~/components/BlurText";
+import Magnet from "~/components/Magnet";
 import { LandingHeroAuthCta } from "../components/landing-auth-cta";
 import { HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
 import { INSTALL_CMD } from "./landing-shared";
-
-const Grainient = dynamic(
-  () => import("~/components/marketing/grainient").then((m) => ({ default: m.Grainient })),
-  { ssr: false },
-);
 
 export function LandingHeroClient() {
   const [copied, setCopied] = useState(false);
@@ -26,122 +22,24 @@ export function LandingHeroClient() {
   }, []);
 
   return (
-    <section className="relative min-h-[min(92svh,880px)] overflow-x-hidden border-b border-border pt-16 pb-12 sm:pt-24 sm:pb-16 md:pb-24">
-      <Grainient
-        className="z-0"
-        color1="#ebe4ff"
-        color2="#faf8f5"
-        color3="#fdeee6"
-        grainAnimated
-        grainAmount={0.13}
-        grainScale={1.55}
-        timeSpeed={0.1}
-        warpSpeed={0.75}
-        saturation={0.68}
-        contrast={1.04}
-        gamma={0.98}
-        zoom={0.88}
-        centerX={0}
-        centerY={-0.06}
-        blendAngle={18}
-        blendSoftness={0.42}
-      />
-
-      <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" aria-hidden>
-        <div
-          className="landing-hero-blob landing-hero-blob--b absolute"
-          style={{
-            top: "8%",
-            left: "-8%",
-            width: "clamp(200px, 42vw, 560px)",
-            height: "clamp(200px, 38vw, 480px)",
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle at 55% 45%, rgba(196,181,253,0.42) 0%, rgba(226,221,253,0.22) 38%, transparent 72%)",
-            filter: "blur(40px)",
-          }}
-        />
-        <div
-          className="landing-hero-blob landing-hero-blob--c absolute"
-          style={{
-            top: "12%",
-            right: "-8%",
-            width: "clamp(200px, 40vw, 520px)",
-            height: "clamp(200px, 36vw, 440px)",
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle at 45% 50%, rgba(255,200,175,0.38) 0%, rgba(255,228,210,0.18) 42%, transparent 70%)",
-            filter: "blur(38px)",
-          }}
-        />
-        <div
-          className="landing-hero-blob landing-hero-blob--a absolute"
-          style={{
-            bottom: "-18%",
-            left: "-16%",
-            width: "clamp(400px, 50vw, 640px)",
-            height: "clamp(340px, 46vw, 580px)",
-            borderRadius: "50%",
-            background: [
-              "radial-gradient(",
-              "  circle at 42% 40%,",
-              "  rgba(215,55,8,0.72) 0%,",
-              "  rgba(235,90,25,0.48) 24%,",
-              "  rgba(248,140,70,0.22) 48%,",
-              "  transparent 74%",
-              ")",
-            ].join(""),
-            filter: "blur(42px)",
-          }}
-        />
-        <div
-          className="absolute"
-          style={{
-            bottom: "-14%",
-            right: "-12%",
-            width: "clamp(340px, 44vw, 560px)",
-            height: "clamp(300px, 40vw, 500px)",
-            borderRadius: "50%",
-            background: [
-              "radial-gradient(",
-              "  circle at 58% 42%,",
-              "  rgba(139,92,246,0.28) 0%,",
-              "  rgba(255,149,128,0.16) 36%,",
-              "  transparent 70%",
-              ")",
-            ].join(""),
-            filter: "blur(44px)",
-          }}
-        />
-      </div>
-
+    <section className="relative min-h-dvh overflow-x-hidden border-b border-white/[0.06] pt-16 pb-12 sm:pt-24 sm:pb-16 md:pb-24">
       <div
-        className="pointer-events-none absolute inset-0 z-[1]"
+        className="pointer-events-none absolute inset-0 z-10"
         style={{
-          background: [
-            "radial-gradient(",
-            "  ellipse 75% 55% at 50% 0%,",
-            "  rgba(255,255,255,0.88) 0%,",
-            "  rgba(255,255,255,0.40) 45%,",
-            "  transparent 68%",
-            ")",
-          ].join(""),
+          background:
+            "radial-gradient(ellipse 70% 50% at 50% 38%, rgba(11,11,12,0.2) 0%, rgba(11,11,12,0.72) 100%)",
         }}
         aria-hidden
       />
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-24"
-        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.7) 0%, transparent 100%)" }}
-        aria-hidden
-      />
 
-      <div className="relative z-[2] mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="relative z-20 mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
           <Link
             href={isClerkClientConfigured() ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}
-            className="am-focus mb-5 inline-flex max-w-full items-center justify-center gap-2 rounded-full border border-black/[0.08] bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-800 shadow-[var(--shadow-subtle-2)] backdrop-blur-md transition hover:border-black/12 hover:bg-white/95 sm:text-sm"
+            className="am-focus mkt-enter mkt-chip mb-5 inline-flex max-w-full items-center justify-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium text-zinc-100 shadow-[0_0_0_1px_rgba(255,106,26,0.18)] transition hover:border-[var(--mkt-brand)]/40 hover:bg-white/[0.07] sm:text-sm"
+            style={{ ["--mkt-stagger" as string]: 0 }}
           >
-            <span className="shrink-0 rounded-md bg-[#111111] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+            <span className="shrink-0 rounded-md bg-[var(--mkt-brand)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
               New
             </span>
             <span className="truncate text-left sm:text-center">
@@ -149,27 +47,48 @@ export function LandingHeroClient() {
             </span>
           </Link>
 
-          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 sm:tracking-[0.22em]">
+          <p
+            className="mkt-enter mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 sm:tracking-[0.22em]"
+            style={{ ["--mkt-stagger" as string]: 1 }}
+          >
             {MARKETING_HERO.eyebrow}
           </p>
 
-          <h1 className="font-heading flex flex-wrap items-baseline justify-center gap-x-[0.18em] gap-y-1 text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-[#111111] sm:text-6xl md:text-7xl">
+          <h1
+            className="mkt-enter font-heading flex flex-wrap items-baseline justify-center gap-x-[0.18em] gap-y-1 text-balance text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-white sm:text-6xl md:text-7xl"
+            style={{ ["--mkt-stagger" as string]: 2 }}
+          >
             <span>{MARKETING_HERO.headlineLead}</span>
             <span className="am-text-gradient--hero am-text-gradient--hero-glow">
               {MARKETING_HERO.headlineAccent}
             </span>
-            <span className="text-[#111111]">.</span>
+            <span className="text-white">.</span>
           </h1>
 
-          <p className="mt-5 max-w-2xl text-balance text-lg text-slate-600 sm:text-xl">
-            {MARKETING_HERO.subhead}
-          </p>
+          <div
+            className="mkt-enter mt-5 max-w-2xl text-pretty text-lg text-zinc-300 sm:text-xl"
+            style={{ ["--mkt-stagger" as string]: 3 }}
+          >
+            <BlurText
+              text={MARKETING_HERO.subhead}
+              delay={28}
+              animateBy="words"
+              direction="bottom"
+              className="justify-center text-center text-lg text-zinc-300 sm:text-xl"
+              stepDuration={0.22}
+            />
+          </div>
 
-          <div className="mt-8 flex w-full max-w-2xl flex-col gap-3 sm:flex-row items-center justify-center">
-            <LandingHeroAuthCta />
+          <div
+            className="mkt-enter mt-8 flex w-full max-w-2xl flex-col items-center justify-center gap-3 sm:flex-row"
+            style={{ ["--mkt-stagger" as string]: 4 }}
+          >
+            <Magnet padding={28} magnetStrength={5} wrapperClassName="inline-flex">
+              <LandingHeroAuthCta />
+            </Magnet>
             <div
               data-testid="install-chip"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-[#1A1A1A] px-3 py-1.5 h-[52px] text-xs font-medium shadow-sm"
+              className="inline-flex h-[52px] items-center gap-2 rounded-lg border border-white/10 bg-[#1A1A1A] px-3 py-1.5 text-xs font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
             >
               <code className="font-mono text-slate-100">{INSTALL_CMD}</code>
               {copied ? (
@@ -181,7 +100,7 @@ export function LandingHeroClient() {
                   type="button"
                   onClick={onCopy}
                   data-testid="copy-button"
-                  className="inline-flex items-center gap-0.5 text-slate-400 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-0.5 text-slate-400 transition-colors hover:text-white"
                   aria-label="Copy install command"
                 >
                   <Copy className="h-3 w-3" />
@@ -190,7 +109,10 @@ export function LandingHeroClient() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-500">
+          <div
+            className="mkt-enter mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-zinc-300"
+            style={{ ["--mkt-stagger" as string]: 5 }}
+          >
             <span>Self-host on Cloudflare</span>
             <span aria-hidden="true">·</span>
             <span>MIT licensed</span>
@@ -199,14 +121,15 @@ export function LandingHeroClient() {
           </div>
         </div>
 
-        <SpotlightCard
-          className="mx-auto mt-12 max-w-5xl border-black/[0.14] bg-white p-5 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.18),0_2px_8px_-2px_rgba(0,0,0,0.08)] sm:p-6 md:mt-14"
-          spotlightColor="rgba(232, 69, 10, 0.2)"
-        >
-          <HeroCodeInboxDemo />
-        </SpotlightCard>
+        <div className="mkt-enter mx-auto mt-12 max-w-5xl md:mt-14" style={{ ["--mkt-stagger" as string]: 6 }}>
+          <SpotlightCard
+            className="mkt-panel border-white/15 bg-zinc-950/80 p-5 sm:p-6"
+            spotlightColor="rgba(255, 106, 26, 0.28)"
+          >
+            <HeroCodeInboxDemo />
+          </SpotlightCard>
+        </div>
       </div>
     </section>
   );
 }
-

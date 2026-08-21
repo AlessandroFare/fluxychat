@@ -3,6 +3,7 @@ import { isRoomMember } from "../lib/room-access.js";
 import { logError } from "../lib/worker-log.js";
 import { fanoutRoomInternal } from "../lib/room-shard.js";
 import { pickRouteDeps } from "./route-http-deps.js";
+import { parseEventsTriggerBody } from "../lib/http-body.js";
 
 const MAX_ROOMS_PER_TRIGGER = 50;
 const VALID_ID_REGEX = /^[a-zA-Z0-9_-]{1,128}$/;
@@ -29,6 +30,12 @@ export async function dispatchEventsRoutes(request, url, h) {
   } catch {
     return json({ error: "invalid_json" }, 400);
   }
+
+  const parsed = parseEventsTriggerBody(body);
+  if (!parsed.ok) {
+    return json({ error: parsed.error }, 400);
+  }
+  body = parsed.body;
 
   const roomIdsRaw = body.roomIds ?? body.rooms ?? body.channels;
   if (!Array.isArray(roomIdsRaw) || roomIdsRaw.length === 0) {

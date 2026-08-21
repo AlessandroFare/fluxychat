@@ -13,7 +13,7 @@ interface LandingMegaNavProps {
 function MegaMenuPanel({ menu }: { menu: LandingNavMenu }) {
   if (menu.href) {
     return (
-      <Link href={menu.href} className="shrink-0 rounded-full px-2.5 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+      <Link href={menu.href} className="shrink-0 rounded-full px-2.5 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
         {menu.label}
       </Link>
     );
@@ -27,7 +27,7 @@ function MegaMenuPanel({ menu }: { menu: LandingNavMenu }) {
     <div className="group relative shrink-0">
       <button
         type="button"
-        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm font-medium text-slate-600 transition-colors group-hover:bg-slate-100 group-hover:text-slate-900 group-focus-within:bg-slate-100 group-focus-within:text-slate-900"
+        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm font-medium text-zinc-300 transition-colors group-hover:bg-white/5 group-hover:text-white group-focus-within:bg-white/5 group-focus-within:text-white"
         aria-haspopup="true"
       >
         {menu.label}
@@ -42,7 +42,7 @@ function MegaMenuPanel({ menu }: { menu: LandingNavMenu }) {
       >
         <div
           className={cn(
-            "rounded-xl border border-black/10 bg-[#111111] p-4 shadow-xl",
+            "rounded-xl border border-white/10 bg-[#111111] p-4 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.8)]",
             isWide ? "grid min-w-[22rem] grid-cols-2 gap-6" : "min-w-[12rem]",
           )}
         >

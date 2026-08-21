@@ -9,6 +9,7 @@ import { HOSTED_COPY, HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted
 import { formatNumber } from "@/lib/format-number";
 import { cn } from "@/lib/utils";
 import { Check, ArrowRight, MessagesSquare, Bot, Webhook, Shield, Server, Workflow, GitFork, GanttChartSquare, Zap } from "lucide-react";
+import { LandingShell } from "../landing/landing-shell";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing: Fluxychat",
@@ -55,7 +56,7 @@ const COMPARISON_ROWS: { feature: string; values: Record<string, string> }[] = [
 
 function PricingHero() {
   return (
-    <section className="relative overflow-hidden border-b border-white/10 bg-slate-950 px-4 pt-24 pb-16 sm:px-6 sm:pt-28 sm:pb-20">
+    <section className="relative overflow-hidden border-b border-white/10 bg-[#1e1e1e] px-4 pt-24 pb-16 sm:px-6 sm:pt-28 sm:pb-20">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,115,94,0.12)_0%,transparent_70%)]" />
       <div className="relative mx-auto max-w-6xl text-center">
         <Badge className="mb-4 border border-orange-400/40 bg-orange-500/15 px-4 py-1.5 text-sm font-medium text-orange-100 hover:bg-orange-500/20">
@@ -86,9 +87,9 @@ function PricingHero() {
 
 function PlanCards() {
   return (
-    <section className="border-b border-white/10 bg-slate-950 px-4 py-16 sm:px-6">
+    <section className="border-b border-white/10 bg-[#1e1e1e] px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-lg rounded-xl border border-white/15 bg-slate-900/60 p-4 text-center">
+        <div className="mx-auto max-w-lg rounded-xl border border-white/15 bg-[#252525]/80 p-4 text-center">
           <p className="text-sm text-slate-200">
             All plans include{" "}
             <span className="font-semibold text-white">unlimited rooms</span>,{" "}
@@ -107,8 +108,8 @@ function PlanCards() {
                 className={cn(
                   "relative flex min-w-0 flex-col rounded-2xl border p-6 pt-8 transition-shadow duration-300",
                   isFeatured
-                    ? "z-[1] border-primary bg-slate-900/80 shadow-[0_0_0_1px_rgba(255,115,94,0.35)] hover:shadow-[0_0_20px_rgba(255,115,94,0.15)]"
-                    : "border-white/10 bg-slate-900/40 hover:border-white/20",
+                    ? "z-[1] border-primary bg-[#2a2a2a] shadow-[0_0_0_1px_rgba(255,115,94,0.35)] hover:shadow-[0_0_20px_rgba(255,115,94,0.15)]"
+                    : "border-white/10 bg-[#252525]/70 hover:border-white/20",
                 )}
               >
                 {isFeatured ? (
@@ -193,7 +194,7 @@ function PlanCards() {
           {SALES_PLAN_CATALOG.map((plan) => (
             <div
               key={plan.label}
-              className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/30 p-6"
+              className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#252525]/50 p-6"
             >
               <h3 className="font-heading text-lg font-semibold text-white">{plan.label}</h3>
               <div className="mt-1 text-2xl font-bold text-white">{plan.price}</div>
@@ -219,7 +220,7 @@ function PlanCards() {
 
 function ComparisonTable() {
   return (
-    <section className="border-b border-white/10 bg-slate-950 px-4 py-16 sm:px-6">
+    <section className="border-b border-white/10 bg-[#1e1e1e] px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <h2 className="text-center font-heading text-2xl font-bold text-white">Compare plans side by side</h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
@@ -229,7 +230,7 @@ function ComparisonTable() {
         <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10">
           <table className="w-full min-w-[640px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-white/10 bg-slate-900/60">
+              <tr className="border-b border-white/10 bg-[#252525]/80">
                 <th className="px-4 py-3 font-medium text-slate-200 sm:px-6">Feature</th>
                 {planEntries.map(([key, plan]) => (
                   <th key={key} className="px-4 py-3 text-center font-medium text-slate-200 sm:px-6">
@@ -273,13 +274,13 @@ function FeatureShowcase() {
     { icon: Server, title: "Cloudflare Workers", desc: "Edge-deployed on Cloudflare's global network. 300+ locations, sub-10ms latency." },
     { icon: Shield, title: "End-to-end encryption", desc: "TLS by default. Double Ratchet encryption for private rooms (roadmap)." },
     { icon: Workflow, title: "AI agent platform", desc: "Built-in AI agents with streaming markdown, MCP tools, and WorkflowAgent." },
-    { icon: GitFork, title: "14 platform adapters", desc: "React, Vue, Svelte, React Native, Node, Express, Fastify, and more." },
+    { icon: GitFork, title: "Platform adapters", desc: "React + JS SDK published today; Vue/Svelte packages are in-repo (not the hosted CLI path yet). React Native and Node adapters available." },
     { icon: GanttChartSquare, title: "Operator console", desc: "Full dashboard for room management, analytics, billing, and team management." },
     { icon: Zap, title: "Real-time sync", desc: "Durable Objects + WebSocket. CRDT sync for collaborative features." },
   ];
 
   return (
-    <section className="border-b border-white/10 bg-slate-950 px-4 py-16 sm:px-6">
+    <section className="border-b border-white/10 bg-[#1e1e1e] px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <h2 className="text-center font-heading text-2xl font-bold text-white">Everything you need to ship real-time</h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
@@ -287,7 +288,7 @@ function FeatureShowcase() {
         </p>
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
-            <div key={f.title} className="rounded-xl border border-white/10 bg-slate-900/60 p-5">
+            <div key={f.title} className="rounded-xl border border-white/10 bg-[#252525]/80 p-5">
               <f.icon className="h-5 w-5 text-primary" />
               <h3 className="mt-3 font-semibold text-white">{f.title}</h3>
               <p className="mt-1 text-sm text-slate-300">{f.desc}</p>
@@ -301,7 +302,7 @@ function FeatureShowcase() {
 
 function PricingFaq() {
   return (
-    <section className="border-b border-white/10 bg-slate-950 px-4 py-16 sm:px-6">
+    <section className="border-b border-white/10 bg-[#1e1e1e] px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <h2 className="text-center font-heading text-2xl font-bold text-white">Frequently asked questions</h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
@@ -311,7 +312,7 @@ function PricingFaq() {
           {PRICING_FAQ.map((item) => (
             <details
               key={item.q}
-              className="group rounded-xl border border-white/10 bg-slate-900/40 px-4 py-3 open:bg-slate-900/60"
+              className="group rounded-xl border border-white/10 bg-[#252525]/70 px-4 py-3 open:bg-[#2a2a2a]"
             >
               <summary className="cursor-pointer list-none text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center justify-between gap-3">
@@ -332,7 +333,7 @@ function PricingFaq() {
 
 function PricingCta() {
   return (
-    <section className="bg-slate-950 px-4 py-20 sm:px-6">
+    <section className="bg-[#1e1e1e] px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="font-heading text-3xl font-bold tracking-tight text-white">
           Start building for free
@@ -365,7 +366,7 @@ function PricingCta() {
 
 function PricingFooter() {
   return (
-    <footer className="border-t border-white/10 bg-slate-950 px-4 py-8 sm:px-6">
+    <footer className="border-t border-white/10 bg-[#1e1e1e] px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col items-center justify-between gap-4 text-sm text-slate-400 sm:flex-row">
           <p>&copy; {new Date().getFullYear()} FluxyChat. Open source MIT.</p>
@@ -384,7 +385,7 @@ function PricingFooter() {
 
 export default function PricingPage() {
   return (
-    <>
+    <LandingShell>
       <PricingHero />
       <PlanCards />
       <ComparisonTable />
@@ -392,6 +393,6 @@ export default function PricingPage() {
       <PricingFaq />
       <PricingCta />
       <PricingFooter />
-    </>
+    </LandingShell>
   );
 }

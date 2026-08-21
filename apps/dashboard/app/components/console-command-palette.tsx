@@ -296,7 +296,7 @@ export function CommandPaletteTrigger({
       type="button"
       onClick={open}
       className={cn(
-        "flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 text-left text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900",
+        "flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted/80 px-2.5 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
         className,
       )}
       aria-label="Open command palette"

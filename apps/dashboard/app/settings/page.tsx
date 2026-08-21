@@ -6,6 +6,7 @@ import { useClerkUser } from "@/lib/clerk-user";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
+import { SETTINGS_CATALOG } from "@/lib/settings-catalog";
 import { Banner, Button, Panel } from "../components/ui";
 import { Input } from "~/components/ui/input";
 import { UserStatusBadge } from "~/components/ui/user-status";
@@ -70,8 +71,32 @@ export default function SettingsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Settings"
-        description="Account, project, notification preferences, UI Kit, and translation settings."
+        description="Account, project, and tenant configuration. Sub-pages are listed below."
       />
+
+      <section className="mb-8">
+        <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Browse settings</h2>
+        <div className="grid gap-6 sm:grid-cols-2">
+          {SETTINGS_CATALOG.map((group) => (
+            <div key={group.label}>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{group.label}</h3>
+              <ul className="space-y-1">
+                {group.items.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="block rounded-lg px-2 py-1.5 text-sm hover:bg-slate-50"
+                    >
+                      <span className="font-medium text-slate-900">{item.label}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {!isSignedIn ? (
         <Banner variant="info">

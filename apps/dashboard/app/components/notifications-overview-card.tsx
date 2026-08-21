@@ -33,14 +33,14 @@ export function NotificationsOverviewCard() {
   if (!token) return null;
 
   return (
-    <section className="mb-8 rounded-2xl border border-black/[0.06] bg-white/90 p-5 shadow-[var(--shadow-subtle-2)] sm:p-6">
+    <section className="mb-8 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Bell className="h-5 w-5" aria-hidden />
           </div>
           <div>
-            <h2 className="font-heading text-base font-semibold text-slate-900">Notifications</h2>
+            <h2 className="font-heading text-base font-semibold text-foreground">Notifications</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {loading
                 ? "Loading…"

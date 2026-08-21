@@ -27,6 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { useChat, useFluxyChatOptional } from "@fluxy-chat/react";
+import { SearchSnippet } from "@/app/search/search-snippet";
 import {
   buildDeepResearchPrompt,
   buildImageGenerationCaption,
@@ -1883,7 +1884,7 @@ export function FluxyChat({
                   </span>
                   <div className="mt-0.5 leading-relaxed text-muted-foreground">
                     {r.snippet ? (
-                      <span dangerouslySetInnerHTML={{ __html: r.snippet }} />
+                      <SearchSnippet snippet={r.snippet} />
                     ) : (
                       r.content
                     )}

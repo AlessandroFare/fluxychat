@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { fetchWorkerHealth } from "@/lib/worker-health";
 import { loadStatusIncidents } from "@/lib/status-incidents";
+import { MarketingShell } from "../components/marketing-shell";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -21,7 +22,7 @@ function statusLabel(ok: boolean | undefined, degraded?: boolean): string {
 }
 
 function statusTone(ok: boolean | undefined, degraded?: boolean): string {
-  if (ok === undefined) return "text-slate-600";
+  if (ok === undefined) return "text-muted-foreground";
   if (!ok) return "text-red-600";
   if (degraded) return "text-amber-600";
   return "text-emerald-600";
@@ -36,8 +37,7 @@ export default async function StatusPage() {
   const tone = statusTone(ok, degraded);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <MarketingShell className="max-w-3xl py-12 sm:py-12">
         <h1 data-testid="status-heading" className="font-heading text-3xl font-bold tracking-tight">System status</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Public health for the chat API. Project-scoped operational alerts appear in the console
@@ -152,7 +152,6 @@ export default async function StatusPage() {
           </Link>{" "}
           in the console after connecting your project.
         </p>
-      </div>
-    </div>
+    </MarketingShell>
   );
 }

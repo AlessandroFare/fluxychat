@@ -1,4 +1,5 @@
 import { logInfo, logError } from "./worker-log.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 const OTEL_VERSION = "1.2.0";
 const RESOURCE_ATTRIBUTES = {
@@ -205,11 +206,15 @@ export async function flushExportQueue(env, { configId, maxBatch = 100 } = {}) {
             ? `${config.endpoint_url}/v1/logs`
             : config.endpoint_url;
 
-      const resp = await fetch(endpoint, {
-        method: "POST",
-        headers,
-        body: row.payload_json,
-      });
+      const resp = await safeOutboundFetch(
+        endpoint,
+        {
+          method: "POST",
+          headers,
+          body: row.payload_json,
+        },
+        env,
+      );
 
       if (resp.ok) {
         await env.DB.prepare(

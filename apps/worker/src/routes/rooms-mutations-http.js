@@ -8,6 +8,7 @@ import {
   parseMemberPreferencesJson,
 } from "../lib/member-preferences.js";
 import { pickRouteDeps } from "./route-http-deps.js";
+import { parseCreateRoomBody } from "../lib/http-body.js";
 import {
   generateRoomE2eKeyMaterial,
   encryptRoomE2eKeyForStorage,
@@ -83,8 +84,13 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     if (!auth) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
-    const body = await request.json().catch(() => null);
-    const nameValidation = validateRoomName(body?.name);
+    const rawBody = await request.json().catch(() => null);
+    const parsedRoom = parseCreateRoomBody(rawBody);
+    if (!parsedRoom.ok) {
+      return json({ error: parsedRoom.error }, { status: 400 });
+    }
+    const body = parsedRoom;
+    const nameValidation = validateRoomName(body.name);
     if (!nameValidation.valid) {
       return json({ error: nameValidation.error }, { status: 400 });
     }

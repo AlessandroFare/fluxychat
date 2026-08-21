@@ -12,11 +12,17 @@ import { FluxyAutoConnect } from "./components/fluxy-auto-connect";
 import { FluxyRealtimeShell } from "./components/fluxy-realtime-shell";
 import { BetaBanner } from "./components/beta-banner";
 import { CookieConsentBanner } from "./components/cookie-consent-banner";
-import { Geist } from "next/font/google";
+import { Geist, Geist_Mono, Syne } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ROOT_METADATA } from "@/lib/site-metadata";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const syne = Syne({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  weight: ["500", "600", "700", "800"],
+});
 
 export const metadata: Metadata = {
   ...ROOT_METADATA,
@@ -35,7 +41,7 @@ export default async function RootLayout({
 }) {
   const shell = (
     <ClerkUserBridge>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <DashboardSessionProvider>
         {clerkPublishableKey ? (
           <>
@@ -46,7 +52,7 @@ export default async function RootLayout({
         <FluxyRealtimeShell>
           <BetaBanner />
           <ConditionalHeader />
-          <main className="min-h-dvh bg-[#faf9f6] text-foreground antialiased">
+          <main className="min-h-dvh bg-background text-foreground antialiased">
             <ConsoleChrome>{children}</ConsoleChrome>
           </main>
           <CookieConsentBanner />
@@ -61,8 +67,18 @@ export default async function RootLayout({
     `${(process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://fluxychat.com").replace(/\/$/, "")}/docs/llms.txt`;
 
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn("font-sans", geist.variable, geistMono.variable, syne.variable)}
+    >
       <head suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'){document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t);document.documentElement.style.colorScheme=t;}}catch(e){}})();",
+          }}
+        />
         <link rel="llms" href={docsLlmsUrl} />
         <link rel="alternate" type="text/plain" href={docsLlmsUrl} title="LLM documentation index" />
       </head>

@@ -10,13 +10,13 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--am-midnight-ink)] text-[var(--am-canvas-white)] shadow-[var(--shadow-subtle-3)] hover:opacity-95 hover:-translate-y-px hover:shadow-[var(--shadow-xl)]",
+          "bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] shadow-[var(--shadow-subtle-3)] hover:bg-[var(--fluxy-btn-primary-hover-bg)] hover:-translate-y-px",
         outline:
-          "border-[color:color-mix(in_oklab,var(--am-midnight-ink)_10%,transparent)] bg-[var(--am-canvas-white)] text-[var(--am-deep-indigo)] shadow-[var(--shadow-subtle)] hover:bg-[var(--am-whisper-gray)] hover:-translate-y-px hover:shadow-[var(--shadow-subtle-2)]",
+          "border-border bg-background text-foreground shadow-[var(--shadow-subtle)] hover:bg-muted hover:-translate-y-px",
         secondary:
-          "bg-[var(--am-light-taupe)] text-[var(--am-midnight-ink)] shadow-[var(--shadow-subtle)] hover:bg-[var(--am-whisper-gray)] hover:-translate-y-px hover:shadow-[var(--shadow-subtle-2)]",
+          "bg-muted text-foreground shadow-[var(--shadow-subtle)] hover:bg-muted/80 hover:-translate-y-px",
         ghost:
-          "text-[var(--am-muted-ash)] hover:bg-[var(--am-whisper-gray)] hover:text-[var(--am-midnight-ink)] hover:-translate-y-px",
+          "text-muted-foreground hover:bg-muted hover:text-foreground hover:-translate-y-px",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",

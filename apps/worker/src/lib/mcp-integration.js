@@ -4,6 +4,7 @@
  *
  * Includes MCP Resources support for application-driven data sources.
  */
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 /**
  * Convert MCP tool definitions to FluxyChat tool format.
@@ -205,7 +206,7 @@ export function createApiProvider(baseUrl, headers = {}) {
   return async (uri) => {
     const path = uri.replace("api://", "");
     try {
-      const response = await fetch(`${baseUrl}/${path}`, { headers });
+      const response = await safeOutboundFetch(`${baseUrl}/${path}`, { headers });
       if (!response.ok) {
         return { uri, mimeType: "text/plain", text: `API error: ${response.status}` };
       }
@@ -256,7 +257,7 @@ export function createMcpClient(config, opts = {}) {
         try {
           for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-              const resp = await fetch(config.url, {
+              const resp = await safeOutboundFetch(config.url, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",

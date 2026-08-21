@@ -27,28 +27,28 @@ const TEMPLATES = [
     name: "basic",
     description: "Minimal FluxyChat setup: one room, real-time messaging, no auth.",
     features: ["WebSocket rooms", "REST API", "One-line embed"],
-    command: "npx create-fluxy-chat my-app --template basic",
+    command: "npx @fluxy-chat/create-fluxy-chat@latest my-app --template basic",
   },
   {
     id: "slack",
     name: "slack",
     description: "Slack-style workspace with channels, DMs, and presence.",
     features: ["Channels & DMs", "Presence indicators", "Threaded replies"],
-    command: "npx create-fluxy-chat my-app --template slack",
+    command: "npx @fluxy-chat/create-fluxy-chat@latest my-app --template slack",
   },
   {
     id: "telegram",
     name: "telegram",
     description: "Telegram-style client with bots, inline queries, and secret chats.",
     features: ["Bot framework", "Inline queries", "Secret chats"],
-    command: "npx create-fluxy-chat my-app --template telegram",
+    command: "npx @fluxy-chat/create-fluxy-chat@latest my-app --template telegram",
   },
   {
     id: "discord",
     name: "discord",
     description: "Discord-style guild with voice-ready rooms, roles, and permissions.",
     features: ["Guild model", "Roles & permissions", "Voice-ready rooms"],
-    command: "npx create-fluxy-chat my-app --template discord",
+    command: "npx @fluxy-chat/create-fluxy-chat@latest my-app --template discord",
   },
 ] as const;
 
@@ -87,24 +87,29 @@ const CLI_STEPS = [
 
 const QUICK_COMMANDS = [
   {
-    label: "Create a project",
-    command: "npx create-fluxy-chat my-app",
-    description: "Run the interactive scaffolding wizard.",
+    label: "Hosted app (recommended)",
+    command: "npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y",
+    description: "Vite chat + Clerk. No wrangler.",
+  },
+  {
+    label: "Self-host Worker",
+    command: "npx @fluxy-chat/create-fluxy-chat@latest my-app --mode self-host",
+    description: "Same app pointed at your Worker.",
   },
   {
     label: "With a template",
-    command: "npx create-fluxy-chat my-app --template slack",
+    command: "npx @fluxy-chat/create-fluxy-chat@latest my-app --template slack",
     description: "Skip the prompt and specify a template directly.",
   },
   {
     label: "With adapters",
-    command: "npx create-fluxy-chat my-app --template discord --adapters slack,telegram",
+    command: "npx @fluxy-chat/create-fluxy-chat@latest my-app --template discord --adapters slack,telegram",
     description: "Pre-select adapters from the CLI.",
   },
   {
     label: "Install globally",
-    command: "npm install -g create-fluxy-chat",
-    description: "Install the CLI globally for repeated use.",
+    command: "npm install -g @fluxy-chat/create-fluxy-chat",
+    description: "Scoped package only — unscoped create-fluxy-chat 404s on npm.",
   },
 ] as const;
 
@@ -119,7 +124,7 @@ export default function CLIPage() {
   const [terminalLines, setTerminalLines] = useState<
     Array<{ type: "input" | "output" | "prompt"; text: string }>
   >([
-    { type: "output", text: "$ npx create-fluxy-chat my-app" },
+    { type: "output", text: "$ npx @fluxy-chat/create-fluxy-chat@latest my-app" },
     { type: "output", text: "" },
     { type: "prompt", text: "FluxyChat CLI v1.0.0" },
     { type: "output", text: "Let's scaffold your chat app!\n" },
@@ -168,7 +173,7 @@ export default function CLIPage() {
     setActiveStep(0);
     setCompletedSteps(new Set());
     setTerminalLines([
-      { type: "output", text: "$ npx create-fluxy-chat my-app" },
+      { type: "output", text: "$ npx @fluxy-chat/create-fluxy-chat@latest my-app" },
       { type: "output", text: "" },
       { type: "prompt", text: "FluxyChat CLI v1.0.0" },
       { type: "output", text: "Let's scaffold your chat app!\n" },

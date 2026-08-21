@@ -59,7 +59,7 @@ function navItems(quickstartHref: string): ConsoleCommandItemDef[] {
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_CONNECT), "Navigate", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_TOOLS), "Navigate", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_PLATFORM), "Labs", quickstartHref),
-    ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_INDUSTRIES), "Industries", quickstartHref),
+    ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_INDUSTRIES), "Labs", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_OPERATE), "Operate", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_TRUST), "Operate", quickstartHref),
   ];

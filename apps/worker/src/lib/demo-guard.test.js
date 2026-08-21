@@ -30,12 +30,21 @@ describe("demo-guard", () => {
     expect(isDemoOriginAllowed(req, ["https://other.com"])).toBe(false);
   });
 
-  it("guardDemoSessionRequest allows when origins unset", async () => {
+  it("guardDemoSessionRequest allows when origins unset in development", async () => {
     const result = await guardDemoSessionRequest(
-      {},
+      { NODE_ENV: "development" },
       new Request("https://api/demo/session", { method: "GET" }),
     );
     expect(result).toEqual({ ok: true });
+  });
+
+  it("guardDemoSessionRequest blocks empty allowlist in production", async () => {
+    const result = await guardDemoSessionRequest(
+      { NODE_ENV: "production" },
+      new Request("https://api/demo/session", { method: "GET" }),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("demo_origin_forbidden");
   });
 
   it("guardDemoSessionRequest blocks wrong origin", async () => {

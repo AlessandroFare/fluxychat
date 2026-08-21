@@ -3,6 +3,8 @@
  * @returns {Promise<Response|null>}
  */
 import { pickRouteDeps } from "./route-http-deps.js";
+import { parseWebhookRegisterBody, parseReportCreateBody } from "../lib/http-body.js";
+import { isPrivateUrl } from "../lib/url-ssrf.js";
 import { prepareWebhookSecretForStorage, signWebhookPayload } from "../lib/webhook-signing.js";
 import {
   verifyWebhookSignature,
@@ -71,13 +73,12 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
       });
     }
 
-    const body = await request.json().catch(() => null);
-    if (!body || !body.messageId || !body.roomId) {
-      return json(
-        { error: "messageId and roomId required" },
-        { status: 400 }
-      );
+    const rawReport = await request.json().catch(() => null);
+    const parsedReport = parseReportCreateBody(rawReport);
+    if (!parsedReport.ok) {
+      return json({ error: parsedReport.error }, { status: 400 });
     }
+    const body = parsedReport.body;
 
     const { userId, projectId: authProjectId } = auth;
     const now = new Date().toISOString();
@@ -153,13 +154,19 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
       });
     }
     const { projectId: authProjectId } = auth;
-    const body = await request.json().catch(() => null);
-    if (!body || !body.url || !Array.isArray(body.eventTypes)) {
-      return json(
-        { error: "url and eventTypes[] required" },
-        { status: 400 }
-      );
+    const rawBody = await request.json().catch(() => null);
+    const parsedWebhook = parseWebhookRegisterBody(rawBody);
+    if (!parsedWebhook.ok) {
+      return json({ error: parsedWebhook.error }, { status: 400 });
     }
+    if (isPrivateUrl(parsedWebhook.url, env)) {
+      return json({ error: "ssrf_blocked" }, { status: 400 });
+    }
+    const body = {
+      url: parsedWebhook.url,
+      eventTypes: parsedWebhook.eventTypes,
+      secret: parsedWebhook.secret,
+    };
     const eventCheck = validateWebhookEventTypes(body.eventTypes);
     if (!eventCheck.ok) {
       return json(

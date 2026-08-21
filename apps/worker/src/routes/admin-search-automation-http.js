@@ -4,6 +4,7 @@
  */
 import { isAiConfigured } from "../lib/ai-chat-completion.js";
 import { pickRouteDeps } from "./route-http-deps.js";
+import { safeOutboundFetch } from "../lib/url-ssrf.js";
 
 export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
   const {
@@ -713,7 +714,7 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
 
     if (env.AUTOMATION_WEBHOOK_URL) {
       ctx.waitUntil(
-        fetch(env.AUTOMATION_WEBHOOK_URL, {
+        safeOutboundFetch(env.AUTOMATION_WEBHOOK_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

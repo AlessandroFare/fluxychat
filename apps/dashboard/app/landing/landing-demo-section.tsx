@@ -63,7 +63,7 @@ function ChatBubble({ message, index }: { message: typeof FLOATING_MESSAGES[0]; 
       }}
     >
       {isLeft && (
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-700">
           <Bot className="size-4 text-white" />
         </div>
       )}
@@ -71,8 +71,8 @@ function ChatBubble({ message, index }: { message: typeof FLOATING_MESSAGES[0]; 
         className={cn(
           "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
           isLeft
-            ? "bg-slate-800/80 text-slate-200 rounded-tl-sm"
-            : "bg-gradient-to-r from-blue-600/80 to-purple-600/80 text-white rounded-tr-sm",
+            ? "rounded-tl-sm bg-zinc-800 text-zinc-100"
+            : "rounded-tr-sm bg-zinc-200 text-zinc-900",
           isCode && "font-mono text-xs",
         )}
       >
@@ -115,18 +115,18 @@ export function LandingDemoSection() {
     <section
       ref={ref}
       id="demo"
-      className="scroll-mt-20 border-b border-white/10 bg-slate-950 px-4 py-20 sm:px-6"
+      className="scroll-mt-20 border-b border-white/10 px-4 py-20 sm:px-6"
     >
       <div className="mx-auto max-w-6xl">
         {/* Section Header */}
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-1.5 text-xs font-medium text-blue-300">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-brand)]/30 bg-[var(--mkt-brand)]/15 px-4 py-1.5 text-xs font-medium text-[var(--mkt-brand-soft)]">
             <Sparkles className="size-3.5" />
             Live Playground
           </div>
           <h2 className="text-balance font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Try it right now.
-            <span className="block mt-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <span className="mt-1 block text-[var(--mkt-brand-soft)]">
               No signup required.
             </span>
           </h2>
@@ -140,14 +140,14 @@ export function LandingDemoSection() {
         {visible && (
           <div className="relative mx-auto mt-12 max-w-2xl">
             {/* Background glow */}
-            <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-gradient-to-b from-blue-500/10 via-purple-500/5 to-transparent blur-2xl" />
+            <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-[var(--mkt-brand)]/10" />
 
             {/* Chat Window */}
-            <div key={cycle} className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/90 shadow-2xl shadow-blue-500/10 backdrop-blur-sm">
+            <div key={cycle} className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/90 shadow-xl">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-white/10 bg-slate-900/50 px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-[var(--mkt-brand)]">
                     <Bot className="size-4 text-white" />
                   </div>
                   <div>
@@ -162,7 +162,7 @@ export function LandingDemoSection() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Zap className="size-3.5 text-blue-400" />
+                  <Zap className="size-3.5 text-[var(--mkt-brand-soft)]" />
                   Cloudflare Edge
                 </div>
               </div>
@@ -183,7 +183,7 @@ export function LandingDemoSection() {
                     placeholder="Ask FluxyBot anything..."
                     className="flex-1 bg-transparent text-sm text-slate-300 placeholder:text-slate-600 outline-none"
                   />
-                  <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--mkt-brand)]">
                     <ArrowRight className="size-4 text-white" />
                   </span>
                 </div>
@@ -194,7 +194,7 @@ export function LandingDemoSection() {
             <div className="mt-8 flex items-center justify-center gap-4">
               <Link
                 href="/demo"
-                className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-medium text-white transition-all hover:from-blue-500 hover:to-purple-500 hover:shadow-lg hover:shadow-blue-500/25"
+                className="group inline-flex items-center gap-2 rounded-xl bg-[var(--mkt-brand)] px-6 py-3 text-sm font-medium text-white transition hover:opacity-90"
               >
                 <MessageSquare className="size-4 transition-transform group-hover:scale-110" />
                 Open Playground

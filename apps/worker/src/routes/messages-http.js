@@ -9,6 +9,7 @@ import {
   renderMessageTemplate,
 } from "../lib/message-template.js";
 import { pickRouteDeps } from "./route-http-deps.js";
+import { parsePostMessageBody } from "../lib/http-body.js";
 import { runInboundMessageMiddleware } from "../lib/message-middleware.js";
 import {
   runFluxyRoomAuthz,
@@ -133,8 +134,13 @@ export async function dispatchMessagesRoutes(request, url, h) {
       return json({ error: guestWrite.error }, { status: guestWrite.status });
     }
 
-    const body = await request.json().catch(() => null);
-    if (!body || !body.roomId || !isValidId(body.roomId)) {
+    const rawBody = await request.json().catch(() => null);
+    const parsedMessage = parsePostMessageBody(rawBody);
+    if (!parsedMessage.ok) {
+      return json({ error: parsedMessage.error }, { status: 400 });
+    }
+    const body = parsedMessage.body;
+    if (!isValidId(body.roomId)) {
       return json(
         { error: "roomId required: must be 1-128 chars, alphanumeric with _ -" },
         { status: 400 }

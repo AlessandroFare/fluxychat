@@ -3,6 +3,7 @@
  */
 
 import { createKBArticle, listKBArticles, updateKBArticle } from "./enterprise-support.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 const SOURCE_TYPES = new Set(["url", "notion", "confluence", "google_drive", "intercom", "zendesk", "file"]);
 
@@ -133,10 +134,21 @@ export async function ingestKbFromUrl(env, { projectId, sourceId, url, author })
     return { error: "invalid_url", message: "Only http and https URLs are supported" };
   }
 
-  const res = await fetch(parsed.href, {
-    headers: { "User-Agent": "FluxyChat-KB-Connector/1.0" },
-    signal: AbortSignal.timeout(15000),
-  });
+  let res;
+  try {
+    res = await safeOutboundFetch(
+      parsed.href,
+      {
+        headers: { "User-Agent": "FluxyChat-KB-Connector/1.0" },
+        signal: AbortSignal.timeout(15000),
+      },
+      env,
+    );
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    if (msg.includes("ssrf")) return { error: "ssrf_blocked" };
+    return { error: "fetch_failed", message: msg };
+  }
   if (!res.ok) return { error: "fetch_failed", status: res.status };
 
   const contentType = res.headers.get("content-type") || "";

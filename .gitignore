@@ -78,6 +78,10 @@ opencode-dev/
 # Local reference repos / exports
 directories_links.xlsx
 
+# Nested skill clones (each has its own .git — do not commit as submodules)
+vendor/design-skills/
+
+
 docs/operations/
 
 AGENTS.md

@@ -40,10 +40,10 @@ export function WelcomeStep({ wizard: w }: WelcomeStepProps) {
   return (
     <div className="relative flex min-h-[60vh] flex-col items-center justify-center overflow-hidden">
       <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-60"
+        className="pointer-events-none absolute inset-0 -z-10 opacity-60 dark:opacity-40"
         style={{
           background:
-            "radial-gradient(386% 163% at -13% -17%, rgba(232,64,13,0.12) 0%, rgba(255,238,216,0.5) 26%, rgba(208,178,255,0.3) 84%), radial-gradient(80% 109% at 52% 63%, rgba(208,178,255,0.2) 0%, rgba(198,236,233,0.3) 35%, rgba(153,255,249,0.15) 97%)",
+            "radial-gradient(386% 163% at -13% -17%, rgba(232,64,13,0.18) 0%, transparent 42%), radial-gradient(80% 109% at 52% 63%, rgba(255,138,71,0.08) 0%, transparent 55%)",
         }}
         aria-hidden
       />
@@ -67,8 +67,8 @@ export function WelcomeStep({ wizard: w }: WelcomeStepProps) {
             <ShinyText
               text="AI-native chat that runs on your edge"
               speed={2.5}
-              color="hsl(var(--muted-foreground))"
-              shineColor="hsl(var(--primary))"
+              color="var(--muted-foreground)"
+              shineColor="var(--primary)"
             />
           </p>
         </AnimatedContent>
@@ -89,9 +89,9 @@ export function WelcomeStep({ wizard: w }: WelcomeStepProps) {
                   <GlareHover
                     width="100%"
                     height="auto"
-                    background="rgba(255,255,255,0.85)"
+                    background="var(--surface-card)"
                     borderRadius="1rem"
-                    borderColor="hsl(var(--border))"
+                    borderColor="var(--border)"
                     glareColor={vp.glareHex}
                     glareOpacity={0.4}
                     glareSize={200}

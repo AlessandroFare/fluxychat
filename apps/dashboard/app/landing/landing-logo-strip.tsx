@@ -2,12 +2,12 @@ import { LANDING_BADGES, STACK_LOGOS } from "./landing-shared";
 
 export function LandingLogoStrip() {
   return (
-    <section className="border-b border-border bg-white py-10">
+    <section className="border-b border-[var(--mkt-border)] py-10">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mb-2 text-center text-xs font-semibold uppercase text-[var(--mkt-text-muted)]">
           Works with stacks you already use
         </p>
-        <p className="mb-8 text-center text-sm text-muted-foreground">
+        <p className="mb-8 text-pretty text-center text-sm text-[var(--mkt-text-muted)]">
           One SDK across common frontends and runtimes. Fork the repo when you want full control.
         </p>
         <div
@@ -20,7 +20,7 @@ export function LandingLogoStrip() {
                 {STACK_LOGOS.map((name) => (
                   <span
                     key={`${copy}-${name}`}
-                    className="inline-flex max-w-[10rem] items-center truncate rounded-full border border-border bg-muted/50 px-4 py-2 text-sm font-semibold text-foreground sm:max-w-none"
+                    className="inline-flex max-w-[10rem] items-center truncate rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-4 py-2 text-sm font-semibold text-[var(--mkt-text)] sm:max-w-none"
                   >
                     {name}
                   </span>
@@ -30,7 +30,7 @@ export function LandingLogoStrip() {
           </div>
         </div>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-xs font-semibold uppercase text-[var(--mkt-text-muted)]">
             Featured on
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">

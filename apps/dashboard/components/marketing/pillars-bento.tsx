@@ -46,23 +46,23 @@ function PillarBentoCard({ icon: Icon, title, body, label }: PillarBentoItem) {
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
       className={cn(
-        "fluxy-pillar-bento fluxy-pillar-bento--glow relative flex min-h-[220px] flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md",
+        "fluxy-pillar-bento fluxy-pillar-bento--glow relative flex min-h-[220px] flex-col justify-between rounded-2xl border border-white/15 bg-zinc-950/80 p-6 text-white shadow-none",
       )}
     >
       <div className="relative z-10">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--am-whisper-gray)]"
+            className="flex size-10 items-center justify-center rounded-xl bg-white/10"
             aria-hidden
           >
-            <Icon className="h-5 w-5 text-foreground" />
+            <Icon className="size-5 text-white" />
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="text-[10px] font-semibold uppercase text-zinc-400">
             {label}
           </span>
         </div>
-        <h3 className="font-heading text-base font-semibold text-foreground">{title}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+        <h3 className="font-heading text-base font-semibold text-white">{title}</h3>
+        <p className="mt-2 text-pretty text-sm leading-relaxed text-zinc-400">{body}</p>
       </div>
     </div>
   );

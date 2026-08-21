@@ -73,7 +73,7 @@ const PILLARS: readonly PillarBentoItem[] = [
 export function LandingFeaturesClient() {
   return (
     <>
-      <section id="features" className="scroll-mt-20 border-b border-border bg-[#0e0e0e]">
+      <section id="features" className="scroll-mt-20 border-b border-white/10">
         <div className="mx-auto max-w-6xl px-4 pt-14 pb-5 sm:px-6 sm:pt-16">
           <h2 className="mb-2 text-center font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl">
             Messaging basics, on the edge
@@ -109,30 +109,29 @@ export function LandingFeaturesClient() {
       </Suspense>
 
       <section
-        className="border-b border-border px-4 py-16 sm:px-6"
-        style={{ backgroundColor: "var(--am-whisper-gray)" }}
+        className="border-b border-white/[0.06] px-4 py-16 sm:px-6"
       >
         <div className="mx-auto max-w-6xl">
-          <h2 className="mb-2 text-center font-heading text-3xl font-bold tracking-tight">
+          <h2 className="mb-2 text-center font-heading text-3xl font-bold tracking-tight text-white">
             What ships in the box
           </h2>
-          <p className="mx-auto mb-4 max-w-2xl text-center text-base text-muted-foreground">
+          <p className="mx-auto mb-4 max-w-2xl text-center text-base text-zinc-400">
             Edge delivery, AI-native streaming, 14 platform adapters, and a console for day-two work. You own the UI; we handle rooms, delivery, agents, and ops hooks.
           </p>
-          <p className="mx-auto mb-6 max-w-2xl text-center text-sm text-muted-foreground">{MARKETING_WHY.body}</p>
+          <p className="mx-auto mb-6 max-w-2xl text-center text-sm text-zinc-400">{MARKETING_WHY.body}</p>
           <ul className="mx-auto mb-10 flex max-w-3xl flex-wrap justify-center gap-2">
             {MARKETING_PLATFORM_FEATURES.map((feature) => (
               <li
                 key={feature}
-                className="rounded-full border border-border bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-700 sm:text-sm"
+                className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-200 sm:text-sm"
               >
                 {feature}
               </li>
             ))}
           </ul>
-          <p className="mx-auto mb-10 max-w-2xl text-center text-sm text-muted-foreground">
+          <p className="mx-auto mb-10 max-w-2xl text-center text-sm text-zinc-400">
             Already set up?{" "}
-            <Link href={HOSTED_PATHS.console} className="font-medium text-foreground underline-offset-4 hover:underline">
+            <Link href={HOSTED_PATHS.console} className="font-medium text-white underline-offset-4 hover:underline">
               Open the console
             </Link>{" "}
             for rooms, agents, and billing.
@@ -143,7 +142,7 @@ export function LandingFeaturesClient() {
         </div>
       </section>
 
-      <section className="border-b border-border bg-[#0e0e0e] px-4 py-12 sm:px-6">
+      <section className="border-b border-white/10 px-4 py-12 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <p className="mb-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
             Built-in architecture
@@ -164,14 +163,14 @@ export function LandingFeaturesClient() {
         </div>
       </section>
 
-      <section className="border-b border-border bg-white px-4 py-20 sm:px-6">
+      <section className="border-b border-white/[0.06] px-4 py-20 sm:px-6">
         <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-2 lg:items-center">
           <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Middleware pipeline</p>
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Middleware pipeline</p>
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-white">
               Transform messages and AI responses before they land
             </h2>
-            <p className="mt-4 text-muted-foreground">
+            <p className="mt-4 text-zinc-400">
               Moderate, validate, enrich, and fan out from the edge. LLM middleware supports guardrails, caching, RAG injection, PII redaction, and logging via wrapGenerate / wrapStream / transformParams. Policy code stays on the data path, not in a sidecar you forget to deploy.
             </p>
           </div>
@@ -181,14 +180,14 @@ export function LandingFeaturesClient() {
         </div>
       </section>
 
-      <section className="border-b border-border bg-[var(--am-whisper-gray)] px-4 py-20 sm:px-6">
+      <section className="border-b border-white/[0.06] bg-[var(--mkt-bg-elevated)] px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-12 rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-sm)] sm:p-10">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Developers</p>
-            <h2 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
+          <div className="mkt-panel mb-12 rounded-2xl p-8 sm:p-10">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Developers</p>
+            <h2 className="font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl">
               SDK, CLI, docs, and console in one repo
             </h2>
-            <p className="mt-3 max-w-3xl text-muted-foreground">
+            <p className="mt-3 max-w-3xl text-zinc-400">
               Auth, rooms, and retries sit behind hooks and route handlers. Scaffold a new project with create-fluxy-chat CLI. When you need keys, quotas, or billing, open the operator UI instead of wiring another admin surface.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -197,13 +196,13 @@ export function LandingFeaturesClient() {
                   {HOSTED_COPY.startFree}
                 </Link>
               </Button>
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" className="border-white/15 bg-transparent text-white hover:bg-white/5">
                 <Link href={HOSTED_PATHS.docs}>{HOSTED_COPY.viewDocs}</Link>
               </Button>
             </div>
           </div>
           <div className="flex flex-col items-center text-center">
-            <h3 id="where-teams-start" className="relative z-10 font-heading text-xl font-semibold tracking-tight">
+            <h3 id="where-teams-start" className="relative z-10 font-heading text-xl font-semibold tracking-tight text-white">
               Where teams start
             </h3>
             <div className="relative z-0 w-full max-w-full overflow-x-auto">
@@ -216,13 +215,13 @@ export function LandingFeaturesClient() {
                 <Card
                   key={u.title}
                   className={cn(
-                    "border-black/[0.06] bg-white/95 shadow-[var(--shadow-subtle-2)]",
-                    "transition duration-300 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md",
+                    "border-white/10 bg-[#171719] shadow-none",
+                    "transition duration-300 hover:-translate-y-0.5 hover:border-[var(--mkt-brand)]/35",
                   )}
                 >
                   <CardContent className="min-h-[11rem] pt-7">
-                    <h4 className="font-heading text-base font-semibold text-slate-900">{u.title}</h4>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-600">{u.body}</p>
+                    <h4 className="font-heading text-base font-semibold text-white">{u.title}</h4>
+                    <p className="mt-3 text-sm leading-relaxed text-zinc-400">{u.body}</p>
                   </CardContent>
                 </Card>
               ))}

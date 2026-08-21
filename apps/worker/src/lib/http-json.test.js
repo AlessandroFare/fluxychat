@@ -25,4 +25,16 @@ describe("createJsonResponder", () => {
     const body = await res.json();
     expect(body).toEqual({ ok: true });
   });
+
+  it("accepts numeric status like json(data, 401)", async () => {
+    const json = createJsonResponder({
+      traceId: "trace-test-3",
+      corsHeaders: {},
+    });
+    const res = json({ error: "unauthorized" }, 401);
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe("unauthorized");
+    expect(body.traceId).toBe("trace-test-3");
+  });
 });
