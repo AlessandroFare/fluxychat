@@ -1,36 +1,26 @@
 ---
 title: FluxyChat Docs
-description: Realtime chat on Cloudflare Workers — SDK, Worker API, and platform modules.
+description: Realtime rooms on Cloudflare Workers. SDK, Worker API, hosted or self-host.
 ---
 
-FluxyChat is a realtime messaging platform built on Cloudflare Workers, Durable Objects, and D1. You run a Worker (hosted cloud or self-hosted), mint JWTs from your backend, and connect clients with `@fluxy-chat/sdk` and `@fluxy-chat/react`.
+You run a Worker (ours or yours). Your backend mints JWTs. The browser uses `@fluxy-chat/sdk` and `@fluxy-chat/react`.
 
 <Cards>
-  <Card title="UI kit (3 lines)" description="Drop-in FluxyChatWidget for polished chat UI." href="/docs/packages/ui-kit" />
-  <Card title="Quickstart" description="Install the SDK, mint a JWT, send your first message." href="/docs/getting-started/quickstart" />
-  <Card title="Core SDK" description="FluxyChatClient, useChat, connection state, agents." href="/docs/core" />
-  <Card title="Platform" description="Stream, collab, game, IoT, fleet, transport." href="/docs/platform" />
-  <Card title="API reference" description="REST endpoints on your Worker — browse by tag in the HTTP API sidebar." href="/docs/api-reference" />
-  <Card title="Cookbook" description="JWT auth, transport fallback, templates, HTTP publish." href="/docs/cookbook" />
-  <Card title="Self-hosting" description="Deploy the Worker on your Cloudflare account." href="/docs/getting-started/self-hosting" />
+  <Card title="Choose a path" description="Hosted CLI, self-host, or SDK-only." href="/docs/getting-started/choose-your-path" />
+  <Card title="Quickstart" description="First message in a room." href="/docs/getting-started/quickstart" />
+  <Card title="Core SDK" description="useChat, inbox, agents." href="/docs/core" />
+  <Card title="Self-hosting" description="Worker on your Cloudflare account." href="/docs/getting-started/self-hosting" />
+  <Card title="API reference" description="REST on the Worker." href="/docs/api-reference" />
+  <Card title="Cookbook" description="JWT, transport fallback, RAG." href="/docs/cookbook" />
 </Cards>
 
 ## What you need
 
-| Piece | Who sets it | Notes |
-|-------|-------------|-------|
-| Worker URL | You | e.g. `https://your-worker.workers.dev` or custom domain |
-| Project API key (`fc_…`) | Console or provisioning | Server-side only — mints JWTs |
-| Member JWT | Your backend | Passed to the SDK as `token` |
-| LLM keys | Worker secrets | For in-room agents; never in the browser |
+| Piece | Who sets it |
+|-------|-------------|
+| Worker URL | Hosted API or your `workers.dev` |
+| Project API key (`fc_…`) | Server only. Mints JWTs. |
+| Member JWT | Your backend → SDK |
+| LLM keys | Worker secrets. Never the browser. |
 
-## Monorepo layout
-
-- `apps/worker` — Cloudflare Worker (WebSocket, REST, Durable Objects)
-- `apps/dashboard` — Next.js operator console and marketing
-- `apps/docs` — this documentation site
-- `packages/sdk` — TypeScript client
-- `packages/react` — React hooks (`useChat`, `useInbox`, …)
-- `packages/protocol` — shared WebSocket event types
-
-Try hosted at [fluxychat.com](https://fluxychat.com) or run locally with `pnpm install && pnpm run dev:setup && pnpm dev`.
+Try [fluxychat.com](https://fluxychat.com). Contributors: `pnpm install && pnpm run self-host && pnpm --filter @fluxy-chat/worker dev`.

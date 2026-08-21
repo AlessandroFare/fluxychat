@@ -6,11 +6,11 @@ description: REST endpoints on your FluxyChat Worker — auth, messages, rooms, 
 Every route below is served by your Worker (`openapi.docs.yaml`). Expand **HTTP API** in the sidebar for tag groups (Auth, Messages, Rooms, Agents, Admin, …). Each page includes method badges and a try-it curl panel.
 
 <Banner variant="info">
-  WebSocket room sockets and the user channel are documented under [Wire protocol](/docs/architecture/wire-protocol), not in this OpenAPI tree.
+  WebSocket room sockets and the user channel are documented under [Wire protocol](/docs/architecture/response-envelope-extension), not in this OpenAPI tree.
 </Banner>
 
 <Cards>
   <Card title="OpenAPI spec" description="Download the raw YAML served at /openapi.yaml." href="/openapi.yaml" />
-  <Card title="JWT auth guide" description="Mint member tokens from your backend." href="/docs/guides/security/jwt-auth" />
+  <Card title="JWT auth guide" description="Mint member tokens from your backend." href="/docs/guides/auth-jwt" />
   <Card title="Local Worker" description="Run wrangler dev on port 8787." href="/docs/getting-started/local-development" />
 </Cards>

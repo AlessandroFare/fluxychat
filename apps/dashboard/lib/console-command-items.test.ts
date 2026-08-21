@@ -15,6 +15,11 @@ describe("console-command-items", () => {
     );
   });
 
+  it("hides lab routes from the palette when labs flags are off", () => {
+    expect(items.some((item) => item.href === "/game")).toBe(false);
+    expect(items.some((item) => item.href === "/marketplace")).toBe(false);
+  });
+
   it("filters by label and keywords", () => {
     const filtered = filterConsoleCommandItems(items, "billing");
     expect(filtered.some((item) => item.label === "Billing")).toBe(true);

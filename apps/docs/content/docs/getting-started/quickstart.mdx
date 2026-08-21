@@ -1,63 +1,43 @@
 ---
 title: Quickstart
-description: "Goal: first live message in a room using FluxyChat local Worker or hosted deployment."
+description: First live message — CLI hosted, or a few lines of React.
 ---
 
-# Ship in-app chat in one afternoon
+# First message
 
-Goal: first live message in a room using FluxyChat local Worker or hosted deployment.
+Two ways. CLI if you want an app on disk. React snippet if you already have a Next/Vite project.
 
-## 0. Zero-to-message (repo clone, ~90 seconds)
+## A. CLI (hosted)
 
 ```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
+cd my-app
 pnpm install
-pnpm run first-message
+pnpm setup:hosted
+pnpm dev
 ```
 
-Uses `http://127.0.0.1:8787`, project `dev-local`, room `dev-local-general`. The script writes `FLUXY_CONSOLE_API_KEY` to `apps/worker/.dev.vars` when a new key is minted.
+Open http://localhost:5173, finish the tour, sign in. Mention `@assistant` in the room.
 
-## 1. Install in your app (2 min)
+Self-host instead? [Choose your path](/docs/getting-started/choose-your-path).
+
+## B. React in an existing app
 
 ```bash
 pnpm add @fluxy-chat/sdk @fluxy-chat/react
 ```
 
-## 2. Worker URL + JWT (10 min)
-
-**Local dev:** use values printed by `pnpm run first-message`.
-
-**Hosted:** sign up at your dashboard → Quickstart → copy **member JWT** and **Worker URL**.
-
-**Self-host:** deploy `apps/worker`, run D1 migrations (`wrangler d1 migrations apply`), mint JWT via `POST /auth/token` with project API key.
-
-## 3. React hook (15 min)
+`FluxyRealtimeProvider` takes `workerUrl` and `authTokenProvider`, not a `client` prop.
 
 ```tsx
-import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
-const client = new FluxyChatClient({
-  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,
-  userId: "user-1",
-  token: memberJwt,
-});
-
 function Room({ roomId }: { roomId: string }) {
-  const {
-    messages,
-    sendMessage,
-    connectionState,
-    sendReadReceipt,
-    loadMore,
-  } = useChat({
-    roomId,
-    client,
-    markReadLatest: true,
-  });
+  const { messages, sendMessage, connectionState } = useChat({ roomId });
 
   return (
     <div>
-      <p>Status: {connectionState}</p>
+      <p>Status: {connectionState.status}</p>
       <ul>
         {messages.map((m) => (
           <li key={m.id ?? m.clientMessageId}>{m.content}</li>
@@ -66,52 +46,25 @@ function Room({ roomId }: { roomId: string }) {
       <button type="button" onClick={() => sendMessage("Hello")}>
         Send
       </button>
-      <button type="button" onClick={() => loadMore()}>
-        Older
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          const last = messages.at(-1);
-          if (last?.id) sendReadReceipt(last.id);
-        }}
-      >
-        Mark read
-      </button>
     </div>
   );
 }
 
-export function App({ jwt }: { jwt: string }) {
+export function App({ workerUrl, jwt }: { workerUrl: string; jwt: string }) {
   return (
-    <FluxyRealtimeProvider client={client}>
-      <Room roomId="dev-local-general" />
+    <FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={jwt}>
+      <Room roomId="general" />
     </FluxyRealtimeProvider>
   );
 }
 ```
 
-## 4. Rooms + unread (5 min)
+Mint `jwt` on your server with `POST /auth/token` and a project API key (`fc_…`). See [Auth JWT](/docs/guides/auth-jwt).
 
-```ts
-const rooms = await client.listRooms();
-// each room may include unreadCount when using member JWT
-```
-
-## 5. In-app notifications (optional)
-
-```ts
-import { useNotifications } from "@fluxy-chat/react";
-
-const { notifications, markRead, markAllRead } = useNotifications(client, {
-  unreadOnly: true,
-});
-```
-
-Mentions and DM messages create rows automatically (requires migration `0037_in_app_notifications.sql`).
+Local clone of this repo: `pnpm run first-message` prints a Worker URL and JWT for `dev-local-general`.
 
 ## Next
 
-- [Message middleware](/docs/reference/message-middleware)
+- [Client setup](/docs/getting-started/client-setup)
 - [Transport fallback](/docs/cookbook/transport-fallback)
 - [Dashboard integration](/docs/reference/dashboard-integration)

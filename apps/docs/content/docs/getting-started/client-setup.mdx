@@ -13,28 +13,23 @@ pnpm add @fluxy-chat/sdk @fluxy-chat/react zustand
 ```
 
 ```tsx
-import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
-const client = new FluxyChatClient({
-  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,
-  userId: "alice",
-  token: memberJwt,
-});
-
-function App() {
+function App({ workerUrl, memberJwt }: { workerUrl: string; memberJwt: string }) {
   return (
-    <FluxyRealtimeProvider workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!}>
+    <FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={memberJwt}>
       <Room roomId="general" />
     </FluxyRealtimeProvider>
   );
 }
 
 function Room({ roomId }: { roomId: string }) {
-  const { messages, sendMessage, connectionState } = useChat({ roomId, client });
+  const { messages, sendMessage, connectionState } = useChat({ roomId });
   // render messages…
 }
 ```
+
+`FluxyRealtimeProvider` takes `workerUrl` and `authTokenProvider` (a JWT string or a function). There is no `client` prop.
 
 See [@fluxy-chat/react](/docs/packages/react) and [useChat](/docs/core/use-chat).
 

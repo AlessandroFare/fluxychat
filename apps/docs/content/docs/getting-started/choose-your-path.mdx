@@ -1,24 +1,21 @@
 ---
 title: Choose your path
-description: What each FluxyChat entry command gives you — and what still requires manual setup.
+description: Hosted, self-host, or SDK-only — what each command actually gives you.
 ---
 
-# Choose your path
+You are wiring chat (and maybe an agent) into an app. Pick one:
 
-FluxyChat has several entry points. Pick the one that matches your goal.
+| Path | What you get | You run |
+| --- | --- | --- |
+| **Hosted** `npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y` | Vite chat app. Clerk. Project + room + `@assistant` after login. | Nothing on Cloudflare. |
+| **Self-host** `npx @fluxy-chat/create-fluxy-chat@latest my-app --full --mode self-host` | Same Vite app, pointed at **your** Worker. Setup asks for Worker URL and secrets. | Worker on Cloudflare (or `wrangler dev` from a FluxyChat clone). |
+| `--template react` | Vite + `useChat`. You paste Worker URL and JWT. | Your Worker or hosted API. |
+| `--minimal` | Widget only. | Same. |
+| [fluxychat.com](https://fluxychat.com) | Browser playground / console. | Nothing. |
 
-## Comparison
+Always use the scoped package: `@fluxy-chat/create-fluxy-chat`. Bare `npx create-fluxy-chat` 404s.
 
-| Command / path | Chat UI | Realtime | `@assistant` | Console | Worker |
-| --- | --- | --- | --- | --- | --- |
-| **`npx create-fluxy-chat --mode hosted`** | ✅ Vite app | ✅ | ✅ (demo session) | Link | Managed API |
-| **`npx create-fluxy-chat --full`** | ✅ Vite app | ✅ | ✅ (after `pnpm setup`) | Link / local | Local worker |
-| `npx create-fluxy-chat --template react` | ✅ | ✅ | ❌ | ❌ | Bring `.env` credentials |
-| `npx create-fluxy-chat --minimal` | Widget only | ✅ | ❌ | ❌ | Bring `.env` credentials |
-| `pnpm run first-message` (monorepo) | ❌ (terminal) | ✅ API | ❌ | ❌ | Starts local worker |
-| [fluxychat.com](https://fluxychat.com) hosted | ✅ | ✅ | ✅ | ✅ | Managed |
-
-## Recommended: hosted (zero wrangler)
+## Hosted
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
@@ -28,46 +25,43 @@ pnpm setup:hosted
 pnpm dev
 ```
 
-## Recommended: full stack local
+Localhost: 3-step tour, then Clerk, then chat. Second tab = realtime. Dashboard is a button, not the first screen.
 
-```bash
-npx create-fluxy-chat@latest my-app --full -y
-cd my-app
-pnpm install
+## Self-host (your Worker)
 
-# Start worker (from FluxyChat monorepo clone)
-pnpm --filter @fluxy-chat/worker dev
-
-# In my-app
-pnpm setup
-pnpm dev
-```
-
-`pnpm setup` calls `POST /dev/provision` (local) or `GET /demo/session` (hosted). After setup, open `{console}/onboarding?from=cli` and paste `.env` to jump to First Chat.
-
-## Monorepo contributors
+You need the FluxyChat Worker running. Companies usually clone the repo once, deploy `apps/worker`, then point many apps at that URL.
 
 ```bash
 git clone https://github.com/AlessandroFare/fluxychat
 cd fluxychat
 pnpm install
-pnpm run self-host    # env + D1 migrations
+pnpm run self-host
+# paste Groq/OpenAI key when asked, or edit apps/worker/.dev.vars
 pnpm --filter @fluxy-chat/worker dev
-pnpm run first-message
 ```
 
-## Hosted (no wrangler)
+In another terminal:
 
-1. Sign up at [fluxychat.com](https://fluxychat.com)
-2. Complete [/onboarding](https://fluxychat.com/onboarding)
-3. Copy Worker URL + member JWT into your app's `.env`
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-app --full --mode self-host
+cd my-app
+pnpm install
+pnpm setup:local
+pnpm dev
+```
 
-## Roadmap
+`pnpm setup:local` talks to `POST /dev/provision` on your Worker (`ALLOW_DEV_PROVISION=true` in `.dev.vars`). If the Worker is down, the script asks for the URL instead of dying silently.
 
-One-command **hosted sandbox** (no local worker) is tracked in [ONE-CLICK-PRODUCT-ROADMAP.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/ONE-CLICK-PRODUCT-ROADMAP.md).
+## SDK only
+
+```bash
+pnpm add @fluxy-chat/sdk @fluxy-chat/react
+```
+
+Then [client setup](/docs/getting-started/client-setup). JWT: [Auth JWT](/docs/guides/auth-jwt).
 
 ## Related
 
-- [Client setup](/docs/getting-started/client-setup)
+- [create-fluxy-chat](/docs/guides/create-fluxy-chat)
 - [Self-host one command](/docs/guides/self-host-one-command)
-- [create-fluxy-chat guide](/docs/guides/create-fluxy-chat)
+- [Client setup](/docs/getting-started/client-setup)

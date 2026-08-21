@@ -52,7 +52,6 @@ import {
 } from "lucide-react";
 import { HOSTED_PATHS, isMarketingPath } from "@/lib/hosted-product";
 import {
-  DASHBOARD_LAB_HREFS,
   dashboardFeatureFlags,
   filterDashboardNavItems,
 } from "@/lib/dashboard-feature-flags";
@@ -187,8 +186,6 @@ export interface ConsoleNavGroup {
   defaultOpen?: boolean;
 }
 
-const LAB_SHOWCASE_HREFS = DASHBOARD_LAB_HREFS;
-
 const CONTINUITY_LAB: ConsoleNavItem = {
   href: "/continuity",
   label: "Cross-Reality",
@@ -231,7 +228,7 @@ function buildConsoleNavGroups(): ConsoleNavGroup[] {
     },
     {
       label: "Industries",
-      items: CONSOLE_NAV_INDUSTRIES,
+      items: filterItems(CONSOLE_NAV_INDUSTRIES),
       defaultOpen: false,
     },
   ];

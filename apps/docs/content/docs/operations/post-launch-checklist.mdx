@@ -11,7 +11,7 @@ Execution tasks after Worker deploy, npm publish, and GitHub secrets are in plac
 
 ## 1. Voice load test — real numbers
 
-**Goal:** Fill [VOICE-LOAD-TEST-REPORT.md](/docs/VOICE-LOAD-TEST-REPORT) with verifiable P90/P95, not estimates.
+**Goal:** Fill [VOICE-LOAD-TEST-REPORT.md](/docs/operations/voice-load-test-report) with verifiable P90/P95, not estimates.
 
 **Prereqs:** LiveKit configured (Cloud or `examples/livekit/` Docker).
 
@@ -56,7 +56,7 @@ node scripts/generate-mcp-verified-page.mjs
 
 **Retroactive:** Re-run workflow after adding more servers under `examples/mcp/`. For third-party MCP servers, outreach to maintainers — ask permission to list as verified in your catalog.
 
-See: [MCP audit runbook in docs site](/docs/guides/ecosystem/mcp-audit-runbook) (apps/docs).
+See: [MCP audit runbook in docs site](/docs/operations/production-setup) (apps/docs).
 
 ---
 
@@ -92,7 +92,7 @@ After publish:
 - [ ] `@fluxy-chat/ui-kit@0.1.0` on npm
 - [ ] `@fluxy-chat/sdk@0.6.0`, `create-fluxy-chat@0.3.0`, etc.
 - [ ] Docs homepage card → [UI kit quickstart](/docs/packages/ui-kit)
-- [ ] `/get-started` mentions `npx create-fluxy-chat my-chat --minimal`
+- [ ] `/get-started` mentions `npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal`
 
 ---
 
@@ -103,7 +103,7 @@ Not blocking console deploy. When ready:
 1. Follow [maven-central-publish.md](/docs/integrations/maven-central-publish)
 2. `git tag sdk-v1.0.0 && git push origin sdk-v1.0.0`
 3. Approve first staging release on central.sonatype.com
-4. Update [feature parity checklist](/docs/guides/feature-parity-checklist): Mobile SDK → live
+4. Update [feature parity checklist](/docs/guides/migrate-from-pusher): Mobile SDK → live
 
 ---
 
@@ -138,4 +138,4 @@ Skip iframe embed. Self-host + external link only:
 | Activepieces iframe embed | Enterprise license |
 | Native Zendesk/SF connectors | Activepieces POC sufficient until customer demand |
 
-See [COMPETITIVE-STRATEGY.md](/docs/COMPETITIVE-STRATEGY).
+See [COMPETITIVE-STRATEGY.md](/docs/architecture/competitive-strategy).

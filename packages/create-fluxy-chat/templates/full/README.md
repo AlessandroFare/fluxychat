@@ -16,23 +16,29 @@ pnpm dev
 
 Localhost opens a 3-step tour. Last step is sign in. After Clerk you come back to a simple chat. Open a second tab to try realtime. Use Open dashboard for rooms and agents.
 
-**Local worker:**
+**Self-host (your Worker):**
 
 ```bash
+# In the FluxyChat repo
+pnpm run self-host
 pnpm --filter @fluxy-chat/worker dev
-npx @fluxy-chat/create-fluxy-chat@latest my-app --full -y
+
+# In another terminal
+npx @fluxy-chat/create-fluxy-chat@latest my-app --mode self-host
 cd my-app
 pnpm install
-pnpm setup
+pnpm setup:local
 pnpm dev
 ```
+
+If the Worker is down, `setup:local` asks for the URL. Merge `.fluxy/worker.dev.vars` into `apps/worker/.dev.vars` (Groq key + `ALLOW_DEV_PROVISION=true`).
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
 | `pnpm setup:hosted` | Writes worker + console URLs. Auth happens in the browser via Clerk. |
-| `pnpm setup:local` | Local `/dev/provision` |
+| `pnpm setup:local` / `pnpm setup:self-host` | `POST /dev/provision` on your Worker |
 | `pnpm doctor` | Health check |
 | `pnpm dev` | Start Vite |
 

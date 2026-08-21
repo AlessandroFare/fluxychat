@@ -3,6 +3,7 @@
   "icon": "Rocket",
   "pages": [
     "index",
+    "choose-your-path",
     "quickstart",
     "chat-only-quickstart",
     "client-setup",

@@ -1,0 +1,13 @@
+---
+title: Loop control
+description: Step and tool-call limits for agent runs.
+---
+
+Cap how long an agent may loop so a bad tool call cannot spin forever.
+
+Typical knobs (Worker / agent config):
+
+- `maxSteps` — model turns in one run
+- `maxToolCalls` — tools the model may invoke
+
+See [Prune messages](/docs/guides/prune-messages) and [Subagents](/docs/guides/subagents).

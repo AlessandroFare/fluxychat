@@ -13,10 +13,9 @@ Use this path when you want **in-app chat only** — not stream, IoT, fleet, or 
 pnpm add @fluxy-chat/sdk @fluxy-chat/react
 ```
 
-Import only chat hooks (keeps your bundle small):
+Import chat hooks (keeps your bundle small):
 
 ```tsx
-import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 ```
 
@@ -35,24 +34,32 @@ pnpm install && pnpm run first-message
 ```tsx
 "use client";
 
-import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
-const client = new FluxyChatClient({
-  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,
-  userId: "user-1",
-  token: process.env.NEXT_PUBLIC_FLUXYCHAT_MEMBER_JWT!,
-});
+export function ChatPanel({
+  workerUrl,
+  jwt,
+  roomId,
+}: {
+  workerUrl: string;
+  jwt: string;
+  roomId: string;
+}) {
+  return (
+    <FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={jwt}>
+      <Room roomId={roomId} />
+    </FluxyRealtimeProvider>
+  );
+}
 
-export function ChatPanel({ roomId }: { roomId: string }) {
+function Room({ roomId }: { roomId: string }) {
   const { messages, sendMessage, connectionState } = useChat({
     roomId,
-    client,
     markReadLatest: true,
   });
 
   return (
-    <FluxyRealtimeProvider client={client}>
+    <>
       <p>Status: {connectionState.status}</p>
       <ul>
         {messages.map((m) => (
@@ -62,7 +69,7 @@ export function ChatPanel({ roomId }: { roomId: string }) {
       <button type="button" onClick={() => sendMessage("Hello")}>
         Send
       </button>
-    </FluxyRealtimeProvider>
+    </>
   );
 }
 ```
@@ -75,7 +82,7 @@ Mention an agent configured in the console:
 await sendMessage("@assistant How can you help?");
 ```
 
-Streaming replies use the same WebSocket — see [Agents guide](/docs/guides/agents).
+Streaming replies use the same WebSocket — see [Agents guide](/docs/core/agents).
 
 ## 5. Inbox
 
@@ -88,5 +95,5 @@ const { items, unreadCount, markRead } = useInbox({ client });
 ## Next steps
 
 - [Full quickstart](/docs/getting-started/quickstart) — self-host, loadMore, reactions
-- [Feature parity checklist](/docs/guides/feature-parity-checklist)
+- [Feature parity checklist](/docs/guides/migrate-from-pusher)
 - [Compare vendors](https://fluxychat.com/compare)

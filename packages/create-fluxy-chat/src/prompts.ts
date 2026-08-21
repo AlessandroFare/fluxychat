@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
   confirm,
   isCancel,
@@ -10,6 +11,13 @@ import {
   detectPackageManagerFromLockfiles,
   validateProjectName,
 } from "./utils.js";
+
+const DEFAULT_WORKER_URL = "http://127.0.0.1:8787";
+const DEFAULT_CONSOLE_URL = "http://localhost:3000";
+
+function generateJwtSigningKey(): string {
+  return randomBytes(32).toString("hex");
+}
 
 interface PromptInputs {
   name?: string;
@@ -38,7 +46,6 @@ export async function runPrompts(
 ): Promise<ProjectConfig | null> {
   // --- Project name ---
   const full = inputs.full ?? inputs.adapter === "full";
-  const mode = inputs.mode ?? (full ? "local" : undefined);
   let name = inputs.name;
   if (!name) {
     if (inputs.yes) {
@@ -160,6 +167,69 @@ export async function runPrompts(
         }));
   if (isCancel(shouldInitGit)) return null;
 
+  const isFull = full || adapter === "full";
+  let resolvedMode = inputs.mode;
+  let workerUrl: string | undefined;
+  let consoleUrl: string | undefined;
+  let groqApiKey: string | undefined;
+  let jwtSigningKey: string | undefined;
+
+  if (isFull) {
+    if (!resolvedMode) {
+      if (inputs.yes) {
+        resolvedMode = "local";
+      } else {
+        const picked = await select({
+          message: "Where does the Worker run?",
+          options: [
+            {
+              label: "Hosted (fluxychat.com + Clerk — no wrangler)",
+              value: "hosted",
+            },
+            {
+              label: "Self-host (your Worker / wrangler dev)",
+              value: "local",
+            },
+          ],
+        });
+        if (isCancel(picked)) return null;
+        resolvedMode = picked as "local" | "hosted";
+      }
+    }
+
+    if (resolvedMode === "local") {
+      jwtSigningKey = generateJwtSigningKey();
+      if (inputs.yes) {
+        workerUrl = DEFAULT_WORKER_URL;
+        consoleUrl = DEFAULT_CONSOLE_URL;
+      } else {
+        const workerResult = await text({
+          message: "Worker URL:",
+          placeholder: DEFAULT_WORKER_URL,
+          initialValue: DEFAULT_WORKER_URL,
+        });
+        if (isCancel(workerResult)) return null;
+        workerUrl = String(workerResult).trim() || DEFAULT_WORKER_URL;
+
+        const consoleResult = await text({
+          message: "Console URL (dashboard):",
+          placeholder: DEFAULT_CONSOLE_URL,
+          initialValue: DEFAULT_CONSOLE_URL,
+        });
+        if (isCancel(consoleResult)) return null;
+        consoleUrl = String(consoleResult).trim() || DEFAULT_CONSOLE_URL;
+
+        const groqResult = await text({
+          message: "Groq API key (optional, for @assistant):",
+          placeholder: "gsk_…",
+        });
+        if (isCancel(groqResult)) return null;
+        const groq = String(groqResult).trim();
+        if (groq) groqApiKey = groq;
+      }
+    }
+  }
+
   return {
     name,
     adapter: adapter ?? "react",
@@ -168,7 +238,11 @@ export async function runPrompts(
     shouldInstall,
     shouldInitGit,
     minimal: minimal || inputs.minimal === true,
-    full: full || adapter === "full",
-    mode: mode ?? (adapter === "full" ? "local" : undefined),
+    full: isFull,
+    mode: resolvedMode ?? (isFull ? "local" : undefined),
+    workerUrl,
+    consoleUrl,
+    groqApiKey,
+    jwtSigningKey,
   };
 }
