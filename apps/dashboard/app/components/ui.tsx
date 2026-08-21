@@ -51,7 +51,7 @@ export function Section({
   return (
     <section
       className={cn(
-        "mb-6 rounded-2xl border border-black/[0.06] bg-white/90 p-5 shadow-[var(--shadow-subtle-2)] backdrop-blur-sm",
+        "mb-6 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)]",
         "sm:p-6",
         className,
       )}

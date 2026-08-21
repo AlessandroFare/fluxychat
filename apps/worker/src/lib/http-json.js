@@ -2,8 +2,8 @@
  * JSON responder for Worker HTTP routes: attaches traceId to error payloads (4xx/5xx).
  */
 export function createJsonResponder({ traceId, corsHeaders, onErrorStatus }) {
-  return function json(data, init = {}) {
-    return jsonResponse(data, init, { traceId, corsHeaders, onErrorStatus });
+  return function json(data, initOrStatus = {}) {
+    return jsonResponse(data, initOrStatus, { traceId, corsHeaders, onErrorStatus });
   };
 }
 
@@ -33,7 +33,8 @@ function jsonResponse(data, second, thirdOrOptions) {
   let deps = null;
   if (thirdOrOptions && typeof thirdOrOptions === "object" && "traceId" in thirdOrOptions) {
     deps = thirdOrOptions;
-    init = typeof second === "object" && second !== null ? second : {};
+    if (typeof second === "number") init = { status: second };
+    else init = typeof second === "object" && second !== null ? second : {};
   } else {
     const resolved = resolveJsonInit(second, thirdOrOptions);
     init = resolved.init ?? { status: resolved.status ?? 200 };

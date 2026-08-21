@@ -44,7 +44,7 @@ export const SESSION_SECURITY_GUIDE: GuideContent = {
       title: "Preventing session fixation",
       paragraphs: [
         "FluxyChat rotates the refresh token on every use (refresh token rotation). If a stolen refresh token is used, the legitimate user's next refresh will fail, forcing re-authentication.",
-        "Set REQUIRE_ADMIN_AUTH=true in production to prevent unauthenticated admin access.",
+        "REQUIRE_ADMIN_AUTH cannot be turned off in production: only development|test may set REQUIRE_ADMIN_AUTH=false.",
       ],
     },
   ],

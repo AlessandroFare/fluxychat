@@ -11,7 +11,10 @@ export interface TopNavLink {
 }
 
 export const TOP_NAV_LINK_CLASS =
-  "text-sm font-medium text-slate-600 transition-colors hover:text-slate-900";
+  "text-sm font-medium text-zinc-300 transition-colors hover:text-white";
+
+export const TOP_NAV_LINK_CLASS_THEME =
+  "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground";
 
 export function useTopNavMobileMenu() {
   const [open, setOpen] = useState(false);
@@ -37,7 +40,7 @@ export function TopNavMobileMenuButton({
     <button
       type="button"
       className={cn(
-        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-black/[0.08] text-slate-700 md:hidden",
+        "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-zinc-200 md:hidden",
         className,
       )}
       aria-expanded={open}
@@ -73,7 +76,7 @@ export function TopNavMobileMenuPanel({
     <nav
       id={menuId}
       className={cn(
-        "border-t border-black/[0.06] bg-white px-4 py-3 md:hidden",
+        "border-t border-white/10 bg-[#121214] px-4 py-3 md:hidden",
         panelClassName,
       )}
       aria-label="Mobile links"

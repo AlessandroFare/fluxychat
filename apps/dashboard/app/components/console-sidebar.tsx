@@ -48,7 +48,7 @@ function NavLink({
         "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
         isActive
           ? "bg-primary/10 text-primary"
-          : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900",
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
       <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
@@ -79,7 +79,7 @@ function NavSubgroup({ subgroup, navLocked }: { subgroup: ConsoleNavSubgroup; na
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:bg-slate-100/80"
+        className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted"
         aria-expanded={open}
       >
         {subgroup.label}
@@ -126,7 +126,7 @@ function CollapsibleNavGroup({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="mb-2 flex w-full items-center justify-between rounded-lg px-2.5 py-1 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600 hover:bg-slate-100/80"
+        className="mb-2 flex w-full items-center justify-between rounded-lg px-2.5 py-1 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground hover:bg-muted"
         aria-expanded={open}
       >
         {label}
@@ -156,9 +156,9 @@ export function ConsoleSidebar() {
   const { locked: navLocked } = useQuickstartNavLock();
 
   return (
-    <aside className="hidden w-56 shrink-0 border-r border-black/[0.06] bg-white/70 backdrop-blur-md lg:flex lg:flex-col">
-      <div className="flex h-14 items-center border-b border-black/[0.06] px-4">
-        <Link href={HOSTED_PATHS.console} className="text-slate-900" aria-label="Fluxychat console home">
+    <aside className="hidden w-56 shrink-0 border-r border-border bg-background lg:flex lg:flex-col">
+      <div className="flex h-14 items-center border-b border-border px-4">
+        <Link href={HOSTED_PATHS.console} className="text-foreground" aria-label="Fluxychat console home">
           <FluxychatLogotype size={24} />
         </Link>
       </div>
@@ -179,7 +179,7 @@ export function ConsoleSidebar() {
           />
         ))}
       </nav>
-      <div className="space-y-2 border-t border-black/[0.06] p-3">
+      <div className="space-y-2 border-t border-border p-3">
         <CommandPaletteTrigger />
         {navLocked ? (
           <span
@@ -191,14 +191,14 @@ export function ConsoleSidebar() {
         ) : (
           <Link
             href="/settings"
-            className="block rounded-lg px-2.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800"
+            className="block rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Settings
           </Link>
         )}
         <Link
           href={HOSTED_PATHS.landing}
-          className="block rounded-lg px-2.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800"
+          className="block rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           ← Product &amp; pricing
         </Link>

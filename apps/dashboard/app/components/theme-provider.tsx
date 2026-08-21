@@ -32,17 +32,18 @@ export function ThemeProvider({
   const [theme, setThemeState] = useState(defaultTheme);
 
   const setTheme = useCallback((t: string) => {
-    setThemeState(t);
-    try { localStorage.setItem("theme", t); } catch {}
-    if (attribute === "class") {
-      document.documentElement.className = document.documentElement.className
-        .replace(/\btheme-\S+|light|dark\b/g, "")
-        .trim();
-      document.documentElement.classList.add(t);
-    } else {
-      document.documentElement.setAttribute(`data-${attribute}`, t);
+    const next = t === "dark" ? "dark" : "light";
+    setThemeState(next);
+    try {
+      localStorage.setItem("theme", next);
+    } catch {
+      /* ignore quota / private mode */
     }
-  }, [attribute]);
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(next);
+    root.style.colorScheme = next;
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");

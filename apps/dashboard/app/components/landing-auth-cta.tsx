@@ -14,12 +14,15 @@ import {
 
 const signupRedirect = hostedSignupRedirect();
 
+const MKT_CTA =
+  "border border-[#C2410C] bg-[#C2410C] text-white shadow-none hover:border-[#9a3412] hover:bg-[#9a3412] hover:text-white";
+
 export function LandingNavAuthCta({ navDocked }: { navDocked?: boolean }) {
   const dockClass = navDocked ? "h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" : undefined;
 
   if (!isClerkClientConfigured()) {
     return (
-      <Button asChild size="sm" className={cn("shadow-sm", dockClass)}>
+      <Button asChild size="sm" className={cn(MKT_CTA, dockClass)}>
         <Link href={HOSTED_PATHS.getStarted} className="gap-1">
           {HOSTED_COPY.startFree}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
@@ -31,12 +34,12 @@ export function LandingNavAuthCta({ navDocked }: { navDocked?: boolean }) {
   return (
     <>
       <SignInButton mode="redirect" forceRedirectUrl={signupRedirect}>
-        <Button type="button" size="sm" variant="outline" className={dockClass}>
+        <Button type="button" size="sm" className={cn("border-white/80 bg-white text-zinc-900 shadow-none hover:bg-zinc-100 hover:text-zinc-900", dockClass)}>
           {HOSTED_COPY.signIn}
         </Button>
       </SignInButton>
       <SignUpButton mode="redirect" forceRedirectUrl={signupRedirect}>
-        <Button type="button" size="sm" className={cn("shadow-sm", dockClass)}>
+        <Button type="button" size="sm" className={cn(MKT_CTA, dockClass)}>
           <span className="hidden sm:inline">{HOSTED_COPY.startFree}</span>
           <span className="sm:hidden">Free</span>
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
@@ -47,8 +50,10 @@ export function LandingNavAuthCta({ navDocked }: { navDocked?: boolean }) {
 }
 
 export function LandingHeroAuthCta() {
-  const heroClass =
-    "h-[52px] shrink-0 px-8 text-base font-semibold shadow-[0_4px_14px_-2px_rgba(232,69,10,0.45)] sm:w-auto sm:min-w-[11rem]";
+  const heroClass = cn(
+    MKT_CTA,
+    "h-[52px] shrink-0 px-8 text-base font-semibold sm:w-auto sm:min-w-[11rem]",
+  );
 
   if (!isClerkClientConfigured()) {
     return (

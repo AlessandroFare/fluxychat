@@ -200,29 +200,29 @@ const PAUSE_END_MS = 1300;
 const INCOMING_TYPING_MS = 900;
 const OUTGOING_TYPING_MS = 960;
 const preview = {
-  shellBg: "#ffffff",
-  shellText: "#0f172a",
-  headerBorder: "rgba(15, 23, 42, 0.08)",
+  shellBg: "#12141a",
+  shellText: "#e4e4e7",
+  headerBorder: "rgba(255, 255, 255, 0.1)",
   liveDot: "#22c55e",
-  liveBadgeBg: "#d1fae5",
-  liveBadgeText: "#047857",
-  avatarInBg: "#4f46e5",
+  liveBadgeBg: "rgba(34, 197, 94, 0.15)",
+  liveBadgeText: "#86efac",
+  avatarInBg: "#3f3f46",
   avatarInText: "#ffffff",
-  avatarInRing: "rgba(79, 70, 229, 0.25)",
-  avatarOutBg: "#334155",
+  avatarInRing: "rgba(255, 255, 255, 0.12)",
+  avatarOutBg: "#52525b",
   avatarOutText: "#ffffff",
-  avatarOutRing: "rgba(51, 65, 85, 0.2)",
-  bubbleInBg: "#f1f5f9",
-  bubbleInText: "#0f172a",
-  bubbleInBorder: "rgba(148, 163, 184, 0.45)",
-  bubbleOutBg: "#ea580c",
-  bubbleOutText: "#ffffff",
-  metaText: "#64748b",
-  inputBarBg: "#f8fafc",
-  inputBarBorder: "rgba(148, 163, 184, 0.5)",
-  inputFieldBg: "#ffffff",
-  inputFieldText: "#475569",
-  dotIncoming: "#64748b",
+  avatarOutRing: "rgba(255, 255, 255, 0.1)",
+  bubbleInBg: "#27272a",
+  bubbleInText: "#f4f4f5",
+  bubbleInBorder: "rgba(255, 255, 255, 0.08)",
+  bubbleOutBg: "#3f3f46",
+  bubbleOutText: "#fafafa",
+  metaText: "#a1a1aa",
+  inputBarBg: "#18181b",
+  inputBarBorder: "rgba(255, 255, 255, 0.1)",
+  inputFieldBg: "#09090b",
+  inputFieldText: "#a1a1aa",
+  dotIncoming: "#a1a1aa",
   dotOutgoing: "rgba(255,255,255,0.9)",
 } as const;
 
@@ -365,8 +365,8 @@ export function HeroCodeInboxDemo() {
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-hidden">
-      <div className="mb-3 flex flex-col gap-2 border-b border-black/[0.06] pb-3 sm:flex-row sm:items-end sm:justify-between">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Your app</p>
+      <div className="mb-3 flex flex-col gap-2 border-b border-white/10 pb-3 sm:flex-row sm:items-end sm:justify-between">
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Your app</p>
         <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
           <div className="flex flex-wrap justify-end gap-1" role="tablist" aria-label="Preview modes">
             {HERO_PREVIEW_SCENES.map((scene, index) => (
@@ -378,14 +378,14 @@ export function HeroCodeInboxDemo() {
                 onClick={() => setSceneIndex(index)}
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-medium transition",
-                  index === sceneIndex ? "bg-[#111111] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                  index === sceneIndex ? "bg-[#C2410C] text-white" : "border border-white/15 bg-white/5 text-zinc-300 hover:bg-white/10",
                 )}
               >
                 {scene.label}
               </button>
             ))}
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-600">Live preview</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Live preview</p>
         </div>
       </div>
 
@@ -539,7 +539,7 @@ export function HeroCodeInboxDemo() {
                 >
                   {PLACEHOLDER}
                 </div>
-                <Button size="sm" className="shrink-0 rounded-lg" type="button" tabIndex={-1}>
+                <Button size="sm" className="shrink-0 rounded-lg border border-[#C2410C] bg-[#C2410C] text-white hover:bg-[#9a3412]" type="button" tabIndex={-1}>
                   Send
                 </Button>
               </div>
@@ -553,7 +553,7 @@ export function HeroCodeInboxDemo() {
         </div>
       </div>
 
-      <p className="mx-auto mt-4 max-w-3xl text-center text-xs leading-relaxed text-slate-600 sm:text-sm">
+      <p className="mx-auto mt-4 max-w-3xl text-center text-xs leading-relaxed text-zinc-400 sm:text-sm">
         Wire the client once. Tabs cycle chat, agents, location, stream, collab, game, IoT, and channel adapters — same SDK, same room.
       </p>
     </div>

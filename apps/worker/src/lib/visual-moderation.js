@@ -6,6 +6,7 @@
  */
 
 import { logError, logInfo } from "./worker-log.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 import {
   buildAiAuthHeaders,
   isAiConfigured,
@@ -117,7 +118,7 @@ export async function loadAttachmentImageBytes(env, attachment) {
   const publicUrl = resolvePublicAttachmentUrl(env, attachment.url);
   if (publicUrl) {
     try {
-      const res = await fetch(publicUrl, { cf: { cacheTtl: 60 } });
+      const res = await safeOutboundFetch(publicUrl, { cf: { cacheTtl: 60 } }, env);
       if (res.ok) {
         const bytes = await res.arrayBuffer();
         const contentType =

@@ -1,4 +1,5 @@
 import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
+import { FLUXY_MAX_WS_FRAME_CHARS } from "@fluxy-chat/protocol";
 import {
   isValidClientWsPayload,
   isValidLocationTrackEnded,
@@ -991,6 +992,12 @@ export class RoomDurableObject {
 
     let msg;
     try {
+      if (typeof event.data === "string" && event.data.length > FLUXY_MAX_WS_FRAME_CHARS) {
+        webSocket.send(
+          JSON.stringify({ type: "error", message: "payload_too_large" }),
+        );
+        return;
+      }
       msg = JSON.parse(event.data);
 
       if (!isValidClientWsPayload(msg)) {

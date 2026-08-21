@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useYjs } from "./yjs-provider";
+import { sanitizeHtmlFragment } from "@/lib/sanitize-html";
 
 export default function CollabDocument() {
   const { doc, ymap, connected } = useYjs();
@@ -14,12 +15,12 @@ export default function CollabDocument() {
     if (!ymap) return;
     const saved = ymap.get(docKey);
     if (typeof saved === "string" && saved) {
-      setHtml(saved);
+      setHtml(sanitizeHtmlFragment(saved));
     }
     const observer = () => {
       if (syncingRef.current) return;
       const v = ymap.get(docKey);
-      if (typeof v === "string") setHtml(v);
+      if (typeof v === "string") setHtml(sanitizeHtmlFragment(v));
     };
     ymap.observe(observer);
     return () => ymap.unobserve(observer);
@@ -27,7 +28,7 @@ export default function CollabDocument() {
 
   const handleInput = useCallback(() => {
     if (!editorRef.current || !ymap || !doc) return;
-    const content = editorRef.current.innerHTML;
+    const content = sanitizeHtmlFragment(editorRef.current.innerHTML);
     setHtml(content);
     syncingRef.current = true;
     doc.transact(() => { ymap.set(docKey, content); });

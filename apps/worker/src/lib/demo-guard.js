@@ -16,10 +16,13 @@ export function parseAllowedOrigins(envValue) {
 
 /**
  * @param {Request} request
- * @param {string[]} allowedOrigins Empty = allow all (dev default).
+ * @param {string[]} allowedOrigins Empty = deny unless NODE_ENV is development|test.
  */
-export function isDemoOriginAllowed(request, allowedOrigins) {
-  if (!allowedOrigins.length) return true;
+export function isDemoOriginAllowed(request, allowedOrigins, env) {
+  if (!allowedOrigins.length) {
+    const nodeEnv = String(env?.NODE_ENV || "").trim().toLowerCase();
+    return nodeEnv === "development" || nodeEnv === "test";
+  }
 
   const origin = request.headers.get("Origin")?.trim();
   if (origin && allowedOrigins.includes(origin)) return true;
@@ -45,7 +48,7 @@ export function isDemoOriginAllowed(request, allowedOrigins) {
  */
 export async function guardDemoSessionRequest(env, request, options = {}) {
   const allowedOrigins = parseAllowedOrigins(env.DEMO_ALLOWED_ORIGINS);
-  if (!isDemoOriginAllowed(request, allowedOrigins)) {
+  if (!isDemoOriginAllowed(request, allowedOrigins, env)) {
     return { ok: false, status: 403, error: "demo_origin_forbidden" };
   }
 

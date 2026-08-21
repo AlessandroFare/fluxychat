@@ -90,11 +90,11 @@ export function WorkerHealthCard() {
         : workerUrl;
 
   return (
-    <section className="mb-8 rounded-2xl border border-black/[0.06] bg-white/90 p-5 shadow-[var(--shadow-subtle-2)]">
+    <section className="mb-8 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)]">
       <div className="flex items-start gap-3">
         {icon}
         <div className="min-w-0 flex-1">
-          <h2 className="font-heading text-base font-semibold text-slate-900">{title}</h2>
+          <h2 className="font-heading text-base font-semibold text-foreground">{title}</h2>
           <p className={cn("mt-1 truncate text-sm text-muted-foreground")}>{detail}</p>
           <p className="mt-2 truncate font-mono text-[11px] text-slate-500">{workerUrl}</p>
         </div>

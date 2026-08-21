@@ -73,7 +73,8 @@ export const PROVIDER_TOOL_SETS = {
           required: ["url"],
         },
         execute: async (input, ctx) => {
-          const resp = await fetch(input.url, { signal: ctx.signal });
+          const { safeOutboundFetch } = await import("./url-ssrf.js");
+          const resp = await safeOutboundFetch(input.url, { signal: ctx.signal }, ctx.env);
           const text = await resp.text();
           return { content: text.slice(0, 10000), url: input.url, status: resp.status };
         },

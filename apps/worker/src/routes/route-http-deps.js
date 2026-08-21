@@ -82,4 +82,5 @@ export const ROUTE_DEP_KEY_CATALOG = [
   "resolveProjectId",
   "signJwtHs256",
   "maxRoomNameLength",
+  "customDomain",
 ];

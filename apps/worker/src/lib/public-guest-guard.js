@@ -18,7 +18,7 @@ export async function guardPublicGuestRequest(env, request, options = {}) {
   const allowedOrigins = parseAllowedOrigins(
     env.PUBLIC_GUEST_ALLOWED_ORIGINS || env.DEMO_ALLOWED_ORIGINS,
   );
-  if (!isDemoOriginAllowed(request, allowedOrigins)) {
+  if (!isDemoOriginAllowed(request, allowedOrigins, env)) {
     return { ok: false, status: 403, error: "origin_forbidden" };
   }
 

@@ -35,20 +35,20 @@ const LANDING_STATS = [
 
 export function LandingStatsSection() {
   return (
-    <section className="border-b border-border bg-white px-4 py-16 sm:px-6">
+    <section className="border-b border-[var(--mkt-border)] px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <p className="mx-auto mb-10 max-w-2xl text-center text-sm text-muted-foreground">
+        <p className="mx-auto mb-10 max-w-2xl text-pretty text-center text-sm text-[var(--mkt-text-muted)]">
           Deploy in your account. Quotas live in D1. Console access can require a one-time ack; usage still runs
           through your Worker with your keys.
         </p>
         <div className="grid gap-10 md:grid-cols-3">
           {LANDING_STATS.map((s) => (
             <div key={s.value} className="text-center md:text-left">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-muted/40">
-                <s.icon className="h-6 w-6 text-primary" aria-hidden />
+              <div className="mb-4 inline-flex size-12 items-center justify-center rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)]">
+                <s.icon className="size-6 text-[var(--mkt-brand)]" aria-hidden />
               </div>
-              <p className="font-heading text-2xl font-bold tracking-tight text-foreground">{s.value}</p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.label}</p>
+              <p className="font-heading text-balance text-2xl font-bold tracking-tight text-[var(--mkt-text)] tabular-nums">{s.value}</p>
+              <p className="mt-2 text-pretty text-sm leading-relaxed text-[var(--mkt-text-muted)]">{s.label}</p>
             </div>
           ))}
         </div>

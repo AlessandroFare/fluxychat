@@ -3,6 +3,7 @@
  * @returns {Promise<Response|null>}
  */
 import { pickRouteDeps } from "./route-http-deps.js";
+import { parsePushDeviceBody } from "../lib/http-body.js";
 import {
   registerPushDevice,
   unregisterPushDevice,
@@ -55,11 +56,15 @@ export async function dispatchPushRoutes(request, url, h) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
     const body = await request.json().catch(() => null);
+    const parsed = parsePushDeviceBody(body);
+    if (!parsed.ok) {
+      return json({ error: parsed.error }, { status: 400 });
+    }
     const result = await registerPushDevice(env, {
       projectId: auth.projectId,
       userId: auth.userId,
-      platform: body?.platform,
-      token: body?.token,
+      platform: parsed.platform,
+      token: parsed.token,
     });
     if (!result.ok) {
       return json({ error: result.error }, { status: 400 });

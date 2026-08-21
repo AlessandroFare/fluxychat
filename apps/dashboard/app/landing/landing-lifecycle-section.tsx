@@ -9,7 +9,7 @@ const MessageLifecycleSection = dynamic(
     loading: () => (
       <section
         id="lifecycle"
-        className="scroll-mt-20 border-b border-border bg-muted/30 px-4 py-16 sm:px-6"
+        className="scroll-mt-20 border-b border-[var(--mkt-border)] px-4 py-16 sm:px-6"
         aria-busy="true"
       />
     ),

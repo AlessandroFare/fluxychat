@@ -34,9 +34,9 @@ export const HERO_PREVIEW_SCENES: readonly HeroPreviewScene[] = [
 ];
 
 const shell = {
-  shellBg: "#ffffff",
-  shellText: "#0f172a",
-  headerBorder: "rgba(15, 23, 42, 0.08)",
+  shellBg: "#12141a",
+  shellText: "#e4e4e7",
+  headerBorder: "rgba(255, 255, 255, 0.1)",
   liveDot: "#22c55e",
 };
 
@@ -61,18 +61,18 @@ function PreviewShell({ scene, children }: PreviewShellProps) {
           <span className="text-sm font-semibold">{scene.room}</span>
         </div>
         {scene.badge ? (
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
             {scene.badge}
           </span>
         ) : null}
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-3">{children}</div>
       <div className="shrink-0 p-3" style={{ borderTop: `1px solid ${shell.headerBorder}` }}>
-        <div className="flex gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-          <div className="flex min-h-[36px] flex-1 items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+        <div className="flex gap-2 rounded-xl border border-white/10 bg-zinc-900 p-2">
+          <div className="flex min-h-[36px] flex-1 items-center rounded-lg border border-white/10 bg-zinc-950 px-3 py-2 text-xs text-zinc-500">
             Write a message…
           </div>
-          <Button size="sm" className="shrink-0 rounded-lg" type="button" tabIndex={-1}>
+          <Button size="sm" className="shrink-0 rounded-lg border border-[#C2410C] bg-[#C2410C] text-white hover:bg-[#9a3412]" type="button" tabIndex={-1}>
             Send
           </Button>
         </div>
@@ -136,15 +136,15 @@ function ChatHeroPreview({ scene }: { scene: HeroPreviewScene }) {
             key={`${m.who}-${idx}`}
             className={cn(
               "animate-in fade-in-0 slide-in-from-bottom-1 rounded-xl px-3 py-2 duration-300",
-              m.self ? "ml-6 bg-orange-500 text-white" : "mr-6 bg-slate-100 text-slate-800",
+              m.self ? "ml-6 bg-[#C2410C] text-white" : "mr-6 bg-zinc-800 text-zinc-100",
             )}
           >
-            {!m.self ? <span className="mb-0.5 block text-[10px] font-semibold text-slate-500">{m.who}</span> : null}
+            {!m.self ? <span className="mb-0.5 block text-[10px] font-semibold text-zinc-400">{m.who}</span> : null}
             {m.text}
           </div>
         ))}
         {typing ? (
-          <div className="ml-6 rounded-xl border border-dashed border-orange-300 bg-orange-50 px-3 py-2 text-orange-900">
+          <div className="ml-6 rounded-xl border border-dashed border-orange-500/40 bg-zinc-800 px-3 py-2 text-zinc-100">
             {typing}
             <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-orange-500 align-middle" />
           </div>
@@ -182,10 +182,10 @@ function AgentsPreview({ scene }: { scene: HeroPreviewScene }) {
           <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
             <Bot className="size-3.5" aria-hidden />
           </span>
-          <div className="rounded-xl bg-slate-100 px-3 py-2 text-slate-800">@fluxy summarize open tickets from today</div>
+          <div className="rounded-xl bg-zinc-800 px-3 py-2 text-zinc-100">@fluxy summarize open tickets from today</div>
         </div>
         {thinking ? (
-          <div className="ml-9 flex w-fit items-center gap-1 rounded-xl bg-orange-100 px-3 py-2 animate-in fade-in-0 duration-200">
+          <div className="ml-9 flex w-fit items-center gap-1 rounded-xl bg-zinc-800 px-3 py-2 animate-in fade-in-0 duration-200">
             {[0, 1, 2].map((i) => (
               <span
                 key={i}
@@ -197,7 +197,7 @@ function AgentsPreview({ scene }: { scene: HeroPreviewScene }) {
         ) : (
           <div
             key={phase}
-            className="animate-in fade-in-0 slide-in-from-bottom-2 zoom-in-95 duration-350 ease-out rounded-xl bg-orange-500 px-3 py-2 text-white"
+            className="animate-in fade-in-0 slide-in-from-bottom-2 zoom-in-95 duration-350 ease-out rounded-xl bg-[#C2410C] px-3 py-2 text-white"
           >
             {reply}
           </div>
@@ -208,7 +208,7 @@ function AgentsPreview({ scene }: { scene: HeroPreviewScene }) {
               <span
                 key={btn}
                 style={{ animationDelay: `${150 + i * 90}ms` }}
-                className="animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-300 rounded-md border border-slate-200 px-2 py-1 text-[10px] font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-300 rounded-md border border-white/15 px-2 py-1 text-[10px] font-medium text-zinc-300 transition-colors hover:bg-white/10"
               >
                 {btn}
               </span>
@@ -248,7 +248,7 @@ function LocationHeroPreview({ scene }: { scene: HeroPreviewScene }) {
   return (
     <PreviewShell scene={scene}>
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs text-slate-600">
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
           <MapPin className="size-4 text-orange-500" aria-hidden />
           courier:maya · updated now
         </div>
@@ -288,7 +288,7 @@ function LocationHeroPreview({ scene }: { scene: HeroPreviewScene }) {
             </span>
           </div>
         </div>
-        <p key={eta} className="animate-in fade-in-0 text-xs text-slate-500 duration-300">
+        <p key={eta} className="animate-in fade-in-0 text-xs text-zinc-400 duration-300">
           ETA {eta} min · geofence: customer zone
         </p>
       </div>
@@ -517,7 +517,7 @@ function StreamHeroPreview({ scene }: { scene: HeroPreviewScene }) {
           </span>
         ))}
       </div>
-      <div className="mt-2 flex gap-2 text-xs text-slate-500">
+      <div className="mt-2 flex gap-2 text-xs text-zinc-400">
         <Radio className="size-3.5 shrink-0 text-orange-500" aria-hidden />
         Host + HLS + chat overlay in sync
       </div>
@@ -562,7 +562,7 @@ function CollabHeroPreview({ scene }: { scene: HeroPreviewScene }) {
         <Pen className="size-3.5" aria-hidden />
         CRDT board · 2 editors online
       </div>
-      <div className="relative h-40 rounded-lg bg-slate-50">
+      <div className="relative h-40 rounded-lg bg-zinc-900">
         <div
           className="absolute flex items-center gap-1 transition-all duration-700 ease-out"
           style={{ top: `${cursorTarget.top}%`, left: `${cursorTarget.left}%` }}
@@ -613,12 +613,12 @@ function GameHeroPreview({ scene }: { scene: HeroPreviewScene }) {
 
   return (
     <PreviewShell scene={scene}>
-      <div className="mb-2 flex items-center justify-between text-xs text-slate-600">
+      <div className="mb-2 flex items-center justify-between text-xs text-zinc-400">
         <span className="flex items-center gap-1.5">
           <Gamepad2 className="size-3.5" aria-hidden />
           Match found
         </span>
-        <span className={cn("rounded-full bg-red-500/15 px-2 py-0.5 font-semibold text-red-600 transition-transform", pulse && "scale-110")}>
+        <span className={cn("rounded-full bg-red-500/20 px-2 py-0.5 font-semibold text-red-300 transition-transform", pulse && "scale-110")}>
           LIVE
         </span>
       </div>
@@ -641,7 +641,7 @@ function GameHeroPreview({ scene }: { scene: HeroPreviewScene }) {
           key={name}
           className={cn(
             "mb-2 flex justify-between rounded-lg px-3 py-2 text-sm transition-colors duration-300",
-            i === 0 ? "bg-orange-100 text-orange-950" : "bg-slate-100",
+            i === 0 ? "bg-orange-500/20 text-orange-100" : "bg-zinc-800 text-zinc-100",
           )}
         >
           <span>{name}</span>
@@ -684,14 +684,14 @@ function IoTHeroPreview({ scene }: { scene: HeroPreviewScene }) {
         Device shadow · rule engine
       </div>
       <div className="space-y-2 text-sm">
-        <div className="rounded-lg border border-slate-200 px-3 py-2">
+        <div className="rounded-lg border border-white/10 px-3 py-2">
           <div className="flex justify-between">
-            <span className="font-mono text-xs text-slate-500">sensor-7</span>
+            <span className="font-mono text-xs text-zinc-400">sensor-7</span>
             <span key={temp} className={cn("font-medium transition-transform duration-200", bump && "scale-110")}>
               {temp}°C
             </span>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-700 ease-out",
@@ -707,7 +707,7 @@ function IoTHeroPreview({ scene }: { scene: HeroPreviewScene }) {
             alert ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
           )}
         >
-          <div className="overflow-hidden rounded-lg border border-orange-300 bg-orange-50 text-xs font-medium text-orange-800">
+          <div className="overflow-hidden rounded-lg border border-orange-500/30 bg-orange-500/15 text-xs font-medium text-orange-200">
             <div className="px-3 py-2">Rule fired: alert ops in chat room</div>
           </div>
         </div>
@@ -739,22 +739,22 @@ function ChannelsHeroPreview({ scene }: { scene: HeroPreviewScene }) {
 
   return (
     <PreviewShell scene={scene}>
-      <p className="mb-2 text-xs text-slate-600">One message → in-app + bridges</p>
-      <div className="mb-3 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800">Deploy v2.4 is live 🚀</div>
+      <p className="mb-2 text-xs text-zinc-400">One message → in-app + bridges</p>
+      <div className="mb-3 rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-100">Deploy v2.4 is live 🚀</div>
       <div className="flex flex-wrap gap-1.5">
         {channels.map((ch, i) => (
           <span
             key={ch}
             className={cn(
               "rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-300",
-              i < step ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-400",
+              i < step ? "bg-emerald-500/20 text-emerald-200" : "bg-zinc-800 text-zinc-500",
               justLanded === i && "scale-110",
             )}
           >
             {ch} {i < step ? <span className="inline-block animate-in zoom-in-50 duration-200">✓</span> : ""}
           </span>
         ))}
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">+10</span>
+        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">+10</span>
       </div>
       <div
         className={cn(
@@ -762,7 +762,7 @@ function ChannelsHeroPreview({ scene }: { scene: HeroPreviewScene }) {
           step > channels.length ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         )}
       >
-        <p className="mt-2 overflow-hidden text-[11px] text-emerald-600">Delivered on all adapters</p>
+        <p className="mt-2 overflow-hidden text-[11px] text-emerald-400">Delivered on all adapters</p>
       </div>
     </PreviewShell>
   );

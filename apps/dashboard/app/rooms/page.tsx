@@ -8,17 +8,6 @@ import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { ConfirmDialog } from "../components/confirm-dialog";
-import { RoomOfflineNotifySettings } from "../components/room-offline-notify-settings";
-import { RoomMcpConnectPanel } from "../components/room-mcp-connect-panel";
-import { RoomPresenceEscalationPanel } from "../components/room-presence-escalation-panel";
-import { RoomRoleVisibilityPanel } from "../components/room-role-visibility-panel";
-import { RoomDecisionQuorumPanel } from "../components/room-decision-quorum-panel";
-import { RoomExternalEventPanel } from "../components/room-external-event-panel";
-import { RoomAsymmetryPanel } from "../components/room-asymmetry-panel";
-import { RoomAudienceScorePanel } from "../components/room-audience-score-panel";
-import { RoomMemoryPanel } from "../components/room-memory-panel";
-import { RoomKnowledgeGraphPanel } from "../components/room-knowledge-graph-panel";
-import { RoomApprovalChainPanel } from "../components/room-approval-chain-panel";
 import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { readJwtSub } from "@/lib/jwt-claims";
@@ -34,6 +23,12 @@ import { RoomScheduledCompose } from "../components/room-scheduled-compose";
 import { FluxyChat } from "@/components/chat";
 import { provisionDecisionRoomPack } from "@/lib/decision-rooms-client";
 import { provisionEnterpriseAgentRoom } from "@/lib/enterprise-agent-room-client";
+import dynamic from "next/dynamic";
+
+const RoomAdvancedPanels = dynamic(
+  () => import("./room-advanced-panels").then((m) => m.RoomAdvancedPanels),
+  { ssr: false, loading: () => <p className="text-sm text-muted-foreground">Loading advanced…</p> },
+);
 
 const WORKER_URL = getPublicWorkerUrl();
 
@@ -57,6 +52,7 @@ export default function RoomsPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [roomTab, setRoomTab] = useState<"chat" | "members" | "advanced">("chat");
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("group");
   const [creating, setCreating] = useState(false);
@@ -472,7 +468,25 @@ export default function RoomsPage() {
                 </p>
               ) : null}
 
-              <h3 className="mb-2 mt-4 text-sm font-semibold">Members</h3>
+              <div className="mb-4 flex gap-1 rounded-lg border border-border p-1">
+                {(["chat", "members", "advanced"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setRoomTab(tab)}
+                    className={[
+                      "flex-1 rounded-md px-2 py-1.5 text-xs font-medium capitalize",
+                      roomTab === tab ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50",
+                    ].join(" ")}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
+              {roomTab === "members" ? (
+                <>
+              <h3 className="mb-2 mt-2 text-sm font-semibold">Members</h3>
               <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 <Input
                   value={memberUserId}
@@ -490,8 +504,12 @@ export default function RoomsPage() {
                 onRemove={(uid) => setMemberToRemove(uid)}
                 memberBusy={memberBusy}
               />
+                </>
+              ) : null}
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              {roomTab === "chat" ? (
+                <>
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -550,80 +568,22 @@ export default function RoomsPage() {
                   </div>
                 </div>
               ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomMcpConnectPanel roomId={selectedId} memberJwt={memberToken} />
-                </div>
+                </>
               ) : null}
 
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomPresenceEscalationPanel roomId={selectedId} memberJwt={memberToken} />
-                </div>
-              ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomRoleVisibilityPanel roomId={selectedId} />
-                </div>
-              ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomDecisionQuorumPanel roomId={selectedId} memberJwt={memberToken} />
-                </div>
-              ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomExternalEventPanel roomId={selectedId} memberJwt={memberToken} />
-                </div>
-              ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomAsymmetryPanel roomId={selectedId} memberJwt={memberToken} />
-                </div>
-              ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomAudienceScorePanel roomId={selectedId} memberJwt={memberToken} />
-                </div>
-              ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomMemoryPanel roomId={selectedId} memberJwt={memberToken} />
-                </div>
-              ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomApprovalChainPanel roomId={selectedId} memberJwt={memberToken} />
-                </div>
-              ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomKnowledgeGraphPanel roomId={selectedId} memberJwt={memberToken} />
-                </div>
-              ) : null}
-
-              {memberToken ? (
-                <div className="mt-6">
-                  <RoomOfflineNotifySettings
+              {roomTab === "advanced" ? (
+                memberToken ? (
+                  <RoomAdvancedPanels
                     roomId={selectedId}
                     memberJwt={memberToken}
                     memberUserId={fluxyMemberUserId || undefined}
                   />
-                </div>
-              ) : (
-                <p className="mt-4 text-xs text-muted-foreground">
-                  Add a member JWT in Quickstart to configure offline SMS for your user in this room.
-                </p>
-              )}
+                ) : (
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    Add a member JWT in Quickstart to configure advanced room modules.
+                  </p>
+                )
+              ) : null}
             </>
           )}
         </div>

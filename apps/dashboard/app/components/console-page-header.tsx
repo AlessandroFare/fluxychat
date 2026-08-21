@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import { resolveConsoleNavContext } from "@/lib/console-command-items";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
+import { getDashboardSurfaceKind } from "@/lib/dashboard-feature-flags";
+import { ReadinessBadge } from "~/components/ui/readiness-badge";
 
 export function ConsolePageHeader({
   title,
@@ -20,9 +22,10 @@ export function ConsolePageHeader({
   const pathname = usePathname();
   const navContext = resolveConsoleNavContext(pathname);
   const pageTitle = title ?? navContext?.itemLabel ?? "Console";
+  const surface = getDashboardSurfaceKind(pathname);
 
   return (
-    <header className="mb-6 border-b border-black/[0.06] pb-5">
+    <header className="mb-6 border-b border-border pb-5">
       {/*
         Breadcrumb rendered as a plain <ol> (not a <nav>) so it does not
         become a nested navigation landmark inside the root layout's
@@ -45,6 +48,19 @@ export function ConsolePageHeader({
               <span aria-current="page">{pageTitle}</span>
             </li>
           </>
+        ) : surface !== "ga" ? (
+          <>
+            <li className="flex items-center gap-1">
+              <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
+              <Link href="/labs" className="hover:text-foreground">
+                Labs
+              </Link>
+            </li>
+            <li className="flex items-center gap-1 font-medium text-foreground">
+              <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
+              <span aria-current="page">{pageTitle}</span>
+            </li>
+          </>
         ) : pathname !== "/" ? (
           <li className="flex items-center gap-1 font-medium text-foreground">
             <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
@@ -54,9 +70,11 @@ export function ConsolePageHeader({
       </ol>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="font-heading flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h1 className="font-heading flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             {Icon ? <Icon className="h-7 w-7 shrink-0 text-muted-foreground" aria-hidden /> : null}
             {pageTitle}
+            {surface === "labs" ? <ReadinessBadge label="Labs" /> : null}
+            {surface === "preview" ? <ReadinessBadge label="Preview" /> : null}
           </h1>
           {description ? (
             <div className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{description}</div>

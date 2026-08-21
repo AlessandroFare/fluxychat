@@ -18,6 +18,7 @@ import {
 import { MARKETING_GUIDE_PATHS } from "@/lib/marketing-links";
 import { buildPageMetadata } from "@/lib/site-metadata";
 import { Button } from "~/components/ui/button";
+import { MarketingShell } from "../components/marketing-shell";
 import { CloudflareCostTable } from "~/components/marketing/cloudflare-cost-table";
 import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
@@ -81,7 +82,7 @@ function CompareTable({
 
 export default function ComparePage() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <MarketingShell className="py-16 sm:py-16">
       <p className="text-sm text-muted-foreground">
         <Link href={HOSTED_PATHS.landing} className="text-brand underline underline-offset-2">
           ← Back to landing
@@ -470,7 +471,7 @@ export default function ComparePage() {
           </a>
         </Button>
       </div>
-    </div>
+    </MarketingShell>
   );
 }
 

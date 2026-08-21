@@ -3,7 +3,7 @@
  *
  * Returns 404 unless BOTH:
  *   env.ALLOW_DEV_PROVISION === "true"
- *   env.NODE_ENV !== "production"
+ *   env.NODE_ENV is development or test
  *
  * Idempotent: if a project named "dev-local" already exists, returns its
  * most recent active API key (or mints a new one and revokes the old).

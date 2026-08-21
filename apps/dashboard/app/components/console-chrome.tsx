@@ -8,6 +8,8 @@ import { QuickstartGate } from "./quickstart-gate";
 import { SystemStatusBanner } from "./system-status-banner";
 import { ConsoleCommandPaletteProvider } from "./console-command-palette";
 import { ConsoleAuthGate } from "./console-auth-gate";
+import { ConsoleProjectChip } from "./console-project-chip";
+import { ConsoleSurfaceBanner } from "./console-surface-banner";
 import { isConsoleRoute } from "./console-nav";
 
 export function ConsoleChrome({ children }: { children: React.ReactNode }) {
@@ -26,9 +28,10 @@ export function ConsoleChrome({ children }: { children: React.ReactNode }) {
             <ConsoleSidebar />
             <div className="flex min-w-0 flex-1 flex-col">
               <ConsoleMobileNav />
-              {/* Skip link for keyboard/mobile users: visually hidden until
-                  focused, then jumps focus past the sidebar+nav to the main
-                  content. (Audit UX fix.) */}
+              <div className="flex items-center justify-end gap-2 border-b border-border px-4 py-2 lg:px-6">
+                <ConsoleProjectChip />
+              </div>
+              <ConsoleSurfaceBanner pathname={pathname} />
               <a
                 href="#console-main"
                 className="sr-only z-50 rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background focus:not-sr-only focus:absolute focus:left-4 focus:top-4"

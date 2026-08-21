@@ -4,8 +4,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { gsap } from "gsap";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
-// Assets in public/landing/flow/
-const flowImage = (file: string) => `/landing/flow/${file}`;
+const flowImage = (file: string) => `/flow/${file}`;
 
 export const MESSAGING_FLOW_ITEMS = [
   {

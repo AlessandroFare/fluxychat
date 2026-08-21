@@ -46,10 +46,10 @@ export default function GetStartedPage() {
       <GetStartedAccessBanner />
 
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Quickstart</p>
-      <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900">
+      <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-foreground">
         Get your first message live
       </h1>
-      <p className="mt-3 text-slate-600">
+      <p className="mt-3 text-muted-foreground">
         Account, SDK, first room on hosted cloud. Self-hosting is optional; see{" "}
         <a href="#self-host" className="font-medium text-primary underline-offset-2 hover:underline">
           advanced
@@ -65,7 +65,7 @@ export default function GetStartedPage() {
 
       <section className="mt-8 rounded-2xl border border-primary/20 bg-primary/[0.04] p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">Chat only</p>
-        <h2 className="mt-1 font-heading text-lg font-semibold text-slate-900">
+        <h2 className="mt-1 font-heading text-lg font-semibold text-foreground">
           Fastest path: minimal CLI or drop-in widget
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -73,7 +73,7 @@ export default function GetStartedPage() {
           <code className="text-xs">FluxyChatWidget</code> into an existing React app. For headless
           control, install the SDK and use <code className="text-xs">useChat</code>.
         </p>
-        <pre className="mt-3 overflow-x-auto rounded-lg border border-black/[0.08] bg-[#111111] p-3 font-mono text-xs text-slate-100">
+        <pre className="mt-3 overflow-x-auto rounded-lg border border-border bg-zinc-950 p-3 font-mono text-xs text-zinc-100">
           {`npx create-fluxy-chat my-chat --minimal\npnpm add @fluxy-chat/ui-kit`}
         </pre>
         <div className="mt-4 flex flex-wrap gap-3">
@@ -112,7 +112,7 @@ export default function GetStartedPage() {
         {HOSTED_STEPS.map((step, index) => (
           <li
             key={step.title}
-            className="flex gap-4 rounded-2xl border border-black/[0.06] bg-white/90 p-5 shadow-[var(--shadow-subtle-2)]"
+            className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)]"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <step.icon className="h-5 w-5" aria-hidden />
@@ -121,7 +121,7 @@ export default function GetStartedPage() {
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Step {index + 1}
               </p>
-              <h2 className="font-heading text-lg font-semibold text-slate-900">{step.title}</h2>
+              <h2 className="font-heading text-lg font-semibold text-foreground">{step.title}</h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
             </div>
           </li>

@@ -55,20 +55,20 @@ export function LandingHeroModeStrip() {
 
   return (
     <div
-      className="mt-8 w-full max-w-3xl rounded-2xl border border-black/[0.08] bg-white/85 p-4 shadow-[var(--shadow-subtle-2)] backdrop-blur-md"
+      className="mkt-panel mt-8 w-full max-w-3xl rounded-2xl p-4"
       aria-live={reduceMotion ? "off" : "polite"}
     >
-      <p className="text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+      <p className="text-left text-[10px] font-semibold uppercase text-zinc-500">
         One room · many modes
       </p>
       <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 text-left">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#111111] text-white">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
             <ActiveIcon className="size-5" aria-hidden />
           </span>
           <div>
-            <p className="font-heading text-lg font-semibold text-[#111111]">{active.label}</p>
-            <p className="text-sm text-slate-600">{active.caption}</p>
+            <p className="font-heading text-lg font-semibold text-white">{active.label}</p>
+            <p className="text-pretty text-sm text-zinc-400">{active.caption}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-1.5 sm:justify-end" role="tablist" aria-label="Room modes">
@@ -87,8 +87,8 @@ export function LandingHeroModeStrip() {
                 className={cn(
                   "inline-flex size-9 items-center justify-center rounded-lg border transition",
                   isActive
-                    ? "border-[#111111] bg-[#111111] text-white"
-                    : "border-black/[0.08] bg-white text-slate-600 hover:border-black/15 hover:text-slate-900",
+                    ? "border-[var(--mkt-brand)] bg-[var(--mkt-brand)] text-white"
+                    : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/20 hover:text-white",
                 )}
               >
                 <Icon className="size-4" aria-hidden />

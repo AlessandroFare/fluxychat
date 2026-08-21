@@ -18,7 +18,7 @@ export function GetStartedAccessBanner() {
       className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 sm:px-5"
       role="status"
     >
-      <p className="font-medium text-slate-900">
+      <p className="font-medium text-foreground">
         {phase === "no_jwt"
           ? "Sign in to unlock the console sidebar"
           : "Pick a project to use rooms and billing"}

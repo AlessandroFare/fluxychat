@@ -181,19 +181,26 @@ export async function resolveCallbackUrl(env, token) {
   return stored;
 }
 
+import { safeOutboundFetch } from "./url-ssrf.js";
+
 /**
  * Post to a callback URL with payload.
  * @param {string} callbackUrl
  * @param {Record<string, unknown>} payload
+ * @param {unknown} [env]
  * @returns {Promise<{ error?: unknown; status?: number }>}
  */
-export async function postToCallbackUrl(callbackUrl, payload) {
+export async function postToCallbackUrl(callbackUrl, payload, env) {
   try {
-    const response = await fetch(callbackUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const response = await safeOutboundFetch(
+      callbackUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      env,
+    );
     if (!response.ok) {
       return {
         error: new Error(

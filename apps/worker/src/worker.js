@@ -43,6 +43,7 @@ import {
 import { logInfo, logError } from "./lib/worker-log.js";
 import { runScheduledCronJob } from "./lib/scheduled-runners.js";
 import { verifyJwtAndGetContext } from "./lib/jwt-request.js";
+import { isAdminAuthRequired } from "./lib/admin-auth-flag.js";
 import {
   buildAllowedOriginsList,
   lookupActiveCustomDomain,
@@ -77,6 +78,7 @@ import {
 import { evaluateOperationalAlerts } from "./lib/operational-alerts.js";
 import { seedDefaultAlertRules } from "./lib/seed-default-alert-rules.js";
 import { createJsonResponder } from "./lib/http-json.js";
+import { createHttpGateApp } from "./lib/hono-gate.js";
 import { handleFetchThrownError } from "./lib/http-cors.js";
 import { checkAndConsumeRateLimit } from "./lib/rate-limit.js";
 import "./lib/adapter-web.js"; // P22-A2: Register web adapter on startup
@@ -319,8 +321,7 @@ function generateJwtSecret() {
   return btoa(binary);
 }
 
-export default {
-  async fetch(request, env, ctx) {
+async function workerFetch(request, env, ctx) {
     const url = new URL(request.url);
     const traceId = getOrCreateTraceId(request);
     let resolvedProjectIdForMetrics = env.DEFAULT_PROJECT_ID || "default";
@@ -449,7 +450,7 @@ export default {
       timingSafeEqual,
     };
     // Dev-only provision endpoint (POST /dev/provision). 404 unless
-    // ALLOW_DEV_PROVISION === "true" AND NODE_ENV !== "production".
+    // ALLOW_DEV_PROVISION === "true" AND NODE_ENV is development|test.
     // Mounted before public routes so it short-circuits cleanly.
     const devRes = maybeHandleDevProvision(request, url, env);
     if (devRes) return devRes;
@@ -457,7 +458,7 @@ export default {
     const publicRes = await dispatchPublicRoutes(request, url, publicDeps);
     if (publicRes) return publicRes;
 
-    const requireAdminAuth = env.REQUIRE_ADMIN_AUTH !== "false";
+    const requireAdminAuth = isAdminAuthRequired(env);
 
     const routeDeps = {
       env,
@@ -556,9 +557,9 @@ export default {
         requestLogCtx,
       });
     }
-  },
+}
 
-  async scheduled(event, env, ctx) {
+async function workerScheduled(event, env, ctx) {
     const cron = event.cron || "";
     logInfo("scheduled.triggered", { scheduledTime: event.scheduledTime, cron });
 
@@ -572,7 +573,13 @@ export default {
         logError("scheduled.cron_failed", err, { cron }),
       ),
     );
-  },
+}
+
+const httpGate = createHttpGateApp(workerFetch);
+
+export default {
+  fetch: (request, env, ctx) => httpGate.fetch(request, env, ctx),
+  scheduled: workerScheduled,
 };
 
 

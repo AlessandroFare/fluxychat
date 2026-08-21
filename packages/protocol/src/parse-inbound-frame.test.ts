@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseInboundWsFrame, isKnownOutboundClientEvent } from "./parse-inbound-frame.js";
+import { isValidChatMessageEvent } from "./message-event.js";
 import { isValidLocationTrackEnded, isValidLocationUpdate } from "./location-events.js";
 
 describe("parseInboundWsFrame", () => {
@@ -48,6 +49,10 @@ describe("parseInboundWsFrame", () => {
   it("returns null on invalid JSON", () => {
     expect(parseInboundWsFrame("{")).toBeNull();
   });
+
+  it("rejects oversized frames", () => {
+    expect(parseInboundWsFrame(`{"type":"message","content":"${"x".repeat(260_000)}"}`)).toBeNull();
+  });
 });
 
 describe("isKnownOutboundClientEvent", () => {
@@ -59,6 +64,12 @@ describe("isKnownOutboundClientEvent", () => {
   it("rejects unknown outbound types", () => {
     expect(isKnownOutboundClientEvent({ type: "subscribe" })).toBe(false);
     expect(isKnownOutboundClientEvent(null)).toBe(false);
+  });
+
+  it("rejects oversized outbound payloads", () => {
+    expect(
+      isKnownOutboundClientEvent({ type: "message", content: "x".repeat(260_000) }),
+    ).toBe(false);
   });
 
   it("validates bounded location events", () => {
@@ -80,5 +91,16 @@ describe("isKnownOutboundClientEvent", () => {
       type: "location_track_ended",
       trackId: "courier:42",
     })).toBe(true);
+  });
+});
+
+describe("isValidChatMessageEvent", () => {
+  it("accepts bounded message frames", () => {
+    expect(isValidChatMessageEvent({ type: "message", content: "hi", roomId: "r1" })).toBe(true);
+  });
+
+  it("rejects non-string content and oversized bodies", () => {
+    expect(isValidChatMessageEvent({ type: "message", content: 1 })).toBe(false);
+    expect(isValidChatMessageEvent({ type: "message", content: "x".repeat(33_000) })).toBe(false);
   });
 });

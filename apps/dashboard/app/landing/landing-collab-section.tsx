@@ -192,11 +192,11 @@ export function LandingCollabSection() {
     <section
       ref={sectionRef}
       id="collaboration"
-      className="scroll-mt-20 border-b border-white/10 bg-slate-950 px-4 py-20 sm:px-6"
+      className="scroll-mt-20 border-b border-white/10 px-4 py-20 sm:px-6"
     >
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col gap-4 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-400">FluxyCollab</p>
+          <p className="text-xs font-semibold uppercase text-[var(--mkt-brand-soft)]">FluxyCollab</p>
           <h2 className="text-balance font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Everything teams need to build together
           </h2>

@@ -27,10 +27,10 @@ export function HeaderAuth() {
     <div className="flex shrink-0 items-center gap-2 sm:gap-3">
       {activeProject ? (
         <div
-          className="hidden max-w-[11rem] truncate rounded-full border border-black/[0.08] bg-white/80 px-2.5 py-1 text-xs text-slate-600 sm:block"
+          className="hidden max-w-[11rem] truncate rounded-full border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground sm:block"
           title={activeProject.name}
         >
-          <span className="font-medium text-slate-900">{activeProject.name}</span>
+          <span className="font-medium text-foreground">{activeProject.name}</span>
         </div>
       ) : phase === "jwt_only" ? (
         <span className="hidden text-xs text-amber-700 sm:inline">No active project</span>
@@ -38,7 +38,7 @@ export function HeaderAuth() {
       <button
         type="button"
         onClick={clearSession}
-        className="hidden text-xs text-slate-600 underline-offset-2 hover:text-slate-800 hover:underline sm:inline"
+        className="hidden text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline sm:inline"
       >
         Clear session
       </button>
@@ -65,10 +65,10 @@ function ClerkHeaderAuth({
     <div className="flex shrink-0 items-center gap-2 sm:gap-3">
       {activeProject ? (
         <div
-          className="hidden max-w-[11rem] truncate rounded-full border border-black/[0.08] bg-white/80 px-2.5 py-1 text-xs text-slate-600 sm:block"
+          className="hidden max-w-[11rem] truncate rounded-full border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground sm:block"
           title={activeProject.name}
         >
-          <span className="font-medium text-slate-900">{activeProject.name}</span>
+          <span className="font-medium text-foreground">{activeProject.name}</span>
         </div>
       ) : null}
       {isSignedIn ? (
@@ -89,7 +89,7 @@ function ClerkHeaderAuth({
             <button
               type="button"
               onClick={clearSession}
-              className="hidden text-xs text-slate-600 underline-offset-2 hover:text-slate-800 hover:underline sm:inline"
+              className="hidden text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline sm:inline"
               title="Clear operator JWTs in this tab (Clerk account stays signed in)"
             >
               Clear JWTs

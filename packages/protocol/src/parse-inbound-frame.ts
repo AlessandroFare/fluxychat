@@ -3,6 +3,7 @@ import {
   FLUXY_OUTBOUND_EVENT_TYPES,
   FLUXY_SDK_SYNTHETIC_INBOUND_TYPES,
 } from "./event-types.js";
+import { isWsFrameWithinSizeLimit } from "./frame-size.js";
 import { isUnknownWsFrame, type UnknownWsFrame } from "./unknown-frame.js";
 
 export type { UnknownWsFrame } from "./unknown-frame.js";
@@ -37,6 +38,7 @@ function isDeliverableInboundType(type: string): boolean {
 }
 
 export function parseInboundWsFrame(raw: string): ParsedInboundWsFrame | null {
+  if (typeof raw === "string" && !isWsFrameWithinSizeLimit(raw)) return null;
   const data = parseJson(raw);
   if (!isRecord(data) || typeof data.type !== "string") return null;
 
@@ -58,5 +60,6 @@ export function parseInboundWsFrame(raw: string): ParsedInboundWsFrame | null {
 
 export function isKnownOutboundClientEvent(value: unknown): value is Record<string, unknown> & { type: string } {
   if (!isRecord(value) || typeof value.type !== "string") return false;
+  if (!isWsFrameWithinSizeLimit(value)) return false;
   return (FLUXY_OUTBOUND_EVENT_TYPES as readonly string[]).includes(value.type);
 }

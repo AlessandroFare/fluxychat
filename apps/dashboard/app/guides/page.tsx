@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button";
 import { docsSiteHref, guideDocsHref, HOSTED_PATHS } from "@/lib/hosted-product";
 import { ExternalLink } from "lucide-react";
 import { DocsSearch } from "@/components/doc-search";
+import { MarketingShell } from "../components/marketing-shell";
 
 export const metadata = buildPageMetadata({
   title: "Guides: edge chat on Cloudflare",
@@ -16,7 +17,7 @@ export const metadata = buildPageMetadata({
 
 export default function GuidesIndexPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+    <MarketingShell className="max-w-3xl py-16 sm:py-16">
       <p className="text-sm text-muted-foreground">
         <Link href={HOSTED_PATHS.landing} className="text-brand underline underline-offset-2">
           ← Back to home
@@ -113,6 +114,6 @@ export default function GuidesIndexPage() {
           <Link href={HOSTED_PATHS.getStarted}>Get started</Link>
         </Button>
       </div>
-    </div>
+    </MarketingShell>
   );
 }

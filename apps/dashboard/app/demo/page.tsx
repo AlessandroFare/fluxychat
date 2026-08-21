@@ -13,6 +13,7 @@ import { Loader2, Sparkles, ArrowRight, Bot, MessageSquare, Zap, Shield, Globe, 
 import { FluxyChat } from "@/components/chat";
 import { cn } from "@/lib/utils";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
+import { DemoWavesBackground } from "./demo-waves-background";
 
 interface DemoSession {
   enabled: boolean;
@@ -58,7 +59,7 @@ function DemoChatShell({
   children: ReactNode;
 }) {
   return (
-    <div className="light overflow-hidden rounded-2xl border-2 border-white/20 bg-[#FDFBF9] shadow-2xl shadow-black/50 ring-1 ring-white/10">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-xl">
       <div className="flex items-center justify-between gap-3 border-b border-[var(--fluxy-header-bg)]/20 bg-[var(--fluxy-header-bg)] px-4 py-3 text-white">
         <div className="flex items-center gap-2">
           <span className={cn("relative flex size-2", badgeClass)}>
@@ -98,58 +99,31 @@ const SEED_MESSAGES = [
   },
 ];
 
-const FLOATING_ORB_MOTION: Record<number, { duration: string; delay: string }> = {
-  300: { duration: "5.35s", delay: "0.93s" },
-  400: { duration: "5.14s", delay: "0.52s" },
-  500: { duration: "4.52s", delay: "0.27s" },
-};
-
-function FloatingOrb({ className, color = "from-blue-500/20 to-purple-500/20", size = 300 }: { className?: string; color?: string; size?: number }) {
-  const motion = FLOATING_ORB_MOTION[size] ?? FLOATING_ORB_MOTION[300];
-  return (
-    <div
-      className={cn("absolute rounded-full bg-gradient-to-br blur-3xl animate-pulse", color, className)}
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        animationDuration: motion.duration,
-        animationDelay: motion.delay,
-      }}
-    />
-  );
-}
-
 function DemoHeroSection() {
   return (
-    <div className="relative overflow-hidden bg-slate-950 border-b border-white/10">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <FloatingOrb className="top-[-100px] left-[-100px]" size={400} />
-        <FloatingOrb className="bottom-[-150px] right-[-100px] from-purple-500/10 to-pink-500/10" size={500} />
-        <FloatingOrb className="top-1/2 left-1/3 from-cyan-500/10 to-blue-500/10" size={300} />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.06)_0%,transparent_70%)]" />
-      </div>
+    <div className="relative border-b border-border">
       <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-1.5 text-xs font-medium text-blue-300">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
             <Sparkles className="size-3.5" />
             Live Interactive Demo
           </div>
-          <h1 className="font-heading text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Try FluxyChat
-            <span className="block mt-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <span className="mt-2 block text-[var(--fluxy-cta-color)]">
               Right Now
             </span>
           </h1>
-          <p className="mx-auto max-w-2xl text-balance leading-relaxed text-slate-400">
+          <p className="mx-auto max-w-2xl text-balance leading-relaxed text-muted-foreground">
             No signup required. You&apos;re in a real room with an AI agent powered by Cloudflare Durable Objects.
             Ask questions, test features, see how it works.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-8 mt-6 text-xs text-slate-500">
-            <span className="flex items-center gap-1.5"><Bot className="size-3.5 text-blue-400" /> AI Agent</span>
-            <span className="flex items-center gap-1.5"><MessageSquare className="size-3.5 text-blue-400" /> Real-time Chat</span>
-            <span className="flex items-center gap-1.5"><Zap className="size-3.5 text-blue-400" /> WebSocket</span>
-            <span className="flex items-center gap-1.5"><Globe className="size-3.5 text-blue-400" /> Cloudflare Edge</span>
-            <span className="flex items-center gap-1.5"><Shield className="size-3.5 text-blue-400" /> No Signup</span>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-8 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5"><Bot className="size-3.5 text-primary" /> AI Agent</span>
+            <span className="flex items-center gap-1.5"><MessageSquare className="size-3.5 text-primary" /> Real-time Chat</span>
+            <span className="flex items-center gap-1.5"><Zap className="size-3.5 text-primary" /> WebSocket</span>
+            <span className="flex items-center gap-1.5"><Globe className="size-3.5 text-primary" /> Cloudflare Edge</span>
+            <span className="flex items-center gap-1.5"><Shield className="size-3.5 text-primary" /> No Signup</span>
           </div>
         </div>
       </div>
@@ -161,8 +135,8 @@ export default function DemoRoomPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-slate-950">
-          <Loader2 className="size-8 animate-spin text-blue-400" />
+        <main className="flex min-h-screen items-center justify-center bg-background">
+          <Loader2 className="size-8 animate-spin text-primary" />
         </main>
       }
     >
@@ -266,22 +240,24 @@ function DemoRoomPageContent() {
   const readOnly = session?.readOnly === true;
 
   return (
-    <main className="min-h-screen bg-slate-950 dark [color-scheme:dark]">
+    <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <DemoWavesBackground />
+      <div className="relative z-10">
       <DemoHeroSection />
 
       {/* Demo Chat Section */}
-      <div className="relative border-b border-white/10 bg-gradient-to-b from-slate-950 to-slate-900 px-4 py-12 sm:px-6">
+      <div className="relative border-b border-border bg-background/70 px-4 py-12 sm:px-6 backdrop-blur-[2px]">
         <div className="mx-auto max-w-4xl">
           {/* Loading State */}
           {!session && !error && !showFallback && (demoStatus === null || demoStatus.ready) && (
             <div className="flex flex-col items-center justify-center gap-4 py-24">
               <div className="relative">
                 <div className="absolute inset-0 animate-ping rounded-full bg-blue-400/20" />
-                <div className="relative flex size-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600">
-                  <Loader2 className="size-7 animate-spin text-white" />
+                <div className="relative flex size-16 items-center justify-center rounded-full bg-primary">
+                  <Loader2 className="size-7 animate-spin text-primary-foreground" />
                 </div>
               </div>
-              <p className="text-sm text-slate-400">Connecting to playground…</p>
+              <p className="text-sm text-muted-foreground">Connecting to playground…</p>
             </div>
           )}
 
@@ -292,8 +268,8 @@ function DemoRoomPageContent() {
                 <Bot className="size-8 text-amber-400" />
               </div>
               <div className="max-w-md">
-                <h3 className="text-lg font-semibold text-white">Backend Demo Mode</h3>
-                <p className="mt-2 text-sm text-slate-400">
+                <h3 className="text-lg font-semibold text-foreground">Backend Demo Mode</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
                   {error === "demo_not_configured"
                     ? "The demo room isn't configured yet. Set DEMO_ROOM_ID and DEMO_API_KEY on the Worker to enable live mode."
                     : error === "demo_disabled"
@@ -304,7 +280,7 @@ function DemoRoomPageContent() {
               <button
                 type="button"
                 onClick={() => setShowSimulated(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-white/20"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground transition-all hover:bg-muted"
               >
                 <Zap className="size-4" />
                 Show Live Demo Preview
@@ -317,8 +293,8 @@ function DemoRoomPageContent() {
             demoStatus?.ready &&
             !session &&
             !error && (
-            <div className="mx-auto mt-8 max-w-sm space-y-3 rounded-xl border border-blue-400/20 bg-blue-500/5 p-6">
-              <p className="text-center text-sm text-slate-300">
+            <div className="mx-auto mt-8 max-w-sm space-y-3 rounded-xl border border-border bg-card p-6">
+              <p className="text-center text-sm text-muted-foreground">
                 Complete the check below to enter the demo room.
               </p>
               <DemoTurnstile
@@ -426,7 +402,7 @@ function DemoRoomPageContent() {
       </div>
 
       {/* Features Strip */}
-      <div className="border-b border-white/10 px-4 py-16 sm:px-6">
+      <div className="border-b border-border px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {[
@@ -446,10 +422,10 @@ function DemoRoomPageContent() {
                 desc: "Jump right in. Ephemeral guest sessions are rate-limited and auto-expire. Your privacy is respected.",
               },
             ].map((feature) => (
-              <div key={feature.title} className="rounded-xl border border-white/5 bg-white/[0.02] p-6">
-                <feature.icon className="size-6 text-blue-400" />
-                <h3 className="mt-4 font-semibold text-white">{feature.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-400">{feature.desc}</p>
+              <div key={feature.title} className="rounded-xl border border-border bg-card p-6">
+                <feature.icon className="size-6 text-primary" />
+                <h3 className="mt-4 font-semibold text-foreground">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.desc}</p>
               </div>
             ))}
           </div>
@@ -459,26 +435,27 @@ function DemoRoomPageContent() {
       {/* CTA */}
       <div className="px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-heading text-2xl font-bold text-white">Ready to build?</h2>
-          <p className="mt-3 text-sm text-slate-400">
+          <h2 className="font-heading text-2xl font-bold text-foreground">Ready to build?</h2>
+          <p className="mt-3 text-sm text-muted-foreground">
             Deploy FluxyChat on your own Cloudflare account in minutes. Self-hosted or hosted: your choice.
           </p>
           <div className="mt-8 flex items-center justify-center gap-4">
             <Link
               href="/get-started"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-medium text-white transition-all hover:from-blue-500 hover:to-purple-500"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--fluxy-btn-primary-bg)] px-6 py-3 text-sm font-medium text-[var(--fluxy-btn-primary-text)] transition-all hover:bg-[var(--fluxy-btn-primary-hover-bg)]"
             >
               <Cpu className="size-4" />
               Get Started Free
             </Link>
             <Link
               href={HOSTED_PATHS.landing}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-muted"
             >
               Learn More
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </main>
   );

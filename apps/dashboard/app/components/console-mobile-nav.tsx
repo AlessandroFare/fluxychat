@@ -20,11 +20,11 @@ export function ConsoleMobileNav() {
   const { open: openCommandPalette } = useCommandPalette();
 
   return (
-    <div className="border-b border-black/[0.06] bg-white/90 px-3 py-2 lg:hidden">
+    <div className="border-b border-border bg-background px-3 py-2 lg:hidden">
       <div className="mb-2 flex items-center gap-2">
         <Link
           href={HOSTED_PATHS.landing}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-2 text-xs font-medium text-foreground hover:bg-muted"
         >
           <Home className="h-3.5 w-3.5" aria-hidden />
           Home
@@ -32,7 +32,7 @@ export function ConsoleMobileNav() {
         <button
           type="button"
           onClick={openCommandPalette}
-          className="inline-flex flex-1 items-center gap-2 rounded-lg border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 text-xs text-slate-600"
+          className="inline-flex flex-1 items-center gap-2 rounded-lg border border-border bg-muted/80 px-2.5 py-2 text-xs text-muted-foreground"
           data-testid="command-palette-trigger-mobile"
         >
           <Search className="h-3.5 w-3.5" aria-hidden />
@@ -79,7 +79,7 @@ export function ConsoleMobileNav() {
                 href={href}
                 className={cn(
                   "rounded-lg px-2 py-2 text-center text-xs font-medium",
-                  isActive ? "bg-primary/10 text-primary" : "text-slate-600 hover:bg-slate-50",
+                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted",
                 )}
               >
                 {item.label}

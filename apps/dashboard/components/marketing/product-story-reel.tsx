@@ -153,17 +153,17 @@ export function ProductStoryReel() {
 
   return (
     <section
-      className="border-b border-border bg-[var(--am-whisper-gray)] px-4 py-14 sm:px-6 sm:py-18"
+      className="border-b border-white/[0.06] bg-[var(--mkt-bg-elevated)] px-4 py-14 sm:px-6 sm:py-18"
       aria-labelledby="product-story-reel-heading"
     >
       <div className="mx-auto max-w-6xl">
         <h2
           id="product-story-reel-heading"
-          className="text-center font-heading text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+          className="text-center font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl"
         >
           From blank repo to live threads
         </h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-muted-foreground sm:text-base">
+        <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-zinc-400 sm:text-base">
           Install, connect, hooks, live messages — loops below and pauses when you scroll away.
         </p>
 
@@ -172,7 +172,7 @@ export function ProductStoryReel() {
           ref={rootRef}
           className={cn(
             "relative mx-auto mt-10 w-full max-w-4xl overflow-hidden rounded-3xl",
-            "border border-orange-500/25 bg-slate-950 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.5)]",
+            "border border-orange-500/25 bg-[#1e1e1e] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.55)]",
           )}
           style={{
             minHeight: "clamp(260px, 65svh, 460px)",

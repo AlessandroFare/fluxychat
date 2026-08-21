@@ -136,7 +136,7 @@ export function LandingStreamSection() {
     <section
       ref={sectionRef}
       id="streaming"
-      className="scroll-mt-20 border-b border-white/10 bg-slate-950 px-4 py-20 sm:px-6"
+      className="scroll-mt-20 border-b border-white/10 px-4 py-20 sm:px-6"
     >
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col gap-4 text-center">

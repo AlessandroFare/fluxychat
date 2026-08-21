@@ -92,7 +92,7 @@ export default function DocsPage() {
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Documentation</p>
-          <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900">Guides and reference</h1>
+          <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-foreground">Guides and reference</h1>
         </div>
         <div className="shrink-0 sm:pt-1">
           <Button asChild>
@@ -106,7 +106,7 @@ export default function DocsPage() {
       <div className="mt-6 max-w-md">
         <DocsSearch variant="light" />
       </div>
-      <p className="mt-3 text-slate-600">
+      <p className="mt-3 text-muted-foreground">
         This page is a quick hub on fluxychat.com. Search, Ask AI, and the full SDK reference live on{" "}
         <a href={docsSiteHref("")} className="text-primary underline underline-offset-2" target="_blank" rel="noopener noreferrer">
           the docs site
@@ -128,7 +128,7 @@ export default function DocsPage() {
           const inner = (
             <>
               <guide.icon className="h-5 w-5 text-primary" aria-hidden />
-              <h2 className="mt-3 font-heading text-lg font-semibold text-slate-900">{guide.title}</h2>
+              <h2 className="mt-3 font-heading text-lg font-semibold text-foreground">{guide.title}</h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{guide.summary}</p>
               <span className="mt-3 inline-flex items-center text-sm font-medium text-primary">
                 {guide.cta}
@@ -143,7 +143,7 @@ export default function DocsPage() {
                 href={guide.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group rounded-2xl border border-black/[0.06] bg-white/90 p-5 shadow-[var(--shadow-subtle-2)] transition hover:border-primary/20 hover:shadow-md"
+                className="group rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)] transition hover:border-primary/20 hover:shadow-md"
               >
                 {inner}
               </a>
@@ -153,7 +153,7 @@ export default function DocsPage() {
             <Link
               key={guide.id}
               href={guide.href}
-              className="group rounded-2xl border border-black/[0.06] bg-white/90 p-5 shadow-[var(--shadow-subtle-2)] transition hover:border-primary/20 hover:shadow-md"
+              className="group rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)] transition hover:border-primary/20 hover:shadow-md"
             >
               {inner}
             </Link>
@@ -161,15 +161,15 @@ export default function DocsPage() {
         })}
       </div>
 
-      <section id="auth" className="mt-14 scroll-mt-24 border-t border-black/[0.06] pt-10">
-        <h2 className="font-heading text-xl font-semibold text-slate-900">Auth & JWT</h2>
+      <section id="auth" className="mt-14 scroll-mt-24 border-t border-border pt-10">
+        <h2 className="font-heading text-xl font-semibold text-foreground">Auth & JWT</h2>
         <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
           <p>
-            <strong className="text-slate-800">API key</strong> (<code className="font-mono text-xs">fc_...</code>):
+            <strong className="text-foreground">API key</strong> (<code className="font-mono text-xs">fc_...</code>):
             server-to-server, identifies your project. Store in env on your backend only.
           </p>
           <p>
-            <strong className="text-slate-800">JWT</strong>: for browsers and the SDK. Mint with{" "}
+            <strong className="text-foreground">JWT</strong>: for browsers and the SDK. Mint with{" "}
             <code className="font-mono text-xs">POST /auth/token</code> and header{" "}
             <code className="font-mono text-xs">X-Fluxy-Api-Key</code>. Claims include{" "}
             <code className="font-mono text-xs">sub</code> (user id),{" "}
@@ -183,11 +183,11 @@ export default function DocsPage() {
       </section>
 
       <section id="sdk" className="mt-12 scroll-mt-24">
-        <h2 className="font-heading text-xl font-semibold text-slate-900">SDK</h2>
-        <pre className="mt-4 overflow-x-auto rounded-xl bg-[#111111] p-4 text-sm text-slate-100">
+        <h2 className="font-heading text-xl font-semibold text-foreground">SDK</h2>
+        <pre className="mt-4 overflow-x-auto rounded-xl bg-zinc-950 p-4 text-sm text-zinc-100">
           {`pnpm add @fluxy-chat/sdk @fluxy-chat/react\n\nimport { FluxyChatClient } from "@fluxy-chat/sdk";\nimport { useChat } from "@fluxy-chat/react";\n\nconst client = new FluxyChatClient({\n  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL,\n  userId: "user_123",\n  token: memberJwtFromYourBackend,\n});`}
         </pre>
-        <h3 className="mt-6 font-heading text-base font-semibold text-slate-800">Flutter (Dart)</h3>
+        <h3 className="mt-6 font-heading text-base font-semibold text-foreground">Flutter (Dart)</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           Native Dart SDK for cross-platform apps. Install from{" "}
           <a
@@ -200,13 +200,13 @@ export default function DocsPage() {
           </a>
           .
         </p>
-        <pre className="mt-3 overflow-x-auto rounded-xl bg-[#111111] p-4 text-sm text-slate-100">
+        <pre className="mt-3 overflow-x-auto rounded-xl bg-zinc-950 p-4 text-sm text-zinc-100">
           {`flutter pub add fluxychat_sdk\n\nimport 'package:fluxychat_sdk/fluxychat_sdk.dart';\n\nfinal client = FluxyChatClient(\n  config: FluxyChatConfig(\n    apiUrl: 'https://your-worker.workers.dev',\n    wsUrl: 'wss://your-worker.workers.dev',\n    projectId: 'proj_123',\n    token: 'your-jwt-token',\n  ),\n);`}
         </pre>
       </section>
 
-      <section id="interactive" className="mt-14 scroll-mt-24 border-t border-black/[0.06] pt-10">
-        <h2 className="font-heading text-xl font-semibold text-slate-900">
+      <section id="interactive" className="mt-14 scroll-mt-24 border-t border-border pt-10">
+        <h2 className="font-heading text-xl font-semibold text-foreground">
           Interactive examples
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -226,11 +226,11 @@ export default function DocsPage() {
             return (
               <div
                 key={tmpl.id}
-                className="flex flex-col gap-3 rounded-xl border border-black/[0.06] bg-white/80 p-4 shadow-[var(--shadow-subtle-2)]"
+                className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-subtle-2)]"
               >
                 <Icon className="size-5 text-primary" aria-hidden />
                 <div>
-                  <h3 className="font-semibold text-sm text-slate-900">{tmpl.label}</h3>
+                  <h3 className="font-semibold text-sm text-foreground">{tmpl.label}</h3>
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                     {tmpl.description}
                   </p>
@@ -245,7 +245,7 @@ export default function DocsPage() {
       </section>
 
       <section id="webhooks" className="mt-12 scroll-mt-24">
-        <h2 className="font-heading text-xl font-semibold text-slate-900">Webhooks & billing</h2>
+        <h2 className="font-heading text-xl font-semibold text-foreground">Webhooks & billing</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Configure outbound webhooks per project in the console. Stripe checkout and usage quotas are enforced on the
           Worker  upgrade plans from <Link href="/billing" className="text-primary underline underline-offset-2">Billing</Link> after you connect an account.
@@ -253,7 +253,7 @@ export default function DocsPage() {
       </section>
 
       <section id="web-push" className="mt-12 scroll-mt-24">
-        <h2 className="font-heading text-xl font-semibold text-slate-900">Web Push (browser notifications)</h2>
+        <h2 className="font-heading text-xl font-semibold text-foreground">Web Push (browser notifications)</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           VAPID + RFC 8188 encrypted browser push, self-hosted and wire-compatible with Pusher Beams. Fetch the project
           public key from <code className="font-mono text-xs">GET /push/web/vapid-public-key</code> and register the
@@ -272,7 +272,7 @@ export default function DocsPage() {
         </p>
       </section>
 
-      <div className="mt-12 flex flex-wrap gap-3 border-t border-black/[0.06] pt-8">
+      <div className="mt-12 flex flex-wrap gap-3 border-t border-border pt-8">
         <Button asChild>
           <Link href={HOSTED_PATHS.signUp}>{HOSTED_COPY.startFree}</Link>
         </Button>

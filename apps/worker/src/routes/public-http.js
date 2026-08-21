@@ -22,6 +22,7 @@ import { getPublicHostConfig } from "../lib/custom-domains.js";
 import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flags.js";
 import { getFluxyClientDefaults } from "../lib/fluxy-config-runtime.js";
 import { isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
+import { parseAuthTokenBody } from "../lib/http-body.js";
 import { queryModelsCatalog, getModelById, listModelProviders, syncModelsCatalog } from "../lib/llm-models-catalog.js";
 
 /**
@@ -751,8 +752,12 @@ export async function dispatchPublicRoutes(request, url, h) {
     if (!resolvedProjectId || resolvedProjectId === (env.DEFAULT_PROJECT_ID || "default")) {
       return json({ error: "invalid api key" }, { status: 401 });
     }
-    const body = await request.json().catch(() => null);
-    if (!body?.userId || !isValidId(body.userId)) {
+    const rawBody = await request.json().catch(() => null);
+    const parsed = parseAuthTokenBody(rawBody);
+    if (!parsed.ok) {
+      return json({ error: parsed.error }, { status: 400 });
+    }
+    if (!isValidId(parsed.userId)) {
       return json(
         { error: "userId required: must be 1-128 chars, alphanumeric with _ -" },
         { status: 400 }
@@ -761,9 +766,9 @@ export async function dispatchPublicRoutes(request, url, h) {
     // Audit fix M-5: cap to non-elevated roles on the public token-mint path,
     // UNLESS the caller is the platform operator (trusted server-side bootstrap key).
     const capForTenant = isPlatformOperatorProject(resolvedProjectId, env) ? false : true;
-    const rolesValidation = validateRoles(body.roles, { capElevated: capForTenant });
+    const rolesValidation = validateRoles(parsed.roles, { capElevated: capForTenant });
     const roles = rolesValidation.roles;
-    const ttlSeconds = Math.max(60, Math.min(Number(body.ttlSeconds || 3600), 86_400));
+    const ttlSeconds = Math.max(60, Math.min(Number(parsed.ttlSeconds || 3600), 86_400));
     const row = await env.DB.prepare(
       "SELECT jwt_secret FROM project_secrets WHERE project_id = ?"
     )
@@ -773,7 +778,7 @@ export async function dispatchPublicRoutes(request, url, h) {
       return json({ error: "project secret not configured", projectId: resolvedProjectId, debug: "no_secret_row" }, { status: 400 });
     }
     const token = await signJwtHs256(row.jwt_secret, {
-      sub: body.userId,
+      sub: parsed.userId,
       tid: resolvedProjectId,
       roles,
       iat: Math.floor(Date.now() / 1000),
@@ -782,16 +787,16 @@ export async function dispatchPublicRoutes(request, url, h) {
     const base = {
       token,
       expiresIn: ttlSeconds,
-      claims: { sub: body.userId, tid: resolvedProjectId, roles },
+      claims: { sub: parsed.userId, tid: resolvedProjectId, roles },
     };
     if (!isSignin) {
       return json(base);
     }
-    const encodedUser = encodeURIComponent(body.userId);
+    const encodedUser = encodeURIComponent(parsed.userId);
     return json({
       ...base,
       signin: true,
-      userId: body.userId,
+      userId: parsed.userId,
       projectId: resolvedProjectId,
       userChannel: {
         websocketPath: `/ws/user/${encodedUser}`,

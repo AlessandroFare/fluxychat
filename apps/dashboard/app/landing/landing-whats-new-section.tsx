@@ -1,4 +1,7 @@
-import { Card, CardContent } from "~/components/ui/card";
+"use client";
+
+import { LandingCapabilityIndex } from "./landing-capability-index";
+import { LandingPlatformIndex } from "./landing-platform-index";
 import {
   ArrowRight,
   Boxes,
@@ -13,6 +16,7 @@ import {
   Key,
   LayoutTemplate,
   MessageSquare,
+  Sparkles,
   Mic,
   Network,
   Puzzle,
@@ -195,98 +199,106 @@ const PLATFORM_EXTENSIONS = [
   },
 ] as const;
 
+const CAPABILITY_GROUPS = [
+  {
+    id: "messages",
+    label: "Messages & Adapters",
+    icon: MessageSquare,
+    items: AI_FEATURES.filter((item) =>
+      [
+        "Multi-platform adapters",
+        "Card element builder",
+        "Conversation transcripts",
+        "Slash commands & regex routing",
+        "Ephemeral & chainable messages",
+      ].includes(item.title),
+    ),
+  },
+  {
+    id: "ai",
+    label: "AI, Voice & Streams",
+    icon: Sparkles,
+    items: AI_FEATURES.filter((item) =>
+      [
+        "Streaming markdown",
+        "AI tool presets",
+        "Stream resumption",
+        "MCP client",
+        "LLM middleware",
+        "Realtime voice",
+      ].includes(item.title),
+    ),
+  },
+  {
+    id: "runtime",
+    label: "Runtime & Modules",
+    icon: Cpu,
+    items: AI_FEATURES.filter((item) =>
+      ["DevTools web UI", "WorkflowAgent", "Sandbox support", "Platform modules"].includes(item.title),
+    ),
+  },
+] as const;
+
+const FEATURED_EXTENSIONS = PLATFORM_EXTENSIONS.slice(0, 4);
+const MORE_EXTENSIONS = PLATFORM_EXTENSIONS.slice(4);
+
 export function LandingWhatsNewSection() {
   return (
     <section
       id="whats-new"
-      className="scroll-mt-20 border-b border-white/10 bg-gradient-to-b from-slate-950 to-slate-900 px-4 py-20 sm:px-6"
+      className="scroll-mt-20 border-b border-[var(--mkt-border)] px-4 py-20 sm:px-6"
     >
       <div className="mx-auto max-w-6xl">
         <div className="text-center">
-          <span className="inline-flex items-center rounded-full bg-blue-500/10 px-3 py-1 text-sm font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20">
+          <span className="inline-flex items-center rounded-full bg-[var(--mkt-brand)]/10 px-3 py-1 text-sm font-medium text-[var(--mkt-brand)] ring-1 ring-inset ring-[var(--mkt-brand)]/25">
             Production ready
           </span>
-          <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-[var(--mkt-text)] sm:text-4xl">
             Live verticals, voice, and the server event bus
           </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-slate-300">
+          <p className="mx-auto mt-3 max-w-2xl text-[var(--mkt-text-muted)]">
             Polls, breakouts, stage go-live, collab CRDT, fleet GPS, and hybrid check-in fan out as{" "}
-            <code className="rounded bg-white/10 px-1 py-0.5 text-sm text-blue-200">server_event</code> frames on the
+            <code className="rounded bg-[var(--mkt-surface-2)] px-1 py-0.5 font-mono text-sm text-[var(--mkt-brand)]">server_event</code> frames on the
             room WebSocket. Voice AI, streaming AI, MCP tools, and durable agents sit on the same worker, with
             production readiness labels on every surface.
           </p>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {AI_FEATURES.map(({ icon: Icon, title, description }) => (
-            <Card
-              key={title}
-              className="border-white/10 bg-white/5 transition-colors hover:border-white/20 hover:bg-white/[0.07]"
-            >
-              <CardContent className="flex flex-col gap-3 p-5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 ring-1 ring-inset ring-blue-500/20">
-                  <Icon className="h-5 w-5 text-blue-400" />
-                </div>
-                <h3 className="font-semibold text-white">{title}</h3>
-                <p className="text-sm leading-relaxed text-slate-400">
-                  {description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <LandingCapabilityIndex groups={CAPABILITY_GROUPS} />
 
-        {/* Platform Extensions */}
         <div className="mt-14">
-          <div className="text-center mb-8">
-            <span className="inline-flex items-center rounded-full bg-purple-500/10 px-3 py-1 text-sm font-medium text-purple-400 ring-1 ring-inset ring-purple-500/20">
+          <div className="mb-2 text-center">
+            <span className="inline-flex items-center rounded-full bg-[var(--mkt-brand)]/10 px-3 py-1 text-sm font-medium text-[var(--mkt-brand)] ring-1 ring-inset ring-[var(--mkt-brand)]/25">
               Platform Extensions
             </span>
-            <h3 className="mt-3 font-heading text-2xl font-bold tracking-tight text-white">
+            <h3 className="mt-3 font-heading text-2xl font-bold tracking-tight text-[var(--mkt-text)]">
               App Marketplace · Cross-Channel · Spatial · Web3
             </h3>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-2 text-sm text-[var(--mkt-text-muted)]">
               Extend FluxyChat with apps, unify sessions across devices, build spatial experiences, and add Web3 auth.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {PLATFORM_EXTENSIONS.map(({ icon: Icon, title, description, href }) => (
-              <a key={title} href={href}
-                className="group flex flex-col gap-3 rounded-xl border border-purple-500/15 bg-purple-500/5 p-5 transition-all hover:border-purple-500/30 hover:bg-purple-500/[0.08] hover:-translate-y-0.5"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 ring-1 ring-inset ring-purple-500/20">
-                  <Icon className="h-5 w-5 text-purple-400" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white group-hover:text-purple-300 transition-colors">{title}</h4>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-400">{description}</p>
-                </div>
-                <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-purple-400 group-hover:text-purple-300">
-                  Try it <ArrowRight className="h-3 w-3" />
-                </span>
-              </a>
-            ))}
-          </div>
+          <LandingPlatformIndex featured={FEATURED_EXTENSIONS} more={MORE_EXTENSIONS} />
         </div>
 
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <a
             href="/devtools"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20 transition-colors hover:bg-blue-500/20"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--mkt-brand)]/10 px-4 py-2 text-sm font-medium text-[var(--mkt-brand)] ring-1 ring-inset ring-[var(--mkt-brand)]/20 transition-colors hover:bg-[var(--mkt-brand)]/15"
           >
             <Terminal className="h-4 w-4" />
             Try DevTools Playground
           </a>
           <a
             href="/playground"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20 transition-colors hover:bg-blue-500/20"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--mkt-brand)]/10 px-4 py-2 text-sm font-medium text-[var(--mkt-brand)] ring-1 ring-inset ring-[var(--mkt-brand)]/20 transition-colors hover:bg-[var(--mkt-brand)]/15"
           >
             <LayoutTemplate className="h-4 w-4" />
             Try Card Builder
           </a>
           <a
             href="/middleware"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20 transition-colors hover:bg-blue-500/20"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--mkt-brand)]/10 px-4 py-2 text-sm font-medium text-[var(--mkt-brand)] ring-1 ring-inset ring-[var(--mkt-brand)]/20 transition-colors hover:bg-[var(--mkt-brand)]/15"
           >
             <Settings2 className="h-4 w-4" />
             Try Middleware Configurator
@@ -298,7 +310,7 @@ export function LandingWhatsNewSection() {
             href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/guides"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-blue-400 hover:text-blue-300"
+            className="text-sm font-medium text-[var(--mkt-brand)] hover:opacity-80"
           >
             Read the guides →
           </a>

@@ -28,11 +28,13 @@
     "@fluxy-chat/config": "workspace:*",
     "@fluxy-chat/protocol": "workspace:*",
     "@simplewebauthn/server": "^13.3.2",
+    "hono": "4.12.33",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
     "remark-stringify": "^11.0.0",
     "remend": "^1.0.0",
     "xml-c14n": "^0.0.6",
-    "yjs": "^13.6.31"
+    "yjs": "^13.6.31",
+    "zod": "^4.4.3"
   }
 }

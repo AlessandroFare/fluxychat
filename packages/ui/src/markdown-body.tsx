@@ -3,7 +3,7 @@ import {
   parseMarkdown,
   type Content,
   type Root,
-} from "@fluxy-chat/sdk";
+} from "@fluxy-chat/sdk/markdown";
 import { cn } from "./lib/utils";
 import { safeUrl } from "./safe-url";
 

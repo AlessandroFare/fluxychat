@@ -309,11 +309,14 @@ async function executeTicket(env, { input, projectId, roomId, userId }) {
 async function executeGitHubIssue(env, { action, input }) {
   const { repo, title, body, labels } = input;
   if (!repo || !title) throw new Error("github_issue requires repo and title");
+  if (typeof repo !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo) || repo.includes("..")) {
+    throw new Error("github_issue invalid repo");
+  }
 
   const token = action.config.github_token || action.config.githubToken;
   if (!token) throw new Error("github_issue requires config.github_token");
 
-  const res = await fetch(`https://api.github.com/repos/${repo}/issues`, {
+  const res = await safeOutboundFetch(`https://api.github.com/repos/${repo}/issues`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

@@ -16,7 +16,7 @@ export function LandingPricingSection() {
   return (
     <section
       id="pricing"
-      className="scroll-mt-20 border-b border-white/10 bg-slate-950 px-4 py-20 sm:px-6"
+      className="scroll-mt-20 border-b border-white/10 px-4 py-20 sm:px-6"
     >
       <div className="mx-auto max-w-6xl">
         <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-white">Pricing</h2>

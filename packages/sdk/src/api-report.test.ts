@@ -91,4 +91,10 @@ describe("API Report", () => {
     const missing = core.filter((name) => !allExports.includes(name));
     expect(missing).toEqual([]);
   });
+
+  it("keeps markdown and yjs off the main barrel", () => {
+    expect(allExports).not.toContain("parseMarkdown");
+    expect(allExports).not.toContain("createYjsCollabPort");
+    expect(allExports).not.toContain("FLUXY_MESSAGES_MAP_KEY");
+  });
 });
