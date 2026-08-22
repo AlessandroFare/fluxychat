@@ -65,13 +65,13 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("font-sans", geist.variable, geistMono.variable)}
+      className={cn("light font-sans", geist.variable, geistMono.variable)}
     >
       <head suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'){document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t);document.documentElement.style.colorScheme=t;}}catch(e){}})();",
+              "(function(){try{var t=localStorage.getItem('theme');if(t!=='dark')t='light';document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t);document.documentElement.style.colorScheme=t;}catch(e){document.documentElement.classList.add('light');document.documentElement.style.colorScheme='light';}})();",
           }}
         />
         <link rel="llms" href={docsLlmsUrl} />
