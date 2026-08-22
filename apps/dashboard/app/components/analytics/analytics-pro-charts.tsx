@@ -382,7 +382,13 @@ export function AnalyticsProCharts({
         backgroundColor: theme.tooltipBg,
         borderColor: theme.line,
         textStyle: { color: theme.tooltipFg },
-        formatter: (p: { name?: string; value?: number }) => `${p.name ?? ""}: ${Number(p.value ?? 0).toFixed(1)}%`,
+        formatter: (params) => {
+          const p = Array.isArray(params) ? params[0] : params;
+          const name = p && "name" in p ? String(p.name ?? "") : "";
+          const raw = p && "value" in p ? p.value : 0;
+          const value = typeof raw === "number" ? raw : Number(raw ?? 0);
+          return `${name}: ${Number.isFinite(value) ? value.toFixed(1) : "0.0"}%`;
+        },
       },
       series: [
         {
