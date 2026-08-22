@@ -2063,8 +2063,8 @@ export function FluxyChat({
       <MessageScrollerProvider autoScroll scrollPreviousItemPeek={64}>
         <MessageScroller
           className={cn(
-            "h-[min(420px,50vh)] scroll-fade-b rounded-xl border border-border bg-muted/30",
-            variant === "demo" && "h-[min(480px,58vh)] border-border/80 bg-[#F4F4F5]",
+            "h-[min(420px,50vh)] scroll-fade-b rounded-xl border border-border bg-muted/40 text-card-foreground",
+            variant === "demo" && "h-[min(480px,58vh)] border-border/80 bg-muted",
             isOnboarding && "h-[min(200px,26vh)] shrink-0 border-border/80 bg-muted/20",
           )}
           data-testid="fluxychat-message-list"
@@ -2274,7 +2274,7 @@ export function FluxyChat({
                               <MessageHeader
                                 className={cn("px-0 mb-1", isSelf && "justify-end")}
                               >
-                                <span className="text-sm font-semibold text-foreground">
+                                <span className="text-sm font-semibold text-card-foreground">
                                   {displayName}
                                 </span>
                                 {isAgent ? (

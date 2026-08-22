@@ -6,7 +6,7 @@ import { logError } from "../lib/worker-log.js";
  * @param {URL} url
  * @param {Record<string, unknown>} h
  */
-export async function dispatchCollabHttp(request, url, h) {
+export async function dispatchCollabRoutes(request, url, h) {
   const {
     env, json, corsHeaders, verifyJwtAndGetContext,
   } = pickRouteDeps(h, ["env", "json", "corsHeaders", "verifyJwtAndGetContext"]);

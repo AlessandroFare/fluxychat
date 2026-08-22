@@ -82,7 +82,7 @@ export default function LandingHomePage() {
               Cloudflare bill. No per-connection pricing surprises.
             </p>
             <div className="mt-10">
-              <CloudflareCostTable />
+              <CloudflareCostTable variant="dark" />
             </div>
           </div>
         </section>

@@ -1,14 +1,18 @@
 "use client";
 
-import {
-  DonutChart,
-  HealthGauge,
-  HorizontalBarChart,
-  StatCard,
-  UsageMeter,
-} from "./analytics-charts";
+import { useEffect, useState } from "react";
+import { HealthGauge, StatCard, UsageMeter } from "./analytics-charts";
 import { Section } from "../ui";
-import { formatNumber } from "@/lib/format-number";
+import {
+  ANALYTICS_CURRENCIES,
+  ANALYTICS_CURRENCY_STORAGE_KEY,
+  formatMoney,
+  formatNumber,
+  inferAnalyticsCurrency,
+  isAnalyticsCurrency,
+  type AnalyticsCurrency,
+} from "@/lib/format-number";
+import { AnalyticsProCharts, type OpsStats } from "./analytics-pro-charts";
 
 interface CostStats {
   windowMinutes: number;
@@ -90,6 +94,7 @@ interface AnalyticsVisualSectionsProps {
   perfOverallOk: boolean | null;
   perfLoading?: boolean;
   perfExportAction: React.ReactNode;
+  ops: OpsStats | null;
 }
 
 export function AnalyticsVisualSections({
@@ -101,12 +106,60 @@ export function AnalyticsVisualSections({
   perfOverallOk,
   perfLoading = false,
   perfExportAction,
+  ops,
 }: AnalyticsVisualSectionsProps) {
+  const [currency, setCurrency] = useState<AnalyticsCurrency>("USD");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(ANALYTICS_CURRENCY_STORAGE_KEY);
+      if (stored && isAnalyticsCurrency(stored)) {
+        setCurrency(stored);
+        return;
+      }
+    } catch {
+      /* private mode */
+    }
+    setCurrency(inferAnalyticsCurrency(typeof navigator === "undefined" ? "en-US" : navigator.language));
+  }, []);
+
+  function money(value: number, digits?: { min?: number; max?: number }) {
+    return formatMoney(value, currency, "en-US", digits);
+  }
+
+  function onCurrencyChange(next: AnalyticsCurrency) {
+    setCurrency(next);
+    try {
+      localStorage.setItem(ANALYTICS_CURRENCY_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const currencySelect = (
+    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+      <span className="whitespace-nowrap">Display currency</span>
+      <select
+        className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+        value={currency}
+        onChange={(e) => onCurrencyChange(e.target.value as AnalyticsCurrency)}
+        aria-label="Display currency"
+      >
+        {ANALYTICS_CURRENCIES.map((code) => (
+          <option key={code} value={code}>
+            {code}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
   return (
     <>
       <Section
         title="Cost estimates"
         description={costs ? `Rolling window: ${costs.windowMinutes} minutes` : undefined}
+        actions={currencySelect}
       >
         {costs ? (
           <div className="space-y-8">
@@ -118,54 +171,32 @@ export function AnalyticsVisualSections({
                 hint={`${(costs.totals.errorRate * 100).toFixed(2)}% errors`}
                 accent={costs.totals.errorRate > 0.05 ? "warning" : "default"}
               />
-              <StatCard label="Webhook failures" value={String(costs.totals.webhookFailed)} accent="warning" />
+              <StatCard
+                label="Webhook failures"
+                value={String(costs.totals.webhookFailed)}
+                accent={costs.totals.webhookFailed > 0 ? "warning" : "default"}
+              />
               <StatCard
                 label="Est. total"
-                value={`GBP ${costs.costBreakdown.estimatedTotalCost.toFixed(2)}`}
+                value={money(costs.costBreakdown.estimatedTotalCost, { min: 2, max: 2 })}
                 hint="Operator cost model"
-                accent="success"
               />
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-2">
-              <div className="rounded-xl border border-border bg-white p-5">
-                <h3 className="mb-4 text-sm font-semibold text-foreground">Cost breakdown</h3>
-                <DonutChart
-                  centerLabel="Total"
-                  centerValue={costs.costBreakdown.estimatedTotalCost.toFixed(2)}
-                  segments={[
-                    { label: "Messages", value: costs.costBreakdown.messageCost, color: "#e8450a" },
-                    { label: "Requests", value: costs.costBreakdown.requestCost, color: "#6366f1" },
-                    { label: "Webhooks", value: costs.costBreakdown.webhookFailureCost, color: "#f59e0b" },
-                    { label: "Agents", value: costs.costBreakdown.agentFailureCost, color: "#10b981" },
-                    { label: "AI", value: costs.costBreakdown.aiCost, color: "#94a3b8" },
-                  ].filter((s) => s.value > 0)}
-                />
-              </div>
-              <div className="rounded-xl border border-border bg-white p-5">
-                <h3 className="mb-4 text-sm font-semibold text-foreground">Volume at scale</h3>
-                <HorizontalBarChart
-                  items={[
-                    {
-                      label: "Per 1k msgs",
-                      value: costs.projected.for1kMessages,
-                      formatted: `GBP ${costs.projected.for1kMessages}`,
-                    },
-                    {
-                      label: "Per 100k msgs",
-                      value: costs.projected.for100kMessages,
-                      formatted: `GBP ${costs.projected.for100kMessages}`,
-                    },
-                    {
-                      label: "Per 1M msgs",
-                      value: costs.projected.for1MMessages,
-                      formatted: `GBP ${costs.projected.for1MMessages}`,
-                      color: "#e8450a",
-                    },
-                  ]}
-                />
-              </div>
-            </div>
+            <AnalyticsProCharts
+              ops={ops}
+              costBreakdown={costs.costBreakdown}
+              costTotalLabel={money(costs.costBreakdown.estimatedTotalCost, { min: 2, max: 2 })}
+              projected={costs.projected}
+              projectedLabels={{
+                k1: "Per 1k",
+                k100: "Per 100k",
+                m1: "Per 1M",
+              }}
+              slo={slo}
+              usage={costs.usage ?? null}
+              plan={costs.plan ?? null}
+            />
 
             {costs.plan && costs.usage ? (
               <div className="rounded-xl border border-border bg-muted/20 p-5">
@@ -193,9 +224,9 @@ export function AnalyticsVisualSections({
             ) : null}
 
             {costs.pricing?.guardrails?.length ? (
-              <ul className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm">
+              <ul className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200">
                 {costs.pricing.guardrails.map((g) => (
-                  <li key={g.code} className="text-amber-950">
+                  <li key={g.code}>
                     <span className="font-semibold">[{g.level}]</span> {g.message}
                   </li>
                 ))}
@@ -238,7 +269,7 @@ export function AnalyticsVisualSections({
               accent={(alerts?.openAlerts ?? 0) > 0 ? "danger" : "success"}
             />
             {alerts?.alerts?.length ? (
-              <ul className="divide-y divide-border rounded-xl border border-border bg-white">
+              <ul className="divide-y divide-border rounded-xl border border-border bg-card">
                 {alerts.alerts.slice(0, 5).map((alert) => (
                   <li key={alert.id} className="px-4 py-3 text-sm">
                     <span className="font-medium text-foreground">[{alert.severity}]</span>{" "}
@@ -278,8 +309,8 @@ export function AnalyticsVisualSections({
                   key={c.label}
                   className={
                     c.ok
-                      ? "rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
-                      : "rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950"
+                      ? "rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-900 dark:text-emerald-200"
+                      : "rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-900 dark:text-red-200"
                   }
                 >
                   <p className="font-semibold">{c.label}</p>

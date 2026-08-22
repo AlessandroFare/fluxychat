@@ -12,17 +12,12 @@ import { FluxyAutoConnect } from "./components/fluxy-auto-connect";
 import { FluxyRealtimeShell } from "./components/fluxy-realtime-shell";
 import { BetaBanner } from "./components/beta-banner";
 import { CookieConsentBanner } from "./components/cookie-consent-banner";
-import { Geist, Geist_Mono, Syne } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ROOT_METADATA } from "@/lib/site-metadata";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
-const syne = Syne({
-  subsets: ["latin"],
-  variable: "--font-heading",
-  weight: ["500", "600", "700", "800"],
-});
 
 export const metadata: Metadata = {
   ...ROOT_METADATA,
@@ -70,7 +65,7 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("font-sans", geist.variable, geistMono.variable, syne.variable)}
+      className={cn("font-sans", geist.variable, geistMono.variable)}
     >
       <head suppressHydrationWarning>
         <script

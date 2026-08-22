@@ -366,7 +366,7 @@ export function HeroCodeInboxDemo() {
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-hidden">
       <div className="mb-3 flex flex-col gap-2 border-b border-white/10 pb-3 sm:flex-row sm:items-end sm:justify-between">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Your app</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">Your app</p>
         <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
           <div className="flex flex-wrap justify-end gap-1" role="tablist" aria-label="Preview modes">
             {HERO_PREVIEW_SCENES.map((scene, index) => (
@@ -378,14 +378,16 @@ export function HeroCodeInboxDemo() {
                 onClick={() => setSceneIndex(index)}
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-medium transition",
-                  index === sceneIndex ? "bg-[#C2410C] text-white" : "border border-white/15 bg-white/5 text-zinc-300 hover:bg-white/10",
+                  index === sceneIndex
+                    ? "bg-[#C2410C] text-white"
+                    : "border border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-white/15 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10",
                 )}
               >
                 {scene.label}
               </button>
             ))}
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Live preview</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">Live preview</p>
         </div>
       </div>
 

@@ -133,6 +133,7 @@
   --fluxy-bubble-received-bg: #1F2937;
   --fluxy-bubble-received-border: #2B3648;
   --fluxy-bubble-received-text: #F3F4F6;
+  --card-foreground: #f4f4f5;
 }
 
 body {
@@ -148,7 +149,7 @@ h1.font-heading,
 h2.font-heading,
 h3.font-heading,
 h4.font-heading {
-  font-family: var(--font-heading), var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 html.dark a.underline,
@@ -196,6 +197,26 @@ html.dark:not(:has(#fc-marketing-root)) .hover\:text-slate-900:hover {
 }
 
 #fc-marketing-root {
+  --mkt-nav-bg: color-mix(in srgb, var(--mkt-bg) 80%, transparent);
+  --mkt-nav-docked-bg: color-mix(in srgb, var(--mkt-bg-elevated) 92%, transparent);
+  --background: var(--mkt-bg);
+  --foreground: var(--mkt-text);
+  --card: var(--mkt-surface);
+  --card-foreground: var(--mkt-text);
+  --muted: var(--mkt-surface-2);
+  --muted-foreground: var(--mkt-text-muted);
+  --border: var(--mkt-border);
+  --primary: var(--mkt-brand);
+  --primary-foreground: #ffffff;
+  --ring: var(--mkt-brand);
+  --fluxy-cta-color: var(--mkt-brand);
+  --fluxy-link-color: var(--mkt-brand);
+  background-color: var(--mkt-bg);
+  color: var(--mkt-text);
+  text-wrap: pretty;
+}
+
+html.dark #fc-marketing-root {
   color-scheme: dark;
   --mkt-bg: #0b0b0c;
   --mkt-bg-elevated: #121214;
@@ -208,19 +229,23 @@ html.dark:not(:has(#fc-marketing-root)) .hover\:text-slate-900:hover {
   --mkt-brand: #ff6a1a;
   --mkt-brand-soft: #ff8a47;
   --mkt-glow: rgba(255, 106, 26, 0.22);
-  --background: var(--mkt-bg);
-  --foreground: var(--mkt-text);
-  --card: var(--mkt-surface);
-  --card-foreground: var(--mkt-text);
-  --muted: var(--mkt-surface-2);
-  --muted-foreground: var(--mkt-text-muted);
-  --border: var(--mkt-border);
-  --primary: var(--mkt-brand);
-  --primary-foreground: #ffffff;
-  --ring: var(--mkt-brand);
-  background-color: var(--mkt-bg);
-  color: var(--mkt-text);
-  text-wrap: pretty;
+}
+
+html:not(.dark) #fc-marketing-root {
+  color-scheme: light;
+  --mkt-bg: #ffffff;
+  --mkt-bg-elevated: #ffffff;
+  --mkt-surface: #ffffff;
+  --mkt-surface-2: #f4f4f5;
+  --mkt-border: rgba(24, 24, 27, 0.1);
+  --mkt-border-strong: rgba(24, 24, 27, 0.16);
+  --mkt-text: #18181b;
+  --mkt-text-muted: #52525b;
+  --mkt-brand: #c2410c;
+  --mkt-brand-soft: #9a3412;
+  --mkt-glow: rgba(194, 65, 12, 0.14);
+  --mkt-nav-bg: #ffffff;
+  --mkt-nav-docked-bg: rgba(255, 255, 255, 0.94);
 }
 
 #fc-marketing-root h1,
@@ -241,7 +266,7 @@ html.dark:not(:has(#fc-marketing-root)) .hover\:text-slate-900:hover {
 
 #fc-marketing-root .mkt-chip {
   border: 1px solid var(--mkt-border-strong);
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--mkt-surface) 70%, transparent);
   backdrop-filter: blur(12px);
 }
 
@@ -260,14 +285,17 @@ html.dark:not(:has(#fc-marketing-root)) .hover\:text-slate-900:hover {
 #fc-marketing-root .mkt-band-light {
   color-scheme: light;
   --mkt-text: #18181b;
-  --mkt-text-muted: #3f3f46;
+  --mkt-text-muted: #52525b;
   --mkt-surface: #ffffff;
   --mkt-surface-2: #f4f4f5;
   --mkt-border: rgba(24, 24, 27, 0.12);
   --mkt-border-strong: rgba(24, 24, 27, 0.2);
   --mkt-brand: #c2410c;
   --mkt-brand-soft: #9a3412;
-  background: #f3efe8;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --muted: #f4f4f5;
+  background-color: #faf8f5;
   color: #18181b;
 }
 
@@ -309,12 +337,40 @@ html.dark:not(:has(#fc-marketing-root)) .hover\:text-slate-900:hover {
 }
 
 #fc-marketing-root .mkt-band-dark {
-  background: rgba(11, 11, 12, 0.82);
+  color-scheme: dark;
+  --mkt-bg: #0b0b0c;
+  --mkt-bg-elevated: #121214;
+  --mkt-text: #f4f4f5;
+  --mkt-text-muted: #a1a1aa;
+  --mkt-surface: #171719;
+  --mkt-surface-2: #1c1c1f;
+  --mkt-border: rgba(255, 255, 255, 0.08);
+  --mkt-border-strong: rgba(255, 255, 255, 0.14);
+  --mkt-brand: #ff6a1a;
+  --mkt-brand-soft: #ff8a47;
+  --foreground: #f4f4f5;
+  --card: #171719;
+  --muted: #1c1c1f;
+  background: rgba(11, 11, 12, 0.88);
   color: #f4f4f5;
 }
 
 #fc-marketing-root .mkt-band-glass {
-  background: rgba(11, 11, 12, 0.48);
+  color-scheme: dark;
+  --mkt-bg: #121214;
+  --mkt-bg-elevated: #171719;
+  --mkt-text: #f4f4f5;
+  --mkt-text-muted: #a1a1aa;
+  --mkt-surface: #171719;
+  --mkt-surface-2: #1c1c1f;
+  --mkt-border: rgba(255, 255, 255, 0.08);
+  --mkt-border-strong: rgba(255, 255, 255, 0.14);
+  --mkt-brand: #ff6a1a;
+  --mkt-brand-soft: #ff8a47;
+  --foreground: #f4f4f5;
+  --card: #171719;
+  --muted: #1c1c1f;
+  background: rgba(11, 11, 12, 0.55);
   color: #f4f4f5;
 }
 
@@ -434,7 +490,7 @@ code {
   }
 }
 
-/* Hero headline accent — brand warm→violet, no heavy bloom */
+/* Hero headline accent — same as main: warm orange → violet */
 .am-text-gradient--hero {
   color: transparent;
   background-image: linear-gradient(

@@ -6,7 +6,8 @@ export const MAX_HTTP_BODY_BYTES = 1_048_576;
 /**
  * Hono shell around the existing Worker fetch handler.
  * Adds a body-size cap and a fail-closed Bearer check on /admin/* before
- * the O(prefix) dispatcher runs.
+ * the O(prefix) dispatcher runs. OPTIONS preflight skips the Bearer check
+ * so the inner handler can return CORS headers.
  *
  * @param {(request: Request, env: *, ctx: *) => Promise<Response>} innerFetch
  */
@@ -22,6 +23,10 @@ export function createHttpGateApp(innerFetch) {
   });
 
   app.use("*", async (c, next) => {
+    if (c.req.method === "OPTIONS") {
+      await next();
+      return;
+    }
     const path = new URL(c.req.url).pathname;
     const isAdminPath = path === "/admin" || path.startsWith("/admin/");
     if (isAdminPath && isAdminAuthRequired(c.env) && requestLacksBearer(c.req.raw)) {

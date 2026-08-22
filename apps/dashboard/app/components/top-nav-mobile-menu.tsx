@@ -70,39 +70,27 @@ export function TopNavMobileMenuPanel({
   linkClass = TOP_NAV_LINK_CLASS,
   panelClassName,
 }: TopNavMobileMenuPanelProps) {
-  if (!open) return null;
-
   return (
     <nav
       id={menuId}
+      hidden={!open}
       className={cn(
-        "border-t border-white/10 bg-[#121214] px-4 py-3 md:hidden",
+        "border-t px-4 py-3 md:hidden",
+        "border-[var(--mkt-border,rgba(255,255,255,0.1))] bg-[var(--mkt-bg-elevated,var(--background))] text-[var(--mkt-text,var(--foreground))]",
+        !open && "hidden",
         panelClassName,
       )}
       aria-label="Mobile links"
     >
       <ul className="flex flex-col gap-1">
         {links.map((item) => {
-          const isHashLink = item.href.includes("#");
-          const className = cn(linkClass, "block rounded-lg px-3 py-2.5");
-          const closeMenu = () => onClose();
+          const className = cn(linkClass, "block rounded-lg px-3 py-2.5 text-[var(--mkt-text,inherit)]");
 
           return (
             <li key={`${item.href}-${item.label}`}>
-              {isHashLink ? (
-                <a href={item.href} className={className} onClick={closeMenu}>
-                  {item.label}
-                </a>
-              ) : (
-                <Link
-                  href={item.href}
-                  className={className}
-                  onPointerDown={closeMenu}
-                  onClick={closeMenu}
-                >
-                  {item.label}
-                </Link>
-              )}
+              <Link href={item.href} className={className} onClick={() => window.setTimeout(() => onClose(), 80)}>
+                {item.label}
+              </Link>
             </li>
           );
         })}

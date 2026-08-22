@@ -270,7 +270,7 @@ export function MessageItem({
     <Message align={align} className={cn("gap-1", className)} data-testid={testId} data-streaming={dataStreaming} data-message-id={dataMessageId}>
       <MessageContent>
         <MessageHeader className={cn("px-0", align === "end" ? "justify-end text-right" : "justify-start")}>
-          <span className={cn("text-xs font-medium", isAgent ? "text-brand" : "text-muted-foreground")}>
+          <span className={cn("text-xs font-medium", isAgent ? "text-brand" : "text-card-foreground")}>
             {displayName}
           </span>
           {isAgent ? (

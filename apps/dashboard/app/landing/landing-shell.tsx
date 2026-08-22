@@ -12,6 +12,7 @@ import {
 import { FluxychatLogotype } from "@/components/FluxychatLogo";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "~/components/ui/ThemeToggle";
 import { LANDING_MOBILE_MENU_ID, LANDING_NAV_LINKS } from "./landing-shared";
 import { LandingMegaNav } from "./landing-mega-nav";
 import { HeroSignalField } from "~/components/marketing/hero-signal-field";
@@ -53,15 +54,14 @@ export function LandingShell({ children }: { children: ReactNode }) {
       <header
         className={cn(
           "fixed z-50 transition-[top,left,right,width,transform,border-radius,box-shadow,padding,border-width,background-color] duration-300 ease-out",
-          mobileNav.open && "overflow-hidden",
           navDocked
             ? cn(
-                "left-1/2 right-auto top-3 w-[min(calc(100vw-1.5rem),72rem)] -translate-x-1/2 border border-white/10 py-2 pl-3 pr-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.65)] sm:top-5 sm:pl-4 sm:pr-3",
+                "left-1/2 right-auto top-3 w-[min(calc(100vw-1.5rem),72rem)] -translate-x-1/2 border border-[var(--mkt-border)] py-2 pl-3 pr-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.35)] sm:top-5 sm:pl-4 sm:pr-3",
                 mobileNav.open
-                  ? "rounded-2xl bg-[#121214]/95 backdrop-blur-xl"
-                  : "rounded-full bg-[#121214]/90 backdrop-blur-xl",
+                  ? "rounded-2xl bg-[var(--mkt-nav-docked-bg)] backdrop-blur-xl"
+                  : "rounded-full bg-[var(--mkt-nav-docked-bg)] backdrop-blur-xl",
               )
-            : "left-0 right-0 top-0 border-b border-white/[0.06] bg-[#0b0b0c]/80 py-0 backdrop-blur-md",
+            : "left-0 right-0 top-0 border-b border-[var(--mkt-border)] bg-[var(--mkt-nav-bg)] py-0 backdrop-blur-md",
         )}
       >
         <div
@@ -73,7 +73,7 @@ export function LandingShell({ children }: { children: ReactNode }) {
           <div className="flex min-w-0 items-center md:col-start-1">
             <Link
               href={HOSTED_PATHS.landing}
-              className={cn("text-white", navDocked ? "scale-[0.92] sm:scale-100" : "")}
+              className={cn("text-[var(--mkt-text)]", navDocked ? "scale-[0.92] sm:scale-100" : "")}
               aria-label="Fluxychat"
             >
               <FluxychatLogotype size={navDocked ? 26 : 30} />
@@ -81,11 +81,13 @@ export function LandingShell({ children }: { children: ReactNode }) {
           </div>
           <LandingMegaNav docked={navDocked} />
           <div className="col-start-2 flex shrink-0 items-center justify-end gap-1.5 sm:gap-2 md:col-start-3">
+            <ThemeToggle className="border-[var(--mkt-border)] text-[var(--mkt-text)]" />
             <LandingNavAuthCta navDocked={navDocked} />
             <TopNavMobileMenuButton
               open={mobileNav.open}
               onToggle={mobileNav.toggle}
               menuId={LANDING_MOBILE_MENU_ID}
+              className="border-[var(--mkt-border)] text-[var(--mkt-text)]"
             />
           </div>
         </div>
@@ -94,10 +96,8 @@ export function LandingShell({ children }: { children: ReactNode }) {
           onClose={mobileNav.close}
           links={LANDING_NAV_LINKS}
           menuId={LANDING_MOBILE_MENU_ID}
-          panelClassName={cn(
-            "border-white/10 bg-[#121214] text-zinc-200",
-            navDocked && "border-white/10 bg-[#121214]",
-          )}
+          linkClass="text-sm font-medium text-[var(--mkt-text)] hover:bg-[var(--mkt-surface-2)]"
+          panelClassName="border-[var(--mkt-border)] bg-[var(--mkt-bg-elevated)] text-[var(--mkt-text)]"
         />
       </header>
       <div className="relative z-10 flex flex-1 flex-col">{children}</div>
