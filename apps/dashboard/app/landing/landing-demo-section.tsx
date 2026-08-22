@@ -63,16 +63,16 @@ function ChatBubble({ message, index }: { message: typeof FLOATING_MESSAGES[0]; 
       }}
     >
       {isLeft && (
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-surface-2)]">
-          <Bot className="size-4 text-[var(--mkt-text)]" />
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-800">
+          <Bot className="size-4 text-zinc-200" />
         </div>
       )}
       <div
         className={cn(
           "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
           isLeft
-            ? "rounded-tl-sm bg-[var(--mkt-surface-2)] text-[var(--mkt-text)]"
-            : "rounded-tr-sm bg-[var(--mkt-brand)] text-white",
+            ? "rounded-tl-sm bg-zinc-800 text-zinc-100"
+            : "rounded-tr-sm bg-zinc-100 text-zinc-900",
           isCode && "font-mono text-xs",
         )}
       >
@@ -139,19 +139,14 @@ export function LandingDemoSection() {
         {/* Animated Chat Preview */}
         {visible && (
           <div className="relative mx-auto mt-12 max-w-2xl">
-            {/* Background glow */}
-            <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-[var(--mkt-brand)]/10" />
-
-            {/* Chat Window */}
-            <div key={cycle} className="relative overflow-hidden rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)] shadow-xl">
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-[var(--mkt-border)] bg-[var(--mkt-surface-2)] px-4 py-3">
+            <div key={cycle} className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-xl backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="flex size-8 items-center justify-center rounded-full bg-[var(--mkt-brand)]">
                     <Bot className="size-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-[var(--mkt-text)]">FluxyBot</p>
+                    <p className="text-sm font-medium text-white">FluxyBot</p>
                     <p className="flex items-center gap-1 text-[10px] text-green-400">
                       <span className="relative flex size-1.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400/60" />
@@ -161,48 +156,45 @@ export function LandingDemoSection() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-2 text-xs text-zinc-400">
                   <Zap className="size-3.5 text-[var(--mkt-brand-soft)]" />
                   Cloudflare Edge
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="space-y-4 p-4 min-h-[300px]">
+              <div className="min-h-[300px] space-y-4 p-4">
                 {FLOATING_MESSAGES.map((msg, i) => (
                   <ChatBubble key={i} message={msg} index={i} />
                 ))}
               </div>
 
-              {/* Composer */}
-              <div className="border-t border-[var(--mkt-border)] bg-[var(--mkt-surface-2)] px-4 py-3">
-                <div className="flex items-center gap-2 rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-4 py-2.5">
+              <div className="border-t border-white/10 px-4 py-3">
+                <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-2.5">
                   <input
                     type="text"
                     readOnly
                     placeholder="Ask FluxyBot anything..."
-                    className="flex-1 bg-transparent text-sm text-[var(--mkt-text)] placeholder:text-[var(--mkt-text-muted)] outline-none"
+                    className="flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 outline-none"
                   />
-                  <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--mkt-brand)]">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-[var(--mkt-brand)]">
                     <ArrowRight className="size-4 text-white" />
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* CTA */}
-            <div className="mt-8 flex items-center justify-center gap-4">
+            <div className="mt-6 flex flex-row items-center justify-center gap-2 sm:mt-8 sm:gap-4">
               <Link
                 href="/demo"
-                className="group inline-flex items-center gap-2 rounded-xl bg-[var(--mkt-brand)] px-6 py-3 text-sm font-medium text-white transition hover:opacity-90"
+                className="group inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--mkt-brand)] px-3 text-xs font-medium text-white transition hover:opacity-90 sm:h-auto sm:gap-2 sm:rounded-xl sm:px-6 sm:py-3 sm:text-sm"
               >
-                <MessageSquare className="size-4 transition-transform group-hover:scale-110" />
+                <MessageSquare className="size-3.5 sm:size-4 sm:transition-transform sm:group-hover:scale-110" />
                 Open Playground
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                <ArrowRight className="hidden size-4 transition-transform group-hover:translate-x-0.5 sm:inline" />
               </Link>
               <Link
                 href="/guides"
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-6 py-3 text-sm font-medium text-[var(--mkt-text)] transition-all hover:bg-[var(--mkt-surface-2)]"
+                className="inline-flex h-9 items-center rounded-lg border border-white/15 bg-white/[0.06] px-3 text-xs font-medium text-white backdrop-blur-sm transition hover:bg-white/10 sm:h-auto sm:rounded-xl sm:px-6 sm:py-3 sm:text-sm"
               >
                 Read the Docs
               </Link>

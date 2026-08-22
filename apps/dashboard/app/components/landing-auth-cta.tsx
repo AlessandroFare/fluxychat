@@ -50,7 +50,7 @@ export function LandingNavAuthCta({ navDocked }: { navDocked?: boolean }) {
   return (
     <>
       <SignInButton mode="redirect" forceRedirectUrl={signupRedirect}>
-        <Button type="button" size="sm" className={cn(signInClass, dockClass)}>
+        <Button type="button" size="sm" className={cn(signInClass, dockClass, "hidden sm:inline-flex")}>
           {HOSTED_COPY.signIn}
         </Button>
       </SignInButton>

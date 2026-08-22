@@ -70,18 +70,18 @@ export function LandingShell({ children }: { children: ReactNode }) {
             navDocked ? "px-2 sm:px-3" : "h-14 px-4 sm:h-16 sm:px-6",
           )}
         >
-          <div className="flex min-w-0 items-center md:col-start-1">
+          <div className="flex min-w-0 items-center overflow-hidden md:col-start-1">
             <Link
               href={HOSTED_PATHS.landing}
-              className={cn("text-[var(--mkt-text)]", navDocked ? "scale-[0.92] sm:scale-100" : "")}
+              className={cn("min-w-0 truncate text-[var(--mkt-text)]", navDocked ? "scale-[0.92] sm:scale-100" : "")}
               aria-label="Fluxychat"
             >
-              <FluxychatLogotype size={navDocked ? 26 : 30} />
+              <FluxychatLogotype size={navDocked ? 22 : 24} className="sm:!text-[inherit]" />
             </Link>
           </div>
           <LandingMegaNav docked={navDocked} />
-          <div className="col-start-2 flex shrink-0 items-center justify-end gap-1.5 sm:gap-2 md:col-start-3">
-            <ThemeToggle className="border-[var(--mkt-border)] text-[var(--mkt-text)]" />
+          <div className="relative z-20 col-start-2 flex shrink-0 items-center justify-end gap-1 sm:gap-2 md:col-start-3">
+            <ThemeToggle className="shrink-0 border-[var(--mkt-border)] text-[var(--mkt-text)]" />
             <LandingNavAuthCta navDocked={navDocked} />
             <TopNavMobileMenuButton
               open={mobileNav.open}

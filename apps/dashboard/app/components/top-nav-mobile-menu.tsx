@@ -60,6 +60,7 @@ interface TopNavMobileMenuPanelProps {
   menuId: string;
   linkClass?: string;
   panelClassName?: string;
+  extra?: ReactNode;
 }
 
 export function TopNavMobileMenuPanel({
