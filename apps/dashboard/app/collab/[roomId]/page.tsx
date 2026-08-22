@@ -70,8 +70,8 @@ function CollabLayout({ roomId, tab, setTab }: { roomId: string; tab: CollabTab;
   const { connected, undoManager } = useYjs();
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-950">
-      <header className="flex items-center gap-3 border-b bg-white px-4 py-2 dark:bg-gray-900">
+    <div className="flex h-screen flex-col bg-background">
+      <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-2">
         <Link href="/collab" className="text-muted-foreground hover:text-foreground">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </Link>
@@ -90,7 +90,7 @@ function CollabLayout({ roomId, tab, setTab }: { roomId: string; tab: CollabTab;
         </div>
       </header>
 
-      <div className="flex gap-0.5 overflow-x-auto border-b bg-white px-2 dark:bg-gray-900 scrollbar-none">
+      <div className="flex gap-0.5 overflow-x-auto border-b border-border bg-card px-2 scrollbar-none">
         {ALL_TABS.map((t) => {
           const TabIcon = t.icon;
           return (

@@ -63,16 +63,16 @@ function ChatBubble({ message, index }: { message: typeof FLOATING_MESSAGES[0]; 
       }}
     >
       {isLeft && (
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-700">
-          <Bot className="size-4 text-white" />
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-surface-2)]">
+          <Bot className="size-4 text-[var(--mkt-text)]" />
         </div>
       )}
       <div
         className={cn(
           "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
           isLeft
-            ? "rounded-tl-sm bg-zinc-800 text-zinc-100"
-            : "rounded-tr-sm bg-zinc-200 text-zinc-900",
+            ? "rounded-tl-sm bg-[var(--mkt-surface-2)] text-[var(--mkt-text)]"
+            : "rounded-tr-sm bg-[var(--mkt-brand)] text-white",
           isCode && "font-mono text-xs",
         )}
       >
@@ -143,15 +143,15 @@ export function LandingDemoSection() {
             <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-[var(--mkt-brand)]/10" />
 
             {/* Chat Window */}
-            <div key={cycle} className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/90 shadow-xl">
+            <div key={cycle} className="relative overflow-hidden rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)] shadow-xl">
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 bg-slate-900/50 px-4 py-3">
+              <div className="flex items-center justify-between border-b border-[var(--mkt-border)] bg-[var(--mkt-surface-2)] px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="flex size-8 items-center justify-center rounded-full bg-[var(--mkt-brand)]">
                     <Bot className="size-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">FluxyBot</p>
+                    <p className="text-sm font-medium text-[var(--mkt-text)]">FluxyBot</p>
                     <p className="flex items-center gap-1 text-[10px] text-green-400">
                       <span className="relative flex size-1.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400/60" />
@@ -175,13 +175,13 @@ export function LandingDemoSection() {
               </div>
 
               {/* Composer */}
-              <div className="border-t border-white/10 bg-slate-900/50 px-4 py-3">
-                <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-800/50 px-4 py-2.5">
+              <div className="border-t border-[var(--mkt-border)] bg-[var(--mkt-surface-2)] px-4 py-3">
+                <div className="flex items-center gap-2 rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-4 py-2.5">
                   <input
                     type="text"
                     readOnly
                     placeholder="Ask FluxyBot anything..."
-                    className="flex-1 bg-transparent text-sm text-slate-300 placeholder:text-slate-600 outline-none"
+                    className="flex-1 bg-transparent text-sm text-[var(--mkt-text)] placeholder:text-[var(--mkt-text-muted)] outline-none"
                   />
                   <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--mkt-brand)]">
                     <ArrowRight className="size-4 text-white" />
@@ -202,7 +202,7 @@ export function LandingDemoSection() {
               </Link>
               <Link
                 href="/guides"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-6 py-3 text-sm font-medium text-[var(--mkt-text)] transition-all hover:bg-[var(--mkt-surface-2)]"
               >
                 Read the Docs
               </Link>

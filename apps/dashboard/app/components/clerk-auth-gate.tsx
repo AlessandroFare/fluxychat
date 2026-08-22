@@ -24,5 +24,17 @@ export function ClerkAuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (publishableKey.startsWith("pk_test_")) {
+    return (
+      <>
+        <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-800 dark:text-amber-200">
+          Clerk is using a development key on this host. Switch to a production instance (
+          <code className="font-mono">pk_live_…</code>) in the dashboard env, then redeploy.
+        </div>
+        {children}
+      </>
+    );
+  }
+
   return <>{children}</>;
 }

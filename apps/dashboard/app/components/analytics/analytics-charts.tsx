@@ -6,20 +6,35 @@ interface StatCardProps {
   value: string;
   hint?: string;
   accent?: "default" | "success" | "warning" | "danger";
+  /** Single-line value with native tooltip for long ids. */
+  truncate?: boolean;
 }
 
 const accentRing: Record<NonNullable<StatCardProps["accent"]>, string> = {
-  default: "border-border bg-white",
-  success: "border-emerald-200/80 bg-emerald-50/50",
-  warning: "border-amber-200/80 bg-amber-50/50",
-  danger: "border-red-200/80 bg-red-50/50",
+  default: "border-border bg-card",
+  success: "border-emerald-500/35 bg-emerald-500/10",
+  warning: "border-amber-500/35 bg-amber-500/10",
+  danger: "border-red-500/35 bg-red-500/10",
 };
 
-export function StatCard({ label, value, hint, accent = "default" }: StatCardProps) {
+export function StatCard({ label, value, hint, accent = "default", truncate = false }: StatCardProps) {
   return (
-    <div className={cn("rounded-xl border p-4 shadow-[var(--shadow-subtle)]", accentRing[accent])}>
+    <div
+      className={cn(
+        "flex min-w-0 flex-col rounded-xl border p-4 shadow-[var(--shadow-subtle)]",
+        accentRing[accent],
+      )}
+    >
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 font-heading text-2xl font-bold tracking-tight text-foreground">{value}</p>
+      <p
+        className={cn(
+          "mt-1 font-heading font-bold tracking-tight text-foreground",
+          truncate ? "truncate text-sm sm:text-base" : "text-2xl",
+        )}
+        title={truncate ? value : undefined}
+      >
+        {value}
+      </p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
@@ -99,12 +114,12 @@ export function HealthGauge({ label, value, max = 100, format, ok }: HealthGauge
   const pct = Math.min(100, (value / max) * 100);
   const display = format ? format(value) : `${value.toFixed(1)}%`;
   return (
-    <div className="rounded-xl border border-border bg-white p-4">
+    <div className="rounded-xl border border-border bg-card p-4">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p
         className={cn(
           "mt-1 text-xl font-bold tabular-nums",
-          ok === false ? "text-red-700" : ok ? "text-emerald-700" : "text-foreground",
+          ok === false ? "text-red-600 dark:text-red-400" : ok ? "text-emerald-600 dark:text-emerald-400" : "text-foreground",
         )}
       >
         {display}
@@ -151,7 +166,7 @@ export function DonutChart({
         role="img"
         aria-label={centerLabel}
       >
-        <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white text-center">
+        <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-card text-center">
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{centerLabel}</span>
           <span className="font-heading text-lg font-bold text-foreground">{centerValue}</span>
         </div>

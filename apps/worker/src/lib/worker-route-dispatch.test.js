@@ -41,15 +41,24 @@ describe("worker-route-dispatch (P0-2)", () => {
     );
   });
 
+  it("keeps composite messages/agents dispatcher on /agents, /rooms, and /bots", () => {
+    function names(segment) {
+      return (WORKER_ROUTE_PREFIX_INDEX[segment] ?? []).map((fn) => fn.name);
+    }
+    expect(names("agents")).toContain("dispatchMessagesAgentsRoutes");
+    expect(names("rooms")).toContain("dispatchMessagesAgentsRoutes");
+    expect(names("bots")).toContain("dispatchMessagesAgentsRoutes");
+  });
+
   it("narrows candidates for /messages vs full before-privacy list", () => {
     const messages = WORKER_ROUTE_PREFIX_INDEX.messages ?? [];
     expect(messages.length).toBeLessThan(WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY.length);
     expect(messages.some((fn) => fn.name.includes("Messages"))).toBe(true);
   });
 
-  it("keeps most verticals lazy while GA paths stay eager", () => {
+  it("keeps GA paths eager and still lazy-loads a large vertical set", () => {
     expect(WORKER_ROUTE_EAGER_COUNT).toBeGreaterThan(10);
-    expect(WORKER_ROUTE_LAZY_COUNT).toBeGreaterThan(WORKER_ROUTE_EAGER_COUNT);
+    expect(WORKER_ROUTE_LAZY_COUNT).toBeGreaterThan(10);
     expect(WORKER_ROUTE_EAGER_COUNT + WORKER_ROUTE_LAZY_COUNT).toBe(
       WORKER_ROUTE_DISPATCHER_COUNT,
     );

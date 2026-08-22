@@ -7,10 +7,10 @@ type BannerVariant = "info" | "success" | "warn" | "warning" | "error";
 
 const bannerVariantClass: Record<BannerVariant, string> = {
   info: "border-border bg-muted/60 text-foreground",
-  success: "border-emerald-200/80 bg-emerald-50 text-emerald-950",
-  warn: "border-amber-200/80 bg-amber-50 text-amber-950",
-  warning: "border-amber-200/80 bg-amber-50 text-amber-950",
-  error: "border-red-200/80 bg-red-50 text-red-950",
+  success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200",
+  warn: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200",
+  warning: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200",
+  error: "border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-200",
 };
 
 export function Banner({
@@ -134,10 +134,13 @@ type ButtonVariant =
   | "secondary";
 type ButtonSize = "sm" | "md" | "lg";
 
+const buttonCtaClasses =
+  "border-transparent bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] hover:bg-[var(--fluxy-btn-primary-hover-bg)]";
+
 const buttonVariantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-white border-transparent hover:opacity-90",
-  default: "bg-primary text-white border-transparent hover:opacity-90",
-  neutral: "border-slate-800/15 bg-slate-900 text-white hover:bg-slate-800",
+  primary: buttonCtaClasses,
+  default: buttonCtaClasses,
+  neutral: buttonCtaClasses,
   ghost: "border-transparent bg-transparent text-foreground hover:bg-muted/80",
   outline: "border-border bg-background text-foreground hover:bg-muted/60",
   secondary: "border-border bg-muted/60 text-foreground hover:bg-muted",

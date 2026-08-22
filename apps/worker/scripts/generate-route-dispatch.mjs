@@ -70,6 +70,7 @@ const HOT_SEGMENTS = new Set([
   "api",
   "export",
   "ws",
+  "collab",
 ]);
 
 function resolveRouteFile(relFromLib) {
@@ -87,12 +88,25 @@ function scrapeFileSegments(filePath, seen = new Set()) {
   }
   const segments = new Set();
 
-  const eqRe =
-    /(?:url\.pathname|path)\s*(?:===|!==|startsWith|endsWith)\s*\(\s*["'`](\/[^"'`?]*)/g;
+  function addPathLiteral(raw) {
+    const seg = String(raw || "")
+      .split("/")
+      .filter(Boolean)[0];
+    if (seg) segments.add(seg);
+  }
+
+  // Equality: url.pathname === "/agents" (no parentheses)
+  const eqRe = /(?:url\.pathname|path)\s*(?:===|!==)\s*["'`](\/[^"'`?]*)/g;
   let pm;
   while ((pm = eqRe.exec(src)) !== null) {
-    const seg = pm[1].split("/").filter(Boolean)[0];
-    if (seg) segments.add(seg);
+    addPathLiteral(pm[1]);
+  }
+
+  // Prefix only. endsWith("/branch") is a suffix and must not become a top-level bucket.
+  const startRe =
+    /(?:url\.pathname|path)\s*\.\s*startsWith\s*\(\s*["'`](\/[^"'`?]*)/g;
+  while ((pm = startRe.exec(src)) !== null) {
+    addPathLiteral(pm[1]);
   }
 
   const matchRe = /(?:url\.pathname|path)\.match\(\s*\/\^\\\/([a-zA-Z][\w-]*)/g;

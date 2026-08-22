@@ -6,6 +6,7 @@ import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { AnalyticsVisualSections } from "../components/analytics/analytics-visual-sections";
+import type { OpsStats } from "../components/analytics/analytics-pro-charts";
 import { StatCard } from "../components/analytics/analytics-charts";
 import { RoomPicker } from "../components/room-picker";
 import { ConsoleFeedback } from "../components/console-feedback";
@@ -230,6 +231,7 @@ export default function AnalyticsPage() {
   const [kpis, setKpis] = useState<LaunchKpis | null>(null);
   const [slo, setSlo] = useState<SloStats | null>(null);
   const [alerts, setAlerts] = useState<AlertsStats | null>(null);
+  const [ops, setOps] = useState<OpsStats | null>(null);
   const [benchmark, setBenchmark] = useState<BenchmarkStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [benchmarkLoading, setBenchmarkLoading] = useState(false);
@@ -283,7 +285,7 @@ export default function AnalyticsPage() {
     // Kick off the slow benchmark in parallel but do NOT await it here.
     void runBenchmark();
     try {
-      const [roomJson, costJson, kpiJson, sloJson, alertsJson] =
+      const [roomJson, costJson, kpiJson, sloJson, alertsJson, opsJson] =
         await Promise.all([
           fetchWorkerJson<RoomStats>(
             `${WORKER_URL}/stats/rooms/${encodeURIComponent(roomId)}`,
@@ -301,6 +303,9 @@ export default function AnalyticsPage() {
           fetchWorkerJson<AlertsStats>(`${WORKER_URL}/stats/alerts?limit=10`, {
             headers: authHeader(adminJwt),
           }),
+          fetchWorkerJson<OpsStats>(`${WORKER_URL}/stats/ops?minutes=1440`, {
+            headers: authHeader(adminJwt),
+          }).catch(() => null),
         ]);
 
       if (gen !== fetchGenRef.current) return;
@@ -309,6 +314,7 @@ export default function AnalyticsPage() {
       setKpis(kpiJson);
       setSlo(sloJson);
       setAlerts(alertsJson);
+      setOps(opsJson);
       setNotice("Analytics refreshed.");
     } catch (err: unknown) {
       if (gen !== fetchGenRef.current) return;
@@ -436,13 +442,12 @@ export default function AnalyticsPage() {
         </div>
 
         {roomStats ? (
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Room" value={roomStats.roomId} hint="Selected channel" />
+          <div className="grid items-start gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            <StatCard label="Room" value={roomStats.roomId} hint="Selected channel" truncate />
             <StatCard
               label="Messages"
               value={formatNumber(roomStats.messageCount)}
               hint="Stored in D1"
-              accent="success"
             />
             <StatCard label="Active users" value={String(roomStats.activeUsers)} hint="Distinct senders" />
             <StatCard
@@ -479,6 +484,7 @@ export default function AnalyticsPage() {
         slo={slo}
         alerts={alerts}
         kpis={kpis}
+        ops={ops}
         perfChecks={perfSummary?.checks ?? null}
         perfOverallOk={perfSummary?.overallOk ?? null}
         perfLoading={benchmarkLoading}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
 
 interface NodePos {
   x: number;
@@ -8,12 +9,21 @@ interface NodePos {
   z: number;
 }
 
+const DARK_BG = 0x0b0b0c;
+const LIGHT_BG = 0xf3efe8;
+
+interface HeroSignalFieldProps {
+  /** Page backdrop is always the dark constellation. Hero layer is cream, clipped to the hero box. */
+  placement?: "page" | "hero";
+}
+
 /**
- * Full-viewport realtime constellation: nodes, edges, and packets hopping branches.
- * Zoom is CSS scroll-timeline on the canvas (transform only). rAF pauses off-tab.
+ * Realtime constellation. Two instances: a fixed dark field for the page, and an
+ * absolutely-positioned light field inside the hero (light theme only).
  */
-export function HeroSignalField() {
+export function HeroSignalField({ placement = "page" }: HeroSignalFieldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDark = placement === "page";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -37,7 +47,8 @@ export function HeroSignalField() {
       if (disposed || !canvas) return;
 
       const scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(0x0b0b0c, 0.045);
+      const bg = isDark ? DARK_BG : LIGHT_BG;
+      scene.fog = new THREE.FogExp2(bg, isDark ? 0.045 : 0.032);
 
       const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 120);
       camera.position.set(0, 0, 11);
@@ -45,10 +56,10 @@ export function HeroSignalField() {
       renderer = new THREE.WebGLRenderer({
         canvas,
         antialias: true,
-        alpha: true,
+        alpha: false,
         powerPreference: "high-performance",
       });
-      renderer.setClearColor(0x0b0b0c, 0.55);
+      renderer.setClearColor(bg, 1);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
 
@@ -104,19 +115,19 @@ export function HeroSignalField() {
       nodeGeo = new THREE.BufferGeometry();
       nodeGeo.setAttribute("position", new THREE.BufferAttribute(nodePositions, 3));
       nodeMat = new THREE.PointsMaterial({
-        color: 0xf7f4ee,
+        color: isDark ? 0xf7f4ee : 0x3f3f46,
         size: 0.12,
         transparent: true,
-        opacity: 0.92,
+        opacity: isDark ? 0.92 : 0.72,
         sizeAttenuation: true,
       });
 
       lineGeo = new THREE.BufferGeometry();
       lineGeo.setAttribute("position", new THREE.BufferAttribute(linePositions, 3));
       lineMat = new THREE.LineBasicMaterial({
-        color: 0xe8e4dc,
+        color: isDark ? 0xe8e4dc : 0x9a3412,
         transparent: true,
-        opacity: 0.22,
+        opacity: isDark ? 0.22 : 0.18,
       });
 
       const packetCount = reduced ? 0 : 28;
@@ -124,7 +135,7 @@ export function HeroSignalField() {
       packetGeo = new THREE.BufferGeometry();
       packetGeo.setAttribute("position", new THREE.BufferAttribute(packetPos, 3));
       packetMat = new THREE.PointsMaterial({
-        color: 0xffffff,
+        color: isDark ? 0xff6a1a : 0xc2410c,
         size: 0.1,
         transparent: true,
         opacity: 0.98,
@@ -140,14 +151,14 @@ export function HeroSignalField() {
       group = new THREE.Group();
       group.add(new THREE.LineSegments(lineGeo, lineMat));
       group.add(new THREE.Points(nodeGeo, nodeMat));
-      const packetPoints = new THREE.Points(packetGeo, packetMat);
-      group.add(packetPoints);
+      group.add(new THREE.Points(packetGeo, packetMat));
       scene.add(group);
 
       function resize() {
-        if (!renderer) return;
-        const width = window.innerWidth;
-        const height = window.innerHeight;
+        if (!renderer || !canvas) return;
+        const parent = canvas.parentElement;
+        const width = placement === "hero" ? (parent?.clientWidth ?? canvas.clientWidth) : window.innerWidth;
+        const height = placement === "hero" ? (parent?.clientHeight ?? canvas.clientHeight) : window.innerHeight;
         if (width < 1 || height < 1) return;
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
@@ -217,12 +228,17 @@ export function HeroSignalField() {
       packetMat?.dispose();
       renderer?.dispose();
     };
-  }, []);
+  }, [isDark, placement]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="mkt-signal-zoom pointer-events-none fixed left-0 top-0 z-0 block h-dvh w-screen max-w-none"
+      className={cn(
+        "pointer-events-none block max-w-none",
+        placement === "page"
+          ? "mkt-signal-zoom fixed left-0 top-0 z-0 h-dvh w-screen"
+          : "absolute inset-0 z-0 h-full w-full",
+      )}
       aria-hidden
     />
   );

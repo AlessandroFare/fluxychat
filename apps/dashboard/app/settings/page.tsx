@@ -75,19 +75,24 @@ export default function SettingsPage() {
       />
 
       <section className="mb-8">
-        <h2 className="mb-3 font-heading text-sm font-semibold text-slate-900">Browse settings</h2>
-        <div className="grid gap-6 sm:grid-cols-2">
+        <h2 className="mb-3 font-heading text-sm font-semibold text-foreground">Browse settings</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
           {SETTINGS_CATALOG.map((group) => (
-            <div key={group.label}>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{group.label}</h3>
+            <div
+              key={group.label}
+              className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-subtle-2)]"
+            >
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {group.label}
+              </h3>
               <ul className="space-y-1">
                 {group.items.map((item) => (
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="block rounded-lg px-2 py-1.5 text-sm hover:bg-slate-50"
+                      className="block rounded-lg px-2 py-1.5 text-sm hover:bg-muted"
                     >
-                      <span className="font-medium text-slate-900">{item.label}</span>
+                      <span className="font-medium text-foreground">{item.label}</span>
                       <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
                     </Link>
                   </li>
@@ -350,14 +355,14 @@ function SettingsCard(props: {
   return (
     <div
       className={
-        "rounded-2xl border bg-white/90 p-5 shadow-[var(--shadow-subtle-2)] " +
-        (props.danger ? "border-red-200" : "border-black/[0.06]")
+        "rounded-2xl border bg-card p-5 shadow-[var(--shadow-subtle-2)] " +
+        (props.danger ? "border-red-500/40" : "border-border")
       }
     >
       <h2
         className={
           "font-heading text-base font-semibold " +
-          (props.danger ? "text-red-700" : "text-slate-900")
+          (props.danger ? "text-red-600 dark:text-red-400" : "text-foreground")
         }
       >
         {props.title}

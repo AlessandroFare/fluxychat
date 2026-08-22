@@ -30,6 +30,31 @@ describe("createHttpGateApp", () => {
     expect(res.status).toBe(401);
   });
 
+  it("lets CORS preflight through /admin without Bearer", async () => {
+    let innerCalled = false;
+    const app = createHttpGateApp(async () => {
+      innerCalled = true;
+      return new Response(null, {
+        status: 204,
+        headers: { "Access-Control-Allow-Origin": "https://fluxychat.com" },
+      });
+    });
+    const res = await app.fetch(
+      new Request("https://x/admin/webhooks", {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://fluxychat.com",
+          "Access-Control-Request-Method": "GET",
+        },
+      }),
+      { NODE_ENV: "production" },
+      { waitUntil() {} },
+    );
+    expect(innerCalled).toBe(true);
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://fluxychat.com");
+  });
+
   it("passes through authenticated admin requests", async () => {
     const app = createHttpGateApp(async () => new Response("ok", { status: 200 }));
     const res = await app.fetch(

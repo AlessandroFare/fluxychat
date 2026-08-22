@@ -13,10 +13,10 @@ interface KanbanItem {
 }
 
 const COLUMNS = [
-  { key: "todo", label: "To Do", color: "bg-gray-100 dark:bg-gray-800" },
-  { key: "in_progress", label: "In Progress", color: "bg-blue-50 dark:bg-blue-950" },
-  { key: "review", label: "Review", color: "bg-amber-50 dark:bg-amber-950" },
-  { key: "done", label: "Done", color: "bg-green-50 dark:bg-green-950" },
+  { key: "todo", label: "To Do", accent: "border-l-muted-foreground/40" },
+  { key: "in_progress", label: "In Progress", accent: "border-l-sky-500" },
+  { key: "review", label: "Review", accent: "border-l-amber-500" },
+  { key: "done", label: "Done", accent: "border-l-emerald-500" },
 ];
 
 function KanbanCard({ item, onDelete }: { item: KanbanItem; onDelete: () => void }) {
@@ -24,7 +24,7 @@ function KanbanCard({ item, onDelete }: { item: KanbanItem; onDelete: () => void
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
-    <div ref={setNodeRef} style={style} className={`rounded-lg border bg-white p-2.5 text-xs shadow-sm dark:bg-gray-900 ${isDragging ? "opacity-50" : ""}`}>
+    <div ref={setNodeRef} style={style} className={`rounded-lg border border-border bg-card p-2.5 text-xs text-foreground shadow-sm ${isDragging ? "opacity-50" : ""}`}>
       <div className="flex items-start gap-1">
         <button {...attributes} {...listeners} className="mt-0.5 shrink-0 cursor-grab text-muted-foreground hover:text-foreground">
           <GripVertical className="h-3 w-3" />
@@ -40,11 +40,11 @@ function KanbanCard({ item, onDelete }: { item: KanbanItem; onDelete: () => void
   );
 }
 
-function KanbanColumn({ status, label, color, items, onAdd }: { status: string; label: string; color: string; items: KanbanItem[]; onAdd: () => void }) {
+function KanbanColumn({ status, label, accent, items, onAdd }: { status: string; label: string; accent: string; items: KanbanItem[]; onAdd: () => void }) {
   const ids = useMemo(() => items.map((i) => i.id), [items]);
 
   return (
-    <div className={`flex flex-1 flex-col rounded-xl ${color} p-3 min-w-0`}>
+    <div className={`flex min-w-0 flex-1 flex-col rounded-xl border border-border bg-muted/40 p-3 border-l-4 ${accent}`}>
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-semibold text-xs">{label} <span className="ml-1 text-muted-foreground font-normal">({items.length})</span></h3>
         <button onClick={onAdd} className="rounded-md p-1 text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"><Plus className="h-3.5 w-3.5" /></button>
@@ -115,7 +115,7 @@ export default function CollabKanban({ roomId }: { roomId: string }) {
   const activeItem = activeId ? items.find((i) => i.id === activeId) : null;
 
   return (
-    <div className="flex h-full flex-col bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-full flex-col bg-background">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(e) => setActiveId(e.active.id as string)} onDragEnd={handleDragEnd}>
         <div className="flex flex-1 gap-3 overflow-x-auto p-4">
           {COLUMNS.map((col) => (
@@ -123,24 +123,24 @@ export default function CollabKanban({ roomId }: { roomId: string }) {
               key={col.key}
               status={col.key}
               label={col.label}
-              color={col.color}
+              accent={col.accent}
               items={items.filter((i) => i.status === col.key)}
               onAdd={() => setNewItemStatus(col.key)}
             />
           ))}
         </div>
         <DragOverlay>
-          {activeItem && <div className="rounded-lg border bg-white p-2.5 text-xs shadow-lg dark:bg-gray-900"><p className="font-medium">{activeItem.title}</p></div>}
+          {activeItem && <div className="rounded-lg border border-border bg-card p-2.5 text-xs text-foreground shadow-lg"><p className="font-medium">{activeItem.title}</p></div>}
         </DragOverlay>
       </DndContext>
 
       {newItemStatus && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setNewItemStatus(null)}>
-          <div className="w-72 rounded-xl bg-white p-4 shadow-lg dark:bg-gray-900" onClick={(e) => e.stopPropagation()}>
+          <div className="w-72 rounded-xl border border-border bg-card p-4 text-foreground shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-3 font-semibold text-sm">Add card to {COLUMNS.find((c) => c.key === newItemStatus)?.label}</h3>
             <input
               autoFocus
-              className="mb-3 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-primary"
+              className="mb-3 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               placeholder="Card title..."
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}

@@ -215,7 +215,7 @@ export function LandingFeaturesClient() {
                 <Card
                   key={u.title}
                   className={cn(
-                    "border-white/10 bg-[#171719] shadow-none",
+                    "border-[var(--mkt-border)] bg-[var(--mkt-surface)] shadow-none",
                     "transition duration-300 hover:-translate-y-0.5 hover:border-[var(--mkt-brand)]/35",
                   )}
                 >

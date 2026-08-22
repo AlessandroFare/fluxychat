@@ -13,7 +13,7 @@ interface LandingMegaNavProps {
 function MegaMenuPanel({ menu }: { menu: LandingNavMenu }) {
   if (menu.href) {
     return (
-      <Link href={menu.href} className="shrink-0 rounded-full px-2.5 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
+      <Link href={menu.href} className="shrink-0 rounded-full px-2.5 py-1.5 text-sm font-medium text-[var(--mkt-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--mkt-text)]">
         {menu.label}
       </Link>
     );
@@ -27,7 +27,7 @@ function MegaMenuPanel({ menu }: { menu: LandingNavMenu }) {
     <div className="group relative shrink-0">
       <button
         type="button"
-        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm font-medium text-zinc-300 transition-colors group-hover:bg-white/5 group-hover:text-white group-focus-within:bg-white/5 group-focus-within:text-white"
+        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm font-medium text-[var(--mkt-text-muted)] transition-colors group-hover:bg-white/5 group-hover:text-[var(--mkt-text)] group-focus-within:bg-white/5 group-focus-within:text-[var(--mkt-text)]"
         aria-haspopup="true"
       >
         {menu.label}
@@ -42,7 +42,7 @@ function MegaMenuPanel({ menu }: { menu: LandingNavMenu }) {
       >
         <div
           className={cn(
-            "rounded-xl border border-white/10 bg-[#111111] p-4 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.8)]",
+            "rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-bg-elevated)] p-4 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.35)]",
             isWide ? "grid min-w-[22rem] grid-cols-2 gap-6" : "min-w-[12rem]",
           )}
         >
@@ -57,7 +57,7 @@ function MegaMenuPanel({ menu }: { menu: LandingNavMenu }) {
                       <li key={link.href + link.label}>
                         <Link
                           href={link.href}
-                          className="block rounded-md px-2 py-1.5 text-sm text-slate-100 transition-colors hover:bg-white/10"
+                          className="block rounded-md px-2 py-1.5 text-sm text-[var(--mkt-text)] transition-colors hover:bg-white/10"
                         >
                           {link.label}
                         </Link>
@@ -72,7 +72,7 @@ function MegaMenuPanel({ menu }: { menu: LandingNavMenu }) {
                   <li key={link.href + link.label}>
                     <Link
                       href={link.href}
-                      className="block rounded-md px-2 py-1.5 text-sm text-slate-100 transition-colors hover:bg-white/10"
+                      className="block rounded-md px-2 py-1.5 text-sm text-[var(--mkt-text)] transition-colors hover:bg-white/10"
                     >
                       {link.label}
                     </Link>
