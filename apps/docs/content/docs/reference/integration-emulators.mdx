@@ -1,0 +1,68 @@
+---
+title: "Integration test emulators (webhook replay)"
+description: "Replay recorded Slack, Discord, and Matrix webhook payloads in Vitest without hitting production platforms."
+---
+
+FluxyChat ships a fixture replay harness for bridge webhook routes. Record real payloads once, commit them as JSON, and replay them in CI to catch parser regressions before deploy.
+
+## Layout
+
+```
+apps/worker/src/lib/
+  integration-emulator.js      # loadFixture, replayWebhookFixture
+  bridge-webhook-parsers.js    # Slack / Discord parsers
+  fixtures/webhooks/*.json     # Recorded payloads + expectations
+  integration-emulator.test.js # Replay suite
+```
+
+## Run replay tests
+
+```bash
+cd apps/worker
+npm test -- --run src/lib/integration-emulator.test.js
+```
+
+## Add a fixture
+
+1. Capture the webhook body from bridge logs or a staging tunnel (Slack Events API, Discord interactions, Matrix appservice).
+2. Create `fixtures/webhooks/my-case.json`:
+
+```json
+{
+  "name": "slack-mention",
+  "platform": "slack",
+  "bridgeId": "br_slack_fixture",
+  "payload": { "type": "event_callback", "event": { "..." : "..." } },
+  "expect": { "status": 200, "ok": true }
+}
+```
+
+3. Add `"my-case"` to the replay loop in `integration-emulator.test.js` (or use dynamic `listWebhookFixtures()` only).
+4. Run Vitest — `assertFixtureExpectations` validates status and response shape.
+
+## Supported routes
+
+| Platform | Path | Parser |
+|----------|------|--------|
+| Slack | `POST /webhooks/bridge/slack/:bridgeId` | `parseSlackWebhookBody` |
+| Discord | `POST /webhooks/bridge/discord/:bridgeId` | `parseDiscordWebhookBody` |
+| Matrix | `POST /webhooks/matrix/:bridgeId` | appservice transaction processor |
+
+## API helpers
+
+```js
+import {
+  loadWebhookFixture,
+  createBridgeWebhookRequest,
+  replayWebhookFixture,
+} from "../lib/integration-emulator.js";
+import { dispatchBridgeWebhookRoutes } from "../routes/bridge-webhook-http.js";
+
+const fixture = loadWebhookFixture("slack-message");
+const result = await replayWebhookFixture(dispatchBridgeWebhookRoutes, env, h, fixture);
+```
+
+## Related
+
+- [Messaging parity checklist](/docs/reference/messaging-parity-checklist)
+- Vercel Chat SDK reference clones under `docs/research/chat-main-vercel/packages/integration-tests/`

@@ -1,0 +1,48 @@
+---
+title: "Presence-aware escalation"
+description: "Nudge humans who are online when an agent is waiting for a response (PH-102)."
+---
+
+# Presence-aware escalation
+
+When an agent needs a human and the primary contact does not answer, FluxyChat walks an **escalation chain** and nudges the next **online** member in the room.
+
+## Start a watch
+
+```http
+POST /rooms/{roomId}/presence-escalation
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "escalationChain": ["tier1_user", "tier2_user", "manager_user"],
+  "awaitingUserId": "tier1_user",
+  "nudgeIntervalSeconds": 300
+}
+```
+
+## Cron tick
+
+Every five minutes (webhook flush cron), the Worker runs `tickPresenceEscalations`. Online users are read from room presence (`fetchAggregatedRoomLive`). Each nudge emits:
+
+- WebSocket `server_event` named `presence_escalation.nudge`
+- Audit event `presence_escalation.nudged`
+
+Manual tick (admin):
+
+```http
+POST /presence-escalation/tick
+```
+
+## Human responds
+
+Any message in the room from a chain participant auto-resolves the watch (REST `POST /messages` path). Or call:
+
+```http
+POST /rooms/{roomId}/presence-escalation/resolve
+```
+
+## Dashboard
+
+Configure chains from **Agent queue** and room settings. Pair with [Presence knock template](/docs/guides/cookbook-presence-knock).

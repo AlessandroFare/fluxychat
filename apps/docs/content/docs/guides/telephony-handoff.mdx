@@ -1,0 +1,59 @@
+---
+title: "Telephony to agent handoff"
+description: "Send Telnyx or Twilio inbound SMS and voice into a room handoff, with an optional Voice AI session."
+---
+
+When someone texts or calls your number, you can drop them into a support room, flag a human handoff, and optionally start a Voice AI session on the same room.
+
+## Turn it on
+
+Set these Worker environment variables:
+
+```bash
+TELCO_INBOUND_ENABLED=true
+TELEPHONY_AGENT_HANDOFF=true   # or TELCO_AGENT_HANDOFF=true
+TELCO_INBOUND_DEFAULT_ROOM_ID=<room-uuid>
+```
+
+After a successful inbound telco message, FluxyChat can call `maybeTelephonyHandoffOnInbound` automatically.
+
+## Call the API yourself
+
+```http
+POST /integrations/telephony/handoff
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{
+  "roomId": "room-uuid",
+  "fromE164": "+15551234567",
+  "channel": "voice",
+  "providerId": "openai-realtime",
+  "requestVoiceSession": true,
+  "reason": "Caller asked for an agent"
+}
+```
+
+The response includes:
+
+- `handoff`: active human handoff state
+- `voiceSession`: Voice AI session (`sessionId`, `wsUrl`) when you asked for one
+- `suggestedAgentUserId`: best support agent match from presence and skill tags
+
+## What happens end to end
+
+1. Telco webhook hits `handleTelcoInboundMessage` (SMS or WhatsApp body becomes a room message).
+2. The agent queue enqueues the room if you use support routing.
+3. Handoff runs `requestHumanHandoff`, optionally `createVoiceAiSession`, and picks a support routing candidate.
+
+## Dashboard
+
+Open **Settings → Telephony handoff** (`/settings/telephony`) to review env vars and fire a test handoff.
+
+After a voice escalation, check **Voice AI** (`/voice-ai`) for the session and **Agent queue** to claim the room.
+
+## Related
+
+- [Voice AI pipeline](/docs/guides/voice-ai-pipeline)
+- [US SMS compliance](/docs/operations/us-sms-compliance-playbook)
+- [Agent tool policy](/docs/reference/agent-tool-policy)

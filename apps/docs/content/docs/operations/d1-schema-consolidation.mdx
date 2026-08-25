@@ -1,76 +1,15 @@
 ---
-title: "D1 schema consolidation plan (P21)"
-description: "FluxyChat currently ships **136 sequential migrations** under `apps/worker/db/` (0001â€“0136). P15â€“P20 added many feature-specific tables. This document defin"
+title: "D1 schema consolidation (internal)"
+description: "Engineering note for FluxyChat contributors. Not part of the public integration docs."
 ---
 
-# D1 schema consolidation plan (P21)
+This document describes how we plan to consolidate D1 migrations for faster fresh installs. It is maintained for the core team in the repository (`docs/` and `apps/worker/db/`).
 
-FluxyChat currently ships **136 sequential migrations** under `apps/worker/db/` (0001â€“0136). P15â€“P20 added many feature-specific tables. This document defines a **safe consolidation strategy** without blocking current deploys.
-
-## Goals
-
-1. **Faster fresh installs** -- one baseline snapshot for new environments instead of 136 `ALTER` steps.
-2. **Clear domain boundaries** -- group tables by feature area for docs and access reviews.
-3. **No production downtime** -- consolidation is additive; old migration history stays valid.
-
-## Current shape (high level)
-
-| Domain | Example migrations | Notes |
-|--------|-------------------|--------|
-| Core chat | 0001â€“0011, 0005, 0007 | messages, threads, reactions, tenancy |
-| Agents & AI | 0010, 0013, 0060â€“0063, 0086 | agents, runs, memory, knowledge graph |
-| Omnichannel | 0054â€“0057, 0079â€“0080 | telco, inbox, quiet hours |
-| Enterprise | 0082, 0113â€“0117, 0129â€“0136 | retention, IP whitelist, eDiscovery, SSO |
-| Integrations | 0124â€“0125, 0119 | bridges, marketplace |
-| Ops | 0014â€“0016, 0105 | metrics, alerts, rate-limit dashboard |
-
-## Recommended phases
-
-### Phase 1 -- Inventory (done in repo)
-
-- Keep applying migrations 0001â†’0136 on existing DBs (your deploy flow).
-- Feature map: `docs/features-overview.md` P21 table.
-
-### Phase 2 -- Baseline snapshot
-
-1. On a **fresh local D1**, apply all migrations.
-2. Export schema (no data) to `apps/worker/db/baseline/0136_schema.sql`.
-3. Use `apps/worker/db/README.md` for greenfield vs incremental guidance.
+If you are self-hosting FluxyChat, follow [Production setup](/docs/operations/production-setup) and apply migrations with:
 
 ```bash
 cd apps/worker
-wrangler d1 migrations apply fluxychat --local
-pnpm run db:export-baseline
-# Writes db/baseline/0136_schema.sql (wrangler d1 export fails on FTS5 virtual tables)
+pnpm exec wrangler d1 migrations apply fluxychat --remote
 ```
 
-### Phase 3 -- View layer (optional)
-
-Create SQL **views** for cross-feature queries (e.g. `v_project_compliance` joining audit + retention) without merging tables.
-
-### Phase 4 -- Deprecation pass (post GA)
-
-- Identify duplicate concepts (e.g. overlapping moderation tables from P12 vs P15).
-- Mark deprecated columns with migration comments; remove only after one release cycle.
-
-## What we are **not** doing yet
-
-- Merging live tables in production in one shot.
-- Changing `project_plans` or quota columns without a Stripe migration plan.
-- Squashing git history of old migration files (breaks existing deploy hashes).
-
-## Operator checklist (when you run migrations)
-
-```bash
-cd apps/worker
-wrangler d1 migrations list fluxychat --remote
-wrangler d1 migrations apply fluxychat --remote
-# Verify
-wrangler d1 execute fluxychat --remote --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-```
-
-## Related P21 work
-
-- `@fluxy-chat/protocol` -- shared WS event registry (SDK + worker)
-- `packages/protocol/protocol-events.json` -- cross-SDK manifest (Flutter, RN, TS)
-- Observability: [`observability.md`](observability)
+Do not wait for a consolidated baseline unless the project publishes one in release notes.

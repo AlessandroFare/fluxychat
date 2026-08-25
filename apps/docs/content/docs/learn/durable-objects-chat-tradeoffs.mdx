@@ -24,6 +24,6 @@ A single ultra-hot room (thousands of messages per second in one channel) may ne
 
 Stateless Workers cannot hold open WebSocket fan-out for a room across clients. You need sticky coordination. That is the DO (or an external broker). "Just Workers" fits HTTP, not multi-client room state.
 
-## FluxyChat’s scope
+## FluxyChat's scope
 
 We optimize for many rooms with moderate throughput each, not one global firehose. If you outgrow one room object, you shard by roomId (multiple products) or redesign that hot channel. We do not hide that limit.

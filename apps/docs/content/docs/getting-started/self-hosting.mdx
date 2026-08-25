@@ -1,0 +1,57 @@
+---
+title: Self-hosting
+description: Run the FluxyChat Worker on your Cloudflare account.
+---
+
+Self-host means **you** run `apps/worker`. The Vite/React app is a client. It only needs the Worker URL and a member JWT.
+
+## 1. Bootstrap the Worker (from this repo)
+
+```bash
+git clone https://github.com/AlessandroFare/fluxychat
+cd fluxychat
+pnpm install
+pnpm run self-host
+```
+
+The script copies `.dev.vars` templates and applies **local** D1 migrations. Put LLM keys in `apps/worker/.dev.vars` (`GROQ_API_KEY` or `OPENAI_API_KEY`). Agent model: `openai/gpt-oss-20b` on Groq (older `llama-3.1-8b-instant` is retired).
+
+```bash
+pnpm --filter @fluxy-chat/worker dev
+```
+
+Smoke: `pnpm run first-message`.
+
+Longer notes: [Self-host one command](/docs/guides/self-host-one-command).
+
+## 2. Point an app at that Worker
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-app --full --mode self-host
+cd my-app
+pnpm setup:local
+pnpm dev
+```
+
+The CLI asks for Worker URL (default `http://127.0.0.1:8787`) and writes `.env`. `setup:local` calls `POST /dev/provision` so you get a project, JWT, room, and `@assistant`.
+
+## 3. Production
+
+From `apps/worker`:
+
+```bash
+pnpm exec wrangler d1 migrations apply fluxychat --remote
+pnpm run deploy
+```
+
+Secrets via `wrangler secret put`: `JWT_SIGNING_KEY`, LLM keys, webhook HMAC. See [Production setup](/docs/operations/production-setup) and [Local development](/docs/getting-started/local-development).
+
+## SSO
+
+SAML is optional and sits on top of JWT rooms. [SAML SSO](/docs/security/saml-signature-verification).
+
+## Related
+
+- [Client setup](/docs/getting-started/client-setup)
+- [Auth JWT](/docs/guides/auth-jwt)
+- [Dashboard integration](/docs/reference/dashboard-integration)

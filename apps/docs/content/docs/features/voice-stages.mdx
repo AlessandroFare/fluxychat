@@ -1,0 +1,43 @@
+---
+title: Voice stages
+description: Discord Stages-style speaker and listener roles with active-speaker detection in voice rooms.
+---
+
+# Voice stages
+
+Split voice participants into speakers and listeners. Only speakers publish audio by default. Listeners request to speak or are promoted by moderators.
+
+## Console / in-room UI
+
+**Voice AI** (`/voice-ai`) and the in-room Voice stage panel (`VoiceStagePanel`):
+
+- Toggle speaker / listener role
+- Request to speak queue for listeners
+- Moderator promote / demote
+- Active speaker highlight (Silero VAD)
+
+## Active speaker
+
+`useVoiceStageVad` plus Silero VAD highlights who is speaking. Same pipeline as [voice AI](/docs/guides/voice-ai-pipeline).
+
+## API
+
+```http
+GET  /rooms/:roomId/voice-stage
+POST /rooms/:roomId/voice-stage/join
+POST /rooms/:roomId/voice-stage/role
+POST /rooms/:roomId/voice-stage/request-speak
+```
+
+Stage state also syncs via Room DO WebSocket presence (`speaker` | `listener`).
+
+## Environment
+
+Voice pipeline env vars (`AI_*`, TURN) apply when WebRTC is used alongside stages.
+
+Ideal for AMAs, town halls, and large voice rooms without everyone unmuted.
+
+## Related
+
+- [FluxyStream](/docs/features/fluxystream): live audience modes
+- [Empathy layer](/docs/features/empathy-layer): prosody hints

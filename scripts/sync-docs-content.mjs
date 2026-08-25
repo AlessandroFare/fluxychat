@@ -95,6 +95,8 @@ const PROTECTED_REL = new Set([
   "guides/mcp-apps-marketplace.mdx",
   "guides/enterprise/crm-helpdesk.mdx",
   "guides/enterprise/ai-governance.mdx",
+  "guides/enterprise/default-story.mdx",
+  "guides/enterprise/room-sql-pitr.mdx",
   "guides/automations.mdx",
   "guides/voice-ai-pipeline.mdx",
   "guides/huddles-webrtc.mdx",
@@ -137,6 +139,13 @@ function shouldSkipFile(relFromDocs) {
   if (!base.endsWith(".md")) return true;
   if (EXCLUDE_FILE_RE.test(norm)) return true;
   if (EXCLUDE_INTERNAL_FILES.has(base)) return true;
+  // Internal strategy / runbook dumps — stay in repo docs/, not Fumadocs
+  if (
+    /ROADMAP|COMPETITIVE-STRATEGY|FEATURE_ROADMAP|^FLUXYCHAT-|LANGFUSE|MATRIX_SYNAPSE|LOCAL_FIRST|STATUS_PAGE|VOICE-LOAD|ONE-CLICK-PRODUCT/i.test(
+      base,
+    )
+  )
+    return true;
   if (/^guides\/category-[a-h]\.md$/i.test(norm)) return true;
   return false;
 }
@@ -616,6 +625,8 @@ function buildRootMeta(byDir) {
     for (const slug of slugs) add(`${dir}/${slug}`);
   }
 
+  if (isProtected("meta.json")) return;
+
   fs.writeFileSync(
     path.join(DEST, "meta.json"),
     `${JSON.stringify({ title: "Documentation", pages }, null, 2)}\n`,
@@ -624,6 +635,14 @@ function buildRootMeta(byDir) {
 }
 
 function main() {
+  if (!process.argv.includes("--force")) {
+    console.error(
+      "sync-docs-content: refused. This overwrites apps/docs/content and smashed Fumadocs once already.",
+    );
+    console.error("Re-run with --force only if you intend to dump repo docs/ into the public site.");
+    process.exit(1);
+  }
+
   fs.mkdirSync(DEST, { recursive: true });
   clearSyncedContent(DEST);
 

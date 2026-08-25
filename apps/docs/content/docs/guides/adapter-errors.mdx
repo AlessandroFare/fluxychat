@@ -1,11 +1,11 @@
 ---
 title: "Adapter Error Hierarchy"
-description: "FluxyChat's adapter error system (P26-B1) provides a standardized error hierarchy for consistent error handling across all adapter implementations."
+description: "FluxyChat's adapter error system provides a standardized error hierarchy for consistent error handling across all adapter implementations."
 ---
 
 # Adapter Error Hierarchy
 
-FluxyChat's adapter error system (P26-B1) provides a standardized error hierarchy for consistent error handling across all adapter implementations.
+FluxyChat's adapter error system provides a standardized error hierarchy for consistent error handling across all adapter implementations.
 
 ## Overview
 
@@ -151,10 +151,10 @@ class MyAdapter extends BaseAdapter {
 
 ## Relationship to SDK Errors
 
-The SDK also exports `ChatError`, `RateLimitError`, `LockError`, and `NotImplementedError` from the structured errors module (P22-F9). These are client-side errors for SDK operations, while the `Adapter*` errors are for adapter-level operations.
+The SDK also exports `ChatError`, `RateLimitError`, `LockError`, and `NotImplementedError` from the structured errors module. These are client-side errors for SDK operations, while the `Adapter*` errors are for adapter-level operations.
 
 ## See Also
 
-- [Unified Chat API](/docs/unified-chat-api) — Top-level chat methods
-- [Adapter Lifecycle](/docs/adapter-lifecycle) — disconnect, postEphemeral, rehydrateAttachment, waitUntil
-- [Adapter Pattern](/docs/adapter-pattern) — Multi-platform adapter interface
+- [Unified Chat API](/docs/guides/unified-chat-api) — Top-level chat methods
+- [Adapter Lifecycle](/docs/guides/adapter-lifecycle) — disconnect, postEphemeral, rehydrateAttachment, waitUntil
+- [Adapter Pattern](/docs/guides/adapter-pattern) — Multi-platform adapter interface

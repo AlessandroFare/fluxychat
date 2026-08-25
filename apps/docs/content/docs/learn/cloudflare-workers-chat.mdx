@@ -1,11 +1,11 @@
 ---
 title: "How to build instant messaging on Cloudflare Workers"
-description: "WebSocket chat on Cloudflare Workers and Durable Objects: shared state per room, D1 history, realtime without a VPS. Works with Cloudflare Pages, Vercel, or Netlify fronts."
+description: "cloudflare workers websocket + durable objects chat: shared state coordination per room, D1 history, realtime without a VPS. For Cloudflare Pages, Vercel, or Netlify fronts."
 ---
 
 # How to build instant messaging on Cloudflare Workers
 
-WebSocket chat on Cloudflare Workers and Durable Objects: shared state per room, D1 history, realtime without a VPS. Works with Cloudflare Pages, Vercel, or Netlify fronts.
+cloudflare workers websocket + durable objects chat: shared state coordination per room, D1 history, realtime without a VPS. For Cloudflare Pages, Vercel, or Netlify fronts.
 
 ## Start with Cloudflare’s chat demo (mental model)
 
@@ -28,4 +28,4 @@ Next.js or Nuxt on Vercel/Netlify for HTTP + UI; FluxyChat Worker on Cloudflare 
 
 ## Go deeper with a walkthrough
 
-Worker routing at `/ws/room/:roomId`, RoomDurableObject, SDK useChat, and self-host commands in the long-form Dev.to article.
+Worker routing at `/ws/room/:roomId`, RoomDurableObject, SDK useChat, and self-host commands: in the long-form Dev.to article.

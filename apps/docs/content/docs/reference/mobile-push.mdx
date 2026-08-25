@@ -1,0 +1,163 @@
+---
+title: "Mobile push: FCM, APNs, delivery ack"
+description: "Configure Android (FCM legacy and HTTP v1), iOS (APNs), Web Push, and client-side delivery acknowledgements on FluxyChat."
+---
+
+FluxyChat delivers mobile and web push from the same worker that handles chat. You do not need a third-party push broker. This page covers Android (FCM), iOS (APNs), browser Web Push with VAPID, multi-environment credentials, and delivery metrics.
+
+## Platform matrix
+
+| Platform | Token registration | Send path | Config surface |
+|----------|-------------------|-----------|----------------|
+| Android | `POST /push/devices` (`platform: "fcm"` or `"android"`) | FCM legacy HTTP or FCM HTTP v1 (OAuth2) | `project_push_config` and env vars |
+| iOS | `POST /push/devices` (`platform: "apns"` or `"ios"`) | APNs HTTP/2 with ES256 JWT | Per-project APNs key and bundle ID |
+| Web | `POST /push/web/subscribe` | VAPID and RFC 8188 encryption | Auto VAPID keys per project |
+
+See also [Web Push (VAPID)](/docs/reference/web-push-vapid) for browser-only details.
+
+## Register a device
+
+```http
+POST /push/devices
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{
+  "platform": "fcm",
+  "token": "<fcm-registration-token>"
+}
+```
+
+Supported `platform` values: `fcm`, `android`, `apns`, `ios`.
+
+List or unregister:
+
+- `GET /push/devices`
+- `DELETE /push/devices/:id`
+
+## FCM: legacy vs HTTP v1
+
+FluxyChat tries FCM legacy (`FCM_SERVER_KEY` or per-project `fcm_server_key`) first. When no legacy key is configured, it falls back to FCM HTTP v1 using a Google service account.
+
+### Option A: Legacy server key
+
+```bash
+# Worker secret (all projects) or dashboard Settings → Push
+FCM_SERVER_KEY=AAAA...
+```
+
+### Option B: FCM HTTP v1 (recommended for new Firebase projects)
+
+1. In Firebase Console → Project settings → Service accounts → Generate new private key.
+2. Store JSON via dashboard **Settings → Push** (`fcmServiceAccountJson`) or worker secret:
+
+```bash
+FCM_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"...",...}'
+```
+
+3. Set `fcmProjectId` if it differs from the JSON `project_id`.
+
+The worker obtains a short-lived OAuth2 token (`https://oauth2.googleapis.com/token`) and sends to:
+
+```
+POST https://fcm.googleapis.com/v1/projects/{projectId}/messages:send
+```
+
+### Admin API
+
+```http
+PUT /push/config
+Authorization: Bearer <admin-jwt>
+
+{
+  "environment": "production",
+  "fcmServerKey": "...",
+  "fcmProjectId": "my-app",
+  "fcmServiceAccountJson": "{...}",
+  "apnsBundleId": "com.example.app",
+  "apnsUseSandbox": false,
+  "webPushEnabled": true
+}
+```
+
+`GET /push/config` lists configs without exposing secret material (only `hasFcm`, `hasApns` flags).
+
+## APNs
+
+Configure via dashboard or worker secrets:
+
+```bash
+APNS_KEY_ID=...
+APNS_TEAM_ID=...
+APNS_BUNDLE_ID=com.example.app
+APNS_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
+APNS_USE_SANDBOX=true   # dev builds use api.sandbox.push.apple.com
+```
+
+The worker builds an ES256 JWT (key ID and team ID) and sends over HTTP/2 to Apple's push gateway. `apns-topic` is set from bundle ID.
+
+## Web Push
+
+Browser subscriptions use the self-hosted VAPID stack documented in [Web Push (VAPID)](/docs/reference/web-push-vapid). Mobile apps use FCM or APNs device tokens, not VAPID.
+
+## Delivery acknowledgement
+
+A successful HTTP response from FCM or APNs does not guarantee the user saw the notification. Clients should ack after display:
+
+```ts
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({ baseUrl, token });
+await client.acknowledgePushDelivery({
+  roomId: "room_abc",
+  messageId: "42",
+  platform: "fcm",
+  deliveryLogId: payload.deliveryLogId,
+});
+```
+
+Or with the React hook:
+
+```ts
+const { acknowledgeDelivery } = useWebPush({ ... });
+// call acknowledgeDelivery when notification is shown
+```
+
+Server endpoint:
+
+```http
+POST /push/delivery-ack
+```
+
+Every send is also logged to `push_delivery_log` for ops dashboards.
+
+## Multi-environment certs
+
+`project_push_config` stores development, staging, and production rows per tenant. Pass `environment` on `PUT /push/config` to upsert the matching row. Device registration is environment-agnostic; the worker picks config based on deployment or explicit project settings.
+
+## SDK quick reference
+
+```ts
+// Register FCM token (mobile app)
+await fetch(`${baseUrl}/push/devices`, {
+  method: "POST",
+  headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+  body: JSON.stringify({ platform: "fcm", token: fcmToken }),
+});
+
+// Ack delivery
+await client.acknowledgePushDelivery({ roomId, messageId, platform: "fcm" });
+```
+
+## Troubleshooting
+
+| Symptom | Check |
+|---------|-------|
+| Android never receives | Legacy key valid? v1 JSON has `cloud.messaging` scope? Token fresh? |
+| iOS sandbox vs prod mismatch | `APNS_USE_SANDBOX` or dashboard toggle matches build type |
+| Web push 401 from Google endpoint | VAPID `aud` must match push endpoint origin |
+| Metrics show sends but no opens | Wire `acknowledgePushDelivery` in app or service worker |
+
+## Compare providers
+
+See the dashboard compare matrix for how FluxyChat push lines up with Sendbird and Stream.

@@ -1,59 +1,25 @@
 ---
-title: "Open beta deploy guide"
-description: "Short path from commit to a smoke-verified hosted stack. For rollback and secrets detail, see repo `RUNBOOK_DEPLOY_ROLLBACK.md` and [M6 checklist](/docs/m6-oper"
+title: "Open beta deploy (internal)"
+description: "Contributor deploy checklist. Customers should use Production setup and Post-launch checklist."
 ---
 
-# Open beta deploy guide
+This runbook is for FluxyChat operators deploying the hosted stack from the monorepo. It is not required reading for integrators.
 
-Short path from commit to a smoke-verified hosted stack. For rollback and secrets detail, see repo `RUNBOOK_DEPLOY_ROLLBACK.md` and [M6 checklist](/docs/m6-operational-checklist).
+## Public alternatives
 
-## 1. Preflight (CI locally)
+- [Production setup](/docs/operations/production-setup)
+- [Post-launch checklist](/docs/operations/post-launch-checklist)
+- [Staging and status](/docs/operations/staging-and-status)
+
+## Quick deploy (contributors)
+
+From repo root:
 
 ```bash
 pnpm install
-pnpm run check:pricing
-pnpm run check:tenant-scope
-pnpm run check:openapi
-pnpm run check:do-bindings
-pnpm --filter @fluxy-chat/worker typecheck
 pnpm test
-pnpm --filter @fluxy-chat/dashboard build
+cd apps/worker && pnpm exec wrangler d1 migrations apply fluxychat --remote
+pnpm exec wrangler deploy
 ```
 
-## 2. Database
-
-```bash
-cd apps/worker
-pnpm exec wrangler d1 migrations apply fluxychat --remote
-```
-
-## 3. Worker
-
-```bash
-pnpm exec wrangler deploy src/worker.js
-# Staging: --config wrangler.staging.toml
-```
-
-Set secrets (`wrangler secret put â€¦`) per `apps/worker/.dev.vars.example`.
-
-## 4. Dashboard (Vercel or `next start`)
-
-```bash
-NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL=https://api.yourdomain.com
-# Clerk keys if using hosted sign-in
-pnpm --filter @fluxy-chat/dashboard build
-```
-
-## 5. Smoke
-
-```bash
-pnpm --filter @fluxy-chat/worker smoke:remote -- --base-url https://api.yourdomain.com --admin-jwt "<JWT>"
-cd apps/dashboard && CI=true pnpm test:e2e:smoke
-```
-
-Check `/status` on the dashboard host and `/health` on the Worker.
-
-## 6. First tenant
-
-Dashboard â†’ **Onboarding** â†’ project â†’ member JWT â†’ room â†’ message.  
-**Billing** â†’ load plan. **Analytics** â†’ cost + alerts.
+Rollback and secrets detail live in the repository contributor runbook (not required for integrators). See [Production setup](/docs/operations/production-setup) for the public deploy path.

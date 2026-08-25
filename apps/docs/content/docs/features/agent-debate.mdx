@@ -1,0 +1,47 @@
+---
+title: Multi-agent debate
+description: Two or three perspective agents debate visibly before a moderator synthesizes the final answer.
+---
+
+# Multi-agent debate
+
+Trigger a debate thread where multiple agents argue assigned perspectives. A moderator agent posts a synthesis when rounds complete.
+
+## Console
+
+**Agents → Debate** (`/agents/debate`)
+
+1. Seed default roles (optimist, skeptic, moderator) or create custom roles.
+2. Configure trigger pattern (regex on user prompt), system prompt, and max rounds (default 2).
+3. Run debate from console or trigger from chat when the pattern matches.
+
+In chat, debates render as grouped `agent_step` events in `DebateThreadPanel` with `participant_role: "debate"`.
+
+## API
+
+```http
+GET  /admin/agent-debate/roles
+POST /admin/agent-debate/roles
+POST /admin/agent-debate/roles/seed
+PATCH /admin/agent-debate/roles/:roleId
+DELETE /admin/agent-debate/roles/:roleId
+GET  /admin/agent-debate/sessions?roomId=
+POST /admin/agent-debate/run
+```
+
+Run body: `{ roomId, prompt, maxRounds? }`.
+
+## Behaviour
+
+- Token cost telemetry per debate session (`latencyMs`, step count).
+- Timeout produces a partial consensus message from the moderator role.
+- Events stream on the room WebSocket like normal agent steps.
+
+## When to use
+
+High-stakes decisions, policy review, or UX where users benefit from seeing reasoning paths before the final answer.
+
+## Related
+
+- [Agent observability](/docs/reference/observability-otel)
+- [Agent eval](/agents/eval)

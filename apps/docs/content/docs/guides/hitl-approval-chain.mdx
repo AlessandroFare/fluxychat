@@ -1,0 +1,75 @@
+---
+title: "HITL approval chain"
+description: "Per-room approver chain with snapshot, timeline audit, and cross-room inbox."
+---
+
+# HITL approval chain
+
+Configure who must approve sensitive agent tool calls per room. Pending requests **snapshot** the chain at creation time so config changes never affect in-flight approvals.
+
+## Room config
+
+```http
+GET /rooms/:roomId/config
+PATCH /rooms/:roomId/config
+Authorization: Bearer <admin-jwt>
+Content-Type: application/json
+
+{
+  "config": {
+    "approvalChain": {
+      "defaultTimeoutSeconds": 180,
+      "steps": [
+        { "approverId": "user_ana", "timeoutSeconds": 240 },
+        { "approverId": "user_carlos", "timeoutSeconds": 240 },
+        { "fallback": "notify_channel" }
+      ]
+    }
+  }
+}
+```
+
+Stored in `room_config` (same pattern as translation settings). Dashboard: **Rooms → HITL approval chain**.
+
+## Snapshot on request
+
+When an agent hits a tool that requires approval, the Worker:
+
+1. Reads the current `approvalChain` from room config
+2. Copies it into `hitl_approval_requests.approval_chain_snapshot_json`
+3. Sets `current_approver_id` to step 0
+4. Writes `approval_requested` to `room_timeline_events`
+
+Later config edits only affect **new** requests.
+
+## Timeline audit
+
+Every `approvalChain` change emits `approval_chain_updated` on the room timeline:
+
+```http
+GET /rooms/:roomId/timeline-events?eventType=approval_chain_updated
+```
+
+Payload includes `previousChain`, `newChain`, and `changedBy`.
+
+## Approver inbox (cross-room)
+
+```http
+GET /api/hitl/approvals?approverId=me
+POST /approvals/:approvalRequestId/decision
+{ "decision": "approve" | "reject" }
+```
+
+Dashboard: **Inbox → Approvals inbox**. Each action is bound to a specific `approvalRequestId`. When ≥2 requests are pending, the UI asks for explicit confirmation before submit.
+
+## Migrations
+
+Applied automatically with the rest of the D1 chain (`0208`–`0210`):
+
+```bash
+cd apps/worker
+wrangler d1 migrations list fluxychat --remote
+wrangler d1 migrations apply fluxychat --remote
+```
+
+Files: `0208_room_config.sql`, `0209_hitl_approval_requests.sql`, `0210_room_timeline_events.sql`.

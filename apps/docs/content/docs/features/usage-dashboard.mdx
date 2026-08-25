@@ -1,0 +1,45 @@
+---
+title: Tenant usage and cost dashboard
+description: Monthly message, agent, and webhook usage with a rough USD cost estimate for capacity planning.
+---
+
+# Tenant usage and cost dashboard
+
+See monthly usage, plan limits, storage totals, and a rough cost estimate for your project. Useful for billing conversations and capacity planning. This is not an invoice.
+
+## Console
+
+**Settings → Usage** (`/settings/usage`)
+
+Displays:
+
+- Plan: name, billing status, monthly limits (messages, agent invokes, webhook deliveries).
+- This month: messages created, agent invokes, webhook deliveries.
+- Totals: all-time messages, rooms, MAU, attachment storage (GB).
+- Ops (30d): breakdown of worker operations.
+- Cost estimate: configurable rates times usage plus platform base (USD, disclaimer shown).
+
+## API
+
+```http
+GET /admin/tenant-usage
+```
+
+Response shape: `usage.plan`, `usage.monthlyUsage`, `usage.totals`, `usage.costEstimate`.
+
+## Environment
+
+| Variable | Purpose |
+|----------|---------|
+| `USAGE_COST_ENABLED` | Enable cost estimate block |
+| `USAGE_COST_PER_1K_MESSAGES_USD` | Rate for message volume |
+| `USAGE_COST_PER_AGENT_INVOKE_USD` | Rate per agent run |
+| `USAGE_COST_PER_GB_STORAGE_USD` | Storage monthly rate |
+| `USAGE_COST_PLATFORM_BASE_USD` | Fixed platform fee in estimate |
+
+Rates are estimates only. Configure them to match your internal unit economics.
+
+## Related
+
+- [Billing overage policy](/docs/reference/billing-overage-policy)
+- [Optional integrations](/docs/guides/ecosystem/optional-integrations)

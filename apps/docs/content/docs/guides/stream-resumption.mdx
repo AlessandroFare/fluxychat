@@ -1,11 +1,11 @@
 ---
 title: "Stream Resumption"
-description: "FluxyChat's stream resumption (P23-1) lets users reconnect to in-progress AI responses after a page refresh, network drop, or tab switch — without losing the pa"
+description: "FluxyChat stream resumption lets users reconnect to in-progress AI responses after a page refresh, network drop, or tab switch without losing partial output."
 ---
 
 # Stream Resumption
 
-FluxyChat's stream resumption (P23-1) lets users reconnect to in-progress AI responses after a page refresh, network drop, or tab switch — without losing the partial output.
+FluxyChat stream resumption lets users reconnect to in-progress AI responses after a page refresh, network drop, or tab switch without losing partial output.
 
 ## The Problem
 
@@ -72,10 +72,10 @@ STREAM_RESUMPTION_MAX_CONCURRENT=10      # max concurrent resumable streams per 
 
 - **SSE fallback:** Stream resumption works across transport fallbacks (WS → SSE → polling)
 - **Agent runtime:** The `agent-runtime.js` module checks for resumable streams on agent start
-- **Room DO:** The Durable Object tracks `activeStreams` and sends `streamState` on WS reconnect (P11-B1)
-- **DevTools:** The DevTools UI (P23-5) shows active streams and their resume status
+- **Room DO:** The Durable Object tracks `activeStreams` and sends `streamState` on WebSocket reconnect
+- **DevTools:** The DevTools UI shows active streams and their resume status
 
 ## See Also
 
-- [LLM Middleware Guide](/docs/llm-middleware) — Intercept and modify stream behavior
-- [Workflow Agent Guide](/docs/workflow-agent) — Durable agent execution that survives restarts
+- [LLM Middleware Guide](/docs/guides/llm-middleware) — Intercept and modify stream behavior
+- [Workflow Agent Guide](/docs/guides/workflow-agent) — Durable agent execution that survives restarts

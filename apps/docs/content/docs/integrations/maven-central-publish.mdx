@@ -1,11 +1,11 @@
 ---
 title: "Publish KMP SDK to Maven Central (Sonatype)"
-description: "This guide covers **Fase 5** from [PRODUCTION-SETUP.md](/docs/PRODUCTION-SETUP): getting `OSSRH_USER`, `OSSRH_PASS`, `GPG_KEY`, and `GPG_PASS` into GitHub Actio"
+description: "This guide covers **Fase 5** from [PRODUCTION-SETUP.md](/docs/operations/production-setup): getting `OSSRH_USER`, `OSSRH_PASS`, `GPG_KEY`, and `GPG_PASS` into GitHub Actio"
 ---
 
 # Publish KMP SDK to Maven Central (Sonatype)
 
-This guide covers **Fase 5** from [PRODUCTION-SETUP.md](/docs/PRODUCTION-SETUP): getting `OSSRH_USER`, `OSSRH_PASS`, `GPG_KEY`, and `GPG_PASS` into GitHub Actions so `sdk-v*` tags publish `com.fluxychat` artifacts.
+This guide covers **Fase 5** from [PRODUCTION-SETUP.md](/docs/operations/production-setup): getting `OSSRH_USER`, `OSSRH_PASS`, `GPG_KEY`, and `GPG_PASS` into GitHub Actions so `sdk-v*` tags publish `com.fluxychat` artifacts.
 
 > **Not SonarQube.** The portal at [my.sonatype.com](https://my.sonatype.com) is **Sonatype** (Maven Central / OSSRH). SonarQube is unrelated code quality tooling.
 
@@ -86,9 +86,9 @@ Export **private** key (for CI — store only in GitHub Secrets):
 gpg --armor --export-secret-keys YOUR_KEY_ID > gpg-private.asc
 ```
 
-Copy the entire file contents (including `-----BEGIN PGP PRIVATE KEY BLOCK-----`) into GitHub secret **`GPG_KEY`**.
+Copy the entire file contents (including `-----BEGIN PGP PRIVATE KEY BLOCK-----`) into GitHub secret `GPG_KEY`.
 
-Set **`GPG_PASS`** to the passphrase you chose when creating the key.
+Set `GPG_PASS` to the passphrase you chose when creating the key.
 
 ### Upload public key to keyserver (required once)
 
@@ -178,8 +178,6 @@ iOS: download `FluxyChatSDK.xcframework.zip` from the GitHub Release attached to
 | `401 Unauthorized` on publish | Regenerate user token; update `OSSRH_USER` / `OSSRH_PASS` |
 | `402 Payment Required` on publish | Repo still points at legacy `s01.oss.sonatype.org` — use Central Portal staging API URL above |
 | Signature verification failed | Re-upload public key to keyserver; check `GPG_KEY` is private key armored |
-| `Javadocs must be provided` | JVM publication needs `-javadoc.jar` — see `jvmJavadocJar` in `shared/build.gradle.kts` |
-| `Developers information is missing` | POM must include `&lt;developers&gt;` — configured in `configureFluxyPom()` |
 | CI skips Maven publish | Log says `OSSRH_USER not set` — add secrets or expect build-only |
 | `./gradlew` not found locally | CI uses `gradle/actions/setup-gradle@v4`; local dev optional |
 
@@ -195,4 +193,4 @@ iOS: download `FluxyChatSDK.xcframework.zip` from the GitHub Release attached to
 - [ ] Release staging deployment on Central Portal (first time only)
 - [ ] Update docs / feature parity: “Mobile native SDK — live on Maven Central”
 
-See also: [kotlin-multiplatform.md](/docs/kotlin-multiplatform), `packages/sdk-kmp/README.md`.
+See also: [kotlin-multiplatform.md](/docs/integrations/kotlin-multiplatform), `packages/sdk-kmp/README.md`.

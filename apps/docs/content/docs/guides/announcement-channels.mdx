@@ -1,0 +1,40 @@
+---
+title: "Announcement channels"
+description: "Broadcast rooms where only admins post and everyone else reads, with push and in-app alerts."
+---
+
+Announcement rooms work like a company-wide megaphone. Owners, admins, and moderators can post. Everyone else reads only, but they still get realtime updates, in-app notifications, and push when you have push configured.
+
+## Create a channel
+
+In the dashboard, go to **Rooms** and pick type **Announcement**, or call:
+
+```http
+POST /rooms
+{ "name": "Company news", "type": "announcement" }
+```
+
+## Who can post
+
+`assertCanPostToRoom` blocks regular members. They get:
+
+```json
+{ "error": "announcement_read_only", "code": "announcement_read_only", "roomType": "announcement" }
+```
+
+HTTP status `403`.
+
+## What members receive
+
+When an admin posts successfully:
+
+1. The room Durable Object broadcasts the message in realtime.
+2. Every other member gets an in-app notification with `kind: "announcement"`.
+3. Web, FCM, and APNs push run with higher priority (`topic: announcement`) through `maybePushNotifyOnMessage`.
+
+Announcement pushes still go out even if a member turned off routine message notifications. That is intentional for broadcast content.
+
+## Related
+
+- [Notification controls](/docs/core/notifications)
+- [Quiet hours and notifications](/docs/reference/quiet-hours-notifications)

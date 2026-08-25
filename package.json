@@ -41,8 +41,8 @@
     "check:env": "node scripts/check-env-readiness.mjs",
     "check:upptime": "node scripts/validate-upptime-config.mjs",
     "docs:sync": "node scripts/sync-docs-content.mjs",
-    "docs:dev": "pnpm docs:sync && pnpm --filter docs dev",
-    "docs:build": "pnpm docs:sync && pnpm --filter docs build"
+    "docs:dev": "pnpm --filter docs dev",
+    "docs:build": "pnpm --filter docs build"
   },
   "workspaces": [
     "apps/*",

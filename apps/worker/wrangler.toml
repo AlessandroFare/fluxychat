@@ -9,9 +9,11 @@ compatibility_date = "2026-06-11"
 enabled = true
 head_sampling_rate = 1.0
 
-[limits]
-# Fails fast instead of runaway CPU billing; 30s covers the heaviest agent run.
-cpu_ms = 30000
+# [limits] cpu_ms is Workers Paid only. Free plan deploy fails with
+# API 100328 ("CPU limits are not supported for the Free plan").
+# After upgrading: uncomment and set cpu_ms (max 30000 on standard).
+# [limits]
+# cpu_ms = 30000
 
 [vars]
 # When true, cron jobs run via FluxyScheduledWorkflow (P12-L); Worker `scheduled` is a no-op.

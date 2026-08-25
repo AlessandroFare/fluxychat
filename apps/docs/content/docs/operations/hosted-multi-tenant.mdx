@@ -1,9 +1,9 @@
 ---
-title: "Hosted multi-tenant (P0-4 / ENG-04)"
-description: "When `HOSTED_MULTI_TENANT=true`, the Worker treats missing tenant context as **unauthorized** instead of falling back to a shared `default` project."
+title: "Hosted multi-tenant"
+description: "When HOSTED_MULTI_TENANT=true, the Worker treats missing tenant context as unauthorized instead of falling back to a shared default project."
 ---
 
-# Hosted multi-tenant (P0-4 / ENG-04)
+# Hosted multi-tenant
 
 When `HOSTED_MULTI_TENANT=true`, the Worker treats missing tenant context as **unauthorized** instead of falling back to a shared `default` project.
 
@@ -41,4 +41,4 @@ For hosted parity locally, align **both** dashboard `.env.local` and worker `.de
 curl -i https://api.example.com/projects
 ```
 
-See also [staging and status](/docs/staging-and-status).
+See also [staging and status](/docs/operations/staging-and-status).

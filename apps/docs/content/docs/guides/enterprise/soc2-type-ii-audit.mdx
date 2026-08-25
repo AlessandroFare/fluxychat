@@ -1,0 +1,79 @@
+---
+title: "SOC 2 Type II audit engagement"
+description: "When and how to engage a licensed CPA firm for a formal SOC 2 Type II attestation, including FluxyChat evidence exports."
+---
+
+FluxyChat ships product controls and evidence exports. A signed SOC 2 Type II report still requires an external audit firm. This guide covers when to start, what to prepare, and how to use FluxyChat exports during the audit.
+
+## When to pursue Type II
+
+| Signal | Action |
+|--------|--------|
+| Enterprise deal requires attestation | Start Type I or a bridge letter first |
+| ARR above €500k with regulated customers | Budget Type II (typically 30 to 120k€) |
+| Self-assessment score stable with evidence cadence | Ready for auditor scoping call |
+
+Type I proves control design at a point in time. Type II adds operating effectiveness over a review period (often 6 to 12 months). Most enterprise buyers ask for Type II.
+
+## Before you contact auditors
+
+1. Run the [SOC 2 readiness checklist](/docs/guides/enterprise/soc2-readiness-checklist) and export self-assessment JSON from [/soc2](/soc2).
+2. Collect weekly evidence exports for at least one full review period.
+3. Document policies outside FluxyChat: HR onboarding, access reviews, vendor risk, incident response.
+4. Fix open incidents and risks logged in the SOC 2 dashboard before scoping.
+
+## Evidence pack to share
+
+Bundle these exports for the first scoping call:
+
+| Artifact | Source |
+|----------|--------|
+| Self-assessment JSON | `GET /api/soc2/self-assessment` or dashboard export |
+| Evidence rows | `GET /api/soc2/evidence` |
+| Audit log sample | Dashboard audit export (last 30 to 90 days) |
+| DLP smoke test result | SOC 2 page in dashboard |
+| ISO 27001 mapping | [ISO 27001 one-pager](/docs/guides/enterprise/iso27001-mapping) |
+| AI governance export | [/ai-governance](/ai-governance) |
+
+Store dated copies in `evidence/YYYY-MM-DD/` with a short change note. Auditors prefer consistent naming over perfect formatting.
+
+## Typical timeline
+
+| Phase | Duration | Notes |
+|-------|----------|-------|
+| Scoping | 2 to 4 weeks | Trust Services Criteria in scope, subprocessors, systems |
+| Readiness / gap remediation | 1 to 3 months | Often overlaps with observation period |
+| Observation period | 3 to 12 months | Controls must run as documented |
+| Fieldwork and report | 4 to 8 weeks | CPA firm tests samples and issues report |
+
+Start scoping before you need the report in a contract. Observation periods cannot be skipped.
+
+## Budget planning
+
+| Item | Rough range |
+|------|-------------|
+| SOC 2 Type II (first year) | 30k to 120k€ depending on scope and firm |
+| Penetration test (annual) | 5k to 25k€ |
+| Policy tooling / GRC (optional) | 0 if you use FluxyChat exports + spreadsheets |
+
+FluxyChat does not replace the CPA attestation fee. It reduces time spent assembling technical evidence.
+
+## During the audit
+
+- Point auditors at exported JSON and dashboard surfaces instead of live production toggles.
+- Use [SOC 2 / HIPAA runbook](/docs/guides/enterprise/soc2-hipaa-runbook) weekly cadence as your control operating evidence.
+- Map each TSC item in self-assessment to a named owner on your team.
+- Keep change logs for migrations, access reviews, and incident closures in the same evidence folder.
+
+## After you receive the report
+
+1. Store the signed PDF in your compliance repository (not in FluxyChat unless you treat it as customer-uploaded evidence).
+2. Update sales collateral with report date and scope (Security, Availability, and so on).
+3. Schedule annual refresh and keep weekly exports running.
+4. For HIPAA customers, cross-reference BAA records with report scope.
+
+## Related
+
+- [SOC 2 readiness checklist](/docs/guides/enterprise/soc2-readiness-checklist)
+- [SOC 2 / HIPAA runbook](/docs/guides/enterprise/soc2-hipaa-runbook)
+- [ISO 27001 mapping](/docs/guides/enterprise/iso27001-mapping)
