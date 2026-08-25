@@ -3,6 +3,21 @@ const STREAM_PUSH_FLUSH_MS = 80;
 
 import { markdownTextChunk } from "./stream-chunks.js";
 
+export function isStreamStoppedError(err) {
+  const code = err && typeof err === "object" ? err.code : null;
+  const msg = err instanceof Error ? err.message : String(err || "");
+  return code === "stream_stopped" || msg === "stream_stopped";
+}
+
+function throwIfStopped(res, messageId) {
+  if (res?.ok) return;
+  if (messageId && (res?.error === "stream_not_active" || res?.error === "stream_stopped")) {
+    const err = new Error("stream_stopped");
+    err.code = "stream_stopped";
+    throw err;
+  }
+}
+
 export async function roomStreamOp(env, roomId, body) {
   const id = env.ROOM.idFromName(roomId);
   const res = await env.ROOM.get(id).fetch("https://internal/stream", {
@@ -56,7 +71,7 @@ export function createAgentStreamHooks(env, { projectId, roomId, userId, parentI
         messageId,
         content: fullContent,
         chunk,
-      });
+      }).then((res) => throwIfStopped(res, messageId));
     },
     async onEnd(fullContent) {
       if (!messageId) {
@@ -74,6 +89,7 @@ export function createAgentStreamHooks(env, { projectId, roomId, userId, parentI
         content: fullContent,
       });
       if (!res.ok) {
+        throwIfStopped(res, messageId);
         throw new Error(res.error || "stream_end_failed");
       }
       return messageId;

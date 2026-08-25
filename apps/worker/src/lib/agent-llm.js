@@ -4,7 +4,7 @@ import {
   extractAnthropicToolCalls,
   extractOpenAIToolCalls,
 } from "./agent-tool-calls.js";
-import { assertSafeOutboundUrl } from "./url-ssrf.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 import { logInfo } from "./worker-log.js";
 
 export const MAX_TOOL_ITERATIONS = 5;
@@ -37,12 +37,18 @@ export async function callLlmOpenAI(baseUrl, apiKey, model, messages, tools, opt
   // comes from env.AI_BASE_URL (or a Cloudflare AI Gateway URL set by
   // the operator). It is NOT user-supplied per request. DNS rebinding
   // is the only residual concern because Workers cannot resolve DNS
-  // before `fetch()`. We also assert the URL is not RFC1918 / loopback
+  // before the request. We also assert the URL is not RFC1918 / loopback
   // at request time so a misconfigured env.AI_BASE_URL pointing at
   // 10.0.0.0/8 or 127.0.0.1 fails fast instead of silently probing the
   // worker's local network.
-  assertSafeOutboundUrl(url);
-  const res = await fetch(url, {
+  //
+  // `safeOutboundFetch` rather than a bare fetch: validating the URL once and
+  // then calling fetch with the default redirect:"follow" leaves a redirect
+  // bypass open, because a validated public host can answer 302 with a Location
+  // pointing at link-local or RFC1918 space and the runtime follows it without
+  // re-validation. safeOutboundFetch forces manual redirects and re-checks every
+  // hop.
+  const res = await safeOutboundFetch(url, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -69,14 +75,18 @@ export async function callLlmAnthropic(apiKey, model, messages, systemPrompt, to
         t.function?.parameters || t.parameters || { type: "object", properties: {} },
     }));
   }
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const url = opts.messagesUrl || "https://api.anthropic.com/v1/messages";
+  const headers = {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    ...(opts.gatewayHeaders || {}),
+  };
+  if (apiKey && !headers["x-api-key"] && !headers["cf-aig-authorization"]) {
+    headers["x-api-key"] = apiKey;
+  }
+  const res = await safeOutboundFetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -99,7 +109,11 @@ export async function callLlmForConnection(connection, messages, tools, systemPr
       openAiStyleMessages,
       systemPrompt,
       tools,
-      opts
+      {
+        ...opts,
+        messagesUrl: connection.anthropicMessagesUrl,
+        gatewayHeaders: connection.gatewayHeaders,
+      },
     );
   }
   return callLlmOpenAI(

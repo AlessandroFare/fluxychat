@@ -33,7 +33,7 @@ export function LandingHeroClient() {
         aria-hidden
       />
 
-      <div className="relative z-20 mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="mkt-hero-fg relative z-20 mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
           <Link
             href={isClerkClientConfigured() ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}
@@ -89,7 +89,7 @@ export function LandingHeroClient() {
             </Magnet>
             <div
               data-testid="install-chip"
-              className="inline-flex h-[52px] items-center gap-2 rounded-lg border border-white/10 bg-[#1A1A1A] px-3 py-1.5 text-xs font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+              className="inline-flex h-[52px] items-center gap-2 rounded-lg border border-white/10 bg-[#1A1A1A] px-3 py-1.5 text-xs font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-transform duration-200 hover:scale-[1.015] active:scale-[0.99]"
             >
               <code className="font-mono text-slate-100">{INSTALL_CMD}</code>
               {copied ? (

@@ -1,0 +1,1941 @@
+{
+  "comment": "Exact route literals not in openapi.yaml. New paths must be documented or added here with a reason. Do not grow this list silently.",
+  "paths": [
+    {
+      "path": "/a2a/agent-cards",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/a2a/agent-cards/fetch",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/a2a/envelopes",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/a2a/envelopes/receive",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/a2a/tasks",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/adapters",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/2fa/disable",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/2fa/enroll",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/2fa/status",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/2fa/verify",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/a2a/agent-cards",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/agent-debate/roles",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/agent-debate/roles/seed",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/agent-debate/run",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/agent-debate/sessions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/agent-eval/datasets",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/agent-eval/export-otel",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/agent-eval/flush-otel",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/agent-eval/runs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ai-governance/evaluate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ai-governance/evidence",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ai-governance/models",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ai-governance/prompts",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ai-governance/registry",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ai-governance/tools",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ambient/dispatch",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ambient/policies",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ambient/runs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/audit-chain/append",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/audit-chain/export",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/audit-chain/export-r2",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/audit-chain/verify",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/audit-export/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/audit-export/runs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/audit-export/schedules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/audit-export/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/audit-export/stream",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/bridges",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/bridges/mappings",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/bridges/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/bridges/sync/inbound",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/bridges/sync/outbound",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/calls",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/calls/active",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/calls/join",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/calls/leave",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/calls/participants",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/calls/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/calls/token",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/channel-forms/deliveries",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/channel-forms/dispatch",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cmk/encrypt",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cmk/keys",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cobrowsing/annotations",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cobrowsing/cursor",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cobrowsing/join",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cobrowsing/leave",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cobrowsing/remote-control/grant",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cobrowsing/remote-control/revoke",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cobrowsing/sessions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cobrowsing/sessions/active",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cobrowsing/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/companions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/companions/assign",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/companions/interact",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/companions/interactions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/companions/memory",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/companions/memory/search",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/companions/room",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/companions/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/companions/unassign",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/consent",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/consent/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/crm/connections",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/crm/contacts/lookup",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/crm/handoff",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/crm/sync",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/crm/sync/history",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/crm/tickets",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cross-channel/bindings",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cross-channel/journey",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/cross-channel/merge",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/data-residency",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/data-residency/check",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/dlp-integrations",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/dlp-integrations/scan",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/dlp-integrations/scans",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/dlp-integrations/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ediscovery/cases",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ediscovery/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/eu-ai-act/agents",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/eu-ai-act/assessment",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/eu-ai-act/audit-log",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/eu-ai-act/settings",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/eu-ai-act/technical-documentation",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ip-whitelist",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ip-whitelist/check",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/ip-whitelist/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/kb/ingest",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/kb/rag",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/kb/search",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/kb/sources",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/marketplace/agents",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/marketplace/install",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/marketplace/installed",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/marketplace/reviews",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/matrix/bridges",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/matrix/bridges/health-check-all",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/matrix/mappings",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/matrix/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/matrix/sync/inbound",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/matrix/sync/outbound",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/mcp-apps/install",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/mcp-apps/installed",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/mcp-identity/audit",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/mcp-identity/registry",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/mcp-identity/servers",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/mcp-identity/tools",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/media/jobs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/media/settings",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/member-token",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/messages/import",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/messages/import/batch",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/moderation/analyze",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/moderation/queue",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/moderation/review",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/moderation/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/notification/snooze/clean",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/pins/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/previews/purge",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/retention/effective",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/retention/logs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/retention/policies",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/retention/purge-candidates",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/retention/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/room-message-retention",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/room-translation-settings",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/scim/tokens",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/search/settings",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/truth-market/credits",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/truth-market/credits/grant",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/visual-moderation/frame",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/visual-moderation/scan-message",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/visual-moderation/status",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/voice-ai/metrics",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/voice-ai/providers",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/voice-ai/sessions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/voice-ai/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/webhooks/summary",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/widgets",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/widgets/analytics",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/widgets/flows",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/widgets/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/widgets/themes",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workflows",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workflows/apply-template",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workflows/execute",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workflows/runs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workflows/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workflows/templates",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workspace",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workspace/apply-template",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workspace/pins",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workspace/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workspace/tabs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/workspace/templates",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/agent-profiles",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/agent-profiles/ab-test",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/agent-profiles/ab-test/results",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/agent-profiles/assign",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/agents/platform/agents",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/agents/tool-policy/evaluate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ai-analytics",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ai-analytics/generate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ai-analytics/weekly-digest",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ai-images/generate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ai-images/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ai/streams/active",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/analytics/kpis",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/analytics/kpis/values",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/anonymous-feedback",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/anonymous-feedback/audit",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/cdp/broadcasts",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/cdp/customers",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/cdp/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/cdp/events/counts",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/cdp/properties",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/cdp/segments",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/cdp/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/companion-advanced/conversations",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/companion-advanced/delegations",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/companion-advanced/emotions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/companion-advanced/emotions/current",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/companion-advanced/personality",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/companion-advanced/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/hipaa/audit",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/hipaa/baa",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/hipaa/breaches",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/hipaa/dashboard",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/hipaa/encryption",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/hipaa/phi/access",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/hipaa/phi/detections",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/hipaa/training",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/hitl/approvals",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/live/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/live/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/live/turn-credentials",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/replay/events/range",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/replay/sessions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/replay/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/controls",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/dashboard",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/evidence",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/incidents",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/policies",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/policies/acknowledge",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/policies/acknowledgments",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/reports",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/risks",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/self-assessment",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/sso/audit",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/sso/configurations",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/sso/jit",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/sso/sessions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/sso/sessions/invalidate-all",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/sso/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/support/escalation-rules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/support/kb",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/support/sla",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/support/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/support/surveys",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/support/tickets",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/voice-translation/cache",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/voice-translation/feedback",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/voice-translation/jobs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/voice-translation/profiles",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/voice-translation/quality",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/voice-translation/rooms",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/voice-translation/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/workflows",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/workflows/executions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/workflows/schedules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/workflows/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/workflows/templates",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/auth/admin/2fa-verify",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/auth/revoke",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/auth/sms-otp/request",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/auto-mod/appeal",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/auto-mod/evaluate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/auto-mod/history",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/auto-mod/rules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/auto-mod/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/broadcast/campaigns",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/broadcast/deliveries",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/broadcast/segments",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/chat/open-dm",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/collab/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/collab/files",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/collab/files/upload",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/commands",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/commands/autocomplete",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/commands/execute",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/commands/parse",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/community/leaderboard",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/community/leaderboard/contest",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/community/reputation",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/community/reputation/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/community/reputation/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/community/spam-evaluate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/community/spam-rules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/community/warnings",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/config/client",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/consent/acknowledge",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/consent/status",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/cross-org/rooms",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/demo/session",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/demo/status",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/ai-policies",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/ai-policies/check",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/ai-policies/violations",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/ai-rooms",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/analytics/cache",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/analytics/history",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/analytics/query",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/approvals/requests",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/approvals/workflows",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/classification/labels",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/compliance/export",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/compliance/export/verify",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/compliance/exports",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/dashboards",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/dashboards/default",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/dashboards/purge",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/dlp/policy-version",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/dlp/rules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/dlp/scan",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/engagement/activity",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/engagement/churn-analysis",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/feeds",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/feeds/aggregate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/feeds/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/multimodal/analyze",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/multimodal/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/notifications/broadcast",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/notifications/bulk",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/notifications/channels",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/notifications/read-all",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/notifications/rules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/notifications/send",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/notifications/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/notifications/unread",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/notifications/user",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/qa/sessions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/retention/exports",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/retention/holds",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/retention/policies",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/slo/alerts",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/slo/data",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/slo/definitions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/enterprise/status-page",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/escalation/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/escalation/rules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/escalation/scan",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/escalation/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/field-ops/templates",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/field-ops/updates",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/field-ops/updates/unsynced",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/delivery/match",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/delivery/nearest",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/delivery/predict",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/geofences",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/gps",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/gps/current",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/gps/history",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/pricing",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/route/copilot",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/trips",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/fleet/vehicles",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/forms",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/games/checkpoints",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/games/checkpoints/crdt-snapshot",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/games/lobbies/matchmake",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/games/npcs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/games/players",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/games/quests",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/games/tournaments",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/gamification/award",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/gamification/badges",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/gamification/init",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/gamification/leaderboard",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/hybrid/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/inbox/priorities",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/inbox/suggest",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/inbox/summarize",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/incidents",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/incidents/alerts",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/incidents/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/analytics/escalations",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/analytics/moderation",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/analytics/resolution-times",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/digest",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/intents",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/intents/top",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/questions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/questions/mark-answered",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/questions/mark-unanswered",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/questions/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/intelligence/snapshots",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/internal/marketplace/audit-result",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/internal/marketplace/template-commit",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/iot/devices",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/iot/rules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/llm-models",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/llm-models/providers",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/llm-models/sync",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/llm/providers",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/marketplace/agents",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/marketplace/mcp-apps",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/marketplace/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/marketplace/templates",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/mcp",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/moderation-queue/bulk-review",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/moderation-queue/feedback",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/moderation-queue/feedback/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/moderation-queue/priority",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/moderation-queue/review-history",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/moderation-queue/sla-breaches",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/moderation-queue/sla-config",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/moderation-queue/sla-scan",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/notification/preferences",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/notification/priority",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/notification/snooze",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/notification/snooze/check",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/notifications",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/notifications/read-all",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/oncall/schedules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/oncall/shifts",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/oncall/shifts/swap",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/otel/configs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/otel/configs/langfuse",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/otel/export/metrics",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/otel/export/traces",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/otel/flush",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/otel/queue/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/overlays",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/packs/decision-rooms",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/packs/enterprise-agent-room",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/platform/bootstrap",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/platform/sanitize-plans",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/polls",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/presence-escalation/tick",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/presence/user",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/previews/analyze",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/previews/file-type",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/previews/link",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/previews/render",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/projects/llm/credentials",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/public/guest-hardening",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/push/config",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/push/delivery-ack",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/queue/agents",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/queue/assignments",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/queue/escalate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/queue/rules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/queue/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/rate-limit-dashboard/denials",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/rate-limit-dashboard/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/rate-limit-dashboard/summary",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/rate-limit-dashboard/thresholds",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/rehearsals",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/room-templates",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/rooms/kg/extract",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/saml/acs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/saml/acs/verify-2fa",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/saml/config",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/saml/metadata",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/scim/v2/Groups",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/scim/v2/Users",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/search/folders",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/search/messages/backfill",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/search/messages/semantic",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/search/saved",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/search/settings",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/search/unified",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/security/url-fetch-audit",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/security/url-fetch-audit/validate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/spatial/scenes",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/support/business-hours",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/support/canned-responses",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/support/csat/pending",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/support/csat/trigger",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/support/tickets/from-room",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/templates",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/templates/render",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/tokens/anonymous",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/truth-claims",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/user/activity-feed",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/user/activity-feed/read",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/user/contacts",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/user/contacts/accept",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/user/contacts/decline",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/user/contacts/incoming",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/user/contacts/request",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/users/sync",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/webauthn/credentials",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/webauthn/login/options",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/webauthn/login/verify",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/webauthn/register/options",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/webauthn/register/verify",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/webhooks/channel-forms/rcs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/webhooks/channel-forms/whatsapp",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/white-label/config",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/white-label/embed-snippet",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/white-label/resellers",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/white-label/resellers/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/activities",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/cards/send",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/dev/provision",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/devtools/chat",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/threads",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/moderation/labels",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/integrations/telephony/handoff",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/tenant-usage",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    }
+  ]
+}

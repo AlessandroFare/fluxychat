@@ -95,6 +95,16 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
   // Constant-time crypto before DB lookup (P1-2): unknown vs known project both verify once.
   await verifyHs256Signature(headerB64, payloadB64, sigB64, JWT_DUMMY_KEY_BYTES);
 
+  // R7 token revocation: after signature work, before trusting the token. Only
+  // tokens minted with a `jti` are revocable; older ones skip the KV lookup.
+  if (payloadJson.jti) {
+    const { isJtiRevoked } = await import("./token-revocation.js");
+    const revoked = await isJtiRevoked(env, payloadJson.jti).catch(() => false);
+    if (revoked) {
+      throw new Response("Token revoked", { status: 401 });
+    }
+  }
+
   const row = await env.DB.prepare(
     "SELECT jwt_secret, jwt_secret_previous, jwt_secret_previous_expires_at FROM project_secrets WHERE project_id = ?"
   )

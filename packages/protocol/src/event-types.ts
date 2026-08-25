@@ -57,6 +57,13 @@ export const FLUXY_OUTBOUND_EVENT_TYPES = [
   "agentTyping",
   /** Reconnect: client sends lastSeq; server replays room_message_events with seq > lastSeq. */
   "resume",
+  /**
+   * Presence-aware AI cost control (R6): client reports tab visibility
+   * ({ state: "background" | "active" }). The DO stores this on the socket
+   * attachment and skips speculative agent warmup / AI spend for users whose
+   * sockets are all backgrounded.
+   */
+  "presence_state",
 ] as const;
 
 /** Worker → client transport frames handled before dispatch. */

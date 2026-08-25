@@ -1,4 +1,9 @@
-# FluxyChat Kotlin Multiplatform SDK
+# FluxyChat Kotlin Multiplatform SDK — **unpublished stub**
+
+> Not a Maven Central product unless a `sdk-v*` publish job actually succeeds.
+> Do not list this in marketing as a shipping SDK. Gold path: `@fluxy-chat/sdk`.
+
+
 
 Shared WebSocket + REST client for Android and iOS (Ktor engines).
 

@@ -282,7 +282,7 @@ async function visionChatCompletion(env, { messages, model, maxTokens, logContex
     return { ok: false, error: "ai_not_configured" };
   }
 
-  const res = await fetch(transport.chatCompletionsUrl, {
+  const res = await safeOutboundFetch(transport.chatCompletionsUrl, {
     method: "POST",
     headers: buildAiAuthHeaders(env, {
       contentType: "application/json",

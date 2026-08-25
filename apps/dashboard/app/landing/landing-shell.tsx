@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LandingNavAuthCta } from "../components/landing-auth-cta";
@@ -16,12 +16,15 @@ import { ThemeToggle } from "~/components/ui/ThemeToggle";
 import { LANDING_MOBILE_MENU_ID, LANDING_NAV_LINKS } from "./landing-shared";
 import { LandingMegaNav } from "./landing-mega-nav";
 import { HeroSignalField } from "~/components/marketing/hero-signal-field";
+import { attachLandingPointer } from "./landing-pointer";
 
 /** Sticky marketing nav — dark cinematic shell; page body stays as server `children`. */
 export function LandingShell({ children }: { children: ReactNode }) {
   const [navDocked, setNavDocked] = useState(false);
   const mobileNav = useTopNavMobileMenu();
   const pathname = usePathname();
+  const pointerWashRef = useRef<HTMLDivElement>(null);
+  const dockSentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     mobileNav.close();
@@ -35,14 +38,17 @@ export function LandingShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, [mobileNav.close]);
 
+  useEffect(() => attachLandingPointer(pointerWashRef.current), []);
+
   useEffect(() => {
-    function onScroll() {
-      const next = window.scrollY > 100;
+    const sentinel = dockSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => {
+      const next = !entry.isIntersecting;
       setNavDocked((prev) => (prev === next ? prev : next));
-    }
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    });
+    io.observe(sentinel);
+    return () => io.disconnect();
   }, []);
 
   return (
@@ -50,7 +56,18 @@ export function LandingShell({ children }: { children: ReactNode }) {
       id="fc-marketing-root"
       className="relative flex min-h-dvh flex-col bg-[var(--mkt-bg)] text-[var(--mkt-text)] antialiased"
     >
+      <div
+        ref={dockSentinelRef}
+        className="pointer-events-none absolute left-0 top-0 h-[100px] w-px"
+        aria-hidden
+      />
+      <div className="mkt-scroll-progress" aria-hidden />
       <HeroSignalField />
+      <div
+        ref={pointerWashRef}
+        className="mkt-pointer-wash pointer-events-none fixed inset-0 z-[1]"
+        aria-hidden
+      />
       <header
         className={cn(
           "fixed z-50 transition-[top,left,right,width,transform,border-radius,box-shadow,padding,border-width,background-color] duration-300 ease-out",

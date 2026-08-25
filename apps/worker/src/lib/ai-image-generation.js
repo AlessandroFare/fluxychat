@@ -11,6 +11,7 @@
  */
 
 import { resolveImageTransport } from "./ai-gateway.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 const ALLOWED_SIZES = ["1024x1024", "1024x1792", "1792x1024"];
 const ALLOWED_QUALITIES = ["standard", "hd"];
@@ -90,7 +91,7 @@ export async function generateImage(env, {
     } else {
       // OpenAI-compatible /v1/images/generations
       const transport = resolveImageTransport(env);
-      const response = await fetch(transport.imagesUrl, {
+      const response = await safeOutboundFetch(transport.imagesUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

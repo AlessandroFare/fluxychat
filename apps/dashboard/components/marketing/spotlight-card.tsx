@@ -8,11 +8,6 @@
 import React, { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
-interface Position {
-  x: number;
-  y: number;
-}
-
 export interface SpotlightCardProps extends React.PropsWithChildren {
   className?: string;
   spotlightColor?: string;
@@ -24,14 +19,15 @@ export function SpotlightCard({
   spotlightColor = "rgba(255, 117, 94, 0.2)",
 }: SpotlightCardProps) {
   const divRef = useRef<HTMLDivElement>(null);
+  const washRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
-  const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
   const [opacity, setOpacity] = useState(0);
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (!divRef.current || isFocused) return;
+    if (!divRef.current || !washRef.current || isFocused) return;
     const rect = divRef.current.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    washRef.current.style.setProperty("--spot-x", `${e.clientX - rect.left}px`);
+    washRef.current.style.setProperty("--spot-y", `${e.clientY - rect.top}px`);
   }
 
   function handleFocus() {
@@ -63,10 +59,11 @@ export function SpotlightCard({
       className={cn("relative overflow-hidden rounded-2xl border border-border bg-card/85 backdrop-blur-sm", className)}
     >
       <div
+        ref={washRef}
         className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-500 ease-out"
         style={{
           opacity,
-          background: `radial-gradient(circle 420px at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 72%)`,
+          background: `radial-gradient(circle 420px at var(--spot-x, 50%) var(--spot-y, 40%), ${spotlightColor}, transparent 72%)`,
         }}
         aria-hidden
       />
@@ -74,4 +71,3 @@ export function SpotlightCard({
     </div>
   );
 }
-

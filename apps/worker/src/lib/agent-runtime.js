@@ -1,11 +1,11 @@
-﻿import { callLlmOpenAIStream } from "./llm-stream.js";
+import { callLlmOpenAIStream } from "./llm-stream.js";
 import {
   formatModelRef,
   isAnthropicConnection,
   normalizeAgentLlmFields,
   resolveLlmConnectionWithFallback,
 } from "./llm-providers.js";
-import { createAgentStreamHooks, roomStreamOp } from "./room-stream.js";
+import { createAgentStreamHooks, roomStreamOp, isStreamStoppedError } from "./room-stream.js";
 import { isPrivateUrl } from "./url-ssrf.js";
 import { logInfo, logError } from "./worker-log.js";
 import { createLogger } from "./logger.js";
@@ -18,7 +18,14 @@ import {
   estimateCost,
 } from "./agent-llm.js";
 import { parseAgentToolAllowListFromEnv } from "./agent-tool-calls.js";
+import { emitGenAiChatSpan, emitGenAiToolSpan, tokenUsageFromLlmResponse } from "./genai-spans.js";
+import { classifyDoFailure } from "./do-retry-taxonomy.js";
 import { executeToolCall, fetchAppContext } from "./agent-tools.js";
+import {
+  isNestedAgentToolName,
+  runNestedAgentTool,
+  withNestedAgentTool,
+} from "./agent-nested-run.js";
 import { safeJsonParse, truncateForStorage } from "./storage-utils.js";
 import { buildToolsWithOverrides } from "./tool-overrides.js";
 import { createPlan, addTask, updateTaskStatus, getPlanProgress } from "./plan.js";
@@ -80,7 +87,7 @@ async function announceRoomEvent(env, roomId, payload) {
       method: "POST",
       body: JSON.stringify(payload),
     });
-  } catch {
+  } catch (err) {
     /* ignore */
   }
 }
@@ -240,6 +247,62 @@ export async function invokeMentionedAgents(
     return;
   }
 
+  // F2 hard circuit breaker: reject BEFORE any LLM call when the room's
+  // monthly agent-token budget is exhausted. This is the single choke point
+  // every mention-driven invocation passes through.
+  const { checkRoomAgentBudget, tryReserveRoomAgentTokens, releaseRoomAgentTokens } =
+    await import("./agent-budget.js");
+  const budget = await checkRoomAgentBudget(env, projectId, roomId);
+  if (!budget.allowed) {
+    logInfo("agent.invoke_blocked_budget", {
+      projectId,
+      roomId,
+      usedTokens: budget.usedTokens,
+      budget: budget.budget,
+      monthKey: budget.monthKey,
+    });
+    void announceRoomEvent(env, roomId, {
+      type: "agent_budget_exceeded",
+      roomId,
+      usedTokens: budget.usedTokens,
+      budget: budget.budget,
+      monthKey: budget.monthKey,
+    });
+    return;
+  }
+
+  let holdTokens = 0;
+  if (budget.budget != null) {
+    const hold = Math.max(1, Number(budget.remaining) || 1);
+    const reserved = await tryReserveRoomAgentTokens(
+      env,
+      projectId,
+      roomId,
+      hold,
+      budget.monthKey,
+    );
+    if (!reserved.ok) {
+      logInfo("agent.invoke_blocked_budget", {
+        projectId,
+        roomId,
+        usedTokens: budget.usedTokens,
+        budget: budget.budget,
+        monthKey: budget.monthKey,
+        reason: "reserve_lost_race",
+      });
+      void announceRoomEvent(env, roomId, {
+        type: "agent_budget_exceeded",
+        roomId,
+        usedTokens: budget.usedTokens,
+        budget: budget.budget,
+        monthKey: budget.monthKey,
+      });
+      return;
+    }
+    holdTokens = reserved.held;
+  }
+
+  try {
   const placeholders = normalized.map(() => "?").join(",");
   const agentRows = await env.DB.prepare(
     `SELECT id, name, handle, provider, model, config, system_prompt, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm, allowed_tools FROM bots WHERE project_id = ? AND LOWER(REPLACE(handle, '@', '')) IN (${placeholders})`
@@ -429,11 +492,27 @@ export async function invokeMentionedAgents(
       }).catch(() => {});
     }
   }
+  } finally {
+    if (holdTokens) {
+      await releaseRoomAgentTokens(env, projectId, roomId, holdTokens);
+    }
+  }
 }
 
-export async function executeAgentRun(env, { agentRow, projectId, roomId, userMessage, userId, traceId, streamHooks }) {
+export async function executeAgentRun(env, { agentRow, projectId, roomId, userMessage, userId, traceId, streamHooks, parentRunId = null, parentToolCallId = null, nestDepth = 0, skipRoomAnnounce = false }) {
   const startTime = performance.now();
   const runId = crypto.randomUUID();
+  const lineagePayload =
+    parentRunId
+      ? {
+          parentRunId,
+          parentToolCallId,
+          nestDepth: Math.max(0, Number(nestDepth) || 0),
+        }
+      : {};
+  const announce = skipRoomAnnounce
+    ? async () => {}
+    : (payload) => announceRoomEvent(env, roomId, { ...payload, ...lineagePayload });
 
   agentLog.info("agent_lifecycle_onStart", { runId, agentId: agentRow.id, roomId, userId, traceId });
 
@@ -478,7 +557,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     const errorText = !primaryResolved.ok
       ? (primaryResolved.error || "llm_provider_not_configured")
       : "llm_api_key_not_configured";
-    await announceRoomEvent(env, roomId, {
+    await announce( {
       type: "agentRun",
       run: {
         id: runId,
@@ -551,10 +630,8 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     }
   }
 
-  // Builtin / dashboard agents without tool_execute_url cannot run tools.
-  if (!toolExecuteUrl?.trim()) {
-    tools = null;
-  }
+  // Builtin agents without tool_execute_url still get `run_agent` (room timeline).
+  tools = withNestedAgentTool(tools, Boolean(toolExecuteUrl?.trim()));
   // Audit S-35: agent-level tool allow-list. NULL means "not set" (legacy
   // behaviour: trust the declared schema); an empty array means "deny all";
   // a non-empty array means "allow exactly these names". The list is
@@ -599,7 +676,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       euRiskCategory: euAiActPolicy.profile?.euRiskCategory,
       metadata: { error: errorText, runId },
     }).catch(() => {});
-    await announceRoomEvent(env, roomId, {
+    await announce( {
       type: "agentRun",
       run: {
         id: runId,
@@ -740,6 +817,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         streamHooks && !tools && connection.supportsStreaming;
 
       if (canStreamFinal) {
+        const streamStarted = Date.now();
         try {
           await streamHooks.onStart("");
           const { content, usage } = await callLlmOpenAIStream(
@@ -766,6 +844,20 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
             const sanitized = sanitizeAgentReply(content, agentRow.id);
             await streamHooks.onEnd(sanitized);
             lastContent = sanitized;
+            emitGenAiChatSpan(env, {
+              projectId,
+              roomId,
+              agentId: agentRow.id,
+              runId,
+              provider: connection.providerId,
+              model: connection.model,
+              inputTokens: usage.prompt_tokens || 0,
+              outputTokens: usage.completion_tokens || 0,
+              finishReason: "stop",
+              ok: true,
+              startedAtMs: streamStarted,
+              endedAtMs: Date.now(),
+            });
             break;
           }
 
@@ -785,6 +877,33 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           }
           // Same iteration: fall through to non-stream completion below.
         } catch (streamErr) {
+          if (isStreamStoppedError(streamErr)) {
+            streamHooks.clearMessageId();
+            emitGenAiChatSpan(env, {
+              projectId,
+              roomId,
+              agentId: agentRow.id,
+              runId,
+              provider: connection.providerId,
+              model: connection.model,
+              ok: true,
+              finishReason: "stop",
+              startedAtMs: streamStarted,
+              endedAtMs: Date.now(),
+            });
+            break;
+          }
+          emitGenAiChatSpan(env, {
+            projectId,
+            roomId,
+            agentId: agentRow.id,
+            runId,
+            provider: connection.providerId,
+            model: connection.model,
+            ok: false,
+            startedAtMs: streamStarted,
+            endedAtMs: Date.now(),
+          });
           if (streamHooks.getMessageId()) {
             await roomStreamOp(env, roomId, {
               projectId,
@@ -812,8 +931,9 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       }
 
       let response;
+      const llmStarted = Date.now();
       try {
-        response = await callLlmForConnection(connection, messages, tools, systemPrompt, llmOpts);
+        response = await callLlmForConnection(connection, messages, tools, effectiveSystemPrompt, llmOpts);
       } catch (primaryErr) {
         if (hasFallback && i === 0 && fallbackResolved?.ok) {
           logInfo("agent.provider_fallback", {
@@ -825,15 +945,52 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           });
           connection = fallbackResolved;
           try {
-            response = await callLlmForConnection(connection, messages, tools, systemPrompt, llmOpts);
+            response = await callLlmForConnection(connection, messages, tools, effectiveSystemPrompt, llmOpts);
           } catch (fallbackErr) {
+            emitGenAiChatSpan(env, {
+              projectId,
+              roomId,
+              agentId: agentRow.id,
+              runId,
+              provider: connection.providerId,
+              model: connection.model,
+              ok: false,
+              startedAtMs: llmStarted,
+              endedAtMs: Date.now(),
+            });
             return { runId, status: "failed", content: null, latencyMs: performance.now() - startTime, inputTokens: 0, outputTokens: 0, estimatedCost: 0, toolCalls: allToolCalls, contextFetched, iterations, error: `primary: ${primaryErr.message}; fallback: ${fallbackErr.message}` };
           }
         } else {
+          emitGenAiChatSpan(env, {
+            projectId,
+            roomId,
+            agentId: agentRow.id,
+            runId,
+            provider: connection.providerId,
+            model: connection.model,
+            ok: false,
+            startedAtMs: llmStarted,
+            endedAtMs: Date.now(),
+          });
           throw primaryErr;
         }
       }
       const extracted = extractLlmResponse(connection, response, tools, runId, toolAllowSet, envAllowList);
+      const llmUsage = tokenUsageFromLlmResponse(response, isAnthropicConnection(connection));
+      emitGenAiChatSpan(env, {
+        projectId,
+        roomId,
+        agentId: agentRow.id,
+        runId,
+        provider: connection.providerId,
+        model: connection.model,
+        inputTokens: llmUsage.inputTokens,
+        outputTokens: llmUsage.outputTokens,
+        finishReason: extracted.finishReason || extracted.stopReason,
+        ok: true,
+        startedAtMs: llmStarted,
+        endedAtMs: Date.now(),
+      });
       // Audit A-5: log every stripped tool so operators can correlate
       // dropped tool calls to specific runs.
       for (const w of extracted.invalidWarnings || []) {
@@ -863,7 +1020,8 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
       if (!hasToolCalls || shouldStop) break;
 
-      if (!toolExecuteUrl) break;
+      const nestedCalls = extracted.toolCalls.filter((tc) => isNestedAgentToolName(tc.name));
+      if (!toolExecuteUrl && !nestedCalls.length) break;
 
       if (isAnthropicConnection(connection)) {
         const assistantContent = [];
@@ -947,7 +1105,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
               approvalChainSnapshot: chainSnapshot,
               reason: `Tool "${tc.name}" requires human approval`,
             });
-            await announceRoomEvent(env, roomId, {
+            await announce( {
               type: "approval_requested",
               runId,
               agentId: agentRow.id,
@@ -973,7 +1131,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           }
         }
 
-        await announceRoomEvent(env, roomId, {
+        await announce( {
           type: "tool_call",
           runId,
           agentId: agentRow.id,
@@ -986,7 +1144,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           const toolPolicy = await getProjectToolPolicy(env, projectId);
           const onHoldPhrase = resolveOnHoldPhrase(toolPolicy, tc.name);
           if (onHoldPhrase) {
-            await announceRoomEvent(env, roomId, {
+            await announce( {
               type: "agent_on_hold",
               runId,
               agentId: agentRow.id,
@@ -1000,14 +1158,41 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           /* non-fatal */
         }
         agentLog.info("agent_lifecycle_onToolExecutionStart", { runId, toolName: tc.name, toolCallId: tc.id });
-        const toolResult = await executeToolCall(env, toolExecuteUrl, tc, projectId, runId, traceId);
+        const toolStarted = Date.now();
+        const toolResult = isNestedAgentToolName(tc.name)
+          ? await runNestedAgentTool({
+              executeAgentRun,
+              env,
+              projectId,
+              roomId,
+              userId,
+              traceId,
+              parentAgentRow: agentRow,
+              parentRunId: runId,
+              nestDepth: Math.max(0, Number(nestDepth) || 0),
+              toolCall: tc,
+            })
+          : toolExecuteUrl
+            ? await executeToolCall(env, toolExecuteUrl, tc, projectId, runId, traceId)
+            : { success: false, error: "tool_execute_url_missing" };
         agentLog.info("agent_lifecycle_onToolExecutionEnd", {
           runId,
           toolName: tc.name,
           toolCallId: tc.id,
           success: toolResult.success,
         });
-        await announceRoomEvent(env, roomId, {
+        emitGenAiToolSpan(env, {
+          projectId,
+          roomId,
+          agentId: agentRow.id,
+          runId,
+          toolName: tc.name,
+          toolCallId: tc.id,
+          success: toolResult.success,
+          startedAtMs: toolStarted,
+          endedAtMs: Date.now(),
+        });
+        await announce( {
           type: toolResult.success ? "tool_result" : "tool_error",
           runId,
           agentId: agentRow.id,
@@ -1076,7 +1261,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       }, 300_000);
     }
 
-    await announceRoomEvent(env, roomId, {
+    await announce( {
       type: "agentRun",
       run: {
         id: runId,
@@ -1112,8 +1297,9 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     };
   } catch (err) {
     const latencyMs = Math.round(performance.now() - startTime);
-    const errorText = truncateForStorage(err instanceof Error ? err.message : "agent_run_failed");
-    await announceRoomEvent(env, roomId, {
+    const classified = classifyDoFailure(err);
+    const errorText = truncateForStorage(classified.message || "agent_run_failed");
+    await announce( {
       type: "agentRun",
       run: {
         id: runId,
@@ -1126,6 +1312,8 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         tool_calls: allToolCalls,
         iterations,
         error: errorText,
+        retry_code: classified.code,
+        retryable: classified.retry,
         created_at: new Date().toISOString(),
       },
     });
@@ -1141,6 +1329,8 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       contextFetched,
       iterations,
       error: errorText,
+      retryCode: classified.code,
+      retryable: classified.retry,
     };
   }
 }

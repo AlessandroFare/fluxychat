@@ -2,30 +2,44 @@ import { canAccessRoom } from "./room-access.js";
 import { publishMcpRoomMessage } from "./mcp-room-message.js";
 import { checkAndConsumeRateLimit } from "./rate-limit.js";
 import { messageVisibilitySql } from "./message-visibility.js";
+import {
+  detectMcpEra,
+  discoverResult,
+  elicitationInputRequired,
+  emptyPromptsList,
+  emptyResourcesList,
+  mcpCapabilities,
+  mcpRpc,
+  mergeMcpInputResponses,
+  methodNotFoundError,
+  negotiateLegacyInitializeVersion,
+  rejectUnknownProtocolVersion,
+  unsupportedProtocolVersionError,
+  validateModernStreamableHeaders,
+  withModernResult,
+} from "./mcp-protocol.js";
 
 /**
  * MCP (Model Context Protocol) Server for FluxyChat.
  *
- * Exposes FluxyChat rooms/messages as MCP tools that any AI agent
- * (Claude, GPT, etc.) can use via the standard MCP protocol.
+ * Dual-era Streamable HTTP:
+ *   - Modern: protocol 2026-07-28, `server/discover`, per-request `_meta`
+ *   - Legacy: `initialize` handshake (2024-11-05 through 2025-11-25)
  *
- * Protocol: JSON-RPC 2.0 over HTTP POST
- * Endpoints: POST /mcp (single endpoint for all MCP operations)
+ * Endpoint: POST /mcp
  *
- * Tools exposed:
- *   - list_rooms: List rooms the authenticated user has access to
- *   - get_room_messages: Get messages from a specific room
- *   - send_message: Send a text message to a room
- *   - search_chat: Full-text search across rooms
- *   - get_room_info: Get room details (members, online count)
+ * Tools: list_rooms, get_room_messages, send_message, search_chat, get_room_info
  */
 
 export const MCP_SERVER_INFO = {
   name: "fluxychat",
-  version: "0.1.0",
+  version: "1.0.0",
 };
 
-export const MCP_PROTOCOL_VERSION = "2024-11-05";
+export { MCP_PROTOCOL_VERSION, MCP_SUPPORTED_PROTOCOL_VERSIONS } from "./mcp-protocol.js";
+
+const PROJECT_MCP_INSTRUCTIONS =
+  "FluxyChat project MCP. Tools list rooms, read and send messages, and search chat the JWT can access. Live events stay on room WebSocket/SSE, not on this RPC.";
 
 /**
  * Tool definitions following MCP spec.
@@ -145,66 +159,82 @@ export const MCP_TOOLS = [
 /**
  * Handle an MCP JSON-RPC 2.0 request.
  *
- * @param {object} params - { method, params, id }
- * @param {object} deps - { env, auth, logError }
- * @returns {object} JSON-RPC 2.0 response
+ * @param {object} rpc - { method, params, id }
+ * @param {object} deps - { env, auth, logError, requestHeaders, era }
+ * @returns {object} JSON-RPC 2.0 response (may include httpStatus)
  */
-export async function handleMcpRequest(params, deps) {
-  const { method, params: toolParams, id } = params;
-  const { env, auth, logError } = deps;
+export async function handleMcpRequest(rpc, deps) {
+  const { method, params: rpcParams, id } = rpc;
+  const { env, auth, logError, requestHeaders } = deps;
+  const era = deps.era || detectMcpEra(rpc, requestHeaders);
+
+  const versionError = rejectUnknownProtocolVersion(rpc, requestHeaders);
+  if (versionError) return versionError;
+
+  if (era === "modern") {
+    const headers = validateModernStreamableHeaders(rpc, requestHeaders);
+    if (!headers.ok) return headers.response;
+  }
 
   switch (method) {
-    case "initialize":
-      return {
-        jsonrpc: "2.0",
+    case "server/discover":
+      return mcpRpc({
+        id,
+        result: discoverResult(MCP_SERVER_INFO, mcpCapabilities(), PROJECT_MCP_INSTRUCTIONS),
+      });
+
+    case "initialize": {
+      const negotiated = negotiateLegacyInitializeVersion(rpcParams);
+      if (!negotiated.ok) {
+        return unsupportedProtocolVersionError(id, negotiated.requested);
+      }
+      return mcpRpc({
         id,
         result: {
-          protocolVersion: MCP_PROTOCOL_VERSION,
-          capabilities: {
-            tools: {},
-          },
+          protocolVersion: negotiated.protocolVersion,
+          capabilities: mcpCapabilities(),
           serverInfo: MCP_SERVER_INFO,
+          instructions: PROJECT_MCP_INSTRUCTIONS,
         },
-      };
+      });
+    }
 
     case "tools/list":
-      return {
-        jsonrpc: "2.0",
+      return mcpRpc({
         id,
-        result: {
-          tools: MCP_TOOLS,
-        },
-      };
+        result: withModernResult(era, MCP_SERVER_INFO, { tools: MCP_TOOLS }, { cacheable: true }),
+      });
+
+    case "prompts/list":
+      return mcpRpc({ id, result: emptyPromptsList(era, MCP_SERVER_INFO) });
+
+    case "resources/list":
+    case "resources/templates/list":
+      return mcpRpc({ id, result: emptyResourcesList(era, MCP_SERVER_INFO) });
 
     case "tools/call": {
-      const toolResult = await handleToolCall(toolParams, { env, auth, logError });
-      return {
-        jsonrpc: "2.0",
+      const toolResult = await handleToolCall(rpcParams, { env, auth, logError, era });
+      return mcpRpc({
         id,
-        result: toolResult,
-      };
+        result: withModernResult(era, MCP_SERVER_INFO, toolResult),
+      });
     }
 
     case "ping":
-      return { jsonrpc: "2.0", id, result: {} };
+      if (era === "modern") return methodNotFoundError(id, method, era);
+      return mcpRpc({ id, result: {} });
 
     default:
-      return {
-        jsonrpc: "2.0",
-        id,
-        error: {
-          code: -32601,
-          message: `Method not found: ${method}`,
-        },
-      };
+      return methodNotFoundError(id, method, era);
   }
 }
 
 /**
  * Dispatch a tool call to the appropriate handler.
  */
-async function handleToolCall(params, { env, auth, logError }) {
-  const { name, arguments: args } = params;
+async function handleToolCall(params, { env, auth, logError, era }) {
+  const name = params?.name;
+  const args = mergeMcpInputResponses(params);
 
   try {
     let result;
@@ -216,6 +246,13 @@ async function handleToolCall(params, { env, auth, logError }) {
         result = await toolGetRoomMessages(args, { env, auth });
         break;
       case "send_message":
+        if (!String(args?.content || "").trim() && era === "modern") {
+          result = elicitationInputRequired({
+            message: "Message text is required to send.",
+            fieldName: "content",
+          });
+          break;
+        }
         result = await toolSendMessage(args, { env, auth, logError });
         break;
       case "search_chat":

@@ -1,9 +1,8 @@
 {
-  "title": "Integrations",
-  "icon": "Plug",
   "pages": [
     "activepieces",
     "kotlin-multiplatform",
-    "livekit"
+    "livekit",
+    "maven-central-publish"
   ]
 }

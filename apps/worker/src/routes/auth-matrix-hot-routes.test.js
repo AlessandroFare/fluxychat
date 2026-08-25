@@ -16,6 +16,7 @@ import { dispatchActivitiesRoutes } from "./activities-http.js";
 import { dispatchPresenceRoutes } from "./presence-http.js";
 import { dispatchPushRoutes } from "./push-http.js";
 import { dispatchVoiceMessagesRoutes } from "./voice-messages-http.js";
+import { dispatchVoiceAiRoutes } from "./voice-ai-http.js";
 import { dispatchUserBlocksRoutes } from "./user-blocks-http.js";
 import { dispatchLlmRoutes } from "./llm-http.js";
 import { dispatchDevtoolsRoutes } from "./devtools-http.js";
@@ -45,6 +46,11 @@ const cases401 = [
         method: "POST",
         body: { roomId: "room-1", content: "hi" },
       }),
+  },
+  {
+    name: "GET /agents/:id/copilot",
+    dispatch: dispatchAgentsRoutes,
+    request: () => unauthorizedRequest("/agents/bot-1/copilot"),
   },
   {
     name: "POST /webhooks/register",
@@ -146,6 +152,21 @@ const cases401 = [
     name: "POST /messages/voice",
     dispatch: dispatchVoiceMessagesRoutes,
     request: () => unauthorizedRequest("/messages/voice", { method: "POST", body: {} }),
+  },
+  {
+    name: "POST /voice-ai/transcribe",
+    dispatch: dispatchVoiceAiRoutes,
+    request: () =>
+      unauthorizedRequest("/voice-ai/transcribe", {
+        method: "POST",
+        body: { audioBase64: "YQ==" },
+      }),
+  },
+  {
+    name: "POST /voice-ai/speak",
+    dispatch: dispatchVoiceAiRoutes,
+    request: () =>
+      unauthorizedRequest("/voice-ai/speak", { method: "POST", body: { text: "hi" } }),
   },
   {
     name: "GET /blocks",

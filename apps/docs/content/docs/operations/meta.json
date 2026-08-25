@@ -1,14 +1,13 @@
 {
-  "title": "Operations",
-  "icon": "Wrench",
   "pages": [
+    "d1-schema-consolidation",
     "environment-setup",
     "hosted-multi-tenant",
     "observability",
+    "open-beta-deploy-guide",
     "post-launch-checklist",
     "production-demo-and-sms",
     "staging-and-status",
-    "us-sms-compliance-playbook",
-    "production-setup"
+    "us-sms-compliance-playbook"
   ]
 }

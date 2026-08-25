@@ -23,6 +23,9 @@ export interface FluxyToolThreadEvent {
   arguments?: string;
   resultPreview?: string | null;
   error?: string | null;
+  parentRunId?: string | null;
+  parentToolCallId?: string | null;
+  nestDepth?: number;
 }
 
 export interface FluxyRoomStoreState {
@@ -79,6 +82,8 @@ export interface FluxyRoomStoreState {
     content: string,
     options?: { agentId?: string; replyTo?: number | null },
   ) => Promise<unknown>;
+  /** Stop the in-flight agent stream (keeps tokens already shown). */
+  stopAgentStream: (targetUserId?: string) => void;
   clearToolThread: () => void;
   clearDebateThread: () => void;
   joinVoiceStage: (role: import("./voice-stage").VoiceStageRole, displayName?: string) => void;
@@ -112,6 +117,7 @@ const inertRoomActions: Pick<
   | "deleteMessage"
   | "branchRoomFromMessage"
   | "invokeAgent"
+  | "stopAgentStream"
   | "clearToolThread"
   | "clearDebateThread"
   | "joinVoiceStage"
@@ -132,6 +138,7 @@ const inertRoomActions: Pick<
   deleteMessage: noop,
   branchRoomFromMessage: async () => notReady(),
   invokeAgent: async () => notReady(),
+  stopAgentStream: noop,
   clearToolThread: noop,
   clearDebateThread: noop,
   joinVoiceStage: noop,

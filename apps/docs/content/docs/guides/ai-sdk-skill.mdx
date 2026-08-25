@@ -55,7 +55,7 @@ You are coding with FluxyChat SDK (`@fluxychat/sdk`). All imports from `@fluxych
 - **Platform adapter** — `createPlatformAdapter()`: platform abstraction
 
 ### Enterprise/Security
-- **MLS E2EE** — `createMlsManager()`: MLS protocol groups, key rotation, encrypt/decrypt, 3 cipher suites
+- **Group cipher** — `createGroupCipher()`: AES-256-GCM + HKDF (not MLS/RFC 9420). E2EE only if you supply the key out of band.
 - **AI governance** — `createAiGovernance()`: model/prompt/tool registry, risk tiering, approvals
 - **eDiscovery** — `createEdiscoveryManager()`: legal hold, export, SHA-256 audit log
 - **DLP** — `createDlpDetector()`: PHI/PCI pattern scan, redact/block/flag

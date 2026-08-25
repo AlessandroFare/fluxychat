@@ -1,9 +1,9 @@
 ---
-title: "Staging deploy and public status"
-description: "Deploy a staging Worker and expose a public status page for your FluxyChat stack."
+title: "Staging deploy & public status (OPS-4)"
+description: "Template: `apps/worker/wrangler.staging.toml`"
 ---
 
-# Staging deploy and public status
+# Staging deploy & public status (OPS-4)
 
 ## Staging Worker
 
@@ -28,7 +28,7 @@ GitHub Actions: workflow **Deploy** → environment `staging` (requires `CLOUDFL
 
 ## Public status page
 
-Dashboard route: `/status` (server-rendered, polls `GET /health` on the configured Worker).
+Dashboard route: **`/status`** (server-rendered, polls `GET /health` on the configured Worker).
 
 Optional custom domain:
 

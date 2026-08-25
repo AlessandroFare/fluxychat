@@ -1,6 +1,6 @@
 import { encryptSecret, decryptSecret } from "./secrets-crypto.js";
 
-const E2E_KEY_BYTES = 32;
+const ROOM_CONTENT_KEY_BYTES = 32;
 
 function bytesToBase64(bytes) {
   let binary = "";
@@ -9,17 +9,17 @@ function bytesToBase64(bytes) {
 }
 
 /**
- * @returns {string} base64-encoded 32-byte AES key for client E2E envelopes.
+ * @returns {string} base64-encoded 32-byte AES key for client room content envelopes.
  */
-export function generateRoomE2eKeyMaterial() {
-  return bytesToBase64(crypto.getRandomValues(new Uint8Array(E2E_KEY_BYTES)));
+export function generateRoomContentKeyMaterial() {
+  return bytesToBase64(crypto.getRandomValues(new Uint8Array(ROOM_CONTENT_KEY_BYTES)));
 }
 
 /**
  * @param {import("@cloudflare/workers-types").Env} env
  * @param {string} keyMaterial base64 key returned to clients
  */
-export async function encryptRoomE2eKeyForStorage(env, keyMaterial) {
+export async function encryptRoomContentKeyForStorage(env, keyMaterial) {
   return encryptSecret(env, keyMaterial);
 }
 
@@ -29,7 +29,7 @@ export async function encryptRoomE2eKeyForStorage(env, keyMaterial) {
  * @param {string | null | undefined} iv
  * @returns {Promise<string | null>}
  */
-export async function decryptRoomE2eKeyFromStorage(env, ciphertext, iv) {
+export async function decryptRoomContentKeyFromStorage(env, ciphertext, iv) {
   return decryptSecret(env, ciphertext, iv);
 }
 
@@ -37,7 +37,7 @@ export async function decryptRoomE2eKeyFromStorage(env, ciphertext, iv) {
  * @param {unknown} content
  * @returns {boolean}
  */
-export function isE2eContentEnvelope(content) {
+export function isRoomContentEnvelope(content) {
   if (typeof content !== "string" || !content.trim()) return false;
   try {
     const parsed = JSON.parse(content);

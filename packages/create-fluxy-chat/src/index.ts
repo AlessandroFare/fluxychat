@@ -388,6 +388,7 @@ async function main(): Promise<void> {
             "cp .env.example .env",
             "# Set VITE_FLUXYCHAT_WORKER_URL + JWT or public room ID",
             `${devCmd} dev`,
+            "# In the room, send: @assistant hello",
           ].join("\n")
         : [
             `cd ${config.name}`,

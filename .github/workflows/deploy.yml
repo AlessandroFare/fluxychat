@@ -34,18 +34,28 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Verify CI package filters resolve (meta-gate)
+        run: node scripts/check-ci-filters.mjs
+
       - name: Consistency checks
         run: |
           pnpm run check:pricing
           pnpm run check:tenant-scope
           pnpm run check:openapi
           pnpm run check:do-bindings
+          pnpm run check:outbound-fetch
+
+      - name: Build workspace packages
+        run: pnpm --filter @fluxy-chat/protocol build && pnpm --filter @fluxy-chat/config build && pnpm --filter @fluxy-chat/sdk build && pnpm --filter @fluxy-chat/react build
 
       - name: Worker typecheck (ENG-06)
-        run: pnpm --filter @fluxychat/worker typecheck
+        run: pnpm --filter @fluxy-chat/worker typecheck
 
-      - name: Test
-        run: pnpm test
+      # `pnpm test` alone only covers the six library packages. Deploying the
+      # worker without running the worker suite is how a broken worker reaches
+      # production with a green pipeline.
+      - name: Test (packages + worker + dashboard)
+        run: pnpm run test:all
 
   deploy-worker:
     runs-on: ubuntu-latest

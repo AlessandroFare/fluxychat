@@ -7,10 +7,16 @@
     "dev": "pnpm --filter \"./apps/*\" --parallel dev",
     "build": "pnpm -r build",
     "lint": "pnpm --filter @fluxy-chat/ui exec eslint src --ext .ts,.tsx",
-    "test": "pnpm run test:packages",
+    "test": "pnpm run test:all",
+    "test:all": "pnpm run test:packages && pnpm run test:worker && pnpm run test:worker:e2e && pnpm run test:dashboard",
     "test:packages": "pnpm --filter @fluxy-chat/protocol test && pnpm --filter @fluxy-chat/sdk test && pnpm --filter @fluxy-chat/react test && pnpm --filter @fluxy-chat/ui test && pnpm --filter @fluxy-chat/config test && pnpm --filter @fluxy-chat/agent test",
+    "test:worker": "pnpm --filter @fluxy-chat/worker test && pnpm --filter @fluxy-chat/worker test:pool",
+    "test:worker:e2e": "pnpm --filter @fluxy-chat/worker test:e2e",
+    "test:dashboard": "pnpm --filter @fluxy-chat/dashboard test",
     "check:bundle-size": "node scripts/analyze-sdk-bundle.mjs",
     "check:bandwidth-budget": "node scripts/bandwidth-budget.mjs",
+    "check:ci-filters": "node scripts/check-ci-filters.mjs",
+    "check:outbound-fetch": "node scripts/check-outbound-fetch.mjs",
     "test:e2e:smoke": "pnpm --filter @fluxy-chat/dashboard test:e2e:smoke",
     "smoke:worker": "pnpm --filter @fluxy-chat/worker smoke:remote",
     "smoke:bundled": "bash scripts/smoke-test.sh",
@@ -20,6 +26,8 @@
     "check:pricing": "node scripts/check-pricing-consistency.mjs",
     "check:tenant-scope": "node scripts/audit-tenant-scope.mjs",
     "check:openapi": "node scripts/check-openapi-routes.mjs",
+    "check:crypto-claims": "node scripts/check-crypto-claims.mjs",
+    "check:workflows": "node scripts/check-workflows-config.mjs",
     "check:do-bindings": "node scripts/check-do-bindings.mjs",
     "check:publish-manifest": "node scripts/check-publish-manifests.mjs",
     "publish:packages": "node scripts/publish-packages.mjs",
@@ -73,7 +81,12 @@
       "@excalidraw/mermaid-to-excalidraw": "file:./apps/dashboard/lib/stubs/mermaid-to-excalidraw-pkg",
       "sharp": "0.35.0",
       "next": "16.2.11"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
   },
   "devDependencies": {
     "baseline-browser-mapping": "^2.10.29",

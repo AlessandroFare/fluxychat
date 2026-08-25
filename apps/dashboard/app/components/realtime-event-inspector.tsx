@@ -89,6 +89,7 @@ export function RealtimeEventInspector({
     });
     const connection = wsClient.connectRoom(trimmedRoom, {
       wsReplay: "off",
+      wsReadonly: true,
       maxReconnectAttempts: 3,
       onStatusChange: (status) => setConnected(status === "connected"),
     });

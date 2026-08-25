@@ -1,25 +1,27 @@
 # Category E — Enterprise/Security (14 modules)
 
-## E-1: MLS Encryption (`mls-encryption.ts`)
+## E-1: Group content encryption (`group-cipher.ts`)
 
-End-to-end encryption for groups using MLS-style protocol with key rotation and multi-device support.
+Authenticated group encryption with AES-256-GCM and HKDF-SHA256. This is **not** MLS (RFC 9420). `createMlsManager()` was removed because it was base64, not crypto.
 
 ```
-createMlsManager() → MlsManager
+createGroupCipher() → GroupCipher
 ```
 
-**Key APIs:** `createGroup`, `addDevice`, `removeDevice`, `encryptMessage`, `decryptMessage`, `rotateKeys`
+**Key APIs:** `createGroup`, `addDevice`, `encrypt`, `decrypt`, `rotateEpoch`
 
 **Usage:**
 ```typescript
-const mls = createMlsManager();
-const group = mls.createGroup({ cipherSuite: "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519" });
-mls.addDevice(group.groupId, { deviceId: "alice", publicKey: "pk", signatureKey: "sk", credentialType: "basic" });
-const msg = mls.encryptMessage(group.groupId, "alice", "hello");
-const text = mls.decryptMessage(group.groupId, msg);
+import { createGroupCipher } from "@fluxy-chat/sdk";
+
+const keyMaterial = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+const cipher = createGroupCipher({ keyMaterial });
+const group = cipher.createGroup({ groupId: "room-1" });
+const msg = await cipher.encrypt(group.groupId, "alice", "hello");
+const text = await cipher.decrypt(group.groupId, msg);
 ```
 
-**Config:** Supports 3 cipher suites, max device limits, auto key rotation intervals.
+**Honesty:** E2EE only if `baseKey` never reaches FluxyChat servers. Server-issued keys are content encryption, not E2EE.
 
 ---
 

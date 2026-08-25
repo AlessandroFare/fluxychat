@@ -1,7 +1,17 @@
 name = "fluxychat-worker"
 main = "src/worker.js"
-# Browser Run quickAction() requires 2026-03-24+
-compatibility_date = "2026-03-24"
+# Browser Run quickAction() requires 2026-03-24+; Agents examples use 2026-06-11.
+compatibility_date = "2026-06-11"
+
+# Arch debt (P27-6): structured observability + hard resource ceilings.
+# tail consumers / logpush can attach to this stream without code changes.
+[observability]
+enabled = true
+head_sampling_rate = 1.0
+
+[limits]
+# Fails fast instead of runaway CPU billing; 30s covers the heaviest agent run.
+cpu_ms = 30000
 
 [vars]
 # When true, cron jobs run via FluxyScheduledWorkflow (P12-L); Worker `scheduled` is a no-op.
@@ -11,7 +21,8 @@ BROWSER_ENABLED = "false"
 
 # Local optional vars/secrets: see `.dev.vars.example` (copy to `.dev.vars` for `wrangler dev`).
 # Runtime env/secrets checklist:
-# - AI: Cloudflare AI Gateway (P12-I) preferred — AI_GATEWAY_ACCOUNT_ID + AI_GATEWAY_ID + AI_GATEWAY_TOKEN
+# - AI binding `[ai]` below is the in-worker STT/TTS path (Whisper + MeloTTS/Aura).
+# - Optional BYOK fallback: Cloudflare AI Gateway (P12-I) — AI_GATEWAY_ACCOUNT_ID + AI_GATEWAY_ID + AI_GATEWAY_TOKEN
 #   (+ AI_GATEWAY_PROVIDER_KEY or AI_API_KEY for upstream). Legacy fallback: AI_BASE_URL + AI_API_KEY.
 # - Optional automatic AI room summaries (requires AI configured via gateway or AI_BASE_URL):
 #   AUTO_ROOM_SUMMARY_ENABLED=true
@@ -62,6 +73,11 @@ class_name = "IpRateLimiterDurableObject"
 name = "SUPERGROUP_ROUTER"
 class_name = "SupergroupRouterDurableObject"
 
+# Optional 1:1 copilot isolate (CF-A-014). Room DO stays the multi-user kernel.
+[[durable_objects.bindings]]
+name = "AGENT"
+class_name = "AgentDurableObject"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "fluxychat"
@@ -84,6 +100,10 @@ preview_id = "536bdaedd5ce4e28b898e4bfb65ef3a2"   # npx wrangler kv namespace cr
 binding = "ATTACHMENTS"
 bucket_name = "fluxychat-attachments"
 
+# In-worker speech (CF-A-030): env.AI.run — Whisper STT + MeloTTS/Aura TTS.
+[ai]
+binding = "AI"
+
 # Free Workers plan requires SQLite-backed DO (new_sqlite_classes, not new_classes).
 [[migrations]]
 tag = "v1"
@@ -101,6 +121,10 @@ new_sqlite_classes = ["UserDurableObject"]
 tag = "v4"
 new_sqlite_classes = ["SupergroupRouterDurableObject"]
 
+[[migrations]]
+tag = "v5"
+new_sqlite_classes = ["AgentDurableObject"]
+
 # P12-L: scheduled jobs via Workflows (set WORKFLOW_SCHEDULES_ENABLED=false + uncomment triggers for legacy cron)
 [triggers]
 crons = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *", "0 */6 * * *"]
@@ -113,6 +137,9 @@ binding = "BROWSER"
 # binding = "FLAGS"
 # app_id = "<FLAGSHIP_APP_ID>"
 
+# Production schedules: Worker `[triggers] crons` (below). Cloudflare Workflows
+# stay commented until WORKFLOW_SCHEDULES_ENABLED=true AND this binding is live
+# together — see scripts/check-workflows-config.mjs. Do not enable one without the other.
 # [[workflows]]
 # name = "fluxychat-scheduled"
 # binding = "FLUXY_SCHEDULED_WORKFLOW"

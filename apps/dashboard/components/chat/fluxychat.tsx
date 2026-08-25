@@ -18,6 +18,7 @@ import {
   Send,
   Smile,
   Sparkles,
+  Square,
   Copy,
   Pencil,
   RotateCw,
@@ -713,6 +714,7 @@ export function FluxyChat({
     messages,
     sendMessage,
     invokeAgent,
+    stopAgentStream,
     connectionStatus,
     connectionState,
     connectionErrorInfo,
@@ -1806,6 +1808,16 @@ export function FluxyChat({
                 : runPending
                   ? " running…"
                   : " thinking…"}
+              {streamingCount > 0 ? (
+                <button
+                  type="button"
+                  className="ml-1 inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-foreground hover:bg-muted"
+                  onClick={() => stopAgentStream()}
+                >
+                  <Square className="h-2.5 w-2.5" aria-hidden />
+                  Stop
+                </button>
+              ) : null}
             </span>
           ) : null}
         </span>
@@ -3266,10 +3278,22 @@ export function FluxyChat({
             ) : null}
           </ComposerToolbarLeft>
           <ComposerToolbarRight>
-            <ComposerSubmitButton
-              loading={isAgentBusy}
-              disabled={!canSend}
-            />
+            {streamingCount > 0 ? (
+              <button
+                type="button"
+                className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs font-medium hover:bg-muted"
+                onClick={() => stopAgentStream()}
+                aria-label="Stop generating"
+              >
+                <Square className="h-3 w-3" aria-hidden />
+                Stop
+              </button>
+            ) : (
+              <ComposerSubmitButton
+                loading={isAgentBusy}
+                disabled={!canSend}
+              />
+            )}
           </ComposerToolbarRight>
         </ComposerToolbar>
       </Composer>

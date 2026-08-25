@@ -40,16 +40,93 @@ export function mapCrossOrgRoomRow(row) {
 }
 
 /**
- * @param {*} row
+ * Term keys that represent a party's private reserve position.
+ *
+ * These must never reach the counterparty. They are used server-side to reject
+ * offers below a floor, and previously travelled inside the shared `terms_json`,
+ * which meant `getCommitment` / `listCommitments` handed one org's walk-away
+ * price to the other. Treated as a denylist on both write and read so that
+ * pre-existing rows are redacted too.
  */
-export function mapCommitmentRow(row) {
-  if (!row) return null;
-  let terms = {};
-  try {
-    terms = JSON.parse(String(row.terms_json || "{}"));
-  } catch {
-    terms = {};
+export const PRIVATE_TERM_KEYS = Object.freeze([
+  "floorPrice",
+  "floor_price",
+  "minPrice",
+  "min_price",
+  "reservePrice",
+  "reserve_price",
+  "walkAwayPrice",
+  "walk_away_price",
+  "maxPrice",
+  "max_price",
+  "ceilingPrice",
+  "ceiling_price",
+  "budgetCap",
+  "budget_cap",
+]);
+
+const PRIVATE_TERM_KEY_SET = new Set(PRIVATE_TERM_KEYS);
+
+/**
+ * Split a caller-supplied terms object into the part both orgs may see and the
+ * part that stays with the proposing org.
+ *
+ * @param {Record<string, unknown> | null | undefined} terms
+ * @returns {{ publicTerms: Record<string, unknown>, privateTerms: Record<string, unknown> }}
+ */
+export function splitCommitmentTerms(terms) {
+  const publicTerms = {};
+  const privateTerms = {};
+  if (!terms || typeof terms !== "object") return { publicTerms, privateTerms };
+  for (const [key, value] of Object.entries(terms)) {
+    if (PRIVATE_TERM_KEY_SET.has(key)) privateTerms[key] = value;
+    else publicTerms[key] = value;
   }
+  return { publicTerms, privateTerms };
+}
+
+/**
+ * Defence in depth: strip private keys from any terms object read back from
+ * storage, so rows written before the private column existed cannot leak.
+ * @param {Record<string, unknown>} terms
+ */
+export function redactPrivateTerms(terms) {
+  if (!terms || typeof terms !== "object") return {};
+  const out = {};
+  for (const [key, value] of Object.entries(terms)) {
+    if (!PRIVATE_TERM_KEY_SET.has(key)) out[key] = value;
+  }
+  return out;
+}
+
+function parseJsonObject(raw) {
+  try {
+    const parsed = JSON.parse(String(raw || "{}"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Map a commitment row to its API shape.
+ *
+ * `terms` is always the shared view. Private reserve terms are returned under
+ * `privateTerms` ONLY when the reader's org is the one that supplied them, which
+ * requires the caller to pass `forOrgId` explicitly. Callers that omit it get
+ * the safe, fully redacted shape.
+ *
+ * @param {*} row
+ * @param {{ forOrgId?: string }} [options]
+ */
+export function mapCommitmentRow(row, options = {}) {
+  if (!row) return null;
+  // Redact on read as well as split on write: rows created before the private
+  // column existed still carry the floor inside terms_json.
+  const terms = redactPrivateTerms(parseJsonObject(row.terms_json));
+  const privateOwner = row.private_terms_org ? String(row.private_terms_org) : null;
+  const canSeePrivate = Boolean(options.forOrgId) && options.forOrgId === privateOwner;
+  const privateTerms = canSeePrivate ? parseJsonObject(row.private_terms_json) : undefined;
   return {
     id: String(row.id),
     crossOrgRoomId: String(row.cross_org_room_id),
@@ -57,6 +134,7 @@ export function mapCommitmentRow(row) {
     proposedByOrg: String(row.proposed_by_org),
     proposedByAgent: row.proposed_by_agent ? String(row.proposed_by_agent) : null,
     terms,
+    ...(privateTerms ? { privateTerms } : {}),
     state: String(row.state),
     roundNumber: Number(row.round_number) || 1,
     ttlSeconds: Number(row.ttl_seconds) || 86400,
@@ -66,6 +144,21 @@ export function mapCommitmentRow(row) {
     parentCommitmentId: row.parent_commitment_id ? String(row.parent_commitment_id) : null,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
+  };
+}
+
+/**
+ * Internal-only view that also returns the stored private terms and their owner,
+ * for server-side floor enforcement. Never return this shape over the wire.
+ * @param {*} row
+ */
+export function mapCommitmentRowInternal(row) {
+  if (!row) return null;
+  const base = mapCommitmentRow(row);
+  return {
+    ...base,
+    privateTerms: parseJsonObject(row.private_terms_json),
+    privateTermsOrg: row.private_terms_org ? String(row.private_terms_org) : null,
   };
 }
 
@@ -275,6 +368,11 @@ export async function proposeCommitment(env, input) {
   const floorCheck = assertNegotiationFloorPrice(input.terms ?? {});
   if (!floorCheck.ok) return floorCheck;
 
+  // Keep the private reserve out of the shared blob. Both orgs can read
+  // `terms_json`; only the proposing org may ever see `private_terms_json`.
+  const { publicTerms, privateTerms } = splitCommitmentTerms(input.terms);
+  const hasPrivate = Object.keys(privateTerms).length > 0;
+
   const now = new Date().toISOString();
   const commitmentId = crypto.randomUUID();
   const ttlSeconds = Math.min(604800, Math.max(300, Number(input.ttlSeconds) || 86400));
@@ -283,8 +381,9 @@ export async function proposeCommitment(env, input) {
   await env.DB.prepare(
     `INSERT INTO cross_org_commitments
      (id, cross_org_room_id, project_id, room_id, proposed_by_org, proposed_by_agent,
-      terms_json, state, round_number, ttl_seconds, expires_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'proposed', 1, ?, ?, ?, ?)`,
+      terms_json, private_terms_json, private_terms_org, state, round_number, ttl_seconds,
+      expires_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'proposed', 1, ?, ?, ?, ?)`,
   )
     .bind(
       commitmentId,
@@ -293,7 +392,9 @@ export async function proposeCommitment(env, input) {
       room.roomId,
       input.proposedByOrg,
       input.proposedByAgent ?? null,
-      JSON.stringify(input.terms ?? {}),
+      JSON.stringify(publicTerms),
+      hasPrivate ? JSON.stringify(privateTerms) : null,
+      hasPrivate ? input.proposedByOrg : null,
       ttlSeconds,
       expiresAt,
       now,
@@ -305,24 +406,43 @@ export async function proposeCommitment(env, input) {
     crossOrgRoomId: input.crossOrgRoomId,
     projectId: input.projectId,
     orgId: input.proposedByOrg,
-    event: { type: "commitment.proposed", commitmentId, terms: input.terms },
+    // The audit log is readable by both orgs in the room, so it carries the
+    // shared terms only.
+    event: { type: "commitment.proposed", commitmentId, terms: publicTerms },
   });
 
   return { ok: true, commitment: await getCommitment(env, input.projectId, commitmentId) };
 }
 
 /** @param {*} env @param {string} projectId @param {string} commitmentId */
-export async function getCommitment(env, projectId, commitmentId) {
+export async function getCommitment(env, projectId, commitmentId, options = {}) {
   const row = await env.DB.prepare(
     `SELECT * FROM cross_org_commitments WHERE project_id = ? AND id = ?`,
   )
     .bind(projectId, commitmentId)
     .first();
-  return mapCommitmentRow(row);
+  return mapCommitmentRow(row, options);
 }
 
-/** @param {*} env @param {string} projectId @param {string} crossOrgRoomId */
-export async function listCommitments(env, projectId, crossOrgRoomId) {
+/**
+ * Server-side read including the stored private reserve terms. Used for floor
+ * enforcement across negotiation rounds. Never serialise the result to a client.
+ * @param {*} env @param {string} projectId @param {string} commitmentId
+ */
+export async function getCommitmentInternal(env, projectId, commitmentId) {
+  const row = await env.DB.prepare(
+    `SELECT * FROM cross_org_commitments WHERE project_id = ? AND id = ?`,
+  )
+    .bind(projectId, commitmentId)
+    .first();
+  return mapCommitmentRowInternal(row);
+}
+
+/**
+ * @param {*} env @param {string} projectId @param {string} crossOrgRoomId
+ * @param {{ forOrgId?: string }} [options] pass the reader's org to receive its own private terms
+ */
+export async function listCommitments(env, projectId, crossOrgRoomId, options = {}) {
   const rows = await env.DB.prepare(
     `SELECT * FROM cross_org_commitments
      WHERE project_id = ? AND cross_org_room_id = ?
@@ -330,7 +450,7 @@ export async function listCommitments(env, projectId, crossOrgRoomId) {
   )
     .bind(projectId, crossOrgRoomId)
     .all();
-  return (rows.results || []).map(mapCommitmentRow);
+  return (rows.results || []).map((row) => mapCommitmentRow(row, options));
 }
 
 /**
@@ -362,21 +482,45 @@ export async function counterCommitment(env, input) {
   const floorCheck = assertNegotiationFloorPrice(input.terms ?? {});
   if (!floorCheck.ok) return floorCheck;
 
+  // Enforce the standing reserve too. Previously the floor was only ever checked
+  // against the terms in the same request, so a counter-offer below the original
+  // proposer's floor sailed through and the "private floor" guarantee was
+  // decorative. The stored floor now constrains every later round.
+  const standing = await getCommitmentInternal(env, input.projectId, input.commitmentId);
+  const standingFloor = standing?.privateTerms ?? {};
+  if (Object.keys(standingFloor).length) {
+    const { publicTerms: counterPublic } = splitCommitmentTerms(input.terms);
+    const standingCheck = assertNegotiationFloorPrice({ ...standingFloor, ...counterPublic });
+    if (!standingCheck.ok) {
+      // Do not echo the floor value back: that would disclose the reserve to the
+      // counterparty through the error payload.
+      return { ok: false, reason: standingCheck.reason };
+    }
+  }
+
   const nextRound = existing.roundNumber + 1;
   if (nextRound > room.maxRounds) {
     return { ok: false, reason: "max_rounds_exceeded", maxRounds: room.maxRounds };
   }
 
+  // The countering org may attach its own reserve; it replaces ownership of the
+  // private slot so each side's floor is only ever visible to itself.
+  const { publicTerms, privateTerms } = splitCommitmentTerms(input.terms);
+  const hasPrivate = Object.keys(privateTerms).length > 0;
+
   const now = new Date().toISOString();
   await env.DB.prepare(
     `UPDATE cross_org_commitments SET
-       terms_json = ?, state = 'countered', round_number = ?, proposed_by_org = ?,
+       terms_json = ?, private_terms_json = ?, private_terms_org = ?,
+       state = 'countered', round_number = ?, proposed_by_org = ?,
        proposed_by_agent = ?, human_a_confirmed_at = NULL, human_b_confirmed_at = NULL,
        updated_at = ?
      WHERE id = ? AND project_id = ?`,
   )
     .bind(
-      JSON.stringify(input.terms ?? {}),
+      JSON.stringify(publicTerms),
+      hasPrivate ? JSON.stringify(privateTerms) : (standing?.privateTermsOrg ? JSON.stringify(standingFloor) : null),
+      hasPrivate ? input.counterByOrg : (standing?.privateTermsOrg ?? null),
       nextRound,
       input.counterByOrg,
       input.proposedByAgent ?? null,
@@ -454,7 +598,36 @@ export async function approveCommitment(env, input) {
     },
   });
 
+  // F3: both humans confirmed => open the settlement record. Best-effort and
+  // idempotent (INSERT OR IGNORE on commitment_id): a settlement failure must
+  // never roll back the commitment itself.
+  if (nextState === "committed") {
+    try {
+      const { createCommitmentSettlement } = await import("./cross-org-settlement.js");
+      await createCommitmentSettlement(env, {
+        projectId: input.projectId,
+        crossOrgRoomId: existing.crossOrgRoomId,
+        commitmentId: input.commitmentId,
+        publicTerms: existing.terms,
+      });
+    } catch (err) {
+      logErrorSafe("cross_org.settlement_create_failed", err, {
+        commitmentId: input.commitmentId,
+      });
+    }
+  }
+
   return { ok: true, commitment: await getCommitment(env, input.projectId, input.commitmentId) };
+}
+
+/** logError may not be imported in every bundle path; keep the hook resilient. */
+function logErrorSafe(event, err, ctx) {
+  try {
+    // eslint-disable-next-line no-console
+    console.error(JSON.stringify({ level: "error", event, error: err?.message ?? String(err), ...ctx }));
+  } catch {
+    /* never throw from the safety net */
+  }
 }
 
 /** @param {*} env */

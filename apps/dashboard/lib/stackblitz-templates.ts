@@ -25,6 +25,11 @@ function tmpl(strings: TemplateStringsArray, ...values: unknown[]) {
 
 const WC_BASE_URL = "https://api.fluxychat.com";
 
+/** Keep in lockstep with published @fluxy-chat/* (publish sdk/react/protocol before relying on StackBlitz). */
+const FLUXY_SDK = "^0.6.3";
+const FLUXY_REACT = "^0.1.3";
+const FLUXY_PROTOCOL = "^0.1.4";
+
 export const STACKBLITZ_TEMPLATES: FluxyTemplate[] = [
   {
     id: "basic-connection",
@@ -36,8 +41,8 @@ export const STACKBLITZ_TEMPLATES: FluxyTemplate[] = [
       description: "Connect to FluxyChat, join a room, send and receive messages",
       template: "javascript",
       dependencies: {
-        "@fluxy-chat/sdk": "^0.4.2",
-        "@fluxy-chat/protocol": "^0.1.0",
+        "@fluxy-chat/sdk": FLUXY_SDK,
+        "@fluxy-chat/protocol": FLUXY_PROTOCOL,
       },
       files: {
         "index.html": tmpl`<!DOCTYPE html>
@@ -347,10 +352,10 @@ console.log("FluxyChat StackBlitz: uses GET /demo/session guest JWT");`,
               start: "npx serve .",
             },
             dependencies: {
-              "@fluxy-chat/sdk": "^0.4.2",
+              "@fluxy-chat/sdk": FLUXY_SDK,
             },
             overrides: {
-              "@fluxy-chat/protocol": "^0.1.0",
+              "@fluxy-chat/protocol": FLUXY_PROTOCOL,
             },
           },
           null,
@@ -372,9 +377,9 @@ console.log("FluxyChat StackBlitz: uses GET /demo/session guest JWT");`,
         react: "^18.2.0",
         "react-dom": "^18.2.0",
         "react-scripts": "5.0.1",
-        "@fluxy-chat/sdk": "^0.4.2",
-        "@fluxy-chat/react": "^0.1.0",
-        "@fluxy-chat/protocol": "^0.1.0",
+        "@fluxy-chat/sdk": FLUXY_SDK,
+        "@fluxy-chat/react": FLUXY_REACT,
+        "@fluxy-chat/protocol": FLUXY_PROTOCOL,
       },
       files: {
         "src/App.js": tmpl`import React, { useState, useEffect, useCallback } from "react";
@@ -435,13 +440,14 @@ function RoomList({ rooms, activeRoom, onJoin }) {
 }
 
 function ChatRoom({ roomId, client, userId }) {
-  const { messages, sendMessage, connectionState } = useChat({
+  const { messages, sendMessage, connectionState, stopAgentStream } = useChat({
     roomId,
     client,
     replay: "connect",
   });
   const [input, setInput] = useState("");
   const listRef = React.useRef(null);
+  const isStreaming = messages.some((m) => m.streaming);
 
   useEffect(() => {
     if (listRef.current) {
@@ -462,6 +468,9 @@ function ChatRoom({ roomId, client, userId }) {
         <span className={"status " + connectionState.status}>
           {connectionState.status}
         </span>
+        {isStreaming ? (
+          <button type="button" onClick={() => stopAgentStream()}>Stop</button>
+        ) : null}
       </div>
       <div className="messages" ref={listRef}>
         {messages.length === 0 && (
@@ -763,11 +772,11 @@ root.render(
               react: "^18.2.0",
               "react-dom": "^18.2.0",
               "react-scripts": "5.0.1",
-              "@fluxy-chat/sdk": "^0.4.2",
-              "@fluxy-chat/protocol": "^0.1.0",
+              "@fluxy-chat/sdk": FLUXY_SDK,
+              "@fluxy-chat/protocol": FLUXY_PROTOCOL,
             },
             overrides: {
-              "@fluxy-chat/protocol": "^0.1.0",
+              "@fluxy-chat/protocol": FLUXY_PROTOCOL,
             },
             scripts: {
               start: "react-scripts start",
@@ -793,9 +802,9 @@ root.render(
         react: "^18.2.0",
         "react-dom": "^18.2.0",
         "react-scripts": "5.0.1",
-        "@fluxy-chat/sdk": "^0.4.2",
-        "@fluxy-chat/react": "^0.1.0",
-        "@fluxy-chat/protocol": "^0.1.0",
+        "@fluxy-chat/sdk": FLUXY_SDK,
+        "@fluxy-chat/react": FLUXY_REACT,
+        "@fluxy-chat/protocol": FLUXY_PROTOCOL,
       },
       files: {
         "src/App.js": tmpl`import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -857,13 +866,14 @@ export default function App() {
 }
 
 function AgentChat({ client, roomId, userId }) {
-  const { messages, sendMessage, connectionState } = useChat({
+  const { messages, sendMessage, connectionState, stopAgentStream } = useChat({
     roomId,
     client,
     replay: "connect",
   });
   const [input, setInput] = useState("");
   const listRef = useRef(null);
+  const isStreaming = messages.some((m) => m.streaming);
 
   useEffect(() => {
     if (listRef.current) {
@@ -887,6 +897,9 @@ function AgentChat({ client, roomId, userId }) {
           <span className="badge">AI Agent</span>
         </div>
         <div className={"status-dot " + connectionState.status} />
+        {isStreaming ? (
+          <button type="button" onClick={() => stopAgentStream()}>Stop</button>
+        ) : null}
       </header>
       <div className="messages" ref={listRef}>
         {messages.length === 0 && (
@@ -1148,11 +1161,11 @@ root.render(<App />);`,
               react: "^18.2.0",
               "react-dom": "^18.2.0",
               "react-scripts": "5.0.1",
-              "@fluxy-chat/sdk": "^0.4.2",
-              "@fluxy-chat/protocol": "^0.1.0",
+              "@fluxy-chat/sdk": FLUXY_SDK,
+              "@fluxy-chat/protocol": FLUXY_PROTOCOL,
             },
             overrides: {
-              "@fluxy-chat/protocol": "^0.1.0",
+              "@fluxy-chat/protocol": FLUXY_PROTOCOL,
             },
             scripts: {
               start: "react-scripts start",
@@ -1178,8 +1191,8 @@ root.render(<App />);`,
         react: "^18.2.0",
         "react-dom": "^18.2.0",
         "react-scripts": "5.0.1",
-        "@fluxy-chat/sdk": "^0.6.2",
-        "@fluxy-chat/react": "^0.1.1",
+        "@fluxy-chat/sdk": FLUXY_SDK,
+        "@fluxy-chat/react": FLUXY_REACT,
       },
       files: {
         "src/App.js": tmpl`import React, { useEffect, useMemo, useState } from "react";
@@ -1190,18 +1203,22 @@ import "./App.css";
 const BASE_URL = "${WC_BASE_URL}";
 
 function ChatRoom({ roomId, agentId, agentHandle, userId }) {
-  const { messages, sendMessage, invokeAgent, connectionState, agentTyping, toolThreadEvents } = useChat({
+  const { messages, sendMessage, invokeAgent, connectionState, agentTyping, toolThreadEvents, stopAgentStream } = useChat({
     roomId,
     agentId: agentId || undefined,
     markReadLatest: true,
   });
   const [draft, setDraft] = useState("");
+  const isStreaming = messages.some((m) => m.streaming);
 
   return (
     <section className="chat">
       <header>
         <strong>{roomId}</strong>
         <span>{connectionState.status}</span>
+        {isStreaming ? (
+          <button type="button" onClick={() => stopAgentStream()}>Stop</button>
+        ) : null}
       </header>
       <ul>
         {messages.map((m) => (
@@ -1321,8 +1338,8 @@ root.render(<App />);`,
               react: "^18.2.0",
               "react-dom": "^18.2.0",
               "react-scripts": "5.0.1",
-              "@fluxy-chat/sdk": "^0.6.2",
-              "@fluxy-chat/react": "^0.1.1",
+              "@fluxy-chat/sdk": FLUXY_SDK,
+              "@fluxy-chat/react": FLUXY_REACT,
             },
             scripts: {
               start: "react-scripts start",

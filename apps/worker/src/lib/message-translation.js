@@ -1,5 +1,6 @@
 import { workerSharedLlmAllowed } from "./hosted-saas-policy.js";
 import { buildAiAuthHeaders, isAiConfigured, resolveAiTransport } from "./ai-gateway.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 const LANG_RE = /^[a-z]{2}(-[A-Za-z]{2})?$/;
 
@@ -70,7 +71,7 @@ export async function translateMessageContent(env, input) {
 
   const systemPrompt = `You translate chat messages. Output ONLY the translated text in ${targetLang}, no quotes or explanation. Preserve mentions (@user) and URLs.`;
 
-  const res = await fetch(transport.chatCompletionsUrl, {
+  const res = await safeOutboundFetch(transport.chatCompletionsUrl, {
     method: "POST",
     headers: buildAiAuthHeaders(env, {
       contentType: "application/json",

@@ -77,17 +77,23 @@ function useFluxySession(): {
 }
 
 function ChatPanel({ roomId }: { roomId: string }) {
-  const { messages, sendMessage, connectionState } = useChat({
+  const { messages, sendMessage, connectionState, stopAgentStream } = useChat({
     roomId,
     markReadLatest: true,
   });
   const [draft, setDraft] = useState("");
+  const isStreaming = messages.some((m) => m.streaming);
 
   return (
     <section className="chat-panel">
       <header className="chat-header">
         <strong>{roomId}</strong>
         <span className="status">{connectionState.status}</span>
+        {isStreaming ? (
+          <button type="button" onClick={() => stopAgentStream()}>
+            Stop
+          </button>
+        ) : null}
       </header>
       <ul className="messages">
         {messages.map((m) => (
@@ -110,7 +116,7 @@ function ChatPanel({ roomId }: { roomId: string }) {
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Type a message…"
+          placeholder="Type a message, or @assistant to mention the room agent"
           aria-label="Message"
         />
         <button type="submit">Send</button>

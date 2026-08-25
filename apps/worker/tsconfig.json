@@ -1,19 +1,27 @@
 {
+  "include": [
+    "src/**/*.ts",
+    "src/lib/do-alarm-scheduler.js",
+    "src/lib/agent-budget.js",
+    "src/lib/do-ws-sessions.js",
+    "src/lib/room-cost-ledger.js",
+    "src/lib/token-revocation.js",
+    "src/lib/conversation-attestation.js",
+    "src/lib/expire-room-messages.js"
+  ],
+  "exclude": ["**/*.test.js", "**/*.test.ts", "**/test-stubs/**"],
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ES2022"],
     "allowJs": true,
-    "checkJs": false,
+    "checkJs": true,
     "strict": true,
+    "noImplicitAny": false,
     "noEmit": true,
     "skipLibCheck": true,
+    "maxNodeModuleJsDepth": 0,
     "types": ["@cloudflare/workers-types"]
-  },
-  "include": [
-    "src/lib/url-ssrf.ts",
-    "src/lib/plan-tier-limits.ts",
-    "src/lib/deps-env.ts"
-  ]
+  }
 }

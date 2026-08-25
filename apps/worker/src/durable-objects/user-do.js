@@ -1,16 +1,55 @@
 import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
-import { logInfo } from "../lib/worker-log.js";
+import { logInfo, logError } from "../lib/worker-log.js";
+import { WsSessionRegistry, installWsAutoResponse } from "../lib/do-ws-sessions.js";
 
-/** DO id scope: one instance per project user (`idFromName(projectId + "__" + userId)`). */
+/**
+ * Per-user fan-out channel. DO id scope: one instance per project user
+ * (`idFromName(projectId + "__" + userId)`).
+ *
+ * This object is the worst possible case for non-hibernating WebSockets: it is a
+ * low-traffic notification channel that a user keeps open for hours. Accepting
+ * with `webSocket.accept()` would bill Durable Object duration (128 MB x
+ * wall-clock seconds) for that entire idle window, per user. It is accepted
+ * through the Hibernation API instead, so an idle channel costs nothing.
+ */
 export class UserDurableObject {
   constructor(state, env) {
     this.state = state;
     this.env = env;
-    this.clients = new Set();
-    /** @type {Map<WebSocket, string>} */
-    this.socketIds = new Map();
+
+    this.sessions = new WsSessionRegistry(state, {
+      onAttachmentOverflow: ({ bytes, field }) =>
+        logError("user_do.ws_attachment_overflow", new Error("attachment budget exceeded"), {
+          bytes,
+          field,
+        }),
+    });
+    /** Live sockets, derived from `state.getWebSockets()` so a wake sees them all. */
+    this.clients = this.sessions.socketSet();
+    /** @type {Map<WebSocket, string>} per-socket id, attachment field `s` */
+    this.socketIds = this.sessions.field("s");
     this.projectId = null;
     this.userId = null;
+
+    // Answered by the runtime without waking this object.
+    this.autoResponseInstalled = installWsAutoResponse(state);
+
+    if (typeof state?.blockConcurrencyWhile === "function" && state.storage) {
+      this._hydrated = state.blockConcurrencyWhile(async () => {
+        const [projectId, userId] = await Promise.all([
+          state.storage.get("projectId"),
+          state.storage.get("userId"),
+        ]);
+        if (typeof projectId === "string" && projectId) this.projectId = projectId;
+        if (typeof userId === "string" && userId) this.userId = userId;
+      });
+    } else {
+      this._hydrated = Promise.resolve();
+    }
+  }
+
+  async ensureHydrated() {
+    await this._hydrated;
   }
 
   async fetch(request) {
@@ -20,6 +59,7 @@ export class UserDurableObject {
       return new Response(null, { status: 101, webSocket: client });
     }
 
+    await this.ensureHydrated();
     const url = new URL(request.url);
     if (url.pathname === "/deliver" && request.method === "POST") {
       let body;
@@ -75,9 +115,9 @@ export class UserDurableObject {
   }
 
   async handleWebSocket(webSocket, request) {
-    webSocket.accept();
+    this.sessions.accept(webSocket, []);
     const auth = await verifyJwtAndGetContext(request, this.env).catch((err) => {
-      console.error("UserDurableObject JWT verify error", err);
+      logError("user_do.ws_jwt_verify_failed", err, {});
       return null;
     });
     if (!auth) {
@@ -93,18 +133,25 @@ export class UserDurableObject {
 
     this.projectId = auth.projectId;
     this.userId = auth.userId;
-    this.clients.add(webSocket);
+    // Persist the channel identity: `/deliver` can arrive on a woken object that
+    // never ran a handshake in this isolate.
+    if (this.state.storage) {
+      try {
+        await this.state.storage.put({ projectId: auth.projectId, userId: auth.userId });
+      } catch (err) {
+        logError("user_do.persist_identity_failed", err, { userId: auth.userId });
+      }
+    }
+
     const socketId = crypto.randomUUID();
-    this.socketIds.set(webSocket, socketId);
+    this.sessions.write(webSocket, { s: socketId, u: auth.userId, p: auth.projectId });
 
     logInfo("user_do.connected", {
       userId: auth.userId,
       projectId: auth.projectId,
       clients: this.clients.size,
+      hibernatable: this.sessions.hibernationEnabled,
     });
-
-    webSocket.addEventListener("close", () => this.onClose(webSocket));
-    webSocket.addEventListener("error", () => this.onClose(webSocket));
 
     webSocket.send(
       JSON.stringify({
@@ -114,6 +161,51 @@ export class UserDurableObject {
         connectionCount: this.clients.size,
       }),
     );
+  }
+
+  // ── WebSocket Hibernation API handlers ────────────────────────────────────
+
+  /**
+   * This channel is push-only; inbound frames other than the runtime-handled
+   * ping are ignored rather than parsed, keeping the wake path cheap.
+   * @param {WebSocket} webSocket
+   * @param {string | ArrayBuffer} message
+   */
+  async webSocketMessage(webSocket, message) {
+    await this.ensureHydrated();
+    if (typeof message !== "string") return;
+    let frame;
+    try {
+      frame = JSON.parse(message);
+    } catch {
+      return;
+    }
+    // Kept for clients that predate the runtime auto-responder.
+    if (frame?.type === "ping") {
+      try {
+        webSocket.send(JSON.stringify({ type: "pong" }));
+      } catch {
+        /* socket already gone */
+      }
+    }
+  }
+
+  /** @param {WebSocket} webSocket */
+  async webSocketClose(webSocket) {
+    await this.ensureHydrated();
+    this.onClose(webSocket);
+  }
+
+  /**
+   * @param {WebSocket} webSocket
+   * @param {unknown} error
+   */
+  async webSocketError(webSocket, error) {
+    await this.ensureHydrated();
+    logError("user_do.ws_error", error instanceof Error ? error : new Error(String(error)), {
+      userId: this.userId || undefined,
+    });
+    this.onClose(webSocket);
   }
 
   userIdFromRequest(request) {
@@ -129,8 +221,7 @@ export class UserDurableObject {
   }
 
   onClose(webSocket) {
-    this.clients.delete(webSocket);
-    this.socketIds.delete(webSocket);
+    this.sessions.forget(webSocket);
   }
 
   /**

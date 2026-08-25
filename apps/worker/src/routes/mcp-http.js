@@ -9,14 +9,69 @@ import {
 } from "../lib/public-room-access.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
 import { isValidId } from "../lib/valid-ids.js";
+import { isJsonRpcNotification, splitMcpHttpStatus } from "../lib/mcp-protocol.js";
 
 /**
- * MCP HTTP endpoints.
+ * MCP HTTP endpoints (dual-era Streamable HTTP).
  *
- * POST /mcp — project-wide MCP (list rooms, search, etc.)
- * POST /mcp/rooms/:roomId — room-scoped MCP (PH-100)
- * GET /mcp/rooms/:roomId/events — SSE stream alias (same as GET /rooms/:roomId/stream)
+ * POST /mcp — project-wide MCP
+ * POST /mcp/rooms/:roomId — room-scoped MCP
+ * GET /mcp/rooms/:roomId/events — SSE alias
+ * GET/DELETE /mcp — 405 (no session GET stream in 2026-07-28)
  */
+
+function mcpMethodNotAllowed(json, corsHeaders) {
+  return json(
+    { jsonrpc: "2.0", error: { code: -32600, message: "Method not allowed." }, id: null },
+    { status: 405, headers: corsHeaders },
+  );
+}
+
+async function parseMcpJsonRpc(request, json, corsHeaders) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return {
+      errorResponse: json(
+        { jsonrpc: "2.0", error: { code: -32700, message: "Parse error" }, id: null },
+        { status: 400, headers: corsHeaders },
+      ),
+    };
+  }
+  if (!body || body.jsonrpc !== "2.0" || typeof body.method !== "string") {
+    return {
+      errorResponse: json(
+        {
+          jsonrpc: "2.0",
+          error: { code: -32600, message: "Invalid Request" },
+          id: body?.id ?? null,
+        },
+        { status: 400, headers: corsHeaders },
+      ),
+    };
+  }
+  if (isJsonRpcNotification(body)) {
+    return {
+      errorResponse: new Response(null, { status: 202, headers: corsHeaders }),
+    };
+  }
+  if (!Object.prototype.hasOwnProperty.call(body, "id")) {
+    return {
+      errorResponse: json(
+        { jsonrpc: "2.0", error: { code: -32600, message: "Invalid Request" }, id: null },
+        { status: 400, headers: corsHeaders },
+      ),
+    };
+  }
+  return { body };
+}
+
+function mcpJsonRpcResponse(json, rpc, corsHeaders) {
+  const { status, body } = splitMcpHttpStatus(rpc);
+  return json(body, { status, headers: corsHeaders });
+}
+
 export async function dispatchMcpRoutes(request, url, h) {
   const {
     env,
@@ -36,21 +91,49 @@ export async function dispatchMcpRoutes(request, url, h) {
 
   const roomMcpMatch = url.pathname.match(/^\/mcp\/rooms\/([^/]+)$/);
   const roomEventsMatch = url.pathname.match(/^\/mcp\/rooms\/([^/]+)\/events$/);
+  const isProjectMcp = url.pathname === "/mcp";
+  const isProtectedResourceMeta =
+    url.pathname === "/.well-known/oauth-protected-resource" ||
+    url.pathname === "/.well-known/oauth-protected-resource/mcp";
 
-  if (!roomMcpMatch && !roomEventsMatch && !(url.pathname === "/mcp" && request.method === "POST")) {
+  if (isProtectedResourceMeta && request.method === "GET") {
+    return json(
+      {
+        resource: `${url.origin}/mcp`,
+        bearer_methods_supported: ["header"],
+        resource_documentation: `${url.origin}/docs/guides/room-as-mcp-server`,
+        scopes_supported: ["mcp"],
+      },
+      { headers: corsHeaders },
+    );
+  }
+
+  if (!roomMcpMatch && !roomEventsMatch && !isProjectMcp) {
     return null;
   }
 
+  if ((isProjectMcp || roomMcpMatch) && request.method !== "POST" && !roomEventsMatch) {
+    return mcpMethodNotAllowed(json, corsHeaders);
+  }
+
+  const workerOrigin = url.origin;
   const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
     if (err instanceof Response) throw err;
     logError("auth.jwt_verify_failed", err, requestLogCtx);
     return null;
   });
   if (!auth) {
-    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    return json(
+      { jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized" }, id: null },
+      {
+        status: 401,
+        headers: {
+          ...corsHeaders,
+          "WWW-Authenticate": `Bearer realm="fluxychat", resource_metadata="${workerOrigin}/.well-known/oauth-protected-resource"`,
+        },
+      },
+    );
   }
-
-  const workerOrigin = url.origin;
 
   if (roomEventsMatch && request.method === "GET") {
     const roomId = decodeURIComponent(roomEventsMatch[1]);
@@ -102,61 +185,32 @@ export async function dispatchMcpRoutes(request, url, h) {
       );
     }
 
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return json(
-        { jsonrpc: "2.0", error: { code: -32700, message: "Parse error" }, id: null },
-        { status: 400, headers: corsHeaders },
-      );
-    }
+    const parsed = await parseMcpJsonRpc(request, json, corsHeaders);
+    if (parsed.errorResponse) return parsed.errorResponse;
 
-    if (!body || body.jsonrpc !== "2.0" || !body.method) {
-      return json(
-        {
-          jsonrpc: "2.0",
-          error: { code: -32600, message: "Invalid Request" },
-          id: body?.id ?? null,
-        },
-        { status: 400, headers: corsHeaders },
-      );
-    }
-
-    const result = await handleMcpRoomRequest(body, {
+    const result = await handleMcpRoomRequest(parsed.body, {
       env,
       auth,
       roomId,
       logError,
       workerOrigin,
+      requestHeaders: request.headers,
     });
-    return json(result, { headers: corsHeaders });
+    return mcpJsonRpcResponse(json, result, corsHeaders);
   }
 
-  if (url.pathname === "/mcp" && request.method === "POST") {
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return json(
-        { jsonrpc: "2.0", error: { code: -32700, message: "Parse error" }, id: null },
-        { status: 400, headers: corsHeaders },
-      );
-    }
+  if (isProjectMcp && request.method === "POST") {
+    const parsed = await parseMcpJsonRpc(request, json, corsHeaders);
+    if (parsed.errorResponse) return parsed.errorResponse;
 
-    if (!body || body.jsonrpc !== "2.0" || !body.method) {
-      return json(
-        {
-          jsonrpc: "2.0",
-          error: { code: -32600, message: "Invalid Request" },
-          id: body?.id ?? null,
-        },
-        { status: 400, headers: corsHeaders },
-      );
-    }
-
-    const result = await handleMcpRequest(body, { env, auth, logError, workerOrigin });
-    return json(result, { headers: corsHeaders });
+    const result = await handleMcpRequest(parsed.body, {
+      env,
+      auth,
+      logError,
+      workerOrigin,
+      requestHeaders: request.headers,
+    });
+    return mcpJsonRpcResponse(json, result, corsHeaders);
   }
 
   return null;

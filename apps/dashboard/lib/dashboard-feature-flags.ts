@@ -51,7 +51,6 @@ export const DASHBOARD_PREVIEW_HREFS = new Set([
   "/cross-channel",
   "/agents/platform",
   "/agents/a2a",
-  "/agents/cross-org",
   "/agents/debate",
   "/agents/rehearsal",
   "/agents/ambient",

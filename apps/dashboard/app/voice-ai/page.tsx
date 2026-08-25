@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Loader2, Mic, Play, Square } from "lucide-react";
 import { useVoice } from "@fluxy-chat/react";
@@ -15,10 +15,13 @@ import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../components/dashboard-session";
 import { messageFromUnknown } from "@/lib/error-message";
 import {
+  blobToAudioBase64,
   createVoiceAiSession,
   getVoiceAiStats,
   listVoiceAiProviders,
   recordVoiceAiMetrics,
+  speakWithWorker,
+  transcribeWithWorker,
   type VoiceAiProvider,
   type VoiceAiStats,
 } from "@/lib/voice-ai-client";
@@ -41,7 +44,9 @@ export default function VoiceAiPage() {
 
   const [providers, setProviders] = useState<VoiceAiProvider[]>([]);
   const [stats, setStats] = useState<VoiceAiStats | null>(null);
-  const [providerId, setProviderId] = useState("openai-realtime");
+  const [providerId, setProviderId] = useState("workers-ai");
+  const [workerTranscript, setWorkerTranscript] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
   const [roomId, setRoomId] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [pipelineMode, setPipelineMode] = useState<"unified" | "legacy">("unified");
@@ -50,6 +55,9 @@ export default function VoiceAiPage() {
   const [empathyEnabled, setEmpathyEnabled] = useState(false);
   const [empathyMinConfidence, setEmpathyMinConfidence] = useState("0.6");
   const [empathyOperatorHint, setEmpathyOperatorHint] = useState<string | null>(null);
+  const recRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const recStreamRef = useRef<MediaStream | null>(null);
   const [onHoldPhrase, setOnHoldPhrase] = useState<string | null>(null);
 
   const { user: clerkUser } = useClerkUser();
@@ -174,11 +182,89 @@ export default function VoiceAiPage() {
     setNotice(`Pipeline complete in ${voice.latencyMs}ms.`);
   }
 
+  async function handleWorkerSpeak() {
+    if (!token) return;
+    setBusy("speak");
+    setError(null);
+    try {
+      const out = await speakWithWorker(token, {
+        text: testText,
+        roomId: roomId || undefined,
+      });
+      const src = `data:${out.mimeType};base64,${out.audioBase64}`;
+      const audio = new Audio(src);
+      await audio.play();
+      setNotice(`Spoke via ${out.engine} (${out.model})`);
+    } catch (err) {
+      setError(messageFromUnknown(err, "Workers AI speak failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function transcribeRecordingBlob(blob: Blob) {
+    if (!token || blob.size === 0) return;
+    setBusy("transcribe");
+    try {
+      const audioBase64 = await blobToAudioBase64(blob);
+      const out = await transcribeWithWorker(token, {
+        audioBase64,
+        mimeType: blob.type || "audio/webm",
+        roomId: roomId || undefined,
+      });
+      setWorkerTranscript(out.text);
+      setNotice(`Transcribed via ${out.engine || out.model}`);
+    } catch (err) {
+      setError(messageFromUnknown(err, "Workers AI transcribe failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function stopWorkerRecording() {
+    const rec = recRef.current;
+    if (!rec || rec.state === "inactive") return;
+    rec.stop();
+  }
+
+  async function handleWorkerRecord() {
+    if (recording) {
+      stopWorkerRecording();
+      return;
+    }
+    setError(null);
+    setWorkerTranscript(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recStreamRef.current = stream;
+      const rec = new MediaRecorder(stream);
+      recChunksRef.current = [];
+      rec.ondataavailable = (ev) => {
+        if (ev.data.size) recChunksRef.current.push(ev.data);
+      };
+      rec.onstop = () => {
+        recStreamRef.current?.getTracks().forEach((t) => t.stop());
+        recStreamRef.current = null;
+        recRef.current = null;
+        setRecording(false);
+        const blob = new Blob(recChunksRef.current, { type: rec.mimeType || "audio/webm" });
+        recChunksRef.current = [];
+        void transcribeRecordingBlob(blob);
+      };
+      recRef.current = rec;
+      rec.start();
+      setRecording(true);
+      setNotice("Recording… click again to transcribe");
+    } catch (err) {
+      setError(messageFromUnknown(err, "Microphone permission denied"));
+    }
+  }
+
   return (
     <ConsoleShell>
       <ConsolePageHeader
         title="Voice AI pipeline"
-        description="Unified multimodal voice (default) or legacy STT→LLM→TTS with OpenAI Realtime and Gemini Live, VAD, barge-in, and latency metrics."
+        description="In-worker Whisper STT and MeloTTS on Workers AI. Optional OpenAI Realtime / Gemini Live duplex, VAD, barge-in, and latency metrics."
         actions={
           <Badge className={readinessBadgeClass(PLATFORM_READINESS.voice.readiness)}>
             {formatReadinessLabel(PLATFORM_READINESS.voice.readiness)}
@@ -188,9 +274,12 @@ export default function VoiceAiPage() {
       <ConsoleFeedback error={error} notice={notice} />
 
       <Panel className="p-4 text-sm text-muted-foreground">
-        Voice AI uses your project&apos;s provider keys. OpenAI Realtime and Gemini Live are not included in the hosted Worker secrets.
-        Add <code className="rounded bg-muted px-1 py-0.5 text-xs">OPENAI_API_KEY</code> or{" "}
-        <code className="rounded bg-muted px-1 py-0.5 text-xs">GOOGLE_AI_API_KEY</code> in project settings or Worker secrets before running live sessions.
+        In-worker speech uses the Worker <code className="rounded bg-muted px-1 py-0.5 text-xs">[ai]</code> binding
+        (<code className="rounded bg-muted px-1 py-0.5 text-xs">POST /voice-ai/transcribe</code> and{" "}
+        <code className="rounded bg-muted px-1 py-0.5 text-xs">POST /voice-ai/speak</code>).
+        OpenAI Realtime and Gemini Live are optional duplex adapters on the client — add{" "}
+        <code className="rounded bg-muted px-1 py-0.5 text-xs">OPENAI_API_KEY</code> or{" "}
+        <code className="rounded bg-muted px-1 py-0.5 text-xs">GOOGLE_AI_API_KEY</code> only if you want that path.
       </Panel>
 
       <Panel className="p-4 text-sm text-muted-foreground">
@@ -232,6 +321,29 @@ export default function VoiceAiPage() {
                 </Panel>
               ))}
             </div>
+          </Section>
+
+          <Section title="Workers AI speech" description="Runs on the Worker via env.AI.run. Uses your dashboard JWT — no OpenAI key required.">
+            <Panel className="p-4 space-y-3 max-w-xl">
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" disabled={!token || busy === "speak"} onClick={() => void handleWorkerSpeak()}>
+                  {busy === "speak" ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Play className="h-3 w-3 mr-1" />}
+                  Speak test text
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!token || busy === "transcribe"}
+                  onClick={() => void handleWorkerRecord()}
+                >
+                  {recording ? <Square className="h-3 w-3 mr-1" /> : <Mic className="h-3 w-3 mr-1" />}
+                  {recording ? "Stop & transcribe" : "Record & transcribe"}
+                </Button>
+              </div>
+              {workerTranscript ? (
+                <p className="rounded border border-border bg-muted/40 px-3 py-2 text-sm">{workerTranscript}</p>
+              ) : null}
+            </Panel>
           </Section>
 
           <Section title="Session">

@@ -10,7 +10,7 @@ Client for a **FluxyChat Worker** (self-hosted or [FluxyChat Cloud](https://gith
 
 For **React hooks** (`useChat`, `useInbox`, `FluxyRealtimeProvider`), install [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) alongside this package.
 
-The SDK talks to **your** Worker URL. It does **not** include LLM API keys — only your Fluxy **project API key** or **member JWT**.
+The SDK talks to **your** Worker URL. It does **not** include LLM API keys; only your Fluxy **project API key** or **member JWT**.
 
 ## Install
 
@@ -22,11 +22,11 @@ npm install @fluxy-chat/react react
 pnpm add @fluxy-chat/sdk @fluxy-chat/react zustand
 ```
 
-**Peer dependencies:** install `react` (18+) when you use hooks from `@fluxy-chat/react`, and `zustand` (5+) for `createFluxyRoomSession` or room store helpers. The SDK has **no runtime npm dependencies** beyond protocol/types — only your Worker URL is contacted over the network ([Socket network-access note](https://socket.dev/alerts/networkAccess)).
+**Peer dependencies:** install `react` (18+) when you use hooks from `@fluxy-chat/react`, and `zustand` (5+) for `createFluxyRoomSession` or room store helpers. The SDK has **no runtime npm dependencies** beyond protocol/types; only your Worker URL is contacted over the network ([Socket network-access note](https://socket.dev/alerts/networkAccess)).
 
 ### Bundle size
 
-Import only what your app needs — the full `dist/index.js` artifact is ~112 KB uncompressed; tree-shaken app bundles (client + hooks via `@fluxy-chat/react`) are typically much smaller. Compare gzip size in your bundler (Vite/webpack) when evaluating against other chat SDKs.
+Import only what your app needs. The full `dist/index.js` artifact is ~112 KB uncompressed; tree-shaken app bundles (client + hooks via `@fluxy-chat/react`) are typically much smaller. Compare gzip size in your bundler (Vite/webpack) when evaluating against other chat SDKs.
 
 **Industry reference:** ~14 kB gzip for a chat-only React import path in comparable hosted SDKs. FluxyChat CI gates `@fluxy-chat/react` at **≤20 kB gzip** (`pnpm run check:bundle-size`).
 
@@ -272,7 +272,7 @@ For your own backend mint flow, pass `authTokenProvider=\{() => fetch("/api/chat
 
 ### Live snapshot (`getParticipants`)
 
-`GET /rooms/:id/live` returns the room's channel stats plus a `members: [{ userId, userInfo }]` array (aggregated across shards for supergroup rooms). Use it from the SDK to know who's connected right now without waiting for the next `presence` WS event:
+`GET /rooms/:id/live` returns the room's Pusher-style channel stats plus a `members: [\{ userId, userInfo \}]` array (aggregated across shards for supergroup rooms, P10-SB8). Use it from the SDK to know "who's connected right now" without waiting for the next `presence` WS event:
 
 ```ts
 const live = await client.getRoomLive("lobby");
@@ -327,7 +327,7 @@ const conn = client.connectRoom(roomId, {
 
 - **Shorter transient drops recover faster.** Mobile networks flap in the 1–3 s window; a 500 ms first step lands a reconnect before most apps show a "disconnected" toast, which is what the dashboard UX relies on (`connectionState.status` is rendered in the room header).
 - **Longer outages still give up reasonably fast.** The 20 s cap means a 10-minute Worker outage costs ~30 reconnect attempts' worth of traffic, and the SSE/polling fallback (`useChat`) kicks in well before users notice.
-- It's configurable per-room. Call sites that want the Fluxy-style curve set `baseBackoffMs: 1_000, maxBackoffMs: 8_000` on `connectRoom` options. See [Connection state](/docs/core/connection-state) for fallback behavior.
+- It's configurable per-room. Call sites that want the Fluxy-style curve set `baseBackoffMs: 1_000, maxBackoffMs: 8_000` on `connectRoom` options. See [public SDK docs](https://docs.fluxychat.com/packages/sdk).
 
 **When to flip to the Fluxy profile**
 
@@ -348,14 +348,14 @@ const conn = client.connectRoom(roomId, {
 });
 ```
 
-The current defaults favor fast recovery on mobile networks. Use `baseBackoffMs` and `maxBackoffMs` on `connectRoom` when you need the Fluxy profile instead. See [Connection state](/docs/core/connection-state) for fallback behavior.
+The current defaults favor fast recovery on mobile networks. Use `baseBackoffMs` and `maxBackoffMs` on `connectRoom` when you need the Fluxy profile instead.
 
 ## Self-host vs hosted cloud
 
 - **Self-host:** deploy `apps/worker` from the [monorepo](https://github.com/AlessandroFare/fluxychat), run D1 migrations, set secrets. See `apps/worker/.dev.vars.example`.
 - **Hosted cloud:** use the Fluxychat dashboard on Vercel; sign in with Clerk; project + API keys are provisioned for you.
 
-Full operator docs: [docs/dashboard-integration.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/reference/dashboard-integration).
+Full operator docs: [docs/dashboard-integration.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/dashboard-integration).
 
 ## Agents
 
@@ -394,7 +394,7 @@ stream.end();
 
 See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/bot-streaming-fluxy-message-stream) in the monorepo.
 
-## P12 / open beta APIs (2026)
+## Console and admin APIs (2026)
 
 | Feature | SDK method |
 |---------|------------|
@@ -411,14 +411,14 @@ See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/Ale
 | Digest preferences | `getDigestPreferences()`, `updateDigestPreferences()` |
 | Agent handoff | `getRoomHandoff()`, `requestRoomHandoff()`, `resolveRoomHandoff()` |
 | Agent queue | `getAgentQueue()`, `claimAgentTask()`, `resolveAgentTask()` |
-| Feature flags | `getFeatureFlags()` — backoff applied on room session connect |
+| Feature flags | `getFeatureFlags()` (backoff applied on room session connect) |
 | Public host / embed | `getPublicHostConfig()`, `getPublicEmbedConfig()` |
 
-See [Production setup](/docs/operations/production-setup) for deploy steps.
+Docs: [docs.fluxychat.com](https://docs.fluxychat.com) · deploy: [production setup](https://docs.fluxychat.com/docs/operations/production-setup)
 
 ## Pusher Channels parity
 
-FluxyChat maps [Pusher Channels](https://pusher.com/docs/channels) features to rooms plus JWT. Full matrix: [Pusher Channels parity](/docs/reference/pusher-channels-parity).
+FluxyChat maps [Pusher Channels](https://pusher.com/docs/channels) features to rooms plus JWT. Full matrix: [Pusher Channels parity](https://docs.fluxychat.com/docs/reference/pusher-channels-parity).
 
 | Feature | SDK API |
 |---------|---------|
@@ -465,9 +465,9 @@ function Inbox({ userId }: { userId: string }) {
 }
 ```
 
-### P10 — Sendbird / Sent / remaining Pusher
+### Sendbird, Sent, and remaining Pusher gaps
 
-See [docs/competitive-parity-p10.md](https://github.com/AlessandroFare/fluxychat/blob/main/docs/competitive-parity-p10).
+See [messaging parity checklist](https://docs.fluxychat.com/docs/reference/messaging-parity-checklist).
 
 | Feature | SDK API |
 |---------|---------|
@@ -500,7 +500,7 @@ await client.registerPushDevice("fcm", fcmToken);
 
 ## Architecture features
 
-FluxyChat includes a full-stack adapter system, streaming markdown renderer, card builder, and AI tool presets — all designed for multi-platform chat deployments.
+FluxyChat includes a full-stack adapter system, streaming markdown renderer, card builder, and AI tool presets for multi-platform chat deployments.
 
 | Feature | What it does |
 |---------|-------------|
@@ -628,5 +628,5 @@ Questions: [fluxychat@outlook.com](mailto\:fluxychat@outlook.com) · Issues: [gi
 
 ## License
 
-MIT. See the repo LICENSE file.
+MIT — see [LICENSE](/docs/LICENSE).
 

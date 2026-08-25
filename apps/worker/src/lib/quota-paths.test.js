@@ -73,9 +73,23 @@ describe("quota path consistency (ENG-16)", () => {
     const projectId = "proj_quota_shape";
     const userId = "user_quota_shape";
     const roomId = "room_quota_shape";
+    // Minimal D1 stub: the WS pipeline reads room retention/policy rows before
+    // reaching the quota gate; they must resolve to "unset" here.
+    const nullDb = {
+      DB: {
+        prepare: () => ({
+          bind: () => ({
+            first: async () => null,
+            all: async () => ({ results: [] }),
+            run: async () => ({ meta: { changes: 0 } }),
+          }),
+        }),
+      },
+      RATE_LIMIT_WS_MESSAGES_PER_MINUTE: "60",
+    };
     const roomDo = new RoomDurableObject(
       { id: { toString: () => roomId } },
-      { DB: {}, RATE_LIMIT_WS_MESSAGES_PER_MINUTE: "60" },
+      nullDb,
     );
     roomDo.projectId = projectId;
     const ws = { sent: [], send(data) { this.sent.push(data); } };

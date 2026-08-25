@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { landingPointer } from "../../app/landing/landing-pointer";
 import { cn } from "@/lib/utils";
 
 interface NodePos {
@@ -170,17 +171,42 @@ export function HeroSignalField({ placement = "page" }: HeroSignalFieldProps) {
 
       const clock = new THREE.Clock();
       let pageVisible = document.visibilityState === "visible";
+      let inView = true;
+      let baseY = 0;
+      let viewIo: IntersectionObserver | undefined;
+      function kick() {
+        if (disposed || reduced) return;
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(frame);
+      }
       function onVis() {
         pageVisible = document.visibilityState === "visible";
+        if (pageVisible && inView) kick();
       }
       document.addEventListener("visibilitychange", onVis);
+
+      if (typeof IntersectionObserver !== "undefined") {
+        viewIo = new IntersectionObserver(
+          ([entry]) => {
+            inView = entry.isIntersecting;
+            if (inView && pageVisible) kick();
+          },
+          { threshold: 0.02 },
+        );
+        viewIo.observe(canvas);
+      }
 
       function frame() {
         if (disposed || !renderer || !group) return;
         const delta = clock.getDelta();
-        if (pageVisible && !reduced) {
-          group.rotation.y += delta * 0.045;
-          group.rotation.x = Math.sin(clock.elapsedTime * 0.12) * 0.06;
+        if (pageVisible && inView && !reduced) {
+          baseY += delta * 0.045;
+          const wantY = baseY + (landingPointer.nx - 0.5) * 0.52;
+          const wantX =
+            Math.sin(clock.elapsedTime * 0.12) * 0.045 + (landingPointer.ny - 0.5) * 0.28;
+          const ease = 1 - Math.exp(-delta * 4.2);
+          group.rotation.y += (wantY - group.rotation.y) * ease;
+          group.rotation.x += (wantX - group.rotation.x) * ease;
           const attr = packetGeo!.getAttribute("position") as import("three").BufferAttribute;
           for (let i = 0; i < packets.length; i++) {
             const p = packets[i];
@@ -202,7 +228,7 @@ export function HeroSignalField({ placement = "page" }: HeroSignalFieldProps) {
           attr.needsUpdate = true;
           renderer.render(scene, camera);
         }
-        if (!reduced) raf = requestAnimationFrame(frame);
+        if (pageVisible && inView && !reduced) raf = requestAnimationFrame(frame);
       }
 
       renderer.render(scene, camera);
@@ -211,6 +237,7 @@ export function HeroSignalField({ placement = "page" }: HeroSignalFieldProps) {
       return () => {
         window.removeEventListener("resize", resize);
         document.removeEventListener("visibilitychange", onVis);
+        viewIo?.disconnect();
       };
     }
 

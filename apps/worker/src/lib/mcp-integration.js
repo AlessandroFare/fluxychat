@@ -5,6 +5,14 @@
  * Includes MCP Resources support for application-driven data sources.
  */
 import { safeOutboundFetch } from "./url-ssrf.js";
+import {
+  MCP_ERROR_UNSUPPORTED_PROTOCOL,
+  MCP_LEGACY_PROTOCOL_VERSION,
+  MCP_META_CLIENT_CAPABILITIES,
+  MCP_META_CLIENT_INFO,
+  MCP_META_PROTOCOL_VERSION,
+  MCP_PROTOCOL_VERSION,
+} from "./mcp-protocol.js";
 
 /**
  * Convert MCP tool definitions to FluxyChat tool format.
@@ -225,15 +233,99 @@ export function createApiProvider(baseUrl, headers = {}) {
  */
 export function createMcpClient(config, opts = {}) {
   const { maxRetries = 3, timeoutMs = 30_000 } = opts;
+  const clientInfo = { name: "fluxychat-agent", version: "1.0.0" };
   let connected = false;
   let tools = [];
+  let era = "modern";
+  let protocolVersion = MCP_PROTOCOL_VERSION;
+
+  function metaParams(extra = {}) {
+    return {
+      ...extra,
+      _meta: {
+        [MCP_META_PROTOCOL_VERSION]: protocolVersion,
+        [MCP_META_CLIENT_INFO]: clientInfo,
+        [MCP_META_CLIENT_CAPABILITIES]: { tools: {} },
+      },
+    };
+  }
+
+  function headersFor(method, name) {
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      ...config.headers,
+    };
+    if (era === "modern") {
+      headers["MCP-Protocol-Version"] = protocolVersion;
+      headers["Mcp-Method"] = method;
+      if (name) headers["Mcp-Name"] = name;
+    }
+    return headers;
+  }
+
+  async function rpc(method, params, extraHeaders = {}) {
+    if (!config.url) {
+      return { error: { message: "No URL configured" } };
+    }
+    const name = method === "tools/call" ? params?.name : method === "resources/read" ? params?.uri : undefined;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const resp = await safeOutboundFetch(config.url, {
+            method: "POST",
+            headers: { ...headersFor(method, name), ...extraHeaders },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: crypto.randomUUID(),
+              method,
+              params: era === "modern" ? metaParams(params) : params,
+            }),
+            signal: controller.signal,
+          });
+          const data = await resp.json().catch(() => null);
+          if (data) return data;
+          throw new Error(`HTTP ${resp.status}`);
+        } catch (err) {
+          if (attempt === maxRetries) throw err;
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        }
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+    return { error: { message: "MCP request failed" } };
+  }
 
   return {
     async connect() {
-      // MCP SSE/HTTP connection logic
-      // In production, this would use the MCP SDK or direct SSE/HTTP
+      era = "modern";
+      protocolVersion = MCP_PROTOCOL_VERSION;
+      const discovered = await rpc("server/discover", {});
+      const supported = discovered?.result?.supportedVersions;
+      if (Array.isArray(supported) && supported.length) {
+        protocolVersion = supported.includes(MCP_PROTOCOL_VERSION)
+          ? MCP_PROTOCOL_VERSION
+          : supported[0];
+        era = protocolVersion === MCP_PROTOCOL_VERSION ? "modern" : "legacy";
+      } else if (
+        discovered?.error &&
+        discovered.error.code !== MCP_ERROR_UNSUPPORTED_PROTOCOL
+      ) {
+        era = "legacy";
+        protocolVersion = MCP_LEGACY_PROTOCOL_VERSION;
+        await rpc("initialize", {
+          protocolVersion: MCP_LEGACY_PROTOCOL_VERSION,
+          capabilities: {},
+          clientInfo,
+        });
+      }
+
+      const listed = await rpc("tools/list", {});
+      tools = listed?.result?.tools || [];
       connected = true;
-      tools = [];
     },
 
     async disconnect() {
@@ -243,57 +335,24 @@ export function createMcpClient(config, opts = {}) {
 
     async listTools() {
       if (!connected) throw new Error("MCP client not connected");
+      const listed = await rpc("tools/list", {});
+      tools = listed?.result?.tools || tools;
       return tools;
     },
 
     async callTool(call) {
       if (!connected) throw new Error("MCP client not connected");
-
-      // Tool execution via HTTP/SSE
-      if (config.url) {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-        try {
-          for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            try {
-              const resp = await safeOutboundFetch(config.url, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  ...config.headers,
-                },
-                body: JSON.stringify({
-                  jsonrpc: "2.0",
-                  id: crypto.randomUUID(),
-                  method: "tools/call",
-                  params: { name: call.name, arguments: call.arguments },
-                }),
-                signal: controller.signal,
-              });
-
-              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-              const data = await resp.json();
-
-              if (data.error) {
-                return {
-                  content: [{ type: "text", text: data.error.message || "MCP error" }],
-                  isError: true,
-                };
-              }
-
-              return data.result || { content: [{ type: "text", text: "Empty result" }] };
-            } catch (err) {
-              if (attempt === maxRetries) throw err;
-              await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
-            }
-          }
-        } finally {
-          clearTimeout(timeout);
-        }
+      if (!config.url) {
+        return { content: [{ type: "text", text: "No URL configured" }], isError: true };
       }
-
-      return { content: [{ type: "text", text: "No URL configured" }], isError: true };
+      const data = await rpc("tools/call", { name: call.name, arguments: call.arguments || {} });
+      if (data?.error) {
+        return {
+          content: [{ type: "text", text: data.error.message || "MCP error" }],
+          isError: true,
+        };
+      }
+      return data?.result || { content: [{ type: "text", text: "Empty result" }] };
     },
 
     isConnected() {

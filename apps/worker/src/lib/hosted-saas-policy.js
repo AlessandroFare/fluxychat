@@ -47,7 +47,7 @@ export function tenantScopeForbidden(adminAuth, targetProjectId, env) {
 
 /**
  * In hosted mode, only the platform operator project may change plans via the admin API.
- * @returns {null | { status: number, error: string, reason: string }}
+ * @returns {null | { status: number, error: string, reason: string, message?: string }}
  */
 export function hostedTenantPlanMutationForbidden(adminAuth, env) {
   if (!isHostedMultiTenantMode(env)) return null;

@@ -18,16 +18,10 @@ function createDb() {
             },
             async run() {
               if (sql.includes("INSERT INTO marketplace_audits")) {
-                rows.push({
-                  server_id: args[0],
-                  score: args[2],
-                  findings_json: args[3],
-                  severity_critical: args[4],
-                  severity_high: args[5],
-                  scanner_version: args[6],
-                  scanner_name: args[7],
-                  scanned_at: args[8],
-                });
+                // Bind order mirrors the real statement: project_id is a
+                // literal NULL in SQL, so there is no bind for it.
+                const [server_id, score, findings_json, severity_critical, severity_high, scanner_version, scanner_name, scanned_at] = args;
+                rows.push({ server_id, score, findings_json, severity_critical, severity_high, scanner_version, scanner_name, scanned_at });
               }
               return { success: true };
             },

@@ -15,12 +15,12 @@ export function LandingFinalCtaSection() {
           <h2 className="text-balance font-heading text-2xl font-semibold text-white sm:text-3xl">{MARKETING_FINAL_CTA.title}</h2>
           <p className="mx-auto mt-3 max-w-2xl text-pretty text-sm text-zinc-400">{MARKETING_FINAL_CTA.body}</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Button asChild>
+            <Button asChild className="mkt-lift">
               <Link href={clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}>
                 {MARKETING_FINAL_CTA.primaryLabel}
               </Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="mkt-lift">
               <a href={MARKETING_FINAL_CTA.secondaryHref}>{MARKETING_FINAL_CTA.secondaryLabel}</a>
             </Button>
             <Button asChild variant="ghost">

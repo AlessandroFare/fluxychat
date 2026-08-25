@@ -4,8 +4,8 @@
  * Three small building blocks:
  *   1. `validateVoiceUpload` — gate by MIME, size, duration.
  *   2. `uploadVoiceToR2` — store the audio blob in the existing R2 bucket.
- *   3. `transcribeAudio` — call the OpenAI-compatible `/v1/audio/transcriptions`
- *      endpoint exposed by `AI_BASE_URL` and return the transcript.
+ *   3. `transcribeAudio` — Workers AI Whisper (`env.AI.run`) first, then
+ *      OpenAI-compatible `/v1/audio/transcriptions` as BYOK fallback.
  *
  * The HTTP route (`POST /messages/voice`) stitches them together: validate →
  * upload → INSERT pending message → respond 201 → `ctx.waitUntil` runs the
@@ -13,17 +13,12 @@
  * with `transcription_status: "pending"` and a follow-up `message_updated`
  * event surfaces the transcript a few seconds later.
  *
- * Why an OpenAI-compatible endpoint and not native `env.AI.run`?
- *   The existing AI integration in this worker is `AI_BASE_URL` + `AI_API_KEY`
- *   (see `lib/post-message-automations.js`, `lib/message-translation.js`).
- *   Reusing the same env contract keeps operators on one provider/key and
- *   matches the M6-B billing surface (`QUOTA_AGENT_INVOKES_PER_MONTH`).
- *   The transcription cost is metered the same way as chat completions.
- *
  * Failure modes are surfaced as `{ ok: false, error, status }` so the route
  * can map them to HTTP responses and metrics without throwing.
  */
 import { buildTranscriptionAuthHeaders, resolveTranscriptionTransport } from "./ai-gateway.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
+import { isWorkersAiBound, transcribeWithWorkersAi } from "./workers-ai-speech.js";
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_DURATION_MS = 10 * 60 * 1000;   // 10 minutes
@@ -152,12 +147,24 @@ export async function uploadVoiceToR2(env, { projectId, roomId, messageId, audio
  * @returns {Promise<{ ok: true, text: string, model: string } | { ok: false, error: string, status: number }>}
  */
 export async function transcribeAudio(env, { audioBytes, mimeType, filename, language, model }) {
-  const transport = resolveTranscriptionTransport(env);
-  if (!transport.configured || !transport.transcriptionsUrl) {
-    return { ok: false, error: "ai_not_configured", status: 503 };
-  }
   if (!(audioBytes instanceof Uint8Array) || audioBytes.byteLength === 0) {
     return { ok: false, error: "audioBytes must be a non-empty Uint8Array", status: 400 };
+  }
+  if (isWorkersAiBound(env) && !model) {
+    const local = await transcribeWithWorkersAi(env, { audioBytes, mimeType, language });
+    if (local.ok) return local;
+    if (local.error === "workers_ai_unbound") {
+      /* fall through */
+    } else if (!resolveTranscriptionTransport(env).configured) {
+      return local;
+    }
+  }
+  const transport = resolveTranscriptionTransport(env);
+  if (!transport.configured || !transport.transcriptionsUrl) {
+    if (isWorkersAiBound(env)) {
+      return transcribeWithWorkersAi(env, { audioBytes, mimeType, language });
+    }
+    return { ok: false, error: "ai_not_configured", status: 503 };
   }
   const useModel = model || env.AI_TRANSCRIBE_MODEL || DEFAULT_TRANSCRIBE_MODEL;
 
@@ -176,7 +183,7 @@ export async function transcribeAudio(env, { audioBytes, mimeType, filename, lan
 
   let res;
   try {
-    res = await fetch(transport.transcriptionsUrl, {
+    res = await safeOutboundFetch(transport.transcriptionsUrl, {
       method: "POST",
       headers: buildTranscriptionAuthHeaders(env, {
         extra: { "content-type": `multipart/form-data; boundary=${boundary}` },

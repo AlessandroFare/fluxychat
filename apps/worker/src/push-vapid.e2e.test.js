@@ -130,10 +130,17 @@ class FakeDB {
       ).length;
       return { cnt };
     }
-    if (sql.includes("SELECT jwt_secret FROM project_secrets WHERE project_id = ?")) {
+    if (/SELECT\s+jwt_secret.*FROM project_secrets WHERE project_id = \?/s.test(sql)) {
       const [projectId] = bound;
       const row = this.projectSecrets.find((r) => r.project_id === projectId);
-      return row ? { jwt_secret: row.jwt_secret } : null;
+      // Rotation-aware verifier also reads previous-secret columns.
+      return row
+        ? {
+            jwt_secret: row.jwt_secret,
+            jwt_secret_previous: row.jwt_secret_previous ?? null,
+            jwt_secret_previous_expires_at: row.jwt_secret_previous_expires_at ?? null,
+          }
+        : null;
     }
     return null;
   }

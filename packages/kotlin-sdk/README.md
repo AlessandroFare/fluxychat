@@ -1,4 +1,9 @@
-# FluxyChat Kotlin SDK (starter)
+# FluxyChat Kotlin SDK — **starter / unpublished**
+
+> Not on Maven Central. Do not list this in marketing as a shipping SDK.
+> Gold path: `@fluxy-chat/sdk` (TypeScript).
+
+
 
 JVM/Android REST client for FluxyChat rooms and messages. WebSocket subscribe uses the same JWT as `@fluxy-chat/sdk` — wire with OkHttp WebSocket on Android.
 

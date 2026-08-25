@@ -9,7 +9,7 @@ FluxyChat's adapter system lets you connect any messaging platform through a uni
 
 ## Overview
 
-The adapter pattern abstracts platform-specific concerns behind a common `Adapter<TRawMessage>` interface. This lets you add new platforms without modifying core worker code.
+The adapter pattern (P22-A) abstracts platform-specific concerns behind a common `Adapter&lt;TRawMessage&gt;` interface. This lets you add new platforms without modifying core worker code.
 
 **14 platforms supported:** Web, Slack, Microsoft Teams, Discord, Telegram, WhatsApp, Google Chat, GitHub, Linear, Matrix, Resend (Email), IRC, Twitch, Line, and a generic API adapter.
 
@@ -98,5 +98,5 @@ Adapters declare whether they lock at the **thread** level (Slack, Discord) or *
 
 ## See Also
 
-- [Streaming Markdown Guide](/docs/guides/streaming-markdown) — How markdown renders during streaming
-- [Card Builder Guide](/docs/guides/card-builder) — Rich message elements across platforms
+- [Streaming Markdown Guide](/docs/streaming-markdown) — How markdown renders during streaming
+- [Card Builder Guide](/docs/card-builder) — Rich message elements across platforms

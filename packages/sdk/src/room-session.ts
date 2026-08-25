@@ -28,6 +28,7 @@ import {
   sortMessagesChronological,
 } from "./message-history";
 import { FluxyChatRoomConnection } from "./room-connection";
+import { applyStreamTailToLocal } from "./stream-offset";
 import {
   createStreamingEditBatcher,
   mergeStreamingEditIntoMessages,
@@ -44,9 +45,9 @@ import { createConcurrencyStrategy } from "./concurrency";
 import type { UseChatHistoryReplay } from "./use-chat";
 import type { ServerEventHandler } from "./server-realtime";
 import {
-  decryptE2eContent,
-  encryptE2eContent,
-  isE2eContentEnvelope,
+  decryptRoomContent,
+  encryptRoomContent,
+  isRoomContentEnvelope,
 } from "./room-e2e";
 import { scheduleSessionTokenRefresh } from "./session-token-refresh";
 import { createOfflineSyncController, type OfflineSyncController } from "./offline-sync";
@@ -155,9 +156,9 @@ export function startFluxyRoomSession(
   }
 
   async function maybeDecryptContent(content: string): Promise<string> {
-    if (!e2eKeyRef || !isE2eContentEnvelope(content)) return content;
+    if (!e2eKeyRef || !isRoomContentEnvelope(content)) return content;
     try {
-      return await decryptE2eContent(content, e2eKeyRef);
+      return await decryptRoomContent(content, e2eKeyRef);
     } catch {
       return content;
     }
@@ -165,7 +166,7 @@ export function startFluxyRoomSession(
 
   async function maybeEncryptContent(content: string): Promise<string> {
     if (!e2eKeyRef) return content;
-    return encryptE2eContent(content, e2eKeyRef);
+    return encryptRoomContent(content, e2eKeyRef);
   }
 
   const appendToolThreadEvent = (entry: FluxyToolThreadEvent) => {
@@ -207,17 +208,30 @@ export function startFluxyRoomSession(
       }));
       scheduleMarkLatest();
     } else if (data.type === "streamState") {
+      const resumeFrom = Number((data as { resumeFrom?: number }).resumeFrom) || 0;
+      const offset = Number((data as { offset?: number }).offset);
       setState((s) => {
+        const idx = s.messages.findIndex((m) => m.id === data.messageId);
+        const local = idx >= 0 ? s.messages[idx]?.content : "";
+        const merged = applyStreamTailToLocal(local, {
+          content: data.content,
+          resumeFrom,
+        });
         const normalized = {
           id: data.messageId,
           roomId: data.roomId,
           userId: data.userId,
-          content: data.content,
+          content: merged,
           createdAt: data.createdAt,
           parentId: data.parentId ?? null,
           streaming: data.streaming,
         };
-        const idx = s.messages.findIndex((m) => m.id === normalized.id);
+        if (Number.isFinite(offset)) {
+          connectionRef?.noteStreamOffset(data.messageId, offset);
+        } else {
+          connectionRef?.noteStreamOffset(data.messageId, merged.length);
+        }
+        if (!data.streaming) connectionRef?.clearStreamOffset(data.messageId);
         if (idx >= 0) {
           const next = [...s.messages];
           next[idx] = { ...next[idx], ...normalized };
@@ -298,7 +312,7 @@ export function startFluxyRoomSession(
         scheduleMarkLatest();
       };
       const rawContent = data.content ?? "";
-      if (!e2eKeyRef || !isE2eContentEnvelope(rawContent)) {
+      if (!e2eKeyRef || !isRoomContentEnvelope(rawContent)) {
         ingestInboundMessage(rawContent);
       } else {
         void maybeDecryptContent(rawContent).then(ingestInboundMessage);
@@ -359,6 +373,9 @@ export function startFluxyRoomSession(
         toolCallId: data.toolCallId,
         name: data.name,
         arguments: data.arguments,
+        parentRunId: data.parentRunId ?? null,
+        parentToolCallId: data.parentToolCallId ?? null,
+        nestDepth: Number(data.nestDepth) || 0,
       });
     } else if (data.type === "tool_result") {
       let preview: string | null = null;
@@ -375,6 +392,9 @@ export function startFluxyRoomSession(
         toolCallId: data.toolCallId,
         name: data.name,
         resultPreview: preview,
+        parentRunId: data.parentRunId ?? null,
+        parentToolCallId: data.parentToolCallId ?? null,
+        nestDepth: Number(data.nestDepth) || 0,
       });
     } else if (data.type === "tool_error") {
       appendToolThreadEvent({
@@ -384,6 +404,9 @@ export function startFluxyRoomSession(
         toolCallId: data.toolCallId,
         name: data.name,
         error: data.error ?? "tool_failed",
+        parentRunId: data.parentRunId ?? null,
+        parentToolCallId: data.parentToolCallId ?? null,
+        nestDepth: Number(data.nestDepth) || 0,
       });
     } else if (data.type === "agentRun") {
       setState({ lastAgentRun: data.run });
@@ -422,9 +445,11 @@ export function startFluxyRoomSession(
           roomId: edit.roomId,
           userId: edit.userId,
         });
+        connectionRef?.noteStreamOffset(edit.id, String(edit.content ?? "").length);
         return;
       }
       streamEditBatcher.flush();
+      connectionRef?.clearStreamOffset(edit.id);
       setState((s) => ({
         messages: mergeStreamingEditIntoMessages(
           s.messages,
@@ -1011,6 +1036,22 @@ export function startFluxyRoomSession(
     return run();
   };
 
+  const stopAgentStream = (targetUserId?: string) => {
+    const streaming = getState().messages.find((m) => m.streaming && m.userId);
+    const uid = targetUserId || streaming?.userId || agentId;
+    if (!uid) return;
+    try {
+      connectionRef?.sendJson({
+        type: "stream",
+        op: "stop",
+        targetUserId: uid,
+        messageId: streaming?.id,
+      });
+    } catch {
+      /* socket closed */
+    }
+  };
+
   const clearToolThread = () => {
     setState({ toolThreadEvents: [], lastAgentRun: null });
   };
@@ -1120,6 +1161,7 @@ export function startFluxyRoomSession(
     deleteMessage,
     branchRoomFromMessage,
     invokeAgent,
+    stopAgentStream,
     clearToolThread,
     clearDebateThread,
     joinVoiceStage,

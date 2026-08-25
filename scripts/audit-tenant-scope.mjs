@@ -28,11 +28,12 @@ const EXTERNAL_PROJECT_ID_PATTERNS = [
 
 const GUARD_PATTERNS = [
   /\bverifyJwtAndGetContext\b/,
+  /\brequireAdminJwt\b/,
+  /\brequireApiProjectAdmin\b/,
   /\btenantScopeForbidden\b/,
   /\bverifyAdminJwt\b/,
   /\bverifyScimToken\b/,
   /\bverifyWebhookSignature\b/,
-  /\bresolveProjectId\b/,
 ];
 
 /** Routes intentionally public or pre-authenticated at worker boundary. */

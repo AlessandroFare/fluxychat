@@ -7,6 +7,7 @@
     "build": "pnpm --filter @fluxy-chat/protocol build && pnpm --filter @fluxy-chat/config build && pnpm --filter @fluxy-chat/sdk build && pnpm --filter @fluxy-chat/react build && pnpm --filter @fluxy-chat/ui build && pnpm exec next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run --environment jsdom",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test",

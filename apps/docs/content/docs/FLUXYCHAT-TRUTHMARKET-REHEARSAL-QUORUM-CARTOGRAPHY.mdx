@@ -1,0 +1,233 @@
+---
+title: "FluxyChat — Truth Market, Rehearsal Rooms, Async Decision Quorum, Chat Cartography"
+description: "> Quarto documento della serie moonshot. Nota onestà: Truth Market,"
+---
+
+# FluxyChat — Truth Market, Rehearsal Rooms, Async Decision Quorum, Chat Cartography
+
+> Quarto documento della serie moonshot. Nota onestà: Truth Market,
+> Rehearsal Rooms, Async Decision Quorum = composizioni originali.
+> Chat Cartography ha precedenti accademici (MIT Conversation Map 1999,
+> brevetto Cisco) ma non implementazione moderna zoomabile con embedding
+> live in SDK chat realtime.
+>
+> Vincolo: **zero budget**.
+
+---
+
+# 1. Truth Market (`#50`)
+
+## 1.1 Pitch
+
+Agente "staka" correttezza di un'affermazione verificabile; contestazione
+valida entro TTL trasferisce stake — incentivo economico al fact-checking
+(per-affermazione, non trust score agente intero).
+
+## 1.2 Architettura
+
+```
+Affermazione → [opzionale stake AP2/x402]
+  → truth_claims (open)
+  → nessuna contestazione → verified_by_time, stake restituito
+  → contestazione + evidenza → arbitraggio umano (default) o auto (fatti semplici)
+  → disputed_confirmed | disputed_rejected
+```
+
+## 1.3 Data model
+
+```sql
+CREATE TABLE truth_claims (
+  claim_id TEXT PRIMARY KEY,
+  room_id TEXT,
+  agent_id TEXT,
+  message_id TEXT,
+  content TEXT,
+  stake_amount REAL DEFAULT 0,
+  currency TEXT DEFAULT 'credits',
+  ttl_seconds INTEGER,
+  state TEXT,
+  created_at TEXT
+);
+
+CREATE TABLE truth_disputes (
+  dispute_id TEXT PRIMARY KEY,
+  claim_id TEXT,
+  disputed_by TEXT,
+  evidence TEXT,
+  resolved_by TEXT,
+  outcome TEXT,
+  resolved_at TEXT
+);
+```
+
+## 1.4 Guardrail anti-abuso
+
+- Stake min/max per tenant.
+- Solo claim verificabili (no opinioni).
+- Arbitraggio umano per claim ambigui.
+- Rate limit contestazioni.
+- MVP: **credits interni**, non valuta reale.
+
+## 1.5 Fasi
+
+| Fase | Contenuto | Effort |
+|---|---|---|
+| MVP | Credits + arbitraggio umano | 2–3 sett |
+| V1 | Verifica auto claim semplici | 2 sett |
+| V2 | x402/AP2 opzionale tenant | esplorativo |
+
+**Priorità:** 🟢 Later · **Rischio:** percezione gamification enterprise
+
+---
+
+# 2. Rehearsal Rooms (`#51`)
+
+## 2.1 Pitch
+
+Room effimera privata che clona contesto room reale; agente simula
+"controparte" calibrata — non role-play generico.
+
+## 2.2 Architettura
+
+```
+Room reale → snapshot read-only (solo dati autorizzati)
+  → Room DO effimera rehearsal-<id>
+  → sessione prova → TTL → delete (default)
+```
+
+## 2.3 Data model
+
+```sql
+CREATE TABLE rehearsal_rooms (
+  rehearsal_id TEXT PRIMARY KEY,
+  source_room_id TEXT,
+  owner_user_id TEXT,
+  snapshot_ts TEXT,
+  stated_goal TEXT,
+  ttl_seconds INTEGER DEFAULT 3600,
+  persist_after_session BOOLEAN DEFAULT false,
+  created_at TEXT
+);
+```
+
+## 2.4 Privacy
+
+- Solo dati a cui owner ha già accesso.
+- Disclaimer esplicito: "simulazione, non controparte reale".
+- Default: no persistenza post-sessione.
+
+## 2.5 Fasi
+
+| Fase | Contenuto | Effort |
+|---|---|---|
+| MVP | Clone manuale, prompt ruolo, no persist | 2–3 sett |
+| V1 | Obiettivo strutturato + feedback post | 1–2 sett |
+| V2 | Libreria scenari comuni | esplorativo |
+
+**Priorità:** 🟡 Next
+
+---
+
+# 3. Async Decision Quorum (`#52`)
+
+## 3.1 Pitch
+
+Messaggio tipo **decision** con quorum pesato per ruolo — vincolante e
+tracciato, non sondaggio.
+
+## 3.2 Architettura
+
+```
+decision message { required_roles: [{role:"approver", count:2}], ttl: 48h }
+  → Room DO traccia decision_acks server-side
+  → quorum → decided | expired_no_quorum
+  → barra progresso live + notifica scadenza 12h
+```
+
+## 3.3 Data model
+
+```sql
+CREATE TABLE decisions (
+  decision_id TEXT PRIMARY KEY,
+  room_id TEXT,
+  content TEXT,
+  required_roles TEXT,
+  ttl_seconds INTEGER,
+  state TEXT,
+  created_at TEXT
+);
+
+CREATE TABLE decision_acks (
+  decision_id TEXT,
+  user_id TEXT,
+  role TEXT,
+  acked_at TEXT,
+  PRIMARY KEY (decision_id, user_id)
+);
+```
+
+## 3.4 Guardrail
+
+- Quorum **solo server-side** (Room DO).
+- Ruoli da permessi room esistenti.
+- Notifica scadenza imminente.
+
+## 3.5 Fasi
+
+| Fase | Contenuto | Effort |
+|---|---|---|
+| MVP | Quorum semplice + progress bar | 1–2 sett |
+| V1 | Notifiche scadenza + escalation | 1 sett |
+| V2 | Integrazione Room Firmware (#47) | dipende #47 |
+
+**Priorità:** 🔴 Now · **Effort:** basso — composizione primitivi esistenti
+
+---
+
+# 4. Chat Cartography (`#53`)
+
+## 4.1 Pitch
+
+Cronologia come mappa zoomabile: cluster tematici (embedding) → drill-down
+continuo al singolo messaggio.
+
+## 4.2 Precedenti onesti
+
+MIT Conversation Map (1999), brevetto Cisco timeline — **non** embedding
+live + zoom continuo in SDK moderno.
+
+## 4.3 Architettura
+
+```
+Messaggi + Vectorize embeddings
+  → clustering batch (UMAP-like, cron ogni N min)
+  → coordinate 2D in D1 cache
+  → client canvas/WebGL zoom continuo
+```
+
+Clustering **batch**, non per-messaggio (evita layout che salta).
+
+## 4.4 Fasi
+
+| Fase | Contenuto | Effort |
+|---|---|---|
+| MVP | Cluster blob zoom-out only | 2–3 sett |
+| V1 | Zoom continuo + recency color | 2 sett |
+| V2 | Filtri persona/periodo | 1 sett |
+
+**Priorità:** 🟡 Next · **Rischio:** performance room molto grandi
+
+---
+
+# Riepilogo
+
+| Feature | ID | Priorità | Effort MVP | Rischio |
+|---|---|---|---|---|
+| Async Decision Quorum | #52 | 🔴 Now | 1–2 sett | Basso |
+| Rehearsal Rooms | #51 | ✅ MVP | 2–3 sett | Privacy/consenso |
+| Chat Cartography | #53 | ✅ MVP | 2–3 sett | Performance clustering |
+| Truth Market | #50 | 🟢 Later | 2–3 sett | Gamification enterprise |
+
+---
+
+*Aggiornato: 2026-08-03.*

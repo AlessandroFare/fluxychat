@@ -452,6 +452,11 @@ export interface FluxyWebSocketConnectOptions {
   presenceInfo?: Record<string, unknown>;
   /** Request Pusher-style cache snapshot on connect (`cache=1` query param). */
   cache?: "on" | "off";
+  /**
+   * Spectator socket: receive room events, cannot publish.
+   * Query `readonly=1`. JWT roles `spectator` / `viewer` / `readonly` also force this.
+   */
+  readonly?: boolean;
 }
 
 /** Single member in a `FluxyRoomLive.members` snapshot. */
@@ -618,6 +623,9 @@ export type FluxyChatEvent =
       toolCallId: string;
       name: string;
       arguments?: string;
+      parentRunId?: string | null;
+      parentToolCallId?: string | null;
+      nestDepth?: number;
     }
   | {
       type: "tool_result";
@@ -626,6 +634,9 @@ export type FluxyChatEvent =
       toolCallId: string;
       name: string;
       result?: unknown;
+      parentRunId?: string | null;
+      parentToolCallId?: string | null;
+      nestDepth?: number;
     }
   | {
       type: "tool_error";
@@ -634,6 +645,9 @@ export type FluxyChatEvent =
       toolCallId: string;
       name: string;
       error?: string;
+      parentRunId?: string | null;
+      parentToolCallId?: string | null;
+      nestDepth?: number;
     }
   | {
       type: "approval_request";
@@ -923,6 +937,9 @@ export class FluxyChatClient {
     }
     if (options?.cache === "on") {
       url.searchParams.set("cache", "1");
+    }
+    if (options?.readonly) {
+      url.searchParams.set("readonly", "1");
     }
     return createFluxyWebSocket(url.toString(), this.usePartySocket);
   }

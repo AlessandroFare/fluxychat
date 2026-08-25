@@ -21,6 +21,10 @@ class_name = "UserDurableObject"
 name = "IP_RATE_LIMITER"
 class_name = "IpRateLimiterDurableObject"
 
+[[durable_objects.bindings]]
+name = "AGENT"
+class_name = "AgentDurableObject"
+
 # Replace with staging D1 / KV / R2 IDs from `wrangler d1 create` / `kv namespace create`.
 [[d1_databases]]
 binding = "DB"
@@ -37,6 +41,9 @@ preview_id = "REPLACE_WITH_STAGING_KV_PREVIEW_ID"
 binding = "ATTACHMENTS"
 bucket_name = "fluxychat-attachments-staging"
 
+[ai]
+binding = "AI"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RoomDurableObject"]
@@ -48,6 +55,10 @@ new_sqlite_classes = ["IpRateLimiterDurableObject"]
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["UserDurableObject"]
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["AgentDurableObject"]
 
 [triggers]
 crons = ["0 3 * * *", "0 8 * * *", "*/15 * * * *", "*/5 * * * *"]

@@ -46,17 +46,18 @@ export const MARKETING_USE_CASES = [
 ] as const;
 
 export const MARKETING_ENTERPRISE = {
-  title: "Enterprise-ready",
-  intro: "Self-serve plans cover most production traffic. When governance matters, these capabilities are built into the worker, not a separate SKU bolted on later.",
+  eyebrow: "Enterprise default",
+  title: "The room Cloudflare Agents will not ship",
+  intro:
+    "Agents give a developer a Durable Object. FluxyChat is the multi-tenant room those agents join: two orgs in one thread, quorum on the dangerous tools, and an E2EE envelope with a signed export. That is the default enterprise story — not a bolt-on SKU.",
   items: [
+    "Cross-org rooms, private terms, and settlements",
+    "Critical-action quorum on the same WebSocket as chat",
+    "E2EE group cipher + signed conversation attestation",
+    "Room SQLite PITR (30-day bookmarks, restore on next wake)",
     "SSO / SAML & SCIM provisioning",
-    "Audit logs with export schedules",
-    "Retention policies & legal hold",
-    "IP whitelisting & DLP integrations",
-    "GDPR export and erasure tools",
-    "Signed webhooks with retry & delivery logs",
-    "Per-tool approval gates for AI agents",
-    "OpenTelemetry tracing with GenAI semantic conventions",
+    "Audit logs, retention, legal hold, GDPR export",
+    "Per-tool HITL gates and OpenTelemetry gen_ai spans",
   ],
 } as const;
 

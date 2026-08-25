@@ -1,157 +1,57 @@
-export type MlsCipherSuite = "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519" | "MLS_128_DHKEMX25519_CHACHA20POLY1305_SHA256_Ed25519" | "MLS_256_DHKEMX448_AES256GCM_SHA512_Ed448";
+/**
+ * DEPRECATED — this module used to ship fake cryptography.
+ *
+ * `createMlsManager` was exported publicly as "E2EE groups (MLS)" and advertised
+ * the cipher suite `MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519`, while
+ * `encryptMessage` was `btoa(plaintext)`, `decryptMessage` was `atob(...)`, the
+ * `signature` field was an interpolated string, `ratchetTree` was permanently
+ * empty, and `crypto.subtle` was never called. Applications that turned it on
+ * transmitted and stored plaintext-in-base64 while believing their messages were
+ * end-to-end encrypted.
+ *
+ * It is replaced by `createGroupCipher` in `./group-cipher.js`, which performs real
+ * AES-256-GCM with HKDF-SHA256 per-epoch key derivation and AAD binding of
+ * groupId/epoch/senderId.
+ *
+ * The old entry point throws instead of forwarding. Two reasons: the replacement is
+ * asynchronous (WebCrypto is), and — more importantly — it requires the caller to
+ * supply key material. Silently accepting the old call shape would have to invent a
+ * key, which is how the original problem happened. Failing loudly with migration
+ * instructions is the only safe behaviour for a security API.
+ *
+ * @deprecated Use `createGroupCipher({ keyMaterial })` from `@fluxy-chat/sdk`.
+ */
 
-export interface MlsDevice {
-  deviceId: string;
-  publicKey: string;
-  signatureKey: string;
-  credentialType: "basic" | "x509";
+const MIGRATION = [
+  "createMlsManager() has been removed: it was not encryption.",
+  "It base64-encoded the plaintext while claiming MLS, so any data it 'protected' was in the clear.",
+  "",
+  "Replace it with:",
+  "",
+  "  import { createGroupCipher } from '@fluxy-chat/sdk';",
+  "",
+  "  const cipher = createGroupCipher({ keyMaterial }); // base64, 32 bytes, distributed by YOUR app",
+  "  const group = cipher.createGroup({ groupId });",
+  "  cipher.addDevice(groupId, { deviceId });",
+  "  const envelope = await cipher.encrypt(groupId, deviceId, plaintext);",
+  "  const plaintext = await cipher.decrypt(groupId, envelope);",
+  "",
+  "encrypt/decrypt are async, and keyMaterial is required: if the key comes from a",
+  "FluxyChat endpoint the server can decrypt, so the result is content encryption",
+  "with server-managed keys, not end-to-end encryption. Do not advertise it as E2EE",
+  "unless your application distributes the key out of band.",
+].join("\n");
+
+/** @deprecated see the module docblock; use `createGroupCipher` instead. */
+export function createMlsManager(): never {
+  throw new Error(MIGRATION);
 }
 
-export interface MlsGroupConfig {
-  cipherSuite: MlsCipherSuite;
-  maxDevices: number;
-  epochSize: number;
-  autoKeyRotation: boolean;
-  rotationIntervalMs: number;
-}
-
-export interface MlsMessage {
-  groupId: string;
-  epoch: number;
-  sender: string;
-  ciphertext: string;
-  signature: string;
-  contentType: "application" | "proposal" | "commit";
-}
-
-export interface MlsGroup {
-  groupId: string;
-  epoch: number;
-  devices: Map<string, MlsDevice>;
-  config: MlsGroupConfig;
-  ratchetTree: string[];
-}
-
-export interface MlsKeyPackage {
-  deviceId: string;
-  publicKey: string;
-  signatureKey: string;
-  cipherSuite: MlsCipherSuite;
-  expiresAt: string;
-}
-
-export interface MlsManager {
-  createGroup(config: Partial<MlsGroupConfig>): MlsGroup;
-  addDevice(groupId: string, device: MlsDevice): void;
-  removeDevice(groupId: string, deviceId: string): void;
-  encryptMessage(groupId: string, senderId: string, plaintext: string): MlsMessage;
-  decryptMessage(groupId: string, message: MlsMessage): string;
-  rotateKeys(groupId: string): void;
-  getGroup(groupId: string): MlsGroup | null;
-  listGroups(): MlsGroup[];
-  getEpoch(groupId: string): number;
-  importGroup(group: {
-    groupId: string;
-    epoch: number;
-    config?: Partial<MlsGroupConfig>;
-    devices: MlsDevice[];
-  }): MlsGroup;
-}
-
-const DEFAULT_MLS_CONFIG: MlsGroupConfig = {
-  cipherSuite: "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519",
-  maxDevices: 64,
-  epochSize: 1000,
-  autoKeyRotation: true,
-  rotationIntervalMs: 86400000,
-};
-
-export function createMlsManager(): MlsManager {
-  const groups = new Map<string, MlsGroup>();
-
-  return {
-    createGroup(config: Partial<MlsGroupConfig> = {}): MlsGroup {
-      const id = `mls-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const group: MlsGroup = {
-        groupId: id,
-        epoch: 0,
-        devices: new Map(),
-        config: { ...DEFAULT_MLS_CONFIG, ...config },
-        ratchetTree: [],
-      };
-      groups.set(id, group);
-      return group;
-    },
-
-    addDevice(groupId: string, device: MlsDevice): void {
-      const group = groups.get(groupId);
-      if (!group) throw new Error(`Group ${groupId} not found.`);
-      if (group.devices.size >= group.config.maxDevices) {
-        throw new Error(`Group ${groupId} is at max capacity (${group.config.maxDevices}).`);
-      }
-      group.devices.set(device.deviceId, device);
-    },
-
-    removeDevice(groupId: string, deviceId: string): void {
-      const group = groups.get(groupId);
-      if (!group) throw new Error(`Group ${groupId} not found.`);
-      group.devices.delete(deviceId);
-    },
-
-    encryptMessage(groupId: string, senderId: string, plaintext: string): MlsMessage {
-      const group = groups.get(groupId);
-      if (!group) throw new Error(`Group ${groupId} not found.`);
-      if (!group.devices.has(senderId)) throw new Error(`Device ${senderId} not in group.`);
-
-      const epoch = group.epoch;
-      const encoded = btoa(plaintext);
-      return {
-        groupId,
-        epoch,
-        sender: senderId,
-        ciphertext: encoded,
-        signature: `sig-${senderId}-${epoch}-${encoded.slice(0, 8)}`,
-        contentType: "application",
-      };
-    },
-
-    decryptMessage(groupId: string, message: MlsMessage): string {
-      const group = groups.get(groupId);
-      if (!group) throw new Error(`Group ${groupId} not found.`);
-      return atob(message.ciphertext);
-    },
-
-    rotateKeys(groupId: string): void {
-      const group = groups.get(groupId);
-      if (!group) throw new Error(`Group ${groupId} not found.`);
-      group.epoch++;
-    },
-
-    getGroup(groupId: string): MlsGroup | null {
-      return groups.get(groupId) ?? null;
-    },
-
-    listGroups(): MlsGroup[] {
-      return [...groups.values()];
-    },
-
-    getEpoch(groupId: string): number {
-      return groups.get(groupId)?.epoch ?? 0;
-    },
-
-    importGroup(groupInput): MlsGroup {
-      const group: MlsGroup = {
-        groupId: groupInput.groupId,
-        epoch: Number(groupInput.epoch ?? 0),
-        devices: new Map(),
-        config: { ...DEFAULT_MLS_CONFIG, ...groupInput.config },
-        ratchetTree: [],
-      };
-      for (const device of groupInput.devices) {
-        group.devices.set(device.deviceId, device);
-      }
-      groups.set(group.groupId, group);
-      return group;
-    },
-  };
-}
+export type {
+  GroupCipher as MlsManager,
+  GroupDevice as MlsDevice,
+  GroupConfig as MlsGroupConfig,
+  GroupEnvelope as MlsMessage,
+  GroupState as MlsGroup,
+  GroupCipherSuite as MlsCipherSuite,
+} from "./group-cipher.js";

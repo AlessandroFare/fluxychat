@@ -13,6 +13,7 @@
  */
 
 import { logInfo } from "./worker-log.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 const SUMMARY_MAX_MESSAGES = 100;
 const SUMMARY_TTL_HOURS = 4;
@@ -56,7 +57,7 @@ ${messageTexts}
 
 Respond in JSON: {"summary":"...","keyPoints":["..."],"actionItems":["..."]}`;
 
-      const response = await fetch(env.AI_BASE_URL, {
+      const response = await safeOutboundFetch(env.AI_BASE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.AI_API_KEY}` },
         body: JSON.stringify({
@@ -249,7 +250,7 @@ ${messageTexts}
 
 Respond in JSON: {"suggestions":["response 1","response 2","response 3"]}`;
 
-      const response = await fetch(env.AI_BASE_URL, {
+      const response = await safeOutboundFetch(env.AI_BASE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.AI_API_KEY}` },
         body: JSON.stringify({

@@ -11,7 +11,8 @@ import {
 describe("voice-ai-pipeline", () => {
   it("lists realtime providers", () => {
     const providers = listVoiceAiProviders();
-    expect(providers.length).toBeGreaterThanOrEqual(2);
+    expect(providers.length).toBeGreaterThanOrEqual(3);
+    expect(providers.some((p) => p.id === "workers-ai" && p.engine === "workers-ai")).toBe(true);
     expect(providers.some((p) => p.id === "openai-realtime")).toBe(true);
     expect(providers.some((p) => p.id === "gemini-live")).toBe(true);
   });

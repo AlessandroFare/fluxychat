@@ -1,0 +1,46 @@
+---
+title: Enterprise default story
+description: Cross-org rooms, quorum, and E2EE attestation are the default enterprise path — not a Cloudflare Agents add-on.
+---
+
+Cloudflare Agents is an **agent OS** on Durable Objects. FluxyChat is the **room those agents join**. The enterprise default is three product surfaces that Agents will not ship as a multi-tenant kernel.
+
+## 1. Cross-org rooms
+
+Console: [Cross-org rooms](/agents/cross-org) (always in the main nav).
+
+1. Create a room with the counterparty org.
+2. Attach agents from each side.
+3. Record commitments, counters, and approvals.
+4. Export the audit trail for settlement.
+
+Guide: [Cross-org negotiation](/docs/guides/cross-org-negotiation).
+
+## 2. Critical-action quorum
+
+Console: open any room → advanced panels / decision quorum in the transcript.
+
+Dangerous tools and binding decisions stay on the **same WebSocket** as chat. The room does not complete the action until the quorum ack lands.
+
+Guide: [Critical action quorum](/docs/guides/critical-action-quorum).
+
+## 3. E2EE envelope + signed attestation
+
+Console: room insights → **Export + sign**.
+
+- Payloads can use the group cipher (`@fluxy-chat/sdk`).
+- The conversation export is a hash chain plus a signature. Verify offline with `verifyAttestation` in the SDK.
+
+This is **not** MLS. Do not claim MLS.
+
+## 4. Room SQLite recovery
+
+Console: room insights → **Room SQLite recovery**.
+
+- `GET /rooms/:id/pitr` lists the current bookmark and named snapshots.
+- `POST /rooms/:id/pitr` with `{ "action": "snapshot" }` (owner/admin) captures a named bookmark.
+- `{ "action": "restore", "bookmark": "…" }` queues `onNextSessionRestoreBookmark` — the Durable Object reloads that SQLite+KV state on the next wake (30-day Cloudflare window).
+
+Alarms also write hourly checkpoints (`alarm-checkpoint`) so you are not dependent on a human clicking Snapshot.
+
+Runbook: [Room SQL PITR](/docs/guides/enterprise/room-sql-pitr).

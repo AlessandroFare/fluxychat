@@ -65,6 +65,22 @@ security:
   - bearerAuth: []
 
 paths:
+  /.well-known/oauth-protected-resource:
+    get:
+      summary: OAuth protected resource metadata (RFC 9728)
+      description: Unauthenticated discovery for MCP Bearer clients (`resource` is `/mcp`).
+      security: []
+      responses:
+        "200":
+          description: Protected resource metadata
+  /.well-known/oauth-protected-resource/mcp:
+    get:
+      summary: OAuth protected resource metadata (MCP path suffix)
+      description: Same document as `/.well-known/oauth-protected-resource` for clients that append the resource path.
+      security: []
+      responses:
+        "200":
+          description: Protected resource metadata
   /auth/token:
     post:
       summary: Mint a short-lived JWT
@@ -895,7 +911,8 @@ paths:
       summary: Upload a voice message (multipart audio)
       description: |
         Records audio via multipart upload, stores in R2, inserts a `kind=voice` message,
-        and asynchronously transcribes via the configured AI provider (`message_updated` on completion).
+        and asynchronously transcribes via Workers AI (`env.AI.run`) with OpenAI-compatible
+        `/v1/audio/transcriptions` as BYOK fallback (`message_updated` on completion).
       security:
         - bearerAuth: []
       requestBody:
@@ -940,6 +957,103 @@ paths:
           description: R2 or AI provider failure
         "503":
           description: R2 or AI not configured
+
+  /voice-ai/providers:
+    get:
+      summary: List voice AI providers
+      description: |
+        Returns in-worker Workers AI (Whisper STT + TTS) plus optional realtime adapters
+        (OpenAI Realtime, Gemini Live) used for session metrics.
+      responses:
+        "200":
+          description: Provider list
+
+  /voice-ai/transcribe:
+    post:
+      summary: Transcribe audio in-worker (Workers AI Whisper)
+      description: |
+        Runs STT via `env.AI.run` (`@cf/openai/whisper-large-v3-turbo`) when the AI binding
+        is present. Falls back to OpenAI-compatible `AI_BASE_URL` transcriptions when unbound.
+        Optional `roomId` + `announce: true` fans out `voice_ai_transcript` on the room bus.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audioBase64]
+              properties:
+                audioBase64:
+                  type: string
+                mimeType:
+                  type: string
+                language:
+                  type: string
+                roomId:
+                  type: string
+                announce:
+                  type: boolean
+      responses:
+        "200":
+          description: Transcript
+        "400":
+          description: Invalid audio
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden (not a room member)
+        "413":
+          description: Audio too large
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: Speech provider failure
+        "503":
+          description: AI not configured
+
+  /voice-ai/speak:
+    post:
+      summary: Synthesize speech in-worker (Workers AI TTS)
+      description: |
+        Runs TTS via `env.AI.run` (`@cf/myshell-ai/melotts`, fallback `@cf/deepgram/aura-1`).
+        Optional `roomId` + `announce: true` fans out `voice_ai_speak` (text only, not the audio blob).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                lang:
+                  type: string
+                voice:
+                  type: string
+                roomId:
+                  type: string
+                announce:
+                  type: boolean
+      responses:
+        "200":
+          description: MPEG audio as base64
+        "400":
+          description: Missing text
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden (not a room member)
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: Speech provider failure
+        "503":
+          description: Workers AI not bound
 
   /messages/suggest-replies:
     post:
@@ -2934,6 +3048,114 @@ paths:
         "404":
           description: Not found
 
+  /agents/{agentId}/copilot:
+    parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: 1:1 copilot session state on the Agent Durable Object
+      description: Turns live on AgentDurableObject, not on the multi-user Room DO.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Copilot transcript
+        "401":
+          description: Unauthorized
+        "503":
+          description: AGENT binding missing
+
+  /agents/{agentId}/copilot/turns:
+    parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Append a copilot turn and run the agent on the Agent DO
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+      responses:
+        "200":
+          description: Turn result
+        "401":
+          description: Unauthorized
+        "404":
+          description: Agent not found
+        "503":
+          description: AGENT binding missing
+
+  /agents/{agentId}/copilot/schedules:
+    parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: List copilot schedules stored on the Agent DO
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Schedule list
+        "401":
+          description: Unauthorized
+    post:
+      summary: Create a delay or cron wake on the Agent DO
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Schedule upserted
+        "400":
+          description: Invalid schedule
+        "401":
+          description: Unauthorized
+
+  /agents/{agentId}/copilot/schedules/{scheduleId}:
+    parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: scheduleId
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      summary: Cancel a copilot schedule
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cancelled
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+
   /agents/{agentId}/invoke:
     parameters:
       - name: agentId
@@ -3702,6 +3924,84 @@ paths:
         "200":
           description: Event processed
 
+  /integrations/email/inbound:
+    post:
+      summary: Inbound email webhook (same pipeline as Email Workers)
+      description: |
+        Accepts JSON `{ from, to, subject, text, messageId }` or `{ raw }` MIME.
+        HMAC via EMAIL_INBOUND_WEBHOOK_SECRET, otherwise owner/admin JWT.
+        Local-parts `room-<id>` and `agent-<id>` map without a stored route.
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Delivered or duplicate
+        "401":
+          description: Unauthorized
+        "404":
+          description: No mailbox route
+
+  /integrations/email/routes:
+    get:
+      summary: List inbound email routes for the project
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Route list
+        "401":
+          description: Unauthorized
+    post:
+      summary: Create an inbound email route
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [address]
+              properties:
+                address:
+                  type: string
+                roomId:
+                  type: string
+                agentId:
+                  type: string
+                mode:
+                  type: string
+                  enum: [room, agent, both]
+      responses:
+        "200":
+          description: Created
+        "400":
+          description: Invalid route
+        "401":
+          description: Unauthorized
+
+  /integrations/email/routes/{routeId}:
+    parameters:
+      - name: routeId
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      summary: Delete an inbound email route
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Deleted
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+
   /admin/integrations/sent/deliveries:
     get:
       summary: List Sent.dm outbound delivery records
@@ -3825,4 +4125,185 @@ paths:
         "406":
           description: Accept header not acceptable
 
+  /rooms/{id}/agent-runs:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Recent agent runs for a room
+      description: Tenant-scoped inspector rows (status, tokens, tools, latency) for the dashboard insights panel.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Agent run list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  roomId:
+                    type: string
+                  runs:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
 
+  /rooms/{id}/agent-schedules:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: List agent schedules stored on the room Durable Object
+      description: Cron and delay wakes persisted next to the room (idempotent keys, claimed on alarm).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Schedule list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  schedules:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      summary: Create a delay or cron agent schedule on the room
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agentId, kind]
+              properties:
+                agentId:
+                  type: string
+                kind:
+                  type: string
+                  enum: [delay, cron]
+                delayMs:
+                  type: integer
+                cron:
+                  type: string
+                prompt:
+                  type: string
+                idempotencyKey:
+                  type: string
+      responses:
+        "200":
+          description: Created or existing schedule (same idempotency key)
+        "400":
+          description: Invalid schedule
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /rooms/{id}/pitr:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: List SQLite PITR bookmarks for this room Durable Object
+      description: Current bookmark plus named snapshots (30-day Cloudflare SQLite history). Any room member may read.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: PITR status and snapshots
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      summary: Capture a named PITR snapshot or restore the room SQLite on next wake
+      description: Owner/admin only. Restore calls onNextSessionRestoreBookmark; the object reloads that bookmark after the next eviction.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [snapshot, restore]
+                label:
+                  type: string
+                bookmark:
+                  type: string
+                snapshotId:
+                  type: string
+      responses:
+        "200":
+          description: Snapshot captured or restore queued
+        "400":
+          description: Invalid action or missing bookmark
+        "401":
+          description: Unauthorized
+        "403":
+          description: Owner/admin required
+
+  /rooms/{id}/agent-schedules/{scheduleId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: scheduleId
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      summary: Cancel a room agent schedule
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cancelled
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found

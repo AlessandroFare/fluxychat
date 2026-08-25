@@ -89,6 +89,7 @@ export { RoomDurableObject } from "./durable-objects/room-do.js";
 export { UserDurableObject } from "./durable-objects/user-do.js";
 export { IpRateLimiterDurableObject } from "./durable-objects/ip-rate-limiter-do.js";
 export { SupergroupRouterDurableObject } from "./durable-objects/supergroup-router-do.js";
+export { AgentDurableObject } from "./durable-objects/agent-do.js";
 export { FluxyScheduledWorkflow } from "./workflows/fluxy-scheduled-workflow.js";
 export { retryDelayMsForAttempt } from "./lib/webhook-delivery.js";
 export { truncateForStorage } from "./lib/storage-utils.js";
@@ -358,7 +359,7 @@ async function workerFetch(request, env, ctx) {
     const corsHeaders = {
       ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
       "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Trace-Id,X-Fluxy-Api-Key,X-Project-Id",
+      "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Trace-Id,X-Fluxy-Api-Key,X-Project-Id,MCP-Protocol-Version,Mcp-Method,Mcp-Name,mcp-session-id",
       "Access-Control-Expose-Headers": "X-Trace-Id,Retry-After",
       "X-Trace-Id": traceId,
       ...(cspHeader && { "Content-Security-Policy": cspHeader }),
@@ -580,6 +581,18 @@ const httpGate = createHttpGateApp(workerFetch);
 export default {
   fetch: (request, env, ctx) => httpGate.fetch(request, env, ctx),
   scheduled: workerScheduled,
+  async email(message, env, ctx) {
+    const { handleCloudflareEmailMessage } = await import("./lib/email-inbound.js");
+    try {
+      const result = await handleCloudflareEmailMessage(message, env);
+      if (!result.ok && result.reject === "no mailbox" && typeof message?.setReject === "function") {
+        message.setReject(result.reject);
+      }
+    } catch (err) {
+      logError("email.worker_handler_failed", err, {});
+      throw err;
+    }
+  },
 };
 
 

@@ -10,6 +10,7 @@ import { useDashboardSession } from "@/app/components/dashboard-session";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { useYjs } from "./yjs-provider";
 import { cn } from "@/lib/utils";
+import { RoomInsightsPanel } from "@/components/room-insights-panel";
 
 const WORKER_URL = getPublicWorkerUrl();
 
@@ -202,6 +203,9 @@ export default function ProjectOverview({ roomId }: { roomId: string }) {
           </div>
         </div>
       </div>
+
+      {/* F1/F2/F4 — live cost, agent budget, signed attestation (P27) */}
+      <RoomInsightsPanel roomId={roomId} token={token} />
 
       {/* Project tools quick links */}
       <div className="rounded-xl border bg-white p-4 dark:bg-gray-900">

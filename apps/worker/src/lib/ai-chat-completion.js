@@ -1,4 +1,5 @@
 import { logError } from "./worker-log.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 import {
   buildAiAuthHeaders,
   isAiConfigured,
@@ -34,7 +35,7 @@ export async function chatCompletion(env, input) {
     env.AI_MODEL ||
     "deepseek-v4-flash-free";
 
-  const res = await fetch(transport.chatCompletionsUrl, {
+  const res = await safeOutboundFetch(transport.chatCompletionsUrl, {
     method: "POST",
     headers: buildAiAuthHeaders(env, {
       contentType: "application/json",

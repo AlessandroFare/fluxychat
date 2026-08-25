@@ -1,9 +1,20 @@
 /**
- * Voice AI pipeline — adapter registry, session metrics, quality targets.
- * Adapters: openai-realtime (standard WS surface), gemini-live (compatible mode).
+ * Voice AI: in-worker STT/TTS (Workers AI) plus optional realtime session metrics.
+ *
+ * Speech hops: `workers-ai-speech.js` via `env.AI.run`.
+ * Realtime WS adapters (OpenAI / Gemini) remain client-side; this file stores
+ * provider metadata, session records, and SLO rollups.
  */
 
 const PROVIDERS = {
+  "workers-ai": {
+    id: "workers-ai",
+    label: "Workers AI (in-worker Whisper + TTS)",
+    model: "@cf/openai/whisper-large-v3-turbo",
+    features: ["stt", "tts", "in_worker"],
+    targetLatencyMs: 800,
+    engine: "workers-ai",
+  },
   "openai-realtime": {
     id: "openai-realtime",
     label: "OpenAI Realtime API",
@@ -43,7 +54,7 @@ export function resolveVoicePipelineMode(settings) {
 }
 
 export async function createVoiceAiSession(env, { projectId, providerId, roomId, userId, settings }) {
-  const provider = getVoiceAiProvider(providerId || "openai-realtime");
+  const provider = getVoiceAiProvider(providerId || (env?.AI ? "workers-ai" : "openai-realtime"));
   if (!provider) return { error: "unknown_provider" };
   const pipelineMode = resolveVoicePipelineMode(settings);
   const sessionId = `vas_${crypto.randomUUID().slice(0, 12)}`;

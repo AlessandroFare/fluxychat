@@ -40,6 +40,7 @@ export function isAiConfigured(env) {
  *   chatCompletionsUrl: string | null,
  *   transcriptionsUrl: string | null,
  *   embeddingsUrl: string | null,
+ *   anthropicMessagesUrl: string | null,
  * }}
  */
 export function resolveAiTransport(env) {
@@ -57,6 +58,7 @@ export function resolveAiTransport(env) {
       chatCompletionsUrl: `${openAiCompatBase}/chat/completions`,
       transcriptionsUrl: `${openAiCompatBase}/audio/transcriptions`,
       embeddingsUrl: `${openAiCompatBase}/embeddings`,
+      anthropicMessagesUrl: anthropicMessagesUrlFromGateway(env, openAiCompatBase),
     };
   }
 
@@ -69,6 +71,7 @@ export function resolveAiTransport(env) {
       chatCompletionsUrl: null,
       transcriptionsUrl: null,
       embeddingsUrl: null,
+      anthropicMessagesUrl: null,
     };
   }
 
@@ -84,7 +87,22 @@ export function resolveAiTransport(env) {
     chatCompletionsUrl: `${openAiCompatBase}/chat/completions`,
     transcriptionsUrl: `${openAiCompatBase}/audio/transcriptions`,
     embeddingsUrl: `${openAiCompatBase}/embeddings`,
+    anthropicMessagesUrl: null,
   };
+}
+
+function anthropicMessagesUrlFromGateway(env, openAiCompatBase) {
+  if (env.AI_GATEWAY_ACCOUNT_ID?.trim() && env.AI_GATEWAY_ID?.trim()) {
+    return `${GATEWAY_HOST}/v1/${env.AI_GATEWAY_ACCOUNT_ID.trim()}/${env.AI_GATEWAY_ID.trim()}/anthropic/v1/messages`;
+  }
+  const base = trimTrailingSlashes(openAiCompatBase || "");
+  if (base.endsWith("/openai")) {
+    return `${base.slice(0, -"/openai".length)}/anthropic/v1/messages`;
+  }
+  if (base.endsWith("/anthropic")) {
+    return `${base}/v1/messages`;
+  }
+  return `${base}/anthropic/v1/messages`;
 }
 
 /**
@@ -147,6 +165,7 @@ export function getAiGatewayConnectionOverrides(env, options = {}) {
   }
   return {
     chatCompletionsUrl: transport.chatCompletionsUrl,
+    anthropicMessagesUrl: transport.anthropicMessagesUrl || null,
     gatewayHeaders: buildAiAuthHeaders(env, {
       metadata: {
         ...(options.projectId ? { projectId: options.projectId } : {}),

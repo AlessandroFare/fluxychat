@@ -116,6 +116,24 @@ describe("resolveLlmConnectionWithFallback", () => {
   });
 });
 
+describe("AI Gateway on resolveLlmConnection", () => {
+  it("routes worker-shared openai-compatible calls through the gateway", async () => {
+    const conn = await resolveLlmConnection(
+      {
+        AI_API_KEY: "sk-test",
+        AI_BASE_URL: "https://api.openai.com",
+        AI_GATEWAY_ACCOUNT_ID: "acc",
+        AI_GATEWAY_ID: "gw",
+        AI_GATEWAY_TOKEN: "cf-token",
+      },
+      { provider: "openai", model: "gpt-4o-mini" },
+    );
+    expect(conn.ok).toBe(true);
+    expect(conn.chatCompletionsUrl).toContain("gateway.ai.cloudflare.com");
+    expect(conn.gatewayHeaders?.Authorization).toBe("Bearer cf-token");
+  });
+});
+
 describe("listLlmProvidersForApi", () => {
   it("returns custom provider", async () => {
     const catalog = await listLlmProvidersForApi({ AI_API_KEY: "x" }, {});
