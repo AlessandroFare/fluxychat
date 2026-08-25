@@ -24,7 +24,7 @@ FluxyChat targets teams who want that architecture for in-app SaaS chat, not a g
 ## Replacing Socket.io or a VPS fleet
 
 - Socket.io on Node: you operate processes, regions, and sticky sessions.
-- Room-per-DO: Cloudflare routes clients to the object that owns that room’s state.
+- Room-per-DO: Cloudflare routes clients to the object that owns that room's state.
 - Client: @fluxy-chat/sdk (reconnect, loadMore) instead of hand-rolled socket.io client glue.
 - Tradeoff: you learn CF billing and DO patterns, not a managed Pusher dashboard.
 

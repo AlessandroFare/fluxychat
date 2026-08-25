@@ -1,0 +1,39 @@
+---
+title: Chat cartography
+description: Zoomable thematic map of room history. Cluster by embeddings, drill down to messages.
+---
+
+# Chat cartography
+
+Visualize a room's history as a 2D map of thematic clusters (from message embeddings). Zoom out for overview blobs. Zoom in to read messages in a cluster.
+
+## Console
+
+**Cartography** (`/cartography`)
+
+1. Select a room.
+2. Generate or refresh map. The worker runs k-means on message embeddings and stores 2D coordinates.
+3. Pan and zoom the canvas (`RoomCartographyMap`).
+4. Click a cluster to list representative messages.
+
+## API
+
+```http
+GET  /rooms/:roomId/cartography
+POST /rooms/:roomId/cartography/rebuild
+```
+
+Rebuild is rate-limited. Cached coords live in D1 (`room_cartography`).
+
+## Requirements
+
+Message embeddings must exist. Enable [semantic search](/docs/core/search) and run backfill from **Settings → Search**.
+
+## Honesty note
+
+Conversation maps show up in research papers from time to time. This is an exploratory UX for large rooms, not a replacement for keyword or semantic search.
+
+## Related
+
+- [Search](/docs/core/search)
+- [Room sentiment](/docs/features/room-sentiment)

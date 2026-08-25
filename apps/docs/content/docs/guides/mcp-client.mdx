@@ -1,15 +1,15 @@
 ---
 title: "MCP Client Integration"
-description: "FluxyChat's MCP (Model Context Protocol) client (P23-3) lets AI agents consume tools and resources from any MCP-compatible server — expanding agent capabilities"
+description: "FluxyChat's MCP client lets AI agents consume tools and resources from any MCP-compatible server, expanding agent capabilities without custom integrations."
 ---
 
 # MCP Client Integration
 
-FluxyChat's MCP (Model Context Protocol) client (P23-3) lets AI agents consume tools and resources from any MCP-compatible server — expanding agent capabilities without writing custom integrations.
+FluxyChat's MCP (Model Context Protocol) client lets AI agents consume tools and resources from any MCP-compatible server, expanding agent capabilities without writing custom integrations.
 
 ## Overview
 
-MCP is the de-facto protocol for AI↔app communication, adopted by OpenAI, Google, Microsoft, and Anthropic (~97M SDK downloads/month). FluxyChat acts as both an MCP **server** (P15-A, exposing rooms/messages as tools) and an MCP **client** (P23-3, consuming external tools).
+MCP is the de-facto protocol for AI↔app communication, adopted by OpenAI, Google, Microsoft, and Anthropic (~97M SDK downloads/month). FluxyChat ships an MCP **client** today so agents can call external tools. To expose a **room** to external agents, use the [room as MCP server](/docs/guides/room-as-mcp-server) guide (`POST /mcp/rooms/:roomId`).
 
 ## Supported Transports
 
@@ -38,7 +38,7 @@ const tools = await mcp.listTools();
 const resources = await mcp.listResources();
 ```
 
-## Tool Conversion (P23-3a)
+## Tool conversion
 
 MCP tools are auto-converted to FluxyChat tool definitions, ready for LLM function calling:
 
@@ -56,7 +56,7 @@ const agent = createAgent({
 });
 ```
 
-## Resources (P23-3b)
+## Resources
 
 MCP resources provide application-driven data that's passed as context to the LLM:
 
@@ -91,9 +91,9 @@ curl -X POST "$WORKER_URL/admin/mcp-servers" \
   }'
 ```
 
-## MCP Apps (P24-14)
+## MCP Apps
 
-MCP Apps render sandboxed iframes for tool UIs — letting tools show interactive interfaces inside the chat:
+MCP Apps render sandboxed iframes for tool UIs, letting tools show interactive interfaces inside the chat:
 
 - **Model-visible tools:** AI calls them and reads results
 - **App-only tools:** UI renders for humans, AI doesn't see them
@@ -102,8 +102,8 @@ MCP Apps render sandboxed iframes for tool UIs — letting tools show interactiv
 ## Security
 
 - MCP server URLs are validated against an allowlist
-- Tool execution respects FluxyChat's approval gates (P22-D2)
-- Resource content is filtered through the DLP pipeline (P18-D) before reaching the LLM
+- Tool execution respects FluxyChat's approval gates
+- Resource content is filtered through the DLP pipeline before reaching the LLM
 - Per-project tool filtering (`toolFilter`) limits which MCP tools are exposed
 
 ## Common MCP Servers
@@ -118,5 +118,5 @@ MCP Apps render sandboxed iframes for tool UIs — letting tools show interactiv
 
 ## See Also
 
-- [AI Tool Presets Guide](/docs/ai-tool-presets) — Approval gates for MCP tools
-- [LLM Middleware Guide](/docs/llm-middleware) — Intercept MCP tool calls
+- [AI Tool Presets Guide](/docs/guides/ai-tool-presets): approval gates for MCP tools
+- [LLM Middleware Guide](/docs/guides/llm-middleware): intercept MCP tool calls

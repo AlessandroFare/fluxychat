@@ -1,0 +1,29 @@
+---
+title: Feature parity checklist
+description: What the JS SDK and Worker cover vs typical hosted chat APIs.
+---
+
+Use this when you are mapping from Pusher, Ably, or a custom WebSocket.
+
+## Core (ship this first)
+
+- Rooms (public / private) and member JWTs
+- Realtime messages over WebSocket
+- REST send + history
+- Presence and typing (when enabled on the Worker)
+- Inbox / unread (`useInbox`)
+- In-room agents (`@assistant`) with Groq/OpenAI on the Worker
+
+## Hosted vs self-host
+
+| | Hosted | Self-host |
+|---|---|---|
+| Worker | `https://api.fluxychat.com` | Your `workers.dev` or custom domain |
+| Auth | Clerk in the CLI full template | Your backend mints JWTs (`POST /auth/token`) |
+| Agents | Same Worker APIs | Same, plus your LLM keys in `.dev.vars` |
+
+## Not the JS CLI
+
+Native SDKs (Kotlin, Swift, Flutter, Unity, .NET) live in the repo, not on npm. Vue/Svelte packages are not part of `--full`.
+
+Next: [Migrate from Pusher](/docs/guides/migrate-from-pusher), [create-fluxy-chat](/docs/guides/create-fluxy-chat).

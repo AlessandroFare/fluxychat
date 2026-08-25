@@ -1,0 +1,23 @@
+---
+title: "Presence knock template"
+description: "Aldaba-style: knock on who is online before escalating (PH-121)."
+---
+
+# Presence knock template
+
+Agent waits for tier-1 human; cron nudges the next **online** person in the chain.
+
+```http
+POST /rooms/support/presence-escalation
+```
+
+```json
+{
+  "escalationChain": ["on_call_l1", "on_call_l2", "duty_manager"],
+  "nudgeIntervalSeconds": 180
+}
+```
+
+When `on_call_l1` is offline but `on_call_l2` is in the room WebSocket presence set, the nudge targets L2.
+
+See [Presence-aware escalation](/docs/guides/presence-escalation).

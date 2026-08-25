@@ -1,0 +1,67 @@
+---
+title: Choose your path
+description: Hosted, self-host, or SDK-only — what each command actually gives you.
+---
+
+You are wiring chat (and maybe an agent) into an app. Pick one:
+
+| Path | What you get | You run |
+| --- | --- | --- |
+| **Hosted** `npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y` | Vite chat app. Clerk. Project + room + `@assistant` after login. | Nothing on Cloudflare. |
+| **Self-host** `npx @fluxy-chat/create-fluxy-chat@latest my-app --full --mode self-host` | Same Vite app, pointed at **your** Worker. Setup asks for Worker URL and secrets. | Worker on Cloudflare (or `wrangler dev` from a FluxyChat clone). |
+| `--template react` | Vite + `useChat`. You paste Worker URL and JWT. | Your Worker or hosted API. |
+| `--minimal` | Widget only. | Same. |
+| [fluxychat.com](https://fluxychat.com) | Browser playground / console. | Nothing. |
+
+Always use the scoped package: `@fluxy-chat/create-fluxy-chat`. Bare `npx create-fluxy-chat` 404s.
+
+## Hosted
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
+cd my-app
+pnpm install
+pnpm setup:hosted
+pnpm dev
+```
+
+Localhost: 3-step tour, then Clerk, then chat. Second tab = realtime. Dashboard is a button, not the first screen.
+
+## Self-host (your Worker)
+
+You need the FluxyChat Worker running. Companies usually clone the repo once, deploy `apps/worker`, then point many apps at that URL.
+
+```bash
+git clone https://github.com/AlessandroFare/fluxychat
+cd fluxychat
+pnpm install
+pnpm run self-host
+# paste Groq/OpenAI key when asked, or edit apps/worker/.dev.vars
+pnpm --filter @fluxy-chat/worker dev
+```
+
+In another terminal:
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-app --full --mode self-host
+cd my-app
+pnpm install
+pnpm setup:local
+pnpm dev
+```
+
+`pnpm setup:local` talks to `POST /dev/provision` on your Worker (`ALLOW_DEV_PROVISION=true` in `.dev.vars`). If the Worker is down, the script asks for the URL instead of dying silently.
+
+## SDK only
+
+```bash
+pnpm add @fluxy-chat/sdk @fluxy-chat/react
+```
+
+Then [client setup](/docs/getting-started/client-setup). JWT: [Auth JWT](/docs/guides/auth-jwt).
+
+## Related
+
+- [create-fluxy-chat](/docs/guides/create-fluxy-chat)
+- [Self-host one command](/docs/guides/self-host-one-command)
+- [Client setup](/docs/getting-started/client-setup)

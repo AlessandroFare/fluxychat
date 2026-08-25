@@ -3,7 +3,7 @@ title: Voice AI pipeline
 description: OpenAI Realtime and Gemini Live adapters with STT→LLM→TTS metrics, VAD, and barge-in.
 ---
 
-End-to-end voice: **Workers AI in the Worker** for REST STT/TTS, plus **OpenAI Realtime** / **Gemini Live** on the client for duplex.
+End-to-end voice AI with **OpenAI Realtime API** as the standard adapter and **Gemini Live** in OpenAI-compatible WS mode.
 
 Dashboard: [**Voice AI**](/voice-ai) · SDK: `useVoice()` hook.
 
@@ -13,25 +13,7 @@ Dashboard: [**Voice AI**](/voice-ai) · SDK: `useVoice()` hook.
 curl "$WORKER_URL/voice-ai/providers"
 ```
 
-Returns `workers-ai` (in-worker Whisper + TTS), `openai-realtime` (300ms target), and `gemini-live` with feature flags: `vad`, `barge_in`, `noise_suppression`, `aec`.
-
-## In-worker STT / TTS
-
-Requires `[ai] binding = "AI"` in wrangler. Member JWT:
-
-```bash
-curl -X POST "$WORKER_URL/voice-ai/transcribe" \
-  -H "Authorization: Bearer $JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"audioBase64":"<base64>","mimeType":"audio/webm"}'
-
-curl -X POST "$WORKER_URL/voice-ai/speak" \
-  -H "Authorization: Bearer $JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"text":"Room is live"}'
-```
-
-`POST /messages/voice` uses the same STT path after R2 upload.
+Returns `openai-realtime` (300ms target) and `gemini-live` with feature flags: `vad`, `barge_in`, `noise_suppression`, `aec`.
 
 ## Create session
 
@@ -85,7 +67,7 @@ await voice.start();
 await voice.processText("What's the weather?");
 ```
 
-Duplex realtime still needs OpenAI/Gemini keys on the client. In-worker STT/TTS uses the Worker AI binding and does not require those keys.
+Production keys (OpenAI/Gemini) are required for live STT/TTS — the dashboard runs pipeline simulation and metrics without billing.
 
 ## Latency SLO & fallback
 

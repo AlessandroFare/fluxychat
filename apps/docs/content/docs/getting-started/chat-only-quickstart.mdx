@@ -1,0 +1,99 @@
+---
+title: Chat-only quickstart
+description: "Minimal path: install SDK, mint JWT, useChat — no platform modules, no wrangler."
+---
+
+# Chat-only quickstart
+
+Use this path when you want **in-app chat only** — not stream, IoT, fleet, or spatial modules.
+
+## 1. Install
+
+```bash
+pnpm add @fluxy-chat/sdk @fluxy-chat/react
+```
+
+Import chat hooks (keeps your bundle small):
+
+```tsx
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+```
+
+## 2. Client + JWT
+
+**Hosted (fastest):** sign up → **Onboarding** → copy Worker URL + member JWT.
+
+**Local:** from repo root:
+
+```bash
+pnpm install && pnpm run first-message
+```
+
+## 3. Three lines to live chat
+
+```tsx
+"use client";
+
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+export function ChatPanel({
+  workerUrl,
+  jwt,
+  roomId,
+}: {
+  workerUrl: string;
+  jwt: string;
+  roomId: string;
+}) {
+  return (
+    <FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={jwt}>
+      <Room roomId={roomId} />
+    </FluxyRealtimeProvider>
+  );
+}
+
+function Room({ roomId }: { roomId: string }) {
+  const { messages, sendMessage, connectionState } = useChat({
+    roomId,
+    markReadLatest: true,
+  });
+
+  return (
+    <>
+      <p>Status: {connectionState.status}</p>
+      <ul>
+        {messages.map((m) => (
+          <li key={m.id}>{m.content}</li>
+        ))}
+      </ul>
+      <button type="button" onClick={() => sendMessage("Hello")}>
+        Send
+      </button>
+    </>
+  );
+}
+```
+
+## 4. Optional: AI agent in the same room
+
+Mention an agent configured in the console:
+
+```tsx
+await sendMessage("@assistant How can you help?");
+```
+
+Streaming replies use the same WebSocket — see [Agents guide](/docs/core/agents).
+
+## 5. Inbox
+
+```tsx
+import { useInbox } from "@fluxy-chat/react";
+
+const { items, unreadCount, markRead } = useInbox({ client });
+```
+
+## Next steps
+
+- [Full quickstart](/docs/getting-started/quickstart) — self-host, loadMore, reactions
+- [Feature parity checklist](/docs/guides/migrate-from-pusher)
+- [Compare vendors](https://fluxychat.com/compare)

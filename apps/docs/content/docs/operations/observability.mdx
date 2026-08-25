@@ -1,15 +1,15 @@
 ---
-title: "Observability & scheduled jobs (ENG-09 / ENG-18)"
-description: "New projects receive seeded operational alert rules via `insertNewProject` â†’ `seedDefaultAlertRules` (`apps/worker/src/lib/seed-default-alert-rules.js`)."
+title: "Observability & scheduled jobs"
+description: "Default alert rules, cron schedules, workflow toggles, and health checks for self-hosted FluxyChat operators."
 ---
 
-# Observability & scheduled jobs (ENG-09 / ENG-18)
+# Observability & scheduled jobs
 
 ## Default alert rules
 
-New projects receive seeded operational alert rules via `insertNewProject` â†’ `seedDefaultAlertRules` (`apps/worker/src/lib/seed-default-alert-rules.js`).
+New projects receive seeded operational alert rules via `insertNewProject` → `seedDefaultAlertRules`.
 
-Console: **Analytics** â†’ alerts list; open alerts also surface in the red **System status** banner (owner/admin JWT).
+Console: **Analytics** → alerts list; open alerts also surface in the red **System status** banner (owner/admin JWT).
 
 ## Cron / workflows default
 
@@ -48,9 +48,9 @@ Content-Type: application/json
 
 Allowed values: `0 8 * * *`, `*/15 * * * *`, `0 3 * * *`, `*/5 * * * *`.
 
-Implementation: `apps/worker/src/lib/scheduled-runners.js`. Full Workflows setup: [scheduled-workflows.md](/docs/scheduled-workflows).
+See [Scheduled workflows](/docs/reference/scheduled-workflows) for the Workflows setup.
 
 ## Health & smoke
 
-- Public: dashboard `/status` â†’ Worker `/health`
-- Operator: `pnpm --filter @fluxy-chat/worker smoke:remote -- --base-url â€¦ --admin-jwt â€¦`
+- Public: dashboard `/status` → Worker `/health`
+- Operator: `pnpm --filter @fluxy-chat/worker smoke:remote -- --base-url <worker-url> --admin-jwt <token>`

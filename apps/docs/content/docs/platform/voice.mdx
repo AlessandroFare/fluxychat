@@ -1,48 +1,20 @@
 ---
 title: Voice AI
-description: In-worker STT/TTS on Workers AI, plus optional realtime adapters and room integration.
+description: STT→LLM→TTS pipeline, latency SLOs, transport fallback, and room integration.
 ---
 
-Dashboard: [**Voice AI**](/voice-ai).
-
-The Worker runs **speech in-process** when the `[ai]` binding is present (`env.AI.run`):
-
-| Direction | Model | HTTP |
-|-----------|--------|------|
-| STT | `@cf/openai/whisper-large-v3-turbo` | `POST /voice-ai/transcribe` and async `POST /messages/voice` |
-| TTS | `@cf/myshell-ai/melotts`, fallback `@cf/deepgram/aura-1` | `POST /voice-ai/speak` |
-
-Voice-message uploads still land on R2 and the room WebSocket (`kind: "voice"`). Transcription prefers Workers AI, then OpenAI-compatible `AI_BASE_URL` if you BYOK.
-
-Realtime duplex (OpenAI Realtime / Gemini Live) stays on the client SDK (`createVoicePipeline` / `useVoice`) for sub-300ms barge-in. Session metrics remain on `/admin/voice-ai/*`.
-
-## In-worker transcribe / speak
-
-```bash
-curl -X POST "$WORKER_URL/voice-ai/transcribe" \
-  -H "Authorization: Bearer $JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"audioBase64":"<base64>","mimeType":"audio/webm","roomId":"support"}'
-
-curl -X POST "$WORKER_URL/voice-ai/speak" \
-  -H "Authorization: Bearer $JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"text":"Room is live","lang":"en"}'
-```
-
-Set `announce: true` with a `roomId` you can access to fan out `voice_ai_transcript` / `voice_ai_speak` on the room bus (text only; speak does not broadcast the audio blob).
+Production voice runs on the same Worker as chat. Dashboard: [**Voice AI**](/voice-ai).
 
 ## Latency SLO
 
 | Tier | Target | Path |
 |------|--------|------|
-| **Realtime duplex** | P95 ≤ 300ms end-to-end | OpenAI Realtime WebSocket (`openai-realtime`) |
-| **Acceptable duplex** | P95 ≤ 350ms | Gemini Live (OpenAI-compatible WS surface) |
-| **In-worker REST** | Best effort (~800ms target) | Workers AI Whisper + TTS (`workers-ai`) |
-| **BYOK REST** | Best effort | Chunked `AI_BASE_URL` transcriptions |
+| **Production** | P95 ≤ 300ms end-to-end | OpenAI Realtime WebSocket (`openai-realtime`) |
+| **Acceptable** | P95 ≤ 350ms | Gemini Live (OpenAI-compatible WS surface) |
+| **Degraded** | Best effort | Chunked REST STT → LLM → TTS |
 | **Demo / offline** | N/A | Text-only pipeline (`useVoice` simulation) |
 
-Report duplex samples via `POST /admin/voice-ai/metrics` and inspect aggregates on `/voice-ai`.
+Report samples via `POST /admin/voice-ai/metrics` and inspect aggregates on `/voice-ai` (avg, P95, under-300ms count).
 
 ## Transport fallback ladder
 
@@ -51,7 +23,7 @@ The SDK degrades automatically when a faster path is unavailable:
 ```
 realtime (OpenAI/Gemini WS)
   ↓ mic denied / WS error / missing API key
-chunked (REST STT + TTS — Worker /voice-ai/* or AI_BASE_URL)
+chunked (REST STT + TTS segments)
   ↓ provider error
 text_only (LLM + TTS text path — dashboard demo default)
 ```
@@ -75,16 +47,16 @@ console.log(voice.pipeline?.getActiveTransport()); // realtime | chunked | text_
 
 Listen for `transport_fallback` events on the pipeline when debugging production paths.
 
-## Worker session (metrics)
+## Worker session
 
 ```bash
 curl -X POST "$WORKER_URL/admin/voice-ai/sessions" \
   -H "Authorization: Bearer $ADMIN_JWT" \
   -H "Content-Type: application/json" \
-  -d '{"providerId":"workers-ai","roomId":"support"}'
+  -d '{"providerId":"openai-realtime","roomId":"support"}'
 ```
 
-Returns `targetLatencyMs` and a session `wsUrl` for client realtime audio. Speech itself is `POST /voice-ai/transcribe` and `POST /voice-ai/speak`.
+Returns `targetLatencyMs: 300` and a session `wsUrl` for streaming audio.
 
 ## Room integration
 

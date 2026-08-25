@@ -1,0 +1,106 @@
+---
+title: "@fluxy-chat/ui-kit"
+description: "Drop-in FluxyChatWidget and FluxyInboxPanel — polished chat UI in three lines, built on @fluxy-chat/ui and @fluxy-chat/react."
+---
+
+# @fluxy-chat/ui-kit
+
+Drop-in **chat widget** and **inbox panel** for FluxyChat. Use this when you want a hosted-SDK-style experience without building layout from primitives.
+
+Built on [`@fluxy-chat/ui`](/docs/packages/ui) + [`@fluxy-chat/react`](/docs/packages/react). Optional bridge to [assistant-ui](https://assistant-ui.com) via `useFluxyAssistantRuntime`.
+
+## Install
+
+```bash
+pnpm add @fluxy-chat/ui-kit @fluxy-chat/ui @fluxy-chat/react @fluxy-chat/sdk
+```
+
+Your app needs Tailwind (same as `@fluxy-chat/ui`) and a member JWT from your backend. See [Getting started → Client setup](/docs/getting-started/client-setup).
+
+## FluxyChatWidget (3 lines)
+
+```tsx
+import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
+
+export function SupportChat({ token }: { token: string }) {
+  return (
+    <FluxyChatWidget
+      roomId="general"
+      workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!}
+      token={token}
+      theme="brand"
+      height={520}
+    />
+  );
+}
+```
+
+### Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `roomId` | `string` | Room to join (required) |
+| `workerUrl` | `string` | Worker base URL (required unless `client` is passed) |
+| `token` | `string` | Member JWT (required unless `client` is passed) |
+| `client` | `FluxyChatClient` | Pre-built client — share one instance with inbox |
+| `userId` | `string` | Default `"user-1"` when constructing client internally |
+| `theme` | `FluxyThemeId` | `default`, `dark`, `minimal`, or `brand` |
+| `height` | `number \| string` | Widget height (default `480`) |
+| `title` | `string` | Header label (defaults to `roomId`) |
+| `className` | `string` | Extra wrapper classes |
+
+## Inbox panel
+
+```tsx
+import { FluxyInboxPanel } from "@fluxy-chat/ui-kit";
+
+<FluxyInboxPanel
+  workerUrl={workerUrl}
+  token={token}
+  onSelectItem={(item) => openRoom(item.roomId)}
+/>
+```
+
+Lists rooms/conversations and calls `onSelectItem` when the user picks one — pair with `FluxyChatWidget` and a shared `FluxyChatClient` for a full inbox + thread UX.
+
+## assistant-ui (optional)
+
+```bash
+pnpm add @assistant-ui/react
+```
+
+```tsx
+import { useExternalStoreRuntime, Thread } from "@assistant-ui/react";
+import { useFluxyAssistantRuntime } from "@fluxy-chat/ui-kit";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({ baseUrl: workerUrl, userId, token });
+const { externalStoreProps } = useFluxyAssistantRuntime({ roomId: "general", client });
+const runtime = useExternalStoreRuntime(externalStoreProps);
+
+return <Thread runtime={runtime} />;
+```
+
+## Scaffold with CLI
+
+Fastest path — minimal Vite app with the widget only:
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal
+```
+
+See [create-fluxy-chat](/docs/packages/create-fluxy-chat) for flags and templates.
+
+## When to use ui-kit vs ui
+
+| Need | Package |
+| --- | --- |
+| Drop-in widget or inbox in an existing app | **ui-kit** |
+| Custom layout, design system, headless primitives | [`@fluxy-chat/ui`](/docs/packages/ui) |
+| Dashboard-grade agent room (templates, tools, voice) | Dashboard `FluxyChat` or compose from `ui` primitives |
+
+## Related
+
+- [Quickstart](/docs/getting-started/quickstart) — first message end-to-end
+- [Core SDK](/docs/core) — `FluxyChatClient`, rooms, agents
+- [@fluxy-chat/react](/docs/packages/react) — `useChat`, connection state

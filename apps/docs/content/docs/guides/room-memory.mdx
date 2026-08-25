@@ -1,0 +1,43 @@
+---
+title: "Room memory for operators"
+description: "Persistent facts extracted from room conversations (PH-132)."
+---
+
+# Room memory for operators
+
+Room memory stores durable facts from the conversation: decisions, tasks, FAQs, user context, and key facts. Each entry links to source messages for audit.
+
+## Query
+
+```http
+GET /rooms/:roomId/memory?limit=12
+Authorization: Bearer <member-jwt>
+```
+
+Optional filter: `?kind=decision`
+
+## Extract on demand
+
+```http
+POST /rooms/:roomId/memory/extract
+Authorization: Bearer <member-jwt>
+```
+
+Requires a configured LLM provider on the Worker. Returns extracted entries and insert/update counts.
+
+## Dashboard
+
+**Rooms → Room memory** shows entries with kind badges, confidence, and source message ids. Use **Extract from messages** after a meaningful thread.
+
+## Memory kinds
+
+| Kind | Use |
+|------|-----|
+| `decision` | Choices made in the room |
+| `task` | Action items and TODOs |
+| `faq` | Repeated questions and answers |
+| `user_context` | Preferences or facts about participants |
+| `key_fact` | Durable technical or business facts |
+| `sentiment` | Tone signals (use sparingly) |
+
+Pair with [Live knowledge graph](/docs/guides/live-knowledge-graph) for relational context.

@@ -1,0 +1,148 @@
+---
+title: EU AI Act readiness
+description: "How FluxyChat maps to Regulation (EU) 2024/1689: risk classification, human oversight, transparency, and Annex IV documentation."
+---
+
+# EU AI Act readiness
+
+FluxyChat ships technical controls aligned with the [EU Artificial Intelligence Act](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32024R1689) (Regulation 2024/1689). This is not legal advice. Pair with your counsel for formal conformity assessment.
+
+## Console: compliance hub
+
+Open [EU AI Act](/ai-governance/eu-ai-act) in the dashboard (also under Trust → EU AI Act):
+
+| Feature | What it does |
+|---------|----------------|
+| Gap assessment | Automated checklist with severity (critical / high / medium) |
+| Project settings | Provider identity, retention, disclosure and HITL enforcement toggles |
+| Agent profiles | Intended purpose, EU risk category, Annex III domain, oversight level |
+| Runtime enforcement | Blocks unacceptable/high-risk-without-conformity agents; forces HITL |
+| Annex IV export | JSON technical documentation for your conformity file |
+
+## Risk categories
+
+| Category | Typical FluxyChat use | Runtime behaviour |
+|----------|----------------------|-------------------|
+| minimal | Internal FAQ bot, read-only tools | Standard logging |
+| limited | Customer support with disclosure | AI disclosure in system prompt and message metadata |
+| high | HR, credit, essential services (Annex III) | HITL on side-effect tools; conformity sign-off required |
+| unacceptable | Social scoring, prohibited practices | Blocked at runtime when enforcement enabled |
+
+Document each agent's intended purpose before production. Most team-chat agents are minimal or limited.
+
+## Article mapping
+
+### Art. 9: Risk management
+
+- Per-agent profiles with intended purpose and Annex III category
+- Automated gap assessment (`GET /admin/eu-ai-act/assessment`)
+- Integration with [AI Governance](/ai-governance) model/prompt/tool registry
+
+### Art. 10: Data governance
+
+- [EU consent and DPA](/docs/features/eu-consent): banner and audit log
+- [Data residency](/settings/residency): pin project storage region
+- PII redaction via [LLM middleware](/middleware) and [room firmware](/docs/features/room-firmware)
+
+### Art. 11: Technical documentation
+
+- Annex IV export: `GET /admin/eu-ai-act/technical-documentation`
+- Includes agents, models, controls matrix, provider identity
+- Download from dashboard Annex IV export button
+
+### Art. 12: Record-keeping
+
+- `agent_runs` table (tool traces, tokens, latency)
+- `eu_ai_act_audit_log` (settings changes, blocked runs, completions)
+- Configurable retention days in project settings (default 365)
+- [Activities](/activities), [SOC 2](/soc2), OTel/Langfuse export
+
+### Art. 13: Transparency
+
+- Agent `@mention` and streaming `agent_step` events
+- AI disclosure suffix in system prompt for limited/high-risk agents
+- Message metadata: `aiGenerated`, `aiDisclosure`, `euAiActRiskCategory`
+
+### Art. 14: Human oversight
+
+- [Tool approvals](/docs/guides/tool-approvals): HITL before destructive tools
+- Automatic HITL for high-risk agents (`side_effect` or `all_tools` mode)
+- [Moderation console](/docs/features/moderation-console), [agent queue](/agent-queue), [async decisions](/docs/features/async-decisions)
+
+### Art. 15: Accuracy and robustness
+
+- [Agent eval](/agents/eval) datasets and OTel export
+- [Counterfactual replay](/docs/features/counterfactual-replay)
+- [Agents → Observability](/agents/observability) for drift monitoring
+
+### Art. 43 / 50: Conformity and transparency to deployers
+
+- Conformity assessed checkbox on high-risk agent profiles (blocks run until set)
+- Provider legal name and contact in project settings
+- GPAI: register foundation models in AI Governance; use provider DPAs
+
+## API reference
+
+All routes require admin JWT.
+
+```bash
+# Settings
+GET  /admin/eu-ai-act/settings
+PATCH /admin/eu-ai-act/settings
+
+# Agent profiles
+GET  /admin/eu-ai-act/agents
+PUT  /admin/eu-ai-act/agents/{agentId}
+
+# Assessment & documentation
+GET  /admin/eu-ai-act/assessment
+GET  /admin/eu-ai-act/technical-documentation
+GET  /admin/eu-ai-act/audit-log?limit=100
+```
+
+Example: register a high-risk agent profile:
+
+```bash
+curl -X PUT "$WORKER/admin/eu-ai-act/agents/bot_hr" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intendedPurpose": "Draft HR policy answers. Human reviews all outbound messages.",
+    "euRiskCategory": "high",
+    "annexIIICategory": "employment",
+    "humanOversightLevel": "human_in_loop",
+    "hitlMode": "all_tools",
+    "requiresDisclosure": true,
+    "conformityAssessed": true
+  }'
+```
+
+## Operator checklist (before go-live)
+
+1. Set provider legal name and contact in EU AI Act settings.
+2. Inventory every agent: purpose, risk category, model ID.
+3. Register models in AI Governance registry.
+4. Enable tool approvals / HITL for high-risk agents.
+5. Turn on EU consent and data residency if you have EU users.
+6. Enable moderation and audit logging for customer-facing rooms.
+7. Run gap assessment. Resolve all critical and high items.
+8. Export Annex IV documentation and store with your conformity file.
+9. Mark conformity assessed only after internal/legal review.
+10. Configure OTel/Langfuse for incident review.
+
+## What FluxyChat cannot do for you
+
+These remain organizational and legal obligations:
+
+- Formal conformity assessment body involvement (if required for your use case)
+- EU database registration as provider/deployer where applicable
+- Written human oversight policy signed by management
+- Fundamental rights impact assessment (FRIA) for high-risk public-sector deployers
+- Training data documentation for custom fine-tuned models
+
+## Related
+
+- [AI Governance guide](/docs/guides/enterprise/ai-governance)
+- [GDPR compliance](/docs/learn/gdpr-compliance)
+- [SOC 2 runbook](/docs/guides/enterprise/soc2-hipaa-runbook)
+- [Platform status](/docs/features/platform-status)

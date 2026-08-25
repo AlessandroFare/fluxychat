@@ -1,0 +1,86 @@
+---
+title: "Dashboard integration (JWT session and operator UI)"
+description: "How the Next.js dashboard authenticates and which Worker features the operator console exercises."
+---
+
+The Next.js app in `apps/dashboard` is a developer and operator console plus a live chat demo. This page summarizes session storage, main routes, and SDK behavior on the home page.
+
+## Session storage (security)
+
+- State is persisted under `fluxychat.dashboard.session.v1` in `sessionStorage` (cleared when the browser tab closes).
+- Fields: `adminJwt`, `memberJwt`, `activeProject` (id, name, optional `apiKey`, plan snapshot).
+- One-time migration from legacy `localStorage` runs on first load.
+
+Use **Onboarding** or **Projects** to mint or paste tokens. The SDK client on the home page prefers `memberJwt`, then `adminJwt`, for `Authorization` on REST and WebSocket.
+
+## Operator pages
+
+| Path | Purpose | Typical token |
+|------|---------|----------------|
+| `/` | Live `useChat` demo and `ChatWindow` | Member or admin JWT |
+| `/onboarding` | End-to-end: project, keys, room, message, agent | Starts with admin |
+| `/projects` | Projects, API keys, plan | Admin JWT |
+| `/rooms` | List, create, rename, delete rooms; members | Admin JWT for mutations |
+| `/agents` | CRUD agents, invoke, runs | JWT with appropriate roles |
+| `/admin` | Webhooks, automation, audit snippets | Admin or owner |
+| `/billing` | Plan, Stripe checkout or portal when configured | Admin |
+| `/analytics` | Costs, SLO, launch KPIs | Admin |
+| `/search` | Message search | JWT |
+| `/privacy` | Policy copy, GDPR export download, erasure request | Export: member or admin; erasure: owner or admin JWT |
+
+## GDPR API (Worker)
+
+- `GET /gdpr/export`: right of access and portability. Returns JSON attachment for the `sub` in the JWT.
+- `DELETE /gdpr/delete`: erasure for the `sub` in the JWT within the project; requires `owner` or `admin` roles.
+
+The Privacy page calls these endpoints using the stored session tokens.
+
+## SDK transport behavior (`useChat`)
+
+Relevant to the home demo:
+
+- Send message: REST when the client has a JWT; otherwise WebSocket payload.
+- Edit or delete message: REST when authenticated; on failure, WebSocket fallback for the same operation.
+- Reconnect: exponential backoff; after repeated failures the hook falls back to SSE (`GET /rooms/:id/stream` via `connectSSE`), then REST polling if SSE is unavailable.
+- `useChat` history replay (Portal-style):
+  - `replay: "connect"` (default): REST fetch on mount plus WS `history` events.
+  - `replay: "request"`: skip auto-load for heavy rooms; call `loadHistory()` when the UI needs messages.
+  - `replayHistoryOnReconnect`: passed to `connectRoom` (default `true` when `replay` is `"connect"`).
+- `connectionStatus`: `connected`, `connecting`, `reconnecting`, `disconnected`, `sse`, or `polling`.
+
+## File uploads and attachments
+
+- Worker endpoint `POST /upload` (JWT) stores bytes in R2 when `ATTACHMENTS` is bound; response returns a public `/attachments/...` URL.
+- The home `ChatWindow` passes `uploadComposerFile` to `FluxyChatClient.uploadFile(roomId, file)` so image, file, and audio icons use a native picker instead of URL prompts.
+- `POST /messages` accepts an optional `attachments` array (same shape as websocket sends); entries are validated to `http(s)` URLs and persisted to D1 for history.
+
+## Notifications
+
+- Worker: `GET /notifications`, `POST /notifications/:id/read`, `POST /notifications/read-all`
+- SDK: `client.listNotifications()`, `useNotifications(client)`, `useChat({ markReadLatest: true })`
+- Console: `/notifications` inbox; overview card on `/`; unread badges on `/rooms`
+- Deep link: `/rooms?room=<roomId>` selects a room after load
+
+## Composer @mentions
+
+The home page wires `@fluxy-chat/ui` `ChatWindow` with:
+
+- `mentionSuggestions`: built by loading `client.listAgents()` and passing `{ handle, label, agentId }` per bot (handle falls back to a slug derived from name).
+- `typingAgentId`: from `useChat().typingAgentId`, which merges websocket `agentTyping` events (includes `agentId`) with an in-flight id while `invokeAgent` runs.
+
+`ChatWindow` merges those rows with `onlineUsers` IDs and `@handles` parsed from recent message text. Matching is prefix on handle or substring on display label.
+
+## Worker automation hooks (optional)
+
+Configure on the Worker (see `apps/worker/wrangler.toml` comments):
+
+| Env prefix | Behaviour |
+|------------|-----------|
+| `AUTO_ROOM_SUMMARY_*` | After new messages, enqueue an automatic `room_summary` when AI is configured and thresholds pass. Webhook `room.summary` fires when summaries are persisted. |
+| `BUILTIN_MODERATION_*` | Substring blocklist match creates a moderation row, `automation_events`, and webhook `moderation.auto_flag`. |
+
+## Environment
+
+- `NEXT_PUBLIC_FLUXYCHAT_WORKER_URL`: Worker base URL (default `http://127.0.0.1:8787` in dev).
+
+See also: [Auth cookbook](/docs/cookbook/auth-jwt), [Troubleshooting](/docs/reference/troubleshooting).

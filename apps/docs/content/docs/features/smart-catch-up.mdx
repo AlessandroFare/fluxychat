@@ -1,0 +1,52 @@
+---
+title: Smart catch-up digest
+description: Relevance-ranked summary of what you missed since your last visit to a room.
+---
+
+# Smart catch-up digest
+
+When you return to a room, FluxyChat shows a catch-up banner with the most relevant updates: mentions, active threads, and semantically related topics. Not just the last N messages chronologically.
+
+## Console
+
+1. Open any room in **Rooms** after being away.
+2. If new activity exists since your last-read watermark, `ChatCatchUpBanner` appears at the top with bullet highlights and an optional AI summary.
+3. Dismiss the banner or jump to highlighted messages.
+
+## How ranking works
+
+1. Load messages since your watermark (`room-catch-up`).
+2. Rank by mention of you, thread participation, and semantic similarity (when embeddings are on).
+3. Optionally summarize top hits via Workers AI.
+
+Without semantic search, ranking falls back to mentions plus recency.
+
+## API
+
+```http
+GET /rooms/:roomId/catch-up?userId=...
+GET /rooms/:roomId/catch-up/smart
+```
+
+Smart digest response includes `summary`, `highlights[]`, and `since`.
+
+## SDK
+
+```ts
+const digest = await client.getRoomCatchUpDigest(roomId);
+// digest.summary, digest.highlights[], digest.since
+```
+
+## Environment
+
+| Variable | Purpose |
+|----------|---------|
+| `SEMANTIC_SEARCH_ENABLED` | Enables embedding-based topic ranking |
+| `AI_*` | Workers AI for summary bullets (optional) |
+
+Configure semantic search under **Settings → Search** (`/settings/search`).
+
+## Related
+
+- [Search](/docs/core/search)
+- [Thread summary](/docs/reference/thread-summary)

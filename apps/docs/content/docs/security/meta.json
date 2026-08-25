@@ -1,5 +1,6 @@
 {
   "pages": [
-    "agent-tool-exfiltration"
+    "agent-tool-exfiltration",
+    "saml-signature-verification"
   ]
 }
