@@ -1,0 +1,47 @@
+---
+title: Room SQL point-in-time recovery
+description: Snapshot and restore a room Durable Object SQLite database (30-day Cloudflare PITR) from the console.
+---
+
+Every FluxyChat room is a SQLite-backed Durable Object (`new_sqlite_classes`). Cloudflare retains **30 days** of that database (SQL + KV). FluxyChat exposes it as a product, not a wrangler trivia fact.
+
+## Operator path
+
+1. Open a room in the dashboard.
+2. In **Room insights**, use **Snapshot now** before a risky cutover.
+3. After a bad write, **Restore** on the snapshot you want.
+4. The object applies `onNextSessionRestoreBookmark` and reloads that bookmark the next time it is constructed (hibernation / eviction). Live sockets reconnect.
+
+## API
+
+```bash
+# List current bookmark + named snapshots (any member)
+curl "$WORKER_URL/rooms/$ROOM_ID/pitr" \
+  -H "Authorization: Bearer $MEMBER_JWT"
+
+# Named snapshot (owner/admin)
+curl -X POST "$WORKER_URL/rooms/$ROOM_ID/pitr" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"snapshot","label":"before-migration"}'
+
+# Restore (owner/admin) — takes effect on next DO wake
+curl -X POST "$WORKER_URL/rooms/$ROOM_ID/pitr" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"restore","snapshotId":"pitr_…"}'
+```
+
+## What this does and does not restore
+
+| Restored | Not in the room SQLite |
+|----------|------------------------|
+| Room DO SQL tables + DO KV (schedules, cost ledger, PITR catalog) | D1 `messages` history (tenant DB) |
+| Live stream offsets / alarm job map stored on the object | R2 attachments |
+| Agent schedule rows on the room | Other rooms |
+
+D1 remains the tenant system of record for durable chat history. PITR is the **room kernel** (hot state). Use both in an incident: restore the room object, then decide whether D1 rows need a separate export replay.
+
+## Tests
+
+Hibernation + alarm queue + schedule claim run in workerd via `pnpm --filter @fluxy-chat/worker test:pool` (`@cloudflare/vitest-pool-workers`).

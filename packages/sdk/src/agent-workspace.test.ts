@@ -91,6 +91,52 @@ describe("agent-workspace", () => {
     ).toBe(false);
   });
 
+  it("nests child tool events under the parent run_agent call", () => {
+    const steps = buildAgentWorkspaceSteps([
+      {
+        key: "p:run:call",
+        kind: "tool_call",
+        runId: "parent",
+        toolCallId: "run",
+        name: "run_agent",
+        arguments: '{"handle":"@researcher","prompt":"go"}',
+      },
+      {
+        key: "c:search:call",
+        kind: "tool_call",
+        runId: "child",
+        toolCallId: "search",
+        name: "web_search",
+        parentToolCallId: "run",
+        nestDepth: 1,
+      },
+      {
+        key: "c:search:result",
+        kind: "tool_result",
+        runId: "child",
+        toolCallId: "search",
+        name: "web_search",
+        resultPreview: '{"hits":1}',
+        parentToolCallId: "run",
+        nestDepth: 1,
+      },
+      {
+        key: "p:run:result",
+        kind: "tool_result",
+        runId: "parent",
+        toolCallId: "run",
+        name: "run_agent",
+        resultPreview: '{"content":"ok"}',
+      },
+    ]);
+    expect(steps).toHaveLength(1);
+    expect(steps[0].toolName).toBe("run_agent");
+    expect(steps[0].children).toHaveLength(1);
+    expect(steps[0].children?.[0].toolName).toBe("web_search");
+    expect(steps[0].children?.[0].status).toBe("completed");
+    expect(isAgentWorkspaceLive(steps)).toBe(false);
+  });
+
   it("maps completed steps to AG-UI tool parts", () => {
     const parts = agentWorkspaceStepsToUiParts([
       {

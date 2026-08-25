@@ -116,15 +116,24 @@ function LocalOnboarding() {
 }
 
 function ChatRoom({ session }: { session: CliSession }) {
-  const { messages, sendMessage, invokeAgent, connectionState, agentTyping, typingUsers, online } =
-    useChat({
-      roomId: session.roomId,
-      agentId: session.agentId || undefined,
-      markReadLatest: true,
-    });
+  const {
+    messages,
+    sendMessage,
+    invokeAgent,
+    connectionState,
+    agentTyping,
+    typingUsers,
+    online,
+    stopAgentStream,
+  } = useChat({
+    roomId: session.roomId,
+    agentId: session.agentId || undefined,
+    markReadLatest: true,
+  });
 
   const [error, setError] = useState<string | null>(null);
   const connected = connectionState.status === "connected";
+  const isStreaming = messages.some((m) => m.streaming);
 
   async function onSend(content: string) {
     setError(null);
@@ -152,6 +161,11 @@ function ChatRoom({ session }: { session: CliSession }) {
           </span>
           <span className="text-muted-foreground"> · {session.roomId}</span>
         </span>
+        {isStreaming ? (
+          <button type="button" className="btn-ghost" onClick={() => stopAgentStream()}>
+            Stop generation
+          </button>
+        ) : null}
       </div>
 
       <div className="chat-frame">

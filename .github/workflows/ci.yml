@@ -9,8 +9,16 @@ on:
 permissions:
   contents: read
 
+env:
+  # Fail fast on the checks that used to pass silently.
+  CI: "true"
+
 jobs:
-  test:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Static gates. Cheap, run first, and every one of them must be able to fail.
+  # ──────────────────────────────────────────────────────────────────────────
+  gates:
+    name: Static gates
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -28,14 +36,24 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Build workspace packages for dashboard tests
-        run: pnpm --filter @fluxychat/protocol build && pnpm --filter @fluxy-chat/config build && pnpm --filter @fluxy-chat/sdk build && pnpm --filter @fluxy-chat/react build
+      # Guards against the class of bug that silently disabled three CI steps:
+      # `pnpm --filter <name>` exits 0 when no project matches, so a typo in the
+      # package scope turns a gate into a no-op. This verifies every filter used
+      # in this workflow resolves to a real workspace package.
+      - name: Verify CI package filters resolve (meta-gate)
+        run: node scripts/check-ci-filters.mjs
+
+      - name: Build workspace packages
+        run: pnpm --filter @fluxy-chat/protocol build && pnpm --filter @fluxy-chat/config build && pnpm --filter @fluxy-chat/sdk build && pnpm --filter @fluxy-chat/react build
 
       - name: Pricing consistency check (P0-1 / ENG-03)
         run: pnpm run check:pricing
 
       - name: Tenant-scope audit (P1 ENG-07)
         run: pnpm run check:tenant-scope
+
+      - name: Outbound fetch guard (SSRF)
+        run: pnpm run check:outbound-fetch
 
       - name: Build publishable packages (docs bin + manifest smoke)
         run: pnpm --filter @fluxy-chat/create-fluxy-chat build
@@ -49,8 +67,14 @@ jobs:
       - name: Bandwidth budget gate (#29)
         run: pnpm run check:bandwidth-budget
 
-      - name: OpenAPI route smoke (ENG-14)
+      - name: OpenAPI route drift (ENG-14)
         run: pnpm run check:openapi
+
+      - name: Crypto claim gate
+        run: pnpm run check:crypto-claims
+
+      - name: Workflows vs cron honesty
+        run: pnpm run check:workflows
 
       - name: DO bindings check (ENG-12)
         run: pnpm run check:do-bindings
@@ -62,30 +86,204 @@ jobs:
         run: pnpm run check:upptime
 
       - name: Worker typecheck (ENG-06)
-        run: pnpm --filter @fluxychat/worker typecheck
+        run: pnpm --filter @fluxy-chat/worker typecheck
 
+      - name: Dashboard typecheck
+        run: pnpm --filter @fluxy-chat/dashboard typecheck
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Tests. The worker and dashboard suites were previously absent from CI
+  # entirely: the root `test` script only enumerated six packages, so ~2100
+  # server-side tests never ran and regressions accumulated unnoticed.
+  # ──────────────────────────────────────────────────────────────────────────
+  test-packages:
+    name: Tests: packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build workspace packages
+        run: pnpm --filter @fluxy-chat/protocol build && pnpm --filter @fluxy-chat/config build && pnpm --filter @fluxy-chat/sdk build && pnpm --filter @fluxy-chat/react build
+      - name: Test packages
+        run: pnpm run test:packages
+
+  test-worker:
+    name: Tests: worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build workspace packages needed by the worker
+        run: pnpm --filter @fluxy-chat/protocol build && pnpm --filter @fluxy-chat/config build
+      - name: Unit + integration
+        run: pnpm run test:worker
+      - name: Worker e2e (in-process)
+        run: pnpm run test:worker:e2e
+
+  test-dashboard:
+    name: Tests: dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build workspace packages
+        run: pnpm --filter @fluxy-chat/protocol build && pnpm --filter @fluxy-chat/config build && pnpm --filter @fluxy-chat/sdk build && pnpm --filter @fluxy-chat/react build
+      - name: Test dashboard
+        run: pnpm run test:dashboard
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Builds
+  # ──────────────────────────────────────────────────────────────────────────
+  build:
+    name: Builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [gates]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build workspace packages
+        run: pnpm --filter @fluxy-chat/protocol build && pnpm --filter @fluxy-chat/config build && pnpm --filter @fluxy-chat/sdk build && pnpm --filter @fluxy-chat/react build
       - name: Build dashboard
-        run: pnpm --filter @fluxychat/dashboard build
-
+        run: pnpm --filter @fluxy-chat/dashboard build
       - name: Build docs site
         run: pnpm run docs:build
-
       - name: Smoke test create-fluxy-chat scaffold
         run: pnpm run smoke:create-fluxy-chat
-
       - name: Smoke test one-click full template
         run: pnpm run smoke:one-click
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Security. Previously there was no SAST, no secret scanning and no SBOM at
+  # all, on a repo that publishes eleven npm packages.
+  # ──────────────────────────────────────────────────────────────────────────
+  security:
+    name: Security scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install
+        run: pnpm install --frozen-lockfile
 
       - name: Dependency audit (high/critical)
         run: pnpm audit --audit-level=high
 
-      - name: Test
-        run: pnpm test
+      - name: Secret scanning (gitleaks)
+        uses: gitleaks/gitleaks-action@83373cf2f8c4db6e24b41c1a9b086bb9619e9cd3
+        env:
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
 
+      - name: Static analysis (Semgrep)
+        run: |
+          python3 -m pip install --quiet semgrep
+          semgrep scan \
+            --config p/javascript \
+            --config p/typescript \
+            --config p/secrets \
+            --config p/owasp-top-ten \
+            --error \
+            --sarif --output semgrep.sarif \
+            --exclude node_modules --exclude '*.test.js' --exclude '*.test.ts' \
+            --exclude dist --exclude .next --exclude vendor
+
+      - name: Upload Semgrep SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@4b1d7ae6b0a2a1a1a1cbb3f2b1d0f1e6ba4c8f6f
+        with:
+          sarif_file: semgrep.sarif
+        continue-on-error: true
+
+      - name: Generate SBOM (CycloneDX)
+        run: pnpm dlx @cyclonedx/cyclonedx-npm --output-file sbom.json --output-format JSON
+
+      - name: Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sbom
+          path: sbom.json
+          if-no-files-found: ignore
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@4b1d7ae6b0a2a1a1a1cbb3f2b1d0f1e6ba4c8f6f
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+      - name: Analyse
+        uses: github/codeql-action/analyze@4b1d7ae6b0a2a1a1a1cbb3f2b1d0f1e6ba4c8f6f
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # End-to-end
+  # ──────────────────────────────────────────────────────────────────────────
   e2e-smoke:
+    name: E2E smoke
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    needs: test
+    needs: [test-packages]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
@@ -116,10 +314,11 @@ jobs:
 
   # Manual only: needs wrangler .dev.vars + E2E_ADMIN_JWT (see apps/dashboard/playwright.integrated.config.ts).
   e2e-integrated:
+    name: E2E integrated
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: test
+    needs: [test-packages]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 

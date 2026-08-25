@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.11] - 2026-08-25
+
+### Added
+
+- React and full templates expose `stopAgentStream` (Stop / Stop generation) while an agent reply is streaming. Comes from `@fluxy-chat/sdk@0.6.3` via `useChat`.
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.6.3`, `@fluxy-chat/react@^0.1.3`, `@fluxy-chat/ui@^0.1.4`, and `@fluxy-chat/ui-kit@^0.1.1` (minimal). Publish those packages **before** this CLI, or `pnpm create` will 404.
+
+## [0.5.10] - 2026-08-25
+
+### Added
+
+- Gold-path outro mentions `@assistant` in the generated React app.
+
+### Changed
+
+- Templates still depend on `@fluxy-chat/sdk@^0.6.2` (and `@fluxy-chat/react@^0.1.2` where used) so `pnpm create` works **before and after** sdk `0.6.3` is on npm. `^0.6.2` installs `0.6.3` once published.
+
 ## [0.5.9] - 2026-08-21
 
 ### Added

@@ -1,0 +1,12 @@
+name = "fluxychat-pool-probe"
+main = "worker.js"
+compatibility_date = "2026-06-11"
+compatibility_flags = ["nodejs_compat"]
+
+[[durable_objects.bindings]]
+name = "SCHEDULE_PROBE"
+class_name = "ScheduleProbeDo"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ScheduleProbeDo"]

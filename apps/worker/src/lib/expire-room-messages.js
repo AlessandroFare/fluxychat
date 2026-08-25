@@ -1,3 +1,5 @@
+import { scheduleDoAlarmJob } from "./do-alarm-scheduler.js";
+
 const EXPIRED_CONTENT = "[expired]";
 
 /**
@@ -67,12 +69,9 @@ export async function scheduleRoomMessageExpiryAlarm(storage, db, { projectId, r
       .bind(projectId, roomId, nowIso)
       .first();
     if (!overdue) return;
-    await storage.setAlarm(Date.now() + 1_000);
+    await scheduleDoAlarmJob(storage, "message-expiry", Date.now() + 1_000, "message-expiry");
     return;
   }
 
-  const current = await storage.getAlarm();
-  if (!current || current > nextAt) {
-    await storage.setAlarm(nextAt);
-  }
+  await scheduleDoAlarmJob(storage, "message-expiry", nextAt, "message-expiry");
 }

@@ -8,5 +8,8 @@ test.describe("landing smoke", () => {
     });
     await expect(page.getByRole("heading", { name: "Pricing" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "How we compare" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "The room Cloudflare Agents will not ship" }),
+    ).toBeVisible();
   });
 });

@@ -50,15 +50,15 @@ room.on("message", async (msg) => {
 |----------|---------|
 | `baseUrl` | Your FluxyChat Worker URL |
 | `id` | Stable bot user id |
-| `apiKey` | Project API key (`fc_…`) for JWT minting — **server-side only** |
+| `apiKey` | Project API key (`fc_…`) for JWT minting (**server-side only**) |
 
 Mint member JWTs with `POST /auth/token` and the `X-Fluxy-Api-Key` header, or use `mintWorkerToken` from this package.
 
 ## Related packages
 
-- [`@fluxy-chat/sdk`](https://www.npmjs.com/package/@fluxy-chat/sdk) — core client, REST, room sessions
-- [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) — React hooks (`useChat`, `useInbox`)
-- [`@fluxy-chat/config`](https://www.npmjs.com/package/@fluxy-chat/config) — `fluxy.config.ts` room authz and middleware
+- [`@fluxy-chat/sdk`](https://www.npmjs.com/package/@fluxy-chat/sdk): core client, REST, room sessions
+- [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react): React hooks (`useChat`, `useInbox`)
+- [`@fluxy-chat/config`](https://www.npmjs.com/package/@fluxy-chat/config): `fluxy.config.ts` room authz and middleware
 
 ## License
 

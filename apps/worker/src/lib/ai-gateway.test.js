@@ -67,4 +67,15 @@ describe("ai-gateway", () => {
     expect(overrides.chatCompletionsUrl).toContain("/chat/completions");
     expect(overrides.gatewayHeaders?.Authorization).toBeTruthy();
   });
+
+  it("exposes anthropic messages URL next to openai chat completions", () => {
+    const env = {
+      AI_GATEWAY_ACCOUNT_ID: "acc_123",
+      AI_GATEWAY_ID: "fluxy-chat",
+    };
+    const transport = resolveAiTransport(env);
+    expect(transport.anthropicMessagesUrl).toBe(
+      "https://gateway.ai.cloudflare.com/v1/acc_123/fluxy-chat/anthropic/v1/messages",
+    );
+  });
 });

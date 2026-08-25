@@ -1,7 +1,7 @@
 # FluxyChat — Feature Roadmap & Implementation Guide
 
 > Consolidated technical roadmap (Aug 2026). Merges product research, zero-budget constraints, and **verified code inventory**.
-> Companion docs: [ROADMAP.md](../ROADMAP.md) (business/phases), [ROADMAP_REALTIME_FEATURES.md](../ROADMAP_REALTIME_FEATURES.md) (AI SDK parity matrix), [COMPETITOR-PARITY-ROADMAP-2026.md](./COMPETITOR-PARITY-ROADMAP-2026.md) (Sendbird/Stream/PubNub/Vercel gaps CP-001–CP-083), [NEXT-WAVE-ROADMAP-2026.md](./NEXT-WAVE-ROADMAP-2026.md) (post-parity NW-100–NW-206).
+> Companion docs: [ROADMAP.md](../ROADMAP.md) (business/phases), [ROADMAP_REALTIME_FEATURES.md](../ROADMAP_REALTIME_FEATURES.md) (AI SDK parity matrix), [COMPETITOR-PARITY-ROADMAP-2026.md](./COMPETITOR-PARITY-ROADMAP-2026.md) (Sendbird/Stream/PubNub/Vercel gaps CP-001–CP-083), [NEXT-WAVE-ROADMAP-2026.md](./NEXT-WAVE-ROADMAP-2026.md) (post-parity NW-100–NW-206), [CLOUDFLARE-AGENTS-VS-FLUXYCHAT-ROADMAP.md](./CLOUDFLARE-AGENTS-VS-FLUXYCHAT-ROADMAP.md) (CF Agents SDK vs room kernel, CF-A-001–044).
 
 ## How to use this document
 
@@ -303,7 +303,7 @@ Full sprint order: [NEXT-WAVE-ROADMAP-2026.md](./NEXT-WAVE-ROADMAP-2026.md).
 | | |
 |---|---|
 | **Status** | ✅ Shipped (Aug 2026) |
-| **Code** | `voice-pipeline.ts` (`pipelineMode: unified \| legacy`), `voice-ai-pipeline.js`, `useVoice()` |
+| **Code** | `workers-ai-speech.js` (`env.AI.run`), `/voice-ai/transcribe` + `/voice-ai/speak`, `voice-pipeline.ts` (`pipelineMode: unified \| legacy`), `useVoice()` |
 | **Default** | **Unified** — single `multimodal` stage (mic → multimodal → speaker) instead of asr → llm → tts |
 | **Migration** | `pipelineMode: 'legacy'` preserves old stage breakdown for integrators |
 | **UI** | `/voice-ai` — mode toggle + stage timeline in metrics |

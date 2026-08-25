@@ -1,17 +1,17 @@
-const E2E_ENVELOPE_PREFIX = '{"e2e":1';
+const ROOM_CONTENT_ENVELOPE_PREFIX = '{"e2e":1';
 
-export interface FluxyE2eEnvelope {
+export interface FluxyRoomContentEnvelope {
   e2e: 1;
   v: 1;
   c: string;
   iv: string;
 }
 
-export function isE2eContentEnvelope(content: string | null | undefined): boolean {
+export function isRoomContentEnvelope(content: string | null | undefined): boolean {
   if (!content || typeof content !== "string") return false;
-  if (!content.startsWith(E2E_ENVELOPE_PREFIX)) return false;
+  if (!content.startsWith(ROOM_CONTENT_ENVELOPE_PREFIX)) return false;
   try {
-    const parsed = JSON.parse(content) as FluxyE2eEnvelope;
+    const parsed = JSON.parse(content) as FluxyRoomContentEnvelope;
     return parsed.e2e === 1 && typeof parsed.c === "string" && typeof parsed.iv === "string";
   } catch {
     return false;
@@ -34,7 +34,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 async function importAesKey(keyB64: string): Promise<CryptoKey> {
   const keyBytes = base64ToBytes(keyB64.trim());
   if (keyBytes.byteLength !== 32) {
-    throw new Error("E2E key must be 32 bytes (base64-encoded)");
+    throw new Error("Room content key must be 32 bytes (base64-encoded)");
   }
   const rawKey = new Uint8Array(keyBytes);
   return crypto.subtle.importKey("raw", rawKey, { name: "AES-GCM" }, false, [
@@ -43,7 +43,7 @@ async function importAesKey(keyB64: string): Promise<CryptoKey> {
   ]);
 }
 
-export async function encryptE2eContent(
+export async function encryptRoomContent(
   plaintext: string,
   keyB64: string,
 ): Promise<string> {
@@ -54,7 +54,7 @@ export async function encryptE2eContent(
     key,
     new TextEncoder().encode(plaintext),
   );
-  const envelope: FluxyE2eEnvelope = {
+  const envelope: FluxyRoomContentEnvelope = {
     e2e: 1,
     v: 1,
     c: bytesToBase64(new Uint8Array(ct)),
@@ -63,12 +63,12 @@ export async function encryptE2eContent(
   return JSON.stringify(envelope);
 }
 
-export async function decryptE2eContent(
+export async function decryptRoomContent(
   content: string,
   keyB64: string,
 ): Promise<string> {
-  if (!isE2eContentEnvelope(content)) return content;
-  const envelope = JSON.parse(content) as FluxyE2eEnvelope;
+  if (!isRoomContentEnvelope(content)) return content;
+  const envelope = JSON.parse(content) as FluxyRoomContentEnvelope;
   const key = await importAesKey(keyB64);
   const pt = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: new Uint8Array(base64ToBytes(envelope.iv)) },

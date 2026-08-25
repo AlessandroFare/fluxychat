@@ -1,11 +1,11 @@
 ---
 title: "OAuth Token Encryption"
-description: "FluxyChat token encryption provides AES-256-GCM encryption for securely storing OAuth tokens used by platform adapters (Slack, Linear, and others)."
+description: "FluxyChat's token encryption (P26-B2) provides AES-256-GCM encryption for securely storing OAuth tokens used by platform adapters (Slack, Linear, etc.)."
 ---
 
 # OAuth Token Encryption
 
-FluxyChat token encryption provides AES-256-GCM encryption for securely storing OAuth tokens used by platform adapters (Slack, Linear, and others).
+FluxyChat's token encryption (P26-B2) provides AES-256-GCM encryption for securely storing OAuth tokens used by platform adapters (Slack, Linear, etc.).
 
 ## Overview
 
@@ -116,5 +116,5 @@ class SlackAdapter extends BaseAdapter {
 
 ## See Also
 
-- [Adapter Errors](/docs/guides/adapter-errors) — `AuthenticationError` for invalid/expired tokens
-- [Adapter Pattern](/docs/guides/adapter-pattern) — How adapters are structured
+- [Adapter Errors](/docs/adapter-errors) — `AuthenticationError` for invalid/expired tokens
+- [Adapter Pattern](/docs/adapter-pattern) — How adapters are structured

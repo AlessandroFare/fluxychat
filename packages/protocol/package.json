@@ -1,6 +1,6 @@
 {
     "name":  "@fluxy-chat/protocol",
-    "version":  "0.1.3",
+    "version":  "0.1.4",
     "description":  "Shared FluxyChat wire protocol — WebSocket event types and validators for SDKs and the worker",
     "license":  "MIT",
     "type":  "module",

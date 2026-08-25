@@ -13,5 +13,5 @@ const nestedSdk = join(
 
 if (existsSync(nestedSdk)) {
   rmSync(nestedSdk, { recursive: true, force: true });
-  console.log("[fluxy] removed nested @fluxy-chat/sdk so Vite uses the complete 0.6.2 package");
+  console.log("[fluxy] removed nested @fluxy-chat/sdk so Vite uses the hoisted complete package");
 }

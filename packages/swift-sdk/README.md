@@ -1,4 +1,9 @@
-# FluxyChat Swift SDK (starter)
+# FluxyChat Swift SDK — **starter / unpublished**
+
+> Not a CocoaPods/SPM registry product. Do not list this in marketing as a shipping SDK.
+> Gold path: `@fluxy-chat/sdk` (TypeScript).
+
+
 
 iOS/macOS REST client for FluxyChat. Realtime uses `URLSessionWebSocketTask` against `{wsUrl}/ws?roomId=&token=`.
 

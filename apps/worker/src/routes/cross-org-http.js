@@ -105,6 +105,10 @@ export async function dispatchCrossOrgRoutes(request, url, h) {
     const commitmentsListMatch = path.match(/^\/cross-org\/rooms\/([^/]+)\/commitments$/);
     if (commitmentsListMatch && request.method === "GET") {
       const crossOrgRoomId = decodeURIComponent(commitmentsListMatch[1]);
+      // `forOrgId` is deliberately NOT passed. A cross-org room is readable by both
+      // participating organisations, and the caller's org is asserted by the client
+      // rather than proven, so opting into the private-reserve view here would let
+      // one side read the other's floor price. Private terms stay server-side.
       const commitments = await listCommitments(env, auth.projectId, crossOrgRoomId);
       return json({ ok: true, commitments }, { headers: corsHeaders });
     }

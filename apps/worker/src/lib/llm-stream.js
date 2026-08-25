@@ -127,24 +127,33 @@ export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts
   let fullContent = "";
   const state = { usage: { prompt_tokens: 0, completion_tokens: 0 } };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    lineBuffer += decoder.decode(value, { stream: true });
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      lineBuffer += decoder.decode(value, { stream: true });
 
-    let newlineIndex = lineBuffer.indexOf("\n");
-    while (newlineIndex >= 0) {
-      const line = lineBuffer.slice(0, newlineIndex);
-      lineBuffer = lineBuffer.slice(newlineIndex + 1);
-      newlineIndex = lineBuffer.indexOf("\n");
-      fullContent = await consumeSseLine(line, state, fullContent, onDelta);
+      let newlineIndex = lineBuffer.indexOf("\n");
+      while (newlineIndex >= 0) {
+        const line = lineBuffer.slice(0, newlineIndex);
+        lineBuffer = lineBuffer.slice(newlineIndex + 1);
+        newlineIndex = lineBuffer.indexOf("\n");
+        fullContent = await consumeSseLine(line, state, fullContent, onDelta);
+      }
     }
-  }
 
-  lineBuffer += decoder.decode();
-  if (lineBuffer.trim()) {
-    fullContent = await consumeSseLine(lineBuffer, state, fullContent, onDelta);
-  }
+    lineBuffer += decoder.decode();
+    if (lineBuffer.trim()) {
+      fullContent = await consumeSseLine(lineBuffer, state, fullContent, onDelta);
+    }
 
-  return { content: fullContent, usage: state.usage };
+    return { content: fullContent, usage: state.usage };
+  } catch (err) {
+    try {
+      await reader.cancel();
+    } catch {
+      /* already closed */
+    }
+    throw err;
+  }
 }

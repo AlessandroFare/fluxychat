@@ -222,7 +222,67 @@ describe("RoomDurableObject message handlers", () => {
     });
 
     expect(result).toMatchObject({ ok: true, id: 99 });
-    expect(roomDo.activeStreams.get(userId)).toMatchObject({ messageId: 99 });
+    expect(roomDo.activeStreams.get(userId)).toMatchObject({
+      messageId: 99,
+      offset: 0,
+      content: "",
+    });
+  });
+
+  it("keeps stream buffer so offset resume can send a suffix", async () => {
+    vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+    });
+    const { roomDo } = createRoomDo();
+    await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "start",
+      content: "hel",
+      parentId: null,
+    });
+    await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "delta",
+      messageId: 99,
+      content: "hello world",
+    });
+    const ws = createMockWebSocket();
+    await roomDo.sendActiveStreamState(ws, {
+      projectId,
+      roomId,
+      streamOffsets: { 99: 6 },
+    });
+    const payload = JSON.parse(ws.sent[0]);
+    expect(payload.type).toBe("streamState");
+    expect(payload.content).toBe("world");
+    expect(payload.resumeFrom).toBe(6);
+  });
+
+  it("processStreamOp stop finalizes without deleting the message", async () => {
+    vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+    });
+    const { roomDo } = createRoomDo();
+    await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "start",
+      content: "hel",
+      parentId: null,
+    });
+    const stopped = await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "stop",
+    });
+    expect(stopped).toMatchObject({ ok: true, id: 99 });
+    expect(roomDo.activeStreams.has(userId)).toBe(false);
   });
 
   it("processStreamOp start returns quota_exceeded when quota is denied", async () => {
@@ -262,6 +322,7 @@ describe("RoomDurableObject message handlers", () => {
       replay: "off",
       limit: MAX_WS_HISTORY_LIMIT,
       cache: false,
+      readonly: false,
     });
 
     const connectReq = new Request(
@@ -271,6 +332,7 @@ describe("RoomDurableObject message handlers", () => {
       replay: "connect",
       limit: 120,
       cache: false,
+      readonly: false,
     });
 
     const cacheReq = new Request(
@@ -280,6 +342,33 @@ describe("RoomDurableObject message handlers", () => {
       replay: "off",
       cache: true,
     });
+
+    const spectatorReq = new Request(
+      `https://worker/ws/room/${roomId}?readonly=1&replay=off`,
+    );
+    expect(parseWsConnectOptions(spectatorReq)).toMatchObject({
+      replay: "off",
+      readonly: true,
+    });
+  });
+
+  it("rejects mutating frames on a readonly socket", async () => {
+    const { roomDo } = createRoomDo();
+    const ws = createMockWebSocket();
+    roomDo.clients.add(ws);
+    roomDo.sessions.write(ws, { u: userId, ro: 1 });
+
+    await roomDo.onMessage(ws, {
+      data: JSON.stringify({ type: "message", content: "nope", userId }),
+    });
+    expect(JSON.parse(ws.sent[0])).toMatchObject({
+      type: "error",
+      message: "readonly_connection",
+    });
+
+    ws.sent.length = 0;
+    await roomDo.onMessage(ws, { data: JSON.stringify({ type: "ping" }) });
+    expect(JSON.parse(ws.sent[0])).toMatchObject({ type: "pong" });
   });
 
   it("pruneEphemeralState removes expired ws and moderation cache entries", () => {
@@ -420,5 +509,84 @@ describe("RoomDurableObject message handlers", () => {
       transcription: null,
       transcriptionStatus: "failed",
     });
+  });
+
+  it("persists delay agent schedules with idempotent upsert", async () => {
+    const bag = new Map();
+    const { roomDo } = createRoomDo();
+    roomDo.state = {
+      id: { toString: () => roomId },
+      storage: {
+        get: async (k) => bag.get(k),
+        put: async (k, v) => bag.set(k, v),
+        setAlarm: async () => {},
+        deleteAlarm: async () => {},
+        getAlarm: async () => null,
+      },
+    };
+    const req = (body) =>
+      new Request("https://internal/agent-schedules", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const first = await (await roomDo.fetch(req({
+      kind: "delay",
+      agentId: "bot-1",
+      delayMs: 5000,
+      prompt: "ping",
+      idempotencyKey: "k1",
+    }))).json();
+    expect(first.created).toBe(true);
+    const second = await (await roomDo.fetch(req({
+      kind: "delay",
+      agentId: "bot-1",
+      delayMs: 9000,
+      idempotencyKey: "k1",
+    }))).json();
+    expect(second.created).toBe(false);
+    expect(second.schedule.id).toBe(first.schedule.id);
+  });
+
+  it("answers typed internal RPC ping", async () => {
+    const { roomDo } = createRoomDo();
+    const res = await roomDo.fetch(
+      new Request("https://internal/rpc", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ method: "ping" }),
+      }),
+    );
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.roomId).toBe(roomId);
+  });
+
+  it("nudges the agent DO through room RPC", async () => {
+    const { roomDo } = createRoomDo({
+      AGENT: {
+        idFromName: (name) => name,
+        get: () => ({
+          fetch: async (_url, init) => {
+            const body = JSON.parse(init.body);
+            expect(body.method).toBe("turn");
+            return new Response(JSON.stringify({ ok: true, run: { status: "completed" } }));
+          },
+        }),
+      },
+    });
+    const res = await roomDo.fetch(
+      new Request("https://internal/rpc", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          method: "copilot_nudge",
+          params: { agentId: "bot-1", userId, content: "summarize this room" },
+        }),
+      }),
+    );
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.run.status).toBe("completed");
   });
 });

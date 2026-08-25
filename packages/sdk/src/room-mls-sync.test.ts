@@ -1,42 +1,52 @@
 import { describe, expect, it } from "vitest";
-import { createMlsManager } from "./mls-encryption";
-import { buildMlsRegistryUpsertFromManager, hydrateMlsManagerFromRegistry } from "./room-mls-sync";
+import { createGroupCipher } from "./group-cipher";
+import {
+  buildMlsRegistryUpsertFromManager,
+  hydrateMlsManagerFromRegistry,
+} from "./room-mls-sync";
+
+function keyMaterial(): string {
+  const bytes = new Uint8Array(32);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = i;
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
 
 describe("room-mls-sync", () => {
   it("hydrates manager devices and epoch from registry", () => {
-    const manager = createMlsManager();
-    const hydrated = hydrateMlsManagerFromRegistry(manager, {
+    const cipher = createGroupCipher({ keyMaterial: keyMaterial() });
+    const hydrated = hydrateMlsManagerFromRegistry(cipher, {
       roomId: "room-1",
-      groupId: "mls_test_group",
+      groupId: "grp_test",
       epoch: 2,
-      cipherSuite: "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519",
+      cipherSuite: "AES-256-GCM/HKDF-SHA256",
       maxDevices: 8,
       devices: [
         {
           deviceId: "alice-phone",
           publicKey: "pk-alice",
-          signatureKey: "sk-alice",
+          credentialType: "basic",
         },
       ],
     });
 
-    expect(hydrated.groupId).toBe("mls_test_group");
-    expect(manager.getEpoch("mls_test_group")).toBe(2);
+    expect(hydrated.groupId).toBe("grp_test");
+    expect(cipher.getEpoch("grp_test")).toBe(2);
     expect(hydrated.devices.has("alice-phone")).toBe(true);
   });
 
   it("builds registry payload from local manager state", () => {
-    const manager = createMlsManager();
-    const group = manager.createGroup({ maxDevices: 4 });
-    manager.addDevice(group.groupId, {
+    const cipher = createGroupCipher({ keyMaterial: keyMaterial() });
+    const group = cipher.createGroup({ maxDevices: 4 });
+    cipher.addDevice(group.groupId, {
       deviceId: "bob",
       publicKey: "pk-bob",
-      signatureKey: "sk-bob",
       credentialType: "basic",
     });
-    manager.rotateKeys(group.groupId);
+    cipher.rotateEpoch(group.groupId);
 
-    const payload = buildMlsRegistryUpsertFromManager(manager, group.groupId, "room-2");
+    const payload = buildMlsRegistryUpsertFromManager(cipher, group.groupId, "room-2");
     expect(payload?.epoch).toBe(1);
     expect(payload?.devices).toHaveLength(1);
     expect(payload?.roomId).toBe("room-2");

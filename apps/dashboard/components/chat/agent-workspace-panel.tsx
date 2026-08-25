@@ -57,6 +57,67 @@ function StepStatusIcon({ status }: { status: AgentWorkspaceStep["status"] }) {
   return <Circle className="size-3.5 text-muted-foreground" aria-hidden />;
 }
 
+function WorkspaceStepRow({
+  step,
+  isLast,
+}: {
+  step: AgentWorkspaceStep;
+  isLast: boolean;
+}) {
+  const CategoryIcon = CATEGORY_ICON[step.category] ?? Wrench;
+  const children = step.children ?? [];
+  return (
+    <li className="relative flex gap-3 pb-3 last:pb-1" data-testid="agent-workspace-step">
+      <div className="flex flex-col items-center">
+        <div
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-full border",
+            step.status === "running"
+              ? "border-brand/40 bg-brand/10"
+              : step.status === "failed"
+                ? "border-red-200 bg-red-50"
+                : step.status === "completed"
+                  ? "border-emerald-200 bg-emerald-50"
+                  : "border-border bg-muted/40",
+          )}
+        >
+          <CategoryIcon className="size-3.5 text-muted-foreground" aria-hidden />
+        </div>
+        {!isLast ? <span className="mt-1 w-px flex-1 bg-border/80" aria-hidden /> : null}
+      </div>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <StepStatusIcon status={step.status} />
+          <span className="text-sm font-medium text-foreground">{step.label}</span>
+          <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
+            {step.toolName}
+          </code>
+        </div>
+        {step.argsPreview ? (
+          <pre className="mt-1 max-h-20 overflow-auto whitespace-pre-wrap break-all rounded border border-border/40 bg-background/80 p-2 font-mono text-[10px] text-muted-foreground">
+            {step.argsPreview}
+          </pre>
+        ) : null}
+        {step.resultPreview ? (
+          <p className="mt-1 font-mono text-[10px] text-muted-foreground">→ {step.resultPreview}</p>
+        ) : null}
+        {step.error ? (
+          <p className="mt-1 text-[10px] text-red-700" role="alert">
+            {step.error}
+          </p>
+        ) : null}
+        {children.length > 0 ? (
+          <ol className="mt-2 border-l border-border/70 pl-3" data-testid="agent-workspace-nested">
+            {children.map((child, index) => (
+              <WorkspaceStepRow key={child.id} step={child} isLast={index === children.length - 1} />
+            ))}
+          </ol>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 export function AgentWorkspacePanel({
   steps,
   run,
@@ -130,57 +191,13 @@ export function AgentWorkspacePanel({
               Waiting for agent activity…
             </li>
           ) : (
-            steps.map((step, index) => {
-              const CategoryIcon = CATEGORY_ICON[step.category] ?? Wrench;
-              const isLast = index === steps.length - 1;
-              return (
-                <li key={step.id} className="relative flex gap-3 pb-3 last:pb-1" data-testid="agent-workspace-step">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-full border",
-                        step.status === "running"
-                          ? "border-brand/40 bg-brand/10"
-                          : step.status === "failed"
-                            ? "border-red-200 bg-red-50"
-                            : step.status === "completed"
-                              ? "border-emerald-200 bg-emerald-50"
-                              : "border-border bg-muted/40",
-                      )}
-                    >
-                      <CategoryIcon className="size-3.5 text-muted-foreground" aria-hidden />
-                    </div>
-                    {!isLast ? (
-                      <span className="mt-1 w-px flex-1 bg-border/80" aria-hidden />
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StepStatusIcon status={step.status} />
-                      <span className="text-sm font-medium text-foreground">{step.label}</span>
-                      <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
-                        {step.toolName}
-                      </code>
-                    </div>
-                    {step.argsPreview ? (
-                      <pre className="mt-1 max-h-20 overflow-auto whitespace-pre-wrap break-all rounded border border-border/40 bg-background/80 p-2 font-mono text-[10px] text-muted-foreground">
-                        {step.argsPreview}
-                      </pre>
-                    ) : null}
-                    {step.resultPreview ? (
-                      <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-                        → {step.resultPreview}
-                      </p>
-                    ) : null}
-                    {step.error ? (
-                      <p className="mt-1 text-[10px] text-red-700" role="alert">
-                        {step.error}
-                      </p>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })
+            steps.map((step, index) => (
+              <WorkspaceStepRow
+                key={step.id}
+                step={step}
+                isLast={index === steps.length - 1}
+              />
+            ))
           )}
         </ol>
       ) : null}

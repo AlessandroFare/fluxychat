@@ -35,8 +35,8 @@ const result = await api.delete({ userKey: "user@example.com" });
 
 ## Configuration
 
-- `retention`: TTL for entries (ms or duration string like `"30d"`, `"6h"`, `"45s"`). Refreshed on append.
-- `maxPerUser`: Hard cap per user. Older entries evicted on append (default: 200).
+- **`retention`** — TTL for entries (ms or duration string like `"30d"`, `"6h"`, `"45s"`). Refreshed on append.
+- **`maxPerUser`** — Hard cap per user. Older entries evicted on append (default: 200).
 
 ## Filtering
 

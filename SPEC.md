@@ -281,6 +281,22 @@ Standard payload signed HMAC-SHA256 (`X-Fluxy-Signature: sha256=<hex>`):
 }
 ```
 
+**Message ordering & exactly-once semantics.** Every message event carries a
+monotonic per-room `seq` and a per-message `version`. Guarantees:
+
+- **Ordering**: events within a room are delivered with strictly increasing `seq`;
+  a reconnecting client sends `{ type: "resume", lastSeq }` and receives every
+  event after that seq exactly once, in order (`/ai/streams`-style replay via
+  `room_message_events`). Conformance: `apps/worker/src/lib/exactly-once.conformance.test.js`.
+- **Exactly-once creation**: duplicate submissions carrying the same
+  `client_message_id` return the original message instead of creating a second one,
+  at both the REST boundary (`POST /messages`) and the WebSocket boundary.
+- **Optimistic concurrency**: edits and deletes increment `version`; clients can
+  reject stale writes.
+
+Webhook deliveries are **at-least-once** with exponential backoff up to
+`WEBHOOK_MAX_ATTEMPTS` (default 5); consumers must deduplicate on delivery id.
+
 ### Event types
 
 | Event | Trigger |

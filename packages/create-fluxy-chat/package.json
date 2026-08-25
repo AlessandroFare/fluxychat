@@ -1,6 +1,6 @@
 {
     "name":  "@fluxy-chat/create-fluxy-chat",
-    "version": "0.5.9",
+    "version": "0.5.11",
     "description":  "Scaffold a new FluxyChat bot project with a single command",
     "type":  "module",
     "main":  "./dist/index.js",

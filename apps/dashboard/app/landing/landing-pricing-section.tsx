@@ -64,7 +64,7 @@ export function LandingPricingSection() {
               <div
                 key={key}
                 className={cn(
-                  "relative flex min-w-0 flex-col rounded-2xl border p-6 pt-8",
+              "relative flex min-w-0 flex-col rounded-2xl border p-6 pt-8 mkt-lift",
                   isFeatured
                     ? "z-[1] border-primary bg-slate-900/80 shadow-[0_0_0_1px_rgba(255,115,94,0.35)]"
                     : "border-white/10 bg-slate-900/40",
@@ -156,7 +156,7 @@ export function LandingPricingSection() {
           {SALES_PLAN_CATALOG.map((plan) => (
             <div
               key={plan.label}
-              className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/30 p-6"
+              className="mkt-lift flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/30 p-6"
             >
               <h3 className="font-heading text-lg font-semibold text-white">{plan.label}</h3>
               <div className="mt-1 text-2xl font-bold text-white">{plan.price}</div>

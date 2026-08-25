@@ -59,6 +59,13 @@ describe("dashboard-feature-flags", () => {
     expect(getDashboardSurfaceKind("/game")).toBe("labs");
     expect(getDashboardSurfaceKind("/stream/abc/broadcast")).toBe("labs");
     expect(getDashboardSurfaceKind("/agents/platform")).toBe("preview");
+    expect(getDashboardSurfaceKind("/agents/cross-org")).toBe("ga");
     expect(getDashboardSurfaceKind("/rooms")).toBe("ga");
+  });
+
+  it("shows cross-org rooms in default nav", () => {
+    expect(
+      isDashboardNavHrefVisible("/agents/cross-org", { labsShowcase: false, previewTools: false }),
+    ).toBe(true);
   });
 });

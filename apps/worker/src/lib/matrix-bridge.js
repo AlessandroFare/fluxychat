@@ -1,6 +1,7 @@
 import { importAdminMessage } from "./message-import.js";
 import { deriveScopedClientMessageId } from "./client-message-id.js";
 import { appendRoomAuditChainEvent } from "./audit-chain.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -94,7 +95,11 @@ export async function pingMatrixHomeserver({ homeserverUrl, accessToken }) {
   if (!base) return { ok: false, error: "missing_homeserver" };
   try {
     const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-    const res = await fetch(`${base}/_matrix/client/versions`, {
+    // SECURITY: `homeserverUrl` is tenant-supplied bridge configuration, so this
+    // is a user-controlled outbound request. Without the guard a tenant could
+    // point a bridge at 169.254.169.254 or an internal address and use the
+    // health check as an SSRF probe — and the response body is returned to them.
+    const res = await safeOutboundFetch(`${base}/_matrix/client/versions`, {
       headers,
       signal: AbortSignal.timeout(8000),
     });
@@ -427,7 +432,10 @@ export async function syncMatrixOutbound(env, { bridgeId, projectId, fluxychatMe
 
     for (let attempt = 1; attempt <= Math.max(1, maxAttempts); attempt++) {
       try {
-        const res = await fetch(sendUrl, {
+        // SECURITY: `base` comes from the tenant's stored bridge configuration.
+        // Guarded so a bridge cannot be pointed at internal infrastructure to
+        // relay message content out of the private network.
+        const res = await safeOutboundFetch(sendUrl, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,

@@ -1,7 +1,7 @@
 /**
  * PH-100: Room-scoped MCP server (one room per endpoint).
  *
- * POST /mcp/rooms/:roomId — JSON-RPC 2.0 (initialize, tools/list, tools/call)
+ * POST /mcp/rooms/:roomId — JSON-RPC 2.0 (discover, initialize, tools/list, tools/call)
  */
 import { canAccessRoom } from "./room-access.js";
 import { isGuestOnlyAuth } from "./guest-auth.js";
@@ -10,12 +10,35 @@ import { messageVisibilitySql } from "./message-visibility.js";
 import { fetchAggregatedRoomLive } from "./room-shard.js";
 import { publishMcpRoomMessage } from "./mcp-room-message.js";
 import { checkAndConsumeRateLimit } from "./rate-limit.js";
-import { MCP_PROTOCOL_VERSION } from "./mcp-server.js";
+import {
+  detectMcpEra,
+  discoverResult,
+  elicitationInputRequired,
+  emptyPromptsList,
+  emptyResourcesList,
+  mcpCapabilities,
+  mcpRpc,
+  mergeMcpInputResponses,
+  methodNotFoundError,
+  negotiateLegacyInitializeVersion,
+  rejectUnknownProtocolVersion,
+  unsupportedProtocolVersionError,
+  validateModernStreamableHeaders,
+  withModernResult,
+} from "./mcp-protocol.js";
 
 export const MCP_ROOM_SERVER_INFO = {
   name: "fluxychat-room",
   version: "1.0.0",
 };
+
+function roomMcpInstructions(roomId) {
+  return `You are connected to a single FluxyChat room (${roomId}). Tools affect that room only. External agents appear on the same timeline as human messages.`;
+}
+
+function roomServerInfo(roomId) {
+  return { ...MCP_ROOM_SERVER_INFO, roomId };
+}
 
 /** Tools scoped to the room in the URL (no roomId argument). */
 export const MCP_ROOM_TOOLS = [
@@ -72,8 +95,7 @@ export const MCP_ROOM_TOOLS = [
   },
   {
     name: "list_participants",
-    description:
-      "List room members and who is online now (from room presence).",
+    description: "List room members and who is online now (from room presence).",
     inputSchema: {
       type: "object",
       properties: {
@@ -136,70 +158,93 @@ function mcpTextResult(data, isError = false) {
 }
 
 /**
- * @param {object} params - JSON-RPC request body
+ * @param {object} rpc - JSON-RPC request body
  * @param {object} deps
  * @param {string} deps.roomId
  */
-export async function handleMcpRoomRequest(params, deps) {
-  const { method, params: rpcParams, id } = params;
-  const { env, auth, roomId, logError, workerOrigin } = deps;
+export async function handleMcpRoomRequest(rpc, deps) {
+  const { method, params: rpcParams, id } = rpc;
+  const { env, auth, roomId } = deps;
+  const era = deps.era || detectMcpEra(rpc, deps.requestHeaders);
+  const serverInfo = roomServerInfo(roomId);
+
+  const versionError = rejectUnknownProtocolVersion(rpc, deps.requestHeaders);
+  if (versionError) return versionError;
+
+  if (era === "modern") {
+    const headers = validateModernStreamableHeaders(rpc, deps.requestHeaders);
+    if (!headers.ok) return headers.response;
+  }
 
   const access = await assertMcpRoomAccess(env, auth, roomId);
   if (!access.ok) {
-    return {
-      jsonrpc: "2.0",
+    return mcpRpc({
       id,
+      httpStatus: access.status === 403 ? 403 : access.status || 401,
       error: {
         code: access.status === 403 ? -32003 : -32001,
         message: access.error,
       },
-    };
+    });
   }
 
   switch (method) {
-    case "initialize":
-      return {
-        jsonrpc: "2.0",
+    case "server/discover":
+      return mcpRpc({
+        id,
+        result: discoverResult(serverInfo, mcpCapabilities(), roomMcpInstructions(roomId)),
+      });
+
+    case "initialize": {
+      const negotiated = negotiateLegacyInitializeVersion(rpcParams);
+      if (!negotiated.ok) {
+        return unsupportedProtocolVersionError(id, negotiated.requested);
+      }
+      return mcpRpc({
         id,
         result: {
-          protocolVersion: MCP_PROTOCOL_VERSION,
-          capabilities: { tools: {} },
-          serverInfo: {
-            ...MCP_ROOM_SERVER_INFO,
-            roomId,
-          },
-          instructions:
-            "You are connected to a single FluxyChat room. Tools affect that room only. External agents appear on the same timeline as human messages.",
+          protocolVersion: negotiated.protocolVersion,
+          capabilities: mcpCapabilities(),
+          serverInfo,
+          instructions: roomMcpInstructions(roomId),
         },
-      };
+      });
+    }
 
     case "tools/list":
-      return {
-        jsonrpc: "2.0",
+      return mcpRpc({
         id,
-        result: { tools: MCP_ROOM_TOOLS },
-      };
+        result: withModernResult(era, serverInfo, { tools: MCP_ROOM_TOOLS }, { cacheable: true }),
+      });
+
+    case "prompts/list":
+      return mcpRpc({ id, result: emptyPromptsList(era, serverInfo) });
+
+    case "resources/list":
+    case "resources/templates/list":
+      return mcpRpc({ id, result: emptyResourcesList(era, serverInfo) });
 
     case "tools/call": {
-      const toolResult = await handleMcpRoomToolCall(rpcParams, deps);
-      return { jsonrpc: "2.0", id, result: toolResult };
+      const toolResult = await handleMcpRoomToolCall(rpcParams, { ...deps, era });
+      return mcpRpc({
+        id,
+        result: withModernResult(era, serverInfo, toolResult),
+      });
     }
 
     case "ping":
-      return { jsonrpc: "2.0", id, result: {} };
+      if (era === "modern") return methodNotFoundError(id, method, era);
+      return mcpRpc({ id, result: {} });
 
     default:
-      return {
-        jsonrpc: "2.0",
-        id,
-        error: { code: -32601, message: `Method not found: ${method}` },
-      };
+      return methodNotFoundError(id, method, era);
   }
 }
 
 async function handleMcpRoomToolCall(params, deps) {
-  const { name, arguments: args } = params ?? {};
-  const { env, auth, roomId, logError, workerOrigin } = deps;
+  const name = params?.name;
+  const args = mergeMcpInputResponses(params);
+  const { env, auth, roomId, logError, era } = deps;
 
   const toolRate = await checkAndConsumeRateLimit(env, {
     key: `mcp-tool:${auth.projectId}:${auth.userId}:${roomId}`,
@@ -217,6 +262,13 @@ async function handleMcpRoomToolCall(params, deps) {
     let result;
     switch (name) {
       case "send_message":
+        if (!String(args?.content || "").trim() && era === "modern") {
+          result = elicitationInputRequired({
+            message: "Message text is required to send to this room.",
+            fieldName: "content",
+          });
+          break;
+        }
         result = await toolRoomSendMessage(args, deps);
         break;
       case "read_timeline":

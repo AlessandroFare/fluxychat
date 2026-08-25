@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "wrangler dev src/worker.js",
     "deploy": "wrangler deploy src/worker.js",
-    "test": "vitest run --exclude '**/worker.e2e.test.js' --exclude '**/push-vapid.e2e.test.js'",
+    "test": "vitest run --exclude '**/worker.e2e.test.js' --exclude '**/push-vapid.e2e.test.js' --exclude '**/*.pool.test.js'",
+    "test:pool": "vitest run --config vitest.pool.config.js",
     "test:e2e": "vitest run src/worker.e2e.test.js src/lib/push-vapid.e2e.test.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:watch": "vitest",
@@ -17,11 +18,12 @@
     "db:export-baseline": "node scripts/export-d1-baseline.mjs"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.16.20",
     "@cloudflare/workers-types": "^4.20260515.1",
     "@xmldom/xmldom": "^0.9.10",
     "typescript": "^5.9.3",
     "vite": "^8.0.16",
-    "vitest": "^4.1.5",
+    "vitest": "4.1.0",
     "wrangler": "^4.92.0"
   },
   "dependencies": {

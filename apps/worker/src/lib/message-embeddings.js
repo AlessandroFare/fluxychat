@@ -14,6 +14,7 @@
 
 import { logError } from "./worker-log.js";
 import { resolveEmbeddingsTransport, buildEmbeddingsAuthHeaders } from "./ai-gateway.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
 const DEFAULT_DIMENSIONS = 1536;
@@ -49,7 +50,7 @@ export async function generateEmbeddings(env, opts) {
     body.dimensions = opts.dimensions;
   }
 
-  const res = await fetch(embTransport.embeddingsUrl, {
+  const res = await safeOutboundFetch(embTransport.embeddingsUrl, {
     method: "POST",
     headers: buildEmbeddingsAuthHeaders(env, {
       contentType: "application/json",

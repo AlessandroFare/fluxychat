@@ -3,6 +3,7 @@
  */
 
 import { buildOpenAiChatCompletionsUrl } from "./openai-compat-url.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 const INSIGHT_TYPES = ["engagement", "activity", "performance", "retention", "content", "agent", "custom"];
 
@@ -42,7 +43,7 @@ export async function generateInsights(env, {
 
   try {
     const prompt = INSIGHT_PROMPTS[insightType] || INSIGHT_PROMPTS.custom;
-    const response = await fetch(buildOpenAiChatCompletionsUrl(env.AI_BASE_URL), {
+    const response = await safeOutboundFetch(buildOpenAiChatCompletionsUrl(env.AI_BASE_URL), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

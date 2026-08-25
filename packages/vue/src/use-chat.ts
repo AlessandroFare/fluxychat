@@ -75,6 +75,9 @@ export function useChat(options: UseChatOptions) {
     typingUsers: computed(() => snapshot.value.typingUsers),
     sendMessage: (content: string, opts?: Parameters<typeof snapshot.value.sendMessage>[1]) =>
       snapshot.value.sendMessage(content, opts),
+    invokeAgent: (content: string, opts?: { agentId?: string; replyTo?: number | null }) =>
+      snapshot.value.invokeAgent(content, opts),
+    stopAgentStream: (targetUserId?: string) => snapshot.value.stopAgentStream(targetUserId),
     store,
   };
 }

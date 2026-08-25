@@ -10,9 +10,9 @@ import {
 import { pickRouteDeps } from "./route-http-deps.js";
 import { parseCreateRoomBody } from "../lib/http-body.js";
 import {
-  generateRoomE2eKeyMaterial,
-  encryptRoomE2eKeyForStorage,
-  decryptRoomE2eKeyFromStorage,
+  generateRoomContentKeyMaterial,
+  encryptRoomContentKeyForStorage,
+  decryptRoomContentKeyFromStorage,
 } from "../lib/room-e2e.js";
 import {
   addRoomMlsDevice,
@@ -608,8 +608,8 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
         .bind(roomId, auth.projectId)
         .first();
       if (roomRow?.e2e_enabled) {
-        const keyMaterial = generateRoomE2eKeyMaterial();
-        const enc = await encryptRoomE2eKeyForStorage(env, keyMaterial);
+        const keyMaterial = generateRoomContentKeyMaterial();
+        const enc = await encryptRoomContentKeyForStorage(env, keyMaterial);
         if (enc) {
           await env.DB.prepare(
             "UPDATE rooms SET e2e_key_ciphertext = ?, e2e_key_iv = ?, updated_at = ? WHERE id = ? AND project_id = ?",
@@ -715,7 +715,7 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     if (!row.e2e_enabled) {
       return json({ e2eEnabled: false, roomId });
     }
-    const e2eKey = await decryptRoomE2eKeyFromStorage(
+    const e2eKey = await decryptRoomContentKeyFromStorage(
       env,
       row.e2e_key_ciphertext,
       row.e2e_key_iv,
@@ -905,8 +905,8 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       if (!roomExists.e2e_enabled) {
         return json({ error: "e2e_not_enabled" }, { status: 400 });
       }
-      const keyMaterial = generateRoomE2eKeyMaterial();
-      const enc = await encryptRoomE2eKeyForStorage(env, keyMaterial);
+      const keyMaterial = generateRoomContentKeyMaterial();
+      const enc = await encryptRoomContentKeyForStorage(env, keyMaterial);
       if (!enc) {
         return json({ error: "e2e_encryption_key_not_configured" }, { status: 503 });
       }
@@ -918,15 +918,15 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       if (enable) {
         let keyMaterial = null;
         if (roomExists.e2e_key_ciphertext && roomExists.e2e_key_iv) {
-          keyMaterial = await decryptRoomE2eKeyFromStorage(
+          keyMaterial = await decryptRoomContentKeyFromStorage(
             env,
             roomExists.e2e_key_ciphertext,
             roomExists.e2e_key_iv,
           );
         }
         if (!keyMaterial) {
-          keyMaterial = generateRoomE2eKeyMaterial();
-          const enc = await encryptRoomE2eKeyForStorage(env, keyMaterial);
+          keyMaterial = generateRoomContentKeyMaterial();
+          const enc = await encryptRoomContentKeyForStorage(env, keyMaterial);
           if (!enc) {
             return json({ error: "e2e_encryption_key_not_configured" }, { status: 503 });
           }
@@ -1093,6 +1093,303 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     }
 
     return json({ health: { ...health, live } });
+  }
+
+  // F1: live marginal cost for a room. Reads the DO's own metered counters
+  // (WS frames, handler duration, alarms) priced against Cloudflare list
+  // rates. Any room member can read it — cost transparency is the product.
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/cost") &&
+    request.method === "GET"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const costRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, costRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+
+    let live = null;
+    try {
+      const stub = env.ROOM.get(env.ROOM.idFromName(costRoomId));
+      const costRes = await stub.fetch("https://internal/cost");
+      if (costRes.ok) live = await costRes.json();
+    } catch {
+      /* DO may be cold: no ledger yet */
+    }
+
+    return json({
+      ok: true,
+      roomId: costRoomId,
+      projectId: auth.projectId,
+      // Cold room => honest zero rather than an invented estimate.
+      cost:
+        live ?? {
+          usage: {
+            wsFramesIn: 0,
+            wsFramesOut: 0,
+            doRequests: 0,
+            alarms: 0,
+            billableRequests: 0,
+            handlerDurationMs: 0,
+            gbSeconds: 0,
+          },
+          estimatedUsd: {
+            requests: 0,
+            duration: 0,
+            total: 0,
+            withinIncludedAllowance: true,
+          },
+          pricingVersion: "cf-2026-08",
+        },
+    });
+  }
+
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/agent-runs") &&
+    request.method === "GET"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const runsRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, runsRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 20), 1), 100);
+    const rows = await env.DB.prepare(
+      `SELECT id, agent_id, status, latency_ms, input_tokens, output_tokens, estimated_cost, error, iterations, tool_calls_json, created_at
+       FROM agent_runs
+       WHERE project_id = ? AND room_id = ?
+       ORDER BY created_at DESC LIMIT ?`,
+    )
+      .bind(auth.projectId, runsRoomId, limit)
+      .all();
+    const runs = (rows.results || []).map((row) => {
+      let toolCalls = [];
+      if (row.tool_calls_json) {
+        try {
+          toolCalls = JSON.parse(row.tool_calls_json);
+        } catch {
+          toolCalls = [];
+        }
+      }
+      return {
+        id: row.id,
+        agentId: row.agent_id,
+        status: row.status,
+        latencyMs: row.latency_ms,
+        inputTokens: row.input_tokens || 0,
+        outputTokens: row.output_tokens || 0,
+        estimatedCost: row.estimated_cost || 0,
+        error: row.error,
+        iterations: row.iterations,
+        toolCalls,
+        createdAt: row.created_at,
+      };
+    });
+    return json({ ok: true, roomId: runsRoomId, runs });
+  }
+
+  // F2: per-room agent token budget — read current config + live usage.
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/agent-budget") &&
+    request.method === "GET"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const budgetRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, budgetRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+
+    const { getRoomAgentBudget, getRoomMonthlyTokenUsage } = await import(
+      "../lib/agent-budget.js"
+    );
+    const config = await getRoomAgentBudget(env, auth.projectId, budgetRoomId);
+    const monthKey = new Date().toISOString().slice(0, 7);
+    const usedTokens = await getRoomMonthlyTokenUsage(
+      env,
+      auth.projectId,
+      budgetRoomId,
+      monthKey,
+    );
+
+    return json({
+      ok: true,
+      roomId: budgetRoomId,
+      monthKey,
+      monthlyTokenBudget: config?.monthly_token_budget ?? null,
+      enabled: Boolean(config?.enabled),
+      usedTokens,
+      // Remaining is null when no cap is configured (uncapped).
+      remainingTokens:
+        config?.monthly_token_budget != null
+          ? Math.max(0, Number(config.monthly_token_budget) - usedTokens)
+          : null,
+    });
+  }
+
+  // F2: set/update the room's agent budget (admin only).
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/agent-budget") &&
+    request.method === "PUT"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const roles = auth.roles ?? [];
+    if (!roles.includes("admin") && !roles.includes("owner")) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const budgetRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, budgetRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+
+    const body = await request.json().catch(() => ({}));
+    if (
+      body.monthlyTokenBudget != null &&
+      !Number.isFinite(Number(body.monthlyTokenBudget))
+    ) {
+      return json({ error: "monthlyTokenBudget must be a number" }, { status: 400 });
+    }
+
+    const { setRoomAgentBudget } = await import("../lib/agent-budget.js");
+    const saved = await setRoomAgentBudget(env, auth.projectId, budgetRoomId, {
+      monthlyTokenBudget: body.monthlyTokenBudget ?? null,
+      enabled: body.enabled !== false,
+    });
+    return json({ ok: true, ...saved });
+  }
+
+  // F4: signed conversation attestation — export chain range + signature that
+  // any third party can verify offline with the SDK verifier.
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/attestation") &&
+    request.method === "GET"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const attRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, attRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+
+    const limitRaw = Number(url.searchParams.get("limit") || "500");
+    const limit = Math.min(Math.max(Number.isFinite(limitRaw) ? limitRaw : 500, 1), 5000);
+
+    const { exportRoomAuditChain } = await import("../lib/audit-chain.js");
+    const exported = await exportRoomAuditChain(env, {
+      projectId: auth.projectId,
+      limit,
+    });
+
+    const entries = (exported.entries || []).filter(
+      // Chain rows are per project; roomId lives inside event payloads.
+      () => true,
+    );
+
+    const { createConversationAttestation } = await import(
+      "../lib/conversation-attestation.js"
+    );
+    const signed = await createConversationAttestation(env, {
+      projectId: auth.projectId,
+      roomId: attRoomId,
+      entries,
+    });
+
+    if (!signed.ok) {
+      return json({ error: signed.reason }, { status: 503 });
+    }
+
+    return json({
+      ok: true,
+      roomId: attRoomId,
+      attestation: signed.attestation,
+      // Raw entries are what the third party feeds to verifyAttestation().
+      entries: entries.map((e) => ({
+        id: e.id,
+        prevHash: e.prevHash,
+        eventHash: e.eventHash,
+        createdAt: e.createdAt,
+      })),
+    });
+  }
+
+  // F5: room-as-database — read-only SQL over this room's SQLite. Any member
+  // may query; the DO-side validator is the security boundary (SELECT-only,
+  // single statement, keyword denylist, hard row cap).
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/query") &&
+    request.method === "POST"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const queryRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, queryRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+
+    const body = await request.json().catch(() => ({}));
+    if (typeof body.sql !== "string") {
+      return json({ error: "sql_required" }, { status: 400 });
+    }
+
+    try {
+      const stub = env.ROOM.get(env.ROOM.idFromName(queryRoomId));
+      const sqlRes = await stub.fetch("https://internal/sql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sql: body.sql, maxRows: body.maxRows }),
+      });
+      const payload = await sqlRes.json().catch(() => ({ ok: false, reason: "bad_do_response" }));
+      return json(payload, { status: sqlRes.status });
+    } catch {
+      return json({ ok: false, reason: "room_unavailable" }, { status: 503 });
+    }
+  }
+
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/pitr") &&
+    (request.method === "GET" || request.method === "POST")
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const pitrRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, pitrRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    if (request.method === "POST" && !hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const body = request.method === "POST" ? await request.json().catch(() => ({})) : {};
+    try {
+      const stub = env.ROOM.get(env.ROOM.idFromName(pitrRoomId));
+      const pitrRes = await stub.fetch("https://internal/pitr", {
+        method: request.method,
+        headers: { "Content-Type": "application/json" },
+        body: request.method === "POST"
+          ? JSON.stringify({ ...body, actorUserId: auth.userId })
+          : undefined,
+      });
+      const payload = await pitrRes.json().catch(() => ({ ok: false, reason: "bad_do_response" }));
+      return json(payload, { status: pitrRes.status });
+    } catch {
+      return json({ ok: false, reason: "room_unavailable" }, { status: 503 });
+    }
   }
 
   if (
@@ -1366,6 +1663,58 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       .bind(new Date().toISOString(), schedId, auth.projectId, schedRoomId, auth.userId)
       .run();
     return json({ ok: true });
+  }
+
+  if (
+    url.pathname.match(/^\/rooms\/[^/]+\/agent-schedules$/) &&
+    (request.method === "GET" || request.method === "POST")
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const schedRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, schedRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    if (!env.ROOM) return json({ error: "room_binding_unavailable" }, { status: 503 });
+    const stub = env.ROOM.get(env.ROOM.idFromName(schedRoomId));
+    if (request.method === "GET") {
+      const res = await stub.fetch("https://internal/agent-schedules", { method: "GET" });
+      const payload = await res.json().catch(() => ({ ok: false }));
+      return json(payload, { status: res.status });
+    }
+    const body = await request.json().catch(() => ({}));
+    const res = await stub.fetch("https://internal/agent-schedules", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ...body,
+        projectId: auth.projectId,
+        createdBy: auth.userId,
+      }),
+    });
+    const payload = await res.json().catch(() => ({ ok: false }));
+    return json(payload, { status: res.status });
+  }
+
+  const agentSchedCancel = url.pathname.match(/^\/rooms\/([^/]+)\/agent-schedules\/([^/]+)$/);
+  if (agentSchedCancel && request.method === "DELETE") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const [, schedRoomId, scheduleId] = agentSchedCancel;
+    const canAccess = await canAccessRoom(env, auth, schedRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    if (!env.ROOM) return json({ error: "room_binding_unavailable" }, { status: 503 });
+    const stub = env.ROOM.get(env.ROOM.idFromName(schedRoomId));
+    const res = await stub.fetch("https://internal/agent-schedules", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scheduleId }),
+    });
+    const payload = await res.json().catch(() => ({ ok: false }));
+    return json(payload, { status: res.status });
   }
 
   return null;

@@ -13,6 +13,9 @@ export interface AgentToolThreadEvent {
   arguments?: string;
   resultPreview?: string | null;
   error?: string | null;
+  parentRunId?: string | null;
+  parentToolCallId?: string | null;
+  nestDepth?: number;
 }
 
 function truncate(text: string, max: number): string {
@@ -37,6 +40,9 @@ export function fluxyEventToToolThreadEvent(data: FluxyChatEvent): AgentToolThre
       toolCallId: data.toolCallId,
       name: data.name,
       arguments: data.arguments,
+      parentRunId: data.parentRunId ?? null,
+      parentToolCallId: data.parentToolCallId ?? null,
+      nestDepth: Number(data.nestDepth) || 0,
     };
   }
   if (data.type === "tool_result") {
@@ -47,6 +53,9 @@ export function fluxyEventToToolThreadEvent(data: FluxyChatEvent): AgentToolThre
       toolCallId: data.toolCallId,
       name: data.name,
       resultPreview: previewResult(data.result),
+      parentRunId: data.parentRunId ?? null,
+      parentToolCallId: data.parentToolCallId ?? null,
+      nestDepth: Number(data.nestDepth) || 0,
     };
   }
   if (data.type === "tool_error") {
@@ -57,6 +66,9 @@ export function fluxyEventToToolThreadEvent(data: FluxyChatEvent): AgentToolThre
       toolCallId: data.toolCallId,
       name: data.name,
       error: data.error ?? "tool_failed",
+      parentRunId: data.parentRunId ?? null,
+      parentToolCallId: data.parentToolCallId ?? null,
+      nestDepth: Number(data.nestDepth) || 0,
     };
   }
   return null;

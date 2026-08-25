@@ -9,6 +9,12 @@ import {
 } from "../lib/sent-dm-deliveries.js";
 import { handleTelcoInboundMessage } from "../lib/telco-inbound.js";
 import {
+  createEmailInboundRoute,
+  deleteEmailInboundRoute,
+  handleEmailInbound,
+  listEmailInboundRoutes,
+} from "../lib/email-inbound.js";
+import {
   syncSentContactForE164,
   handleSentContactWebhookEvent,
 } from "../lib/sent-dm-contacts.js";
@@ -127,6 +133,64 @@ export async function dispatchIntegrationsSentRoutes(request, url, h) {
       return json({ error: result.error, detail: result.detail }, { status: result.status || 400 });
     }
     return json(result);
+  }
+
+  if (url.pathname === "/integrations/email/inbound" && request.method === "POST") {
+    const secret = env.EMAIL_INBOUND_WEBHOOK_SECRET?.trim();
+    const rawBody = await request.text();
+    if (secret) {
+      const sig =
+        request.headers.get("X-Fluxy-Signature") ||
+        request.headers.get("X-Webhook-Signature") ||
+        request.headers.get("X-Signature");
+      const valid = await verifySentDmWebhookSignature(secret, rawBody, sig);
+      if (!valid) return json({ error: "invalid_signature" }, { status: 401 });
+    } else {
+      const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+      if (!auth || !hasAnyRole(auth.roles, ["owner", "admin"])) {
+        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      }
+    }
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      body = { raw: rawBody };
+    }
+    const result = await handleEmailInbound(env, body);
+    return json(result, { status: result.ok ? 200 : result.reject === "no mailbox" ? 404 : 502 });
+  }
+
+  if (url.pathname === "/integrations/email/routes" && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const routes = await listEmailInboundRoutes(env, auth.projectId);
+    return json({ ok: true, routes });
+  }
+
+  if (url.pathname === "/integrations/email/routes" && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const body = await request.json().catch(() => ({}));
+    const result = await createEmailInboundRoute(env, { ...body, projectId: auth.projectId });
+    return json(result, { status: result.ok ? 200 : 400 });
+  }
+
+  const emailRouteDel = url.pathname.match(/^\/integrations\/email\/routes\/([^/]+)$/);
+  if (emailRouteDel && request.method === "DELETE") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const result = await deleteEmailInboundRoute(env, { projectId: auth.projectId, routeId: emailRouteDel[1] });
+    return json(result, { status: result.ok ? 200 : 404 });
   }
 
   return null;

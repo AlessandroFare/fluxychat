@@ -210,6 +210,7 @@ export function useChat({
     deleteMessage: state.deleteMessage,
     branchRoomFromMessage: state.branchRoomFromMessage,
     invokeAgent: state.invokeAgent,
+    stopAgentStream: state.stopAgentStream,
     toolThreadEvents: state.toolThreadEvents,
     clearToolThread: state.clearToolThread,
     debateSteps: state.debateSteps,

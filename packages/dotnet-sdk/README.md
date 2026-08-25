@@ -1,4 +1,9 @@
-# FluxyChat .NET SDK (skeleton)
+# FluxyChat .NET SDK — **unpublished stub**
+
+> Not a supported product surface. Not on NuGet. Do not list this in marketing as a shipping SDK.
+> Gold path: `npx @fluxy-chat/create-fluxy-chat@latest` and `@fluxy-chat/sdk`.
+
+
 
 Cross-platform .NET client for server apps, Unity headless, and MAUI. Mirrors `@fluxy-chat/sdk` REST and user-channel WebSocket.
 

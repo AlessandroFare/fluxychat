@@ -111,6 +111,15 @@ describe("MCP room server (PH-100)", () => {
     ]);
   });
 
+  it("answers server/discover without an initialize handshake", async () => {
+    const result = await handleMcpRoomRequest(
+      { method: "server/discover", params: {}, id: "d1" },
+      deps,
+    );
+    expect(result.result.supportedVersions).toContain("2026-07-28");
+    expect(result.result.serverInfo?.name || result.result._meta).toBeTruthy();
+  });
+
   it("rejects guest token scoped to another room", () => {
     const scope = assertMcpRoomTokenScope(
       { roles: ["guest"], roomId: "other_room" },

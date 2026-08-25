@@ -21,12 +21,52 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     fluxy: "Designed for Workers + DO + D1",
   },
   {
+    label: "Cross-org rooms + settlement",
+    portal: "Single-tenant SaaS org",
+    stream: "N/A",
+    ably: "N/A",
+    pusher: "N/A",
+    fluxy: "Two companies in one room, private terms, escrow notes — console /agents/cross-org",
+  },
+  {
+    label: "Critical-action quorum",
+    portal: "Admin roles only",
+    stream: "N/A",
+    ably: "N/A",
+    pusher: "N/A",
+    fluxy: "Binding ack on dangerous tools in the room kernel",
+  },
+  {
+    label: "E2EE envelope + signed attestation",
+    portal: "Vendor-held plaintext",
+    stream: "Vendor-held",
+    ably: "Vendor-held",
+    pusher: "Vendor-held",
+    fluxy: "Group cipher + offline-verifiable conversation export (no fake MLS)",
+  },
+  {
+    label: "Room SQLite PITR",
+    portal: "Opaque storage",
+    stream: "Opaque",
+    ably: "Opaque",
+    pusher: "Opaque",
+    fluxy: "30-day Durable Object bookmarks; snapshot/restore in room insights",
+  },
+  {
     label: "Multi-platform adapters (14 platforms)",
     portal: "Web/React SDK, not 14 channel adapters",
     stream: "Limited / separate product",
     ably: "N/A",
     pusher: "N/A",
     fluxy: "Slack, Discord, Telegram, WhatsApp, Teams, +9, unified interface",
+  },
+  {
+    label: "Cloudflare Agents channels package",
+    portal: "N/A",
+    stream: "N/A",
+    ably: "N/A",
+    pusher: "N/A",
+    fluxy: "14 adapters in product; @cloudflare/channels still unpublished 0.0.0 (Slack/Telegram/email/voice in clone)",
   },
   {
     label: "AI-native streaming (markdown, tool calling)",
@@ -303,6 +343,15 @@ export interface AlternativeApproach {
 
 /** Cloudflare-adjacent or DIY stacks buyers compare mentally. */
 export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
+  {
+    name: "Cloudflare Agents SDK (npm i agents)",
+    bestFor:
+      "A single-agent Durable Object: SQL memory, hibernation, MCP SDK v2, Think/chat loops on Workers.",
+    tradeoff:
+      "An agent OS, not a multi-tenant room product. You still build JWT tenancy, billing, presence, history, and an operator console.",
+    fluxyAngle:
+      "FluxyChat is the room kernel: humans and agents share one timeline, dual-era MCP 2026-07-28, 14 adapters, and a console. Keep Agents SDK for an Agent class Worker; pick FluxyChat when the product is a room.",
+  },
   {
     name: "Hosted chat SDK (proprietary)",
     bestFor: "Teams optimizing for React DX, SSR-safe hooks, inbox feed, streaming agents, hosted dashboard.",

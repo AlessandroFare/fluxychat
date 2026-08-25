@@ -1,11 +1,11 @@
 ---
 title: "Chat Singleton for Thread Deserialization"
-description: "FluxyChat's chat singleton provides a global registry so ThreadRef.fromJSON() can resolve adapters without passing a Chat instance through every call."
+description: "FluxyChat's chat singleton (P26-C3) provides a global registry so that `ThreadRef.fromJSON()` can resolve adapters without an explicit `Chat` instance being pas"
 ---
 
 # Chat Singleton for Thread Deserialization
 
-FluxyChat's chat singleton provides a global registry so that `ThreadRef.fromJSON()` can resolve adapters without an explicit `Chat` instance being passed through every call.
+FluxyChat's chat singleton (P26-C3) provides a global registry so that `ThreadRef.fromJSON()` can resolve adapters without an explicit `Chat` instance being passed through every call.
 
 ## Overview
 
@@ -128,5 +128,5 @@ setDefaultChatInstance(`project-${request.projectId}`);
 
 ## See Also
 
-- [Unified Chat API](/docs/guides/unified-chat-api) — `chat.thread()`, `chat.openDM()`, `chat.getUser()`
-- [Postable Objects](/docs/guides/postable-objects) — Objects that can be posted to threads
+- [Unified Chat API](/docs/unified-chat-api) — `chat.thread()`, `chat.openDM()`, `chat.getUser()`
+- [Postable Objects](/docs/postable-objects) — Objects that can be posted to threads

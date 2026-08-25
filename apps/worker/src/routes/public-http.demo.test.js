@@ -5,6 +5,7 @@ function buildDemoHandlerDeps(overrides = {}) {
   return {
     env: {
       DEMO_ENABLED: "true",
+      NODE_ENV: "test",
       DEMO_ROOM_ID: "public-demo",
       DEMO_API_KEY: "fc_demo_key",
       DEMO_USER_ID: "demo-guest",
@@ -143,7 +144,8 @@ describe("GET /demo/status", () => {
 
 describe("GET /demo/session", () => {
   it("returns a guest session when demo env and rate limit deps are wired", async () => {
-    const request = new Request("https://api.example.com/demo/session");
+    const request = new Request("https://api.example.com/demo/session", { headers: { Origin: "https://api.example.com" } });
+    // demo-guard (added post-test) requires an allowlisted Origin.
     const url = new URL(request.url);
     const response = await dispatchPublicRoutes(request, url, buildDemoHandlerDeps());
     expect(response).not.toBeNull();

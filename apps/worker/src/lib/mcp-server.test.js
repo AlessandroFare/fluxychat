@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleMcpRequest,
   MCP_SERVER_INFO,
-  MCP_PROTOCOL_VERSION,
   MCP_TOOLS,
 } from "./mcp-server.js";
+import { MCP_LEGACY_PROTOCOL_VERSION, MCP_PROTOCOL_VERSION } from "./mcp-protocol.js";
 
 vi.mock("./mcp-room-message.js", () => ({
   publishMcpRoomMessage: vi.fn(async (_env, input) => ({
@@ -91,15 +91,28 @@ describe("MCP Server", () => {
   }
 
   describe("initialize", () => {
-    it("returns server info and protocol version", async () => {
+    it("returns legacy protocol when params omit a version", async () => {
       const result = await handleMcpRequest(
         { method: "initialize", params: {}, id: 1 },
         { env: createMcpEnv(), auth, logError: createLogError() },
       );
       expect(result.jsonrpc).toBe("2.0");
       expect(result.id).toBe(1);
-      expect(result.result.protocolVersion).toBe(MCP_PROTOCOL_VERSION);
+      expect(result.result.protocolVersion).toBe(MCP_LEGACY_PROTOCOL_VERSION);
       expect(result.result.serverInfo).toEqual(MCP_SERVER_INFO);
+      expect(result.result.capabilities.tools).toBeDefined();
+    });
+  });
+
+  describe("server/discover", () => {
+    it("advertises 2026-07-28 and supported versions", async () => {
+      const result = await handleMcpRequest(
+        { method: "server/discover", params: {}, id: "discover-1" },
+        { env: createMcpEnv(), auth, logError: createLogError() },
+      );
+      expect(result.result.resultType).toBe("complete");
+      expect(result.result.supportedVersions).toContain(MCP_PROTOCOL_VERSION);
+      expect(result.result.supportedVersions).toContain(MCP_LEGACY_PROTOCOL_VERSION);
       expect(result.result.capabilities.tools).toBeDefined();
     });
   });
@@ -319,6 +332,73 @@ describe("MCP Server", () => {
       );
       expect(result.result.isError).toBe(true);
       expect(result.result.content[0].text).toContain("Unknown tool");
+    });
+  });
+
+  describe("modern 2026-07-28", () => {
+    it("tools/list includes resultType and cache hints", async () => {
+      const headers = new Headers({
+        "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
+        "Mcp-Method": "tools/list",
+      });
+      const result = await handleMcpRequest(
+        {
+          method: "tools/list",
+          params: {
+            _meta: { "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION },
+          },
+          id: 70,
+        },
+        { env: createMcpEnv(), auth, logError: createLogError(), requestHeaders: headers },
+      );
+      expect(result.result.resultType).toBe("complete");
+      expect(result.result.ttlMs).toBeGreaterThan(0);
+      expect(result.result.cacheScope).toBe("private");
+      expect(result.result.tools).toHaveLength(MCP_TOOLS.length);
+    });
+
+    it("send_message without content elicits instead of failing", async () => {
+      const headers = new Headers({
+        "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "send_message",
+      });
+      const result = await handleMcpRequest(
+        {
+          method: "tools/call",
+          params: { name: "send_message", arguments: { roomId: "room_1" } },
+          id: 71,
+        },
+        { env: createMcpEnv(), auth, logError: createLogError(), requestHeaders: headers },
+      );
+      expect(result.result.resultType).toBe("input_required");
+      expect(result.result.inputRequests[0].method).toBe("elicitation/create");
+    });
+
+    it("retries send_message with inputResponses", async () => {
+      const headers = new Headers({
+        "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "send_message",
+      });
+      const result = await handleMcpRequest(
+        {
+          method: "tools/call",
+          params: {
+            name: "send_message",
+            arguments: { roomId: "room_1" },
+            inputResponses: [
+              { result: { action: "accept", content: { content: "Hello after elicit" } } },
+            ],
+          },
+          id: 72,
+        },
+        { env: createMcpEnv(), auth, logError: createLogError(), requestHeaders: headers },
+      );
+      expect(result.result.resultType).toBe("complete");
+      const data = JSON.parse(result.result.content[0].text);
+      expect(data.content).toBe("Hello after elicit");
+      expect(data.status).toBe("sent");
     });
   });
 });

@@ -320,4 +320,48 @@ describe("FluxyChatRoomConnection", () => {
       expect.objectContaining({ type: "typing", userId: "other" }),
     );
   });
+
+  it("sends lastSeq and streamOffsets on WS resume", async () => {
+    vi.useFakeTimers();
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const conn = client.connectRoom("room-seq", {
+      maxReconnectAttempts: 3,
+      baseBackoffMs: 50,
+      maxBackoffMs: 50,
+      replayHistoryOnReconnect: false,
+      heartbeatIntervalMs: 0,
+    });
+    conn.connect();
+
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    instances[0]!.emit("message", {
+      data: JSON.stringify({
+        type: "message",
+        id: 7,
+        seq: 12,
+        roomId: "room-seq",
+        userId: "u",
+        content: "hi",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+    });
+    conn.noteStreamOffset(99, 6);
+    expect(conn.lastSeq).toBe(12);
+
+    instances[0]!.emit("close", { code: 1006, reason: "gone" });
+    await vi.advanceTimersByTimeAsync(50);
+    await vi.waitFor(() => expect(instances.length).toBe(2));
+    await Promise.resolve();
+
+    const resume = instances[1]!.sent
+      .map((row) => JSON.parse(row) as { type: string; lastSeq?: number; streamOffsets?: Record<string, number> })
+      .find((row) => row.type === "resume");
+    expect(resume).toMatchObject({
+      type: "resume",
+      lastSeq: 12,
+      streamOffsets: { "99": 6 },
+    });
+
+    vi.useRealTimers();
+  });
 });

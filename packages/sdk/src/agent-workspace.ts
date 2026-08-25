@@ -21,6 +21,9 @@ export interface AgentWorkspaceToolEvent {
   arguments?: string;
   resultPreview?: string | null;
   error?: string | null;
+  parentRunId?: string | null;
+  parentToolCallId?: string | null;
+  nestDepth?: number;
 }
 
 export interface AgentWorkspaceStep {
@@ -33,6 +36,9 @@ export interface AgentWorkspaceStep {
   argsPreview?: string;
   resultPreview?: string;
   error?: string;
+  parentToolCallId?: string | null;
+  nestDepth?: number;
+  children?: AgentWorkspaceStep[];
 }
 
 export interface AgentWorkspaceContext {
@@ -61,6 +67,9 @@ const TOOL_LABELS: Record<string, string> = {
   fetch_url: "Fetching a link",
   send_message: "Sending a message",
   create_poll: "Creating a poll",
+  run_agent: "Delegating to an agent",
+  invoke_agent: "Delegating to an agent",
+  delegate_agent: "Delegating to an agent",
 };
 
 export function normalizeToolName(name: string): string {
@@ -83,6 +92,7 @@ export function toolCategory(toolName: string): AgentWorkspaceStepCategory {
   if (key.includes("browser") || key.includes("browse") || key.includes("computer")) return "browser";
   if (key.includes("file") || key.includes("read") || key.includes("write")) return "file";
   if (key.includes("sql") || key.includes("query") || key.includes("database")) return "data";
+  if (key.includes("agent") || key.includes("delegate")) return "thinking";
   return "generic";
 }
 
@@ -123,6 +133,9 @@ export function buildAgentWorkspaceSteps(
         status: "running",
         category: toolCategory(ev.name),
         argsPreview: ev.arguments,
+        parentToolCallId: ev.parentToolCallId ?? null,
+        nestDepth: Number(ev.nestDepth) || 0,
+        children: [],
       });
     }
 
@@ -131,6 +144,8 @@ export function buildAgentWorkspaceSteps(
     step.toolName = ev.name;
     step.label = toolLabel(ev.name);
     step.category = toolCategory(ev.name);
+    if (ev.parentToolCallId) step.parentToolCallId = ev.parentToolCallId;
+    if (Number(ev.nestDepth) > 0) step.nestDepth = Number(ev.nestDepth);
 
     if (ev.kind === "tool_call") {
       step.status = "running";
@@ -144,9 +159,25 @@ export function buildAgentWorkspaceSteps(
     }
   }
 
-  const steps = order.map((id) => byToolCall.get(id)!);
+  const flat = order.map((id) => byToolCall.get(id)!);
+  const roots: AgentWorkspaceStep[] = [];
+  for (const step of flat) {
+    const parentId = step.parentToolCallId;
+    if (parentId && byToolCall.has(parentId) && parentId !== step.id) {
+      const parent = byToolCall.get(parentId)!;
+      (parent.children ||= []).push(step);
+    } else {
+      roots.push(step);
+    }
+  }
+  const steps = roots;
 
-  const hasRunning = steps.some((s) => s.status === "running");
+  function stepIsRunning(step: AgentWorkspaceStep): boolean {
+    if (step.status === "running") return true;
+    return (step.children || []).some(stepIsRunning);
+  }
+
+  const hasRunning = steps.some(stepIsRunning);
   const agentBusy = Boolean(ctx.agentTyping || ctx.runPending);
   const runFinished = ctx.runStatus === "completed" || ctx.runStatus === "failed";
 
@@ -180,7 +211,10 @@ export function isAgentWorkspaceLive(
   steps: AgentWorkspaceStep[],
   ctx: AgentWorkspaceContext = {},
 ): boolean {
-  if (steps.some((s) => s.status === "running")) return true;
+  function walk(list: AgentWorkspaceStep[]): boolean {
+    return list.some((s) => s.status === "running" || walk(s.children || []));
+  }
+  if (walk(steps)) return true;
   return Boolean(ctx.agentTyping || ctx.runPending);
 }
 
@@ -232,6 +266,10 @@ export function agentWorkspaceStepsToUiParts(steps: AgentWorkspaceStep[]): UIPar
           step.error ?? "tool_failed",
         ),
       );
+    }
+
+    if (step.children?.length) {
+      parts.push(...agentWorkspaceStepsToUiParts(step.children));
     }
   }
 

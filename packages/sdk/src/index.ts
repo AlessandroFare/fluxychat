@@ -613,6 +613,9 @@ export {
   type FluxyWaitForOptions,
 } from "./room-connection";
 
+export { applyStreamTailToLocal } from "./stream-offset";
+export { highestRoomSeq, resumeLogEventToClientEvent } from "./seq-resume";
+
 export {
   locationTrack,
   type LocationTrackController,
@@ -740,10 +743,10 @@ export {
 export { createFluxyWebSocket } from "./websocket-factory";
 
 export {
-  isE2eContentEnvelope,
-  encryptE2eContent,
-  decryptE2eContent,
-  type FluxyE2eEnvelope,
+  isRoomContentEnvelope,
+  encryptRoomContent,
+  decryptRoomContent,
+  type FluxyRoomContentEnvelope,
 } from "./room-e2e";
 
 export {
@@ -1280,17 +1283,20 @@ export {
   type VideoGenerator,
 } from "./video-generation";
 
-// E-1: E2EE groups (MLS)
+// E-1: group content encryption.
+// NOT E2EE unless your application distributes `keyMaterial` out of band — if the
+// key comes from a FluxyChat endpoint the server can decrypt. See group-cipher.ts.
 export {
-  createMlsManager,
-  type MlsCipherSuite,
-  type MlsDevice,
-  type MlsGroupConfig,
-  type MlsMessage,
-  type MlsGroup,
-  type MlsKeyPackage,
-  type MlsManager,
-} from "./mls-encryption";
+  createGroupCipher,
+  GROUP_CIPHER_SUITE,
+  GROUP_BASE_KEY_BYTES,
+  type GroupCipher,
+  type GroupCipherSuite,
+  type GroupDevice,
+  type GroupConfig,
+  type GroupEnvelope,
+  type GroupState,
+} from "./group-cipher";
 
 export {
   hydrateMlsManagerFromRegistry,

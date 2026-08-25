@@ -1,4 +1,9 @@
-# FluxyChat Unity SDK (skeleton)
+# FluxyChat Unity SDK — **unpublished stub**
+
+> Not a supported product surface. Do not list this in marketing as a shipping SDK.
+> Gold path: `@fluxy-chat/sdk` (TypeScript).
+
+
 
 Minimal C# client for Unity games. REST and WebSocket parity with `@fluxy-chat/sdk`.
 

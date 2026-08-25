@@ -107,6 +107,65 @@ export async function dispatchAgentsRoutes(request, url, h) {
     );
     return json({ bot: result });
   }
+
+  const copilotMatch = url.pathname.match(/^\/agents\/([^/]+)\/copilot(?:\/(turns|schedules)(?:\/([^/]+))?)?$/);
+  if (copilotMatch) {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const agentId = copilotMatch[1];
+    const action = copilotMatch[2] || "state";
+    const scheduleId = copilotMatch[3];
+    const { callAgentDo } = await import("../lib/agent-do-session.js");
+    const ids = { projectId: auth.projectId, agentId, userId: auth.userId };
+    if (request.method === "GET" && action === "state") {
+      const payload = await callAgentDo(env, ids, "state");
+      const status = payload.reason === "agent_do_unbound" ? 503 : 200;
+      return json(payload, { status });
+    }
+    if (request.method === "POST" && action === "turns") {
+      const body = await request.json().catch(() => ({}));
+      const contentValidation = validateMessageContent(body?.content ?? "");
+      if (!contentValidation.valid) {
+        return json({ error: contentValidation.error }, { status: 400 });
+      }
+      const payload = await callAgentDo(env, ids, "turn", {
+        content: contentValidation.content,
+        projectId: auth.projectId,
+        agentId,
+        userId: auth.userId,
+        traceId,
+      });
+      const status = payload.reason === "agent_do_unbound" ? 503 : payload.ok === false && payload.reason === "agent_not_found" ? 404 : 200;
+      return json(payload, { status });
+    }
+    if (request.method === "GET" && action === "schedules") {
+      const payload = await callAgentDo(env, ids, "list_schedules");
+      return json(payload, { status: payload.reason === "agent_do_unbound" ? 503 : 200 });
+    }
+    if (request.method === "POST" && action === "schedules") {
+      const body = await request.json().catch(() => ({}));
+      const payload = await callAgentDo(env, ids, "schedule", {
+        ...body,
+        projectId: auth.projectId,
+        agentId,
+        userId: auth.userId,
+        createdBy: auth.userId,
+      });
+      return json(payload, { status: payload.ok === false ? 400 : 200 });
+    }
+    if (request.method === "DELETE" && action === "schedules" && scheduleId) {
+      const payload = await callAgentDo(env, ids, "cancel_schedule", { scheduleId });
+      return json(payload, { status: payload.ok === false ? 404 : 200 });
+    }
+    return json({ error: "unsupported_copilot_route" }, { status: 405 });
+  }
+
   if (url.pathname === "/agents" && request.method === "GET") {
     const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
       if (err instanceof Response) throw err;

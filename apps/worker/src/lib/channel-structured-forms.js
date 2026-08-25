@@ -7,6 +7,7 @@ import { fanoutPersistedMessage } from "./message-realtime-fanout.js";
 import { submitForm } from "./polls-forms.js";
 import { getChannelConfig } from "./omnichannel.js";
 import { logInfo, logError } from "./worker-log.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
 const E164_RE = /^\+[1-9]\d{6,14}$/;
 const VALID_CHANNELS = new Set(["whatsapp", "rcs"]);
@@ -279,7 +280,11 @@ export async function sendWhatsAppCloudMessage(env, { phoneNumberId, accessToken
 export async function sendRcsOutbound(env, { outboundUrl, apiKey, toE164, payload }) {
   const headers = { "Content-Type": "application/json" };
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-  const res = await fetch(outboundUrl, {
+  // SECURITY: `outboundUrl` is tenant-configured RCS provider credentials, i.e.
+  // an attacker-controllable destination. The guard blocks private, loopback,
+  // link-local and cloud-metadata targets so a tenant cannot turn form dispatch
+  // into an SSRF primitive (the provider response is surfaced in the error text).
+  const res = await safeOutboundFetch(outboundUrl, {
     method: "POST",
     headers,
     body: JSON.stringify({ to: toE164, ...payload }),

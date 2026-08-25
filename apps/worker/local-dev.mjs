@@ -56,6 +56,7 @@ async function run() {
         bucket_name: "dev-attachments",
       },
     ],
+    // Speech in `wrangler dev` uses [ai] from wrangler.toml. Miniflare here has no Workers AI.
     durableObjects: [
       {
         name: "ROOM",
@@ -68,6 +69,10 @@ async function run() {
       {
         name: "IP_RATE_LIMITER",
         class_name: "IpRateLimiterDurableObject",
+      },
+      {
+        name: "AGENT",
+        class_name: "AgentDurableObject",
       },
     ],
     durableObjectsSQLite: true,
@@ -96,6 +101,8 @@ async function run() {
 
   console.log("\n📋 Available endpoints:");
   console.log("   GET  /healthz          - Health check");
+  console.log("   POST /voice-ai/transcribe - Workers AI STT (needs wrangler [ai])");
+  console.log("   POST /voice-ai/speak      - Workers AI TTS (needs wrangler [ai])");
   console.log("   POST /platform/bootstrap - Bootstrap platform");
   console.log("   POST /admin/rooms      - Create room");
   console.log("   POST /admin/messages   - Send message");

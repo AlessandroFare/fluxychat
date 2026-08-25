@@ -9,6 +9,8 @@
  *   • Contextual responses based on media + text
  */
 
+import { safeOutboundFetch } from "./url-ssrf.js";
+
 const MEDIA_TYPES = ["image", "audio", "video", "document"];
 const IMAGE_ANALYSIS_PROMPT = `Analyze this image and provide:
 1. A brief description of what you see
@@ -133,7 +135,7 @@ async function callAIForMedia(env, { mediaType, mediaUrl, mediaBase64, prompt, m
     ]},
   ];
 
-  const resp = await fetch(`${env.AI_BASE_URL}/chat/completions`, {
+  const resp = await safeOutboundFetch(`${env.AI_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

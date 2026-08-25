@@ -1,5 +1,13 @@
-import type { MlsDevice, MlsGroup, MlsManager } from "./mls-encryption";
+import type { GroupCipher, GroupDevice, GroupState } from "./group-cipher.js";
 
+/**
+ * Server-side registry row for a room's encryption group (coordination slice #30).
+ *
+ * `publicKey` / `signatureKey` are registry metadata for device discovery. The group
+ * cipher does not consume them: it uses a symmetric group key that the application
+ * distributes. They are carried here so the server can list devices without being
+ * able to read message content.
+ */
 export interface RoomMlsRegistryGroup {
   roomId: string;
   groupId: string;
@@ -14,63 +22,64 @@ export interface RoomMlsRegistryGroup {
   }>;
 }
 
-/**
- * Hydrate a local MLS manager from server-side D1 registry (coordination slice #30).
- */
+/** Hydrate a local group cipher from the server-side D1 registry. */
 export function hydrateMlsManagerFromRegistry(
-  manager: MlsManager,
+  cipher: GroupCipher,
   registry: RoomMlsRegistryGroup,
-): MlsGroup {
-  const existing = manager.getGroup(registry.groupId);
+): GroupState {
+  const existing = cipher.getGroup(registry.groupId);
   if (existing) {
-    while (manager.getEpoch(registry.groupId) < registry.epoch) {
-      manager.rotateKeys(registry.groupId);
+    while (cipher.getEpoch(registry.groupId) < registry.epoch) {
+      cipher.rotateEpoch(registry.groupId);
     }
     for (const device of registry.devices) {
-      const mlsDevice: MlsDevice = {
+      const member: GroupDevice = {
         deviceId: device.deviceId,
         publicKey: device.publicKey,
-        signatureKey: device.signatureKey,
         credentialType: device.credentialType === "x509" ? "x509" : "basic",
       };
       try {
-        manager.addDevice(registry.groupId, mlsDevice);
+        cipher.addDevice(registry.groupId, member);
       } catch {
-        /* already present */
+        /* already present, or at capacity */
       }
     }
-    return manager.getGroup(registry.groupId)!;
+    return cipher.getGroup(registry.groupId)!;
   }
 
-  return manager.importGroup({
+  return cipher.importGroup({
     groupId: registry.groupId,
     epoch: registry.epoch,
-    config: {
-      cipherSuite: registry.cipherSuite as MlsGroup["config"]["cipherSuite"],
-      maxDevices: registry.maxDevices,
-    },
+    // `cipherSuite` from the registry is deliberately NOT forwarded: the cipher pins
+    // its own suite so a stale or attacker-influenced registry row cannot downgrade
+    // the algorithm or re-assert the old MLS suite string.
+    config: { maxDevices: registry.maxDevices },
     devices: registry.devices.map((device) => ({
       deviceId: device.deviceId,
       publicKey: device.publicKey,
-      signatureKey: device.signatureKey,
       credentialType: device.credentialType === "x509" ? "x509" : "basic",
     })),
   });
 }
 
 export function buildMlsRegistryUpsertFromManager(
-  manager: MlsManager,
+  cipher: GroupCipher,
   groupId: string,
   roomId: string,
 ): Partial<RoomMlsRegistryGroup> | null {
-  const group = manager.getGroup(groupId);
+  const group = cipher.getGroup(groupId);
   if (!group) return null;
   return {
     roomId,
     groupId: group.groupId,
-    epoch: manager.getEpoch(groupId),
+    epoch: cipher.getEpoch(groupId),
     cipherSuite: group.config.cipherSuite,
     maxDevices: group.config.maxDevices,
-    devices: [...group.devices.values()],
+    devices: [...group.devices.values()].map((device) => ({
+      deviceId: device.deviceId,
+      publicKey: device.publicKey ?? "",
+      signatureKey: "",
+      credentialType: device.credentialType ?? "basic",
+    })),
   };
 }

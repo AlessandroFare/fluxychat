@@ -17,6 +17,7 @@ import { dispatchInboundWsFrame } from "./ws-inbound";
 import { isCapabilityRealtimeEvent } from "./capability-realtime";
 import { isServerRealtimeEvent, type ServerEventHandler } from "./server-realtime";
 import type { RoomEvent } from "./vertical-platform";
+import { highestRoomSeq, resumeLogEventToClientEvent } from "./seq-resume";
 
 export type FluxyRoomConnectionStatus =
   | "idle"
@@ -41,6 +42,8 @@ export interface FluxyRoomConnectionOptions {
   presenceInfo?: Record<string, unknown>;
   /** Pusher-style cache channel snapshot on connect. */
   wsCache?: FluxyWebSocketConnectOptions["cache"];
+  /** Spectator WS: receive events, cannot send messages/tools/typing. */
+  wsReadonly?: boolean;
   /** Delegate transport reconnect to partysocket (disables SDK reconnect scheduling). */
   usePartySocket?: boolean;
   /** Client ping interval in ms (default 25_000). Set 0 to disable. */
@@ -127,7 +130,13 @@ export class FluxyChatRoomConnection {
   private outboundQueue: OutboundFrame[] = [];
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private lastPongAtMs = 0;
+  /** R6: visibilitychange listener while connected (browser only). */
+  private visibilityHandler: (() => void) | null = null;
   private wsSnapshotReceived = false;
+  /** Last applied character offset per in-flight stream message id. */
+  streamOffsets: Record<string, number> = {};
+  /** Highest room_message_events seq observed on this connection. */
+  lastSeq = 0;
 
   constructor(client: FluxyChatClient, roomId: string, options: FluxyRoomConnectionOptions = {}) {
     this.client = client;
@@ -235,11 +244,23 @@ export class FluxyChatRoomConnection {
     this.openSocket();
   }
 
+  noteStreamOffset(messageId: number | string, offset: number): void {
+    const id = String(messageId);
+    const next = Number(offset);
+    if (!id || !Number.isFinite(next) || next < 0) return;
+    this.streamOffsets[id] = next;
+  }
+
+  clearStreamOffset(messageId: number | string): void {
+    delete this.streamOffsets[String(messageId)];
+  }
+
   close(code = FLUXY_WS_CLOSE_NORMAL): void {
     this.intentionallyClosed = true;
     this.rejectAllWaitFor(new FluxySendError("Connection closed."));
     this.clearReconnectTimer();
     this.stopHeartbeat();
+    this.detachVisibilityReporting();
     this.clearOutboundQueue();
     if (this.ws) {
       try {
@@ -266,6 +287,40 @@ export class FluxyChatRoomConnection {
     throw new FluxySendError(
       "Cannot send: WebSocket is not open. Call connect() and wait until connected.",
     );
+  }
+
+  /**
+   * R6 presence-aware AI cost control: report tab visibility so the server can
+   * skip speculative agent warmup / AI spend while the user cannot see it.
+   * Fire-and-forget: silently ignored when disconnected (state is re-reported
+   * on reconnect via visibilitychange or the next explicit call).
+   */
+  sendPresenceState(state: "active" | "background"): void {
+    try {
+      if (this.canSendImmediately()) {
+        this.ws!.send(JSON.stringify({ type: "presence_state", state }));
+      }
+    } catch {
+      /* never let telemetry break the connection */
+    }
+  }
+
+  private attachVisibilityReporting(): void {
+    if (typeof document === "undefined" || typeof document.addEventListener !== "function") {
+      return; // non-browser runtime
+    }
+    if (this.visibilityHandler) return;
+    this.visibilityHandler = () => {
+      this.sendPresenceState(document.hidden ? "background" : "active");
+    };
+    document.addEventListener("visibilitychange", this.visibilityHandler);
+  }
+
+  private detachVisibilityReporting(): void {
+    if (this.visibilityHandler && typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.visibilityHandler);
+    }
+    this.visibilityHandler = null;
   }
 
   /**
@@ -407,9 +462,16 @@ export class FluxyChatRoomConnection {
     }
   }
 
+  private bumpLastSeq(value: unknown): void {
+    const next = highestRoomSeq(value);
+    if (next > this.lastSeq) this.lastSeq = next;
+  }
+
   private handleInboundRaw(raw: string): void {
+    let parsed: unknown = null;
     try {
-      const parsed = JSON.parse(raw) as unknown;
+      parsed = JSON.parse(raw) as unknown;
+      this.bumpLastSeq(parsed);
       if (isCapabilityRealtimeEvent(parsed)) {
         for (const listener of this.capabilityListeners) {
           listener(parsed.event);
@@ -451,6 +513,18 @@ export class FluxyChatRoomConnection {
         this.emitAnyOnly(frame as FluxyChatEvent);
       },
     });
+
+    if (
+      parsed != null &&
+      typeof parsed === "object" &&
+      (parsed as { type?: string }).type === "replay" &&
+      Array.isArray((parsed as { events?: unknown[] }).events)
+    ) {
+      for (const event of (parsed as { events: unknown[] }).events) {
+        const framed = resumeLogEventToClientEvent(event);
+        if (framed) this.deliver(framed as FluxyChatEvent);
+      }
+    }
   }
 
   private openSocket(): void {
@@ -464,6 +538,7 @@ export class FluxyChatRoomConnection {
       replayLimit: this.options.historyLimit,
       presenceInfo: this.options.presenceInfo,
       cache: this.options.wsCache,
+      readonly: this.options.wsReadonly,
     };
     if (this.options.wsReplay === "off") {
       wsConnect.replay = "off";
@@ -473,12 +548,26 @@ export class FluxyChatRoomConnection {
     this.wsSnapshotReceived = false;
 
     ws.addEventListener("open", () => {
+      const isReconnect = this.hasConnectedOnce;
       this.hasConnectedOnce = true;
       this.reconnectAttempt = 0;
       this.lastError = null;
       this.setStatus("connected");
       this.startHeartbeat();
+      if (!this.options.wsReadonly) {
+        this.attachVisibilityReporting();
+        if (typeof document !== "undefined") {
+          this.sendPresenceState(document.hidden ? "background" : "active");
+        }
+      }
       this.flushOutboundQueue();
+      if (isReconnect) {
+        this.sendJson({
+          type: "resume",
+          lastSeq: this.lastSeq,
+          streamOffsets: { ...this.streamOffsets },
+        });
+      }
       const needsRestReplay =
         this.pendingHistoryReplay && this.options.replayHistoryOnReconnect;
       this.pendingHistoryReplay = false;

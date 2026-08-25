@@ -1,61 +1,134 @@
 ---
-title: create-fluxy-chat CLI
-description: Scaffold a chat app or a bot worker. Use the scoped npm package.
+title: "create-fluxy-chat CLI"
+description: "Scaffold a new FluxyChat bot project with a single command. The CLI generates a working Cloudflare Workers project pre-configured with your chosen adapter, pack"
 ---
 
-Always:
+# create-fluxy-chat CLI
+
+Scaffold a new FluxyChat bot project with a single command. The CLI generates a working Cloudflare Workers project pre-configured with your chosen adapter, package manager, and TypeScript setup.
+
+## Quick Start
 
 ```bash
-npx @fluxy-chat/create-fluxy-chat@latest
+# Full stack — chat + @assistant + setup (recommended)
+npx create-fluxy-chat my-app --full -y
+
+# Interactive mode (defaults to template picker including Full stack)
+npx create-fluxy-chat my-bot
 ```
 
-Unscoped `npx create-fluxy-chat` is not our package.
-
-## Chat app (what most people want)
+## Non-Interactive Usage
 
 ```bash
-# Hosted — Clerk, no wrangler
-npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
+# Create a Slack bot with pnpm
+npx create-fluxy-chat my-bot --adapter slack --pm pnpm
 
-# Your Worker
-npx @fluxy-chat/create-fluxy-chat@latest my-app --full --mode self-host
+# Create a Telegram bot, skip install
+npx create-fluxy-chat my-bot --adapter telegram --skip-install
+
+# Create a Discord bot with defaults
+npx create-fluxy-chat my-bot -y --adapter discord
+
+# Create a basic webhook bot
+npx create-fluxy-chat my-bot --adapter basic
 ```
 
-Then `cd my-app && pnpm install`.
+## Options
 
-- Hosted: `pnpm setup:hosted && pnpm dev`
-- Self-host: start the Worker, then `pnpm setup:local && pnpm dev`
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--adapter &lt;type&gt;` | `-a` | Adapter: `basic`, `slack`, `telegram`, `discord`, `web` |
+| `--pm &lt;manager&gt;` | | Package manager: `npm`, `pnpm`, `yarn` |
+| `--language &lt;lang&gt;` | `-l` | Language: `typescript` (default) or `javascript` |
+| `--yes` | `-y` | Skip prompts and accept defaults |
+| `--skip-install` | | Skip dependency installation |
+| `--no-git` | | Skip git repository initialization |
+| `--help` | `-h` | Show help |
 
-The interactive CLI asks for Worker URL and optional Groq key when you pick self-host. It writes `.fluxy/worker.dev.vars` so you can paste secrets into `apps/worker/.dev.vars` after you clone the FluxyChat repo.
+## Adapters
 
-Details: [Choose your path](/docs/getting-started/choose-your-path).
+| Adapter | Description | Platform |
+|---------|-------------|----------|
+| `basic` | Generic webhook bot | Cloudflare Workers |
+| `slack` | Slack Events API bot | Slack |
+| `telegram` | Telegram webhook bot | Telegram |
+| `discord` | Discord interactions bot | Discord |
+| `web` | Web chat HTTP API bot | Any HTTP client |
 
-## Smaller templates
+## What You Get
+
+Each generated project includes:
+
+- **`src/index.ts`** — Cloudflare Workers entry point with route handling
+- **`src/bot.ts`** — Bot handler using `@fluxy-chat/sdk`
+- **`wrangler.toml`** — Cloudflare Workers deployment config
+- **`.dev.vars`** — Local development environment variables
+- **`.env.example`** — Example environment variables for your adapter
+- **`tsconfig.json`** — TypeScript configuration (for TS projects)
+- **`README.md`** — Project-specific setup instructions
+- **`.gitignore`** — Standard ignore patterns
+
+## Package Manager Detection
+
+The CLI auto-detects your package manager from lockfiles:
+
+- `pnpm-lock.yaml` → pnpm
+- `yarn.lock` → yarn
+- `package-lock.json` or none → npm
+
+You can override with `--pm`.
+
+## Generated Project Structure
+
+```
+my-bot/
+├── src/
+│   ├── index.ts        # Worker entry point
+│   └── bot.ts          # Bot handler
+├── wrangler.toml       # Cloudflare config
+├── .dev.vars           # Local secrets
+├── .env.example        # Example env vars
+├── tsconfig.json       # TypeScript config
+├── package.json        # Dependencies
+├── README.md           # Setup guide
+└── .gitignore
+```
+
+## Development
 
 ```bash
-npx @fluxy-chat/create-fluxy-chat@latest my-chat --template react
-npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal
-npx @fluxy-chat/create-fluxy-chat@latest my-hr --template hr-feedback
+cd my-bot
+pnpm install    # or npm install
+pnpm dev        # local dev via wrangler
 ```
 
-React/minimal: copy `.env.example` and set Worker URL + JWT. [Auth JWT](/docs/guides/auth-jwt).
-
-## Bot workers (Slack / Telegram / Discord)
+## Deployment
 
 ```bash
-npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter slack --pm pnpm
-npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter telegram --skip-install
-npx @fluxy-chat/create-fluxy-chat@latest my-bot -y --adapter discord
-npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter basic
+pnpm deploy     # deploys to Cloudflare Workers via wrangler
 ```
 
-These generate a small Cloudflare Worker (`src/index.ts`, `src/bot.ts`, `wrangler.toml`, `.dev.vars`). Fill `FLUXY_BASE_URL` and `FLUXY_API_KEY`, then `pnpm dev` / `pnpm deploy`.
+## Local Development (for contributors)
 
-| Flag | Meaning |
-|------|---------|
-| `--mode hosted \| local \| self-host` | `self-host` is the same as `local` (your Worker) |
-| `--full` | Vite app + setup scripts |
-| `--adapter` / `--template` | `full`, `react`, `minimal`, `hr-feedback`, `basic`, `slack`, `telegram`, `discord`, `web` |
-| `-y` | Skip prompts |
+To work on the CLI itself:
 
-See also: [Unified chat API](/docs/guides/unified-chat-api), [SDK](/docs/packages/sdk).
+```bash
+# Clone the monorepo
+git clone https://github.com/AlessandroFare/fluxychat
+cd fluxychat/packages/create-fluxy-chat
+
+# Install dependencies
+pnpm install
+
+# Build the CLI
+pnpm build
+
+# Run locally
+node dist/index.js my-test-bot -y --adapter basic
+```
+
+## See Also
+
+- [Adapter Pattern](/docs/adapter-pattern) — How adapters work
+- [Unified Chat API](/docs/unified-chat-api) — Chat API for cross-platform operations
+- [SDK README](/docs/../packages/sdk/README) — Full SDK documentation

@@ -19,6 +19,7 @@ import { LandingShell } from "./landing-shell";
 import { LandingStatsSection } from "./landing-stats-section";
 import { LandingWhatsNewSection } from "./landing-whats-new-section";
 import { LandingBand } from "./landing-band";
+import { LandingPinBar } from "./landing-pin-bar";
 import { LandingMediaStrip } from "./landing-media-strip";
 
 export const metadata: Metadata = PAGE_METADATA.landing;
@@ -47,10 +48,15 @@ export default function LandingHomePage() {
         <LandingWhatsNewSection />
       </LandingBand>
 
-      <LandingBand tone="glass">
-        <LandingRealtimeSection />
-        <LandingCollabSection />
-        <LandingStreamSection />
+      <LandingBand tone="glass" reveal={false}>
+        <div className="mkt-pin">
+          <div className="px-4 pt-8 sm:px-6">
+            <LandingPinBar />
+          </div>
+          <LandingRealtimeSection />
+          <LandingCollabSection />
+          <LandingStreamSection />
+        </div>
       </LandingBand>
 
       <LandingBand tone="light">

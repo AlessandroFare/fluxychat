@@ -23,6 +23,7 @@ import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flag
 import { getFluxyClientDefaults } from "../lib/fluxy-config-runtime.js";
 import { isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
 import { parseAuthTokenBody } from "../lib/http-body.js";
+import { base64urlToBytes } from "../lib/jwt-auth.js";
 import { queryModelsCatalog, getModelById, listModelProviders, syncModelsCatalog } from "../lib/llm-models-catalog.js";
 
 /**
@@ -781,6 +782,7 @@ export async function dispatchPublicRoutes(request, url, h) {
       sub: parsed.userId,
       tid: resolvedProjectId,
       roles,
+      jti: crypto.randomUUID(),
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + ttlSeconds,
     });
@@ -790,8 +792,7 @@ export async function dispatchPublicRoutes(request, url, h) {
       claims: { sub: parsed.userId, tid: resolvedProjectId, roles },
     };
     if (!isSignin) {
-      return json(base);
-    }
+      return json(base);    }
     const encodedUser = encodeURIComponent(parsed.userId);
     return json({
       ...base,
@@ -803,6 +804,57 @@ export async function dispatchPublicRoutes(request, url, h) {
         eventsPath: `/users/${encodedUser}/events`,
       },
     });
+  }
+
+  // R7 token revocation kill switch. The caller must present the token to be
+  // revoked AND it must verify against the project secret — we never revoke on
+  // an unverified blob. Revoked jti is denied at every subsequent verify.
+  if (url.pathname === "/auth/revoke" && request.method === "POST") {
+    const body = await request.json().catch(() => ({}));
+    const rawToken = typeof body.token === "string" ? body.token.trim() : "";
+    if (!rawToken) return json({ error: "token_required" }, { status: 400 });
+
+    const parts = rawToken.split(".");
+    if (parts.length !== 3) return json({ error: "invalid_token" }, { status: 400 });
+    let payload;
+    try {
+      payload = JSON.parse(new TextDecoder().decode(base64urlToBytes(parts[1])));
+    } catch {
+      return json({ error: "invalid_token" }, { status: 400 });
+    }
+    const { sub, tid: projectId, jti, exp } = payload || {};
+    if (!sub || !projectId) return json({ error: "invalid_token" }, { status: 400 });
+
+    const secretRow = await env.DB.prepare(
+      "SELECT jwt_secret FROM project_secrets WHERE project_id = ?"
+    )
+      .bind(projectId)
+      .first();
+    if (!secretRow?.jwt_secret) return json({ error: "invalid_token" }, { status: 400 });
+
+    // Signature must verify before anything is written to the deny list.
+    const { verifyHs256Signature } = await import("../lib/jwt-auth.js");
+    const sigOk = await verifyHs256Signature(
+      parts[0],
+      parts[1],
+      parts[2],
+      new TextEncoder().encode(secretRow.jwt_secret),
+    );
+    if (!sigOk) return json({ error: "invalid_token" }, { status: 401 });
+
+    if (!jti) {
+      // Pre-R7 token without a jti: cannot be individually revoked. Honest
+      // answer rather than a silent no-op.
+      return json(
+        { error: "not_revocable", hint: "token has no jti; rotate the project secret instead" },
+        { status: 409 },
+      );
+    }
+
+    const { revokeJti } = await import("../lib/token-revocation.js");
+    const res = await revokeJti(env, jti, exp);
+    if (!res.ok) return json({ error: res.reason }, { status: 503 });
+    return json({ ok: true, revoked: true, jti });
   }
 
   if (
@@ -876,6 +928,7 @@ export async function dispatchPublicRoutes(request, url, h) {
       sub: body.userId,
       tid: resolvedProjectId,
       roles,
+      jti: crypto.randomUUID(),
       sms_verified: e164,
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + ttlSeconds,

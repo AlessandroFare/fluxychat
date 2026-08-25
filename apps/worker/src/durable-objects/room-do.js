@@ -1,11 +1,55 @@
 import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
 import { FLUXY_MAX_WS_FRAME_CHARS } from "@fluxy-chat/protocol";
+import { WsSessionRegistry, installWsAutoResponse } from "../lib/do-ws-sessions.js";
+import {
+  emptyLedger,
+  recordWsFrameIn,
+  recordWsFrameOut,
+  recordDoRequest,
+  recordAlarm as recordAlarmCost,
+  merge as mergeLedger,
+  costView,
+} from "../lib/room-cost-ledger.js";
 import {
   isValidClientWsPayload,
   isValidLocationTrackEnded,
   isValidLocationUpdate,
 } from "../lib/ws-protocol.js";
+import {
+  isReadonlyAllowedClientType,
+  isReadonlyWsConnect,
+  readonlyConnectionError,
+} from "../lib/ws-readonly.js";
 import { logInfo, logError } from "../lib/worker-log.js";
+import {
+  backoffMsForFailure,
+  classifyDoFailure,
+  runDoAlarmStep,
+} from "../lib/do-retry-taxonomy.js";
+import {
+  scheduleDoAlarmJob,
+  cancelDoAlarmJob,
+  takeDueDoAlarmJobs,
+} from "../lib/do-alarm-scheduler.js";
+import {
+  captureRoomPitrSnapshot,
+  listRoomPitr,
+  restoreRoomPitr,
+} from "../lib/room-pitr.js";
+import {
+  AGENT_SCHEDULE_ALARM_JOB,
+  cancelAgentSchedule,
+  claimDueAgentSchedules,
+  completeAgentScheduleFire,
+  earliestAgentScheduleDueAt,
+  ensureAgentSchedulesSql,
+  fireAgentSchedule,
+  serializeSchedule,
+  upsertAgentSchedule,
+  withAgentScheduleRows,
+} from "../lib/agent-schedules.js";
+import { parseRpcRequest, ROOM_RPC_METHODS } from "../lib/do-rpc.js";
+import { callAgentDo } from "../lib/agent-do-session.js";
 import { isRoomMember, canAccessRoom } from "../lib/room-access.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
 import { attachAttachmentsToMessages } from "../lib/messages-attachments.js";
@@ -67,6 +111,7 @@ import {
   syncCheckpointToYjsRoomDoc,
 } from "../lib/yjs-game-checkpoint.js";
 import { maybeSyncMatrixOutboundForMessage } from "../lib/matrix-outbound-hook.js";
+import { streamCheckpoint, streamTail } from "../lib/stream-offset.js";
 
 /**
  * Ordered list of migrations applied to the Room DO's `ctx.storage`.
@@ -81,6 +126,12 @@ import { maybeSyncMatrixOutboundForMessage } from "../lib/matrix-outbound-hook.j
  */
 export const EPHEMERAL_WS_RATE_LIMIT_KEY = "_ephemeral_ws_rate_limits";
 export const EPHEMERAL_MODERATION_CACHE_KEY = "_ephemeral_moderation_cache";
+/**
+ * Room-scoped (not socket-scoped) live state that must survive a hibernation
+ * wake. Socket-scoped state lives in the socket attachment instead — see
+ * `lib/do-ws-sessions.js`.
+ */
+export const EPHEMERAL_ROOM_STATE_KEY = "_ephemeral_room_state";
 
 export const ROOM_DO_MIGRATIONS = [
   {
@@ -99,6 +150,28 @@ export const ROOM_DO_MIGRATIONS = [
       // wsRateLimitStore + moderationCache persist under EPHEMERAL_* keys.
     },
   },
+  {
+    version: 3,
+    name: "hibernatable_websockets",
+    up: async () => {
+      // Sockets are now accepted through the WebSocket Hibernation API, so
+      // per-socket identity moved from in-memory Maps into the socket
+      // attachment, and room-scoped live state (voice stage, active streams,
+      // location tracks) persists under EPHEMERAL_ROOM_STATE_KEY so a woken
+      // object can rebuild it. Nothing to rewrite: the new shape is created
+      // lazily on first write, and an absent key means "empty room state".
+    },
+  },
+  {
+    version: 4,
+    name: "agent_schedules_sql",
+    up: async ({ state }) => {
+      const sql = state?.storage?.sql;
+      if (sql && typeof sql.exec === "function") {
+        ensureAgentSchedulesSql(sql);
+      }
+    },
+  },
 ];
 
 export const DEFAULT_WS_HISTORY_LIMIT = 50;
@@ -114,9 +187,14 @@ export function parseWsConnectOptions(request) {
   let replay = "default";
   let limit = DEFAULT_WS_HISTORY_LIMIT;
   let cache = false;
+  let readonly = false;
   try {
     const url = new URL(request.url);
     cache = parseCacheConnectParam(url.searchParams.get("cache"));
+    readonly = isReadonlyWsConnect({
+      queryReadonly: url.searchParams.get("readonly"),
+      queryMode: url.searchParams.get("mode"),
+    });
     const replayParam = url.searchParams.get("replay")?.toLowerCase();
     if (replayParam === "off" || replayParam === "false" || replayParam === "0") {
       replay = "off";
@@ -138,17 +216,42 @@ export function parseWsConnectOptions(request) {
   } catch {
     /* keep defaults */
   }
-  return { replay, limit, cache };
+  return { replay, limit, cache, readonly };
 }
 
 export class RoomDurableObject {
   constructor(state, env) {
     this.state = state;
     this.env = env;
-    this.clients = new Set();
+
+    /**
+     * Hibernation-safe socket registry.
+     *
+     * Sockets are accepted through `state.acceptWebSocket()` so the runtime can
+     * evict this object from memory between frames. Cloudflare bills Durable
+     * Object duration for the entire time a socket accepted with `accept()` is
+     * connected; hibernation removes that charge. Consequence: per-socket state
+     * cannot live in an in-memory Map any more, because the Map is gone after a
+     * wake while the socket is still open. The registry keeps that state in the
+     * socket attachment and exposes Map/Set-compatible views so the call sites
+     * below are unchanged.
+     */
+    this.sessions = new WsSessionRegistry(state, {
+      onAttachmentOverflow: ({ bytes, field }) =>
+        logError("do.ws_attachment_overflow", new Error("attachment budget exceeded"), {
+          bytes,
+          field,
+          roomId: this.roomId || undefined,
+        }),
+    });
+
+    /** Live sockets. Derived from `state.getWebSockets()`, correct after a wake. */
+    this.clients = this.sessions.socketSet();
+    /** @type {Map<string, MessageEvent[]>} SSE writers cannot survive hibernation. */
     this.sseClients = new Set();
     this.moderationCache = new Map();
-    this.userIds = new Map();
+    /** Per-socket user id (attachment field `u`). */
+    this.userIds = this.sessions.field("u");
     this.projectId = null;
     this.roomId = null;
     this.wsRateLimitStore = new Map();
@@ -156,16 +259,16 @@ export class RoomDurableObject {
     this.activeStreams = new Map();
     /** @type {Map<WebSocket, MessageEvent[]>} */
     this.wsInboundQueues = new Map();
-    /** Active WS connections per user (Pusher-style presence). */
-    this.userConnectionCounts = new Map();
     /** Optional profile payload from `presenceInfo` WS query param. */
     this.userInfoByUserId = new Map();
-    /** Per-connection id (exclude-sender / debugging). */
-    this.socketIds = new Map();
-    /** @type {Map<WebSocket, Record<string, boolean | undefined>>} */
-    this.wsCapabilities = new Map();
-    /** @type {Map<WebSocket, string[]>} */
-    this.wsRoles = new Map();
+    /** Per-connection id (exclude-sender / debugging), attachment field `s`. */
+    this.socketIds = this.sessions.field("s");
+    /** @type {Map<WebSocket, Record<string, boolean | undefined>>} attachment field `c` */
+    this.wsCapabilities = this.sessions.field("c");
+    /** @type {Map<WebSocket, string[]>} attachment field `r` */
+    this.wsRoles = this.sessions.field("r");
+    /** Spectator sockets (`ro: 1`) receive events but cannot publish. */
+    this.wsReadonly = this.sessions.field("ro");
     /** @type {{ event: Record<string, unknown>; cachedAt: string } | null} */
     this.lastCacheEntry = null;
     /** @type {Map<string, { role: string, displayName?: string, vadScore?: number, lastVadAt?: number, joinedAt: string }>} */
@@ -183,6 +286,15 @@ export class RoomDurableObject {
     /** @type {YjsSyncHandler} */
     this.yjsSync = new YjsSyncHandler();
 
+    // Runtime-level ping/pong. Auto-responses are answered without waking the
+    // object, so client heartbeats cost neither duration nor a billed request.
+    this.autoResponseInstalled = installWsAutoResponse(state);
+
+    // F1 live marginal cost ledger. Snapshot persists in DO storage so counters
+    // survive eviction; merged additively on wake.
+    this.costLedger = emptyLedger();
+    this.costLedgerKey = "_cost_ledger";
+
     if (typeof this.state.blockConcurrencyWhile === "function" && this.state.storage) {
       this._storageHydrated = this.state.blockConcurrencyWhile(async () => {
         // Run pending migrations BEFORE reading state so that any shape
@@ -199,6 +311,9 @@ export class RoomDurableObject {
         }
         const storedCache = await this.state.storage.get(ROOM_CACHE_STORAGE_KEY);
         this.lastCacheEntry = parseStoredCacheEntry(storedCache);
+        // F1: restore cost counters from before the last eviction.
+        const storedCost = await this.state.storage.get(this.costLedgerKey);
+        if (storedCost) mergeLedger(this.costLedger, storedCost);
       });
     } else {
       this._storageHydrated = Promise.resolve();
@@ -219,7 +334,87 @@ export class RoomDurableObject {
     if (modRaw && typeof modRaw === "object" && !Array.isArray(modRaw)) {
       this.moderationCache = new Map(Object.entries(modRaw));
     }
+    // Room-scoped live state. Without this, a hibernation wake would silently
+    // drop the voice stage, in-flight agent streams and location tracks while
+    // clients still believe they are active.
+    const roomRaw = await this.state.storage.get(EPHEMERAL_ROOM_STATE_KEY);
+    if (roomRaw && typeof roomRaw === "object" && !Array.isArray(roomRaw)) {
+      if (roomRaw.stage && typeof roomRaw.stage === "object") {
+        this.stageByUserId = new Map(Object.entries(roomRaw.stage));
+      }
+      if (typeof roomRaw.activeSpeakerUserId === "string") {
+        this.activeSpeakerUserId = roomRaw.activeSpeakerUserId;
+      }
+      if (roomRaw.activeStreams && typeof roomRaw.activeStreams === "object") {
+        this.activeStreams = new Map(Object.entries(roomRaw.activeStreams));
+      }
+      if (roomRaw.locationTracks && typeof roomRaw.locationTracks === "object") {
+        this.locationTracks = new Map(Object.entries(roomRaw.locationTracks));
+      }
+      if (roomRaw.userInfoByUserId && typeof roomRaw.userInfoByUserId === "object") {
+        this.userInfoByUserId = new Map(Object.entries(roomRaw.userInfoByUserId));
+      }
+    }
   }
+
+  /**
+   * Persist room-scoped live state so it survives eviction.
+   * Socket-scoped state needs no explicit save: it rides the attachment.
+   */
+  async persistRoomStateToStorage() {
+    if (!this.state.storage) return;
+    const hasState =
+      this.stageByUserId.size ||
+      this.activeStreams.size ||
+      this.locationTracks.size ||
+      this.userInfoByUserId.size ||
+      this.activeSpeakerUserId;
+    if (!hasState) {
+      await this.state.storage.delete(EPHEMERAL_ROOM_STATE_KEY);
+      return;
+    }
+    await this.state.storage.put(EPHEMERAL_ROOM_STATE_KEY, {
+      stage: Object.fromEntries(this.stageByUserId),
+      activeSpeakerUserId: this.activeSpeakerUserId,
+      activeStreams: Object.fromEntries(this.activeStreams),
+      locationTracks: Object.fromEntries(this.locationTracks),
+      userInfoByUserId: Object.fromEntries(this.userInfoByUserId),
+    });
+  }
+
+  /**
+   * Number of live sockets belonging to a user.
+   *
+   * Derived from the socket registry rather than a stored counter: a counter in
+   * memory would reset on a hibernation wake and report every returning user as
+   * a fresh join, emitting duplicate `member_joined` events.
+   *
+   * @param {string} userId
+   */
+  countUserConnections(userId) {
+    let n = 0;
+    for (const ws of this.sessions.sockets()) {
+      const att = this.sessions.read(ws);
+      if (att?.u === userId && !att?.ro) n++;
+    }
+    return n;
+  }
+
+  /**
+   * Backwards-compatible view of the old `userConnectionCounts` Map.
+   * Read-only and always derived from live sockets.
+   */
+  get userConnectionCounts() {
+    const counts = new Map();
+    for (const ws of this.sessions.sockets()) {
+      const att = this.sessions.read(ws);
+      const uid = att?.u;
+      if (typeof uid !== "string" || att?.ro) continue;
+      counts.set(uid, (counts.get(uid) || 0) + 1);
+    }
+    return counts;
+  }
+
 
   async persistEphemeralToStorage() {
     if (!this.state.storage) return;
@@ -240,17 +435,41 @@ export class RoomDurableObject {
     } else {
       await this.state.storage.delete(EPHEMERAL_MODERATION_CACHE_KEY);
     }
+    await this.persistRoomStateToStorage();
   }
 
   getActiveUserIds() {
     return listActivePresenceUserIds(this.userIds, this.userConnectionCounts);
   }
 
+  /**
+   * R6 presence-aware AI cost control.
+   *
+   * A user is "backgrounded" when they hold at least one live socket and every
+   * one of those sockets reported `presence_state: "background"`. Users with no
+   * sockets are NOT backgrounded (they are simply offline — different policy).
+   *
+   * @param {string} userId
+   * @returns {boolean}
+   */
+  isUserBackgrounded(userId) {
+    let sockets = 0;
+    for (const ws of this.sessions.socketsByTag(`user:${userId}`)) {
+      sockets += 1;
+      if (this.sessions.read(ws)?.st !== "background") return false;
+    }
+    return sockets > 0;
+  }
+
   getPresenceSnapshot() {
     const userIds = this.getActiveUserIds();
+    let live = 0;
+    for (const ws of this.sessions.sockets()) {
+      if (!this.sessions.read(ws)?.ro) live += 1;
+    }
     return {
-      online: this.clients.size,
-      subscriptionCount: this.clients.size,
+      online: live,
+      subscriptionCount: live,
       users: userIds,
       members: buildPresenceMembers(userIds, this.userInfoByUserId),
     };
@@ -414,21 +633,22 @@ export class RoomDurableObject {
     );
   }
 
+  /**
+   * Called right after a socket joins (its `u` attachment is already set), so
+   * the live socket count is the authoritative connection count for that user.
+   * @param {string} userId
+   */
   incrementUserConnection(userId) {
-    const next = (this.userConnectionCounts.get(userId) || 0) + 1;
-    this.userConnectionCounts.set(userId, next);
-    return next;
+    return Math.max(1, this.countUserConnections(userId));
   }
 
+  /**
+   * Called from close/error handling after the socket has been forgotten, so the
+   * remaining live socket count is the post-disconnect count.
+   * @param {string} userId
+   */
   decrementUserConnection(userId) {
-    const current = this.userConnectionCounts.get(userId) || 0;
-    if (current <= 1) {
-      this.userConnectionCounts.delete(userId);
-      return 0;
-    }
-    const next = current - 1;
-    this.userConnectionCounts.set(userId, next);
-    return next;
+    return this.countUserConnections(userId);
   }
 
   async persistRoomContext(projectId, roomId) {
@@ -454,9 +674,18 @@ export class RoomDurableObject {
   }
 
   async handleWebSocket(webSocket, request) {
-    webSocket.accept();
+    // Hibernation API: the runtime may evict this object between frames, which
+    // is what removes the per-connection duration charge. `accept()` would pin
+    // the object in memory for the whole connection lifetime instead.
+    // Tags let us fan out to one user's sockets without scanning attachments.
+    // Cloudflare allows up to 10 tags, 256 chars each.
+    const tags = [
+      `user:${auth.userId}`,
+      ...(auth.roles ?? []).map((r) => `role:${r}`),
+    ];
+    this.sessions.accept(webSocket, tags);
     const auth = await verifyJwtAndGetContext(request, this.env).catch((err) => {
-      console.error("RoomDurableObject JWT verify error", err);
+      logError("do.ws_jwt_verify_failed", err, {});
       return null;
     });
     if (!auth) {
@@ -484,8 +713,30 @@ export class RoomDurableObject {
       webSocket.close(1008, String(authz.reason).slice(0, 120));
       return;
     }
-    this.wsCapabilities.set(webSocket, authz.capabilities ?? {});
-    this.wsRoles.set(webSocket, auth.roles ?? []);
+
+    const userId = auth.userId;
+    const socketId = crypto.randomUUID();
+    const connectOptsEarly = parseWsConnectOptions(request);
+    const spectator = isReadonlyWsConnect({
+      queryReadonly: connectOptsEarly.readonly ? "1" : "",
+      roles: auth.roles,
+      capabilities: authz.capabilities,
+    });
+
+    // Persist identity/authorisation into the socket attachment in a single
+    // write, BEFORE any await that could be followed by an eviction. A woken
+    // object reads this back instead of a lost in-memory Map.
+    this.sessions.write(webSocket, {
+      u: userId,
+      s: socketId,
+      c: spectator
+        ? { ...(authz.capabilities ?? {}), publish: false }
+        : (authz.capabilities ?? {}),
+      r: auth.roles ?? [],
+      p: auth.projectId,
+      ...(spectator ? { ro: 1 } : {}),
+    });
+
     try {
       await ensurePublicRoomMembership(
         this.env,
@@ -498,16 +749,12 @@ export class RoomDurableObject {
       logError("do.ws_ensure_public_room_membership_failed", err, { roomId });
     }
 
-    this.clients.add(webSocket);
     logInfo("do.client_count", {
       roomId: this.state.id.toString(),
       wsClients: this.clients.size,
       sseClients: this.sseClients.size,
+      hibernatable: this.sessions.hibernationEnabled,
     });
-    const userId = auth.userId;
-    this.userIds.set(webSocket, userId);
-    const socketId = crypto.randomUUID();
-    this.socketIds.set(webSocket, socketId);
 
     try {
       const connectUrl = new URL(request.url);
@@ -522,7 +769,7 @@ export class RoomDurableObject {
     }
 
     const wasVacant = this.clients.size === 1;
-    const userConnCount = this.incrementUserConnection(userId);
+    const userConnCount = spectator ? 0 : this.incrementUserConnection(userId);
     const roomIdStr = roomId;
 
     // Presence recovery: on DO wake after hibernation, reconstruct online user list
@@ -551,21 +798,10 @@ export class RoomDurableObject {
       this.userIds.set(`recovered:${uid}`, uid);
     }
 
+    // Frames that arrive while the handshake below is still running are queued
+    // by `webSocketMessage` and drained once setup completes, preserving order.
     const inboundQueue = [];
     this.wsInboundQueues.set(webSocket, inboundQueue);
-    webSocket.addEventListener("message", (event) => {
-      if (this.wsInboundQueues.has(webSocket)) {
-        inboundQueue.push(event);
-        return;
-      }
-      void this.onMessage(webSocket, event);
-    });
-    webSocket.addEventListener("close", () =>
-      this.onClose(webSocket)
-    );
-    webSocket.addEventListener("error", () =>
-      this.onClose(webSocket)
-    );
 
     const projectId = this.projectId;
     const connectOpts = parseWsConnectOptions(request);
@@ -594,7 +830,6 @@ export class RoomDurableObject {
       await this.sendActiveStreamState(webSocket, {
         projectId,
         roomId,
-        userId,
       });
     } catch (err) {
       logError("do.active_stream_state_failed", err, { roomId, projectId });
@@ -618,6 +853,7 @@ export class RoomDurableObject {
           type: "subscription_succeeded",
           roomId: roomIdStr,
           socketId,
+          readonly: Boolean(spectator),
           subscriptionCount: presence.subscriptionCount,
           members: presence.members,
         }),
@@ -673,6 +909,84 @@ export class RoomDurableObject {
 
     if (wasVacant) {
       void this.notifyRoomOccupancyWebhook("room.occupied");
+    }
+
+    // Room-scoped state may have changed during the handshake (presence info,
+    // recovered users). Persist so a wake right after connect is consistent.
+    void this.persistRoomStateToStorage().catch((err) =>
+      logError("do.persist_room_state_failed", err, { roomId }),
+    );
+  }
+
+  // ── WebSocket Hibernation API handlers ────────────────────────────────────
+  //
+  // With `state.acceptWebSocket()` the runtime dispatches frames to these
+  // methods instead of to `addEventListener` closures. That indirection is the
+  // whole point: closures capture the object in memory and defeat eviction,
+  // while these methods can be invoked on a freshly reconstructed instance.
+
+  /**
+   * @param {WebSocket} webSocket
+   * @param {string | ArrayBuffer} message
+   */
+  async webSocketMessage(webSocket, message) {
+    // A frame can arrive on a woken object before any handshake ran in this
+    // isolate. Storage hydration must complete first or the handler would see
+    // an empty room context.
+    await this.ensureStorageHydrated();
+
+    // F1: every inbound WS frame is a billable unit (20:1 ratio) — count it,
+    // and attribute handler wall-clock to the room's duration ledger.
+    recordWsFrameIn(this.costLedger);
+    const __costStart = Date.now();
+    try {
+      await this.#webSocketMessageInner(webSocket, message);
+    } finally {
+      const __costDelta = Date.now() - __costStart;
+      if (__costDelta > 0) this.costLedger.handlerDurationMs += __costDelta;
+      this.costLedger.lastEventMs = Date.now();
+    }
+  }
+
+  async #webSocketMessageInner(webSocket, message) {
+
+    const queue = this.wsInboundQueues.get(webSocket);
+    if (queue) {
+      // Handshake still in flight: preserve arrival order.
+      queue.push({ data: message });
+      return;
+    }
+    await this.onMessage(webSocket, { data: message });
+  }
+
+  /**
+   * @param {WebSocket} webSocket
+   * @param {number} code
+   * @param {string} reason
+   * @param {boolean} wasClean
+   */
+  async webSocketClose(webSocket, code, reason, wasClean) {
+    await this.ensureStorageHydrated();
+    try {
+      this.onClose(webSocket);
+    } finally {
+      void this.persistRoomStateToStorage().catch(() => {});
+    }
+  }
+
+  /**
+   * @param {WebSocket} webSocket
+   * @param {unknown} error
+   */
+  async webSocketError(webSocket, error) {
+    await this.ensureStorageHydrated();
+    logError("do.ws_error", error instanceof Error ? error : new Error(String(error)), {
+      roomId: this.roomId || undefined,
+    });
+    try {
+      this.onClose(webSocket);
+    } finally {
+      void this.persistRoomStateToStorage().catch(() => {});
     }
   }
 
@@ -780,29 +1094,54 @@ export class RoomDurableObject {
    * @param {WebSocket} webSocket
    * @param {{ projectId: string, roomId: string, userId: string }} opts
    */
-  async sendActiveStreamState(webSocket, { projectId, roomId, userId }) {
-    const stream = this.activeStreams.get(userId);
-    if (!stream?.messageId) return;
-
-    const row = await this.env.DB.prepare(
-      "SELECT id, user_id, content, created_at, parent_id FROM messages WHERE id = ? AND project_id = ? AND room_id = ? AND deleted_at IS NULL"
-    )
-      .bind(stream.messageId, projectId, roomId)
-      .first();
-    if (!row) return;
-
-    webSocket.send(
-      JSON.stringify({
-        type: "streamState",
-        messageId: row.id,
-        roomId,
-        userId: row.user_id,
-        content: row.content ?? "",
-        createdAt: row.created_at,
-        parentId: row.parent_id ? Number(row.parent_id) || null : null,
-        streaming: true,
-      })
-    );
+  async sendActiveStreamState(webSocket, { projectId, roomId, streamOffsets = {} }) {
+    for (const [ownerId, stream] of this.activeStreams.entries()) {
+      if (!stream?.messageId) continue;
+      let full = typeof stream.content === "string" ? stream.content : "";
+      if (!full) {
+        const row = await this.env.DB.prepare(
+          "SELECT id, user_id, content, created_at, parent_id FROM messages WHERE id = ? AND project_id = ? AND room_id = ? AND deleted_at IS NULL",
+        )
+          .bind(stream.messageId, projectId, roomId)
+          .first();
+        if (!row) continue;
+        full = row.content ?? "";
+        const clientOffset = streamOffsets[String(stream.messageId)] ?? streamOffsets[stream.messageId];
+        const tail = streamTail(full, clientOffset);
+        webSocket.send(
+          JSON.stringify({
+            type: "streamState",
+            messageId: row.id,
+            roomId,
+            userId: row.user_id,
+            content: tail.content,
+            offset: tail.offset,
+            resumeFrom: tail.resumeFrom,
+            createdAt: row.created_at,
+            parentId: row.parent_id ? Number(row.parent_id) || null : null,
+            streaming: true,
+          }),
+        );
+        continue;
+      }
+      const clientOffset = streamOffsets[String(stream.messageId)] ?? streamOffsets[stream.messageId];
+      const tail = streamTail(full, clientOffset);
+      if (tail.caughtUp) continue;
+      webSocket.send(
+        JSON.stringify({
+          type: "streamState",
+          messageId: stream.messageId,
+          roomId,
+          userId: ownerId,
+          content: tail.content,
+          offset: tail.offset,
+          resumeFrom: tail.resumeFrom,
+          createdAt: stream.createdAt || new Date().toISOString(),
+          parentId: stream.parentId ?? null,
+          streaming: true,
+        }),
+      );
+    }
   }
 
   async processStreamOp({ projectId, roomId, userId, op, content, messageId, parentId }) {
@@ -863,10 +1202,16 @@ export class RoomDurableObject {
         )
         .run();
       const newMessageId = insert.meta.last_row_id;
+      const checkpoint = streamCheckpoint(initialContent);
       this.activeStreams.set(userId, {
         messageId: newMessageId,
         lastFlushMs: Date.now(),
+        content: checkpoint.content,
+        offset: checkpoint.offset,
+        createdAt,
+        parentId: parentId ? Number(parentId) || null : null,
       });
+      void this.persistRoomStateToStorage().catch(() => {});
 
       this.broadcast({
         type: "message",
@@ -886,21 +1231,33 @@ export class RoomDurableObject {
       return { ok: true, id: newMessageId };
     }
 
-    if (op === "delta" || op === "end") {
+    if (op === "delta" || op === "end" || op === "stop") {
       const state = this.activeStreams.get(userId);
-      const mid = Number(messageId);
+      let mid = Number(messageId);
+      if (op === "stop" && state && (!Number.isFinite(mid) || mid <= 0)) {
+        mid = Number(state.messageId);
+        if (content == null || String(content).trim() === "") {
+          content = state.content || "";
+        }
+      }
       if (!state || state.messageId !== mid) {
         return { ok: false, error: "stream_not_active" };
       }
 
-      const contentValidation = validateMessageContent(content ?? "");
+      const contentValidation =
+        op === "stop"
+          ? validateStreamStartContent(content ?? state.content ?? "")
+          : validateMessageContent(content ?? "");
       if (!contentValidation.valid) {
         return { ok: false, error: `invalid_content: ${contentValidation.error}` };
       }
 
       const now = new Date().toISOString();
       const nextContent = contentValidation.content;
-      const isFinal = op === "end";
+      const checkpoint = streamCheckpoint(nextContent);
+      state.content = checkpoint.content;
+      state.offset = checkpoint.offset;
+      const isFinal = op === "end" || op === "stop";
       const shouldPersist =
         isFinal || Date.now() - state.lastFlushMs >= STREAM_FLUSH_MS;
 
@@ -912,6 +1269,7 @@ export class RoomDurableObject {
           .run();
         state.lastFlushMs = Date.now();
       }
+      void this.persistRoomStateToStorage().catch(() => {});
 
       this.broadcast({
         type: "edit",
@@ -925,6 +1283,7 @@ export class RoomDurableObject {
 
       if (isFinal) {
         this.activeStreams.delete(userId);
+        void this.persistRoomStateToStorage().catch(() => {});
         void safeSchedulePostMessageAutomations(this.env, {
           projectId,
           roomId,
@@ -959,6 +1318,7 @@ export class RoomDurableObject {
         deletedAt: now,
         hard: false,
       });
+      void this.persistRoomStateToStorage().catch(() => {});
       return { ok: true, id: mid };
     }
 
@@ -966,6 +1326,13 @@ export class RoomDurableObject {
   }
 
   async onMessage(webSocket, event) {
+    if (this.sessions.read(webSocket)?.ro) {
+      if (event.data instanceof ArrayBuffer) {
+        webSocket.send(JSON.stringify(readonlyConnectionError()));
+        return;
+      }
+    }
+
     if (event.data instanceof ArrayBuffer) {
       const roomId = this.roomId || this.state.id.toString();
       await this.yjsSync.handleBinary(
@@ -1012,6 +1379,11 @@ export class RoomDurableObject {
         return;
       }
 
+      if (this.sessions.read(webSocket)?.ro && !isReadonlyAllowedClientType(msg.type)) {
+        webSocket.send(JSON.stringify(readonlyConnectionError()));
+        return;
+      }
+
       if (msg.type === "resume") {
         const roomId = this.roomId || this.state.id.toString();
         const projectId = this.projectId;
@@ -1037,6 +1409,15 @@ export class RoomDurableObject {
         } catch (err) {
           logError("do.resume_replay_failed", err, { roomId, projectId });
           webSocket.send(JSON.stringify({ type: "error", message: "resume_failed" }));
+        }
+        try {
+          await this.sendActiveStreamState(webSocket, {
+            projectId,
+            roomId,
+            streamOffsets: msg.streamOffsets && typeof msg.streamOffsets === "object" ? msg.streamOffsets : {},
+          });
+        } catch (err) {
+          logError("do.stream_offset_resume_failed", err, { roomId, projectId });
         }
         return;
       }
@@ -1530,22 +1911,31 @@ export class RoomDurableObject {
 
       if (msg.type === "stream") {
         const roomId = this.roomId || this.state.id.toString();
-        const userId = this.userIds.get(webSocket) || msg.userId;
+        const socketUserId = this.userIds.get(webSocket) || msg.userId;
         const projectId = this.projectId;
         const op = String(msg.op || "");
         const parentId = msg.parentId ? Number(msg.parentId) || null : null;
+        const targetUserId =
+          op === "stop" && typeof msg.targetUserId === "string" && msg.targetUserId.trim()
+            ? msg.targetUserId.trim()
+            : socketUserId;
 
-        if (!userId || !projectId) {
+        if (!socketUserId || !projectId) {
           webSocket.send(
             JSON.stringify({ type: "error", message: "stream_requires_authenticated_socket" })
           );
           return;
         }
 
+        if (op === "stop" && targetUserId !== socketUserId && !this.activeStreams.has(targetUserId)) {
+          webSocket.send(JSON.stringify({ type: "error", message: "stream_not_active" }));
+          return;
+        }
+
         const result = await this.processStreamOp({
           projectId,
           roomId,
-          userId,
+          userId: targetUserId,
           op,
           content: msg.content,
           messageId: msg.messageId,
@@ -2002,6 +2392,16 @@ export class RoomDurableObject {
         return;
       }
 
+      // R6 presence-aware AI cost control: the client reports tab visibility.
+      // Stored per-socket in the attachment (survives hibernation). AI-side
+      // spend for a fully-backgrounded user (speculative warmup) is skipped —
+      // see maybeRunSpeculativeWarmup and isUserBackgrounded.
+      if (msg.type === "presence_state") {
+        const state = msg.state === "background" ? "background" : "active";
+        this.sessions.write(webSocket, { st: state });
+        return;
+      }
+
       if (msg.type === "agentTyping") {
         const payload = {
           type: "agentTyping",
@@ -2026,19 +2426,20 @@ export class RoomDurableObject {
   }
 
   onClose(webSocket) {
+    // Read the identity BEFORE forgetting the socket: after `forget` the
+    // attachment view no longer resolves and presence bookkeeping would be lost.
     const userId = this.userIds.get(webSocket);
+    const wasReadonly = Boolean(this.sessions.read(webSocket)?.ro);
     const roomId = this.roomId || this.state.id.toString();
     this.yjsSync.removeClient(webSocket, roomId);
-    this.clients.delete(webSocket);
-    this.userIds.delete(webSocket);
-    this.socketIds.delete(webSocket);
     this.wsInboundQueues.delete(webSocket);
-    this.wsCapabilities.delete(webSocket);
-    this.wsRoles.delete(webSocket);
+    // Single call drops every per-socket field at once (identity, socket id,
+    // capabilities, roles) and removes the socket from the live set.
+    this.sessions.forget(webSocket);
 
     const roomIdStr = this.roomId || this.state.id.toString();
     let memberLeft = false;
-    if (userId && !String(userId).startsWith("recovered:")) {
+    if (userId && !String(userId).startsWith("recovered:") && !wasReadonly) {
       void runFluxyDisconnectHooks(roomIdStr, userId, "close");
       const remaining = this.decrementUserConnection(userId);
       if (remaining === 0) {
@@ -2102,18 +2503,35 @@ export class RoomDurableObject {
     const excludeWebSocket = options.excludeWebSocket;
     const excludeSocketId = options.excludeSocketId;
     const deadClients = [];
-    for (const client of this.clients) {
+
+    // OPTIMIZATION: when targeting specific users, use tag-based fanout
+    // instead of scanning all clients and filtering by attachment.
+    let targets;
+    if (recipientUserIds && recipientUserIds.size > 0) {
+      targets = [];
+      for (const uid of recipientUserIds) {
+        targets.push(...this.sessions.socketsByTag(`user:${uid}`));
+      }
+      // Deduplicate in case a socket has multiple matching tags
+      targets = [...new Set(targets)];
+    } else {
+      targets = this.clients;
+    }
+
+    for (const client of targets) {
       if (excludeWebSocket && client === excludeWebSocket) continue;
       if (excludeSocketId) {
         const sid = this.socketIds.get(client);
         if (sid === excludeSocketId) continue;
       }
       if (recipientUserIds) {
+        // Double-check: the tag lookup should already filter, but verify
         const uid = this.userIds.get(client);
         if (!uid || !recipientUserIds.has(uid)) continue;
       }
       try {
         client.send(payload);
+        recordWsFrameOut(this.costLedger, 1);
       } catch {
         deadClients.push(client);
       }
@@ -2277,16 +2695,15 @@ export class RoomDurableObject {
   async scheduleEphemeralCleanup(delayMs = 60_000) {
     if (typeof this.state.storage?.setAlarm !== "function") return;
     if (this.wsRateLimitStore.size === 0 && this.moderationCache.size === 0) {
-      if (typeof this.state.storage.deleteAlarm === "function") {
-        await this.state.storage.deleteAlarm();
-      }
+      await cancelDoAlarmJob(this.state.storage, "ephemeral-cleanup");
       return;
     }
-    const when = Date.now() + delayMs;
-    const current = await this.state.storage.getAlarm();
-    if (!current || current > when) {
-      await this.state.storage.setAlarm(when);
-    }
+    await scheduleDoAlarmJob(
+      this.state.storage,
+      "ephemeral-cleanup",
+      Date.now() + delayMs,
+      "ephemeral-cleanup",
+    );
   }
 
   async scheduleMessageExpiryAlarm() {
@@ -2334,24 +2751,110 @@ export class RoomDurableObject {
   }
 
   async alarm() {
-    await this.expireDueMessagesInRoom();
-    const projectId = this.projectId;
-    const roomId = this.roomId || this.state.id.toString();
-    if (projectId && roomId) {
-      const { processDueScheduledMessages } = await import(
-        "../lib/scheduled-messages.js"
+    recordAlarmCost(this.costLedger);
+    const step = await runDoAlarmStep(this.state, async () => {
+      await takeDueDoAlarmJobs(this.state.storage);
+      await this.expireDueMessagesInRoom();
+      const projectId = this.projectId;
+      const roomId = this.roomId || this.state.id.toString();
+      if (projectId && roomId) {
+        const { processDueScheduledMessages } = await import(
+          "../lib/scheduled-messages.js"
+        );
+        await processDueScheduledMessages(this.env, {
+          projectId,
+          roomId,
+          broadcast: (payload) => this.broadcast(payload),
+        });
+      }
+      this.pruneEphemeralState();
+      if (this.wsRateLimitStore.size > 0 || this.moderationCache.size > 0) {
+        await this.scheduleEphemeralCleanup(60_000);
+      }
+      await this.scheduleMessageExpiryAlarm();
+      await this.processDueAgentSchedules();
+    }, { reason: "alarm" });
+    if (!step.ok && step.retry && this.state?.storage?.setAlarm) {
+      const delay = backoffMsForFailure(step, 0);
+      await scheduleDoAlarmJob(
+        this.state.storage,
+        "alarm-retry",
+        Date.now() + delay,
+        "alarm-retry",
       );
-      await processDueScheduledMessages(this.env, {
-        projectId,
-        roomId,
-        broadcast: (payload) => this.broadcast(payload),
+    }
+    // F1: persist the cost snapshot while we are awake anyway (alarm fires are
+    // the natural checkpoint between hibernation windows).
+    await this.persistCostLedger();
+    if (this.state?.storage) {
+      await captureRoomPitrSnapshot(this.state.storage, { label: "alarm-checkpoint" });
+    }
+  }
+
+  async armAgentScheduleAlarm() {
+    if (!this.state?.storage) return;
+    const dueAt = await withAgentScheduleRows(this.state.storage, (rows) => ({
+      rows,
+      dueAt: earliestAgentScheduleDueAt(rows),
+    }));
+    const when = dueAt?.dueAt;
+    if (when == null) {
+      await cancelDoAlarmJob(this.state.storage, AGENT_SCHEDULE_ALARM_JOB);
+      return;
+    }
+    await scheduleDoAlarmJob(this.state.storage, AGENT_SCHEDULE_ALARM_JOB, when, AGENT_SCHEDULE_ALARM_JOB);
+  }
+
+  async processDueAgentSchedules() {
+    if (!this.state?.storage) return;
+    const claimed = [];
+    await withAgentScheduleRows(this.state.storage, (rows) => {
+      claimed.push(...claimDueAgentSchedules(rows, Date.now()));
+      return { rows };
+    });
+    for (const schedule of claimed) {
+      let fire;
+      try {
+        fire = await fireAgentSchedule(this.env, schedule);
+      } catch (err) {
+        const classified = classifyDoFailure(err);
+        fire = {
+          ok: false,
+          error: classified.message,
+          retry: classified.retry,
+          delayMs: backoffMsForFailure(classified, schedule.failCount),
+        };
+      }
+      if (fire && fire.ok === false && fire.retry == null && fire.error) {
+        const classified = classifyDoFailure(new Error(String(fire.error)));
+        fire.retry = classified.retry;
+        fire.delayMs = backoffMsForFailure(classified, schedule.failCount);
+      }
+      await withAgentScheduleRows(this.state.storage, (rows) => {
+        const row = rows.find((r) => r.id === schedule.id);
+        if (row) {
+          completeAgentScheduleFire(row, {
+            ok: Boolean(fire?.ok),
+            runId: fire?.runId || null,
+            error: fire?.error || null,
+            retry: fire?.retry !== false,
+            delayMs: fire?.delayMs,
+          });
+        }
+        return { rows };
       });
     }
-    this.pruneEphemeralState();
-    if (this.wsRateLimitStore.size > 0 || this.moderationCache.size > 0) {
-      await this.scheduleEphemeralCleanup(60_000);
+    if (claimed.length) await this.armAgentScheduleAlarm();
+  }
+
+  /** Persist the F1 cost ledger so counters survive eviction. */
+  async persistCostLedger() {
+    if (!this.state?.storage) return;
+    try {
+      await this.state.storage.put(this.costLedgerKey, { ...this.costLedger });
+    } catch (err) {
+      logError("do.cost_ledger_persist_failed", err, {});
     }
-    await this.scheduleMessageExpiryAlarm();
   }
 
   async checkModeration(roomId, userId) {
@@ -2394,6 +2897,15 @@ export class RoomDurableObject {
     } = await import("../lib/speculative-warmup.js");
 
     if (!isSpeculativeWarmupEnabled(this.env) || !this.projectId || !userId) return;
+
+    // R6 presence-aware AI cost control: a user whose sockets are all
+    // backgrounded cannot see the response, so pre-computing context for them
+    // is pure token spend. Skip and discard any stale cache.
+    if (this.isUserBackgrounded(userId)) {
+      const stale = this.speculativeWarmupCache.get(userId);
+      if (stale) stale.discarded = true;
+      return;
+    }
 
     const roomId = this.roomId || this.state.id.toString();
 
@@ -2461,6 +2973,69 @@ export class RoomDurableObject {
 
   async fetch(request) {
     await this.ensureStorageHydrated();
+    recordDoRequest(this.costLedger);
+
+    // F1: live marginal cost for this room. Auth is enforced by the caller
+    // (admin route); the DO itself sits on the private binding.
+    if (new URL(request.url).pathname === "/cost") {
+      await this.persistCostLedger();
+      return Response.json({
+        ok: true,
+        roomId: this.roomId || this.state.id.toString(),
+        projectId: this.projectId,
+        ...costView(this.costLedger),
+      });
+    }
+
+    // F5: read-only SQL over this room's own SQLite. The REST route enforces
+    // JWT + room membership; here we only trust validateReadOnlySql as the
+    // last line of defence before touching live state.
+    if (new URL(request.url).pathname === "/sql" && request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      const { validateReadOnlySql, executeReadOnlySql } = await import("../lib/room-sql.js");
+      const verdict = validateReadOnlySql(body.sql);
+      if (!verdict.ok) {
+        return Response.json({ ok: false, reason: verdict.reason }, { status: 400 });
+      }
+      const sqlite = this.state?.storage?.sql ?? null;
+      const maxRows = Math.min(Math.max(Number(body.maxRows) || 200, 1), 1000);
+      const result = executeReadOnlySql(sqlite, verdict.sql, maxRows);
+      return Response.json(result, { status: result.ok ? 200 : 400 });
+    }
+
+    if (new URL(request.url).pathname === "/pitr") {
+      const storage = this.state?.storage;
+      if (!storage) {
+        return Response.json({ ok: false, reason: "storage_unavailable" }, { status: 503 });
+      }
+      if (request.method === "GET") {
+        return Response.json(await listRoomPitr(storage));
+      }
+      if (request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const action = String(body.action || "").trim();
+        if (action === "snapshot") {
+          const captured = await captureRoomPitrSnapshot(storage, {
+            label: body.label || "manual",
+            actorUserId: body.actorUserId || null,
+            force: true,
+          });
+          return Response.json(captured, { status: captured.ok ? 200 : 400 });
+        }
+        if (action === "restore") {
+          const bookmark =
+            typeof body.bookmark === "string"
+              ? body.bookmark
+              : typeof body.snapshotId === "string"
+                ? ((await listRoomPitr(storage)).snapshots.find((s) => s.id === body.snapshotId) || {})
+                    .bookmark
+                : "";
+          const restored = await restoreRoomPitr(storage, bookmark);
+          return Response.json(restored, { status: restored.ok ? 200 : 400 });
+        }
+        return Response.json({ ok: false, reason: "action_required" }, { status: 400 });
+      }
+    }
 
     if (request.headers.get("Upgrade") === "websocket") {
       const [client, server] = Object.values(new WebSocketPair());
@@ -2648,6 +3223,59 @@ export class RoomDurableObject {
       });
     }
 
+    if (new URL(request.url).pathname === "/agent-schedules") {
+      const storage = this.state?.storage;
+      if (!storage) {
+        return Response.json({ ok: false, reason: "storage_unavailable" }, { status: 503 });
+      }
+      if (request.method === "GET") {
+        const listed = await withAgentScheduleRows(storage, (rows) => ({
+          rows,
+          schedules: rows
+            .filter((r) => r.status !== "cancelled")
+            .map(serializeSchedule),
+        }));
+        return Response.json({ ok: true, schedules: listed.schedules || [] });
+      }
+      if (request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const projectId = this.projectId || body.projectId;
+        const roomId = this.roomId || this.state.id.toString();
+        if (projectId && roomId) {
+          await this.persistRoomContext(projectId, roomId);
+        }
+        const result = await withAgentScheduleRows(storage, (rows) =>
+          upsertAgentSchedule(rows, {
+            ...body,
+            projectId,
+            roomId,
+          }),
+        );
+        if (!result.ok) {
+          return Response.json({ ok: false, reason: result.reason }, { status: 400 });
+        }
+        await this.armAgentScheduleAlarm();
+        return Response.json({
+          ok: true,
+          created: result.created,
+          schedule: serializeSchedule(result.schedule),
+        });
+      }
+      if (request.method === "DELETE") {
+        const body = await request.json().catch(() => ({}));
+        const scheduleId = String(body.scheduleId || body.id || "").trim();
+        if (!scheduleId) {
+          return Response.json({ ok: false, reason: "schedule_id_required" }, { status: 400 });
+        }
+        const result = await withAgentScheduleRows(storage, (rows) => cancelAgentSchedule(rows, scheduleId));
+        if (!result.ok) {
+          return Response.json({ ok: false, reason: result.reason }, { status: 404 });
+        }
+        await this.armAgentScheduleAlarm();
+        return Response.json({ ok: true, schedule: serializeSchedule(result.schedule) });
+      }
+    }
+
     if (new URL(request.url).pathname === "/terminate-socket" && request.method === "POST") {
       const body = await request.json().catch(() => ({}));
       const socketId =
@@ -2710,6 +3338,61 @@ export class RoomDurableObject {
       });
     }
 
+    if (new URL(request.url).pathname === "/rpc" && request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      const parsed = parseRpcRequest(body, ROOM_RPC_METHODS);
+      if (!parsed.ok) {
+        return Response.json(parsed, { status: 400 });
+      }
+      if (parsed.method === "ping") {
+        return Response.json({
+          ok: true,
+          method: "ping",
+          roomId: this.roomId || this.state.id.toString(),
+          projectId: this.projectId,
+        });
+      }
+      if (parsed.method === "presence") {
+        return Response.json({ ok: true, ...this.getPresenceSnapshot() });
+      }
+      if (parsed.method === "announce") {
+        return this.fetch(
+          new Request("https://internal/announce", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(parsed.params),
+          }),
+        );
+      }
+      if (parsed.method === "copilot_nudge") {
+        const agentId = String(parsed.params.agentId || "").trim();
+        const userId = String(parsed.params.userId || "").trim();
+        const content = String(parsed.params.content || "").trim();
+        if (!agentId || !userId || !content) {
+          return Response.json({ ok: false, reason: "nudge_fields_required" }, { status: 400 });
+        }
+        const payload = await callAgentDo(
+          this.env,
+          {
+            projectId: this.projectId || parsed.params.projectId,
+            agentId,
+            userId,
+          },
+          "turn",
+          {
+            content,
+            projectId: this.projectId || parsed.params.projectId,
+            agentId,
+            userId,
+            roomId: this.roomId || this.state.id.toString(),
+            traceId: parsed.params.traceId,
+          },
+        );
+        return Response.json(payload);
+      }
+      return Response.json({ ok: false, reason: "unknown_method" }, { status: 400 });
+    }
+
     if (new URL(request.url).pathname === "/announce" && request.method === "POST") {
       const body = await request.json();
       const roomIdStr = this.state.id.toString();
@@ -2732,6 +3415,20 @@ export class RoomDurableObject {
             userId: body.userId,
             name: body.name,
             data: body.data ?? {},
+            at: body.at || new Date().toISOString(),
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "copilot_turn") {
+        this.broadcast(
+          {
+            type: "copilot_turn",
+            roomId: body.roomId || roomIdStr,
+            agentId: body.agentId,
+            userId: body.userId,
+            runId: body.runId || null,
+            content: body.content || null,
+            status: body.status || null,
             at: body.at || new Date().toISOString(),
           },
           broadcastOpts,
@@ -2836,6 +3533,9 @@ export class RoomDurableObject {
             arguments: body.arguments,
             result: body.result,
             error: body.error,
+            parentRunId: body.parentRunId ?? null,
+            parentToolCallId: body.parentToolCallId ?? null,
+            nestDepth: Number(body.nestDepth) || 0,
           },
           broadcastOpts,
         );

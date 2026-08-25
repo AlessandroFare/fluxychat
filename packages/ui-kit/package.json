@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/ui-kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Polished drop-in FluxyChat widget and inbox — built on @fluxy-chat/ui with optional assistant-ui runtime",
   "license": "MIT",
   "type": "module",
@@ -21,8 +21,8 @@
   },
   "peerDependencies": {
     "react": ">=18",
-    "@fluxy-chat/sdk": "^0.6.2",
-    "@fluxy-chat/react": "^0.1.2",
+    "@fluxy-chat/sdk": "^0.6.3",
+    "@fluxy-chat/react": "^0.1.3",
     "@fluxy-chat/ui": "^0.1.4",
     "@assistant-ui/react": ">=0.10.0"
   },

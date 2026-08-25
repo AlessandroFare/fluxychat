@@ -10,6 +10,7 @@ import { buildModelCatalogEntry } from "./llm-model-catalog.js";
 import { buildOpenAiChatCompletionsUrl } from "./openai-compat-url.js";
 import { getProjectLlmCredential } from "./project-llm-credentials.js";
 import { workerSharedLlmAllowed } from "./hosted-saas-policy.js";
+import { getAiGatewayConnectionOverrides } from "./ai-gateway.js";
 
 /** @typedef {"anthropic" | "openai-compatible"} LlmApiStyle */
 
@@ -183,7 +184,7 @@ export async function resolveLlmConnection(env, { provider: providerField, model
     };
   }
 
-  return {
+  const connection = {
     ok: true,
     providerId: id,
     label: def.label,
@@ -201,6 +202,26 @@ export async function resolveLlmConnection(env, { provider: providerField, model
     apiKeyConfigured: !!apiKey,
     apiKeySource: projectCred?.apiKey ? "project" : apiKey ? "worker" : "none",
   };
+
+  const usingProjectOrAgentUrl = Boolean(projectCred?.baseUrl || agentLlm.baseUrl);
+  if (sharedLlmOk && !usingProjectOrAgentUrl) {
+    const gateway = getAiGatewayConnectionOverrides(env, {
+      useGateway: true,
+      projectId,
+      feature: "agent",
+    });
+    if (gateway.chatCompletionsUrl || gateway.anthropicMessagesUrl) {
+      if (apiStyle === "openai-compatible" && gateway.chatCompletionsUrl) {
+        connection.chatCompletionsUrl = gateway.chatCompletionsUrl;
+      }
+      if (apiStyle === "anthropic" && gateway.anthropicMessagesUrl) {
+        connection.anthropicMessagesUrl = gateway.anthropicMessagesUrl;
+      }
+      connection.gatewayHeaders = gateway.gatewayHeaders;
+    }
+  }
+
+  return connection;
 }
 
 /**

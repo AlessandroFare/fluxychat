@@ -2,6 +2,8 @@
 
 Roadmap completa con best practice, architetture, tool gratuiti/open-source e riferimenti al codice già pronto.
 
+**Cloudflare Agents SDK (agents-main, Aug 2026) — threat + steal list + CF-A-001–044:** [docs/CLOUDFLARE-AGENTS-VS-FLUXYCHAT-ROADMAP.md](docs/CLOUDFLARE-AGENTS-VS-FLUXYCHAT-ROADMAP.md)
+
 **Technical implementation guide (code-mapped, 🔴/🟡/🟢 priorities):** [docs/FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md)
 
 **Competitor parity (Sendbird/Stream/PubNub/CometChat/Vercel — CP-001–CP-083):** [docs/COMPETITOR-PARITY-ROADMAP-2026.md](docs/COMPETITOR-PARITY-ROADMAP-2026.md)
@@ -120,7 +122,16 @@ Lanciato Maggio 2026, closed source, cloud-only, chat + AI basic.
 | AI | Chat agent basic | Multi-agent swarm (A2A), voice, generative UI |
 | Transport | WebSocket | DO + WebTransport + CRDT + WebRTC |
 | Spatial/Voice/IoT | ❌ | ✅ Spatial audio, 3D awareness, voice-first |
-| CRDT/Location/E2EE | ❌ | ✅ Tutto incluso |
+| CRDT/Location | -- | CRDT + live location inclusi |
+
+> **Cifratura, per essere precisi.** Non dichiarare E2EE. `packages/sdk/src/group-cipher.ts`
+> fa AES-256-GCM reale con derivazione HKDF per epoch, ma la chiave la fornisce
+> l'applicazione: è end-to-end **solo** se la distribuisci fuori banda. Il percorso
+> `room-e2e` prende la chiave dal server (`lib/room-e2e.js:14`
+> `generateRoomContentKeyMaterial`), quindi lì il server può decifrare — si chiama — si chiama
+> "content encryption con chiavi gestite dal server", non E2EE. MLS (RFC 9420) non è
+> implementato: vedi `ROADMAP_EXECUTION.md` P27-1. Ably vende E2E AES su tutti i piani,
+> Free incluso, quindi su questa riga siamo indietro e va detto.
 
 **Strategia**: Competere su open source (costo 1/10) + spatial + AI swarm + piattaforma unificata.
 Portal è "Pusher con AI basic" — ignora completamente spatial, voice-first, digital twin, cross-reality.

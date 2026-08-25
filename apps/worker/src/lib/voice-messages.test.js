@@ -274,6 +274,24 @@ describe("transcribeAudio", () => {
     expect(res.error).toBe("ai_not_configured");
   });
 
+  it("prefers env.AI.run when the Workers AI binding is present", async () => {
+    const env = {
+      AI: {
+        run: async () => ({ text: "from workers ai" }),
+      },
+      AI_BASE_URL: "https://llm.example.com",
+      AI_API_KEY: "sk-test",
+    };
+    const res = await transcribeAudio(env, {
+      audioBytes: new Uint8Array([1, 2, 3]),
+      mimeType: "audio/webm",
+    });
+    expect(res.ok).toBe(true);
+    expect(res.text).toBe("from workers ai");
+    expect(res.engine).toBe("workers-ai");
+    expect(calls).toHaveLength(0);
+  });
+
   it("returns 400 on empty audio", async () => {
     const res = await transcribeAudio(
       { AI_BASE_URL: "https://llm.example.com" },

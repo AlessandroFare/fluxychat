@@ -1,5 +1,12 @@
 # @fluxy-chat/sdk
 
+## 0.6.3 (2026-08-25)
+
+### Added
+
+- `stopAgentStream()` on `useChat` / room session — cooperative stop of an in-flight agent stream (keeps tokens already shown).
+- Stream offset resume, group cipher / attestation helpers, nested agent workspace steps.
+
 ## 0.5.0 (2026-07-28)
 
 ### Added

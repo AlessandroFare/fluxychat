@@ -9,6 +9,7 @@ export interface VoiceAiProvider {
   model: string;
   features: string[];
   targetLatencyMs: number;
+  engine?: string;
 }
 
 export interface VoiceAiSession {
@@ -73,6 +74,40 @@ export async function recordVoiceAiMetrics(
 
 export async function getVoiceAiStats(token: string): Promise<{ stats: VoiceAiStats }> {
   return fetchWorkerJson(`${BASE}/admin/voice-ai/stats`, { headers: authHeaders(token) });
+}
+
+export async function transcribeWithWorker(
+  token: string,
+  body: { audioBase64: string; mimeType?: string; language?: string; roomId?: string; announce?: boolean },
+): Promise<{ ok: true; text: string; model: string; engine: string | null }> {
+  return fetchWorkerJson(`${BASE}/voice-ai/transcribe`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function speakWithWorker(
+  token: string,
+  body: { text: string; lang?: string; voice?: string; roomId?: string; announce?: boolean },
+): Promise<{ ok: true; audioBase64: string; mimeType: string; model: string; engine: string }> {
+  return fetchWorkerJson(`${BASE}/voice-ai/speak`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function blobToAudioBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      resolve(dataUrl.includes(",") ? dataUrl.slice(dataUrl.indexOf(",") + 1) : dataUrl);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+    reader.readAsDataURL(blob);
+  });
 }
 
 export async function listVoiceAiMetrics(token: string, limit = 20): Promise<{ entries: unknown[]; count: number }> {
