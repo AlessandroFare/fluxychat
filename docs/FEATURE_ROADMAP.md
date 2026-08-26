@@ -1,7 +1,7 @@
 # FluxyChat — Feature Roadmap & Implementation Guide
 
 > Consolidated technical roadmap (Aug 2026). Merges product research, zero-budget constraints, and **verified code inventory**.
-> Companion docs: [ROADMAP.md](../ROADMAP.md) (business/phases), [ROADMAP_REALTIME_FEATURES.md](../ROADMAP_REALTIME_FEATURES.md) (AI SDK parity matrix), [COMPETITOR-PARITY-ROADMAP-2026.md](./COMPETITOR-PARITY-ROADMAP-2026.md) (Sendbird/Stream/PubNub/Vercel gaps CP-001–CP-083), [NEXT-WAVE-ROADMAP-2026.md](./NEXT-WAVE-ROADMAP-2026.md) (post-parity NW-100–NW-206), [CLOUDFLARE-AGENTS-VS-FLUXYCHAT-ROADMAP.md](./CLOUDFLARE-AGENTS-VS-FLUXYCHAT-ROADMAP.md) (CF Agents SDK vs room kernel, CF-A-001–044).
+> Companion docs: [ROADMAP.md](../ROADMAP.md) (business/phases), [ROADMAP_REALTIME_FEATURES.md](../ROADMAP_REALTIME_FEATURES.md) (AI SDK parity matrix), [COMPETITOR-PARITY-ROADMAP-2026.md](./COMPETITOR-PARITY-ROADMAP-2026.md) (Sendbird/Stream/PubNub/Vercel gaps CP-001–CP-083), [NEXT-WAVE-ROADMAP-2026.md](./NEXT-WAVE-ROADMAP-2026.md) (post-parity NW-100–NW-206), [CLOUDFLARE-AGENTS-VS-FLUXYCHAT-ROADMAP.md](./CLOUDFLARE-AGENTS-VS-FLUXYCHAT-ROADMAP.md) (CF Agents SDK vs room kernel, CF-A-001–044), [LIVEBLOCKS-PORTAL-COLLAB-DX-ROADMAP.md](./LIVEBLOCKS-PORTAL-COLLAB-DX-ROADMAP.md) (Liveblocks primitives + collab features, `LB-*`).
 
 ## How to use this document
 

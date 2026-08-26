@@ -1,0 +1,75 @@
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  color: #0f172a;
+  background: #f8fafc;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.shell { max-width: 720px; margin: 0 auto; padding: 1.5rem; }
+.panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #0f172a;
+  color: #fff;
+}
+.status { font-size: 0.75rem; opacity: 0.9; }
+.roster {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  list-style: none;
+  font-size: 0.8rem;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+.log { min-height: 240px; max-height: 50vh; overflow: auto; padding: 1rem; }
+.composer { display: flex; gap: 0.5rem; padding: 0.75rem; border-top: 1px solid #e2e8f0; }
+.composer input { flex: 1; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; }
+.composer button, button.primary {
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+.mode-badge { font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem; }
+.error { color: #b91c1c; }
+code { font-size: 0.85em; }
+.hint { font-size: 0.8rem; color: #475569; white-space: pre-wrap; background: #f1f5f9; padding: 0.75rem; border-radius: 8px; }
+.readings { margin: 0; padding: 0.75rem 1rem; list-style: none; font-size: 0.875rem; }
+.canvas {
+  position: relative;
+  height: min(70vh, 480px);
+  background: #f8fafc;
+  touch-action: none;
+}
+.dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.peer-cursor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+.peer-cursor span {
+  display: block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: currentColor;
+  color: #fff;
+  font-size: 11px;
+}

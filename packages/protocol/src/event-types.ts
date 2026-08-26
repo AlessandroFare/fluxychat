@@ -12,6 +12,10 @@ export const FLUXY_INBOUND_EVENT_TYPES = [
   "message_deleted",
   "message_expired",
   "typing",
+  /** Ephemeral live cursor — not persisted, not webhooks. */
+  "cursor",
+  /** Ephemeral presence JSON (cursors, selections). Not persisted, not webhooks. */
+  "presence_patch",
   "subscription_succeeded",
   "subscription_count",
   "member_joined",
@@ -51,6 +55,8 @@ export const FLUXY_OUTBOUND_EVENT_TYPES = [
   "read",
   "delete",
   "typing",
+  "cursor",
+  "presence_patch",
   "client_event",
   "location_update",
   "location_track_ended",

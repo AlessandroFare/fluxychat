@@ -1,6 +1,13 @@
 import type { FluxyInboxSummary } from "./index";
 
-export type FluxyInboxItemKind = "mention" | "unread" | "follow_up" | "snooze";
+export type FluxyInboxItemKind =
+  | "mention"
+  | "unread"
+  | "follow_up"
+  | "snooze"
+  | "thread"
+  | "comment"
+  | "custom";
 
 /** Normalized inbox row for views and realtime `onItem` (Portal-style items feed). */
 export interface FluxyInboxItem {
@@ -83,5 +90,30 @@ export function mergeInboxItem(
 }
 
 export function countUnseenItems(items: readonly FluxyInboxItem[]): number {
-  return items.filter((row) => row.kind === "unread" || row.kind === "mention").length;
+  return items.filter(
+    (row) =>
+      row.kind === "unread" ||
+      row.kind === "mention" ||
+      row.kind === "thread" ||
+      row.kind === "comment",
+  ).length;
+}
+
+/** Map a comment-thread fan-out into an inbox row (LB-NOTIF). */
+export function commentEventToInboxItem(input: {
+  roomId: string;
+  roomName?: string;
+  kind: "thread" | "comment";
+  id: string;
+  receivedAt?: string;
+  payload?: unknown;
+}): FluxyInboxItem {
+  return {
+    id: itemId(input.kind, input.roomId, input.id),
+    kind: input.kind,
+    roomId: input.roomId,
+    roomName: input.roomName,
+    receivedAt: input.receivedAt ?? new Date().toISOString(),
+    payload: input.payload,
+  };
 }

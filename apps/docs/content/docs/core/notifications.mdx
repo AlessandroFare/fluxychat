@@ -53,3 +53,18 @@ useNotifications({ client, onEvent: (event) => console.log(event) });
 | Email / SMS | Worker integrations (tenant-configured) |
 
 Member JWT required for subscription registration.
+
+## Collab inbox kinds
+
+`useInbox` items now include `thread`, `comment`, and `custom` besides mention/unread/follow_up/snooze. Map `server_event` comment fan-out with `commentEventToInboxItem`. UI: `<InboxNotification />` from `@fluxy-chat/ui`. See [Comments & threads](/docs/core/comments).
+
+## Daily email digest (collab + chat)
+
+Cron `runDailyDigest` (enable `DAILY_DIGEST_ENABLED=true`) emails yesterday's chat highlights **and** thread comments. Preferences:
+
+```
+GET  /digest/preferences
+PATCH /digest/preferences  { enabled, email, emailEnabled, webPushEnabled, inAppEnabled }
+```
+
+SDK: `client.getDigestPreferences()` / `client.updateDigestPreferences({ enabled: true, email })`. Delivery: Cloudflare Email binding or `RESEND_API_KEY`. From: `DIGEST_EMAIL_FROM` / `EMAIL_FROM`. Comments-only days still send (no chat messages required).

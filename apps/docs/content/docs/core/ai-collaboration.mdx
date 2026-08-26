@@ -1,0 +1,25 @@
+---
+title: AI collaboration
+description: External workflows write Feeds and presence — not a second socket.
+---
+
+Three writers, one room:
+
+| Role | API | Writes |
+| --- | --- | --- |
+| Copilot | `useAiChat` / `<AiChat />` | Local panel only |
+| Room peer | `invokeAgent` | Chat `messages` |
+| Workflow | `POST /rooms/:id/feeds` + API key | Feed log + `server_event` |
+
+n8n / LangChain / a Worker cron uses the **project API key** (server-only):
+
+```bash
+curl -X POST "$WORKER/rooms/$ROOM/feeds/$FEED/messages" \
+  -H "X-Fluxy-Api-Key: fc_…" \
+  -H "Content-Type: application/json" \
+  -d '{"body":"deploy ok","metadata":{"source":"n8n","status":"ok"}}'
+```
+
+Optional: the same process can mint a short-lived member JWT and send `presence_patch` `{ "agentStatus": "running" }` on the room WebSocket so UIs show `useOthers()` status. Do not use `client_event` for that.
+
+This is not MQTT, not a copilot transcript, and not HIPAA.

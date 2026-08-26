@@ -210,6 +210,53 @@ async function fetchYesterdayMessages(env, projectId, userId, startIso, endIso) 
   return { messages: rows.results || [], roomNames };
 }
 
+async function fetchYesterdayComments(env, projectId, userId, startIso, endIso) {
+  try {
+    const rooms = await env.DB.prepare(
+      `SELECT rm.room_id, r.name
+       FROM room_members rm
+       JOIN rooms r ON r.id = rm.room_id AND r.project_id = ?
+       WHERE rm.user_id = ?`,
+    )
+      .bind(projectId, userId)
+      .all();
+    const roomRows = rooms.results || [];
+    if (!roomRows.length) return [];
+    const roomIds = roomRows.map((r) => r.room_id);
+    const placeholders = roomIds.map(() => "?").join(", ");
+    const rows = await env.DB.prepare(
+      `SELECT room_id, user_id, body, created_at, thread_id
+       FROM room_comment_thread_comments
+       WHERE project_id = ? AND room_id IN (${placeholders})
+         AND created_at >= ? AND created_at < ?
+       ORDER BY created_at ASC
+       LIMIT ?`,
+    )
+      .bind(projectId, ...roomIds, startIso, endIso, MAX_CONTEXT_MESSAGES)
+      .all();
+    return rows.results || [];
+  } catch {
+    return [];
+  }
+}
+
+export function collabDigestLines(comments, roomNames) {
+  return (comments || []).slice(0, 8).map((c) => {
+    const room = roomNames?.get?.(c.room_id) || c.room_id;
+    const body = String(c.body || "").replace(/\s+/g, " ").trim().slice(0, 100);
+    return `${c.user_id} on ${room}: ${body}`;
+  });
+}
+
+export function fallbackDigestHighlights({ messageCount = 0, commentCount = 0 } = {}) {
+  const lines = [];
+  if (messageCount) lines.push(`${messageCount} chat messages in your rooms`);
+  if (commentCount) lines.push(`${commentCount} new comments on threads`);
+  if (!lines.length) return [];
+  while (lines.length < 3) lines.push("Open FluxyChat to catch up.");
+  return lines.slice(0, 3);
+}
+
 async function generateHighlights(env, input) {
   if (!workerSharedLlmAllowed(env, input.projectId)) {
     return { ok: false, error: "ai_not_available" };
@@ -257,14 +304,23 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-function formatDigestBody(highlights, digestDate, appUrl) {
+function formatDigestBody(highlights, digestDate, appUrl, collabLines = []) {
   const lines = highlights.map((h, i) => `${i + 1}. ${h}`);
-  const textBody = [`Your FluxyChat highlights for ${digestDate}:`, "", ...lines].join("\n");
+  const collabBlock =
+    collabLines.length > 0
+      ? ["", "Comments & threads:", ...collabLines.map((line) => `- ${line}`)]
+      : [];
+  const textBody = [`Your FluxyChat highlights for ${digestDate}:`, "", ...lines, ...collabBlock].join(
+    "\n",
+  );
   const htmlBody = [
     `<p>Your FluxyChat highlights for <strong>${digestDate}</strong>:</p>`,
     "<ol>",
     ...highlights.map((h) => `<li>${escapeHtml(h)}</li>`),
     "</ol>",
+    collabLines.length
+      ? `<h2>Comments &amp; threads</h2><ul>${collabLines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`
+      : "",
     appUrl ? `<p><a href="${escapeHtml(appUrl)}">Open FluxyChat</a></p>` : "",
   ].join("");
   return { textBody, htmlBody, pushBody: lines.join(" · ") };
@@ -276,8 +332,9 @@ export async function deliverUserDigest(env, input) {
     input.highlights,
     input.digestDate,
     appUrl,
+    input.collabLines || [],
   );
-  const title = `Yesterday in chat — ${input.digestDate}`;
+  const title = `Yesterday in FluxyChat — ${input.digestDate}`;
   const { projectId, userId, digestDate, prefs, highlights } = input;
 
   if (prefs.inAppEnabled !== false) {
@@ -393,7 +450,14 @@ export async function processUserDailyDigest(env, input) {
     startIso,
     endIso,
   );
-  if (!messages.length) {
+  const comments = await fetchYesterdayComments(
+    env,
+    input.projectId,
+    input.userId,
+    startIso,
+    endIso,
+  );
+  if (!messages.length && !comments.length) {
     logInfo("digest.user_skipped_no_messages", {
       projectId: input.projectId,
       userId: input.userId,
@@ -402,20 +466,19 @@ export async function processUserDailyDigest(env, input) {
     return { ok: true, skipped: true, reason: "no_messages" };
   }
 
-  const highlightsResult = await generateHighlights(env, {
-    projectId: input.projectId,
-    userId: input.userId,
-    digestDate: input.digestDate,
-    messages,
-    roomNames,
+  let highlights = fallbackDigestHighlights({
+    messageCount: messages.length,
+    commentCount: comments.length,
   });
-  if (!highlightsResult.ok) {
-    logError("digest.highlights_failed", new Error(highlightsResult.error), {
+  if (messages.length) {
+    const highlightsResult = await generateHighlights(env, {
       projectId: input.projectId,
       userId: input.userId,
       digestDate: input.digestDate,
+      messages,
+      roomNames,
     });
-    return { ok: false, error: highlightsResult.error };
+    if (highlightsResult.ok) highlights = highlightsResult.highlights;
   }
 
   await deliverUserDigest(env, {
@@ -423,10 +486,11 @@ export async function processUserDailyDigest(env, input) {
     userId: input.userId,
     digestDate: input.digestDate,
     prefs: input.prefs,
-    highlights: highlightsResult.highlights,
+    highlights,
+    collabLines: collabDigestLines(comments, roomNames),
   });
 
-  return { ok: true, highlights: highlightsResult.highlights };
+  return { ok: true, highlights, collabCount: comments.length };
 }
 
 export async function runDailyDigest(env, options = {}) {

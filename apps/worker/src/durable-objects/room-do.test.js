@@ -53,7 +53,55 @@ describe("RoomDurableObject message handlers", () => {
     vi.restoreAllMocks();
   });
 
-  it("rejects unknown client WS event types with unknown_event_type error", async () => {
+  it("fans out live cursor frames without echoing to the sender", async () => {
+    const { roomDo } = createRoomDo();
+    const sender = createMockWebSocket();
+    const peer = createMockWebSocket();
+    roomDo.clients.add(sender);
+    roomDo.clients.add(peer);
+    roomDo.userIds.set(sender, userId);
+    roomDo.userIds.set(peer, "user_peer");
+
+    await roomDo.onMessage(sender, {
+      data: JSON.stringify({ type: "cursor", x: 12.5, y: 80, label: "Ada" }),
+    });
+
+    expect(sender.sent).toHaveLength(0);
+    expect(peer.sent).toHaveLength(1);
+    expect(JSON.parse(peer.sent[0])).toMatchObject({
+      type: "cursor",
+      userId,
+      x: 12.5,
+      y: 80,
+      label: "Ada",
+    });
+  });
+
+  it("fans out presence_patch selections without echoing to the sender", async () => {
+    const { roomDo } = createRoomDo();
+    const sender = createMockWebSocket();
+    const peer = createMockWebSocket();
+    roomDo.clients.add(sender);
+    roomDo.clients.add(peer);
+    roomDo.userIds.set(sender, userId);
+    roomDo.userIds.set(peer, "user_peer");
+
+    await roomDo.onMessage(sender, {
+      data: JSON.stringify({
+        type: "presence_patch",
+        data: { selection: { x: 10, y: 20, x2: 40, y2: 80, text: "hi" } },
+      }),
+    });
+
+    expect(sender.sent).toHaveLength(0);
+    expect(JSON.parse(peer.sent[0])).toMatchObject({
+      type: "presence_patch",
+      userId,
+      data: { selection: { x: 10, y: 20, x2: 40, y2: 80, text: "hi" } },
+    });
+  });
+
+  it("rejects unknown client event types", async () => {
     const { roomDo } = createRoomDo();
     const ws = createMockWebSocket();
     roomDo.clients.add(ws);

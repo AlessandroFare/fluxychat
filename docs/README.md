@@ -67,6 +67,7 @@ Contributor-oriented documentation for the monorepo. **Integrators should use [d
 ## Internal roadmaps (contributors)
 
 - [Portal Hackathon Roadmap 2026](./PORTAL-HACKATHON-ROADMAP-2026.md): patterns from 35 Portal hackathon builds (PH-*)
+- [Liveblocks + Portal collab DX](./LIVEBLOCKS-PORTAL-COLLAB-DX-ROADMAP.md): Presence, Broadcast, Storage, Feeds, Threads, Comments, Notifications, Copilots (`LB-*`)
 - [Next Wave Roadmap 2026](./NEXT-WAVE-ROADMAP-2026.md)
 - [Beat Portal roadmap](./BEAT-PORTAL-ROADMAP.md)
 - [Portal zero-budget Phase 2](./PORTAL-ZERO-BUDGET-ROADMAP.md)

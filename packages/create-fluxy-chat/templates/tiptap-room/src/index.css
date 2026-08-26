@@ -1,0 +1,107 @@
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: #0f172a;
+  color: #fff;
+}
+
+.status {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-bottom: 0;
+  background: #fff;
+}
+
+.toolbar input[type="text"] {
+  flex: 1;
+  min-width: 12rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.toolbar button {
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+
+.editor {
+  min-height: 280px;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0 0 12px 12px;
+  background: #fff;
+}
+
+.editor .tiptap {
+  outline: none;
+  min-height: 240px;
+}
+
+.hero {
+  margin: 0.75rem 0 0;
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.mode-badge {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0 0 0.75rem;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.room-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.room-picker input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}

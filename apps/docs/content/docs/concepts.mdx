@@ -1,0 +1,51 @@
+---
+title: Concepts
+description: Rooms, primitives, and how people and agents share one WebSocket.
+---
+
+FluxyChat is the realtime **room** for your product: a Cloudflare Durable Object plus D1, one WebSocket per room. People and AI share that socket. Your auth, your backend, your data model stay yours — we mint member JWTs and fan out events.
+
+Think of a room as the artifact in your app: a document, a board, a deal, a classroom, a vehicle dispatch view. Map `roomId` to that artifact.
+
+## Building blocks
+
+| Concept | FluxyChat |
+| --- | --- |
+| Project | Tenant. API keys (`fc_…`, server-only), rooms, agents, quotas. |
+| Room | One Durable Object + one WebSocket. Chat, presence, Yjs, feeds, threads, `server_event`. |
+| Primitives | Presence, Broadcast, Storage, Feeds, Threads, Chat. |
+| Users | Humans (member JWT or guest) and AI (copilot, room peer, workflow). |
+| Features | Comments, multiplayer editors, notifications, copilots, AI collaboration. |
+| Platform | Worker, dashboard, `@fluxy-chat/sdk` / `react` / `ui`. |
+
+## Primitives (pick the right one)
+
+| Primitive | Means | API | Stored? |
+| --- | --- | --- | --- |
+| **Presence** | Now: who is here, cursors, selections, `agentStatus` | `sendCursor`, `useMyPresence` / `presence_patch`, `presenceMembers` | No |
+| **Broadcast** | Pulse: one-shot signals | `sendClientEvent` / `useBroadcastEvent` | No |
+| **Storage** | The document | `FluxyYjsProvider`, `useStorage`, `useMutation`, LiveFile | Yes (Yjs on the room DO) |
+| **Feeds** | Activity / agent / n8n logs | `useFeeds`, `POST /rooms/:id/feeds` | Yes (D1, ≠ chat) |
+| **Threads** | Contextual comments | `useThreads`, `/comment-threads` | Yes |
+| **Chat** | Timeline + tools | `useChat`, `invokeAgent` | Yes |
+
+Do **not** put 60 Hz pointers on Broadcast. Do **not** mix Feeds with `messages`. Do **not** mix Threads with chat `parentId` replies.
+
+## Two kinds of AI
+
+| Kind | API | Writes |
+| --- | --- | --- |
+| Copilot (side panel) | `RegisterAiKnowledge` + `useAiChat` + `<AiChat />` | Local UI only (keyless mock) |
+| Room peer | `invokeAgent` on `useChat` | Chat `messages` |
+| Workflow | API key `POST …/feeds/…/messages` | Feed + `server_event` |
+
+## Auth
+
+Browser: **member JWT** or `FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId)`.  
+Server: project API key mints JWTs (`POST /v1/auth/token`). Never put `fc_…` in the client.
+
+## Verticals on the same bus
+
+IoT, fleet, game ticks, voice stage, deal quorum — all `server_event` or chat on the **same** room WebSocket. Not MQTT, not netcode, not a second socket fleet. [Gallery](/docs/getting-started/gallery) has a copy-paste app for each.
+
+Next: [Getting started](/docs/getting-started) · [For coding agents](/docs/getting-started/for-coding-agents) · [llms.txt](/llms.txt)

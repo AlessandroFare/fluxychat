@@ -1,0 +1,37 @@
+---
+title: AI copilots
+description: Individual assistants that read UI knowledge — not the room agent.
+---
+
+**Copilot** (`<AiChat />`) is a side panel that reads registered app state. **Room agent** (`invokeAgent`) is a peer on the chat timeline. Do not mix them.
+
+## React (keyless mock)
+
+No LLM key required. The mock replies with your last message plus `RegisterAiKnowledge` / `RegisterAiTool`. It does **not** insert `messages` rows.
+
+```tsx
+import {
+  FluxyAiCopilotProvider,
+  RegisterAiKnowledge,
+  RegisterAiTool,
+  useAiChat,
+} from "@fluxy-chat/react";
+import { AiChat } from "@fluxy-chat/ui";
+
+<FluxyAiCopilotProvider>
+  <RegisterAiKnowledge name="title" value={title} />
+  <RegisterAiTool name="highlight" description="Mark a region" />
+  <CopilotPanel />
+</FluxyAiCopilotProvider>
+
+function CopilotPanel() {
+  const { messages, sending, sendMessage } = useAiChat();
+  return <AiChat messages={messages} sending={sending} onSend={sendMessage} />;
+}
+```
+
+Room-peer agents still use `invokeAgent` from `useChat`. Workflows write **feeds**, not this panel.
+
+## Presence
+
+Workflows / agents can set ephemeral `agentStatus` via `useUpdateMyPresence({ agentStatus: "running" })` (`presence_patch`). Not stored.

@@ -36,6 +36,34 @@ snapshot.presenceMembers.map((m) => m.userId);
 
 Pass optional profile data when joining via WebSocket query (`presenceInfo` JSON) for richer avatars in the dashboard.
 
+## Live cursors (presence, not broadcast)
+
+Pointers use WebSocket `type: "cursor"` (up to 600/min, no D1, no webhooks). **Do not** send pointers as `client_event` (10/min + webhooks).
+
+```tsx
+const { liveCursors, sendCursor, connected } = useChat({ roomId, replay: "request" });
+
+function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  sendCursor({
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+    label: "Ada",
+  });
+}
+```
+
+Scaffold: `npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors`. UI: `<Cursors />` (damped spring via `stepSpring`) / `<Selections />` / `<AvatarStack />` from `@fluxy-chat/ui`. `prefers-reduced-motion` snaps without spring.
+
+Selections ride on `presence_patch` (same throttle as cursors, no D1, no webhooks):
+
+```tsx
+const [, updateMyPresence] = useMyPresence(store);
+updateMyPresence({ selection: { x: 10, y: 20, x2: 80, y2: 40 } });
+```
+
+`client_event` / `useBroadcastEvent` is for **sparse** signals (`client-ephemeral-*` skips webhooks). Not 60 Hz pointers.
+
 ## Intents
 
 Typing intents support `composing`, `away`, `viewing_thread` — surfaced as `typingIntents` in the room store for advanced UX (thread focus indicators).

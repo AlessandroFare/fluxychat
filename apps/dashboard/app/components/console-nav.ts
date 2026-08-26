@@ -145,15 +145,15 @@ export const CONSOLE_NAV_PLATFORM: ConsoleNavItem[] = [
   { href: "/collab", label: "FluxyCollab", icon: Pen, description: "Whiteboard, notes, kanban" },
   { href: "/stream", label: "FluxyStream", icon: Video, description: "Live broadcast + chat overlay" },
   { href: "/stream/demo", label: "Stream demo", icon: Radio, description: "Interactive stream SDK demo" },
-  { href: "/game", label: "FluxyGame", icon: Gamepad2, description: "Multiplayer game backend" },
-  { href: "/iot", label: "FluxyIoT", icon: Cpu, description: "MQTT bridge, device shadow" },
+  { href: "/game", label: "FluxyGame", icon: Gamepad2, description: "Match ticks as server_event (not netcode)" },
+  { href: "/iot", label: "FluxyIoT", icon: Cpu, description: "HTTP ingest + device shadow (not MQTT)" },
   { href: "/transport", label: "WebTransport", icon: Zap, description: "Transport fallback chain" },
   { href: "/marketplace", label: "Marketplace", icon: Store, description: "Apps and agent skills" },
   { href: "/chatbot-builder", label: "Chatbot builder", icon: Bot, description: "Trigger-action rules" },
   { href: "/cross-channel", label: "Cross-channel", icon: ArrowRightLeft, description: "Unified sessions" },
   { href: "/spatial", label: "Spatial twins", icon: Boxes, description: "3D room scenes" },
   { href: "/web3", label: "Web3", icon: Coins, description: "Wallet auth, token gates" },
-  { href: "/fleet", label: "Fleet", icon: Truck, description: "GPS tracking and geofences" },
+  { href: "/fleet", label: "Fleet", icon: Truck, description: "HTTP GPS ingest + room fan-out (not MQTT)" },
   { href: "/driver", label: "Driver app", icon: Smartphone, description: "PWA driver client" },
 ];
 

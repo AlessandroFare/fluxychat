@@ -1,0 +1,94 @@
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.canvas-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #0f172a;
+  color: #fff;
+}
+
+.status {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.canvas {
+  position: relative;
+  height: min(70vh, 560px);
+  background:
+    linear-gradient(#e2e8f0 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, #e2e8f0 1px, transparent 1px) 0 0 / 32px 32px,
+    #f8fafc;
+  cursor: none;
+  touch-action: none;
+}
+
+.peer-cursor {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-2px, -2px);
+  z-index: 2;
+}
+
+.peer-cursor span {
+  display: block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: currentColor;
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.mode-badge {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0 0 0.75rem;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.room-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.room-picker input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}

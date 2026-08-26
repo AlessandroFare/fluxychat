@@ -74,4 +74,90 @@ export function normalizeClientEventName(eventName) {
   return { ok: true, eventName: name };
 }
 
+/** Live cursors are ephemeral fan-out (no D1, no webhooks). ~10 updates/sec. */
+export const CURSOR_MAX_PER_MINUTE = 600;
+
+const PRESENCE_PATCH_MAX_BYTES = 2048;
+const SELECTION_TEXT_MAX = 512;
+
+function clampCoord(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(-1e6, Math.min(1e6, n));
+}
+
+function sanitizeSelection(raw) {
+  if (raw === null) return { ok: true, selection: null };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, error: "presence_selection_invalid" };
+  }
+  const selection = {};
+  if (typeof raw.kind === "string" && raw.kind.length <= 32) {
+    selection.kind = raw.kind.slice(0, 32);
+  }
+  for (const key of ["x", "y", "x2", "y2"]) {
+    if (raw[key] != null) {
+      const n = clampCoord(raw[key]);
+      if (n == null) return { ok: false, error: "presence_selection_invalid" };
+      selection[key] = n;
+    }
+  }
+  if (typeof raw.text === "string") {
+    selection.text = raw.text.slice(0, SELECTION_TEXT_MAX);
+  }
+  return { ok: true, selection };
+}
+
+/**
+ * Allowlisted presence JSON (cursor + selection). No HTML, size-capped.
+ * @param {unknown} raw
+ * @returns {{ ok: true, data: Record<string, unknown> } | { ok: false, error: string }}
+ */
+export function sanitizePresencePatch(raw) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) && raw.data && typeof raw.data === "object"
+    ? raw.data
+    : raw;
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return { ok: false, error: "presence_patch_invalid" };
+  }
+  const data = {};
+  if ("cursor" in source) {
+    if (source.cursor === null) {
+      data.cursor = null;
+    } else if (source.cursor && typeof source.cursor === "object") {
+      const x = clampCoord(source.cursor.x);
+      const y = clampCoord(source.cursor.y);
+      if (x == null || y == null) return { ok: false, error: "presence_cursor_invalid" };
+      data.cursor = { x, y };
+    } else {
+      return { ok: false, error: "presence_cursor_invalid" };
+    }
+  }
+  if ("selection" in source) {
+    const sel = sanitizeSelection(source.selection);
+    if (!sel.ok) return sel;
+    data.selection = sel.selection;
+  }
+  if ("agentStatus" in source) {
+    if (source.agentStatus === null) {
+      data.agentStatus = null;
+    } else if (typeof source.agentStatus === "string") {
+      data.agentStatus = source.agentStatus.replace(/[<>]/g, "").slice(0, 64);
+    } else {
+      return { ok: false, error: "presence_agent_status_invalid" };
+    }
+  }
+  const encoded = JSON.stringify(data);
+  if (encoded.length > PRESENCE_PATCH_MAX_BYTES) {
+    return { ok: false, error: "presence_patch_too_large" };
+  }
+  if (Object.keys(data).length === 0) return { ok: false, error: "presence_patch_empty" };
+  return { ok: true, data };
+}
+
+/** Sparse broadcast that must not hit tenant webhooks. */
+export function shouldSkipClientEventWebhook(eventName) {
+  return String(eventName || "").startsWith("client-ephemeral-");
+}
+
 export { CLIENT_EVENT_MAX_PER_MINUTE };

@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/react",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "React hooks and providers for FluxyChat — useChat, useInbox, FluxyRealtimeProvider",
   "homepage": "https://github.com/AlessandroFare/fluxychat/tree/main/packages/react#readme",
   "bugs": {
@@ -29,6 +29,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./yjs": {
+      "types": "./dist/yjs.d.ts",
+      "import": "./dist/yjs.js",
+      "default": "./dist/yjs.js"
     }
   },
   "files": [

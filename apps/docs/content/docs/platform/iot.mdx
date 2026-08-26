@@ -1,25 +1,48 @@
 ---
 title: IoT
-description: Device telemetry and command channels.
+description: HTTP ingest and device shadow — not MQTT.
 ---
 
-# IoT module
+Devices POST JSON to the Worker. Readings fan out as room `server_event` name `iot.reading`. There is **no native MQTT** transport.
 
-Device-facing realtime channels via `createWorkerFluxyIoTClient`.
+## Gallery
 
-```ts
-import { createWorkerFluxyIoTClient } from "@fluxy-chat/sdk";
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
+```
 
-const iot = createWorkerFluxyIoTClient({
-  baseUrl,
-  token: deviceOrOperatorJwt,
+Keep the app tab open, then:
+
+```bash
+curl -X POST "$WORKER/rooms/$ROOM/iot/events" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"deviceId":"sim-1","eventType":"telemetry","payload":{"temp":21}}'
+```
+
+Register a device (JWT or API key) then shadow readings:
+
+```bash
+curl -X POST "$WORKER/iot/devices" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"probe","roomId":"YOUR_ROOM"}'
+
+curl -X POST "$WORKER/iot/devices/DEVICE_ID/readings" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"sensor":"temp","value":21,"unit":"C"}'
+```
+
+## React
+
+```tsx
+useChat({
+  roomId,
+  onServerEvent: (ev) => {
+    if (ev.name === "iot.reading") { /* ev.data.sensor, ev.data.value */ }
+  },
 });
 ```
 
-Patterns:
-
-- Device rooms with restricted member roles
-- Operator dashboards using `useChat` for alert threads
-- HTTP publish from device gateways when WebSocket is unavailable
-
-Authenticate devices with short-lived JWTs minted by your provisioning service — same `POST /auth/token` flow with device-scoped `userId`.
+SDK: `createWorkerFluxyIoTClient(client)` for register/ingest/shadow.

@@ -1,0 +1,30 @@
+---
+title: Broadcast
+description: Sparse one-shot events on the room WebSocket — not cursors, not storage.
+---
+
+Broadcast is a **pulse**. Use it for “someone clicked stamp”, “slide changed”, “nudge the peer”. It is **not** stored. It is **not** for pointers.
+
+## React
+
+```tsx
+const { sendClientEvent, lastClientEvent } = useChat({ roomId, replay: "request" });
+
+sendClientEvent("client-ephemeral-dot", { x, y, color: "#2563eb" });
+```
+
+`useBroadcastEvent(store)` is the same send helper on a room store.
+
+Prefix **`client-ephemeral-*`** skips webhooks. Other `client_event` names are rate-limited (**10/min**) and may fire webhooks.
+
+## vs Presence vs Storage
+
+| Need | Use |
+| --- | --- |
+| Mouse / live selection | `sendCursor` / `presence_patch` |
+| Shared document / strokes that persist | Yjs `useStorage` / `--example whiteboard` |
+| One-shot “boop” | `sendClientEvent` |
+
+Scaffold: `--example draw` (stamps). Persistent ink: `--example whiteboard`.
+
+See [Presence](/docs/core/presence-typing) and [Storage](/docs/core/storage).

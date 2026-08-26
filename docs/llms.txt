@@ -1,5 +1,23 @@
 # FluxyChat
 
+> Canonical agent catalog (dense playbook + sitemap): https://docs.fluxychat.com/llms.txt
+> Humans: https://docs.fluxychat.com/docs/concepts · https://docs.fluxychat.com/docs/getting-started/what-to-build
+
+Gold path: `npx @fluxy-chat/create-fluxy-chat@latest`
+
+Live cursors: `npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors`
+
+Gallery: `live-cursors-chat`, `javascript-live-cursors`, `tiptap-room`, `whiteboard`, `war-room`, `iot-panel`, `draw`, `deal-room`, `fleet-panel`, `game-tick`, `voice-stage`, `comments-board`.
+
+Feeds: `useFeeds` + `POST /rooms/:id/feeds`. Copilot: `RegisterAiKnowledge` + `<AiChat />` (not `invokeAgent`). Threads: `useThreads` (not chat `parentId`).
+
+`FluxyRealtimeProvider` = `workerUrl` + `authTokenProvider`. `FluxyYjsProvider` = `token`. JWT mint: `POST /auth/token` with `X-Fluxy-Api-Key` (`fc_…` server-only).
+
+Cursors are WS `type: "cursor"` via `sendCursor` / `liveCursors`. Do not use `client_event` for pointers. Do not invent MQTT, Liveblocks keys, HIPAA, netcode, or a socket fleet.
+
+---
+
+
 > Multi-tenant realtime chat on Cloudflare Workers (Durable Objects + D1). MIT self-host + hosted beta.
 
 ## Docs index

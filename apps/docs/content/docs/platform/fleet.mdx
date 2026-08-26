@@ -1,18 +1,32 @@
 ---
 title: Fleet
-description: Multi-tenant fleet coordination.
+description: HTTP GPS ingest on the same room bus.
 ---
 
 # Fleet module
 
-Coordinate many Workers, projects, or edge nodes from a central operator view.
+Vehicles POST GPS to the Worker. The room WebSocket fans out `server_event` `fleet.gps_update`. **Not MQTT.**
 
-Fleet features integrate with:
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
+```
 
-- Project-scoped API keys and JWT `tid` claims
-- Admin audit and export APIs
-- Cross-room inbox (`useInbox`) for operator consoles
+```bash
+curl -X POST "$WORKER/fleet/gps" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"vehicleId":"veh_1","lat":45.46,"lng":9.18,"roomId":"demo"}'
+```
 
-Deploy a single Worker per environment; use project provisioning (`ALLOW_DEV_PROVISION` locally, dashboard in production) to isolate tenants.
+```ts
+useChat({
+  roomId,
+  onServerEvent: (ev) => {
+    if (ev.name === "fleet.gps_update") {
+      // ev.data.vehicleId, lat, lng
+    }
+  },
+});
+```
 
-See [Architecture](/docs/architecture) and [Operations](/docs/operations/production-setup).
+Register vehicles with `POST /fleet/vehicles` (SDK `createFleetVehicle`) before ingest. Default fan-out room is `fleet:{projectId}` if `roomId` is omitted.

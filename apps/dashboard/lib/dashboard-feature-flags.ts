@@ -12,7 +12,7 @@ function readEnvFlag(name: string, defaultValue = false): boolean {
 
 export function getDashboardFeatureFlags() {
   return {
-    /** Labs & demos nav (stream, game, IoT, fleet, industries, …). Default off in production. */
+    /** Labs & demos nav (stream, voice-ai, health, …). Default off in production. */
     labsShowcase: readEnvFlag("NEXT_PUBLIC_DASHBOARD_LABS", false),
     /** Preview surfaces (marketplace, web3, agent platform, …). Default off in production. */
     previewTools: readEnvFlag("NEXT_PUBLIC_DASHBOARD_PREVIEW", false),
@@ -27,12 +27,8 @@ export const DASHBOARD_LAB_HREFS = new Set([
   "/continuity",
   "/stream",
   "/stream/demo",
-  "/game",
-  "/iot",
-  "/fleet",
   "/spatial",
   "/transport",
-  "/collab",
   "/huddles",
   "/voice-ai",
   "/edu",

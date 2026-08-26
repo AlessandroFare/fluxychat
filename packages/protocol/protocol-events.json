@@ -9,6 +9,8 @@
     "message_deleted",
     "message_expired",
     "typing",
+    "cursor",
+    "presence_patch",
     "subscription_succeeded",
     "subscription_count",
     "member_joined",
@@ -45,10 +47,13 @@
     "read",
     "delete",
     "typing",
+    "cursor",
+    "presence_patch",
     "client_event",
     "location_update",
     "location_track_ended",
     "agentTyping",
-    "resume"
+    "resume",
+    "presence_state"
   ]
 }

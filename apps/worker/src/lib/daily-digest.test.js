@@ -68,6 +68,37 @@ describe("processUserDailyDigest", () => {
     expect(result.skipped).toBe(true);
   });
 
+  it("sends a comments-only digest with collab lines", async () => {
+    const env = createProcessEnv({
+      messages: [],
+      comments: [
+        {
+          room_id: "room_1",
+          user_id: "bob",
+          body: "Pin this clause",
+          created_at: "2026-06-07T11:00:00.000Z",
+          thread_id: "th_1",
+        },
+      ],
+    });
+    const result = await processUserDailyDigest(env, {
+      projectId: "proj_1",
+      userId: "user_1",
+      digestDate: "2026-06-07",
+      prefs: {
+        email: "ops@example.com",
+        emailEnabled: true,
+        webPushEnabled: false,
+        inAppEnabled: true,
+      },
+    });
+    expect(result.ok).toBe(true);
+    expect(result.skipped).toBeFalsy();
+    expect(result.collabCount).toBe(1);
+    expect(result.highlights.some((h) => h.includes("comment"))).toBe(true);
+    expect(env._inAppNotifications).toHaveLength(1);
+  });
+
   it("generates highlights and records in-app delivery", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(
@@ -170,7 +201,7 @@ function createPrefsDb() {
   };
 }
 
-function createProcessEnv({ messages }) {
+function createProcessEnv({ messages, comments = [] }) {
   const deliveries = [];
   const inAppNotifications = [];
   const env = {
@@ -196,6 +227,9 @@ function createProcessEnv({ messages }) {
                 }
                 if (sql.includes("FROM messages")) {
                   return { results: messages };
+                }
+                if (sql.includes("FROM room_comment_thread_comments")) {
+                  return { results: comments };
                 }
                 if (sql.includes("FROM user_digest_preferences")) {
                   return { results: [] };

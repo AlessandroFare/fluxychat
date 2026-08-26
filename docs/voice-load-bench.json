@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-08-26T15:02:18.664Z",
+  "node": "v24.13.0",
+  "platform": "win32 x64",
+  "workerUrl": null,
+  "pipeline": {
+    "label": "sdk_useVoice_text_only_tick_ms",
+    "n": 400,
+    "min": 0.005999999999971806,
+    "p50": 0.011799999999993815,
+    "p90": 0.015499999999974534,
+    "p95": 0.03170000000000073,
+    "p99": 0.0664000000000442,
+    "max": 2.462699999999927,
+    "mean": 0.019024500000001013
+  },
+  "ingest": {
+    "label": "slo_tracker_ingest_ms",
+    "n": 5000,
+    "min": 0.0012000000000398359,
+    "p50": 0.0013999999999896318,
+    "p90": 0.0027000000000043656,
+    "p95": 0.003100000000017644,
+    "p99": 0.005300000000033833,
+    "max": 0.12930000000005748,
+    "mean": 0.0018678800000000138
+  },
+  "fixturePercentiles": {
+    "p50": 99,
+    "p90": 115,
+    "p95": 117,
+    "p99": 119
+  },
+  "fixtureCount": 5000,
+  "health": {
+    "label": "worker_health_ms",
+    "n": 0,
+    "min": 0,
+    "p50": 0,
+    "p90": 0,
+    "p95": 0,
+    "p99": 0,
+    "max": 0,
+    "mean": 0,
+    "skipped": true,
+    "reason": "FLUXY_WORKER_URL unset"
+  },
+  "providers": {
+    "label": "voice_ai_providers_ms",
+    "n": 0,
+    "min": 0,
+    "p50": 0,
+    "p90": 0,
+    "p95": 0,
+    "p99": 0,
+    "max": 0,
+    "mean": 0,
+    "skipped": true,
+    "reason": "FLUXY_WORKER_URL unset"
+  },
+  "productSlo": {
+    "openaiRealtimeTargetP95Ms": 300,
+    "chunkedTargetP95Ms": 500,
+    "bargeInTargetMs": 500
+  }
+}

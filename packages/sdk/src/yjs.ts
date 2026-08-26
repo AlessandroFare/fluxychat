@@ -27,3 +27,37 @@ export {
   type YjsCollabPort,
   type YjsSnapshotPolicy,
 } from "./yjs-collab";
+
+export {
+  decodeYjsFrame,
+  encodeYjsFrame,
+  YJS_MSG_AWARENESS,
+  YJS_MSG_SYNC,
+  YJS_MSG_UPDATE,
+} from "./yjs-binary";
+
+export {
+  applyStoragePatch,
+  FLUXY_YJS_EDITOR_FRAGMENT,
+  FLUXY_YJS_STORAGE_MAP,
+  isLiveFile,
+  jsonToYValue,
+  liveFileFromAttachment,
+  storageMapToJson,
+  uploadLiveFile,
+  yValueToJson,
+  type FluxyLiveFile,
+  type StorageJson,
+} from "./yjs-storage";
+
+export {
+  FluxyYjsProvider,
+  useMutation,
+  useRedo,
+  useStorage,
+  useUndo,
+  useYjsContext,
+  useYjsDoc,
+  type FluxyYjsContextValue,
+  type FluxyYjsProviderProps,
+} from "./use-storage";
