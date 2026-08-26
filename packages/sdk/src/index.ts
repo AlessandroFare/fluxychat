@@ -684,6 +684,81 @@ export {
 } from "./use-chat";
 
 export {
+  useLiveCursors,
+  type UseLiveCursorsOptions,
+  type UseLiveCursorsResult,
+} from "./use-live-cursors";
+
+export {
+  parseLiveCursorEvent,
+  buildCursorOutbound,
+  createCursorThrottle,
+  clampCursorCoordinate,
+  type LiveCursor,
+  type LiveCursorPointer,
+  type LiveCursorPublishInput,
+} from "./live-cursors";
+
+export {
+  useOthers,
+  useMyPresence,
+  useUpdateMyPresence,
+  useBroadcastEvent,
+  useEventListener,
+  othersFromRoomState,
+  type FluxyPresence,
+  type FluxyPresenceOther,
+} from "./use-presence";
+
+export {
+  useThreads,
+  type UseThreadsOptions,
+  type UseThreadsResult,
+} from "./use-threads";
+
+export {
+  useFeeds,
+  useFeedMessages,
+  useCreateFeed,
+  useCreateFeedMessage,
+  type UseFeedsOptions,
+  type UseFeedsResult,
+  type UseFeedMessagesOptions,
+  type UseFeedMessagesResult,
+} from "./use-feeds";
+
+export type {
+  FluxyFeed,
+  FluxyFeedKind,
+  FluxyFeedMessage,
+  FluxyFeedMessageMetadata,
+} from "./room-feeds";
+
+export {
+  FluxyAiCopilotProvider,
+  RegisterAiKnowledge,
+  RegisterAiTool,
+  useAiChat,
+  useSendAiMessage,
+  useAiChatMessages,
+  type UseAiChatResult,
+} from "./use-ai-chat";
+
+export {
+  mockCopilotReply,
+  serializeKnowledge,
+  type AiChatMessage,
+  type AiKnowledgeEntry,
+  type AiToolEntry,
+} from "./ai-copilot";
+
+export type {
+  FluxyComment,
+  FluxyCommentThread,
+  FluxyCommentThreadMetadata,
+} from "./comment-threads";
+
+export {
   useVoice,
   type UseVoiceOptions,
   type UseVoiceResult,
@@ -706,6 +781,7 @@ export {
   inboxSummaryToItems,
   mergeInboxItem,
   countUnseenItems,
+  commentEventToInboxItem,
   type FluxyInboxItem,
   type FluxyInboxItemKind,
 } from "./inbox-items";

@@ -13,7 +13,9 @@ React hooks and providers for [FluxyChat](https://github.com/AlessandroFare/flux
 pnpm add @fluxy-chat/react @fluxy-chat/sdk
 ```
 
-Requires `react` 18+ as a peer dependency.
+`FluxyRealtimeProvider` uses `workerUrl` plus **`authTokenProvider`** (JWT string or async mint) or hosted **`connectUrl`**. It does not take `token` or `config.baseUrl`. Pass `userId` when the JWT has no `sub`. `FluxyYjsProvider` takes **`token`**.
+
+When the provider owns the session, omit `client` on `useChat`. A standalone `FluxyChatClient` is still valid if you pass it into hooks.
 
 ## Usage
 

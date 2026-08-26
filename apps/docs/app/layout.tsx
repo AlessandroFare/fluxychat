@@ -33,6 +33,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={geist.variable} suppressHydrationWarning>
+      <head>
+        <link rel="llms" href="/llms.txt" />
+      </head>
       <body>
         <NextProvider>
           <TreeContextProvider tree={source.getPageTree()}>

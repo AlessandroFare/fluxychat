@@ -82,10 +82,16 @@ When the provider owns the client, omit the explicit `client`:
 ```tsx
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
-<FluxyRealtimeProvider config={{ baseUrl, userId, token }}>
+<FluxyRealtimeProvider
+  workerUrl={workerUrl}
+  authTokenProvider={memberJwt}
+  userId={userId}
+>
   <Room roomId="general" />
 </FluxyRealtimeProvider>
 ```
+
+`FluxyYjsProvider` takes **`token`**, not `authTokenProvider`. Do not pass `config={{ baseUrl, token }}` to the realtime provider.
 
 ## Connection state
 

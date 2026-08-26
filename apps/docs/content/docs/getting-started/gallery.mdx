@@ -1,0 +1,40 @@
+---
+title: Gallery examples
+description: Copy-paste Vite apps on the same room WebSocket.
+---
+
+All examples: Worker URL + member JWT **or** public room id. Open two tabs unless noted.
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors
+npx @fluxy-chat/create-fluxy-chat@latest my-cursors-chat --example live-cursors-chat
+npx @fluxy-chat/create-fluxy-chat@latest my-vanilla --example javascript-live-cursors
+npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room
+npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room
+npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
+npx @fluxy-chat/create-fluxy-chat@latest my-draw --example draw
+npx @fluxy-chat/create-fluxy-chat@latest my-deal --example deal-room
+npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
+npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick
+npx @fluxy-chat/create-fluxy-chat@latest my-stage --example voice-stage
+npx @fluxy-chat/create-fluxy-chat@latest my-comments --example comments-board
+npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
+```
+
+| Example | Primitive | Do not |
+| --- | --- | --- |
+| `live-cursors` | `sendCursor` / `type: cursor` | `client_event` for pointers |
+| `live-cursors-chat` | cursors + `useChat` | a second socket |
+| `javascript-live-cursors` | vanilla `connect` + `type: cursor` | React required |
+| `tiptap-room` | Yjs `useStorage` + Collaboration | A second CRDT |
+| `war-room` | `useChat` + `invokeAgent` + `AvatarStack` | A second agent socket |
+| `iot-panel` | HTTP ingest + `server_event` `iot.reading` | MQTT |
+| `draw` | cursors + `client-ephemeral-dot` | 60 Hz broadcast |
+| `deal-room` | `createDecision` / `ackDecision` / export | MQTT; cross-org is REST `/cross-org` |
+| `fleet-panel` | `POST /fleet/gps` → `fleet.gps_update` | MQTT |
+| `game-tick` | lobby + `game.tick` | netcode / rollback |
+| `voice-stage` | `joinVoiceStage` signaling | WebRTC huddle without LiveKit; invent P95 |
+| `comments-board` | `useThreads` + `FloatingComposer` | chat `parentId` as pins |
+| `whiteboard` | Yjs `Y.Array` strokes + cursors | A second CRDT / Excalidraw lock-in |
+
+Health is **not** HIPAA. Stream/HLS stays labs until a WHIP example exists. Voice numbers: [Voice load report](/docs/operations/voice-load-test-report).

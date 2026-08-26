@@ -9,16 +9,17 @@ export interface ReadinessEntry {
 
 /**
  * Keep in sync with dashboard `DASHBOARD_LAB_HREFS` / preview flags.
- * Chat is GA. Verticals ship in the Worker but are Labs until they share the same ops bar.
+ * Chat is GA. Collab / IoT / fleet / game are beta once a gallery example exists.
+ * Stream, voice-ai, and health stay labs.
  */
 export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
   chat: { label: "Chat & rooms", readiness: "production", href: "/rooms", description: "Core messaging, presence, agents" },
-  collab: { label: "Collab", readiness: "labs", href: "/collab", description: "Yjs CRDT + collab events on the room WebSocket" },
+  collab: { label: "Collab", readiness: "beta", href: "/collab", description: "Yjs + Tiptap on the room WebSocket (--example tiptap-room)" },
   stream: { label: "Stream", readiness: "labs", href: "/stream/demo", description: "Live events, HLS, WHIP + room fan-out" },
-  voice: { label: "Voice AI", readiness: "labs", href: "/voice-ai", description: "Workers AI STT/TTS in the Worker plus optional realtime duplex" },
-  game: { label: "FluxyGame", readiness: "labs", href: "/game", description: "Matchmaking + ticks on the room WebSocket" },
-  iot: { label: "FluxyIoT", readiness: "labs", href: "/iot", description: "Device shadow, rules, live readings" },
-  fleet: { label: "Fleet", readiness: "labs", href: "/fleet", description: "GPS ingest + dispatch room updates" },
+  voice: { label: "Voice AI", readiness: "labs", href: "/voice-ai", description: "Workers AI STT/TTS — no unpublished latency claims" },
+  game: { label: "FluxyGame", readiness: "beta", href: "/game", description: "Match ticks as server_event (--example game-tick). Not a netcode engine." },
+  iot: { label: "FluxyIoT", readiness: "beta", href: "/iot", description: "HTTP ingest + device shadow (--example iot-panel). Not MQTT." },
+  fleet: { label: "Fleet", readiness: "beta", href: "/fleet", description: "GPS ingest + fleet.gps_update (--example fleet-panel)" },
   spatial: { label: "Spatial", readiness: "labs", href: "/spatial", description: "Digital twin scenes + spatial grants" },
   edu: { label: "FluxyEdu", readiness: "labs", href: "/edu", description: "Live classroom, polls, breakouts" },
   health: { label: "FluxyHealth", readiness: "labs", href: "/health", description: "Consent events + care workspace" },

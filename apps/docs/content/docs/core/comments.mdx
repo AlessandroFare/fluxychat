@@ -1,0 +1,34 @@
+---
+title: Comments & threads
+description: Contextual comment threads pinned to a location — not chat replies.
+---
+
+Chat replies use `parentId`. **Contextual threads** are a separate product: a pin (`x`, `y`, `sceneId`, `quote`) plus comments, resolve, and inbox kinds `thread` / `comment`.
+
+## REST
+
+```
+GET    /rooms/:roomId/comment-threads
+POST   /rooms/:roomId/comment-threads          { body, metadata }
+POST   /rooms/:roomId/comment-threads/:id/comments  { body }
+PATCH  /rooms/:roomId/comment-threads/:id      { resolved, metadata }
+```
+
+Fan-out on the room WebSocket as `server_event` names `comment.thread`, `comment.created`, `comment.thread.updated`. Member JWT required (`canAccessRoom`).
+
+## React
+
+```tsx
+import { useThreads } from "@fluxy-chat/react";
+import { CommentPin, FloatingComposer, Thread } from "@fluxy-chat/ui";
+
+const { threads, createThread, createComment, markThreadAsResolved } = useThreads({ roomId });
+
+await createThread({ body: "Check this", metadata: { x: 120, y: 80 } });
+```
+
+Render pins with `<CommentPin />`, overlay `<FloatingComposer />`, and `<Thread />` for replies/resolve. Scaffold: `--example comments-board`.
+
+Inbox: merge `commentEventToInboxItem` into `useInbox().onItem`, then `<InboxNotification />`. Daily email digest includes yesterday's thread comments (enable `DAILY_DIGEST_ENABLED`; see [Notifications](/docs/core/notifications)).
+
+This is **not** the chat log. Do not store 60 Hz pointers here — those are presence (`sendCursor` / `presence_patch`).

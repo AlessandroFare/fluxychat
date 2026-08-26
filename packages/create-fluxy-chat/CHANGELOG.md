@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.12] - 2026-08-26
+
+### Added
+
+- Gallery `--example` apps: `live-cursors`, `live-cursors-chat`, `javascript-live-cursors`, `tiptap-room`, `whiteboard`, `draw`, `comments-board`, `war-room`, `iot-panel`, `deal-room`, `fleet-panel`, `game-tick`, `voice-stage`.
+
+### Changed
+
+- Templates that use React pin `@fluxy-chat/react@^0.1.4`. Publish `@fluxy-chat/protocol@0.1.5` and `@fluxy-chat/react@0.1.4` **before** this CLI, or `pnpm create` / StackBlitz will miss those versions.
+
 ## [0.5.11] - 2026-08-25
 
 ### Added

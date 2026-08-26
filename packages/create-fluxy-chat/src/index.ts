@@ -23,6 +23,7 @@ import {
   isAdapterType,
   isPackageManager,
   templatesDir,
+  validateProjectName,
   writeFile,
   writeJson,
 } from "./utils.js";
@@ -47,10 +48,27 @@ interface ParsedArgs {
   skipInstall: boolean;
   noGit: boolean;
   help: boolean;
+  example?: string;
 }
 
 const TEMPLATE_CHOICES =
   "react, full, basic, slack, telegram, discord, web, hr-feedback";
+
+const GALLERY_EXAMPLES = [
+  "live-cursors",
+  "live-cursors-chat",
+  "javascript-live-cursors",
+  "tiptap-room",
+  "war-room",
+  "iot-panel",
+  "draw",
+  "deal-room",
+  "fleet-panel",
+  "game-tick",
+  "voice-stage",
+  "comments-board",
+  "whiteboard",
+] as const;
 
 function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
@@ -75,6 +93,13 @@ function parseArgs(argv: string[]): ParsedArgs {
     } else if (arg === "--full") {
       args.full = true;
       args.adapter = "full";
+    } else if (arg === "--example") {
+      const value = argv[++i]?.trim();
+      if (!value || !GALLERY_EXAMPLES.includes(value as (typeof GALLERY_EXAMPLES)[number])) {
+        console.error(`Invalid example: ${value ?? ""}. Choose: ${GALLERY_EXAMPLES.join(", ")}`);
+        process.exit(1);
+      }
+      args.example = value;
     } else if (arg === "--mode") {
       const value = argv[++i]?.trim().toLowerCase();
       if (value === "local" || value === "hosted" || value === "self-host") {
@@ -157,6 +182,7 @@ ${pc.bold("Options:")}
                              hosted = Clerk on fluxychat.com (no wrangler)
                              local / self-host = your Worker (asks for URL + keys)
   --minimal                  Chat-only widget (ui-kit)
+  --example <name>           Gallery app: ${GALLERY_EXAMPLES.join(", ")}
   --skip-install             Skip dependency installation
   --no-git                   Skip git repository initialization
   -h, --help                 Show this help
@@ -164,6 +190,10 @@ ${pc.bold("Options:")}
 ${pc.bold("Examples:")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-app --mode self-host")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter slack")}
 `;
@@ -177,6 +207,90 @@ async function main(): Promise<void> {
   }
 
   intro(pc.bgCyan(pc.black(" create-fluxy-chat ")));
+
+  if (args.example) {
+    const exampleName = args.example;
+    const projectName = args.name ?? `my-${exampleName}`;
+    const nameError = validateProjectName(projectName);
+    if (nameError) {
+      outro(pc.red(nameError));
+      process.exitCode = 1;
+      return;
+    }
+    const projectDir = path.resolve(process.cwd(), projectName);
+    if (fs.existsSync(projectDir) && fs.readdirSync(projectDir).length > 0) {
+      outro(pc.red(`Directory "${projectName}" already exists and is not empty.`));
+      process.exitCode = 1;
+      return;
+    }
+    const s = spinner();
+    s.start(`Copying example "${exampleName}"`);
+    const templateRoot = path.join(templatesDir(), exampleName);
+    if (!fs.existsSync(templateRoot)) {
+      s.stop("Example template missing.");
+      outro(pc.red(`No template at ${templateRoot}`));
+      process.exitCode = 1;
+      return;
+    }
+    fs.mkdirSync(projectDir, { recursive: true });
+    copyDir(templateRoot, projectDir);
+    const pkgPath = path.join(projectDir, "package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as Record<string, unknown>;
+    pkg.name = projectName;
+    writeJson(projectDir, "package.json", pkg);
+    s.stop(`Example "${exampleName}" created.`);
+
+    if (!args.noGit) {
+      const gitSpinner = spinner();
+      gitSpinner.start("Initializing git repository");
+      try {
+        await execAsync("git init", { cwd: projectDir });
+        gitSpinner.stop("Git repository initialized.");
+      } catch {
+        gitSpinner.stop("Failed to initialize git repository.");
+      }
+    }
+    if (!args.skipInstall) {
+      const pm = args.pm ?? detectPackageManager(process.env.npm_config_user_agent ?? "");
+      const installSpinner = spinner();
+      installSpinner.start(`Installing dependencies with ${pm}`);
+      try {
+        await execAsync(installCommand(pm), { cwd: projectDir });
+        installSpinner.stop("Dependencies installed.");
+      } catch {
+        installSpinner.stop("Failed to install dependencies.");
+        log.warning(`Run "${installCommand(pm)}" manually in the project directory.`);
+      }
+    }
+    const pm = args.pm ?? detectPackageManager(process.env.npm_config_user_agent ?? "");
+    const devCmd = pm === "npm" ? "npm run" : pm;
+    const tryHints: Record<string, string> = {
+      "tiptap-room": "# Open two tabs — type in the editor",
+      "war-room": "# Open two tabs — chat; set AGENT_ID to invokeAgent",
+      "iot-panel": "# Keep this tab open; curl an ingest from another terminal",
+      draw: "# Open two tabs — move and click",
+      "deal-room": "# Open two tabs — propose a decision and ack from both",
+      "fleet-panel": "# Keep this tab open; click Post sample GPS",
+      "game-tick": "# Matchmake + start, then Submit input (not netcode)",
+      "voice-stage": "# Open two tabs — join speaker/listener (signaling, not WebRTC)",
+      "comments-board": "# Click the canvas to pin a thread",
+      "live-cursors-chat": "# Open two tabs — move and chat",
+      whiteboard: "# Open two tabs — draw strokes (Yjs, not a second CRDT)",
+    };
+    const tryHint = tryHints[exampleName] ?? "# Open two tabs — move the pointer";
+    note(
+      [
+        `cd ${projectName}`,
+        "cp .env.example .env",
+        "# Set VITE_FLUXYCHAT_WORKER_URL + public room ID or member JWT",
+        `${devCmd} dev`,
+        tryHint,
+      ].join("\n"),
+      "Next steps",
+    );
+    outro(`${pc.green("Done!")} Visit ${pc.cyan("https://docs.fluxychat.com/llms.txt")}`);
+    return;
+  }
 
   // Run prompts (or use flags for non-interactive mode)
   const config = await runPrompts({

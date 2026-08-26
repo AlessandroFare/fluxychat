@@ -11,6 +11,8 @@ import { dispatchVoiceMessagesRoutes } from "./voice-messages-http.js";
 import { dispatchSuggestRepliesRoutes } from "./suggest-replies-http.js";
 import { dispatchThreadSummaryRoutes } from "./thread-summary-http.js";
 import { dispatchMessageThreadsRoutes } from "./message-threads-http.js";
+import { dispatchCommentThreadsRoutes } from "./comment-threads-http.js";
+import { dispatchRoomFeedsRoutes } from "./room-feeds-http.js";
 import { dispatchUsersRoutes } from "./users-http.js";
 
 /**
@@ -34,6 +36,10 @@ export async function dispatchMessagesAgentsRoutes(request, url, h) {
   if (resSuggest) return resSuggest;
   const resThreadSummary = await dispatchThreadSummaryRoutes(request, url, h);
   if (resThreadSummary) return resThreadSummary;
+  const resCommentThreads = await dispatchCommentThreadsRoutes(request, url, h);
+  if (resCommentThreads) return resCommentThreads;
+  const resRoomFeeds = await dispatchRoomFeedsRoutes(request, url, h);
+  if (resRoomFeeds) return resRoomFeeds;
   const resMessageThreads = await dispatchMessageThreadsRoutes(request, url, h);
   if (resMessageThreads) return resMessageThreads;
   const resUsers = await dispatchUsersRoutes(request, url, h);

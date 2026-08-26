@@ -1,18 +1,14 @@
 ---
 title: Collab
-description: Collaborative realtime sessions.
+description: Yjs and Tiptap on the room Durable Object.
 ---
 
-# Collab module
+Collab is the **same room WebSocket** as chat (binary Yjs frames). Scaffold:
 
-Shared presence and collaborative sessions built on room Durable Objects and platform transport.
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room
+```
 
-Typical uses:
+React: `FluxyYjsProvider` + `useStorage` from `@fluxy-chat/sdk/yjs`. See [Storage](/docs/core/storage).
 
-- Co-editing session chat
-- Whiteboard or document room sidebars
-- Multi-user operational dashboards
-
-Connect through the standard `FluxyChatClient` room APIs; collab-specific capabilities extend room metadata and capability events (`POST /rooms/:roomId/capabilities/events`).
-
-See [Transport](/docs/platform/transport) and [Realtime modules](/docs/platform/realtime-modules).
+Do not add Liveblocks, PartyKit, or a second CRDT vendor.

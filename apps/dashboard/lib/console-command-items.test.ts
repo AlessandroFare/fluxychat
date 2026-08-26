@@ -16,7 +16,8 @@ describe("console-command-items", () => {
   });
 
   it("hides lab routes from the palette when labs flags are off", () => {
-    expect(items.some((item) => item.href === "/game")).toBe(false);
+    expect(items.some((item) => item.href === "/game")).toBe(true);
+    expect(items.some((item) => item.href === "/health")).toBe(false);
     expect(items.some((item) => item.href === "/marketplace")).toBe(false);
   });
 

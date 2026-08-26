@@ -5,7 +5,6 @@ import { statusBadgesPlugin } from "fumadocs-core/source/status-badges";
 import { metaSchema, pageSchema } from "fumadocs-core/source/schema";
 import { renderMethodBadge } from "@/components/method-badge";
 import { openapi } from "@/lib/openapi";
-import z from "zod";
 
 interface OpenAPINameContext {
   fromExtractedOperation(item: { path: string; method: string }): {
@@ -22,7 +21,9 @@ const docs = defineDocs({
   docs: {
     compiler: "satteri",
     schema: pageSchema.extend({
-      status: z.string().optional(),
+      // Same Zod instance as pageSchema (do not import a second `zod` — Zod 4 throws
+      // "Invalid element at key status: expected a Zod schema").
+      status: pageSchema.shape.description,
     }),
     postprocess: {
       includeProcessedMarkdown: true,
@@ -31,9 +32,7 @@ const docs = defineDocs({
     lastModified: true,
   },
   meta: {
-    schema: metaSchema.extend({
-      description: z.string().optional(),
-    }),
+    schema: metaSchema,
   },
 });
 

@@ -45,4 +45,6 @@ Voice uploads consume message quota and respect `RATE_LIMIT_VOICE_MESSAGES_PER_M
 
 ## Live voice / huddles
 
-Room presence and typing work over WebSocket today. Full duplex voice rooms (WebRTC + TURN) are on the platform roadmap — use voice **messages** for push-to-talk style clips until a huddle SDK ships.
+`joinVoiceStage` / `leaveVoiceStage` on `useChat` is **stage signaling** (speaker vs listener on the room WebSocket). Scaffold: `--example voice-stage`.
+
+It is not WebRTC audio. Voice AI latency: [load report](/docs/operations/voice-load-test-report) and `GET /admin/voice-ai/stats` (product SLO P95 ≤ 300ms realtime). Async clips remain `POST /messages/voice`. `/voice-ai` stays labs until production stats are populated.

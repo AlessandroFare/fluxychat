@@ -1,25 +1,34 @@
 ---
 title: Game
-description: Realtime game state and room messaging.
+description: Match ticks as server_event — not a netcode engine.
 ---
 
 # Game module
 
-Game session messaging and state sync via `createWorkerFluxyGameClient`.
+Lobbies and matches live in D1. Input advances a tick and fans out `game.tick` on the **lobby `room_id`**. This is not rollback netcode.
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick
+```
 
 ```ts
 import { createWorkerFluxyGameClient } from "@fluxy-chat/sdk";
 
-const game = createWorkerFluxyGameClient({
-  baseUrl,
-  token: memberJwt,
+const game = createWorkerFluxyGameClient(client);
+const lobby = await game.matchmake({ playerId, roomId, maxPlayers: 2 });
+const { matchId } = await game.startMatch(lobby.lobbyId);
+await game.submitInput(matchId, { playerId, actions: { move: "nudge" } });
+```
+
+```ts
+useChat({
+  roomId,
+  onServerEvent: (ev) => {
+    if (ev.name === "game.tick") {
+      // ev.data.matchId, tick, events
+    }
+  },
 });
 ```
 
-Use for:
-
-- In-game chat channels
-- Match lobby coordination
-- Server-authoritative events paired with room messages
-
-Pair with low-latency WebSocket transport — see [Transport fallback](/docs/cookbook/transport-fallback) for resilience on mobile networks.
+`startMatch` needs at least two lobby players. Pair with [war-room](/docs/getting-started/gallery) for chat + `invokeAgent` on the same socket.

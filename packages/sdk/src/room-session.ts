@@ -51,6 +51,13 @@ import {
 } from "./room-e2e";
 import { scheduleSessionTokenRefresh } from "./session-token-refresh";
 import { createOfflineSyncController, type OfflineSyncController } from "./offline-sync";
+import {
+  buildCursorOutbound,
+  createCursorThrottle,
+  parseLiveCursorEvent,
+  type LiveCursorPublishInput,
+} from "./live-cursors";
+import { buildPresencePatchOutbound, parsePresencePatchEvent } from "./presence-patch";
 
 export interface StartFluxyRoomSessionOptions {
   roomId: string;
@@ -360,6 +367,49 @@ export function startFluxyRoomSession(
           [data.userId]: data.intent ?? (data.isTyping ? "composing" : "idle"),
         },
       }));
+    } else if (data.type === "cursor") {
+      const cursor = parseLiveCursorEvent(data);
+      if (cursor) {
+        setState((s) => ({
+          liveCursors: { ...s.liveCursors, [cursor.userId]: cursor },
+        }));
+      }
+    } else if (data.type === "presence_patch") {
+      const userId = typeof data.userId === "string" ? data.userId : "";
+      const patch = parsePresencePatchEvent(data);
+      if (userId && patch) {
+        setState((s) => {
+          const prev = s.livePresence[userId] ?? {};
+          const nextPresence = { ...prev, ...patch };
+          const livePresence = { ...s.livePresence, [userId]: nextPresence };
+          let liveCursors = s.liveCursors;
+          if (patch.cursor && typeof patch.cursor.x === "number") {
+            liveCursors = {
+              ...liveCursors,
+              [userId]: {
+                userId,
+                x: patch.cursor.x,
+                y: patch.cursor.y,
+                pointer: "mouse",
+                ts: Number(data.ts) || Date.now(),
+              },
+            };
+          } else if (patch.cursor === null) {
+            const { [userId]: _removed, ...rest } = liveCursors;
+            liveCursors = rest;
+          }
+          return { livePresence, liveCursors };
+        });
+      }
+    } else if (data.type === "client_event") {
+      setState({
+        lastClientEvent: {
+          eventName: String(data.eventName ?? ""),
+          data: data.data,
+          userId: String(data.userId ?? ""),
+          roomId: typeof data.roomId === "string" ? data.roomId : undefined,
+        },
+      });
     } else if (data.type === "agentTyping") {
       setState({
         agentTyping: data.isTyping,
@@ -1110,6 +1160,27 @@ export function startFluxyRoomSession(
     }
   };
 
+  const cursorThrottle = createCursorThrottle(50);
+  const sendCursor = (input: LiveCursorPublishInput) => {
+    cursorThrottle.publish(input, (next) => {
+      try {
+        connectionRef?.sendJson(buildCursorOutbound(next));
+      } catch {
+        /* ignore */
+      }
+    });
+  };
+
+  const sendPresencePatch = (patch: import("./presence-patch").FluxyPresence) => {
+    const frame = buildPresencePatchOutbound(patch);
+    if (!frame) return;
+    try {
+      connectionRef?.sendJson(frame);
+    } catch {
+      /* ignore */
+    }
+  };
+
   let visibilityCleanup: (() => void) | undefined;
 
   const shouldAutoMarkRead = (): boolean => {
@@ -1169,6 +1240,8 @@ export function startFluxyRoomSession(
     promoteVoiceStageListener,
     sendVoiceStageVad,
     sendClientEvent,
+    sendCursor,
+    sendPresencePatch,
   });
 
   if (!client || !trimmedRoomId || !client.isAuthenticated()) {
@@ -1182,6 +1255,7 @@ export function startFluxyRoomSession(
     });
     return () => {
       active = false;
+      cursorThrottle.dispose();
     };
   }
 
@@ -1401,6 +1475,7 @@ export function startFluxyRoomSession(
     connectionRef = null;
     offlineSyncCleanup?.();
     offlineSyncRef = null;
+    cursorThrottle.dispose();
     patchConnection({ connectionStatus: "disconnected", connected: false });
   };
 }

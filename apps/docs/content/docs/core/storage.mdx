@@ -1,0 +1,62 @@
+---
+title: Storage (Yjs)
+description: Synced CRDT room state — useStorage wrapping Y.Map, LiveFile refs, Tiptap.
+---
+
+Storage is the **document**: Yjs on the room Durable Object (`yjs-sync.js`). Do not invent a second CRDT. Presence is "now"; chat is the timeline; this is the file.
+
+Import from `@fluxy-chat/sdk/yjs` (or `@fluxy-chat/react/yjs`) so chat-only clients skip the yjs graph.
+
+## React
+
+```tsx
+import {
+  FluxyYjsProvider,
+  useStorage,
+  useMutation,
+  useUndo,
+  useRedo,
+  useYjsDoc,
+  uploadLiveFile,
+} from "@fluxy-chat/sdk/yjs";
+
+<FluxyYjsProvider workerUrl token userId roomId>
+  <Board />
+</FluxyYjsProvider>
+
+const title = useStorage((root) => String(root.title ?? ""));
+const setTitle = useMutation((storage, next: string) => {
+  storage.set("title", next);
+}, []);
+```
+
+`useStorage` reads a JSON snapshot of the `storage` Y.Map. `useMutation` writes that map inside a Yjs transaction. Undo/redo is `Y.UndoManager` on the map + Tiptap fragment (`prosemirror`).
+
+The provider opens a **binary** WebSocket on the same `/ws/room/:id` (replay off). Chat `useChat` stays JSON on its own socket — same room DO, same persistence key.
+
+## LiveFile
+
+Bytes go through existing `POST /upload` (`client.uploadFile`). Put a JSON ref on the CRDT, not a second blob store:
+
+```ts
+const live = await uploadLiveFile(client, roomId, file);
+storage.set("hero", live); // { liveFile: true, id, name, mime, size, url }
+```
+
+## Tiptap
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room
+```
+
+Pass `useYjsDoc()` into `@tiptap/extension-collaboration` with `field: "prosemirror"`. Disable StarterKit history; undo is Yjs.
+
+Lexical / BlockNote / CodeMirror wait until this example is copy-pasteable.
+
+## Whiteboard
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
+```
+
+Strokes live on `Y.Array` inside `Y.Map("storage")` (`storage.set("strokes", new Y.Array())`). Cursors stay on `useChat().sendCursor`. Same room DO — not Excalidraw as a second backend.

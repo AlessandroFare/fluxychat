@@ -40,6 +40,27 @@ describe("dashboard-feature-flags", () => {
     }
   });
 
+  it("shows collab, iot, fleet, and game in default nav once gallery examples exist", () => {
+    expect(
+      isDashboardNavHrefVisible("/collab", { labsShowcase: false, previewTools: false }),
+    ).toBe(true);
+    expect(isDashboardNavHrefVisible("/iot", { labsShowcase: false, previewTools: false })).toBe(
+      true,
+    );
+    expect(isDashboardNavHrefVisible("/fleet", { labsShowcase: false, previewTools: false })).toBe(
+      true,
+    );
+    expect(isDashboardNavHrefVisible("/game", { labsShowcase: false, previewTools: false })).toBe(
+      true,
+    );
+    expect(isDashboardNavHrefVisible("/health", { labsShowcase: false, previewTools: false })).toBe(
+      false,
+    );
+    expect(isDashboardNavHrefVisible("/stream", { labsShowcase: false, previewTools: false })).toBe(
+      false,
+    );
+  });
+
   it("always shows the labs catalog hub", () => {
     expect(isDashboardNavHrefVisible("/labs", { labsShowcase: false, previewTools: false })).toBe(
       true,
@@ -56,7 +77,10 @@ describe("dashboard-feature-flags", () => {
   });
 
   it("classifies deep lab and preview paths", () => {
-    expect(getDashboardSurfaceKind("/game")).toBe("labs");
+    expect(getDashboardSurfaceKind("/game")).toBe("ga");
+    expect(getDashboardSurfaceKind("/fleet")).toBe("ga");
+    expect(getDashboardSurfaceKind("/collab")).toBe("ga");
+    expect(getDashboardSurfaceKind("/iot")).toBe("ga");
     expect(getDashboardSurfaceKind("/stream/abc/broadcast")).toBe("labs");
     expect(getDashboardSurfaceKind("/agents/platform")).toBe("preview");
     expect(getDashboardSurfaceKind("/agents/cross-org")).toBe("ga");

@@ -81,6 +81,9 @@ export default function InboxPage() {
     unread: "Unread",
     follow_up: "Follow-up",
     snooze: "Snoozed",
+    thread: "Thread",
+    comment: "Comment",
+    custom: "Custom",
   };
 
   async function handleSnooze(roomId: string, hours: number) {

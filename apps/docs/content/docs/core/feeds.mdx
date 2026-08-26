@@ -1,0 +1,40 @@
+---
+title: Feeds
+description: Activity and agent logs in a room — not the chat timeline.
+---
+
+Chat is `messages`. **Feeds** are a separate D1 log: agent traces, n8n/LangChain steps, automation. Do not POST feed items as chat messages.
+
+## REST
+
+```
+GET    /rooms/:roomId/feeds
+POST   /rooms/:roomId/feeds                     { name, kind }
+GET    /rooms/:roomId/feeds/:feedId/messages
+POST   /rooms/:roomId/feeds/:feedId/messages    { body, metadata }
+```
+
+`kind`: `activity` | `agent` | `automation`. Metadata allowlist: `source`, `agentId`, `status`.
+
+Auth: **member JWT** (`canAccessRoom`) **or** project API key (`X-Fluxy-Api-Key`). API keys stay on the server (n8n, workers). Fan-out: `server_event` names `feed.created`, `feed.message`.
+
+## React
+
+```tsx
+import { useFeeds, useFeedMessages } from "@fluxy-chat/react";
+import { FeedMessage } from "@fluxy-chat/ui";
+
+const { feeds, createFeed } = useFeeds({ roomId });
+await createFeed({ name: "Agent traces", kind: "agent" });
+
+const { messages, createMessage } = useFeedMessages({ roomId, feedId });
+await createMessage({ body: "run started", metadata: { source: "n8n" } });
+```
+
+Node / workflow (API key, not a browser JWT):
+
+```ts
+const client = new FluxyChatClient({ baseUrl, apiKey: process.env.FLUXY_API_KEY, userId: "workflow" });
+const feed = await client.createFeed(roomId, { name: "n8n", kind: "automation" });
+await client.createFeedMessage(roomId, feed.id, { body: "step ok", metadata: { source: "n8n" } });
+```

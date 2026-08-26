@@ -1,0 +1,29 @@
+---
+title: What to build
+description: Map a product idea to FluxyChat primitives and a gallery example.
+---
+
+Tell an AI: “read [llms.txt](/llms.txt) and [Concepts](/docs/concepts), then build X.” Use this table so it does not invent MQTT or a second CRDT.
+
+| You want | Primitive mix | Scaffold |
+| --- | --- | --- |
+| Live cursors / who is here | Presence | `--example live-cursors` |
+| Cursors + chat overlay | Presence + Chat | `--example live-cursors-chat` |
+| Vanilla JS pointers | Presence (`connect` + `type: cursor`) | `--example javascript-live-cursors` |
+| Google-Docs-style editor | Storage + Presence | `--example tiptap-room` |
+| Figma-like board | Storage `Y.Array` + Presence | `--example whiteboard` |
+| Stamp / ephemeral dots | Broadcast + Presence | `--example draw` |
+| Contextual review comments | Threads + UI `Thread` / `FloatingComposer` | `--example comments-board` |
+| Agent war room | Chat + `invokeAgent` + Presence | `--example war-room` |
+| Quorum / export deal | Chat decisions + export REST | `--example deal-room` |
+| Device telemetry panel | HTTP ingest + `server_event` | `--example iot-panel` |
+| GPS / fleet | `POST /fleet/gps` + `fleet.gps_update` | `--example fleet-panel` |
+| Match lobby ticks | Game HTTP + `game.tick` | `--example game-tick` |
+| Speaker / listener roster | `joinVoiceStage` | `--example voice-stage` |
+| n8n / LangChain log | Feeds + API key | [Feeds](/docs/core/feeds) |
+| Side-panel assistant | Copilot `<AiChat />` | [Copilots](/docs/core/copilots) |
+| Inbox + email catch-up | Inbox kinds + digest prefs | [Notifications](/docs/core/notifications) |
+
+Open **two tabs** for anything collaborative.
+
+Cross-org rooms are **REST** `/cross-org/…` (server), not MQTT. Health is **not** HIPAA. Game ticks are **not** netcode. Voice stage is **signaling**, not WebRTC; latency: [voice report](/docs/operations/voice-load-test-report).

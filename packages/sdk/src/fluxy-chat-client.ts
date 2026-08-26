@@ -7,6 +7,12 @@ import { FluxyClientCredentials, type FluxyTokenSource } from "./client-credenti
 import { applyInboxQuery, type FluxyInboxQuery } from "./inbox-filter";
 import { createFluxyWebSocket } from "./websocket-factory";
 import { decodeFluxyJwtPayload } from "./jwt-utils";
+import type {
+  FluxyComment,
+  FluxyCommentThread,
+  FluxyCommentThreadMetadata,
+} from "./comment-threads";
+import type { FluxyFeed, FluxyFeedMessage, FluxyFeedMessageMetadata } from "./room-feeds";
 
 export interface FluxyChatMessage {
   id: number;
@@ -585,6 +591,24 @@ export type FluxyChatEvent =
       userId: string;
       isTyping: boolean;
       intent?: import("./message-template").FluxyPresenceIntent;
+    }
+  | {
+      type: "cursor";
+      userId: string;
+      roomId?: string;
+      x: number;
+      y: number;
+      pointer?: "mouse" | "touch";
+      color?: string;
+      label?: string;
+      ts?: number;
+    }
+  | {
+      type: "presence_patch";
+      userId: string;
+      roomId?: string;
+      data: import("./presence-patch").FluxyPresence;
+      ts?: number;
     }
   | {
       type: "subscription_succeeded";
@@ -1510,6 +1534,138 @@ export class FluxyChatClient {
     }
     const body = await res.json();
     return body.message ?? null;
+  }
+
+  async listCommentThreads(roomId: string): Promise<FluxyCommentThread[]> {
+    if (!this.token) return [];
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/comment-threads`, this.baseUrl).toString(),
+      { headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`listCommentThreads failed: ${res.status}`);
+    const json = (await res.json()) as { threads?: FluxyCommentThread[] };
+    return json.threads ?? [];
+  }
+
+  async createCommentThread(
+    roomId: string,
+    input: { body: string; metadata?: FluxyCommentThreadMetadata },
+  ): Promise<FluxyCommentThread | null> {
+    if (!this.token) return null;
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/comment-threads`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify(input),
+      },
+    );
+    if (!res.ok) throw new Error(`createCommentThread failed: ${res.status}`);
+    const json = (await res.json()) as { thread?: FluxyCommentThread };
+    return json.thread ?? null;
+  }
+
+  async createComment(
+    roomId: string,
+    threadId: string,
+    body: string,
+  ): Promise<FluxyComment | null> {
+    if (!this.token) return null;
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/comment-threads/${encodeURIComponent(threadId)}/comments`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify({ body }),
+      },
+    );
+    if (!res.ok) throw new Error(`createComment failed: ${res.status}`);
+    const json = (await res.json()) as { comment?: FluxyComment };
+    return json.comment ?? null;
+  }
+
+  async markThreadAsResolved(roomId: string, threadId: string, resolved = true): Promise<void> {
+    if (!this.token) return;
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/comment-threads/${encodeURIComponent(threadId)}`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify({ resolved }),
+      },
+    );
+    if (!res.ok) throw new Error(`markThreadAsResolved failed: ${res.status}`);
+  }
+
+  async listFeeds(roomId: string): Promise<FluxyFeed[]> {
+    if (!this.token && !this.apiKey) return [];
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/feeds`, this.baseUrl).toString(),
+      { headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`listFeeds failed: ${res.status}`);
+    const json = (await res.json()) as { feeds?: FluxyFeed[] };
+    return json.feeds ?? [];
+  }
+
+  async createFeed(
+    roomId: string,
+    input: { name: string; kind?: string },
+  ): Promise<FluxyFeed | null> {
+    if (!this.token && !this.apiKey) return null;
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/feeds`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify(input),
+      },
+    );
+    if (!res.ok) throw new Error(`createFeed failed: ${res.status}`);
+    const json = (await res.json()) as { feed?: FluxyFeed };
+    return json.feed ?? null;
+  }
+
+  async listFeedMessages(roomId: string, feedId: string): Promise<FluxyFeedMessage[]> {
+    if (!this.token && !this.apiKey) return [];
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/feeds/${encodeURIComponent(feedId)}/messages`,
+        this.baseUrl,
+      ).toString(),
+      { headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`listFeedMessages failed: ${res.status}`);
+    const json = (await res.json()) as { messages?: FluxyFeedMessage[] };
+    return json.messages ?? [];
+  }
+
+  async createFeedMessage(
+    roomId: string,
+    feedId: string,
+    input: { body: string; metadata?: FluxyFeedMessageMetadata },
+  ): Promise<FluxyFeedMessage | null> {
+    if (!this.token && !this.apiKey) return null;
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/feeds/${encodeURIComponent(feedId)}/messages`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify(input),
+      },
+    );
+    if (!res.ok) throw new Error(`createFeedMessage failed: ${res.status}`);
+    const json = (await res.json()) as { message?: FluxyFeedMessage };
+    return json.message ?? null;
   }
 
   /** Ephemeral whisper — visible only to `visibleToUserId` (Portal B-10). */
@@ -3813,6 +3969,8 @@ export class FluxyChatClient {
     speed?: number;
     heading?: number;
     accuracy?: number;
+    /** Fan-out `fleet.gps_update` on this room (defaults to `fleet:{projectId}`). */
+    roomId?: string;
   }): Promise<{ ok: boolean; ts: number; geofenceEvents: Array<{ id: string; geofenceId: string; vehicleId: string; eventType: string }> }> {
     if (!this.token) throw new Error("ingestGps requires JWT token");
     const res = await fetch(new URL("/fleet/gps", this.baseUrl).toString(), {

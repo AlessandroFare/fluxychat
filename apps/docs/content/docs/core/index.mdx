@@ -3,15 +3,57 @@ title: Core SDK
 description: FluxyChatClient, React hooks, and room session helpers.
 ---
 
-FluxyChat ships two npm packages for app developers:
+One room WebSocket. Install:
+
+```bash
+npm install @fluxy-chat/sdk @fluxy-chat/react @fluxy-chat/ui zustand
+```
+
+React 18+, zustand 5+. Yjs editors also need `yjs` and `@fluxy-chat/sdk/yjs`.
 
 <Cards>
-  <Card title="@fluxy-chat/sdk" description="FluxyChatClient, REST helpers, platform clients, createFluxyRoomSession." href="/docs/packages/sdk" />
-  <Card title="@fluxy-chat/react" description="FluxyRealtimeProvider, useChat, useInbox, useNotifications." href="/docs/packages/react" />
-  <Card title="@fluxy-chat/protocol" description="Shared WebSocket event types." href="/docs/packages/protocol" />
+  <Card title="@fluxy-chat/sdk" description="Client, REST, createFluxyRoomSession, verticals." href="/docs/packages/sdk" />
+  <Card title="@fluxy-chat/react" description="FluxyRealtimeProvider, hooks." href="/docs/packages/react" />
+  <Card title="@fluxy-chat/ui" description="Cursors, Thread, AiChat, AvatarStack." href="/docs/packages" />
 </Cards>
 
-## Minimal client
+Read [Concepts](/docs/concepts) before mixing primitives.
+
+## Provider (required for hooks)
+
+```tsx
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+<FluxyRealtimeProvider
+  workerUrl={workerUrl}
+  authTokenProvider={memberJwt}
+  userId={userId}
+>
+  <Room />
+</FluxyRealtimeProvider>
+```
+
+`FluxyYjsProvider` takes **`token`**, not `authTokenProvider`. Do not pass `token=` to `FluxyRealtimeProvider`.
+
+## Topics
+
+| Guide | Primitive |
+|-------|-----------|
+| [useChat](/docs/core/use-chat) | Chat timeline, agents, most room APIs |
+| [Presence & typing](/docs/core/presence-typing) | Now (cursors, selections) |
+| [Broadcast](/docs/core/broadcast) | Pulse (`sendClientEvent`) |
+| [Storage](/docs/core/storage) | Yjs document, Tiptap, whiteboard |
+| [Comments](/docs/core/comments) | Contextual threads |
+| [Feeds](/docs/core/feeds) | Activity logs |
+| [Copilots](/docs/core/copilots) | Side-panel AI |
+| [AI collaboration](/docs/core/ai-collaboration) | Workflows → feeds |
+| [Agents](/docs/core/agents) | `invokeAgent` |
+| [Inbox](/docs/core/inbox) | Mentions, unread, thread/comment |
+| [Notifications](/docs/core/notifications) | Push + email digest |
+| [Connection state](/docs/core/connection-state) | WS / SSE / poll |
+| [Voice](/docs/core/voice-huddles) | Clips + stage signaling |
+
+## Minimal client (no React)
 
 ```ts
 import { FluxyChatClient } from "@fluxy-chat/sdk";
@@ -21,33 +63,5 @@ const client = new FluxyChatClient({
   userId: "alice",
   token: memberJwt,
 });
-
-await client.connect();
-await client.joinRoom("general");
 await client.sendMessage("general", "Hello!");
 ```
-
-## Topics
-
-| Guide | What it covers |
-|-------|----------------|
-| [useChat](/docs/core/use-chat) | React hook — messages, send, pagination, agents |
-| [Connection state](/docs/core/connection-state) | WebSocket, SSE, polling fallback |
-| [Agents](/docs/core/agents) | invokeAgent, handoff, mention triggers |
-| [Inbox](/docs/core/inbox) | Cross-room unread and snooze |
-| [User channel](/docs/core/user-channel) | Per-user WebSocket for inbox and notifications |
-| [Notifications](/docs/core/notifications) | User channel events |
-| [Web push](/docs/core/web-push) | `useWebPush` browser hook |
-| [Presence & typing](/docs/core/presence-typing) | Room presence and typing indicators |
-| [Search](/docs/core/search) | Full-text message search |
-| [Read receipts](/docs/core/read-receipts) | Unread counts and mark-read |
-| [Message middleware](/docs/core/message-middleware) | Hooks before send/receive |
-| [Voice messages](/docs/core/voice-huddles) | Upload voice clips with transcription |
-
-Install:
-
-```bash
-npm install @fluxy-chat/sdk @fluxy-chat/react zustand
-```
-
-Peer deps: React 18+ for hooks, zustand 5+ for room store helpers.

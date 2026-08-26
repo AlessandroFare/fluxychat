@@ -5,6 +5,7 @@ describe("ws-protocol", () => {
   it("accepts Room DO client events", () => {
     expect(isValidClientWsPayload({ type: "message", content: "hi" })).toBe(true);
     expect(isValidClientWsPayload({ type: "typing", isTyping: true })).toBe(true);
+    expect(isValidClientWsPayload({ type: "cursor", x: 1, y: 2 })).toBe(true);
   });
 
   it("rejects unknown client events", () => {

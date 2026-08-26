@@ -1,0 +1,31 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+}
+body { margin: 0; }
+.shell { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+.mode-badge { font-size: 0.75rem; color: #64748b; }
+.canvas {
+  position: relative;
+  height: min(70vh, 560px);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: none;
+  touch-action: none;
+}
+.peer-cursor {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-2px, -2px);
+}
+.peer-cursor span {
+  display: block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: currentColor;
+  color: #fff;
+  font-size: 11px;
+}

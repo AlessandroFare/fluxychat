@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inboxSummaryToItems, mergeInboxItem } from "./inbox-items";
+import { commentEventToInboxItem, countUnseenItems, inboxSummaryToItems, mergeInboxItem } from "./inbox-items";
 import type { FluxyInboxSummary } from "./index";
 
 describe("inbox-items", () => {
@@ -55,5 +55,15 @@ describe("inbox-items", () => {
     });
     expect(merged).toHaveLength(1);
     expect(merged[0]?.unreadCount).toBe(5);
+  });
+
+  it("counts thread and comment kinds as unseen", () => {
+    const item = commentEventToInboxItem({
+      roomId: "r1",
+      kind: "thread",
+      id: "cth_1",
+    });
+    expect(item.kind).toBe("thread");
+    expect(countUnseenItems([item])).toBe(1);
   });
 });

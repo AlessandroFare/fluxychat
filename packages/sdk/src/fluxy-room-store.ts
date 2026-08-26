@@ -39,6 +39,16 @@ export interface FluxyRoomStoreState {
   seenBy: Record<number, string[]>;
   onlineUsers: string[];
   presenceMembers: Array<{ userId: string; userInfo?: Record<string, unknown> }>;
+  /** Live peer cursors (ephemeral WS `cursor` frames). */
+  liveCursors: Record<string, import("./live-cursors").LiveCursor>;
+  /** Merged ephemeral presence per user (selections, cursor). */
+  livePresence: Record<string, import("./presence-patch").FluxyPresence>;
+  lastClientEvent: {
+    eventName: string;
+    data: unknown;
+    userId: string;
+    roomId?: string;
+  } | null;
   /** REST snapshot from `GET /rooms/:id/live` (Portal-style getParticipants). */
   liveSnapshot: FluxyRoomLive | null;
   subscriptionCount: number;
@@ -91,6 +101,8 @@ export interface FluxyRoomStoreState {
   promoteVoiceStageListener: (targetUserId: string) => void;
   sendVoiceStageVad: (score: number) => void;
   sendClientEvent: (eventName: string, data: unknown) => void;
+  sendCursor: (input: import("./live-cursors").LiveCursorPublishInput) => void;
+  sendPresencePatch: (patch: import("./presence-patch").FluxyPresence) => void;
 }
 
 export type FluxyRoomStore = StoreApi<FluxyRoomStoreState>;
@@ -125,6 +137,8 @@ const inertRoomActions: Pick<
   | "promoteVoiceStageListener"
   | "sendVoiceStageVad"
   | "sendClientEvent"
+  | "sendCursor"
+  | "sendPresencePatch"
 > = Object.freeze({
   sendMessage: noop,
   retryMessage: noop,
@@ -146,6 +160,8 @@ const inertRoomActions: Pick<
   promoteVoiceStageListener: noop,
   sendVoiceStageVad: noop,
   sendClientEvent: noop,
+  sendCursor: noop,
+  sendPresencePatch: noop,
 });
 
 /**
@@ -163,6 +179,9 @@ export const INERT_FLUXY_ROOM_SNAPSHOT: FluxyRoomStoreState = Object.freeze({
   seenBy: {} as Record<number, string[]>,
   onlineUsers: [] as string[],
   presenceMembers: [] as Array<{ userId: string; userInfo?: Record<string, unknown> }>,
+  liveCursors: {} as Record<string, import("./live-cursors").LiveCursor>,
+  livePresence: {} as Record<string, import("./presence-patch").FluxyPresence>,
+  lastClientEvent: null,
   liveSnapshot: null,
   subscriptionCount: 0,
   socketId: null,
@@ -198,6 +217,9 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     seenBy: {},
     onlineUsers: [],
     presenceMembers: [],
+    liveCursors: {},
+    livePresence: {},
+    lastClientEvent: null,
     liveSnapshot: null,
     subscriptionCount: 0,
     socketId: null,

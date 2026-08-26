@@ -4,6 +4,9 @@
   "pages": [
     "index",
     "choose-your-path",
+    "for-coding-agents",
+    "what-to-build",
+    "gallery",
     "quickstart",
     "chat-only-quickstart",
     "client-setup",

@@ -38,10 +38,12 @@ describe("@fluxy-chat/protocol", () => {
     expect(overlap.sort()).toEqual([
       "agentTyping",
       "client_event",
+      "cursor",
       "edit",
       "location_track_ended",
       "location_update",
       "message",
+      "presence_patch",
       "stream",
       "typing",
     ]);
@@ -62,8 +64,11 @@ describe("outbound client events", () => {
       "location_update",
       "location_track_ended",
       "typing",
+      "cursor",
+      "presence_patch",
       "agentTyping",
       "resume",
+      "presence_state",
     ];
     expect([...FLUXY_OUTBOUND_EVENT_TYPES].sort()).toEqual(roomDoTypes.sort());
   });

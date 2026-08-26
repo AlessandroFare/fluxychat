@@ -84,7 +84,10 @@ import {
   listActivePresenceUserIds,
   normalizeClientEventName,
   parsePresenceInfoParam,
+  sanitizePresencePatch,
+  shouldSkipClientEventWebhook,
   CLIENT_EVENT_MAX_PER_MINUTE,
+  CURSOR_MAX_PER_MINUTE,
 } from "../lib/room-presence.js";
 import { buildStageSnapshot, pickActiveSpeaker } from "../lib/room-voice-stage.js";
 import {
@@ -2293,12 +2296,14 @@ export class RoomDurableObject {
           },
           { excludeWebSocket: webSocket },
         );
-        void deliverWebhooks(this.env, this.projectId, "client_event", {
-          roomId,
-          userId,
-          eventName: normalized.eventName,
-          data: msg.data ?? null,
-        }).catch((err) => logError("webhook.client_event_failed", err, { roomId }));
+        if (!shouldSkipClientEventWebhook(normalized.eventName)) {
+          void deliverWebhooks(this.env, this.projectId, "client_event", {
+            roomId,
+            userId,
+            eventName: normalized.eventName,
+            data: msg.data ?? null,
+          }).catch((err) => logError("webhook.client_event_failed", err, { roomId }));
+        }
         return;
       }
 
@@ -2389,6 +2394,89 @@ export class RoomDurableObject {
         this.broadcast(payload);
         const partialText = typeof msg.partialText === "string" ? msg.partialText : "";
         void this.maybeRunSpeculativeWarmup(msg.userId, partialText, isTyping).catch(() => {});
+        return;
+      }
+
+      if (msg.type === "cursor") {
+        const roomId = this.roomId || this.state.id.toString();
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "cursor_requires_auth" }));
+          return;
+        }
+        const x = Number(msg.x);
+        const y = Number(msg.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          webSocket.send(JSON.stringify({ type: "error", message: "cursor_invalid_position" }));
+          return;
+        }
+        const cursorRate = this.consumeWsRateLimit(
+          `cursor:${this.projectId}:${roomId}:${userId}`,
+          CURSOR_MAX_PER_MINUTE,
+          60_000,
+        );
+        if (!cursorRate.allowed) {
+          webSocket.send(
+            JSON.stringify({
+              type: "error",
+              message: `rate_limit_exceeded: retry in ${cursorRate.retryAfterSeconds}s`,
+            }),
+          );
+          return;
+        }
+        this.broadcast(
+          {
+            type: "cursor",
+            roomId,
+            userId,
+            x,
+            y,
+            pointer: msg.pointer === "touch" ? "touch" : "mouse",
+            color: typeof msg.color === "string" ? msg.color.slice(0, 32) : undefined,
+            label: typeof msg.label === "string" ? msg.label.slice(0, 64) : undefined,
+            ts: Date.now(),
+          },
+          { excludeWebSocket: webSocket },
+        );
+        return;
+      }
+
+      if (msg.type === "presence_patch") {
+        const roomId = this.roomId || this.state.id.toString();
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "presence_requires_auth" }));
+          return;
+        }
+        const sanitized = sanitizePresencePatch(msg);
+        if (!sanitized.ok) {
+          webSocket.send(JSON.stringify({ type: "error", message: sanitized.error }));
+          return;
+        }
+        const presenceRate = this.consumeWsRateLimit(
+          `presence:${this.projectId}:${roomId}:${userId}`,
+          CURSOR_MAX_PER_MINUTE,
+          60_000,
+        );
+        if (!presenceRate.allowed) {
+          webSocket.send(
+            JSON.stringify({
+              type: "error",
+              message: `rate_limit_exceeded: retry in ${presenceRate.retryAfterSeconds}s`,
+            }),
+          );
+          return;
+        }
+        this.broadcast(
+          {
+            type: "presence_patch",
+            roomId,
+            userId,
+            data: sanitized.data,
+            ts: Date.now(),
+          },
+          { excludeWebSocket: webSocket },
+        );
         return;
       }
 

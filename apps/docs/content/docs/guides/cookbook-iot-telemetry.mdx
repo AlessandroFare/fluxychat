@@ -1,23 +1,30 @@
 ---
 title: "IoT telemetry starter"
-description: "Nexora-style: one channel for device readings (PH-122)."
+description: "HTTP ingest + room server_event (not MQTT)."
 ---
 
-# IoT telemetry in ~20 lines
+# IoT telemetry
 
-Post device readings as room messages or server events.
+Do **not** use MQTT. Post HTTP, listen on the room WebSocket.
 
-```ts
-const client = new FluxyChatClient({ workerUrl, token });
-
-setInterval(async () => {
-  const reading = await readSensor();
-  await client.createMessage("nexora-floor", JSON.stringify(reading), {
-    visibility: "room",
-  });
-}, 5000);
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
 ```
 
-Or ingest via FluxyIoT bridge → `POST /rooms/{id}/events` with `name: "telemetry.sample"`.
+```bash
+curl -X POST "$WORKER/rooms/$ROOM/iot/events" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"deviceId":"sim-1","eventType":"telemetry","payload":{"temp":21}}'
+```
 
-Dashboard: **IoT** vertical for device registry and live charts.
+```tsx
+useChat({
+  roomId,
+  onServerEvent: (ev) => {
+    if (ev.name === "iot.reading") console.log(ev.data);
+  },
+});
+```
+
+See [IoT](/docs/platform/iot).
