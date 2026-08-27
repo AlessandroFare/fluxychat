@@ -9,51 +9,14 @@ import { installCanvasMaxSizeGuard, maxCssBox } from "@/lib/canvas-max-size-guar
 const ELEMENT_POS_CAP = 100_000;
 const ELEMENT_SIZE_CAP = 8_192;
 
-const ExcalidrawBoard = dynamic(
-  () =>
-    Promise.all([
-      import("@excalidraw/excalidraw"),
-      import("@excalidraw/excalidraw/index.css"),
-      import("./collab-excalidraw.css"),
-    ]).then(([mod]) => {
-      function Board({
-        onChange,
-        onApi,
-        theme,
-      }: {
-        onChange: (elements: readonly unknown[]) => void;
-        onApi: (api: unknown) => void;
-        theme: "light" | "dark";
-      }) {
-        return (
-          <mod.Excalidraw
-            onChange={onChange}
-            excalidrawAPI={onApi}
-            theme={theme}
-            viewModeEnabled={false}
-            zenModeEnabled={false}
-            gridModeEnabled={false}
-            initialData={{
-              appState: {
-                zoom: { value: 1 as number & { _brand: "normalizedZoom" } },
-                scrollX: 0,
-                scrollY: 0,
-              },
-            }}
-          />
-        );
-      }
-      return { default: Board };
-    }),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Loading board…
-      </div>
-    ),
-  },
-);
+const ExcalidrawBoard = dynamic(() => import("./collab-excalidraw-board"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+      Loading board…
+    </div>
+  ),
+});
 
 function isPlausibleElement(el: unknown): el is Record<string, unknown> {
   if (!el || typeof el !== "object") return false;
