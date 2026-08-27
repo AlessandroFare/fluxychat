@@ -271,10 +271,10 @@ function ComparisonTable() {
 
 function FeatureShowcase() {
   const features = [
-    { icon: Server, title: "Cloudflare Workers", desc: "Edge-deployed on Cloudflare's global network. 300+ locations, sub-10ms latency." },
+    { icon: Server, title: "Cloudflare Workers", desc: "Runs on Cloudflare's global network. PoP count and edge RTT are Cloudflare's, not a FluxyChat-measured SLO." },
     { icon: Shield, title: "End-to-end encryption", desc: "TLS by default. Double Ratchet encryption for private rooms (roadmap)." },
-    { icon: Workflow, title: "AI agent platform", desc: "Built-in AI agents with streaming markdown, MCP tools, and WorkflowAgent." },
-    { icon: GitFork, title: "Platform adapters", desc: "React + JS SDK published today; Vue/Svelte packages are in-repo (not the hosted CLI path yet). React Native and Node adapters available." },
+    { icon: Workflow, title: "Agents on the timeline", desc: "invokeAgent writes chat messages. Streaming markdown, MCP tools, HITL. The side-panel copilot is UI you wire to your own model." },
+    { icon: GitFork, title: "Platform adapters", desc: "React, Vue, and Svelte packages on npm. React Native on npm. Flutter, Swift, and KMP live in this repo until they hit pub.dev / CocoaPods / Maven." },
     { icon: GanttChartSquare, title: "Operator console", desc: "Full dashboard for room management, analytics, billing, and team management." },
     { icon: Zap, title: "Real-time sync", desc: "Durable Objects + WebSocket. CRDT sync for collaborative features." },
   ];
@@ -339,7 +339,7 @@ function PricingCta() {
           Start building for free
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-slate-300">
-          No credit card required. Join thousands of developers building real-time apps on FluxyChat.
+          No credit card required. Open beta — pin SDK versions and read the docs, not the compare table, as the spec.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="bg-[var(--fluxy-cta-color)] text-white hover:opacity-90">

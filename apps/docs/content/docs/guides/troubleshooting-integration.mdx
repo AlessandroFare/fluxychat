@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting integration
-description: Fix common SDK errors — 401, not member, token expired, connection degraded.
+description: "Fix common SDK errors: 401, not member, token expired, connection degraded."
 ---
 
 Symptoms mapped to fixes you can paste into your app or curl.
@@ -26,12 +26,12 @@ curl -sS -X POST "$FLUXY_BASE_URL/auth/token" \
 
 **Symptom:** `FluxyTokenExpiredError`, WS close reason `token_expired`.
 
-**Fix:** Mint a fresh JWT — the SDK has no `updateToken()` helper. Refresh via your backend:
+**Fix:** Mint a fresh JWT and call `client.setToken(token)` (alias `updateToken`). Or pass a function to `authTokenProvider` so the provider remints before `exp`.
 
 ```ts
 const res = await fetch("/api/fluxy/token", { method: "POST" });
 const { token } = await res.json();
-// pass token to FluxyRealtimeProvider authTokenProvider or new FluxyChatClient
+client.setToken(token);
 ```
 
 Use `ttlSeconds` with buffer; refresh before `exp` (dashboard uses ~5 min buffer).
@@ -57,7 +57,7 @@ curl -sS -X POST "$FLUXY_BASE_URL/rooms/$ROOM_ID/members" \
 
 1. Worker reachable: `curl $FLUXY_BASE_URL/health`
 2. CORS / mixed content (HTTPS page → HTTP worker blocked in prod)
-3. Rate limits — `RateLimitError` with `retryAfterMs`
+3. Rate limits: `RateLimitError` with `retryAfterMs`
 
 Use `getConnectionStatusLabel()` from `@fluxy-chat/sdk` for user-facing copy.
 

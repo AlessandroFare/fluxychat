@@ -18,7 +18,7 @@ import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
 <FluxyChatWidget
   roomId="general"
   workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!}
-  token={memberJwt}
+  guest
   theme="brand"
   height={520}
 />
@@ -50,7 +50,7 @@ return <Thread runtime={runtime} />;
 ## CLI
 
 ```bash
-npx create-fluxy-chat my-chat --minimal
+npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal
 ```
 
 Generates Vite + `FluxyChatWidget` only (no platform modules).

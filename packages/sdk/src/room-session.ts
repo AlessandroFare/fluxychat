@@ -327,30 +327,57 @@ export function startFluxyRoomSession(
     } else if (data.type === "presence") {
       setState({
         online: data.online,
+        presenceKind: data.kind === "aggregate" ? "aggregate" : "detailed",
+        presenceCount:
+          typeof data.count === "number"
+            ? data.count
+            : Array.isArray(data.members)
+              ? data.members.length
+              : Array.isArray(data.users)
+                ? data.users.length
+                : 0,
         ...(data.users ? { onlineUsers: data.users } : {}),
         ...(data.members ? { presenceMembers: data.members } : {}),
+      });
+    } else if (data.type === "derived") {
+      setState({
+        derivedState: data.state && typeof data.state === "object" ? data.state : {},
+        derivedSeq: typeof data.seq === "number" ? data.seq : 0,
       });
     } else if (data.type === "subscription_succeeded") {
       setState({
         subscriptionCount: data.subscriptionCount,
+        presenceKind: data.kind === "aggregate" ? "aggregate" : "detailed",
+        presenceCount:
+          typeof data.count === "number"
+            ? data.count
+            : Array.isArray(data.members)
+              ? data.members.length
+              : 0,
         presenceMembers: data.members ?? [],
         socketId: data.socketId ?? null,
+        derivedState:
+          data.derived && typeof data.derived === "object" ? data.derived : {},
+        derivedSeq: typeof data.derivedSeq === "number" ? data.derivedSeq : 0,
       });
     } else if (data.type === "subscription_count") {
       setState({ subscriptionCount: data.subscriptionCount });
     } else if (data.type === "member_joined") {
       setState((s) => {
         const existing = s.presenceMembers.filter((m) => m.userId !== data.userId);
+        const wasNew = existing.length === s.presenceMembers.length;
         return {
           presenceMembers: [
             ...existing,
             { userId: data.userId, userInfo: data.userInfo },
           ],
+          presenceCount: wasNew ? (s.presenceCount || s.presenceMembers.length) + 1 : s.presenceCount,
         };
       });
     } else if (data.type === "member_left") {
       setState((s) => ({
         presenceMembers: s.presenceMembers.filter((m) => m.userId !== data.userId),
+        presenceCount: Math.max(0, (s.presenceCount || s.presenceMembers.length) - 1),
       }));
     } else if (data.type === "cache_snapshot") {
       const inner = data.event;
@@ -1181,6 +1208,14 @@ export function startFluxyRoomSession(
     }
   };
 
+  const setDerivedState = (state: Record<string, unknown>) => {
+    try {
+      connectionRef?.sendJson({ type: "derived_set", state });
+    } catch {
+      /* ignore */
+    }
+  };
+
   let visibilityCleanup: (() => void) | undefined;
 
   const shouldAutoMarkRead = (): boolean => {
@@ -1242,6 +1277,7 @@ export function startFluxyRoomSession(
     sendClientEvent,
     sendCursor,
     sendPresencePatch,
+    setDerivedState,
   });
 
   if (!client || !trimmedRoomId || !client.isAuthenticated()) {

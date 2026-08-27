@@ -26,7 +26,7 @@ import { HOSTED_PATHS } from "@/lib/hosted-product";
 export const metadata = buildPageMetadata({
   title: "Compare FluxyChat vs Pusher, Ably, Stream, hosted chat SDKs",
   description:
-    "How FluxyChat compares to hosted chat SDKs, Pusher, Ably, Stream, and DIY Workers: chat, agents, MIT self-host, voice, omnichannel inbox, 14 channels.",
+    "How FluxyChat compares to Stream, Ably, Pusher, and DIY Workers. Room layer on Cloudflare: chat, presence, Yjs, agents, HTTP ingest. MIT self-host or hosted beta.",
   path: "/compare",
 });
 
@@ -92,11 +92,14 @@ export default function ComparePage() {
         Compare FluxyChat
       </h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">
-        Positioning for teams evaluating Stream, Ably, Pusher, TalkJS, Firebase, or a DIY Workers stack.
-        FluxyChat is a realtime platform on Cloudflare: chat, agents, streaming, collab, game, IoT, fleet,
-        spatial, and 14 channel adapters in one SDK. MIT self-host or hosted beta, not a helpdesk widget.{" "}
+        Put a room in the product and you are done shopping for a stack. Chat, presence, Yjs, and an agent on the same Durable Object. Guest widget on a public room takes minutes. Member JWT when you ship. MIT on your Cloudflare account when procurement asks who owns the data.
+        Spec lives at{" "}
+        <a href="https://docs.fluxychat.com" className="text-brand underline underline-offset-2">
+          docs.fluxychat.com
+        </a>
+        . Ably and Pusher are transport. Liveblocks is the document. Stream is consumer chat. Voice media is LiveKit. IoT is HTTP ingest.{" "}
         <Link href={MARKETING_GUIDE_PATHS.pusherAlternativeSaas} className="text-brand underline underline-offset-2">
-          Pusher alternative guide →
+          Pusher alternative guide
         </Link>
       </p>
 
@@ -133,7 +136,7 @@ export default function ComparePage() {
             href={MARKETING_GUIDE_PATHS.inAppChatVsSupportDesk}
             className="font-medium text-brand underline underline-offset-2"
           >
-            Product chat vs support desk guide →
+            Product chat vs support desk guide
           </Link>
         </p>
       </div>
@@ -170,7 +173,7 @@ export default function ComparePage() {
           framework may fit. If the product is tenant-scoped in-app messaging with history
           and operator tools, FluxyChat is the slice.{" "}
           <Link href="/why#not" className="text-brand underline underline-offset-2">
-            What we are not →
+            What we are not
           </Link>
         </p>
       </div>
@@ -247,7 +250,7 @@ export default function ComparePage() {
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Each product and vertical on the docs site shows a production, beta, or preview badge. Check the{" "}
-        <Link href="https://docs.fluxychat.com/platform/overview" className="text-brand underline underline-offset-2">
+        <Link href="https://docs.fluxychat.com/docs/platform" className="text-brand underline underline-offset-2">
           platform overview
         </Link>{" "}
         before you plan a launch around stream, voice, collab, or mobile SDKs.
@@ -262,7 +265,7 @@ export default function ComparePage() {
           href={MARKETING_GUIDE_PATHS.nextjsVercelRealtimeChat}
           className="text-brand underline underline-offset-2"
         >
-          Next.js on Vercel guide →
+          Next.js on Vercel guide
         </Link>
       </p>
       <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
@@ -280,7 +283,7 @@ export default function ComparePage() {
           href={MARKETING_GUIDE_PATHS.vercelRealtimeWithoutPusher}
           className="text-brand underline underline-offset-2"
         >
-          Full Vercel guide →
+          Full Vercel guide
         </Link>
       </p>
       <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
@@ -298,7 +301,7 @@ export default function ComparePage() {
           href={MARKETING_GUIDE_PATHS.reconnectDurableObjectsHibernation}
           className="text-brand underline underline-offset-2"
         >
-          Reconnect & hibernation guide →
+          Reconnect and hibernation guide
         </Link>
       </p>
       <div className="mt-4 overflow-x-auto rounded-2xl border border-border">

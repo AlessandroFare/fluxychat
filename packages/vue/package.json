@@ -23,7 +23,7 @@
   },
   "peerDependencies": {
     "vue": ">=3.4",
-    "@fluxy-chat/sdk": "^0.6.4"
+    "@fluxy-chat/sdk": "^0.6.5"
   },
   "dependencies": {
     "@fluxy-chat/sdk": "workspace:*"

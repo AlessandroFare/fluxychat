@@ -29,7 +29,8 @@ import { isTurnstileConfigured, verifyTurnstileToken } from "./turnstile.js";
 describe("getPublicGuestHardeningConfig", () => {
   it("returns defaults when env unset", () => {
     const cfg = getPublicGuestHardeningConfig({});
-    expect(cfg.publicGuestEnabled).toBe(true);
+    expect(cfg.publicGuestEnabled).toBe(false);
+    expect(cfg.readOnlyGuest).toBe(false);
     expect(cfg.rateLimitPerMinute).toBe(30);
     expect(cfg.turnstile.required).toBe(false);
     expect(cfg.turnstile.siteKey).toBeNull();

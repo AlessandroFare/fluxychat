@@ -2,9 +2,10 @@
  * Mint ephemeral guest JWT for any public room (Sendbird open channel, P10-SB6).
  */
 import { isPublicRoomInProject } from "./public-room-access.js";
-import { isPublicGuestEnabled } from "./guest-auth.js";
+import { isPublicGuestEnabled, isPublicGuestReadOnly } from "./guest-auth.js";
 import { guardPublicGuestRequest } from "./public-guest-guard.js";
 import { getEmbedConfigForProject } from "./embed-config.js";
+import { deriveStableGuestUserId } from "./guest-identity.js";
 
 /**
  * @param {*} env
@@ -13,7 +14,7 @@ import { getEmbedConfigForProject } from "./embed-config.js";
  *   signJwtHs256: (secret: string, payload: object) => Promise<string>,
  *   isValidId: (id: string) => boolean,
  * }} deps
- * @param {{ roomId: string, displayName?: string, userId?: string }} input
+ * @param {{ roomId: string, displayName?: string, userId?: string, guestKey?: string, turnstileToken?: string, embedParentOrigin?: string }} input
  * @param {Request} [request]
  */
 export async function issuePublicGuestSession(env, deps, input, request) {
@@ -64,9 +65,9 @@ export async function issuePublicGuestSession(env, deps, input, request) {
     return { ok: false, status: 403, body: { error: "room_not_public" } };
   }
 
-  // Never trust client-supplied userId  prevents impersonation of real members (audit S-6).
-  let guestUserId = `guest_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-  if (!isValidId(guestUserId)) {
+  // Never trust client-supplied userId. A guestKey (localStorage) yields a stable id per room.
+  let guestUserId = await deriveStableGuestUserId(projectId, roomId, input.guestKey);
+  if (!guestUserId || !isValidId(guestUserId)) {
     guestUserId = `guest_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
   }
 
@@ -113,7 +114,7 @@ export async function issuePublicGuestSession(env, deps, input, request) {
       token,
       expiresIn: ttlSeconds,
       roles: ["guest"],
-      readOnly: env.PUBLIC_GUEST_READ_ONLY !== "false" && env.PUBLIC_GUEST_READ_ONLY !== "0",
+      readOnly: isPublicGuestReadOnly(env),
     },
   };
 }

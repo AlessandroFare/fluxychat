@@ -1,6 +1,6 @@
 ---
 title: Storage (Yjs)
-description: Synced CRDT room state — useStorage wrapping Y.Map, LiveFile refs, Tiptap.
+description: Synced CRDT room state. useStorage wrapping Y.Map, LiveFile refs, Tiptap.
 ---
 
 Storage is the **document**: Yjs on the room Durable Object (`yjs-sync.js`). Do not invent a second CRDT. Presence is "now"; chat is the timeline; this is the file.
@@ -20,10 +20,14 @@ import {
   uploadLiveFile,
 } from "@fluxy-chat/sdk/yjs";
 
-<FluxyYjsProvider workerUrl token userId roomId>
+<FluxyYjsProvider workerUrl token={jwt} roomId>
   <Board />
 </FluxyYjsProvider>
+```
 
+Prefer nesting inside `FluxyRealtimeProvider` so you do not pass `token` twice. Standalone, `authTokenProvider` is accepted as an alias of `token`. `userId` is optional when the JWT has `sub`.
+
+```tsx
 const title = useStorage((root) => String(root.title ?? ""));
 const setTitle = useMutation((storage, next: string) => {
   storage.set("title", next);
@@ -32,7 +36,7 @@ const setTitle = useMutation((storage, next: string) => {
 
 `useStorage` reads a JSON snapshot of the `storage` Y.Map. `useMutation` writes that map inside a Yjs transaction. Undo/redo is `Y.UndoManager` on the map + Tiptap fragment (`prosemirror`).
 
-The provider opens a **binary** WebSocket on the same `/ws/room/:id` (replay off). Chat `useChat` stays JSON on its own socket — same room DO, same persistence key.
+The provider opens a **binary** WebSocket on the same `/ws/room/:id` (replay off). Chat `useChat` stays JSON on its own socket. Same room DO, same persistence key.
 
 ## LiveFile
 
@@ -59,4 +63,4 @@ Lexical / BlockNote / CodeMirror wait until this example is copy-pasteable.
 npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
 ```
 
-Strokes live on `Y.Array` inside `Y.Map("storage")` (`storage.set("strokes", new Y.Array())`). Cursors stay on `useChat().sendCursor`. Same room DO — not Excalidraw as a second backend.
+Strokes live on `Y.Array` inside `Y.Map("storage")` (`storage.set("strokes", new Y.Array())`). Cursors stay on `useChat().sendCursor`. Same room DO. Not Excalidraw as a second backend.

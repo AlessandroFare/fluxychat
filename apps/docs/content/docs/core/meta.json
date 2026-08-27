@@ -4,6 +4,7 @@
   "pages": [
     "index",
     "use-chat",
+    "wire-protocol",
     "connection-state",
     "agents",
     "inbox",

@@ -8,7 +8,7 @@ description: API keys, member JWTs, roles, token refresh, and WebSocket auth.
 FluxyChat uses two credential forms:
 
 - **API key** (`X-Fluxy-Api-Key`): server-to-server, identifies the **tenant/project**.
-- **JWT** (`Authorization: Bearer …`): client-to-worker/SDK — claims include `sub` (userId), `tid` (projectId), `roles`, `exp`.
+- **JWT** (`Authorization: Bearer …`): client-to-worker/SDK. Claims include `sub` (userId), `tid` (projectId), `roles`, `exp`.
 
 **Rule:** keep the API key on your backend and **mint JWTs** for browsers and mobile clients. Never expose the API key in client bundles.
 
@@ -35,7 +35,7 @@ Response includes `token`, `expiresIn`, and echoed `claims`.
 | `admin` | Webhooks, projects, alert rules |
 | `owner` | Sensitive tenant operations |
 
-Admin routes enforce role checks per endpoint — see OpenAPI docs for each route.
+Admin routes enforce role checks per endpoint. See OpenAPI docs for each route.
 
 ## Next.js Route Handler example
 
@@ -68,16 +68,20 @@ Wire the returned JWT into `FluxyRealtimeProvider` or `FluxyChatClient({ token }
 GET /ws/room/:roomId?token=<JWT>
 ```
 
-Membership is enforced — `403` / close `1008` when the user is not a room member.
+Membership is enforced: `403` / close `1008` when the user is not a room member.
 
 ## Token refresh
 
-The SDK does not expose `client.updateToken()`. When `exp` passes:
+`FluxyChatClient.setToken(next)` (alias `updateToken`) replaces the session JWT. Returns `true` when `sub` changed. Reconnect active rooms.
+
+When `exp` passes:
 
 1. Mint a new JWT on your backend (`POST /auth/token`).
-2. Pass it via `FluxyRealtimeProvider` `authTokenProvider` or recreate `FluxyChatClient` with the new token.
+2. Call `client.setToken(jwt)`, or pass a **function** to `FluxyRealtimeProvider` `authTokenProvider` so it remints before expiry.
 
 Hosted dashboard uses `/api/fluxy/connect` to refresh member JWT automatically.
+
+Public rooms skip this path: `joinPublicRoomAsGuest` (stable `guestKey`). Not a substitute for member roles.
 
 ## Common errors
 

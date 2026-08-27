@@ -3,6 +3,9 @@
 import React from "react";
 import * as Y from "yjs";
 import { FluxyChatClient } from "./fluxy-chat-client";
+import { decodeFluxyJwtPayload } from "./jwt-utils";
+import { useFluxyChatOptional } from "./use-fluxy-chat";
+import { trimTrailingSlashes } from "./url-utils";
 import { decodeYjsFrame, encodeYjsFrame, YJS_MSG_SYNC, YJS_MSG_UPDATE } from "./yjs-binary";
 import {
   FLUXY_YJS_EDITOR_FRAGMENT,
@@ -28,6 +31,8 @@ export interface FluxyYjsProviderProps {
   client?: FluxyChatClient;
   workerUrl?: string;
   token?: string;
+  /** Same shape as FluxyRealtimeProvider — string JWT, or nest under that provider. */
+  authTokenProvider?: string | (() => Promise<string>);
   userId?: string;
 }
 
@@ -37,15 +42,49 @@ export function FluxyYjsProvider({
   client: clientProp,
   workerUrl,
   token,
+  authTokenProvider,
   userId,
 }: FluxyYjsProviderProps) {
+  const realtime = useFluxyChatOptional();
+  const [asyncToken, setAsyncToken] = React.useState<string | undefined>();
+
+  React.useEffect(() => {
+    if (typeof authTokenProvider !== "function") {
+      setAsyncToken(undefined);
+      return;
+    }
+    let cancelled = false;
+    void authTokenProvider().then((next) => {
+      if (!cancelled) setAsyncToken(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authTokenProvider]);
+
+  const resolvedToken =
+    token ??
+    (typeof authTokenProvider === "string" ? authTokenProvider : undefined) ??
+    asyncToken ??
+    realtime?.token ??
+    undefined;
+
+  const waiting =
+    Boolean(!clientProp && realtime && !realtime.client) ||
+    (typeof authTokenProvider === "function" && !resolvedToken && !realtime?.client);
+
   const client = React.useMemo(() => {
     if (clientProp) return clientProp;
-    if (!workerUrl || !token || !userId) {
-      throw new Error("FluxyYjsProvider needs client or workerUrl + token + userId");
-    }
-    return new FluxyChatClient({ baseUrl: workerUrl, token, userId });
-  }, [clientProp, workerUrl, token, userId]);
+    if (realtime?.client) return realtime.client;
+    const uid =
+      userId ?? (resolvedToken ? decodeFluxyJwtPayload(resolvedToken).sub : undefined) ?? "";
+    if (!workerUrl || !resolvedToken || !uid) return null;
+    return new FluxyChatClient({
+      baseUrl: trimTrailingSlashes(workerUrl),
+      token: resolvedToken,
+      userId: uid,
+    });
+  }, [clientProp, realtime?.client, workerUrl, resolvedToken, userId]);
 
   const [connected, setConnected] = React.useState(false);
   const [version, setVersion] = React.useState(0);
@@ -75,7 +114,7 @@ export function FluxyYjsProvider({
     let updateHandler: ((update: Uint8Array, origin: unknown) => void) | null = null;
 
     function openSocket() {
-      if (disposed) return;
+      if (disposed || !client) return;
       ws?.close();
       const socket = client.connect(roomId, { replay: "off" });
       socket.binaryType = "arraybuffer";
@@ -120,6 +159,8 @@ export function FluxyYjsProvider({
       socket.onerror = () => socket.close();
     }
 
+    if (!client) return undefined;
+
     const deep = () => setVersion((n) => n + 1);
     storage.observeDeep(deep);
     openSocket();
@@ -134,10 +175,20 @@ export function FluxyYjsProvider({
     };
   }, [client, doc, roomId, storage]);
 
-  const value = React.useMemo<FluxyYjsContextValue>(
-    () => ({ doc, storage, undoManager, connected, client, roomId }),
+  const value = React.useMemo<FluxyYjsContextValue | null>(
+    () =>
+      client
+        ? { doc, storage, undoManager, connected, client, roomId }
+        : null,
     [client, connected, doc, roomId, storage, undoManager, version],
   );
+
+  if (!client || !value) {
+    if (waiting) return null;
+    throw new Error(
+      "FluxyYjsProvider needs client, a parent FluxyRealtimeProvider, or workerUrl + token (or authTokenProvider) + userId",
+    );
+  }
 
   return <FluxyYjsContext.Provider value={value}>{children}</FluxyYjsContext.Provider>;
 }

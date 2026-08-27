@@ -1,0 +1,51 @@
+---
+title: Wire protocol (v1)
+description: Room sockets, frames, and what the Worker actually does.
+---
+
+This page is the contract. Use it when you wire a client or review a competitor.
+
+## One room, two sockets when you need Yjs
+
+A room is one Durable Object. Chat, presence, feeds, threads, `server_event`, and `derived` share a JSON WebSocket:
+
+```
+GET /ws/room/:roomId?token=<JWT>
+```
+
+Yjs (`FluxyYjsProvider`) opens a second, binary WebSocket on the same route with replay off. Chat plus Tiptap means two connections to one object. JSON history and CRDT sync stay out of each other's way.
+
+Transport falls `websocket` to `sse` to `polling`. Reconnect exposes `connectionState.nextRetryAt`.
+
+## Auth on the wire
+
+| Who | How |
+| --- | --- |
+| Member | JWT in `?token=` (or `Authorization` on REST). Roles: `member` / `moderator` / `admin` / `owner`. |
+| Guest | `POST /public/rooms/:id/guest-session` then the same `?token=`. Public rooms. Stable `guestKey` in localStorage. |
+| Non-member | HTTP 403 or close `1008`. |
+
+Keep `fc_…` API keys on the server. Mint JWTs with `POST /auth/token`. Refresh with `client.setToken()` / `updateToken()`, or pass a function to `authTokenProvider`.
+
+## Frames that match the job
+
+| Job | Frame / API | Wrong primitive |
+| --- | --- | --- |
+| Pointers | `type: "cursor"` / `sendCursor` (up to 600/min) | Broadcast at 60 Hz |
+| Roster | `presence_patch`, `presenceMembers` | Full roster above 250 users (`presenceKind` becomes `aggregate`) |
+| Chat | JSON messages + `clientMessageId` | Feeds or comment threads |
+| Ephemeral pulse | `client-ephemeral-*` (skips webhooks) | Persisting it |
+| Document | Binary Yjs on the second socket | A second CRDT backend |
+| Late-joiner JSON | `setDerivedState` / `derivedState` (16 KiB, 30/min) | Stuffing a graph into chat history |
+| Private lines | `visibility` + `visibleTo` on send | Filtering only in the UI |
+| Agent on the timeline | `invokeAgent` | The keyless copilot panel (local UI only) |
+
+## What this layer is for
+
+The room is the product artifact: a deal, a board, a classroom, a dispatch view. You do not buy Ably for this combination. You do not buy Liveblocks unless the artifact is only a document. You do not buy Stream unless you need MAU-scale consumer chat and mobile moderation.
+
+Live audio is a media plane (LiveKit or an SFU). `voice-stage` is roster signaling. Devices POST JSON (`iot.reading`, `fleet.gps_update`). Game ticks are server-authoritative input. Publish rules live in your Worker / `fluxy.config` `onPublish`.
+
+## REST companion
+
+History, uploads, geofences, and cross-org are HTTP. Routes: [openapi.yaml](https://docs.fluxychat.com/openapi.yaml) (`text/yaml`).

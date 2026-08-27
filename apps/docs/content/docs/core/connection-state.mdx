@@ -1,9 +1,9 @@
 ---
 title: Connection state
-description: WebSocket lifecycle, reconnect backoff, and transport fallback.
+description: Lifecycle, reconnect backoff, transport fallback, degraded-http.
 ---
 
-`FluxyChatClient` and `useChat` expose structured connection state — not just a boolean connected flag.
+`FluxyChatClient` and `useChat` expose structured connection state, not a boolean.
 
 ## Status values
 
@@ -11,16 +11,20 @@ description: WebSocket lifecycle, reconnect backoff, and transport fallback.
 |--------|---------|
 | `connecting` | First WebSocket handshake |
 | `connected` | Live on WebSocket |
-| `reconnecting` | Socket dropped; backoff retry in progress |
+| `reconnecting` | Socket dropped, backoff retry in progress |
+| `degraded-http` | Socket down, HTTP publish still works (`canPublishViaHttp`) |
+| `degraded` | Unhealthy, not the HTTP fallback path |
 | `disconnected` | Not connected (manual disconnect or fatal error) |
+
+Legacy `sse` and `polling` statuses normalize to `degraded-http`. `connectionState.transport` still tells you `sse` vs `polling`.
 
 ## Transport fallback
 
 When WebSocket reconnect attempts are exhausted, the SDK degrades automatically:
 
-1. **WebSocket** — primary (`/ws/room/:roomId?token=…`)
-2. **SSE** — `GET /rooms/:id/stream` with member JWT
-3. **Polling** — `GET /api/messages` every ~4s
+1. **WebSocket**: primary (`/ws/room/:roomId?token=…`)
+2. **SSE**: `GET /rooms/:id/stream` with member JWT
+3. **Polling**: `GET /api/messages` every ~4s
 
 When WebSocket recovers, SSE/polling stops.
 
@@ -32,11 +36,11 @@ if (connectionState.status === "reconnecting" && connectionState.nextRetryAt) {
     0,
     Math.ceil((new Date(connectionState.nextRetryAt).getTime() - Date.now()) / 1000),
   );
-  return <span>Reconnecting in {seconds}s…</span>;
+  return <span>Reconnecting in {seconds}s</span>;
 }
 
-if (connectionState.transport === "sse") {
-  return <span>Live updates via SSE</span>;
+if (connectionState.status === "degraded-http" && connectionState.canPublishViaHttp) {
+  return <span>Live socket down. Sends still go over HTTP.</span>;
 }
 ```
 
@@ -51,7 +55,9 @@ await client.connect();
 await client.disconnect();
 ```
 
+JWT refresh: `client.setToken(next)` (alias `updateToken`). Reconnect rooms if `sub` changed.
+
 ## Related
 
-- [Transport fallback guide](/docs/cookbook/transport-fallback)
-- [Cookbook: transport fallback](/docs/cookbook/transport-fallback)
+- [Wire protocol](/docs/core/wire-protocol)
+- [Transport fallback](/docs/cookbook/transport-fallback)

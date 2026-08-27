@@ -21,12 +21,12 @@ const HOSTED_STEPS = [
   {
     icon: Package,
     title: "Install the SDK or use the CLI",
-    body: "Run pnpm add @fluxy-chat/sdk in your app, or use create-fluxy-chat to scaffold a full project with Worker, SDK, and config pre-wired.",
+    body: "Run pnpm add @fluxy-chat/sdk, or npx @fluxy-chat/create-fluxy-chat@latest. Public rooms: joinPublicRoomAsGuest or FluxyChatWidget guest — no token endpoint.",
   },
   {
     icon: Code2,
     title: "Send your first message",
-    body: "Mint a member JWT on your backend (or use the wizard), join a room, and render chat with useChat. Streaming markdown and tool calling work out of the box.",
+    body: "Open two tabs. Guests join public rooms without your backend. Production apps mint a member JWT with POST /auth/token and X-Fluxy-Api-Key (fc_ keys stay server-only).",
   },
   {
     icon: LayoutDashboard,
@@ -69,12 +69,13 @@ export default function GetStartedPage() {
           Fastest path: minimal CLI or drop-in widget
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Scaffold a chat-only Vite app in one command, or drop{" "}
-          <code className="text-xs">FluxyChatWidget</code> into an existing React app. For headless
+          Scaffold a chat-only Vite app in one command. Public rooms can use{" "}
+          <code className="text-xs">guest</code> on{" "}
+          <code className="text-xs">FluxyChatWidget</code> (no JWT mint). For headless
           control, install the SDK and use <code className="text-xs">useChat</code>.
         </p>
         <pre className="mt-3 overflow-x-auto rounded-lg border border-border bg-zinc-950 p-3 font-mono text-xs text-zinc-100">
-          {`npx create-fluxy-chat my-chat --minimal\npnpm add @fluxy-chat/ui-kit`}
+          {`npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal\npnpm add @fluxy-chat/ui-kit`}
         </pre>
         <div className="mt-4 flex flex-wrap gap-3">
           <Button asChild size="sm">

@@ -20,6 +20,11 @@ describe("guest-auth", () => {
     expect(assertGuestCanWrite(env, { roles: ["member"] }).ok).toBe(true);
   });
 
+  it("allows guest writes by default", () => {
+    expect(isPublicGuestReadOnly({})).toBe(false);
+    expect(assertGuestCanWrite({}, { roles: ["guest"] }).ok).toBe(true);
+  });
+
   it("picks guest role for room join", () => {
     expect(guestMemberRoleForJoin({ roles: ["guest"] })).toBe("guest");
     expect(guestMemberRoleForJoin({ roles: ["member"] })).toBe("member");

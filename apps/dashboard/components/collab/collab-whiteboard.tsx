@@ -6,60 +6,39 @@ import { useYjs } from "./yjs-provider";
 import { useTheme } from "@/app/components/theme-provider";
 import { installCanvasMaxSizeGuard, maxCssBox } from "@/lib/canvas-max-size-guard";
 
-const ELEMENT_COORD_CAP = 100_000;
+const ELEMENT_POS_CAP = 100_000;
+const ELEMENT_SIZE_CAP = 8_192;
 
-const ExcalidrawBoard = dynamic(
-  () => import("@excalidraw/excalidraw").then((mod) => {
-    function Board({
-      onChange,
-      onApi,
-      theme,
-    }: {
-      onChange: (elements: readonly unknown[]) => void;
-      onApi: (api: unknown) => void;
-      theme: "light" | "dark";
-    }) {
-      return (
-        <mod.Excalidraw
-          onChange={onChange}
-          excalidrawAPI={onApi}
-          theme={theme}
-          viewModeEnabled={false}
-          zenModeEnabled={false}
-          gridModeEnabled={false}
-          initialData={{
-            appState: {
-              zoom: { value: 1 as number & { _brand: "normalizedZoom" } },
-            },
-          }}
-        />
-      );
-    }
-    return { default: Board };
-  }),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Loading Excalidraw…
-      </div>
-    ),
-  },
-);
+const ExcalidrawBoard = dynamic(() => import("./collab-excalidraw-board"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+      Loading board…
+    </div>
+  ),
+});
 
 function isPlausibleElement(el: unknown): el is Record<string, unknown> {
   if (!el || typeof el !== "object") return false;
   const rec = el as Record<string, unknown>;
-  const nums = [rec.x, rec.y, rec.width, rec.height];
-  return nums.every(
-    (n) => n == null || (typeof n === "number" && Number.isFinite(n) && Math.abs(n) < ELEMENT_COORD_CAP),
+  const pos = [rec.x, rec.y];
+  const size = [rec.width, rec.height];
+  const posOk = pos.every(
+    (n) => n == null || (typeof n === "number" && Number.isFinite(n) && Math.abs(n) < ELEMENT_POS_CAP),
   );
+  const sizeOk = size.every(
+    (n) => n == null || (typeof n === "number" && Number.isFinite(n) && n >= 0 && n < ELEMENT_SIZE_CAP),
+  );
+  return posOk && sizeOk;
 }
 
 export default function CollabWhiteboard() {
   const { doc, connected, yarray } = useYjs();
   const { resolvedTheme } = useTheme();
-  const apiRef = useRef<{ updateScene?: (scene: { elements: unknown[] }) => void } | null>(null);
+  const apiRef = useRef<{
+    updateScene?: (scene: { elements?: unknown[]; appState?: Record<string, unknown> }) => void;
+    scrollToContent?: () => void;
+  } | null>(null);
   const syncingRef = useRef(false);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [box, setBox] = useState<{ width: number; height: number } | null>(null);
@@ -76,18 +55,12 @@ export default function CollabWhiteboard() {
       const rect = node.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
       const { maxWidth, maxHeight } = maxCssBox(dpr);
-      const availW = Math.min(
-        rect.width || node.clientWidth || window.innerWidth,
-        window.innerWidth,
-        maxWidth,
-      );
-      const availH = Math.min(
-        rect.height || node.clientHeight || Math.max(240, window.innerHeight - rect.top),
-        Math.max(240, window.innerHeight - rect.top - 4),
-        maxHeight,
-      );
-      const width = Math.max(320, Math.floor(availW));
-      const height = Math.max(240, Math.floor(availH));
+      const parentW = node.clientWidth || rect.width;
+      const parentH = node.clientHeight || rect.height;
+      const availW = Math.min(parentW || window.innerWidth, maxWidth);
+      const availH = Math.min(parentH || 480, maxHeight);
+      const width = Math.max(280, Math.floor(availW));
+      const height = Math.max(280, Math.floor(availH));
       setBox((prev) => (prev && prev.width === width && prev.height === height ? prev : { width, height }));
     }
 
@@ -146,23 +119,36 @@ export default function CollabWhiteboard() {
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden">
       <div className={cn(
-        "absolute right-3 top-3 z-10 rounded-full px-2 py-0.5 text-[10px] font-medium",
+        "pointer-events-none absolute right-3 top-3 z-10 rounded-full px-2 py-0.5 text-[10px] font-medium",
         connected
           ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
           : "bg-amber-500/15 text-amber-800 dark:text-amber-200",
       )}>
-        {connected ? "● Excalidraw + Yjs" : "○ Offline"}
+        {connected ? "Live Yjs" : "Offline"}
       </div>
-      <div ref={hostRef} className="absolute inset-0 min-h-0 min-w-0 overflow-hidden">
+      <div ref={hostRef} className="fluxy-excalidraw-host absolute inset-0">
         {box ? (
           <div
-            className="overflow-hidden"
-            style={{ width: box.width, height: box.height, maxWidth: "100%", maxHeight: "100%" }}
+            className="fluxy-excalidraw-host"
+            style={{ width: box.width, height: box.height }}
           >
             <ExcalidrawBoard
               theme={theme}
               onChange={onChange}
-              onApi={(api) => { apiRef.current = api as typeof apiRef.current; }}
+              onApi={(api) => {
+                apiRef.current = api as typeof apiRef.current;
+                try {
+                  apiRef.current?.updateScene?.({
+                    appState: {
+                      zoom: { value: 1 },
+                      scrollX: 0,
+                      scrollY: 0,
+                    },
+                  });
+                } catch {
+                  /* api not ready */
+                }
+              }}
             />
           </div>
         ) : null}

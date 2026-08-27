@@ -242,7 +242,7 @@ export default function CrossOrgAgentsPage() {
         </Link>
         {" · "}
         <a
-          href="https://docs.fluxy.chat/docs/guides/cross-org-negotiation"
+          href="https://docs.fluxychat.com/docs/guides/cross-org-negotiation"
           className="underline underline-offset-2"
           target="_blank"
           rel="noopener noreferrer"

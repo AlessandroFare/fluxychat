@@ -36,6 +36,17 @@ snapshot.presenceMembers.map((m) => m.userId);
 
 Pass optional profile data when joining via WebSocket query (`presenceInfo` JSON) for richer avatars in the dashboard.
 
+Rooms with more than **250** unique users switch to **aggregate** presence: `presenceKind: "aggregate"`, `presenceCount`, and a sample of `presenceMembers` (24). Check `presenceKind` before rendering a full roster.
+
+## Late-joiner derived state
+
+Non-CRDT app state (score, turn, ETA) can live in a JSON bag on the room Durable Object. It is included on `subscription_succeeded` as `derived` so a late joiner paints before replaying the log. Replace the bag with `setDerivedState` from `useChat` (30/min, 16 KiB). Use Yjs storage when you need conflict-free document edits.
+
+```tsx
+const { derivedState, setDerivedState } = useChat({ roomId, client });
+setDerivedState({ score: 3, turn: "ada" });
+```
+
 ## Live cursors (presence, not broadcast)
 
 Pointers use WebSocket `type: "cursor"` (up to 600/min, no D1, no webhooks). **Do not** send pointers as `client_event` (10/min + webhooks).

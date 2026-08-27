@@ -21,6 +21,14 @@ describe("parseInboundWsFrame", () => {
     expect(frame?.event?.type).toBe("message");
   });
 
+  it("parses derived late-joiner snapshots", () => {
+    const frame = parseInboundWsFrame(
+      JSON.stringify({ type: "derived", state: { score: 3 }, seq: 1 }),
+    );
+    expect(frame?.kind).toBe("event");
+    expect(frame?.event?.type).toBe("derived");
+  });
+
   it("parses worker streaming edit broadcasts", () => {
     const frame = parseInboundWsFrame(
       JSON.stringify({
@@ -59,6 +67,7 @@ describe("isKnownOutboundClientEvent", () => {
   it("accepts room DO client events", () => {
     expect(isKnownOutboundClientEvent({ type: "message", content: "x" })).toBe(true);
     expect(isKnownOutboundClientEvent({ type: "edit", id: 1 })).toBe(true);
+    expect(isKnownOutboundClientEvent({ type: "derived_set", state: { score: 1 } })).toBe(true);
   });
 
   it("rejects unknown outbound types", () => {

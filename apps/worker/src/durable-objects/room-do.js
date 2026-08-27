@@ -81,6 +81,7 @@ import { safeSchedulePostMessageAutomations } from "../lib/post-message-automati
 import { invokeMentionedAgents } from "../lib/agent-runtime.js";
 import {
   buildPresenceMembers,
+  buildRoomPresenceSnapshot,
   listActivePresenceUserIds,
   normalizeClientEventName,
   parsePresenceInfoParam,
@@ -89,6 +90,10 @@ import {
   CLIENT_EVENT_MAX_PER_MINUTE,
   CURSOR_MAX_PER_MINUTE,
 } from "../lib/room-presence.js";
+import {
+  sanitizeDerivedState,
+  DERIVED_SET_MAX_PER_MINUTE,
+} from "../lib/room-derived.js";
 import { buildStageSnapshot, pickActiveSpeaker } from "../lib/room-voice-stage.js";
 import {
   ROOM_CACHE_STORAGE_KEY,
@@ -280,6 +285,9 @@ export class RoomDurableObject {
     this.maxStageSpeakers = 5;
     /** Ephemeral last-known foreground location per track. */
     this.locationTracks = new Map();
+    /** JSON bag sent on connect so late joiners render without replaying the log. */
+    this.derivedState = {};
+    this.derivedSeq = 0;
     /** Last accepted update time per user/track, enforcing the 1 Hz ceiling. */
     this.locationUpdateTimes = new Map();
     /** @type {Map<string, number>} */
@@ -357,6 +365,12 @@ export class RoomDurableObject {
       if (roomRaw.userInfoByUserId && typeof roomRaw.userInfoByUserId === "object") {
         this.userInfoByUserId = new Map(Object.entries(roomRaw.userInfoByUserId));
       }
+      if (roomRaw.derived && typeof roomRaw.derived === "object" && !Array.isArray(roomRaw.derived)) {
+        this.derivedState = roomRaw.derived;
+      }
+      if (typeof roomRaw.derivedSeq === "number" && Number.isFinite(roomRaw.derivedSeq)) {
+        this.derivedSeq = roomRaw.derivedSeq;
+      }
     }
   }
 
@@ -366,12 +380,17 @@ export class RoomDurableObject {
    */
   async persistRoomStateToStorage() {
     if (!this.state.storage) return;
+    const hasDerived =
+      this.derivedState &&
+      typeof this.derivedState === "object" &&
+      Object.keys(this.derivedState).length > 0;
     const hasState =
       this.stageByUserId.size ||
       this.activeStreams.size ||
       this.locationTracks.size ||
       this.userInfoByUserId.size ||
-      this.activeSpeakerUserId;
+      this.activeSpeakerUserId ||
+      hasDerived;
     if (!hasState) {
       await this.state.storage.delete(EPHEMERAL_ROOM_STATE_KEY);
       return;
@@ -382,6 +401,8 @@ export class RoomDurableObject {
       activeStreams: Object.fromEntries(this.activeStreams),
       locationTracks: Object.fromEntries(this.locationTracks),
       userInfoByUserId: Object.fromEntries(this.userInfoByUserId),
+      derived: this.derivedState ?? {},
+      derivedSeq: this.derivedSeq ?? 0,
     });
   }
 
@@ -470,12 +491,7 @@ export class RoomDurableObject {
     for (const ws of this.sessions.sockets()) {
       if (!this.sessions.read(ws)?.ro) live += 1;
     }
-    return {
-      online: live,
-      subscriptionCount: live,
-      users: userIds,
-      members: buildPresenceMembers(userIds, this.userInfoByUserId),
-    };
+    return buildRoomPresenceSnapshot(userIds, this.userInfoByUserId, live);
   }
 
   getStageSnapshot() {
@@ -858,7 +874,11 @@ export class RoomDurableObject {
           socketId,
           readonly: Boolean(spectator),
           subscriptionCount: presence.subscriptionCount,
+          kind: presence.kind,
+          count: presence.count,
           members: presence.members,
+          derived: this.derivedState ?? {},
+          derivedSeq: this.derivedSeq ?? 0,
         }),
       );
     } catch (err) {
@@ -900,6 +920,8 @@ export class RoomDurableObject {
 
     this.broadcast({
       type: "presence",
+      kind: presence.kind,
+      count: presence.count,
       online: presence.online,
       users: presence.users,
       members: presence.members,
@@ -2441,6 +2463,45 @@ export class RoomDurableObject {
         return;
       }
 
+      if (msg.type === "derived_set") {
+        const roomId = this.roomId || this.state.id.toString();
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "derived_requires_auth" }));
+          return;
+        }
+        const derivedRate = this.consumeWsRateLimit(
+          `derived:${this.projectId}:${roomId}:${userId}`,
+          DERIVED_SET_MAX_PER_MINUTE,
+          60_000,
+        );
+        if (!derivedRate.allowed) {
+          webSocket.send(
+            JSON.stringify({
+              type: "error",
+              message: `rate_limit_exceeded: retry in ${derivedRate.retryAfterSeconds}s`,
+            }),
+          );
+          return;
+        }
+        const sanitized = sanitizeDerivedState(msg.state);
+        if (!sanitized.ok) {
+          webSocket.send(JSON.stringify({ type: "error", message: sanitized.error }));
+          return;
+        }
+        this.derivedState = sanitized.state;
+        this.derivedSeq = (this.derivedSeq || 0) + 1;
+        this.broadcast({
+          type: "derived",
+          roomId,
+          userId,
+          state: this.derivedState,
+          seq: this.derivedSeq,
+        });
+        void this.persistRoomStateToStorage().catch(() => {});
+        return;
+      }
+
       if (msg.type === "presence_patch") {
         const roomId = this.roomId || this.state.id.toString();
         const userId = this.userIds.get(webSocket);
@@ -2551,6 +2612,8 @@ export class RoomDurableObject {
     const presence = this.getPresenceSnapshot();
     this.broadcast({
       type: "presence",
+      kind: presence.kind,
+      count: presence.count,
       online: presence.online,
       users: presence.users,
       members: presence.members,

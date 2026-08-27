@@ -26,10 +26,8 @@ export function isPublicGuestEnabled(env) {
  * @param {*} env
  */
 export function isPublicGuestReadOnly(env) {
-  if (env.PUBLIC_GUEST_READ_ONLY === "false" || env.PUBLIC_GUEST_READ_ONLY === "0") {
-    return false;
-  }
-  return true;
+  const v = String(env?.PUBLIC_GUEST_READ_ONLY ?? "").toLowerCase();
+  return v === "true" || v === "1" || v === "yes";
 }
 
 /**

@@ -91,7 +91,9 @@ import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 </FluxyRealtimeProvider>
 ```
 
-`FluxyYjsProvider` takes **`token`**, not `authTokenProvider`. Do not pass `config={{ baseUrl, token }}` to the realtime provider.
+Nest `FluxyYjsProvider` **inside** `FluxyRealtimeProvider` (it reuses the client). Standalone, it accepts `token` or the same `authTokenProvider` string. Do not pass `config={{ baseUrl, token }}` to the realtime provider.
+
+Public rooms: `joinPublicRoomAsGuest` then the same provider. See [Quickstart](/docs/getting-started/quickstart).
 
 ## Connection state
 

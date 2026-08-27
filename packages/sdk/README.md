@@ -1,7 +1,5 @@
 # @fluxy-chat/sdk
 
-[![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0)
-
 Client for a **FluxyChat Worker** (self-hosted or [FluxyChat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and vertical SDKs.
 
 For **React hooks** (`useChat`, `useInbox`, `FluxyRealtimeProvider`), install [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) alongside this package.

@@ -38,7 +38,14 @@ export function ConsoleChrome({ children }: { children: React.ReactNode }) {
               >
                 Skip to content
               </a>
-              <main id="console-main" className="flex-1">
+              <main
+                id="console-main"
+                className={
+                  pathname.startsWith("/collab/")
+                    ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+                    : "flex-1"
+                }
+              >
                 <ConsoleAuthGate>{children}</ConsoleAuthGate>
               </main>
             </div>

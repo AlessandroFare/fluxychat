@@ -9,7 +9,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@fluxy-chat/sdk": "^0.6.4"
+    "@fluxy-chat/sdk": "^0.6.5"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",

@@ -52,7 +52,7 @@ export const REALTIME_FEATURES: readonly RealtimeFeature[] = [
     label: "In-App Chat",
     title: "Ship a chat feature in an afternoon.",
     description:
-      "Rooms, presence, threads, and reactions over one WebSocket. Vertical events (polls, breakouts, stage live) arrive on the same connection via onServerEvent — no second subscription layer.",
+      "Rooms, presence, threads, and reactions on one Durable Object. Vertical events (polls, breakouts, stage live) arrive on the JSON socket via onServerEvent. Yjs, if you need it, is a second binary connection to the same object.",
     icon: MessageSquare,
     code: [
       { text: "const", kind: "keyword" },
@@ -262,7 +262,7 @@ export const REALTIME_FEATURES: readonly RealtimeFeature[] = [
     label: "FluxyIoT",
     title: "Devices, rules, and telemetry beside your users.",
     description:
-      "Device shadow, rule engine, and MQTT bridge events reach operators in the dispatch room. Field readings ingest through the worker REST API.",
+      "Device shadow, rule engine, and HTTP ingest reach operators in the dispatch room. Readings POST to the Worker and fan out as iot.reading — not MQTT.",
     icon: Cpu,
     code: [
       { text: "const", kind: "keyword" },

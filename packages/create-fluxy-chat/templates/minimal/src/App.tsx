@@ -12,6 +12,7 @@ export function App() {
         roomId={roomId}
         workerUrl={workerUrl}
         token={token}
+        guest={!token}
         theme="default"
         height={520}
       />

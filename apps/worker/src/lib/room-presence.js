@@ -24,6 +24,43 @@ export function buildPresenceMembers(userIds, userInfoByUserId) {
   }));
 }
 
+/** Below this unique-user count, clients get a full roster. Above it, count + sample. */
+export const PRESENCE_DETAILED_MAX = 250;
+
+/**
+ * @param {string[]} userIds
+ * @param {Map<string, Record<string, unknown>>} userInfoByUserId
+ * @param {number} liveCount
+ * @param {number} [detailedMax]
+ */
+export function buildRoomPresenceSnapshot(
+  userIds,
+  userInfoByUserId,
+  liveCount,
+  detailedMax = PRESENCE_DETAILED_MAX,
+) {
+  const unique = userIds.length;
+  if (unique <= detailedMax) {
+    return {
+      kind: "detailed",
+      online: liveCount,
+      subscriptionCount: liveCount,
+      count: unique,
+      users: userIds,
+      members: buildPresenceMembers(userIds, userInfoByUserId),
+    };
+  }
+  const sample = userIds.slice(0, 24);
+  return {
+    kind: "aggregate",
+    online: liveCount,
+    subscriptionCount: liveCount,
+    count: unique,
+    users: sample,
+    members: buildPresenceMembers(sample, userInfoByUserId),
+  };
+}
+
 /**
  * @param {unknown} raw
  * @returns {Record<string, unknown>}
