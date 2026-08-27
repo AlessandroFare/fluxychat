@@ -29,7 +29,7 @@ const ExcalidrawBoard = dynamic(
           gridModeEnabled={false}
           initialData={{
             appState: {
-              zoom: { value: 1 },
+              zoom: { value: 1 as number & { _brand: "normalizedZoom" } },
             },
           }}
         />

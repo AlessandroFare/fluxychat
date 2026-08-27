@@ -97,16 +97,16 @@ export function installCanvasMaxSizeGuard(): () => void {
         typeof c === "number" &&
         typeof d === "number"
       ) {
-        return setTransform.call(this, a, b, c, d, e ?? 0, f ?? 0);
+        return Reflect.apply(setTransform, this, [a, b, c, d, e ?? 0, f ?? 0]);
       }
-      if (a && typeof a === "object") return setTransform.call(this, a);
-      return setTransform.call(this);
+      if (a && typeof a === "object") return Reflect.apply(setTransform, this, [a]);
+      return Reflect.apply(setTransform, this, []);
     } catch (err) {
       if (!(err instanceof DOMException)) throw err;
       const clamped = clampBackingStoreSize(this.canvas.width, this.canvas.height);
       if (widthDesc?.set) widthDesc.set.call(this.canvas, clamped.width);
       if (heightDesc?.set) heightDesc.set.call(this.canvas, clamped.height);
-      return setTransform.call(this, 1, 0, 0, 1, 0, 0);
+      return Reflect.apply(setTransform, this, [1, 0, 0, 1, 0, 0]);
     }
   } as typeof CanvasRenderingContext2D.prototype.setTransform;
 
