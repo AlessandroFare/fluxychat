@@ -1,73 +1,34 @@
 # FluxyChat
 
-> Canonical agent catalog (dense playbook + sitemap): https://docs.fluxychat.com/llms.txt
-> Humans: https://docs.fluxychat.com/docs/concepts · https://docs.fluxychat.com/docs/getting-started/what-to-build
+> Realtime rooms on Cloudflare Workers (Durable Objects + D1). Chat, presence, Yjs, agents, and HTTP ingest share one WebSocket. MIT self-host or hosted beta.
 
-Gold path: `npx @fluxy-chat/create-fluxy-chat@latest`
+FluxyChat is a room layer for your product. Map roomId to a document, board, deal, classroom, or dispatch view. Auth stays yours: mint a member JWT with POST /auth/token and header X-Fluxy-Api-Key (fc_ keys are server-only). Guests use FluxyChatClient.joinPublicRoomAsGuest. Scaffold with npx @fluxy-chat/create-fluxy-chat@latest (the unscoped create-fluxy-chat package is not ours). Open two browser tabs for cursors, presence, or Yjs.
 
-Live cursors: `npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors`
+Presence is sendCursor / liveCursors / presence_patch (WebSocket type cursor). Broadcast is sendClientEvent; prefix client-ephemeral-* skips webhooks. Storage is FluxyYjsProvider plus useStorage from @fluxy-chat/sdk/yjs. Feeds are /rooms/:id/feeds, not chat messages. Threads are /comment-threads, not chat parentId. Room agents use invokeAgent. Copilots use RegisterAiKnowledge and AiChat (they do not write the timeline). FluxyRealtimeProvider takes workerUrl and authTokenProvider. FluxyYjsProvider takes token.
 
-Gallery: `live-cursors-chat`, `javascript-live-cursors`, `tiptap-room`, `whiteboard`, `war-room`, `iot-panel`, `draw`, `deal-room`, `fleet-panel`, `game-tick`, `voice-stage`, `comments-board`.
+IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.gps_update. Games use /games/* plus game.tick after startMatch. Voice stage is joinVoiceStage signaling. Cross-org negotiation is REST /cross-org. Omnichannel lives in console Bridges with per-vendor OAuth and signing secrets. RCS uses RCS_OUTBOUND_URL plus RCS_WEBHOOK_SECRET. Voice clone/translation posts to /voice-ai/clone-translate, which calls VOICE_CLONE_URL on your media box.
 
-Feeds: `useFeeds` + `POST /rooms/:id/feeds`. Copilot: `RegisterAiKnowledge` + `<AiChat />` (not `invokeAgent`). Threads: `useThreads` (not chat `parentId`).
+Hosted catalog (same text): https://docs.fluxychat.com/llms.txt
 
-`FluxyRealtimeProvider` = `workerUrl` + `authTokenProvider`. `FluxyYjsProvider` = `token`. JWT mint: `POST /auth/token` with `X-Fluxy-Api-Key` (`fc_…` server-only).
+## Docs
 
-Cursors are WS `type: "cursor"` via `sendCursor` / `liveCursors`. Do not use `client_event` for pointers. Do not invent MQTT, Liveblocks keys, HIPAA, netcode, or a socket fleet.
+- [Docs home](https://docs.fluxychat.com/docs): Start here. Hosted, self-host, or SDK-only.
+- [Concepts](https://docs.fluxychat.com/docs/concepts): Projects, rooms, presence, broadcast, storage, feeds, threads, chat.
+- [Choose your path](https://docs.fluxychat.com/docs/getting-started/choose-your-path): Hosted CLI, your Worker, or a few lines of SDK.
+- [What to build](https://docs.fluxychat.com/docs/getting-started/what-to-build): Product idea to gallery example.
+- [Gallery](https://docs.fluxychat.com/docs/getting-started/gallery): Copy-paste Vite apps. Open two tabs.
+- [CLI and examples](https://docs.fluxychat.com/docs/getting-started/for-coding-agents): create-fluxy-chat flags, env vars, JWT mint.
+- [Platform modules](https://docs.fluxychat.com/docs/features/platform-status): IoT, fleet, game, RCS, adapters, commerce, federation.
+- [Auth JWT](https://docs.fluxychat.com/docs/guides/auth-jwt): Mint tokens from your backend.
 
----
+## API
 
+- [HTTP reference](https://docs.fluxychat.com/docs/api-reference): Worker REST.
+- [OpenAPI YAML](https://docs.fluxychat.com/openapi.yaml): Machine-readable routes.
+- [@fluxy-chat/sdk](https://www.npmjs.com/package/@fluxy-chat/sdk): Published client.
+- [npm create-fluxy-chat](https://www.npmjs.com/package/@fluxy-chat/create-fluxy-chat): Scaffold CLI.
 
-> Multi-tenant realtime chat on Cloudflare Workers (Durable Objects + D1). MIT self-host + hosted beta.
+## Optional
 
-## Docs index
-
-- [Docs home](https://github.com/AlessandroFare/fluxychat/blob/main/docs/README.md)
-- [Full LLM bundle](https://github.com/AlessandroFare/fluxychat/blob/main/docs/llms-full.txt)
-- [SDK README](https://github.com/AlessandroFare/fluxychat/blob/main/packages/sdk/README.md)
-- [SPEC](https://github.com/AlessandroFare/fluxychat/blob/main/SPEC.md)
-- [Competitive parity P10 (Sendbird, Sent.dm, Pusher gaps)](https://github.com/AlessandroFare/fluxychat/blob/main/docs/competitive-parity-p10.md)
-- [Auth / JWT cookbook](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/auth-jwt.md)
-- [Next.js end-to-end](https://github.com/AlessandroFare/fluxychat/blob/main/docs/snippets/nextjs-end-to-end.md)
-- [Support chat use case](https://github.com/AlessandroFare/fluxychat/blob/main/docs/use-cases/support-chat.md)
-- [Team chat use case](https://github.com/AlessandroFare/fluxychat/blob/main/docs/use-cases/team-chat.md)
-- [Assistant room / agents](https://github.com/AlessandroFare/fluxychat/blob/main/docs/use-cases/assistant-room.md)
-- [Bot streaming (FluxyMessageStream)](https://github.com/AlessandroFare/fluxychat/blob/main/docs/cookbook/bot-streaming-fluxy-message-stream.md)
-- [Dashboard integration](https://github.com/AlessandroFare/fluxychat/blob/main/docs/dashboard-integration.md)
-- [Hosted domains](https://github.com/AlessandroFare/fluxychat/blob/main/docs/hosted-domains.md)
-- [Troubleshooting](https://github.com/AlessandroFare/fluxychat/blob/main/docs/troubleshooting.md)
-- [Contract policy](https://github.com/AlessandroFare/fluxychat/blob/main/docs/contract-policy.md)
-
-## Product URLs
-
-- Beta: https://fluxychat.com/get-started
-- Compare: https://fluxychat.com/compare
-- Guides index: https://fluxychat.com/guides
-- CF Workers chat guide: https://fluxychat.com/guides/cloudflare-workers-chat
-- Durable Objects for chat rooms: https://fluxychat.com/guides/durable-objects-for-chat-rooms
-- Vercel without Pusher/Ably: https://fluxychat.com/guides/vercel-realtime-without-pusher
-- Reconnect & DO hibernation: https://fluxychat.com/guides/reconnect-durable-objects-hibernation
-- Dev.to walkthrough: https://dev.to/fluxychat_sdk_330378fbf56/how-to-build-a-realtime-chat-app-on-cloudflare-workers-without-managing-a-socket-fleet-4hdh
-- GitHub: https://github.com/AlessandroFare/fluxychat
-- npm SDK: https://www.npmjs.com/package/@fluxy-chat/sdk
-
-## SDK quick reference
-
-```ts
-import { FluxyChatClient, useChat } from "@fluxy-chat/sdk";
-
-const client = new FluxyChatClient({ baseUrl, userId, token });
-const { messages, sendMessage, connectionState, retryMessage, loadMore } = useChat({
-  roomId,
-  client,
-});
-```
-
-- Headless core: `FluxyChatClient`, `FluxyChatRoomConnection` (reconnect/backoff, history replay)
-- React: `useChat`, `FluxyRealtimeProvider`
-- Per-message delivery: `deliveryStatus` pending | sent | failed, `retryMessage(clientMessageId)`
-- Connection UI: `connectionState` with `status`, `lastError`, `retryAttempt`, `nextRetryAt`
-
-## Architecture (one paragraph)
-
-One Room Durable Object per channel handles WebSocket fan-out and ordering; messages persist asynchronously to D1. JWT per project for members; Next.js console for rooms, agents, webhooks, billing. Agents emit `tool_call` / `tool_result` on the same room WebSocket as user messages.
+- [GitHub](https://github.com/AlessandroFare/fluxychat): Source, MIT.
+- [Hosted app](https://fluxychat.com): Console and playground.

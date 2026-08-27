@@ -201,11 +201,69 @@ export async function federateGameCheckpoint(env, auth, input) {
   });
   if (!saved.ok) return saved;
 
+  const peer = await forwardCheckpointToFederationPeer(env, {
+    projectId: auth.projectId,
+    playerId: pid,
+    checkpointKey: key,
+    sourceRoomId,
+    targetRoomId,
+    state: saved.checkpoint.state,
+    version: saved.checkpoint.version,
+  });
+
   return {
     ok: true,
     checkpoint: saved.checkpoint,
     sourceRoomId,
     targetRoomId,
     federated: true,
+    peer: peer.forwarded ? peer : undefined,
   };
+}
+
+export async function ingestFederatedCheckpoint(env, input) {
+  const projectId = String(input.projectId || "").trim();
+  const playerId = String(input.playerId || "").trim();
+  const checkpointKey = String(input.checkpointKey || "").trim().slice(0, 64);
+  const state = input.state && typeof input.state === "object" ? input.state : null;
+  if (!projectId || !playerId || !checkpointKey || !state) {
+    return { ok: false, error: "federation_payload_required" };
+  }
+  return upsertGameCheckpoint(env, { projectId, userId: playerId }, {
+    checkpointKey,
+    playerId,
+    state,
+    roomId: input.targetRoomId,
+  });
+}
+
+export async function verifyFederationSecret(env, headerValue) {
+  const expected = String(env.FLUXY_FEDERATION_SECRET || "").trim();
+  if (!expected || !headerValue) return false;
+  const { timingSafeEqual } = await import("./crypto-timing.js");
+  return timingSafeEqual(expected, String(headerValue).trim());
+}
+
+async function forwardCheckpointToFederationPeer(env, payload) {
+  const peerUrl = String(env.FLUXY_FEDERATION_PEER_URL || "").trim().replace(/\/$/, "");
+  const secret = String(env.FLUXY_FEDERATION_SECRET || "").trim();
+  if (!peerUrl || !secret) return { forwarded: false };
+  try {
+    const { safeOutboundFetch } = await import("./url-ssrf.js");
+    const res = await safeOutboundFetch(
+      `${peerUrl}/games/federation/ingest`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Fluxy-Federation-Secret": secret,
+        },
+        body: JSON.stringify(payload),
+      },
+      env,
+    );
+    return { forwarded: res.ok, status: res.status };
+  } catch {
+    return { forwarded: false, error: "peer_unreachable" };
+  }
 }

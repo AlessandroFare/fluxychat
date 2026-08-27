@@ -188,6 +188,51 @@ export async function getIoTShadow(env, auth, deviceId) {
   };
 }
 
+export function scoreIoTReadings(values) {
+  const nums = values.filter((n) => Number.isFinite(n));
+  if (!nums.length) {
+    return { ok: true, sampleSize: 0, mean: null, slope: null, health: 100, alerts: [] };
+  }
+  const mean = nums.reduce((a, b) => a + b, 0) / nums.length;
+  const variance = nums.reduce((a, b) => a + (b - mean) ** 2, 0) / nums.length;
+  const stdev = Math.sqrt(variance);
+  const n = nums.length;
+  const xMean = (n - 1) / 2;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (i - xMean) * (nums[i] - mean);
+    den += (i - xMean) ** 2;
+  }
+  const slope = den === 0 ? 0 : num / den;
+  const last = nums[n - 1];
+  const alerts = [];
+  if (stdev > 0 && Math.abs(last - mean) > 2 * stdev) alerts.push("spike");
+  if (Math.abs(slope) > Math.abs(mean) * 0.05 + 0.01) alerts.push("trend");
+  const health = Math.max(0, Math.min(100, Math.round(100 - alerts.length * 18 - Math.min(40, stdev * 2))));
+  return { ok: true, sampleSize: n, mean, slope, stdev, last, health, alerts };
+}
+
+export async function getIoTDeviceHealth(env, auth, deviceId, sensor) {
+  const device = await env.DB.prepare(
+    `SELECT id FROM iot_devices WHERE project_id = ? AND id = ?`,
+  )
+    .bind(auth.projectId, deviceId)
+    .first();
+  if (!device) return { ok: false, error: "not_found" };
+
+  let sql = `SELECT value FROM iot_readings WHERE project_id = ? AND device_id = ?`;
+  const params = [auth.projectId, deviceId];
+  if (sensor) {
+    sql += ` AND sensor = ?`;
+    params.push(String(sensor).slice(0, 64));
+  }
+  sql += ` ORDER BY recorded_at DESC LIMIT 50`;
+  const rows = await env.DB.prepare(sql).bind(...params).all();
+  const values = (rows.results || []).map((r) => Number(r.value)).reverse();
+  return { ok: true, deviceId, sensor: sensor || null, ...scoreIoTReadings(values) };
+}
+
 export async function updateIoTDesiredShadow(env, auth, deviceId, desired) {
   const now = nowIso();
   const result = await env.DB.prepare(

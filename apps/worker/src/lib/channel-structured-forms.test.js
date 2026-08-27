@@ -7,7 +7,9 @@ import {
   parseRcsFormReply,
   parseWhatsAppInteractiveReply,
   validateChannelFormSchema,
+  verifyRcsWebhookSignature,
 } from "./channel-structured-forms.js";
+import { signWebhookPayload } from "./webhook-signing.js";
 
 describe("channel-structured-forms", () => {
   it("validates form schema", () => {
@@ -84,5 +86,15 @@ describe("channel-structured-forms", () => {
       { a: "hello" },
     );
     expect(out.summaryText).toContain("Answer: hello");
+  });
+
+  it("verifyRcsWebhookSignature accepts hex HMAC of the raw body", async () => {
+    const secret = "rcs-test-secret";
+    const raw = JSON.stringify({ suggestionResponse: { postbackData: "cfd:del:0:yes" } });
+    const signed = await signWebhookPayload(secret, raw);
+    expect(await verifyRcsWebhookSignature(secret, raw, signed)).toBe(true);
+    expect(await verifyRcsWebhookSignature(secret, raw, signed.replace(/^sha256=/, ""))).toBe(true);
+    expect(await verifyRcsWebhookSignature(secret, raw, "deadbeef")).toBe(false);
+    expect(await verifyRcsWebhookSignature(secret, raw, null)).toBe(false);
   });
 });

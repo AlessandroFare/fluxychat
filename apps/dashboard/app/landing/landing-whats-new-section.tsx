@@ -187,8 +187,8 @@ const PLATFORM_EXTENSIONS = [
   },
   {
     icon: Cpu,
-    title: "FluxyIoT: MQTT Bridge & Device Fleet",
-    description: "Device provisioning, rule engine, device shadow (desired vs reported), OTA updates, geofencing, AI device doctor, device-as-room-member.",
+    title: "FluxyIoT: HTTP ingest and device fleet",
+    description: "Provision devices, ingest readings, device shadow (desired vs reported), rules, and health scores. GPS fleet is a sibling module. Devices fan out on the room WebSocket.",
     href: "/iot",
   },
   {

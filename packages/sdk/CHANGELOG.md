@@ -1,5 +1,11 @@
 # @fluxy-chat/sdk
 
+## 0.6.4 (2026-08-27)
+
+### Added
+
+- `createWorkerFluxyGameClient().listLeaderboard()` — D1 skill-rating table via `GET /games/leaderboard`.
+
 ## 0.6.3 (2026-08-25)
 
 ### Added

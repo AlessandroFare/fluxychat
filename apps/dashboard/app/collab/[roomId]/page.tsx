@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -68,9 +68,24 @@ export default function CollabRoomPage() {
 
 function CollabLayout({ roomId, tab, setTab }: { roomId: string; tab: CollabTab; setTab: (t: CollabTab) => void }) {
   const { connected, undoManager } = useYjs();
+  const shellRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    function fit() {
+      const node = shellRef.current;
+      if (!node) return;
+      const top = node.getBoundingClientRect().top;
+      node.style.height = `${Math.max(320, Math.floor(window.innerHeight - top))}px`;
+    }
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div ref={shellRef} className="flex min-h-0 flex-col overflow-hidden bg-background">
       <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-2">
         <Link href="/collab" className="text-muted-foreground hover:text-foreground">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -109,7 +124,7 @@ function CollabLayout({ roomId, tab, setTab }: { roomId: string; tab: CollabTab;
         })}
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {tab === "overview" && <ProjectOverview roomId={roomId} />}
         {tab === "whiteboard" && <CollabWhiteboard />}
         {tab === "notes" && <CollabNotes />}

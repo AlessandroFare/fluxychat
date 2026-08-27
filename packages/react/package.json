@@ -52,7 +52,7 @@
   },
   "peerDependencies": {
     "react": ">=18",
-    "@fluxy-chat/sdk": "^0.6.3"
+    "@fluxy-chat/sdk": "^0.6.4"
   },
   "dependencies": {
     "@fluxy-chat/sdk": "workspace:*"

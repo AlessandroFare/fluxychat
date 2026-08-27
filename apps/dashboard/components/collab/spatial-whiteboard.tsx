@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Pen, Eraser, Move3d, Rotate3d, Square, Circle, Type, Trash2, Undo2 } from "lucide-react";
 import { useYjs } from "./yjs-provider";
 import { cn } from "@/lib/utils";
+import { clampBackingStoreSize } from "@/lib/canvas-max-size-guard";
 
 interface SpatialStroke {
   id: string; points: { x: number; y: number; z: number }[];
@@ -32,8 +33,9 @@ export default function SpatialWhiteboard() {
     if (!ctx) return;
 
     const resize = () => {
-      canvas.width = canvas.clientWidth;
-      canvas.height = canvas.clientHeight;
+      const next = clampBackingStoreSize(canvas.clientWidth, canvas.clientHeight);
+      canvas.width = next.width;
+      canvas.height = next.height;
     };
     resize();
     window.addEventListener("resize", resize);

@@ -3,6 +3,7 @@ import {
   endGameMatch,
   findOrCreateLobby,
   getGameMatch,
+  listGameLeaderboard,
   startGameMatch,
   submitGameInput,
   upsertGamePlayer,
@@ -14,6 +15,8 @@ import {
   listGameCheckpointsMerged,
   upsertGameCheckpoint,
   federateGameCheckpoint,
+  ingestFederatedCheckpoint,
+  verifyFederationSecret,
 } from "../lib/game-checkpoint.js";
 import { fetchGameCheckpointCrdtSnapshot } from "../lib/yjs-game-checkpoint.js";
 import {
@@ -35,6 +38,13 @@ export async function dispatchFluxyGameRoutes(request, url, h) {
   const path = url.pathname;
   if (!path.startsWith("/games/")) return null;
 
+  if (path === "/games/federation/ingest" && request.method === "POST") {
+    return dispatchFederationIngest(request, h);
+  }
+
+  if (path === "/games/leaderboard" && request.method === "GET") {
+    return dispatchLeaderboard(request, url, h);
+  }
   if (path === "/games/players" && request.method === "PUT") {
     return dispatchUpsertPlayer(request, h);
   }
@@ -148,6 +158,19 @@ async function authContext(request, env, h) {
   });
 }
 
+async function dispatchFederationIngest(request, h) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const secret = request.headers.get("X-Fluxy-Federation-Secret");
+  const valid = await verifyFederationSecret(env, secret);
+  if (!valid) {
+    return json({ error: "forbidden" }, { status: 401, headers: corsHeaders });
+  }
+  const body = await request.json().catch(() => null);
+  const result = await ingestFederatedCheckpoint(env, body ?? {});
+  if (!result.ok) return json({ error: result.error }, { status: 400, headers: corsHeaders });
+  return json(result, { headers: corsHeaders });
+}
+
 async function dispatchUpsertPlayer(request, h) {
   const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
   const auth = await authContext(request, env, h);
@@ -155,6 +178,14 @@ async function dispatchUpsertPlayer(request, h) {
   const body = await request.json().catch(() => null);
   const result = await upsertGamePlayer(env, auth, body ?? {});
   if (!result.ok) return json({ error: result.error }, { status: 400, headers: corsHeaders });
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchLeaderboard(request, url, h) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const result = await listGameLeaderboard(env, auth, url.searchParams.get("limit"));
   return json(result, { headers: corsHeaders });
 }
 

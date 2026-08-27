@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.13] - 2026-08-27
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.6.4` (game `listLeaderboard`). Publish `@fluxy-chat/sdk@0.6.4` **before** this CLI, or `pnpm create` / StackBlitz will miss that version.
+
 ## [0.5.12] - 2026-08-26
 
 ### Added

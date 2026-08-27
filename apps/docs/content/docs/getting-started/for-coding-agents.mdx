@@ -1,17 +1,21 @@
 ---
-title: For coding agents
-description: Configure FluxyChat and build without inventing MQTT, Liveblocks keys, or a socket fleet.
+title: CLI and examples
+description: Scaffold a FluxyChat app, set env vars, and mint a member JWT.
 ---
 
-You are wiring a product on FluxyChat. Use **this page** plus [llms.txt](/llms.txt). Do not invent a second realtime vendor.
+Use the scoped CLI. Bare `npx create-fluxy-chat` is a different package and 404s.
 
-## Gold path
+## Hosted app
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
 ```
 
-Live cursors (two browser tabs):
+That writes a Vite chat app. After `pnpm setup:hosted` you sign in on fluxychat.com.
+
+## Gallery
+
+Each example needs `VITE_FLUXYCHAT_WORKER_URL` plus a public room id or a member JWT. Open two tabs for anything collaborative.
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors
@@ -29,17 +33,15 @@ npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick
 npx @fluxy-chat/create-fluxy-chat@latest my-stage --example voice-stage
 ```
 
-Set `VITE_FLUXYCHAT_WORKER_URL` and either a **public room id** (guest JWT) or a **member JWT**. Open two tabs. Cursors use `type: "cursor"`; Tiptap/whiteboard sync Yjs on the same room DO. Map ideas in [What to build](/docs/getting-started/what-to-build) and [Concepts](/docs/concepts).
+Cursors travel as WebSocket `type: "cursor"`. Tiptap and the whiteboard sync Yjs on the same room. See [What to build](/docs/getting-started/what-to-build) for the idea-to-example map.
 
 ## Three ways to run
 
 | Path | Command | You provide |
 | --- | --- | --- |
 | Hosted | `--mode hosted -y` | Clerk on fluxychat.com after setup |
-| Self-host | clone repo, `pnpm --filter @fluxy-chat/worker dev` | Worker URL + project JWT |
+| Self-host | clone the repo, `pnpm --filter @fluxy-chat/worker dev` | Worker URL + project JWT |
 | SDK-only | `--template react` or `--example` from the [gallery](/docs/getting-started/gallery) | Worker URL + JWT or public room |
-
-Always use `@fluxy-chat/create-fluxy-chat`. Bare `npx create-fluxy-chat` 404s.
 
 ## Env vars (browser)
 
@@ -47,33 +49,29 @@ Always use `@fluxy-chat/create-fluxy-chat`. Bare `npx create-fluxy-chat` 404s.
 - `VITE_FLUXYCHAT_MEMBER_JWT` + `VITE_FLUXYCHAT_ROOM_ID` — member
 - `VITE_FLUXYCHAT_PUBLIC_ROOM_ID` — guest via `FluxyChatClient.joinPublicRoomAsGuest`
 
-Project API keys (`fc_…`) stay on the **server**.
+Keep `fc_…` API keys on the server.
 
 ## One WebSocket per room
 
 `useChat({ roomId })` is the room session: messages, presence, cursors (`sendCursor` / `liveCursors`), broadcast (`sendClientEvent`), agents (`invokeAgent`).
 
-For cursors-only, `useLiveCursors({ roomId })`. Do **not** mount both without the same `sessionScope` — that opens two sockets.
+For cursors only, `useLiveCursors({ roomId })`. Do not mount both unless they share `sessionScope`, or you open two sockets.
 
-## Liveblocks-shaped map (what exists vs roadmap)
-
-| Liveblocks | FluxyChat now | Do not |
-| --- | --- | --- |
-| Presence (users, cursors, selections) | `presenceMembers`, `liveCursors`, `sendCursor`, `useMyPresence` / `presence_patch` | `client_event` for pointers |
-| Broadcast | `sendClientEvent` / `useBroadcastEvent` (`client-ephemeral-*` skips webhooks) | 60 Hz through broadcast |
-| Storage | `useStorage` / `useMutation` / `FluxyYjsProvider` (`@fluxy-chat/sdk/yjs`); LiveFile via `uploadLiveFile`; Tiptap `--example tiptap-room` | A new CRDT product |
-| Feeds | `useFeeds`, `/rooms/:id/feeds` (JWT or API key) | Mixing with chat `messages` |
-| Copilot | `RegisterAiKnowledge` + `useAiChat` + `<AiChat />` (keyless mock) | Treating it as `invokeAgent` |
-| Threads / Comments | `useThreads`, `/rooms/:id/comment-threads` | Mixing with chat `parentId` replies |
-| Chat | `useChat` messages | MQTT |
-| Agent as peer | `invokeAgent` on the timeline | A separate agent socket |
-
-Storage helpers (`useStorage`) ship on `@fluxy-chat/sdk/yjs`. Feeds and Copilot `<AiChat />` are shipped (feeds ≠ chat; copilot ≠ `invokeAgent`). Do not promise HIPAA/netcode/FDA.
+| Need | API |
+| --- | --- |
+| Who is here, pointers, selections | `sendCursor`, `liveCursors`, `useMyPresence` / `presence_patch` |
+| One-shot stamps | `sendClientEvent` (`client-ephemeral-*` skips webhooks) |
+| Shared document | `useStorage` / `FluxyYjsProvider` (`@fluxy-chat/sdk/yjs`) |
+| Activity logs | `useFeeds`, `/rooms/:id/feeds` |
+| Side-panel assistant | `RegisterAiKnowledge` + `<AiChat />` |
+| Pinned review comments | `useThreads`, `/comment-threads` |
+| Chat timeline | `useChat` messages; replies use `parentId` |
+| Agent on the timeline | `invokeAgent` |
 
 ## JWT mint (server)
 
-Your backend POSTs `POST {WORKER}/auth/token` with `X-Fluxy-Api-Key: fc_…` and body `{ userId, roles, ttlSeconds }`. Pass the JWT as `FluxyRealtimeProvider` **`authTokenProvider`** (not `token`). `FluxyYjsProvider` uses **`token`**. See [Choose your path](/docs/getting-started/choose-your-path) and the auth cookbook.
+`POST {WORKER}/auth/token` with `X-Fluxy-Api-Key: fc_…` and body `{ userId, roles, ttlSeconds }`. Pass the JWT as `FluxyRealtimeProvider` `authTokenProvider`. `FluxyYjsProvider` uses `token`. Details: [Choose your path](/docs/getting-started/choose-your-path) and the auth cookbook.
 
 ## Open two tabs
 
-Collab features are untestable in one tab. Live cursors, presence, and chat all need a second client on the same `roomId`.
+Cursors, presence, and chat need a second client on the same `roomId`. One tab is not a collab test.

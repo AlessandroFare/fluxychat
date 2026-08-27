@@ -8,6 +8,17 @@ export interface WorkerFluxyGameClient {
   getMatch(matchId: string): Promise<{ status: string; state: Record<string, unknown> }>;
   submitInput(matchId: string, input: InputCommand | Record<string, unknown>): Promise<{ tick: number; events: GameEvent[] }>;
   endMatch(matchId: string, result?: MatchResult): Promise<void>;
+  listLeaderboard(limit?: number): Promise<
+    Array<{
+      rank: number;
+      playerId: string;
+      username: string;
+      skillRating: number;
+      region: string;
+      stats: Record<string, unknown>;
+      updatedAt: string;
+    }>
+  >;
   listNpcs(): Promise<Array<{ id: string; name: string; personality: string; difficulty: number }>>;
   upsertNpc(input: { id?: string; name: string; personality?: string; difficulty?: number }): Promise<{ id: string; name: string }>;
   interactNpc(npcId: string, input: { message: string; playerId?: string }): Promise<{ reply: string; retryAfterSeconds?: number }>;
@@ -99,6 +110,24 @@ export function createWorkerFluxyGameClient(client: FluxyChatClient): WorkerFlux
         body: JSON.stringify({ result }),
       });
       if (!res.ok) throw new Error(`endMatch failed: ${res.status}`);
+    },
+    async listLeaderboard(limit) {
+      const url = new URL(`${base(client)}/games/leaderboard`);
+      if (limit) url.searchParams.set("limit", String(limit));
+      const res = await fetch(url.toString(), { headers: await headers(client) });
+      if (!res.ok) throw new Error(`listLeaderboard failed: ${res.status}`);
+      const body = (await res.json()) as {
+        leaderboard?: Array<{
+          rank: number;
+          playerId: string;
+          username: string;
+          skillRating: number;
+          region: string;
+          stats: Record<string, unknown>;
+          updatedAt: string;
+        }>;
+      };
+      return body.leaderboard ?? [];
     },
     async listNpcs() {
       const res = await fetch(`${base(client)}/games/npcs`, { headers: await headers(client) });

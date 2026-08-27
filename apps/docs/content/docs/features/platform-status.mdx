@@ -1,97 +1,50 @@
 ---
-title: Platform roadmap status
-description: Features not shipped yet, paid-vendor dependencies, and monitor-only specs. Honest expectations for integrators.
+title: Platform modules
+description: Adapters, IoT, fleet, game, RCS, voice clone, commerce, and federation as they ship today.
 ---
 
-# Platform roadmap status
+These sit on the same Worker as chat. Set secrets in `.dev.vars` or the hosted console.
 
-FluxyChat ships a large surface area. This page lists items that are not fully productized yet, so you can plan integrations without surprise.
+## Omnichannel adapters
 
----
+Console path: **Bridges**. Each channel is a row in `channel_configs` (OAuth or bot token, webhook URL, signing secret). Slack, Discord, Telegram, Teams, WhatsApp, and the others in `cross-platform.js` share that table.
 
-## Research only: do not build on yet
+1. Create the vendor app (Slack app, Discord bot, …).
+2. Paste tokens and the signing secret in Bridges.
+3. Point the vendor webhook at your Worker.
 
-### Agent commerce (x402 and AP2/UCP)
+The web channel needs no vendor app. Structured replies: [Channel forms](/docs/features/channel-forms).
 
-Status: monitor spec maturity.
+## IoT and fleet
 
-- x402: HTTP micropayments per tool call (Coinbase facilitator pattern).
-- AP2/UCP: Google agent payment mandates for agentic commerce.
+Devices `POST` JSON. The room fans out `iot.reading` or `fleet.gps_update`.
 
-FluxyChat has no production x402 or AP2 handler. Wait for explicit release notes before building on either spec.
+- Register and ingest: [IoT](/docs/platform/iot)
+- GPS: [Fleet](/docs/platform/fleet)
+- Health: `GET /iot/devices/:id/health` scores recent readings (mean, slope, alerts). Geofence lives on the location SDK.
 
-What to do: nothing for now.
+## Game
 
----
+`createWorkerFluxyGameClient` covers matchmake, `startMatch`, `submitInput` (`game.tick`), `endMatch`, D1 `GET /games/leaderboard`, checkpoints, NPC, quests, tournaments. Checkpoint `federate` copies save state between rooms (and to a peer Worker if you set the federation URL). Scaffold: `--example game-tick`. Two players to start a match.
 
-## Monitor only: WebTransport
+## RCS
 
-Status: not recommended for production in 2026.
+Paid Twilio or MessageBird account. Set `RCS_OUTBOUND_URL`, `RCS_API_KEY`, and `RCS_WEBHOOK_SECRET`. Inbound webhooks must include an HMAC of the body (`X-RCS-Signature` hex SHA-256). Forms: [Channel forms](/docs/features/channel-forms).
 
-WebSocket remains the default transport. Safari and Firefox WebTransport maturity, plus server deployment options, are not enough for chat production today.
+## Voice clone and translation
 
-What to do: use WebSocket and SDK reconnect. Treat WebTransport mentions in research docs as experimental.
+Workers AI covers STT and TTS on `/voice-ai/transcribe` and `/voice-ai/speak`. Clone-quality output is `POST /voice-ai/clone-translate` with `{ audioBase64, targetLang, voiceId }`. The Worker forwards to `VOICE_CLONE_URL` (your GPU or VPS). Same member JWT as the rest of voice AI.
 
----
+## Agent commerce
 
-## Paid vendor: RCS channel
+When a cross-org commitment reaches `committed`, the Worker writes a settlement. Default provider is `manual` (both sides confirm, you mark settled). Set `X402_FACILITATOR_URL` to post an x402 payment request and store `external_ref`. AP2 mandates are not a second protocol here: they ride the same settlement row.
 
-Status: adapter scaffold only. Requires a Twilio or MessageBird RCS account.
+## Federation
 
-WhatsApp and web native channels work today. RCS outbound needs vendor credentials.
-
-What to do:
-
-1. Open a Twilio or MessageBird RCS program (paid).
-2. Set `RCS_OUTBOUND_URL` on the Worker when approved.
-3. Use [Channel forms](/docs/features/channel-forms) for structured RCS replies.
-
-Until then, use WhatsApp forms or in-app chat.
-
----
-
-## VPS or GPU: voice clone translation
-
-Status: not on Cloudflare Workers.
-
-The unified [voice pipeline](/docs/guides/voice-ai-pipeline) runs on Workers AI. Voice cloning plus translation in a target language needs an OmniVoice/RVC-style pipeline on a GPU or strong CPU VPS.
-
-What to do:
-
-1. Use standard voice AI on Workers today.
-2. For clone-quality translation, plan a separate media server.
-
----
-
-## Partial: omnichannel adapters (Slack, Teams, Discord, …)
-
-Status: webhook stubs exist. Production needs per-vendor OAuth and signature verification.
-
-15 adapters are listed in code (`cross-platform.js`). Each vendor requires:
-
-- Developer app registration
-- OAuth or bot token storage in `channel_configs`
-- Webhook URL and signing secret
-
-What to do: pick one channel, follow vendor docs, configure it in console **Bridges**. Do not assume all 15 are turnkey.
-
-The native web channel is fully supported.
-
----
-
-## Partial: IoT fleet and spatial
-
-Status: location tracking and FluxyTrack SDK exist. Predictive fleet layer is not shipped.
-
-- Today: [Platform IoT](/docs/platform/iot), geofencing in the SDK, location privacy TTL.
-- Not yet: predictive maintenance, digital twin spatial audio product layer.
-
-What to do: use the location SDK for fleet visibility. Treat predictive features as roadmap.
-
----
+One FluxyChat deployment is the product: many orgs in `/cross-org` rooms, audit chain, human gates. To span two Workers, set `FLUXY_FEDERATION_PEER_URL` plus `FLUXY_FEDERATION_SECRET` and use game checkpoint `federate` or the cross-org peer forward. Both sides must share the secret.
 
 ## Related
 
 - [Features overview](/docs/features/features-overview)
-- [Optional external integrations](/docs/guides/ecosystem/optional-integrations)
-- [Slash commands](/docs/guides/slash-commands) · [Ephemeral messages](/docs/guides/ephemeral-messages) · [Embed widget](/docs/reference/embed-widget)
+- [Channel forms](/docs/features/channel-forms)
+- [Voice](/docs/core/voice-huddles)

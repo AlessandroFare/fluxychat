@@ -4,6 +4,7 @@ import {
   handleRcsFormWebhook,
   handleWhatsAppFormWebhook,
   listChannelFormDeliveries,
+  verifyRcsWebhookSignature,
 } from "../lib/channel-structured-forms.js";
 
 export async function dispatchChannelFormsRoutes(request, url, h) {
@@ -62,7 +63,24 @@ export async function dispatchChannelFormsRoutes(request, url, h) {
     }
 
     if (path === "/webhooks/channel-forms/rcs" && request.method === "POST") {
-      const body = await request.json().catch(() => ({}));
+      const raw = await request.text();
+      const secret = env.RCS_WEBHOOK_SECRET?.trim();
+      if (secret) {
+        const signature =
+          request.headers.get("X-RCS-Signature") ||
+          request.headers.get("X-Twilio-Signature") ||
+          request.headers.get("X-MessageBird-Signature");
+        const valid = await verifyRcsWebhookSignature(secret, raw, signature);
+        if (!valid) {
+          return json({ error: "invalid_signature" }, { status: 401, headers: corsHeaders });
+        }
+      }
+      let body = {};
+      try {
+        body = raw ? JSON.parse(raw) : {};
+      } catch {
+        return json({ error: "invalid_json" }, { status: 400, headers: corsHeaders });
+      }
       const projectId =
         url.searchParams.get("projectId")?.trim() ||
         body?.projectId ||
