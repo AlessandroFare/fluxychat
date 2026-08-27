@@ -1,6 +1,7 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import {
   createIoTRule,
+  getIoTDeviceHealth,
   getIoTShadow,
   ingestIoTReading,
   listIoTDevices,
@@ -30,6 +31,11 @@ export async function dispatchFluxyIoTRoutes(request, url, h) {
   }
   if (shadowMatch && request.method === "PATCH") {
     return dispatchPatchShadow(request, h, decodeURIComponent(shadowMatch[1]));
+  }
+
+  const healthMatch = path.match(/^\/iot\/devices\/([^/]+)\/health$/);
+  if (healthMatch && request.method === "GET") {
+    return dispatchHealth(request, url, h, decodeURIComponent(healthMatch[1]));
   }
 
   if (path === "/iot/rules" && request.method === "POST") {
@@ -88,6 +94,15 @@ async function dispatchGetShadow(request, h, deviceId) {
   const auth = await authContext(request, env, h);
   if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   const result = await getIoTShadow(env, auth, deviceId);
+  if (!result.ok) return json({ error: result.error }, { status: 404, headers: corsHeaders });
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchHealth(request, url, h, deviceId) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const result = await getIoTDeviceHealth(env, auth, deviceId, url.searchParams.get("sensor") || undefined);
   if (!result.ok) return json({ error: result.error }, { status: 404, headers: corsHeaders });
   return json(result, { headers: corsHeaders });
 }

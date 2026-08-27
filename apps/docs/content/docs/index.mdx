@@ -3,37 +3,36 @@ title: FluxyChat Docs
 description: Realtime rooms so people and AI can build together. One WebSocket. Your product on top.
 ---
 
-FluxyChat is the collaboration layer for **your** app: a Cloudflare room (Durable Object + D1) where humans and agents share one WebSocket. Auth stays yours. Map `roomId` to a document, board, deal, classroom, or dispatch view.
+FluxyChat is the collaboration layer for your app: a Cloudflare room (Durable Object + D1) where people and agents share one WebSocket. Auth stays yours. Map `roomId` to a document, board, deal, classroom, or dispatch view.
 
-Gold path: `npx @fluxy-chat/create-fluxy-chat@latest`. Agents: read [llms.txt](/llms.txt) first, then [Concepts](/docs/concepts) and [What to build](/docs/getting-started/what-to-build).
+Start with `npx @fluxy-chat/create-fluxy-chat@latest`, then [Concepts](/docs/concepts) if you want the mental model, or [What to build](/docs/getting-started/what-to-build) if you already know the product.
 
 <Cards>
   <Card title="Get started" description="Hosted, self-host, or SDK-only." href="/docs/getting-started" />
-  <Card title="Concepts" description="Projects, rooms, primitives — pick the right one." href="/docs/concepts" />
-  <Card title="What to build" description="Idea → primitive → --example." href="/docs/getting-started/what-to-build" />
-  <Card title="Gallery" description="Copy-paste Vite apps. Open two tabs." href="/docs/getting-started/gallery" />
-  <Card title="For coding agents" description="Do not invent MQTT, Liveblocks keys, or a socket fleet." href="/docs/getting-started/for-coding-agents" />
-  <Card title="llms.txt" description="Canonical catalog for chatbots." href="/llms.txt" />
+  <Card title="Concepts" description="Projects, rooms, and which primitive to pick." href="/docs/concepts" />
+  <Card title="What to build" description="Idea to gallery example." href="/docs/getting-started/what-to-build" />
+  <Card title="Gallery" description="Vite apps you can run. Open two tabs." href="/docs/getting-started/gallery" />
+  <Card title="CLI and examples" description="Flags, env vars, JWT mint." href="/docs/getting-started/for-coding-agents" />
 </Cards>
 
 ## Collaboration features
 
 <Cards>
-  <Card title="Presence & cursors" description="Now: who is here, pointers, selections." href="/docs/core/presence-typing" />
+  <Card title="Presence & cursors" description="Who is here, pointers, selections." href="/docs/core/presence-typing" />
   <Card title="Broadcast" description="Sparse pulses. Not 60 Hz pointers." href="/docs/core/broadcast" />
-  <Card title="Storage / Tiptap / whiteboard" description="Yjs document on the room DO." href="/docs/core/storage" />
-  <Card title="Comments" description="Pinned threads — not chat parentId." href="/docs/core/comments" />
-  <Card title="Notifications & digest" description="Inbox kinds + daily email." href="/docs/core/notifications" />
+  <Card title="Storage / Tiptap / whiteboard" description="Yjs document on the room." href="/docs/core/storage" />
+  <Card title="Comments" description="Pinned threads, not chat replies." href="/docs/core/comments" />
+  <Card title="Notifications & digest" description="Inbox kinds and daily email." href="/docs/core/notifications" />
   <Card title="Chat + room agents" description="useChat and invokeAgent." href="/docs/core/use-chat" />
-  <Card title="Feeds" description="n8n / agent logs ≠ messages." href="/docs/core/feeds" />
+  <Card title="Feeds" description="n8n and agent logs, not the chat log." href="/docs/core/feeds" />
   <Card title="Copilots" description="Side panel AI. Not the timeline." href="/docs/core/copilots" />
-  <Card title="AI collaboration" description="Workflows write feeds + presence." href="/docs/core/ai-collaboration" />
+  <Card title="AI collaboration" description="Workflows write feeds and presence." href="/docs/core/ai-collaboration" />
 </Cards>
 
 ## Packages
 
 <Cards>
-  <Card title="@fluxy-chat/sdk" description="Client, REST, Yjs subpath, verticals." href="/docs/packages/sdk" />
+  <Card title="@fluxy-chat/sdk" description="Client, REST, Yjs, verticals." href="/docs/packages/sdk" />
   <Card title="@fluxy-chat/react" description="Provider, useChat, useThreads, useFeeds." href="/docs/packages/react" />
   <Card title="@fluxy-chat/ui" description="Cursors, Thread, AiChat, AvatarStack." href="/docs/packages" />
   <Card title="REST API" description="Worker HTTP." href="/docs/api-reference" />
@@ -45,7 +44,7 @@ Gold path: `npx @fluxy-chat/create-fluxy-chat@latest`. Agents: read [llms.txt](/
 |-------|-------------|
 | Worker URL | Hosted API or your `workers.dev` |
 | Project API key (`fc_…`) | Server only. Mints JWTs. |
-| Member JWT | Your backend → SDK (or guest join) |
+| Member JWT | Your backend to the SDK (or guest join) |
 | LLM keys | Worker secrets. Never the browser. |
 
 Try [fluxychat.com](https://fluxychat.com). Self-host: `pnpm install && pnpm run self-host && pnpm --filter @fluxy-chat/worker dev`.

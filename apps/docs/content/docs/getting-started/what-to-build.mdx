@@ -3,7 +3,7 @@ title: What to build
 description: Map a product idea to FluxyChat primitives and a gallery example.
 ---
 
-Tell an AI: “read [llms.txt](/llms.txt) and [Concepts](/docs/concepts), then build X.” Use this table so it does not invent MQTT or a second CRDT.
+Pick a row, scaffold the example, open two tabs.
 
 | You want | Primitive mix | Scaffold |
 | --- | --- | --- |
@@ -24,6 +24,4 @@ Tell an AI: “read [llms.txt](/llms.txt) and [Concepts](/docs/concepts), then b
 | Side-panel assistant | Copilot `<AiChat />` | [Copilots](/docs/core/copilots) |
 | Inbox + email catch-up | Inbox kinds + digest prefs | [Notifications](/docs/core/notifications) |
 
-Open **two tabs** for anything collaborative.
-
-Cross-org rooms are **REST** `/cross-org/…` (server), not MQTT. Health is **not** HIPAA. Game ticks are **not** netcode. Voice stage is **signaling**, not WebRTC; latency: [voice report](/docs/operations/voice-load-test-report).
+Cross-org rooms use REST `/cross-org/…` on the Worker. Game ticks are server-authoritative inputs, not a full netcode stack. Voice stage is signaling. Clone-quality translation goes through `/voice-ai/clone-translate` to your media URL. Latency numbers: [voice report](/docs/operations/voice-load-test-report).

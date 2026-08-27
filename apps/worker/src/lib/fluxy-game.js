@@ -92,7 +92,33 @@ export async function upsertGamePlayer(env, auth, input) {
   };
 }
 
-export async function findOrCreateLobby(env, auth, input) {
+export async function listGameLeaderboard(env, auth, limit = 20) {
+  const cap = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const rows = await env.DB.prepare(
+    `SELECT player_id, username, skill_rating, region, stats_json, updated_at
+     FROM game_player_profiles
+     WHERE project_id = ?
+     ORDER BY skill_rating DESC, updated_at DESC
+     LIMIT ?`,
+  )
+    .bind(auth.projectId, cap)
+    .all();
+
+  return {
+    ok: true,
+    leaderboard: (rows.results || []).map((row, i) => ({
+      rank: i + 1,
+      playerId: row.player_id,
+      username: row.username,
+      skillRating: Number(row.skill_rating),
+      region: row.region,
+      stats: parseJson(row.stats_json, {}),
+      updatedAt: row.updated_at,
+    })),
+  };
+}
+
+export async function findOrCreateLobby(env, auth, input = {}) {
   const playerId = String(input.playerId ?? auth.userId).trim();
   const gameMode = String(input.gameMode ?? "deathmatch").slice(0, 32);
   const maxPlayers = Math.min(Math.max(Number(input.maxPlayers) || 4, 2), 16);
@@ -266,5 +292,17 @@ export async function endGameMatch(env, auth, matchId, result) {
     .bind(result ? JSON.stringify(result) : null, now, auth.projectId, matchId)
     .run();
   if (!update.meta?.changes) return { ok: false, error: "not_found" };
+
+  const winnerId = result?.winnerId || result?.winner;
+  if (winnerId) {
+    await env.DB.prepare(
+      `UPDATE game_player_profiles
+       SET skill_rating = skill_rating + 16, updated_at = ?
+       WHERE project_id = ? AND player_id = ?`,
+    )
+      .bind(now, auth.projectId, String(winnerId))
+      .run();
+  }
+
   return getGameMatch(env, auth, matchId);
 }

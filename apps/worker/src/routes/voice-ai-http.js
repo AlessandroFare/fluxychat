@@ -15,6 +15,7 @@ import {
   decodeAudioBase64,
   synthesizeWithWorkersAi,
 } from "../lib/workers-ai-speech.js";
+import { safeOutboundFetch } from "../lib/url-ssrf.js";
 
 export async function dispatchVoiceAiRoutes(request, url, h) {
   const path = url.pathname;
@@ -26,7 +27,7 @@ export async function dispatchVoiceAiRoutes(request, url, h) {
 
   if (
     request.method === "POST" &&
-    (path === "/voice-ai/transcribe" || path === "/voice-ai/speak")
+    (path === "/voice-ai/transcribe" || path === "/voice-ai/speak" || path === "/voice-ai/clone-translate")
   ) {
     return dispatchMemberSpeech(request, path, h);
   }
@@ -183,6 +184,56 @@ async function dispatchMemberSpeech(request, path, h) {
       },
       { headers: corsHeaders },
     );
+  }
+
+  if (path === "/voice-ai/clone-translate") {
+    const cloneUrl = String(env.VOICE_CLONE_URL || "").trim();
+    if (!cloneUrl) {
+      return json(
+        { error: "voice_clone_unconfigured", hint: "Set VOICE_CLONE_URL on the Worker" },
+        { status: 503, headers: corsHeaders },
+      );
+    }
+    const audioBase64 = typeof body.audioBase64 === "string" ? body.audioBase64 : "";
+    if (!audioBase64) {
+      return json({ error: "audioBase64 required" }, { status: 400, headers: corsHeaders });
+    }
+    const payload = {
+      audioBase64,
+      targetLang: typeof body.targetLang === "string" ? body.targetLang : "en",
+      voiceId: typeof body.voiceId === "string" ? body.voiceId : null,
+      projectId: auth.projectId,
+      userId: auth.userId,
+      roomId,
+    };
+    let upstream;
+    try {
+      upstream = await safeOutboundFetch(
+        cloneUrl,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(env.VOICE_CLONE_API_KEY
+              ? { Authorization: `Bearer ${String(env.VOICE_CLONE_API_KEY).trim()}` }
+              : {}),
+          },
+          body: JSON.stringify(payload),
+        },
+        env,
+      );
+    } catch (err) {
+      logError("voice_ai.clone_translate_failed", err, requestLogCtx);
+      return json({ error: "voice_clone_unreachable" }, { status: 502, headers: corsHeaders });
+    }
+    const cloned = await upstream.json().catch(() => null);
+    if (!upstream.ok) {
+      return json(
+        { error: "voice_clone_upstream", status: upstream.status, detail: cloned },
+        { status: 502, headers: corsHeaders },
+      );
+    }
+    return json({ ok: true, ...(cloned && typeof cloned === "object" ? cloned : {}) }, { headers: corsHeaders });
   }
 
   const text = typeof body.text === "string" ? body.text : "";

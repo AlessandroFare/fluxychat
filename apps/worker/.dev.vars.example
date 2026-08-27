@@ -166,6 +166,20 @@ SEMANTIC_SEARCH_ENABLED=true
 # RCS outbound proxy URL (JSON POST with { to, contentMessage })
 # RCS_OUTBOUND_URL=
 # RCS_API_KEY=
+# HMAC-SHA-256 of the raw inbound body; header X-RCS-Signature (hex or sha256=hex)
+# RCS_WEBHOOK_SECRET=
+
+# Voice clone / translation GPU or VPS. Worker POSTs { audioBase64, targetLang, voiceId }.
+# VOICE_CLONE_URL=https://media.example.com/clone-translate
+# VOICE_CLONE_API_KEY=
+
+# x402 facilitator (cross-org settlement). When set, committed deals POST here.
+# X402_FACILITATOR_URL=https://facilitator.example.com/x402
+# X402_FACILITATOR_KEY=
+
+# Peer Worker for checkpoint federation (same secret on both sides).
+# FLUXY_FEDERATION_PEER_URL=https://peer-worker.example.com
+# FLUXY_FEDERATION_SECRET=
 
 # Silero VAD ONNX model for dashboard voice (roadmap #10) — frame VAD fallback when ONNX unavailable
 # NEXT_PUBLIC_SILERO_VAD_WASM_URL=https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.22/dist/silero_vad.onnx

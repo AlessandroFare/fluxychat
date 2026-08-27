@@ -66,6 +66,14 @@ function makeDb() {
                     row.updated_at = updatedAt;
                   }
                 }
+                if (flat.includes("SET external_ref = ?") && !flat.includes("SET status")) {
+                  const [externalRef, updatedAt, projectId, commitmentId] = p;
+                  const row = settlements.get(commitmentId);
+                  if (row && row.project_id === projectId) {
+                    row.external_ref = externalRef;
+                    row.updated_at = updatedAt;
+                  }
+                }
                 return { meta: { changes: 1 } };
               },
               async all() {
@@ -176,5 +184,20 @@ describe("settlement lifecycle", () => {
     });
     expect(await getSettlementByCommitment({ DB: db.DB }, "pB", "c9")).toBeNull();
     expect(await getSettlementByCommitment({ DB: db.DB }, "pA", "c9")).not.toBeNull();
+  });
+
+  it("uses x402 when X402_FACILITATOR_URL is set", async () => {
+    const db = makeDb();
+    const r = await createCommitmentSettlement(
+      { DB: db.DB, X402_FACILITATOR_URL: "https://example.com/x402" },
+      {
+        projectId: "p1",
+        crossOrgRoomId: "co1",
+        commitmentId: "c-x402",
+        publicTerms: { price: 10 },
+      },
+    );
+    expect(r.ok).toBe(true);
+    expect(r.provider).toBe("x402");
   });
 });

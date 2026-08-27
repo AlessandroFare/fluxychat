@@ -98,3 +98,15 @@ docs/COMPETITIVE-STRATEGY.md
 docs/PORTAL-GAP-CLOSURE.md
 docs/PORTAL-ZERO-BUDGET-ROADMAP.md
 docs/PORTAL-HACKATHON-ROADMAP-2026.md
+
+# Internal product / competitor roadmaps (local only — not public GitHub)
+ROADMAP.md
+ROADMAP_REALTIME_FEATURES.md
+docs/*ROADMAP*
+docs/*-ROADMAP.md
+docs/competitive-parity-p10.md
+docs/spec-implementation-map.md
+docs/FEATURE_ROADMAP.md
+apps/docs/content/docs/operations/competitor-parity-roadmap.mdx
+apps/docs/content/docs/operations/next-wave-roadmap.mdx
+apps/docs/content/docs/architecture/competitive-strategy.mdx

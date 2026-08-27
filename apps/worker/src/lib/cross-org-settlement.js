@@ -14,18 +14,17 @@
  *
  * PROVIDERS
  * ---------
- * - "manual" (default, zero external deps): records intent + terms snapshot.
- *   Parties settle out of band; operator marks settled via markSettlement.
- * - "x402": NOT implemented here. x402 is HTTP-native payment (402 -> pay ->
- *   retry) aimed at machine-to-machine API access; wiring real funds requires
- *   a wallet/RPC decision that belongs to deployment config, not to this repo's
- *   core. The provider field + external_ref column exist so attaching it later
- *   needs NO migration and NO change to the commitment flow.
+ * - "manual" (default): records intent + terms snapshot. Parties settle out of
+ *   band; operator marks settled via markSettlement.
+ * - "x402": POST the settlement to X402_FACILITATOR_URL (HTTP 402 pay-retry).
+ *   Stores facilitator `external_ref`. If the URL is unset, the row still
+ *   opens as pending x402 so you can attach a facilitator without a migration.
  */
 
 import { sha256Hex } from "./audit-chain.js";
+import { safeOutboundFetch } from "./url-ssrf.js";
 
-export const SETTLEMENT_PROVIDERS = Object.freeze(["manual"]);
+export const SETTLEMENT_PROVIDERS = Object.freeze(["manual", "x402"]);
 export const DEFAULT_SETTLEMENT_PROVIDER = "manual";
 
 /**
@@ -74,10 +73,13 @@ function nowIso() {
  */
 export async function createCommitmentSettlement(env, input) {
   if (!env?.DB) return { ok: false, reason: "db_missing" };
-  const provider =
-    input.provider && SETTLEMENT_PROVIDERS.includes(input.provider)
-      ? input.provider
+  const facilitatorUrl = String(env.X402_FACILITATOR_URL || "").trim();
+  const requested = input.provider && SETTLEMENT_PROVIDERS.includes(input.provider)
+    ? input.provider
+    : facilitatorUrl
+      ? "x402"
       : DEFAULT_SETTLEMENT_PROVIDER;
+  const provider = requested;
   const { amount, currency } = deriveSettlementTerms(input.publicTerms);
   const now = nowIso();
   // Deterministic id: same commitment always maps to the same settlement id,
@@ -107,7 +109,60 @@ export async function createCommitmentSettlement(env, input) {
     return { ok: false, reason: "settlement_insert_failed" };
   }
 
-  return { ok: true, settlementId: id, provider, amount, currency, status: "pending" };
+  let externalRef = null;
+  if (provider === "x402" && facilitatorUrl) {
+    const posted = await postX402Facilitator(env, facilitatorUrl, {
+      settlementId: id,
+      projectId: input.projectId,
+      commitmentId: input.commitmentId,
+      amount,
+      currency,
+    });
+    if (posted.ok && posted.externalRef) {
+      externalRef = posted.externalRef;
+      await env.DB.prepare(
+        `UPDATE cross_org_settlements
+         SET external_ref = ?, updated_at = ?
+         WHERE project_id = ? AND commitment_id = ?`,
+      )
+        .bind(externalRef, nowIso(), input.projectId, input.commitmentId)
+        .run();
+    }
+  }
+
+  return { ok: true, settlementId: id, provider, amount, currency, status: "pending", externalRef };
+}
+
+/**
+ * POST a payment intent to the configured x402 facilitator. Failures leave the
+ * settlement pending so a later retry can attach `external_ref`.
+ */
+export async function postX402Facilitator(env, facilitatorUrl, payload) {
+  try {
+    const res = await safeOutboundFetch(
+      facilitatorUrl,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(env.X402_FACILITATOR_KEY
+            ? { Authorization: `Bearer ${String(env.X402_FACILITATOR_KEY).trim()}` }
+            : {}),
+        },
+        body: JSON.stringify(payload),
+      },
+      env,
+    );
+    const body = await res.json().catch(() => ({}));
+    const externalRef =
+      (typeof body.id === "string" && body.id) ||
+      (typeof body.paymentId === "string" && body.paymentId) ||
+      (typeof body.external_ref === "string" && body.external_ref) ||
+      null;
+    return { ok: res.ok, externalRef, status: res.status };
+  } catch {
+    return { ok: false, externalRef: null };
+  }
 }
 
 /**

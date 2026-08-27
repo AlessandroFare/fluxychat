@@ -8,11 +8,28 @@ import { submitForm } from "./polls-forms.js";
 import { getChannelConfig } from "./omnichannel.js";
 import { logInfo, logError } from "./worker-log.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
+import { signWebhookPayload } from "./webhook-signing.js";
+import { timingSafeEqual } from "./crypto-timing.js";
 
 const E164_RE = /^\+[1-9]\d{6,14}$/;
 const VALID_CHANNELS = new Set(["whatsapp", "rcs"]);
 const MAX_FIELDS = 10;
 const MAX_OPTIONS = 10;
+
+/**
+ * HMAC-SHA-256 of the raw webhook body. Header is hex or `sha256=` + hex
+ * (`X-RCS-Signature`). Twilio/MessageBird proxies should send the same digest.
+ * @param {string} secret
+ * @param {string} rawBody
+ * @param {string | null | undefined} signatureHeader
+ */
+export async function verifyRcsWebhookSignature(secret, rawBody, signatureHeader) {
+  if (!secret || rawBody == null || !signatureHeader) return false;
+  const expected = await signWebhookPayload(secret, rawBody);
+  const expectedHex = expected.replace(/^sha256=/i, "");
+  const received = String(signatureHeader).trim().replace(/^sha256=/i, "");
+  return timingSafeEqual(expectedHex, received);
+}
 
 function generateId(prefix) {
   return `${prefix}_${Array.from(crypto.getRandomValues(new Uint8Array(8)))

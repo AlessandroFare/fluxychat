@@ -8,6 +8,7 @@ import { LandingFeaturesClient } from "./landing-features-client";
 import { LandingFinalCtaSection } from "./landing-final-cta-section";
 import { LandingFooter } from "./landing-footer";
 import { LandingDemoSection } from "./landing-demo-section";
+import { LandingBuildGallery } from "./landing-build-gallery";
 import { LandingHeroClient } from "./landing-hero-client";
 import { LandingLifecycleSection } from "./landing-lifecycle-section";
 import { LandingLogoStrip } from "./landing-logo-strip";
@@ -32,6 +33,7 @@ export default function LandingHomePage() {
 
       <LandingBand tone="glass">
         <LandingDemoSection />
+        <LandingBuildGallery />
       </LandingBand>
 
       <LandingBand tone="light">

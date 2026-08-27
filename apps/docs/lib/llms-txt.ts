@@ -1,188 +1,72 @@
-/** Canonical agent-facing catalog (LB-DX-001). Served at /llms.txt and /docs/llms.txt. */
+/** Served at /llms.txt and /docs/llms.txt. llmstxt.org: one H1, blockquote, then H2 link lists with absolute URLs. */
 
 export const FLUXYCHAT_LLMS_TXT = `# FluxyChat
 
-> Multi-tenant realtime rooms on Cloudflare Workers (Durable Objects + D1). MIT self-host + hosted beta.
-> Instruction for agents: read this file, then Concepts and What to build. Scaffold with create-fluxy-chat. Do not invent MQTT, Liveblocks secret keys, HIPAA, netcode, or a second socket fleet.
+> Realtime rooms on Cloudflare Workers (Durable Objects + D1). Chat, presence, Yjs, agents, and HTTP ingest share one WebSocket. MIT self-host or hosted beta.
 
-## Gold path
+FluxyChat is a room layer for your product. Map roomId to a document, board, deal, classroom, or dispatch view. Auth stays yours: mint a member JWT with POST /auth/token and header X-Fluxy-Api-Key (fc_ keys are server-only). Guests use FluxyChatClient.joinPublicRoomAsGuest. Scaffold with npx @fluxy-chat/create-fluxy-chat@latest (the unscoped create-fluxy-chat package is not ours). Open two browser tabs for cursors, presence, or Yjs.
 
-npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
+Presence is sendCursor / liveCursors / presence_patch (WebSocket type cursor). Broadcast is sendClientEvent; prefix client-ephemeral-* skips webhooks. Storage is FluxyYjsProvider plus useStorage from @fluxy-chat/sdk/yjs. Feeds are /rooms/:id/feeds, not chat messages. Threads are /comment-threads, not chat parentId. Room agents use invokeAgent. Copilots use RegisterAiKnowledge and AiChat (they do not write the timeline). FluxyRealtimeProvider takes workerUrl and authTokenProvider. FluxyYjsProvider takes token.
 
-npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors
-npx @fluxy-chat/create-fluxy-chat@latest my-cursors-chat --example live-cursors-chat
-npx @fluxy-chat/create-fluxy-chat@latest my-vanilla --example javascript-live-cursors
-npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room
-npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
-npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room
-npx @fluxy-chat/create-fluxy-chat@latest my-draw --example draw
-npx @fluxy-chat/create-fluxy-chat@latest my-deal --example deal-room
-npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
-npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick
-npx @fluxy-chat/create-fluxy-chat@latest my-stage --example voice-stage
-npx @fluxy-chat/create-fluxy-chat@latest my-comments --example comments-board
-npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
+IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.gps_update. Games use /games/* plus game.tick after startMatch. Voice stage is joinVoiceStage signaling. Cross-org negotiation is REST /cross-org. Omnichannel lives in console Bridges with per-vendor OAuth and signing secrets. RCS uses RCS_OUTBOUND_URL plus RCS_WEBHOOK_SECRET. Voice clone/translation posts to /voice-ai/clone-translate, which calls VOICE_CLONE_URL on your media box.
 
-Docs: https://docs.fluxychat.com
-This file: https://docs.fluxychat.com/llms.txt
-GitHub: https://github.com/AlessandroFare/fluxychat
-npm: @fluxy-chat/sdk @fluxy-chat/react @fluxy-chat/ui
+## Docs
 
-Always use npx @fluxy-chat/create-fluxy-chat@latest (bare create-fluxy-chat 404s).
-Open two browser tabs for anything collaborative.
+- [Docs home](https://docs.fluxychat.com/docs): Start here. Hosted, self-host, or SDK-only.
+- [Concepts](https://docs.fluxychat.com/docs/concepts): Projects, rooms, presence, broadcast, storage, feeds, threads, chat.
+- [Choose your path](https://docs.fluxychat.com/docs/getting-started/choose-your-path): Hosted CLI, your Worker, or a few lines of SDK.
+- [What to build](https://docs.fluxychat.com/docs/getting-started/what-to-build): Product idea to gallery example.
+- [Gallery](https://docs.fluxychat.com/docs/getting-started/gallery): Copy-paste Vite apps. Open two tabs.
+- [CLI and examples](https://docs.fluxychat.com/docs/getting-started/for-coding-agents): create-fluxy-chat flags, env vars, JWT mint.
+- [Quickstart](https://docs.fluxychat.com/docs/getting-started/quickstart): First message in a room.
+- [Client setup](https://docs.fluxychat.com/docs/getting-started/client-setup): React, vanilla, React Native.
+- [Self-hosting](https://docs.fluxychat.com/docs/getting-started/self-hosting): Worker on your Cloudflare account.
+- [useChat](https://docs.fluxychat.com/docs/core/use-chat): Timeline, agents, most room APIs.
+- [Presence](https://docs.fluxychat.com/docs/core/presence-typing): Who is here, cursors, selections.
+- [Broadcast](https://docs.fluxychat.com/docs/core/broadcast): Sparse one-shot events.
+- [Storage](https://docs.fluxychat.com/docs/core/storage): Yjs, Tiptap, whiteboard.
+- [Comments](https://docs.fluxychat.com/docs/core/comments): Pinned threads.
+- [Feeds](https://docs.fluxychat.com/docs/core/feeds): Activity logs.
+- [Copilots](https://docs.fluxychat.com/docs/core/copilots): Side-panel AI.
+- [Notifications](https://docs.fluxychat.com/docs/core/notifications): Inbox and daily digest.
+- [Voice](https://docs.fluxychat.com/docs/core/voice-huddles): Clips, stage signaling, clone proxy.
+- [Platform modules](https://docs.fluxychat.com/docs/features/platform-status): IoT, fleet, game, RCS, adapters, commerce, federation.
+- [Auth JWT](https://docs.fluxychat.com/docs/guides/auth-jwt): Mint tokens from your backend.
+- [Voice load report](https://docs.fluxychat.com/docs/operations/voice-load-test-report): Measured latency and product SLO.
 
-## Concepts (mental model)
+## Examples
 
-Project  = tenant. API keys fc_… are server-only. Rooms, agents, quotas.
-Room     = one Durable Object + one WebSocket. Map roomId to your artifact (doc, board, deal, classroom, dispatch).
-Users    = humans (member JWT or guest) and AI (copilot, room peer, workflow).
+- [live-cursors](https://docs.fluxychat.com/docs/getting-started/gallery): Presence pointers.
+- [live-cursors-chat](https://docs.fluxychat.com/docs/getting-started/gallery): Cursors plus chat.
+- [javascript-live-cursors](https://docs.fluxychat.com/docs/getting-started/gallery): Vanilla JS pointers.
+- [tiptap-room](https://docs.fluxychat.com/docs/getting-started/gallery): Collaborative editor.
+- [whiteboard](https://docs.fluxychat.com/docs/getting-started/gallery): Y.Array strokes plus cursors.
+- [draw](https://docs.fluxychat.com/docs/getting-started/gallery): Ephemeral stamps.
+- [comments-board](https://docs.fluxychat.com/docs/getting-started/gallery): Contextual pins.
+- [war-room](https://docs.fluxychat.com/docs/getting-started/gallery): Humans and invokeAgent.
+- [deal-room](https://docs.fluxychat.com/docs/getting-started/gallery): Decisions and markdown export.
+- [iot-panel](https://docs.fluxychat.com/docs/getting-started/gallery): HTTP ingest, iot.reading.
+- [fleet-panel](https://docs.fluxychat.com/docs/getting-started/gallery): GPS ingest, fleet.gps_update.
+- [game-tick](https://docs.fluxychat.com/docs/getting-started/gallery): Lobby, ticks, leaderboard.
+- [voice-stage](https://docs.fluxychat.com/docs/getting-started/gallery): Speaker roster signaling.
 
-Presence  = now (cursors, selections, who is here) — not stored
-Broadcast = pulse (one-shot events) — not stored
-Storage   = the document (Yjs / LiveFile) — stored on the room DO
-Feeds     = activity / agent / n8n logs — useFeeds, not chat messages
-Threads   = contextual comments — useThreads + comment-threads REST
-Chat      = timeline + tools — useChat (our wedge)
-Copilot   = side-panel AI — RegisterAiKnowledge + AiChat (keyless mock; does not write the timeline)
-Room agent= AI that speaks on the chat timeline — invokeAgent
-Workflow  = API key POST …/feeds/…/messages → feed + server_event
+## API
 
-## Primitive → API
+- [HTTP reference](https://docs.fluxychat.com/docs/api-reference): Worker REST.
+- [OpenAPI YAML](https://docs.fluxychat.com/openapi.yaml): Machine-readable routes.
+- [@fluxy-chat/sdk](https://docs.fluxychat.com/docs/packages/sdk): Client, REST, Yjs, verticals.
+- [@fluxy-chat/react](https://docs.fluxychat.com/docs/packages/react): Provider and hooks.
+- [@fluxy-chat/ui](https://docs.fluxychat.com/docs/packages): Cursors, Thread, AiChat.
+- [npm sdk](https://www.npmjs.com/package/@fluxy-chat/sdk): Published client.
+- [npm react](https://www.npmjs.com/package/@fluxy-chat/react): Published hooks.
+- [npm create-fluxy-chat](https://www.npmjs.com/package/@fluxy-chat/create-fluxy-chat): Scaffold CLI.
 
-Presence  useChat: sendCursor, liveCursors, presenceMembers, useMyPresence / presence_patch. WS type "cursor".
-Broadcast useChat: sendClientEvent, lastClientEvent { eventName, data, userId }. useBroadcastEvent(store). Prefix client-ephemeral-* skips webhooks. Other client_event: 10/min + webhooks.
-Storage   FluxyYjsProvider + useStorage / useMutation / useYjsDoc from @fluxy-chat/sdk/yjs (Y.Map "storage"). LiveFile = uploadLiveFile then JSON ref. Tiptap field "prosemirror". Whiteboard: Y.Array strokes.
-Feeds     useFeeds, useFeedMessages. REST /rooms/:id/feeds. Fan-out feed.message.
-Threads   useThreads. REST /rooms/:id/comment-threads. Fan-out comment.thread, comment.created, comment.thread.updated. Pins: metadata x,y.
-Chat      useChat messages, sendMessage, invokeAgent. Replies use parentId (not threads).
-Inbox     useInbox. Kinds: mention, unread, thread, comment, custom. commentEventToInboxItem.
-Digest    GET/PATCH /digest/preferences. Cron DAILY_DIGEST_ENABLED. Includes yesterday's comments, not chat-only.
+## Optional
 
-## Providers (do not mix props)
-
-FluxyRealtimeProvider: workerUrl + authTokenProvider (+ userId). Optional connectUrl for hosted mint. NEVER token= or config={{ baseUrl, token }}.
-FluxyYjsProvider: token (JWT string) + workerUrl / room. Nested inside realtime provider for whiteboard/tiptap.
-FluxyChatClient: { baseUrl, userId, token }. Guest: FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId).
-Do not mount useChat and useLiveCursors without the same sessionScope (two sockets).
-
-UI: Cursors (rAF spring; prefers-reduced-motion snaps), Cursor, AvatarStack, CommentPin, Thread, ThreadComposer, FloatingComposer, AiChat, InboxNotification from @fluxy-chat/ui.
-
-## Recipes (idea → --example)
-
-Live cursors / who is here          Presence                         live-cursors
-Cursors + chat overlay              Presence + Chat                  live-cursors-chat
-Vanilla JS pointers                 Presence (connect + type cursor) javascript-live-cursors
-Google-Docs-style editor            Storage + Presence               tiptap-room
-Figma-like board                    Storage Y.Array + Presence       whiteboard
-Stamp / ephemeral dots              Broadcast + Presence             draw
-Contextual review comments          Threads + Thread UI              comments-board
-Agent war room                      Chat + invokeAgent + Presence    war-room
-Quorum / export deal                Chat decisions + export REST     deal-room
-Device telemetry                    HTTP ingest + iot.reading        iot-panel
-GPS / fleet                         POST /fleet/gps + fleet.gps_update  fleet-panel
-Match lobby ticks                   Game HTTP + game.tick            game-tick
-Speaker / listener roster           joinVoiceStage                   voice-stage
-n8n / LangChain log                 Feeds + API key                  docs/core/feeds
-Side-panel assistant                Copilot AiChat                   docs/core/copilots
-Inbox + email catch-up              Inbox + digest prefs             docs/core/notifications
-
-Cross-org rooms: REST /cross-org/… (server), not in Vite apps.
-
-## JWT mint (server only)
-
-POST {WORKER_URL}/auth/token
-Header: X-Fluxy-Api-Key: fc_…
-Body: { "userId": "alice", "roles": ["member"], "ttlSeconds": 3600 }
-Never put fc_… in the browser. Pass returned token as authTokenProvider or FluxyChatClient.token.
-
-## Live cursors
-
-import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
-
-<FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={memberJwt} userId={userId}>
-  <Room />
-</FluxyRealtimeProvider>
-
-const { liveCursors, sendCursor, connected } = useChat({ roomId, replay: "request" });
-// pointermove → sendCursor({ x, y, color, label })
-// render Object.values(liveCursors); hide self
-
-## Storage (Yjs)
-
-import { FluxyYjsProvider, useStorage, useMutation, useYjsDoc } from "@fluxy-chat/sdk/yjs";
-
-const title = useStorage((root) => String(root.title ?? ""));
-const setTitle = useMutation((storage, next: string) => { storage.set("title", next); }, []);
-// Tiptap: Collaboration.configure({ document: useYjsDoc(), field: "prosemirror" })
-// LiveFile: uploadLiveFile(client, roomId, file) then storage.set("hero", live)
-// Same DO binary protocol as dashboard collab (byte0: 0=sync, 1=update). Do not add another CRDT.
-
-## Feeds vs copilot vs room agent
-
-Feeds: useFeeds({ roomId }); workflows POST /rooms/:id/feeds/:feedId/messages with X-Fluxy-Api-Key.
-Copilot: FluxyAiCopilotProvider + RegisterAiKnowledge + <AiChat /> (no timeline write).
-Room peer: invokeAgent on useChat.
-Workflow presence: optional useUpdateMyPresence({ agentStatus }).
-
-## server_event names (fan-out on the room WS)
-
-iot.reading          HTTP ingest
-fleet.gps_update     POST /fleet/gps (optional roomId)
-game.tick            after startMatch (need 2 players)
-feed.message         feed writes
-comment.thread, comment.created, comment.thread.updated
-collab.crdt_update   Yjs activity
-poll.created         polls
-
-Deal: createDecision / ackDecision / exportRoomMarkdown on the SDK. Voice: joinVoiceStage is signaling, not WebRTC.
-
-## Voice latency (do not invent)
-
-Product SLO: OpenAI Realtime P95 ≤ 300ms; chunked ≤ 500ms; barge-in ≤ 500ms.
-Source: GET /admin/voice-ai/stats in prod. Bench: docs/VOICE-LOAD-TEST-REPORT.md (SDK tick + SLO tracker).
-/voice-ai stays labs until prod stats are populated. Health is not HIPAA. Stream/HLS stays labs.
-
-## What not to invent
-
-- MQTT as native transport (IoT/fleet = HTTP ingest + room fan-out)
-- HIPAA / FDA product claims
-- Liveblocks secret keys, Portal channels, or a custom socket fleet
-- client_event / broadcast for mouse pointers (use sendCursor)
-- Mixing Feeds with messages, or Threads with chat parentId
-- Game netcode / rollback (use game.tick)
-- WebRTC huddles from joinVoiceStage without LiveKit
-- P95 numbers other than the voice report / admin stats
-
-## Docs sitemap (https://docs.fluxychat.com)
-
-/docs
-/docs/concepts
-/docs/getting-started
-/docs/getting-started/what-to-build
-/docs/getting-started/gallery
-/docs/getting-started/for-coding-agents
-/docs/getting-started/choose-your-path
-/docs/getting-started/quickstart
-/docs/getting-started/client-setup
-/docs/getting-started/self-hosting
-/docs/core
-/docs/core/use-chat
-/docs/core/presence-typing
-/docs/core/broadcast
-/docs/core/storage
-/docs/core/comments
-/docs/core/feeds
-/docs/core/copilots
-/docs/core/ai-collaboration
-/docs/core/agents
-/docs/core/inbox
-/docs/core/notifications
-/docs/core/voice-huddles
-/docs/packages/sdk
-/docs/packages/react
-/docs/api-reference
-/docs/operations/voice-load-test-report
-/docs/cookbook
+- [GitHub](https://github.com/AlessandroFare/fluxychat): Source, MIT.
+- [Hosted app](https://fluxychat.com): Console and playground.
+- [Pricing](https://fluxychat.com/pricing): Hosted plans.
+- [Cookbook](https://docs.fluxychat.com/docs/cookbook): JWT, RAG, offline.
 `;
 
 export function fluxyChatLlmsResponse(): Response {

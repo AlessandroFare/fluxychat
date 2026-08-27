@@ -42,10 +42,10 @@ Do **not** put 60 Hz pointers on Broadcast. Do **not** mix Feeds with `messages`
 ## Auth
 
 Browser: **member JWT** or `FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId)`.  
-Server: project API key mints JWTs (`POST /v1/auth/token`). Never put `fc_…` in the client.
+Server: project API key mints JWTs (`POST /auth/token`). Never put `fc_…` in the client.
 
 ## Verticals on the same bus
 
-IoT, fleet, game ticks, voice stage, deal quorum — all `server_event` or chat on the **same** room WebSocket. Not MQTT, not netcode, not a second socket fleet. [Gallery](/docs/getting-started/gallery) has a copy-paste app for each.
+IoT, fleet, game ticks, voice stage, deal quorum — all `server_event` or chat on the same room WebSocket. [Gallery](/docs/getting-started/gallery) has a copy-paste app for each.
 
-Next: [Getting started](/docs/getting-started) · [For coding agents](/docs/getting-started/for-coding-agents) · [llms.txt](/llms.txt)
+Next: [Getting started](/docs/getting-started) · [CLI and examples](/docs/getting-started/for-coding-agents)

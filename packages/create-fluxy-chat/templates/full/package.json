@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@fluxy-chat/react": "^0.1.4",
-    "@fluxy-chat/sdk": "^0.6.3",
+    "@fluxy-chat/sdk": "^0.6.4",
     "@fluxy-chat/ui": "^0.1.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -40,7 +40,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@fluxy-chat/sdk": "^0.6.3"
+      "@fluxy-chat/sdk": "^0.6.4"
     }
   }
 }
