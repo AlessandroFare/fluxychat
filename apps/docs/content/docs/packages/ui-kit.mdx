@@ -15,25 +15,22 @@ Built on [`@fluxy-chat/ui`](/docs/packages/ui) + [`@fluxy-chat/react`](/docs/pac
 pnpm add @fluxy-chat/ui-kit @fluxy-chat/ui @fluxy-chat/react @fluxy-chat/sdk
 ```
 
-Your app needs Tailwind (same as `@fluxy-chat/ui`) and a member JWT from your backend. See [Getting started → Client setup](/docs/getting-started/client-setup).
+Your app needs Tailwind (same as `@fluxy-chat/ui`). Member JWT **or** `guest` on a public room.
 
 ## FluxyChatWidget (3 lines)
 
 ```tsx
 import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
 
-export function SupportChat({ token }: { token: string }) {
-  return (
-    <FluxyChatWidget
-      roomId="general"
-      workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!}
-      token={token}
-      theme="brand"
-      height={520}
-    />
-  );
-}
+<FluxyChatWidget
+  roomId="general"
+  workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!}
+  guest
+  height={520}
+/>
 ```
+
+Pass `token` instead of `guest` when you already have a member JWT.
 
 ### Props
 
@@ -41,7 +38,9 @@ export function SupportChat({ token }: { token: string }) {
 | --- | --- | --- |
 | `roomId` | `string` | Room to join (required) |
 | `workerUrl` | `string` | Worker base URL (required unless `client` is passed) |
-| `token` | `string` | Member JWT (required unless `client` is passed) |
+| `token` | `string` | Member JWT (unless `client` or `guest`) |
+| `guest` | `boolean` | Call `joinPublicRoomAsGuest` (public room, no JWT) |
+| `displayName` | `string` | Guest display name |
 | `client` | `FluxyChatClient` | Pre-built client — share one instance with inbox |
 | `userId` | `string` | Default `"user-1"` when constructing client internally |
 | `theme` | `FluxyThemeId` | `default`, `dark`, `minimal`, or `brand` |

@@ -8,6 +8,7 @@ import {
 } from "../lib/embed-config.js";
 import { EMBED_LOADER_SOURCE } from "../lib/embed-loader.js";
 import { buildEmbedFrameHtml } from "../lib/embed-frame-html.js";
+import { isPublicGuestReadOnly } from "../lib/guest-auth.js";
 
 export async function dispatchEmbedRoutes(request, url, h) {
   const {
@@ -58,8 +59,7 @@ export async function dispatchEmbedRoutes(request, url, h) {
     const resolvedProjectId = customDomain?.projectId || projectId;
     let theme = { primaryColor: "#2563eb", position: "bottom-right" };
     let launcherTitle = "Chat";
-    let readOnly =
-      env.PUBLIC_GUEST_READ_ONLY !== "false" && env.PUBLIC_GUEST_READ_ONLY !== "0";
+    let readOnly = isPublicGuestReadOnly(env);
 
     if (resolvedProjectId) {
       const config = await getEmbedConfigForProject(env, resolvedProjectId);

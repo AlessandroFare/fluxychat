@@ -1,18 +1,6 @@
 /**
- * FluxyIoT SDK — MQTT bridge & IoT device management.
- * ROADMAP 5.2 — 18.8B → 40B IoT devices by 2030.
- *
- * Features:
- *  - Device provisioning (certificate + API key)
- *  - Rule engine (if-this-then-that)
- *  - Time-series storage
- *  - Alerting (webhook + email + push)
- *  - Device shadow (desired vs reported state)
- *  - Fleet management
- *  - OTA updates
- *  - Geofencing for devices
- *  - AI device doctor (diagnostics)
- *  - Device as room member (IoT device = chat participant)
+ * Device helpers used by examples and tests.
+ * Worker ingest is HTTP → room fan-out (`iot.reading`). This module is not an MQTT broker.
  */
 
 import { fluxyEntityId } from "./fluxy-id";

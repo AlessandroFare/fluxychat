@@ -20,6 +20,9 @@ head_sampling_rate = 1.0
 WORKFLOW_SCHEDULES_ENABLED = "false"
 # Browser Run quickAction() incurs cost — set "true" only when you need SPA OG previews.
 BROWSER_ENABLED = "false"
+# Public rooms: joinPublicRoomAsGuest without minting a member JWT. Guests can send unless you set READ_ONLY.
+PUBLIC_GUEST_ENABLED = "true"
+PUBLIC_GUEST_READ_ONLY = "false"
 
 # Local optional vars/secrets: see `.dev.vars.example` (copy to `.dev.vars` for `wrangler dev`).
 # Runtime env/secrets checklist:

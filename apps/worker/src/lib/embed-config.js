@@ -12,6 +12,7 @@ import {
   envFallbackBoolean,
   getFeatureFlagBoolean,
 } from "./feature-flags.js";
+import { isPublicGuestReadOnly } from "./guest-auth.js";
 
 const DEFAULT_Z_INDEX = 2147483000;
 const MIN_Z_INDEX = 1;
@@ -205,8 +206,7 @@ export async function getPublicEmbedConfig(env, projectId, hostname) {
     launcherTitle: config.launcherTitle,
     theme: config.theme,
     proactiveTriggers: config.proactiveTriggers ?? [],
-    readOnly:
-      env.PUBLIC_GUEST_READ_ONLY !== "false" && env.PUBLIC_GUEST_READ_ONLY !== "0",
+    readOnly: isPublicGuestReadOnly(env),
     scriptUrl: "/embed.js",
     framePath: "/embed/frame",
   };

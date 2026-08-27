@@ -5,6 +5,8 @@ description: "Send messages visible only to certain room roles (evaluator notes,
 
 # Role-scoped message visibility
 
+This is a **room kernel primitive** (D1 `visibility` / `visible_to_json`, WebSocket fan-out filter), not only a cookbook.
+
 Whisper messages target **specific user ids**. Role-scoped messages target **everyone with a room role** (for example all evaluators in an interview room). Candidates and guests in the same session do not see them on the timeline or over WebSocket.
 
 ## Send from the SDK

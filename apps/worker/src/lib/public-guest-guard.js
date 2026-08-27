@@ -2,6 +2,7 @@ import { parseAllowedOrigins, isDemoOriginAllowed } from "./demo-guard.js";
 import { checkAndConsumeIpRateLimit } from "./ip-rate-limit.js";
 import { isTurnstileConfigured, verifyTurnstileToken } from "./turnstile.js";
 import { validateEmbedParentOrigin } from "./embed-config.js";
+import { isPublicGuestEnabled, isPublicGuestReadOnly } from "./guest-auth.js";
 
 /**
  * Rate limit / origin / Turnstile gate for public guest sessions.
@@ -79,10 +80,8 @@ export function getPublicGuestHardeningConfig(env) {
   const siteKey = env.TURNSTILE_SITE_KEY?.trim() || null;
 
   return {
-    publicGuestEnabled:
-      env.PUBLIC_GUEST_ENABLED !== "false" && env.PUBLIC_GUEST_ENABLED !== "0",
-    readOnlyGuest:
-      env.PUBLIC_GUEST_READ_ONLY !== "false" && env.PUBLIC_GUEST_READ_ONLY !== "0",
+    publicGuestEnabled: isPublicGuestEnabled(env),
+    readOnlyGuest: isPublicGuestReadOnly(env),
     rateLimitPerMinute: Math.min(
       Math.max(Number(env.RATE_LIMIT_PUBLIC_GUEST_PER_MINUTE || 30), 1),
       600,

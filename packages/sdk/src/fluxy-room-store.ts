@@ -39,6 +39,12 @@ export interface FluxyRoomStoreState {
   seenBy: Record<number, string[]>;
   onlineUsers: string[];
   presenceMembers: Array<{ userId: string; userInfo?: Record<string, unknown> }>;
+  /** `detailed` roster vs `aggregate` count for large rooms. */
+  presenceKind: "detailed" | "aggregate";
+  presenceCount: number;
+  /** Late-joiner JSON bag from connect (`derived` / `derived_set`). */
+  derivedState: Record<string, unknown>;
+  derivedSeq: number;
   /** Live peer cursors (ephemeral WS `cursor` frames). */
   liveCursors: Record<string, import("./live-cursors").LiveCursor>;
   /** Merged ephemeral presence per user (selections, cursor). */
@@ -103,6 +109,7 @@ export interface FluxyRoomStoreState {
   sendClientEvent: (eventName: string, data: unknown) => void;
   sendCursor: (input: import("./live-cursors").LiveCursorPublishInput) => void;
   sendPresencePatch: (patch: import("./presence-patch").FluxyPresence) => void;
+  setDerivedState: (state: Record<string, unknown>) => void;
 }
 
 export type FluxyRoomStore = StoreApi<FluxyRoomStoreState>;
@@ -139,6 +146,7 @@ const inertRoomActions: Pick<
   | "sendClientEvent"
   | "sendCursor"
   | "sendPresencePatch"
+  | "setDerivedState"
 > = Object.freeze({
   sendMessage: noop,
   retryMessage: noop,
@@ -162,6 +170,7 @@ const inertRoomActions: Pick<
   sendClientEvent: noop,
   sendCursor: noop,
   sendPresencePatch: noop,
+  setDerivedState: noop,
 });
 
 /**
@@ -179,6 +188,10 @@ export const INERT_FLUXY_ROOM_SNAPSHOT: FluxyRoomStoreState = Object.freeze({
   seenBy: {} as Record<number, string[]>,
   onlineUsers: [] as string[],
   presenceMembers: [] as Array<{ userId: string; userInfo?: Record<string, unknown> }>,
+  presenceKind: "detailed" as const,
+  presenceCount: 0,
+  derivedState: {} as Record<string, unknown>,
+  derivedSeq: 0,
   liveCursors: {} as Record<string, import("./live-cursors").LiveCursor>,
   livePresence: {} as Record<string, import("./presence-patch").FluxyPresence>,
   lastClientEvent: null,
@@ -217,6 +230,10 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     seenBy: {},
     onlineUsers: [],
     presenceMembers: [],
+    presenceKind: "detailed",
+    presenceCount: 0,
+    derivedState: {},
+    derivedSeq: 0,
     liveCursors: {},
     livePresence: {},
     lastClientEvent: null,

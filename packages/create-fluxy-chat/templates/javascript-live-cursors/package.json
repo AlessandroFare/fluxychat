@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fluxy-chat/sdk": "^0.6.4"
+    "@fluxy-chat/sdk": "^0.6.5"
   },
   "devDependencies": {
     "typescript": "^5.6.0",

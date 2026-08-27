@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { useChat } from "@fluxy-chat/react";
 import {
@@ -9,7 +9,6 @@ import {
   fluxyThemeClassName,
 } from "@fluxy-chat/ui";
 import type { FluxyThemeId } from "@fluxy-chat/ui";
-import { useEffect } from "react";
 
 export interface FluxyChatWidgetProps {
   roomId: string;
@@ -18,6 +17,9 @@ export interface FluxyChatWidgetProps {
   workerUrl?: string;
   token?: string;
   userId?: string;
+  /** Join a public room with joinPublicRoomAsGuest (no member JWT). */
+  guest?: boolean;
+  displayName?: string;
   theme?: FluxyThemeId;
   className?: string;
   height?: string | number;
@@ -68,12 +70,14 @@ export function FluxyChatWidget({
   workerUrl,
   token,
   userId = "user-1",
+  guest = false,
+  displayName,
   theme = "default",
   className,
   height = 480,
   title,
 }: FluxyChatWidgetProps) {
-  const client = useMemo(() => {
+  const tokenClient = useMemo(() => {
     if (clientProp) return clientProp;
     if (!workerUrl?.trim() || !token?.trim()) return null;
     return new FluxyChatClient({
@@ -83,9 +87,41 @@ export function FluxyChatWidget({
     });
   }, [clientProp, workerUrl, token, userId]);
 
+  const [guestClient, setGuestClient] = useState<FluxyChatClient | null>(null);
+  const [guestError, setGuestError] = useState<string | null>(null);
+
   useEffect(() => {
     applyFluxyTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (clientProp || token?.trim() || !guest || !workerUrl?.trim()) {
+      setGuestClient(null);
+      setGuestError(null);
+      return;
+    }
+    let cancelled = false;
+    void FluxyChatClient.joinPublicRoomAsGuest(workerUrl.trim(), roomId, { displayName })
+      .then((session) => {
+        if (cancelled) return;
+        setGuestClient(
+          new FluxyChatClient({
+            baseUrl: workerUrl.trim(),
+            userId: session.userId,
+            token: session.token,
+          }),
+        );
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setGuestError(err instanceof Error ? err.message : "Guest join failed");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientProp, token, guest, workerUrl, roomId, displayName]);
+
+  const client = tokenClient ?? guestClient;
 
   if (!client) {
     return (
@@ -94,7 +130,8 @@ export function FluxyChatWidget({
         style={{ height, padding: 16, border: "1px solid #e4e4e7", borderRadius: 12 }}
       >
         <p style={{ margin: 0, fontSize: 14 }}>
-          Set <code>workerUrl</code> and <code>token</code>, or pass a <code>client</code>.
+          {guestError ??
+            "Set workerUrl plus token, pass guest on a public room, or pass a client."}
         </p>
       </div>
     );
@@ -105,7 +142,14 @@ export function FluxyChatWidget({
   return (
     <div
       className={[fluxyThemeClassName(theme), className].filter(Boolean).join(" ")}
-      style={{ height: h, display: "flex", flexDirection: "column", overflow: "hidden", borderRadius: 12, border: "1px solid #e4e4e7" }}
+      style={{
+        height: h,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        borderRadius: 12,
+        border: "1px solid #e4e4e7",
+      }}
     >
       <WidgetInner roomId={roomId} title={title ?? roomId} client={client} />
     </div>

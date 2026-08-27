@@ -1,13 +1,72 @@
 ---
 title: Quickstart
-description: First live message — CLI hosted, or a few lines of React.
+description: First live message. Guest on a public room, then member JWT when you ship.
 ---
 
 # First message
 
-Two ways. CLI if you want an app on disk. React snippet if you already have a Next/Vite project.
+Public room first (no backend). Member JWT when the room is private or you need roles.
 
-## A. CLI (hosted)
+## A. Guest on a public room (no JWT mint)
+
+The room must be **public**. Writes are on unless the operator set `PUBLIC_GUEST_READ_ONLY`. Identity is a stable `guestKey` in localStorage.
+
+```bash
+pnpm add @fluxy-chat/sdk @fluxy-chat/react
+```
+
+```tsx
+import { useEffect, useState } from "react";
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+export function App({ workerUrl, publicRoomId }: { workerUrl: string; publicRoomId: string }) {
+  const [session, setSession] = useState<{ token: string; userId: string } | null>(null);
+
+  useEffect(() => {
+    void FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId, {
+      displayName: "Guest",
+    }).then(setSession);
+  }, [workerUrl, publicRoomId]);
+
+  if (!session) return <p>Joining…</p>;
+
+  return (
+    <FluxyRealtimeProvider
+      workerUrl={workerUrl}
+      authTokenProvider={session.token}
+      userId={session.userId}
+    >
+      <Room roomId={publicRoomId} />
+    </FluxyRealtimeProvider>
+  );
+}
+
+function Room({ roomId }: { roomId: string }) {
+  const { messages, sendMessage, connectionState } = useChat({ roomId });
+  return (
+    <div>
+      <p>Status: {connectionState.status}</p>
+      <button type="button" onClick={() => sendMessage("Hello")}>Send</button>
+      <ul>
+        {messages.map((m) => (
+          <li key={m.id ?? m.clientMessageId}>{m.content}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+Drop-in widget from npm:
+
+```tsx
+import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
+
+<FluxyChatWidget workerUrl={workerUrl} roomId={publicRoomId} guest />
+```
+
+## B. CLI (hosted)
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
@@ -21,50 +80,16 @@ Open http://localhost:5173, finish the tour, sign in. Mention `@assistant` in th
 
 Self-host instead? [Choose your path](/docs/getting-started/choose-your-path).
 
-## B. React in an existing app
+## C. Member JWT (private rooms, roles, production)
 
-```bash
-pnpm add @fluxy-chat/sdk @fluxy-chat/react
-```
+`FluxyRealtimeProvider` takes `workerUrl` and `authTokenProvider`, not a `client` prop. Nest `FluxyYjsProvider` inside it so it reuses that client (`token` still works).
 
-`FluxyRealtimeProvider` takes `workerUrl` and `authTokenProvider`, not a `client` prop.
-
-```tsx
-import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
-
-function Room({ roomId }: { roomId: string }) {
-  const { messages, sendMessage, connectionState } = useChat({ roomId });
-
-  return (
-    <div>
-      <p>Status: {connectionState.status}</p>
-      <ul>
-        {messages.map((m) => (
-          <li key={m.id ?? m.clientMessageId}>{m.content}</li>
-        ))}
-      </ul>
-      <button type="button" onClick={() => sendMessage("Hello")}>
-        Send
-      </button>
-    </div>
-  );
-}
-
-export function App({ workerUrl, jwt }: { workerUrl: string; jwt: string }) {
-  return (
-    <FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={jwt}>
-      <Room roomId="general" />
-    </FluxyRealtimeProvider>
-  );
-}
-```
-
-Mint `jwt` on your server with `POST /auth/token` and a project API key (`fc_…`). See [Auth JWT](/docs/guides/auth-jwt).
+Mint `jwt` on **your** server with `POST /auth/token` and a project API key (`fc_…`). Never put `fc_…` in the browser. See [Auth JWT](/docs/guides/auth-jwt).
 
 Local clone of this repo: `pnpm run first-message` prints a Worker URL and JWT for `dev-local-general`.
 
 ## Next
 
 - [Client setup](/docs/getting-started/client-setup)
+- [Wire protocol](/docs/core/wire-protocol)
 - [Transport fallback](/docs/cookbook/transport-fallback)
-- [Dashboard integration](/docs/reference/dashboard-integration)

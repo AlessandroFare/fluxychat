@@ -15,7 +15,13 @@ That writes a Vite chat app. After `pnpm setup:hosted` you sign in on fluxychat.
 
 ## Gallery
 
-Each example needs `VITE_FLUXYCHAT_WORKER_URL` plus a public room id or a member JWT. Open two tabs for anything collaborative.
+Each example needs `VITE_FLUXYCHAT_WORKER_URL` plus a **public** room id (guest) or a member JWT. Open two tabs for anything collaborative.
+
+Zero-backend public room:
+
+```ts
+await FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId);
+```
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors
@@ -45,15 +51,15 @@ Cursors travel as WebSocket `type: "cursor"`. Tiptap and the whiteboard sync Yjs
 
 ## Env vars (browser)
 
-- `VITE_FLUXYCHAT_WORKER_URL` — hosted API or `wrangler dev`
-- `VITE_FLUXYCHAT_MEMBER_JWT` + `VITE_FLUXYCHAT_ROOM_ID` — member
-- `VITE_FLUXYCHAT_PUBLIC_ROOM_ID` — guest via `FluxyChatClient.joinPublicRoomAsGuest`
+- `VITE_FLUXYCHAT_WORKER_URL`: hosted API or `wrangler dev`
+- `VITE_FLUXYCHAT_MEMBER_JWT` + `VITE_FLUXYCHAT_ROOM_ID`: member
+- `VITE_FLUXYCHAT_PUBLIC_ROOM_ID`: guest via `FluxyChatClient.joinPublicRoomAsGuest`
 
 Keep `fc_…` API keys on the server.
 
-## One WebSocket per room
+## One room session
 
-`useChat({ roomId })` is the room session: messages, presence, cursors (`sendCursor` / `liveCursors`), broadcast (`sendClientEvent`), agents (`invokeAgent`).
+`useChat({ roomId })` is the room session: messages, presence, cursors (`sendCursor` / `liveCursors`), broadcast (`sendClientEvent`), agents (`invokeAgent`). Yjs is a second binary socket on the same Durable Object.
 
 For cursors only, `useLiveCursors({ roomId })`. Do not mount both unless they share `sessionScope`, or you open two sockets.
 
@@ -70,7 +76,7 @@ For cursors only, `useLiveCursors({ roomId })`. Do not mount both unless they sh
 
 ## JWT mint (server)
 
-`POST {WORKER}/auth/token` with `X-Fluxy-Api-Key: fc_…` and body `{ userId, roles, ttlSeconds }`. Pass the JWT as `FluxyRealtimeProvider` `authTokenProvider`. `FluxyYjsProvider` uses `token`. Details: [Choose your path](/docs/getting-started/choose-your-path) and the auth cookbook.
+`POST {WORKER}/auth/token` with `X-Fluxy-Api-Key: fc_…` and body `{ userId, roles, ttlSeconds }`. Pass the JWT as `FluxyRealtimeProvider` `authTokenProvider`. Nest `FluxyYjsProvider` inside it, or pass `token` / `authTokenProvider`. Details: [Choose your path](/docs/getting-started/choose-your-path) and the auth cookbook.
 
 ## Open two tabs
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.14] - 2026-08-27
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.6.5`. Minimal template pins `@fluxy-chat/ui-kit@^0.1.3` and uses guest mode when no member JWT is set. Publish protocol `0.1.5`, sdk `0.6.5`, and ui-kit `0.1.3` **before** this CLI.
+
 ## [0.5.13] - 2026-08-27
 
 ### Changed

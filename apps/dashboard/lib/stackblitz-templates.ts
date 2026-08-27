@@ -26,7 +26,7 @@ function tmpl(strings: TemplateStringsArray, ...values: unknown[]) {
 const WC_BASE_URL = "https://api.fluxychat.com";
 
 /** Keep in lockstep with published @fluxy-chat/* (publish sdk/react/protocol before relying on StackBlitz). */
-const FLUXY_SDK = "^0.6.4";
+const FLUXY_SDK = "^0.6.5";
 const FLUXY_REACT = "^0.1.4";
 const FLUXY_PROTOCOL = "^0.1.5";
 

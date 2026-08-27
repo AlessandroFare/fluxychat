@@ -8,6 +8,8 @@ compatibility_date = "2026-03-24"
 WORKFLOW_SCHEDULES_ENABLED = "false"
 # Opt-in Browser Run (cost control — see BROWSER_ENABLED in wrangler.toml)
 BROWSER_ENABLED = "false"
+PUBLIC_GUEST_ENABLED = "true"
+PUBLIC_GUEST_READ_ONLY = "false"
 
 [[durable_objects.bindings]]
 name = "ROOM"

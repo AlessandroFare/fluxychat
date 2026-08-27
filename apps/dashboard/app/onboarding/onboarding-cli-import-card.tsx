@@ -58,7 +58,7 @@ export function OnboardingCliImportCard({ wizard: w, defaultOpen = false }: Onbo
           <p className="text-xs text-muted-foreground">
             Ran{" "}
             <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-              npx create-fluxy-chat my-app --full -y
+              npx @fluxy-chat/create-fluxy-chat@latest my-app --full -y
             </code>{" "}
             and{" "}
             <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">pnpm setup</code>? Paste

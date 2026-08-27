@@ -615,7 +615,18 @@ export type FluxyChatEvent =
       roomId: string;
       socketId?: string;
       subscriptionCount: number;
+      kind?: "detailed" | "aggregate";
+      count?: number;
       members: Array<{ userId: string; userInfo?: Record<string, unknown> }>;
+      derived?: Record<string, unknown>;
+      derivedSeq?: number;
+    }
+  | {
+      type: "derived";
+      roomId?: string;
+      userId?: string;
+      state: Record<string, unknown>;
+      seq?: number;
     }
   | {
       type: "subscription_count";
@@ -709,6 +720,8 @@ export type FluxyChatEvent =
   | {
       type: "presence";
       online: number;
+      kind?: "detailed" | "aggregate";
+      count?: number;
       users?: string[];
       members?: Array<{ userId: string; userInfo?: Record<string, unknown> }>;
     }
@@ -772,6 +785,26 @@ export interface FluxyChatClientOptions {
   token?: FluxyTokenSource;
   /** Use partysocket auto-reconnect for room/user WebSockets (default false). */
   usePartySocket?: boolean;
+}
+
+function rememberPublicGuestKey(baseUrl: string, roomId: string, explicit?: string): string | undefined {
+  if (explicit && /^[A-Za-z0-9_-]{16,128}$/.test(explicit)) return explicit;
+  if (typeof localStorage === "undefined") {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+    }
+    return undefined;
+  }
+  const storageKey = `fluxy.guestKey.${baseUrl}.${roomId}`;
+  let existing = localStorage.getItem(storageKey);
+  if (!existing || !/^[A-Za-z0-9_-]{16,128}$/.test(existing)) {
+    existing =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8)
+        : `${Date.now()}${Math.random().toString(36).slice(2, 18)}`;
+    localStorage.setItem(storageKey, existing);
+  }
+  return existing;
 }
 
 export class FluxyChatClient {
@@ -852,6 +885,11 @@ export class FluxyChatClient {
     return decodeFluxyJwtPayload(prev ?? "").sub !== nextSub;
   }
 
+  /** Alias of `setToken` — login, logout, or JWT refresh without recreating the client. */
+  updateToken(next: FluxyTokenSource | undefined): boolean {
+    return this.setToken(next);
+  }
+
   /** Expire cached anonymous token so the next resolve re-mints (stable anonId). */
   invalidateCredential(): void {
     this.credentials?.invalidate();
@@ -879,7 +917,7 @@ export class FluxyChatClient {
   static async joinPublicRoomAsGuest(
     baseUrl: string,
     roomId: string,
-    opts?: { displayName?: string; turnstileToken?: string },
+    opts?: { displayName?: string; turnstileToken?: string; guestKey?: string },
   ): Promise<{
     token: string;
     userId: string;
@@ -888,6 +926,7 @@ export class FluxyChatClient {
     expiresIn: number;
     readOnly: boolean;
   }> {
+    const guestKey = rememberPublicGuestKey(baseUrl, roomId, opts?.guestKey);
     const url = new URL(
       `/public/rooms/${encodeURIComponent(roomId)}/guest-session`,
       trimTrailingSlashes(baseUrl),
@@ -898,6 +937,7 @@ export class FluxyChatClient {
       body: JSON.stringify({
         displayName: opts?.displayName,
         turnstileToken: opts?.turnstileToken,
+        guestKey,
       }),
     });
     if (!res.ok) throw new Error(`Failed to join public room as guest: ${res.status}`);

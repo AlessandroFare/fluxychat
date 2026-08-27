@@ -21,7 +21,7 @@ Everything you need to run FluxyChat locally â€” from fresh clone to sendin
 ## 1. Clone & Install
 
 ```bash
-git clone https://github.com/fluxychat/fluxychat.git
+git clone https://github.com/AlessandroFare/fluxychat.git
 cd fluxychat
 pnpm install
 ```

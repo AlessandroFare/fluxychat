@@ -3,7 +3,7 @@ title: AI Agents
 description: Invoke agents in rooms, REST invoke, and handoff.
 ---
 
-Agents are configured on the Worker (dashboard or admin API). Clients **invoke** them — there is no `client.createAgent()` in the SDK.
+Agents are configured on the Worker (dashboard or admin API). Clients **invoke** them. There is no `client.createAgent()` in the SDK.
 
 ## Configure on the Worker
 
@@ -40,6 +40,12 @@ await client.invokeAgentRest(agentId, roomId, "Summarize the last 10 messages");
 
 Requires member JWT on the client.
 
+## Several agents in one room
+
+`invokeAgent` can run more than one agent on the same `roomId`. Each call counts against the project's monthly `agent_invokes` quota (Free includes 5k). Handles (`@assistant`) auto-invoke from mentions and count the same way.
+
+Four concurrent agents (a restaurant floor, a war room) is a product pattern, not a second protocol. Watch quota and rate limits in the operator console.
+
 ## Handoff
 
 Check whether a human should take over:
@@ -55,7 +61,7 @@ When the provider supports it, agent replies stream as message edits over WebSoc
 
 ## Next steps
 
-- [Copilots](/docs/core/copilots) (side panel — not this timeline)
+- [Copilots](/docs/core/copilots) (side panel, not this timeline)
 - [Feeds](/docs/core/feeds) (workflow logs)
 - [Agent platform](/docs/platform/agent-platform)
 - [Handoff guide](/docs/guides/ai-agents/handoff)

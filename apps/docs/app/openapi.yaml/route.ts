@@ -9,7 +9,8 @@ export async function GET() {
 
   return new Response(yaml, {
     headers: {
-      "Content-Type": "application/yaml; charset=utf-8",
+      "Content-Type": "text/yaml; charset=utf-8",
+      "Content-Disposition": "inline; filename=\"openapi.yaml\"",
       "Cache-Control": "public, max-age=3600, immutable",
     },
   });

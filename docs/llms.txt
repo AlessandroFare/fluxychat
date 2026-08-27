@@ -1,12 +1,12 @@
 # FluxyChat
 
-> Realtime rooms on Cloudflare Workers (Durable Objects + D1). Chat, presence, Yjs, agents, and HTTP ingest share one WebSocket. MIT self-host or hosted beta.
+> Realtime rooms on Cloudflare Workers (Durable Objects + D1). Chat, presence, Yjs, agents, and HTTP ingest share one room Durable Object. MIT self-host or hosted beta.
 
-FluxyChat is a room layer for your product. Map roomId to a document, board, deal, classroom, or dispatch view. Auth stays yours: mint a member JWT with POST /auth/token and header X-Fluxy-Api-Key (fc_ keys are server-only). Guests use FluxyChatClient.joinPublicRoomAsGuest. Scaffold with npx @fluxy-chat/create-fluxy-chat@latest (the unscoped create-fluxy-chat package is not ours). Open two browser tabs for cursors, presence, or Yjs.
+FluxyChat is a room layer for your product. Map roomId to a document, board, deal, classroom, or dispatch view. Public rooms: FluxyChatClient.joinPublicRoomAsGuest (stable guestKey in localStorage; writes on unless PUBLIC_GUEST_READ_ONLY). Private rooms: mint a member JWT with POST /auth/token and header X-Fluxy-Api-Key (fc_ keys are server-only). Scaffold with npx @fluxy-chat/create-fluxy-chat@latest (the unscoped create-fluxy-chat package is not ours). Open two browser tabs for cursors, presence, or Yjs.
 
-Presence is sendCursor / liveCursors / presence_patch (WebSocket type cursor). Broadcast is sendClientEvent; prefix client-ephemeral-* skips webhooks. Storage is FluxyYjsProvider plus useStorage from @fluxy-chat/sdk/yjs. Feeds are /rooms/:id/feeds, not chat messages. Threads are /comment-threads, not chat parentId. Room agents use invokeAgent. Copilots use RegisterAiKnowledge and AiChat (they do not write the timeline). FluxyRealtimeProvider takes workerUrl and authTokenProvider. FluxyYjsProvider takes token.
+Presence is sendCursor / liveCursors / presence_patch (WebSocket type cursor). Large rooms switch presenceKind to aggregate above 250 unique users. Derived late-joiner JSON is setDerivedState (not a CRDT, 16 KiB). Visibility is visibility/visibleTo on send (kernel, not UI-only). Broadcast is sendClientEvent; prefix client-ephemeral-* skips webhooks. Storage is FluxyYjsProvider plus useStorage from @fluxy-chat/sdk/yjs. Nest it under FluxyRealtimeProvider or pass token/authTokenProvider. Feeds are /rooms/:id/feeds, not chat messages. Threads are /comment-threads, not chat parentId. Room agents use invokeAgent. Copilots use RegisterAiKnowledge and AiChat (they do not write the timeline). FluxyRealtimeProvider takes workerUrl and authTokenProvider. Refresh JWTs with client.setToken / updateToken. Yjs opens a second binary WebSocket on the same /ws/room/:id route. Spec: https://docs.fluxychat.com/docs/core/wire-protocol.
 
-IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.gps_update. Games use /games/* plus game.tick after startMatch. Voice stage is joinVoiceStage signaling. Cross-org negotiation is REST /cross-org. Omnichannel lives in console Bridges with per-vendor OAuth and signing secrets. RCS uses RCS_OUTBOUND_URL plus RCS_WEBHOOK_SECRET. Voice clone/translation posts to /voice-ai/clone-translate, which calls VOICE_CLONE_URL on your media box.
+IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.gps_update. Geofences are GET/POST /fleet/geofences (listFleetGeofences), not a location SDK package. Games use /games/* plus game.tick after startMatch. Voice stage is joinVoiceStage signaling. Cross-org negotiation is REST /cross-org. Omnichannel lives in console Bridges with per-vendor OAuth and signing secrets. RCS uses RCS_OUTBOUND_URL plus RCS_WEBHOOK_SECRET. Voice clone/translation posts to /voice-ai/clone-translate, which calls VOICE_CLONE_URL on your media box. Voice P95 tables are SLO targets from a unit bench, not fleet measurements.
 
 Hosted catalog (same text): https://docs.fluxychat.com/llms.txt
 
@@ -18,6 +18,8 @@ Hosted catalog (same text): https://docs.fluxychat.com/llms.txt
 - [What to build](https://docs.fluxychat.com/docs/getting-started/what-to-build): Product idea to gallery example.
 - [Gallery](https://docs.fluxychat.com/docs/getting-started/gallery): Copy-paste Vite apps. Open two tabs.
 - [CLI and examples](https://docs.fluxychat.com/docs/getting-started/for-coding-agents): create-fluxy-chat flags, env vars, JWT mint.
+- [Quickstart](https://docs.fluxychat.com/docs/getting-started/quickstart): Guest first, then CLI, then member JWT.
+- [Wire protocol](https://docs.fluxychat.com/docs/core/wire-protocol): v1 frames and non-goals.
 - [Platform modules](https://docs.fluxychat.com/docs/features/platform-status): IoT, fleet, game, RCS, adapters, commerce, federation.
 - [Auth JWT](https://docs.fluxychat.com/docs/guides/auth-jwt): Mint tokens from your backend.
 
@@ -26,6 +28,9 @@ Hosted catalog (same text): https://docs.fluxychat.com/llms.txt
 - [HTTP reference](https://docs.fluxychat.com/docs/api-reference): Worker REST.
 - [OpenAPI YAML](https://docs.fluxychat.com/openapi.yaml): Machine-readable routes.
 - [@fluxy-chat/sdk](https://www.npmjs.com/package/@fluxy-chat/sdk): Published client.
+- [npm ui-kit](https://www.npmjs.com/package/@fluxy-chat/ui-kit): FluxyChatWidget + guest.
+- [npm vue](https://www.npmjs.com/package/@fluxy-chat/vue): Vue 3.
+- [npm svelte](https://www.npmjs.com/package/@fluxy-chat/svelte): Svelte 5.
 - [npm create-fluxy-chat](https://www.npmjs.com/package/@fluxy-chat/create-fluxy-chat): Scaffold CLI.
 
 ## Optional

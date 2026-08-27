@@ -29,6 +29,7 @@ export const FLUXY_INBOUND_EVENT_TYPES = [
   "approval_decision",
   "agentRun",
   "presence",
+  "derived",
   "cache_snapshot",
   "server_event",
   "capability_event",
@@ -70,6 +71,7 @@ export const FLUXY_OUTBOUND_EVENT_TYPES = [
    * sockets are all backgrounded.
    */
   "presence_state",
+  "derived_set",
 ] as const;
 
 /** Worker → client transport frames handled before dispatch. */

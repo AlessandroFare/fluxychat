@@ -71,7 +71,7 @@ export function LandingEnterpriseSection() {
           </Link>
           {", and "}
           <Link
-            href="https://docs.fluxy.chat/docs/guides/enterprise/default-story"
+            href="https://docs.fluxychat.com/docs/guides/enterprise/default-story"
             className="font-medium text-primary underline-offset-2 hover:underline"
           >
             enterprise default story

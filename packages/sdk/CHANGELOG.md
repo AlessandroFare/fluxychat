@@ -1,5 +1,17 @@
 # @fluxy-chat/sdk
 
+## 0.6.5 (2026-08-27)
+
+### Added
+
+- `FluxyChatClient.setToken` / `updateToken` — swap JWT or clear credentials without recreating the client.
+- `FluxyYjsProvider` `authTokenProvider` and nesting under `FluxyRealtimeProvider`.
+- Guest-friendly token refresh on the realtime provider.
+
+### Changed
+
+- Peer consumers should pin `@fluxy-chat/sdk@^0.6.5`.
+
 ## 0.6.4 (2026-08-27)
 
 ### Added

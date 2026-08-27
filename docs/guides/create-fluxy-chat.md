@@ -6,26 +6,26 @@ Scaffold a new FluxyChat bot project with a single command. The CLI generates a 
 
 ```bash
 # Full stack — chat + @assistant + setup (recommended)
-npx create-fluxy-chat my-app --full -y
+npx @fluxy-chat/create-fluxy-chat@latest my-app --full -y
 
 # Interactive mode (defaults to template picker including Full stack)
-npx create-fluxy-chat my-bot
+npx @fluxy-chat/create-fluxy-chat@latest my-bot
 ```
 
 ## Non-Interactive Usage
 
 ```bash
 # Create a Slack bot with pnpm
-npx create-fluxy-chat my-bot --adapter slack --pm pnpm
+npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter slack --pm pnpm
 
 # Create a Telegram bot, skip install
-npx create-fluxy-chat my-bot --adapter telegram --skip-install
+npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter telegram --skip-install
 
 # Create a Discord bot with defaults
-npx create-fluxy-chat my-bot -y --adapter discord
+npx @fluxy-chat/create-fluxy-chat@latest my-bot -y --adapter discord
 
 # Create a basic webhook bot
-npx create-fluxy-chat my-bot --adapter basic
+npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter basic
 ```
 
 ## Options

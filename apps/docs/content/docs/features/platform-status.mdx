@@ -21,7 +21,8 @@ Devices `POST` JSON. The room fans out `iot.reading` or `fleet.gps_update`.
 
 - Register and ingest: [IoT](/docs/platform/iot)
 - GPS: [Fleet](/docs/platform/fleet)
-- Health: `GET /iot/devices/:id/health` scores recent readings (mean, slope, alerts). Geofence lives on the location SDK.
+- Health: `GET /iot/devices/:id/health` scores recent readings (mean, slope, alerts).
+- Geofence: Worker REST `GET/POST /fleet/geofences` via `client.listFleetGeofences()` / `createFleetGeofence()`. There is no separate “location SDK” package. The in-memory helpers on `createFluxyIoT()` are local rule helpers, not the fleet API.
 
 ## Game
 

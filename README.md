@@ -2,7 +2,7 @@
 
 Realtime chat on Cloudflare Workers: one Worker, WebSocket rooms, a TypeScript SDK, and an operator console for projects, agents, and compliance.
 
-> **Open beta.** [Try hosted](https://fluxychat.com) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Public docs](https://docs.fluxychat.com) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · [![Socket Badge](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0)](https://badge.socket.dev/npm/package/@fluxy-chat/sdk/0.5.0) · **Support:** fluxychat@outlook.com
+> **Open beta.** [Try hosted](https://fluxychat.com) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Public docs](https://docs.fluxychat.com) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · **Support:** fluxychat@outlook.com
 
 ## Quick links
 
@@ -19,37 +19,51 @@ Realtime chat on Cloudflare Workers: one Worker, WebSocket rooms, a TypeScript S
 
 ## What you get
 
-- **Realtime:** WebSocket rooms, presence, SSE fallback, inbox, notifications
-- **AI:** in-room agents, voice + transcription, suggestions, digest, room memory
-- **Omnichannel:** SMS/WhatsApp, agent queue, handoff, polls and forms
-- **Enterprise:** SSO/SCIM, audit, retention, SOC 2/HIPAA checklist, DLP, IP whitelist
-- **Distribution:** embed widget, custom domain, external bridges, MCP
+- **Realtime:** rooms, presence, Yjs (second binary socket), SSE/polling as `degraded-http`, inbox
+- **AI:** `invokeAgent` writes the room timeline. Copilot UI is a side panel you wire to your model.
+- **Ingest:** HTTP IoT/fleet fan-out (`iot.reading`, `fleet.gps_update`). Not MQTT.
+- **Enterprise:** SSO/SCIM and audit on Growth+. SOC 2/HIPAA checklists are not attestations.
+- **Distribution:** `@fluxy-chat/ui-kit` widget, Bridges (you create the vendor app), MCP
 
 **Stack:** Cloudflare Workers + Durable Objects (WebSocket, presence) · D1 SQLite at the edge (messages, metadata) · Next.js dashboard · `@fluxy-chat/sdk` + `@fluxy-chat/react`.
 
 ## Get started
 
-### Fastest path — hosted (no wrangler)
+### Fastest path: public room widget
+
+```bash
+pnpm add @fluxy-chat/ui-kit @fluxy-chat/ui @fluxy-chat/react @fluxy-chat/sdk
+```
+
+```tsx
+import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
+
+<FluxyChatWidget workerUrl="https://api.fluxychat.com" roomId="your-public-room" guest />
+```
+
+No JWT mint. The room must be public. Two browser tabs to see presence.
+
+### Hosted CLI (no wrangler)
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
 cd my-app && pnpm install && pnpm setup:hosted && pnpm dev
 ```
 
-Uses the public demo on [api.fluxychat.com](https://api.fluxychat.com) — chat + FluxyBot in ~60s.
+Uses the public demo on [api.fluxychat.com](https://api.fluxychat.com). Chat plus FluxyBot in about a minute.
 
-### Full stack — local worker
+### Full stack, local worker
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-app --full -y
 cd my-app
 
-# Terminal 1 — from a FluxyChat monorepo checkout (or self-host worker)
+# Terminal 1: from a FluxyChat monorepo checkout (or self-host worker)
 pnpm --filter @fluxy-chat/worker dev
 
-# Terminal 2 — in my-app
+# Terminal 2: in my-app
 pnpm install
-pnpm setup    # provision project, JWT, @assistant → .env
+pnpm setup    # provision project, JWT, @assistant into .env
 pnpm dev      # Vite + optional dashboard if monorepo nearby
 ```
 
@@ -58,7 +72,7 @@ Chat + realtime + `@assistant` + tool thread in one Vite app. See [choose your p
 ### Monorepo contributor path
 
 ```bash
-git clone https://github.com/fluxychat/fluxychat
+git clone https://github.com/AlessandroFare/fluxychat
 cd fluxychat
 pnpm install
 pnpm run first-message
@@ -119,10 +133,9 @@ Inspired by the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk
 
 | Area | Highlights |
 |------|------------|
-| Adapters | 14 platform adapters; streaming markdown; card builder; AI tool presets; mdast message format |
-| AI core | Stream resumption; HITL approval; MCP client; LLM middleware; DevTools; WorkflowAgent; voice-to-voice |
-| AI medium | Tool call streaming; multi-step loops; pluggable transport; RAG middleware; TTS; structured JSON streaming |
-| AI advanced | Render throttling; smoothStream; ephemeral messages; strict tool calling; telemetry controls |
+| Adapters | Console Bridges (Slack/Discord/Telegram/WA/Teams). You create the vendor OAuth app. |
+| AI core | `invokeAgent`, HITL, MCP, streaming markdown on the room timeline |
+| Packages | `@fluxy-chat/sdk`, `react`, `ui`, `ui-kit`, `vue`, `svelte`, `agent`, `protocol`, `config` on npm |
 
 ## Publish to npm
 
@@ -135,7 +148,7 @@ npm login && npm publish --access public
 
 Consumers set `baseUrl` to their Worker and mint JWTs server-side. See [packages/sdk/README.md](packages/sdk/README.md).
 
-`@fluxy-chat/ui` and `@fluxy-chat/agent` are workspace packages today (not published yet).
+`@fluxy-chat/ui`, `@fluxy-chat/ui-kit`, and `@fluxy-chat/agent` are published on npm (pin versions; pre-1.0).
 
 ## Documentation
 

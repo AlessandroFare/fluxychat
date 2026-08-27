@@ -15,7 +15,7 @@ interface FinishStepProps {
 export function FinishStep({ wizard: w }: FinishStepProps) {
   const [copied, setCopied] = useState(false);
 
-  const installCommand = "npx create-fluxy-chat my-bot";
+  const installCommand = "npx @fluxy-chat/create-fluxy-chat@latest my-bot";
 
   // Mark complete as soon as the user reaches the final step — not only on "Go to Dashboard".
   useEffect(() => {

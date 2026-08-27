@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPresenceMembers,
+  buildRoomPresenceSnapshot,
   normalizeClientEventName,
   parsePresenceInfoParam,
   sanitizePresencePatch,
@@ -34,6 +35,14 @@ describe("room-presence", () => {
     expect(sanitizePresencePatch({ agentStatus: "running" }).data).toEqual({
       agentStatus: "running",
     });
+  });
+
+  it("switches presence to aggregate above the roster cap", () => {
+    const ids = Array.from({ length: 251 }, (_, i) => `u${i}`);
+    const snap = buildRoomPresenceSnapshot(ids, new Map(), 251, 250);
+    expect(snap.kind).toBe("aggregate");
+    expect(snap.count).toBe(251);
+    expect(snap.members.length).toBe(24);
   });
 
   it("skips webhooks for client-ephemeral-* broadcasts", () => {

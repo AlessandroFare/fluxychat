@@ -1,9 +1,9 @@
 ---
 title: Gallery examples
-description: Copy-paste Vite apps on the same room WebSocket.
+description: Copy-paste Vite apps on the same room Durable Object.
 ---
 
-All examples: Worker URL + member JWT **or** public room id. Open two tabs unless noted.
+Each template is a product shape, not a claim that FluxyChat is MQTT, netcode, or an SFU. The **Do not** column is the scope of that example. Open two tabs unless noted. Worker URL plus a public room id or a member JWT.
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors
@@ -21,20 +21,20 @@ npx @fluxy-chat/create-fluxy-chat@latest my-comments --example comments-board
 npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
 ```
 
-| Example | Primitive | Do not |
+| Example | Primitive | Scope (do not stretch) |
 | --- | --- | --- |
-| `live-cursors` | `sendCursor` / `type: cursor` | `client_event` for pointers |
-| `live-cursors-chat` | cursors + `useChat` | a second socket |
-| `javascript-live-cursors` | vanilla `connect` + `type: cursor` | React required |
-| `tiptap-room` | Yjs `useStorage` + Collaboration | A second CRDT |
-| `war-room` | `useChat` + `invokeAgent` + `AvatarStack` | A second agent socket |
-| `iot-panel` | HTTP ingest + `server_event` `iot.reading` | MQTT |
-| `draw` | cursors + `client-ephemeral-dot` | 60 Hz broadcast |
-| `deal-room` | `createDecision` / `ackDecision` / export | MQTT; cross-org is REST `/cross-org` |
-| `fleet-panel` | `POST /fleet/gps` → `fleet.gps_update` | MQTT |
-| `game-tick` | lobby + `game.tick` | netcode / rollback |
-| `voice-stage` | `joinVoiceStage` signaling | WebRTC huddle without LiveKit; invent P95 |
-| `comments-board` | `useThreads` + `FloatingComposer` | chat `parentId` as pins |
-| `whiteboard` | Yjs `Y.Array` strokes + cursors | A second CRDT / Excalidraw lock-in |
+| `live-cursors` | `sendCursor` / `type: cursor` | Not `client_event` for pointers |
+| `live-cursors-chat` | cursors + `useChat` | Chat JSON socket plus Yjs is a second connection |
+| `javascript-live-cursors` | vanilla `connect` + `type: cursor` | React not required |
+| `tiptap-room` | Yjs `useStorage` + Collaboration | Not a second CRDT |
+| `war-room` | `useChat` + `invokeAgent` + `AvatarStack` | Agent uses the same room, not a private DM |
+| `iot-panel` | HTTP ingest + `server_event` `iot.reading` | Not an MQTT broker |
+| `draw` | cursors + `client-ephemeral-dot` | Not 60 Hz broadcast |
+| `deal-room` | `createDecision` / `ackDecision` / export | Cross-org is REST `/cross-org` |
+| `fleet-panel` | `POST /fleet/gps` then `fleet.gps_update` | Not MQTT. Geofences: `listFleetGeofences` |
+| `game-tick` | lobby + `game.tick` | Server-authoritative input, not rollback netcode |
+| `voice-stage` | `joinVoiceStage` signaling | Bring LiveKit for the media plane |
+| `comments-board` | `useThreads` + `FloatingComposer` | Not chat `parentId` as pins |
+| `whiteboard` | Yjs `Y.Array` strokes + cursors | Yjs on the room DO, not Excalidraw as a second backend |
 
-Health is **not** HIPAA. Stream/HLS stays labs until a WHIP example exists. Voice numbers: [Voice load report](/docs/operations/voice-load-test-report).
+Health is not HIPAA. Stream/HLS stays labs until a WHIP example exists. Voice numbers: [Voice load report](/docs/operations/voice-load-test-report).
