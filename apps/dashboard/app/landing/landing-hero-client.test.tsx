@@ -12,7 +12,7 @@ vi.mock("@/lib/hosted-product", () => ({
 }));
 
 vi.mock("./landing-shared", () => ({
-  INSTALL_CMD: "pnpm add @fluxy-chat/sdk",
+  INSTALL_CMD: "pnpm add @fluxy-chat/react",
 }));
 
 vi.mock("@/lib/marketing-landing", () => ({
@@ -58,7 +58,7 @@ describe("LandingHeroClient", () => {
     render(<LandingHeroClient />);
 
     // The install command text should be present
-    const codeEl = screen.getByText("pnpm add @fluxy-chat/sdk");
+    const codeEl = screen.getByText("pnpm add @fluxy-chat/react");
     expect(codeEl).toBeInTheDocument();
     expect(codeEl.tagName).toBe("CODE");
     expect(codeEl).toHaveClass("font-mono");

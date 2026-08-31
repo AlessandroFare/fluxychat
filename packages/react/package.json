@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/react",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "React hooks and providers for FluxyChat — useChat, useInbox, FluxyRealtimeProvider",
   "homepage": "https://github.com/AlessandroFare/fluxychat/tree/main/packages/react#readme",
   "bugs": {
@@ -52,7 +52,7 @@
   },
   "peerDependencies": {
     "react": ">=18",
-    "@fluxy-chat/sdk": "^0.6.5"
+    "@fluxy-chat/sdk": "^0.6.7"
   },
   "dependencies": {
     "@fluxy-chat/sdk": "workspace:*"

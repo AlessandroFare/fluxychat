@@ -178,7 +178,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     stream: "FCM/APNs via Stream Push",
     ably: "Push notifications add-on",
     pusher: "Beams (separate product)",
-    fluxy: "FCM + APNs HTTP/2 + VAPID; per-env project_push_config; client delivery ack",
+    fluxy: "FCM/APNs/VAPID when you configure project_push_config. Not a gold-path mobile push SKU.",
   },
   {
     label: "Cross-room activity feed",

@@ -1516,12 +1516,13 @@ export class RoomDurableObject {
 
         const fluxyPipeline = await runFluxyPublishPipeline(
           roomId,
-          { userId: this.userIds.get(webSocket) ?? userId },
+          { userId: this.userIds.get(webSocket) ?? userId, projectId: this.projectId },
           validatedContent,
           {
             capabilities: this.wsCapabilities.get(webSocket) ?? {},
             replyTo: parentId ?? null,
             attachments,
+            env: this.env,
           },
         );
         if (!fluxyPipeline.ok) {

@@ -168,6 +168,9 @@ function parseArgs(argv: string[]): ParsedArgs {
 const HELP_TEXT = `
 ${pc.bold("create-fluxy-chat")} — Scaffold a FluxyChat app or bot worker
 
+${pc.yellow("Use the scoped package:")} npx @fluxy-chat/create-fluxy-chat@latest
+Unscoped ${pc.bold("npx create-fluxy-chat")} is not ours and will 404.
+
 ${pc.bold("Usage:")}
   npx @fluxy-chat/create-fluxy-chat [project-name] [options]
 

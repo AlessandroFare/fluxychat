@@ -23,6 +23,7 @@ import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flag
 import { getFluxyClientDefaults } from "../lib/fluxy-config-runtime.js";
 import { isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
 import { parseAuthTokenBody } from "../lib/http-body.js";
+import { assertSecretApiKey } from "../lib/api-key-kind.js";
 import { base64urlToBytes } from "../lib/jwt-auth.js";
 import { queryModelsCatalog, getModelById, listModelProviders, syncModelsCatalog } from "../lib/llm-models-catalog.js";
 
@@ -726,6 +727,16 @@ export async function dispatchPublicRoutes(request, url, h) {
       request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
     if (!apiKey) {
       return json({ error: "api key required" }, { status: 401 });
+    }
+    const secretOk = assertSecretApiKey(apiKey);
+    if (!secretOk.ok) {
+      return json(
+        {
+          error: secretOk.error,
+          message: "pk_ keys are publishable. Mint member JWTs with fc_ on the server.",
+        },
+        { status: secretOk.status },
+      );
     }
 
     const ip = clientIpFromRequest(request);

@@ -116,7 +116,7 @@ export function LandingFeaturesClient() {
             What ships in the box
           </h2>
           <p className="mx-auto mb-4 max-w-2xl text-center text-base text-zinc-400">
-            Edge delivery, AI-native streaming, 14 platform adapters, and a console for day-two work. You own the UI; we handle rooms, delivery, agents, and ops hooks.
+            Edge delivery, in-room agents, Bridges you wire yourself, and a console for day-two work. You own the UI. We run the room Durable Object.
           </p>
           <p className="mx-auto mb-6 max-w-2xl text-center text-sm text-zinc-400">{MARKETING_WHY.body}</p>
           <ul className="mx-auto mb-10 flex max-w-3xl flex-wrap justify-center gap-2">
@@ -149,10 +149,10 @@ export function LandingFeaturesClient() {
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: "14 platform adapters", desc: "Slack, Discord, Telegram, WhatsApp, Teams, Email, SMS, Webhook, Matrix, and 5 more on one unified interface" },
+              { label: "Bridges", desc: "Slack, Discord, Telegram, WhatsApp, Teams: you create the vendor app. Same channel_configs table." },
               { label: "Streaming markdown", desc: "Table buffering, code fence tracking, inline marker healing for clean partial renders during AI streaming" },
-              { label: "MCP client + tool calling", desc: "Consume any MCP-compatible tool server. Auto-convert to LLM function-calling format with HITL approval gates" },
-              { label: "Card builder", desc: "Composable rich messaging with JSX or function API. Slack Block Kit and Teams Adaptive Card renderers built in" },
+              { label: "invokeAgent", desc: "Agents on the same room timeline. Copilots do not write the timeline." },
+              { label: "pk_ + guest", desc: "Publishable keys and joinPublicRoomAsGuest. fc_ stays on the server." },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 px-5 py-4">
                 <p className="text-sm font-semibold text-white">{item.label}</p>

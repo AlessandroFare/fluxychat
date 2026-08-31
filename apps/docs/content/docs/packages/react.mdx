@@ -13,11 +13,25 @@ React hooks and providers for [FluxyChat](https://github.com/AlessandroFare/flux
 pnpm add @fluxy-chat/react @fluxy-chat/sdk
 ```
 
-`FluxyRealtimeProvider` uses `workerUrl` plus **`authTokenProvider`** (JWT string or async mint) or hosted **`connectUrl`**. It does not take `token` or `config.baseUrl`. Pass `userId` when the JWT has no `sub`. `FluxyYjsProvider` takes **`token`**.
+`FluxyRealtimeProvider` uses `workerUrl` plus **`publishableKey`** (`pk_` for public rooms), **`authTokenProvider`** (JWT string or async mint), or hosted **`connectUrl`**. It does not take `token` or `config.baseUrl`. Pass `userId` when the JWT has no `sub`. `FluxyYjsProvider` takes **`token`**.
 
 When the provider owns the session, omit `client` on `useChat`. A standalone `FluxyChatClient` is still valid if you pass it into hooks.
 
-## Usage
+## 30 seconds (public room)
+
+```tsx
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+<FluxyRealtimeProvider workerUrl={workerUrl} publishableKey="pk_...">
+  <Room />
+</FluxyRealtimeProvider>
+
+function Room() {
+  const { messages, sendMessage } = useChat({ roomId: "general" });
+}
+```
+
+## Usage (member JWT)
 
 ```tsx
 import { FluxyChatClient } from "@fluxy-chat/sdk";
@@ -70,10 +84,10 @@ const { items, unseen, markRead } = useInbox({
 | `useChat` | Room messages, send, pagination, connection state |
 | `useInbox` | Inbox items feed, unseen count, live `onItem` |
 | `useNotifications` | In-app notification list |
-| `useLocation` | Realtime location sharing |
+| `useLocation` | Consume `fleet.gps_update` tracks in a room. Not a Maps SDK. Ingest is HTTP `POST /fleet/gps`. |
 | `useWebPush` | Web push subscription helpers |
 | `useUserChannel` | User-scoped WebSocket events |
-| `FluxyRealtimeProvider` | Shared client + JWT refresh |
+| `FluxyRealtimeProvider` | Shared client. `publishableKey`, `authTokenProvider`, or `connectUrl` |
 | `useFluxyChat` / `useFluxyChatOptional` | Access provider client |
 
 ## Note on the transitional split

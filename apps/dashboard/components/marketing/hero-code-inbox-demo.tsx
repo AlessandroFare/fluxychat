@@ -8,23 +8,22 @@ import {
   HERO_PREVIEW_SCENES,
 } from "./hero-preview-scenes";
 
-const SNIPPET = `import { FluxyChatClient } from "@fluxy-chat/sdk";
-import { useChat } from "@fluxy-chat/react";
+const SNIPPET = `import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
-const client = new FluxyChatClient({
-  baseUrl: "https://your-worker.example.com",
-  userId: "alice",
-  token: "your_member_jwt",
-});
+<FluxyRealtimeProvider
+  workerUrl="https://api.example.com"
+  publishableKey="pk_live_..."
+>
+  <Chat />
+</FluxyRealtimeProvider>
 
-const { messages, sendMessage } = useChat({
-  roomId: "support-room",
-  client,
-});`;
+function Chat() {
+  const { messages, sendMessage } = useChat({ roomId: "general" });
+}`
 
 const SNIPPET_LINES = SNIPPET.split("\n");
 
-const INCOMING = "Hey team — is the SDK room scoped per project?";
+const INCOMING = "Hey team, is the SDK room scoped per project?";
 const OUTGOING = "Yes — pass X-Project-Id from your backend.";
 const PLACEHOLDER = "Write a message…";
 
@@ -62,58 +61,67 @@ function coloredFullLine(line: string, lineIndex: number): React.ReactNode {
     return (
       <>
         <Tok style={{ color: C.kw }}>import</Tok>{" "}
-        <Tok style={{ color: C.fn }}>{`{ FluxyChatClient, useChat }`}</Tok>{" "}
+        <Tok style={{ color: C.fn }}>{`{ FluxyRealtimeProvider, useChat }`}</Tok>{" "}
         <Tok style={{ color: C.kw }}>from</Tok>{" "}
-        <Tok style={{ color: C.str }}>&quot;@fluxy-chat/sdk&quot;</Tok>
+        <Tok style={{ color: C.str }}>&quot;@fluxy-chat/react&quot;</Tok>
         <Tok style={{ color: C.punct }}>;</Tok>
       </>
     );
-  if (lineIndex === 2 && t.startsWith("const client"))
+  if (t.startsWith("<FluxyRealtimeProvider"))
     return (
       <>
-        <Tok style={{ color: C.kw }}>const</Tok>{" "}
-        <Tok style={{ color: C.plain }}>client</Tok>{" "}
-        <Tok style={{ color: C.punct }}>=</Tok>{" "}
-        <Tok style={{ color: C.kw }}>new</Tok>{" "}
-        <Tok style={{ color: C.fn }}>FluxyChatClient</Tok>
-        <Tok style={{ color: C.punct }}>({"{"}</Tok>
+        <Tok style={{ color: C.punct }}>{"<"}</Tok>
+        <Tok style={{ color: C.fn }}>FluxyRealtimeProvider</Tok>
       </>
     );
-  if (t.startsWith("  baseUrl:"))
+  if (t.startsWith("  workerUrl="))
     return (
       <>
         {"  "}
-        <Tok style={{ color: C.prop }}>baseUrl</Tok>
-        <Tok style={{ color: C.punct }}>: </Tok>
-        <Tok style={{ color: C.str }}>&quot;https://your-worker.example.com&quot;</Tok>
-        <Tok style={{ color: C.punct }}>,</Tok>
+        <Tok style={{ color: C.prop }}>workerUrl</Tok>
+        <Tok style={{ color: C.punct }}>=</Tok>
+        <Tok style={{ color: C.str }}>&quot;https://api.example.com&quot;</Tok>
       </>
     );
-  if (t.startsWith("  userId:"))
+  if (t.startsWith("  publishableKey="))
     return (
       <>
         {"  "}
-        <Tok style={{ color: C.prop }}>userId</Tok>
-        <Tok style={{ color: C.punct }}>: </Tok>
-        <Tok style={{ color: C.str }}>&quot;alice&quot;</Tok>
-        <Tok style={{ color: C.punct }}>,</Tok>
+        <Tok style={{ color: C.prop }}>publishableKey</Tok>
+        <Tok style={{ color: C.punct }}>=</Tok>
+        <Tok style={{ color: C.str }}>&quot;pk_live_...&quot;</Tok>
       </>
     );
-  if (t.startsWith("  token:"))
+  if (t === ">") return <Tok style={{ color: C.punct }}>{">"}</Tok>;
+  if (t === "  <Chat />")
     return (
       <>
         {"  "}
-        <Tok style={{ color: C.prop }}>token</Tok>
-        <Tok style={{ color: C.punct }}>: </Tok>
-        <Tok style={{ color: C.str }}>&quot;your_member_jwt&quot;</Tok>
-        <Tok style={{ color: C.punct }}>,</Tok>
+        <Tok style={{ color: C.punct }}>{"<"}</Tok>
+        <Tok style={{ color: C.fn }}>Chat</Tok>{" "}
+        <Tok style={{ color: C.punct }}>{"/>"}</Tok>
       </>
     );
-  if (t === "});" && lineIndex === 6)
-    return <Tok style={{ color: C.punct }}>{"});"}</Tok>;
-  if (lineIndex === 8 && t.startsWith("const {"))
+  if (t === "</FluxyRealtimeProvider>")
     return (
       <>
+        <Tok style={{ color: C.punct }}>{"</"}</Tok>
+        <Tok style={{ color: C.fn }}>FluxyRealtimeProvider</Tok>
+        <Tok style={{ color: C.punct }}>{">"}</Tok>
+      </>
+    );
+  if (t.startsWith("function Chat"))
+    return (
+      <>
+        <Tok style={{ color: C.kw }}>function</Tok>{" "}
+        <Tok style={{ color: C.fn }}>Chat</Tok>
+        <Tok style={{ color: C.punct }}>{"() {"}</Tok>
+      </>
+    );
+  if (t.includes("useChat({ roomId:"))
+    return (
+      <>
+        {"  "}
         <Tok style={{ color: C.kw }}>const</Tok>{" "}
         <Tok style={{ color: C.punct }}>{"{"}</Tok>{" "}
         <Tok style={{ color: C.plain }}>messages</Tok>
@@ -122,29 +130,14 @@ function coloredFullLine(line: string, lineIndex: number): React.ReactNode {
         <Tok style={{ color: C.punct }}>{"}"}</Tok>{" "}
         <Tok style={{ color: C.punct }}>=</Tok>{" "}
         <Tok style={{ color: C.fn }}>useChat</Tok>
-        <Tok style={{ color: C.punct }}>({"{"}</Tok>
-      </>
-    );
-  if (t.startsWith("  roomId:"))
-    return (
-      <>
-        {"  "}
+        <Tok style={{ color: C.punct }}>({"{ "}</Tok>
         <Tok style={{ color: C.prop }}>roomId</Tok>
         <Tok style={{ color: C.punct }}>: </Tok>
-        <Tok style={{ color: C.str }}>&quot;support-room&quot;</Tok>
-        <Tok style={{ color: C.punct }}>,</Tok>
+        <Tok style={{ color: C.str }}>&quot;general&quot;</Tok>
+        <Tok style={{ color: C.punct }}>{" });"}</Tok>
       </>
     );
-  if (t.startsWith("  client,"))
-    return (
-      <>
-        {"  "}
-        <Tok style={{ color: C.prop }}>client</Tok>
-        <Tok style={{ color: C.punct }}>,</Tok>
-      </>
-    );
-  if (t === "});" && lineIndex === 11)
-    return <Tok style={{ color: C.punct }}>{"});"}</Tok>;
+  if (t === "}") return <Tok style={{ color: C.punct }}>{"}"}</Tok>;
   if (t === "") return "\u00a0";
   return <Tok style={{ color: C.plain }}>{line}</Tok>;
 }

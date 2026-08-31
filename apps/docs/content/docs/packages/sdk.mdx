@@ -576,7 +576,7 @@ Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sd
 | WorkflowAgent | `new WorkflowAgent(\{ agentId, model, tools \})` — `.step()`, `.run()` |
 | Typed runtime context | `defineContext(schema)` for type-safe cross-step data |
 | Sandbox sessions | `SandboxSession` for isolated code execution |
-| Realtime voice | Bidirectional voice-to-voice AI with tool calling |
+| Realtime voice | Stage signaling (`joinVoiceStage`) + async clips. Media plane is LiveKit. |
 | Scoped tool context | Per-tool secret/config isolation via `contextSchema` |
 
 ### AI SDK medium features

@@ -76,6 +76,19 @@ pnpm run smoke:create-fluxy-chat
 
 Worker needs `ALLOW_DEV_PROVISION=true` in `apps/worker/.dev.vars` for local provision.
 
+## Named errors
+
+Branch on classes from `@fluxy-chat/sdk`, not Cloudflare stack traces:
+
+| Class | When |
+|-------|------|
+| `FluxyNotMemberError` | WS 1008, not a member |
+| `FluxyTokenExpiredError` | expired / invalid JWT |
+| `FluxyAnonymousNotAllowedError` | room `anonymous: false` |
+| `FluxyAuthError` | other 1008 refusals |
+
+`describeConnectionError(err)` returns `{ code, message, isTerminal }` for UI copy.
+
 ## Related
 
 - [Authentication (JWT)](/docs/guides/auth-jwt)

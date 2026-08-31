@@ -13,33 +13,27 @@ Requires `react` 18+ as a peer dependency.
 ## Usage
 
 ```tsx
-import { FluxyChatClient } from "@fluxy-chat/sdk";
-import { FluxyRealtimeProvider, useChat, useInbox } from "@fluxy-chat/react";
-
-const client = new FluxyChatClient({
-  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!,
-  userId: "alice",
-  token: memberJwt,
-});
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
 function App() {
   return (
-    <FluxyRealtimeProvider workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!} connectUrl="/api/fluxy/connect">
-      <Room roomId="general" />
-      <InboxPanel />
+    <FluxyRealtimeProvider
+      workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!}
+      publishableKey={process.env.NEXT_PUBLIC_FLUXYCHAT_PUBLISHABLE_KEY!}
+    >
+      <Room />
     </FluxyRealtimeProvider>
   );
 }
 
-function Room({ roomId }: { roomId: string }) {
-  const { messages, sendMessage, connectionState } = useChat({ roomId, client });
-  // connectionState: connected | degraded | degraded-http | blocked | …
-}
-
-function InboxPanel() {
-  const { items, unseen, onItem } = useInbox({ client, onItem: (item) => console.log(item) });
+function Room() {
+  const { messages, sendMessage, connectionState } = useChat({ roomId: "general" });
 }
 ```
+
+Private rooms: pass `authTokenProvider` (member JWT) or `connectUrl` instead of `publishableKey`.
+
+Requires `react` 18+ as a peer dependency. Pin `@fluxy-chat/sdk@^0.6.7`.
 
 ## Inbox demo
 
@@ -63,7 +57,7 @@ const { items, unseen, markRead } = useInbox({
 | `useChat` | Room messages, send, pagination, connection state |
 | `useInbox` | Inbox items feed, unseen count, live `onItem` |
 | `useNotifications` | In-app notification list |
-| `useLocation` | Realtime location sharing |
+| `useLocation` | Consume `fleet.gps_update` tracks. Not a Maps SDK. |
 | `useWebPush` | Web push subscription helpers |
 | `useUserChannel` | User-scoped WebSocket events |
 | `FluxyRealtimeProvider` | Shared client + JWT refresh |

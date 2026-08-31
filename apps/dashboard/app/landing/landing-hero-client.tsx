@@ -44,7 +44,7 @@ export function LandingHeroClient() {
               New
             </span>
             <span className="truncate text-left sm:text-center">
-              Free hosted tier. SDK live in minutes →
+              Public rooms: put a pk_ in the client →
             </span>
           </Link>
 
@@ -114,11 +114,11 @@ export function LandingHeroClient() {
             className="mkt-enter mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-[var(--mkt-text-muted)]"
             style={{ ["--mkt-stagger" as string]: 5 }}
           >
-            <span>Self-host on Cloudflare</span>
+            <span>Self-host on Workers</span>
             <span aria-hidden="true">·</span>
-            <span>MIT licensed</span>
+            <span>MIT</span>
             <span aria-hidden="true">·</span>
-            <span>npm &amp; pnpm</span>
+            <span>Hosted is beta</span>
           </div>
         </div>
 

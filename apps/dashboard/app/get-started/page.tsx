@@ -21,12 +21,12 @@ const HOSTED_STEPS = [
   {
     icon: Package,
     title: "Install the SDK or use the CLI",
-    body: "Run pnpm add @fluxy-chat/sdk, or npx @fluxy-chat/create-fluxy-chat@latest. Public rooms: joinPublicRoomAsGuest or FluxyChatWidget guest — no token endpoint.",
+    body: "Run pnpm add @fluxy-chat/react, or npx @fluxy-chat/create-fluxy-chat@latest. Public rooms: FluxyRealtimeProvider plus publishableKey (pk_). No token endpoint.",
   },
   {
     icon: Code2,
     title: "Send your first message",
-    body: "Open two tabs. Guests join public rooms without your backend. Production apps mint a member JWT with POST /auth/token and X-Fluxy-Api-Key (fc_ keys stay server-only).",
+    body: "Open two tabs. pk_ in the browser for public rooms. Production apps mint a member JWT with POST /auth/token and X-Fluxy-Api-Key (fc_ keys stay server-only).",
   },
   {
     icon: LayoutDashboard,
@@ -69,10 +69,11 @@ export default function GetStartedPage() {
           Fastest path: minimal CLI or drop-in widget
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Scaffold a chat-only Vite app in one command. Public rooms can use{" "}
+          Scaffold a chat-only Vite app in one command. Public rooms:{" "}
+          <code className="text-xs">publishableKey</code> on the provider, or{" "}
           <code className="text-xs">guest</code> on{" "}
-          <code className="text-xs">FluxyChatWidget</code> (no JWT mint). For headless
-          control, install the SDK and use <code className="text-xs">useChat</code>.
+          <code className="text-xs">FluxyChatWidget</code>. No card. Free hosted is
+          beta. For headless control, use <code className="text-xs">useChat</code>.
         </p>
         <pre className="mt-3 overflow-x-auto rounded-lg border border-border bg-zinc-950 p-3 font-mono text-xs text-zinc-100">
           {`npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal\npnpm add @fluxy-chat/ui-kit`}

@@ -58,7 +58,7 @@ const GROUPS: FeatureGroup[] = [
       },
       {
         title: "Realtime voice",
-        description: "Bidirectional voice-to-voice AI conversations with real-time tool calling and provider-agnostic abstraction.",
+        description: "joinVoiceStage signaling and async voice clips. Bidirectional media is LiveKit, not FluxyChat.",
         href: "/voice-ai",
         hrefLabel: "Voice AI",
       },
@@ -84,11 +84,11 @@ const GROUPS: FeatureGroup[] = [
   },
   {
     title: "Multi-platform & messaging",
-    intro: "14 platform adapters, card builder, and unified messaging across channels.",
+    intro: "Bridges: you create the vendor app. Same channel_configs table.",
     items: [
       {
-        title: "14 platform adapters",
-        description: "Slack, Discord, Telegram, WhatsApp, Teams, Email, SMS, Webhook, Matrix, and 5 more on one unified interface.",
+        title: "Channel bridges",
+        description: "Slack, Discord, Telegram, WhatsApp, Teams: OAuth and signing secrets in the console. Not a finished omnichannel helpdesk.",
         href: "/integrations",
         hrefLabel: "Integrations",
       },
@@ -148,7 +148,7 @@ const GROUPS: FeatureGroup[] = [
       },
       {
         title: "SOC2 / HIPAA checklist",
-        description: "Controls, evidence, and compliance reports (admin API).",
+        description: "Operator checklists and BAA tracking. Not an attestation. Health demos are not HIPAA.",
         href: "/soc2",
         hrefLabel: "SOC 2",
       },

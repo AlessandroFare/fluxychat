@@ -1,0 +1,43 @@
+---
+title: Publishable keys
+description: pk_ in the browser, fc_ on the server.
+---
+
+`fc_` keys mint member JWTs (`POST /auth/token`, `signIn`). Never put them in a SPA.
+
+`pk_` keys are **publishable**. Safe in the bundle. They identify the project for:
+
+- `FluxyRealtimeProvider` `publishableKey` (anonymous guest JWT, public rooms)
+- `POST /tokens/anonymous`
+- `POST /public/rooms/:id/guest-session` (optional header `X-Fluxy-Api-Key`)
+
+They **cannot** mint a member JWT. The Worker returns `403 publishable_key_not_allowed`.
+
+```tsx
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+<FluxyRealtimeProvider workerUrl={workerUrl} publishableKey="pk_...">
+  <Room />
+</FluxyRealtimeProvider>
+
+function Room() {
+  const { messages, sendMessage } = useChat({ roomId: "general" });
+}
+```
+
+Anonymous JWTs have `roles: ["guest"]` and no `roomId` claim. They can join **public** rooms in that project. Private rooms still need a member JWT.
+
+Widget / guest-session (stable `guestKey` in localStorage, scoped to one room):
+
+```tsx
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
+
+const guest = await FluxyChatClient.joinPublicRoomAsGuest(workerUrl, "general", {
+  publishableKey: "pk_...",
+});
+
+<FluxyChatWidget roomId="general" workerUrl={workerUrl} guest publishableKey="pk_..." />
+```
+
+New projects return both `apiKey` (`fc_`) and `publishableKey` (`pk_`). Rotate secret keys with the existing rotate route (does not revoke `pk_`). Mint or rotate `pk_` with `POST /admin/projects/:id/publishable-key`.

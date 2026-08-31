@@ -778,6 +778,11 @@ export interface FluxyChatClientOptions {
   userId: string;
   apiKey?: string;
   /**
+   * Browser-safe project key (`pk_…`). Same header as apiKey. Cannot mint member JWTs
+   * (`POST /auth/token` / `signIn`). Use for guest-session and anonymous tokens.
+   */
+  publishableKey?: string;
+  /**
    * Optional JWT for authenticated REST calls (POST /messages, reactions, read, reports, etc).
    * When provided, the SDK will prefer REST for writes and use WebSocket mainly for realtime updates.
    * Omit with `apiKey` to enable anonymous auto-mint via POST /tokens/anonymous (Portal-style).
@@ -817,12 +822,12 @@ export class FluxyChatClient {
   constructor(options: FluxyChatClientOptions) {
     this.baseUrl = trimTrailingSlashes(options.baseUrl);
     this._userId = options.userId;
-    this.apiKey = options.apiKey;
+    this.apiKey = options.publishableKey ?? options.apiKey;
     this.usePartySocket = options.usePartySocket ?? false;
-    if (options.apiKey) {
+    if (this.apiKey) {
       this.credentials = new FluxyClientCredentials({
         baseUrl: this.baseUrl,
-        apiKey: options.apiKey,
+        apiKey: this.apiKey,
         token: options.token,
       });
     } else {
@@ -917,7 +922,7 @@ export class FluxyChatClient {
   static async joinPublicRoomAsGuest(
     baseUrl: string,
     roomId: string,
-    opts?: { displayName?: string; turnstileToken?: string; guestKey?: string },
+    opts?: { displayName?: string; turnstileToken?: string; guestKey?: string; publishableKey?: string },
   ): Promise<{
     token: string;
     userId: string;
@@ -931,9 +936,11 @@ export class FluxyChatClient {
       `/public/rooms/${encodeURIComponent(roomId)}/guest-session`,
       trimTrailingSlashes(baseUrl),
     );
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (opts?.publishableKey) headers["X-Fluxy-Api-Key"] = opts.publishableKey;
     const res = await fetch(url.toString(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         displayName: opts?.displayName,
         turnstileToken: opts?.turnstileToken,
@@ -1182,6 +1189,9 @@ export class FluxyChatClient {
   }): Promise<FluxySignInResponse> {
     if (!this.apiKey) {
       throw new Error("signIn requires apiKey on FluxyChatClient");
+    }
+    if (this.apiKey.startsWith("pk_")) {
+      throw new Error("signIn requires a secret fc_ key. pk_ is publishable (guest / anonymous only).");
     }
     const res = await fetch(new URL("/auth/signin", this.baseUrl).toString(), {
       method: "POST",

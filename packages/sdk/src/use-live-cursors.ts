@@ -13,8 +13,8 @@ export interface UseLiveCursorsOptions {
   staleAfterMs?: number;
   selfUserId?: string;
   /**
-   * Share the `useChat` WebSocket by passing the same scope.
-   * Default `live-cursors` — a second `useChat` without this value opens another socket.
+   * Share the `useChat` WebSocket by passing the same value.
+   * Omit under `FluxyRealtimeProvider` (both hooks use `sessionScope` `app`).
    */
   sessionScope?: string;
 }
@@ -30,7 +30,7 @@ export function useLiveCursors({
   client: clientProp,
   staleAfterMs = 8_000,
   selfUserId,
-  sessionScope = "live-cursors",
+  sessionScope,
 }: UseLiveCursorsOptions): UseLiveCursorsResult {
   const chat = useChat({
     roomId,

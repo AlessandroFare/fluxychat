@@ -185,20 +185,11 @@ export default function DocsPage() {
       <section id="sdk" className="mt-12 scroll-mt-24">
         <h2 className="font-heading text-xl font-semibold text-foreground">SDK</h2>
         <pre className="mt-4 overflow-x-auto rounded-xl bg-zinc-950 p-4 text-sm text-zinc-100">
-          {`pnpm add @fluxy-chat/sdk @fluxy-chat/react\n\nimport { FluxyChatClient } from "@fluxy-chat/sdk";\nimport { useChat } from "@fluxy-chat/react";\n\nconst client = new FluxyChatClient({\n  baseUrl: process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL,\n  userId: "user_123",\n  token: memberJwtFromYourBackend,\n});`}
+          {`pnpm add @fluxy-chat/react\n\nimport { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";\n\n<FluxyRealtimeProvider workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL} publishableKey="pk_...">\n  <Chat />\n</FluxyRealtimeProvider>\n\nfunction Chat() {\n  const { messages, sendMessage } = useChat({ roomId: "general" });\n}`}
         </pre>
         <h3 className="mt-6 font-heading text-base font-semibold text-foreground">Flutter (Dart)</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Native Dart SDK for cross-platform apps. Install from{" "}
-          <a
-            href="https://pub.dev/packages/fluxychat_sdk"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline underline-offset-2"
-          >
-            pub.dev
-          </a>
-          .
+          Native Dart SDK is in this repo (`packages/flutter-sdk`). Not on pub.dev yet. Path dependency from GitHub until we publish.
         </p>
         <pre className="mt-3 overflow-x-auto rounded-xl bg-zinc-950 p-4 text-sm text-zinc-100">
           {`flutter pub add fluxychat_sdk\n\nimport 'package:fluxychat_sdk/fluxychat_sdk.dart';\n\nfinal client = FluxyChatClient(\n  config: FluxyChatConfig(\n    apiUrl: 'https://your-worker.workers.dev',\n    wsUrl: 'wss://your-worker.workers.dev',\n    projectId: 'proj_123',\n    token: 'your-jwt-token',\n  ),\n);`}

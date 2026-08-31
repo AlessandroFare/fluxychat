@@ -93,7 +93,13 @@ import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
 Nest `FluxyYjsProvider` **inside** `FluxyRealtimeProvider` (it reuses the client). Standalone, it accepts `token` or the same `authTokenProvider` string. Do not pass `config={{ baseUrl, token }}` to the realtime provider.
 
-Public rooms: `joinPublicRoomAsGuest` then the same provider. See [Quickstart](/docs/getting-started/quickstart).
+Public rooms: `publishableKey` on `FluxyRealtimeProvider`, or `joinPublicRoomAsGuest`. See [Quickstart](/docs/getting-started/quickstart).
+
+## One socket for chat and cursors
+
+Under `FluxyRealtimeProvider`, `useChat` and `useLiveCursors` share `sessionScope` `app`. One JSON WebSocket per room. Yjs is still a second binary connection if you mount `FluxyYjsProvider`.
+
+Two widgets on the same `roomId` (assistant panel + live chat) must pass different `sessionScope` values.
 
 ## Connection state
 

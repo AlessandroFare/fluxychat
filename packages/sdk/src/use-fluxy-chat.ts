@@ -10,6 +10,11 @@ export interface FluxyRealtimeContextValue {
   workerUrl: string;
   ready: boolean;
   refreshSession: () => void;
+  /**
+   * Shared by `useChat` / `useLiveCursors` when they omit `sessionScope`
+   * (default `app`). Two widgets on the same room must pass different values.
+   */
+  sessionScope: string;
 }
 
 export const FluxyRealtimeContext = React.createContext<FluxyRealtimeContextValue | null>(null);

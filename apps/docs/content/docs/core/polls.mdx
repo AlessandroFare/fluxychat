@@ -1,0 +1,29 @@
+---
+title: Polls
+description: First-class room polls including anonymous ballots.
+---
+
+Polls are stored on the room timeline (`createPoll` / `votePoll` on `@fluxy-chat/sdk`) and also as structured `/polls` records (`isAnonymous`, quorum via close).
+
+## Chat-message poll (timeline)
+
+```tsx
+const { messages } = useChat({ roomId, client });
+await client.createPoll(roomId, {
+  question: "Ship Friday?",
+  options: ["Yes", "No"],
+  allowMultiple: false,
+});
+await client.votePoll(messageId, 0);
+```
+
+## Anonymous ballot (`/polls`)
+
+`POST /polls` with `isAnonymous: true` stores votes without exposing voter ids in results. Use this for social-deduction and evaluator-only scoring. Close with `POST /polls/:id/close`.
+
+Private lines of chat (code only for the evaluator) still use `visibility` / `visibleTo` on `sendMessage`, not polls.
+
+## Related
+
+- [Gallery `deal-room`](/docs/getting-started/gallery)
+- [useChat](/docs/core/use-chat)

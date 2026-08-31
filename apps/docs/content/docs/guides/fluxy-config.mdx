@@ -63,7 +63,9 @@ Copy from `packages/config/fluxy.config.example.ts` in the monorepo.
 
 ## Worker integration
 
-The Worker reads `fluxy.config.js` (compiled from TypeScript) for hosted multi-tenant projects. Self-hosters can colocate config beside `apps/worker/wrangler.toml`.
+The Worker reads `fluxy.config.js` (compiled from TypeScript) on self-host.
+
+**Hosted overlay (no forked Worker):** `GET`/`PUT /admin/projects/:id/publish-config` stores deny-substrings, `guestCanPublish`, and `iotAutoAgentId`. The publish pipeline runs file `onPublish` first, then these D1 rules. Put an agent handle in `iotAutoAgentId` to `invokeAgent` on each `iot.reading` without an `@mention`.
 
 ## Related
 

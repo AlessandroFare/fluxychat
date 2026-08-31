@@ -1,5 +1,19 @@
 # @fluxy-chat/sdk
 
+## 0.6.7 (2026-08-31)
+
+### Added
+
+- `FluxyRealtimeProvider` `publishableKey` (`pk_`). Creates the client immediately and mints an anonymous guest JWT. No `useEffect` in the app. Public rooms only.
+- Under the provider, `useChat` and `useLiveCursors` share one JSON WebSocket (`sessionScope` default `app`). Pass a distinct `sessionScope` for a second widget on the same room.
+
+## 0.6.6 (2026-08-31)
+
+### Added
+
+- `publishableKey` (`pk_`) on `FluxyChatClient` and `joinPublicRoomAsGuest`. Cannot mint member JWTs.
+- Dev warning when `sendClientEvent` looks like a pointer (`sendCursor` instead).
+
 ## 0.6.5 (2026-08-27)
 
 ### Added

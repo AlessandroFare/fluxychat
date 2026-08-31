@@ -16,6 +16,11 @@ export {
 } from "./errors";
 
 export {
+  warnIfPointerOnClientEvent,
+  isPointerLikeClientEventName,
+} from "./client-event-guard";
+
+export {
   FluxyChatError,
   isFluxyChatError,
   ChatError,

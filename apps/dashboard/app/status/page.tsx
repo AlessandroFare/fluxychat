@@ -40,8 +40,8 @@ export default async function StatusPage() {
     <MarketingShell className="max-w-3xl py-12 sm:py-12">
         <h1 data-testid="status-heading" className="font-heading text-3xl font-bold tracking-tight">System status</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Public health for the chat API. Project-scoped operational alerts appear in the console
-          when you are signed in.
+          Live <code className="text-xs">GET /health</code> for this Worker. Hosted is open beta.
+          This page is not a published fleet SLO. Cloudflare PoP RTT is Cloudflare&apos;s.
         </p>
 
         <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">

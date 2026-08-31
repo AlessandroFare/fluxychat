@@ -9,6 +9,7 @@
     "troubleshooting-integration",
     "testing-integration",
     "auth-jwt",
+    "publishable-keys",
     "migrate-from-pusher",
     "migrate-from-portal",
     "feature-parity-checklist",

@@ -9,6 +9,7 @@ import { useFluxyChatOptional } from "./use-fluxy-chat";
 import { describeConnectionError } from "./errors";
 import { isDegradedConnectionStatus } from "./connection-state";
 import { sessionTokenFingerprint } from "./session-token-refresh";
+import { resolveRoomSessionScope } from "./session-scope";
 
 export type UseChatHistoryReplay = "connect" | "request";
 
@@ -59,8 +60,9 @@ export interface UseChatOptions {
   onServerEvent?: import("./server-realtime").ServerEventHandler;
   /**
    * Isolate this hook from other `useChat` instances on the same room/user/token.
-   * Two widgets on `/rooms` (Assistant panel + Live chat) must not share a session:
-   * the second store would stay on "connecting" forever.
+   * Under `FluxyRealtimeProvider`, the default is the provider `sessionScope` (`app`),
+   * so `useLiveCursors` on the same room reuses one JSON WebSocket.
+   * Two widgets on `/rooms` must pass different values (e.g. `assistant` vs `live`).
    */
   sessionScope?: string;
 }
@@ -92,7 +94,7 @@ export function useChat({
   const client =
     clientProp === undefined ? (realtime?.client ?? null) : clientProp;
   const instanceId = React.useId();
-  const scope = sessionScope?.trim() || instanceId;
+  const scope = resolveRoomSessionScope(sessionScope, realtime?.sessionScope, instanceId);
 
   const store = React.useMemo(
     () => createFluxyRoomStore(),

@@ -4,12 +4,17 @@ import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { getPublicWorkerUrl, isPublicHostedCloud } from "@/lib/worker-url-client";
 
-const INSTALL = "pnpm add @fluxy-chat/sdk @fluxy-chat/react";
+const INSTALL = "pnpm add @fluxy-chat/react";
 
-const USE_CHAT_SNIPPET = `const { messages, sendMessage, loadHistory } = useChat({
-  roomId: "assistant-general",
-  replay: "connect", // or "request" + loadHistory() for heavy rooms
-});`;
+const USE_CHAT_SNIPPET = `import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+<FluxyRealtimeProvider workerUrl={workerUrl} publishableKey="pk_...">
+  <Chat />
+</FluxyRealtimeProvider>
+
+function Chat() {
+  const { messages, sendMessage } = useChat({ roomId: "general" });
+}`
 
 const STREAM_BOT_HINT =
   "Custom bots: FluxyMessageStream. See docs/cookbook/bot-streaming-fluxy-message-stream.md";

@@ -18,12 +18,19 @@ FluxyChat stores user data in Cloudflare D1 (messages, reactions, room membershi
 - Attachments can be downloaded via their R2 URLs
 - Export is rate-limited to once per 24 hours per user
 
+```bash
+curl -sS -H "Authorization: Bearer $MEMBER_JWT" \
+  "$FLUXY_BASE_URL/gdpr/export"
 ```
-const res = await fetch(`/users/${userId}/export`, {
-  headers: { Authorization: `Bearer ${token}` },
-});
-const data = await res.json();
+
+Starter hosted plans include export. Erasure:
+
+```bash
+curl -sS -X DELETE -H "Authorization: Bearer $OWNER_JWT" \
+  "$FLUXY_BASE_URL/gdpr/delete"
 ```
+
+Also `GET /users/:userId/export` with a member JWT for a JSON dump of that user's messages and memberships.
 
 ## Right to be forgotten
 

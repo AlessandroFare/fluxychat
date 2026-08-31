@@ -1,49 +1,36 @@
 ---
 title: Quickstart
-description: First live message. Guest on a public room, then member JWT when you ship.
+description: pk_ in the browser, then member JWT when the room is private.
 ---
 
 # First message
 
-Public room first (no backend). Member JWT when the room is private or you need roles.
+Public room first. No backend. Member JWT when the room is private or you need roles.
 
-## A. Guest on a public room (no JWT mint)
+## A. pk_ in the browser (about 30 seconds)
 
-The room must be **public**. Writes are on unless the operator set `PUBLIC_GUEST_READ_ONLY`. Identity is a stable `guestKey` in localStorage.
+The room must be **public**. `pk_` identifies the project. The SDK mints an anonymous guest JWT (`POST /tokens/anonymous`). Writes are on unless the operator set `PUBLIC_GUEST_READ_ONLY`.
 
 ```bash
-pnpm add @fluxy-chat/sdk @fluxy-chat/react
+pnpm add @fluxy-chat/react
 ```
 
 ```tsx
-import { useEffect, useState } from "react";
-import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
-export function App({ workerUrl, publicRoomId }: { workerUrl: string; publicRoomId: string }) {
-  const [session, setSession] = useState<{ token: string; userId: string } | null>(null);
-
-  useEffect(() => {
-    void FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId, {
-      displayName: "Guest",
-    }).then(setSession);
-  }, [workerUrl, publicRoomId]);
-
-  if (!session) return <p>Joining…</p>;
-
+export function App() {
   return (
     <FluxyRealtimeProvider
-      workerUrl={workerUrl}
-      authTokenProvider={session.token}
-      userId={session.userId}
+      workerUrl="https://api.example.com"
+      publishableKey="pk_..."
     >
-      <Room roomId={publicRoomId} />
+      <Room />
     </FluxyRealtimeProvider>
   );
 }
 
-function Room({ roomId }: { roomId: string }) {
-  const { messages, sendMessage, connectionState } = useChat({ roomId });
+function Room() {
+  const { messages, sendMessage, connectionState } = useChat({ roomId: "general" });
   return (
     <div>
       <p>Status: {connectionState.status}</p>
@@ -58,12 +45,16 @@ function Room({ roomId }: { roomId: string }) {
 }
 ```
 
-Drop-in widget from npm:
+No `useEffect`. No `joinPublicRoomAsGuest` in the app. `fc_` stays on the server.
+
+Self-host without a `pk_` row: `FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId)` still works when `PUBLIC_GUEST_ENABLED` is on.
+
+Drop-in widget:
 
 ```tsx
 import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
 
-<FluxyChatWidget workerUrl={workerUrl} roomId={publicRoomId} guest />
+<FluxyChatWidget workerUrl={workerUrl} roomId="general" guest publishableKey="pk_..." />
 ```
 
 ## B. CLI (hosted)
@@ -82,7 +73,7 @@ Self-host instead? [Choose your path](/docs/getting-started/choose-your-path).
 
 ## C. Member JWT (private rooms, roles, production)
 
-`FluxyRealtimeProvider` takes `workerUrl` and `authTokenProvider`, not a `client` prop. Nest `FluxyYjsProvider` inside it so it reuses that client (`token` still works).
+`FluxyRealtimeProvider` takes `workerUrl` plus `publishableKey`, `authTokenProvider`, or `connectUrl`. It does not take a `client` prop. Nest `FluxyYjsProvider` inside it so it reuses that client (`token` still works).
 
 Mint `jwt` on **your** server with `POST /auth/token` and a project API key (`fc_…`). Never put `fc_…` in the browser. See [Auth JWT](/docs/guides/auth-jwt).
 
@@ -91,5 +82,6 @@ Local clone of this repo: `pnpm run first-message` prints a Worker URL and JWT f
 ## Next
 
 - [Client setup](/docs/getting-started/client-setup)
+- [Publishable keys](/docs/guides/publishable-keys)
 - [Wire protocol](/docs/core/wire-protocol)
 - [Transport fallback](/docs/cookbook/transport-fallback)
