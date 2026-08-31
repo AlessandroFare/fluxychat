@@ -24,13 +24,13 @@ npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
 | Example | Primitive | Scope (do not stretch) |
 | --- | --- | --- |
 | `live-cursors` | `sendCursor` / `type: cursor` | Not `client_event` for pointers |
-| `live-cursors-chat` | cursors + `useChat` | Chat JSON socket plus Yjs is a second connection |
+| `live-cursors-chat` | cursors + `useChat` | One JSON socket under the provider. Yjs is a second connection if you add storage. |
 | `javascript-live-cursors` | vanilla `connect` + `type: cursor` | React not required |
 | `tiptap-room` | Yjs `useStorage` + Collaboration | Not a second CRDT |
 | `war-room` | `useChat` + `invokeAgent` + `AvatarStack` | Agent uses the same room, not a private DM |
-| `iot-panel` | HTTP ingest + `server_event` `iot.reading` | Not an MQTT broker |
+| `iot-panel` | HTTP ingest + `iot.reading` | Not MQTT. Hosted: `iotAutoAgentId` on publish-config invokes an agent without @mention. |
 | `draw` | cursors + `client-ephemeral-dot` | Not 60 Hz broadcast |
-| `deal-room` | `createDecision` / `ackDecision` / export | Cross-org is REST `/cross-org` |
+| `deal-room` | `createDecision` / `ackDecision` / `visibility` / `invokeAgent` | `visibleTo` for private lines. Cross-org is REST `/cross-org`. Set `VITE_FLUXYCHAT_AGENT_ID` for Ask agent. |
 | `fleet-panel` | `POST /fleet/gps` then `fleet.gps_update` | Not MQTT. Geofences: `listFleetGeofences` |
 | `game-tick` | lobby + `game.tick` | Server-authoritative input, not rollback netcode |
 | `voice-stage` | `joinVoiceStage` signaling | Bring LiveKit for the media plane |

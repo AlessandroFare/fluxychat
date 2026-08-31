@@ -4,9 +4,10 @@ import { useFluxySession, workerUrl } from "./session";
 
 function DealBoard({ roomId }: { roomId: string }) {
   const { client } = useFluxyChat();
-  const { messages, sendMessage, connected } = useChat({ roomId, replay: "request" });
+  const { messages, sendMessage, connected, invokeAgent } = useChat({ roomId, replay: "request" });
   const [draft, setDraft] = useState("Approve term sheet?");
   const [busy, setBusy] = useState(false);
+  const agentId = import.meta.env.VITE_FLUXYCHAT_AGENT_ID?.trim();
 
   async function propose() {
     const content = draft.trim();
@@ -43,6 +44,16 @@ function DealBoard({ roomId }: { roomId: string }) {
     link.download = `${roomId}.md`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function askAgent() {
+    if (!agentId) return;
+    setBusy(true);
+    try {
+      await invokeAgent(agentId, "Summarize this deal thread and list open decisions.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -87,6 +98,11 @@ function DealBoard({ roomId }: { roomId: string }) {
         <button type="button" className="primary" onClick={() => void exportMarkdown()}>
           Export .md
         </button>
+        {agentId ? (
+          <button type="button" disabled={busy} onClick={() => void askAgent()}>
+            Ask agent
+          </button>
+        ) : null}
       </form>
     </section>
   );

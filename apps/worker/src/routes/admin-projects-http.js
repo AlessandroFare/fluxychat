@@ -345,7 +345,7 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
 
       await env.DB.batch([
         env.DB.prepare(
-          "UPDATE api_keys SET revoked_at = ? WHERE project_id = ? AND revoked_at IS NULL"
+          "UPDATE api_keys SET revoked_at = ? WHERE project_id = ? AND revoked_at IS NULL AND id LIKE 'fc_%'"
         ).bind(now, targetProjectId),
         env.DB.prepare(
           "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)"
@@ -372,6 +372,114 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
           keyPrefix,
           rotatedAt: now,
         },
+      });
+    }
+  }
+
+  if (
+    url.pathname.startsWith("/admin/projects/") &&
+    url.pathname.endsWith("/publishable-key") &&
+    request.method === "POST"
+  ) {
+    if (requireAdminAuth) {
+      const adminAuth = await verifyJwtAndGetContext(request, env).catch(() => null);
+      if (!adminAuth) {
+        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      }
+      if (!hasAnyRole(adminAuth.roles, ["owner", "admin"])) {
+        return json({ error: "forbidden" }, { status: 403 });
+      }
+      const parts = url.pathname.split("/");
+      const targetProjectId = parts[3];
+      if (!targetProjectId) return json({ error: "project id required" }, { status: 400 });
+      const scopeErr = tenantScopeForbidden(adminAuth, targetProjectId, env);
+      if (scopeErr) return scopeErr;
+
+      const now = new Date().toISOString();
+      const publishableKey = `pk_${crypto.randomUUID().replace(/-/g, "")}`;
+      const pkPrefix = publishableKey.slice(0, 8);
+      const pkHash = await hashApiKey(publishableKey, env);
+      await env.DB.batch([
+        env.DB.prepare(
+          "UPDATE api_keys SET revoked_at = ? WHERE project_id = ? AND revoked_at IS NULL AND id LIKE 'pk_%'",
+        ).bind(now, targetProjectId),
+        env.DB.prepare(
+          "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        ).bind(publishableKey, targetProjectId, pkPrefix, pkHash, pkHash, now),
+      ]);
+      return json({
+        key: { projectId: targetProjectId, publishableKey, keyPrefix: pkPrefix, rotatedAt: now },
+      });
+    }
+  }
+
+  if (
+    url.pathname.startsWith("/admin/projects/") &&
+    url.pathname.endsWith("/publish-config") &&
+    (request.method === "GET" || request.method === "PUT")
+  ) {
+    if (requireAdminAuth) {
+      const adminAuth = await verifyJwtAndGetContext(request, env).catch(() => null);
+      if (!adminAuth) {
+        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      }
+      if (!hasAnyRole(adminAuth.roles, ["owner", "admin"])) {
+        return json({ error: "forbidden" }, { status: 403 });
+      }
+      const parts = url.pathname.split("/");
+      const targetProjectId = parts[3];
+      if (!targetProjectId) return json({ error: "project id required" }, { status: 400 });
+      const scopeErr = tenantScopeForbidden(adminAuth, targetProjectId, env);
+      if (scopeErr) return scopeErr;
+
+      if (request.method === "GET") {
+        const row = await env.DB.prepare(
+          "SELECT deny_substrings, guest_can_publish, iot_auto_agent_id, updated_at FROM project_publish_config WHERE project_id = ? LIMIT 1",
+        )
+          .bind(targetProjectId)
+          .first();
+        let deny = [];
+        try {
+          deny = JSON.parse(row?.deny_substrings || "[]");
+        } catch {
+          deny = [];
+        }
+        return json({
+          projectId: targetProjectId,
+          denySubstrings: Array.isArray(deny) ? deny : [],
+          guestCanPublish: row ? row.guest_can_publish !== 0 : true,
+          iotAutoAgentId: row?.iot_auto_agent_id ?? null,
+          updatedAt: row?.updated_at ?? null,
+        });
+      }
+
+      const body = await request.json().catch(() => ({}));
+      const denySubstrings = Array.isArray(body.denySubstrings)
+        ? body.denySubstrings.filter((s) => typeof s === "string").slice(0, 50)
+        : [];
+      const guestCanPublish = body.guestCanPublish === false ? 0 : 1;
+      const iotAutoAgentId =
+        typeof body.iotAutoAgentId === "string" && body.iotAutoAgentId.trim()
+          ? body.iotAutoAgentId.trim().slice(0, 128)
+          : null;
+      const now = new Date().toISOString();
+      await env.DB.prepare(
+        `INSERT INTO project_publish_config (project_id, deny_substrings, guest_can_publish, iot_auto_agent_id, updated_at)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(project_id) DO UPDATE SET
+           deny_substrings = excluded.deny_substrings,
+           guest_can_publish = excluded.guest_can_publish,
+           iot_auto_agent_id = excluded.iot_auto_agent_id,
+           updated_at = excluded.updated_at`,
+      )
+        .bind(targetProjectId, JSON.stringify(denySubstrings), guestCanPublish, iotAutoAgentId, now)
+        .run();
+      return json({
+        projectId: targetProjectId,
+        denySubstrings,
+        guestCanPublish: guestCanPublish === 1,
+        iotAutoAgentId,
+        updatedAt: now,
       });
     }
   }

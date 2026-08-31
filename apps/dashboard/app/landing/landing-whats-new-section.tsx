@@ -36,7 +36,7 @@ const AI_FEATURES = [
     icon: Network,
     title: "Multi-platform adapters",
     description:
-      "14 platform adapters (Slack, Teams, Discord, Telegram, WhatsApp, and more) behind a unified interface.",
+      "Bridges for Slack, Discord, Telegram, WhatsApp, Teams. You create the vendor app. Same Worker table.",
   },
   {
     icon: ScrollText,

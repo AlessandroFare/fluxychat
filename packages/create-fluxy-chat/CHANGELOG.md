@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.16] - 2026-08-31
+
+### Added
+
+- `deal-room` template: Ask agent when `VITE_FLUXYCHAT_AGENT_ID` is set (`invokeAgent`).
+
+## [0.5.15] - 2026-08-31
+
+### Changed
+
+- Help text states the scoped package: `npx @fluxy-chat/create-fluxy-chat@latest`. Unscoped `create-fluxy-chat` is not ours.
+
 ## [0.5.14] - 2026-08-27
 
 ### Changed

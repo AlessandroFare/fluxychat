@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.6] - 2026-08-31
+
+### Added
+
+- Re-export: `FluxyRealtimeProvider` accepts `publishableKey` from `@fluxy-chat/sdk@0.6.7`. Peer is `^0.6.7`.
+
+## [0.1.5] - 2026-08-31
+
+### Changed
+
+- Peer `@fluxy-chat/sdk` is `^0.6.5` (republish so npm matches the repo; 0.1.4 still advertised 0.6.4).
+
 ## [0.1.4] - 2026-08-26
 
 ### Added

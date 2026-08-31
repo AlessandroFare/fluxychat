@@ -34,10 +34,12 @@ if (connectionState.transport === "sse") {
   return <span>Live updates via SSE</span>;
 }
 
-if (connectionState.transport === "polling") {
-  return <span>Updating every few seconds</span>;
+if (connectionState.status === "degraded-http" || connectionState.transport === "polling") {
+  return <span>Live socket blocked. Updating over HTTP.</span>;
 }
 ```
+
+Corporate proxies and some browser extensions block WebSockets. CORS must allow your app origin on the Worker. Custom domains need the same CORS list as `127.0.0.1`. There is no screenshot in this page; the status string above is what you show in the product.
 
 ## Vanilla (no React)
 

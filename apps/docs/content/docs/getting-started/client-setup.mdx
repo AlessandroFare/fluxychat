@@ -3,10 +3,24 @@ title: Client setup
 description: Connect FluxyChat to React, vanilla JavaScript, React Native, or Flutter.
 ---
 
-FluxyChat clients talk to **your Worker URL**. Public rooms can join as guest. Private rooms need a **member JWT**. Project API keys stay on the server.
+FluxyChat clients talk to **your Worker URL**. Public rooms: `publishableKey` on `FluxyRealtimeProvider`, or `joinPublicRoomAsGuest`. Private rooms need a **member JWT**. `fc_` keys stay on the server. **React is the flagship client.** Vue and Svelte packages exist on npm as best-effort. React Native is on npm. Flutter/Swift/KMP stay in-repo until pub.dev/CocoaPods.
 
 <Tabs items={["Guest", "React", "Vanilla JS", "React Native", "Flutter"]}>
   <Tab value="Guest">
+
+```tsx
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+<FluxyRealtimeProvider workerUrl={workerUrl} publishableKey="pk_...">
+  <Room />
+</FluxyRealtimeProvider>
+
+function Room() {
+  const { messages, sendMessage } = useChat({ roomId: "general" });
+}
+```
+
+The room must be **public**. The SDK mints an anonymous guest JWT. Without a `pk_` (self-host + `PUBLIC_GUEST_ENABLED`):
 
 ```ts
 import { FluxyChatClient } from "@fluxy-chat/sdk";
@@ -16,13 +30,13 @@ const session = await FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoo
 });
 ```
 
-Guests are **public-rooms only**. Production apps mint JWTs after sign-in ([Auth JWT](/docs/guides/auth-jwt)).
+Production apps mint JWTs after sign-in ([Auth JWT](/docs/guides/auth-jwt)).
 
   </Tab>
   <Tab value="React">
 
 ```bash
-pnpm add @fluxy-chat/sdk @fluxy-chat/react zustand
+pnpm add @fluxy-chat/react
 ```
 
 ```tsx
@@ -42,7 +56,7 @@ function Room({ roomId }: { roomId: string }) {
 }
 ```
 
-`FluxyRealtimeProvider` takes `workerUrl` and `authTokenProvider` (a JWT string or a function). There is no `client` prop.
+`FluxyRealtimeProvider` takes `workerUrl` plus `publishableKey`, `authTokenProvider` (JWT string or function), or `connectUrl`. There is no `client` prop.
 
 See [@fluxy-chat/react](/docs/packages/react) and [useChat](/docs/core/use-chat).
 
@@ -98,7 +112,7 @@ See [Flutter SDK](/docs/packages/flutter-sdk).
 
 ## Auth
 
-Guest for public rooms. Member JWTs from your backend for everything else. Never embed `fc_…` in client bundles. Refresh with `client.setToken()` / `updateToken()`. See [Auth JWT](/docs/guides/auth-jwt).
+Guest for public rooms (`publishableKey` or `joinPublicRoomAsGuest`). Member JWTs from your backend for everything else. Never embed `fc_…` in client bundles. Refresh with `client.setToken()` / `updateToken()`. See [Auth JWT](/docs/guides/auth-jwt).
 
 ## Common errors
 

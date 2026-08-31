@@ -230,6 +230,22 @@ await client.markNotificationRead(notes[0].id);
 // useNotifications(client) — React hook for in-app notification inbox
 ```
 
+### Public rooms — `publishableKey` (no backend)
+
+```tsx
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+<FluxyRealtimeProvider workerUrl="https://api.example.com" publishableKey="pk_...">
+  <Chat />
+</FluxyRealtimeProvider>
+
+function Chat() {
+  const { messages, sendMessage } = useChat({ roomId: "general" });
+}
+```
+
+The SDK mints an anonymous guest JWT. Private rooms still need a member JWT.
+
 ### Option B — `FluxyRealtimeProvider` (hosted Next.js or custom mint)
 
 Wrap your app (or chat layout) once. The provider refreshes the member JWT before expiry and on auth errors.
@@ -570,7 +586,7 @@ Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sd
 | WorkflowAgent | `new WorkflowAgent({ agentId, model, tools })` — `.step()`, `.run()` |
 | Typed runtime context | `defineContext(schema)` for type-safe cross-step data |
 | Sandbox sessions | `SandboxSession` for isolated code execution |
-| Realtime voice | Bidirectional voice-to-voice AI with tool calling |
+| Realtime voice | Stage signaling (`joinVoiceStage`) + async clips. Media plane is LiveKit. |
 | Scoped tool context | Per-tool secret/config isolation via `contextSchema` |
 
 ### AI SDK medium features

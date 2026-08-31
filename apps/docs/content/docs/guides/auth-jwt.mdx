@@ -10,7 +10,7 @@ FluxyChat uses two credential forms:
 - **API key** (`X-Fluxy-Api-Key`): server-to-server, identifies the **tenant/project**.
 - **JWT** (`Authorization: Bearer …`): client-to-worker/SDK. Claims include `sub` (userId), `tid` (projectId), `roles`, `exp`.
 
-**Rule:** keep the API key on your backend and **mint JWTs** for browsers and mobile clients. Never expose the API key in client bundles.
+**Rule:** `fc_` stays on the server. Browsers may use **`pk_`** (publishable) for guest-session and anonymous tokens only. See [Publishable keys](/docs/guides/publishable-keys).
 
 ## Mint a member JWT (server-side)
 
@@ -77,11 +77,22 @@ Membership is enforced: `403` / close `1008` when the user is not a room member.
 When `exp` passes:
 
 1. Mint a new JWT on your backend (`POST /auth/token`).
-2. Call `client.setToken(jwt)`, or pass a **function** to `FluxyRealtimeProvider` `authTokenProvider` so it remints before expiry.
+2. Call `client.setToken(jwt)`, or pass a **function** to `FluxyRealtimeProvider` `authTokenProvider` so it remints before expiry:
 
-Hosted dashboard uses `/api/fluxy/connect` to refresh member JWT automatically.
+```tsx
+<FluxyRealtimeProvider
+  workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!}
+  authTokenProvider={async () => {
+    const res = await fetch("/api/fluxy/token", { method: "POST" });
+    const data = (await res.json()) as { token: string };
+    return data.token;
+  }}
+>
+  {children}
+</FluxyRealtimeProvider>
+```
 
-Public rooms skip this path: `joinPublicRoomAsGuest` (stable `guestKey`). Not a substitute for member roles.
+Keep `FLUXY_API_KEY` (`fc_`) in the Route Handler only. Public rooms skip this path: `publishableKey` or `joinPublicRoomAsGuest`.
 
 ## Common errors
 

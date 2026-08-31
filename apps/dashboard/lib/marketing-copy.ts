@@ -6,13 +6,13 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const SITE_DESCRIPTION =
-  "AI-native chat SDK on Cloudflare for SaaS teams. 14 platform adapters, streaming AI, MCP tools, LLM middleware, and operator console. Self-host or hosted.";
+  "A room for your product on Cloudflare Workers. Chat, presence, a shared document, and agents on one Durable Object. MIT self-host. Hosted is beta.";
 
 export const PAGE_METADATA = {
   landing: buildPageMetadata({
-    title: "Ship chat and live product from one SDK",
+    title: "Humans and agents in the same room",
     description:
-      "In-app chat, AI agents, live stream, collab, game, and IoT on Cloudflare Workers. Self-host or hosted with SDK, docs, and operator console.",
+      "Chat, live presence, a shared document, and an agent on the same Durable Object. Public rooms use a pk_ in the browser. Self-host is MIT. Hosted is still beta.",
     path: "/",
   }),
   why: buildPageMetadata({

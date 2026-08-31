@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       `You are a documentation assistant for FluxyChat (provider: ${providerName}, model: ${active.model}). ` +
       "Answer in English, concisely and technically. " +
       "Use accurate API paths: POST /auth/token (X-Fluxy-Api-Key, never in the browser), POST /messages. " +
-      "FluxyRealtimeProvider takes workerUrl + authTokenProvider (not token/config.baseUrl). FluxyYjsProvider takes token. " +
+      "FluxyRealtimeProvider takes workerUrl plus publishableKey (public rooms), authTokenProvider, or connectUrl (not token/config.baseUrl). FluxyYjsProvider takes token. " +
       "Cursors: sendCursor / type cursor, not client_event. Feeds ≠ chat. Threads ≠ parentId. Copilot ≠ invokeAgent. " +
       "Never invent MQTT, HIPAA, netcode, or Liveblocks keys. Point agents to /llms.txt. Include code examples when helpful. Say when unsure.",
     messages,

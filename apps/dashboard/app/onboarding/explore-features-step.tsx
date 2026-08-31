@@ -57,8 +57,8 @@ const FEATURES = [
   },
   {
     icon: Plug,
-    title: "14 platform adapters",
-    desc: "Slack, Discord, Telegram, WhatsApp, Matrix, and more in one unified inbox.",
+    title: "Channel bridges",
+    desc: "Slack, Discord, Telegram, WhatsApp. You create the vendor app. Same table.",
     href: "/integrations",
     accent: "bg-cyan-500/10 text-cyan-600",
   },

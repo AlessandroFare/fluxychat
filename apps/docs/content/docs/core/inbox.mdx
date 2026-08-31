@@ -17,17 +17,23 @@ FluxyChat separates three concepts that are easy to conflate:
 The **inbox** tracks *noticing* (mentions, unread rooms, snooze, follow-ups).  
 The **room channel** tracks *reading* (last read message id inside a room). Clearing inbox unread does not automatically advance the room watermark unless you call mark-read.
 
+Nest `useInbox` under `FluxyRealtimeProvider` (same as `useChat`). Omit `client` when the provider owns the session. Member JWT required; guest/`pk_` inbox is empty.
+
 ## Quick start
 
 ```tsx
-import { useInbox } from "@fluxy-chat/react";
+import { FluxyRealtimeProvider, useInbox } from "@fluxy-chat/react";
+
+export function App({ workerUrl, memberJwt }: { workerUrl: string; memberJwt: string }) {
+  return (
+    <FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={memberJwt}>
+      <InboxSidebar />
+    </FluxyRealtimeProvider>
+  );
+}
 
 function InboxSidebar() {
-  const { items, counter, unseen, status, reload, onItem } = useInbox({
-    pollIntervalMs: 30_000,
-    realtime: true,
-    onItem: (item) => console.log("live inbox push", item),
-  });
+  const { items, counter, unseen, status } = useInbox({ pollIntervalMs: 30_000, realtime: true });
 
   return (
     <div>

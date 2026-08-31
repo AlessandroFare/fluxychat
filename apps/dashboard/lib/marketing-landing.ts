@@ -3,27 +3,27 @@
  */
 
 export const MARKETING_HERO = {
-  eyebrow: "Realtime platform on Cloudflare",
-  headlineLead: "Ship chat and live product",
-  headlineAccent: "from one SDK",
+  eyebrow: "Your product is a room",
+  headlineLead: "Humans and agents",
+  headlineAccent: "in the same room",
   subhead:
-    "In-app chat, voice AI, live location, stream, collab, and device sync, plus Slack, Discord, and 12 more channels. Self-host on Workers or start on hosted cloud.",
+    "Chat, live presence, a shared document, and an agent on the same Durable Object. Public rooms use a pk_ in the browser. Self-host is MIT. Hosted is still beta.",
 } as const;
 
 export const MARKETING_WHY = {
   title: "Why teams pick FluxyChat",
-  body: "Most teams glue together chat, AI, support, and compliance from different vendors. That gets expensive and hard to audit. FluxyChat puts 14 platform adapters, streaming AI, MCP tools, and governance hooks on the edge you already run.",
+  body: "The unit of value is a room: chat, presence, Yjs, and an agent on one Cloudflare Durable Object. MIT self-host or hosted beta. Not Pusher, not Liveblocks, not Stream.",
 } as const;
 
 export const MARKETING_PLATFORM_FEATURES = [
-  "14 platform adapters (Slack, Discord, Telegram, WhatsApp, Teams, +9)",
-  "AI-native streaming with tool calling & HITL approval",
-  "MCP client for external tool servers",
-  "LLM middleware pipeline (guardrails, caching, RAG, PII redaction)",
-  "WorkflowAgent for durable agent execution",
-  "Card builder with Slack Block Kit & Teams Adaptive Cards",
-  "DevTools playground & OpenTelemetry tracing",
-  "GDPR export, audit trails, and retention policies",
+  "One room Durable Object: chat, sendCursor, Yjs, invokeAgent, HTTP ingest",
+  "Guest session or pk_ for public rooms; fc_ stays on the server",
+  "fluxy.config onPublish plus hosted D1 overlay (no forked Worker)",
+  "Bridges: you create Slack/Discord/Telegram apps on the same table",
+  "Voice signaling (joinVoiceStage); media is LiveKit",
+  "GDPR export/erasure on the Worker",
+  "Named SDK errors (not_member, token_expired, anonymous_not_allowed)",
+  "Open beta hosted. Pin npm versions.",
 ] as const;
 
 export const MARKETING_USE_CASES = [
@@ -63,7 +63,7 @@ export const MARKETING_ENTERPRISE = {
 
 export const MARKETING_FINAL_CTA = {
   title: "Build AI-native chat on infrastructure you own.",
-  body: "Start on the free tier with 14 platform adapters, streaming AI, and MCP tools. Run a pilot on hosted cloud, or deploy the worker in your Cloudflare account when you are ready.",
+  body: "Start on the free tier. Guest rooms and pk_ first, then mint fc_ JWTs. Hosted is beta. Self-host MIT when you want the Worker in your account.",
   primaryLabel: "Start free",
   secondaryLabel: "Book a pilot",
   secondaryHref: "mailto:fluxychat@outlook.com?subject=FluxyChat%20pilot",
@@ -84,7 +84,19 @@ export const PRICING_FAQ = [
   },
   {
     q: "Enterprise vs Business?",
-    a: "Business is high-limit self-serve with SSO add-on and audit export. Enterprise adds SCIM, SLA, DLP, security review, and dedicated support.",
+    a: "Business is high-limit self-serve with SSO add-on and audit export. Enterprise can add SCIM, DLP, a security review, and a written MSA. There is no public fleet SLO on this page.",
+  },
+  {
+    q: "What counts as a message?",
+    a: "Persisted chat messages (including agent replies on the timeline) and client_event frames that are not client-ephemeral-*. Cursors, typing, and presence_patch do not increment the message quota. Agent invokes are a separate meter. Room ids are not metered.",
+  },
+  {
+    q: "Is there a hackathon or maker plan?",
+    a: "Free is that plan. No card. Public rooms with a pk_ in the client. 200k persisted messages and 5k agent invokes per month. Hosted is beta. Self-host is MIT.",
+  },
+  {
+    q: "Is hosted production-ready?",
+    a: "Hosted is open beta. Pin npm versions. Cloudflare PoP RTT is Cloudflare's, not a FluxyChat SLA. Self-host MIT if you need the Worker in your account today.",
   },
   {
     q: "Self-host vs hosted?",

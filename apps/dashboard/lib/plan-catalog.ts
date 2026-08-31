@@ -95,7 +95,7 @@ export const SALES_PLAN_CATALOG: SalesPlanRow[] = [
     price: "Custom",
     tagline: "Regulated and large deployments.",
     bullets: [
-      "SCIM and SLA",
+      "SCIM. Written SLA only with a signed MSA (not a public uptime number).",
       "Retention and DLP pack",
       "Compliance review",
       "Dedicated support",
@@ -112,13 +112,12 @@ export const PUBLIC_PLAN_CATALOG: Record<string, PublicPlanRow> = {
     messages: FREE_TIER_LIMITS.messageLimitMonthly,
     agents: FREE_TIER_LIMITS.agentInvokeLimitMonthly,
     webhooks: FREE_TIER_LIMITS.webhookDeliveryLimitMonthly,
-    tagline: "Try the stack without a card.",
+    tagline: "Weekend plan. No card. pk_ in the browser.",
     bullets: [
-      "SDK, dashboard, and platform modules",
-      // TODO: replace with real Discord invite URL before launch
-      "Community support (GitHub + Discord: https://discord.gg/fluxychat)",
-      "One project, fair-use limits",
-      "Upgrade without migrating data",
+      "Public rooms with publishableKey. Cursors do not count as messages.",
+      "200k persisted messages and 5k agent invokes per month",
+      "MIT self-host if you want the Worker in your account",
+      "Community support on GitHub",
     ],
   },
   starter: {
@@ -129,7 +128,7 @@ export const PUBLIC_PLAN_CATALOG: Record<string, PublicPlanRow> = {
     webhooks: CANONICAL_TIER_LIMITS.starter.webhookDeliveryLimitMonthly,
     tagline: "Production traffic with fixed monthly limits.",
     bullets: [
-      "Chat, agents, stream, collab, game, IoT on one worker",
+      "Room kernel: chat, presence, Yjs, agents",
       "Signed webhooks with retries",
       "GDPR export and erasure endpoints",
       "Email support (best effort)",

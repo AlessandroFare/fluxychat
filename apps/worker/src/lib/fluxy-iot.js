@@ -136,6 +136,26 @@ export async function ingestIoTReading(env, auth, deviceId, input) {
       userId: deviceId,
       data: { deviceId, sensor, value, unit: input.unit ?? "", recordedAt: now },
     }).catch(() => {});
+
+    const auto = await env.DB.prepare(
+      "SELECT iot_auto_agent_id FROM project_publish_config WHERE project_id = ? LIMIT 1",
+    )
+      .bind(auth.projectId)
+      .first()
+      .catch(() => null);
+    const agentId = typeof auto?.iot_auto_agent_id === "string" ? auto.iot_auto_agent_id.trim() : "";
+    if (agentId) {
+      const { invokeMentionedAgents } = await import("./agent-runtime.js");
+      await invokeMentionedAgents(
+        env,
+        auth.projectId,
+        device.room_id,
+        deviceId,
+        `@${agentId} iot.reading ${sensor}=${value}`,
+        [agentId],
+        `iot_${id}`,
+      ).catch(() => {});
+    }
   }
 
   return { ok: true, reading: { id, deviceId, sensor, value, unit: input.unit ?? "", timestamp: now } };

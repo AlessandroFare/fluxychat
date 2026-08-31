@@ -98,7 +98,7 @@ export function FluxyRealtimeProvider({
   }, [workerUrl, userId, token]);
 
   const value = React.useMemo<FluxyRealtimeContextValue>(
-    () => ({ client, userId, token, workerUrl, ready: Boolean(client), refreshSession }),
+    () => ({ client, userId, token, workerUrl, ready: Boolean(client), refreshSession, sessionScope: "app" }),
     [client, userId, token, workerUrl, refreshSession],
   );
 

@@ -62,6 +62,7 @@ export async function publishMcpRoomMessage(env, input) {
   let content = contentValidation.content;
   const fluxyPipeline = await runFluxyPublishPipeline(roomId, auth, content, {
     capabilities: authz.capabilities ?? {},
+    env,
   });
   if (!fluxyPipeline.ok) {
     return { ok: false, error: fluxyPipeline.reason, status: 403 };

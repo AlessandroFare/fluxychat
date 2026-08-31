@@ -287,6 +287,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
       {
         capabilities: authz.capabilities ?? {},
         replyTo: body.replyTo ? Number(body.replyTo) || null : null,
+        env,
       },
     );
     if (!fluxyPipeline.ok) {

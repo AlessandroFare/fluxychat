@@ -1,7 +1,7 @@
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 import type { TopNavLink } from "../components/top-nav-mobile-menu";
 
-export const INSTALL_CMD = "pnpm add @fluxy-chat/sdk";
+export const INSTALL_CMD = "pnpm add @fluxy-chat/react";
 
 export const STACK_LOGOS = [
   "Next.js",

@@ -4,6 +4,7 @@ import React from "react";
 import { FluxyChatClient } from "./index";
 import { decodeFluxyJwtPayload, jwtRefreshDelayMs } from "./jwt-utils";
 import { trimTrailingSlashes } from "./url-utils";
+import { DEFAULT_PROVIDER_SESSION_SCOPE } from "./session-scope";
 import { FluxyRealtimeContext, type FluxyRealtimeContextValue } from "./use-fluxy-chat";
 
 export interface FluxyAuthTokenResult {
@@ -15,6 +16,12 @@ export interface FluxyRealtimeProviderProps {
   children: React.ReactNode;
   /** Worker HTTP base URL (e.g. https://api.example.com). */
   workerUrl: string;
+  /**
+   * Browser-safe project key (`pk_…`). Mints an anonymous guest JWT via
+   * `POST /tokens/anonymous`. Public rooms only. Member JWT still wins if you
+   * also pass `authTokenProvider` or `connectUrl`.
+   */
+  publishableKey?: string;
   /**
    * Pre-minted member JWT, or a callback that returns one.
    * Use with your backend `POST /auth/token` flow.
@@ -30,6 +37,11 @@ export interface FluxyRealtimeProviderProps {
   userId?: string;
   /** Refresh this many ms before JWT expiry (default 5 minutes). */
   refreshBufferMs?: number;
+  /**
+   * Shared room session key for nested `useChat` / `useLiveCursors`.
+   * Default `app`. Override per widget when two chats share a roomId.
+   */
+  sessionScope?: string;
   onSessionError?: (error: Error) => void;
 }
 
@@ -73,14 +85,24 @@ async function fetchConnectSession(
   };
 }
 
+function isPublishableOnlySession(
+  publishableKey: string | undefined,
+  authTokenProvider: FluxyRealtimeProviderProps["authTokenProvider"],
+  connectUrl: string | undefined,
+): boolean {
+  return Boolean(publishableKey?.trim()) && !authTokenProvider && !connectUrl;
+}
+
 export function FluxyRealtimeProvider({
   children,
   workerUrl,
+  publishableKey,
   authTokenProvider,
   connectUrl,
   connectRequestInit,
   userId: userIdProp,
   refreshBufferMs = 5 * 60 * 1000,
+  sessionScope = DEFAULT_PROVIDER_SESSION_SCOPE,
   onSessionError,
 }: FluxyRealtimeProviderProps) {
   const [token, setToken] = React.useState<string | null>(null);
@@ -109,7 +131,38 @@ export function FluxyRealtimeProvider({
     setRefreshKey((k) => k + 1);
   }, []);
 
+  const publishableOnly = isPublishableOnlySession(publishableKey, authTokenProvider, connectUrl);
+
+  const guestClient = React.useMemo(() => {
+    if (!publishableOnly || !publishableKey?.trim()) return null;
+    return new FluxyChatClient({
+      baseUrl: trimTrailingSlashes(workerUrl),
+      userId: userIdProp?.trim() || "guest",
+      publishableKey: publishableKey.trim(),
+    });
+  }, [publishableOnly, publishableKey, workerUrl, userIdProp]);
+
   React.useEffect(() => {
+    if (!guestClient) return;
+    let cancelled = false;
+    void guestClient
+      .resolveToken()
+      .then((minted) => {
+        if (cancelled || !minted) return;
+        setToken(minted);
+        const sub = decodeFluxyJwtPayload(minted).sub;
+        if (sub) setUserId(sub);
+      })
+      .catch((err) => {
+        onSessionError?.(err instanceof Error ? err : new Error(String(err)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [guestClient, onSessionError]);
+
+  React.useEffect(() => {
+    if (publishableOnly) return;
     if (!authTokenProvider && !connectUrlRef.current) return;
 
     let cancelled = false;
@@ -155,27 +208,40 @@ export function FluxyRealtimeProvider({
       isRefreshingRef.current = false;
       if (timer) clearTimeout(timer);
     };
-  }, [authTokenProvider, connectUrl, connectRequestInit, refreshBufferMs, refreshKey, userIdProp, onSessionError]);
+  }, [
+    publishableOnly,
+    authTokenProvider,
+    connectUrl,
+    connectRequestInit,
+    refreshBufferMs,
+    refreshKey,
+    userIdProp,
+    onSessionError,
+  ]);
 
-  const client = React.useMemo(() => {
+  const jwtClient = React.useMemo(() => {
+    if (guestClient) return null;
     if (!token?.trim() || !userId.trim()) return null;
     return new FluxyChatClient({
       baseUrl: trimTrailingSlashes(workerUrl),
       userId,
       token,
     });
-  }, [workerUrl, userId, token]);
+  }, [guestClient, workerUrl, userId, token]);
+
+  const client = guestClient ?? jwtClient;
 
   const value = React.useMemo<FluxyRealtimeContextValue>(
     () => ({
       client,
-      userId,
-      token,
+      userId: client?.userId ?? userId,
+      token: client?.token ?? token,
       workerUrl,
       ready: Boolean(client),
       refreshSession,
+      sessionScope,
     }),
-    [client, userId, token, workerUrl, refreshSession],
+    [client, userId, token, workerUrl, refreshSession, sessionScope],
   );
 
   return <FluxyRealtimeContext.Provider value={value}>{children}</FluxyRealtimeContext.Provider>;

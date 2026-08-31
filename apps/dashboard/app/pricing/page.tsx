@@ -13,8 +13,8 @@ import { LandingShell } from "../landing/landing-shell";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing: Fluxychat",
-  description:
-    "Chat, AI agents, and platform modules on one plan. Free tier to Growth, undercutting Pusher and Ably on message quotas.",
+    description:
+    "Free weekend plan with pk_ in the browser. Paid plans for production traffic. Hosted is beta.",
   path: "/pricing",
 });
 
@@ -41,14 +41,14 @@ const COMPARISON_ROWS: { feature: string; values: Record<string, string> }[] = [
     feature: "Webhook deliveries / month",
     values: Object.fromEntries(planEntries.map(([k, p]) => [k, p.webhooks === -1 ? "Unlimited" : formatLimit(p.webhooks)])),
   },
-  { feature: "Rooms", values: Object.fromEntries(planKeys.map((k) => [k, "Unlimited"])) },
+  { feature: "Rooms", values: Object.fromEntries(planKeys.map((k) => [k, "Unlimited ids"])) },
   { feature: "Projects", values: { free: "1", starter: "1", pro: "1", team: "5", growth: "Multiple" } },
   { feature: "Team seats", values: { free: "1", starter: "1", pro: "1", team: "5", growth: "Unlimited" } },
   { feature: "SDK & dashboard", values: Object.fromEntries(planKeys.map((k) => [k, "✓"])) },
-  { feature: "Platform modules", values: Object.fromEntries(planKeys.map((k) => [k, "Stream, collab, game, IoT"])) },
+  { feature: "Platform modules", values: Object.fromEntries(planKeys.map((k) => [k, "Same room DO"])) },
   { feature: "AI agents", values: Object.fromEntries(planKeys.map((k) => [k, "✓"])) },
   { feature: "Webhooks", values: { free: "—", starter: "Signed + retries", pro: "✓", team: "✓", growth: "✓" } },
-  { feature: "GDPR export", values: { free: "—", starter: "✓", pro: "✓", team: "✓", growth: "✓" } },
+  { feature: "GDPR export", values: { free: "Worker API", starter: "✓", pro: "✓", team: "✓", growth: "✓" } },
   { feature: "Priority support", values: { free: "Community", starter: "Email (best effort)", pro: "Priority", team: "Priority", growth: "Priority" } },
   { feature: "SSO / SAML", values: { free: "—", starter: "—", pro: "—", team: "—", growth: "Add-on" } },
   { feature: "Audit logs", values: { free: "—", starter: "—", pro: "—", team: "—", growth: "Add-on" } },
@@ -60,14 +60,15 @@ function PricingHero() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,115,94,0.12)_0%,transparent_70%)]" />
       <div className="relative mx-auto max-w-6xl text-center">
         <Badge className="mb-4 border border-orange-400/40 bg-orange-500/15 px-4 py-1.5 text-sm font-medium text-orange-100 hover:bg-orange-500/20">
-          Simple, transparent pricing
+          Open beta. Pin SDK versions.
         </Badge>
         <h1 className="font-heading text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
           Pricing
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
-          One plan covers chat, AI agents, webhooks, and platform modules (stream, collab, game, IoT). Starter at
-          $20/mo, less than Pusher Startup at $49/mo for similar traffic.
+          Free is the weekend plan: public rooms, a pk_ in the client, no card. Cursors and presence
+          do not count as messages. Starter is $20/mo when you outgrow 200k persisted messages.
+          Hosted is beta. Pin SDK versions.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="bg-[var(--fluxy-cta-color)] text-white hover:opacity-90">
@@ -92,9 +93,10 @@ function PlanCards() {
         <div className="mx-auto max-w-lg rounded-xl border border-white/15 bg-[#252525]/80 p-4 text-center">
           <p className="text-sm text-slate-200">
             All plans include{" "}
-            <span className="font-semibold text-white">unlimited rooms</span>,{" "}
-            <span className="font-semibold text-white">unlimited team members</span>, and{" "}
-            <span className="font-semibold text-white">end-to-end WebSocket connections</span>.
+            <span className="font-semibold text-white">unlimited room ids</span>. Message quotas
+            count persisted chat and webhooked <code className="text-xs">client_event</code>{" "}
+            frames. Cursors and <code className="text-xs">presence_patch</code> do not. Hosted is
+            beta; pin <code className="text-xs">@fluxy-chat/sdk</code>.
           </p>
         </div>
 

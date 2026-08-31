@@ -30,4 +30,29 @@ describe("fluxy-config-runtime", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.content).toContain("****");
   });
+
+  it("blocks deny substrings from D1 publish-config", async () => {
+    const result = await runFluxyPublishPipeline(
+      "room-general",
+      { userId: "user_1", projectId: "proj_1", roles: ["member"] },
+      "hello secretcode",
+      {
+        capabilities: { publish: true },
+        env: {
+          DB: {
+            prepare: () => ({
+              bind: () => ({
+                first: async () => ({
+                  deny_substrings: JSON.stringify(["secretcode"]),
+                  guest_can_publish: 1,
+                }),
+              }),
+            }),
+          },
+        },
+      },
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toMatch(/publish rules/i);
+  });
 });

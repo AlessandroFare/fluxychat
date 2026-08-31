@@ -57,6 +57,8 @@ await client.disconnect();
 
 JWT refresh: `client.setToken(next)` (alias `updateToken`). Reconnect rooms if `sub` changed.
 
+If the live socket is blocked (corporate proxy, strict CSP), the UI should read `connectionState.status === "degraded-http"` and `canPublishViaHttp`. Sends still go over HTTP. This is not a second product; it is the same room.
+
 ## Related
 
 - [Wire protocol](/docs/core/wire-protocol)

@@ -1,4 +1,5 @@
 import { FluxyAuthError, FluxySendError } from "./errors";
+import { warnIfPointerOnClientEvent } from "./client-event-guard";
 import { mergeDebateSteps, type AgentDebateStep } from "./agent-debate";
 import {
   createFluxyRoomStore,
@@ -1176,6 +1177,7 @@ export function startFluxyRoomSession(
   const sendClientEvent = (eventName: string, data: unknown) => {
     if (!client) return;
     const name = eventName.startsWith("client-") ? eventName : `client-${eventName}`;
+    warnIfPointerOnClientEvent(name);
     try {
       connectionRef?.sendJson({
         type: "client_event",

@@ -7,11 +7,11 @@ import { useEffect, useRef, useState } from "react";
 
 const FLOATING_MESSAGES = [
   { text: "Tell me about FluxyChat", align: "left", delay: 0 },
-  { text: "Real-time chat, AI agents, streaming, whiteboards, multiplayer, and IoT on one SDK on Cloudflare.", align: "right", delay: 1.5 },
+  { text: "Chat, cursors, Yjs, and invokeAgent on one Durable Object. MIT self-host or hosted beta.", align: "right", delay: 1.5 },
   { text: "How is it different from Pusher?", align: "left", delay: 3 },
-  { text: "Same worker for chat and platform modules. Self-host or hosted. Lower cost at similar message volume.", align: "right", delay: 4.5 },
+  { text: "Room layer, not a transport. Pusher moves bytes. We are the room those bytes live in.", align: "right", delay: 4.5 },
   { text: "Can you write a quickstart example?", align: "left", delay: 6 },
-  { text: "pnpm add @fluxy-chat/sdk, then FluxyChatClient + useChat with a roomId and member JWT from your backend.", align: "right", delay: 7.5 },
+  { text: "pnpm add @fluxy-chat/react, then FluxyRealtimeProvider with publishableKey and useChat({ roomId }).", align: "right", delay: 7.5 },
 ];
 
 function TypewriterText({ text, delay, onComplete }: { text: string; delay: number; onComplete?: () => void }) {

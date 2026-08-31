@@ -627,9 +627,12 @@ async function insertNewProject(env, ctx, name, options = {}) {
   const now = new Date().toISOString();
   const projectId = crypto.randomUUID();
   const apiKey = `fc_${crypto.randomUUID().replace(/-/g, "")}`;
+  const publishableKey = `pk_${crypto.randomUUID().replace(/-/g, "")}`;
   const keyPrefix = apiKey.slice(0, 8);
   const keyHash = await hashApiKey(apiKey, env);
   const keyHmac = keyHash; // dual-write during migration; both columns identical for new keys.
+  const pkPrefix = publishableKey.slice(0, 8);
+  const pkHash = await hashApiKey(publishableKey, env);
   const jwtSecret = generateJwtSecret();
   const freeLimits = planLimitsForTier(env, "free");
 
@@ -645,6 +648,9 @@ async function insertNewProject(env, ctx, name, options = {}) {
     env.DB.prepare(
       "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     ).bind(apiKey, projectId, keyPrefix, keyHash, keyHmac, now),
+    env.DB.prepare(
+      "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    ).bind(publishableKey, projectId, pkPrefix, pkHash, pkHash, now),
     env.DB.prepare(
       "INSERT INTO project_plans (project_id, plan_name, billing_status, message_limit_monthly, agent_invoke_limit_monthly, webhook_delivery_limit_monthly, pricing_version, manually_overridden, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).bind(
@@ -702,6 +708,7 @@ async function insertNewProject(env, ctx, name, options = {}) {
     name,
     created_at: now,
     apiKey,
+    publishableKey,
     plan: await getProjectPlan(env, projectId),
   };
 }

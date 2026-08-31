@@ -3,28 +3,28 @@ import { Boxes, Cpu, Globe, Layers, Mic, Workflow } from "lucide-react";
 const LANDING_STATS = [
   {
     icon: Globe,
-    value: "14 platforms",
-    label: "Slack, Discord, Telegram, WhatsApp, Teams, and 9 more on one unified adapter interface.",
+    value: "Bridges",
+    label: "Slack, Discord, Telegram, WhatsApp, Teams: you create the vendor app. Same channel_configs table, not a finished helpdesk.",
   },
   {
     icon: Cpu,
-    value: "AI-native",
-    label: "Streaming markdown, tool calling, MCP client, and LLM middleware pipeline built in.",
+    value: "Agents in-room",
+    label: "invokeAgent streams on the same timeline as chat. Copilots do not write the timeline.",
   },
   {
     icon: Layers,
-    value: "30+ SDK modules",
-    label: "Rooms, presence, typing, history, agents, webhooks, cards, and more, all on @fluxy-chat/sdk.",
+    value: "One room DO",
+    label: "Chat, sendCursor, Yjs, HTTP ingest, invokeAgent. A second binary WebSocket only if you mount Yjs.",
   },
   {
     icon: Workflow,
-    value: "Durable agents",
-    label: "WorkflowAgent persists to D1, survives deploys, and resumes from the last step.",
+    value: "WorkflowAgent",
+    label: "Optional D1-backed agent steps on the Worker. Not required for invokeAgent.",
   },
   {
     icon: Mic,
-    value: "Realtime voice",
-    label: "Bidirectional voice-to-voice AI with provider-agnostic abstraction.",
+    value: "Voice signaling",
+    label: "joinVoiceStage is a roster. Live audio is LiveKit. Clips are POST /messages/voice.",
   },
   {
     icon: Boxes,

@@ -10,6 +10,7 @@ export interface FluxyRealtimeContextValue {
   workerUrl: string;
   ready: boolean;
   refreshSession: () => void;
+  sessionScope: string;
 }
 
 export const FluxyRealtimeContext = React.createContext<FluxyRealtimeContextValue | null>(null);

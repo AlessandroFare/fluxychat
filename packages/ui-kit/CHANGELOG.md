@@ -1,5 +1,11 @@
 # @fluxy-chat/ui-kit
 
+## 0.1.4 (2026-08-31)
+
+### Added
+
+- `publishableKey` on `FluxyChatWidget` guest join.
+
 ## 0.1.3 (2026-08-27)
 
 ### Added

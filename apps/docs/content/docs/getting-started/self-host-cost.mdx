@@ -1,0 +1,30 @@
+---
+title: Self-host cost
+description: Cloudflare bill for a MIT Worker. Not a FluxyChat invoice.
+---
+
+FluxyChat self-host is **$0 to us**. You pay Cloudflare for Workers, Durable Objects, D1, and (if you use them) R2 and AI.
+
+This is an order-of-magnitude note, not a quote. Read [Cloudflare Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/) and [Durable Objects pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/) for current numbers.
+
+## What you actually run
+
+- One Worker (HTTP + WebSocket upgrade)
+- One Durable Object per **active** room
+- D1 for messages, members, keys
+- Optional: R2 for attachments, a paid AI provider for `invokeAgent`
+
+## Weekend / demo
+
+The Workers free tier often covers a two-tab demo and a public room. Hibernating DOs are cheap when nobody is connected.
+
+## Production (very rough)
+
+Cost follows **WebSocket connections**, **DO requests**, and **D1 rows**, not "unlimited rooms" as a marketing line. A quiet B2B workspace (tens of rooms, not a ticker) is usually a small Workers bill. A consumer chat at Stream scale is a different product; do not self-host FluxyChat expecting that shape.
+
+Hosted FluxyChat Free is the no-card path if you do not want wrangler yet. Hosted is beta.
+
+## Related
+
+- [Self-hosting](/docs/getting-started/self-hosting)
+- [Pricing](https://fluxychat.com/pricing) (hosted quotas; cursors do not count as messages)

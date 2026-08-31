@@ -19,6 +19,8 @@ export interface FluxyChatWidgetProps {
   userId?: string;
   /** Join a public room with joinPublicRoomAsGuest (no member JWT). */
   guest?: boolean;
+  /** Optional pk_ key sent with guest-session (hosted multi-tenant). */
+  publishableKey?: string;
   displayName?: string;
   theme?: FluxyThemeId;
   className?: string;
@@ -71,6 +73,7 @@ export function FluxyChatWidget({
   token,
   userId = "user-1",
   guest = false,
+  publishableKey,
   displayName,
   theme = "default",
   className,
@@ -101,7 +104,10 @@ export function FluxyChatWidget({
       return;
     }
     let cancelled = false;
-    void FluxyChatClient.joinPublicRoomAsGuest(workerUrl.trim(), roomId, { displayName })
+    void FluxyChatClient.joinPublicRoomAsGuest(workerUrl.trim(), roomId, {
+      displayName,
+      publishableKey,
+    })
       .then((session) => {
         if (cancelled) return;
         setGuestClient(
@@ -119,7 +125,7 @@ export function FluxyChatWidget({
     return () => {
       cancelled = true;
     };
-  }, [clientProp, token, guest, workerUrl, roomId, displayName]);
+  }, [clientProp, token, guest, workerUrl, roomId, displayName, publishableKey]);
 
   const client = tokenClient ?? guestClient;
 
