@@ -150,7 +150,7 @@ export default function CrossChannelPage() {
         {journeyPaths.length > 0 ? (
           <div className="grid gap-2 sm:grid-cols-2">
             {journeyPaths.map((path) => (
-              <div key={`${path.from}-${path.to}`} className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm">
+              <div key={`${path.from}-${path.to}`} className="flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] p-3 text-sm">
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{path.from}</span>
                 <ArrowRightLeft className="size-3.5 text-muted-foreground" />
                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs capitalize text-primary">{path.to}</span>

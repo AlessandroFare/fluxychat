@@ -44,7 +44,7 @@ export default async function StatusPage() {
           This page is not a published fleet SLO. Cloudflare PoP RTT is Cloudflare&apos;s.
         </p>
 
-        <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="mt-8 rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-heading text-lg font-semibold">Chat API</h2>
             <span className={`text-sm font-medium ${tone}`}>{label}</span>
@@ -111,7 +111,7 @@ export default async function StatusPage() {
           ) : null}
         </div>
 
-        <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="mt-8 rounded-2xl bg-card p-6 shadow-sm">
           <h2 className="font-heading text-lg font-semibold">Incidents</h2>
           {incidents.active.length === 0 ? (
             <p className="mt-3 text-sm text-emerald-600">All systems operational. No active incidents.</p>

@@ -1,56 +1,54 @@
 # Landing page — reference copy
 
+Live source: `apps/dashboard/lib/marketing-landing.ts` and `lib/marketing-faq.ts`. Do not invent a second hero here.
+
 ## Hero
 
-**Headline:** Realtime chat, AI agents, and enterprise governance — without vendor lock-in.
+**Eyebrow:** Your product is a room
 
-**Subhead:** FluxyChat is the self-hosted platform on Cloudflare Workers for realtime chat, omnichannel inbox, native AI, compliance, and automation.
+**Headline:** Humans and agents in the same room.
 
-**Primary CTA:** Book a demo  
-**Secondary CTA:** Try the developer quickstart
+**Subhead:** Chat, live presence, a shared document, and an agent on the same Durable Object. Public rooms use a pk_ in the browser. Self-host is MIT. Hosted is still beta.
+
+**Primary CTA:** Create free account  
+**Secondary CTA:** `pnpm add @fluxy-chat/react`
 
 ---
 
 ## Why FluxyChat exists
 
-Many companies use separate tools for chat, support, AI, and governance. Traditional vendors are expensive and create lock-in. Enterprise teams need audit, retention, SCIM, compliance, and AI under control.
+The unit of value is a room: chat, presence, Yjs, and an agent on one Cloudflare Durable Object. MIT self-host or hosted beta. Not Pusher, not Liveblocks, not Stream.
 
 ---
 
 ## What you get
 
-- Self-hosted realtime messaging
-- Native AI with memory, knowledge graph, and actions
-- Omnichannel inbox
-- Compliance and audit trail
-- Embeddable widget and custom domain
-- MCP for agents and automations
+- One room Durable Object: chat, sendCursor, Yjs, invokeAgent, HTTP ingest
+- Guest session or pk_ for public rooms; fc_ stays on the server
+- Bridges: you create Slack/Discord/Telegram apps on the same table
+- Voice signaling (joinVoiceStage); media is LiveKit
+- GDPR export/erasure on the Worker
+- Open beta hosted. Pin npm versions.
 
 ---
 
 ## Use cases
 
-- B2B SaaS with a support team
-- Developer teams integrating chat and agents quickly
-- Regulated companies (audit, retention, data control)
-- Communities, events, and live engagement
+- In-app chat with an agent (same WebSocket as users)
+- Bridges (you create the vendor app)
+- GDPR export and signed webhooks on the Worker
+- JWT, SDK, console (no socket VPS)
 
 ---
 
-## Enterprise-ready
+## Enterprise
 
-- SSO / SCIM
-- Audit logs
-- Retention policies
-- IP whitelisting
-- DLP (integrations)
-- SLA and enterprise support
+Group cipher with signed export (E2EE only if you supply the key out of band). Written SLA only with a signed MSA.
 
 ---
 
 ## Final CTA
 
-**Headline:** Build the realtime layer your product was missing.
+**Headline:** Same SDK on hosted or on your Cloudflare account.
 
-**CTA:** Start a pilot
-
+**CTA:** Start free / Book a pilot

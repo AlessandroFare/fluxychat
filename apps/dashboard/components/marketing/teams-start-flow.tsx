@@ -94,7 +94,7 @@ export function TeamsStartFlow() {
           opacity="0.5"
         />
 
-        <circle ref={dotRef} cx="500" cy="4" r="4.5" fill="#ff725e" filter={`url(#${glowId})`} opacity="0" />
+        <circle ref={dotRef} cx="500" cy="4" r="4.5" fill="#C2410C" filter={`url(#${glowId})`} opacity="0" />
       </svg>
     </div>
   );

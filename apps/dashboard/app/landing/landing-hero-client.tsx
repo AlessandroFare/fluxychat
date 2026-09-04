@@ -37,10 +37,10 @@ export function LandingHeroClient() {
         <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
           <Link
             href={isClerkClientConfigured() ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}
-            className="am-focus mkt-enter mkt-chip mb-5 inline-flex max-w-full items-center justify-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium text-[var(--mkt-text)] shadow-[0_0_0_1px_rgba(24,24,27,0.08)] transition hover:border-[var(--mkt-brand)]/40 hover:bg-black/[0.04] sm:text-sm"
+            className="am-focus mkt-enter mkt-chip mb-6 inline-flex max-w-full items-center justify-center gap-2 rounded-full px-3 py-1.5 text-xs font-normal text-[var(--mkt-text)] transition hover:bg-black/[0.04] sm:text-sm"
             style={{ ["--mkt-stagger" as string]: 0 }}
           >
-            <span className="shrink-0 rounded-md bg-zinc-950 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white dark:bg-[var(--mkt-brand)]">
+            <span className="shrink-0 rounded-md bg-zinc-950 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-[0.05em] text-white dark:bg-[var(--mkt-brand)]">
               New
             </span>
             <span className="truncate text-left sm:text-center">
@@ -49,25 +49,27 @@ export function LandingHeroClient() {
           </Link>
 
           <p
-            className="mkt-enter mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 sm:tracking-[0.22em]"
+            className="mkt-enter mb-4 text-xs font-semibold uppercase tracking-[0.05em] text-[var(--mkt-text-muted)]"
             style={{ ["--mkt-stagger" as string]: 1 }}
           >
             {MARKETING_HERO.eyebrow}
           </p>
 
           <h1
-            className="mkt-enter font-heading flex flex-wrap items-baseline justify-center gap-x-[0.18em] gap-y-1 text-balance text-4xl font-bold leading-[1.08] tracking-tight text-[var(--mkt-text)] sm:text-6xl md:text-7xl"
+            className="mkt-enter font-heading flex flex-col items-center text-balance text-4xl font-bold leading-[1.08] tracking-tight text-[var(--mkt-text)] sm:text-6xl md:text-7xl"
             style={{ ["--mkt-stagger" as string]: 2 }}
           >
-            <span>{MARKETING_HERO.headlineLead}</span>
-            <span className="am-text-gradient--hero am-text-gradient--hero-glow">
-              {MARKETING_HERO.headlineAccent}
+            <span className="block">{MARKETING_HERO.headlineLead}</span>
+            <span className="block">
+              <span className="am-text-gradient--hero am-text-gradient--hero-glow">
+                {MARKETING_HERO.headlineAccent}
+              </span>
+              <span className="text-[var(--mkt-text)]">.</span>
             </span>
-            <span className="text-[var(--mkt-text)]">.</span>
           </h1>
 
           <div
-            className="mkt-enter mt-5 max-w-2xl text-pretty text-lg text-[var(--mkt-text-muted)] sm:text-xl"
+            className="mkt-enter mt-6 max-w-xl text-pretty text-base leading-relaxed text-[var(--mkt-text-muted)] sm:text-lg"
             style={{ ["--mkt-stagger" as string]: 3 }}
           >
             <BlurText
@@ -75,7 +77,7 @@ export function LandingHeroClient() {
               delay={28}
               animateBy="words"
               direction="bottom"
-              className="justify-center text-center text-lg text-[var(--mkt-text-muted)] sm:text-xl"
+              className="justify-center text-center text-base text-[var(--mkt-text-muted)] sm:text-lg"
               stepDuration={0.22}
             />
           </div>

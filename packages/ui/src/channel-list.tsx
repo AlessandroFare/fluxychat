@@ -60,7 +60,7 @@ export function ChannelList({
                   padding: "1px 6px",
                   borderRadius: 999,
                   fontSize: 11,
-                  background: "#ff725e",
+                  background: "var(--brand)",
                   color: "#fff",
                   fontWeight: 600,
                 }}

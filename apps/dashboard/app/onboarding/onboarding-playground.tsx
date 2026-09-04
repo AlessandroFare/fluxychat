@@ -38,7 +38,7 @@ export function OnboardingPlayground({ wizard: w }: OnboardingPlaygroundProps) {
 
       {/* Navigation — hidden on Welcome (step 0) since it has its own CTA */}
       {step > 0 && (
-        <div className="sticky bottom-0 z-10 rounded-2xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-sm">
+        <div className="sticky bottom-0 z-10 rounded-2xl bg-background/95 p-4 shadow-[var(--shadow-3)] backdrop-blur-sm">
           <div className="mx-auto flex items-center justify-between">
             {step > 0 ? (
               <Button variant="outline" onClick={() => w.goBack()}>

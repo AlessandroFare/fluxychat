@@ -114,7 +114,7 @@ export default function GetStartedPage() {
         {HOSTED_STEPS.map((step, index) => (
           <li
             key={step.title}
-            className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)]"
+            className="flex gap-4 rounded-2xl bg-card p-4 shadow-[var(--shadow-2)]"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <step.icon className="h-5 w-5" aria-hidden />

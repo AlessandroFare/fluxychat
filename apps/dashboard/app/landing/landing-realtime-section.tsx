@@ -1597,7 +1597,7 @@ function OmnichannelPreview() {
             {i < lit ? <Check className="size-2.5 animate-in zoom-in-50 duration-200" aria-hidden /> : null}
           </span>
         ))}
-        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-slate-500">+9 more</span>
+        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-slate-500">you create the vendor app</span>
       </div>
       {lit >= CHANNELS.length ? (
         <p className="mt-3 animate-in fade-in-0 text-[11px] text-emerald-300">Delivered to in-app + bridged channels</p>

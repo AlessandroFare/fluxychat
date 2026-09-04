@@ -55,7 +55,7 @@ function EnterConsoleBody() {
       <div className="space-y-4 text-sm leading-relaxed text-slate-600">
         <p>
           This dashboard calls <strong className="text-slate-900">your</strong> Worker URL (for example{" "}
-          <code className="rounded border border-black/[0.08] bg-white px-1 py-0.5 font-mono text-xs">NEXT_PUBLIC_FLUXYCHAT_WORKER_URL</code>
+          <code className="rounded bg-white shadow-[var(--shadow-2)] px-1 py-0.5 font-mono text-xs">NEXT_PUBLIC_FLUXYCHAT_WORKER_URL</code>
           ). Messages, agents, and webhooks count against <strong className="text-slate-900">your</strong> quotas, not a shared sandbox.
         </p>
         <p>
@@ -64,7 +64,7 @@ function EnterConsoleBody() {
         </p>
       </div>
 
-      <div className="mt-8 rounded-2xl border border-black/[0.06] bg-white/95 p-6 shadow-[var(--shadow-subtle-2)]">
+      <div className="mt-8 rounded-2xl bg-white/95 p-6 shadow-[var(--shadow-2)]">
         <p className="mb-4 text-sm font-medium text-slate-900">Continue only if you deploy and run this stack.</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button

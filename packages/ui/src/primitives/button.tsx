@@ -5,16 +5,16 @@ import { Slot } from "radix-ui"
 import { cn } from "../lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap select-none outline-none transition-[transform,box-shadow,background-color,color,border-color,opacity] duration-200 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-semibold whitespace-nowrap select-none outline-none transition-[transform,box-shadow,background-color,color,border-color,opacity] duration-200 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "bg-[var(--am-midnight-ink)] text-[var(--am-canvas-white)] shadow-[var(--shadow-subtle-3)] hover:opacity-95 hover:-translate-y-px hover:shadow-[var(--shadow-xl)]",
+          "bg-[var(--am-midnight-ink)] text-[var(--am-canvas-white)] shadow-[var(--shadow-1)] hover:opacity-95 hover:-translate-y-px hover:shadow-[var(--shadow-2)]",
         outline:
-          "border-[color:color-mix(in_oklab,var(--am-midnight-ink)_10%,transparent)] bg-[var(--am-canvas-white)] text-[var(--am-deep-indigo)] shadow-[var(--shadow-subtle)] hover:bg-[var(--am-whisper-gray)] hover:-translate-y-px hover:shadow-[var(--shadow-subtle-2)]",
+          "border-[color:color-mix(in_oklab,var(--am-midnight-ink)_10%,transparent)] bg-[var(--am-canvas-white)] text-[var(--am-deep-indigo)] hover:bg-[var(--am-whisper-gray)] hover:-translate-y-px",
         secondary:
-          "bg-[var(--am-light-taupe)] text-[var(--am-midnight-ink)] shadow-[var(--shadow-subtle)] hover:bg-[var(--am-whisper-gray)] hover:-translate-y-px hover:shadow-[var(--shadow-subtle-2)]",
+          "bg-[var(--am-light-taupe)] text-[var(--am-midnight-ink)] hover:bg-[var(--am-whisper-gray)] hover:-translate-y-px",
         ghost:
           "text-[var(--am-muted-ash)] hover:bg-[var(--am-whisper-gray)] hover:text-[var(--am-midnight-ink)] hover:-translate-y-px",
         destructive:

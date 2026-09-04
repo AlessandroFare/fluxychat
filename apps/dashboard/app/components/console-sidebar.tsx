@@ -10,6 +10,8 @@ import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { useQuickstartNavLock } from "@/lib/use-quickstart-nav-lock";
 import {
   CONSOLE_NAV_GROUPS,
+  consoleNavIconClass,
+  consoleNavLinkClass,
   isConsoleNavItemActive,
   type ConsoleNavItem,
   type ConsoleNavSubgroup,
@@ -30,11 +32,11 @@ function NavLink({
   if (locked) {
     return (
       <span
-        className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-slate-400 opacity-50"
+        className="flex cursor-not-allowed items-center gap-2.5 rounded-lg border-l-[3px] border-l-transparent px-2.5 py-2 text-sm font-normal text-slate-400 opacity-50"
         title="Complete onboarding first"
         aria-disabled="true"
       >
-        <Icon className="h-4 w-4 shrink-0 opacity-60" aria-hidden />
+        <Icon className="h-4 w-4 shrink-0 opacity-40" aria-hidden />
         {label}
         <Lock className="ml-auto h-3 w-3 opacity-60" aria-hidden />
       </span>
@@ -42,16 +44,8 @@ function NavLink({
   }
 
   return (
-    <Link
-      href={href}
-      className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
-    >
-      <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+    <Link href={href} className={consoleNavLinkClass(isActive)}>
+      <Icon className={consoleNavIconClass(isActive)} aria-hidden />
       {label}
     </Link>
   );
@@ -79,7 +73,7 @@ function NavSubgroup({ subgroup, navLocked }: { subgroup: ConsoleNavSubgroup; na
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted"
+        className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-xs font-semibold uppercase tracking-[0.05em] text-[color:var(--text-tertiary)] hover:bg-muted"
         aria-expanded={open}
       >
         {subgroup.label}
@@ -126,7 +120,7 @@ function CollapsibleNavGroup({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="mb-2 flex w-full items-center justify-between rounded-lg px-2.5 py-1 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground hover:bg-muted"
+        className="mb-2 flex w-full items-center justify-between rounded-lg px-2.5 py-1 text-left text-xs font-semibold uppercase tracking-[0.05em] text-[color:var(--text-tertiary)] hover:bg-muted"
         aria-expanded={open}
       >
         {label}
@@ -183,7 +177,7 @@ export function ConsoleSidebar() {
         <CommandPaletteTrigger />
         {navLocked ? (
           <span
-            className="block cursor-not-allowed rounded-lg px-2.5 py-2 text-xs font-medium text-slate-400 opacity-50"
+            className="block cursor-not-allowed rounded-lg px-2.5 py-2 text-xs font-normal text-slate-400 opacity-50"
             aria-disabled="true"
           >
             Settings
@@ -191,14 +185,14 @@ export function ConsoleSidebar() {
         ) : (
           <Link
             href="/settings"
-            className="block rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="block rounded-lg px-2.5 py-2 text-xs font-normal text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Settings
           </Link>
         )}
         <Link
           href={HOSTED_PATHS.landing}
-          className="block rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="block rounded-lg px-2.5 py-2 text-xs font-normal text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           ← Product &amp; pricing
         </Link>

@@ -236,7 +236,7 @@ export default function FluxyGamePage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Match control</h3>
-              <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+              <div className="space-y-3 rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
                 {workerError ? (
                   <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600">{workerError}</p>
                 ) : null}
@@ -283,7 +283,7 @@ export default function FluxyGamePage() {
 
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Game design info</h3>
-              <div className="space-y-2 rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">
+              <div className="space-y-2 rounded-xl bg-card shadow-[var(--shadow-2)] p-4 text-xs text-muted-foreground">
                 <p>🎯 <span className="font-medium text-foreground">Server-authoritative</span>: DO @20fps tick, client @60fps interpolation</p>
                 <p>⚠️ <span className="font-medium text-foreground">NO setAlarm()</span>: $810/DO/day at 60fps. Direct WebSocket loop only.</p>
                 <p>🎮 <span className="font-medium text-foreground">Anti-cheat</span>: all decisions server-side, client sends input only</p>
@@ -409,7 +409,7 @@ function NPCTab({ game, workerGame }: { game: FluxyGameApi; workerGame: WorkerFl
       </div>
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Talk to {displayNpcs[selected]?.name}</h3>
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
           {rateLimitSec ? (
             <div className="mb-3 rounded-lg bg-amber-500/10 p-2 text-sm text-amber-700">
               Rate limited. Retry in {rateLimitSec}s
@@ -542,7 +542,7 @@ function QuestsTab({ workerGame }: { workerGame: WorkerFluxyGameClient | null })
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <div className="rounded-xl border border-border bg-card p-4">
+      <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cloud checkpoint</h3>
         {crdtMerged ? (
           <p className="mb-2 text-[10px] text-violet-600">Yjs CRDT merged from room {gameRoomId}</p>
@@ -568,7 +568,7 @@ function QuestsTab({ workerGame }: { workerGame: WorkerFluxyGameClient | null })
         </div>
         {conflict ? <p className="mt-2 text-xs text-amber-600">Version conflict detected (optimistic concurrency).</p> : null}
       </div>
-      <div className="rounded-xl border border-border bg-card p-4">
+      <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quest moderation</h3>
         <input value={title} onChange={(e) => setTitle(e.target.value)} className="mb-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
         <button type="button" onClick={() => void handleCreateQuest()} disabled={busy}
@@ -662,7 +662,7 @@ function TournamentTab({ game, workerGame }: { game: FluxyGameApi; workerGame: W
         </button>
       ) : null}
       {note ? <p className="mb-2 text-xs text-muted-foreground">{note}</p> : null}
-      <div className="rounded-xl border border-border bg-card p-4">
+      <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
         <div className="flex items-center justify-between">
           <div><h4 className="text-sm font-semibold">{display.name}</h4><p className="text-xs text-muted-foreground">Prize: {display.prize}</p></div>
           <span className={cn("rounded px-2 py-0.5 text-[10px] font-semibold uppercase", display.status === "registration" ? "bg-blue-500/15 text-blue-600" : display.status === "active" ? "bg-green-500/15 text-green-600" : "bg-muted text-muted-foreground")}>{display.status}</span>
@@ -727,7 +727,7 @@ function PartyTab({ game }: { game: FluxyGameApi }) {
         {!partyId ? (
           <button type="button" onClick={handleCreate} className="w-full rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90"><Plus className="mr-1 inline size-3.5" /> Create party</button>
         ) : (
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
             <div className="text-sm font-medium">Party: {partyId}</div>
             <div className="mt-2 text-xs text-muted-foreground">Leader: {party?.leader}</div>
             <div className="mt-2"><div className="text-[10px] uppercase text-muted-foreground">Members</div>{party?.members.map((m) => (<div key={m} className="text-sm">{m}</div>))}</div>
@@ -741,7 +741,7 @@ function PartyTab({ game }: { game: FluxyGameApi }) {
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending invites ({invites.length})</h3>
         <div className="space-y-2">
           {invites.length === 0 ? <p className="text-sm text-muted-foreground">No pending invites</p> : invites.map((inv) => (
-            <div key={inv.id} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2 text-xs">
+            <div key={inv.id} className="flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] p-2 text-xs">
               <span>{inv.fromPlayer} → {inv.toPlayer}</span>
               <button type="button" onClick={() => handleAccept(inv.id)} className="ml-auto rounded bg-green-500/15 px-2 py-0.5 text-[10px] font-medium text-green-600 hover:bg-green-500/25">Accept</button>
             </div>

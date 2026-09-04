@@ -1,7 +1,8 @@
 name = "fluxychat-worker"
 main = "src/worker.js"
-# Browser Run quickAction() requires 2026-03-24+; Agents examples use 2026-06-11.
-compatibility_date = "2026-06-11"
+# Browser Run quickAction() requires 2026-03-24+.
+# Wrangler 4.92.0's workerd maxes out at 2026-05-22 — bump this with wrangler.
+compatibility_date = "2026-05-22"
 
 # Arch debt (P27-6): structured observability + hard resource ceilings.
 # tail consumers / logpush can attach to this stream without code changes.

@@ -79,7 +79,7 @@ export function FinishStep({ wizard: w }: FinishStepProps) {
         {summaryItems.map((item) => (
           <div
             key={item.label}
-            className="flex items-center justify-between rounded-xl border border-border bg-white px-4 py-3"
+            className="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-[var(--shadow-1)]"
           >
             <div className="flex items-center gap-3">
               <div

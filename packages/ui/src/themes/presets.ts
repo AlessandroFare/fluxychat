@@ -8,6 +8,7 @@ export interface FluxyThemeTokens {
   "--fluxy-mention-text"?: string;
   "--fluxy-header-bg"?: string;
   "--fluxy-header-text"?: string;
+  "--fluxy-header-subtext"?: string;
   "--fluxy-btn-primary-bg"?: string;
   "--fluxy-btn-primary-text"?: string;
 }
@@ -26,6 +27,7 @@ export const FLUXY_THEMES: Record<FluxyThemeId, FluxyThemeTokens> = {
     "--fluxy-mention-text": "#C2410C",
     "--fluxy-header-bg": "#C2410C",
     "--fluxy-header-text": "#FFFFFF",
+    "--fluxy-header-subtext": "#FFDCC8",
     "--fluxy-btn-primary-bg": "#C2410C",
     "--fluxy-btn-primary-text": "#FFFFFF",
   },
@@ -39,6 +41,7 @@ export const FLUXY_THEMES: Record<FluxyThemeId, FluxyThemeTokens> = {
     "--fluxy-mention-text": "#FDBA74",
     "--fluxy-header-bg": "#111827",
     "--fluxy-header-text": "#F9FAFB",
+    "--fluxy-header-subtext": "#D1D5DB",
     "--fluxy-btn-primary-bg": "#E85F17",
     "--fluxy-btn-primary-text": "#FFFFFF",
   },
@@ -52,6 +55,7 @@ export const FLUXY_THEMES: Record<FluxyThemeId, FluxyThemeTokens> = {
     "--fluxy-mention-text": "#18181B",
     "--fluxy-header-bg": "#FAFAFA",
     "--fluxy-header-text": "#18181B",
+    "--fluxy-header-subtext": "#52525B",
     "--fluxy-btn-primary-bg": "#18181B",
     "--fluxy-btn-primary-text": "#FAFAFA",
   },
@@ -65,6 +69,7 @@ export const FLUXY_THEMES: Record<FluxyThemeId, FluxyThemeTokens> = {
     "--fluxy-mention-text": "#4338CA",
     "--fluxy-header-bg": "#4338CA",
     "--fluxy-header-text": "#FFFFFF",
+    "--fluxy-header-subtext": "#DDD6FE",
     "--fluxy-btn-primary-bg": "#4338CA",
     "--fluxy-btn-primary-text": "#FFFFFF",
   },

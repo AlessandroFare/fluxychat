@@ -16,7 +16,7 @@ export interface SpotlightCardProps extends React.PropsWithChildren {
 export function SpotlightCard({
   children,
   className,
-  spotlightColor = "rgba(255, 117, 94, 0.2)",
+  spotlightColor = "rgba(194, 65, 12, 0.2)",
 }: SpotlightCardProps) {
   const divRef = useRef<HTMLDivElement>(null);
   const washRef = useRef<HTMLDivElement>(null);
@@ -56,7 +56,7 @@ export function SpotlightCard({
       onBlur={handleBlur}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={cn("relative overflow-hidden rounded-2xl border border-border bg-card/85 backdrop-blur-sm", className)}
+      className={cn("relative overflow-hidden rounded-2xl bg-card/85 shadow-[var(--shadow-2)] backdrop-blur-sm", className)}
     >
       <div
         ref={washRef}

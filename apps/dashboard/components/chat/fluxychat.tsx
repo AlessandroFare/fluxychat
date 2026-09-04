@@ -1723,7 +1723,7 @@ export function FluxyChat({
       ) : null}
       {/* Status bar */}
       {showDemoStatusBar ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/80 bg-card px-3 py-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-card px-3 py-2 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-2">
             <span className="relative flex size-2">
               <span className={cn("relative inline-flex size-2 rounded-full", connected ? "bg-emerald-500" : "bg-amber-500")} />
@@ -1830,7 +1830,7 @@ export function FluxyChat({
 
       {/* Search panel */}
       {showMessageSearch && searchOpen ? (
-        <div className="rounded-lg border border-border bg-background p-3 shadow-lg">
+        <div className="rounded-lg bg-background p-3 shadow-lg">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -2079,9 +2079,9 @@ export function FluxyChat({
       <MessageScrollerProvider autoScroll scrollPreviousItemPeek={64}>
         <MessageScroller
           className={cn(
-            "h-[min(420px,50vh)] scroll-fade-b rounded-xl border border-border bg-muted/40 text-card-foreground",
-            variant === "demo" && "h-[min(480px,58vh)] border-border/80 bg-muted",
-            isOnboarding && "h-[min(200px,26vh)] shrink-0 border-border/80 bg-muted/20",
+            "h-[min(420px,50vh)] scroll-fade-b rounded-xl bg-muted/40 text-card-foreground",
+            variant === "demo" && "h-[min(480px,58vh)] bg-muted",
+            isOnboarding && "h-[min(200px,26vh)] shrink-0 bg-muted/20",
           )}
           data-testid="fluxychat-message-list"
         >
@@ -3770,7 +3770,7 @@ function FluxyAttachment({
       href={fullHref}
       target="_blank"
       rel="noreferrer"
-      className="mt-2 inline-flex items-center gap-2 rounded-lg border border-border bg-card p-2 text-xs hover:bg-muted/50"
+      className="mt-2 inline-flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] p-2 text-xs hover:bg-muted/50"
     >
       <Paperclip className="size-4 text-muted-foreground" />
       <div className="min-w-0">
@@ -3830,7 +3830,7 @@ function AuthedAudioAttachment({
   const effectiveSrc = blobUrl ?? (authToken ? null : src);
 
   return (
-    <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-card p-2">
+    <div className="mt-2 flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] p-2">
       <button
         type="button"
         disabled={loading || !effectiveSrc}

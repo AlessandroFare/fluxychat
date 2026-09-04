@@ -16,13 +16,14 @@ const LIGHT_BG = 0xf3efe8;
 interface HeroSignalFieldProps {
   /** Page backdrop is always the dark constellation. Hero layer is cream, clipped to the hero box. */
   placement?: "page" | "hero";
+  className?: string;
 }
 
 /**
  * Realtime constellation. Two instances: a fixed dark field for the page, and an
  * absolutely-positioned light field inside the hero (light theme only).
  */
-export function HeroSignalField({ placement = "page" }: HeroSignalFieldProps) {
+export function HeroSignalField({ placement = "page", className }: HeroSignalFieldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDark = placement === "page";
 
@@ -265,6 +266,7 @@ export function HeroSignalField({ placement = "page" }: HeroSignalFieldProps) {
         placement === "page"
           ? "mkt-signal-zoom fixed left-0 top-0 z-0 h-dvh w-screen"
           : "absolute inset-0 z-0 h-full w-full",
+        className,
       )}
       aria-hidden
     />

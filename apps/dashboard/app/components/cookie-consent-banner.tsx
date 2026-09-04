@@ -42,7 +42,7 @@ export function CookieConsentBanner() {
     <div
       role="dialog"
       aria-label="Cookie consent"
-      className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-start justify-between gap-3 border-t border-border bg-background px-4 py-4 shadow-[var(--shadow-subtle-3)] sm:flex-row sm:items-center sm:px-6"
+      className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-start justify-between gap-3 bg-background px-4 py-4 shadow-[var(--shadow-3)] sm:flex-row sm:items-center sm:px-6"
     >
       <p className="text-sm text-muted-foreground">
         We use essential cookies for sign-in and session. No ad or third-party tracking.{" "}

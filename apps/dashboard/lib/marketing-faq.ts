@@ -33,8 +33,8 @@ export const LANDING_FAQ = [
     a: "tool_call and tool_result ride the same WebSocket as user messages, so you replay one timeline instead of guessing what the agent did. Streaming markdown with table buffering and code fence tracking renders cleanly during AI responses. Guide: /guides/agent-events-same-websocket-stream.",
   },
   {
-    q: "What platforms do the multi-platform adapters support?",
-    a: "14 platforms behind a unified interface: Slack, Discord, Telegram, WhatsApp, Microsoft Teams, Email, SMS, Webhook, Matrix, and more. Each adapter handles platform-specific formatting, and the card builder renders Slack Block Kit and Teams Adaptive Cards natively.",
+    q: "What do Bridges cover?",
+    a: "A Bridge is a row in the console. You create the Slack (or Discord, Telegram, WhatsApp, Teams) app, paste the token, and point their webhook at the Worker. Web chat is just a room. We do not ship a 14-channel helpdesk.",
   },
   {
     q: "What is MCP and how does FluxyChat use it?",

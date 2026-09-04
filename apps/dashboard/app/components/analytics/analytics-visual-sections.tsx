@@ -269,7 +269,7 @@ export function AnalyticsVisualSections({
               accent={(alerts?.openAlerts ?? 0) > 0 ? "danger" : "success"}
             />
             {alerts?.alerts?.length ? (
-              <ul className="divide-y divide-border rounded-xl border border-border bg-card">
+              <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-2)]">
                 {alerts.alerts.slice(0, 5).map((alert) => (
                   <li key={alert.id} className="px-4 py-3 text-sm">
                     <span className="font-medium text-foreground">[{alert.severity}]</span>{" "}

@@ -390,7 +390,7 @@ export default function PrivacyPage() {
       )}
 
       {showBanner && (
-        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-start justify-between gap-3 border-t border-black/[0.08] bg-white/95 px-4 py-4 shadow-[var(--shadow-subtle-3)] backdrop-blur-md sm:flex-row sm:items-center sm:gap-4 sm:px-6">
+        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-start justify-between gap-3 bg-white/95 px-4 py-4 shadow-[var(--shadow-3)] backdrop-blur-md sm:flex-row sm:items-center sm:gap-4 sm:px-6">
           <span className="text-sm text-slate-700">
             We use essential cookies for authentication. No tracking or third-party cookies.
           </span>

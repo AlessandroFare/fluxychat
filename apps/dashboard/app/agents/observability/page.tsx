@@ -210,7 +210,7 @@ export default function AgentObservabilityPage() {
           description="Trigger an in-room agent or adjust the room filter."
         />
       ) : (
-        <ul className="divide-y rounded-lg border border-border bg-card">
+        <ul className="divide-y rounded-lg bg-card shadow-[var(--shadow-2)]">
           {rows.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
               <div className="flex items-center gap-2">

@@ -314,6 +314,11 @@ export const DIY_DO_COMPARISON: readonly DiyComparisonRow[] = [
   },
 ];
 
+export const PUSHER_ALTERNATIVE_ANSWER = {
+  title: "Is FluxyChat a Pusher alternative?",
+  body: "If the product is tenant rooms on Cloudflare, usually yes: history in D1, reconnect, a console. If you only need pub/sub, keep Pusher or Ably. SMS or WhatsApp to phones still needs a telco. Hosted is beta. Self-host is MIT on your Cloudflare account.",
+} as const;
+
 export const PUSHER_BILL_SHOCK = {
   title: "When the Pusher bill catches up",
   intro:

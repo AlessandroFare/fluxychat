@@ -198,7 +198,7 @@ export default function EphemeralRetentionSettingsPage() {
             {configuredRooms.length === 0 ? (
               <p className="text-sm text-muted-foreground">No non-standard retention rooms yet.</p>
             ) : (
-              <ul className="divide-y rounded-lg border border-border bg-card">
+              <ul className="divide-y rounded-lg bg-card shadow-[var(--shadow-2)]">
                 {configuredRooms.map((r) => (
                   <li key={r.roomId} className="flex items-center justify-between px-4 py-3 text-sm">
                     <span>

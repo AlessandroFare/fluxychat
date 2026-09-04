@@ -220,7 +220,7 @@ export default function RoomTranslationSettingsPage() {
                 {configuredRooms.map((room) => (
                   <li
                     key={room.roomId}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] px-3 py-2 text-sm"
                   >
                     <button
                       type="button"

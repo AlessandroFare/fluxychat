@@ -505,7 +505,7 @@ FluxyChat includes a full-stack adapter system, streaming markdown renderer, car
 
 | Feature | What it does |
 |---------|-------------|
-| **Multi-platform adapters** | Pluggable adapter system (Web, WhatsApp, Telegram, Slack, Discord, Teams, Email, SMS, Webhook, Matrix) with unified thread ID encoding and channel mapping |
+| **Multi-platform adapters** | `Adapter` interface plus Bridges you wire (Slack, Discord, Telegram, WhatsApp, Teams). Not a finished 14-channel helpdesk. |
 | **Streaming markdown** | Real-time markdown rendering with table buffering, code fence tracking, and inline marker healing for partial bold/strikethrough/backtick sequences |
 | **Card builder** | Composable card elements (Text, Button, Image, Divider, Table, Fields) with renderers for fallback text, Markdown, Slack Block Kit, and Teams Adaptive Cards |
 | **AI tool presets** | Pre-configured tool groups (reader, messenger, moderator) with per-tool approval gates for enterprise governance |

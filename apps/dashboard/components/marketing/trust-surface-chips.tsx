@@ -59,7 +59,7 @@ export function TrustSurfaceChips({ className }: TrustSurfaceChipsProps) {
           key={label}
           data-trust-chip
           role="listitem"
-          className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-[var(--shadow-subtle-2)] backdrop-blur-sm"
+          className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-normal text-slate-700 shadow-[var(--shadow-1)] backdrop-blur-sm"
         >
           <Icon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
           {label}

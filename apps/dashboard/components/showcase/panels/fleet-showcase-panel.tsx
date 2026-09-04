@@ -93,7 +93,7 @@ export function FleetShowcasePanel({ session }: { session: ShowcaseSession }) {
       </div>
       <div className="relative min-h-64 flex-1 bg-muted">
         <LocationMap tracks={trackList} />
-        <div className="absolute bottom-3 left-3 rounded-lg border border-border bg-card/95 px-3 py-2 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+        <div className="absolute bottom-3 left-3 rounded-lg bg-card/95 px-3 py-2 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
           <MapPin className="mr-1 inline size-3.5" aria-hidden />
           {tracks.size > 0
             ? "Live GPS tracks from room"

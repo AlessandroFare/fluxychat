@@ -10,7 +10,7 @@ export function Panel({ children, title, className, ...rest }: PanelProps) {
     <div
       {...rest}
       className={cn(
-        "rounded-xl border border-black/[0.06] bg-white/90 p-4 shadow-[var(--shadow-subtle-2)] backdrop-blur-sm",
+        "rounded-xl bg-white/90 p-4 shadow-[var(--shadow-2)] backdrop-blur-sm",
         className,
       )}
     >

@@ -113,22 +113,22 @@ export default function WebTransportPage() {
 
         {/* Current transport */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Active Transport</div>
             <div className="mt-1 flex items-center gap-2">
               <span className="text-sm font-bold capitalize">{current}</span>
               <span className="size-2 rounded-full bg-green-500 animate-pulse" />
             </div>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Available</div>
             <div className="mt-1 text-sm font-bold">{available.length} transports</div>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Failures</div>
             <div className="mt-1 text-sm font-bold tabular-nums">{health?.consecutiveFailures ?? 0}</div>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Threshold</div>
             <div className="mt-1 text-sm font-bold">3 failures</div>
           </div>
@@ -213,7 +213,7 @@ export default function WebTransportPage() {
             </h3>
             <div className="space-y-1">
               {fallbackLog.map((e, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs">
+                <div key={i} className="flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] px-3 py-1.5 text-xs">
                   <XCircle className="size-3 text-red-500" />
                   <span className="font-medium">{e.from}</span>
                   <ArrowRight className="size-3 text-muted-foreground" />

@@ -38,7 +38,7 @@ export function AgentUiRenderer({ parts, className }: AgentUiRendererProps) {
         if (isToolResultPart(part)) {
           const toolName = parseToolName(part.type) ?? part.toolName;
           return (
-            <div key={part.toolCallId} className="rounded-md border border-border/80 px-3 py-2">
+            <div key={part.toolCallId} className="rounded-md px-3 py-2">
               <div className="mb-1 flex items-center gap-2">
                 <Badge variant={part.state === "output-error" ? "destructive" : "secondary"}>
                   {toolName}

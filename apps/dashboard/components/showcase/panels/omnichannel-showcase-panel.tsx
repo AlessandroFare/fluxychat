@@ -56,8 +56,8 @@ export function OmnichannelShowcasePanel({ session }: { session: ShowcaseSession
           <ArrowRightLeft className="size-5" aria-hidden />
         </span>
         <div>
-          <h4 className="font-semibold text-foreground">14-channel inbox</h4>
-          <p className="text-xs text-muted-foreground">One continuity graph across bridged platforms</p>
+          <h4 className="font-semibold text-foreground">Bridges</h4>
+          <p className="text-xs text-muted-foreground">You create the vendor app. Paste the token in the console.</p>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const SITE_DESCRIPTION =
-  "A room for your product on Cloudflare Workers. Chat, presence, a shared document, and agents on one Durable Object. MIT self-host. Hosted is beta.";
+  "In-app chat on a Cloudflare Durable Object. Humans and agents share the room. MIT self-host or hosted beta.";
 
 export const PAGE_METADATA = {
   landing: buildPageMetadata({

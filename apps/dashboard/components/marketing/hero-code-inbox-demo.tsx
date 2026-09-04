@@ -253,7 +253,8 @@ export function HeroCodeInboxDemo() {
     outgoingVisible: false,
   });
 
-  const activeScene = HERO_PREVIEW_SCENES[sceneIndex] ?? HERO_PREVIEW_SCENES[0];
+  const visibleScenes = HERO_PREVIEW_SCENES;
+  const activeScene = visibleScenes[sceneIndex] ?? visibleScenes[0];
   const isChatScene = activeScene.id === "chat";
 
   const cancelled = useRef(false);
@@ -333,7 +334,7 @@ export function HeroCodeInboxDemo() {
       if (chatDone) {
         window.setTimeout(() => {
           if (cancelled.current) return;
-          setSceneIndex((index) => (index + 1) % HERO_PREVIEW_SCENES.length);
+          setSceneIndex((index) => (index + 1) % visibleScenes.length);
         }, PAUSE_END_MS);
         return;
       }
@@ -346,15 +347,15 @@ export function HeroCodeInboxDemo() {
       cancelled.current = true;
       cancelAnimationFrame(raf);
     };
-  }, [isChatScene, sceneIndex]);
+  }, [isChatScene, sceneIndex, visibleScenes.length]);
 
   useEffect(() => {
     if (isChatScene) return;
     const id = window.setInterval(() => {
-      setSceneIndex((index) => (index + 1) % HERO_PREVIEW_SCENES.length);
+      setSceneIndex((index) => (index + 1) % visibleScenes.length);
     }, 5200);
     return () => window.clearInterval(id);
-  }, [isChatScene]);
+  }, [isChatScene, visibleScenes.length]);
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-hidden">
@@ -362,7 +363,7 @@ export function HeroCodeInboxDemo() {
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">Your app</p>
         <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
           <div className="flex flex-wrap justify-end gap-1" role="tablist" aria-label="Preview modes">
-            {HERO_PREVIEW_SCENES.map((scene, index) => (
+            {visibleScenes.map((scene, index) => (
               <button
                 key={scene.id}
                 type="button"
@@ -549,7 +550,7 @@ export function HeroCodeInboxDemo() {
       </div>
 
       <p className="mx-auto mt-4 max-w-3xl text-center text-xs leading-relaxed text-zinc-400 sm:text-sm">
-        Wire the client once. Tabs cycle chat, agents, location, stream, collab, game, IoT, and channel adapters — same SDK, same room.
+        Chat and agents first. Location, stream, collab, game, IoT, and Bridges run on the same Worker if you turn them on.
       </p>
     </div>
   );

@@ -20,12 +20,12 @@ export default function SubprocessorsPage() {
       </p>
       <ul className="mt-8 space-y-4">
         {SUB_PROCESSORS.map((row) => (
-          <li key={row.name} className="rounded-xl border border-border bg-card p-4">
+          <li key={row.name} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
             <p className="font-medium">{row.name}</p>
             <p className="mt-1 text-sm text-muted-foreground">{row.role}</p>
           </li>
         ))}
-        <li className="rounded-xl border border-border bg-card p-4">
+        <li className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
           <p className="font-medium">Vercel</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Hosts the marketing site and console (Next.js).

@@ -304,7 +304,7 @@ export default function IdentitySettingsPage() {
             </p>
 
             {projectId ? (
-              <div className="mb-4 space-y-2 rounded-lg border border-black/[0.06] bg-white/80 p-4 text-sm">
+              <div className="mb-4 space-y-2 rounded-lg bg-white/80 shadow-[var(--shadow-2)] p-4 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-medium">Users endpoint</p>
@@ -356,7 +356,7 @@ export default function IdentitySettingsPage() {
             {scimTokens.length === 0 ? (
               <p className="text-sm text-muted-foreground">No SCIM tokens yet.</p>
             ) : (
-              <ul className="divide-y rounded-lg border border-black/[0.06] bg-white/90">
+              <ul className="divide-y rounded-lg bg-white/90 shadow-[var(--shadow-2)]">
                 {scimTokens.map((row) => (
                   <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                     <div>
@@ -388,7 +388,7 @@ export default function IdentitySettingsPage() {
             {passkeys.length === 0 ? (
               <p className="mt-4 text-sm text-muted-foreground">No passkeys registered for this user.</p>
             ) : (
-              <ul className="mt-4 divide-y rounded-lg border border-black/[0.06] bg-white/90">
+              <ul className="mt-4 divide-y rounded-lg bg-white/90 shadow-[var(--shadow-2)]">
                 {passkeys.map((row) => (
                   <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                     <div>

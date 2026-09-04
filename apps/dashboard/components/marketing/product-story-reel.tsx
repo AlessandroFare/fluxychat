@@ -10,10 +10,10 @@ const SCENES = [
     title: "Install",
     body: "One dependency. No native binaries, no sidecar.",
     visual: (
-      <div className="rounded-xl border border-orange-400/40 bg-zinc-950/95 px-5 py-4 font-mono text-base shadow-inner sm:text-lg">
-        <span className="text-orange-400">$ </span>
+      <div className="rounded-xl border border-white/10 bg-zinc-950/90 px-5 py-4 font-mono text-base shadow-inner sm:text-lg">
+        <span className="text-zinc-500">$ </span>
         <span className="text-zinc-100">pnpm add </span>
-        <span className="text-emerald-400">@fluxy-chat/sdk</span>
+        <span className="text-zinc-300">@fluxy-chat/sdk</span>
       </div>
     ),
   },
@@ -55,13 +55,13 @@ const SCENES = [
     body: "Typing, delivery, and history — already moving on the wire.",
     visual: (
       <div className="flex min-h-[8rem] flex-col gap-3 rounded-xl border border-white/20 bg-zinc-900/90 p-5 shadow-inner">
-        <div className="max-w-[90%] rounded-2xl rounded-tl-md border border-white/15 bg-slate-600 px-4 py-2.5 text-sm font-medium leading-snug text-white">
+        <div className="max-w-[90%] rounded-2xl rounded-tl-md border border-white/10 bg-zinc-800 px-4 py-2.5 text-sm font-medium leading-snug text-zinc-100">
           Hey — is the edge worker up?
         </div>
-        <div className="ml-auto max-w-[90%] rounded-2xl rounded-tr-md border border-orange-400/40 bg-[#e8450a] px-4 py-2.5 text-sm font-medium leading-snug text-white shadow-sm">
+        <div className="ml-auto max-w-[90%] rounded-2xl rounded-tr-md bg-[var(--mkt-brand)] px-4 py-2.5 text-sm font-medium leading-snug text-white">
           Yes. Messages are live.
         </div>
-        <div className="mt-1 h-1.5 w-12 animate-pulse rounded-full bg-white/30" />
+        <div className="mt-1 h-1.5 w-12 animate-pulse rounded-full bg-white/20" />
       </div>
     ),
   },
@@ -153,7 +153,7 @@ export function ProductStoryReel() {
 
   return (
     <section
-      className="border-b border-white/[0.06] bg-[var(--mkt-bg-elevated)] px-4 py-14 sm:px-6 sm:py-18"
+      className="border-b border-white/10 px-4 py-14 sm:px-6 sm:py-18"
       aria-labelledby="product-story-reel-heading"
     >
       <div className="mx-auto max-w-6xl">
@@ -171,16 +171,22 @@ export function ProductStoryReel() {
         <div
           ref={rootRef}
           className={cn(
-            "relative mx-auto mt-10 w-full max-w-4xl overflow-hidden rounded-3xl",
-            "border border-orange-500/25 bg-[#1e1e1e] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.55)]",
+            "relative mx-auto mt-10 w-full max-w-4xl overflow-hidden rounded-2xl",
+            "border border-white/10 bg-[#12141a]/75 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.65)] backdrop-blur-xl",
           )}
           style={{
             minHeight: "clamp(260px, 65svh, 460px)",
             height: "clamp(260px, 62svh, 420px)",
           }}
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_85%_65%_at_50%_-8%,rgba(255,115,94,0.38),rgba(255,115,94,0.12)_42%,transparent_58%)]" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-orange-500/10 to-transparent" />
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 w-0.5 bg-[var(--mkt-brand)]"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(255,255,255,0.07),transparent_58%)]"
+            aria-hidden
+          />
 
           {SCENES.map((scene, index) => (
             <div
@@ -191,7 +197,7 @@ export function ProductStoryReel() {
                 index === 0 ? "opacity-100" : "opacity-0",
               )}
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-400 sm:text-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.05em] text-zinc-500 sm:text-sm">
                 {scene.kicker}
               </p>
               <h3 className="mt-2 font-heading text-xl font-bold tracking-tight text-white sm:text-3xl">
@@ -207,7 +213,7 @@ export function ProductStoryReel() {
                     key={dot}
                     className={cn(
                       "h-1.5 rounded-full transition-all duration-300",
-                      dot === index ? "w-6 bg-orange-400" : "w-1.5 bg-white/25",
+                      dot === index ? "w-6 bg-[var(--mkt-brand)]" : "w-1.5 bg-white/20",
                     )}
                   />
                 ))}

@@ -87,7 +87,7 @@ export function SloOverviewCard() {
   const webhookPct = slo ? slo.sli.webhookSuccessRate * 100 : 0;
 
   return (
-    <section className="mb-8 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)]">
+    <section className="mb-8 rounded-2xl bg-card p-4 shadow-[var(--shadow-2)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           {loading ? (

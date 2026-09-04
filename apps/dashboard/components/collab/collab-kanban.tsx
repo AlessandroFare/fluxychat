@@ -24,7 +24,7 @@ function KanbanCard({ item, onDelete }: { item: KanbanItem; onDelete: () => void
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
-    <div ref={setNodeRef} style={style} className={`rounded-lg border border-border bg-card p-2.5 text-xs text-foreground shadow-sm ${isDragging ? "opacity-50" : ""}`}>
+    <div ref={setNodeRef} style={style} className={`rounded-lg bg-card p-3 text-xs text-foreground ${isDragging ? "shadow-lg" : "shadow-sm"}`}>
       <div className="flex items-start gap-1">
         <button {...attributes} {...listeners} className="mt-0.5 shrink-0 cursor-grab text-muted-foreground hover:text-foreground">
           <GripVertical className="h-3 w-3" />
@@ -130,13 +130,13 @@ export default function CollabKanban({ roomId }: { roomId: string }) {
           ))}
         </div>
         <DragOverlay>
-          {activeItem && <div className="rounded-lg border border-border bg-card p-2.5 text-xs text-foreground shadow-lg"><p className="font-medium">{activeItem.title}</p></div>}
+          {activeItem && <div className="rounded-lg bg-card p-3 text-xs text-foreground shadow-xl"><p className="font-semibold">{activeItem.title}</p></div>}
         </DragOverlay>
       </DndContext>
 
       {newItemStatus && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setNewItemStatus(null)}>
-          <div className="w-72 rounded-xl border border-border bg-card p-4 text-foreground shadow-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="w-72 rounded-xl bg-card p-4 text-foreground shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-3 font-semibold text-sm">Add card to {COLUMNS.find((c) => c.key === newItemStatus)?.label}</h3>
             <input
               autoFocus

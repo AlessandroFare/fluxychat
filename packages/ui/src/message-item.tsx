@@ -93,7 +93,7 @@ function OgPreviewCard({ preview }: { preview: NonNullable<FluxyChatMessage["pre
       href={safeHref}
       target="_blank"
       rel="noreferrer"
-      className="mt-2 block max-w-xs rounded-lg border border-border bg-card p-1.5 no-underline text-foreground transition-colors hover:bg-muted/50"
+      className="mt-2 block max-w-xs rounded-lg bg-card shadow-[var(--shadow-2)] p-1.5 no-underline text-foreground transition-colors hover:bg-muted/50"
     >
       <div className="flex gap-2">
         {safeImageHref ? (

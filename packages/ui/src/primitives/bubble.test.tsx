@@ -17,8 +17,8 @@ describe("Bubble brand tokens", () => {
 
     expect(className).toContain("bg-[var(--fluxy-bubble-sent-bg)]");
     expect(className).toContain("text-[var(--fluxy-bubble-sent-text)]");
-    expect(className).toContain("rounded-[var(--fluxy-bubble-radius)]");
-    expect(className).toContain("rounded-br-[var(--fluxy-bubble-radius-tail)]");
+    expect(className).toContain("rounded-2xl");
+    expect(className).toContain("rounded-br-md");
     expect(className).not.toMatch(/#FF6A1A/i);
     expect(className).not.toMatch(/#C2410C/i);
   });
@@ -36,9 +36,9 @@ describe("Bubble brand tokens", () => {
 
     expect(className).toContain("bg-[var(--fluxy-bubble-received-bg)]");
     expect(className).toContain("text-[var(--fluxy-bubble-received-text)]");
-    expect(className).toContain("border-[var(--fluxy-bubble-received-border)]");
-    expect(className).toContain("rounded-[var(--fluxy-bubble-radius)]");
-    expect(className).toContain("rounded-bl-[var(--fluxy-bubble-radius-tail)]");
+    expect(className).toContain("shadow-[inset_0_0_0_1px_var(--fluxy-bubble-received-border)]");
+    expect(className).toContain("rounded-2xl");
+    expect(className).toContain("rounded-bl-md");
     expect(className).not.toMatch(/#FF6A1A/i);
     expect(className).not.toMatch(/#C2410C/i);
   });
@@ -51,6 +51,6 @@ describe("Bubble brand tokens", () => {
     );
 
     const bubble = container.querySelector('[data-testid="bubble"]');
-    expect(bubble).toHaveAttribute("data-align", "end");
+    expect(bubble?.getAttribute("data-align")).toBe("end");
   });
 });

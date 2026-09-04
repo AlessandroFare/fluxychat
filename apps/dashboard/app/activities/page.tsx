@@ -134,7 +134,7 @@ export default function ActivitiesPage() {
 
       {error ? <Banner variant="error">{error}</Banner> : null}
 
-      <Panel className="mb-4 rounded-2xl border border-border/80 p-4">
+      <Panel className="mb-4 rounded-2xl p-4">
         <div className="flex items-start gap-3">
           <Zap className="mt-0.5 h-5 w-5 text-amber-500" />
           <div>
@@ -146,7 +146,7 @@ export default function ActivitiesPage() {
         </div>
       </Panel>
 
-      <Panel className="mb-4 space-y-3 rounded-2xl border border-border/80 p-4">
+      <Panel className="mb-4 space-y-3 rounded-2xl p-4">
         <div>
           <label className="text-xs text-muted-foreground">Search</label>
           <Input
@@ -182,7 +182,7 @@ export default function ActivitiesPage() {
         </div>
       </Panel>
 
-      <Panel className="rounded-2xl border border-border/80 p-4">
+      <Panel className="rounded-2xl p-4">
         {loading ? (
           <SkeletonCard />
         ) : pageRows.length === 0 ? (

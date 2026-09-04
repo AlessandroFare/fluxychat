@@ -198,7 +198,7 @@ export default function KnowledgePage() {
             ) : sources.length === 0 ? (
               <p className="text-sm text-muted-foreground">No sources yet. Start with a URL connector.</p>
             ) : (
-              <ul className="divide-y rounded-lg border border-black/[0.06] bg-white/90">
+              <ul className="divide-y rounded-lg bg-white/90 shadow-[var(--shadow-2)]">
                 {sources.map((s) => (
                   <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                     <div>
@@ -261,7 +261,7 @@ export default function KnowledgePage() {
             {hits.length > 0 ? (
               <ul className="mt-4 space-y-2">
                 {hits.map((h) => (
-                  <li key={h.id} className="rounded-lg border border-black/[0.06] bg-white/80 p-3 text-sm">
+                  <li key={h.id} className="rounded-lg bg-white/80 shadow-[var(--shadow-2)] p-3 text-sm">
                     <p className="font-medium">{h.title}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{h.excerpt}</p>
                   </li>

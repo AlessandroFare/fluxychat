@@ -1,12 +1,12 @@
 # Multi-Platform Adapter Pattern
 
-FluxyChat's adapter system lets you connect any messaging platform through a unified interface. Each adapter handles webhook parsing, message posting, threading, and format conversion for its platform.
+The Worker ships an `Adapter<TRawMessage>` interface and format converters. Console **Bridges** are paste-token rows: you create the vendor app. This is not a finished 14-channel helpdesk.
 
 ## Overview
 
 The adapter pattern (P22-A) abstracts platform-specific concerns behind a common `Adapter<TRawMessage>` interface. This lets you add new platforms without modifying core worker code.
 
-**14 platforms supported:** Web, Slack, Microsoft Teams, Discord, Telegram, WhatsApp, Google Chat, GitHub, Linear, Matrix, Resend (Email), IRC, Twitch, Line, and a generic API adapter.
+**Interfaces in this repo (not a desk SKU):** Web, Slack, Microsoft Teams, Discord, Telegram, WhatsApp, Google Chat, GitHub, Linear, Matrix, Resend (Email), IRC, Twitch, Line, and a generic API adapter. Gold path today is Bridges you wire yourself.
 
 ## Adapter Interface
 

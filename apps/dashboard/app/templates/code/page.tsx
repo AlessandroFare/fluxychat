@@ -347,7 +347,7 @@ export default function TemplatesPage() {
           </div>
 
           {/* Dependencies */}
-          <div className="mt-3 rounded-xl border border-border bg-card p-3">
+          <div className="mt-3 rounded-xl bg-card shadow-[var(--shadow-2)] p-3">
             <h4 className="mb-1 text-xs font-semibold">Dependencies</h4>
             <div className="flex flex-wrap gap-2">
               {Object.entries(selected.dependencies).map(([pkg, ver]) => (

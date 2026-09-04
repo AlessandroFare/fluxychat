@@ -64,7 +64,7 @@ export default function GuidesIndexPage() {
       <ul className="mt-10 space-y-4">
         {ALL_GUIDES.map((guide) => (
           <li key={guide.href}>
-            <div className="rounded-xl border border-border p-4 transition hover:border-primary/40 hover:bg-muted/30">
+            <div className="rounded-xl bg-card p-4 shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <Link href={guide.href} className="font-semibold text-foreground hover:text-primary">

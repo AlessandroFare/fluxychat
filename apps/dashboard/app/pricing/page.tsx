@@ -12,7 +12,7 @@ import { Check, ArrowRight, MessagesSquare, Bot, Webhook, Shield, Server, Workfl
 import { LandingShell } from "../landing/landing-shell";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Pricing: Fluxychat",
+  title: "Pricing",
     description:
     "Free weekend plan with pk_ in the browser. Paid plans for production traffic. Hosted is beta.",
   path: "/pricing",
@@ -57,15 +57,15 @@ const COMPARISON_ROWS: { feature: string; values: Record<string, string> }[] = [
 function PricingHero() {
   return (
     <section className="relative overflow-hidden border-b border-white/10 bg-[#1e1e1e] px-4 pt-24 pb-16 sm:px-6 sm:pt-28 sm:pb-20">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,115,94,0.12)_0%,transparent_70%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(194,65,12,0.12)_0%,transparent_70%)]" />
       <div className="relative mx-auto max-w-6xl text-center">
-        <Badge className="mb-4 border border-orange-400/40 bg-orange-500/15 px-4 py-1.5 text-sm font-medium text-orange-100 hover:bg-orange-500/20">
+        <Badge className="mb-4 border-0 bg-orange-500/15 px-4 py-1.5 text-sm font-semibold text-orange-100 hover:bg-orange-500/20">
           Open beta. Pin SDK versions.
         </Badge>
-        <h1 className="font-heading text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+        <h1 className="font-heading text-4xl font-semibold tracking-tight text-white sm:text-5xl">
           Pricing
         </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
+        <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
           Free is the weekend plan: public rooms, a pk_ in the client, no card. Cursors and presence
           do not count as messages. Starter is $20/mo when you outgrow 200k persisted messages.
           Hosted is beta. Pin SDK versions.
@@ -274,7 +274,7 @@ function ComparisonTable() {
 function FeatureShowcase() {
   const features = [
     { icon: Server, title: "Cloudflare Workers", desc: "Runs on Cloudflare's global network. PoP count and edge RTT are Cloudflare's, not a FluxyChat-measured SLO." },
-    { icon: Shield, title: "End-to-end encryption", desc: "TLS by default. Double Ratchet encryption for private rooms (roadmap)." },
+    { icon: Shield, title: "Encryption", desc: "TLS in transit. E2EE only if you hold the key. Double Ratchet for private rooms is still on the roadmap." },
     { icon: Workflow, title: "Agents on the timeline", desc: "invokeAgent writes chat messages. Streaming markdown, MCP tools, HITL. The side-panel copilot is UI you wire to your own model." },
     { icon: GitFork, title: "Platform adapters", desc: "React, Vue, and Svelte packages on npm. React Native on npm. Flutter, Swift, and KMP live in this repo until they hit pub.dev / CocoaPods / Maven." },
     { icon: GanttChartSquare, title: "Operator console", desc: "Full dashboard for room management, analytics, billing, and team management." },
@@ -284,9 +284,9 @@ function FeatureShowcase() {
   return (
     <section className="border-b border-white/10 bg-[#1e1e1e] px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <h2 className="text-center font-heading text-2xl font-bold text-white">Everything you need to ship real-time</h2>
+        <h2 className="text-center font-heading text-2xl font-bold text-white">What every plan includes</h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
-          All plans include the full FluxyChat platform. No feature gating on core functionality.
+          Chat, presence, Yjs, and invokeAgent. Extra studios in the console can hide behind flags. Hosted is beta.
         </p>
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (

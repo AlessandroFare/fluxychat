@@ -23,16 +23,16 @@ export const clerkLocalization = {
 
 export const clerkAuthAppearance = {
   variables: {
-    colorPrimary: "#ff725e",
+    colorPrimary: "#C2410C",
     colorText: "#0f172a",
     borderRadius: "0.75rem",
   },
   elements: {
-    card: "shadow-[var(--shadow-subtle-3)] border border-black/[0.06] w-full",
+    card: "shadow-[var(--shadow-3)] w-full",
     headerTitle: "font-heading text-xl",
     headerSubtitle: "text-sm text-slate-600",
-    formButtonPrimary: "bg-[#ff725e] text-white hover:bg-[#e8614d]",
-    footerActionLink: "text-[#ff725e] hover:text-[#e8614d]",
+    formButtonPrimary: "bg-[#C2410C] text-white hover:bg-[#9A3A0A]",
+    footerActionLink: "text-[#C2410C] hover:text-[#9A3A0A]",
   },
 } as const;
 

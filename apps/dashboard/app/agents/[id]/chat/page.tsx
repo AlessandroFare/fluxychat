@@ -39,7 +39,7 @@ export default function AgentChatPage() {
   const roomId = roomFromQuery || chatRoomId;
 
   return (
-    <Panel className="rounded-2xl border border-border/80 p-6">
+    <Panel className="rounded-2xl p-6">
       <ConsolePanelHeader
         title="Chat with agent"
         description={`Live room chat with ${selectedAgent.name} in ${roomId}. Built-in agents are provisioned when you create a project.`}

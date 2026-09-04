@@ -27,7 +27,7 @@ export function AgentPromptTemplatePicker({
             key={template.id}
             type="button"
             title={template.description}
-            className="rounded-full border border-border/80 bg-background px-3 py-1 text-xs font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-brand/5"
+            className="rounded-full bg-background px-3 py-1 text-xs font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-brand/5"
             onClick={() =>
               onApply({
                 systemPrompt: template.systemPrompt,

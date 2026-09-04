@@ -36,7 +36,7 @@ export function ConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="border border-border bg-card text-foreground shadow-[var(--shadow-modal)] sm:max-w-md"
+        className="bg-card text-foreground shadow-[var(--shadow-modal)] sm:max-w-md"
       >
         <DialogHeader>
           <DialogTitle className="text-foreground">{title}</DialogTitle>

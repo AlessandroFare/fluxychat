@@ -43,7 +43,7 @@ export default function AgentInvokePage() {
   }
 
   return (
-    <Panel className="rounded-2xl border border-border/80 p-6">
+    <Panel className="rounded-2xl p-6">
       <ConsolePanelHeader
         title="Test invoke"
         description={`Send a message as ${selectedAgent.name} into a room.`}

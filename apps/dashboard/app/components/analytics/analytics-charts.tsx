@@ -11,21 +11,21 @@ interface StatCardProps {
 }
 
 const accentRing: Record<NonNullable<StatCardProps["accent"]>, string> = {
-  default: "border-border bg-card",
-  success: "border-emerald-500/35 bg-emerald-500/10",
-  warning: "border-amber-500/35 bg-amber-500/10",
-  danger: "border-red-500/35 bg-red-500/10",
+  default: "bg-card shadow-[var(--shadow-1)]",
+  success: "border-l-[3px] border-l-emerald-700 bg-emerald-500/10",
+  warning: "border-l-[3px] border-l-amber-700 bg-amber-500/10",
+  danger: "border-l-[3px] border-l-red-700 bg-red-500/10",
 };
 
 export function StatCard({ label, value, hint, accent = "default", truncate = false }: StatCardProps) {
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col rounded-xl border p-4 shadow-[var(--shadow-subtle)]",
+        "flex min-w-0 flex-col rounded-xl p-4",
         accentRing[accent],
       )}
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-normal uppercase tracking-[0.05em] text-[color:var(--text-tertiary)]">{label}</p>
       <p
         className={cn(
           "mt-1 font-heading font-bold tracking-tight text-foreground",
@@ -114,7 +114,7 @@ export function HealthGauge({ label, value, max = 100, format, ok }: HealthGauge
   const pct = Math.min(100, (value / max) * 100);
   const display = format ? format(value) : `${value.toFixed(1)}%`;
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p
         className={cn(
