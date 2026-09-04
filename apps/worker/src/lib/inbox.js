@@ -1,4 +1,5 @@
 import { getRoomCatchUpForUser } from "./room-catch-up.js";
+import { listUserThreads } from "./message-threads.js";
 
 const MENTION_LIMIT = 50;
 const ROOM_LIMIT = 100;
@@ -184,16 +185,35 @@ export async function getInboxSummary(env, scope) {
     });
   }
 
+  const mine = await listUserThreads(env, {
+    projectId,
+    userId,
+    roles,
+    limit: 50,
+  }).catch(() => ({ threads: [] }));
+
+  const threads = (mine.threads || []).map((t) => ({
+    threadId: t.rootMessageId,
+    parentThreadId: null,
+    rootThreadId: t.rootMessageId,
+    roomId: t.roomId,
+    unreadCount: t.unreadCount,
+    preview: t.rootPreview,
+    lastReplyAt: t.lastReply?.createdAt ?? t.rootCreatedAt,
+  }));
+
   return {
     mentions,
     unreadRooms,
     snoozedRooms,
     followUps,
+    threads,
     counts: {
       mentions: mentions.length,
       unreadRooms: unreadRooms.length,
       snoozedRooms: snoozedRooms.length,
       followUps: followUps.length,
+      threads: threads.length,
     },
   };
 }

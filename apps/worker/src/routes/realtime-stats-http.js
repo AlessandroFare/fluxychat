@@ -249,6 +249,16 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
       "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ";
     const params = [auth.projectId, roomId];
 
+    const parentIdRaw = url.searchParams.get("parentId") || url.searchParams.get("threadParentId");
+    if (parentIdRaw) {
+      const parentId = Number(parentIdRaw);
+      if (!Number.isFinite(parentId) || parentId < 1) {
+        return json({ error: "invalid_parent" }, { status: 400 });
+      }
+      sql += "AND parent_id = ? ";
+      params.push(parentId);
+    }
+
     if (before) {
       sql += "AND created_at < ? ";
       params.push(before);

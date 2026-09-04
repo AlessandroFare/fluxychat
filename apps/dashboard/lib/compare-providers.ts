@@ -101,6 +101,14 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     fluxy: "GET /ws/inbox (connectInbox). Same User DO as /ws/user/:id; inbox_updated only",
   },
   {
+    label: "Nested chat threads",
+    portal: "threadParentId lens, registry + opaque cursor, inbox siblings",
+    stream: "Channel threads",
+    ably: "DIY",
+    pusher: "DIY",
+    fluxy: "parentId lens (useThread), GET /rooms/:id/threads + nextCursor, inbox kind thread",
+  },
+  {
     label: "Room / channel extension snapshots",
     portal: "channel.ext + ctx.storage, max 5",
     stream: "Custom",
@@ -423,7 +431,7 @@ export type PortalGapStatus = (typeof PORTAL_GAP_CLOSURE)[number]["status"];
 export const PRODUCT_CHAT_VS_SUPPORT = {
   title: "In-app realtime platform, not a support desk",
   intro:
-    "Most live-chat listicles are written for support teams: inbox, macros, CSAT. FluxyChat is for realtime inside your product, tenant rooms, SDK embed, streaming, collab, game, IoT, fleet, spatial, and agent events on the same timeline. Wire Salesforce or HubSpot through your own integration layer; we handle the room kernel.",
+    "Most live-chat listicles are written for support teams: inbox, macros, CSAT. FluxyChat is for realtime inside your product: tenant rooms, an SDK embed, and agent events on the same timeline. Wire Salesforce or HubSpot through your own integration layer. We handle the room kernel.",
   bullets: [
     "Helpdesk products sell ticketing and agent assignment. We sell transport, history, JWT rooms, platform modules, and webhooks.",
     "User messages and agent tool_call / tool_result share the room timeline, so you can replay what happened.",

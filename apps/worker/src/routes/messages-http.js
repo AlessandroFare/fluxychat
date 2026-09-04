@@ -56,6 +56,10 @@ import { assertProjectWriteResidency } from "../lib/data-residency-settings.js";
 import { resolveMessageVisibility } from "../lib/message-visibility.js";
 import { branchRoomFromMessage } from "../lib/message-branch.js";
 import {
+  assertChatThreadDepth,
+  parseReplyParentId,
+} from "../lib/message-threads.js";
+import {
   getAgentRunRecord,
   listCounterfactualRuns,
   mapAgentRunRow,
@@ -252,7 +256,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
         userId: authUserId,
         content,
         jwtRoles: auth.roles ?? [],
-        parentId: body.replyTo ? Number(body.replyTo) || null : null,
+        parentId: parseReplyParentId(body),
         clientMessageId: normalizeClientMessageId(body.clientMessageId),
       });
       if (slashDispatch.handled) {
@@ -286,7 +290,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
       content,
       {
         capabilities: authz.capabilities ?? {},
-        replyTo: body.replyTo ? Number(body.replyTo) || null : null,
+        replyTo: parseReplyParentId(body),
         env,
       },
     );
@@ -340,7 +344,21 @@ export async function dispatchMessagesRoutes(request, url, h) {
     const { visibility, visibleTo } = visibilityResult;
     const visibleToJson =
       visibility === "whisper" ? JSON.stringify(visibleTo) : null;
-    const parentId = body.replyTo ? Number(body.replyTo) || null : null;
+    const parentId = parseReplyParentId(body);
+    if (parentId) {
+      const depth = await assertChatThreadDepth(env, {
+        projectId: authProjectId,
+        roomId,
+        parentId,
+      });
+      if (!depth.ok) {
+        const status = depth.error === "parent_not_found" ? 404 : 400;
+        return json(
+          { error: depth.error, reason: depth.error },
+          { status },
+        );
+      }
+    }
     const clientMessageId = normalizeClientMessageId(body.clientMessageId);
     const createdAt = new Date().toISOString();
 

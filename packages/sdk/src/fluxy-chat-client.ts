@@ -1,5 +1,7 @@
 import { FluxyChatRoomConnection, type FluxyRoomConnectionOptions } from "./room-connection";
 import { FluxyAuthError, FluxySendError } from "./errors";
+import { ChatError, ThreadDepthExceededError } from "./structured-errors";
+import type { FluxyRoomThread, FluxyThreadListQuery, FluxyThreadPage } from "./chat-threads";
 import { clampHistoryLimit, sortMessagesChronological } from "./message-history";
 import { normalizeRoomMembers } from "./room-rest";
 import { trimTrailingSlashes } from "./url-utils";
@@ -237,16 +239,28 @@ export interface FluxyInboxFollowUp {
   createdAt: string;
 }
 
+export interface FluxyInboxThread {
+  threadId: number;
+  parentThreadId?: number | null;
+  rootThreadId: number;
+  roomId: string;
+  unreadCount?: number;
+  preview?: string;
+  lastReplyAt?: string;
+}
+
 export interface FluxyInboxSummary {
   mentions: FluxyInboxMention[];
   unreadRooms: FluxyInboxRoomEntry[];
   snoozedRooms: FluxyInboxRoomEntry[];
   followUps: FluxyInboxFollowUp[];
+  threads?: FluxyInboxThread[];
   counts: {
     mentions: number;
     unreadRooms: number;
     snoozedRooms: number;
     followUps: number;
+    threads?: number;
   };
 }
 
@@ -397,6 +411,8 @@ export interface FetchMessagesOptions {
   limit?: number;
   /** ISO `createdAt` cursor  returns messages older than this timestamp. */
   before?: string;
+  /** Direct replies to this message id (chat thread lens). */
+  parentId?: number;
 }
 
 export interface FluxyChatToolDefinition {
@@ -1106,6 +1122,9 @@ export class FluxyChatClient {
     if (options.before?.trim()) {
       url.searchParams.set("before", options.before.trim());
     }
+    if (options.parentId != null && Number.isFinite(options.parentId)) {
+      url.searchParams.set("parentId", String(Math.floor(options.parentId)));
+    }
     const res = await fetch(url.toString(), {
       headers: this.authHeaders(),
     });
@@ -1647,6 +1666,7 @@ export class FluxyChatClient {
         roomId,
         content: options?.templateId ? content || "" : content,
         replyTo: replyTo ?? null,
+        ...(replyTo != null ? { threadParentId: replyTo, parentId: replyTo } : {}),
         ...(attachments?.length ? { attachments } : {}),
         ...(clientMessageId?.trim() ? { clientMessageId: clientMessageId.trim() } : {}),
         ...(options?.templateId ? { templateId: options.templateId } : {}),
@@ -1659,11 +1679,17 @@ export class FluxyChatClient {
         ...(options?.visibleTo?.length ? { visibleTo: options.visibleTo } : {}),
       }),
     });
+    const body = await res.json().catch(() => ({}));
     if (!res.ok) {
+      const err = (body as { error?: string; reason?: string }).reason
+        ?? (body as { error?: string }).error;
+      if (err === "thread_depth_exceeded") throw new ThreadDepthExceededError();
+      if (err === "parent_not_found") {
+        throw new ChatError("PARENT_NOT_FOUND", "Reply parent was not found in this room.");
+      }
       throw new Error(`Failed to create message: ${res.status}`);
     }
-    const body = await res.json();
-    return body.message ?? null;
+    return (body as { message?: FluxyChatMessage }).message ?? null;
   }
 
   async listCommentThreads(roomId: string): Promise<FluxyCommentThread[]> {
@@ -1675,6 +1701,65 @@ export class FluxyChatClient {
     if (!res.ok) throw new Error(`listCommentThreads failed: ${res.status}`);
     const json = (await res.json()) as { threads?: FluxyCommentThread[] };
     return json.threads ?? [];
+  }
+
+  /**
+   * Nested chat-thread registry for a room (`GET /rooms/:id/threads`).
+   * Thread id = parent message id. Page with the returned `nextCursor` only.
+   */
+  async listRoomThreads(
+    roomId: string,
+    query: FluxyThreadListQuery = {},
+  ): Promise<FluxyThreadPage & { next: () => Promise<FluxyThreadPage & { next: () => Promise<FluxyThreadPage> }> }> {
+    if (!this.token) {
+      const empty = {
+        threads: [] as FluxyRoomThread[],
+        hasMore: false,
+        nextCursor: null as string | null,
+      };
+      return { ...empty, next: async () => ({ ...empty, next: async () => ({ ...empty, next: async () => empty as never }) }) };
+    }
+    const url = new URL(`/rooms/${encodeURIComponent(roomId)}/threads`, this.baseUrl);
+    if (query.parent !== undefined) {
+      url.searchParams.set("parent", query.parent == null ? "" : String(query.parent));
+    }
+    if (query.root != null && query.root !== "") {
+      url.searchParams.set("root", String(query.root));
+    }
+    if (query.cursor) url.searchParams.set("cursor", query.cursor);
+    if (query.limit != null) url.searchParams.set("limit", String(query.limit));
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`listRoomThreads failed: ${res.status}`);
+    const json = (await res.json()) as FluxyThreadPage;
+    const hasMore = Boolean(json.hasMore);
+    const nextCursor = json.nextCursor ?? null;
+    const page: FluxyThreadPage = {
+      threads: json.threads ?? [],
+      hasMore,
+      nextCursor: hasMore ? nextCursor : null,
+    };
+    const next = async () => {
+      if (!page.hasMore || !page.nextCursor) {
+        const empty: FluxyThreadPage = { threads: [], hasMore: false, nextCursor: null };
+        return { ...empty, next: async () => ({ ...empty, next }) };
+      }
+      return this.listRoomThreads(roomId, { ...query, cursor: page.nextCursor });
+    };
+    return { ...page, next };
+  }
+
+  /** Participating reply trees across rooms (`GET /threads`). */
+  async listMyReplyThreads(options?: { limit?: number; unreadOnly?: boolean }): Promise<{
+    threads: unknown[];
+    total: number;
+  }> {
+    if (!this.token) return { threads: [], total: 0 };
+    const url = new URL("/threads", this.baseUrl);
+    if (options?.limit != null) url.searchParams.set("limit", String(options.limit));
+    if (options?.unreadOnly) url.searchParams.set("unread", "1");
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`listMyReplyThreads failed: ${res.status}`);
+    return (await res.json()) as { threads: unknown[]; total: number };
   }
 
   async createCommentThread(

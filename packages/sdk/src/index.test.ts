@@ -659,5 +659,56 @@ describe("FluxyChatClient", () => {
       expect(queue?.tasks).toHaveLength(1);
     });
   });
+
+  describe("chat threads", () => {
+    it("listRoomThreads pages with the server nextCursor", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              threads: [{ id: 20, rootThreadId: 20, depth: 0, messageCount: 2 }],
+              hasMore: true,
+              nextCursor: "c_10",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              threads: [{ id: 5, rootThreadId: 5, depth: 0, messageCount: 1 }],
+              hasMore: false,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const page = await client.listRoomThreads("lobby", { limit: 1 });
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/rooms/lobby/threads");
+      expect(page.nextCursor).toBe("c_10");
+      const next = await page.next();
+      expect(String(fetchMock.mock.calls[1]?.[0])).toContain("cursor=c_10");
+      expect(next.threads[0]?.id).toBe(5);
+      const done = await next.next();
+      expect(done.threads).toEqual([]);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("createMessage throws ThreadDepthExceededError", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "thread_depth_exceeded", reason: "thread_depth_exceeded" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const { ThreadDepthExceededError } = await import("./structured-errors");
+      await expect(client.createMessage("lobby", "too deep", 99)).rejects.toBeInstanceOf(
+        ThreadDepthExceededError,
+      );
+    });
+  });
 });
 

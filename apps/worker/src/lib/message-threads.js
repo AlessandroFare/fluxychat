@@ -3,6 +3,217 @@
  */
 import { collectThreadMessages } from "./thread-summary.js";
 
+export const MAX_CHAT_THREAD_DEPTH = 8;
+
+function encodeRoomThreadCursor(lastReplyAt, threadId) {
+  const json = JSON.stringify({ t: String(lastReplyAt), id: Number(threadId) });
+  if (typeof btoa === "function") return btoa(json);
+  return Buffer.from(json, "utf8").toString("base64");
+}
+
+function decodeRoomThreadCursor(raw) {
+  try {
+    const json =
+      typeof atob === "function"
+        ? atob(String(raw))
+        : Buffer.from(String(raw), "base64").toString("utf8");
+    const parsed = JSON.parse(json);
+    if (typeof parsed.t !== "string" || !Number.isFinite(Number(parsed.id))) return null;
+    return { t: parsed.t, id: Number(parsed.id) };
+  } catch {
+    return null;
+  }
+}
+
+export function parseReplyParentId(body) {
+  const raw = body?.replyTo ?? body?.parentId ?? body?.threadParentId;
+  if (raw == null || raw === "") return null;
+  const id = Number(raw);
+  if (!Number.isFinite(id) || id < 1) return null;
+  return Math.floor(id);
+}
+
+/**
+ * @param {*} env
+ * @param {{ projectId: string, roomId: string, parentId: number }} input
+ */
+export async function assertChatThreadDepth(env, input) {
+  let currentId = input.parentId;
+  let hops = 0;
+  for (let i = 0; i < MAX_CHAT_THREAD_DEPTH + 2; i++) {
+    const row = await env.DB.prepare(
+      `SELECT id, parent_id FROM messages
+       WHERE project_id = ? AND room_id = ? AND id = ? AND deleted_at IS NULL
+       LIMIT 1`,
+    )
+      .bind(input.projectId, input.roomId, currentId)
+      .first();
+    if (!row) return { ok: false, error: "parent_not_found" };
+    if (!row.parent_id) {
+      if (hops >= MAX_CHAT_THREAD_DEPTH) {
+        return { ok: false, error: "thread_depth_exceeded" };
+      }
+      return { ok: true };
+    }
+    hops += 1;
+    if (hops >= MAX_CHAT_THREAD_DEPTH) {
+      return { ok: false, error: "thread_depth_exceeded" };
+    }
+    currentId = Number(row.parent_id);
+  }
+  return { ok: false, error: "thread_depth_exceeded" };
+}
+
+function compareThreadDesc(a, b) {
+  const t = String(b.lastReplyAt).localeCompare(String(a.lastReplyAt));
+  if (t !== 0) return t;
+  return b.id - a.id;
+}
+
+/**
+ * Portal-style room thread registry. Thread id = parent message id.
+ *
+ * @param {*} env
+ * @param {{
+ *   projectId: string,
+ *   roomId: string,
+ *   parent?: string | number | null,
+ *   root?: string | number | null,
+ *   cursor?: string | null,
+ *   limit?: number,
+ * }} query
+ */
+export async function listRoomThreads(env, query) {
+  const limit = Math.min(Math.max(query.limit ?? 20, 1), 100);
+  const parents = await env.DB.prepare(
+    `SELECT m.id, m.parent_id, m.user_id, m.content, m.created_at
+     FROM messages m
+     WHERE m.project_id = ? AND m.room_id = ? AND m.deleted_at IS NULL
+       AND EXISTS (
+         SELECT 1 FROM messages r
+         WHERE r.parent_id = m.id AND r.project_id = m.project_id
+           AND r.room_id = m.room_id AND r.deleted_at IS NULL
+       )`,
+  )
+    .bind(query.projectId, query.roomId)
+    .all();
+
+  const agg = await env.DB.prepare(
+    `SELECT parent_id, COUNT(*) AS reply_count, MAX(created_at) AS last_reply_at, MAX(id) AS last_reply_id
+     FROM messages
+     WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL AND parent_id IS NOT NULL
+     GROUP BY parent_id`,
+  )
+    .bind(query.projectId, query.roomId)
+    .all();
+
+  const aggMap = new Map();
+  for (const row of agg.results || []) {
+    aggMap.set(Number(row.parent_id), {
+      replyCount: Number(row.reply_count) || 0,
+      lastReplyAt: String(row.last_reply_at || ""),
+      lastReplyId: Number(row.last_reply_id),
+    });
+  }
+
+  const parentFilter =
+    query.parent === undefined || query.parent === null || query.parent === ""
+      ? "root"
+      : Number(query.parent);
+  const rootFilter =
+    query.root != null && query.root !== "" ? Number(query.root) : null;
+
+  if (parentFilter !== "root" && !Number.isFinite(parentFilter)) {
+    return { ok: false, error: "invalid_parent" };
+  }
+  if (rootFilter != null && !Number.isFinite(rootFilter)) {
+    return { ok: false, error: "invalid_root" };
+  }
+
+  let decoded = null;
+  if (query.cursor) {
+    decoded = decodeRoomThreadCursor(query.cursor);
+    if (!decoded) return { ok: false, error: "invalid_cursor" };
+  }
+
+  const items = [];
+  for (const row of parents.results || []) {
+    const id = Number(row.id);
+    const parentId = row.parent_id == null ? null : Number(row.parent_id);
+    const stats = aggMap.get(id);
+    if (!stats) continue;
+
+    if (parentFilter === "root") {
+      if (parentId != null) continue;
+    } else if (parentId !== parentFilter) {
+      continue;
+    }
+
+    const rootId = parentId
+      ? await resolveThreadRootId(env, query.projectId, query.roomId, id)
+      : id;
+    if (!rootId) continue;
+    if (rootFilter != null && rootId !== rootFilter) continue;
+
+    let depth = 0;
+    if (parentId) {
+      let walk = parentId;
+      for (let i = 0; i < 20 && walk; i++) {
+        depth += 1;
+        const p = await env.DB.prepare(
+          `SELECT id, parent_id FROM messages
+           WHERE project_id = ? AND room_id = ? AND id = ? AND deleted_at IS NULL
+           LIMIT 1`,
+        )
+          .bind(query.projectId, query.roomId, walk)
+          .first();
+        if (!p || !p.parent_id) break;
+        walk = Number(p.parent_id);
+      }
+    }
+
+    items.push({
+      id,
+      roomId: query.roomId,
+      parentThreadId: parentId,
+      rootThreadId: rootId,
+      depth,
+      spawnedBy: { id: String(row.user_id) },
+      messageCount: stats.replyCount,
+      createdAt: String(row.created_at || ""),
+      lastReplyAt: stats.lastReplyAt,
+      lastReplyMessageId: stats.lastReplyId,
+      preview: previewContent(row.content),
+    });
+  }
+
+  items.sort(compareThreadDesc);
+
+  let start = 0;
+  if (decoded) {
+    start = items.findIndex(
+      (t) =>
+        t.lastReplyAt < decoded.t ||
+        (t.lastReplyAt === decoded.t && t.id < decoded.id),
+    );
+    if (start < 0) start = items.length;
+  }
+
+  const slice = items.slice(start, start + limit);
+  const rest = items.slice(start + limit);
+  const hasMore = rest.length > 0;
+  const last = slice[slice.length - 1];
+  const nextCursor =
+    hasMore && last ? encodeRoomThreadCursor(last.lastReplyAt, last.id) : null;
+
+  return {
+    ok: true,
+    threads: slice,
+    hasMore,
+    nextCursor,
+  };
+}
+
 const ROOM_LIMIT = 100;
 const PARTICIPATION_LIMIT = 200;
 const DEFAULT_THREAD_LIMIT = 50;

@@ -1,0 +1,85 @@
+---
+title: Chat reply threads
+description: Nested replies on parentId. Same room socket. Not comment pins.
+---
+
+A chat thread is a reply to a message. We store that as `parentId` on the same `messages` row you already have. The thread id is the parent message id. There is no second room and no second socket.
+
+If you want Figma-style pins on a canvas, that is still [`useThreads`](/docs/core/comments) and `/comment-threads`. Different table, different hook. Mixing the two will hurt.
+
+REST accepts `replyTo`, `parentId`, or `threadParentId`. Same field.
+
+## Lens (`useThread`)
+
+```tsx
+import { useChat, useThread } from "@fluxy-chat/react";
+
+function Room({ roomId }: { roomId: string }) {
+  const chat = useChat({ roomId });
+  const thread = useThread({ roomId, threadParentId: 42 });
+
+  return (
+    <>
+      <ol>
+        {chat.messages.map((m) => (
+          <li key={m.id}>
+            {m.content}
+            <button type="button" onClick={() => thread.sendMessage("got it")}>
+              Reply in thread
+            </button>
+          </li>
+        ))}
+      </ol>
+      <ol>
+        {thread.messages.map((m) => (
+          <li key={m.id}>{m.content}</li>
+        ))}
+      </ol>
+    </>
+  );
+}
+```
+
+Put both hooks under `FluxyRealtimeProvider`. They share the room store and the JSON WebSocket (`sessionScope` defaults to `app`). Without the provider, pass the same `sessionScope` string on both or you get two stores and a quiet thread.
+
+The lens lists **direct** replies only (`parentId === threadParentId`). A reply to a reply is its own thread: `useThread({ threadParentId: reply.id })`.
+
+`sendMessage` on the lens fills in `replyTo` for you. Eight hops from the root is the cap. Past that, `ThreadDepthExceededError` (`code: "blocked"`, `reason: "thread_depth_exceeded"`). Optimistic send rolls back. We do not fall through to the WebSocket.
+
+There is no `where()` filter on a thread in v1. Use the lens.
+
+`loadPrevious` hits `GET /api/messages?parentId=` for older replies the room page may have skipped.
+
+## Registry
+
+```
+GET /rooms/:roomId/threads?parent=&root=&cursor=&limit=
+```
+
+Empty `parent` (the default) lists root threads: a top-level message that already has at least one reply.
+
+`parent=<id>` lists threads spawned from that message (children that have replies of their own).
+
+`root=<id>` walks the tree and returns every thread whose root is that id.
+
+Page with the **`nextCursor` the server sent**. Do not build a cursor from message ids. If `hasMore` is true and `nextCursor` is missing, stop. Inventing a cursor from spawn order or ids will skip or loop pages.
+
+```ts
+const page = await client.listRoomThreads(roomId, { limit: 20 });
+const next = await page.next();
+```
+
+`GET /threads` is the older "trees I participated in" list. Inbox uses that. It is not the room registry.
+
+## Inbox
+
+`GET /inbox` adds a `threads` array (those participating trees). `useInbox().items` maps them to `kind: "thread"` with `threadId` and `rootThreadId`. Unread on a nested row does not increment the room row.
+
+Comment-pin events still use `kind: "thread"` via `commentEventToInboxItem`, but the id is the pin id string, not a numeric message id.
+
+## Errors
+
+| Class | `code` | `reason` |
+| --- | --- | --- |
+| `ThreadDepthExceededError` | `blocked` | `thread_depth_exceeded` |
+| `ChatError` | `PARENT_NOT_FOUND` | parent missing in this room |

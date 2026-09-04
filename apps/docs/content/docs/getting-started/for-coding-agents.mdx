@@ -76,6 +76,7 @@ For cursors only, `useLiveCursors({ roomId })`. Do not mount both unless they sh
 | Side-panel assistant | `RegisterAiKnowledge` + `<AiChat />` |
 | Pinned review comments | `useThreads`, `/comment-threads` |
 | Chat timeline | `useChat` messages; replies use `parentId` |
+| Nested chat thread | `useThread({ threadParentId })`; registry `GET /rooms/:id/threads` |
 | Agent on the timeline | `invokeAgent` |
 
 ## JWT mint (server)

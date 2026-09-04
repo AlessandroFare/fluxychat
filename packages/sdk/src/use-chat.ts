@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { createFluxyRoomStore } from "./fluxy-room-store";
+import { getSharedFluxyRoomStore } from "./room-store-registry";
 import { startFluxyRoomSession } from "./room-session";
 import { acquireFluxyRoomSession } from "./room-session-handle";
 import { useFluxyRoomStoreState } from "./use-fluxy-room-store";
@@ -96,15 +96,15 @@ export function useChat({
   const instanceId = React.useId();
   const scope = resolveRoomSessionScope(sessionScope, realtime?.sessionScope, instanceId);
 
-  const store = React.useMemo(
-    () => createFluxyRoomStore(),
-    [roomId],
-  );
-
   const sessionKey = React.useMemo(
     () =>
       `${scope}:${client?.userId ?? "none"}:${roomId}:${sessionTokenFingerprint(realtime?.token ?? client?.token ?? null)}`,
     [scope, client?.userId, client?.token, roomId, realtime?.token],
+  );
+
+  const store = React.useMemo(
+    () => getSharedFluxyRoomStore(sessionKey),
+    [sessionKey],
   );
 
   const onAnyEventRef = React.useRef(onAnyEvent);

@@ -1,4 +1,5 @@
 import { FluxyAuthError, FluxySendError } from "./errors";
+import { isFluxyChatError } from "./structured-errors";
 import { warnIfPointerOnClientEvent } from "./client-event-guard";
 import { mergeDebateSteps, type AgentDebateStep } from "./agent-debate";
 import {
@@ -800,6 +801,10 @@ export function startFluxyRoomSession(
             messages: applyServerMessageAck(s.messages, serverMessage, ackId),
           }));
         } catch (err) {
+          if (isFluxyChatError(err) && (err.code === "blocked" || err.code === "PARENT_NOT_FOUND")) {
+            failOptimistic(err.code === "blocked" ? "thread_depth_exceeded" : err.code);
+            return;
+          }
           const message = err instanceof Error ? err.message : "send_failed";
           try {
             connectionRef?.sendJson({

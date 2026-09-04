@@ -1,8 +1,6 @@
 # @fluxy-chat/ui-kit
 
-Drop-in polished chat widget and inbox panel for FluxyChat. Closes the "headless only" gap compared to hosted SDKs.
-
-Built on `@fluxy-chat/ui` + `@fluxy-chat/react`. Optional bridge to [`assistant-ui`](https://assistant-ui.com) via `useFluxyAssistantRuntime`.
+Chat widget and inbox panel on `@fluxy-chat/ui` + `@fluxy-chat/react`. Optional bridge to [`assistant-ui`](https://assistant-ui.com) via `useFluxyAssistantRuntime`.
 
 ## Install
 
@@ -19,10 +17,13 @@ import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
   roomId="general"
   workerUrl={process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL!}
   guest
+  publishableKey={process.env.NEXT_PUBLIC_FLUXYCHAT_PUBLISHABLE_KEY}
   theme="brand"
   height={520}
 />
 ```
+
+`guest` on a public room. Hosted multi-tenant also needs `publishableKey` (`pk_`). Member JWT still works via `token` or a `client`.
 
 ## Inbox
 

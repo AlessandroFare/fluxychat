@@ -45,16 +45,22 @@ interface FluxyInboxFollowUpLike {
   roomId: string;
 }
 
+interface FluxyInboxThreadLike {
+  roomId: string;
+}
+
 export interface FluxyInboxSummaryLike {
   mentions: FluxyInboxMentionLike[];
   unreadRooms: FluxyInboxRoomEntryLike[];
   snoozedRooms: FluxyInboxRoomEntryLike[];
   followUps: FluxyInboxFollowUpLike[];
+  threads?: FluxyInboxThreadLike[];
   counts: {
     mentions: number;
     unreadRooms: number;
     snoozedRooms: number;
     followUps: number;
+    threads?: number;
   };
 }
 
@@ -134,6 +140,7 @@ export function applyInboxQuery<T extends FluxyInboxSummaryLike>(
   const snoozedRooms = filterRoomEntries(summary.snoozedRooms, query);
   const mentions = filterMentions(summary.mentions, query);
   const followUps = filterFollowUps(summary.followUps, query);
+  const threads = filterFollowUps(summary.threads ?? [], query);
 
   return {
     ...summary,
@@ -141,11 +148,13 @@ export function applyInboxQuery<T extends FluxyInboxSummaryLike>(
     unreadRooms,
     snoozedRooms,
     followUps,
+    threads,
     counts: {
       mentions: mentions.length,
       unreadRooms: unreadRooms.length,
       snoozedRooms: snoozedRooms.length,
       followUps: followUps.length,
+      threads: threads.length,
     },
   };
 }
@@ -189,7 +198,7 @@ export function parseInboxItemFromUserEvent(event: {
   if (!roomId) return null;
 
   const normalizedKind =
-    kind === "mention" || kind === "unread" || kind === "follow_up" || kind === "snooze"
+    kind === "mention" || kind === "unread" || kind === "follow_up" || kind === "snooze" || kind === "thread"
       ? kind
       : event.name === "inbox_item"
         ? "unread"

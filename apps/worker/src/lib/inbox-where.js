@@ -60,6 +60,7 @@ export function applyInboxQuery(summary, query) {
   const snoozedRooms = filterRoomEntries(summary.snoozedRooms, query);
   const mentions = filterByRoomId(summary.mentions, query.roomId);
   const followUps = filterByRoomId(summary.followUps, query.roomId);
+  const threads = filterByRoomId(summary.threads || [], query.roomId);
 
   return {
     ...summary,
@@ -67,11 +68,13 @@ export function applyInboxQuery(summary, query) {
     unreadRooms,
     snoozedRooms,
     followUps,
+    threads,
     counts: {
       mentions: mentions.length,
       unreadRooms: unreadRooms.length,
       snoozedRooms: snoozedRooms.length,
       followUps: followUps.length,
+      threads: threads.length,
     },
   };
 }

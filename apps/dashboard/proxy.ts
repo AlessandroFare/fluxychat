@@ -3,60 +3,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { CONSOLE_ACK_COOKIE, getDashboardAccessMode } from "@/lib/dashboard-access";
 import { isClerkEnabled } from "@/lib/clerk-config";
+import { clerkPublicRoutePatterns, isPublicSitePath } from "@/lib/public-site-paths";
 
-const isClerkPublicRoute = createRouteMatcher([
-  "/",
-  "/landing(.*)",
-  "/pricing(.*)",
-  "/why(.*)",
-  "/enter(.*)",
-  "/get-started(.*)",
-  "/docs(.*)",
-  "/compare(.*)",
-  "/guides(.*)",
-  "/demo(.*)",
-  "/cli-auth(.*)",
-  "/status(.*)",
-  "/subprocessors(.*)",
-  "/features(.*)",
-  "/.well-known(.*)",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/console-ack(.*)",
-  "/api/webhooks/clerk(.*)",
-  /** Worker JWT in Authorization header — not Clerk session cookies */
-  "/api/fluxy/search-messages(.*)",
-  "/api/fluxy/search-messages-semantic(.*)",
-  "/api/fluxy/search-settings(.*)",
-  "/api/fluxy/config(.*)",
-  /** Worker JWT in Authorization — not Clerk session cookies */
-  "/api/gdpr(.*)",
-]);
+const isClerkPublicRoute = createRouteMatcher(clerkPublicRoutePatterns());
 
 function isPublicPath(pathname: string): boolean {
-  if (pathname === "/favicon.ico") return true;
-  if (pathname === "/") return true;
-  const prefixes = [
-    "/landing",
-    "/pricing",
-    "/why",
-    "/enter",
-    "/get-started",
-    "/docs",
-    "/compare",
-    "/guides",
-    "/demo",
-    "/cli-auth",
-    "/status",
-    "/subprocessors",
-    "/features",
-    "/.well-known",
-    "/api/webhooks",
-    "/api",
-  ];
-  for (const p of prefixes) {
-    if (pathname === p || pathname.startsWith(`${p}/`)) return true;
-  }
+  if (isPublicSitePath(pathname)) return true;
+  if (pathname === "/.well-known" || pathname.startsWith("/.well-known/")) return true;
+  if (pathname === "/api" || pathname.startsWith("/api/")) return true;
   return false;
 }
 

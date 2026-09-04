@@ -32,6 +32,30 @@ describe("inbox-items", () => {
     expect(items[1]?.kind).toBe("unread");
   });
 
+  it("flattens chat reply threads as kind thread", () => {
+    const summary: FluxyInboxSummary = {
+      mentions: [],
+      unreadRooms: [],
+      snoozedRooms: [],
+      followUps: [],
+      threads: [
+        {
+          threadId: 12,
+          rootThreadId: 12,
+          roomId: "r1",
+          unreadCount: 2,
+          lastReplyAt: "2026-01-02T00:00:00.000Z",
+        },
+      ],
+      counts: { mentions: 0, unreadRooms: 0, snoozedRooms: 0, followUps: 0, threads: 1 },
+    };
+    const items = inboxSummaryToItems(summary);
+    expect(items).toHaveLength(1);
+    expect(items[0]?.kind).toBe("thread");
+    expect(items[0]?.threadId).toBe(12);
+    expect(countUnseenItems(items)).toBe(1);
+  });
+
   it("mergeInboxItem dedupes by id", () => {
     const base = inboxSummaryToItems({
       mentions: [],

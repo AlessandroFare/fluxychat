@@ -27,12 +27,12 @@ Think of a room as the artifact in your app: a document, a board, a deal, a clas
 | **Storage** | The document | `FluxyYjsProvider`, `useStorage`, `useMutation`, LiveFile | Yes (Yjs on the room DO) |
 | **Feeds** | Activity / agent / n8n logs | `useFeeds`, `POST /rooms/:id/feeds` | Yes (D1, ≠ chat) |
 | **Threads** | Contextual comments | `useThreads`, `/comment-threads` | Yes |
-| **Chat** | Timeline + tools | `useChat`, `invokeAgent` | Yes |
+| **Chat** | Timeline + nested replies | `useChat`, `useThread`, `parentId` | Yes |
 | **Polls** | Ballots on the timeline (and `/polls` records) | `createPoll` / `votePoll`, `POST /polls` `isAnonymous` | Yes |
 | **Derived** | Late-joiner JSON bag (not a CRDT) | `setDerivedState` / `derivedState` | Yes (DO storage) |
 | **Visibility** | Who may see a chat line | `visibility` / `visibleTo` on send | Yes (D1) |
 
-Do **not** put 60 Hz pointers on Broadcast. Do **not** mix Feeds with `messages`. Do **not** mix Threads with chat `parentId` replies. Do **not** hide private lines only in the UI. Set `visibility` on send.
+Do **not** put 60 Hz pointers on Broadcast. Do **not** mix Feeds with `messages`. Do **not** mix comment pins (`useThreads`) with chat `parentId` replies (`useThread`). Do **not** hide private lines only in the UI. Set `visibility` on send.
 
 Wire limits and v1 non-goals: [Wire protocol](/docs/core/wire-protocol).
 
