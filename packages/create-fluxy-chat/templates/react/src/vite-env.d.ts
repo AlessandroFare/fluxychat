@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_FLUXYCHAT_WORKER_URL: string;
+  readonly VITE_FLUXYCHAT_PUBLISHABLE_KEY?: string;
   readonly VITE_FLUXYCHAT_MEMBER_JWT?: string;
   readonly VITE_FLUXYCHAT_ROOM_ID?: string;
   readonly VITE_FLUXYCHAT_PUBLIC_ROOM_ID?: string;

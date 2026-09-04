@@ -90,7 +90,7 @@ useNotifications({
 });
 ```
 
-Member JWT is required — the user channel is scoped to `userId` in the token.
+Member JWT is required. `useInbox` opens `GET /ws/inbox` (`connectInbox`). The user channel (`/ws/user/:userId`) is still used for non-inbox user events.
 
 ## Web push
 

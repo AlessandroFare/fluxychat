@@ -70,7 +70,7 @@ function CliAuthRedirect() {
     <div className="rounded-2xl border border-border bg-white px-5 py-6 text-center shadow-sm">
       <p className="text-sm font-medium text-foreground">{status}</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        If you already have a project we reuse it. We only mint a fresh member token.
+        If you already have a project we reuse it. We mint a member JWT and a publishable pk_ for public rooms.
       </p>
     </div>
   );

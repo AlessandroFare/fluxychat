@@ -8,6 +8,7 @@
     "setup:hosted": "node scripts/fluxy-setup.mjs --mode hosted",
     "setup:local": "node scripts/fluxy-setup.mjs --mode local",
     "setup:self-host": "node scripts/fluxy-setup.mjs --mode self-host",
+    "fluxy:deploy": "node scripts/fluxy-deploy.mjs",
     "doctor": "node scripts/fluxy-doctor.mjs",
     "dev": "node scripts/fluxy-dev.mjs",
     "dev:app": "vite",
@@ -16,8 +17,8 @@
     "postinstall": "node scripts/hoist-fluxy-sdk.mjs"
   },
   "dependencies": {
-    "@fluxy-chat/react": "^0.1.4",
-    "@fluxy-chat/sdk": "^0.6.5",
+    "@fluxy-chat/react": "^0.1.6",
+    "@fluxy-chat/sdk": "^0.6.8",
     "@fluxy-chat/ui": "^0.1.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -40,7 +41,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@fluxy-chat/sdk": "^0.6.5"
+      "@fluxy-chat/sdk": "^0.6.8"
     }
   }
 }

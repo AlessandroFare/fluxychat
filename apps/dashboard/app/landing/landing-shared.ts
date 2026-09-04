@@ -79,7 +79,7 @@ export const LANDING_NAV_MENUS: readonly LandingNavMenu[] = [
           { href: "/#realtime", label: "Location & push" },
           { href: "/#realtime", label: "Stream & collab" },
           { href: "/#realtime", label: "Game, IoT & fleet" },
-          { href: "/#realtime", label: "14 channel adapters" },
+          { href: "/#realtime", label: "Bridges (you create the vendor app)" },
         ],
       },
     ],

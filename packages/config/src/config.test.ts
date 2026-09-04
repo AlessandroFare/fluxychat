@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineConfig, allow, block, allowPublish, blockPublish } from "./index.js";
+import { defineConfig, allow, block, allowPublish, blockPublish, toHostedOverlay } from "./index.js";
 import { resolveRoomConfig } from "./resolve-room.js";
 import { runRoomAuthz, runPublishMiddleware } from "./runtime.js";
 
@@ -83,5 +83,29 @@ describe("runPublishMiddleware", () => {
     });
     expect(masked.ok).toBe(true);
     if (masked.ok) expect(masked.content).toBe("*** word");
+  });
+});
+
+describe("toHostedOverlay", () => {
+  it("drops callbacks and keeps declared room slots", () => {
+    const overlay = toHostedOverlay(
+      defineConfig({
+        hostedPublish: { denySubstrings: ["secret"], guestCanPublish: false },
+        rooms: {
+          "support-*": {
+            anonymous: false,
+            guestCanPublish: false,
+            extensions: [{ id: "state", kind: "kv" }],
+            authz: () => block("nope"),
+            onPublish: [() => allowPublish()],
+          },
+        },
+      }),
+    );
+    expect(overlay.denySubstrings).toEqual(["secret"]);
+    expect(overlay.guestCanPublish).toBe(false);
+    expect(overlay.rooms?.["support-*"]?.anonymous).toBe(false);
+    expect(overlay.rooms?.["support-*"]?.extensions).toEqual([{ id: "state", kind: "kv" }]);
+    expect(overlay.rooms?.["support-*"]).not.toHaveProperty("authz");
   });
 });

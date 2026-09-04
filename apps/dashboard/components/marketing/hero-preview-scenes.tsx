@@ -30,7 +30,7 @@ export const HERO_PREVIEW_SCENES: readonly HeroPreviewScene[] = [
   { id: "collab", label: "Collab", room: "planning", badge: "Syncing" },
   { id: "game", label: "Game", room: "arena-3", badge: "Match" },
   { id: "iot", label: "IoT", room: "factory-floor", badge: "3 devices" },
-  { id: "channels", label: "14 channels", room: "inbox", badge: "Bridged" },
+  { id: "channels", label: "Bridges", room: "inbox", badge: "Bridged" },
 ];
 
 const shell = {

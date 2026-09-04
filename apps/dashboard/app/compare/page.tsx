@@ -4,6 +4,7 @@ import {
   BUILD_VS_BUY,
   BUYING_FAQ,
   COMPARE_ROWS,
+  COMPARE_LABS_NOTE,
   COMPARE_HOSTED_CHAT_HEADER,
   DECISION_FLOW,
   HACKATHON_ROOM_OS_LINKS,
@@ -195,6 +196,7 @@ export default function ComparePage() {
         Side-by-side with proprietary hosted chat SDKs, Stream, Ably, and Pusher.
         Rows are factual. Check each vendor&apos;s current docs before you buy.
       </p>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{COMPARE_LABS_NOTE}</p>
       <div className="mt-4">
         <CompareTable
           headers={[

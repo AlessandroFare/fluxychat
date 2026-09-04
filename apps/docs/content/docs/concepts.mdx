@@ -13,7 +13,7 @@ Think of a room as the artifact in your app: a document, a board, a deal, a clas
 | --- | --- |
 | Project | Tenant. API keys (`fc_…`, server-only), rooms, agents, quotas. |
 | Room | One Durable Object. Chat JSON WebSocket; Yjs is a second binary connection on the same `/ws/room/:id` route. |
-| Primitives | Presence, Broadcast, Storage, Feeds, Threads, Chat, Derived, Visibility. |
+| Primitives | Presence, Broadcast, Storage, Feeds, Threads, Chat, Polls, Derived, Visibility. |
 | Users | Humans (member JWT or guest) and AI (copilot, room peer, workflow). |
 | Features | Comments, multiplayer editors, notifications, copilots, AI collaboration. |
 | Platform | Worker, dashboard, `@fluxy-chat/sdk`, `react`, `ui`, `ui-kit`, `vue`, `svelte`. |
@@ -28,6 +28,7 @@ Think of a room as the artifact in your app: a document, a board, a deal, a clas
 | **Feeds** | Activity / agent / n8n logs | `useFeeds`, `POST /rooms/:id/feeds` | Yes (D1, ≠ chat) |
 | **Threads** | Contextual comments | `useThreads`, `/comment-threads` | Yes |
 | **Chat** | Timeline + tools | `useChat`, `invokeAgent` | Yes |
+| **Polls** | Ballots on the timeline (and `/polls` records) | `createPoll` / `votePoll`, `POST /polls` `isAnonymous` | Yes |
 | **Derived** | Late-joiner JSON bag (not a CRDT) | `setDerivedState` / `derivedState` | Yes (DO storage) |
 | **Visibility** | Who may see a chat line | `visibility` / `visibleTo` on send | Yes (D1) |
 
@@ -45,8 +46,8 @@ Wire limits and v1 non-goals: [Wire protocol](/docs/core/wire-protocol).
 
 ## Auth
 
-Browser: **member JWT** or `FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId)` (stable `guestKey` in localStorage). Guest writes are on by default; set `PUBLIC_GUEST_READ_ONLY=true` to lock.  
-Server: project API key mints JWTs (`POST /auth/token`). Never put `fc_…` in the client.
+Browser: **`publishableKey` (`pk_`) on `FluxyRealtimeProvider`** (anonymous JWT via `POST /tokens/anonymous`), **member JWT**, or `FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId)` (stable `guestKey` in localStorage). Guest writes are on by default; set `PUBLIC_GUEST_READ_ONLY=true` to lock.  
+Server: project API key (`fc_…`) mints member JWTs (`POST /auth/token`). `pk_` is rejected there (`403`). Never put `fc_…` in the client.
 
 ## Verticals on the same bus
 

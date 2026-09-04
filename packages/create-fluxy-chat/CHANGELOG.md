@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.5.19] - 2026-09-02
+
+### Added
+
+- Full template `fluxy.hosted.json` deploys `rooms` templates and extension slots with `pnpm fluxy:deploy`.
+- Pin `@fluxy-chat/sdk@^0.6.8` (`connectInbox`, room extensions).
+
+## [0.5.18] - 2026-09-01
+
+### Added
+
+- Hosted `setup:hosted` reads `GET /public/demo-credentials` and writes `VITE_FLUXYCHAT_PUBLISHABLE_KEY`.
+- `pnpm fluxy:deploy` on the full template: `fluxy.hosted.json` → `PUT /admin/projects/:id/publish-config`.
+- React and live-cursors templates prefer `publishableKey` (pin sdk `^0.6.7` / react `^0.1.6`).
+
+## [0.5.17] - 2026-09-01
+
+### Added
+
+- Gallery `--example polls`: `createPoll` / `votePoll`. Prefers `VITE_FLUXYCHAT_PUBLISHABLE_KEY`. Documents `POST /polls` `isAnonymous`.
+
 ## [0.5.16] - 2026-08-31
 
 ### Added

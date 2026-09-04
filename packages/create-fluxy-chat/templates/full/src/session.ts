@@ -2,7 +2,8 @@ const STORAGE_KEY = "fluxy-cli-session";
 
 export interface CliSession {
   workerUrl: string;
-  memberJwt: string;
+  memberJwt?: string;
+  publishableKey?: string;
   roomId: string;
   agentId: string;
   agentHandle: string;
@@ -15,7 +16,11 @@ export interface CliSession {
 function isCliSession(value: unknown): value is CliSession {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
-  return typeof v.memberJwt === "string" && v.memberJwt.length > 0 && typeof v.workerUrl === "string";
+  if (typeof v.workerUrl !== "string" || v.workerUrl.length === 0) return false;
+  if (typeof v.roomId !== "string" || v.roomId.length === 0) return false;
+  const hasMember = typeof v.memberJwt === "string" && v.memberJwt.length > 0;
+  const hasPk = typeof v.publishableKey === "string" && v.publishableKey.startsWith("pk_");
+  return hasMember || hasPk;
 }
 
 export function readCliSessionFromHash(): CliSession | null {

@@ -4,6 +4,7 @@ import { ChatWindow } from "@fluxy-chat/ui";
 import { loadCliSession, type CliSession } from "./session";
 
 const envWorkerUrl = import.meta.env.VITE_FLUXYCHAT_WORKER_URL?.trim() ?? "";
+const envPublishableKey = import.meta.env.VITE_FLUXYCHAT_PUBLISHABLE_KEY?.trim() ?? "";
 const envJwt = import.meta.env.VITE_FLUXYCHAT_MEMBER_JWT?.trim() ?? "";
 const envRoomId = import.meta.env.VITE_FLUXYCHAT_ROOM_ID?.trim() ?? "";
 const envAgentId = import.meta.env.VITE_FLUXYCHAT_AGENT_ID?.trim() ?? "";
@@ -31,6 +32,18 @@ function dashboardHref(): string {
 }
 
 function sessionFromEnv(): CliSession | null {
+  if (envWorkerUrl && envPublishableKey.startsWith("pk_") && envRoomId) {
+    return {
+      workerUrl: envWorkerUrl,
+      publishableKey: envPublishableKey,
+      memberJwt: envJwt || undefined,
+      roomId: envRoomId,
+      agentId: envAgentId,
+      agentHandle: envAgentHandle,
+      projectId: envProjectId,
+      userId: envUserId || "guest",
+    };
+  }
   if (!envWorkerUrl || !envJwt || !envRoomId) return null;
   return {
     workerUrl: envWorkerUrl,
@@ -226,6 +239,7 @@ export function App() {
       <div className="page">
         <FluxyRealtimeProvider
           workerUrl={session.workerUrl}
+          publishableKey={session.memberJwt ? undefined : session.publishableKey}
           authTokenProvider={session.memberJwt}
           userId={session.userId}
         >

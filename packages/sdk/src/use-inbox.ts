@@ -18,7 +18,7 @@ export interface UseInboxOptions {
   query?: FluxyInboxQuery;
   /** Poll interval in ms (default 30_000). Set 0 to disable polling. */
   pollIntervalMs?: number;
-  /** Subscribe to user-channel WS for inbox refresh events (default true when authenticated). */
+  /** Subscribe to `/ws/inbox` (default true when authenticated). Falls back to the user channel. */
   realtime?: boolean;
   /** Load immediately on mount (default true). */
   enabled?: boolean;
@@ -41,8 +41,8 @@ export interface UseInboxResult {
 }
 
 /**
- * React hook over REST `/inbox` with optional `where` filter, user-channel WS refresh,
- * and Portal-style `items` + `onItem`.
+ * React hook over REST `/inbox` with optional `where` filter, dedicated `/ws/inbox`
+ * refresh, and Portal-style `items` + `onItem`.
  */
 export function useInbox(options: UseInboxOptions = {}): UseInboxResult {
   const { pollIntervalMs = 30_000, enabled = true, query, realtime = true, onItem } = options;
@@ -102,7 +102,7 @@ export function useInbox(options: UseInboxOptions = {}): UseInboxResult {
       try {
         await client.resolveToken?.();
         if (!active) return;
-        ws = client.connectUser();
+        ws = typeof client.connectInbox === "function" ? client.connectInbox() : client.connectUser();
         const onMessage = (ev: MessageEvent) => {
           try {
             const data = JSON.parse(String(ev.data)) as {

@@ -176,7 +176,7 @@ export const REALTIME_FEATURES: readonly RealtimeFeature[] = [
     label: "Voice AI",
     title: "STT → LLM → TTS on the room WebSocket.",
     description:
-      "Production voice pipeline with latency metrics and transport fallback. Starts on realtime WebRTC, steps down to chunked audio or text-only when the network cannot keep up.",
+      "joinVoiceStage is signaling (who is speaker or listener). Media runs on LiveKit. Not a FluxyChat SFU and not a published latency SLO.",
     icon: Mic,
     code: [
       { text: "const", kind: "keyword" },
@@ -341,10 +341,10 @@ export const REALTIME_FEATURES: readonly RealtimeFeature[] = [
   },
   {
     id: "omnichannel",
-    label: "14 channels",
+    label: "Bridges",
     title: "One inbox across Slack, Discord, and more.",
     description:
-      "Unified adapters for Slack, Discord, Telegram, WhatsApp, Teams, and nine more. Same room kernel for in-app chat and bridged channels.",
+      "Console Bridges: you create the vendor app, then paste tokens. Slack, Discord, Telegram, WhatsApp, and Teams share channel_configs. Not a finished 14-adapter desk.",
     icon: ArrowRightLeft,
     code: [
       { text: "await", kind: "keyword" },

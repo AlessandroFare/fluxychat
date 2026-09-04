@@ -29,7 +29,46 @@ Realtime chat on Cloudflare Workers: one Worker, WebSocket rooms, a TypeScript S
 
 ## Get started
 
-### Fastest path: public room widget
+### Fastest path: public room with pk_
+
+```tsx
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+<FluxyRealtimeProvider
+  workerUrl="https://api.fluxychat.com"
+  publishableKey="pk_..."
+>
+  <Chat />
+</FluxyRealtimeProvider>
+
+function Chat() {
+  const { messages, sendMessage } = useChat({ roomId: "your-public-room" });
+  return (
+    <>
+      <ul>
+        {messages.map((message) => (
+          <li key={message.id}>{message.content}</li>
+        ))}
+      </ul>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const input = event.currentTarget.elements.namedItem("body") as HTMLInputElement;
+          void sendMessage(input.value);
+          event.currentTarget.reset();
+        }}
+      >
+        <input name="body" />
+        <button type="submit">Send</button>
+      </form>
+    </>
+  );
+}
+```
+
+`fc_` stays on the server. `pk_` mints an anonymous JWT (`POST /tokens/anonymous`). Pin `@fluxy-chat/sdk` and `@fluxy-chat/react` after you publish 0.6.7 / 0.1.6.
+
+### Alternative: public room widget
 
 ```bash
 pnpm add @fluxy-chat/ui-kit @fluxy-chat/ui @fluxy-chat/react @fluxy-chat/sdk

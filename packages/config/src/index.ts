@@ -9,9 +9,13 @@ export {
   type FluxyPublishPipelineResult,
   type FluxyPublishPipelineBlocked,
 } from "./runtime.js";
+export { toHostedOverlay, parseHostedOverlayBody, sanitizeHostedRooms } from "./hosted-overlay.js";
 export type {
   FluxyConfig,
   FluxyRoomConfig,
+  FluxyRoomExtensionSlot,
+  FluxyHostedOverlay,
+  FluxyHostedRoomOverlay,
   FluxyAuthConfig,
   FluxyClaimMap,
   FluxyRoomCapabilities,

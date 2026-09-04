@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/config",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "description": "Type-safe fluxy.config.ts authoring for FluxyChat rooms, authz, and message middleware",
   "author": "Fluxychat",
   "repository": {

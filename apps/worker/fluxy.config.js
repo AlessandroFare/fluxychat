@@ -39,6 +39,7 @@ const config = defineConfig({
     },
     "room-*": {
       anonymous: true,
+      extensions: [{ id: "state", kind: "kv" }],
       authz: () => allow({ publish: true, sendDirect: true, react: true, invokeAgent: true }),
       onPublish: [moderatePublish.handler],
     },

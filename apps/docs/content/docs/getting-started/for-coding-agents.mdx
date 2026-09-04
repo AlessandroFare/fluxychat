@@ -15,12 +15,14 @@ That writes a Vite chat app. After `pnpm setup:hosted` you sign in on fluxychat.
 
 ## Gallery
 
-Each example needs `VITE_FLUXYCHAT_WORKER_URL` plus a **public** room id (guest) or a member JWT. Open two tabs for anything collaborative.
+Each example needs `VITE_FLUXYCHAT_WORKER_URL` plus a **`pk_`** (`VITE_FLUXYCHAT_PUBLISHABLE_KEY`), a **public** room id (guest), or a member JWT. Open two tabs for anything collaborative.
 
-Zero-backend public room:
+Zero-backend public room: `FluxyRealtimeProvider` + `publishableKey` (`pk_`, `POST /tokens/anonymous`). Guest session still works:
 
 ```ts
-await FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId);
+<FluxyRealtimeProvider workerUrl={workerUrl} publishableKey={pk}>
+  <Chat />
+</FluxyRealtimeProvider>
 ```
 
 ```bash
@@ -31,6 +33,7 @@ npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room
 npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
 npx @fluxy-chat/create-fluxy-chat@latest my-draw --example draw
 npx @fluxy-chat/create-fluxy-chat@latest my-comments --example comments-board
+npx @fluxy-chat/create-fluxy-chat@latest my-polls --example polls
 npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room
 npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
 npx @fluxy-chat/create-fluxy-chat@latest my-deal --example deal-room
@@ -52,6 +55,7 @@ Cursors travel as WebSocket `type: "cursor"`. Tiptap and the whiteboard sync Yjs
 ## Env vars (browser)
 
 - `VITE_FLUXYCHAT_WORKER_URL`: hosted API or `wrangler dev`
+- `VITE_FLUXYCHAT_PUBLISHABLE_KEY`: `pk_` on `FluxyRealtimeProvider` (public rooms)
 - `VITE_FLUXYCHAT_MEMBER_JWT` + `VITE_FLUXYCHAT_ROOM_ID`: member
 - `VITE_FLUXYCHAT_PUBLIC_ROOM_ID`: guest via `FluxyChatClient.joinPublicRoomAsGuest`
 

@@ -1,5 +1,12 @@
 # @fluxy-chat/sdk
 
+## 0.6.8 (2026-09-02)
+
+### Added
+
+- `connectInbox()` → `GET /ws/inbox`. `useInbox` prefers this socket.
+- `getRoomExtensions` / `setRoomExtension` for room kv/counter snapshots (max 5).
+
 ## 0.6.7 (2026-08-31)
 
 ### Added

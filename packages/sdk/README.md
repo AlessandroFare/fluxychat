@@ -435,7 +435,7 @@ FluxyChat maps [Pusher Channels](https://pusher.com/docs/channels) features to r
 | Presence / subscription count | WS events: `subscription_succeeded`, `member_joined`, `member_left`, `subscription_count` |
 | Cache channel | `connect(roomId, { cache: true })` |
 | E2E encrypted room | `getRoomE2eKey(roomId)` + encrypted sends |
-| User channel | `signIn({ userId, roles, ttlSeconds })`, `connectUser()`, `triggerUserEvent()`, `useUserChannel()` |
+| User channel | `signIn(...)`, `connectUser()`, `connectInbox()`, `triggerUserEvent()`, `useUserChannel()` / `useInbox()` |
 | Multi-room HTTP trigger | `triggerEvents({ roomIds, name, data, excludeSocketId })` |
 | Exclude sender | `excludeSocketId` on trigger (no `connection.socketId` in the SDK) |
 | Connection state | `connectionState`, `state_change` event |

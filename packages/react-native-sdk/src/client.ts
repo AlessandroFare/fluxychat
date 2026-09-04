@@ -246,6 +246,22 @@ export class FluxyChatClient {
     };
   }
 
+  /** Dedicated inbox socket (`GET /ws/inbox?token=`). */
+  connectInbox(): void {
+    if (!this.config.token) return;
+    const wsBase = this.config.wsUrl.replace(/^http/, 'ws');
+    const url = new URL('/ws/inbox', wsBase.endsWith('/') ? wsBase : `${wsBase}/`);
+    url.searchParams.set('token', this.config.token);
+    this.userWs = new WebSocket(url.toString());
+    this.userWs.onmessage = (ev) => {
+      try {
+        const event = JSON.parse(typeof ev.data === 'string' ? ev.data : '') as ChatEvent;
+        const handlers = this.userHandlers.get(event.type);
+        handlers?.forEach((h) => h(event));
+      } catch {}
+    };
+  }
+
   onUserEvent(event: string, handler: EventHandler): () => void {
     if (!this.userHandlers.has(event)) this.userHandlers.set(event, new Set());
     this.userHandlers.get(event)!.add(handler);

@@ -68,6 +68,14 @@ GET /config/client
 
 Use in your app to align `useChat` options with server policy.
 
+## Hosted overlay (`pnpm fluxy:deploy`)
+
+One file on hosted: `fluxy.hosted.json` (or `hostedPublish` + serializable `rooms` on `defineConfig`). Push with `PUT /admin/projects/:id/publish-config` or `pnpm fluxy:deploy`.
+
+Fields: `denySubstrings`, `guestCanPublish`, `iotAutoAgentId`, and `rooms` templates (`anonymous`, per-room deny, `guestCanPublish`, `capabilities`, `extensions` kv/counter slots). This is not Worker-bundled `onPublish` / `authz` callbacks. Those run only on a Worker you deploy.
+
+Room snapshots: `GET/PUT /rooms/:id/extensions/:extId` (max 5, 16 KiB). Hosted ids must be declared on the overlay.
+
 ## Self-hosted execution
 
 Fluxy runs your config callbacks **inside your Worker** — you own execution and secrets (Wrangler vars / secrets).

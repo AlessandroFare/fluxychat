@@ -67,6 +67,7 @@ const GALLERY_EXAMPLES = [
   "game-tick",
   "voice-stage",
   "comments-board",
+  "polls",
   "whiteboard",
 ] as const;
 
@@ -196,7 +197,7 @@ ${pc.bold("Examples:")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room")}
-  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-polls --example polls")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-chat --minimal")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter slack")}
 `;
@@ -277,6 +278,7 @@ async function main(): Promise<void> {
       "game-tick": "# Matchmake + start, then Submit input (not netcode)",
       "voice-stage": "# Open two tabs — join speaker/listener (signaling, not WebRTC)",
       "comments-board": "# Click the canvas to pin a thread",
+      polls: "# Create a poll, open a second tab, vote",
       "live-cursors-chat": "# Open two tabs — move and chat",
       whiteboard: "# Open two tabs — draw strokes (Yjs, not a second CRDT)",
     };
@@ -285,7 +287,7 @@ async function main(): Promise<void> {
       [
         `cd ${projectName}`,
         "cp .env.example .env",
-        "# Set VITE_FLUXYCHAT_WORKER_URL + public room ID or member JWT",
+        "# Set VITE_FLUXYCHAT_WORKER_URL + pk_ (or public room ID / member JWT)",
         `${devCmd} dev`,
         tryHint,
       ].join("\n"),
@@ -487,7 +489,7 @@ async function main(): Promise<void> {
       ? config.mode === "hosted"
         ? [
             `cd ${config.name}`,
-            `${devCmd} setup:hosted   # guest JWT from fluxychat.com`,
+            `${devCmd} setup:hosted   # writes pk_ when /public/demo-credentials is on`,
             `${devCmd} dev            # http://localhost:5173`,
             `# Keep this project: https://fluxychat.com/onboarding?from=cli`,
           ].join("\n")
@@ -503,7 +505,7 @@ async function main(): Promise<void> {
         ? [
             `cd ${config.name}`,
             "cp .env.example .env",
-            "# Set VITE_FLUXYCHAT_WORKER_URL + JWT or public room ID",
+            "# Set VITE_FLUXYCHAT_WORKER_URL + VITE_FLUXYCHAT_PUBLISHABLE_KEY",
             `${devCmd} dev`,
             "# In the room, send: @assistant hello",
           ].join("\n")

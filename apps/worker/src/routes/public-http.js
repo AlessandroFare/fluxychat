@@ -182,6 +182,21 @@ export async function dispatchPublicRoutes(request, url, h) {
     );
   }
 
+  if (url.pathname === "/public/demo-credentials" && request.method === "GET") {
+    const publishableKey = String(env.PUBLIC_DEMO_PUBLISHABLE_KEY || "").trim();
+    if (!publishableKey.startsWith("pk_")) {
+      return json({ configured: false }, { status: 404, headers: corsHeaders });
+    }
+    return json(
+      {
+        configured: true,
+        publishableKey,
+        roomId: String(env.PUBLIC_DEMO_ROOM_ID || "").trim() || "general",
+      },
+      { headers: corsHeaders },
+    );
+  }
+
   if (url.pathname === "/health") {
     const criticalChecks = {
       database: env.DB ? "connected" : "missing",
@@ -812,6 +827,7 @@ export async function dispatchPublicRoutes(request, url, h) {
       projectId: resolvedProjectId,
       userChannel: {
         websocketPath: `/ws/user/${encodedUser}`,
+        inboxWebsocketPath: "/ws/inbox",
         eventsPath: `/users/${encodedUser}/events`,
       },
     });

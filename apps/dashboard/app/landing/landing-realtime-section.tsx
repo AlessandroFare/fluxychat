@@ -28,10 +28,10 @@ export function LandingRealtimeSection() {
         <div className="flex flex-col gap-4 text-center">
           <p className="text-xs font-semibold uppercase text-[var(--mkt-brand-soft)]">Realtime SDK</p>
           <h2 className="text-balance font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            One SDK for chat, location, stream, and more
+            Chat, presence, Yjs, and agents in one room
           </h2>
           <p className="mx-auto max-w-2xl text-pretty leading-relaxed text-slate-300">
-            Start with in-app chat. Add location, push, voice AI, collab, HLS stream, multiplayer, IoT, fleet GPS, spatial twins, or 14 channel adapters: one SDK, one worker, one room WebSocket.
+            Start with useChat. Add cursors, Yjs, polls, HTTP ingest, and invokeAgent on the same Durable Object. Voice media is LiveKit. Bridges are console rows you wire yourself.
           </p>
         </div>
 

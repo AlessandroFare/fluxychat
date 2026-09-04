@@ -121,11 +121,32 @@ export async function handleDevProvision(request, env) {
     .bind(DEV_PROJECT_ID, "dev-local-jwt-secret-do-not-use-in-prod", now)
     .run();
 
+  const publishableRow = await env.DB.prepare(
+    "SELECT id, key_prefix FROM api_keys WHERE project_id = ? AND revoked_at IS NULL AND id LIKE 'pk_%' ORDER BY created_at DESC LIMIT 1",
+  )
+    .bind(DEV_PROJECT_ID)
+    .first();
+
+  async function ensureDevPublishableKey() {
+    if (publishableRow?.id) return publishableRow.id;
+    const publishableKey = `pk_${crypto.randomUUID().replace(/-/g, "")}`;
+    const pkPrefix = publishableKey.slice(0, 8);
+    const pkHash = await hashApiKey(publishableKey, env);
+    await env.DB.prepare(
+      "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+      .bind(publishableKey, DEV_PROJECT_ID, pkPrefix, pkHash, pkHash, now)
+      .run();
+    return publishableKey;
+  }
+
   if (activeKey) {
+    const publishableKey = await ensureDevPublishableKey();
     return new Response(
       JSON.stringify({
         projectId: DEV_PROJECT_ID,
         apiKey: null,
+        publishableKey,
         keyPrefix: activeKey.key_prefix,
         reused: true,
         workerUrl: "http://127.0.0.1:8787",
@@ -152,10 +173,13 @@ export async function handleDevProvision(request, env) {
     .bind(apiKey, DEV_PROJECT_ID, keyPrefix, keyHash, keyHash, now)
     .run();
 
+  const publishableKey = await ensureDevPublishableKey();
+
   return new Response(
     JSON.stringify({
       projectId: DEV_PROJECT_ID,
       apiKey,
+      publishableKey,
       reused: false,
       workerUrl: "http://127.0.0.1:8787",
     }),

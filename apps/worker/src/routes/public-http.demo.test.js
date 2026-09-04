@@ -340,3 +340,30 @@ describe("GET /attachments/:fileKey content-type and disposition", () => {
     expect(response.status).toBe(503);
   });
 });
+
+describe("GET /public/demo-credentials", () => {
+  it("returns 404 when PUBLIC_DEMO_PUBLISHABLE_KEY is unset", async () => {
+    const deps = buildDemoHandlerDeps();
+    const request = new Request("https://api.example.com/public/demo-credentials");
+    const response = await dispatchPublicRoutes(request, new URL(request.url), deps);
+    expect(response).not.toBeNull();
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.configured).toBe(false);
+  });
+
+  it("returns pk_ and room when configured", async () => {
+    const deps = buildDemoHandlerDeps();
+    deps.env.PUBLIC_DEMO_PUBLISHABLE_KEY = "pk_demo";
+    deps.env.PUBLIC_DEMO_ROOM_ID = "lobby";
+    const request = new Request("https://api.example.com/public/demo-credentials");
+    const response = await dispatchPublicRoutes(request, new URL(request.url), deps);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({
+      configured: true,
+      publishableKey: "pk_demo",
+      roomId: "lobby",
+    });
+  });
+});

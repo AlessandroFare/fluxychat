@@ -1,0 +1,15 @@
+{
+  "denySubstrings": [],
+  "guestCanPublish": true,
+  "iotAutoAgentId": null,
+  "rooms": {
+    "support-*": {
+      "anonymous": false,
+      "guestCanPublish": false
+    },
+    "room-*": {
+      "anonymous": true,
+      "extensions": [{ "id": "state", "kind": "kv" }]
+    }
+  }
+}

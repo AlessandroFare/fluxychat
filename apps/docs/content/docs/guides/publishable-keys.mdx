@@ -11,6 +11,8 @@ description: pk_ in the browser, fc_ on the server.
 - `POST /tokens/anonymous`
 - `POST /public/rooms/:id/guest-session` (optional header `X-Fluxy-Api-Key`)
 
+Hosted weekend path: `GET /public/demo-credentials` returns `{ publishableKey, roomId }` when the Worker has `PUBLIC_DEMO_PUBLISHABLE_KEY`. `pnpm setup:hosted` writes that into `.env`. Without that env, copy a `pk_` from the console.
+
 They **cannot** mint a member JWT. The Worker returns `403 publishable_key_not_allowed`.
 
 ```tsx

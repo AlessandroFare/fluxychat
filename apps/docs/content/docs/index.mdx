@@ -27,6 +27,7 @@ Start with `publishableKey` on `FluxyRealtimeProvider`, or `npx @fluxy-chat/crea
   <Card title="Comments" description="Pinned threads, not chat replies." href="/docs/core/comments" />
   <Card title="Notifications and digest" description="Inbox kinds and daily email." href="/docs/core/notifications" />
   <Card title="Chat + room agents" description="useChat and invokeAgent." href="/docs/core/use-chat" />
+  <Card title="Polls" description="createPoll, votePoll, anonymous ballots." href="/docs/core/polls" />
   <Card title="Feeds" description="n8n and agent logs, not the chat log." href="/docs/core/feeds" />
   <Card title="Copilots" description="Side panel AI. Does not write the timeline." href="/docs/core/copilots" />
   <Card title="AI collaboration" description="Workflows write feeds and presence." href="/docs/core/ai-collaboration" />
@@ -49,7 +50,7 @@ Start with `publishableKey` on `FluxyRealtimeProvider`, or `npx @fluxy-chat/crea
 | Piece | Who sets it |
 |-------|-------------|
 | Worker URL | Hosted API or your `workers.dev` |
-| Public room | `joinPublicRoomAsGuest` or `FluxyChatWidget guest`. No JWT mint. |
+| Public room | `FluxyRealtimeProvider` + `publishableKey` (`POST /tokens/anonymous`). Widget `guest` still works. |
 | Project API key (`fc_…`) | Server only. Mints member JWTs. |
 | Member JWT | Private rooms, roles, production. |
 | LLM keys | Worker secrets. Never the browser. |
