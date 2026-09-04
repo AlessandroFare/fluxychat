@@ -443,8 +443,8 @@ importers:
         specifier: 4.1.0
         version: 4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.6.0)(jsdom@29.1.0(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@25.6.0)(typescript@5.9.3))(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
       wrangler:
-        specifier: ^4.129.0
-        version: 4.129.0(@cloudflare/workers-types@4.20260518.1)
+        specifier: ^4.92.0
+        version: 4.92.0(@cloudflare/workers-types@4.20260518.1)
 
   packages/agent:
     dependencies:
