@@ -64,6 +64,7 @@ Each row in `items` is a `FluxyInboxItem`:
 | `unread` | `summary.unreadRooms` | Room has messages after your watermark |
 | `snooze` | `summary.snoozedRooms` | Room hidden until `snoozedUntil` |
 | `follow_up` | `summary.followUps` | Operator reminder you created |
+| `thread` | `summary.threads` | Chat reply tree you participate in (`threadId` is a message id) |
 
 Items are built from `GET /inbox` and merged with realtime pushes on the **user channel** WebSocket (`onItem`).
 

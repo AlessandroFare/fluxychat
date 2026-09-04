@@ -92,6 +92,7 @@ pnpm run first-message
 | `NotImplementedError` / `FluxyNotImplementedError` | 501 | Feature not on this adapter/runtime |
 | `FluxyConnectionError` | WS abnormal close | Auto-reconnect; check network |
 | `FluxySendError` | — | Wait until socket open or use REST fallback |
+| `ThreadDepthExceededError` / `FluxyBlockedError` / `blocked` | 400, `reason: thread_depth_exceeded` | Reply closer to the root; max depth 8 |
 
 Use `describeConnectionError()` from `@fluxy-chat/sdk` for UI copy. Full troubleshooting: [Integration troubleshooting guide](https://github.com/AlessandroFare/fluxychat/blob/main/apps/docs/content/docs/guides/troubleshooting-integration.mdx).
 

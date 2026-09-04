@@ -22,6 +22,11 @@ export {
 } from "@fluxy-chat/sdk";
 
 export {
+  useThread,
+  type UseThreadOptions,
+} from "@fluxy-chat/sdk";
+
+export {
   useVoice,
   type UseVoiceOptions,
   type UseVoiceResult,

@@ -82,6 +82,7 @@ const { items, unseen, markRead } = useInbox({
 | Hook / component | Purpose |
 |------------------|---------|
 | `useChat` | Room messages, send, pagination, connection state |
+| `useThread` | Direct replies to one `parentId`. Shares the `useChat` store under the provider. |
 | `useInbox` | Inbox items feed, unseen count, live `onItem` |
 | `useNotifications` | In-app notification list |
 | `useLocation` | Consume `fleet.gps_update` tracks in a room. Not a Maps SDK. Ingest is HTTP `POST /fleet/gps`. |

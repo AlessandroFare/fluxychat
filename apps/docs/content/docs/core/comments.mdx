@@ -1,9 +1,9 @@
 ---
 title: Comments & threads
-description: Contextual comment threads pinned to a location — not chat replies.
+description: Pinned comments on a location. Chat replies are a different hook.
 ---
 
-Chat replies use `parentId`. **Contextual threads** are a separate product: a pin (`x`, `y`, `sceneId`, `quote`) plus comments, resolve, and inbox kinds `thread` / `comment`.
+Pins on a canvas (`x`, `y`, a quote) live in `/comment-threads`. Chat replies are `parentId` on the message log. See [chat reply threads](/docs/core/nested-threads).
 
 ## REST
 

@@ -4,6 +4,8 @@
  * Self-host remains documented under get-started#self-host (backlog tier).
  */
 
+import { isPublicSitePath, PUBLIC_SITE_PATH_PREFIXES } from "@/lib/public-site-paths";
+
 /** Public Fumadocs site home (external). Set NEXT_PUBLIC_DOCS_URL=http://localhost:3001 for local docs dev. */
 export function docsHomeHref(): string {
   const configured = process.env.NEXT_PUBLIC_DOCS_URL?.trim()?.replace(/\/$/, "");
@@ -81,28 +83,11 @@ export const HOSTED_PATHS = {
   docsChatOnly: docsSiteHref("chat-only"),
 } as const;
 
-/** Routes that use marketing layout (no console sidebar). Root `/` is handled separately. */
-export const MARKETING_PATH_PREFIXES = [
-  "/landing",
-  "/pricing",
-  "/why",
-  "/enter",
-  "/get-started",
-  "/docs",
-  "/compare",
-  "/guides",
-  "/demo",
-  "/cli-auth",
-  "/status",
-  "/sign-in",
-  "/sign-up",
-] as const;
+/** @deprecated Use PUBLIC_SITE_PATH_PREFIXES. Kept so older imports keep compiling. */
+export const MARKETING_PATH_PREFIXES = PUBLIC_SITE_PATH_PREFIXES;
 
 export function isMarketingPath(pathname: string): boolean {
-  if (pathname === "/") return true;
-  return MARKETING_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+  return isPublicSitePath(pathname);
 }
 
 export const HOSTED_COPY = {

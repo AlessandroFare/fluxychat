@@ -1,5 +1,12 @@
 # @fluxy-chat/sdk
 
+## 0.6.9 (2026-09-04)
+
+### Added
+
+- `useThread`, `listRoomThreads` (`GET /rooms/:id/threads` with opaque `nextCursor`), inbox `kind: "thread"`.
+- `ThreadDepthExceededError` when a reply is more than 8 hops from the root.
+
 ## 0.6.8 (2026-09-02)
 
 ### Added

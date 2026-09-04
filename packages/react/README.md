@@ -33,7 +33,7 @@ function Room() {
 
 Private rooms: pass `authTokenProvider` (member JWT) or `connectUrl` instead of `publishableKey`.
 
-Requires `react` 18+ as a peer dependency. Pin `@fluxy-chat/sdk@^0.6.7`.
+Requires `react` 18+ as a peer dependency. Pin `@fluxy-chat/sdk@^0.6.9`.
 
 ## Inbox demo
 
@@ -55,6 +55,7 @@ const { items, unseen, markRead } = useInbox({
 | Hook / component | Purpose |
 |------------------|---------|
 | `useChat` | Room messages, send, pagination, connection state |
+| `useThread` | Direct replies for one `threadParentId` (shared room store under the provider) |
 | `useInbox` | Inbox items feed, unseen count, live `onItem` |
 | `useNotifications` | In-app notification list |
 | `useLocation` | Consume `fleet.gps_update` tracks. Not a Maps SDK. |

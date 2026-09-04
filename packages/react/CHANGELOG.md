@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.7] - 2026-09-04
+
+### Added
+
+- Re-export `useThread` from `@fluxy-chat/sdk@0.6.9`. Peer is `^0.6.9`.
+
 ## [0.1.6] - 2026-08-31
 
 ### Added

@@ -162,8 +162,8 @@ export default function ComparePage() {
         <p className="font-medium">One platform, not a patchwork of SKUs</p>
         <p className="mt-1 text-muted-foreground">
           Pusher and Ably excel at pub/sub channels. Stream bundles chat and feeds with separate video products.
-          FluxyChat ships stream, collab, game, IoT, fleet, and spatial modules on the same Worker and room kernel,
-          so you are not stitching five vendor bills for one product experience.
+          FluxyChat keeps chat, presence, Yjs, and agents on one Durable Object. Platform modules (IoT, game) reuse
+          that Worker when you turn them on. You still pay Cloudflare, not a second chat SKU.
         </p>
       </div>
 

@@ -83,6 +83,7 @@ import { MergeConflictPanel } from "@/app/components/merge-conflict-panel";
 import { ChatPresenceStrip } from "@/app/components/chat-presence-strip";
 import { AgentCopilotConfirm } from "@/app/components/agent-copilot-confirm";
 import { ThreadSummary } from "@/app/components/thread-summary";
+import { RoomThreadPane } from "@/app/components/room-thread-pane";
 import { useRoomDraftSync } from "@/lib/use-room-draft-sync";
 import type { FluxySendMessageOptions, FluxyChatClient } from "@fluxy-chat/sdk";
 import { Button, Input } from "@/app/components/ui";
@@ -403,6 +404,7 @@ export function FluxyChat({
   const [confirmBeforeSend, setConfirmBeforeSend] = useState(showCopilotConfirm ? coPilotConfirmDefault : false);
   const [draft, setDraft] = useState("");
   const [replyToId, setReplyToId] = useState<number | null>(null);
+  const [threadPaneParentId, setThreadPaneParentId] = useState<number | null>(null);
   const [ephemeralTtlSeconds, setEphemeralTtlSeconds] = useState(0);
   const [whisperMode, setWhisperMode] = useState(false);
   const [whisperTo, setWhisperTo] = useState("");
@@ -1662,10 +1664,12 @@ export function FluxyChat({
 
   return (
     <div
+      className={cn("relative flex gap-3", className)}
+    >
+    <div
       className={cn(
-        "relative flex flex-col gap-3",
+        "relative flex min-w-0 flex-1 flex-col gap-3",
         isOnboarding && "max-h-[min(520px,72vh)]",
-        className,
       )}
     >
       {showConnectionBanner ? (
@@ -2238,6 +2242,16 @@ export function FluxyChat({
                         <Reply className="size-3" />
                         Reply
                       </button>
+                      {m.id != null && (replyCountByParent.get(m.id) ?? 0) > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setThreadPaneParentId(m.id!)}
+                          className={messageToolbarButtonClass}
+                          data-testid="open-thread-pane"
+                        >
+                          {replyCountByParent.get(m.id)} replies
+                        </button>
+                      ) : null}
                     </MessageHoverToolbar>
                   ) : null;
 
@@ -3523,6 +3537,15 @@ export function FluxyChat({
           onJumpToMessage={scrollToMessage}
         />
       ) : null}
+    </div>
+    {trimmedRoomId && threadPaneParentId != null ? (
+      <RoomThreadPane
+        roomId={trimmedRoomId}
+        threadParentId={threadPaneParentId}
+        client={fluxyClient}
+        onClose={() => setThreadPaneParentId(null)}
+      />
+    ) : null}
     </div>
   );
 }

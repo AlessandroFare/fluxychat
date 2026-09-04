@@ -4,15 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui";
-import { MARKETING_PATH_PREFIXES } from "@/lib/hosted-product";
+import { isPublicSitePath } from "@/lib/public-site-paths";
 
 const COOKIE_CONSENT_KEY = "fluxychat_cookie_consent";
 
 function isMarketingPath(pathname: string | null): boolean {
   if (!pathname) return false;
-  return MARKETING_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+  return isPublicSitePath(pathname);
 }
 
 export function CookieConsentBanner() {

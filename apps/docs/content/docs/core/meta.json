@@ -15,6 +15,7 @@
     "broadcast",
     "polls",
     "comments",
+    "nested-threads",
     "storage",
     "feeds",
     "copilots",

@@ -71,3 +71,23 @@ export class FluxyNotImplementedError extends NotImplementedError {
     this.name = "FluxyNotImplementedError";
   }
 }
+
+/**
+ * A gate refused the send (Portal `BlockedError`). Branch on `reason` (e.g. `thread_depth_exceeded`).
+ */
+export class FluxyBlockedError extends ChatError {
+  readonly reason: string;
+
+  constructor(reason: string, message?: string) {
+    super("blocked", message ?? reason);
+    this.name = "FluxyBlockedError";
+    this.reason = reason;
+  }
+}
+
+export class ThreadDepthExceededError extends FluxyBlockedError {
+  constructor(message?: string) {
+    super("thread_depth_exceeded", message ?? "Reply thread is too deep.");
+    this.name = "ThreadDepthExceededError";
+  }
+}

@@ -17,6 +17,9 @@ export interface FluxyInboxItem {
   roomName?: string;
   unreadCount?: number;
   receivedAt: string;
+  threadId?: number;
+  parentThreadId?: number | null;
+  rootThreadId?: number;
   payload?: unknown;
 }
 
@@ -71,6 +74,20 @@ export function inboxSummaryToItems(summary: FluxyInboxSummary): FluxyInboxItem[
       roomName: f.roomName,
       receivedAt: f.createdAt ?? now,
       payload: f,
+    });
+  }
+
+  for (const t of summary.threads ?? []) {
+    items.push({
+      id: itemId("thread", t.roomId, String(t.threadId)),
+      kind: "thread",
+      roomId: t.roomId,
+      unreadCount: t.unreadCount,
+      receivedAt: t.lastReplyAt ?? now,
+      threadId: t.threadId,
+      parentThreadId: t.parentThreadId ?? null,
+      rootThreadId: t.rootThreadId ?? t.threadId,
+      payload: t,
     });
   }
 

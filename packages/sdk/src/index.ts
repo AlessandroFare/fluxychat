@@ -30,6 +30,8 @@ export {
   FluxyLockError,
   NotImplementedError,
   FluxyNotImplementedError,
+  FluxyBlockedError,
+  ThreadDepthExceededError,
 } from "./structured-errors";
 
 export {
@@ -687,6 +689,21 @@ export {
   type UseChatHistoryReplay,
   type UseChatReadOn,
 } from "./use-chat";
+
+export {
+  useThread,
+  type UseThreadOptions,
+} from "./use-thread";
+
+export {
+  messagesInReplyThread,
+  encodeRoomThreadCursor,
+  decodeRoomThreadCursor,
+  MAX_CHAT_THREAD_DEPTH,
+  type FluxyRoomThread,
+  type FluxyThreadListQuery,
+  type FluxyThreadPage,
+} from "./chat-threads";
 
 export {
   useLiveCursors,

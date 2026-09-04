@@ -8,9 +8,4 @@ _No active incidents._
 
 ## Resolved
 
-### 2026-07-01 — Example resolved incident (template)
-
-**Status:** Resolved  
-**Impact:** Chat API latency elevated in EU region.  
-**Duration:** 18 minutes  
-**Summary:** Deploy rollback restored normal operation. Use this block as a template for real incidents.
+_None published yet. Copy a past outage here when you have a real one. Do not leave a fake example on the public page._
