@@ -1,25 +1,9 @@
-import { PLATFORM_READINESS } from "@fluxy-chat/sdk";
+import { LANDING_FAQ } from "@/lib/marketing-faq";
+import { SITE_DESCRIPTION } from "@/lib/marketing-copy";
 
 const SITE_URL = "https://fluxychat.com";
 
 export function LandingStructuredData() {
-  const industries = Object.entries(PLATFORM_READINESS)
-    .filter(([id]) => ["edu", "health", "event", "finance", "continuity"].includes(id))
-    .map(([, entry]) => ({
-      "@type": "SoftwareApplication",
-      name: entry.label,
-      applicationCategory: "BusinessApplication",
-      operatingSystem: "Web",
-      url: `${SITE_URL}${entry.href}`,
-      description: entry.description,
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-        description: `${entry.readiness}: transparent readiness, not implied production certification`,
-      },
-    }));
-
   const payload = {
     "@context": "https://schema.org",
     "@graph": [
@@ -27,17 +11,29 @@ export function LandingStructuredData() {
         "@type": "SoftwareApplication",
         name: "FluxyChat",
         applicationCategory: "DeveloperApplication",
-        operatingSystem: "Web, Cloudflare Workers",
-        description:
-          "Realtime interaction platform: one room primitive for chat, collaboration, streaming, game backends, IoT and industry verticals.",
+        operatingSystem: "Cloudflare Workers",
+        license: "https://opensource.org/licenses/MIT",
         url: SITE_URL,
+        description: SITE_DESCRIPTION,
         offers: {
           "@type": "Offer",
           price: "0",
           priceCurrency: "USD",
+          description:
+            "Free hosted tier: 200000 persisted messages per month, no credit card. Hosted is open beta.",
         },
       },
-      ...industries,
+      {
+        "@type": "FAQPage",
+        mainEntity: LANDING_FAQ.map((item) => ({
+          "@type": "Question",
+          name: item.q,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: item.a,
+          },
+        })),
+      },
     ],
   };
 

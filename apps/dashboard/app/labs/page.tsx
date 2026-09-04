@@ -43,7 +43,7 @@ export default function LabsCatalogPage() {
             <li key={entry.id}>
               <Link
                 href={entry.href}
-                className="block rounded-xl border border-border bg-card px-4 py-3 text-sm transition hover:border-primary/20"
+                className="block rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="font-medium text-foreground">{entry.label}</span>
@@ -61,7 +61,7 @@ export default function LabsCatalogPage() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="block rounded-xl border border-border bg-card px-4 py-3 text-sm transition hover:border-primary/20"
+                className="block rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="font-medium text-foreground">{item.label}</span>
@@ -83,7 +83,7 @@ export default function LabsCatalogPage() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="block rounded-xl border border-border bg-card px-4 py-3 text-sm transition hover:border-primary/20"
+                className="block rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="font-medium text-foreground">{item.label}</span>
@@ -103,7 +103,7 @@ export default function LabsCatalogPage() {
             <li key={entry.id}>
               <Link
                 href={entry.href}
-                className="block rounded-xl border border-border bg-card px-4 py-3 text-sm transition hover:border-primary/20"
+                className="block rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="font-medium text-foreground">{entry.label}</span>
@@ -119,7 +119,7 @@ export default function LabsCatalogPage() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="block rounded-xl border border-border bg-card px-4 py-3 text-sm transition hover:border-primary/20"
+                className="block rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
               >
                 <span className="font-medium text-foreground">{item.label}</span>
                 {item.description ? (

@@ -384,7 +384,7 @@ export default function RoomsPage() {
       </div>
 
       <section className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
-        <div className="rounded-xl border border-black/[0.06] bg-white/90 p-4 shadow-[var(--shadow-subtle-2)] backdrop-blur-sm">
+        <div className="rounded-xl bg-white/90 p-4 shadow-[var(--shadow-2)] backdrop-blur-sm">
           <h2 className="font-heading mb-2 text-lg font-semibold text-foreground">Your rooms</h2>
           {rooms.length === 0 ? (
             <div className="rounded-md border border-dashed border-border bg-muted/30 p-3">
@@ -437,7 +437,7 @@ export default function RoomsPage() {
           )}
         </div>
 
-        <div className="rounded-xl border border-black/[0.06] bg-white/90 p-4 shadow-[var(--shadow-subtle-2)] backdrop-blur-sm">
+        <div className="rounded-xl bg-white/90 p-4 shadow-[var(--shadow-2)] backdrop-blur-sm">
           {!selectedId ? (
             <p className="text-muted-foreground">Select a room.</p>
           ) : (

@@ -193,7 +193,7 @@ export function VoiceInterfaceShowcase({ session }: Props) {
             <option value="voice_activity_detection">Voice Activity Detection</option>
           </select>
 
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+          <div className="flex items-center gap-3 rounded-lg bg-card shadow-[var(--shadow-2)] p-3">
             <span
               className={`relative flex size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-300 ${
                 listening ? "bg-[var(--fluxy-cta-color)] text-white" : "bg-muted text-muted-foreground"

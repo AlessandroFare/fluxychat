@@ -13,7 +13,7 @@ export default function Header() {
   const inConsole = isConsoleRoute(pathname);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background shadow-[var(--shadow-subtle-2)]">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
       <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
         {inConsole ? (
           <div className="flex-1" aria-hidden />
@@ -31,19 +31,19 @@ export default function Header() {
           <nav className="hidden items-center gap-6 md:flex" aria-label="Top links">
             <Link
               href={HOSTED_PATHS.landing}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm font-normal text-muted-foreground transition-colors hover:text-foreground"
             >
               Product
             </Link>
             <Link
               href="/get-started"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm font-normal text-muted-foreground transition-colors hover:text-foreground"
             >
               Get started
             </Link>
             <Link
               href={HOSTED_PATHS.docs}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm font-normal text-muted-foreground transition-colors hover:text-foreground"
             >
               Docs
             </Link>

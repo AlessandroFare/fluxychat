@@ -22,15 +22,23 @@ export interface HeroPreviewScene {
   badge?: string;
 }
 
-export const HERO_PREVIEW_SCENES: readonly HeroPreviewScene[] = [
+export const KERNEL_PREVIEW_SCENES: readonly HeroPreviewScene[] = [
   { id: "chat", label: "Chat", room: "support-room", badge: "Live" },
   { id: "agents", label: "AI agents", room: "copilot", badge: "Agent" },
+];
+
+export const OPTIONAL_PREVIEW_SCENES: readonly HeroPreviewScene[] = [
   { id: "location", label: "Location", room: "delivery-42", badge: "Tracking" },
   { id: "stream", label: "Stream", room: "stage-main", badge: "1.2k live" },
   { id: "collab", label: "Collab", room: "planning", badge: "Syncing" },
   { id: "game", label: "Game", room: "arena-3", badge: "Match" },
   { id: "iot", label: "IoT", room: "factory-floor", badge: "3 devices" },
   { id: "channels", label: "Bridges", room: "inbox", badge: "Bridged" },
+];
+
+export const HERO_PREVIEW_SCENES: readonly HeroPreviewScene[] = [
+  ...KERNEL_PREVIEW_SCENES,
+  ...OPTIONAL_PREVIEW_SCENES,
 ];
 
 const shell = {

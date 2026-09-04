@@ -302,7 +302,7 @@ export default function AgentQueuePage() {
       </ul>
 
       {/* Expert Routing SDK module */}
-      <Panel className="mt-8 rounded-2xl border border-border/80 p-4">
+      <Panel className="mt-8 rounded-2xl p-4">
         <div className="flex items-start gap-3">
           <Route className="mt-0.5 h-5 w-5 text-blue-500" />
           <div>
@@ -321,7 +321,7 @@ export default function AgentQueuePage() {
       </Panel>
 
       {/* Waiting Room SDK module */}
-      <Panel className="mt-4 rounded-2xl border border-border/80 p-4">
+      <Panel className="mt-4 rounded-2xl p-4">
         <div className="flex items-start gap-3">
           <Clock className="mt-0.5 h-5 w-5 text-amber-500" />
           <div>

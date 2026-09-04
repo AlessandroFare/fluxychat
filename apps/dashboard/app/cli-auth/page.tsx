@@ -67,7 +67,7 @@ function CliAuthRedirect() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-white px-5 py-6 text-center shadow-sm">
+    <div className="rounded-2xl bg-white px-6 py-6 text-center shadow-[var(--shadow-2)]">
       <p className="text-sm font-medium text-foreground">{status}</p>
       <p className="mt-1 text-xs text-muted-foreground">
         If you already have a project we reuse it. We mint a member JWT and a publishable pk_ for public rooms.

@@ -125,7 +125,7 @@ export default function WebhooksPage() {
               return (
                 <li
                   key={w.webhookId}
-                  className="flex flex-col gap-2 rounded-xl border border-black/[0.06] bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-xl bg-white/80 shadow-[var(--shadow-2)] p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">

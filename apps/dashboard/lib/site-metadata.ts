@@ -54,7 +54,7 @@ export const ROOT_METADATA: Metadata = {
   ...buildPageMetadata({
     title: SITE_NAME,
     description:
-      "Realtime in-app chat on the edge. SDK, AI agents, and operator console for Cloudflare Workers.",
+      "FluxyChat is a room layer for in-app chat: humans and agents share one Cloudflare Durable Object. MIT self-host or hosted beta.",
     absoluteTitle: true,
   }),
   title: {

@@ -11,10 +11,10 @@ export interface TopNavLink {
 }
 
 export const TOP_NAV_LINK_CLASS =
-  "text-sm font-medium text-zinc-300 transition-colors hover:text-white";
+  "text-sm font-normal text-zinc-300 transition-colors hover:text-white";
 
 export const TOP_NAV_LINK_CLASS_THEME =
-  "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground";
+  "text-sm font-normal text-muted-foreground transition-colors hover:text-foreground";
 
 export function useTopNavMobileMenu() {
   const [open, setOpen] = useState(false);

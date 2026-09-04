@@ -33,7 +33,7 @@ export function NotificationsOverviewCard() {
   if (!token) return null;
 
   return (
-    <section className="mb-8 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)] sm:p-6">
+    <section className="mb-8 rounded-2xl bg-card p-4 shadow-[var(--shadow-2)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">

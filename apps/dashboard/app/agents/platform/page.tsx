@@ -247,7 +247,7 @@ function AgentsPanel({
       </h3>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {agents.map(({ id, config }) => (
-          <div key={id} className="rounded-xl border border-border bg-card p-4">
+          <div key={id} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
                 <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
@@ -382,7 +382,7 @@ function BuilderPanel({
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Visual flow builder
         </h3>
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
           <p className="mb-3 text-xs text-muted-foreground">Define a trigger → condition → action flow for your agent.</p>
           <div className="space-y-2">
             {[
@@ -514,7 +514,7 @@ function DeployPanel({
           const stageDeploys = deploys.filter((d) => d.stage === stage);
           const active = stageDeploys.find((d) => d.status === "active");
           return (
-            <div key={stage} className="rounded-xl border border-border bg-card p-4">
+            <div key={stage} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
               <div className="flex items-center gap-2">
                 <span className={cn("rounded px-2 py-0.5 text-[10px] font-semibold uppercase", stageColors[stage])}>{stage}</span>
                 {active && <CheckCircle2 className="size-3.5 text-green-500" />}
@@ -587,16 +587,16 @@ function SandboxPanel({ platform }: { platform: AgentPlatformApi }) {
               {result.success ? <CheckCircle2 className="size-4" /> : <XCircle className="size-4" />}
               {result.success ? "Success" : "Failed"} · {result.duration}ms
             </div>
-            <div className="rounded-lg border border-border bg-card p-3">
+            <div className="rounded-lg bg-card shadow-[var(--shadow-2)] p-3">
               <div className="text-[10px] uppercase text-muted-foreground">Output</div>
               <p className="mt-1 text-sm">{result.output}</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-border bg-card p-2 text-center">
+              <div className="rounded-lg bg-card shadow-[var(--shadow-2)] p-2 text-center">
                 <div className="text-[10px] uppercase text-muted-foreground">Input tokens</div>
                 <div className="text-sm font-bold tabular-nums">{result.tokenUsage.input}</div>
               </div>
-              <div className="rounded-lg border border-border bg-card p-2 text-center">
+              <div className="rounded-lg bg-card shadow-[var(--shadow-2)] p-2 text-center">
                 <div className="text-[10px] uppercase text-muted-foreground">Output tokens</div>
                 <div className="text-sm font-bold tabular-nums">{result.tokenUsage.output}</div>
               </div>
@@ -632,7 +632,7 @@ function TenancyPanel({ platform }: { platform: AgentPlatformApi }) {
           const agents = platform.listAgents(ws);
           const totalCost = agents.reduce((s, { id }) => s + platform.getCostSummary(id).totalCostCents, 0);
           return (
-            <div key={ws} className="rounded-xl border border-border bg-card p-4">
+            <div key={ws} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
               <div className="flex items-center gap-2">
                 <Users className="size-4 text-muted-foreground" />
                 <h4 className="text-sm font-semibold">{ws}</h4>
@@ -667,7 +667,7 @@ function CostsPanel({ platform }: { platform: AgentPlatformApi }) {
         {agents.map(({ id, config }) => {
           const summary = platform.getCostSummary(id);
           return (
-            <div key={id} className="rounded-xl border border-border bg-card p-4">
+            <div key={id} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
               <h4 className="text-sm font-semibold">{config.name}</h4>
               <div className="mt-2 space-y-1 text-xs">
                 <div className="flex justify-between"><span className="text-muted-foreground">Requests</span><span className="tabular-nums">{summary.entries}</span></div>
@@ -704,7 +704,7 @@ function RatesPanel({ platform }: { platform: AgentPlatformApi }) {
         {tiers.map((tier) => {
           const limit = platform.getRateLimit(tier);
           return (
-            <div key={tier} className="rounded-xl border border-border bg-card p-4">
+            <div key={tier} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
               <span className={cn("rounded px-2 py-0.5 text-[10px] font-semibold uppercase", tierColors[tier])}>{tier}</span>
               <div className="mt-2 space-y-1 text-xs">
                 <div className="flex justify-between"><span className="text-muted-foreground">Req/min</span><span className="font-bold tabular-nums">{limit.requestsPerMinute}</span></div>
@@ -748,7 +748,7 @@ function AbTestPanel({ platform }: { platform: AgentPlatformApi }) {
         {tests.map((test) => {
           const results = platform.getTestResults(test.id);
           return (
-            <div key={test.id} className="rounded-xl border border-border bg-card p-4">
+            <div key={test.id} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold">{test.name}</h4>
                 <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase", test.status === "running" ? "bg-green-500/15 text-green-600" : "bg-muted text-muted-foreground")}>{test.status}</span>
@@ -814,7 +814,7 @@ function PersonalityPanel({ platform }: { platform: AgentPlatformApi }) {
       </div>
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trait sliders</h3>
-        <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+        <div className="space-y-3 rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
           {([
             { key: "humor", label: "Humor" },
             { key: "formality", label: "Formality" },
@@ -875,7 +875,7 @@ function EmotionPanel({ platform }: { platform: AgentPlatformApi }) {
       </div>
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Detected emotion</h3>
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
           <div className="flex items-center gap-3">
             <span className={cn("rounded-lg px-3 py-1.5 text-sm font-semibold capitalize", emotionColors[emotion.emotion] || emotionColors.neutral)}>
               {emotion.emotion}
@@ -989,7 +989,7 @@ function MemoryPanel({
             </div>
           ))}
           {memories.map((m) => (
-            <div key={m.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs">
+            <div key={m.id} className="flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] px-3 py-1.5 text-xs">
               <span>{platformIcons[m.platform] || "📱"}</span>
               <span className="font-medium">{m.key}:</span>
               <span className="text-muted-foreground">{m.value}</span>
@@ -1005,7 +1005,7 @@ function MemoryPanel({
         </h3>
         <div className="space-y-2">
           {Object.entries(unified).map(([k, v]) => (
-            <div key={k} className="rounded-xl border border-border bg-card p-3">
+            <div key={k} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{platformIcons[v.platform] || "📱"}</span>
                 <div>

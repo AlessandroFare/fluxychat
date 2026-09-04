@@ -38,20 +38,31 @@
   --surface-card: #FFFFFF;
   --surface-card-rgb: 255 255 255;
   --text-primary: #1a1a1a;
-  --text-muted: #6b7280;
+  --text-muted: #57534e;
   --border: #e5e0d8;
   --border-rgb: 229 224 216;
   --fluxy-cta-rgb: 194 65 12;
   --fluxy-link-color: #C2410C;
-  --brand: #ff725e;
-  --brand-hover: #e8614d;
+  --brand: #C2410C;
+  --brand-hover: #9A3A0A;
   --destructive: #dc2626;
   --success: #16a34a;
-  --ring: #ff725e;
+  --ring: #C2410C;
   --radius: 0.5rem;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08);
-  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  /* Elevation by z-position (Refactoring UI). --shadow-subtle* were referenced in UI
+     but never defined here, so those shadows were a no-op. */
+  --shadow-1: 0 1px 3px hsla(0, 0%, 0%, 0.2);
+  --shadow-2: 0 4px 6px hsla(0, 0%, 0%, 0.2);
+  --shadow-3: 0 5px 15px hsla(0, 0%, 0%, 0.2);
+  --shadow-4: 0 10px 24px hsla(0, 0%, 0%, 0.2);
+  --shadow-5: 0 15px 35px hsla(0, 0%, 0%, 0.2);
+  --shadow-subtle: inset 0 0 0 1px hsla(24, 12%, 12%, 0.08);
+  --shadow-subtle-2: var(--shadow-2);
+  --shadow-subtle-3: var(--shadow-3);
+  --shadow-card: var(--shadow-1);
+  --shadow-dropdown: var(--shadow-2);
+  --shadow-modal: var(--shadow-5);
+  --text-tertiary: #57534e;
 
   /* FLUXYCHAT — BUBBLE COLOR SYSTEM */
   --fluxy-logo-color: #FF6A1A;
@@ -72,7 +83,8 @@
 
   --fluxy-header-bg: #C2410C;
   --fluxy-header-text: #FFFFFF;
-  --fluxy-header-subtext: rgba(255, 255, 255, 0.75);
+  /* Solid peach on orange — not white-at-opacity (washes to grey on color). */
+  --fluxy-header-subtext: #ffdcc8;
 
   --fluxy-btn-primary-bg: #C2410C;
   --fluxy-btn-primary-text: #FFFFFF;
@@ -121,9 +133,18 @@
   --success: #22c55e;
   --ring: #ff8a47;
   --radius: 0.5rem;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.3);
-  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-1: 0 1px 3px hsla(0, 0%, 0%, 0.4);
+  --shadow-2: 0 4px 6px hsla(0, 0%, 0%, 0.4);
+  --shadow-3: 0 5px 15px hsla(0, 0%, 0%, 0.45);
+  --shadow-4: 0 10px 24px hsla(0, 0%, 0%, 0.5);
+  --shadow-5: 0 15px 35px hsla(0, 0%, 0%, 0.55);
+  --shadow-subtle: inset 0 0 0 1px hsla(0, 0%, 100%, 0.08);
+  --shadow-subtle-2: var(--shadow-2);
+  --shadow-subtle-3: var(--shadow-3);
+  --shadow-card: var(--shadow-1);
+  --shadow-dropdown: var(--shadow-2);
+  --shadow-modal: var(--shadow-5);
+  --text-tertiary: #a8a29e;
   --fluxy-banner-text: #ff8a47;
   --fluxy-mention-text: #ff8a47;
 
@@ -249,7 +270,7 @@ html:not(.dark) #fc-marketing-root {
   --mkt-brand-soft: #9a3412;
   --mkt-glow: rgba(194, 65, 12, 0.14);
   --mkt-nav-bg: #ffffff;
-  --mkt-nav-docked-bg: rgba(255, 255, 255, 0.94);
+  --mkt-nav-docked-bg: #ffffff;
 }
 
 #fc-marketing-root h1,
@@ -268,8 +289,14 @@ html:not(.dark) #fc-marketing-root {
 }
 
 #fc-marketing-root .mkt-panel {
-  border: 1px solid var(--mkt-border);
+  border: 0;
   background: var(--mkt-surface);
+  box-shadow: var(--shadow-2);
+}
+
+html.dark #fc-marketing-root .mkt-panel {
+  box-shadow: none;
+  border: 1px solid var(--mkt-border-strong);
 }
 
 #fc-marketing-root .mkt-chip {
@@ -442,22 +469,10 @@ html:not(.dark) #fc-marketing-root {
 
 @supports (animation-timeline: scroll()) {
   @media (prefers-reduced-motion: no-preference) {
-    #fc-marketing-root .mkt-signal-zoom {
-      animation: mkt-field-parallax linear both;
-      animation-timeline: scroll();
-      animation-range: 0vh 95vh;
-    }
-
     #fc-marketing-root .mkt-hero-fg {
       animation: mkt-hero-rise linear both;
       animation-timeline: scroll();
       animation-range: 0vh 80vh;
-    }
-
-    #fc-marketing-root .mkt-pointer-wash {
-      animation: mkt-wash-drift linear both;
-      animation-timeline: scroll();
-      animation-range: 0vh 90vh;
     }
   }
 }
@@ -858,7 +873,7 @@ code {
     --secondary: #f3f0ec;
     --secondary-foreground: #0e1316;
     --muted: #f3f0ec;
-    --muted-foreground: #4b5563;
+    --muted-foreground: #57534e;
     --accent: #f3f0ec;
     --accent-foreground: #0e1316;
     --destructive: #dc2626;

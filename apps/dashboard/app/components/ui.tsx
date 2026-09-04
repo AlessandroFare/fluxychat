@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils";
 type BannerVariant = "info" | "success" | "warn" | "warning" | "error";
 
 const bannerVariantClass: Record<BannerVariant, string> = {
-  info: "border-border bg-muted/60 text-foreground",
-  success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200",
-  warn: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200",
-  warning: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200",
-  error: "border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-200",
+  info: "border-l-stone-400 bg-muted/60 text-foreground",
+  success: "border-l-emerald-700 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200",
+  warn: "border-l-amber-700 bg-amber-500/10 text-amber-900 dark:text-amber-200",
+  warning: "border-l-amber-700 bg-amber-500/10 text-amber-900 dark:text-amber-200",
+  error: "border-l-red-700 bg-red-500/10 text-red-900 dark:text-red-200",
 };
 
 export function Banner({
@@ -25,7 +25,7 @@ export function Banner({
   return (
     <div
       className={cn(
-        "mb-3 rounded-xl border px-3 py-2.5 text-sm leading-relaxed shadow-sm",
+        "mb-3 rounded-xl border-l-[3px] px-3 py-2.5 text-sm leading-relaxed",
         bannerVariantClass[variant],
         className,
       )}
@@ -51,7 +51,7 @@ export function Section({
   return (
     <section
       className={cn(
-        "mb-6 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)]",
+        "mb-6 rounded-2xl bg-card p-4 shadow-[var(--shadow-2)]",
         "sm:p-6",
         className,
       )}
@@ -135,16 +135,16 @@ type ButtonVariant =
 type ButtonSize = "sm" | "md" | "lg";
 
 const buttonCtaClasses =
-  "border-transparent bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] hover:bg-[var(--fluxy-btn-primary-hover-bg)]";
+  "border border-transparent bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] shadow-[var(--shadow-1)] hover:bg-[var(--fluxy-btn-primary-hover-bg)]";
 
 const buttonVariantClasses: Record<ButtonVariant, string> = {
   primary: buttonCtaClasses,
   default: buttonCtaClasses,
   neutral: buttonCtaClasses,
-  ghost: "border-transparent bg-transparent text-foreground hover:bg-muted/80",
-  outline: "border-border bg-background text-foreground hover:bg-muted/60",
-  secondary: "border-border bg-muted/60 text-foreground hover:bg-muted",
-  destructive: "bg-red-600 text-white border-red-600 hover:opacity-90",
+  ghost: "border border-transparent bg-transparent text-foreground hover:bg-muted/80",
+  outline: "border border-border bg-background text-foreground hover:bg-muted/60",
+  secondary: "border border-border bg-muted/60 text-foreground hover:bg-muted",
+  destructive: "border border-red-600 bg-red-600 text-white hover:opacity-90",
 };
 
 const buttonSizeClasses: Record<ButtonSize, string> = {
@@ -171,7 +171,7 @@ export function Button({
       {...rest}
       disabled={disabled}
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center rounded-md border font-medium",
+        "inline-flex cursor-pointer items-center justify-center rounded-md font-semibold",
         "whitespace-nowrap transition-colors",
         "disabled:pointer-events-none disabled:opacity-50",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",

@@ -41,7 +41,7 @@ function CrmDemo() {
   function addLog(msg: string) { setLog((p) => [msg, ...p.slice(0, 19)]); }
 
   return (
-    <Panel className="rounded-2xl border border-border/80 p-5">
+    <Panel className="rounded-2xl p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4 text-blue-500" /> CRM / Helpdesk</h3>
       <p className="mt-1 text-xs text-muted-foreground">Salesforce, Zendesk, HubSpot, Intercom: lookup contacts, create/update tickets with sync direction.</p>
 
@@ -153,7 +153,7 @@ function KnowledgeBaseDemo() {
   function addLog(msg: string) { setLog((p) => [msg, ...p.slice(0, 19)]); }
 
   return (
-    <Panel className="rounded-2xl border border-border/80 p-5">
+    <Panel className="rounded-2xl p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold"><BookOpen className="h-4 w-4 text-emerald-500" /> Knowledge Base</h3>
       <p className="mt-1 text-xs text-muted-foreground">Confluence, Notion, SharePoint, Google Drive: document ingest, chunking, semantic search, RAG context.</p>
 
@@ -260,7 +260,7 @@ function ResourceLinksDemo() {
   function addLog(msg: string) { setLog((p) => [msg, ...p.slice(0, 19)]); }
 
   return (
-    <Panel className="rounded-2xl border border-border/80 p-5">
+    <Panel className="rounded-2xl p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold"><Link2 className="h-4 w-4 text-purple-500" /> Resource Links</h3>
       <p className="mt-1 text-xs text-muted-foreground">URI validation with policy (allowed schemes, blocked domains), lazy fetch with caching.</p>
 
@@ -343,7 +343,7 @@ function TranslationDemo() {
   const LANGUAGES = { en: "English", it: "Italian", fr: "French", de: "German", es: "Spanish", zh: "Chinese", ja: "Japanese", ar: "Arabic", ru: "Russian" };
 
   return (
-    <Panel className="rounded-2xl border border-border/80 p-5">
+    <Panel className="rounded-2xl p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold"><Languages className="h-4 w-4 text-amber-500" /> Real-time Translation</h3>
       <p className="mt-1 text-xs text-muted-foreground">Per-user language preference, glossary terms, auto-detect, live translate with original access.</p>
 

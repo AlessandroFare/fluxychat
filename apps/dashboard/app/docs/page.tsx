@@ -143,7 +143,7 @@ export default function DocsPage() {
                 href={guide.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)] transition hover:border-primary/20 hover:shadow-md"
+                className="group rounded-2xl bg-card p-4 shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
               >
                 {inner}
               </a>
@@ -153,7 +153,7 @@ export default function DocsPage() {
             <Link
               key={guide.id}
               href={guide.href}
-              className="group rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)] transition hover:border-primary/20 hover:shadow-md"
+              className="group rounded-2xl bg-card p-4 shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
             >
               {inner}
             </Link>
@@ -217,7 +217,7 @@ export default function DocsPage() {
             return (
               <div
                 key={tmpl.id}
-                className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-subtle-2)]"
+                className="flex flex-col gap-3 rounded-xl bg-card p-4 shadow-[var(--shadow-2)]"
               >
                 <Icon className="size-5 text-primary" aria-hidden />
                 <div>

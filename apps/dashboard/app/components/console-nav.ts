@@ -46,6 +46,7 @@ import {
   ClipboardCheck,
   Handshake,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { HOSTED_PATHS, isMarketingPath } from "@/lib/hosted-product";
 import { filterDashboardNavItems } from "@/lib/dashboard-feature-flags";
 
@@ -238,4 +239,17 @@ export function isConsoleNavItemActive(href: string, pathname: string | null): b
 export function isConsoleRoute(pathname: string | null): boolean {
   if (!pathname) return false;
   return !isMarketingPath(pathname);
+}
+
+export function consoleNavLinkClass(isActive: boolean) {
+  return cn(
+    "flex items-center gap-2.5 rounded-lg border-l-[3px] px-2.5 py-2 text-sm transition-colors",
+    isActive
+      ? "border-l-primary bg-primary/10 font-semibold text-primary"
+      : "border-l-transparent font-normal text-muted-foreground hover:bg-muted hover:text-foreground",
+  );
+}
+
+export function consoleNavIconClass(isActive: boolean) {
+  return cn("h-4 w-4 shrink-0", isActive ? "opacity-100" : "opacity-40");
 }

@@ -191,7 +191,7 @@ export default function RetentionSettingsPage() {
             {policies.length === 0 ? (
               <p className="mt-4 text-sm text-muted-foreground">No policies yet.</p>
             ) : (
-              <ul className="mt-4 divide-y rounded-lg border border-black/[0.06] bg-white/90">
+              <ul className="mt-4 divide-y rounded-lg bg-white/90 shadow-[var(--shadow-2)]">
                 {policies.map((p) => (
                   <li key={p.id} className="px-4 py-3 text-sm">
                     <span className="font-medium">{p.name}</span>
@@ -222,7 +222,7 @@ export default function RetentionSettingsPage() {
             {holds.length === 0 ? (
               <p className="mt-4 text-sm text-muted-foreground">No active holds.</p>
             ) : (
-              <ul className="mt-4 divide-y rounded-lg border border-black/[0.06] bg-white/90">
+              <ul className="mt-4 divide-y rounded-lg bg-white/90 shadow-[var(--shadow-2)]">
                 {holds.map((h) => (
                   <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                     <div>
@@ -253,7 +253,7 @@ export default function RetentionSettingsPage() {
             {snapshots.length === 0 ? (
               <p className="mt-4 text-sm text-muted-foreground">No snapshots yet.</p>
             ) : (
-              <ul className="mt-4 divide-y rounded-lg border border-black/[0.06] bg-white/90">
+              <ul className="mt-4 divide-y rounded-lg bg-white/90 shadow-[var(--shadow-2)]">
                 {snapshots.map((s) => (
                   <li key={s.id} className="px-4 py-3 text-sm">
                     <Badge variant="outline" className="mr-2">{s.status}</Badge>

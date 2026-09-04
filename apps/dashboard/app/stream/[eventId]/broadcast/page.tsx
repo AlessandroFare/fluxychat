@@ -205,7 +205,7 @@ export default function BroadcastPage() {
           {/* Controls panel */}
           <div className="flex flex-col gap-3">
             {event.rtmpsUrl && event.streamKey && (
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
                 <h3 className="mb-2 text-xs font-semibold text-foreground">RTMP ingest</h3>
                 <div className="mb-2">
                   <label className="text-[10px] text-muted-foreground">Server URL</label>
@@ -232,7 +232,7 @@ export default function BroadcastPage() {
               </div>
             )}
 
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
               <h3 className="mb-3 text-xs font-semibold text-foreground">Controls</h3>
               <div className="flex flex-col gap-2">
                 <button
@@ -258,7 +258,7 @@ export default function BroadcastPage() {
             </div>
 
             {!event.rtmpsUrl && (
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
                 <h3 className="mb-2 text-xs font-semibold text-foreground">Stream ingest</h3>
                 <p className="mb-3 text-[11px] text-muted-foreground">
                   Provision a Cloudflare Stream live input to get RTMP ingest URL and stream key.
@@ -289,7 +289,7 @@ export default function BroadcastPage() {
               </div>
             )}
 
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
               <h3 className="text-xs font-semibold text-foreground">Stream info</h3>
               <dl className="mt-2 space-y-1 text-[11px]">
                 <div className="flex justify-between">

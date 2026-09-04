@@ -80,7 +80,7 @@ export default function SettingsPage() {
           {SETTINGS_CATALOG.map((group) => (
             <div
               key={group.label}
-              className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-subtle-2)]"
+              className="rounded-2xl bg-card p-4 shadow-[var(--shadow-2)]"
             >
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {group.label}
@@ -355,8 +355,8 @@ function SettingsCard(props: {
   return (
     <div
       className={
-        "rounded-2xl border bg-card p-5 shadow-[var(--shadow-subtle-2)] " +
-        (props.danger ? "border-red-500/40" : "border-border")
+        "rounded-2xl bg-card p-4 shadow-[var(--shadow-2)] " +
+        (props.danger ? "border-l-[3px] border-l-red-700" : "")
       }
     >
       <h2

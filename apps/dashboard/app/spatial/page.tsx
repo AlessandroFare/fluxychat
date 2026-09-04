@@ -303,7 +303,7 @@ function RoomCanvas({ entities }: { entities: Array<{ id: string; type: string; 
   }, [entities]);
 
   return (
-    <div className="rounded-2xl border border-border bg-background p-2 overflow-auto">
+    <div className="rounded-2xl bg-background p-2 overflow-auto shadow-[var(--shadow-2)]">
       <canvas ref={canvasRef} width={SIZE} height={SIZE} className="max-w-full h-auto" />
     </div>
   );
@@ -311,11 +311,11 @@ function RoomCanvas({ entities }: { entities: Array<{ id: string; type: string; 
 
 function EntityList({ entities, onRemove }: { entities: Array<{ id: string; type: string; x: number; z: number; props: Record<string, unknown> }>; onRemove: (id: string) => void }) {
   return (
-    <div className="rounded-2xl border border-border bg-muted/10 p-4 max-h-[560px] overflow-y-auto">
+    <div className="rounded-2xl bg-muted/10 p-4 max-h-[560px] overflow-y-auto">
       <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Box className="h-4 w-4" /> Entities ({entities.length})</h4>
       <div className="space-y-1.5">
         {entities.map((e) => (
-          <div key={e.id} className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
+          <div key={e.id} className="flex items-center justify-between rounded-md bg-muted/20 px-3 py-2">
             <div>
               <p className="text-xs font-medium capitalize">{e.type}</p>
               <p className="text-[10px] text-muted-foreground">({e.x}, {e.z}) · {String(e.props.color || "")}</p>
@@ -403,7 +403,7 @@ function ArOverlayTab() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         {/* Presences */}
-        <div className="rounded-2xl border border-border bg-muted/10 p-4">
+        <div className="rounded-2xl bg-muted/10 p-4">
           <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Users className="h-4 w-4 text-blue-500" /> Presence ({presences.length})</h4>
           {presences.length === 0 ? <p className="text-xs text-muted-foreground">No presences yet</p> : (
             <div className="space-y-1.5">
@@ -421,7 +421,7 @@ function ArOverlayTab() {
         </div>
 
         {/* Canvas */}
-        <div className="rounded-2xl border border-border bg-muted/10 p-4">
+        <div className="rounded-2xl bg-muted/10 p-4">
           <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><MapPin className="h-4 w-4 text-emerald-500" /> Canvas ({canvasObjects.length})</h4>
           {canvasObjects.length === 0 ? <p className="text-xs text-muted-foreground">No objects yet</p> : (
             <div className="space-y-1.5">
@@ -436,7 +436,7 @@ function ArOverlayTab() {
         </div>
 
         {/* Audio */}
-        <div className="rounded-2xl border border-border bg-muted/10 p-4">
+        <div className="rounded-2xl bg-muted/10 p-4">
           <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Volume2 className="h-4 w-4 text-purple-500" /> Audio ({audioSources.length})</h4>
           {audioSources.length === 0 ? <p className="text-xs text-muted-foreground">No sources yet</p> : (
             <div className="space-y-1.5">

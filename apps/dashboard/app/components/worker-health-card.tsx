@@ -90,7 +90,7 @@ export function WorkerHealthCard() {
         : workerUrl;
 
   return (
-    <section className="mb-8 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-subtle-2)]">
+    <section className="mb-8 rounded-2xl bg-card p-4 shadow-[var(--shadow-2)]">
       <div className="flex items-start gap-3">
         {icon}
         <div className="min-w-0 flex-1">

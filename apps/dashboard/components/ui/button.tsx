@@ -5,16 +5,16 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap select-none outline-none transition-[transform,box-shadow,background-color,color,border-color,opacity] duration-200 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-semibold whitespace-nowrap select-none outline-none transition-[transform,box-shadow,background-color,color,border-color,opacity] duration-200 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] shadow-[var(--shadow-subtle-3)] hover:bg-[var(--fluxy-btn-primary-hover-bg)] hover:-translate-y-px",
+          "bg-[var(--fluxy-btn-primary-bg)] text-[var(--fluxy-btn-primary-text)] shadow-[var(--shadow-1)] hover:bg-[var(--fluxy-btn-primary-hover-bg)] hover:-translate-y-px",
         outline:
-          "border-border bg-background text-foreground shadow-[var(--shadow-subtle)] hover:bg-muted hover:-translate-y-px",
+          "border-border bg-background text-foreground hover:bg-muted hover:-translate-y-px",
         secondary:
-          "bg-muted text-foreground shadow-[var(--shadow-subtle)] hover:bg-muted/80 hover:-translate-y-px",
+          "bg-muted text-foreground hover:bg-muted/80 hover:-translate-y-px",
         ghost:
           "text-muted-foreground hover:bg-muted hover:text-foreground hover:-translate-y-px",
         destructive:

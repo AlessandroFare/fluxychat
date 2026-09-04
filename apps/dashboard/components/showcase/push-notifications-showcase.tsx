@@ -107,7 +107,7 @@ function PushPanel({ session }: { session: ShowcaseSession }) {
             <div
               key={sub.id}
               style={{ animationDelay: `${idx * 60}ms` }}
-              className="animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-backwards duration-300 flex items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
+              className="animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-backwards duration-300 flex items-start gap-3 rounded-xl bg-card p-3 shadow-sm"
             >
               <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
                 <Bell className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />

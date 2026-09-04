@@ -70,15 +70,13 @@ export function LandingShell({ children }: { children: ReactNode }) {
       />
       <header
         className={cn(
-          "fixed z-50 transition-[top,left,right,width,transform,border-radius,box-shadow,padding,border-width,background-color] duration-300 ease-out",
+          "fixed z-50 isolate transition-[top,left,right,width,transform,border-radius,box-shadow,padding,border-width,background-color] duration-300 ease-out",
           navDocked
             ? cn(
-                "left-1/2 right-auto top-3 w-[min(calc(100vw-1.5rem),72rem)] -translate-x-1/2 border border-[var(--mkt-border)] py-2 pl-3 pr-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.35)] sm:top-5 sm:pl-4 sm:pr-3",
-                mobileNav.open
-                  ? "rounded-2xl bg-[var(--mkt-nav-docked-bg)] backdrop-blur-xl"
-                  : "rounded-full bg-[var(--mkt-nav-docked-bg)] backdrop-blur-xl",
+                "left-1/2 right-auto top-3 w-[min(calc(100vw-1.5rem),72rem)] -translate-x-1/2 border border-[var(--mkt-border)] bg-[var(--mkt-nav-docked-bg)] py-2 pl-3 pr-2 shadow-[var(--shadow-2)] sm:top-5 sm:pl-4 sm:pr-3 dark:backdrop-blur-xl",
+                mobileNav.open ? "rounded-2xl" : "rounded-full",
               )
-            : "left-0 right-0 top-0 border-b border-[var(--mkt-border)] bg-[var(--mkt-nav-bg)] py-0 backdrop-blur-md",
+            : "left-0 right-0 top-0 border-b border-[var(--mkt-border)] bg-[var(--mkt-nav-bg)] py-0 dark:backdrop-blur-md",
         )}
       >
         <div

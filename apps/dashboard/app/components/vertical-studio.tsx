@@ -399,7 +399,7 @@ export function VerticalStudio({ config }: { config: VerticalStudioConfig }) {
             </CardHeader>
             <CardContent className="grid gap-2 sm:grid-cols-2">
               {config.relatedLinks.map((link) => (
-                <Link key={link.href} href={link.href} className="rounded-xl border border-border px-4 py-3 transition hover:border-primary/30 hover:bg-muted/30">
+                <Link key={link.href} href={link.href} className="rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]">
                   <p className="font-medium">{link.label}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{link.description}</p>
                 </Link>

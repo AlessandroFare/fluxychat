@@ -12,7 +12,7 @@ export const MARKETING_HERO = {
 
 export const MARKETING_WHY = {
   title: "Why teams pick FluxyChat",
-  body: "The unit of value is a room: chat, presence, Yjs, and an agent on one Cloudflare Durable Object. MIT self-host or hosted beta. Not Pusher, not Liveblocks, not Stream.",
+  body: "Chat, presence, Yjs, and an agent sit on one Durable Object. Hosted is beta. Self-host is MIT. Pusher is transport. Liveblocks is the document. Stream is consumer chat.",
 } as const;
 
 export const MARKETING_PLATFORM_FEATURES = [
@@ -28,20 +28,20 @@ export const MARKETING_PLATFORM_FEATURES = [
 
 export const MARKETING_USE_CASES = [
   {
-    title: "AI-powered SaaS with in-app chat",
-    body: "Stream AI responses with tool calling, build copilots with HITL approval, and ship agent features on the same WebSocket as user messages.",
+    title: "In-app chat with an agent",
+    body: "The agent writes on the same WebSocket as your users. Tool calls show up in the timeline. If you want a copilot panel, that is separate UI and it does not write the room log.",
   },
   {
-    title: "Multi-platform messaging apps",
-    body: "One adapter interface across Slack, Discord, Telegram, WhatsApp, Teams, and 9 more. Unified card builder for rich messages across platforms.",
+    title: "Bridges",
+    body: "Create the Slack, Discord, Telegram, WhatsApp, or Teams app yourself. Paste the token in the console and point the webhook at the Worker. SMS to phones still needs a telco.",
   },
   {
-    title: "Regulated & compliance-heavy teams",
-    body: "GDPR export, erasure, audit trails, retention policies, and signed webhooks, enforced at the edge rather than sold as a separate SKU.",
+    title: "Export, erasure, webhooks",
+    body: "GDPR export and erasure run on the Worker. Webhooks are signed. We do not sell that as a separate SKU.",
   },
   {
-    title: "Developer teams shipping fast",
-    body: "JWT auth, SDK hooks, create-fluxy-chat CLI scaffolding, and a console for day-two ops, without becoming WebSocket infrastructure experts.",
+    title: "Ship without a socket fleet",
+    body: "JWT, the SDK, and a console. You do not have to be the person who keeps WebSockets alive at 3am.",
   },
 ] as const;
 
@@ -49,11 +49,11 @@ export const MARKETING_ENTERPRISE = {
   eyebrow: "Enterprise default",
   title: "The room Cloudflare Agents will not ship",
   intro:
-    "Agents give a developer a Durable Object. FluxyChat is the multi-tenant room those agents join: two orgs in one thread, quorum on the dangerous tools, and an E2EE envelope with a signed export. That is the default enterprise story — not a bolt-on SKU.",
+    "Cloudflare Agents give you a Durable Object. FluxyChat is the room other orgs can join: private terms, quorum on the dangerous tools, a group cipher and a signed export. E2EE only if you keep the key. We never see it.",
   items: [
     "Cross-org rooms, private terms, and settlements",
     "Critical-action quorum on the same WebSocket as chat",
-    "E2EE group cipher + signed conversation attestation",
+    "Group cipher and signed export. E2EE only if you keep the key.",
     "Room SQLite PITR (30-day bookmarks, restore on next wake)",
     "SSO / SAML & SCIM provisioning",
     "Audit logs, retention, legal hold, GDPR export",
@@ -62,14 +62,18 @@ export const MARKETING_ENTERPRISE = {
 } as const;
 
 export const MARKETING_FINAL_CTA = {
-  title: "Build AI-native chat on infrastructure you own.",
-  body: "Start on the free tier. Guest rooms and pk_ first, then mint fc_ JWTs. Hosted is beta. Self-host MIT when you want the Worker in your account.",
+  title: "Same SDK on hosted or on your Cloudflare account.",
+  body: "Free has no card. Public rooms take a pk_. Private rooms take a member JWT minted with fc_ on the server. Hosted is beta. Self-host when procurement asks who owns D1.",
   primaryLabel: "Start free",
   secondaryLabel: "Book a pilot",
   secondaryHref: "mailto:fluxychat@outlook.com?subject=FluxyChat%20pilot",
 } as const;
 
 export const PRICING_FAQ = [
+  {
+    q: "Is chat end-to-end encrypted?",
+    a: "TLS in transit. If you want E2EE, you hold the key. Double Ratchet for private rooms is still on the roadmap.",
+  },
   {
     q: "Why usage-based quotas?",
     a: "Cost tracks messages, AI invokes, and webhook volume. Self-serve plans include fixed monthly quotas; heavy usage can be metered on Growth and above.",

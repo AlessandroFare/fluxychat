@@ -20,7 +20,7 @@ export function FeatureCodePanel({
       <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
         {feature.description}
       </p>
-      <pre className="overflow-x-auto rounded-xl border border-border bg-card p-4 font-mono text-xs leading-relaxed text-foreground shadow-sm">
+      <pre className="overflow-x-auto rounded-xl bg-card p-4 font-mono text-xs leading-relaxed text-foreground shadow-sm">
         <code><FeatureCodeSnippet tokens={feature.code} /></code>
       </pre>
     </div>
@@ -55,7 +55,7 @@ export function FeaturePreviewFrame({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-lg",
+        "flex flex-col overflow-hidden rounded-2xl bg-card shadow-lg",
         className,
       )}
       aria-label={label}

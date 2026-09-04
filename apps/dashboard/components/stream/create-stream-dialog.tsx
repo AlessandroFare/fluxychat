@@ -54,7 +54,7 @@ export function CreateStreamDialog({ open, onClose, onCreated, token }: CreateSt
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">New live stream</h2>
           <button

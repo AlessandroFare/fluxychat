@@ -293,7 +293,7 @@ export default function ProjectsPage() {
       ) : null}
 
       {panel === "session" ? (
-        <Panel className="mb-6 rounded-2xl border border-border/80 p-5">
+        <Panel className="mb-6 rounded-2xl p-5">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="font-heading text-lg font-semibold">Admin session</h2>
@@ -417,7 +417,7 @@ export default function ProjectsPage() {
             `landmark-main-is-top-level`. */}
         <div className="min-w-0">
           {panel === "create" ? (
-            <Panel className="rounded-2xl border border-border/80 p-6">
+            <Panel className="rounded-2xl p-6">
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-heading text-xl font-semibold">Create project</h2>
@@ -453,7 +453,7 @@ export default function ProjectsPage() {
           ) : null}
 
           {panel === "edit-name" && selectedProject ? (
-            <Panel className="rounded-2xl border border-border/80 p-6">
+            <Panel className="rounded-2xl p-6">
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-heading text-xl font-semibold">Rename project</h2>
@@ -489,7 +489,7 @@ export default function ProjectsPage() {
           ) : null}
 
           {panel === "edit-plan" && selectedProject && canManageTenantPlans ? (
-            <Panel className="rounded-2xl border border-border/80 p-6">
+            <Panel className="rounded-2xl p-6">
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-heading text-xl font-semibold">Plan & quotas</h2>
@@ -581,7 +581,7 @@ export default function ProjectsPage() {
           ) : null}
 
           {panel === "none" && selectedProject ? (
-            <Panel className="rounded-2xl border border-border/80 p-6">
+            <Panel className="rounded-2xl p-6">
               <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">

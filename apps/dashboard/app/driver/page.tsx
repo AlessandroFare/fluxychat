@@ -210,7 +210,7 @@ export default function DriverPage() {
       />
 
       <div className="mx-auto flex max-w-md flex-col pb-8 pt-2">
-        <div className="overflow-hidden rounded-2xl border border-border bg-gray-50 shadow-lg dark:bg-gray-950">
+        <div className="overflow-hidden rounded-2xl bg-gray-50 shadow-lg dark:bg-gray-950">
           <div className="bg-primary px-4 py-3 text-primary-foreground">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

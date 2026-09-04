@@ -608,7 +608,7 @@ export default function MiddlewarePage() {
       </div>
 
       {/* Call Options SDK module */}
-      <Panel className="mt-8 rounded-2xl border border-border/80 p-4">
+      <Panel className="mt-8 rounded-2xl p-4">
         <div className="flex items-start gap-3">
           <Settings2 className="mt-0.5 h-5 w-5 text-purple-500" />
           <div>

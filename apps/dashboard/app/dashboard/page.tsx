@@ -104,7 +104,7 @@ export default function DashboardOverviewPage() {
       <WorkerHealthCard />
       <SloOverviewCard />
 
-      <section className="mb-8 rounded-2xl border border-black/[0.06] bg-white/90 p-5 shadow-[var(--shadow-subtle-2)] sm:p-6">
+      <section className="mb-8 rounded-2xl bg-white/90 p-4 shadow-[var(--shadow-2)] sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-heading text-base font-semibold text-foreground">Session</h2>
@@ -226,7 +226,7 @@ export default function DashboardOverviewPage() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="block rounded-xl border border-black/[0.06] bg-white/80 px-4 py-3 text-sm transition hover:border-primary/20 hover:shadow-sm"
+                className="block rounded-xl bg-white/80 px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
               >
                 <span className="font-medium text-foreground">{item.label}</span>
                 {item.description ? (
@@ -254,7 +254,7 @@ export default function DashboardOverviewPage() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="block rounded-xl border border-black/[0.06] bg-white/80 px-4 py-3 text-sm transition hover:border-primary/20 hover:shadow-sm"
+                className="block rounded-xl bg-white/80 px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
               >
                 <span className="font-medium text-foreground">{item.label}</span>
                 {item.description ? (

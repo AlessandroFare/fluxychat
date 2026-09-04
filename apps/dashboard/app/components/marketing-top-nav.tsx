@@ -28,7 +28,7 @@ export function MarketingTopNav() {
   const mobile = useTopNavMobileMenu();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background shadow-[var(--shadow-subtle-2)]">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
       <div className="mx-auto max-w-6xl">
         <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
           <Link

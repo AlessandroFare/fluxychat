@@ -47,7 +47,7 @@ export function RoomThreadPane({
 
   return (
     <aside
-      className="flex w-full shrink-0 flex-col rounded-xl border border-border bg-card lg:w-80"
+      className="flex w-full shrink-0 flex-col rounded-xl bg-card shadow-[var(--shadow-2)] lg:w-80"
       data-testid="room-thread-pane"
       aria-label={`Thread ${threadPaneLabel(threadParentId)}`}
     >

@@ -49,7 +49,7 @@ export function CloudflareCostTable({ variant = "dark" }: { variant?: "dark" | "
       className={
         isDark
           ? "rounded-2xl border border-white/10 bg-slate-900/40 p-6 sm:p-8"
-          : "rounded-2xl border border-border bg-card p-6 sm:p-8"
+          : "rounded-2xl bg-card shadow-[var(--shadow-2)] p-6 sm:p-8"
       }
     >
       <p className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-muted-foreground"}`}>

@@ -269,7 +269,7 @@ export function FlowingMenu({
   speed = 18,
   textColor = "#ffffff",
   bgColor = "#0e0e0e",
-  marqueeBgColor = "#ff725e",
+  marqueeBgColor = "#C2410C",
   marqueeTextColor = "#ffffff",
   borderColor = "rgba(255,255,255,0.08)",
 }: FlowingMenuProps) {

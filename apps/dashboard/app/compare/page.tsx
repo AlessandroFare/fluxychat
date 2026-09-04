@@ -13,6 +13,7 @@ import {
   SDK_BUNDLE_BENCHMARKS,
   PRODUCT_CHAT_VS_SUPPORT,
   PUSHER_BILL_SHOCK,
+  PUSHER_ALTERNATIVE_ANSWER,
   PUSHER_ON_VERCEL,
   SELF_HOST_POSITIONING,
 } from "@/lib/compare-providers";
@@ -103,6 +104,11 @@ export default function ComparePage() {
           Pusher alternative guide
         </Link>
       </p>
+
+      <h2 className="mt-10 font-heading text-xl font-semibold tracking-tight">
+        {PUSHER_ALTERNATIVE_ANSWER.title}
+      </h2>
+      <p className="mt-2 max-w-2xl text-muted-foreground">{PUSHER_ALTERNATIVE_ANSWER.body}</p>
 
       <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-4 text-sm">
         <p className="font-medium">{PUSHER_BILL_SHOCK.title}</p>

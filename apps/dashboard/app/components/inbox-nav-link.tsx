@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Inbox } from "lucide-react";
 import { useInbox, useFluxyChatOptional } from "@fluxy-chat/react";
-import { cn } from "@/lib/utils";
-import { isConsoleNavItemActive } from "./console-nav";
+import { isConsoleNavItemActive, consoleNavIconClass, consoleNavLinkClass } from "./console-nav";
 
 /** Inbox nav link with unread-room counter badge (PL-6). */
 export function InboxNavLink() {
@@ -21,16 +20,8 @@ export function InboxNavLink() {
   const showBadge = counter > 0;
 
   return (
-    <Link
-      href="/inbox"
-      className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
-    >
-      <Inbox className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+    <Link href="/inbox" className={consoleNavLinkClass(isActive)}>
+      <Inbox className={consoleNavIconClass(isActive)} aria-hidden />
       <span className="min-w-0 flex-1">Inbox</span>
       {showBadge ? (
         <span

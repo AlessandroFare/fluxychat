@@ -170,7 +170,7 @@ export default function TemplatesPage() {
       {error ? <Banner variant="error">{error}</Banner> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <Panel className="rounded-2xl border border-border/80 p-4">
+        <Panel className="rounded-2xl p-4">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-heading text-lg font-semibold">Templates</h2>
             <Button variant="outline" size="sm" onClick={resetForm}>
@@ -210,7 +210,7 @@ export default function TemplatesPage() {
           )}
         </Panel>
 
-        <Panel className="rounded-2xl border border-border/80 p-4">
+        <Panel className="rounded-2xl p-4">
           <h2 className="mb-4 font-heading text-lg font-semibold">
             {selectedId ? "Edit template" : "New template"}
           </h2>

@@ -72,7 +72,7 @@ const bubbleContentVariants = cva(
         sent:
           "bg-[var(--fluxy-bubble-sent-bg)] text-[var(--fluxy-bubble-sent-text)] [button,a]:hover:bg-[color-mix(in_oklch,var(--fluxy-bubble-sent-bg)_90%,black)] rounded-2xl rounded-br-md",
         received:
-          "bg-[var(--fluxy-bubble-received-bg)] text-[var(--fluxy-bubble-received-text)] border border-[var(--fluxy-bubble-received-border)] [button,a]:hover:bg-[color-mix(in_oklch,var(--fluxy-bubble-received-bg)_90%,black)] rounded-2xl rounded-bl-md",
+          "bg-[var(--fluxy-bubble-received-bg)] text-[var(--fluxy-bubble-received-text)] shadow-[inset_0_0_0_1px_var(--fluxy-bubble-received-border)] [button,a]:hover:bg-[color-mix(in_oklch,var(--fluxy-bubble-received-bg)_90%,black)] rounded-2xl rounded-bl-md",
         typing:
           "bg-muted text-muted-foreground",
       },

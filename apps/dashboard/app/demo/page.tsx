@@ -59,7 +59,7 @@ function DemoChatShell({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-xl">
+    <div className="overflow-hidden rounded-2xl bg-card text-foreground shadow-xl">
       <div className="flex items-center justify-between gap-3 border-b border-[var(--fluxy-header-bg)]/20 bg-[var(--fluxy-header-bg)] px-4 py-3 text-white">
         <div className="flex items-center gap-2">
           <span className={cn("relative flex size-2", badgeClass)}>
@@ -280,7 +280,7 @@ function DemoRoomPageContent() {
               <button
                 type="button"
                 onClick={() => setShowSimulated(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground transition-all hover:bg-muted"
+                className="inline-flex items-center gap-2 rounded-xl bg-card shadow-[var(--shadow-2)] px-5 py-3 text-sm font-medium text-foreground transition-all hover:bg-muted"
               >
                 <Zap className="size-4" />
                 Show Live Demo Preview
@@ -293,7 +293,7 @@ function DemoRoomPageContent() {
             demoStatus?.ready &&
             !session &&
             !error && (
-            <div className="mx-auto mt-8 max-w-sm space-y-3 rounded-xl border border-border bg-card p-6">
+            <div className="mx-auto mt-8 max-w-sm space-y-3 rounded-xl bg-card shadow-[var(--shadow-2)] p-6">
               <p className="text-center text-sm text-muted-foreground">
                 Complete the check below to enter the demo room.
               </p>
@@ -422,7 +422,7 @@ function DemoRoomPageContent() {
                 desc: "Jump right in. Ephemeral guest sessions are rate-limited and auto-expire. Your privacy is respected.",
               },
             ].map((feature) => (
-              <div key={feature.title} className="rounded-xl border border-border bg-card p-6">
+              <div key={feature.title} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-6">
                 <feature.icon className="size-6 text-primary" />
                 <h3 className="mt-4 font-semibold text-foreground">{feature.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.desc}</p>
@@ -449,7 +449,7 @@ function DemoRoomPageContent() {
             </Link>
             <Link
               href={HOSTED_PATHS.landing}
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-muted"
+              className="inline-flex items-center gap-2 rounded-xl bg-card shadow-[var(--shadow-2)] px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-muted"
             >
               Learn More
             </Link>

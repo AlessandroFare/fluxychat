@@ -130,7 +130,7 @@ export function FirstChatStep({ wizard: w }: FirstChatStepProps) {
         />
       ) : (
         <div
-          className="flex h-48 items-center justify-center rounded-2xl border border-border bg-muted/20 p-3 text-center"
+          className="flex h-48 items-center justify-center rounded-2xl bg-muted/20 p-3 text-center"
           data-testid="message-list"
         >
           <div>

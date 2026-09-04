@@ -266,7 +266,7 @@ export default function FluxyStreamDemoPage() {
 
 function StatChip({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5">
+    <div className="flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] px-2.5 py-1.5">
       <span className="text-muted-foreground">{icon}</span>
       <div>
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
@@ -306,7 +306,7 @@ function ViewersPanel({ stream }: { stream: FluxyStreamApi }) {
         </h3>
         <div className="space-y-1.5">
           {viewers.map((v) => (
-            <div key={v.userId} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+            <div key={v.userId} className="flex items-center gap-3 rounded-lg bg-card shadow-[var(--shadow-2)] p-2.5">
               <div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
                 {v.username.slice(0, 2).toUpperCase()}
               </div>
@@ -459,7 +459,7 @@ function ChatPanel({ stream }: { stream: FluxyStreamApi }) {
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Stream chat (AI-moderated)
         </h3>
-        <div className="h-64 space-y-1.5 overflow-auto rounded-lg border border-border bg-card p-3">
+        <div className="h-64 space-y-1.5 overflow-auto rounded-lg bg-card shadow-[var(--shadow-2)] p-3">
           {messages.map((msg, i) => (
             <div key={i} className={cn("rounded px-2 py-1 text-sm", msg.ok ? "" : "bg-red-500/10 text-red-600 line-through")}>
               <span className="font-semibold">{msg.username}:</span>{" "}
@@ -709,7 +709,7 @@ function HighlightsPanel({ stream }: { stream: FluxyStreamApi }) {
             <p className="text-sm text-muted-foreground">No highlights yet</p>
           ) : (
             highlights.map((hl) => (
-              <div key={hl.id} className="rounded-lg border border-border bg-card p-3">
+              <div key={hl.id} className="rounded-lg bg-card shadow-[var(--shadow-2)] p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h4 className="text-sm font-medium">{hl.title}</h4>
@@ -763,7 +763,7 @@ function HighlightsPanel({ stream }: { stream: FluxyStreamApi }) {
         <button
           type="button"
           onClick={handleAuto}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-card shadow-[var(--shadow-2)] px-3 py-2 text-xs font-medium hover:bg-muted"
         >
           <Sparkles className="size-3.5" />
           Auto-generate from sentiment + gifts
@@ -806,7 +806,7 @@ function SentimentPanel({ stream }: { stream: FluxyStreamApi }) {
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Real-time sentiment chart
       </h3>
-      <div className="flex h-48 items-end gap-1 rounded-lg border border-border bg-card p-3">
+      <div className="flex h-48 items-end gap-1 rounded-lg bg-card shadow-[var(--shadow-2)] p-3">
         {data.length === 0 ? (
           <p className="m-auto text-sm text-muted-foreground">No data yet</p>
         ) : (
@@ -827,15 +827,15 @@ function SentimentPanel({ stream }: { stream: FluxyStreamApi }) {
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-lg border border-border bg-card p-2">
+        <div className="rounded-lg bg-card shadow-[var(--shadow-2)] p-2">
           <div className="text-[10px] uppercase text-muted-foreground">Positive</div>
           <div className="text-lg font-bold text-green-600">{data.reduce((s, d) => s + d.positive, 0)}</div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-2">
+        <div className="rounded-lg bg-card shadow-[var(--shadow-2)] p-2">
           <div className="text-[10px] uppercase text-muted-foreground">Neutral</div>
           <div className="text-lg font-bold text-muted-foreground">{data.reduce((s, d) => s + d.neutral, 0)}</div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-2">
+        <div className="rounded-lg bg-card shadow-[var(--shadow-2)] p-2">
           <div className="text-[10px] uppercase text-muted-foreground">Negative</div>
           <div className="text-lg font-bold text-red-600">{data.reduce((s, d) => s + d.negative, 0)}</div>
         </div>
@@ -944,7 +944,7 @@ function GiftsPanel({ stream }: { stream: FluxyStreamApi }) {
               key={gift.id}
               type="button"
               onClick={() => handleSend(gift.type)}
-              className="flex flex-col items-center gap-1 rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted"
+              className="flex flex-col items-center gap-1 rounded-lg bg-card shadow-[var(--shadow-2)] p-3 transition-colors hover:bg-muted"
               style={{ borderTopColor: gift.color, borderTopWidth: 2 }}
             >
               <span className="text-3xl">{gift.iconEmoji}</span>
@@ -1219,7 +1219,7 @@ function PollsPanel({ stream }: { stream: FluxyStreamApi }) {
           {polls.map((poll) => {
             const totalVotes = poll.options.reduce((s, o) => s + o.votes, 0);
             return (
-              <div key={poll.id} className="rounded-lg border border-border bg-card p-3">
+              <div key={poll.id} className="rounded-lg bg-card shadow-[var(--shadow-2)] p-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium">{poll.question}</h4>
                   <span className={cn(
@@ -1343,7 +1343,7 @@ function CoHostPanel({ stream }: { stream: FluxyStreamApi }) {
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           AI Co-Host chat
         </h3>
-        <div className="h-64 space-y-2 overflow-auto rounded-lg border border-border bg-card p-3">
+        <div className="h-64 space-y-2 overflow-auto rounded-lg bg-card shadow-[var(--shadow-2)] p-3">
           {chat.length === 0 ? (
             <p className="m-auto text-sm text-muted-foreground">Ask the AI co-host a question!</p>
           ) : (
@@ -1393,7 +1393,7 @@ function CoHostPanel({ stream }: { stream: FluxyStreamApi }) {
         <button
           type="button"
           onClick={handleModerate}
-          className="mt-3 w-full rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted"
+          className="mt-3 w-full rounded-lg bg-card shadow-[var(--shadow-2)] px-3 py-2 text-xs font-medium hover:bg-muted"
         >
           Test moderation scan
         </button>

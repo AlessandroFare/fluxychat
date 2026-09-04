@@ -20,7 +20,7 @@ interface InteractiveCardRendererProps {
 
 export function InteractiveCardRenderer({ card, className, onAction }: InteractiveCardRendererProps) {
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-3 shadow-sm", className)}>
+    <div className={cn("rounded-xl bg-card p-3 shadow-sm", className)}>
       {card.title ? (
         <h4 className="mb-2 border-b border-border pb-2 text-sm font-semibold text-foreground">{card.title}</h4>
       ) : null}

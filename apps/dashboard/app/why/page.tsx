@@ -56,7 +56,7 @@ export default function WhyPage() {
           {WHY_FAQ.map((item) => (
             <details
               key={item.q}
-              className="group rounded-xl border border-border bg-card px-4 py-3 shadow-[var(--shadow-subtle-2)] open:shadow-md"
+              className="group rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-2)] open:shadow-[var(--shadow-3)]"
             >
               <summary className="cursor-pointer list-none font-medium text-foreground [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center justify-between gap-3">
@@ -72,7 +72,7 @@ export default function WhyPage() {
         </div>
       </section>
 
-      <div className="mt-14 flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-subtle-2)] sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-14 flex flex-col gap-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-2)] sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-heading text-lg font-semibold text-foreground">{WHY_CTA.title}</p>
           <p className="mt-1 text-sm text-muted-foreground">{WHY_CTA.body}</p>

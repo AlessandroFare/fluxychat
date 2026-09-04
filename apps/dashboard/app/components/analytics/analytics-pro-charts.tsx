@@ -26,7 +26,7 @@ function ChartPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+    <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4 sm:p-5">
       <div className="mb-3">
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         {hint ? <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p> : null}
