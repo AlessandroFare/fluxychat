@@ -27,7 +27,7 @@ IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.g
 - [Broadcast](https://docs.fluxychat.com/docs/core/broadcast): Sparse one-shot events.
 - [Storage](https://docs.fluxychat.com/docs/core/storage): Yjs, Tiptap, whiteboard.
 - [Comments](https://docs.fluxychat.com/docs/core/comments): Pinned threads.
-- [Chat reply threads](https://docs.fluxychat.com/docs/core/nested-threads): `useThread` on `parentId`. Same room socket.
+- [Chat reply threads](https://docs.fluxychat.com/docs/core/nested-threads): useThread on parentId. Same room socket.
 - [Feeds](https://docs.fluxychat.com/docs/core/feeds): Activity logs.
 - [Copilots](https://docs.fluxychat.com/docs/core/copilots): Side-panel AI.
 - [Notifications](https://docs.fluxychat.com/docs/core/notifications): Inbox and daily digest.

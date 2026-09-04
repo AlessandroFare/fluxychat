@@ -82,6 +82,7 @@ export interface FluxyRoomStoreState {
     replyTo?: number | null,
     attachments?: FluxyChatAttachment[],
     options?: FluxySendMessageOptions,
+    existingClientMessageId?: string,
   ) => void;
   retryMessage: (clientMessageId: string) => void;
   loadHistory: () => Promise<void>;
