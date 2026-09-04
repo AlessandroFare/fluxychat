@@ -1,7 +1,7 @@
 /**
- * Public marketing, legal, and trust URLs.
+ * Public marketing and trust URLs.
  * Used by Clerk (no protect), console chrome (no sign-in gate), and the ack cookie.
- * Console tools stay off this list: /rooms, /settings, /dashboard, /iot ingest, etc.
+ * Console tools stay off this list: /privacy, /security, /soc2, /embed, /health, /rooms, /iot, etc.
  */
 export const PUBLIC_SITE_PATH_PREFIXES = [
   "/landing",
@@ -17,11 +17,6 @@ export const PUBLIC_SITE_PATH_PREFIXES = [
   "/status",
   "/subprocessors",
   "/features",
-  "/privacy",
-  "/security",
-  "/soc2",
-  "/embed",
-  "/health",
   "/sign-in",
   "/sign-up",
 ] as const;
