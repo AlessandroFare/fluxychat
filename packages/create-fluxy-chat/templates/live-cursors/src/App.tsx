@@ -3,6 +3,7 @@ import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
 const workerUrl = import.meta.env.VITE_FLUXYCHAT_WORKER_URL?.trim();
+const publishableKey = import.meta.env.VITE_FLUXYCHAT_PUBLISHABLE_KEY?.trim();
 const memberJwt = import.meta.env.VITE_FLUXYCHAT_MEMBER_JWT?.trim();
 const publicRoomId = import.meta.env.VITE_FLUXYCHAT_PUBLIC_ROOM_ID?.trim();
 const configuredRoomId = import.meta.env.VITE_FLUXYCHAT_ROOM_ID?.trim() || "demo";
@@ -149,6 +150,23 @@ function hashCode(value: string): number {
 }
 
 export function App() {
+  const pkRoomId = publicRoomId || configuredRoomId;
+  if (workerUrl && publishableKey) {
+    return (
+      <main className="shell">
+        <h1>Live cursors</h1>
+        <p className="mode-badge">publishableKey · two tabs, same room</p>
+        <FluxyRealtimeProvider workerUrl={workerUrl} publishableKey={publishableKey}>
+          <CursorCanvas roomId={pkRoomId} selfUserId="guest" />
+        </FluxyRealtimeProvider>
+      </main>
+    );
+  }
+
+  return <MemberOrGuestCursors />;
+}
+
+function MemberOrGuestCursors() {
   const { session, loading, error } = useFluxySession();
   const [roomId, setRoomId] = useState(configuredRoomId);
 
@@ -166,8 +184,7 @@ export function App() {
           <code>VITE_FLUXYCHAT_WORKER_URL</code>.
         </p>
         <p>
-          Then either <code>VITE_FLUXYCHAT_MEMBER_JWT</code> or{" "}
-          <code>VITE_FLUXYCHAT_PUBLIC_ROOM_ID</code>.
+          Then <code>VITE_FLUXYCHAT_PUBLISHABLE_KEY</code>, a member JWT, or a public room id.
         </p>
       </main>
     );

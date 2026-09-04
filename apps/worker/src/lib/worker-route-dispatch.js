@@ -101,6 +101,7 @@ import { dispatchAgentTaskBusRoutes } from "../routes/agent-task-bus-http.js";
 import { dispatchAgentPlatformRoutes } from "../routes/agent-platform-http.js";
 import { dispatchPresenceEscalationRoutes } from "../routes/presence-escalation-http.js";
 import { dispatchRoomConfigRoutes } from "../routes/room-config-http.js";
+import { dispatchRoomExtensionsRoutes } from "../routes/room-extensions-http.js";
 import { dispatchRoomIntelligenceRoutes } from "../routes/room-intelligence-http.js";
 import { dispatchGdprRoutes } from "../routes/gdpr-http.js";
 import { dispatchBillingRoutes } from "../routes/billing-http.js";
@@ -333,6 +334,7 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchEscalationRoutes,
   dispatchPresenceEscalationRoutes,
   dispatchRoomConfigRoutes,
+  dispatchRoomExtensionsRoutes,
   dispatchAnonymousFeedbackRoutes,
   dispatchRoomIntelligenceRoutes,
   dispatchIntelligenceRoutes,
@@ -699,6 +701,7 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
     dispatchCompetitorParityRoutes,
     dispatchPresenceEscalationRoutes,
     dispatchRoomConfigRoutes,
+    dispatchRoomExtensionsRoutes,
     dispatchRoomIntelligenceRoutes,
     dispatchRoomMessageRetentionRoutes,
     dispatchRoomVoiceStageRoutes,
@@ -770,7 +773,7 @@ export const WORKER_ROUTE_DISPATCHER_COUNT =
   WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY.length;
 
 export const WORKER_ROUTE_LAZY_COUNT = 52;
-export const WORKER_ROUTE_EAGER_COUNT = 108;
+export const WORKER_ROUTE_EAGER_COUNT = 109;
 
 /**
  * @param {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} ordered

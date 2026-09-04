@@ -5,6 +5,7 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { hostedTenantPlanMutationForbidden, isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
 import { normalizePlanName, planLimitsForTier } from "../lib/plan-tier-limits.js";
+import { parseHostedOverlayBody } from "@fluxy-chat/config";
 
 export async function dispatchAdminProjectsRoutes(request, url, h) {
   const {
@@ -379,7 +380,7 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
   if (
     url.pathname.startsWith("/admin/projects/") &&
     url.pathname.endsWith("/publishable-key") &&
-    request.method === "POST"
+    (request.method === "GET" || request.method === "POST")
   ) {
     if (requireAdminAuth) {
       const adminAuth = await verifyJwtAndGetContext(request, env).catch(() => null);
@@ -396,6 +397,22 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
       if (scopeErr) return scopeErr;
 
       const now = new Date().toISOString();
+      if (request.method === "GET") {
+        const existing = await env.DB.prepare(
+          "SELECT id, key_prefix FROM api_keys WHERE project_id = ? AND revoked_at IS NULL AND id LIKE 'pk_%' ORDER BY created_at DESC LIMIT 1",
+        )
+          .bind(targetProjectId)
+          .first();
+        if (!existing?.id) return json({ error: "not_found" }, { status: 404 });
+        return json({
+          key: {
+            projectId: targetProjectId,
+            publishableKey: existing.id,
+            keyPrefix: existing.key_prefix,
+          },
+        });
+      }
+
       const publishableKey = `pk_${crypto.randomUUID().replace(/-/g, "")}`;
       const pkPrefix = publishableKey.slice(0, 8);
       const pkHash = await hashApiKey(publishableKey, env);
@@ -434,51 +451,79 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
 
       if (request.method === "GET") {
         const row = await env.DB.prepare(
-          "SELECT deny_substrings, guest_can_publish, iot_auto_agent_id, updated_at FROM project_publish_config WHERE project_id = ? LIMIT 1",
+          "SELECT deny_substrings, guest_can_publish, iot_auto_agent_id, rooms_json, updated_at FROM project_publish_config WHERE project_id = ? LIMIT 1",
         )
           .bind(targetProjectId)
-          .first();
+          .first()
+          .catch(async () =>
+            env.DB.prepare(
+              "SELECT deny_substrings, guest_can_publish, iot_auto_agent_id, updated_at FROM project_publish_config WHERE project_id = ? LIMIT 1",
+            )
+              .bind(targetProjectId)
+              .first(),
+          );
         let deny = [];
         try {
           deny = JSON.parse(row?.deny_substrings || "[]");
         } catch {
           deny = [];
         }
+        let rooms = {};
+        try {
+          rooms = JSON.parse(row?.rooms_json || "{}");
+        } catch {
+          rooms = {};
+        }
         return json({
           projectId: targetProjectId,
           denySubstrings: Array.isArray(deny) ? deny : [],
           guestCanPublish: row ? row.guest_can_publish !== 0 : true,
           iotAutoAgentId: row?.iot_auto_agent_id ?? null,
+          rooms: rooms && typeof rooms === "object" && !Array.isArray(rooms) ? rooms : {},
           updatedAt: row?.updated_at ?? null,
         });
       }
 
       const body = await request.json().catch(() => ({}));
-      const denySubstrings = Array.isArray(body.denySubstrings)
-        ? body.denySubstrings.filter((s) => typeof s === "string").slice(0, 50)
-        : [];
-      const guestCanPublish = body.guestCanPublish === false ? 0 : 1;
-      const iotAutoAgentId =
-        typeof body.iotAutoAgentId === "string" && body.iotAutoAgentId.trim()
-          ? body.iotAutoAgentId.trim().slice(0, 128)
-          : null;
+      const overlay = parseHostedOverlayBody(body);
+      const denySubstrings = overlay.denySubstrings ?? [];
+      const guestCanPublish = overlay.guestCanPublish === false ? 0 : 1;
+      const iotAutoAgentId = overlay.iotAutoAgentId ?? null;
+      let roomsJson = JSON.stringify(overlay.rooms ?? {});
+      if (body.rooms === undefined) {
+        const existing = await env.DB.prepare(
+          "SELECT rooms_json FROM project_publish_config WHERE project_id = ? LIMIT 1",
+        )
+          .bind(targetProjectId)
+          .first()
+          .catch(() => null);
+        if (existing?.rooms_json) roomsJson = existing.rooms_json;
+      }
       const now = new Date().toISOString();
       await env.DB.prepare(
-        `INSERT INTO project_publish_config (project_id, deny_substrings, guest_can_publish, iot_auto_agent_id, updated_at)
-         VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO project_publish_config (project_id, deny_substrings, guest_can_publish, iot_auto_agent_id, rooms_json, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(project_id) DO UPDATE SET
            deny_substrings = excluded.deny_substrings,
            guest_can_publish = excluded.guest_can_publish,
            iot_auto_agent_id = excluded.iot_auto_agent_id,
+           rooms_json = excluded.rooms_json,
            updated_at = excluded.updated_at`,
       )
-        .bind(targetProjectId, JSON.stringify(denySubstrings), guestCanPublish, iotAutoAgentId, now)
+        .bind(targetProjectId, JSON.stringify(denySubstrings), guestCanPublish, iotAutoAgentId, roomsJson, now)
         .run();
+      let rooms = {};
+      try {
+        rooms = JSON.parse(roomsJson || "{}");
+      } catch {
+        rooms = {};
+      }
       return json({
         projectId: targetProjectId,
         denySubstrings,
         guestCanPublish: guestCanPublish === 1,
         iotAutoAgentId,
+        rooms,
         updatedAt: now,
       });
     }

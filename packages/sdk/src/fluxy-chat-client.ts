@@ -769,6 +769,7 @@ export interface FluxySignInResponse {
   projectId: string;
   userChannel: {
     websocketPath: string;
+    inboxWebsocketPath?: string;
     eventsPath: string;
   };
 }
@@ -1226,6 +1227,85 @@ export class FluxyChatClient {
     if (this.token) url.searchParams.set("token", this.token);
     url.searchParams.set("userId", uid);
     return createFluxyWebSocket(url.toString(), this.usePartySocket);
+  }
+
+  /** Dedicated inbox socket (`GET /ws/inbox?token=`). Same User DO as `/ws/user/:id`; inbox-only frames. */
+  connectInbox(): WebSocket {
+    const wsBase = httpUrlToWebSocketBase(this.baseUrl);
+    const url = new URL("/ws/inbox", wsBase.endsWith("/") ? wsBase : `${wsBase}/`);
+    if (this.apiKey) url.searchParams.set("apiKey", this.apiKey);
+    if (this.token) url.searchParams.set("token", this.token);
+    if (this.userId) url.searchParams.set("userId", this.userId);
+    return createFluxyWebSocket(url.toString(), this.usePartySocket);
+  }
+
+  /**
+   * Room extension snapshot (`GET /rooms/:id/extensions`). Max 5 declared kv/counter slots.
+   */
+  async getRoomExtensions(roomId: string): Promise<{
+    roomId: string;
+    ext: Record<string, { kind?: string; data?: unknown; updatedAt?: string }>;
+    declared: Array<{ id: string; kind: string }>;
+  }> {
+    const trimmed = roomId.trim();
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(trimmed)}/extensions`, this.baseUrl).toString(),
+      { headers: this.authHeaders() },
+    );
+    const body = (await res.json().catch(() => ({}))) as {
+      roomId?: string;
+      ext?: Record<string, { kind?: string; data?: unknown; updatedAt?: string }>;
+      declared?: Array<{ id: string; kind: string }>;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(typeof body.error === "string" ? body.error : `getRoomExtensions failed: ${res.status}`);
+    }
+    return {
+      roomId: body.roomId ?? trimmed,
+      ext: body.ext && typeof body.ext === "object" ? body.ext : {},
+      declared: Array.isArray(body.declared) ? body.declared : [],
+    };
+  }
+
+  /** PUT `/rooms/:id/extensions/:extId`. Hosted: id must be declared on fluxy deploy rooms overlay. */
+  async setRoomExtension(
+    roomId: string,
+    extId: string,
+    body: { kind?: "kv" | "counter"; data?: unknown; delta?: number },
+  ): Promise<{
+    ok: boolean;
+    id: string;
+    record: { kind?: string; data?: unknown; updatedAt?: string };
+    ext: Record<string, unknown>;
+  }> {
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId.trim())}/extensions/${encodeURIComponent(extId.trim())}`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify(body ?? {}),
+      },
+    );
+    const payload = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      id?: string;
+      record?: { kind?: string; data?: unknown; updatedAt?: string };
+      ext?: Record<string, unknown>;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(typeof payload.error === "string" ? payload.error : `setRoomExtension failed: ${res.status}`);
+    }
+    return {
+      ok: payload.ok !== false,
+      id: payload.id ?? extId,
+      record: payload.record ?? { data: null },
+      ext: payload.ext && typeof payload.ext === "object" ? payload.ext : {},
+    };
   }
 
   /**

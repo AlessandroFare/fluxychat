@@ -53,12 +53,13 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
   ]);
 
 
-  if (url.pathname.startsWith("/ws/user/")) {
+  if (url.pathname === "/ws/inbox" || url.pathname.startsWith("/ws/user/")) {
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected WebSocket", { status: 400, headers: corsHeaders });
     }
 
-    const pathUserId = url.pathname.split("/").pop();
+    const inbox = url.pathname === "/ws/inbox";
+    const pathUserId = inbox ? null : url.pathname.split("/").pop();
     const wsAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
       if (err instanceof Response) throw err;
       console.error("JWT verify error", err);
@@ -67,7 +68,7 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     if (!wsAuth) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
-    if (!pathUserId || pathUserId !== wsAuth.userId) {
+    if (!inbox && (!pathUserId || pathUserId !== wsAuth.userId)) {
       return json(
         { error: "forbidden: token sub must match user channel id" },
         { status: 403, headers: corsHeaders },
@@ -98,7 +99,11 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
 
     const id = env.USER.idFromName(`${wsAuth.projectId}__${wsAuth.userId}`);
     const stub = env.USER.get(id);
-    return stub.fetch(request);
+    if (!inbox) return stub.fetch(request);
+    const forwarded = new URL(request.url);
+    forwarded.pathname = `/ws/user/${encodeURIComponent(wsAuth.userId)}`;
+    forwarded.searchParams.set("channel", "inbox");
+    return stub.fetch(new Request(forwarded.toString(), request));
   }
 
   if (url.pathname.startsWith("/ws/room/")) {

@@ -100,7 +100,7 @@ Requires authenticated member JWT (same as chat).
 
 ## Realtime
 
-When `realtime: true` (default when authenticated), `useInbox` subscribes to the user channel. Server pushes `inbox_item` events; the hook merges them into `items` and calls `onItem` once per new row.
+When `realtime: true` (default when authenticated), `useInbox` opens **`GET /ws/inbox?token=`** (`client.connectInbox()`). Handshake is `inbox_subscription_succeeded`. The same User Durable Object also serves `/ws/user/:userId`; inbox sockets only receive `inbox_updated` / `inbox_item`. Server pushes merge into `items` and call `onItem` once per new row.
 
 ## Console
 

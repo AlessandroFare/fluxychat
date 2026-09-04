@@ -20,11 +20,11 @@ export function GetStartedAccessBanner() {
     >
       <p className="font-medium text-foreground">
         {phase === "no_jwt"
-          ? "Sign in to unlock the console sidebar"
+          ? "Public rooms start in the browser. Console sign-in is for hosted ops."
           : "Pick a project to use rooms and billing"}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Sign in to provision hosted cloud, or run the wizard with a manual admin JWT if you self-host.
+        Put a pk_ on FluxyRealtimeProvider and call useChat. Sign in only if you want hosted cloud, billing, or Bridges. Self-host with a manual admin JWT in the wizard.
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         {clerkOn ? (

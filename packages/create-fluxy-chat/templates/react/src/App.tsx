@@ -3,6 +3,7 @@ import { FluxyChatClient } from "@fluxy-chat/sdk";
 import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 
 const workerUrl = import.meta.env.VITE_FLUXYCHAT_WORKER_URL?.trim();
+const publishableKey = import.meta.env.VITE_FLUXYCHAT_PUBLISHABLE_KEY?.trim();
 const memberJwt = import.meta.env.VITE_FLUXYCHAT_MEMBER_JWT?.trim();
 const publicRoomId = import.meta.env.VITE_FLUXYCHAT_PUBLIC_ROOM_ID?.trim();
 const configuredRoomId = import.meta.env.VITE_FLUXYCHAT_ROOM_ID?.trim() || "demo";
@@ -21,11 +22,11 @@ function useFluxySession(): {
   error: string | null;
 } {
   const [session, setSession] = useState<FluxySession | null>(null);
-  const [loading, setLoading] = useState(Boolean(workerUrl));
+  const [loading, setLoading] = useState(Boolean(workerUrl) && !publishableKey);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!workerUrl) {
+    if (!workerUrl || publishableKey) {
       setLoading(false);
       return;
     }
@@ -126,6 +127,36 @@ function ChatPanel({ roomId }: { roomId: string }) {
 }
 
 export function App() {
+  const pkRoomId = publicRoomId || configuredRoomId;
+
+  if (!workerUrl) {
+    return (
+      <main className="shell">
+        <h1>FluxyChat</h1>
+        <p>
+          Copy <code>.env.example</code> to <code>.env</code> and set{" "}
+          <code>VITE_FLUXYCHAT_WORKER_URL</code> plus <code>VITE_FLUXYCHAT_PUBLISHABLE_KEY</code>.
+        </p>
+      </main>
+    );
+  }
+
+  if (publishableKey) {
+    return (
+      <main className="shell">
+        <h1>FluxyChat</h1>
+        <p className="mode-badge">publishableKey · public room {pkRoomId}</p>
+        <FluxyRealtimeProvider workerUrl={workerUrl} publishableKey={publishableKey}>
+          <ChatPanel roomId={pkRoomId} />
+        </FluxyRealtimeProvider>
+      </main>
+    );
+  }
+
+  return <MemberOrGuestApp />;
+}
+
+function MemberOrGuestApp() {
   const { session, loading, error } = useFluxySession();
   const [roomId, setRoomId] = useState(configuredRoomId);
 
@@ -133,22 +164,6 @@ export function App() {
     if (session?.mode === "guest") return session.roomId;
     return roomId.trim() || configuredRoomId;
   }, [session, roomId]);
-
-  if (!workerUrl) {
-    return (
-      <main className="shell">
-        <h1>FluxyChat — chat-only starter</h1>
-        <p>
-          Copy <code>.env.example</code> to <code>.env</code> and set{" "}
-          <code>VITE_FLUXYCHAT_WORKER_URL</code>.
-        </p>
-        <p>
-          Then either <code>VITE_FLUXYCHAT_MEMBER_JWT</code> (member) or{" "}
-          <code>VITE_FLUXYCHAT_PUBLIC_ROOM_ID</code> (guest, ~60s to first message).
-        </p>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -162,14 +177,7 @@ export function App() {
     return (
       <main className="shell">
         <h1>FluxyChat</h1>
-        <p className="error">{error ?? "Set JWT or public room ID in .env"}</p>
-        <p>
-          Get credentials from{" "}
-          <a href="https://fluxychat.com/onboarding" target="_blank" rel="noreferrer">
-            onboarding
-          </a>{" "}
-          or use a public room ID for guest mode.
-        </p>
+        <p className="error">{error ?? "Set pk_, JWT, or public room ID in .env"}</p>
       </main>
     );
   }

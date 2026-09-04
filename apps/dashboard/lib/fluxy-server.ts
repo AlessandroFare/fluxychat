@@ -56,6 +56,7 @@ export interface CreatedProject {
   name: string;
   created_at: string;
   apiKey: string;
+  publishableKey?: string;
 }
 
 export async function createWorkerProject(adminJwt: string, name: string): Promise<CreatedProject> {
@@ -161,4 +162,25 @@ export async function listWorkerProjects(adminJwt: string) {
     throw new Error(json.error || `List projects failed (${res.status})`);
   }
   return json.projects ?? [];
+}
+
+export async function ensurePublishableKey(
+  adminJwt: string,
+  projectId: string,
+): Promise<string | null> {
+  const base = `${getWorkerUrl()}/admin/projects/${encodeURIComponent(projectId)}/publishable-key`;
+  const headers = { Authorization: `Bearer ${adminJwt.trim()}` };
+  const existing = await fetch(base, { headers });
+  if (existing.ok) {
+    const json = (await existing.json().catch(() => ({}))) as {
+      key?: { publishableKey?: string };
+    };
+    if (json.key?.publishableKey?.startsWith("pk_")) return json.key.publishableKey;
+  }
+  const created = await fetch(base, { method: "POST", headers });
+  if (!created.ok) return null;
+  const json = (await created.json().catch(() => ({}))) as {
+    key?: { publishableKey?: string };
+  };
+  return json.key?.publishableKey?.startsWith("pk_") ? json.key.publishableKey : null;
 }

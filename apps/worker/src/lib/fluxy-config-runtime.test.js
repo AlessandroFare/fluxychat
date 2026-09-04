@@ -31,6 +31,29 @@ describe("fluxy-config-runtime", () => {
     if (result.ok) expect(result.content).toContain("****");
   });
 
+  it("blocks anonymous from hosted rooms overlay", async () => {
+    const result = await runFluxyRoomAuthz(
+      "lobby-1",
+      { userId: "anon_x", roles: ["guest"], projectId: "proj_1" },
+      {
+        env: {
+          DB: {
+            prepare: () => ({
+              bind: () => ({
+                first: async () => ({
+                  deny_substrings: "[]",
+                  guest_can_publish: 1,
+                  rooms_json: JSON.stringify({ "lobby-*": { anonymous: false } }),
+                }),
+              }),
+            }),
+          },
+        },
+      },
+    );
+    expect(result.action).toBe("block");
+  });
+
   it("blocks deny substrings from D1 publish-config", async () => {
     const result = await runFluxyPublishPipeline(
       "room-general",

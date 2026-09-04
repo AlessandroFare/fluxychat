@@ -99,7 +99,7 @@ export function LandingFeaturesClient() {
 
         <div className="mx-auto max-w-6xl px-4 pb-10 pt-4 sm:px-6">
           <p className="text-center text-xs text-zinc-400">
-            Threads, polls, and translation are up to your product layer. FluxyChat ships the realtime core: rooms, presence, typing, delivery, and AI agent events.
+            Rooms, presence, typing, delivery, polls, and invokeAgent on one Durable Object. Translation and your chrome stay in the product.
           </p>
         </div>
       </section>

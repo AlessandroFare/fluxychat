@@ -76,9 +76,36 @@ export interface FluxyNotifyDescriptor {
   to?: string[];
 }
 
+export interface FluxyRoomExtensionSlot {
+  id: string;
+  /** Hosted slots are declared kinds. Arbitrary JS is self-host `onPublish` only. */
+  kind: "kv" | "counter";
+}
+
+export interface FluxyHostedRoomOverlay {
+  anonymous?: boolean;
+  guestCanPublish?: boolean;
+  denySubstrings?: string[];
+  capabilities?: FluxyRoomCapabilities;
+  extensions?: FluxyRoomExtensionSlot[];
+}
+
+export interface FluxyHostedOverlay {
+  denySubstrings?: string[];
+  guestCanPublish?: boolean;
+  iotAutoAgentId?: string | null;
+  rooms?: Record<string, FluxyHostedRoomOverlay>;
+}
+
 export interface FluxyRoomConfig {
   /** Allow anonymous JWT connections (default true). */
   anonymous?: boolean;
+  /** Serializes to hosted overlay. Self-host `authz` still wins on conflict. */
+  guestCanPublish?: boolean;
+  denySubstrings?: string[];
+  capabilities?: FluxyRoomCapabilities;
+  /** Max 5 declared slots. Snapshots live on the room Durable Object. */
+  extensions?: FluxyRoomExtensionSlot[];
   authz?: (ctx: FluxyAuthzContext) => FluxyAuthzResult | Promise<FluxyAuthzResult>;
   onPublish?: FluxyPublishMiddleware[];
   onDisconnect?: FluxyDisconnectMiddleware[];
@@ -97,6 +124,12 @@ export interface FluxyClientDefaults {
 export interface FluxyConfig {
   /** Public worker URL hint for docs / CLI scaffolds. */
   workerUrl?: string;
+  /** Hosted overlay (PUT /admin/projects/:id/publish-config). Not Worker-bundled callbacks. */
+  hostedPublish?: {
+    denySubstrings?: string[];
+    guestCanPublish?: boolean;
+    iotAutoAgentId?: string | null;
+  };
   auth?: FluxyAuthConfig;
   /** Room keys: exact id or template ending in `*` (Portal-style). */
   rooms?: Record<string, FluxyRoomConfig>;

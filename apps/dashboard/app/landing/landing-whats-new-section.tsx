@@ -96,7 +96,7 @@ const AI_FEATURES = [
     icon: Mic,
     title: "Realtime voice",
     description:
-      "STT → LLM → TTS pipeline with latency metrics. WebRTC realtime with automatic fallback to chunked audio or text-only.",
+      "joinVoiceStage signaling on the room WebSocket. Media is LiveKit. STT/TTS is Workers AI when you enable it. Not an SFU.",
   },
   {
     icon: MessageSquare,

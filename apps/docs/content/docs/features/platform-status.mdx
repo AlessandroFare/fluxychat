@@ -5,6 +5,10 @@ description: Adapters, IoT, fleet, game, RCS, voice clone, commerce, and federat
 
 These sit on the same Worker as chat. Set secrets in `.dev.vars` or the hosted console.
 
+## Hosted publish-config
+
+Without forking the Worker, `PUT /admin/projects/:id/publish-config` (CLI `pnpm fluxy:deploy`) overlays `fluxy.config`: deny substrings, `guest_can_publish`, **`iotAutoAgentId`**, and **`rooms`** (anonymous, per-room deny, capabilities, kv/counter extension slots). When that agent id is set, HTTP ingest can invoke the room agent without an `@mention`. Self-host: keep callbacks in `fluxy.config.ts`; hosted never evals tenant JS.
+
 ## Omnichannel adapters
 
 Console path: **Bridges**. Each channel is a row in `channel_configs` (OAuth or bot token, webhook URL, signing secret). Slack, Discord, Telegram, Teams, WhatsApp, and the others in `cross-platform.js` share that table.

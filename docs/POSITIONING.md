@@ -34,6 +34,6 @@ Free path: hosted Free (no card, `pk_`, 200k persisted messages; cursors do not 
 
 ## Still later (not this weekend)
 
-Console playground before billing, public always-on demos, signed DPA, PITR UI, Slack+Telegram OAuth gold path, native pub.dev/CocoaPods, Worker `/v1` pin, status-page SLO.
+Console playground before billing, hosted `PUBLIC_DEMO_PUBLISHABLE_KEY` on production, signed DPA, PITR UI, Slack+Telegram OAuth gold path, native pub.dev/CocoaPods, Worker `/v1` pin, status-page SLO.
 
 Recorded 2026-08-31 after Portal SDK research (`docs/research/portal-sdk-main`).

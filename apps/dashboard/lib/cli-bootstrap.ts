@@ -9,7 +9,7 @@ import {
   provisionFluxyForClerkUser,
   resolveProjectApiKeyForClerkUser,
 } from "@/lib/fluxy-provision";
-import { getConsoleApiKey, mintWorkerToken } from "@/lib/fluxy-server";
+import { ensurePublishableKey, getConsoleApiKey, mintWorkerToken } from "@/lib/fluxy-server";
 import { getWorkerUrl } from "@/lib/hosted-worker";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
 import type { User } from "@clerk/nextjs/server";
@@ -25,6 +25,7 @@ export interface CliBootstrapPayload {
   userId: string;
   projectName: string;
   createdNewProject: boolean;
+  publishableKey?: string;
 }
 
 export function isAllowedCliRedirectUri(raw: string): boolean {
@@ -100,6 +101,7 @@ export async function buildCliBootstrapForClerkUser(
     adminJwt: provisioned.adminJwt,
   });
   const agent = await ensureAssistantAgent(workerUrl, provisioned.adminJwt);
+  const publishableKey = await ensurePublishableKey(provisioned.adminJwt, projectId);
 
   return {
     workerUrl,
@@ -112,5 +114,6 @@ export async function buildCliBootstrapForClerkUser(
     userId,
     projectName: provisioned.activeProject?.name || "My project",
     createdNewProject: provisioned.createdNewProject,
+    publishableKey: publishableKey ?? undefined,
   };
 }

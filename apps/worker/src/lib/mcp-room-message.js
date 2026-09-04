@@ -54,7 +54,7 @@ export async function publishMcpRoomMessage(env, input) {
     return { ok: false, error: contentValidation.error, status: 400 };
   }
 
-  const authz = await runFluxyRoomAuthz(roomId, auth);
+  const authz = await runFluxyRoomAuthz(roomId, auth, { env });
   if (authz.action === "block") {
     return { ok: false, error: authz.reason, status: 403 };
   }

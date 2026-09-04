@@ -154,7 +154,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
       return json({ error: "forbidden" }, { status: 403 });
     }
 
-    const authz = await runFluxyRoomAuthz(roomId, auth);
+    const authz = await runFluxyRoomAuthz(roomId, auth, { env });
     if (authz.action === "block") {
       return json({ error: authz.reason, code: "blocked" }, { status: 403 });
     }

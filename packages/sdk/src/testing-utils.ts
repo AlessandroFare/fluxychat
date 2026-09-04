@@ -109,6 +109,12 @@ export function createFluxyChatMockClient(
     markReadRest: async (roomId: string, messageId: number) => {
       markReadCalls.push({ roomId, messageId });
     },
+    connectInbox: () =>
+      ({
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        close: () => {},
+      }) as unknown as WebSocket,
     connectUser: () =>
       ({
         addEventListener: () => {},

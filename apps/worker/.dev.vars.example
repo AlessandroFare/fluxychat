@@ -285,6 +285,9 @@ AUDIT_CHAIN_ENABLED=true
 # PUBLIC_GUEST_TOKEN_TTL_SECONDS=3600
 # PUBLIC_GUEST_ALLOWED_ORIGINS=https://app.example.com
 # PUBLIC_GUEST_TURNSTILE_REQUIRED=false
+# Weekend demo without Clerk: GET /public/demo-credentials
+# PUBLIC_DEMO_PUBLISHABLE_KEY=pk_...
+# PUBLIC_DEMO_ROOM_ID=general
 # WEBAUTHN_RP_ID=app.example.com
 # WEBAUTHN_RP_NAME=FluxyChat
 # WEBAUTHN_ORIGIN=https://app.example.com,https://dashboard.example.com

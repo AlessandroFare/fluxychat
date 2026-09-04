@@ -727,7 +727,7 @@ export class RoomDurableObject {
       webSocket.close(1008, "Forbidden");
       return;
     }
-    const authz = await runFluxyRoomAuthz(roomId, auth);
+    const authz = await runFluxyRoomAuthz(roomId, auth, { env: this.env });
     if (authz.action === "block") {
       webSocket.close(1008, String(authz.reason).slice(0, 120));
       return;
@@ -3129,6 +3129,35 @@ export class RoomDurableObject {
 
     // F1: live marginal cost for this room. Auth is enforced by the caller
     // (admin route); the DO itself sits on the private binding.
+    const requestUrl = new URL(request.url);
+    if (requestUrl.pathname === "/extensions" || requestUrl.pathname.startsWith("/extensions/")) {
+      const { snapshotRoomExtensions, putRoomExtension } = await import("../lib/room-extensions.js");
+      const storage = this.state?.storage;
+      if (!storage) {
+        return Response.json({ ok: false, error: "storage_unavailable" }, { status: 503 });
+      }
+      if (requestUrl.pathname === "/extensions" && request.method === "GET") {
+        const ext = await snapshotRoomExtensions(storage);
+        return Response.json({ ok: true, ext });
+      }
+      const extId = decodeURIComponent(requestUrl.pathname.split("/").pop() || "");
+      if (request.method === "GET") {
+        const ext = await snapshotRoomExtensions(storage);
+        return Response.json({ ok: true, id: extId, record: ext[extId] ?? null, ext });
+      }
+      if (request.method === "PUT" || request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const declared = Array.isArray(body.declared) ? body.declared : undefined;
+        const result = await putRoomExtension(storage, extId, body, declared);
+        if (!result.ok) {
+          return Response.json({ ok: false, error: result.error }, { status: result.status || 400 });
+        }
+        this.broadcast({ type: "extension_snapshot", ext: result.ext, id: extId });
+        return Response.json(result);
+      }
+      return Response.json({ error: "method_not_allowed" }, { status: 405 });
+    }
+
     if (new URL(request.url).pathname === "/cost") {
       await this.persistCostLedger();
       return Response.json({
@@ -3591,6 +3620,16 @@ export class RoomDurableObject {
             type: "agentTyping",
             agentId: body.agentId || body.userId,
             isTyping: !!body.isTyping,
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "extension_snapshot") {
+        this.broadcast(
+          {
+            type: "extension_snapshot",
+            roomId: body.roomId || roomIdStr,
+            ext: body.ext ?? {},
+            id: body.id ?? null,
           },
           broadcastOpts,
         );

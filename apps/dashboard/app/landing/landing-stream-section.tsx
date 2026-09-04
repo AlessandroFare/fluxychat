@@ -9,7 +9,7 @@ const STREAM_FEATURES = [
   {
     id: "live",
     title: "Live video broadcast",
-    description: "WebRTC + Cloudflare Stream HLS relay with adaptive bitrate, DVR, and multi-resolution.",
+    description: "Bring LiveKit or Cloudflare Stream for the media plane. FluxyChat is the room, not an SFU.",
     icon: Eye,
   },
   {
@@ -21,7 +21,7 @@ const STREAM_FEATURES = [
   {
     id: "polls",
     title: "Polls & quizzes",
-    description: "Create polls and quizzes during the stream. Results update in real-time for everyone.",
+    description: "createPoll and votePoll on the same room timeline. Anonymous ballots via POST /polls.",
     icon: BarChart3,
   },
   {
@@ -47,7 +47,7 @@ const STREAM_FEATURES = [
 const LIVE_LINES = [
   "Welcome to the stream everyone! 🎉",
   "Today we're diving deep into real-time architecture.",
-  "Let me show you the WebRTC setup...",
+  "Let me show you the room overlay...",
   "This is where FluxyStream handles fan-out.",
   "Questions? Drop them in chat!",
 ];
@@ -147,8 +147,7 @@ export function LandingStreamSection() {
             Live streaming with real-time chat
           </h2>
           <p className="mx-auto max-w-2xl text-pretty leading-relaxed text-slate-300">
-            Broadcast live video via WebRTC, RTMP, or OBS. Viewers watch with integrated chat,
-            polls, virtual gifts, and AI moderation, all in one room.
+            Room chat and polls ship in the product. For live video, bring LiveKit or Cloudflare Stream. FluxyChat is not an SFU, RTMP ingest, or OBS plugin.
           </p>
         </div>
 

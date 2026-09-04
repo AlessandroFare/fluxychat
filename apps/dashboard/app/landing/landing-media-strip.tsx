@@ -27,7 +27,7 @@ const GALLERY_ITEMS = [
   },
   {
     image: "/flow/5.png",
-    label: "14 channel adapters",
+    label: "Bridges you wire in the console",
     alt: "Grid of identical adapters on a cream desk",
   },
 ];

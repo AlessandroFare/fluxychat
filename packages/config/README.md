@@ -63,6 +63,10 @@ GET /config/client
 
 Use in your app to align `useChat` options with server policy.
 
+## Hosted overlay
+
+`toHostedOverlay(config)` drops callbacks. `PUT /admin/projects/:id/publish-config` (CLI: `pnpm fluxy:deploy`) applies deny list, guest publish, `iotAutoAgentId`, and per-room templates plus extension slots. Callbacks in `rooms.*.onPublish` still run only inside a Worker you deploy.
+
 ## Self-hosted execution
 
 Fluxy runs your config callbacks **inside your Worker**. You own execution and secrets (Wrangler vars / secrets).

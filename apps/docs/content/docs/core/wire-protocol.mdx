@@ -22,7 +22,7 @@ Transport falls `websocket` to `sse` to `polling`. Reconnect exposes `connection
 | Who | How |
 | --- | --- |
 | Member | JWT in `?token=` (or `Authorization` on REST). Roles: `member` / `moderator` / `admin` / `owner`. |
-| Guest | `POST /public/rooms/:id/guest-session` then the same `?token=`. Public rooms. Stable `guestKey` in localStorage. |
+| Guest | `POST /tokens/anonymous` with `pk_` (provider `publishableKey`), or `POST /public/rooms/:id/guest-session` then the same `?token=`. Public rooms. Stable `guestKey` in localStorage on the guest-session path. |
 | Non-member | HTTP 403 or close `1008`. |
 
 Keep `fc_…` API keys on the server. Mint JWTs with `POST /auth/token`. Refresh with `client.setToken()` / `updateToken()`, or pass a function to `authTokenProvider`.
@@ -36,7 +36,10 @@ Keep `fc_…` API keys on the server. Mint JWTs with `POST /auth/token`. Refresh
 | Chat | JSON messages + `clientMessageId` | Feeds or comment threads |
 | Ephemeral pulse | `client-ephemeral-*` (skips webhooks) | Persisting it |
 | Document | Binary Yjs on the second socket | A second CRDT backend |
+| REST inbox | `GET /inbox` | Liveblocks inbox |
+| Inbox socket | `GET /ws/inbox?token=` (`connectInbox`) | User-channel only |
 | Late-joiner JSON | `setDerivedState` / `derivedState` (16 KiB, 30/min) | Stuffing a graph into chat history |
+| Room extensions | `GET/PUT /rooms/:id/extensions` (`extension_snapshot`, max 5) | Eval on the shared Worker |
 | Private lines | `visibility` + `visibleTo` on send | Filtering only in the UI |
 | Agent on the timeline | `invokeAgent` | The keyless copilot panel (local UI only) |
 

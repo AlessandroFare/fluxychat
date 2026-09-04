@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { COMPARE_ROWS } from "@/lib/compare-providers";
+import { COMPARE_ROWS, COMPARE_LABS_NOTE } from "@/lib/compare-providers";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 /** Server-rendered compare table — keeps marketing bundle smaller (ENG-13). */
@@ -23,6 +23,9 @@ export function LandingCompareSection() {
             Leaving Pusher
           </Link>
           .
+        </p>
+        <p className="mx-auto mt-2 max-w-2xl text-pretty text-center text-sm text-[var(--mkt-text-muted)]">
+          {COMPARE_LABS_NOTE}
         </p>
         <div className="mt-10 overflow-x-auto rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)]">
           <table className="w-full min-w-[640px] border-collapse text-left text-sm leading-relaxed text-[var(--mkt-text)]">

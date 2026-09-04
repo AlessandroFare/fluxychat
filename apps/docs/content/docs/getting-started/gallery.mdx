@@ -3,7 +3,7 @@ title: Gallery examples
 description: Copy-paste Vite apps on the same room Durable Object.
 ---
 
-Each template is a product shape, not a claim that FluxyChat is MQTT, netcode, or an SFU. The **Do not** column is the scope of that example. Open two tabs unless noted. Worker URL plus a public room id or a member JWT.
+Each template is a product shape, not a claim that FluxyChat is MQTT, netcode, or an SFU. The **Do not** column is the scope of that example. Open two tabs unless noted. Worker URL plus a `pk_` / public room id or a member JWT.
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors
@@ -18,6 +18,7 @@ npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
 npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick
 npx @fluxy-chat/create-fluxy-chat@latest my-stage --example voice-stage
 npx @fluxy-chat/create-fluxy-chat@latest my-comments --example comments-board
+npx @fluxy-chat/create-fluxy-chat@latest my-polls --example polls
 npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
 ```
 
@@ -35,6 +36,7 @@ npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
 | `game-tick` | lobby + `game.tick` | Server-authoritative input, not rollback netcode |
 | `voice-stage` | `joinVoiceStage` signaling | Bring LiveKit for the media plane |
 | `comments-board` | `useThreads` + `FloatingComposer` | Not chat `parentId` as pins |
+| `polls` | `createPoll` / `votePoll` | Timeline polls. Anonymous ballots: `POST /polls` `isAnonymous` |
 | `whiteboard` | Yjs `Y.Array` strokes + cursors | Yjs on the room DO, not Excalidraw as a second backend |
 
 Health is not HIPAA. Stream/HLS stays labs until a WHIP example exists. Voice numbers: [Voice load report](/docs/operations/voice-load-test-report).

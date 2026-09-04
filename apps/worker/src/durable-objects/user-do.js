@@ -1,6 +1,10 @@
 import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
 import { logInfo, logError } from "../lib/worker-log.js";
 import { WsSessionRegistry, installWsAutoResponse } from "../lib/do-ws-sessions.js";
+import {
+  isInboxChannelRequest,
+  shouldDeliverOnUserSocket,
+} from "../lib/user-channel-deliver.js";
 
 /**
  * Per-user fan-out channel. DO id scope: one instance per project user
@@ -28,6 +32,8 @@ export class UserDurableObject {
     this.clients = this.sessions.socketSet();
     /** @type {Map<WebSocket, string>} per-socket id, attachment field `s` */
     this.socketIds = this.sessions.field("s");
+    /** @type {Map<WebSocket, string>} `user` | `inbox` */
+    this.channels = this.sessions.field("c");
     this.projectId = null;
     this.userId = null;
 
@@ -125,7 +131,8 @@ export class UserDurableObject {
       return;
     }
 
-    const pathUserId = this.userIdFromRequest(request);
+    const inbox = isInboxChannelRequest(request);
+    const pathUserId = inbox ? auth.userId : this.userIdFromRequest(request);
     if (!pathUserId || pathUserId !== auth.userId) {
       webSocket.close(1008, "Forbidden");
       return;
@@ -144,18 +151,25 @@ export class UserDurableObject {
     }
 
     const socketId = crypto.randomUUID();
-    this.sessions.write(webSocket, { s: socketId, u: auth.userId, p: auth.projectId });
+    const channel = inbox ? "inbox" : "user";
+    this.sessions.write(webSocket, {
+      s: socketId,
+      u: auth.userId,
+      p: auth.projectId,
+      c: channel,
+    });
 
     logInfo("user_do.connected", {
       userId: auth.userId,
       projectId: auth.projectId,
+      channel,
       clients: this.clients.size,
       hibernatable: this.sessions.hibernationEnabled,
     });
 
     webSocket.send(
       JSON.stringify({
-        type: "user_subscription_succeeded",
+        type: inbox ? "inbox_subscription_succeeded" : "user_subscription_succeeded",
         userId: auth.userId,
         socketId,
         connectionCount: this.clients.size,
@@ -258,6 +272,9 @@ export class UserDurableObject {
       if (excludeSocketId) {
         const sid = this.socketIds.get(client);
         if (sid === excludeSocketId) continue;
+      }
+      if (!shouldDeliverOnUserSocket(this.channels.get(client) || "user", message)) {
+        continue;
       }
       try {
         client.send(payload);
