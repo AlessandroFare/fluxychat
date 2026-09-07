@@ -355,7 +355,7 @@ export default function RoomsPage() {
       />
 
       <Section title="Session">
-        <Button onClick={loadRooms} disabled={loading || !token}>
+        <Button onClick={() => void loadRooms()} disabled={loading || !token}>
           {loading ? "Loading…" : "Load rooms"}
         </Button>
       </Section>
