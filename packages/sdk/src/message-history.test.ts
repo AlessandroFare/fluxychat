@@ -23,6 +23,25 @@ describe("message-history", () => {
     expect(merged[0]?.content).toBe("current");
   });
 
+  it("mergeMessagesChronological does not let an empty streaming stub replace REST text", () => {
+    const merged = mergeMessagesChronological(
+      [{ id: 9, createdAt: "2026-01-01T00:00:00.000Z", content: "", streaming: true }],
+      [{ id: 9, createdAt: "2026-01-01T00:00:00.000Z", content: "Agent finished this reply." }],
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.content).toBe("Agent finished this reply.");
+    expect(merged[0]?.streaming).toBeUndefined();
+  });
+
+  it("mergeMessagesChronological keeps streamed tokens over an empty REST row", () => {
+    const merged = mergeMessagesChronological(
+      [{ id: 9, createdAt: "2026-01-01T00:00:00.000Z", content: "Hello from the agent", streaming: true }],
+      [{ id: 9, createdAt: "2026-01-01T00:00:00.000Z", content: "" }],
+    );
+    expect(merged[0]?.content).toBe("Hello from the agent");
+    expect(merged[0]?.streaming).toBe(true);
+  });
+
   it("clampHistoryLimit enforces bounds", () => {
     expect(clampHistoryLimit()).toBe(50);
     expect(clampHistoryLimit(0)).toBe(50);

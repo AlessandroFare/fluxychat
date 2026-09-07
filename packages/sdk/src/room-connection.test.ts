@@ -321,6 +321,48 @@ describe("FluxyChatRoomConnection", () => {
     );
   });
 
+  it("delivers a completing message frame after a streaming stub with the same id", async () => {
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const onAny = vi.fn();
+    const conn = client.connectRoom("room-stream", {
+      replayHistoryOnReconnect: false,
+      heartbeatIntervalMs: 0,
+    });
+    conn.onAnyEvent(onAny);
+    conn.connect();
+
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    const ws = instances[0]!;
+    ws.emit("open", {});
+    ws.emit("message", {
+      data: JSON.stringify({
+        type: "message",
+        id: 9,
+        roomId: "room-stream",
+        userId: "agent-1",
+        content: "",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        streaming: true,
+      }),
+    });
+    ws.emit("message", {
+      data: JSON.stringify({
+        type: "message",
+        id: 9,
+        roomId: "room-stream",
+        userId: "agent-1",
+        content: "Agent finished this reply.",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        streaming: false,
+      }),
+    });
+
+    const completing = onAny.mock.calls
+      .map((c) => c[0])
+      .filter((e) => e?.type === "message" && e.id === 9);
+    expect(completing.some((e) => e.content === "Agent finished this reply.")).toBe(true);
+  });
+
   it("sends lastSeq and streamOffsets on WS resume", async () => {
     vi.useFakeTimers();
     const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });

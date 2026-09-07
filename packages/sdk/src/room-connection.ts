@@ -673,7 +673,8 @@ export class FluxyChatRoomConnection {
         if (Number.isFinite(msg.id)) this.trackMessageId(msg.id);
       }
     } else if (event.type === "message" && Number.isFinite(event.id)) {
-      if (this.seenIdsSet.has(event.id) && !event.streaming) return;
+      const content = typeof event.content === "string" ? event.content : "";
+      if (this.seenIdsSet.has(event.id) && !event.streaming && !content) return;
       this.trackMessageId(event.id);
     }
 

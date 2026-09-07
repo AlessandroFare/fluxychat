@@ -78,10 +78,6 @@ export async function ensureAssistantRoom(
 
   const existingBefore = pickAssistantRoom(roomId, await listProjectRooms(workerUrl, memberJwt));
   if (existingBefore) {
-    const adminToken = adminJwt?.trim();
-    if (adminToken) {
-      await ensureRoomMembership(workerUrl, adminToken, existingBefore.id, memberUserId);
-    }
     return { room: existingBefore, created: false };
   }
 

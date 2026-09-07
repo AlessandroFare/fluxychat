@@ -201,4 +201,29 @@ describe("message-delivery", () => {
     expect(merged[0]?.content).toBe("partial tokens already shown");
     expect(merged[0]?.streaming).toBe(true);
   });
+
+  it("mergeHistoryWithPendingDelivery prefers REST text over an empty live streaming stub", () => {
+    const stub = {
+      id: 9,
+      roomId: "r1",
+      userId: "agent-1",
+      content: "",
+      createdAt: "2026-01-01T00:00:00Z",
+      streaming: true,
+      deliveryStatus: "sent" as const,
+    };
+    const merged = mergeHistoryWithPendingDelivery(
+      [stub],
+      [{
+        id: 9,
+        roomId: "r1",
+        userId: "agent-1",
+        content: "Agent finished this reply.",
+        createdAt: "2026-01-01T00:00:00Z",
+      }],
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.content).toBe("Agent finished this reply.");
+    expect(merged[0]?.streaming).toBeUndefined();
+  });
 });

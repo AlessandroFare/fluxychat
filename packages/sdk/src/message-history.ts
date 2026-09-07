@@ -23,6 +23,26 @@ export function sortMessagesChronological<T extends HistoryMessage>(messages: T[
   );
 }
 
+function contentLength(msg: HistoryMessage): number {
+  return String(msg.content ?? "").length;
+}
+
+/** Same-id merge: later row wins fields, but never replace longer text with a shorter stub. */
+export function mergeSameIdHistoryMessage<T extends HistoryMessage>(prev: T, msg: T): T {
+  const prevLen = contentLength(prev);
+  const msgLen = contentLength(msg);
+  if (msgLen > prevLen) return { ...prev, ...msg };
+  if (prevLen > msgLen) {
+    return {
+      ...prev,
+      ...msg,
+      content: prev.content,
+      streaming: prev.streaming,
+    };
+  }
+  return { ...prev, ...msg };
+}
+
 export function mergeMessagesChronological<T extends HistoryMessage>(
   existing: T[],
   incoming: T[],
@@ -31,7 +51,7 @@ export function mergeMessagesChronological<T extends HistoryMessage>(
   for (const msg of [...incoming, ...existing]) {
     if (!Number.isFinite(msg.id)) continue;
     const prev = byId.get(msg.id);
-    byId.set(msg.id, prev ? { ...prev, ...msg } : msg);
+    byId.set(msg.id, prev ? mergeSameIdHistoryMessage(prev, msg) : msg);
   }
   return sortMessagesChronological([...byId.values()]);
 }

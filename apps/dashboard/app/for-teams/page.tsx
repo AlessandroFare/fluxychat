@@ -13,7 +13,7 @@ export const metadata: Metadata = buildPageMetadata({
 const KERNEL = [
   "Public room: FluxyRealtimeProvider + publishableKey (pk_) + useChat({ roomId }). Two tabs.",
   "Private room: mint a member JWT with POST /auth/token and X-Fluxy-Api-Key. fc_ stays on your server.",
-  "Pin npm: @fluxy-chat/sdk ^0.6.11, @fluxy-chat/react ^0.1.7. Scaffold with npx @fluxy-chat/create-fluxy-chat@latest.",
+  "Pin npm: @fluxy-chat/sdk ^0.6.12, @fluxy-chat/react ^0.1.7. Scaffold with npx @fluxy-chat/create-fluxy-chat@latest.",
   "Same room WebSocket for chat, presence, polls, and server_event. Yjs is a second binary socket on the same room.",
 ];
 
