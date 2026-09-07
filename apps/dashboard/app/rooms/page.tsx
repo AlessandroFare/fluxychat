@@ -109,18 +109,18 @@ export default function RoomsPage() {
     [memberToken, fluxyMemberUserId, clerkUser?.id],
   );
 
-  const loadRooms = useCallback(async () => {
+  const loadRooms = useCallback(async (opts?: { quiet?: boolean }) => {
     if (!listToken) {
       setError("JWT required (member or admin from Projects / Onboarding).");
       return;
     }
     setLoading(true);
     setError(null);
-    setNotice(null);
+    if (!opts?.quiet) setNotice(null);
     try {
       const list = await listClient.listRooms();
       setRooms(list);
-      setNotice(`Loaded ${list.length} rooms.`);
+      if (!opts?.quiet) setNotice(`Loaded ${list.length} rooms.`);
       setSelectedId((prev) => {
         if (prev && list.some((r) => r.id === prev)) return prev;
         return list[0]?.id ?? null;
@@ -142,19 +142,39 @@ export default function RoomsPage() {
     setSelectedId(roomFromQuery);
   }, [roomFromQuery]);
 
+  const createClient = useMemo(
+    () =>
+      new FluxyChatClient({
+        baseUrl: WORKER_URL,
+        userId: fluxyMemberUserId || "dashboard",
+        token: (memberJwt.trim() || adminJwt.trim()) || undefined,
+      }),
+    [memberJwt, adminJwt, fluxyMemberUserId],
+  );
+
   const createRoom = async () => {
-    if (!token || !newName.trim()) return;
+    const createToken = memberJwt.trim() || adminJwt.trim();
+    if (!createToken || !newName.trim()) return;
     setCreating(true);
     setError(null);
     try {
       const roomType = isRoomType(newType) ? newType : "group";
-      await client.createRoom({
+      const members = fluxyMemberUserId
+        ? [{ userId: fluxyMemberUserId, role: "owner" }]
+        : undefined;
+      const created = await createClient.createRoom({
         name: newName.trim(),
         type: roomType,
+        ...(members ? { members } : {}),
       });
       setNewName("");
-      setNotice("Room created.");
-      await loadRooms();
+      await loadRooms({ quiet: true });
+      setRooms((prev) => {
+        if (!created?.id || prev.some((r) => r.id === created.id)) return prev;
+        return [{ ...created, unreadCount: 0 }, ...prev];
+      });
+      if (created?.id) setSelectedId(created.id);
+      setNotice(`Room created: ${created?.name || created?.id || "ok"}`);
     } catch (e: unknown) {
       setError(messageFromUnknown(e, "Create failed"));
     } finally {

@@ -1118,13 +1118,15 @@ export function FluxyChat({
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const since = pollSinceRef.current;
-      const sinceWithBuffer = since
-        ? new Date(new Date(since).getTime() - 60_000).toISOString()
-        : null;
+      const sinceMs = since ? Date.parse(since) : 0;
       for (const row of json.runs ?? []) {
         const run = normalizeAgentRun(row);
         if (run.room_id && run.room_id !== activeRoomId) continue;
-        if (sinceWithBuffer && run.created_at && run.created_at < sinceWithBuffer) continue;
+        if (Number.isFinite(sinceMs) && sinceMs > 0) {
+          const createdMs = run.created_at ? Date.parse(run.created_at) : NaN;
+          // Ignore runs from before this send (2s clock skew only — not 60s).
+          if (Number.isFinite(createdMs) && createdMs < sinceMs - 2_000) continue;
+        }
         if (run.status === "completed" || run.status === "failed") return run;
       }
       return null;
@@ -1161,6 +1163,12 @@ export function FluxyChat({
     [fluxyClient, trimmedRoomId, counterfactualTarget, agentId],
   );
 
+  const refreshMessagesAfterAgentRun = useCallback(() => {
+    void loadHistory();
+    window.setTimeout(() => void loadHistory(), 400);
+    window.setTimeout(() => void loadHistory(), 1600);
+  }, [loadHistory]);
+
   useEffect(() => {
     if (!runPending || !adminJwt.trim()) return;
     let cancelled = false;
@@ -1171,7 +1179,7 @@ export function FluxyChat({
       setLatestRun(run);
       setRunPending(false);
       if (run.status === "completed") {
-        void loadHistory();
+        refreshMessagesAfterAgentRun();
       }
       if (run.status === "failed") {
         setInvokeError(run.error || "Agent run failed");
@@ -1197,33 +1205,7 @@ export function FluxyChat({
       window.clearInterval(intervalId);
       window.clearTimeout(timeoutId);
     };
-  }, [runPending, adminJwt, fetchLatestRunForRoom, loadHistory]);
-
-  useEffect(() => {
-    if (!runPending || agentTyping) return;
-    let cancelled = false;
-    const id = window.setTimeout(() => {
-      if (cancelled) return;
-      void fetchLatestRunForRoom().then((run) => {
-        if (cancelled) return;
-        if (run) {
-          setLatestRun(run);
-          if (run.status === "completed") {
-            void loadHistory();
-          }
-          if (run.status === "failed") {
-            setInvokeError(run.error || "Agent run failed");
-          }
-          showRunFeedback(run);
-        }
-        setRunPending(false);
-      });
-    }, 2000);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(id);
-    };
-  }, [runPending, agentTyping, fetchLatestRunForRoom, loadHistory]);
+  }, [runPending, adminJwt, fetchLatestRunForRoom, refreshMessagesAfterAgentRun]);
 
   useEffect(() => {
     if (!lastAgentRun) return;
@@ -1231,11 +1213,14 @@ export function FluxyChat({
     const run = normalizeAgentRun(lastAgentRun as unknown as Record<string, unknown>);
     setLatestRun(run);
     setRunPending(false);
+    if (run.status === "completed") {
+      refreshMessagesAfterAgentRun();
+    }
     if (run.status === "failed") {
       setInvokeError(run.error || "Agent run failed");
     }
     showRunFeedback(run);
-  }, [lastAgentRun, activeRoomId]);
+  }, [lastAgentRun, activeRoomId, refreshMessagesAfterAgentRun]);
 
   useEffect(
     () => () => {
