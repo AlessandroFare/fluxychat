@@ -4084,7 +4084,7 @@ export class FluxyChatClient {
     type: string;
     id?: string;
     members?: { userId: string; role: string }[];
-  }): Promise<{ id: string; type: string; name: string; created_at: string }> {
+  }): Promise<FluxyChatRoom> {
     if (!this.token) throw new Error("createRoom requires JWT token");
     const res = await fetch(new URL("/rooms", this.baseUrl).toString(), {
       method: "POST",
