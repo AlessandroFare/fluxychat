@@ -1,5 +1,12 @@
 # @fluxy-chat/sdk
 
+## 0.6.12 (2026-09-07)
+
+### Fixed
+
+- History merge no longer lets an empty local streaming stub overwrite a REST row that already has the agent reply.
+- WebSocket `message` frames with the same id as a streaming stub are still delivered when they carry content, so the completing bubble is not dropped.
+
 ## 0.6.11 (2026-09-07)
 
 ### Added

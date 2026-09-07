@@ -168,4 +168,43 @@ describe("dispatchRoomsMutationsRoutes auth", () => {
     const res = await dispatchRoomsMutationsRoutes(req, new URL(req.url), deps);
     expect(res.status).toBe(403);
   });
+
+  it("POST /rooms/:id/members stubs a missing D1 room instead of 404", async () => {
+    const sqls = [];
+    const db = {
+      prepare(sql) {
+        sqls.push(sql);
+        return {
+          bind() {
+            return {
+              first: async () => null,
+              run: async () => ({ success: true }),
+            };
+          },
+        };
+      },
+    };
+    const req = new Request("http://127.0.0.1:8787/rooms/assistant-proj-1/members", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: "u1", role: "member" }),
+    });
+    const res = await dispatchRoomsMutationsRoutes(
+      req,
+      new URL(req.url),
+      buildDeps({
+        db,
+        verifyJwt: async () => ({
+          projectId: "proj-1",
+          userId: "admin",
+          roles: ["admin"],
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(sqls.some((s) => s.includes("INSERT OR IGNORE INTO rooms"))).toBe(true);
+    expect(sqls.some((s) => s.includes("INSERT OR IGNORE INTO room_members"))).toBe(true);
+  });
 });

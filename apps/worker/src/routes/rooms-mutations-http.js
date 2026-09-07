@@ -590,12 +590,28 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     if (!body?.userId) {
       return json({ error: "userId required" }, { status: 400 });
     }
+    if (!isValidId(roomId)) {
+      return json({ error: "room not found" }, { status: 404 });
+    }
     const roomExists = await env.DB.prepare(
       "SELECT id FROM rooms WHERE id = ? AND project_id = ?"
     ).bind(roomId, auth.projectId).first();
-    if (!roomExists) return json({ error: "room not found" }, { status: 404 });
-    const role = body.role && ["owner", "admin", "moderator", "member"].includes(body.role) ? body.role : "member";
     const now = new Date().toISOString();
+    if (!roomExists) {
+      // DO-backed rooms (e.g. assistant-${projectId}) may exist before a D1 row.
+      // Owner/admin member-add should stub the catalog row instead of 404.
+      try {
+        await env.DB.prepare(
+          "INSERT OR IGNORE INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, ?, ?, ?)",
+        )
+          .bind(roomId, auth.projectId, "group", roomId, now)
+          .run();
+      } catch (dbErr) {
+        logError("room.member_add_stub_failed", dbErr, requestLogCtx);
+        return json({ error: "room not found" }, { status: 404 });
+      }
+    }
+    const role = body.role && ["owner", "admin", "moderator", "member"].includes(body.role) ? body.role : "member";
     await env.DB.prepare(
       "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)"
     ).bind(roomId, body.userId, role, now).run();
