@@ -1103,9 +1103,32 @@ export function startFluxyRoomSession(
     const run = async () => {
       setState({ agentTyping: true, invokeTypingAgentId: targetAgentId });
       try {
-        return await client.invokeAgentRest(targetAgentId, trimmedRoomId, content, {
+        const result = await client.invokeAgentRest(targetAgentId, trimmedRoomId, content, {
           replyTo: invokeOptions?.replyTo,
         });
+        const invoked = result?.message;
+        const invokedId = Number(invoked?.id);
+        const invokedContent = typeof invoked?.content === "string" ? invoked.content : "";
+        if (Number.isFinite(invokedId) && invokedId > 0 && invokedContent) {
+          const userId = String(invoked.userId || invoked.senderId || targetAgentId);
+          setState((s) => ({
+            messages: mergeMessagesChronological(s.messages, [
+              {
+                id: invokedId,
+                roomId: String(invoked.roomId || trimmedRoomId),
+                userId,
+                content: invokedContent,
+                createdAt: String(invoked.createdAt || new Date().toISOString()),
+                parentId: invoked.parentId ?? invokeOptions?.replyTo ?? null,
+                streaming: false,
+                deliveryStatus: "sent" as const,
+              },
+            ]),
+          }));
+        } else {
+          await loadHistory();
+        }
+        return result;
       } finally {
         setState({ agentTyping: false, invokeTypingAgentId: null });
       }

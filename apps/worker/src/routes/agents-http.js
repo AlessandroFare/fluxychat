@@ -6,6 +6,7 @@ import { pickRouteDeps } from "./route-http-deps.js";
 import { parseAgentInvokeBody, parseBotUpsertBody } from "../lib/http-body.js";
 import { isHumanHandoffActive } from "../lib/room-handoff.js";
 import { maybeAutoCaptureFailedAgentRun } from "../lib/agent-eval.js";
+import { announceRoomChatMessage, toFiniteMessageId } from "../lib/agent-runtime.js";
 
 export async function dispatchAgentsRoutes(request, url, h) {
   const {
@@ -478,7 +479,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
     if (result.status === "completed" && result.content) {
       const contentValidation2 = validateMessageContent(result.content);
       const agentContent = contentValidation2.valid ? contentValidation2.content : result.content.slice(0, MAX_MESSAGE_LENGTH);
-      let messageId = streamHooks?.getMessageId() ?? null;
+      let messageId = toFiniteMessageId(streamHooks?.getMessageId());
 
       if (!messageId) {
         const insert = await env.DB.prepare(
@@ -486,16 +487,18 @@ export async function dispatchAgentsRoutes(request, url, h) {
         )
           .bind(auth.projectId, body.roomId, agentId, agentContent, createdAt, body.replyTo || null, null, null, null, null, null)
           .run();
-        messageId = insert.meta.last_row_id;
+        messageId = toFiniteMessageId(insert.meta.last_row_id);
+      }
 
-        const id = env.ROOM.idFromName(body.roomId);
-        const stub = env.ROOM.get(id);
-        ctx.waitUntil(
-          stub.fetch("https://internal/announce", {
-            method: "POST",
-            body: JSON.stringify({ id: messageId, content: agentContent, userId: agentId }),
-          }).catch((err) => logError("agent.announce_failed", err, requestLogCtx))
-        );
+      if (messageId) {
+        await announceRoomChatMessage(env, {
+          roomId: body.roomId,
+          messageId,
+          content: agentContent,
+          userId: agentId,
+          parentId: body.replyTo || null,
+          createdAt,
+        }).catch((err) => logError("agent.announce_failed", err, requestLogCtx));
       }
 
       await env.DB.prepare(
@@ -539,7 +542,14 @@ export async function dispatchAgentsRoutes(request, url, h) {
 
       return json({
         run: { id: result.runId, status: "completed", latencyMs: result.latencyMs, inputTokens: result.inputTokens, outputTokens: result.outputTokens, estimatedCost: result.estimatedCost, iterations: result.iterations, toolCalls: result.toolCalls, createdAt },
-        message: { id: messageId, roomId: body.roomId, senderId: agentId, content: agentContent },
+        message: {
+          id: messageId,
+          roomId: body.roomId,
+          userId: agentId,
+          senderId: agentId,
+          content: agentContent,
+          createdAt,
+        },
       });
     }
 
