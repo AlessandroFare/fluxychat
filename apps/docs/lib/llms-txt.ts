@@ -37,7 +37,7 @@ IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.g
 - [FluxyEdu](https://docs.fluxychat.com/docs/platform/edu): Polls, breakouts, attendance. Video is LiveKit.
 - [Chatbot builder](https://docs.fluxychat.com/docs/platform/chatbot-builder): Trigger-action workflows on /api/workflows.
 - [Marketplace](https://docs.fluxychat.com/docs/platform/marketplace): Agent templates and MCP apps.
-- [Web3 rooms](https://docs.fluxychat.com/docs/platform/web3): Worker SIWE mint (`/auth/wallet` + `fc_`). Token gates stay on your server.
+- [Web3 rooms](https://docs.fluxychat.com/docs/platform/web3): Worker SIWE mint (/auth/wallet + fc_). Token gates stay on your server.
 - [Collab](https://docs.fluxychat.com/docs/platform/collab): Yjs on the room. Excalidraw is a local renderer.
 - [Spatial](https://docs.fluxychat.com/docs/platform/spatial-digital-twin): Scenes, entities, MCP grants.
 - [Voice AI](https://docs.fluxychat.com/docs/platform/voice): STT/TTS. Huddle media is LiveKit.
