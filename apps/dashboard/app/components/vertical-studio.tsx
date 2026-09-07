@@ -60,30 +60,43 @@ const READINESS_KEY: Record<StudioVerticalId, keyof typeof PLATFORM_READINESS> =
 
 function liveMetrics(
   config: VerticalStudioConfig,
-  step: number,
-  running: boolean,
+  snapshot: { attendance: number; consent: number; checkpoints: number; riskFlags: number; stageLive: number; total: number } | null,
   ws: { capability: number; server: number; polls: number },
-  syncState: "local" | "synced" | "partial" | "offline",
 ) {
-  if (syncState === "synced" && ws.capability + ws.server > 0) {
-    return config.metrics.map((metric, index) => {
-      if (index === 0) return { ...metric, value: String(ws.capability + ws.server) };
-      if (index === 1) return { ...metric, value: "Live" };
-      if (index === 2 && config.id === "edu") return { ...metric, value: String(ws.polls) };
-      if (index === 2 && config.id === "events") return { ...metric, value: ws.server > 0 ? "Streaming" : metric.value };
-      if (index === 2 && (config.id === "health" || config.id === "finance" || config.id === "continuity")) {
-        return { ...metric, value: String(ws.capability) };
-      }
-      return metric;
-    });
+  const live = snapshot?.total || ws.capability + ws.server;
+  if (config.id === "edu") {
+    return [
+      { label: "Attendance heartbeats", value: String(snapshot?.attendance ?? 0) },
+      { label: "Room events", value: live ? "Live" : "—" },
+      { label: "Poll ticks", value: String(ws.polls) },
+    ];
   }
-  if (!running) return config.metrics;
-  const progress = `${Math.min(step + 1, config.journey.length)} / ${config.journey.length}`;
-  return config.metrics.map((metric, index) => {
-    if (index === 0) return { ...metric, value: progress };
-    if (index === 1 && step >= 2) return { ...metric, value: config.id === "edu" ? "Live" : metric.value };
-    return metric;
-  });
+  if (config.id === "events") {
+    return [
+      { label: "Capability events", value: String(snapshot?.total ?? 0) },
+      { label: "Stage live events", value: String(snapshot?.stageLive ?? 0) },
+      { label: "Server fan-out", value: String(ws.server) },
+    ];
+  }
+  if (config.id === "health") {
+    return [
+      { label: "Consent events", value: String(snapshot?.consent ?? 0) },
+      { label: "Care-room events", value: String(snapshot?.total ?? 0) },
+      { label: "Capability ticks", value: String(ws.capability) },
+    ];
+  }
+  if (config.id === "finance") {
+    return [
+      { label: "Risk flags", value: String(snapshot?.riskFlags ?? 0) },
+      { label: "Room events", value: String(snapshot?.total ?? 0) },
+      { label: "Capability ticks", value: String(ws.capability) },
+    ];
+  }
+  return [
+    { label: "Checkpoints", value: String(snapshot?.checkpoints ?? 0) },
+    { label: "Room events", value: String(snapshot?.total ?? 0) },
+    { label: "Capability ticks", value: String(ws.capability) },
+  ];
 }
 
 export function VerticalStudio({ config }: { config: VerticalStudioConfig }) {
@@ -108,6 +121,14 @@ export function VerticalStudio({ config }: { config: VerticalStudioConfig }) {
   const [syncState, setSyncState] = useState<"local" | "synced" | "partial" | "offline">("offline");
   const [liveRemoteEvents, setLiveRemoteEvents] = useState(0);
   const [wsMetrics, setWsMetrics] = useState({ capability: 0, server: 0, polls: 0 });
+  const [snapshot, setSnapshot] = useState<{
+    attendance: number;
+    consent: number;
+    checkpoints: number;
+    riskFlags: number;
+    stageLive: number;
+    total: number;
+  } | null>(null);
   const [sfuJoinUrl, setSfuJoinUrl] = useState<string | null>(null);
   const [adapterNotice, setAdapterNotice] = useState<string | null>(null);
 
@@ -151,8 +172,23 @@ export function VerticalStudio({ config }: { config: VerticalStudioConfig }) {
     };
   }, [chatClient, targetRoomId]);
 
+  useEffect(() => {
+    if (!capabilityClient || !targetRoomId) return;
+    void capabilityClient.snapshot(targetRoomId).then((row) => {
+      if (!row.ok) return;
+      setSnapshot({
+        attendance: row.attendance ?? 0,
+        consent: row.consent ?? 0,
+        checkpoints: row.checkpoints ?? 0,
+        riskFlags: row.riskFlags ?? 0,
+        stageLive: row.stageLive ?? 0,
+        total: row.total ?? 0,
+      });
+    });
+  }, [capabilityClient, targetRoomId, liveRemoteEvents]);
+
   const activity = workflow.activityFeed(6);
-  const metrics = liveMetrics(config, step, running, wsMetrics, syncState);
+  const metrics = liveMetrics(config, snapshot, wsMetrics);
   const sessionReport = running && step >= config.journey.length - 1
     ? buildVerticalSessionReport(verticalId, workflow)
     : [];

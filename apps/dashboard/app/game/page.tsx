@@ -213,13 +213,13 @@ export default function FluxyGamePage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="FluxyGame"
-        description="Multiplayer game backend: matchmaking, server-authoritative state sync @20fps, AI NPCs, tournaments, replay system"
+        description="Matchmaking, authoritative ticks, D1 leaderboards and checkpoints. Not a netcode engine."
         actions={<WorkerBackendBadge connected={workerConnected} label="FluxyGame" />}
       />
 
       <ConsoleProjectRoomBar
         requireProject
-        hint={workerConnected ? "Matches and leaderboards persist to D1 on your Worker." : "Sign in to run matchmaking against your Worker; local demo runs in-memory otherwise."}
+        hint={workerConnected ? "Matches, ticks, and leaderboards persist to D1. Not a dedicated game server or rollback netcode." : "Sign in so matchmaking hits your Worker D1 tables."}
       />
 
       <div className="flex flex-wrap gap-1 border-b border-border px-4 py-2">

@@ -16,20 +16,9 @@ FluxyChat evaluates [Cloudflare Flagship](https://developers.cloudflare.com/flag
 
 ## Dashboard console (PL-5)
 
-Incomplete lab and preview routes are hidden from console nav unless enabled via env:
+Platform, industry, marketplace, and agent-platform routes are in the sidebar. `/labs` is the platform catalog hub (same modules).
 
-| Key | Gates | Env fallback |
-|-----|-------|--------------|
-| `dashboard_labs` | “Labs & demos” nav group (stream, game, IoT, fleet showcase, …) | `NEXT_PUBLIC_DASHBOARD_LABS=1` (default off) |
-| `dashboard_preview` | Preview dev tools (marketplace, web3, cross-channel, agent platform, …) | `NEXT_PUBLIC_DASHBOARD_PREVIEW=1` (default off) |
-
-Routes remain reachable by direct URL for internal QA; only sidebar / command palette entries are filtered.
-
-```bash
-# .env.local — show all experimental console pages
-NEXT_PUBLIC_DASHBOARD_LABS=1
-NEXT_PUBLIC_DASHBOARD_PREVIEW=1
-```
+`NEXT_PUBLIC_DASHBOARD_LABS` / `NEXT_PUBLIC_DASHBOARD_PREVIEW` default **on**. They are not used to hide nav items.
 
 See `apps/dashboard/lib/dashboard-feature-flags.ts`.
 

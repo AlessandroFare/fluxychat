@@ -143,7 +143,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
 ] as const;
 
 export const COMPARE_LABS_NOTE =
-  "MCP, WorkflowAgent, FCM, spatial twins, PITR UI, and Bridges OAuth are not this table. Kernel first.";
+  "MCP, WorkflowAgent, FCM, PITR UI, and Bridges OAuth are not this table. Kernel first. Spatial, IoT, and Stream have their own docs.";
 
 export interface AlternativeApproach {
   name: string;

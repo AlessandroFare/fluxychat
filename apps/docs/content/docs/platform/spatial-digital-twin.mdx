@@ -3,7 +3,7 @@ title: Spatial & Digital Twin
 description: Digital twin scenes, entity updates, MCP spatial grants, and room WebSocket events.
 ---
 
-FluxyChat Spatial maps physical or virtual venues to **room-scoped digital twins**. Scene creation, entity placement, and telemetry fan out on the same room WebSocket as chat — no separate realtime bus.
+A scene is bound to a room. Create scenes, place entities, and send telemetry on the same room WebSocket as chat. There is no second realtime bus.
 
 ## Architecture
 
@@ -61,25 +61,13 @@ Spatial tools (scene lookup, entity query, AR anchor export) are exposed through
 
 Grants are **least-privilege**: write scopes cannot export raw anchor bundles; export requires an explicit `spatial:export` scope and audit log entry.
 
-## AR / WebXR path
+## AR / WebXR
 
-Production AR flows use progressive enhancement:
+1. The room WebSocket delivers entity pose updates (`spatial.entity_added`).
+2. `/spatial` renders a WebGL preview for operators.
+3. A WebXR session can attach to the same entity stream. If WebXR is missing, the 2D map still works.
 
-1. **Room WS** delivers entity pose updates (`spatial.entity_added`).
-2. **Dashboard showcase** (`/spatial`) renders a WebGL preview for operators.
-3. **WebXR session** (optional) attaches to the same entity stream — when WebXR is unavailable, the 2D map fallback remains fully accessible.
-
-Anchor bundles for native AR (ARKit / ARCore) can be exported via MCP when `spatial:export` is granted. Exports are signed, time-limited URLs — never embed long-lived secrets in client bundles.
-
-## Readiness gate
-
-Spatial is **production** when:
-
-- Worker persist + `server_event` fan-out ✅
-- SDK `onServerEvent` subscription ✅
-- Dashboard showcase live WS ✅
-- MCP grant documentation (this page) ✅
-- Operator runbook in `/spatial` console ✅
+You can export ARKit / ARCore anchor bundles through MCP when `spatial:export` is granted. Exports are signed, time-limited URLs. Do not put long-lived secrets in client bundles.
 
 ## Related
 

@@ -4,6 +4,8 @@ import { isMarketingRoute } from "./is-marketing-route";
 
 describe("isMarketingPath / isMarketingRoute", () => {
   it("does not treat subprocessors as console (no ConsoleAuthGate)", () => {
+    expect(isMarketingPath("/dpa")).toBe(true);
+    expect(isMarketingPath("/for-teams")).toBe(true);
     expect(isMarketingPath("/subprocessors")).toBe(true);
     expect(isMarketingRoute("/subprocessors")).toBe(true);
   });

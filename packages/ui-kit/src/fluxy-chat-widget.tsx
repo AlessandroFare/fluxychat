@@ -37,7 +37,7 @@ function WidgetInner({
   title?: string;
   client: FluxyChatClient;
 }) {
-  const { messages, sendMessage, connectionState, typingUsers, online } = useChat({
+  const { messages, sendMessage, connectionState, typingUsers, online, agentTyping } = useChat({
     roomId,
     client,
     markReadLatest: true,
@@ -58,6 +58,7 @@ function WidgetInner({
           messages={messages}
           online={online}
           typingUsers={typingUsers}
+          agentTyping={agentTyping && !messages.some((m) => m.streaming)}
           onSend={(text) => sendMessage(text)}
         />
       </div>

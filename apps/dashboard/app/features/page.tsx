@@ -256,11 +256,11 @@ const GROUPS: FeatureGroup[] = [
         title: "App & Agent Marketplace",
         description: "Publish, review, and install apps with signed manifests, scoped grants, and quota tracking.",
         href: "/marketplace",
-        hrefLabel: "Try marketplace",
+        hrefLabel: "Open marketplace",
       },
       {
         title: "Chatbot Builder",
-        description: "Visual trigger-action rule engine with 6 event types, 7 action types, conditions, and priority ordering.",
+        description: "Visual trigger-action rule engine with event types, actions, conditions, and priority ordering.",
         href: "/chatbot-builder",
         hrefLabel: "Build a bot",
       },

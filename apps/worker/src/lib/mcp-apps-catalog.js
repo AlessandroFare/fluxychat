@@ -70,6 +70,27 @@ const CATALOG = [
       instructions: "Default to team-scoped queries only.",
     },
   },
+  {
+    id: "apyhub-mcp",
+    name: "ApyHub",
+    vendor: "ApyHub",
+    verified: true,
+    auditLevel: "curated",
+    description:
+      "Remote HTTP MCP: documents, company checks, file convert, live lookup. You create an ApyHub account and connect EU or US. FluxyChat does not proxy the 1500 tools.",
+    category: "productivity",
+    tools: ["document_extract", "company_verify", "file_convert", "live_lookup"],
+    connectUrlEu: "https://mcp.eu.apyhub.com",
+    connectUrlUs: "https://mcp.us.apyhub.com",
+    docsUrl: "https://apyhub.com/mcp",
+    serverConfig: {
+      name: "apyhub",
+      version: "1.0.0",
+      vendor: "ApyHub",
+      instructions:
+        "Remote MCP at https://mcp.eu.apyhub.com or https://mcp.us.apyhub.com. User must paste their ApyHub connection. Files go to the tool, not the chat log. Not hosted inside FluxyChat.",
+    },
+  },
 ];
 
 function installsKey(projectId) {

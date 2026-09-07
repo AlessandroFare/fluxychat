@@ -34,9 +34,9 @@ import {
 const AI_FEATURES = [
   {
     icon: Network,
-    title: "Multi-platform adapters",
+    title: "Bridges",
     description:
-      "Bridges for Slack, Discord, Telegram, WhatsApp, Teams. You create the vendor app. Same Worker table.",
+      "Slack, Discord, Telegram, WhatsApp, Teams. You create the vendor app. Bindings live in one Worker table.",
   },
   {
     icon: ScrollText,
@@ -120,7 +120,7 @@ const AI_FEATURES = [
     icon: Radio,
     title: "Platform modules",
     description:
-      "Stream, game, IoT, spatial twins, cross-channel continuity, and marketplace apps, each with docs, demos, and readiness badges.",
+      "Stream, game, IoT, spatial twins, cross-channel continuity, and marketplace apps — production modules on the same Worker.",
   },
 ] as const;
 
@@ -128,74 +128,86 @@ const PLATFORM_EXTENSIONS = [
   {
     icon: Store,
     title: "App Marketplace",
-    description: "Publish and install apps with OAuth scoped grants. App review, versioning, and tenant installation.",
+    description: "Publish and install apps with signed manifests, scoped grants, and tenant installs.",
     href: "/marketplace",
+    readiness: "production" as const,
   },
   {
     icon: Globe,
     title: "Cross-Channel Continuity",
-    description: "Unify user sessions across web, mobile, voice, and bot. Identity linking, channel switching, device replay.",
+    description: "One identity across web, mobile, voice, and bot — handoff without dropping the room.",
     href: "/cross-channel",
+    readiness: "production" as const,
   },
   {
     icon: Boxes,
     title: "Spatial & Digital Twins",
-    description: "Create 3D room scenes with entities, agent access grants, AR overlays, and spatial audio presences.",
+    description: "3D room scenes, entities, agent grants, and spatial presence on the same kernel.",
     href: "/spatial",
+    readiness: "production" as const,
   },
   {
     icon: Key,
     title: "Web3 Chat",
-    description: "Wallet-based authentication, token-gated rooms, on-chain message commitments with hash verification.",
+    description: "Wallet authentication, token-gated rooms, and on-chain message commitments.",
     href: "/web3",
+    readiness: "production" as const,
   },
   {
     icon: Puzzle,
     title: "Agent Marketplace",
-    description: "Browse and install pre-built agent skills by category. Community templates with versioning and config schemas.",
+    description: "Install pre-built agent skills with versioning and config schemas.",
     href: "/marketplace",
+    readiness: "production" as const,
   },
   {
     icon: Bot,
     title: "Chatbot Builder",
-    description: "Visual trigger-action rule engine with conditions, priorities, and simulated event testing.",
+    description: "Visual trigger-action rules with conditions, priorities, and simulated events.",
     href: "/chatbot-builder",
+    readiness: "production" as const,
   },
   {
     icon: Radio,
     title: "FluxyStream: Live Broadcasting",
-    description: "Create events, provision ingest, go live with HLS playback. Chat overlay and reactions on the same room.",
+    description: "Events, ingest, HLS playback, and chat overlay on the room WebSocket.",
     href: "/stream/demo",
+    readiness: "production" as const,
   },
   {
     icon: Zap,
     title: "WebTransport Readiness",
-    description: "Auto-negotiation WebTransport → WebSocket → SSE → Long Poll. Feature detection with automatic fallback chain.",
+    description: "WebTransport → WebSocket → SSE → long-poll, negotiated in the SDK.",
     href: "/transport",
+    readiness: "production" as const,
   },
   {
     icon: Bot,
     title: "AI Agent Platform",
-    description: "No-code agent builder, versioning, CI/CD deploy, sandbox testing, cost tracking, rate limiting, A/B testing, personality designer, emotional intelligence, cross-platform memory.",
+    description: "No-code builder, versioning, sandbox, CI/CD, and invokeAgent on the timeline.",
     href: "/agents/platform",
+    readiness: "production" as const,
   },
   {
     icon: Gamepad2,
     title: "FluxyGame: Multiplayer SDK",
-    description: "Matchmaking, server-authoritative state sync @20fps, AI NPCs with memory, tournaments, replay system, party system. Game room = chat room.",
+    description: "Matchmaking, server-authoritative ticks, AI NPCs, tournaments, and party rooms.",
     href: "/game",
+    readiness: "production" as const,
   },
   {
     icon: Cpu,
     title: "FluxyIoT: HTTP ingest and device fleet",
-    description: "Provision devices, ingest readings, device shadow (desired vs reported), rules, and health scores. GPS fleet is a sibling module. Devices fan out on the room WebSocket.",
+    description: "Provision devices, ingest readings, shadow, rules, and GPS fleet on the room stream.",
     href: "/iot",
+    readiness: "production" as const,
   },
   {
     icon: GraduationCap,
     title: "FluxyEdu: Live classroom",
-    description: "Polls, breakouts, attendance, and stage go-live with server_event fan-out on the room WebSocket.",
+    description: "Polls, breakouts, attendance, and stage go-live on the room WebSocket.",
     href: "/edu",
+    readiness: "production" as const,
   },
 ] as const;
 
@@ -206,7 +218,7 @@ const CAPABILITY_GROUPS = [
     icon: MessageSquare,
     items: AI_FEATURES.filter((item) =>
       [
-        "Multi-platform adapters",
+        "Bridges",
         "Card element builder",
         "Conversation transcripts",
         "Slash commands & regex routing",
@@ -259,8 +271,7 @@ export function LandingWhatsNewSection() {
           <p className="mx-auto mt-3 max-w-2xl text-[var(--mkt-text-muted)]">
             Polls, breakouts, stage go-live, collab CRDT, fleet GPS, and hybrid check-in fan out as{" "}
             <code className="rounded bg-[var(--mkt-surface-2)] px-1 py-0.5 font-mono text-sm text-[var(--mkt-brand)]">server_event</code> frames on the
-            room WebSocket. Voice AI, streaming AI, MCP tools, and durable agents sit on the same worker, with
-            production readiness labels on every surface.
+            room WebSocket. Voice AI, streaming AI, MCP tools, and durable agents sit on the same worker.
           </p>
         </div>
 
@@ -269,13 +280,13 @@ export function LandingWhatsNewSection() {
         <div className="mt-14">
           <div className="mb-2 text-center">
             <span className="inline-flex items-center rounded-full bg-[var(--mkt-brand)]/10 px-3 py-1 text-sm font-medium text-[var(--mkt-brand)] ring-1 ring-inset ring-[var(--mkt-brand)]/25">
-              Platform Extensions
+              Platform extensions
             </span>
             <h3 className="mt-3 font-heading text-2xl font-bold tracking-tight text-[var(--mkt-text)]">
-              App Marketplace · Cross-Channel · Spatial · Web3
+              Modules on the same Worker
             </h3>
             <p className="mt-2 text-sm text-[var(--mkt-text-muted)]">
-              Extend FluxyChat with apps, unify sessions across devices, build spatial experiences, and add Web3 auth.
+              Marketplace, Web3, FluxyEdu, stream, game, IoT, and the chatbot builder are in the console sidebar.
             </p>
           </div>
           <LandingPlatformIndex featured={FEATURED_EXTENSIONS} more={MORE_EXTENSIONS} />

@@ -66,7 +66,7 @@ function Chat() {
 }
 ```
 
-`fc_` stays on the server. `pk_` mints an anonymous JWT (`POST /tokens/anonymous`). Pin `@fluxy-chat/sdk@0.6.9` and `@fluxy-chat/react@0.1.7`.
+`fc_` stays on the server. `pk_` mints an anonymous JWT (`POST /tokens/anonymous`). Pin `@fluxy-chat/sdk@0.6.11` and `@fluxy-chat/react@0.1.7`.
 
 GitHub About (paste in the repo UI): Room layer on Cloudflare. Chat, presence, Yjs, and agents on one Durable Object. MIT self-host or hosted beta.
 

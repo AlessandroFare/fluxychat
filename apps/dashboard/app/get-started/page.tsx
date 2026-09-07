@@ -50,7 +50,11 @@ export default function GetStartedPage() {
         Get your first message live
       </h1>
       <p className="mt-3 text-muted-foreground">
-        Account, SDK, first room on hosted cloud. Self-hosting is optional; see{" "}
+        Account, SDK, first room on hosted cloud. Legal pack for a company:{" "}
+        <Link href={HOSTED_PATHS.forTeams} className="font-medium text-primary underline-offset-2 hover:underline">
+          /for-teams
+        </Link>
+        . Self-hosting is optional; see{" "}
         <a href="#self-host" className="font-medium text-primary underline-offset-2 hover:underline">
           advanced
         </a>

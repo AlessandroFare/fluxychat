@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.21] - 2026-09-07
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.6.10` (reconnect history merge).
+
+## [0.5.20] - 2026-09-07
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.6.9`, `@fluxy-chat/react@^0.1.7`, `@fluxy-chat/ui-kit@^0.1.5`. Public rooms still use `publishableKey` (`pk_`).
+
 ## [0.5.19] - 2026-09-02
 
 ### Added

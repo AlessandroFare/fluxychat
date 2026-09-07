@@ -5,6 +5,7 @@ const BASE = getPublicWorkerUrl();
 
 export interface LivePollResult {
   ok: boolean;
+  id?: string;
   poll?: { id: string; title: string };
   error?: string;
 }
@@ -46,6 +47,54 @@ export async function createRoomPoll(
       pollType: "single",
       options: input.options,
     }),
+  });
+}
+
+export async function listRoomBreakouts(
+  token: string,
+  roomId: string,
+): Promise<{ ok: boolean; breakouts: Array<{ id: string; name: string; memberCount: number; status: string }> }> {
+  return fetchWorkerJson(`${BASE}/rooms/${encodeURIComponent(roomId)}/breakouts`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function closeRoomBreakout(
+  token: string,
+  roomId: string,
+  breakoutId: string,
+): Promise<{ ok: boolean; closedAt?: string; error?: string }> {
+  return fetchWorkerJson(
+    `${BASE}/rooms/${encodeURIComponent(roomId)}/breakouts/${encodeURIComponent(breakoutId)}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+
+export async function getLivePollResults(
+  token: string,
+  pollId: string,
+): Promise<{
+  ok: boolean;
+  poll?: { id: string; title: string; isClosed?: boolean };
+  options?: Array<{ id: string; text: string; votes: number }>;
+  error?: string;
+}> {
+  return fetchWorkerJson(`${BASE}/polls/${encodeURIComponent(pollId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function closeLivePoll(
+  token: string,
+  pollId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  return fetchWorkerJson(`${BASE}/polls/${encodeURIComponent(pollId)}/close`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({}),
   });
 }
 

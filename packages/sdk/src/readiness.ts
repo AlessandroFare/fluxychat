@@ -8,24 +8,106 @@ export interface ReadinessEntry {
 }
 
 /**
- * Keep in sync with dashboard `DASHBOARD_LAB_HREFS` / preview flags.
- * Chat is GA. Collab / IoT / fleet / game are beta once a gallery example exists.
- * Stream, voice-ai, and health stay labs.
+ * Product modules on the free path. Hosted is still open beta (no SLA).
+ * Out of scope: SOC 2 attestation, HIPAA BAA, 99.999% uptime.
  */
 export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
-  chat: { label: "Chat & rooms", readiness: "production", href: "/rooms", description: "Core messaging, presence, agents" },
-  collab: { label: "Collab", readiness: "beta", href: "/collab", description: "Yjs + Tiptap on the room WebSocket (--example tiptap-room)" },
-  stream: { label: "Stream", readiness: "labs", href: "/stream/demo", description: "Live events, HLS, WHIP + room fan-out" },
-  voice: { label: "Voice AI", readiness: "labs", href: "/voice-ai", description: "Workers AI STT/TTS — no unpublished latency claims" },
-  game: { label: "FluxyGame", readiness: "beta", href: "/game", description: "Match ticks as server_event (--example game-tick). Not a netcode engine." },
-  iot: { label: "FluxyIoT", readiness: "beta", href: "/iot", description: "HTTP ingest + device shadow (--example iot-panel). Not MQTT." },
-  fleet: { label: "Fleet", readiness: "beta", href: "/fleet", description: "GPS ingest + fleet.gps_update (--example fleet-panel)" },
-  spatial: { label: "Spatial", readiness: "labs", href: "/spatial", description: "Digital twin scenes + spatial grants" },
-  edu: { label: "FluxyEdu", readiness: "labs", href: "/edu", description: "Live classroom, polls, breakouts" },
-  health: { label: "FluxyHealth", readiness: "labs", href: "/health", description: "Consent events + care workspace" },
-  event: { label: "FluxyEvent", readiness: "labs", href: "/events", description: "Venue, stage, check-in, Q&A" },
-  finance: { label: "FluxyFinance", readiness: "labs", href: "/finance", description: "Risk signals + compliance workspace" },
-  continuity: { label: "Continuity", readiness: "labs", href: "/continuity", description: "Cross-device handoff / checkpoints" },
+  chat: {
+    label: "Chat & rooms",
+    readiness: "production",
+    href: "/rooms",
+    description: "Messaging, presence, and invokeAgent on one Durable Object",
+  },
+  collab: {
+    label: "FluxyCollab",
+    readiness: "production",
+    href: "/collab",
+    description: "Yjs on the room WebSocket. Tiptap/Excalidraw renderers stay in your app",
+  },
+  stream: {
+    label: "FluxyStream",
+    readiness: "production",
+    href: "/stream",
+    description: "Live event rooms + chat overlay. WHIP/HLS via Cloudflare Stream secrets",
+  },
+  voice: {
+    label: "Voice AI",
+    readiness: "production",
+    href: "/voice-ai",
+    description: "Workers AI STT/TTS and joinVoiceStage signaling. No unpublished latency SLA",
+  },
+  game: {
+    label: "FluxyGame",
+    readiness: "production",
+    href: "/game",
+    description: "Match ticks, leaderboard, and checkpoints on D1. Not rollback netcode",
+  },
+  iot: {
+    label: "FluxyIoT",
+    readiness: "production",
+    href: "/iot",
+    description: "HTTP ingest, device shadow, and room fan-out. Not MQTT",
+  },
+  fleet: {
+    label: "Fleet",
+    readiness: "production",
+    href: "/fleet",
+    description: "Vehicles, trips, geofences, and GPS fan-out",
+  },
+  spatial: {
+    label: "Spatial",
+    readiness: "production",
+    href: "/spatial",
+    description: "Scenes, entities, and agent grants on /spatial. Not a game engine",
+  },
+  edu: {
+    label: "FluxyEdu",
+    readiness: "production",
+    href: "/edu",
+    description: "Polls, breakouts, and attendance heartbeats on the room",
+  },
+  health: {
+    label: "FluxyHealth",
+    readiness: "production",
+    href: "/health",
+    description: "Consent and care-room capability events. No HIPAA BAA",
+  },
+  event: {
+    label: "FluxyEvent",
+    readiness: "production",
+    href: "/events",
+    description: "Stage live, hybrid check-in, and moderated Q&A",
+  },
+  finance: {
+    label: "FluxyFinance",
+    readiness: "production",
+    href: "/finance",
+    description: "Risk flags and approval events. No PAN, no trade execution",
+  },
+  continuity: {
+    label: "Continuity",
+    readiness: "production",
+    href: "/continuity",
+    description: "Device checkpoints and handoff events on the room",
+  },
+  marketplace: {
+    label: "Marketplace",
+    readiness: "production",
+    href: "/marketplace",
+    description: "Agent templates, KV apps, MCP catalog. ApyHub is remote MCP",
+  },
+  "chatbot-builder": {
+    label: "Chatbot builder",
+    readiness: "production",
+    href: "/chatbot-builder",
+    description: "Trigger-action rules stored on the Worker",
+  },
+  web3: {
+    label: "Web3 rooms",
+    readiness: "production",
+    href: "/web3",
+    description: "Worker SIWE mint plus optional address allowlist. NFT gates stay optional RPC on your side",
+  },
 };
 
 export function getReadinessEntry(id: keyof typeof PLATFORM_READINESS): ReadinessEntry {

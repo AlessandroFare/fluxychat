@@ -1,145 +1,169 @@
 "use client";
 
-import { useState } from "react";
-import { Coins, Key, Lock, MessageSquare, CheckCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { ConsoleProjectRoomBar } from "../components/console-project-room-bar";
 import { Panel } from "~/components/ui/Panel";
 import { Button } from "~/components/ui/button";
-import { Badge } from "~/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { createWeb3Chat } from "@fluxy-chat/sdk";
+import { useDashboardSession } from "../components/dashboard-session";
+import { messageFromUnknown } from "@/lib/error-message";
+import {
+  getWalletAllowlist,
+  requestWalletNonce,
+  saveWalletAllowlist,
+  verifyWalletSiwe,
+} from "@/lib/wallet-auth-client";
 
-const TOUR_STEPS = [
-  { id: "wallet", label: "Connect wallet" },
-  { id: "room", label: "Token-gated room" },
-  { id: "message", label: "On-chain message" },
-] as const;
+type EthereumProvider = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+};
+
+function getEthereum(): EthereumProvider | null {
+  if (typeof window === "undefined") return null;
+  const injected = (window as Window & { ethereum?: EthereumProvider }).ethereum;
+  return injected ?? null;
+}
 
 export default function Web3Page() {
-  const [w3] = useState(() => createWeb3Chat());
-  const [token, setToken] = useState("");
-  const [roomId, setRoomId] = useState("");
-  const [draft, setDraft] = useState("");
-  const [messages, setMessages] = useState<Array<{ sender: string; content: string; commitment: string }>>([]);
-  const [walletAddr] = useState(() => `0x${Math.random().toString(16).slice(2, 10)}`);
-  const [log, setLog] = useState<string[]>([]);
-  const [tourStep, setTourStep] = useState(0);
+  const { adminJwt } = useDashboardSession();
+  const token = adminJwt.trim();
+  const [address, setAddress] = useState("");
+  const [memberJwt, setMemberJwt] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [allowlistText, setAllowlistText] = useState("");
+  const [allowlistBusy, setAllowlistBusy] = useState(false);
 
-  function addLog(msg: string) { setLog((p) => [msg, ...p]); }
+  useEffect(() => {
+    if (!token) return;
+    void getWalletAllowlist(token)
+      .then((row) => setAllowlistText((row.addresses ?? []).join("\n")))
+      .catch(() => undefined);
+  }, [token]);
+
+  async function connectAndMint() {
+    setStatus(null);
+    const eth = getEthereum();
+    if (!eth) {
+      setStatus("No injected wallet. Install MetaMask or another EIP-1193 provider.");
+      return;
+    }
+    if (!token) {
+      setStatus("Admin JWT required. Finish Quickstart so the console can mint for this project.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
+      const wallet = String(accounts?.[0] || "");
+      if (!wallet) throw new Error("No account returned");
+      setAddress(wallet);
+      const nonce = await requestWalletNonce(token, wallet);
+      const signature = (await eth.request({
+        method: "personal_sign",
+        params: [nonce.message, wallet],
+      })) as string;
+      const minted = await verifyWalletSiwe(token, {
+        address: wallet,
+        message: nonce.message,
+        signature,
+      });
+      setMemberJwt(minted.token);
+      setStatus(`Minted member JWT for ${minted.userId}. Use it in useChat. Token gates stay on your server.`);
+    } catch (err: unknown) {
+      setStatus(messageFromUnknown(err, "Wallet sign-in failed"));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <ConsoleShell>
       <ConsolePageHeader
-        title="Web3 / Decentralized Chat"
-        description="Guided demo: wallet auth → token-gated room → message with on-chain commitment hash."
+        title="Web3 rooms"
+        description="SIWE on the Worker. FluxyChat does not run a chain, mint tokens, or custody keys."
       />
 
       <ConsoleProjectRoomBar
-        hint="Wallet auth and token-gated rooms run in the SDK demo layer. For production in-app chat, use JWT rooms on your Worker."
+        hint="Console uses GET/POST /admin/auth/wallet. Apps use the same verify with fc_ on GET/POST /auth/wallet."
       />
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {TOUR_STEPS.map((step, index) => (
-          <Badge
-            key={step.id}
-            variant={index <= tourStep ? "default" : "outline"}
-            className={cn(index < tourStep && "bg-emerald-600")}
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <Panel className="p-4">
+          <h2 className="text-sm font-semibold">Connect wallet</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The Worker issues a nonce, you sign it in the wallet, then you get a member JWT whose
+            userId is the address. Token-gated rooms: check balance on your backend before you let
+            that user in.
+          </p>
+          <Button className="mt-4" size="sm" disabled={busy} onClick={() => void connectAndMint()}>
+            {busy ? "Waiting for signature…" : "Sign in with Ethereum"}
+          </Button>
+          {address ? <p className="mt-3 font-mono text-xs text-muted-foreground">{address}</p> : null}
+          {status ? <p className="mt-3 text-sm">{status}</p> : null}
+          {memberJwt ? (
+            <pre className="mt-3 overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 font-mono text-[10px]">
+              {memberJwt}
+            </pre>
+          ) : null}
+        </Panel>
+        <Panel className="p-4">
+          <h2 className="text-sm font-semibold">Address allowlist</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Empty list: any wallet that completes SIWE gets a JWT. Non-empty: only listed addresses.
+            NFT/balance checks still belong on your RPC if you need them.
+          </p>
+          <textarea
+            className="mt-3 min-h-28 w-full rounded-md border border-border bg-background p-2 font-mono text-xs"
+            value={allowlistText}
+            onChange={(e) => setAllowlistText(e.target.value)}
+            placeholder="0xabc… one address per line"
+          />
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="outline"
+            disabled={allowlistBusy || !token}
+            onClick={() => {
+              setAllowlistBusy(true);
+              const addresses = allowlistText
+                .split(/[\s,]+/)
+                .map((row) => row.trim())
+                .filter(Boolean);
+              void saveWalletAllowlist(token, addresses)
+                .then((row) => {
+                  setAllowlistText((row.addresses ?? []).join("\n"));
+                  setStatus(`Allowlist saved (${row.addresses?.length ?? 0} addresses).`);
+                })
+                .catch((err) => setStatus(messageFromUnknown(err, "Allowlist save failed")))
+                .finally(() => setAllowlistBusy(false));
+            }}
           >
-            {index < tourStep ? <CheckCircle2 className="mr-1 h-3 w-3" /> : null}
-            {index + 1}. {step.label}
-          </Badge>
-        ))}
-      </div>
+            {allowlistBusy ? "Saving…" : "Save allowlist"}
+          </Button>
+        </Panel>
+        <Panel className="p-4 lg:col-span-2">
+          <h2 className="text-sm font-semibold">From your app</h2>
+          <pre className="mt-3 overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 font-mono text-[11px] leading-relaxed">
+{`GET /auth/wallet/nonce?address=0x…
+X-Fluxy-Api-Key: fc_...
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
-          <Panel className={cn("p-4 transition-shadow", tourStep === 0 && "ring-2 ring-primary/30")}>
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><Key className="h-4 w-4" /> Wallet</h3>
-            <p className="mt-1 text-xs font-mono text-muted-foreground">{walletAddr}</p>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" onClick={() => {
-                const t = w3.authWithWallet({ address: walletAddr, chain: "ethereum" });
-                setToken(t);
-                setTourStep((s) => Math.max(s, 1));
-                addLog(`Authenticated: ${t.slice(0, 16)}...`);
-              }}>Connect wallet</Button>
-              <Button size="sm" variant="outline" onClick={() => {
-                const valid = w3.verifyAuth(token, { address: walletAddr, chain: "ethereum" });
-                addLog(valid ? "Signature verified ✓" : "Signature invalid ✗");
-              }}>Verify auth</Button>
-            </div>
-          </Panel>
-
-          <Panel className={cn("p-4 transition-shadow", tourStep === 1 && "ring-2 ring-primary/30")}>
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><Lock className="h-4 w-4" /> Token-gated room</h3>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" disabled={!token} onClick={() => {
-                const room = w3.createRoom("Token Room", [
-                  { tokenAddress: "0xABC", chain: "ethereum", minBalance: "1" },
-                ]);
-                setRoomId(room.id);
-                setTourStep((s) => Math.max(s, 2));
-                addLog(`Room "${room.id}" created with token gate`);
-              }}>Create room</Button>
-              <Button size="sm" variant="outline" disabled={!roomId} onClick={() => {
-                const ok = w3.joinRoom(roomId, walletAddr);
-                addLog(ok ? "Joined room ✓" : "Token gate blocked ✗");
-              }}>Join room</Button>
-            </div>
-          </Panel>
-        </div>
-
-        <div className="space-y-4">
-          <Panel className={cn("p-4 transition-shadow", tourStep === 2 && "ring-2 ring-primary/30")}>
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="h-4 w-4" /> Messages</h3>
-            <div className="mt-3 flex gap-2">
-              <input
-                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
-                placeholder="Type a message..."
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter" || !roomId || !token || !draft.trim()) return;
-                  e.preventDefault();
-                  const msg = w3.sendMessage(roomId, walletAddr, draft.trim());
-                  setMessages((p) => [...p, { sender: msg.sender, content: msg.content, commitment: msg.commitment }]);
-                  addLog(`Message sent with commitment: ${msg.commitment.slice(0, 16)}...`);
-                  setDraft("");
-                  setTourStep(3);
-                }}
-              />
-              <Button size="sm" disabled={!roomId || !token || !draft.trim()} onClick={() => {
-                const msg = w3.sendMessage(roomId, walletAddr, draft.trim());
-                setMessages((p) => [...p, { sender: msg.sender, content: msg.content, commitment: msg.commitment }]);
-                addLog(`Message sent with commitment: ${msg.commitment.slice(0, 16)}...`);
-                setDraft("");
-                setTourStep(3);
-              }}>Send</Button>
-            </div>
-            {messages.length > 0 ? (
-              <div className="mt-3 space-y-2">
-                {messages.map((m, i) => (
-                  <div key={`${m.commitment}-${i}`} className="rounded-md border border-border bg-muted/20 p-2">
-                    <p className="text-xs font-medium">{m.sender.slice(0, 10)}...</p>
-                    <p className="text-sm">{m.content}</p>
-                    <p className="text-[10px] font-mono text-muted-foreground">{m.commitment.slice(0, 20)}...</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-3 text-xs text-muted-foreground">Complete wallet + room steps to send a committed message.</p>
-            )}
-          </Panel>
-
-          <Panel className="p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><Coins className="h-4 w-4" /> Activity</h3>
-            <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
-              {log.map((e, i) => <p key={`${e}-${i}`} className="text-xs text-muted-foreground">{e}</p>)}
-            </div>
-          </Panel>
-        </div>
+POST /auth/wallet
+{ "address", "message", "signature" }`}
+          </pre>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Docs:{" "}
+            <a className="underline underline-offset-2" href="https://docs.fluxychat.com/docs/platform/web3">
+              platform/web3
+            </a>
+            {" · "}
+            <Link className="underline underline-offset-2" href="/docs">
+              dashboard docs
+            </Link>
+          </p>
+        </Panel>
       </div>
     </ConsoleShell>
   );

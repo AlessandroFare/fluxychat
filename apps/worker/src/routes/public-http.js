@@ -8,6 +8,7 @@ import { guardDemoSessionRequest } from "../lib/demo-guard.js";
 import { issueDemoSession } from "../lib/demo-session.js";
 import { getDemoStatus } from "../lib/demo-room-seed.js";
 import { issueAnonymousToken } from "../lib/anonymous-token.js";
+import { issueWalletNonce, verifyWalletSiwe, mintWalletMemberJwt } from "../lib/wallet-siwe.js";
 import { issuePublicGuestSession } from "../lib/guest-public-session.js";
 import { getPublicGuestHardeningConfig } from "../lib/public-guest-guard.js";
 import {
@@ -731,6 +732,65 @@ export async function dispatchPublicRoutes(request, url, h) {
       return json(result.body, { status: result.status, headers: corsHeaders });
     }
     return json(result.body, { headers: corsHeaders });
+  }
+
+  if (url.pathname === "/auth/wallet/nonce" && request.method === "GET") {
+    const apiKey = request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
+    if (!apiKey) return json({ error: "api key required" }, { status: 401, headers: corsHeaders });
+    const secretOk = assertSecretApiKey(apiKey);
+    if (!secretOk.ok) {
+      return json({ error: secretOk.error }, { status: secretOk.status, headers: corsHeaders });
+    }
+    const resolvedProjectId = await resolveProjectId(request, env);
+    if (!resolvedProjectId || resolvedProjectId === (env.DEFAULT_PROJECT_ID || "default")) {
+      return json({ error: "invalid api key" }, { status: 401, headers: corsHeaders });
+    }
+    const address = url.searchParams.get("address") || "";
+    const host = request.headers.get("Host") || "fluxychat.com";
+    const issued = await issueWalletNonce(env, {
+      projectId: resolvedProjectId,
+      address,
+      domain: host.replace(/:\d+$/, ""),
+      uri: `https://${host}/web3`,
+    });
+    if (issued.error) return json({ error: issued.error }, { status: issued.status || 400, headers: corsHeaders });
+    return json(issued, { headers: corsHeaders });
+  }
+
+  if (url.pathname === "/auth/wallet" && request.method === "POST") {
+    const apiKey = request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
+    if (!apiKey) return json({ error: "api key required" }, { status: 401, headers: corsHeaders });
+    const secretOk = assertSecretApiKey(apiKey);
+    if (!secretOk.ok) {
+      return json({ error: secretOk.error }, { status: secretOk.status, headers: corsHeaders });
+    }
+    const resolvedProjectId = await resolveProjectId(request, env);
+    if (!resolvedProjectId || resolvedProjectId === (env.DEFAULT_PROJECT_ID || "default")) {
+      return json({ error: "invalid api key" }, { status: 401, headers: corsHeaders });
+    }
+    const body = await request.json().catch(() => ({}));
+    const host = request.headers.get("Host") || "fluxychat.com";
+    const verified = await verifyWalletSiwe(env, {
+      projectId: resolvedProjectId,
+      address: body.address,
+      message: body.message,
+      signature: body.signature,
+      domain: host.replace(/:\d+$/, ""),
+    });
+    if (verified.error) {
+      return json({ error: verified.error }, { status: verified.status || 401, headers: corsHeaders });
+    }
+    if (!isValidId(verified.address)) {
+      return json({ error: "address cannot be used as userId" }, { status: 400, headers: corsHeaders });
+    }
+    const minted = await mintWalletMemberJwt(env, {
+      projectId: resolvedProjectId,
+      address: verified.address,
+      signJwtHs256,
+      ttlSeconds: body.ttlSeconds,
+    });
+    if (minted.error) return json({ error: minted.error }, { status: minted.status || 400, headers: corsHeaders });
+    return json(minted, { headers: corsHeaders });
   }
 
   if (

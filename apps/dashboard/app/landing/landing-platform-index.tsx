@@ -10,6 +10,7 @@ export interface PlatformModule {
   description: string;
   href: string;
   icon: ComponentType<{ className?: string }>;
+  readiness?: "production" | "beta";
 }
 
 interface LandingPlatformIndexProps {
@@ -34,8 +35,15 @@ export function LandingPlatformIndex({ featured, more }: LandingPlatformIndexPro
               >
                 <div className="flex items-start justify-between gap-3">
                   <Icon className="size-5 text-[var(--mkt-brand)]" aria-hidden />
-                  <span className="font-mono text-xs text-[var(--mkt-text-muted)]">
-                    {String(index + 1).padStart(2, "0")}
+                  <span className="flex items-center gap-2">
+                    {item.readiness ? (
+                      <span className="rounded-full bg-[var(--mkt-surface-2)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--mkt-text-muted)]">
+                        {item.readiness}
+                      </span>
+                    ) : null}
+                    <span className="font-mono text-xs text-[var(--mkt-text-muted)]">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
                   </span>
                 </div>
                 <div className="mt-8">
@@ -79,7 +87,14 @@ export function LandingPlatformIndex({ featured, more }: LandingPlatformIndexPro
             })}
           </div>
           <div className="mt-5 border-t border-[var(--mkt-border)] pt-4">
-            <p className="font-heading text-lg font-semibold text-[var(--mkt-text)]">{active.title}</p>
+            <p className="font-heading text-lg font-semibold text-[var(--mkt-text)]">
+              {active.title}
+              {active.readiness ? (
+                <span className="ml-2 align-middle rounded-full bg-[var(--mkt-surface-2)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--mkt-text-muted)]">
+                  {active.readiness}
+                </span>
+              ) : null}
+            </p>
             <p className="mt-1 max-w-2xl text-sm text-[var(--mkt-text-muted)]">{active.description}</p>
             <Link
               href={active.href}

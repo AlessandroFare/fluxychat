@@ -45,6 +45,10 @@ import {
   Network,
   ClipboardCheck,
   Handshake,
+  Map,
+  Mic,
+  Gavel,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HOSTED_PATHS, isMarketingPath } from "@/lib/hosted-product";
@@ -113,7 +117,7 @@ export const CONSOLE_NAV_OPERATE: ConsoleNavItem[] = [
   { href: "/activities", label: "Activities", icon: Activity, description: "Webhooks, agents, automation" },
   { href: "/billing", label: "Billing", icon: CreditCard, description: "Usage and plan changes" },
   { href: "/admin", label: "Admin", icon: Shield, description: "Mute, ban, webhooks" },
-  { href: "/labs", label: "Labs", icon: Sparkles, description: "Verticals and experiments" },
+  { href: "/labs", label: "Platform", icon: Layers, description: "All product modules" },
 ];
 
 export const CONSOLE_NAV_TRUST: ConsoleNavItem[] = [
@@ -143,26 +147,31 @@ export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
 ];
 
 export const CONSOLE_NAV_PLATFORM: ConsoleNavItem[] = [
-  { href: "/collab", label: "FluxyCollab", icon: Pen, description: "Whiteboard, notes, kanban" },
-  { href: "/stream", label: "FluxyStream", icon: Video, description: "Live broadcast + chat overlay" },
-  { href: "/stream/demo", label: "Stream demo", icon: Radio, description: "Interactive stream SDK demo" },
-  { href: "/game", label: "FluxyGame", icon: Gamepad2, description: "Match ticks as server_event (not netcode)" },
-  { href: "/iot", label: "FluxyIoT", icon: Cpu, description: "HTTP ingest + device shadow (not MQTT)" },
-  { href: "/transport", label: "WebTransport", icon: Zap, description: "Transport fallback chain" },
+  { href: "/collab", label: "FluxyCollab", icon: Pen, description: "Whiteboard, notes, and kanban on Yjs" },
+  { href: "/stream", label: "FluxyStream", icon: Video, description: "Live broadcast, HLS, and chat overlay" },
+  { href: "/stream/demo", label: "Stream studio", icon: Radio, description: "Go live with ingest and room chat" },
+  { href: "/huddles", label: "Huddles", icon: Headphones, description: "Audio and video huddles in the room" },
+  { href: "/voice-ai", label: "Voice AI", icon: Mic, description: "STT, TTS, and realtime voice pipeline" },
+  { href: "/game", label: "FluxyGame", icon: Gamepad2, description: "Matchmaking, ticks, and game rooms" },
+  { href: "/iot", label: "FluxyIoT", icon: Cpu, description: "HTTP ingest, device shadow, room fan-out" },
+  { href: "/fleet", label: "Fleet", icon: Truck, description: "Live GPS tracks and fleet rooms" },
+  { href: "/spatial", label: "Spatial twins", icon: Boxes, description: "3D rooms, entities, and spatial grants" },
+  { href: "/cartography", label: "Cartography", icon: Map, description: "Thematic room maps" },
+  { href: "/truth-market", label: "Truth Market", icon: Gavel, description: "Stake and dispute claims in-room" },
+  { href: "/transport", label: "WebTransport", icon: Zap, description: "WebTransport, WebSocket, SSE, long-poll" },
   { href: "/marketplace", label: "Marketplace", icon: Store, description: "Apps and agent skills" },
   { href: "/chatbot-builder", label: "Chatbot builder", icon: Bot, description: "Trigger-action rules" },
-  { href: "/cross-channel", label: "Cross-channel", icon: ArrowRightLeft, description: "Unified sessions" },
-  { href: "/spatial", label: "Spatial twins", icon: Boxes, description: "3D room scenes" },
-  { href: "/web3", label: "Web3", icon: Coins, description: "Wallet auth, token gates" },
-  { href: "/fleet", label: "Fleet", icon: Truck, description: "HTTP GPS ingest + room fan-out (not MQTT)" },
-  { href: "/driver", label: "Driver app", icon: Smartphone, description: "PWA driver client" },
+  { href: "/cross-channel", label: "Cross-channel", icon: ArrowRightLeft, description: "Unified sessions across channels" },
+  { href: "/web3", label: "Web3", icon: Coins, description: "Wallet auth and token-gated rooms" },
+  { href: "/driver", label: "Driver app", icon: Smartphone, description: "PWA driver client for fleet rooms" },
 ];
 
 export const CONSOLE_NAV_INDUSTRIES: ConsoleNavItem[] = [
-  { href: "/edu", label: "Education", icon: GraduationCap, description: "Live classes, breakouts, polls and attendance" },
-  { href: "/health", label: "Health", icon: HeartPulse, description: "Secure care rooms and consent workflows" },
-  { href: "/events", label: "Events", icon: CalendarRange, description: "Venues, stages, Q&A and ticket verification" },
-  { href: "/finance", label: "Finance", icon: Landmark, description: "Market rooms, risk alerts and approvals" },
+  { href: "/edu", label: "Education", icon: GraduationCap, description: "Live classes, breakouts, polls, attendance" },
+  { href: "/health", label: "Health", icon: HeartPulse, description: "Care rooms and consent workflows" },
+  { href: "/events", label: "Events", icon: CalendarRange, description: "Venues, stages, Q&A, check-in" },
+  { href: "/finance", label: "Finance", icon: Landmark, description: "Market rooms, risk alerts, approvals" },
+  { href: "/continuity", label: "Continuity", icon: Network, description: "Cross-device handoff and checkpoints" },
 ];
 
 function filterItems(items: ConsoleNavItem[]): ConsoleNavItem[] {
@@ -193,6 +202,14 @@ function buildConsoleNavGroups(): ConsoleNavGroup[] {
       items: filterItems(CONSOLE_NAV_TOOLS),
       defaultOpen: false,
     },
+    {
+      label: "Platform",
+      subgroups: [
+        { label: "Products", items: filterItems(CONSOLE_NAV_PLATFORM) },
+        { label: "Industries", items: filterItems(CONSOLE_NAV_INDUSTRIES) },
+      ],
+      defaultOpen: true,
+    },
   ];
 }
 
@@ -206,7 +223,7 @@ export function flattenConsoleNavItems(): ConsoleNavItem[] {
   ]);
 }
 
-/** Labs catalog (not in the main sidebar — single /labs entry). */
+/** Full platform catalog (sidebar + /labs hub). */
 export const CONSOLE_NAV_LABS_CATALOG: ConsoleNavItem[] = [
   ...CONSOLE_NAV_PLATFORM,
   ...CONSOLE_NAV_INDUSTRIES,

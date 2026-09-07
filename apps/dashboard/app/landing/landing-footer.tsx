@@ -24,7 +24,12 @@ export function LandingFooter() {
             <Link href={HOSTED_PATHS.compare} className="hover:text-white">Compare</Link>
             <Link href="/demo" className="hover:text-white">Demo</Link>
             <Link href={HOSTED_PATHS.guides} className="hover:text-white">Guides</Link>
+            <Link href={HOSTED_PATHS.forTeams} className="hover:text-white">For teams</Link>
             <Link href={HOSTED_PATHS.status} className="hover:text-white">Status</Link>
+            <Link href={HOSTED_PATHS.dpa} className="hover:text-white">DPA</Link>
+            <Link href={HOSTED_PATHS.terms} className="hover:text-white">Terms</Link>
+            <Link href={HOSTED_PATHS.privacyPolicy} className="hover:text-white">Privacy</Link>
+            <Link href={HOSTED_PATHS.subprocessors} className="hover:text-white">Subprocessors</Link>
             <a
               href={DEVTO_SOCKET_FLEET_ARTICLE.href}
               target="_blank"

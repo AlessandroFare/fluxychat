@@ -3,6 +3,10 @@ import { clerkPublicRoutePatterns, isPublicSitePath } from "./public-site-paths"
 
 describe("isPublicSitePath", () => {
   it("allows marketing pages and the subprocessors list without a console session", () => {
+    expect(isPublicSitePath("/dpa")).toBe(true);
+    expect(isPublicSitePath("/terms")).toBe(true);
+    expect(isPublicSitePath("/privacy-policy")).toBe(true);
+    expect(isPublicSitePath("/for-teams")).toBe(true);
     expect(isPublicSitePath("/subprocessors")).toBe(true);
     expect(isPublicSitePath("/status")).toBe(true);
     expect(isPublicSitePath("/compare")).toBe(true);

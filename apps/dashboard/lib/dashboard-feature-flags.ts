@@ -1,9 +1,9 @@
 /**
- * Dashboard nav visibility — hide incomplete lab/preview routes unless enabled.
- * See docs/feature-flags.md § Dashboard console.
+ * Dashboard nav visibility. Platform modules ship as production in the sidebar.
+ * Env flags remain for emergency hide-only; default is show everything.
  */
 
-function readEnvFlag(name: string, defaultValue = false): boolean {
+function readEnvFlag(name: string, defaultValue = true): boolean {
   const raw = process.env[name]?.trim().toLowerCase();
   if (raw === "1" || raw === "true" || raw === "yes") return true;
   if (raw === "0" || raw === "false" || raw === "no") return false;
@@ -12,17 +12,15 @@ function readEnvFlag(name: string, defaultValue = false): boolean {
 
 export function getDashboardFeatureFlags() {
   return {
-    /** Labs & demos nav (stream, voice-ai, health, …). Default off in production. */
-    labsShowcase: readEnvFlag("NEXT_PUBLIC_DASHBOARD_LABS", false),
-    /** Preview surfaces (marketplace, web3, agent platform, …). Default off in production. */
-    previewTools: readEnvFlag("NEXT_PUBLIC_DASHBOARD_PREVIEW", false),
+    labsShowcase: readEnvFlag("NEXT_PUBLIC_DASHBOARD_LABS", true),
+    previewTools: readEnvFlag("NEXT_PUBLIC_DASHBOARD_PREVIEW", true),
   };
 }
 
 /** @deprecated Use getDashboardFeatureFlags() — kept for static nav module init. */
 export const dashboardFeatureFlags = getDashboardFeatureFlags();
 
-/** Showcase / vertical modules — sidebar only when NEXT_PUBLIC_DASHBOARD_LABS=1. */
+/** Product + industry routes (always in sidebar). */
 export const DASHBOARD_LAB_HREFS = new Set([
   "/continuity",
   "/stream",
@@ -39,7 +37,7 @@ export const DASHBOARD_LAB_HREFS = new Set([
   "/cartography",
 ]);
 
-/** Early-preview routes — sidebar only when NEXT_PUBLIC_DASHBOARD_PREVIEW=1. */
+/** Additional platform routes (always in sidebar). */
 export const DASHBOARD_PREVIEW_HREFS = new Set([
   "/web3",
   "/driver",
@@ -72,26 +70,21 @@ export function matchFlaggedHref(pathname: string, hrefs: Set<string>): string |
   return best;
 }
 
-export function getDashboardSurfaceKind(pathname: string | null): DashboardSurfaceKind {
-  if (!pathname) return "ga";
-  if (matchFlaggedHref(pathname, DASHBOARD_PREVIEW_HREFS)) return "preview";
-  if (matchFlaggedHref(pathname, DASHBOARD_LAB_HREFS)) return "labs";
+/** All console surfaces are GA / flagship. */
+export function getDashboardSurfaceKind(_pathname: string | null): DashboardSurfaceKind {
   return "ga";
 }
 
 export function isDashboardNavHrefVisible(
-  href: string,
-  flags = getDashboardFeatureFlags(),
+  _href: string,
+  _flags = getDashboardFeatureFlags(),
 ): boolean {
-  if (href === "/labs") return true;
-  if (DASHBOARD_LAB_HREFS.has(href)) return flags.labsShowcase;
-  if (DASHBOARD_PREVIEW_HREFS.has(href)) return flags.previewTools;
   return true;
 }
 
 export function filterDashboardNavItems<T extends { href: string }>(
   items: T[],
-  flags = getDashboardFeatureFlags(),
+  _flags = getDashboardFeatureFlags(),
 ): T[] {
-  return items.filter((item) => isDashboardNavHrefVisible(item.href, flags));
+  return items;
 }

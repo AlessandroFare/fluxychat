@@ -13,28 +13,28 @@ const MAX_IDEMPOTENCY_LEN = 256;
 
 /** @type {Record<string, { roles?: string[], selfActor?: boolean }>} */
 const EVENT_POLICY = {
-  "edu.session.started": { selfActor: true },
-  "attendance.heartbeat": { selfActor: true },
-  "edu.breakout.assigned": { roles: ["teacher", "admin", "owner"] },
-  "edu.poll.created": { roles: ["teacher", "admin", "owner"] },
-  "poll.voted": { selfActor: true },
+  "edu.session.started": { selfActor: true, roles: ["member", "teacher", "admin", "owner"] },
+  "attendance.heartbeat": { selfActor: true, roles: ["member", "teacher", "admin", "owner"] },
+  "edu.breakout.assigned": { roles: ["member", "teacher", "admin", "owner"] },
+  "edu.poll.created": { roles: ["member", "teacher", "admin", "owner"] },
+  "poll.voted": { selfActor: true, roles: ["member", "admin", "owner"] },
   "edu.grade.suggested": { roles: ["teacher", "admin", "owner", "agent"] },
   "edu.grade.approved": { roles: ["teacher", "admin", "owner"] },
-  "health.consent.verified": { roles: ["patient", "coordinator", "admin", "owner"] },
-  "health.fhir.context.attached": { roles: ["clinician", "admin", "owner", "system"] },
+  "health.consent.verified": { selfActor: true, roles: ["member", "patient", "coordinator", "admin", "owner"] },
+  "health.fhir.context.attached": { roles: ["member", "clinician", "admin", "owner", "system"] },
   "health.audit.sealed": { roles: ["admin", "owner", "system"] },
-  "event.ticket.verified": { roles: ["organizer", "admin", "owner", "system"] },
-  "event.stage.live": { roles: ["organizer", "speaker", "admin", "owner", "system"] },
-  "event.qa.upvoted": { selfActor: true },
+  "event.ticket.verified": { roles: ["member", "organizer", "admin", "owner", "system"] },
+  "event.stage.live": { roles: ["member", "organizer", "speaker", "admin", "owner", "system"] },
+  "event.qa.upvoted": { selfActor: true, roles: ["member", "admin", "owner"] },
   "event.recap.published": { roles: ["organizer", "admin", "owner"] },
-  "finance.alert.created": { roles: ["analyst", "admin", "owner", "system"] },
-  "finance.risk.flagged": { roles: ["analyst", "admin", "owner", "agent", "system"] },
-  "finance.invoice.draft": { roles: ["analyst", "admin", "owner", "agent"] },
+  "finance.alert.created": { roles: ["member", "analyst", "admin", "owner", "system"] },
+  "finance.risk.flagged": { roles: ["member", "analyst", "admin", "owner", "agent", "system"] },
+  "finance.invoice.draft": { roles: ["member", "analyst", "admin", "owner", "agent"] },
   "finance.invoice.approved": { roles: ["approver", "admin", "owner"] },
   "finance.audit.exported": { roles: ["analyst", "admin", "owner"] },
-  "continuity.device.registered": { selfActor: true },
-  "continuity.checkpoint.created": { selfActor: true },
-  "continuity.checkpoint.resumed": { selfActor: true },
+  "continuity.device.registered": { selfActor: true, roles: ["member", "admin", "owner"] },
+  "continuity.checkpoint.created": { selfActor: true, roles: ["member", "admin", "owner"] },
+  "continuity.checkpoint.resumed": { selfActor: true, roles: ["member", "admin", "owner"] },
   "continuity.cursor.confirmed": { roles: ["admin", "owner", "system"] },
 };
 
@@ -226,5 +226,40 @@ export async function listCapabilityEvents(env, input, auth) {
     events,
     cursor: safeCursor + events.length,
     hasMore: events.length === safeLimit,
+  };
+}
+
+export async function getCapabilitySnapshot(env, { roomId }, auth) {
+  if (!roomId?.trim()) return { ok: false, error: "room_id_required" };
+  const canAccess = await canAccessRoom(env, auth, roomId);
+  if (!canAccess) return { ok: false, error: "forbidden" };
+
+  const { results } = await env.DB.prepare(
+    `SELECT event_type AS type, COUNT(*) AS n
+     FROM room_capability_events
+     WHERE project_id = ? AND room_id = ?
+     GROUP BY event_type`,
+  )
+    .bind(auth.projectId, roomId)
+    .all();
+
+  const byType = {};
+  let total = 0;
+  for (const row of results || []) {
+    const n = Number(row.n || 0);
+    byType[row.type] = n;
+    total += n;
+  }
+
+  return {
+    ok: true,
+    roomId,
+    total,
+    byType,
+    attendance: byType["attendance.heartbeat"] || 0,
+    consent: byType["health.consent.verified"] || 0,
+    checkpoints: byType["continuity.checkpoint.created"] || 0,
+    riskFlags: byType["finance.risk.flagged"] || 0,
+    stageLive: byType["event.stage.live"] || 0,
   };
 }

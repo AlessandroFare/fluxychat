@@ -1,5 +1,25 @@
 # @fluxy-chat/sdk
 
+## 0.6.11 (2026-09-07)
+
+### Added
+
+- `createCapabilityClient().snapshot(roomId)` — live counts for attendance, consent, checkpoints, risk flags, stage.
+
+### Changed
+
+- `PLATFORM_READINESS` marks IoT, fleet, game, edu, stream, voice, spatial, health, finance, event, continuity, marketplace, web3 as `production` on the free path. Copy still excludes HIPAA BAA, unpublished voice SLA, MQTT, and SFU.
+
+## 0.6.10 (2026-09-07)
+
+### Fixed
+
+- History replay on reconnect keeps live messages and pending/failed rows (`mergeHistoryWithPendingDelivery`). Optimistic sends no longer vanish when `fetchMessages` returns.
+
+### Changed
+
+- `PLATFORM_READINESS` matches the product: kernel chat + Yjs are `production`; stream/game/IoT/fleet/edu/marketplace/web3/chatbot-builder are `beta`; voice/spatial/health/event/finance/continuity stay `labs`. Hosted remains open beta.
+
 ## 0.6.9 (2026-09-04)
 
 ### Added

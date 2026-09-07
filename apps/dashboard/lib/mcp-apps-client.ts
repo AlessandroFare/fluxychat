@@ -12,6 +12,9 @@ export interface McpAppCatalogEntry {
   description: string;
   category: string;
   tools: string[];
+  connectUrlEu?: string;
+  connectUrlUs?: string;
+  docsUrl?: string;
   auditGrade?: string;
   auditScore?: number;
   auditScannedAt?: number;

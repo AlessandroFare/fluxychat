@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowRightLeft, Brain, GitBranch, Network, TestTubes } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { ArrowRightLeft, Brain, Fingerprint, GitBranch, Network, TestTubes } from "lucide-react";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { ConsoleProjectRoomBar } from "../components/console-project-room-bar";
 import { Panel } from "~/components/ui/Panel";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import {
   createCrossChannelContinuity,
   createJourneyMapping,
@@ -18,11 +19,23 @@ import {
 } from "@fluxy-chat/sdk";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { useDashboardSession } from "../components/dashboard-session";
+import { messageFromUnknown } from "@/lib/error-message";
+import { upsertCustomer } from "@/lib/cdp-client";
+import {
+  bindChannelIdentity,
+  getUnifiedCustomerView,
+  listIdentityBindings,
+  listJourneyHistory,
+  recordJourneyStep,
+  type IdentityBinding,
+  type JourneyStep,
+} from "@/lib/cross-channel-client";
 
-type TabId = "continuity" | "journey" | "abtesting" | "a2a" | "memory";
+type TabId = "identity" | "continuity" | "journey" | "abtesting" | "a2a" | "memory";
 
 const TABS: { id: TabId; label: string; icon: typeof ArrowRightLeft }[] = [
-  { id: "continuity", label: "Cross-Channel", icon: ArrowRightLeft },
+  { id: "identity", label: "Identity", icon: Fingerprint },
+  { id: "continuity", label: "SDK playground", icon: ArrowRightLeft },
   { id: "journey", label: "Journey Map", icon: GitBranch },
   { id: "memory", label: "Memory Graph", icon: Brain },
   { id: "abtesting", label: "A/B Testing", icon: TestTubes },
@@ -30,9 +43,42 @@ const TABS: { id: TabId; label: string; icon: typeof ArrowRightLeft }[] = [
 ];
 
 export default function CrossChannelPage() {
-  const [tab, setTab] = useState<TabId>("continuity");
+  const [tab, setTab] = useState<TabId>("identity");
   const { memberJwt, adminJwt, lastRoom } = useDashboardSession();
   const token = (adminJwt || memberJwt).trim();
+  const [customerId, setCustomerId] = useState("cust_demo");
+  const [channel, setChannel] = useState("web");
+  const [channelUserId, setChannelUserId] = useState("web-user-1");
+  const [journeyAction, setJourneyAction] = useState("viewed_pricing");
+  const [bindings, setBindings] = useState<IdentityBinding[]>([]);
+  const [journey, setJourney] = useState<JourneyStep[]>([]);
+  const [channels, setChannels] = useState<string[]>([]);
+  const [identityBusy, setIdentityBusy] = useState<string | null>(null);
+  const [identityError, setIdentityError] = useState<string | null>(null);
+
+  const [resolvedCustomerId, setResolvedCustomerId] = useState<string | null>(null);
+
+  const loadIdentity = useCallback(async (customerKey?: string) => {
+    if (!token) return;
+    const id = customerKey || resolvedCustomerId;
+    if (!id) return;
+    setIdentityBusy("load");
+    setIdentityError(null);
+    try {
+      const [bound, hist, unified] = await Promise.all([
+        listIdentityBindings(token, id),
+        listJourneyHistory(token, id),
+        getUnifiedCustomerView(token, id).catch(() => null),
+      ]);
+      setBindings(bound.bindings ?? []);
+      setJourney(hist.journey ?? []);
+      setChannels(unified?.channels ?? []);
+    } catch (err) {
+      setIdentityError(messageFromUnknown(err, "Could not load this customer"));
+    } finally {
+      setIdentityBusy(null);
+    }
+  }, [token, resolvedCustomerId]);
   const chatClient = useMemo(() => {
     if (!token) return null;
     return new FluxyChatClient({
@@ -63,6 +109,134 @@ export default function CrossChannelPage() {
   const [journeyPaths, setJourneyPaths] = useState<Array<{ from: string; to: string; count: number }>>([]);
 
   const TabContent = {
+    identity: (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Rows go to D1/KV. First we upsert a CDP customer from the id you type, then we bind a channel.
+        </p>
+        {!token ? (
+          <p className="text-sm text-amber-800 dark:text-amber-200">You need an admin JWT for this tab.</p>
+        ) : (
+          <>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Input value={customerId} onChange={(e) => setCustomerId(e.target.value)} placeholder="Customer id" />
+              <Input value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="Channel (web, mobile, sms)" />
+              <Input value={channelUserId} onChange={(e) => setChannelUserId(e.target.value)} placeholder="Channel user id" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                disabled={!!identityBusy}
+                onClick={() => void (async () => {
+                  setIdentityBusy("load");
+                  setIdentityError(null);
+                  try {
+                    const row = await upsertCustomer(token, { externalId: customerId.trim(), name: customerId.trim() });
+                    setResolvedCustomerId(row.id);
+                    await loadIdentity(row.id);
+                  } catch (err) {
+                    setIdentityError(messageFromUnknown(err, "Could not load this customer"));
+                    setIdentityBusy(null);
+                  }
+                })()}
+              >
+                Load profile
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!!identityBusy}
+                onClick={() => void (async () => {
+                  setIdentityBusy("bind");
+                  setIdentityError(null);
+                  try {
+                    const row = await upsertCustomer(token, { externalId: customerId.trim(), name: customerId.trim() });
+                    setResolvedCustomerId(row.id);
+                    await bindChannelIdentity(token, {
+                      customerId: row.id,
+                      channel: channel.trim().toLowerCase(),
+                      channelUserId: channelUserId.trim(),
+                    });
+                    await loadIdentity(row.id);
+                  } catch (err) {
+                    setIdentityError(messageFromUnknown(err, "Bind failed"));
+                  } finally {
+                    setIdentityBusy(null);
+                  }
+                })()}
+              >
+                Bind channel
+              </Button>
+              <Input className="max-w-xs" value={journeyAction} onChange={(e) => setJourneyAction(e.target.value)} placeholder="Journey step" />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!!identityBusy}
+                onClick={() => void (async () => {
+                  setIdentityBusy("step");
+                  setIdentityError(null);
+                  try {
+                    const row = resolvedCustomerId
+                      ? { id: resolvedCustomerId }
+                      : await upsertCustomer(token, { externalId: customerId.trim(), name: customerId.trim() });
+                    setResolvedCustomerId(row.id);
+                    await recordJourneyStep(token, {
+                      customerId: row.id,
+                      channel: channel.trim().toLowerCase(),
+                      step: journeyAction.trim(),
+                    });
+                    await loadIdentity(row.id);
+                  } catch (err) {
+                    setIdentityError(messageFromUnknown(err, "Journey record failed"));
+                  } finally {
+                    setIdentityBusy(null);
+                  }
+                })()}
+              >
+                Record step
+              </Button>
+            </div>
+            {identityError ? <p className="text-sm text-destructive">{identityError}</p> : null}
+            {resolvedCustomerId ? (
+              <p className="font-mono text-xs text-muted-foreground">CDP id {resolvedCustomerId}</p>
+            ) : null}
+            {channels.length > 0 ? (
+              <p className="text-xs text-muted-foreground">Channels on this profile: {channels.join(", ")}</p>
+            ) : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Panel className="p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bindings</p>
+                {bindings.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">None yet.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {bindings.map((b) => (
+                      <li key={b.id} className="text-xs">
+                        <span className="font-medium">{b.channel}</span> · {b.channelUserId}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+              <Panel className="p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Journey</p>
+                {journey.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No steps.</p>
+                ) : (
+                  <ul className="max-h-40 space-y-1 overflow-y-auto">
+                    {journey.map((step, i) => (
+                      <li key={`${step.timestamp}-${i}`} className="text-xs">
+                        {step.channel ?? "—"} · {step.type} · {new Date(step.timestamp).toLocaleTimeString()}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+            </div>
+          </>
+        )}
+      </div>
+    ),
     continuity: (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">Unify user sessions across web, mobile, voice, bot, email, and SMS.</p>
@@ -279,14 +453,14 @@ export default function CrossChannelPage() {
   return (
     <ConsoleShell>
       <ConsolePageHeader
-        title="Cross-Channel & Multi-Agent"
-        description="Cross-channel continuity, journey mapping, A/B testing, and A2A protocol. SDK-powered interactive demos."
+        title="Cross-channel"
+        description="This tab writes to the Worker. The SDK playground tabs stay in the browser, except Memory and A2A after you pick a room."
       />
 
       <ConsoleProjectRoomBar
         requireProject
         preferRoom
-        hint="Memory graph and A2A task APIs use your Worker when signed in; continuity and journey tabs exercise the SDK locally."
+        hint="Identity writes to /admin/cross-channel. Memory graph and A2A need a room."
       />
 
       <div role="tablist" className="mt-6 flex gap-1 overflow-x-auto border-b border-border">

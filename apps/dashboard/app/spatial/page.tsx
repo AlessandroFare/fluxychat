@@ -44,6 +44,7 @@ function DigitalTwinTab() {
   const seeded = useRef(false);
 
   useEffect(() => {
+    if (workerTwin) return;
     if (seeded.current) return;
     seeded.current = true;
     const scene = dtr.createScene("Office-Demo", { floor: 1, name: "Open Space Office" });
@@ -64,8 +65,8 @@ function DigitalTwinTab() {
         props: e.properties,
       })));
     }
-    addLog("Demo office scene seeded with 10 entities");
-  }, [dtr]);
+    addLog("Local preview scene (sign in to persist scenes on /spatial)");
+  }, [dtr, workerTwin]);
 
   useEffect(() => {
     if (!workerTwin) return;
@@ -468,7 +469,7 @@ export default function SpatialPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Spatial & AR/VR"
-        description="Digital-twin rooms with live 2D visualization, 3D entity management, spatial audio, and shared AR canvas. Interactive SDK demos."
+        description="Digital-twin scenes on Worker HTTP (/spatial/scenes). Entities and grants persist. Not a Unity engine or WebXR headset product."
       />
 
       <ConsoleProjectRoomBar

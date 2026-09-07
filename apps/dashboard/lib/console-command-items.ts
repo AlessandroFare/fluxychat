@@ -21,7 +21,7 @@ import {
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { filterDashboardNavItems } from "@/lib/dashboard-feature-flags";
 
-export type ConsoleCommandGroup = "Navigate" | "Industries" | "Labs" | "Operate" | "Actions" | "Help";
+export type ConsoleCommandGroup = "Navigate" | "Industries" | "Platform" | "Operate" | "Actions" | "Help";
 
 export type ConsoleCommandAction = "copy-worker-url" | "open-support";
 
@@ -58,8 +58,8 @@ function navItems(quickstartHref: string): ConsoleCommandItemDef[] {
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_AGENTS), "Navigate", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_CONNECT), "Navigate", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_TOOLS), "Navigate", quickstartHref),
-    ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_PLATFORM), "Labs", quickstartHref),
-    ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_INDUSTRIES), "Labs", quickstartHref),
+    ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_PLATFORM), "Platform", quickstartHref),
+    ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_INDUSTRIES), "Industries", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_OPERATE), "Operate", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_TRUST), "Operate", quickstartHref),
   ];
@@ -141,7 +141,7 @@ export function filterConsoleCommandItems(
   });
 }
 
-const GROUP_ORDER: ConsoleCommandGroup[] = ["Navigate", "Industries", "Operate", "Labs", "Actions", "Help"];
+const GROUP_ORDER: ConsoleCommandGroup[] = ["Navigate", "Platform", "Industries", "Operate", "Actions", "Help"];
 
 /** Group filtered items preserving section order. */
 export function groupConsoleCommandItems(

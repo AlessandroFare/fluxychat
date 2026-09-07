@@ -15,7 +15,7 @@ Built on [`@fluxy-chat/ui`](/docs/packages/ui) + [`@fluxy-chat/react`](/docs/pac
 pnpm add @fluxy-chat/ui-kit @fluxy-chat/ui @fluxy-chat/react @fluxy-chat/sdk
 ```
 
-Your app needs Tailwind (same as `@fluxy-chat/ui`). Member JWT **or** `guest` on a public room.
+Your app needs Tailwind (same as `@fluxy-chat/ui`). Member JWT **or** `guest` plus `publishableKey` (`pk_`) on a public room.
 
 ## FluxyChatWidget (3 lines)
 
@@ -41,6 +41,7 @@ Pass `token` instead of `guest` when you already have a member JWT.
 | `workerUrl` | `string` | Worker base URL (required unless `client` is passed) |
 | `token` | `string` | Member JWT (unless `client` or `guest`) |
 | `guest` | `boolean` | Call `joinPublicRoomAsGuest` (public room, no JWT) |
+| `publishableKey` | `string` | Browser `pk_` key. Required with `guest` on hosted public rooms |
 | `displayName` | `string` | Guest display name |
 | `client` | `FluxyChatClient` | Pre-built client — share one instance with inbox |
 | `userId` | `string` | Default `"user-1"` when constructing client internally |

@@ -29,6 +29,15 @@ describe("capability platform policy", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("allows member JWT to verify care consent", () => {
+    const result = evaluateCapabilityPolicy(
+      { userId: "u1", roles: ["member"] },
+      { id: "other", type: "user", role: "member" },
+      "health.consent.verified",
+    );
+    expect(result.ok).toBe(true);
+  });
+
   it("allows unknown event types by default", () => {
     const result = evaluateCapabilityPolicy(
       { userId: "u1", roles: [] },

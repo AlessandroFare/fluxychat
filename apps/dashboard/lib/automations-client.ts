@@ -50,6 +50,18 @@ export async function createWorkflow(
   });
 }
 
+export async function updateWorkflow(
+  token: string,
+  workflowId: string,
+  body: { name?: string; description?: string | null; status?: string },
+): Promise<{ updated: boolean }> {
+  return fetchWorkerJson(`${BASE}/api/workflows/${encodeURIComponent(workflowId)}`, {
+    method: "PATCH",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function runWorkflow(
   token: string,
   workflowId: string,

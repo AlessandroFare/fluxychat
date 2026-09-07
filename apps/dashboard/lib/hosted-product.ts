@@ -79,6 +79,11 @@ export const HOSTED_PATHS = {
   /** Operator console overview (Clerk-protected). */
   console: "/dashboard",
   status: "/status",
+  subprocessors: "/subprocessors",
+  dpa: "/dpa",
+  terms: "/terms",
+  privacyPolicy: "/privacy-policy",
+  forTeams: "/for-teams",
   /** Fumadocs “Chat only” progressive disclosure slice */
   docsChatOnly: docsSiteHref("chat-only"),
 } as const;
