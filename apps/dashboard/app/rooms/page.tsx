@@ -169,11 +169,21 @@ export default function RoomsPage() {
       });
       setNewName("");
       await loadRooms({ quiet: true });
-      setRooms((prev) => {
-        if (!created?.id || prev.some((r) => r.id === created.id)) return prev;
-        return [{ ...created, unreadCount: 0 }, ...prev];
-      });
-      if (created?.id) setSelectedId(created.id);
+      if (created?.id) {
+        const listType: FluxyChatRoom["type"] =
+          created.type === "dm" || created.type === "group" || created.type === "public"
+            ? created.type
+            : "group";
+        const createdRow: FluxyChatRoom & { unreadCount?: number } = {
+          id: created.id,
+          name: created.name,
+          type: listType,
+          created_at: created.created_at,
+          unreadCount: 0,
+        };
+        setRooms((prev) => (prev.some((r) => r.id === created.id) ? prev : [createdRow, ...prev]));
+        setSelectedId(created.id);
+      }
       setNotice(`Room created: ${created?.name || created?.id || "ok"}`);
     } catch (e: unknown) {
       setError(messageFromUnknown(e, "Create failed"));
