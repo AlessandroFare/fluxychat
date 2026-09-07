@@ -1170,6 +1170,9 @@ export function FluxyChat({
       if (cancelled || !run) return;
       setLatestRun(run);
       setRunPending(false);
+      if (run.status === "completed") {
+        void loadHistory();
+      }
       if (run.status === "failed") {
         setInvokeError(run.error || "Agent run failed");
       }
@@ -1194,7 +1197,7 @@ export function FluxyChat({
       window.clearInterval(intervalId);
       window.clearTimeout(timeoutId);
     };
-  }, [runPending, adminJwt, fetchLatestRunForRoom]);
+  }, [runPending, adminJwt, fetchLatestRunForRoom, loadHistory]);
 
   useEffect(() => {
     if (!runPending || agentTyping) return;
@@ -1205,6 +1208,9 @@ export function FluxyChat({
         if (cancelled) return;
         if (run) {
           setLatestRun(run);
+          if (run.status === "completed") {
+            void loadHistory();
+          }
           if (run.status === "failed") {
             setInvokeError(run.error || "Agent run failed");
           }
@@ -1217,7 +1223,7 @@ export function FluxyChat({
       cancelled = true;
       window.clearTimeout(id);
     };
-  }, [runPending, agentTyping, fetchLatestRunForRoom]);
+  }, [runPending, agentTyping, fetchLatestRunForRoom, loadHistory]);
 
   useEffect(() => {
     if (!lastAgentRun) return;
@@ -2412,10 +2418,14 @@ export function FluxyChat({
                                             isAgent ||
                                             (!isSelf && messageContentUsesMarkdown(bodyText));
                                           return useMarkdown ? (
-                                            <MarkdownBody
-                                              content={bodyText}
-                                              invert={isSelf}
-                                            />
+                                            !bodyText.trim() && isStreaming ? (
+                                              <p className="whitespace-pre-wrap break-words">…</p>
+                                            ) : (
+                                              <MarkdownBody
+                                                content={bodyText}
+                                                invert={isSelf}
+                                              />
+                                            )
                                           ) : m.id != null && translatedMessages[String(m.id)] ? (
                                             <MessageTranslationBlock
                                               originalText={cardDisplayText(m)}

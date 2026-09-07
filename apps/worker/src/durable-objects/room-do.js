@@ -1226,7 +1226,7 @@ export class RoomDurableObject {
           null
         )
         .run();
-      const newMessageId = insert.meta.last_row_id;
+      const newMessageId = Number(insert.meta.last_row_id);
       const checkpoint = streamCheckpoint(initialContent);
       this.activeStreams.set(userId, {
         messageId: newMessageId,
@@ -1298,7 +1298,7 @@ export class RoomDurableObject {
 
       this.broadcast({
         type: "edit",
-        id: mid,
+        id: Number(mid),
         roomId,
         userId,
         content: nextContent,
@@ -3807,11 +3807,11 @@ export class RoomDurableObject {
           broadcastOpts,
         );
       } else {
-        const messageId = body.id || Date.now();
+        const messageId = Number(body.id);
         const rid = typeof body.roomId === "string" ? body.roomId : roomIdStr;
         const payload = {
           type: "message",
-          id: messageId,
+          id: Number.isFinite(messageId) && messageId > 0 ? messageId : Date.now(),
           roomId: rid,
           userId: body.senderId || body.userId || "system",
           senderId: body.senderId || body.userId || "system",

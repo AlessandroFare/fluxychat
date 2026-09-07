@@ -14,13 +14,13 @@ describe("message-history", () => {
     expect(sorted.map((m) => m.id)).toEqual([1, 2]);
   });
 
-  it("mergeMessagesChronological dedupes by id (current list wins)", () => {
+  it("mergeMessagesChronological dedupes by id (current list wins at equal length)", () => {
     const merged = mergeMessagesChronological(
-      [{ id: 1, createdAt: "2026-01-01T00:00:00.000Z", content: "current" }],
-      [{ id: 1, createdAt: "2026-01-01T00:00:00.000Z", content: "older-page" }],
+      [{ id: 1, createdAt: "2026-01-01T00:00:00.000Z", content: "live-text" }],
+      [{ id: 1, createdAt: "2026-01-01T00:00:00.000Z", content: "from-hist" }],
     );
     expect(merged).toHaveLength(1);
-    expect(merged[0]?.content).toBe("current");
+    expect(merged[0]?.content).toBe("live-text");
   });
 
   it("mergeMessagesChronological does not let an empty streaming stub replace REST text", () => {

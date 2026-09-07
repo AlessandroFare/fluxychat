@@ -78,6 +78,11 @@ export function buildHistoryMessage(msg, { userId, agentId }) {
   return { role: "user", content: `[${msg.user_id}]: ${raw}` };
 }
 
+export function toFiniteMessageId(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /** Best-effort realtime tool/run events for connected room clients. */
 async function announceRoomEvent(env, roomId, payload) {
   try {
@@ -90,6 +95,29 @@ async function announceRoomEvent(env, roomId, payload) {
   } catch (err) {
     /* ignore */
   }
+}
+
+/** Completing chat bubble so connected clients do not wait for a reload. */
+export async function announceRoomChatMessage(env, {
+  roomId,
+  messageId,
+  content,
+  userId,
+  parentId = null,
+  createdAt,
+}) {
+  const id = toFiniteMessageId(messageId);
+  if (!id || !env?.ROOM || !roomId) return;
+  await announceRoomEvent(env, roomId, {
+    type: "message",
+    id,
+    roomId,
+    content,
+    userId,
+    senderId: userId,
+    parentId,
+    createdAt: createdAt || new Date().toISOString(),
+  });
 }
 
 export function mapBotRowToAgent(row) {
@@ -349,7 +377,7 @@ export async function invokeMentionedAgents(
         const createdAt = new Date().toISOString();
         const contentValidation = validateMessageContent(result.content);
         const agentContent = contentValidation.valid ? contentValidation.content : result.content.slice(0, MAX_MESSAGE_LENGTH);
-        let mentionMessageId = streamHooks.getMessageId();
+        let mentionMessageId = toFiniteMessageId(streamHooks.getMessageId());
 
         if (!mentionMessageId) {
           const agentMsgInsert = await env.DB.prepare(
@@ -369,20 +397,21 @@ export async function invokeMentionedAgents(
               null,
             )
             .run();
-          mentionMessageId = agentMsgInsert.meta.last_row_id;
+          mentionMessageId = toFiniteMessageId(agentMsgInsert.meta.last_row_id);
+        }
 
-          const id = env.ROOM.idFromName(roomId);
-          const stub = env.ROOM.get(id);
-          await stub.fetch("https://internal/announce", {
-            method: "POST",
-            body: JSON.stringify({
-              id: mentionMessageId,
-              content: agentContent,
-              userId: agentRow.id,
-              parentId: resolvedParentId,
-            }),
+        if (mentionMessageId) {
+          await announceRoomChatMessage(env, {
+            roomId,
+            messageId: mentionMessageId,
+            content: agentContent,
+            userId: agentRow.id,
+            parentId: resolvedParentId,
+            createdAt,
           }).catch(() => {});
+        }
 
+        if (mentionMessageId && !streamHooks.getMessageId()) {
           await safeSchedulePostMessageAutomations(env, {
             projectId,
             roomId,
@@ -1225,6 +1254,17 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           "The model returned tokens but no visible text. Try again or switch model (e.g. openai/gpt-oss-20b on Groq).";
       } else {
         finalContent = "I was unable to generate a response.";
+      }
+    }
+
+    // Tool rounds skip live streaming (`canStreamFinal` requires !tools). Push the
+    // finished reply onto the room DO so connected clients do not wait for reload.
+    if (streamHooks && !streamHooks.getMessageId()) {
+      try {
+        await streamHooks.onStart(finalContent);
+        await streamHooks.onEnd(finalContent);
+      } catch (streamFinalErr) {
+        logError("agent.stream_final_failed", streamFinalErr, { projectId, roomId, runId });
       }
     }
 

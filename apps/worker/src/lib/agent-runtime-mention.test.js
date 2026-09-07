@@ -76,6 +76,9 @@ describe("invokeMentionedAgents parentId", () => {
 
     const streamStart = streamBodies.find((b) => b.op === "start");
     expect(streamStart?.parentId).toBe(55);
+    expect(streamBodies.some((b) => b.type === "message" && String(b.content || "").length > 0)).toBe(
+      true,
+    );
 
     vi.unstubAllGlobals();
   });
