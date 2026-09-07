@@ -179,7 +179,6 @@ import {
 
 const WORKER_URL = getPublicWorkerUrl();
 const RUN_POLL_MS = 2000;
-const RUN_POLL_TIMEOUT_MS = 60_000;
 const SKIP_HISTORY_STORAGE_KEY = "fluxychat.agentChat.skipHistory";
 
 // ─── Helper functions ───
@@ -424,6 +423,7 @@ export function FluxyChat({
   const [invokeError, setInvokeError] = useState<string | null>(null);
   const [latestRun, setLatestRun] = useState<AgentRunDisplay | null>(null);
   const [runPending, setRunPending] = useState(false);
+  const [runStartedAt, setRunStartedAt] = useState<string | null>(null);
   const [workspaceOpen, setWorkspaceOpen] = useState(true);
   const [runFeedback, setRunFeedback] = useState<string | null>(null);
   const [skipHistoryOnConnect, setSkipHistoryOnConnect] = useState(false);
@@ -510,6 +510,7 @@ export function FluxyChat({
   }, [adminJwt, memberJwt]);
 
   const pollSinceRef = useRef<string | null>(null);
+  const runIdAtStartRef = useRef<string | null>(null);
   const runFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -895,6 +896,20 @@ export function FluxyChat({
     [messages],
   );
 
+  const agentReplyArrived = useMemo(() => {
+    if (!runStartedAt) return false;
+    const startedMs = Date.parse(runStartedAt);
+    if (!Number.isFinite(startedMs)) return false;
+    return messages.some((m) => {
+      const uid = m.userId?.trim() || "";
+      const fromAgent = Boolean(agentId && uid === agentId) || Boolean(m.streaming);
+      if (!fromAgent) return false;
+      if (m.streaming) return true;
+      const createdMs = m.createdAt ? Date.parse(m.createdAt) : NaN;
+      return Number.isFinite(createdMs) && createdMs >= startedMs - 5_000;
+    });
+  }, [messages, runStartedAt, agentId]);
+
   const messagesById = useMemo(() => {
     const map = new Map<number, (typeof messages)[number]>();
     for (const m of messages) {
@@ -1053,7 +1068,8 @@ export function FluxyChat({
     [displayToolEvents],
   );
 
-  const isAgentBusy = agentTyping || streamingCount > 0 || runPending;
+  const isAgentBusy =
+    streamingCount > 0 || ((agentTyping || runPending) && !agentReplyArrived);
 
   const workspaceSteps = useMemo(
     () =>
@@ -1122,10 +1138,10 @@ export function FluxyChat({
       for (const row of json.runs ?? []) {
         const run = normalizeAgentRun(row);
         if (run.room_id && run.room_id !== activeRoomId) continue;
+        if (runIdAtStartRef.current && run.id && run.id === runIdAtStartRef.current) continue;
         if (Number.isFinite(sinceMs) && sinceMs > 0) {
           const createdMs = run.created_at ? Date.parse(run.created_at) : NaN;
-          // Ignore runs from before this send (2s clock skew only — not 60s).
-          if (Number.isFinite(createdMs) && createdMs < sinceMs - 2_000) continue;
+          if (Number.isFinite(createdMs) && createdMs < sinceMs - 5_000) continue;
         }
         if (run.status === "completed" || run.status === "failed") return run;
       }
@@ -1169,17 +1185,29 @@ export function FluxyChat({
     window.setTimeout(() => void loadHistory(), 1600);
   }, [loadHistory]);
 
+  const fetchLatestRunRef = useRef(fetchLatestRunForRoom);
+  fetchLatestRunRef.current = fetchLatestRunForRoom;
+  const refreshMessagesRef = useRef(refreshMessagesAfterAgentRun);
+  refreshMessagesRef.current = refreshMessagesAfterAgentRun;
+
   useEffect(() => {
-    if (!runPending || !adminJwt.trim()) return;
+    if (!runPending || !agentReplyArrived) return;
+    setRunPending(false);
+    refreshMessagesRef.current();
+  }, [runPending, agentReplyArrived]);
+
+  useEffect(() => {
+    if (!runPending) return;
     let cancelled = false;
 
     const tick = async () => {
-      const run = await fetchLatestRunForRoom();
+      if (!adminJwt.trim()) return;
+      const run = await fetchLatestRunRef.current();
       if (cancelled || !run) return;
       setLatestRun(run);
       setRunPending(false);
       if (run.status === "completed") {
-        refreshMessagesAfterAgentRun();
+        refreshMessagesRef.current();
       }
       if (run.status === "failed") {
         setInvokeError(run.error || "Agent run failed");
@@ -1189,23 +1217,12 @@ export function FluxyChat({
 
     void tick();
     const intervalId = window.setInterval(() => void tick(), RUN_POLL_MS);
-    const timeoutId = window.setTimeout(() => {
-      if (!cancelled) {
-        setRunPending(false);
-        setInvokeError(
-          (prev) =>
-            prev ||
-            "Assistant did not finish in time. Verify worker LLM settings (AI_BASE_URL / AI_API_KEY) and redeploy.",
-        );
-      }
-    }, RUN_POLL_TIMEOUT_MS);
 
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
-      window.clearTimeout(timeoutId);
     };
-  }, [runPending, adminJwt, fetchLatestRunForRoom, refreshMessagesAfterAgentRun]);
+  }, [runPending, adminJwt]);
 
   useEffect(() => {
     if (!lastAgentRun) return;
@@ -1259,11 +1276,14 @@ export function FluxyChat({
   }
 
   function beginRunTracking() {
-    pollSinceRef.current = new Date().toISOString();
+    const started = new Date().toISOString();
+    pollSinceRef.current = started;
+    runIdAtStartRef.current = latestRun?.id ?? null;
+    setRunStartedAt(started);
     setLatestRun(null);
     setInvokeError(null);
     clearToolThread();
-    if (usesMentionInvoke && adminJwt.trim()) {
+    if (usesMentionInvoke) {
       setRunPending(true);
     }
   }
@@ -2698,13 +2718,13 @@ export function FluxyChat({
               ))}
 
               {/* Streaming status markers */}
-              {runPending && displayToolEvents.length === 0 ? (
+              {runPending && displayToolEvents.length === 0 && !agentReplyArrived ? (
                 <MessageScrollerItem>
                   <Marker role="status">
                     <MarkerIcon>
                       <Loader2 className="size-3 animate-spin" />
                     </MarkerIcon>
-                    <MarkerContent className="shimmer">Waiting for agent tool rounds…</MarkerContent>
+                    <MarkerContent className="shimmer">Assistant is responding…</MarkerContent>
                   </Marker>
                 </MessageScrollerItem>
               ) : null}
