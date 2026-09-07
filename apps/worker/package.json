@@ -29,6 +29,8 @@
   "dependencies": {
     "@fluxy-chat/config": "workspace:*",
     "@fluxy-chat/protocol": "workspace:*",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
     "@simplewebauthn/server": "^13.3.2",
     "hono": "4.12.33",
     "remark": "^15.0.1",

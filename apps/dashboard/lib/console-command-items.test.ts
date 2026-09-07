@@ -15,10 +15,12 @@ describe("console-command-items", () => {
     );
   });
 
-  it("hides lab routes from the palette when labs flags are off", () => {
-    expect(items.some((item) => item.href === "/game")).toBe(true);
-    expect(items.some((item) => item.href === "/health")).toBe(false);
-    expect(items.some((item) => item.href === "/marketplace")).toBe(false);
+  it("includes platform and industry routes in the palette", () => {
+    expect(items.some((item) => item.href === "/game" && item.group === "Platform")).toBe(true);
+    expect(items.some((item) => item.href === "/health" && item.group === "Industries")).toBe(true);
+    expect(items.some((item) => item.href === "/marketplace" && item.group === "Platform")).toBe(
+      true,
+    );
   });
 
   it("filters by label and keywords", () => {

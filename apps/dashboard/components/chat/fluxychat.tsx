@@ -2739,7 +2739,7 @@ export function FluxyChat({
               {/* Typing indicator */}
               <MessageScrollerItem>
                 <TypingIndicator
-                  visible={Boolean(agentTyping && !isAgentBusy)}
+                  visible={Boolean(agentTyping && streamingCount === 0)}
                   name={agentName}
                   avatar={
                     <div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">

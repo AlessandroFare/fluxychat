@@ -8,30 +8,35 @@ import {
 } from "./dashboard-feature-flags";
 
 describe("dashboard-feature-flags", () => {
-  it("hides lab hrefs by default", () => {
+  it("shows every former lab and preview href in the sidebar", () => {
     for (const href of DASHBOARD_LAB_HREFS) {
       expect(isDashboardNavHrefVisible(href, { labsShowcase: false, previewTools: false })).toBe(
-        false,
+        true,
+      );
+    }
+    for (const href of DASHBOARD_PREVIEW_HREFS) {
+      expect(isDashboardNavHrefVisible(href, { labsShowcase: false, previewTools: false })).toBe(
+        true,
       );
     }
   });
 
-  it("shows preview hrefs when preview flag is set", () => {
-    expect(
-      isDashboardNavHrefVisible("/marketplace", { labsShowcase: false, previewTools: true }),
-    ).toBe(true);
-  });
-
-  it("filterDashboardNavItems keeps core routes", () => {
+  it("filterDashboardNavItems keeps platform routes", () => {
     const filtered = filterDashboardNavItems(
       [
         { href: "/rooms", label: "Rooms" },
         { href: "/inbox", label: "Inbox" },
         { href: "/marketplace", label: "Marketplace" },
+        { href: "/health", label: "Health" },
       ],
       { labsShowcase: false, previewTools: false },
     );
-    expect(filtered.map((i) => i.href)).toEqual(["/rooms", "/inbox"]);
+    expect(filtered.map((i) => i.href)).toEqual([
+      "/rooms",
+      "/inbox",
+      "/marketplace",
+      "/health",
+    ]);
   });
 
   it("keeps lab and preview href sets disjoint", () => {
@@ -40,56 +45,10 @@ describe("dashboard-feature-flags", () => {
     }
   });
 
-  it("shows collab, iot, fleet, and game in default nav once gallery examples exist", () => {
-    expect(
-      isDashboardNavHrefVisible("/collab", { labsShowcase: false, previewTools: false }),
-    ).toBe(true);
-    expect(isDashboardNavHrefVisible("/iot", { labsShowcase: false, previewTools: false })).toBe(
-      true,
-    );
-    expect(isDashboardNavHrefVisible("/fleet", { labsShowcase: false, previewTools: false })).toBe(
-      true,
-    );
-    expect(isDashboardNavHrefVisible("/game", { labsShowcase: false, previewTools: false })).toBe(
-      true,
-    );
-    expect(isDashboardNavHrefVisible("/health", { labsShowcase: false, previewTools: false })).toBe(
-      false,
-    );
-    expect(isDashboardNavHrefVisible("/stream", { labsShowcase: false, previewTools: false })).toBe(
-      false,
-    );
-  });
-
-  it("always shows the labs catalog hub", () => {
-    expect(isDashboardNavHrefVisible("/labs", { labsShowcase: false, previewTools: false })).toBe(
-      true,
-    );
-  });
-
-  it("hides agent observability behind preview", () => {
-    expect(
-      isDashboardNavHrefVisible("/agents/observability", {
-        labsShowcase: false,
-        previewTools: false,
-      }),
-    ).toBe(false);
-  });
-
-  it("classifies deep lab and preview paths", () => {
+  it("classifies every console surface as GA", () => {
     expect(getDashboardSurfaceKind("/game")).toBe("ga");
-    expect(getDashboardSurfaceKind("/fleet")).toBe("ga");
-    expect(getDashboardSurfaceKind("/collab")).toBe("ga");
-    expect(getDashboardSurfaceKind("/iot")).toBe("ga");
-    expect(getDashboardSurfaceKind("/stream/abc/broadcast")).toBe("labs");
-    expect(getDashboardSurfaceKind("/agents/platform")).toBe("preview");
-    expect(getDashboardSurfaceKind("/agents/cross-org")).toBe("ga");
+    expect(getDashboardSurfaceKind("/stream/abc/broadcast")).toBe("ga");
+    expect(getDashboardSurfaceKind("/agents/platform")).toBe("ga");
     expect(getDashboardSurfaceKind("/rooms")).toBe("ga");
-  });
-
-  it("shows cross-org rooms in default nav", () => {
-    expect(
-      isDashboardNavHrefVisible("/agents/cross-org", { labsShowcase: false, previewTools: false }),
-    ).toBe(true);
   });
 });

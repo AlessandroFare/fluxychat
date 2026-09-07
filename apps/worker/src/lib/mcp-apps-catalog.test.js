@@ -4,8 +4,9 @@ import { listMcpAppsCatalog, getMcpAppById } from "./mcp-apps-catalog.js";
 describe("mcp-apps-catalog", () => {
   it("lists curated MCP apps", async () => {
     const apps = await listMcpAppsCatalog({});
-    expect(apps.length).toBeGreaterThanOrEqual(4);
+    expect(apps.length).toBeGreaterThanOrEqual(5);
     expect(apps.every((a) => a.verified && a.auditLevel === "curated")).toBe(true);
+    expect(getMcpAppById("apyhub-mcp")?.docsUrl).toBe("https://apyhub.com/mcp");
   });
 
   it("finds app by id", () => {

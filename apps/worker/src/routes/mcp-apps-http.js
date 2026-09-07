@@ -10,10 +10,11 @@ import {
 import { recordMarketplaceAudit } from "../lib/marketplace-audit.js";
 import { listTemplateMarketplace, registerTemplateCommit } from "../lib/template-marketplace.js";
 import { verifyWebhookSignature } from "../lib/webhook-batch-verify.js";
+import { issueWalletNonce, verifyWalletSiwe, mintWalletMemberJwt, getWalletAllowlist, setWalletAllowlist } from "../lib/wallet-siwe.js";
 
 export async function dispatchMcpAppsRoutes(request, url, h) {
   const path = url.pathname;
-  const { json: respond } = pickRouteDeps(h, ["json"]);
+  const { json: respond, signJwtHs256 } = pickRouteDeps(h, ["json", "signJwtHs256"]);
   const env = h?.env ?? {};
 
   if (request.method === "POST" && path === "/internal/marketplace/audit-result") {
@@ -103,6 +104,60 @@ export async function dispatchMcpAppsRoutes(request, url, h) {
     const app = await getMcpAppByIdWithAudit(env, decodeURIComponent(appMatch[1]));
     if (!app) return respond({ error: "not_found" }, h, 404);
     return respond({ app }, h);
+  }
+
+  if (path === "/admin/auth/wallet/nonce" || path === "/admin/auth/wallet") {
+    const ctx = await resolveAdminContext(request, h);
+    if (ctx.response) return ctx.response;
+    const { env: adminEnv, projectId } = ctx;
+    const host = request.headers.get("Host") || "fluxychat.com";
+    const domain = host.replace(/:\d+$/, "");
+    if (request.method === "GET" && path === "/admin/auth/wallet/nonce") {
+      const issued = await issueWalletNonce(adminEnv, {
+        projectId,
+        address: url.searchParams.get("address") || "",
+        domain,
+        uri: `https://${host}/web3`,
+      });
+      if (issued.error) return respond({ error: issued.error }, h, issued.status || 400);
+      return respond(issued, h);
+    }
+    if (request.method === "POST" && path === "/admin/auth/wallet") {
+      const body = await request.json().catch(() => ({}));
+      const verified = await verifyWalletSiwe(adminEnv, {
+        projectId,
+        address: body.address,
+        message: body.message,
+        signature: body.signature,
+        domain,
+      });
+      if (verified.error) return respond({ error: verified.error }, h, verified.status || 401);
+      const minted = await mintWalletMemberJwt(adminEnv, {
+        projectId,
+        address: verified.address,
+        signJwtHs256,
+        ttlSeconds: body.ttlSeconds,
+      });
+      if (minted.error) return respond({ error: minted.error }, h, minted.status || 400);
+      return respond(minted, h);
+    }
+    return respond({ error: "method_not_allowed" }, h, 405);
+  }
+
+  if (path === "/admin/auth/wallet/allowlist") {
+    const ctx = await resolveAdminContext(request, h);
+    if (ctx.response) return ctx.response;
+    const { env: adminEnv, projectId } = ctx;
+    if (request.method === "GET") {
+      return respond(await getWalletAllowlist(adminEnv, projectId), h);
+    }
+    if (request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      const saved = await setWalletAllowlist(adminEnv, projectId, body.addresses);
+      if (saved.error) return respond({ error: saved.error }, h, saved.status || 400);
+      return respond(saved, h);
+    }
+    return respond({ error: "method_not_allowed" }, h, 405);
   }
 
   if (!path.startsWith("/admin/mcp-apps")) return null;

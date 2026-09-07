@@ -1,24 +1,23 @@
 ---
-title: Platform Overview
-description: FluxyChat platform modules and their capabilities.
+title: Platform overview
+description: Same Worker and room Durable Object. Chat, collab, stream, IoT, and the rest.
 ---
 
-FluxyChat provides composable realtime modules. Each module builds on the same core room infrastructure.
+Hosted FluxyChat is open beta. Pin npm. The pages below are the modules in the console. They share one Worker, one room object, and one JSON WebSocket for events. Yjs uses a second binary socket on the same room.
+
+Bridges (Slack, Discord, and the rest) store a binding. You still create the vendor app. That is not a finished omnichannel desk.
 
 <Cards>
-  <Card title="Realtime Modules" description="Chat, collaboration, streaming, gaming, IoT, fleet, and more." href="/docs/platform/realtime-modules" />
-  <Card title="Spatial & Digital Twin" description="Scenes, entities, MCP grants, and AR path." href="/docs/platform/spatial-digital-twin" />
-  <Card title="Voice AI" description="Realtime voice pipeline with latency SLO and fallback." href="/docs/platform/voice" />
-  <Card title="Vertical industries" description="Health, Finance, Continuity — capability events + live workspace." href="/docs/platform/vertical-industries" />
+  <Card title="Realtime modules" description="Chat, stream, game, IoT, fleet on one Worker." href="/docs/platform/realtime-modules" />
+  <Card title="Collab" description="Yjs on the room. Excalidraw is a local renderer." href="/docs/platform/collab" />
+  <Card title="Stream" description="Live event chat. WHIP needs Cloudflare Stream secrets." href="/docs/platform/stream" />
+  <Card title="Spatial" description="Scenes, entities, MCP grants." href="/docs/platform/spatial-digital-twin" />
+  <Card title="Voice AI" description="STT/TTS pipeline. Huddle media is LiveKit." href="/docs/platform/voice" />
+  <Card title="IoT" description="HTTP ingest, shadow, room fan-out." href="/docs/platform/iot" />
+  <Card title="FluxyEdu" description="Polls, breakouts, attendance on the classroom room." href="/docs/platform/edu" />
+  <Card title="Chatbot builder" description="Trigger-action workflows on Worker HTTP." href="/docs/platform/chatbot-builder" />
+  <Card title="Marketplace" description="Agent templates and MCP apps." href="/docs/platform/marketplace" />
+  <Card title="Web3 rooms" description="Worker SIWE mint plus optional address allowlist." href="/docs/platform/web3" />
+  <Card title="Vertical industries" description="Health, Finance, Continuity events + live workspace." href="/docs/platform/vertical-industries" />
   <Card title="Embed widget" description="Guest sessions and public host config." href="/docs/platform/embed-widget" />
-  <Card title="Custom domains" description="White-label chat on your hostname." href="/docs/platform/custom-domains" />
 </Cards>
-
-## Readiness tiers
-
-| Tier | Meaning |
-|------|---------|
-| Production | Battle-tested, fully documented, breaking changes guarded |
-| Beta | Feature-complete, API may evolve |
-| Preview | Available for testing, not feature-complete |
-| Labs | Experimental, API unstable |

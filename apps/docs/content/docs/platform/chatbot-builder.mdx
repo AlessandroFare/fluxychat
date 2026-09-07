@@ -1,0 +1,20 @@
+---
+title: Chatbot builder
+description: Trigger-action rules stored as Worker workflows.
+---
+
+Console: `/chatbot-builder`. Saving a rule POSTs `/api/workflows`. A test run POSTs `/api/workflows/:id/run`. Same table as [Automations](/docs/guides/scheduled-workflows) if you already use that page.
+
+Triggers are event names (`message_received`, `user_joined`, and similar). Conditions are keyword lists. Actions are JSON the Worker stores (notify, invoke agent, ticket). Status starts as `draft`. Archive with PATCH `status: archived`.
+
+You need an admin JWT and an active project. Hosted does not eval tenant JavaScript in the room. This is a persisted rule list.
+
+```bash
+curl -X POST "$WORKER/api/workflows" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Welcome","triggerType":"user_joined","actions":[{"type":"send_message","params":{"text":"Hi"}}]}'
+```
+
+- [Platform modules](/docs/features/platform-status)
+- [Agents](/docs/core/agents)

@@ -1,18 +1,30 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Plus, Trash2, Play, ListChecks, GitBranch,
   Zap, Filter, ArrowRight, CheckCircle2, XCircle,
-  Clock, Users, MessageSquare, Ticket, Bell,
+  Clock, Users, MessageSquare, Ticket, Bell, Loader2,
 } from "lucide-react";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
+import { ConsoleProjectRoomBar } from "../components/console-project-room-bar";
+import { ConsoleFeedback } from "../components/console-feedback";
 import { Panel } from "~/components/ui/Panel";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
-import { createChatbotBuilder, type ChatbotEventType } from "@fluxy-chat/sdk";
+import type { ChatbotEventType } from "@fluxy-chat/sdk";
+import { useDashboardSession } from "../components/dashboard-session";
+import { messageFromUnknown } from "@/lib/error-message";
+import {
+  createWorkflow,
+  listWorkflows,
+  runWorkflow,
+  updateWorkflow,
+  type WorkflowDefinition,
+} from "@/lib/automations-client";
 
 const EVENTS: { value: ChatbotEventType; label: string; icon: typeof Zap }[] = [
   { value: "message_received", label: "Message received", icon: MessageSquare },
@@ -33,11 +45,33 @@ const ACTIONS = [
   { value: "log_event", label: "Log event", icon: Filter },
 ];
 
-type RuleEntry = { name: string; event: ChatbotEventType; action: string; conditions: string[]; priority: number };
+function workflowEvent(wf: WorkflowDefinition): ChatbotEventType {
+  const fromConfig = wf.triggerConfig?.event;
+  if (typeof fromConfig === "string") return fromConfig as ChatbotEventType;
+  return (wf.triggerType as ChatbotEventType) || "message_received";
+}
+
+function workflowAction(wf: WorkflowDefinition): string {
+  const first = wf.actions?.[0];
+  if (first && typeof first.type === "string") return first.type;
+  return "send_message";
+}
+
+function workflowConditions(wf: WorkflowDefinition): string[] {
+  const raw = wf.conditions?.keywords;
+  if (Array.isArray(raw)) return raw.filter((item): item is string => typeof item === "string");
+  const contains = wf.conditions?.textContains;
+  return typeof contains === "string" && contains ? [contains] : [];
+}
 
 export default function ChatbotBuilderPage() {
-  const builder = useMemo(() => createChatbotBuilder(), []);
-  const [rules, setRules] = useState<RuleEntry[]>([]);
+  const { adminJwt } = useDashboardSession();
+  const token = adminJwt.trim();
+  const [workflows, setWorkflows] = useState<WorkflowDefinition[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [event, setEvent] = useState<ChatbotEventType>("message_received");
   const [action, setAction] = useState("send_message");
@@ -46,39 +80,78 @@ export default function ChatbotBuilderPage() {
   const [log, setLog] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<ChatbotEventType>("message_received");
 
-  function handleAddRule() {
-    if (!name.trim()) return;
-    builder.addRule({
-      name: name.trim(),
-      priority: rules.length + 1,
-      enabled: true,
-      trigger: { type: event },
-      conditions: conditions.map((c) => ({ field: "text", operator: "contains" as const, value: c })),
-      actions: [{ type: action as any, params: { text: `Auto: ${name}` } }],
-    });
-    setRules([...rules, { name: name.trim(), event, action, conditions: [...conditions], priority: rules.length + 1 }]);
-    setName("");
-    setConditions([]);
-    setConditionInput("");
-    setLog((prev) => [`✅ Rule "${name.trim()}" added (on ${event} → ${action}${conditions.length ? `, ${conditions.length} condition(s)` : ""})`, ...prev.slice(0, 29)]);
-  }
+  const loadWorkflows = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await listWorkflows(token);
+      setWorkflows(rows.filter((wf) => wf.status !== "archived"));
+    } catch (err) {
+      setError(messageFromUnknown(err, "Failed to load rules"));
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
-  function handleRemoveRule(index: number) {
-    const r = rules[index];
-    if (r) {
-      // Find the actual rule by name in the builder
-      const allRules = builder.listRules();
-      const match = allRules.find((x) => x.name === r.name);
-      if (match) builder.removeRule(match.id);
-      setRules(rules.filter((_, i) => i !== index));
-      setLog((prev) => [`🗑️ Rule "${r.name}" removed`, ...prev.slice(0, 29)]);
+  useEffect(() => {
+    void loadWorkflows();
+  }, [loadWorkflows]);
+
+  async function handleAddRule() {
+    if (!token || !name.trim()) return;
+    const ruleName = name.trim();
+    setBusy("create");
+    try {
+      const created = await createWorkflow(token, {
+        name: ruleName,
+        description: `Chatbot builder · ${event} → ${action}`,
+        triggerType: event,
+        triggerConfig: { source: "chatbot-builder", event },
+        conditions: { keywords: conditions, textContains: conditions[0] },
+        actions: [{ type: action, params: { text: `Auto: ${ruleName}` } }],
+      });
+      setName("");
+      setConditions([]);
+      setConditionInput("");
+      setNotice(`Rule saved as workflow ${created.id} (draft).`);
+      setLog((prev) => [`Saved "${ruleName}" on ${event} → ${action}`, ...prev.slice(0, 29)]);
+      await loadWorkflows();
+    } catch (err) {
+      setError(messageFromUnknown(err, "Failed to save rule"));
+    } finally {
+      setBusy(null);
     }
   }
 
-  function handleTrigger(eventType: ChatbotEventType) {
-    builder.evaluateTrigger({ type: eventType }, { userId: "demo-user", text: `Test trigger for ${eventType}` }).then((triggered) => {
-      setLog((prev) => [`⚡ Triggered "${eventType}" → ${triggered.length} matching rule(s)`, ...prev.slice(0, 29)]);
-    });
+  async function handleRemoveRule(workflowId: string, ruleName: string) {
+    if (!token) return;
+    setBusy(`rm-${workflowId}`);
+    try {
+      await updateWorkflow(token, workflowId, { status: "archived" });
+      setLog((prev) => [`Archived "${ruleName}"`, ...prev.slice(0, 29)]);
+      await loadWorkflows();
+    } catch (err) {
+      setError(messageFromUnknown(err, "Failed to archive rule"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleTrigger(eventType: ChatbotEventType) {
+    if (!token) return;
+    const matches = workflows.filter((wf) => workflowEvent(wf) === eventType);
+    for (const wf of matches) {
+      try {
+        const result = await runWorkflow(token, wf.id, { event: eventType, text: `Test trigger for ${eventType}` });
+        setLog((prev) => [`Ran "${wf.name}" → execution ${result.id}`, ...prev.slice(0, 29)]);
+      } catch (err) {
+        setLog((prev) => [messageFromUnknown(err, `Run failed for ${wf.name}`), ...prev.slice(0, 29)]);
+      }
+    }
+    if (matches.length === 0) {
+      setLog((prev) => [`No persisted rules for ${eventType}`, ...prev.slice(0, 29)]);
+    }
   }
 
   function addCondition() {
@@ -89,24 +162,29 @@ export default function ChatbotBuilderPage() {
     }
   }
 
-  const filteredRules = rules.filter((r) => r.event === selectedEvent);
+  const filteredRules = workflows.filter((wf) => workflowEvent(wf) === selectedEvent);
 
   return (
     <ConsoleShell>
       <ConsolePageHeader
-        title="Chatbot Builder"
-        description="Visual trigger-action rule engine: create rules with conditions, test them, and see execution logs. SDK-powered in-memory demo."
+        title="Chatbot builder"
+        description="Rules save as workflows on the project. A test run starts a real execution, same store as Automations."
       />
+      <ConsoleProjectRoomBar requireProject hint="Saved as draft workflows on the active project." />
+      <ConsoleFeedback error={error} notice={notice} />
 
+      {!token ? (
+        <Panel className="p-6 text-sm text-muted-foreground">
+          Admin JWT required. <Link href="/projects" className="font-medium underline-offset-2 hover:underline">Projects</Link>.
+        </Panel>
+      ) : (
       <div className="mt-6 grid gap-6 lg:grid-cols-[420px_1fr]">
-        {/* Left: Rule builder */}
         <div className="space-y-4">
           <Panel className="p-4">
             <h3 className="flex items-center gap-2 text-sm font-semibold"><Plus className="h-4 w-4" /> Create rule</h3>
             <div className="mt-3 space-y-3">
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Rule name (e.g. 'Welcome new users')" />
 
-              {/* Event selector */}
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">When this happens:</label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -124,7 +202,6 @@ export default function ChatbotBuilderPage() {
                 </div>
               </div>
 
-              {/* Action selector */}
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Do this:</label>
                 <select className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" value={action} onChange={(e) => setAction(e.target.value)}>
@@ -132,7 +209,6 @@ export default function ChatbotBuilderPage() {
                 </select>
               </div>
 
-              {/* Conditions */}
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Conditions (optional):</label>
                 <div className="flex gap-1.5">
@@ -153,23 +229,23 @@ export default function ChatbotBuilderPage() {
                 )}
               </div>
 
-              <Button onClick={handleAddRule} size="sm" className="w-full">
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add rule
+              <Button onClick={() => void handleAddRule()} size="sm" className="w-full" disabled={busy === "create" || !name.trim()}>
+                {busy === "create" ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
+                Save rule
               </Button>
             </div>
           </Panel>
 
-          {/* Trigger test panel */}
           <Panel className="p-4">
             <h4 className="flex items-center gap-2 text-sm font-semibold"><Play className="h-4 w-4" /> Test events</h4>
-            <p className="text-xs text-muted-foreground mt-1">Click a button to simulate an event and see which rules fire.</p>
+            <p className="text-xs text-muted-foreground mt-1">Runs matching workflows on the Worker (creates an execution row).</p>
             <div className="mt-3 grid grid-cols-2 gap-1.5">
               {EVENTS.map((e) => {
                 const Icon = e.icon;
-                const count = rules.filter((r) => r.event === e.value).length;
+                const count = workflows.filter((wf) => workflowEvent(wf) === e.value).length;
                 return (
                   <button key={e.value} type="button"
-                    onClick={() => handleTrigger(e.value)}
+                    onClick={() => void handleTrigger(e.value)}
                     className="flex items-center justify-between gap-1 rounded-md border border-border bg-muted/20 px-2.5 py-1.5 text-xs hover:bg-muted/40 transition-colors">
                     <span className="flex items-center gap-1.5">
                       <Icon className="h-3 w-3 text-muted-foreground" />
@@ -183,14 +259,14 @@ export default function ChatbotBuilderPage() {
           </Panel>
         </div>
 
-        {/* Right: Rules list + flow visualization */}
         <div className="space-y-4">
-          {/* Flow visualization header */}
           <div className="flex items-center gap-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><ListChecks className="h-4 w-4" /> Active rules ({rules.length})</h3>
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <ListChecks className="h-4 w-4" /> Active rules ({loading ? "…" : workflows.length})
+            </h3>
             <div className="flex gap-1">
               {EVENTS.map((e) => {
-                const count = rules.filter((r) => r.event === e.value).length;
+                const count = workflows.filter((wf) => workflowEvent(wf) === e.value).length;
                 if (count === 0) return null;
                 return (
                   <button key={e.value} type="button"
@@ -203,81 +279,80 @@ export default function ChatbotBuilderPage() {
             </div>
           </div>
 
-          {/* Flow visualization */}
           {filteredRules.length > 0 && (
             <Panel className="p-4">
               <h4 className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
                 <GitBranch className="h-3.5 w-3.5" /> Flow: {EVENTS.find((e) => e.value === selectedEvent)?.label}
               </h4>
               <div className="space-y-2">
-                {filteredRules.map((r, i) => (
-                  <div key={i} className="relative">
-                    {/* Connector */}
-                    {i > 0 && (
-                      <div className="absolute -top-2 left-3 h-2 w-px bg-border" aria-hidden />
-                    )}
-                    <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 p-3">
-                      {/* Trigger node */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 ring-1 ring-blue-500/20">
-                          <Zap className="h-4 w-4 text-blue-400" />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground max-w-[60px] truncate">{r.event.replace(/_/g, " ")}</span>
-                      </div>
-
-                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-
-                      {/* Conditions (if any) */}
-                      {r.conditions.length > 0 && (
-                        <>
-                          <div className="flex flex-col gap-0.5">
-                            {r.conditions.map((c, j) => (
-                              <Badge key={j} variant="outline" className="text-[9px]">
-                                <Filter className="h-2.5 w-2.5 mr-0.5" /> {c}
-                              </Badge>
-                            ))}
-                          </div>
-                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        </>
+                {filteredRules.map((wf, i) => {
+                  const wfEvent = workflowEvent(wf);
+                  const wfAction = workflowAction(wf);
+                  const wfConditions = workflowConditions(wf);
+                  return (
+                    <div key={wf.id} className="relative">
+                      {i > 0 && (
+                        <div className="absolute -top-2 left-3 h-2 w-px bg-border" aria-hidden />
                       )}
-
-                      {/* Action node */}
-                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/20 shrink-0">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 p-3">
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 ring-1 ring-blue-500/20">
+                            <Zap className="h-4 w-4 text-blue-400" />
+                          </div>
+                          <span className="text-[10px] text-muted-foreground max-w-[60px] truncate">{wfEvent.replace(/_/g, " ")}</span>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium truncate">{r.name}</p>
-                          <p className="text-[10px] text-muted-foreground capitalize truncate">{r.action.replace(/_/g, " ")}</p>
+                        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        {wfConditions.length > 0 && (
+                          <>
+                            <div className="flex flex-col gap-0.5">
+                              {wfConditions.map((c) => (
+                                <Badge key={c} variant="outline" className="text-[9px]">
+                                  <Filter className="h-2.5 w-2.5 mr-0.5" /> {c}
+                                </Badge>
+                              ))}
+                            </div>
+                            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          </>
+                        )}
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/20 shrink-0">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate">{wf.name}</p>
+                            <p className="text-[10px] text-muted-foreground capitalize truncate">{wfAction.replace(/_/g, " ")} · {wf.status}</p>
+                          </div>
                         </div>
+                        <button
+                          onClick={() => void handleRemoveRule(wf.id, wf.name)}
+                          disabled={busy === `rm-${wf.id}`}
+                          className="shrink-0 text-muted-foreground hover:text-red-500 p-1"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-
-                      {/* Remove */}
-                      <button onClick={() => handleRemoveRule(rules.indexOf(r))}
-                        className="shrink-0 text-muted-foreground hover:text-red-500 p-1">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Panel>
           )}
 
-          {filteredRules.length === 0 && rules.length > 0 && (
+          {filteredRules.length === 0 && workflows.length > 0 && (
             <Panel className="p-6 text-center">
-              <p className="text-sm text-muted-foreground">No rules for "{EVENTS.find((e) => e.value === selectedEvent)?.label}". Select a different event.</p>
+              <p className="text-sm text-muted-foreground">No rules for &quot;{EVENTS.find((e) => e.value === selectedEvent)?.label}&quot;. Select a different event.</p>
             </Panel>
           )}
 
-          {rules.length === 0 && (
+          {workflows.length === 0 && (
             <Panel className="p-6 text-center">
               <p className="text-sm text-muted-foreground">No rules yet. Create one using the panel on the left.</p>
-              <p className="text-xs text-muted-foreground mt-1">Rules define what happens when an event fires.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Same store as <Link href="/automations" className="underline underline-offset-2">Automations</Link>.
+              </p>
             </Panel>
           )}
 
-          {/* Activity log */}
           <div>
             <h4 className="text-sm font-semibold mb-2">Activity log</h4>
             <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
@@ -288,6 +363,7 @@ export default function ChatbotBuilderPage() {
           </div>
         </div>
       </div>
+      )}
     </ConsoleShell>
   );
 }

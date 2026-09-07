@@ -13,7 +13,7 @@ const COLLAB_FEATURES = [
     color: "text-indigo-400",
     bg: "bg-indigo-500/10",
     border: "border-indigo-500/30",
-    desc: "Infinite canvas with Excalidraw. Real-time sync via CRDT.",
+    desc: "Infinite canvas on the room Yjs doc. Excalidraw is the local renderer, not a second backend.",
     preview: "whiteboard",
   },
   {

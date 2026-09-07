@@ -15,8 +15,11 @@ export default function SubprocessorsPage() {
       <h1 className="font-heading text-3xl font-bold tracking-tight">Subprocessors</h1>
       <p className="mt-3 text-sm text-muted-foreground">
         Hosted FluxyChat may use the processors below. Self-host in your Cloudflare account if you
-        do not want Clerk, Stripe, or our LLM path. This is not a DPA. A downloadable DPA is a later
-        legal deliverable.
+        do not want Clerk, Stripe, or our LLM path. Standard DPA:{" "}
+        <a className="underline underline-offset-2" href="/dpa">
+          /dpa
+        </a>
+        . A signed PDF with custom clauses is only with a written MSA.
       </p>
       <ul className="mt-8 space-y-4">
         {SUB_PROCESSORS.map((row) => (

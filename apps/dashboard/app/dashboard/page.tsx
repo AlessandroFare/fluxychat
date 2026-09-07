@@ -267,12 +267,12 @@ export default function DashboardOverviewPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 font-heading text-sm font-semibold text-foreground">Labs</h2>
+        <h2 className="mb-3 font-heading text-sm font-semibold text-foreground">Platform</h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          Stream, IoT, fleet, industries, and other verticals live in one catalog so the main console stays Projects → Rooms → Agents.
+          Stream, IoT, fleet, industries, and the rest live in one catalog so the main console stays Projects, Rooms, Agents.
         </p>
         <Button asChild variant="outline" size="sm">
-          <Link href="/labs">Open labs catalog</Link>
+          <Link href="/labs">Open platform catalog</Link>
         </Button>
       </section>
     </ConsoleShell>

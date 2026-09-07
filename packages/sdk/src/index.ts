@@ -1989,6 +1989,7 @@ export {
   syncWorkflowEventsToWorker,
   type CapabilityClient,
   type CapabilityClientConfig,
+  type CapabilitySnapshot,
   type PublishCapabilityInput,
 } from "./capability-client";
 

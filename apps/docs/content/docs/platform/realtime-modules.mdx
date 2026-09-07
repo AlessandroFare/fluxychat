@@ -13,6 +13,9 @@ All modules share the same Worker, Durable Object rooms, D1 persistence, and Web
   <Card title="Game" description="Session messaging via game client." href="/docs/platform/game" />
   <Card title="IoT" description="Device and operator channels." href="/docs/platform/iot" />
   <Card title="Fleet" description="Multi-tenant operator coordination." href="/docs/platform/fleet" />
+  <Card title="Edu" description="Polls and breakouts on the classroom room." href="/docs/platform/edu" />
+  <Card title="Chatbot builder" description="Persisted trigger-action workflows." href="/docs/platform/chatbot-builder" />
+  <Card title="Marketplace" description="Agent templates and MCP apps." href="/docs/platform/marketplace" />
 </Cards>
 
 ## Chat (core)
@@ -57,7 +60,7 @@ See [Platform index](/docs/platform) and [Packages: SDK](/docs/packages/sdk).
 
 ## Live room events (`server_event` + `capability_event`)
 
-Vertical and labs modules fan out typed frames on the **same room WebSocket** as chat. Subscribe with:
+Industry and live-workspace modules fan out typed frames on the **same room WebSocket** as chat. Subscribe with:
 
 ```ts
 const conn = client.connectRoom("classroom:42");

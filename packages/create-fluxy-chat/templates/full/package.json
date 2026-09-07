@@ -17,8 +17,8 @@
     "postinstall": "node scripts/hoist-fluxy-sdk.mjs"
   },
   "dependencies": {
-    "@fluxy-chat/react": "^0.1.6",
-    "@fluxy-chat/sdk": "^0.6.8",
+    "@fluxy-chat/react": "^0.1.7",
+    "@fluxy-chat/sdk": "^0.6.10",
     "@fluxy-chat/ui": "^0.1.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -41,7 +41,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@fluxy-chat/sdk": "^0.6.8"
+      "@fluxy-chat/sdk": "^0.6.10"
     }
   }
 }

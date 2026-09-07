@@ -3,7 +3,7 @@
  * Retention numbers match Worker defaults; change here when product policy changes.
  */
 
-export const PRIVACY_UPDATED = "May 2026";
+export const PRIVACY_UPDATED = "September 2026";
 
 export const RETENTION_DEFAULTS = [
   { label: "Messages", detail: "365 days by default; soft-deleted rows are purged on schedule" },

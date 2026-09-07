@@ -8,7 +8,7 @@ export function generatePackageJson(
   config: ProjectConfig,
 ): Record<string, unknown> {
   const deps: Record<string, string> = {
-    "@fluxy-chat/sdk": "latest",
+    "@fluxy-chat/sdk": "^0.6.10",
   };
 
   const devDeps: Record<string, string> = {

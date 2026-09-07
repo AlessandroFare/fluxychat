@@ -2,6 +2,7 @@ import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
 
 const workerUrl = import.meta.env.VITE_FLUXYCHAT_WORKER_URL;
 const token = import.meta.env.VITE_FLUXYCHAT_MEMBER_JWT;
+const publishableKey = import.meta.env.VITE_FLUXYCHAT_PUBLISHABLE_KEY;
 const roomId = import.meta.env.VITE_FLUXYCHAT_ROOM_ID || "general";
 
 export function App() {
@@ -13,6 +14,7 @@ export function App() {
         workerUrl={workerUrl}
         token={token}
         guest={!token}
+        publishableKey={publishableKey}
         theme="default"
         height={520}
       />

@@ -1,0 +1,21 @@
+---
+title: Web3 rooms
+description: SIWE on the Worker. Wallet-shaped user ids. Not a chain.
+---
+
+Console: `/web3`. Sign in with an injected wallet (EIP-1193). The Worker issues a nonce, you `personal_sign`, then you get a member JWT whose `sub` is the address.
+
+| Who | Route |
+|-----|--------|
+| Console | `GET/POST /admin/auth/wallet` with admin JWT |
+| Your backend | `GET/POST /auth/wallet` with `X-Fluxy-Api-Key: fc_...` |
+
+FluxyChat does not run a chain, mint tokens, or custody keys. Optional address allowlist: `GET/POST /admin/auth/wallet/allowlist` (empty = any verified wallet). NFT/balance gates stay on your RPC if you need them.
+
+```bash
+curl "$WORKER/auth/wallet/nonce?address=0xabc..." \
+  -H "X-Fluxy-Api-Key: $FC_KEY"
+```
+
+- [Auth JWT](/docs/guides/auth-jwt)
+- [Visibility](/docs/guides/role-scoped-visibility)

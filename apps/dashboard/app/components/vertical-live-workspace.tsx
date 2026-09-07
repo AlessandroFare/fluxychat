@@ -9,11 +9,15 @@ import {
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import {
   checkInHybridEvent,
+  closeLivePoll,
+  closeRoomBreakout,
   createHybridEvent,
   createLiveStageEvent,
   createRoomBreakout,
   createRoomPoll,
+  getLivePollResults,
   goLiveStageEvent,
+  listRoomBreakouts,
 } from "@/lib/vertical-live-client";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -57,6 +61,8 @@ export function VerticalLiveWorkspace({
   const [feed, setFeed] = useState<LiveFeedItem[]>([]);
   const [pollTitle, setPollTitle] = useState("Quick knowledge check");
   const [breakoutName, setBreakoutName] = useState("Group A");
+  const [breakouts, setBreakouts] = useState<Array<{ id: string; name: string; memberCount: number }>>([]);
+  const [polls, setPolls] = useState<Array<{ id: string; title: string; closed?: boolean; options?: Array<{ text: string; votes: number }> }>>([]);
   const [stageTitle, setStageTitle] = useState("Main stage keynote");
   const [hybridEventId, setHybridEventId] = useState<string | null>(null);
   const [liveEventId, setLiveEventId] = useState<string | null>(null);
@@ -72,6 +78,12 @@ export function VerticalLiveWorkspace({
     onActivity?.(label);
   }, [onActivity]);
 
+  const refreshBreakouts = useCallback(async () => {
+    if (!token || !roomId) return;
+    const result = await listRoomBreakouts(token, roomId);
+    setBreakouts(result.breakouts ?? []);
+  }, [token, roomId]);
+
   useEffect(() => {
     setHybridEventId(null);
     setLiveEventId(null);
@@ -79,7 +91,10 @@ export function VerticalLiveWorkspace({
     setFeed([]);
     setNotice(null);
     setError(null);
-  }, [roomId, verticalId]);
+    setPolls([]);
+    setBreakouts([]);
+    if (verticalId === "edu") void refreshBreakouts();
+  }, [roomId, verticalId, refreshBreakouts]);
 
   async function publishCapability(extra?: Record<string, unknown>) {
     if (!capabilityClient) throw new Error("Sign in to publish capability events");
@@ -88,7 +103,7 @@ export function VerticalLiveWorkspace({
       roomId,
       vertical: verticalId === "events" ? "event" : verticalId,
       type,
-      actor: { id: "vertical-studio", type: "user", role: "admin" },
+      actor: { id: "console", type: "user", role: "member" },
       idempotencyKey: `${type}-${roomId}-${Date.now()}`,
       payload: extra ?? {},
     });
@@ -121,7 +136,7 @@ export function VerticalLiveWorkspace({
           Live workspace
         </CardTitle>
         <CardDescription>
-          Production Worker calls on room <span className="font-mono text-xs">{roomId}</span>. Polls, breakouts, stage, hybrid check-in and capability events fan out on the room WebSocket.
+          Calls hit room <span className="font-mono text-xs">{roomId}</span>. Polls and breakouts land on the same WebSocket as chat.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -129,6 +144,7 @@ export function VerticalLiveWorkspace({
         {notice ? <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">{notice}</p> : null}
 
         {showEdu ? (
+          <>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-border p-4">
               <div className="flex items-center gap-2">
@@ -148,12 +164,45 @@ export function VerticalLiveWorkspace({
                     options: ["A", "B", "C", "D"],
                   });
                   if (!result.ok) throw new Error(result.error || "poll_failed");
-                  pushFeed(`Poll created · ${result.poll?.id ?? "ok"}`);
-                  setNotice("Poll is open. Votes fan out as poll.* server events.");
+                  const pollId = result.id ?? result.poll?.id;
+                  if (!pollId) throw new Error("poll_missing_id");
+                  const tally = await getLivePollResults(token, pollId);
+                  setPolls((prev) => [{
+                    id: pollId,
+                    title: tally.poll?.title ?? pollTitle,
+                    closed: tally.poll?.isClosed,
+                    options: tally.options,
+                  }, ...prev]);
+                  pushFeed(`Poll ${pollId.slice(0, 8)}`);
+                  setNotice("Poll is open. Learners vote from the room. You cannot vote on your own poll.");
                 })}
               >
                 {busy === "poll" ? <Loader2 className="size-3 animate-spin" /> : null}
                 Create poll
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-3 ml-2"
+                disabled={!!busy}
+                onClick={() => void runAction("attend", async () => {
+                  if (!capabilityClient) throw new Error("Sign in to record attendance");
+                  const result = await capabilityClient.publish({
+                    roomId,
+                    vertical: "edu",
+                    type: "attendance.heartbeat",
+                    actor: { id: "console", type: "user", role: "member" },
+                    idempotencyKey: `attendance.heartbeat-${roomId}-${Date.now()}`,
+                    payload: { source: "console" },
+                  });
+                  if (!result.ok) throw new Error(result.error || "attendance_failed");
+                  pushFeed("Attendance heartbeat");
+                  setNotice("Heartbeat stored on the room. Counts show in the metrics row.");
+                })}
+              >
+                {busy === "attend" ? <Loader2 className="size-3 animate-spin" /> : null}
+                Mark attendance
               </Button>
             </div>
             <div className="rounded-xl border border-border p-4">
@@ -171,8 +220,9 @@ export function VerticalLiveWorkspace({
                 onClick={() => void runAction("breakout", async () => {
                   const result = await createRoomBreakout(token, roomId, breakoutName);
                   if (!result.ok) throw new Error(result.error || "breakout_failed");
+                  await refreshBreakouts();
                   pushFeed(`Breakout · ${result.breakout?.name ?? breakoutName}`);
-                  setNotice("Breakout announced via edu.breakout.created server event.");
+                  setNotice("Breakout is open. Close it from the list below.");
                 })}
               >
                 {busy === "breakout" ? <Loader2 className="size-3 animate-spin" /> : null}
@@ -180,6 +230,75 @@ export function VerticalLiveWorkspace({
               </Button>
             </div>
           </div>
+          {(polls.length > 0 || breakouts.length > 0) ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-border p-4">
+                <p className="text-sm font-medium">Open polls</p>
+                {polls.length === 0 ? (
+                  <p className="mt-2 text-xs text-muted-foreground">Create a poll to see tallies here.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {polls.map((poll) => (
+                      <li key={poll.id} className="rounded-md border border-border px-2 py-2 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium">{poll.title}</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={!!busy || poll.closed}
+                            onClick={() => void runAction(`close-${poll.id}`, async () => {
+                              const result = await closeLivePoll(token, poll.id);
+                              if (!result.ok) throw new Error(result.error || "close_failed");
+                              const tally = await getLivePollResults(token, poll.id);
+                              setPolls((prev) => prev.map((row) => row.id === poll.id
+                                ? { ...row, closed: true, options: tally.options }
+                                : row));
+                              setNotice("Poll closed.");
+                            })}
+                          >
+                            Close
+                          </Button>
+                        </div>
+                        <p className="mt-1 text-muted-foreground">
+                          {(poll.options ?? []).map((opt) => `${opt.text} ${opt.votes}`).join(" · ") || "No votes yet"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="rounded-xl border border-border p-4">
+                <p className="text-sm font-medium">Breakouts</p>
+                {breakouts.length === 0 ? (
+                  <p className="mt-2 text-xs text-muted-foreground">No open groups on this room.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {breakouts.map((group) => (
+                      <li key={group.id} className="flex items-center justify-between gap-2 text-xs">
+                        <span>{group.name} · {group.memberCount} people</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={!!busy}
+                          onClick={() => void runAction(`end-${group.id}`, async () => {
+                            const result = await closeRoomBreakout(token, roomId, group.id);
+                            if (!result.ok) throw new Error(result.error || "close_failed");
+                            await refreshBreakouts();
+                            setNotice("Breakout closed.");
+                          })}
+                        >
+                          End
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ) : null}
+          </>
         ) : null}
 
         {showEvents ? (

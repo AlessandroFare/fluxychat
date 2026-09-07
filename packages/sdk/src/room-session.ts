@@ -681,10 +681,10 @@ export function startFluxyRoomSession(
       try {
         const next = await client.fetchMessages(trimmedRoomId, { limit: historyLimit });
         if (active) {
-          setState({
-            messages: next,
+          setState((s) => ({
+            messages: mergeHistoryWithPendingDelivery(s.messages, next),
             hasMore: next.length >= historyLimit,
-          });
+          }));
         }
       } catch {
         /* ignore */

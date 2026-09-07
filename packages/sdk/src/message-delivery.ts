@@ -190,5 +190,11 @@ export function mergeHistoryWithPendingDelivery(
       m.clientMessageId &&
       !historyClientIds.has(m.clientMessageId),
   );
-  return mergeMessagesChronological(inflight, history as FluxyChatMessageWithDelivery[]);
+  const live = existing.filter(
+    (m) => m.deliveryStatus !== "pending" && m.deliveryStatus !== "failed",
+  );
+  return mergeMessagesChronological(
+    [...live, ...inflight],
+    history as FluxyChatMessageWithDelivery[],
+  );
 }

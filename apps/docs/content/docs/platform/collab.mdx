@@ -3,12 +3,14 @@ title: Collab
 description: Yjs and Tiptap on the room Durable Object.
 ---
 
-Collab is the **same room WebSocket** as chat (binary Yjs frames). Scaffold:
+Collab is the same room WebSocket as chat (binary Yjs frames). Scaffold:
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room
 ```
 
 React: `FluxyYjsProvider` + `useStorage` from `@fluxy-chat/sdk/yjs`. See [Storage](/docs/core/storage).
+
+The dashboard canvas can paint with Excalidraw in the browser. The document is still Yjs on the room. Excalidraw is not a second backend.
 
 Do not add Liveblocks, PartyKit, or a second CRDT vendor.

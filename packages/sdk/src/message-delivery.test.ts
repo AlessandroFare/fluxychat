@@ -152,4 +152,53 @@ describe("message-delivery", () => {
     expect(merged).toHaveLength(2);
     expect(merged.some((m) => m.clientMessageId === "cmsg_inflight")).toBe(true);
   });
+
+  it("mergeHistoryWithPendingDelivery keeps a live streaming agent row missing from REST", () => {
+    const streaming = {
+      id: 42,
+      roomId: "r1",
+      userId: "agent-1",
+      content: "Hello from the agent",
+      createdAt: "2026-01-01T00:00:01Z",
+      streaming: true,
+      deliveryStatus: "sent" as const,
+    };
+    const merged = mergeHistoryWithPendingDelivery(
+      [streaming],
+      [{
+        id: 1,
+        roomId: "r1",
+        userId: "alice",
+        content: "hi",
+        createdAt: "2026-01-01T00:00:00Z",
+      }],
+    );
+    expect(merged.some((m) => m.id === 42 && m.content === "Hello from the agent")).toBe(true);
+    expect(merged.find((m) => m.id === 42)?.streaming).toBe(true);
+  });
+
+  it("mergeHistoryWithPendingDelivery does not replace streamed tokens with an empty REST row", () => {
+    const streaming = {
+      id: 9,
+      roomId: "r1",
+      userId: "agent-1",
+      content: "partial tokens already shown",
+      createdAt: "2026-01-01T00:00:00Z",
+      streaming: true,
+      deliveryStatus: "sent" as const,
+    };
+    const merged = mergeHistoryWithPendingDelivery(
+      [streaming],
+      [{
+        id: 9,
+        roomId: "r1",
+        userId: "agent-1",
+        content: "",
+        createdAt: "2026-01-01T00:00:00Z",
+      }],
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.content).toBe("partial tokens already shown");
+    expect(merged[0]?.streaming).toBe(true);
+  });
 });

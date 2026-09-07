@@ -72,7 +72,7 @@ export default function StreamPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="FluxyStream"
-        description="Live video broadcasting with integrated chat, polls & viewer analytics"
+        description="Live event chat overlays on the same Worker. WHIP/HLS ingest needs Cloudflare Stream secrets on the Worker."
         actions={
           <button
             type="button"
@@ -87,16 +87,16 @@ export default function StreamPage() {
       <ConsoleProjectRoomBar
         requireProject
         preferRoom
-        hint="Stream events are scoped to your project. Create a stream to bind chat and polls to a live room."
+        hint="Chat and polls bind to the room. Ingest (WHIP/HLS) is Cloudflare Stream, not a second FluxyChat socket fleet."
       />
 
       <div className="flex flex-1 flex-col gap-4 p-4 pt-2">
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Interactive demo with all FluxyStream features →
+            SDK playground (local overlay state). Production streams are this page + Worker live events.
           </p>
-          <a href="/stream/demo" className="text-xs font-medium text-brand underline underline-offset-2">
-            Open demo
+          <a href="/stream/demo" className="text-xs font-medium text-muted-foreground underline underline-offset-2">
+            Open playground
           </a>
         </div>
         {loading ? (

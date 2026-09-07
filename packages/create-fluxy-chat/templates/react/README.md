@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Pin `@fluxy-chat/sdk@0.6.7` and `@fluxy-chat/react@0.1.6` once those versions are on npm.
+Pin `@fluxy-chat/sdk@0.6.10` and `@fluxy-chat/react@0.1.7`.
 
 ## Other paths
 

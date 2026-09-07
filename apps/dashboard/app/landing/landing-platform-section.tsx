@@ -19,7 +19,7 @@ const PLATFORM_PRIMITIVES = [
   { title: "Room kernel", body: "One WebSocket per room: messages, presence, client events, and server_event fan-out for polls, breakouts, and live stage." },
   { title: "Capability layer", body: "Attach polls, whiteboard, attendance, market data, or device shadow without standing up a second realtime backend." },
   { title: "Policy + audit", body: "RBAC, retention, consent gates, and signed event envelopes enforced on the worker before data leaves the room." },
-  { title: "Honest readiness", body: "Chat is production. Verticals are labeled labs or preview so the catalog matches what the console actually promotes." },
+  { title: "Console modules", body: "Collab, stream, voice, game, IoT, fleet, spatial, and industry studios run on the same Worker." },
 ] as const;
 
 const PRODUCT_ICONS = {
@@ -43,10 +43,10 @@ export function LandingPlatformSection() {
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-xs font-semibold uppercase text-zinc-500">One room primitive, many products</p>
           <h2 className="mt-3 text-balance font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Chat stays the core. The platform grows around it.
+            One room. Chat, collab, stream, and the rest.
           </h2>
           <p className="mt-4 text-pretty text-lg text-zinc-400">
-            Chat is the core. The same room kernel runs classrooms, care teams, live venues, and trading desks. Voice, stream, collab, and industry modules plug in with labeled readiness.
+            Chat, collab, stream, voice, game, IoT, fleet, spatial, and industry studios run on the same Durable Object. Hosted is open beta. Pin npm.
           </p>
         </div>
 
@@ -61,7 +61,7 @@ export function LandingPlatformSection() {
 
         <div className="mt-14 grid gap-8 lg:grid-cols-2">
           <div>
-            <h3 className="font-heading text-xl font-semibold text-white">Product suite</h3>
+            <h3 className="font-heading text-xl font-semibold text-white">Products</h3>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {products.map((entry) => {
                 const Icon = PRODUCT_ICONS[entry.id as keyof typeof PRODUCT_ICONS] ?? MessageSquare;
@@ -79,7 +79,7 @@ export function LandingPlatformSection() {
           </div>
 
           <div>
-            <h3 className="font-heading text-xl font-semibold text-white">Industry solutions</h3>
+            <h3 className="font-heading text-xl font-semibold text-white">Industries</h3>
             <div className="mt-4 grid gap-2">
               {industries.map((entry) => (
                 <ReadinessLinkRow key={entry.id} entry={entry} highlight={entry.id === "edu"} />

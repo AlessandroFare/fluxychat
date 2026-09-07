@@ -1,0 +1,22 @@
+---
+title: FluxyEdu
+description: Classroom on one room. Polls, breakouts, attendance. Video is LiveKit.
+---
+
+Console: `/edu`. The classroom is a normal room. Polls and breakouts go to Worker HTTP, then fan out on the room WebSocket.
+
+| Piece | API |
+|-------|-----|
+| Poll | `POST /polls`, then `GET /polls/:id`. Close with `POST /polls/:id/close`. You cannot vote on a poll you created. |
+| Breakout | `POST /rooms/:id/breakouts`, list with GET, close with POST on the breakout id |
+| Attendance | `attendance.heartbeat` capability events. Live counts: `GET /rooms/:id/capabilities/snapshot` |
+| Whiteboard | Yjs on the same room. [Collab](/docs/platform/collab) |
+| Grading agent | Draft only. A teacher publishes. |
+
+The live workspace on `/edu` runs those poll and breakout calls against the room you picked.
+
+Live video is not FluxyChat. Use LiveKit or similar. FERPA, COPPA, retention, and learner export are workspace settings. They are not defaults.
+
+- [Polls](/docs/core/polls)
+- [Vertical industries](/docs/platform/vertical-industries)
+- Gallery `--example polls`

@@ -14,8 +14,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "~/components/ui/dialog";
-import { createAppMarketplace, type AppManifest } from "@fluxy-chat/sdk";
-import { createProviderMarketplace, type LlmProvider, type LlmModel } from "@fluxy-chat/sdk";
+import { type LlmProvider } from "@fluxy-chat/sdk";
 import { useDashboardSession } from "../components/dashboard-session";
 import { useClerkUser } from "@/lib/clerk-user";
 import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
@@ -43,10 +42,14 @@ import {
   type McpAppCatalogEntry,
   type McpAppInstall,
 } from "@/lib/mcp-apps-client";
+import {
+  deleteProjectMarketplaceApp,
+  listProjectMarketplaceApps,
+  publishProjectMarketplaceApp,
+  type ProjectMarketplaceApp,
+} from "@/lib/marketplace-apps-client";
 
 /* ─── Provider helpers ─── */
-
-interface ProviderKey { id: string; providerId: string; key: string; label?: string; isActive: boolean; }
 
 const BUILTIN_PROVIDERS: LlmProvider[] = [
   { id: "openai", name: "OpenAI", models: [
@@ -67,13 +70,13 @@ const BUILTIN_PROVIDERS: LlmProvider[] = [
 /* ─── Page layout ─── */
 
 export default function MarketplacePage() {
-  const [tab, setTab] = useState<"apps" | "templates" | "providers" | "mcp-apps">("apps");
+  const [tab, setTab] = useState<"apps" | "templates" | "providers" | "mcp-apps">("templates");
 
   return (
     <ConsoleShell>
       <ConsolePageHeader
         title="Marketplace"
-        description="Publish, browse, and install agent templates, apps, and AI providers."
+        description="Agent templates and MCP apps on the Worker. Apps tab persists manifests per project."
       />
 
       <div role="tablist" className="mt-6 flex gap-1 border-b border-border">
@@ -108,39 +111,65 @@ export default function MarketplacePage() {
   );
 }
 
-/* ─── Apps (SDK demo) ─── */
+/* ─── Apps (Worker KV per project) ─── */
 
 function AppMarketplaceTab() {
-  const [store] = useState(() => createAppMarketplace());
-  const [apps, setApps] = useState<AppManifest[]>([]);
+  const { adminJwt } = useDashboardSession();
+  const token = adminJwt.trim();
+  const [apps, setApps] = useState<ProjectMarketplaceApp[]>([]);
   const [appName, setAppName] = useState("");
   const [appGrants, setAppGrants] = useState("chat:write");
-  const [installMsg, setInstallMsg] = useState("");
   const [search, setSearch] = useState("");
-  const [installed, setInstalled] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function handlePublish() {
-    if (!appName.trim()) return;
-    const manifest: AppManifest = {
-      appId: `app-${Date.now()}`,
-      name: appName.trim(),
-      version: "1.0.0",
-      description: `App ${appName.trim()}`,
-      developer: "demo-user",
-      permissions: appGrants.split(",").map((g) => g.trim() as any),
-      createdAt: Date.now(),
-    };
-    store.submitManifest(manifest);
-    store.approveApp(manifest.appId, "demo-reviewer");
-    setApps(store.getInstalledApps("demo-tenant").length > 0 ? [manifest] : [manifest]);
-    setAppName("");
-    setAppGrants("chat:write");
+  const load = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await listProjectMarketplaceApps(token);
+      setApps(data.apps ?? []);
+      setError(null);
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Failed to load apps"));
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function handlePublish() {
+    if (!token || !appName.trim()) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      await publishProjectMarketplaceApp(token, {
+        name: appName.trim(),
+        permissions: appGrants.split(",").map((g) => g.trim()).filter(Boolean),
+      });
+      setAppName("");
+      setAppGrants("chat:write");
+      setNotice("App saved on the Worker for this project.");
+      await load();
+    } catch (err: unknown) {
+      setError(messageFromUnknown(err, "Publish failed"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   const filtered = search ? apps.filter((a) => a.name.toLowerCase().includes(search.toLowerCase())) : apps;
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        Manifests persist in Worker KV for the active project (`/admin/marketplace/apps`). Agent
+        templates and MCP installs are separate tabs.
+      </p>
+      {!token ? <p className="text-sm text-muted-foreground">Admin JWT required.</p> : null}
+      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
       <Panel className="p-4">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <Package className="h-4 w-4" /> Publish a new app
@@ -148,7 +177,9 @@ function AppMarketplaceTab() {
         <div className="mt-3 flex flex-wrap gap-2">
           <Input value={appName} onChange={(e) => setAppName(e.target.value)} placeholder="App name" className="max-w-[160px]" />
           <Input value={appGrants} onChange={(e) => setAppGrants(e.target.value)} placeholder="grants: chat:write, chat:read" className="max-w-[200px] font-mono text-xs" />
-          <Button onClick={handlePublish} size="sm">Publish + approve</Button>
+          <Button onClick={() => void handlePublish()} size="sm" disabled={busy || !token}>
+            {busy ? "Saving…" : "Publish"}
+          </Button>
         </div>
       </Panel>
 
@@ -160,40 +191,33 @@ function AppMarketplaceTab() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.length === 0 ? (
           <p className="col-span-full text-sm text-muted-foreground">{apps.length === 0 ? "No published apps yet. Create one above." : "No matches."}</p>
-        ) : filtered.map((a) => {
-          const isInstalled = installed.has(a.appId);
-          return (
-            <Panel key={a.appId} className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="flex items-center gap-1.5 text-sm font-medium">
-                    <Store className="h-3.5 w-3.5" /> {a.name}
-                  </h4>
-                  <p className="text-xs text-muted-foreground">{a.description}</p>
-                  <p className="text-xs text-muted-foreground">v{a.version}</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    {a.permissions.map((g) => (
-                      <Badge key={g} variant="outline" className="text-[9px]">{g}</Badge>
-                    ))}
-                  </div>
-                </div>
-                <Button size="sm" variant={isInstalled ? "secondary" : "outline"}
-                  onClick={() => {
-                    if (isInstalled) return;
-                    store.installApp(a.appId, "demo-tenant", "demo-user");
-                    setInstalled((p) => new Set([...p, a.appId]));
-                    setInstallMsg(`"${a.name}" installed`);
-                  }}>
-                  {isInstalled ? <><CheckCircle2 className="h-3 w-3 mr-1" /> Installed</> : <><Download className="h-3 w-3 mr-1" /> Install</>}
-                </Button>
-              </div>
-            </Panel>
-          );
-        })}
+        ) : filtered.map((a) => (
+          <Panel key={a.appId} className="p-4">
+            <h4 className="flex items-center gap-1.5 text-sm font-medium">
+              <Store className="h-3.5 w-3.5" /> {a.name}
+            </h4>
+            <p className="text-xs text-muted-foreground">{a.description || "No description"}</p>
+            <p className="text-xs text-muted-foreground">v{a.version}</p>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {a.permissions.map((g) => (
+                <Badge key={g} variant="outline" className="text-[9px]">{g}</Badge>
+              ))}
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              onClick={() => {
+                void deleteProjectMarketplaceApp(token, a.appId).then(load).catch((err: unknown) => {
+                  setError(messageFromUnknown(err, "Delete failed"));
+                });
+              }}
+            >
+              <Trash2 className="h-3 w-3 mr-1" /> Remove
+            </Button>
+          </Panel>
+        ))}
       </div>
-      {installMsg && (
-        <p className="flex items-center gap-1.5 text-xs text-emerald-600"><CheckCircle2 className="h-3 w-3" /> {installMsg}</p>
-      )}
     </div>
   );
 }
@@ -787,109 +811,34 @@ function AgentTemplateDetail({
 /* ─── Providers (SDK demo) ─── */
 
 function ProviderMarketplaceTab() {
-  const [store] = useState(() => createProviderMarketplace());
-  const [providers, setProviders] = useState<LlmProvider[]>([]);
-  const [keys, setKeys] = useState<ProviderKey[]>([]);
-  const [keyInput, setKeyInput] = useState("");
-  const [keyLabel, setKeyLabel] = useState("");
-  const [selectedProvider, setSelectedProvider] = useState("openai");
-
-  useState(() => {
-    BUILTIN_PROVIDERS.forEach((p) => store.registerProvider(p));
-    setProviders(BUILTIN_PROVIDERS);
-  });
-
-  const registeredIds = new Set(providers.map((p) => p.id));
-  const selectedP = providers.find((p) => p.id === selectedProvider);
-
   return (
     <div className="space-y-6">
       <Panel className="p-4">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <Star className="h-4 w-4" /> Add your own API key
+          <Key className="h-4 w-4" /> LLM keys
         </h3>
-        <p className="text-xs text-muted-foreground mt-1">Keys stored in-memory. This is a client-side demo.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <select className="rounded-md border border-border bg-background px-3 py-2 text-sm" value={selectedProvider} onChange={(e) => setSelectedProvider(e.target.value)}>
-            {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <Input placeholder="sk-..." className="max-w-[200px] font-mono text-xs" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} />
-          <Input placeholder="Label (optional)" className="max-w-[120px]" value={keyLabel} onChange={(e) => setKeyLabel(e.target.value)} />
-          <Button size="sm" onClick={() => {
-            if (!keyInput.trim()) return;
-            const key = store.addKey(selectedProvider, keyInput.trim(), keyLabel.trim() || undefined);
-            setKeys((p) => [...p, key]);
-            setKeyInput(""); setKeyLabel("");
-          }}><Key className="h-3 w-3 mr-1" /> Save key</Button>
-        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Provider keys belong on the Worker, not in this tab. Store them under Agents → LLM keys.
+        </p>
+        <a
+          href="/agents/llm-keys"
+          className="mt-3 inline-flex text-sm font-medium text-brand underline underline-offset-2"
+        >
+          Open LLM keys
+        </a>
       </Panel>
-
-      {selectedP && (
-        <Panel className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className={`h-4 w-4 rounded-full ${selectedP.id === "openai" ? "bg-emerald-500" : selectedP.id === "anthropic" ? "bg-amber-500" : "bg-blue-500"}`} />
-            <h3 className="text-sm font-semibold">{selectedP.name}</h3>
-            <Badge variant="outline" className="text-[9px]">{selectedP.supportsStreaming ? "streaming" : ""}</Badge>
-          </div>
-          <div className="space-y-2">
-            {selectedP.models.map((m: LlmModel) => (
-              <div key={m.id} className="flex items-center justify-between rounded-md border border-border bg-muted/20 p-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium font-mono">{m.id}</span>
-                    <span className="text-xs text-muted-foreground">{m.name}</span>
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {m.capabilities.map((cap: string) => (
-                      <Badge key={cap} variant="outline" className="text-[9px]">{cap}</Badge>
-                    ))}
-                    <span className="text-[10px] text-muted-foreground">max {m.maxTokens.toLocaleString()} tokens</span>
-                  </div>
-                </div>
-                <div className="text-right shrink-0 ml-4">
-                  <p className="text-xs font-medium">${m.costPer1kInput}/1k in</p>
-                  <p className="text-xs text-muted-foreground">${m.costPer1kOutput}/1k out</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Panel>
-      )}
-
-      {keys.length > 0 && (
-        <Panel className="p-4">
-          <h3 className="flex items-center gap-2 text-sm font-semibold"><Key className="h-4 w-4" /> Saved keys ({keys.length})</h3>
-          <div className="mt-2 space-y-1.5">
-            {keys.map((k) => (
-              <div key={k.id} className="flex items-center justify-between rounded-md border border-border bg-muted/20 p-2.5">
-                <div className="min-w-0">
-                  <p className="text-xs font-mono truncate">{k.key.slice(0, 12)}...</p>
-                  <p className="text-[10px] text-muted-foreground">{k.providerId}{k.label ? ` · ${k.label}` : ""}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={k.isActive ? "default" : "outline"} className="text-[9px]">{k.isActive ? "active" : "inactive"}</Badge>
-                  <button onClick={() => { store.removeKey(k.id); setKeys((p) => p.filter((x) => x.id !== k.id)); }}>
-                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-red-500" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Panel>
-      )}
-
-      <details className="text-xs text-muted-foreground">
-        <summary className="cursor-pointer font-medium text-foreground">All registered providers</summary>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {providers.map((p) => (
-            <button key={p.id} onClick={() => setSelectedProvider(p.id)}
-              className={`rounded-md border p-2 text-left transition-colors ${p.id === selectedProvider ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20 hover:bg-muted/30"}`}>
+      <Panel className="p-4">
+        <h3 className="text-sm font-semibold">Catalog</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Reference pricing only. Billing is on the provider.</p>
+        <div className="mt-3 space-y-3">
+          {BUILTIN_PROVIDERS.map((p) => (
+            <div key={p.id} className="rounded-md border border-border p-3">
               <p className="text-sm font-medium">{p.name}</p>
-              <p className="text-[10px] text-muted-foreground">{p.models.length} models</p>
-            </button>
+              <p className="text-[10px] text-muted-foreground">{p.models.map((m) => m.id).join(" · ")}</p>
+            </div>
           ))}
         </div>
-      </details>
+      </Panel>
     </div>
   );
 }
@@ -1021,6 +970,22 @@ function McpAppsMarketplaceTab() {
                 )}
               </div>
               <p className="mt-2 flex-1 text-xs text-muted-foreground line-clamp-3">{app.description}</p>
+              {app.docsUrl ? (
+                <a
+                  href={app.docsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 text-[11px] underline underline-offset-2"
+                >
+                  Connect docs
+                </a>
+              ) : null}
+              {app.connectUrlEu ? (
+                <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                  EU {app.connectUrlEu}
+                  {app.connectUrlUs ? ` · US ${app.connectUrlUs}` : ""}
+                </p>
+              ) : null}
               <div className="mt-2 flex flex-wrap gap-1">
                 {app.tools.slice(0, 3).map((t) => (
                   <Badge key={t} variant="outline" className="text-[8px]">{t}</Badge>

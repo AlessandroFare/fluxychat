@@ -1,11 +1,16 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { canAccessRoom } from "../lib/room-access.js";
-import { publishCapabilityEvent, listCapabilityEvents } from "../lib/capability-platform.js";
+import {
+  publishCapabilityEvent,
+  listCapabilityEvents,
+  getCapabilitySnapshot,
+} from "../lib/capability-platform.js";
 
 /**
  * Capability platform HTTP routes:
  *   POST /rooms/:roomId/capabilities/events
  *   GET  /rooms/:roomId/capabilities/events
+ *   GET  /rooms/:roomId/capabilities/snapshot
  */
 export async function dispatchCapabilitiesRoutes(request, url, h) {
   const {
@@ -14,10 +19,11 @@ export async function dispatchCapabilitiesRoutes(request, url, h) {
     "env", "json", "corsHeaders", "verifyJwtAndGetContext", "logError", "requestLogCtx",
   ]);
 
+  const snapshotMatch = url.pathname.match(/^\/rooms\/([^/]+)\/capabilities\/snapshot$/);
   const eventsMatch = url.pathname.match(/^\/rooms\/([^/]+)\/capabilities\/events$/);
-  if (!eventsMatch) return null;
+  if (!snapshotMatch && !eventsMatch) return null;
 
-  const roomId = eventsMatch[1];
+  const roomId = decodeURIComponent((snapshotMatch || eventsMatch)[1]);
   const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
     if (err instanceof Response) throw err;
     logError("auth.jwt_verify_failed", err, requestLogCtx);
@@ -26,6 +32,13 @@ export async function dispatchCapabilitiesRoutes(request, url, h) {
   if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
 
   try {
+    if (snapshotMatch && request.method === "GET") {
+      const result = await getCapabilitySnapshot(env, { roomId }, auth);
+      const status = result.ok ? 200 : result.error === "forbidden" ? 403 : 400;
+      return json(result, { status, headers: corsHeaders });
+    }
+
+    if (!eventsMatch) return json({ error: "method_not_allowed" }, { status: 405, headers: corsHeaders });
     if (request.method === "POST") {
       const body = await request.json().catch(() => null);
       if (!body || typeof body !== "object") {

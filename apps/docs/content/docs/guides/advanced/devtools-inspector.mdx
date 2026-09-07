@@ -3,16 +3,15 @@ title: DevTools inspector
 description: Inspect LLM calls, tool usage, token stats, and connection debug locally via SDK hooks and the dashboard DevTools page.
 ---
 
-FluxyChat includes a local DevTools inspector for AI agent runs — inspired by production observability UIs, but runnable on your machine with no SaaS.
+FluxyChat has a local DevTools inspector for agent runs. Use it on your machine.
 
 ## Dashboard UI
 
-When signed in to the console with labs enabled:
+When signed in to the console:
 
-1. Set `NEXT_PUBLIC_DASHBOARD_LABS=1` in the dashboard env.
-2. Open `/devtools` in the dashboard app.
-3. Use preset prompts or custom input to stream agent responses.
-4. Inspect the timeline: LLM steps, tool calls (including HITL approval), token usage, and Chat API probe results.
+1. Open `/devtools` in the dashboard app.
+2. Use preset prompts or custom input to stream agent responses.
+3. Inspect the timeline: LLM steps, tool calls (including HITL approval), token usage, and Chat API probe results.
 
 The page uses your configured Worker URL and member JWT from the dashboard session.
 

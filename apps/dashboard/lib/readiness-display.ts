@@ -31,7 +31,7 @@ export function readinessBadgeClass(readiness: PlatformReadinessLabel | string):
 }
 
 export function listProductReadiness(): ReadinessDisplayEntry[] {
-  return (["chat", "collab", "stream", "voice", "game", "iot", "fleet", "spatial"] as const).map((id) => {
+  return (["chat", "collab", "stream", "voice", "game", "iot", "fleet", "spatial", "marketplace", "chatbot-builder", "web3"] as const).map((id) => {
     const entry = PLATFORM_READINESS[id];
     return {
       id,

@@ -8,6 +8,7 @@ import {
   installAgent, uninstallAgent, listInstalledAgents,
   addReview, listReviews, getMarketplaceStats,
 } from "../lib/agent-marketplace.js";
+import { listProjectApps, publishProjectApp, deleteProjectApp } from "../lib/marketplace-apps.js";
 
 export async function dispatchMarketplaceRoutes(request, url, h) {
   const path = url.pathname;
@@ -157,6 +158,34 @@ export async function dispatchMarketplaceRoutes(request, url, h) {
     const agentId = url.searchParams.get("agentId");
     const reviews = await listReviews(env, { agentId });
     return respond({ reviews }, h);
+  }
+
+  if (request.method === "GET" && path === "/admin/marketplace/apps") {
+    if (!isAdmin) return respond({ error: "forbidden" }, h, 403);
+    const apps = await listProjectApps(env, { projectId });
+    return respond({ apps, count: apps.length }, h);
+  }
+
+  if (request.method === "POST" && path === "/admin/marketplace/apps") {
+    if (!isAdmin) return respond({ error: "forbidden" }, h, 403);
+    const body = await request.json().catch(() => ({}));
+    const result = await publishProjectApp(env, {
+      projectId,
+      name: body.name,
+      description: body.description,
+      permissions: body.permissions,
+      publisherId: userId,
+    });
+    if (result.error) return respond(result, h, 400);
+    return respond(result, h, 201);
+  }
+
+  if (request.method === "DELETE" && path === "/admin/marketplace/apps") {
+    if (!isAdmin) return respond({ error: "forbidden" }, h, 403);
+    const appId = url.searchParams.get("appId");
+    if (!appId) return respond({ error: "appId required" }, h, 400);
+    const result = await deleteProjectApp(env, { projectId, appId });
+    return respond(result, h);
   }
 
   return null;

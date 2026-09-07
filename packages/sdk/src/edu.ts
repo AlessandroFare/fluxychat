@@ -22,6 +22,7 @@ export {
   createCapabilityClient,
   syncWorkflowEventsToWorker,
   type CapabilityClient,
+  type CapabilitySnapshot,
 } from "./capability-client";
 
 export {

@@ -15,9 +15,23 @@ export interface PublishCapabilityInput {
   occurredAt?: string;
 }
 
+export interface CapabilitySnapshot {
+  ok: boolean;
+  roomId?: string;
+  total?: number;
+  byType?: Record<string, number>;
+  attendance?: number;
+  consent?: number;
+  checkpoints?: number;
+  riskFlags?: number;
+  stageLive?: number;
+  error?: string;
+}
+
 export interface CapabilityClient {
   publish(input: PublishCapabilityInput): Promise<{ ok: boolean; event?: RoomEvent; deduplicated?: boolean; error?: string }>;
   list(roomId: string, afterCursor?: number): Promise<{ ok: boolean; events?: RoomEvent[]; cursor?: number; hasMore?: boolean; error?: string }>;
+  snapshot(roomId: string): Promise<CapabilitySnapshot>;
 }
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -59,7 +73,16 @@ export function createCapabilityClient(config: CapabilityClientConfig): Capabili
     return data as { ok: boolean; events?: RoomEvent[]; cursor?: number; hasMore?: boolean };
   }
 
-  return { publish, list };
+  async function snapshot(roomId: string): Promise<CapabilitySnapshot> {
+    const res = await fetch(`${base}/rooms/${encodeURIComponent(roomId)}/capabilities/snapshot`, {
+      headers: { Authorization: `Bearer ${config.token}` },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: (data as { error?: string }).error || "snapshot_failed" };
+    return data as CapabilitySnapshot;
+  }
+
+  return { publish, list, snapshot };
 }
 
 export async function syncWorkflowEventsToWorker(
