@@ -150,10 +150,7 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       return json({ error: "room_create_failed" }, { status: 500 });
     }
 
-    ctx.waitUntil(invalidateCache(env, `rooms:${auth.projectId}`).catch(() => {}));
-
     const members = Array.isArray(body.members) ? body.members.slice() : [];
-    // Validate member userIds
     const validMembers = members.filter((m) => m && isValidId(m.userId));
     if (!validMembers.some((m) => m.userId === auth.userId)) {
       validMembers.push({ userId: auth.userId, role: "owner" });
@@ -170,6 +167,8 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       );
       await env.DB.batch(stmts);
     }
+
+    await invalidateCache(env, `rooms:${auth.projectId}`).catch(() => {});
 
     ctx.waitUntil(
       writeAuditEvent(env, {
