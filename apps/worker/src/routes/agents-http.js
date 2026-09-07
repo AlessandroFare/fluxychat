@@ -493,6 +493,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
       if (messageId) {
         await announceRoomChatMessage(env, {
           roomId: body.roomId,
+          projectId: auth.projectId,
           messageId,
           content: agentContent,
           userId: agentId,
@@ -697,15 +698,14 @@ export async function dispatchAgentsRoutes(request, url, h) {
 
     const messageId = resInsert.meta.last_row_id;
 
-    const id = env.ROOM.idFromName(roomId);
-    const stub = env.ROOM.get(id);
-    await stub.fetch("https://internal/announce", {
-      method: "POST",
-      body: JSON.stringify({
-        id: messageId,
-        content,
-        userId: body.botId,
-      }),
+    await announceRoomChatMessage(env, {
+      roomId,
+      projectId: authProjectId,
+      messageId,
+      content,
+      userId: body.botId,
+      parentId,
+      createdAt,
     });
 
     ctx.waitUntil(

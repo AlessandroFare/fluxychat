@@ -2,6 +2,7 @@
 const STREAM_PUSH_FLUSH_MS = 80;
 
 import { markdownTextChunk } from "./stream-chunks.js";
+import { getRoomStubForProject } from "./room-shard.js";
 
 export function isStreamStoppedError(err) {
   const code = err && typeof err === "object" ? err.code : null;
@@ -19,8 +20,11 @@ function throwIfStopped(res, messageId) {
 }
 
 export async function roomStreamOp(env, roomId, body) {
-  const id = env.ROOM.idFromName(roomId);
-  const res = await env.ROOM.get(id).fetch("https://internal/stream", {
+  const projectId = body?.projectId;
+  const stub = projectId
+    ? await getRoomStubForProject(env, projectId, roomId, body.userId)
+    : env.ROOM.get(env.ROOM.idFromName(roomId));
+  const res = await stub.fetch("https://internal/stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

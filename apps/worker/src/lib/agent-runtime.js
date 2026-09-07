@@ -6,6 +6,7 @@ import {
   resolveLlmConnectionWithFallback,
 } from "./llm-providers.js";
 import { createAgentStreamHooks, roomStreamOp, isStreamStoppedError } from "./room-stream.js";
+import { fanoutRoomInternal } from "./room-shard.js";
 import { isPrivateUrl } from "./url-ssrf.js";
 import { logInfo, logError } from "./worker-log.js";
 import { createLogger } from "./logger.js";
@@ -84,14 +85,19 @@ export function toFiniteMessageId(value) {
 }
 
 /** Best-effort realtime tool/run events for connected room clients. */
-async function announceRoomEvent(env, roomId, payload) {
+async function announceRoomEvent(env, roomId, payload, projectId) {
   try {
-    const id = env.ROOM.idFromName(roomId);
-    const stub = env.ROOM.get(id);
-    await stub.fetch("https://internal/announce", {
+    const init = {
       method: "POST",
-      body: JSON.stringify(payload),
-    });
+      body: JSON.stringify(payload, (_key, value) =>
+        typeof value === "bigint" ? Number(value) : value,
+      ),
+    };
+    if (projectId) {
+      await fanoutRoomInternal(env, projectId, roomId, "/announce", init);
+      return;
+    }
+    await env.ROOM.get(env.ROOM.idFromName(roomId)).fetch("https://internal/announce", init);
   } catch (err) {
     /* ignore */
   }
@@ -100,6 +106,7 @@ async function announceRoomEvent(env, roomId, payload) {
 /** Completing chat bubble so connected clients do not wait for a reload. */
 export async function announceRoomChatMessage(env, {
   roomId,
+  projectId,
   messageId,
   content,
   userId,
@@ -117,7 +124,7 @@ export async function announceRoomChatMessage(env, {
     senderId: userId,
     parentId,
     createdAt: createdAt || new Date().toISOString(),
-  });
+  }, projectId);
 }
 
 export function mapBotRowToAgent(row) {
@@ -289,13 +296,13 @@ export async function invokeMentionedAgents(
       budget: budget.budget,
       monthKey: budget.monthKey,
     });
-    void announceRoomEvent(env, roomId, {
+    await announceRoomEvent(env, roomId, {
       type: "agent_budget_exceeded",
       roomId,
       usedTokens: budget.usedTokens,
       budget: budget.budget,
       monthKey: budget.monthKey,
-    });
+    }, projectId);
     return;
   }
 
@@ -318,13 +325,13 @@ export async function invokeMentionedAgents(
         monthKey: budget.monthKey,
         reason: "reserve_lost_race",
       });
-      void announceRoomEvent(env, roomId, {
+      await announceRoomEvent(env, roomId, {
         type: "agent_budget_exceeded",
         roomId,
         usedTokens: budget.usedTokens,
         budget: budget.budget,
         monthKey: budget.monthKey,
-      });
+      }, projectId);
       return;
     }
     holdTokens = reserved.held;
@@ -345,16 +352,11 @@ export async function invokeMentionedAgents(
 
   for (const agentRow of agentRows.results || []) {
     try {
-      const id = env.ROOM.idFromName(roomId);
-      const stub = env.ROOM.get(id);
-      await stub.fetch("https://internal/announce", {
-        method: "POST",
-        body: JSON.stringify({
-          type: "agentTyping",
-          agentId: agentRow.id,
-          isTyping: true,
-        }),
-      }).catch(() => {});
+      await announceRoomEvent(env, roomId, {
+        type: "agentTyping",
+        agentId: agentRow.id,
+        isTyping: true,
+      }, projectId);
 
       const streamHooks = createAgentStreamHooks(env, {
         projectId,
@@ -403,6 +405,7 @@ export async function invokeMentionedAgents(
         if (mentionMessageId) {
           await announceRoomChatMessage(env, {
             roomId,
+            projectId,
             messageId: mentionMessageId,
             content: agentContent,
             userId: agentRow.id,
@@ -451,14 +454,14 @@ export async function invokeMentionedAgents(
               null,
             )
             .run();
-          await stub.fetch("https://internal/announce", {
-            method: "POST",
-            body: JSON.stringify({
-              id: insert.meta.last_row_id,
-              content: errorContent,
-              userId: agentRow.id,
-              parentId: resolvedParentId,
-            }),
+          await announceRoomChatMessage(env, {
+            roomId,
+            projectId,
+            messageId: insert.meta.last_row_id,
+            content: errorContent,
+            userId: agentRow.id,
+            parentId: resolvedParentId,
+            createdAt,
           }).catch(() => {});
         } catch (announceErr) {
           logError("agent.mention_invoke_error_announce_failed", announceErr, {
@@ -478,14 +481,11 @@ export async function invokeMentionedAgents(
         createdAt: new Date().toISOString(),
       });
 
-      await stub.fetch("https://internal/announce", {
-        method: "POST",
-        body: JSON.stringify({
-          type: "agentTyping",
-          agentId: agentRow.id,
-          isTyping: false,
-        }),
-      }).catch(() => {});
+      await announceRoomEvent(env, roomId, {
+        type: "agentTyping",
+        agentId: agentRow.id,
+        isTyping: false,
+      }, projectId);
     } catch (err) {
       logError("agent.mention_invoke_error", err, { projectId, agentId: agentRow.id, roomId });
       const failedRunId = crypto.randomUUID();
@@ -509,16 +509,11 @@ export async function invokeMentionedAgents(
         createdAt: new Date().toISOString(),
         errorOverride: errorText,
       });
-      const id = env.ROOM.idFromName(roomId);
-      const stub = env.ROOM.get(id);
-      await stub.fetch("https://internal/announce", {
-        method: "POST",
-        body: JSON.stringify({
-          type: "agentTyping",
-          agentId: agentRow.id,
-          isTyping: false,
-        }),
-      }).catch(() => {});
+      await announceRoomEvent(env, roomId, {
+        type: "agentTyping",
+        agentId: agentRow.id,
+        isTyping: false,
+      }, projectId);
     }
   }
   } finally {
@@ -541,7 +536,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       : {};
   const announce = skipRoomAnnounce
     ? async () => {}
-    : (payload) => announceRoomEvent(env, roomId, { ...payload, ...lineagePayload });
+    : (payload) => announceRoomEvent(env, roomId, { ...payload, ...lineagePayload }, projectId);
 
   agentLog.info("agent_lifecycle_onStart", { runId, agentId: agentRow.id, roomId, userId, traceId });
 

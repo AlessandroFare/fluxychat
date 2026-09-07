@@ -698,11 +698,6 @@ export class RoomDurableObject {
     // the object in memory for the whole connection lifetime instead.
     // Tags let us fan out to one user's sockets without scanning attachments.
     // Cloudflare allows up to 10 tags, 256 chars each.
-    const tags = [
-      `user:${auth.userId}`,
-      ...(auth.roles ?? []).map((r) => `role:${r}`),
-    ];
-    this.sessions.accept(webSocket, tags);
     const auth = await verifyJwtAndGetContext(request, this.env).catch((err) => {
       logError("do.ws_jwt_verify_failed", err, {});
       return null;
@@ -711,6 +706,11 @@ export class RoomDurableObject {
       webSocket.close(1008, "Unauthorized");
       return;
     }
+    const tags = [
+      `user:${auth.userId}`,
+      ...(auth.roles ?? []).map((r) => `role:${r}`),
+    ];
+    this.sessions.accept(webSocket, tags);
     const roomId = this.getRoomIdFromRequest(request) || this.roomId || this.state.id.toString();
     try {
       await this.persistRoomContext(auth.projectId, roomId);
@@ -2650,7 +2650,18 @@ export class RoomDurableObject {
 
     // P22-E3: Add _type discriminator for cross-system identification
     const typedMessage = message.type ? message : serializeMessage(message);
-    const payload = JSON.stringify(typedMessage);
+    let payload;
+    try {
+      payload = JSON.stringify(typedMessage, (_key, value) =>
+        typeof value === "bigint" ? Number(value) : value,
+      );
+    } catch (err) {
+      logError("do.broadcast_serialize_failed", err, {
+        roomId: this.roomId,
+        type: typedMessage?.type,
+      });
+      return;
+    }
     const recipientUserIds = options.recipientUserIds;
     const excludeWebSocket = options.excludeWebSocket;
     const excludeSocketId = options.excludeSocketId;
