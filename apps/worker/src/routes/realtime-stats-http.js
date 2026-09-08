@@ -3,6 +3,8 @@
  * @returns {Promise<Response|null>}
  */
 import { pickRouteDeps } from "./route-http-deps.js";
+import { attachPollsToMessages } from "../lib/message-polls.js";
+import { attachDecisionsToMessages } from "../lib/message-decisions.js";
 import { getRoomStubForProject } from "../lib/room-shard.js";
 import { ensurePublicRoomMembership } from "../lib/public-room-access.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
@@ -269,12 +271,19 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
 
     const result = await env.DB.prepare(sql).bind(...params).all();
     const rows = result.results || [];
-    const mapped = await attachAttachmentsToMessages(
+    const mappedRaw = await attachAttachmentsToMessages(
       env,
       auth.projectId,
       roomId,
       rows
     );
+    const withPolls = await attachPollsToMessages(
+      env,
+      auth.projectId,
+      mappedRaw,
+      auth.userId,
+    );
+    const mapped = await attachDecisionsToMessages(env, auth.projectId, withPolls);
 
     // Fetch reactions for the returned messages
     let reactionsMap = {};

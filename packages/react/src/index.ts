@@ -17,6 +17,7 @@ export {
 export {
   useChat,
   type UseChatOptions,
+  type UseChatResult,
   type UseChatReadOn,
   type UseChatHistoryReplay,
 } from "@fluxy-chat/sdk";

@@ -258,11 +258,18 @@ function sanitizeMessageAttachments(raw) {
     if (!a || typeof a !== "object") continue;
     const url = typeof a.url === "string" ? sanitizeString(a.url, 2048).trim() : "";
     if (!url) continue;
-    try {
-      const u = new URL(url);
-      if (u.protocol !== "http:" && u.protocol !== "https:") continue;
-    } catch {
-      continue;
+    const isWorkerAttachmentPath =
+      url.startsWith("/attachments/") &&
+      !url.includes("://") &&
+      !url.includes("\\") &&
+      !url.includes("..");
+    if (!isWorkerAttachmentPath) {
+      try {
+        const u = new URL(url);
+        if (u.protocol !== "http:" && u.protocol !== "https:") continue;
+      } catch {
+        continue;
+      }
     }
     const name =
       sanitizeString(String(a.name || url.split("/").pop() || "attachment"), 255) || "attachment";

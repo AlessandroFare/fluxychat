@@ -686,6 +686,7 @@ export { useFluxyChat, useFluxyChatOptional, type FluxyRealtimeContextValue } fr
 export {
   useChat,
   type UseChatOptions,
+  type UseChatResult,
   type UseChatHistoryReplay,
   type UseChatReadOn,
 } from "./use-chat";

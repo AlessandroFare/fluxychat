@@ -50,6 +50,11 @@ import { isHumanHandoffActive } from "./room-handoff.js";
 import { buildWebSearchContext, detectResearchMode } from "./web-search.js";
 import { composeAgentSystemPrompt } from "./fluxychat-product-knowledge.js";
 import { listCommands } from "./room-commands.js";
+import {
+  imagePartsFromAttachments,
+  loadAttachmentsByMessageIds,
+  userContentWithImages,
+} from "./agent-vision.js";
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -264,6 +269,7 @@ export async function invokeMentionedAgents(
   mentions,
   traceId,
   parentId = null,
+  options = {},
 ) {
   const resolvedParentId =
     parentId != null && Number.isFinite(Number(parentId))
@@ -373,6 +379,7 @@ export async function invokeMentionedAgents(
         userId,
         traceId,
         streamHooks,
+        attachments: options.attachments,
       });
 
       if (result.status === "completed" && result.content) {
@@ -523,7 +530,7 @@ export async function invokeMentionedAgents(
   }
 }
 
-export async function executeAgentRun(env, { agentRow, projectId, roomId, userMessage, userId, traceId, streamHooks, parentRunId = null, parentToolCallId = null, nestDepth = 0, skipRoomAnnounce = false }) {
+export async function executeAgentRun(env, { agentRow, projectId, roomId, userMessage, userId, traceId, streamHooks, parentRunId = null, parentToolCallId = null, nestDepth = 0, skipRoomAnnounce = false, attachments = [] }) {
   const startTime = performance.now();
   const runId = crypto.randomUUID();
   const lineagePayload =
@@ -766,9 +773,15 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
   try {
     const contextRows = await env.DB.prepare(
-      "SELECT user_id, content, created_at FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 30"
+      "SELECT id, user_id, content, created_at FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 30"
     ).bind(projectId, roomId).all();
     const conversationHistory = (contextRows.results || []).reverse();
+    const historyAtts = await loadAttachmentsByMessageIds(
+      env,
+      projectId,
+      roomId,
+      conversationHistory.map((row) => row.id),
+    );
 
     const messages = [{ role: "system", content: `${effectiveSystemPrompt}${euAiActSystemSuffix}` }];
 
@@ -783,9 +796,25 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
     for (const msg of conversationHistory) {
       const historyMsg = buildHistoryMessage(msg, { userId, agentId: agentRow.id });
-      if (historyMsg) messages.push(historyMsg);
+      if (!historyMsg) continue;
+      const histImages =
+        historyMsg.role === "user"
+          ? await imagePartsFromAttachments(env, historyAtts.get(msg.id) || [], projectId)
+          : [];
+      if (histImages.length) {
+        messages.push({
+          role: "user",
+          content: userContentWithImages(historyMsg.content, histImages),
+        });
+      } else {
+        messages.push(historyMsg);
+      }
     }
-    messages.push({ role: "user", content: userMessage });
+    const promptImages = await imagePartsFromAttachments(env, attachments, projectId);
+    messages.push({
+      role: "user",
+      content: userContentWithImages(userMessage, promptImages),
+    });
 
     const {
       fetchConsumedWarmupFromRoomDo,

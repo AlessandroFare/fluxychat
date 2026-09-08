@@ -111,6 +111,7 @@ export interface FluxyRoomStoreState {
   sendCursor: (input: import("./live-cursors").LiveCursorPublishInput) => void;
   sendPresencePatch: (patch: import("./presence-patch").FluxyPresence) => void;
   setDerivedState: (state: Record<string, unknown>) => void;
+  upsertMessage: (message: FluxyChatMessage) => void;
 }
 
 export type FluxyRoomStore = StoreApi<FluxyRoomStoreState>;
@@ -148,6 +149,7 @@ const inertRoomActions: Pick<
   | "sendCursor"
   | "sendPresencePatch"
   | "setDerivedState"
+  | "upsertMessage"
 > = Object.freeze({
   sendMessage: noop,
   retryMessage: noop,
@@ -172,6 +174,7 @@ const inertRoomActions: Pick<
   sendCursor: noop,
   sendPresencePatch: noop,
   setDerivedState: noop,
+  upsertMessage: noop,
 });
 
 /**
