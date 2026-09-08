@@ -227,6 +227,7 @@ export function useChat({
     sendCursor: state.sendCursor,
     sendPresencePatch: state.sendPresencePatch,
     setDerivedState: state.setDerivedState,
+    upsertMessage: state.upsertMessage,
     derivedState: state.derivedState,
     derivedSeq: state.derivedSeq,
     presenceKind: state.presenceKind,
@@ -244,3 +245,5 @@ export function useChat({
     store,
   };
 }
+
+export type UseChatResult = ReturnType<typeof useChat>;

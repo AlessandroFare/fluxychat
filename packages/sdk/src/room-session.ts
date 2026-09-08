@@ -649,6 +649,13 @@ export function startFluxyRoomSession(
           m.id === data.messageId ? { ...m, poll: pollPayload } : m,
         ),
       }));
+    } else if (data.type === "decision_updated" && data.messageId != null && data.decision) {
+      const decisionPayload = data.decision as FluxyChatMessage["decision"];
+      setState((s) => ({
+        messages: s.messages.map((m) =>
+          m.id === data.messageId ? { ...m, decision: decisionPayload } : m,
+        ),
+      }));
     }
   };
 
@@ -1284,6 +1291,13 @@ export function startFluxyRoomSession(
     queueMicrotask(() => scheduleMarkLatest());
   }
 
+  const upsertMessage = (message: FluxyChatMessage) => {
+    if (!message || !Number.isFinite(message.id)) return;
+    setState((s) => ({
+      messages: mergeMessagesChronological(s.messages, [message]),
+    }));
+  };
+
   setState({
     sendMessage,
     retryMessage,
@@ -1308,6 +1322,7 @@ export function startFluxyRoomSession(
     sendCursor,
     sendPresencePatch,
     setDerivedState,
+    upsertMessage,
   });
 
   if (!client || !trimmedRoomId || !client.isAuthenticated()) {

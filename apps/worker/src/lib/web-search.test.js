@@ -19,8 +19,8 @@ describe("web-search helpers", () => {
     expect(extractResearchQuery(prompt)).toBe("FluxyChat pricing");
   });
 
-  it("defaults provider chain to tavily, searxng", () => {
-    expect(resolveWebSearchProviders({})).toEqual(["tavily", "searxng"]);
+  it("defaults provider chain to tavily, searxng, brave, wikipedia", () => {
+    expect(resolveWebSearchProviders({})).toEqual(["tavily", "searxng", "brave", "wikipedia"]);
     expect(resolveWebSearchProviders({ WEB_SEARCH_PROVIDER: "searxng,tavily" })).toEqual([
       "searxng",
       "tavily",

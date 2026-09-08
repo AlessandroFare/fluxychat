@@ -47,6 +47,69 @@ export function parseDecisionCreateInput(decisionBody) {
   return { ok: true, content, requiredRoles: normalized, ttlSeconds };
 }
 
+export async function attachDecisionsToMessages(env, projectId, messages) {
+  if (!messages?.length) return messages;
+  const ids = messages.map((m) => m.id).filter((id) => Number.isFinite(id));
+  if (!ids.length) return messages;
+
+  const placeholders = ids.map(() => "?").join(",");
+  const decRows = await env.DB.prepare(
+    `SELECT message_id, content, required_roles_json, ttl_seconds, expires_at, state
+     FROM message_decisions WHERE project_id = ? AND message_id IN (${placeholders})`,
+  )
+    .bind(projectId, ...ids)
+    .all();
+  if (!decRows.results?.length) return messages;
+
+  const ackRows = await env.DB.prepare(
+    `SELECT message_id, user_id, role, acked_at
+     FROM message_decision_acks WHERE message_id IN (${placeholders})
+     ORDER BY acked_at ASC`,
+  )
+    .bind(...ids)
+    .all();
+
+  /** @type {Map<number, { userId: string, role: string, ackedAt: string }[]>} */
+  const acksByMessage = new Map();
+  for (const ack of ackRows.results || []) {
+    const mid = Number(ack.message_id);
+    const list = acksByMessage.get(mid) || [];
+    list.push({
+      userId: String(ack.user_id),
+      role: normalizeRoomRole(String(ack.role)),
+      ackedAt: String(ack.acked_at),
+    });
+    acksByMessage.set(mid, list);
+  }
+
+  const byId = new Map(
+    (decRows.results || []).map((row) => [Number(row.message_id), row]),
+  );
+
+  return messages.map((message) => {
+    const row = byId.get(message.id);
+    if (!row) return message;
+    let requiredRoles = [];
+    try {
+      requiredRoles = JSON.parse(String(row.required_roles_json || "[]"));
+    } catch {
+      requiredRoles = [];
+    }
+    return {
+      ...message,
+      decision: buildDecisionSnapshot({
+        messageId: message.id,
+        content: String(row.content),
+        requiredRoles,
+        acks: acksByMessage.get(message.id) || [],
+        state: String(row.state),
+        expiresAt: String(row.expires_at),
+        ttlSeconds: Number(row.ttl_seconds),
+      }),
+    };
+  });
+}
+
 function normalizeRoomRole(role) {
   const lower = role.toLowerCase();
   return ROLE_ALIASES[lower] ?? lower;

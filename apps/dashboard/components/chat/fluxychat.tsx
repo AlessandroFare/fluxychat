@@ -52,7 +52,7 @@ import {
   type AgentToolCallDisplay,
 } from "@/lib/agent-run-display";
 import { toolCallsToThreadEvents, toolThreadEventsToUiParts } from "@/lib/agent-tool-thread";
-import type { UseChatHistoryReplay, FluxyChatAttachment } from "@fluxy-chat/sdk";
+import type { UseChatHistoryReplay, FluxyChatAttachment, FluxyChatMessage } from "@fluxy-chat/sdk";
 import { parseCardFromMessage, cardDisplayText } from "@fluxy-chat/sdk";
 import { InteractiveCardRenderer } from "@/components/chat/interactive-card-renderer";
 import { AgentToolThreadCard } from "@/app/components/agent-tool-thread-card";
@@ -338,6 +338,49 @@ interface PendingComposePayload {
   tool: PendingTool;
 }
 
+type ComposerAction = "poll" | "decision" | "schedule" | null;
+
+function asChatMessageFromApi(
+  raw: unknown,
+  fallback: { roomId: string; userId: string },
+): FluxyChatMessage | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const id = Number(row.id);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  const parentRaw = row.parentId;
+  return {
+    id,
+    roomId: String(row.roomId ?? fallback.roomId),
+    userId: String(row.userId ?? row.senderId ?? fallback.userId),
+    senderId: typeof row.senderId === "string" ? row.senderId : undefined,
+    content: String(row.content ?? ""),
+    createdAt: String(row.createdAt ?? new Date().toISOString()),
+    parentId:
+      parentRaw == null || parentRaw === ""
+        ? null
+        : Number.isFinite(Number(parentRaw))
+          ? Number(parentRaw)
+          : null,
+    attachments: Array.isArray(row.attachments)
+      ? (row.attachments as FluxyChatAttachment[])
+      : [],
+    poll: (row.poll as FluxyChatMessage["poll"]) ?? undefined,
+    decision: (row.decision as FluxyChatMessage["decision"]) ?? undefined,
+    deliveryStatus: "sent",
+  };
+}
+
+function filesFromClipboardOrDrop(data: DataTransfer | null): File[] {
+  if (!data) return [];
+  const fromItems = Array.from(data.items)
+    .filter((item) => item.kind === "file")
+    .map((item) => item.getAsFile())
+    .filter((file): file is File => Boolean(file));
+  if (fromItems.length > 0) return fromItems;
+  return Array.from(data.files ?? []);
+}
+
 // ─── Bubble styling constants ───
 // Rounding, background, and text color come from the Bubble `sent` / `received`
 // variants (driven by the --fluxy-bubble-* design tokens in globals.css).
@@ -434,9 +477,11 @@ export function FluxyChat({
   const [imagePrompt, setImagePrompt] = useState("");
   // + menu open state
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
-  const [pollCreateOpen, setPollCreateOpen] = useState(false);
-  const [decisionCreateOpen, setDecisionCreateOpen] = useState(false);
-  const [scheduleSendOpen, setScheduleSendOpen] = useState(false);
+  const [composerAction, setComposerAction] = useState<ComposerAction>(null);
+  const [scheduledRows, setScheduledRows] = useState<
+    Array<{ id: number; content: string; send_at: string; status: string }>
+  >([]);
+  const [composerDragOver, setComposerDragOver] = useState(false);
   const [counterfactualTarget, setCounterfactualTarget] = useState<{
     runId: string;
     toolCall: AgentToolCallDisplay;
@@ -753,6 +798,7 @@ export function FluxyChat({
     reactions,
     sendReaction,
     setTyping,
+    upsertMessage,
   } = useChat({
     roomId: activeRoomId,
     agentId,
@@ -1259,13 +1305,47 @@ export function FluxyChat({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [plusMenuOpen]);
 
+  useEffect(() => {
+    void refreshScheduled();
+  }, [trimmedRoomId, fluxyClient]);
+
   // ─── Send logic ───
 
   function sendResearchPrompt(mode: "deep-research" | "web-search") {
     if (!trimmedRoomId || isAgentBusy) return;
     setInputError(null);
+    setComposerAction(null);
     setPendingTool({ type: mode });
     setPlusMenuOpen(false);
+  }
+
+  function ingestPostedMessage(raw: unknown) {
+    const msg = asChatMessageFromApi(raw, {
+      roomId: trimmedRoomId,
+      userId: chatUserId ?? localUserId ?? "me",
+    });
+    if (msg) upsertMessage(msg);
+    else void loadHistory();
+  }
+
+  async function refreshScheduled() {
+    if (!fluxyClient || !trimmedRoomId) {
+      setScheduledRows([]);
+      return;
+    }
+    try {
+      const rows = await fluxyClient.listScheduledMessages(trimmedRoomId);
+      setScheduledRows(
+        (rows as Array<Record<string, unknown>>).map((row) => ({
+          id: Number(row.id),
+          content: String(row.content ?? ""),
+          send_at: String(row.send_at ?? row.sendAt ?? ""),
+          status: String(row.status ?? "pending"),
+        })).filter((row) => Number.isFinite(row.id)),
+      );
+    } catch {
+      setScheduledRows([]);
+    }
   }
 
   function prepareImageGeneration() {
@@ -1476,10 +1556,15 @@ export function FluxyChat({
 
   function requestSend() {
     const templateSend = templateSelection;
-    const text = templateSend ? templateSend.renderedPreview.trim() : draft.trim();
     const readyAttachments = pendingAttachments
       .filter((p) => !p.uploading && !p.error)
       .map((p) => p.attachment);
+    let text = templateSend ? templateSend.renderedPreview.trim() : draft.trim();
+    if (!text && readyAttachments.length > 0) {
+      text = usesMentionInvoke
+        ? `${mentionPrefixForAgent(agentHandle)}Please look at the attached image(s).`.trim()
+        : "Please look at the attached image(s).";
+    }
     if ((!text && readyAttachments.length === 0 && !pendingTool) || !trimmedRoomId) return;
 
     if (!templateSend && !pendingTool && text.startsWith("/clear")) {
@@ -2418,6 +2503,12 @@ export function FluxyChat({
                                               />
                                             );
                                           }
+                                          const pollData =
+                                            (m.id != null ? pollOverrides[m.id as number] : undefined) ?? m.poll;
+                                          const decisionData =
+                                            (m.id != null ? decisionOverrides[m.id as number] : undefined) ??
+                                            m.decision;
+                                          if (pollData || decisionData) return null;
                                           const bodyText = cardDisplayText(m);
                                           const useMarkdown =
                                             isAgent ||
@@ -2557,6 +2648,19 @@ export function FluxyChat({
                                       );
                                     })()}
 
+                                    {m.attachments && m.attachments.length > 0 ? (
+                                      <div className="mt-2 flex flex-col gap-2">
+                                        {m.attachments.map((a) => (
+                                          <FluxyAttachment
+                                            key={a.url}
+                                            attachment={a}
+                                            mediaBaseUrl={WORKER_URL}
+                                            authToken={adminJwt.trim() || memberJwt.trim() || null}
+                                          />
+                                        ))}
+                                      </div>
+                                    ) : null}
+
                                     {/* Delivery status */}
                                     {m.deliveryStatus === "pending" ? (
                                       <div className={cn("mt-1 text-[10px]", isSelf ? "text-white/70" : "text-muted-foreground")}>
@@ -2637,20 +2741,6 @@ export function FluxyChat({
                                     </BubbleReactions>
                                   ) : null}
                               </Bubble>
-
-                              {/* Attachments */}
-                              {m.attachments && m.attachments.length > 0 ? (
-                                <div className="mt-1 flex flex-col gap-2">
-                                  {m.attachments.map((a) => (
-                                    <FluxyAttachment
-                                      key={a.url}
-                                      attachment={a}
-                                      mediaBaseUrl={WORKER_URL}
-                                      authToken={adminJwt.trim() || memberJwt.trim() || null}
-                                    />
-                                  ))}
-                                </div>
-                              ) : null}
 
                               {/* Thread summary */}
                               {trimmedRoomId && m.id && !parentId && !isStreaming ? (
@@ -3017,6 +3107,115 @@ export function FluxyChat({
         </div>
       ) : null}
 
+      {scheduledRows.length > 0 ? (
+        <div className="mb-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Scheduled
+          </p>
+          <ul className="mt-1 space-y-1">
+            {scheduledRows.map((row) => (
+              <li key={row.id} className="flex items-start justify-between gap-2 text-xs">
+                <span className="min-w-0 truncate">
+                  {row.content}
+                  {row.send_at ? (
+                    <span className="ml-1 text-muted-foreground">
+                      · {new Date(row.send_at).toLocaleString()}
+                    </span>
+                  ) : null}
+                </span>
+                <button
+                  type="button"
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={async () => {
+                    if (!fluxyClient || !trimmedRoomId) return;
+                    try {
+                      await fluxyClient.cancelScheduledMessage(trimmedRoomId, row.id);
+                      await refreshScheduled();
+                    } catch (err: unknown) {
+                      setInputError(messageFromUnknown(err, "Failed to cancel scheduled message"));
+                    }
+                  }}
+                >
+                  Cancel
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {composerAction ? (
+        <div className="mb-2">
+          <div className="mb-1 flex justify-end">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={() => setComposerAction(null)}
+            >
+              <X className="size-3" aria-hidden />
+              Close
+            </button>
+          </div>
+          {composerAction === "poll" ? (
+            <PollCreate
+              onCreate={async (question, options) => {
+                if (!fluxyClient || !trimmedRoomId) return;
+                try {
+                  const result = await fluxyClient.createPoll(trimmedRoomId, { question, options });
+                  ingestPostedMessage(result.message);
+                  setComposerAction(null);
+                  setInputError(null);
+                } catch (err: unknown) {
+                  setInputError(messageFromUnknown(err, "Failed to create poll"));
+                }
+              }}
+            />
+          ) : null}
+          {composerAction === "decision" ? (
+            <DecisionCreate
+              onCreate={async (content, requiredRoles, ttlHours) => {
+                if (!fluxyClient || !trimmedRoomId) return;
+                try {
+                  const result = await fluxyClient.createDecision(trimmedRoomId, {
+                    content,
+                    requiredRoles,
+                    ttlSeconds: ttlHours * 3600,
+                  });
+                  ingestPostedMessage(result.message);
+                  setComposerAction(null);
+                  setInputError(null);
+                } catch (err: unknown) {
+                  setInputError(messageFromUnknown(err, "Failed to create decision"));
+                }
+              }}
+            />
+          ) : null}
+          {composerAction === "schedule" ? (
+            <ScheduleSend
+              initialContent={draft}
+              onCancel={() => setComposerAction(null)}
+              onSchedule={async (content, sendAt) => {
+                if (!fluxyClient || !trimmedRoomId) return;
+                try {
+                  await fluxyClient.scheduleMessage(trimmedRoomId, {
+                    content,
+                    sendAt,
+                    replyTo: replyToId,
+                  });
+                  setComposerAction(null);
+                  setDraft("");
+                  setReplyToId(null);
+                  setInputError(null);
+                  await refreshScheduled();
+                } catch (err: unknown) {
+                  setInputError(messageFromUnknown(err, "Failed to schedule message"));
+                }
+              }}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
       {/* ─── Composer with + menu ─── */}
       <Composer
         onSubmit={(e) => {
@@ -3024,7 +3223,23 @@ export function FluxyChat({
           if (!canSend) return;
           void requestSend();
         }}
-        className="relative"
+        className={cn("relative", composerDragOver && "ring-2 ring-primary/40")}
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          setComposerDragOver(true);
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+          setComposerDragOver(false);
+        }}
+        onDrop={(e) => {
+          const files = filesFromClipboardOrDrop(e.dataTransfer);
+          if (files.length === 0) return;
+          e.preventDefault();
+          setComposerDragOver(false);
+          void Promise.all(files.map((file) => uploadPendingFile(file)));
+        }}
       >
         {/* Deep Research / Web Search chips above textarea */}
         {pendingTool?.type === "deep-research" || pendingTool?.type === "web-search" ? (
@@ -3103,6 +3318,12 @@ export function FluxyChat({
                 : `Ask ${agentName}…`
           }
           disabled={!trimmedRoomId || isAgentBusy || Boolean(templateSelection)}
+          onPaste={(e) => {
+            const files = filesFromClipboardOrDrop(e.clipboardData);
+            if (files.length === 0) return;
+            e.preventDefault();
+            void Promise.all(files.map((file) => uploadPendingFile(file)));
+          }}
           onKeyDown={(e) => {
             if (showMentionMenu && (e.key === "ArrowDown" || e.key === "ArrowUp" || (e.key === "Enter" && mentionSuggestions.length))) return;
             if (e.key === "/" && (e.currentTarget.selectionStart ?? 0) === 0) {
@@ -3149,13 +3370,13 @@ export function FluxyChat({
               </button>
               {plusMenuOpen ? (
                 <div
-                  className="absolute bottom-full left-0 z-[200] mb-2 w-56 rounded-lg border border-slate-200 bg-white p-1 text-slate-900 shadow-2xl"
+                  className="absolute bottom-full left-0 z-[200] mb-2 w-56 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg"
                   role="menu"
                 >
                   {/* Add Photos & Files */}
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
                     role="menuitem"
                     onClick={() => {
                       setPlusMenuOpen(false);
@@ -3171,7 +3392,7 @@ export function FluxyChat({
                   {showImageGen ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
                     role="menuitem"
                     onClick={() => prepareImageGeneration()}
                   >
@@ -3185,7 +3406,7 @@ export function FluxyChat({
                   {showDeepResearch ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
                     role="menuitem"
                     onClick={() => sendResearchPrompt("deep-research")}
                   >
@@ -3199,7 +3420,7 @@ export function FluxyChat({
                   {showWebSearch ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
                     role="menuitem"
                     onClick={() => sendResearchPrompt("web-search")}
                   >
@@ -3213,13 +3434,12 @@ export function FluxyChat({
                   {showPollCreate ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
                     role="menuitem"
                     onClick={() => {
                       setPlusMenuOpen(false);
-                      setPollCreateOpen((p) => !p);
-                      setDecisionCreateOpen(false);
-                      setScheduleSendOpen(false);
+                      setComposerAction("poll");
+                      setPendingTool(null);
                     }}
                   >
                     <BarChart3 className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
@@ -3232,13 +3452,12 @@ export function FluxyChat({
                   {showDecisionCreate ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
                     role="menuitem"
                     onClick={() => {
                       setPlusMenuOpen(false);
-                      setDecisionCreateOpen((p) => !p);
-                      setPollCreateOpen(false);
-                      setScheduleSendOpen(false);
+                      setComposerAction("decision");
+                      setPendingTool(null);
                     }}
                   >
                     <Gavel className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
@@ -3251,13 +3470,12 @@ export function FluxyChat({
                   {showScheduleSend ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
                     role="menuitem"
                     onClick={() => {
                       setPlusMenuOpen(false);
-                      setScheduleSendOpen((p) => !p);
-                      setPollCreateOpen(false);
-                      setDecisionCreateOpen(false);
+                      setComposerAction("schedule");
+                      setPendingTool(null);
                     }}
                   >
                     <Clock className="size-4 text-[var(--fluxy-cta-color)]" aria-hidden />
@@ -3413,49 +3631,6 @@ export function FluxyChat({
           </>
         )}
       </div>
-
-      {/* Poll creator */}
-      {pollCreateOpen ? (
-        <PollCreate
-          onCreate={async (question, options) => {
-            if (!fluxyClient || !trimmedRoomId) return;
-            await fluxyClient.createPoll(trimmedRoomId, { question, options });
-            setPollCreateOpen(false);
-          }}
-        />
-      ) : null}
-
-      {decisionCreateOpen ? (
-        <DecisionCreate
-          onCreate={async (content, requiredRoles, ttlHours) => {
-            if (!fluxyClient || !trimmedRoomId) return;
-            await fluxyClient.createDecision(trimmedRoomId, {
-              content,
-              requiredRoles,
-              ttlSeconds: ttlHours * 3600,
-            });
-            setDecisionCreateOpen(false);
-          }}
-        />
-      ) : null}
-
-      {scheduleSendOpen ? (
-        <ScheduleSend
-          initialContent={draft}
-          onCancel={() => setScheduleSendOpen(false)}
-          onSchedule={async (content, sendAt) => {
-            if (!fluxyClient || !trimmedRoomId) return;
-            await fluxyClient.scheduleMessage(trimmedRoomId, {
-              content,
-              sendAt,
-              replyTo: replyToId,
-            });
-            setScheduleSendOpen(false);
-            setDraft("");
-            setReplyToId(null);
-          }}
-        />
-      ) : null}
 
       {/* ─── Errors ─── */}
       {inputError || uploadError ? (

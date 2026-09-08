@@ -1,13 +1,13 @@
 /**
  * Live web search for [web-search] / [deep-research] composer prompts.
- * Provider chain (default): Tavily → SearXNG (self-hosted, public URL + Basic Auth).
+ * Provider chain (default): Tavily → SearXNG → Brave → Wikipedia (free fallback).
  */
 
 import { safeOutboundFetch } from "./url-ssrf.js";
 import { logInfo, logError } from "./worker-log.js";
 
 const SEARCH_TIMEOUT_MS = 12_000;
-const DEFAULT_PROVIDER_CHAIN = "tavily,searxng";
+const DEFAULT_PROVIDER_CHAIN = "tavily,searxng,brave,wikipedia";
 
 export function detectResearchMode(text) {
   if (typeof text !== "string") return null;
@@ -187,9 +187,64 @@ async function searchWithProvider(env, provider, query, num, mode) {
       return searchSearxng(env, query, num);
     case "brave":
       return searchBrave(env, query, num);
+    case "wikipedia":
+      return searchWikipedia(query, num);
     default:
       return { ok: false, error: "unknown_provider", results: [] };
   }
+}
+
+async function searchWikipedia(query, num) {
+  const url = new URL("https://en.wikipedia.org/w/api.php");
+  url.searchParams.set("action", "query");
+  url.searchParams.set("list", "search");
+  url.searchParams.set("srsearch", query);
+  url.searchParams.set("srlimit", String(num));
+  url.searchParams.set("format", "json");
+  url.searchParams.set("utf8", "1");
+
+  const res = await fetchWithTimeout(url.toString(), {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "FluxyChat/1.0 (web-search; https://fluxychat.com)",
+    },
+  });
+  if (!res.ok) return { ok: false, error: `wikipedia_http_${res.status}`, results: [] };
+  const data = await res.json();
+  const rows = (data?.query?.search || []).map((row) => ({
+    title: row.title,
+    url: `https://en.wikipedia.org/wiki/${encodeURIComponent(String(row.title).replace(/ /g, "_"))}`,
+    snippet: String(row.snippet || "").replace(/<[^>]+>/g, ""),
+  }));
+  return { ok: true, query, results: normalizeResults(rows, num), provider: "wikipedia" };
+}
+
+function stripHtml(html) {
+  return String(html || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchPageSnippets(urls, limit = 3) {
+  const targets = urls.filter((u) => typeof u === "string" && /^https:\/\//i.test(u)).slice(0, limit);
+  const snippets = [];
+  for (const pageUrl of targets) {
+    try {
+      const res = await fetchWithTimeout(pageUrl, {
+        headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "FluxyChat/1.0" },
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+      const text = stripHtml(html).slice(0, 1600);
+      if (text.length > 80) snippets.push({ url: pageUrl, text });
+    } catch {
+      /* skip */
+    }
+  }
+  return snippets;
 }
 
 function isConfigured(env, provider) {
@@ -202,6 +257,8 @@ function isConfigured(env, provider) {
     }
     case "brave":
       return Boolean(env.BRAVE_SEARCH_API_KEY);
+    case "wikipedia":
+      return true;
     default:
       return false;
   }
@@ -299,6 +356,15 @@ export async function buildWebSearchContext(env, userMessage, mode) {
     const secondary = await performWebSearch(env, followUp, { numResults: 4, mode });
     if (secondary.ok && secondary.results.length) {
       block += `\n\n---\n\nAdditional results:\n\n${formatResultsForLlm(secondary.results, followUp)}`;
+    }
+    const extracts = await fetchPageSnippets(
+      primary.results.map((row) => row.url),
+      3,
+    );
+    if (extracts.length > 0) {
+      block += `\n\n---\n\nPage extracts:\n\n${extracts
+        .map((row, i) => `${i + 1}. ${row.url}\n${row.text}`)
+        .join("\n\n")}`;
     }
   }
 

@@ -25,7 +25,11 @@ export function messageAuthorIsAgent(
 }
 
 export function messageContentUsesMarkdown(content: string): boolean {
-  return /\*\*|^#{1,6}\s|^\s*[-*]\s|\[.+\]\(.+\)/m.test(content);
+  return (
+    /\*\*|__|^#{1,6}\s|^\s*[-*+]\s|^\s*\d+\.\s|\[.+\]\(.+\)|^\s*>|```|^\s*\|.+\||!\[[^\]]*\]\(/m.test(
+      content,
+    )
+  );
 }
 
 /** Strip composer tool tags for edit/retry display. */

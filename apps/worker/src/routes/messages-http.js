@@ -709,6 +709,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
           agentHandles,
           traceId,
           parentId,
+          { attachments: sanitizedAttachments },
         ).catch((err) =>
           logError("agent.mention_invoke_failed", err, requestLogCtx)
         )

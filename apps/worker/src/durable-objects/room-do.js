@@ -1792,6 +1792,7 @@ export class RoomDurableObject {
             agentHandles,
             undefined,
             parentId || null,
+            { attachments: Array.isArray(attachments) ? attachments : [] },
           ).catch((err) =>
             logError("agent.mention_invoke_error", err, { projectId, roomId }),
           );

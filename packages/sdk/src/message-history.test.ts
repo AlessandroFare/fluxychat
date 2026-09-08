@@ -42,6 +42,26 @@ describe("message-history", () => {
     expect(merged[0]?.streaming).toBe(true);
   });
 
+  it("mergeMessagesChronological keeps poll and decision when incoming row omits them", () => {
+    const merged = mergeMessagesChronological(
+      [
+        {
+          id: 4,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          content: "Vote",
+          poll: { question: "Ready?", options: [], totalVoters: 0, closed: false },
+        },
+      ],
+      [{ id: 4, createdAt: "2026-01-01T00:00:00.000Z", content: "Vote" }],
+    );
+    expect(merged[0]?.poll).toEqual({
+      question: "Ready?",
+      options: [],
+      totalVoters: 0,
+      closed: false,
+    });
+  });
+
   it("clampHistoryLimit enforces bounds", () => {
     expect(clampHistoryLimit()).toBe(50);
     expect(clampHistoryLimit(0)).toBe(50);
