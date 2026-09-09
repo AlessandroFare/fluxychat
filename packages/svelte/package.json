@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/svelte",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Svelte 5 stores/composables for FluxyChat — useChat parity",
   "type": "module",
   "sideEffects": false,
@@ -23,7 +23,7 @@
   },
   "peerDependencies": {
     "svelte": ">=5",
-    "@fluxy-chat/sdk": "^0.6.5"
+    "@fluxy-chat/sdk": "^0.6.12"
   },
   "dependencies": {
     "@fluxy-chat/sdk": "workspace:*"

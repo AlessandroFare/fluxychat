@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.8] - 2026-09-09
+
+### Changed
+
+- Peer `@fluxy-chat/sdk` is `^0.6.12` (history merge, agent stream stub, `upsertMessage`). Republish so npm matches the repo; `0.1.7` still advertised `0.6.9`.
+
 ## [0.1.7] - 2026-09-04
 
 ### Added
