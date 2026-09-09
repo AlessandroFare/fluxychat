@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/vue",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Vue 3 composables for FluxyChat — useChat parity with @fluxy-chat/react",
   "type": "module",
   "sideEffects": false,
@@ -23,7 +23,7 @@
   },
   "peerDependencies": {
     "vue": ">=3.4",
-    "@fluxy-chat/sdk": "^0.6.5"
+    "@fluxy-chat/sdk": "^0.6.12"
   },
   "dependencies": {
     "@fluxy-chat/sdk": "workspace:*"

@@ -1,6 +1,6 @@
 {
     "name":  "@fluxy-chat/ui",
-    "version":  "0.1.4",
+    "version":  "0.1.5",
     "description":  "FluxyChat React UI components (shadcn-based chat primitives)",
     "license":  "MIT",
     "author":  "Fluxychat",
@@ -45,6 +45,7 @@
                 },
     "peerDependencies":  {
                              "react":  "\u003e=18",
+                             "@fluxy-chat/sdk":  "^0.6.12",
                              "class-variance-authority":  "\u003e=0.7.0",
                              "clsx":  "\u003e=2.0.0",
                              "tailwind-merge":  "\u003e=2.0.0",

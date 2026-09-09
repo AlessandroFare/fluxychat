@@ -33,7 +33,7 @@ function Room() {
 
 Private rooms: pass `authTokenProvider` (member JWT) or `connectUrl` instead of `publishableKey`.
 
-Requires `react` 18+ as a peer dependency. Pin `@fluxy-chat/sdk@^0.6.10`.
+Requires `react` 18+ as a peer dependency. Pin `@fluxy-chat/sdk@^0.6.12`.
 
 ## Inbox demo
 

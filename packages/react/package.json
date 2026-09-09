@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/react",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "React hooks and providers for FluxyChat — useChat, useThread, useInbox, FluxyRealtimeProvider",
   "homepage": "https://github.com/AlessandroFare/fluxychat/tree/main/packages/react#readme",
   "bugs": {

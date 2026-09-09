@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.22] - 2026-09-09
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.6.12`, `@fluxy-chat/react@^0.1.8`, `@fluxy-chat/ui@^0.1.5`, `@fluxy-chat/ui-kit@^0.1.6`. Publish **react 0.1.8** (and ui / ui-kit) **before** this CLI, or `pnpm create` will resolve the previous peers.
+
 ## [0.5.21] - 2026-09-07
 
 ### Changed

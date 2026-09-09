@@ -10,4 +10,4 @@ cp .env.example .env
 npm run dev
 ```
 
-Fastest path: `VITE_FLUXYCHAT_WORKER_URL` + `VITE_FLUXYCHAT_PUBLISHABLE_KEY` (`pk_`) + a public room id. Pin `@fluxy-chat/sdk@0.6.7` and `@fluxy-chat/react@0.1.6` once those versions are on npm.
+Fastest path: `VITE_FLUXYCHAT_WORKER_URL` + `VITE_FLUXYCHAT_PUBLISHABLE_KEY` (`pk_`) + a public room id. Pin `@fluxy-chat/sdk@0.6.12` and `@fluxy-chat/react@0.1.8`.
