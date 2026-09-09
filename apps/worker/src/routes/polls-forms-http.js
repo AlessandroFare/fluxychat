@@ -26,7 +26,7 @@ export async function dispatchPollsFormsRoutes(request, url, h) {
     const result = await createPoll(env, {
       projectId,
       roomId: body.roomId,
-      createdBy: body.userId || userId,
+      createdBy: userId,
       title: body.title,
       description: body.description,
       pollType: body.pollType,
@@ -45,7 +45,7 @@ export async function dispatchPollsFormsRoutes(request, url, h) {
       projectId,
       pollId: voteMatch[1],
       optionIds: body.optionIds || [],
-      userId: body.userId || userId,
+      userId,
     });
     return json(result, { status: result.ok ? 200 : 400 });
   }
@@ -62,7 +62,7 @@ export async function dispatchPollsFormsRoutes(request, url, h) {
     const result = await closePoll(env, {
       projectId,
       pollId: closeMatch[1],
-      userId: body.userId || userId,
+      userId,
     });
     return json(result, { status: result.ok ? 200 : 400 });
   }
@@ -72,7 +72,7 @@ export async function dispatchPollsFormsRoutes(request, url, h) {
     const result = await createForm(env, {
       projectId,
       roomId: body.roomId,
-      createdBy: body.userId || userId,
+      createdBy: userId,
       title: body.title,
       description: body.description,
       schema: body.schema,
@@ -88,7 +88,7 @@ export async function dispatchPollsFormsRoutes(request, url, h) {
     const result = await submitForm(env, {
       projectId,
       formId: submitMatch[1],
-      userId: body.userId || userId,
+      userId,
       response: body.response,
     });
     return json(result, { status: result.ok ? 201 : 400 });

@@ -26,12 +26,11 @@ export default function PlatformCatalogPage() {
       <ConsolePageHeader
         title="Platform"
         icon={Layers}
-        description="Modules on the same room. Every surface is also in the console sidebar."
+        description="Modules on the same room. Badges match PLATFORM_READINESS, not a GA claim."
       />
 
       <p className="mb-6 text-sm text-muted-foreground">
-        Chat, collab, stream, voice, game, IoT, fleet, spatial, industries, marketplace, and more.
-        APIs on the Worker. Operator UI in this console.
+        Chat, collab, and invokeAgent are the kernel. The rest rides the same Worker. Hosted is open beta.
       </p>
 
       <section className="mb-8">
@@ -59,7 +58,7 @@ export default function PlatformCatalogPage() {
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="font-medium text-foreground">{item.label}</span>
-                  <ReadinessBadge label="Production" />
+                  <ReadinessBadge label="Labs" />
                 </span>
                 {item.description ? (
                   <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
@@ -95,7 +94,7 @@ export default function PlatformCatalogPage() {
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="font-medium text-foreground">{item.label}</span>
-                  <ReadinessBadge label="Production" />
+                  <ReadinessBadge label="Labs" />
                 </span>
                 {item.description ? (
                   <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>

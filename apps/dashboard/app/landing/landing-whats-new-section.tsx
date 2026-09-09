@@ -120,7 +120,7 @@ const AI_FEATURES = [
     icon: Radio,
     title: "Platform modules",
     description:
-      "Stream, game, IoT, spatial twins, cross-channel continuity, and marketplace apps — production modules on the same Worker.",
+      "Stream, game, IoT, and marketplace sit on the same Worker. Spatial and cross-channel are labs. Hosted is still beta.",
   },
 ] as const;
 
@@ -130,84 +130,84 @@ const PLATFORM_EXTENSIONS = [
     title: "App Marketplace",
     description: "Publish and install apps with signed manifests, scoped grants, and tenant installs.",
     href: "/marketplace",
-    readiness: "production" as const,
+    readiness: "beta" as const,
   },
   {
     icon: Globe,
     title: "Cross-Channel Continuity",
-    description: "One identity across web, mobile, voice, and bot — handoff without dropping the room.",
+    description: "One identity across web, mobile, voice, and bot. Handoff without dropping the room.",
     href: "/cross-channel",
-    readiness: "production" as const,
+    readiness: "labs" as const,
   },
   {
     icon: Boxes,
     title: "Spatial & Digital Twins",
     description: "3D room scenes, entities, agent grants, and spatial presence on the same kernel.",
     href: "/spatial",
-    readiness: "production" as const,
+    readiness: "labs" as const,
   },
   {
     icon: Key,
     title: "Web3 Chat",
     description: "Wallet authentication, token-gated rooms, and on-chain message commitments.",
     href: "/web3",
-    readiness: "production" as const,
+    readiness: "beta" as const,
   },
   {
     icon: Puzzle,
     title: "Agent Marketplace",
     description: "Install pre-built agent skills with versioning and config schemas.",
     href: "/marketplace",
-    readiness: "production" as const,
+    readiness: "beta" as const,
   },
   {
     icon: Bot,
     title: "Chatbot Builder",
     description: "Visual trigger-action rules with conditions, priorities, and simulated events.",
     href: "/chatbot-builder",
-    readiness: "production" as const,
+    readiness: "beta" as const,
   },
   {
     icon: Radio,
     title: "FluxyStream: Live Broadcasting",
     description: "Events, ingest, HLS playback, and chat overlay on the room WebSocket.",
     href: "/stream/demo",
-    readiness: "production" as const,
+    readiness: "beta" as const,
   },
   {
     icon: Zap,
-    title: "WebTransport Readiness",
-    description: "WebTransport → WebSocket → SSE → long-poll, negotiated in the SDK.",
+    title: "Fallback transports",
+    description: "WebSocket, then SSE or long-poll if the socket dies. WebTransport is not a live Worker path.",
     href: "/transport",
-    readiness: "production" as const,
+    readiness: "labs" as const,
   },
   {
     icon: Bot,
     title: "AI Agent Platform",
-    description: "No-code builder, versioning, sandbox, CI/CD, and invokeAgent on the timeline.",
+    description: "Builder, versioning, sandbox, and invokeAgent on the timeline.",
     href: "/agents/platform",
-    readiness: "production" as const,
+    readiness: "labs" as const,
   },
   {
     icon: Gamepad2,
     title: "FluxyGame: Multiplayer SDK",
-    description: "Matchmaking, server-authoritative ticks, AI NPCs, tournaments, and party rooms.",
+    description: "Matchmaking, ticks, AI NPCs, tournaments, and party rooms. Not rollback netcode.",
     href: "/game",
-    readiness: "production" as const,
+    readiness: "beta" as const,
   },
   {
     icon: Cpu,
     title: "FluxyIoT: HTTP ingest and device fleet",
     description: "Provision devices, ingest readings, shadow, rules, and GPS fleet on the room stream.",
     href: "/iot",
-    readiness: "production" as const,
+    readiness: "beta" as const,
   },
   {
     icon: GraduationCap,
     title: "FluxyEdu: Live classroom",
     description: "Polls, breakouts, attendance, and stage go-live on the room WebSocket.",
     href: "/edu",
-    readiness: "production" as const,
+    readiness: "beta" as const,
   },
 ] as const;
 
@@ -263,15 +263,15 @@ export function LandingWhatsNewSection() {
       <div className="mx-auto max-w-6xl">
         <div className="text-center">
           <span className="inline-flex items-center rounded-full bg-[var(--mkt-brand)]/10 px-3 py-1 text-sm font-medium text-[var(--mkt-brand)] ring-1 ring-inset ring-[var(--mkt-brand)]/25">
-            Production ready
+            Kernel first
           </span>
           <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-[var(--mkt-text)] sm:text-4xl">
-            Live verticals, voice, and the server event bus
+            Polls and GPS ride the same socket as chat
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-[var(--mkt-text-muted)]">
-            Polls, breakouts, stage go-live, collab CRDT, fleet GPS, and hybrid check-in fan out as{" "}
-            <code className="rounded bg-[var(--mkt-surface-2)] px-1 py-0.5 font-mono text-sm text-[var(--mkt-brand)]">server_event</code> frames on the
-            room WebSocket. Voice AI, streaming AI, MCP tools, and durable agents sit on the same worker.
+            When someone votes, a device posts a reading, or a stage goes live, the room gets a{" "}
+            <code className="rounded bg-[var(--mkt-surface-2)] px-1 py-0.5 font-mono text-sm text-[var(--mkt-brand)]">server_event</code>.
+            You do not stand up a second realtime backend. Hosted is still beta.
           </p>
         </div>
 
@@ -286,7 +286,7 @@ export function LandingWhatsNewSection() {
               Modules on the same Worker
             </h3>
             <p className="mt-2 text-sm text-[var(--mkt-text-muted)]">
-              Marketplace, Web3, FluxyEdu, stream, game, IoT, and the chatbot builder are in the console sidebar.
+              Marketplace, Web3, classrooms, stream, game, and IoT live in the sidebar. They are beta or labs, not a second product you buy.
             </p>
           </div>
           <LandingPlatformIndex featured={FEATURED_EXTENSIONS} more={MORE_EXTENSIONS} />

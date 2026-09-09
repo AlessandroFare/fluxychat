@@ -10,7 +10,7 @@ export interface PlatformModule {
   description: string;
   href: string;
   icon: ComponentType<{ className?: string }>;
-  readiness?: "production" | "beta";
+  readiness?: "production" | "beta" | "labs";
 }
 
 interface LandingPlatformIndexProps {

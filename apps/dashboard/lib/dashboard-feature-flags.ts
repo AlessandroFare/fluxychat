@@ -1,6 +1,6 @@
 /**
- * Dashboard nav visibility. Platform modules ship as production in the sidebar.
- * Env flags remain for emergency hide-only; default is show everything.
+ * Dashboard nav stays fully visible. Surface kind is chrome (ga / labs / preview),
+ * not a hide switch. Env flags remain for emergency hide-only.
  */
 
 function readEnvFlag(name: string, defaultValue = true): boolean {
@@ -70,8 +70,11 @@ export function matchFlaggedHref(pathname: string, hrefs: Set<string>): string |
   return best;
 }
 
-/** All console surfaces are GA / flagship. */
-export function getDashboardSurfaceKind(_pathname: string | null): DashboardSurfaceKind {
+/** Console chrome: kernel vs labs vs preview. Nav stays visible. */
+export function getDashboardSurfaceKind(pathname: string | null): DashboardSurfaceKind {
+  if (!pathname) return "ga";
+  if (matchFlaggedHref(pathname, DASHBOARD_LAB_HREFS)) return "labs";
+  if (matchFlaggedHref(pathname, DASHBOARD_PREVIEW_HREFS)) return "preview";
   return "ga";
 }
 

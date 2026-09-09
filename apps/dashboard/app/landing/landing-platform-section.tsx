@@ -41,12 +41,12 @@ export function LandingPlatformSection() {
     <section id="platform" className="scroll-mt-20 border-b border-white/10 bg-[#0b0b0c] px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase text-zinc-500">One room primitive, many products</p>
+          <p className="text-xs font-semibold uppercase text-zinc-500">Same Worker when the room grows</p>
           <h2 className="mt-3 text-balance font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            One room. Chat, collab, stream, and the rest.
+            Start with chat and a document. Add GPS or a live overlay later.
           </h2>
           <p className="mt-4 text-pretty text-lg text-zinc-400">
-            Chat, collab, stream, voice, game, IoT, fleet, spatial, and industry studios run on the same Durable Object. Hosted is open beta. Pin npm.
+            Chat, presence, Yjs, and invokeAgent are the kernel. Polls, HTTP ingest, and Stream sit on that same Durable Object. Hosted is open beta. Pin npm.
           </p>
         </div>
 

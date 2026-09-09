@@ -1,10 +1,12 @@
 import { pickRouteDeps } from "./route-http-deps.js";
+import { readDeviceBearer } from "../lib/device-secret.js";
 import {
   parseGpsIngestBody,
   parseVehicleInput,
   parseTripInput,
   parseGeofenceInput,
   parseDeliveryMatchInput,
+  authenticateFleetVehicle,
   ingestGps,
   listCurrentPositions,
   getGpsHistory,
@@ -37,11 +39,21 @@ export async function dispatchFleetTrackingRoutes(request, url, h) {
 
   if (!url.pathname.startsWith("/fleet")) return null;
 
-  const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
-    if (err instanceof Response) throw err;
-    logError("auth.jwt_verify_failed", err, requestLogCtx);
-    return null;
-  });
+  const deviceKey = readDeviceBearer(request);
+  let auth = null;
+  if (deviceKey.startsWith("fleet_")) {
+    auth = await authenticateFleetVehicle(env, deviceKey);
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    if (url.pathname !== "/fleet/gps" || request.method !== "POST") {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    }
+  } else {
+    auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+  }
   if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
 
   const projectId = auth.projectId;
@@ -52,8 +64,12 @@ export async function dispatchFleetTrackingRoutes(request, url, h) {
       const body = await request.json().catch(() => null);
       const parsed = parseGpsIngestBody(body);
       if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+      if (auth.id && parsed.data.vehicleId !== auth.id) {
+        return json({ error: "vehicle_mismatch" }, { status: 403, headers: corsHeaders });
+      }
       const result = await ingestGps(env, projectId, parsed.data);
-      return json(result, { headers: corsHeaders });
+      const status = result.error === "quota_exceeded" ? 429 : 200;
+      return json(result, { status, headers: corsHeaders });
     }
 
     /* ── GET /fleet/gps/current ── */

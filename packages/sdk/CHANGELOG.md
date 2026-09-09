@@ -1,5 +1,11 @@
 # @fluxy-chat/sdk
 
+## Unreleased
+
+### Changed
+
+- `PLATFORM_READINESS` matches what you can sell: chat + Yjs `production`; stream/game/IoT/fleet/edu/marketplace/web3/chatbot-builder `beta`; voice, huddles, spatial, health, event, finance, continuity, cartography, truth-market, transport, driver, cross-channel `labs`. Transport copy no longer claims a live WebTransport listener. Huddles copy points at Cloudflare Realtime SFU, not a LiveKit VPS.
+
 ## 0.6.12 (2026-09-07)
 
 ### Fixed

@@ -10,7 +10,7 @@ export interface WorkerFluxyIoTClient {
     metadata?: Record<string, unknown>;
   }): Promise<{ device: IoTDevicePublic; apiKey: string }>;
   listDevices(filter?: { fleetId?: string }): Promise<IoTDevicePublic[]>;
-  ingestReading(deviceId: string, reading: { sensor: string; value: number; unit?: string }): Promise<SensorReading>;
+  ingestReading(deviceId: string, reading: { sensor: string; value: number; unit?: string }, deviceKey?: string): Promise<SensorReading>;
   getShadow(deviceId: string): Promise<{ reported: Record<string, unknown>; desired: Record<string, unknown> }>;
   setDesired(deviceId: string, desired: Record<string, unknown>): Promise<{ reported: Record<string, unknown>; desired: Record<string, unknown> }>;
   createRule(input: {
@@ -50,10 +50,13 @@ export function createWorkerFluxyIoTClient(client: FluxyChatClient): WorkerFluxy
       const body = (await res.json()) as { devices: IoTDevicePublic[] };
       return body.devices;
     },
-    async ingestReading(deviceId, reading) {
+    async ingestReading(deviceId, reading, deviceKey) {
+      const auth = deviceKey
+        ? { Authorization: `Bearer ${deviceKey}` }
+        : await headers(client);
       const res = await fetch(`${base(client)}/iot/devices/${encodeURIComponent(deviceId)}/readings`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await headers(client)) },
+        headers: { "Content-Type": "application/json", ...auth },
         body: JSON.stringify(reading),
       });
       if (!res.ok) throw new Error(`ingestReading failed: ${res.status}`);

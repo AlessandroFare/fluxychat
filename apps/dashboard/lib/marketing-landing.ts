@@ -11,7 +11,7 @@ export const MARKETING_HERO = {
 } as const;
 
 export const MARKETING_WHY = {
-  title: "Why teams pick FluxyChat",
+  title: "What you stop paying for",
   body: "Chat, presence, Yjs, and an agent sit on one Durable Object. Hosted is beta. Self-host is MIT. Pusher is transport. Liveblocks is the document. Stream is consumer chat.",
 } as const;
 

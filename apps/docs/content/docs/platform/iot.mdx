@@ -20,7 +20,7 @@ curl -X POST "$WORKER/rooms/$ROOM/iot/events" \
   -d '{"deviceId":"sim-1","eventType":"telemetry","payload":{"temp":21}}'
 ```
 
-Register a device (JWT or API key) then shadow readings:
+Register a device (JWT). The Worker returns `apiKey` once (`iot_…`). Devices ingest with that key, not a member JWT. Shadow and rules still use the project JWT.
 
 ```bash
 curl -X POST "$WORKER/iot/devices" \
@@ -29,10 +29,12 @@ curl -X POST "$WORKER/iot/devices" \
   -d '{"name":"probe","roomId":"YOUR_ROOM"}'
 
 curl -X POST "$WORKER/iot/devices/DEVICE_ID/readings" \
-  -H "Authorization: Bearer $JWT" \
+  -H "Authorization: Bearer $IOT_DEVICE_KEY" \
   -H "Content-Type: application/json" \
   -d '{"sensor":"temp","value":21,"unit":"C"}'
 ```
+
+Quota: 5,000 readings per project per UTC day. Over that: HTTP 429 `quota_exceeded`. MQTT does not run in the Worker.
 
 ## React
 

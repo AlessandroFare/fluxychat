@@ -3,6 +3,7 @@
  */
 import { buildOpenAiChatCompletionsUrl } from "./openai-compat-url.js";
 import { fetchWithDoKeepalive, outboundStreamTags } from "./do-outbound-keepalive.js";
+import { openAiMessagesForModel } from "./llm-message-content.js";
 
 /**
  * @param {unknown} parsed
@@ -70,7 +71,7 @@ async function consumeSseLine(line, state, fullContent, onDelta) {
 export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts, onDelta) {
   const body = {
     model,
-    messages,
+    messages: openAiMessagesForModel(model, messages),
     max_tokens: opts.maxTokens || 1024,
     temperature: opts.temperature ?? 0.7,
     ...(opts.topP !== undefined ? { top_p: opts.topP } : {}),

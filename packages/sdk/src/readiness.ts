@@ -9,6 +9,7 @@ export interface ReadinessEntry {
 
 /**
  * Product modules on the free path. Hosted is still open beta (no SLA).
+ * Kernel chat + Yjs are production. Verticals ship; they are not a hosted GA claim.
  * Out of scope: SOC 2 attestation, HIPAA BAA, 99.999% uptime.
  */
 export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
@@ -26,85 +27,121 @@ export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
   },
   stream: {
     label: "FluxyStream",
-    readiness: "production",
+    readiness: "beta",
     href: "/stream",
     description: "Live event rooms + chat overlay. WHIP/HLS via Cloudflare Stream secrets",
   },
   voice: {
     label: "Voice AI",
-    readiness: "production",
+    readiness: "labs",
     href: "/voice-ai",
     description: "Workers AI STT/TTS and joinVoiceStage signaling. No unpublished latency SLA",
   },
+  huddles: {
+    label: "Huddles",
+    readiness: "labs",
+    href: "/huddles",
+    description: "Audio and video huddles. Default media path is Cloudflare Realtime SFU; LiveKit JWT is a fallback",
+  },
+  cartography: {
+    label: "Cartography",
+    readiness: "labs",
+    href: "/cartography",
+    description: "Thematic room maps from message embeddings",
+  },
+  "truth-market": {
+    label: "Truth Market",
+    readiness: "labs",
+    href: "/truth-market",
+    description: "Stake and dispute claims in-room",
+  },
+  transport: {
+    label: "Fallback transports",
+    readiness: "labs",
+    href: "/transport",
+    description: "WebSocket plus SSE and long-poll fallback. WebTransport is not a live Worker listener",
+  },
+  "cross-channel": {
+    label: "Cross-channel",
+    readiness: "labs",
+    href: "/cross-channel",
+    description: "Unified identity and journeys across channels",
+  },
+  driver: {
+    label: "Driver app",
+    readiness: "labs",
+    href: "/driver",
+    description: "PWA driver client for fleet rooms",
+  },
   game: {
     label: "FluxyGame",
-    readiness: "production",
+    readiness: "beta",
     href: "/game",
     description: "Match ticks, leaderboard, and checkpoints on D1. Not rollback netcode",
   },
   iot: {
     label: "FluxyIoT",
-    readiness: "production",
+    readiness: "beta",
     href: "/iot",
     description: "HTTP ingest, device shadow, and room fan-out. Not MQTT",
   },
   fleet: {
     label: "Fleet",
-    readiness: "production",
+    readiness: "beta",
     href: "/fleet",
     description: "Vehicles, trips, geofences, and GPS fan-out",
   },
   spatial: {
     label: "Spatial",
-    readiness: "production",
+    readiness: "labs",
     href: "/spatial",
     description: "Scenes, entities, and agent grants on /spatial. Not a game engine",
   },
   edu: {
     label: "FluxyEdu",
-    readiness: "production",
+    readiness: "beta",
     href: "/edu",
     description: "Polls, breakouts, and attendance heartbeats on the room",
   },
   health: {
     label: "FluxyHealth",
-    readiness: "production",
+    readiness: "labs",
     href: "/health",
     description: "Consent and care-room capability events. No HIPAA BAA",
   },
   event: {
     label: "FluxyEvent",
-    readiness: "production",
+    readiness: "labs",
     href: "/events",
     description: "Stage live, hybrid check-in, and moderated Q&A",
   },
   finance: {
     label: "FluxyFinance",
-    readiness: "production",
+    readiness: "labs",
     href: "/finance",
     description: "Risk flags and approval events. No PAN, no trade execution",
   },
   continuity: {
     label: "Continuity",
-    readiness: "production",
+    readiness: "labs",
     href: "/continuity",
     description: "Device checkpoints and handoff events on the room",
   },
   marketplace: {
     label: "Marketplace",
-    readiness: "production",
+    readiness: "beta",
     href: "/marketplace",
     description: "Agent templates, KV apps, MCP catalog. ApyHub is remote MCP",
   },
   "chatbot-builder": {
     label: "Chatbot builder",
-    readiness: "production",
+    readiness: "beta",
     href: "/chatbot-builder",
     description: "Trigger-action rules stored on the Worker",
   },
   web3: {
     label: "Web3 rooms",
-    readiness: "production",
+    readiness: "beta",
     href: "/web3",
     description: "Worker SIWE mint plus optional address allowlist. NFT gates stay optional RPC on your side",
   },

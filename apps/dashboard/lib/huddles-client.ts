@@ -102,3 +102,137 @@ export async function getCallToken(
     body: JSON.stringify(body),
   });
 }
+
+export interface SfuProxyResult<T> {
+  ok?: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export function unwrapSfuResult<T>(body: SfuProxyResult<T> & Partial<T>): T {
+  if (body?.ok === false) {
+    throw new Error(body.message || body.error || "sfu_upstream");
+  }
+  if (body?.ok === true && body.data) return body.data;
+  return body as T;
+}
+
+export interface SfuSessionCreated {
+  sessionId: string;
+  sessionDescription?: RTCSessionDescriptionInit;
+}
+
+export interface SfuTracksResult {
+  requiresImmediateRenegotiation?: boolean;
+  sessionDescription?: RTCSessionDescriptionInit;
+  tracks?: Array<{ trackName?: string; mid?: string; errorCode?: string; errorDescription?: string }>;
+}
+
+export interface HuddleRoomTrack {
+  user_id: string;
+  session_id: string;
+  track_name: string;
+  kind: string;
+}
+
+export async function createRealtimeSession(
+  token: string,
+  roomId: string,
+  sessionDescription: RTCSessionDescriptionInit,
+): Promise<SfuSessionCreated> {
+  const body = await fetchWorkerJson<SfuProxyResult<SfuSessionCreated>>(
+    `${BASE}/rooms/${encodeURIComponent(roomId)}/realtime/sessions`,
+    {
+      method: "POST",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionDescription }),
+    },
+  );
+  return unwrapSfuResult(body);
+}
+
+export async function addRealtimeTracks(
+  token: string,
+  roomId: string,
+  sessionId: string,
+  payload: { sessionDescription?: RTCSessionDescriptionInit; tracks: unknown[] },
+): Promise<SfuTracksResult> {
+  const body = await fetchWorkerJson<SfuProxyResult<SfuTracksResult>>(
+    `${BASE}/rooms/${encodeURIComponent(roomId)}/realtime/sessions/${encodeURIComponent(sessionId)}/tracks`,
+    {
+      method: "POST",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  const data = unwrapSfuResult(body);
+  const failed = (data.tracks || []).find((t) => t.errorCode);
+  if (failed) throw new Error(failed.errorDescription || failed.errorCode || "track_error");
+  return data;
+}
+
+export async function renegotiateRealtimeSession(
+  token: string,
+  roomId: string,
+  sessionId: string,
+  sessionDescription: RTCSessionDescriptionInit,
+): Promise<unknown> {
+  const body = await fetchWorkerJson<SfuProxyResult<unknown>>(
+    `${BASE}/rooms/${encodeURIComponent(roomId)}/realtime/sessions/${encodeURIComponent(sessionId)}/renegotiate`,
+    {
+      method: "PUT",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionDescription }),
+    },
+  );
+  return unwrapSfuResult(body);
+}
+
+export async function announceHuddleTracks(
+  token: string,
+  roomId: string,
+  body: { sessionId: string; tracks: Array<{ trackName: string; kind: string }> },
+): Promise<void> {
+  await fetchWorkerJson(`${BASE}/rooms/${encodeURIComponent(roomId)}/realtime/tracks`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function listHuddleRoomTracks(
+  token: string,
+  roomId: string,
+): Promise<{ tracks: HuddleRoomTrack[] }> {
+  return fetchWorkerJson(`${BASE}/rooms/${encodeURIComponent(roomId)}/realtime/tracks`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function leaveHuddleRoomTracks(token: string, roomId: string): Promise<void> {
+  await fetchWorkerJson(`${BASE}/rooms/${encodeURIComponent(roomId)}/realtime/tracks`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+export interface HuddleSfuBudget {
+  estimated: boolean;
+  month: string;
+  bytesUsed: number;
+  capBytes: number;
+  remainingBytes: number;
+  openSessions: number;
+  maxConcurrent: number;
+  maxSessionSeconds: number;
+  allowVideo: boolean;
+  disabled: boolean;
+  monthlyGbCap: number;
+}
+
+export async function getHuddleSfuBudget(token: string, roomId: string): Promise<HuddleSfuBudget> {
+  return fetchWorkerJson(`${BASE}/rooms/${encodeURIComponent(roomId)}/realtime/budget`, {
+    headers: authHeaders(token),
+  });
+}

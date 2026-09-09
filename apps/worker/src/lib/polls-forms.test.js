@@ -34,6 +34,13 @@ function createMockDb({ polls = [], options = [], votes = [], forms = [], submis
               return { results: [] };
             },
             async first() {
+              if (sql.includes("COUNT(*)") && sql.includes("FROM polls")) {
+                return {
+                  cnt: self.polls.filter(
+                    (p) => p.project_id === args[0] && p.room_id === args[1] && !p.is_closed,
+                  ).length,
+                };
+              }
               if (sql.includes("SELECT * FROM polls WHERE id")) {
                 return self.polls.find((p) => p.id === args[0]) || null;
               }
@@ -150,12 +157,16 @@ describe("polls-forms", () => {
       });
       expect(result.ok).toBe(false);
     });
-    it("rejects missing options", async () => {
-      const db = createMockDb();
+    it("rejects more than 20 open polls in a room", async () => {
+      const polls = Array.from({ length: 20 }, (_, i) => ({
+        id: `p${i}`, project_id: "p1", room_id: "r1", created_by: "u1", is_closed: 0,
+      }));
+      const db = createMockDb({ polls });
       const result = await createPoll({ DB: db }, {
-        projectId: "p1", roomId: "r1", createdBy: "u1", title: "Q", options: [],
+        projectId: "p1", roomId: "r1", createdBy: "u1", title: "Q", options: ["A"],
       });
       expect(result.ok).toBe(false);
+      expect(result.error).toBe("too_many_open_polls");
     });
   });
 

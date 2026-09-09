@@ -1,4 +1,5 @@
 import { mintLiveKitAccessToken } from "./livekit-token.js";
+import { defaultHuddleProvider, huddleParticipantCap, isRealtimeSfuConfigured } from "./realtime-sfu.js";
 
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -10,12 +11,19 @@ export async function createCallSession(env, { projectId, roomId, provider, star
   const id = `call_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
   const providerRoomId = `room_${generateId().slice(0, 16)}`;
+  const resolvedProvider = defaultHuddleProvider(env, provider);
+  const storedProvider = resolvedProvider === "cloudflare-realtime" ? "custom" : resolvedProvider;
+  const cap = huddleParticipantCap(maxParticipants || 8);
+  const storedSettings = {
+    ...(settings && typeof settings === "object" ? settings : {}),
+    huddleProvider: resolvedProvider,
+  };
 
   await env.DB.prepare(
     `INSERT INTO call_sessions (id, project_id, room_id, provider, provider_room_id, status, started_by, started_at, recording_enabled, max_participants, settings, created_at)
      VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?, ?, ?, ?, ?)`
   )
-    .bind(id, projectId, roomId, provider || "livekit", providerRoomId, startedBy || null, now, recordingEnabled ? 1 : 0, maxParticipants || 50, settings ? JSON.stringify(settings) : null, now)
+    .bind(id, projectId, roomId, storedProvider, providerRoomId, startedBy || null, now, recordingEnabled ? 1 : 0, cap, JSON.stringify(storedSettings), now)
     .run();
 
   return { id, providerRoomId, status: "waiting" };
@@ -182,8 +190,27 @@ export async function getCallStats(env, { projectId }) {
 
 export async function generateToken(env, provider, { roomId, userId, displayName, ttl, roomName }) {
   const livekitRoom = roomName || roomId;
+  const resolved = defaultHuddleProvider(env, provider);
 
-  if (provider === "livekit") {
+  if (resolved === "cloudflare-realtime") {
+    return {
+      provider: "cloudflare-realtime",
+      configured: isRealtimeSfuConfigured(env),
+      signaling: {
+        createSession: `/rooms/${encodeURIComponent(roomId)}/realtime/sessions`,
+        tracks: `/rooms/${encodeURIComponent(roomId)}/realtime/sessions/{sessionId}/tracks`,
+        renegotiate: `/rooms/${encodeURIComponent(roomId)}/realtime/sessions/{sessionId}/renegotiate`,
+        roomTracks: `/rooms/${encodeURIComponent(roomId)}/realtime/tracks`,
+      },
+      iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
+      identity: userId,
+      displayName,
+      ttl: ttl || 3600,
+      note: "POST SDP through the Worker. The Realtime SFU app secret never leaves the Worker. LiveKit remains a fallback if REALTIME_SFU_* is unset.",
+    };
+  }
+
+  if (resolved === "livekit") {
     const minted = await mintLiveKitAccessToken(env, {
       roomName: livekitRoom,
       identity: userId,

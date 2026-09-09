@@ -3,9 +3,38 @@ title: Huddles — audio, video, and screen share
 description: WebRTC huddles with worker call sessions, captions, and optional recording.
 ---
 
-**Huddles** combine the SDK `createHuddle()` WebRTC helper with worker **call sessions** for room-scoped audio/video, screen share, captions, and recording.
+**Huddles** combine the SDK `createHuddle()` helper with worker **call sessions**. Default media path is **Cloudflare Realtime SFU** (no rooms on the SFU — the Durable Object is the room). LiveKit JWT mint is a fallback when `LIVEKIT_*` is set.
+
+## Realtime SFU signaling
+
+The Worker holds `REALTIME_SFU_APP_ID` and `REALTIME_SFU_APP_SECRET`. Browsers never see the app secret.
+
+```bash
+curl -X POST "$WORKER_URL/rooms/{roomId}/realtime/sessions" \
+  -H "Authorization: Bearer $MEMBER_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"sessionDescription":{"type":"offer","sdp":"v=0..."}}'
+```
+
+Same sequence as Cloudflare's Echo HTML: create session with the offer, wait for ICE, `POST .../tracks` with local `mid` + `trackName`, then pull peers from `GET /rooms/{roomId}/realtime/tracks`. The app secret never goes to the browser.
+
+`GET /admin/calls/token` with no provider returns that signaling map when Realtime SFU is configured, otherwise a LiveKit token or stub.
 
 Dashboard: [**Huddles**](/huddles)
+
+## Bill cap (not Cloudflare's meter)
+
+Realtime includes **1 TB/month** then $0.05/GB. The Worker cannot read Cloudflare's usage, so it keeps its own **high** estimate and **refuses new huddles** when that estimate hits the cap.
+
+Defaults (override with Worker env):
+
+- `REALTIME_SFU_MONTHLY_GB_CAP=80` (stop at 80 GB estimated, not 1000)
+- `REALTIME_SFU_MAX_CONCURRENT=2`
+- `REALTIME_SFU_MAX_SESSION_SECONDS=1200` (20 minutes, then we settle the session)
+- Video off unless `REALTIME_SFU_ALLOW_VIDEO=true`
+- Panic: `REALTIME_SFU_DISABLED=true`
+
+`GET /rooms/{roomId}/realtime/budget` returns the current estimate. Apply D1 migration `0225_huddle_sfu_budget.sql`.
 
 ## Create and start a call
 
@@ -15,9 +44,9 @@ curl -X POST "$WORKER_URL/admin/calls" \
   -H "Content-Type: application/json" \
   -d '{
     "roomId": "room_team",
-    "provider": "livekit",
+    "provider": "cloudflare-realtime",
     "recordingEnabled": true,
-    "maxParticipants": 25
+    "maxParticipants": 8
   }'
 
 curl -X POST "$WORKER_URL/admin/calls/{callId}/start" \
@@ -61,7 +90,7 @@ const huddle = createHuddle({
   screenShareEnabled: true,
   captionsEnabled: true,
   recordingConsent: false,
-  maxParticipants: 25,
+  maxParticipants: 8,
 });
 
 await huddle.join();

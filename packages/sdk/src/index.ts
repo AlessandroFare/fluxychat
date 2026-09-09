@@ -1370,6 +1370,14 @@ export {
   type Caption,
   type Huddle,
 } from "./huddles";
+export {
+  CLOUDFLARE_STUN,
+  buildLocalTrackObjects,
+  toRemotePullTracks,
+  sfuTracksNeedAnswer,
+  type LocalTrackObject,
+  type RemoteTrackObject,
+} from "./realtime-sfu-session";
 
 // D-10: Video generation progress
 export {
