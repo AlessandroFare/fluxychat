@@ -13,7 +13,7 @@ npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
 
 ```bash
 curl -X POST "$WORKER/fleet/gps" \
-  -H "Authorization: Bearer $JWT" \
+  -H "Authorization: Bearer $FLEET_DEVICE_KEY" \
   -H "Content-Type: application/json" \
   -d '{"vehicleId":"veh_1","lat":45.46,"lng":9.18,"roomId":"demo"}'
 ```
@@ -29,4 +29,4 @@ useChat({
 });
 ```
 
-Register vehicles with `POST /fleet/vehicles` (SDK `createFleetVehicle`) before ingest. Default fan-out room is `fleet:{projectId}` if `roomId` is omitted.
+Register vehicles with `POST /fleet/vehicles` (SDK `createFleetVehicle`). The response includes `apiKey` (`fleet_…`) once. Drivers POST GPS with that key; other fleet routes still need a member JWT. Default fan-out room is `fleet:{projectId}` if `roomId` is omitted. Cap: 60 GPS points per vehicle per minute.

@@ -59,7 +59,7 @@ Numbers we can cite (with source and date):
 - CI gzip budgets: `@fluxy-chat/react` chat-only entry gated at 20 kB gzip; full SDK budget 160 kB. Source: live compare page + repo `check:bundle-size`. Do not quote a single gzip as “the product size” without the tree-shake caveat.
 - Thread depth cap 8. Source: SDK `ThreadDepthExceededError`, 2026-09.
 - Presence aggregate above 250 unique users. Source: docs/llms.txt.
-- npm pins as of 2026-09-04 in repo: `@fluxy-chat/sdk@0.6.9`, `@fluxy-chat/react@0.1.7` (publish status: confirm on npm before citing as live).
+- npm pins as of 2026-09-09: `@fluxy-chat/sdk@0.6.12`, `@fluxy-chat/react@0.1.8`. Confirm on npm before citing as live.
 
 Named customers we're allowed to name:
 
@@ -91,7 +91,7 @@ Seamless, frictionless, industry-leading, SFU (as ours), MQTT (as ours), HIPAA-c
 
 Regulatory or legal limits:
 
-No invented testimonials. No public uptime number. GDPR export exists on the Worker; DPA download is later. Subprocessors page is public (Clerk, Stripe, Cloudflare, LLM path, Vercel).
+No invented testimonials. No public uptime number. GDPR export exists on the Worker. DPA is at fluxychat.com/dpa (custom PDF only with MSA). Subprocessors page is public (Clerk, Stripe, Cloudflare, LLM path, Vercel).
 
 Anything off-limits:
 

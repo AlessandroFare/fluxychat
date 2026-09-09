@@ -50,6 +50,7 @@ import { isHumanHandoffActive } from "./room-handoff.js";
 import { buildWebSearchContext, detectResearchMode } from "./web-search.js";
 import { composeAgentSystemPrompt } from "./fluxychat-product-knowledge.js";
 import { listCommands } from "./room-commands.js";
+import { getModelCapabilities } from "./llm-model-catalog.js";
 import {
   imagePartsFromAttachments,
   loadAttachmentsByMessageIds,
@@ -794,11 +795,15 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       }
     }
 
+    const allowVision = Boolean(
+      getModelCapabilities(connection.model, connection.apiStyle || "openai-compatible").imageInput,
+    );
+
     for (const msg of conversationHistory) {
       const historyMsg = buildHistoryMessage(msg, { userId, agentId: agentRow.id });
       if (!historyMsg) continue;
       const histImages =
-        historyMsg.role === "user"
+        allowVision && historyMsg.role === "user"
           ? await imagePartsFromAttachments(env, historyAtts.get(msg.id) || [], projectId)
           : [];
       if (histImages.length) {
@@ -810,7 +815,9 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         messages.push(historyMsg);
       }
     }
-    const promptImages = await imagePartsFromAttachments(env, attachments, projectId);
+    const promptImages = allowVision
+      ? await imagePartsFromAttachments(env, attachments, projectId)
+      : [];
     messages.push({
       role: "user",
       content: userContentWithImages(userMessage, promptImages),
@@ -1088,7 +1095,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       } else {
         messages.push({
           role: "assistant",
-          content: extracted.content || null,
+          content: extracted.content || "",
           tool_calls: extracted.toolCalls.map((tc) => ({
             id: tc.id,
             type: "function",

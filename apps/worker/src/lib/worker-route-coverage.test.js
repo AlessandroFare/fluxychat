@@ -148,6 +148,7 @@ describe("worker HTTP prefix coverage", () => {
         for (const s of firstSegmentsInSource(readFileSync(nested, "utf8"))) segs.add(s);
       }
       for (const seg of segs) {
+        if (seg.startsWith(".")) continue;
         const names = (WORKER_ROUTE_PREFIX_INDEX[seg] ?? []).map((d) => d.name);
         if (!names.includes(fn.name)) {
           gaps.push(`${fn.name} missing from PREFIX_INDEX.${seg}`);

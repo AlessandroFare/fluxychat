@@ -25,7 +25,9 @@ BROWSER_ENABLED = "false"
 PUBLIC_GUEST_ENABLED = "true"
 PUBLIC_GUEST_READ_ONLY = "false"
 
-# Local optional vars/secrets: see `.dev.vars.example` (copy to `.dev.vars` for `wrangler dev`).
+# - Huddles: REALTIME_SFU_APP_ID + REALTIME_SFU_APP_SECRET (Worker proxies SDP). Optional LIVEKIT_* fallback.
+#   Caps (defaults): REALTIME_SFU_MONTHLY_GB_CAP=80 REALTIME_SFU_MAX_CONCURRENT=2 REALTIME_SFU_MAX_SESSION_SECONDS=1200
+#   Video off unless REALTIME_SFU_ALLOW_VIDEO=true. Instant stop: REALTIME_SFU_DISABLED=true.
 # Runtime env/secrets checklist:
 # - AI binding `[ai]` below is the in-worker STT/TTS path (Whisper + MeloTTS/Aura).
 # - Optional BYOK fallback: Cloudflare AI Gateway (P12-I) — AI_GATEWAY_ACCOUNT_ID + AI_GATEWAY_ID + AI_GATEWAY_TOKEN

@@ -308,7 +308,18 @@ AUDIT_CHAIN_ENABLED=true
 # RATE_LIMIT_PUBLIC_GUEST_PER_MINUTE=30
 # RATE_LIMIT_WS_MESSAGES_PER_MINUTE=60      # per-user WS message sends (Room DO)
 
-# --- Voice / LiveKit (PG-ZB-10 — SFU runs off Workers) ---
+# --- Voice / Cloudflare Realtime SFU (default huddles) ---
+# Create an SFU app in the Cloudflare dashboard. Never put the secret in the browser.
+# REALTIME_SFU_APP_ID=
+# REALTIME_SFU_APP_SECRET=
+# Bill cap (included Realtime is 1 TB/month then $0.05/GB). These are conservative estimates, not CF's meter.
+# REALTIME_SFU_MONTHLY_GB_CAP=80
+# REALTIME_SFU_MAX_CONCURRENT=2
+# REALTIME_SFU_MAX_SESSION_SECONDS=1200
+# REALTIME_SFU_ALLOW_VIDEO=false
+# REALTIME_SFU_DISABLED=false
+
+# --- Voice / LiveKit (optional fallback if a customer brings LiveKit) ---
 # LIVEKIT_API_KEY=
 # LIVEKIT_API_SECRET=
 # LIVEKIT_URL=wss://livekit.example.com

@@ -45,10 +45,10 @@ describe("dashboard-feature-flags", () => {
     }
   });
 
-  it("classifies every console surface as GA", () => {
-    expect(getDashboardSurfaceKind("/game")).toBe("ga");
-    expect(getDashboardSurfaceKind("/stream/abc/broadcast")).toBe("ga");
-    expect(getDashboardSurfaceKind("/agents/platform")).toBe("ga");
+  it("classifies kernel as ga and former labs as labs", () => {
     expect(getDashboardSurfaceKind("/rooms")).toBe("ga");
+    expect(getDashboardSurfaceKind("/game")).toBe("ga");
+    expect(getDashboardSurfaceKind("/stream/abc/broadcast")).toBe("labs");
+    expect(getDashboardSurfaceKind("/agents/platform")).toBe("preview");
   });
 });

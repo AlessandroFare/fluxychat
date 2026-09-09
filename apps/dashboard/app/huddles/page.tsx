@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Loader2, Video } from "lucide-react";
 import { createHuddle } from "@fluxy-chat/sdk";
@@ -17,13 +17,16 @@ import {
   createCall,
   endCall,
   getCall,
+  getHuddleSfuBudget,
   joinCall,
   listActiveCalls,
   startCall,
   toggleCallRecording,
   type CallSession,
   type CallParticipant as HuddleParticipant,
+  type HuddleSfuBudget,
 } from "@/lib/huddles-client";
+import { connectRealtimeHuddle, type RealtimeHuddleHandle } from "@/lib/connect-realtime-huddle";
 import { enableVoiceStage } from "@/lib/voice-stage-client";
 
 export default function HuddlesPage() {
@@ -43,6 +46,11 @@ export default function HuddlesPage() {
   const [isVideoOff, setIsVideoOff] = useState(true);
   const [displayName, setDisplayName] = useState("Console user");
   const [eventLog, setEventLog] = useState<string[]>([]);
+  const [sfuConnected, setSfuConnected] = useState(false);
+  const [budget, setBudget] = useState<HuddleSfuBudget | null>(null);
+  const huddleMedia = useRef<RealtimeHuddleHandle | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const huddle = useMemo(
     () => createHuddle({
@@ -52,7 +60,7 @@ export default function HuddlesPage() {
       screenShareEnabled: true,
       captionsEnabled: true,
       recordingConsent: false,
-      maxParticipants: 25,
+      maxParticipants: 8,
     }),
     [roomId],
   );
@@ -83,6 +91,16 @@ export default function HuddlesPage() {
     void loadCalls();
   }, [loadCalls]);
 
+  useEffect(() => {
+    if (!token || !roomId.trim()) {
+      setBudget(null);
+      return;
+    }
+    void getHuddleSfuBudget(token, roomId.trim())
+      .then(setBudget)
+      .catch(() => setBudget(null));
+  }, [token, roomId]);
+
   async function refreshParticipants(callId: string) {
     if (!token) return;
     const detail = await getCall(token, callId);
@@ -93,15 +111,29 @@ export default function HuddlesPage() {
     if (!token || !roomId.trim()) return;
     setBusy("create");
     try {
-      const created = await createCall(token, { roomId: roomId.trim(), provider: "livekit", recordingEnabled: true });
+      const created = await createCall(token, { roomId: roomId.trim(), recordingEnabled: false });
       await startCall(token, created.id);
       await joinCall(token, { callId: created.id, displayName });
       setActiveCallId(created.id);
       await refreshParticipants(created.id);
-      await huddle.join();
-      setNotice(`Huddle ${created.id} started`);
+      huddleMedia.current = await connectRealtimeHuddle({
+        token,
+        roomId: roomId.trim(),
+        videoEnabled: !isVideoOff,
+        onLocalStream(stream) {
+          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        },
+        onRemoteStream(_sessionId, stream) {
+          if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream;
+        },
+      });
+      setSfuConnected(true);
+      setNotice(`Huddle ${created.id} on Realtime SFU`);
       await loadCalls();
     } catch (err) {
+      await huddleMedia.current?.leave().catch(() => {});
+      huddleMedia.current = null;
+      setSfuConnected(false);
       setError(messageFromUnknown(err, "Failed to start huddle"));
     } finally {
       setBusy(null);
@@ -112,6 +144,9 @@ export default function HuddlesPage() {
     if (!token || !activeCallId) return;
     setBusy("end");
     try {
+      await huddleMedia.current?.leave();
+      huddleMedia.current = null;
+      setSfuConnected(false);
       await huddle.leave();
       await endCall(token, activeCallId);
       setActiveCallId(null);
@@ -143,18 +178,20 @@ export default function HuddlesPage() {
   }
 
   function handleToggleMute() {
-    if (isMuted) {
-      huddle.unmute();
-      setIsMuted(false);
-      setNotice("Unmuted");
-    } else {
-      huddle.mute();
-      setIsMuted(true);
-      setNotice("Muted");
-    }
+    const stream = huddleMedia.current?.localStream;
+    const next = !isMuted;
+    stream?.getAudioTracks().forEach((t) => {
+      t.enabled = !next;
+    });
+    setIsMuted(next);
+    setNotice(next ? "Muted" : "Unmuted");
   }
 
   function handleToggleVideo() {
+    if (!budget?.allowVideo) {
+      setNotice("Camera is off until REALTIME_SFU_ALLOW_VIDEO=true on the Worker. It burns the 1 TB faster.");
+      return;
+    }
     setIsVideoOff((prev) => {
       const next = !prev;
       setNotice(next ? "Camera off" : "Camera on");
@@ -179,7 +216,7 @@ export default function HuddlesPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Huddles"
-        description="Audio/video huddles with screen share, captions, and optional recording (WebRTC + worker call sessions)."
+        description="Mic over Cloudflare Realtime SFU. We stop huddles before the included 1 TB using our own estimate, not Cloudflare's meter. Camera stays off unless you set REALTIME_SFU_ALLOW_VIDEO=true."
       />
       <ConsoleFeedback error={error} notice={notice} />
 
@@ -198,6 +235,14 @@ export default function HuddlesPage() {
           <Section title="Start huddle">
             <Panel className="p-4 space-y-3 max-w-xl">
               <RoomPicker token={token} value={roomId} onChange={setRoomId} />
+              {budget ? (
+                <p className="text-xs text-muted-foreground">
+                  This month (estimate): {(budget.bytesUsed / 1e9).toFixed(2)} / {budget.monthlyGbCap} GB.
+                  {" "}Max {budget.maxConcurrent} huddles at once, {Math.round(budget.maxSessionSeconds / 60)} min each.
+                  {" "}Video {budget.allowVideo ? "allowed" : "blocked"}.
+                  {" "}Kill switch: REALTIME_SFU_DISABLED=true.
+                </p>
+              ) : null}
               <Input placeholder="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
               <div className="flex flex-wrap gap-2">
                 <CallButton
@@ -230,9 +275,25 @@ export default function HuddlesPage() {
                   onToggleMute={handleToggleMute}
                   onToggleVideo={handleToggleVideo}
                   onEndCall={() => void handleEnd()}
+                  mediaSlot={
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div>
+                        <p className="mb-1 text-xs text-muted-foreground">You</p>
+                        <video ref={localVideoRef} autoPlay muted playsInline className="w-full rounded-lg bg-black" />
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs text-muted-foreground">Remote</p>
+                        <video ref={remoteVideoRef} autoPlay playsInline className="w-full rounded-lg bg-black" />
+                      </div>
+                    </div>
+                  }
                 />
               ) : null}
-              <p className="text-xs text-muted-foreground">Local status: <Badge variant="outline">{huddle.getStatus()}</Badge></p>
+              <p className="text-xs text-muted-foreground">
+                Camera is chosen when you join. Mute uses the local mic track.
+                {" "}
+                <Badge variant="outline">{sfuConnected ? "sfu connected" : huddle.getStatus()}</Badge>
+              </p>
             </Panel>
           </Section>
 

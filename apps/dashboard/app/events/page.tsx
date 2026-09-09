@@ -2,8 +2,8 @@ import { VerticalStudio } from "@/app/components/vertical-studio";
 
 export default function EventsPage() {
   return <VerticalStudio config={{
-    id: "events", name: "FluxyEvent", eyebrow: "Live venue control room", readiness: "Production",
-    description: "Build a venue from connected rooms: lobby, stages, backstage, Q&A, polls and sponsor booths.",
+    id: "events", name: "FluxyEvent", eyebrow: "Venue", readiness: "Labs",
+    description: "Lobby, stage, Q&A, and polls on ordinary rooms. Spatial audio is not included.",
     journey: ["Verify attendee ticket", "Enter venue lobby", "Go live on main stage", "Moderate Q&A", "Publish event recap"],
     metrics: [{ label: "Capability events", value: "0" }, { label: "Stage live events", value: "0" }, { label: "Server fan-out", value: "0" }],
     capabilities: [{ name: "Venue rooms", detail: "Organizer, speaker, sponsor and attendee policy presets.", status: "Ready" }, { name: "Moderated Q&A", detail: "Idempotent upvotes, moderation queue and organizer controls.", status: "Ready" }, { name: "Ticket verification", detail: "Signed lifecycle adapter with revocation and anti-replay checks.", status: "Adapter" }, { name: "Spatial audio", detail: "Progressive enhancement with an accessible non-spatial fallback.", status: "Gated" }],

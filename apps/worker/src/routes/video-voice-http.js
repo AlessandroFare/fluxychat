@@ -113,7 +113,7 @@ export async function dispatchVideoVoiceRoutes(request, url, h) {
 
   if (request.method === "POST" && path === "/admin/calls/token") {
     const body = await request.json();
-    const token = await generateToken(env, body.provider || "livekit", {
+    const token = await generateToken(env, body.provider, {
       roomId: body.roomId,
       roomName: body.roomName || body.providerRoomId,
       userId: body.userId || userId,

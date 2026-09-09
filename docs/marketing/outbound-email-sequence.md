@@ -1,75 +1,97 @@
-# Outbound email sequence (B2B)
+# Outbound — founder who is about to glue three vendors
 
-Goal: get replies and short calls, not explain the whole product by email.
+Goal: they open a public room this week. Not a 15-minute demo calendar.
 
-Duration: 14–21 days · 5–6 touches · email + LinkedIn (optional call).
+Cadence: 4 emails over ~12 days. One link per email: https://fluxychat.com (or a gallery URL once you have a stable one).
+
+Voice: engineer writing to an engineer. Hosted is beta. Do not name competing hosted chat SDKs in public copy.
 
 ---
 
 ## Email 1 — first contact
 
-**Subject:** idea for [company] on realtime / AI / compliance
+Subject: your in-app chat is about to become three invoices
+
+Preview: pk_ in the browser, MIT if you want the Worker
 
 Hi [Name],
 
-I noticed [company] is working on [trigger: support, community, product, compliance].
+I saw [company] shipping [deal rooms / a classroom / a dispatch map / a copilot]. Most teams in that spot buy a socket vendor, a collab vendor, and a bot SDK, then spend a quarter making them look like one product.
 
-I'm building FluxyChat: self-hosted realtime chat on Cloudflare with native AI, omnichannel, and audit in one layer.
+FluxyChat is one Durable Object per room. Chat, presence, a Yjs document, and invokeAgent share that object. Public rooms take a pk_ in the client. Private rooms use a member JWT you mint. Hosted is open beta. The Worker is MIT if you want it on your Cloudflare account.
 
-The idea is to cut vendor lock-in and keep chat, automation, and governance in one place.
+Free is 200k persisted messages and 5k agent invokes a month, no card.
 
-Would a 15-minute demo work for you?
+If that matches what you are building, try it on fluxychat.com. If the room holds, Starter is $20.
+
+[Your name]
+
+P.S. If you already bought Stream or Liveblocks and you are happy, ignore this.
 
 ---
 
-## Email 2 — concrete example
+## Email 2 — mechanism
 
-**Subject:** quick example for [company]
+Subject: two sockets, one object
 
 Hi [Name],
 
-Quick example: with FluxyChat you get realtime chat, an embeddable widget, AI agents, and an audit trail on the same platform.
+Quick map, in case email 1 was too compressed.
 
-If your team needs support, compliance, or automation, I can walk through a use case similar to yours.
+JSON WebSocket: messages, presence, the agent writing the timeline.
+Binary socket: Yjs. Tiptap or Excalidraw stay in your app.
+HTTP ingest if you have devices or GPS: the room fans out iot.reading or fleet.gps_update. Not MQTT.
 
-15 minutes this week?
+I am not asking for a call. If you want the 20-line React snippet it is on the homepage.
+
+[Your name]
 
 ---
 
-## Email 3 — operational value
+## Email 3 — objection
 
-**Subject:** fewer tools to juggle
+Subject: hosted is still beta
 
 Hi [Name],
 
-Teams often lose time switching between separate chat, inbox, AI, and governance tools.
+Fair pushback: we do not have a public uptime SLO, there is no HIPAA BAA, and I will not pretend IoT is MQTT.
 
-FluxyChat unifies those flows and reduces operational overhead.
+What you do get: DPA at fluxychat.com/dpa, MIT self-host of the same Worker, and the kernel (chat + Yjs + invokeAgent) as the thing we actually operate.
 
-If useful, I can send a short breakdown for your use case.
+If procurement will not touch a beta host, self-host on your Cloudflare account and keep the SDK.
+
+[Your name]
 
 ---
 
-## Email 4 — soft close
+## Email 4 — close
 
-**Subject:** closing the loop
+Subject: I'll stop pinging
 
 Hi [Name],
 
-I assume you have more urgent priorities right now.
+Last one. If in-app rooms are not on the roadmap, that is fine.
 
-If you later need a realtime layer with AI and compliance, I'm happy to help.
+If they are, the free path is still open. I would rather you try the room than book a call you do not need.
 
-I can also send a recorded demo only, no call required.
+[Your name]
 
 ---
 
-## Developer variant (tech lead)
+## Italian variant (same facts)
 
-More direct tone:
+Subject: la chat in-app sta per diventare tre fatture
 
-- self-hosted on Cloudflare Workers
-- TypeScript SDK, React hooks, MCP
-- chat + AI agents without running a socket fleet
-- quickstart in about 15 minutes
+Ciao [Name],
 
+Ho visto che [company] sta mettendo su [stanze / aula / dispatch / copilot]. Di solito a quel punto si compra un vendor per i socket, uno per il documento, e un SDK per il bot.
+
+FluxyChat è una Durable Object per stanza. Chat, presence, documento Yjs, e invokeAgent stanno lì. Stanza pubblica: pk_ nel browser. Privata: JWT che minti tu. Hosted è open beta. Il Worker è MIT.
+
+Free: 200k messaggi e 5k invoke agente al mese, senza carta. Se la stanza regge, Starter è 20$.
+
+Prova su fluxychat.com.
+
+[Your name]
+
+P.S. Se Stream o Liveblocks già vi stanno bene, ignora pure.

@@ -34,13 +34,13 @@ IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.g
 - [Voice](https://docs.fluxychat.com/docs/core/voice-huddles): Clips, stage signaling, clone proxy.
 - [Platform modules](https://docs.fluxychat.com/docs/features/platform-status): IoT, fleet, game, RCS, Bridges, commerce, federation.
 - [Platform overview](https://docs.fluxychat.com/docs/platform): Console modules on one Worker.
-- [FluxyEdu](https://docs.fluxychat.com/docs/platform/edu): Polls, breakouts, attendance. Video is LiveKit.
+- [FluxyEdu](https://docs.fluxychat.com/docs/platform/edu): Polls, breakouts, attendance. Video is Cloudflare Realtime SFU.
 - [Chatbot builder](https://docs.fluxychat.com/docs/platform/chatbot-builder): Trigger-action workflows on /api/workflows.
 - [Marketplace](https://docs.fluxychat.com/docs/platform/marketplace): Agent templates and MCP apps.
 - [Web3 rooms](https://docs.fluxychat.com/docs/platform/web3): Worker SIWE mint (/auth/wallet + fc_). Token gates stay on your server.
 - [Collab](https://docs.fluxychat.com/docs/platform/collab): Yjs on the room. Excalidraw is a local renderer.
 - [Spatial](https://docs.fluxychat.com/docs/platform/spatial-digital-twin): Scenes, entities, MCP grants.
-- [Voice AI](https://docs.fluxychat.com/docs/platform/voice): STT/TTS. Huddle media is LiveKit.
+- [Voice AI](https://docs.fluxychat.com/docs/platform/voice): STT/TTS. Huddle media is Cloudflare Realtime SFU.
 - [Auth JWT](https://docs.fluxychat.com/docs/guides/auth-jwt): Mint tokens from your backend.
 - [Publishable keys](https://docs.fluxychat.com/docs/guides/publishable-keys): pk_ in the browser, fc_ on the server.
 - [Polls](https://docs.fluxychat.com/docs/core/polls): Timeline polls and anonymous ballots.

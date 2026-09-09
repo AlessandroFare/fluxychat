@@ -4226,7 +4226,7 @@ export class FluxyChatClient {
     return res.json();
   }
 
-  async createFleetVehicle(data: { name: string; plate?: string; driverId?: string }): Promise<{ ok: boolean; vehicle: { id: string; name: string; plate: string | null; driverId: string | null; status: string } }> {
+  async createFleetVehicle(data: { name: string; plate?: string; driverId?: string }): Promise<{ ok: boolean; vehicle: { id: string; name: string; plate: string | null; driverId: string | null; status: string }; apiKey?: string }> {
     if (!this.token) throw new Error("createFleetVehicle requires JWT token");
     const res = await fetch(new URL("/fleet/vehicles", this.baseUrl).toString(), {
       method: "POST",

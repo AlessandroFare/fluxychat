@@ -33,7 +33,7 @@ export interface VerticalStudioConfig {
   name: string;
   eyebrow: string;
   description: string;
-  readiness: "Production" | "Beta" | "Preview" | "Prototype";
+  readiness: "Production" | "Beta" | "Preview" | "Prototype" | "Labs";
   journey: string[];
   metrics: Array<{ label: string; value: string }>;
   capabilities: Array<{ name: string; detail: string; status: "Ready" | "Adapter" | "Gated" }>;

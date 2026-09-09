@@ -11,6 +11,7 @@ import { fanoutServerEvent } from "./message-realtime-fanout.js";
 
 const MAX_POLL_OPTIONS = 20;
 const MAX_FORM_FIELDS = 30;
+export const MAX_OPEN_POLLS_PER_ROOM = 20;
 
 /**
  * Create a poll in a room.
@@ -24,6 +25,15 @@ export async function createPoll(env, input) {
   const validTypes = ["single", "multi", "rating", "yes_no"];
   const type = pollType || "single";
   if (!validTypes.includes(type)) return { ok: false, error: "invalid_poll_type" };
+
+  const openCount = await env.DB.prepare(
+    `SELECT COUNT(*) as cnt FROM polls WHERE project_id = ? AND room_id = ? AND COALESCE(is_closed, 0) = 0`,
+  )
+    .bind(projectId, roomId)
+    .first();
+  if ((openCount?.cnt || 0) >= MAX_OPEN_POLLS_PER_ROOM) {
+    return { ok: false, error: "too_many_open_polls", max: MAX_OPEN_POLLS_PER_ROOM };
+  }
 
   const pollId = crypto.randomUUID();
   const now = new Date().toISOString();

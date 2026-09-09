@@ -2,6 +2,7 @@ import { fanoutServerEvent } from "./message-realtime-fanout.js";
 
 const BREAKOUT_NAME_MAX = 100;
 const BREAKOUT_AUTO_CLOSE_HOURS = 24;
+export const MAX_ACTIVE_BREAKOUTS = 12;
 
 /**
  * Generate a short unique ID for a breakout room.
@@ -31,6 +32,15 @@ export function parseBreakoutInput(body) {
  * @param {{ projectId: string, parentRoomId: string, name: string, createdBy: string }} input
  */
 export async function createBreakout(env, input) {
+  const open = await env.DB.prepare(
+    `SELECT COUNT(*) as cnt FROM breakout_rooms WHERE project_id = ? AND parent_room_id = ? AND status = 'active'`,
+  )
+    .bind(input.projectId, input.parentRoomId)
+    .first();
+  if ((open?.cnt || 0) >= MAX_ACTIVE_BREAKOUTS) {
+    return { ok: false, error: "too_many_breakouts", max: MAX_ACTIVE_BREAKOUTS };
+  }
+
   const id = generateBreakoutId();
   const now = new Date().toISOString();
   const autoCloseAt = new Date(Date.now() + BREAKOUT_AUTO_CLOSE_HOURS * 60 * 60 * 1000).toISOString();

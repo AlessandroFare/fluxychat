@@ -2,8 +2,8 @@ import { VerticalStudio } from "@/app/components/vertical-studio";
 
 export default function FinancePage() {
   return <VerticalStudio config={{
-    id: "finance", name: "FluxyFinance", eyebrow: "Realtime market workspace", readiness: "Production",
-    description: "Discuss market context, route alerts and review finance workflows without storing payment credentials or auto-executing trades.",
+    id: "finance", name: "FluxyFinance", eyebrow: "Market room", readiness: "Labs",
+    description: "Alerts and invoice drafts on the room. No PAN. No trade execution.",
     journey: ["Open market room", "Attach provider snapshot", "Review risk alert", "Approve invoice draft", "Export audit trail"],
     metrics: [{ label: "Risk flags", value: "0" }, { label: "Room events", value: "0" }, { label: "Capability ticks", value: "0" }],
     capabilities: [{ name: "Market event feed", detail: "Sequence-aware provider port with stale-data and reconnect handling.", status: "Adapter" }, { name: "Risk room", detail: "Explainable alerts, provenance and immutable review events.", status: "Ready" }, { name: "Invoice assistant", detail: "Decimal-safe amounts and mandatory human approval.", status: "Ready" }, { name: "Payment execution", detail: "Tokenized provider handoff only; Fluxy never stores PAN data.", status: "Gated" }],

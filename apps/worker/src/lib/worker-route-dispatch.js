@@ -24,6 +24,7 @@ import { dispatchRichPreviewsRoutes } from "../routes/rich-previews-http.js";
 import { dispatchPinnedMessagesRoutes } from "../routes/pinned-messages-http.js";
 import { dispatchBreakoutRoomsRoutes } from "../routes/breakout-rooms-http.js";
 import { dispatchCapabilitiesRoutes } from "../routes/capabilities-http.js";
+import { dispatchRealtimeSfuRoutes } from "../routes/realtime-sfu-http.js";
 import { dispatchDevtoolsRoutes } from "../routes/devtools-http.js";
 import { dispatchCardsRoutes } from "../routes/cards-http.js";
 import { dispatchThreadStateRoutes } from "../routes/thread-state-http.js";
@@ -212,6 +213,7 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchPinnedMessagesRoutes,
   dispatchBreakoutRoomsRoutes,
   dispatchCapabilitiesRoutes,
+  dispatchRealtimeSfuRoutes,
   dispatchDevtoolsRoutes,
   dispatchCardsRoutes,
   dispatchThreadStateRoutes,
@@ -685,6 +687,7 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
     dispatchPinnedMessagesRoutes,
     dispatchBreakoutRoomsRoutes,
     dispatchCapabilitiesRoutes,
+    dispatchRealtimeSfuRoutes,
     dispatchPresenceRoutes,
     dispatchInsightsRoutes,
     dispatchBusinessObjectRoutes,
@@ -773,7 +776,7 @@ export const WORKER_ROUTE_DISPATCHER_COUNT =
   WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY.length;
 
 export const WORKER_ROUTE_LAZY_COUNT = 52;
-export const WORKER_ROUTE_EAGER_COUNT = 109;
+export const WORKER_ROUTE_EAGER_COUNT = 110;
 
 /**
  * @param {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} ordered

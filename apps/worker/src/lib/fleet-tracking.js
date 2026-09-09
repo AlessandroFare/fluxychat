@@ -1,4 +1,8 @@
 import { fanoutServerEvent } from "./message-realtime-fanout.js";
+import { hashDeviceSecret } from "./device-secret.js";
+import { checkAndConsumeRateLimit } from "./rate-limit.js";
+
+export const FLEET_GPS_PER_VEHICLE_PER_MINUTE = 60;
 
 const GPS_RAW_TTL_SEC = 7 * 86400;
 const AGG_INTERVAL_SEC = 300;
@@ -88,7 +92,28 @@ export function parseGeofenceInput(body) {
   return { ok: true, data: { name, lat, lng, radiusMeters } };
 }
 
+export async function authenticateFleetVehicle(env, apiKey) {
+  const key = String(apiKey || "").trim();
+  if (!key.startsWith("fleet_")) return null;
+  const hash = await hashDeviceSecret(key);
+  const row = await env.DB.prepare(
+    `SELECT id, fleet_id FROM fleet_vehicles WHERE api_key_hash = ? LIMIT 1`,
+  )
+    .bind(hash)
+    .first();
+  if (!row) return null;
+  return { id: row.id, projectId: row.fleet_id };
+}
+
 export async function ingestGps(env, projectId, data) {
+  const quota = await checkAndConsumeRateLimit(env, {
+    key: `fleet-gps:${projectId}:${data.vehicleId}`,
+    limit: FLEET_GPS_PER_VEHICLE_PER_MINUTE,
+    windowSeconds: 60,
+  });
+  if (!quota.allowed) {
+    return { ok: false, error: "quota_exceeded", retryAfterSeconds: quota.retryAfterSeconds };
+  }
   const ts = Date.now();
   await env.DB.prepare(
     `INSERT OR IGNORE INTO gps_raw (vehicle_id, fleet_id, timestamp, lat, lng, speed, heading, accuracy)
@@ -208,11 +233,12 @@ export async function listVehicles(env, projectId) {
 
 export async function createVehicle(env, projectId, data) {
   const id = generateId("v_");
+  const apiKey = `fleet_${crypto.randomUUID().replace(/-/g, "")}`;
   await env.DB.prepare(
-    `INSERT INTO fleet_vehicles (id, fleet_id, name, plate, driver_id, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).bind(id, projectId, data.name, data.plate, data.driverId, nowISO()).run();
-  return { ok: true, vehicle: { id, name: data.name, plate: data.plate, driverId: data.driverId, status: "offline" } };
+    `INSERT INTO fleet_vehicles (id, fleet_id, name, plate, driver_id, api_key_hash, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(id, projectId, data.name, data.plate, data.driverId, await hashDeviceSecret(apiKey), nowISO()).run();
+  return { ok: true, vehicle: { id, name: data.name, plate: data.plate, driverId: data.driverId, status: "offline" }, apiKey };
 }
 
 export async function updateVehicle(env, projectId, vehicleId, data) {

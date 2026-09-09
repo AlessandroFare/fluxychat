@@ -3,6 +3,10 @@
  */
 
 import { fanoutServerEvent } from "./message-realtime-fanout.js";
+import { hashDeviceSecret } from "./device-secret.js";
+import { checkAndConsumeRateLimit } from "./rate-limit.js";
+
+export const IOT_READINGS_PER_DAY = 5000;
 
 function nowIso() {
   return new Date().toISOString();
@@ -32,12 +36,25 @@ function rowToDevice(row) {
   };
 }
 
-async function hashApiKey(key) {
-  const data = new TextEncoder().encode(key);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+export async function authenticateIoTDevice(env, apiKey) {
+  const key = String(apiKey || "").trim();
+  if (!key.startsWith("iot_")) return null;
+  const hash = await hashDeviceSecret(key);
+  const row = await env.DB.prepare(
+    `SELECT id, project_id, room_id FROM iot_devices WHERE api_key_hash = ? LIMIT 1`,
+  )
+    .bind(hash)
+    .first();
+  if (!row) return null;
+  return { id: row.id, projectId: row.project_id, roomId: row.room_id };
+}
+
+async function consumeIoTReadingQuota(env, projectId) {
+  return checkAndConsumeRateLimit(env, {
+    key: `iot-read:${projectId}`,
+    limit: IOT_READINGS_PER_DAY,
+    windowSeconds: 86400,
+  });
 }
 
 export async function registerIoTDevice(env, auth, input) {
@@ -62,7 +79,7 @@ export async function registerIoTDevice(env, auth, input) {
       name,
       String(input.type ?? "sensor").slice(0, 32),
       String(input.firmwareVersion ?? "1.0.0").slice(0, 32),
-      await hashApiKey(apiKey),
+      await hashDeviceSecret(apiKey),
       input.metadata ? JSON.stringify(input.metadata) : null,
       input.location ? JSON.stringify(input.location) : null,
       now,
@@ -95,6 +112,11 @@ export async function listIoTDevices(env, auth, filter = {}) {
 }
 
 export async function ingestIoTReading(env, auth, deviceId, input) {
+  const quota = await consumeIoTReadingQuota(env, auth.projectId);
+  if (!quota.allowed) {
+    return { ok: false, error: "quota_exceeded", retryAfterSeconds: quota.retryAfterSeconds };
+  }
+
   const device = await env.DB.prepare(
     `SELECT id, room_id FROM iot_devices WHERE project_id = ? AND id = ?`,
   )

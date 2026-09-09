@@ -137,9 +137,10 @@ describe('Video/Voice lib', () => {
       const t = await generateToken({}, 'daily', { roomId: 'r-1', userId: 'u-1' });
       expect(t.provider).toBe('daily');
     });
-    it('generates custom token', async () => {
-      const t = await generateToken({}, 'custom', { roomId: 'r-1', userId: 'u-1' });
-      expect(t.provider).toBe('custom');
+    it('returns Realtime SFU signaling when that provider is requested', async () => {
+      const t = await generateToken({}, 'cloudflare-realtime', { roomId: 'r-1', userId: 'u-1' });
+      expect(t.provider).toBe('cloudflare-realtime');
+      expect(t.signaling.createSession).toContain('/realtime/sessions');
     });
   });
 

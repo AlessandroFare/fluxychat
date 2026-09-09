@@ -4,6 +4,7 @@ import {
   extractAnthropicToolCalls,
   extractOpenAIToolCalls,
 } from "./agent-tool-calls.js";
+import { openAiMessagesForModel } from "./llm-message-content.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
 import { logInfo } from "./worker-log.js";
 
@@ -12,7 +13,7 @@ export const MAX_TOOL_ITERATIONS = 5;
 export async function callLlmOpenAI(baseUrl, apiKey, model, messages, tools, opts = {}) {
   const body = {
     model,
-    messages,
+    messages: openAiMessagesForModel(model, messages),
     max_tokens: opts.maxTokens || 1024,
     temperature: opts.temperature ?? 0.7,
     ...(opts.topP !== undefined ? { top_p: opts.topP } : {}),
@@ -149,7 +150,7 @@ export function buildToolResultMessage(connection, toolCall, toolResult) {
           type: "tool_result",
           tool_use_id: toolCall.id,
           content: toolResult.success
-            ? JSON.stringify(toolResult.result)
+            ? JSON.stringify(toolResult.result ?? null)
             : `Error: ${toolResult.error}`,
         },
       ],
@@ -159,7 +160,7 @@ export function buildToolResultMessage(connection, toolCall, toolResult) {
     role: "tool",
     tool_call_id: toolCall.id,
     content: toolResult.success
-      ? JSON.stringify(toolResult.result)
+      ? JSON.stringify(toolResult.result ?? null)
       : `Error: ${toolResult.error}`,
   };
 }

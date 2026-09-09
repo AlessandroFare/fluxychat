@@ -1,5 +1,7 @@
 import { pickRouteDeps } from "./route-http-deps.js";
+import { readDeviceBearer } from "../lib/device-secret.js";
 import {
+  authenticateIoTDevice,
   createIoTRule,
   getIoTDeviceHealth,
   getIoTShadow,
@@ -81,11 +83,24 @@ async function dispatchList(request, url, h) {
 
 async function dispatchReading(request, h, deviceId) {
   const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
-  const auth = await authContext(request, env, h);
+  const deviceKey = readDeviceBearer(request);
+  let auth = null;
+  if (deviceKey.startsWith("iot_")) {
+    const device = await authenticateIoTDevice(env, deviceKey);
+    if (!device || device.id !== deviceId) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    auth = { projectId: device.projectId, userId: device.id };
+  } else {
+    auth = await authContext(request, env, h);
+  }
   if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   const body = await request.json().catch(() => null);
   const result = await ingestIoTReading(env, auth, deviceId, body ?? {});
-  if (!result.ok) return json({ error: result.error }, { status: result.error === "not_found" ? 404 : 400, headers: corsHeaders });
+  if (!result.ok) {
+    const status = result.error === "not_found" ? 404 : result.error === "quota_exceeded" ? 429 : 400;
+    return json({ error: result.error, retryAfterSeconds: result.retryAfterSeconds }, { status, headers: corsHeaders });
+  }
   return json(result, { headers: corsHeaders });
 }
 
