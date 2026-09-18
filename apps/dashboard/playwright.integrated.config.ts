@@ -8,7 +8,10 @@ const e2eEnv = {
   ...process.env,
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "",
   CLERK_SECRET_KEY: "",
+  NEXT_PUBLIC_FLUXY_E2E_SELF_HOST: "1",
+  FLUXY_E2E_SELF_HOST: "1",
   NEXT_PUBLIC_FLUXYCHAT_WORKER_URL: workerUrl,
+  NEXT_PUBLIC_FLUXYCHAT_CLOUD_URL: workerUrl,
   PORT: "3000",
 };
 
@@ -20,6 +23,7 @@ export default defineConfig({
   ...base,
   testMatch: "**/*.integrated.spec.ts",
   timeout: 180_000,
+  globalSetup: "./e2e/global-setup.integrated.cjs",
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : [
@@ -29,14 +33,32 @@ export default defineConfig({
           reuseExistingServer: !process.env.CI,
           timeout: 180_000,
           cwd: "../..",
+          env: {
+            ...process.env,
+            NODE_ENV: "development",
+            ALLOW_DEV_PROVISION: "true",
+          },
         },
         {
-          command: "pnpm build && pnpm exec next start -p 3000",
+          command: process.env.CI ? "pnpm build && pnpm exec next start -p 3000" : "pnpm dev",
           url: dashboardUrl,
-          reuseExistingServer: !process.env.CI,
-          timeout: 300_000,
+          // Do not reuse a Next already started with Clerk keys in .env.local.
+          reuseExistingServer: false,
+          timeout: process.env.CI ? 300_000 : 180_000,
           env: e2eEnv,
         },
       ],
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Local Windows: PLAYWRIGHT_CHANNEL=chrome uses installed Chrome (no ~400MB browser download).
+        ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
+        launchOptions: {
+          args: ["--disable-gpu", "--disable-dev-shm-usage"],
+        },
+      },
+    },
+  ],
 });

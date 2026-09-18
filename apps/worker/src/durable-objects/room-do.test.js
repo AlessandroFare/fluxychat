@@ -455,6 +455,19 @@ describe("RoomDurableObject message handlers", () => {
     expect(JSON.parse(ws2.sent[0])).toMatchObject({ type: "message", id: 1 });
   });
 
+  it("broadcast delivers the same chat frame to two sockets in the room", async () => {
+    const { roomDo } = createRoomDo();
+    const alice = createMockWebSocket();
+    const bob = createMockWebSocket();
+    roomDo.clients.add(alice);
+    roomDo.clients.add(bob);
+
+    await roomDo.broadcast({ type: "message", id: 7, roomId, userId: "alice", content: "hello" });
+
+    expect(JSON.parse(alice.sent[0])).toMatchObject({ type: "message", id: 7, content: "hello" });
+    expect(JSON.parse(bob.sent[0])).toMatchObject({ type: "message", id: 7, content: "hello" });
+  });
+
   it("persistLastCacheEvent stores cacheable messages", async () => {
     const storage = new Map();
     const { roomDo } = createRoomDo();

@@ -14,6 +14,7 @@
  */
 
 import { normalizeShardCount, MAX_ROOM_SHARDS, shardIndexForUser, roomDoName } from "../lib/room-shard.js";
+import { withRuntimeConfig } from "../lib/with-runtime-config.js";
 
 const SHARD_FETCH_TIMEOUT = 100;
 const SHARD_CAPACITY_WARN = 800;
@@ -22,7 +23,7 @@ const SHARD_CAPACITY_MAX = 1000;
 export class SupergroupRouterDurableObject {
   constructor(state, env) {
     this.state = state;
-    this.env = env;
+    this.env = withRuntimeConfig(env);
     this.rooms = new Map();
   }
 

@@ -41,6 +41,22 @@ describe("parseWorkerJson", () => {
     );
   });
 
+  it("surfaces huddle SFU 429 with the budget reason", async () => {
+    const res = new Response(
+      JSON.stringify({ error: "quota_exceeded", reason: "monthly_gb" }),
+      { status: 429, headers: { "Content-Type": "application/json" } },
+    );
+    await expect(parseWorkerJson(res)).rejects.toThrow("quota_exceeded (monthly_gb)");
+  });
+
+  it("surfaces 503 when Realtime SFU secrets are missing", async () => {
+    const res = new Response(JSON.stringify({ error: "realtime_sfu_not_configured" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+    await expect(parseWorkerJson(res)).rejects.toThrow("realtime_sfu_not_configured");
+  });
+
   it("returns parsed body on success", async () => {
     const res = new Response(JSON.stringify({ ok: true }), {
       status: 200,

@@ -28,7 +28,10 @@ export default function CollabPage() {
   }, [token]);
 
   const loadRooms = useCallback(async () => {
-    if (!client) return;
+    if (!client) {
+      setLoading(false);
+      return;
+    }
     try {
       const rooms = await client.listRooms();
       setRooms(
@@ -80,7 +83,7 @@ export default function CollabPage() {
           ))}
         </div>
 
-        {!loading && !token && (
+        {!token ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
             <Pen className="h-12 w-12 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Sign in to list workspaces</h2>
@@ -91,7 +94,7 @@ export default function CollabPage() {
               Connect session
             </Link>
           </div>
-        )}
+        ) : null}
 
         {!loading && token && rooms.length === 0 && (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">

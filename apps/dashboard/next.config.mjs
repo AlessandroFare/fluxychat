@@ -15,6 +15,8 @@ const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname, "../.."),
   },
+  // Playwright and wrangler use 127.0.0.1; Next treats localhost as a different origin.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
     formats: ['image/avif', 'image/webp'],
     // Mitigate CPU exhaustion from malicious remote SVGs (CVE-2026-64644) on self-hosted builds.

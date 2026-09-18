@@ -5,6 +5,7 @@
  */
 
 import { isPublicSitePath, PUBLIC_SITE_PATH_PREFIXES } from "@/lib/public-site-paths";
+import { hasClerkPublishableKey } from "@/lib/clerk-config";
 
 /** Public Fumadocs site home (external). Set NEXT_PUBLIC_DOCS_URL=http://localhost:3001 for local docs dev. */
 export function docsHomeHref(): string {
@@ -106,7 +107,7 @@ export const HOSTED_COPY = {
 
 /** Browser-safe: publishable key present (sign-in UI available). */
 export function isClerkClientConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
+  return hasClerkPublishableKey();
 }
 
 /** Nav "Console" before the user is authenticated. */

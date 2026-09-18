@@ -1,16 +1,16 @@
-# Graph Report - Chat  (2026-09-09)
+# Graph Report - Chat  (2026-09-17)
 
 ## Corpus Check
-- 4873 files · ~5,653,700 words
+- 4908 files · ~5,667,226 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 38157 nodes · 70387 edges · 2311 communities (1851 shown, 340 thin omitted)
+- 38306 nodes · 70764 edges · 2339 communities (1864 shown, 354 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 1185 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5c87c9f9`
+- Built from commit: `337ed5a6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -23,34 +23,34 @@
 - fluxychat.tsx
 - detect-antipatterns-browser.js
 - FluxyChatClient
-- react.ts
+- room-shard.js
 - checks.mjs
 - worker-runtime.ts
-- room-session.ts
-- fluxy-stream.ts
-- FluxyChatRoomConnection
+- react.ts
+- WorkerFluxyStreamClient
+- fluxy-chat-client.ts
 - src/worker.js
 - agents-console-context.tsx
 - agent-runtime.js
-- visual-moderation.js
+- logError
 - client.dart
 - live-browser.js
 - FluxyChatClient
 - edu.ts
 - agent/skills/media-use/audio/scripts/audio.mjs
-- session-store.mjs
+- impeccable-paths.mjs
 - .agents/skills/media-use/audio/scripts/audio.mjs
-- pricing/page.tsx
+- voice-ai/page.tsx
 - voice-pipeline.ts
 - agent/skills/talking-head-recut/assets/vendor/gsap.min.js
 - context.mjs
 - agent/skills/music-to-video/references/motion-primitives/assets/gsap.min.js
 - .agents/skills/music-to-video/references/motion-primitives/assets/gsap.min.js
 - .agents/skills/talking-head-recut/assets/vendor/gsap.min.js
-- email-inbound.js
-- fluxy-chat-client.ts
+- message-realtime-fanout.js
+- labs-http-contract.test.js
 - cli-bootstrap.ts
-- push-notifications.js
+- scheduled-runners.js
 - worker-route-dispatch.js
 - analytics/page.tsx
 - react-native-sdk/src/index.ts
@@ -67,7 +67,7 @@
 - detect-text.mjs
 - resumeSession
 - svelte-component.mjs
-- marketplace/page.tsx
+- UiKitConfigurator
 - live-streaming.js
 - agent/skills/embedded-captions/scripts/make-theme.cjs
 - .agents/skills/embedded-captions/scripts/make-theme.cjs
@@ -79,8 +79,8 @@
 - .agents/skills/pr-to-video/SKILL.md
 - doctor.mjs
 - live-commit-manual-edits.mjs
-- marketing-shell.tsx
-- telemetry.ts
+- room-session.ts
+- room-commands.js
 - truth-market.js
 - design-system.mjs
 - safeOutboundFetch
@@ -90,9 +90,9 @@
 - identity-access-http.js
 - css-cascade.mjs
 - setLiveState
-- jwt-auth.js
+- roots.mjs
 - generative-ui.ts
-- logInfo
+- cards.ts
 - hook-lib.mjs
 - dashboard/package.json
 - room-do.js
@@ -100,7 +100,7 @@
 - agent-to-agent.ts
 - mcp-apps.ts
 - modern-screenshot.umd.js
-- fanoutServerEvent
+- logInfo
 - index.tsx
 - FluxyChatClient
 - agent/skills/media-use/scripts/resolve.test.mjs
@@ -122,7 +122,7 @@
 - site-metadata.ts
 - agent/skills/hyperframes-animation/scripts/animation-map.mjs
 - .agents/skills/hyperframes-animation/scripts/animation-map.mjs
-- voice-ai/page.tsx
+- conversation-intelligence.js
 - mcp-apps-http.js
 - impeccable/SKILL.md
 - el
@@ -131,7 +131,7 @@
 - RoomDurableObject
 - cn
 - live-wrap.mjs
-- landing-home.tsx
+- room-pitr.js
 - search-http.js
 - customer-data.js
 - docs/README.md
@@ -147,7 +147,7 @@
 - worker/package.json
 - media-pipeline.js
 - react-native-sdk/package.json
-- agent-platform.ts
+- worker-agent-platform-client.ts
 - agent/skills/media-use/scripts/lib/heygen-cli.mjs
 - detect-antipatterns.mjs
 - hook-admin.mjs
@@ -156,41 +156,41 @@
 - .agents/skills/media-use/scripts/lib/heygen-cli.mjs
 - websocket_client.dart
 - models.dart
-- impeccable-paths.mjs
+- critique-storage.mjs
 - ai-tool-factory.js
 - inbox-http.js
 - API Reference
 - memory.ts
-- hosted-product.ts
+- push-notifications.js
 - ui/button.tsx
 - sync-docs-content.mjs
-- llm-providers.js
-- room-export.js
+- docs/page.tsx
+- telemetry.ts
 - Vertical platform expansion
 - offline-queue.ts
 - agent/skills/product-launch-video/scripts/build-frame.mjs
 - live-copy-edit-agent.mjs
 - .agents/skills/product-launch-video/scripts/build-frame.mjs
-- relatedGuidesExcept
+- hosted-product.ts
 - group-cipher.ts
 - agent/skills/media-use/scripts/lib/local-models.mjs
 - live-poll.mjs
 - .agents/skills/media-use/scripts/lib/local-models.mjs
-- room-shard.js
+- realtime-notifications.js
 - chat-cartography.js
 - Review: packages, Worker, dashboard
 - ui-kit/package.json
 - agent/skills/pr-to-video/scripts/ingest.mjs
 - design-parser.mjs
 - .agents/skills/pr-to-video/scripts/ingest.mjs
-- messageFromUnknown
+- dashboard/lib/utils.ts
 - generate-saml-fixture.mjs
-- hosted-saas-policy.js
+- room-templates.js
 - scripts
 - agent/skills/pr-to-video/scripts/build-frame.mjs
 - initGlobalBar
 - .agents/skills/pr-to-video/scripts/build-frame.mjs
-- landing-shell.tsx
+- proxy.ts
 - WsSessionRegistry
 - soc2-compliance.js
 - agent/package.json
@@ -200,7 +200,7 @@
 - agent/skills/faceless-explainer/scripts/build-frame.mjs
 - .agents/skills/embedded-captions/scripts/make-composition.cjs
 - .agents/skills/faceless-explainer/scripts/build-frame.mjs
-- renderGroupedTemplate
+- conversational-analytics.js
 - matrix-bridge.js
 - queue-management.js
 - PARTE 2 — Altre feature nuove (specifiche sintetiche)
@@ -218,10 +218,10 @@
 - first-message.mjs
 - agent/skills/hyperframes-core/scripts/lib/frame-packets-core.mjs
 - .agents/skills/hyperframes-core/scripts/lib/frame-packets-core.mjs
-- inbox-filter.ts
+- omnichannel.js
 - marketplace-http.js
-- embed-config.js
-- room-commands.js
+- fluxy-iot.ts
+- agent-profiles.js
 - adapter-pattern.md
 - Prune Messages — Context Compaction
 - agent/skills/hyperframes-creative/references/design-spec.md
@@ -254,7 +254,7 @@
 - .agents/skills/faceless-explainer/scripts/assemble-index.mjs
 - .agents/skills/hyperframes-animation/rules/discrete-text-sequence.md
 - .agents/skills/pr-to-video/scripts/assemble-index.mjs
-- huddles-client.ts
+- live-stream-replay.js
 - @playwright/test
 - local-development.mdx
 - p26-lifecycle.test.js
@@ -272,7 +272,7 @@
 - live-inject.mjs
 - .agents/skills/music-to-video/scripts/analyze-beatgrid.py
 - WebAdapter
-- agent-profiles.js
+- video-voice.js
 - createAgentPlatform
 - ai-tools.ts
 - MorphEngine
@@ -295,14 +295,14 @@
 - ui/package.json
 - compare/page.tsx
 - docs/package.json
-- conversation-intelligence.js
+- live-dashboards.js
 - config/package.json
 - fluxy-setup.mjs
 - createFluxyIoT
 - Failure Modes — learned the hard way
 - Failure Modes — learned the hard way
 - injected/index.mjs
-- enterprise-support.js
+- landing-shell.tsx
 - workflow-agent.ts
 - createFluxyStream
 - bridge.js
@@ -310,14 +310,14 @@
 - MinimalChatView
 - overrides
 - polls/package.json
-- why/page.tsx
-- eu-ai-act/page.tsx
+- marketing-copy.ts
+- approval-workflows.js
 - Fluxychat Dashboard Style Guide
 - integration-emulator.test.js
 - broadcast-segmentation.js
-- conversational-analytics.js
+- svelte-ast.mjs
 - otel-export.js
-- live-dashboards.js
+- incident-response.js
 - API endpoints
 - api_client.dart
 - providers.ts
@@ -329,7 +329,7 @@
 - Workflow
 - delivery-map.tsx
 - generate-route-dispatch.mjs
-- incident-response.js
+- audit-chain.js
 - notification-controls.js
 - workflow-automation.js
 - Fluxychat Deploy & Rollback Runbook
@@ -337,11 +337,11 @@
 - agent/skills/remotion-to-hyperframes/assets/test-corpus/tier-3-data-driven/remotion-src/src/Stargazed.tsx
 - Responsive Design
 - .agents/skills/remotion-to-hyperframes/assets/test-corpus/tier-3-data-driven/remotion-src/src/Stargazed.tsx
-- scanCssTextForPulsingDot
-- approval-workflows.js
+- ai-companions.js
+- channel-forms-client.ts
 - community-reputation.js
 - p26-features.test.js
-- identity-client.ts
+- worker-fetch.ts
 - replay-timetravel.js
 - FluxyChatClient
 - 1. Counterfactual Replay (`#44`)
@@ -375,11 +375,11 @@
 - Three.js Fundamentals
 - agent_outbound.dart
 - Fluxychat AI Agent Service
-- ai-workspace.js
-- roots.mjs
+- admin-route-context.js
+- ai-qa-moderator.js
 - chat-api.js
 - eu-ai-act-compliance.js
-- route-http-deps.js
+- a2a-worker.js
 - P9 feature reference
 - WebSocketClient
 - Part 1 — the move vocabulary
@@ -402,17 +402,17 @@
 - Daisy Days — Frame (video / frame layer)
 - Editorial Forest — Frame (video / frame layer)
 - document.md
-- svelte-ast.mjs
+- landing-home.tsx
 - Part 1 — the move vocabulary
 - Part 1 — the move vocabulary
 - Story design — product launch video
 - fleet/page.tsx
-- logError
-- ai-qa-moderator.js
-- cobrowsing-http.js
 - compliance-export.js
+- dlp-integrations.js
+- cobrowsing-http.js
+- ediscovery-client.ts
 - ediscovery.js
-- live-stream-replay.js
+- hosted-saas-policy.js
 - Plan
 - widget-builder.js
 - message_stream.dart
@@ -440,16 +440,16 @@
 - [[...slug]]/page.tsx
 - pusher-channels-parity.mdx
 - dependencies
-- a2a-worker.js
+- eu-ai-act/page.tsx
 - adapter.js
 - digital-twin-http.js
-- offline-notify-sent.js
+- live-auctions.js
 - room-analytics.js
 - workflow-builder.js
 - slack/package.json
 - CrdtApi
 - factory.ts
-- WorkerFluxyGameClient
+- iot/page.tsx
 - FluxyChat
 - Interpreting failures
 - The 18 rules
@@ -463,14 +463,14 @@
 - tanstack-adapter.mjs
 - .agents/skills/pr-to-video/scripts/frame-packets.mjs
 - .agents/skills/product-launch-video/scripts/transitions.mjs
-- message-threads.js
-- useTheme
-- docs/page.tsx
+- pricing/page.tsx
+- auth-matrix-hot-routes.test.js
+- HttpMcpClient
 - local-dev.mjs
 - MockAdapter
-- live-auctions.js
-- video-voice.js
-- web-search.js
+- oncall-collaboration-http.js
+- ambient-agents.js
+- message-retention-room.js
 - fluxychat_sdk.dart
 - MinimalChatScreen.kt
 - Huddle
@@ -505,10 +505,10 @@
 - audit-route-index.mjs
 - agent-platform-http.js
 - business-objects.js
-- rate-limit-dashboard-http.js
+- audit-log-export.js
 - LockScopeManager
 - voice-translation.js
-- white-label.js
+- agent-task-bus-http.js
 - discord/package.json
 - telegram/package.json
 - data-parts.ts
@@ -528,12 +528,12 @@
 - Story design — PR → narrative
 - a11y.admin.integrated.spec.ts
 - compilerOptions
-- YjsSyncHandler
-- ambient-agents.js
+- ai-governance/page.tsx
+- checkAndConsumeRateLimit
 - crm-adapters.js
 - custom-domains.js
-- hitl-approval-client.ts
-- resolveAdminContext
+- messageFromUnknown
+- insights-http.js
 - realtime-sfu-http.js
 - FluxyChatClient
 - DevToolsStore
@@ -546,15 +546,15 @@
 - .agents/skills/media-use/scripts/lib/grade-analyzer.mjs
 - .agents/skills/media-use/scripts/transcribe.mjs
 - ai-agent/package.json
-- audit-log-export.js
+- web-search.js
 - docs-page-top-bar.tsx
 - API Reference
 - grainient.tsx
-- ai-image-generation.js
+- onboarding-playground.tsx
 - field-ops-http.js
-- knowledge-graph.js
-- oncall-collaboration-http.js
-- rich-previews.js
+- white-label.js
+- gamification-http.js
+- collab-whiteboard.tsx
 - Offline notify: in-app chat (FluxyChat) + SMS/WhatsApp (Sent.dm)
 - basic/package.json
 - compilerOptions
@@ -577,7 +577,7 @@
 - compilerOptions
 - compilerOptions
 - A2AClient
-- ediscovery.ts
+- EdiscoveryManager
 - The 10 moves
 - HyperFrames Keyframes
 - agent/skills/media-use/audio/scripts/wait-bgm.mjs
@@ -585,7 +585,7 @@
 - The 10 moves
 - quick reference
 - HyperFrames Keyframes
-- checkHeadingRhythmDOM
+- SAFE_TAGS
 - constants.mjs
 - detect-utils.mjs
 - .agents/skills/media-use/audio/scripts/wait-bgm.mjs
@@ -593,21 +593,21 @@
 - three
 - troubleshooting.mdx
 - activity-feed-http.js
-- agent-debate.js
-- agent-durable-workflow.js
-- resolve-project-id.ts
-- createFluxyGame
-- custom-retention.js
-- message-retention-room.js
-- ModalContextManager
+- ai-gateway.js
 - presence-extensions.js
+- room-firmware-client.ts
+- ai-image-generation.js
+- custom-retention.js
+- console-nav.ts
+- ModalContextManager
+- route-http-deps.js
 - ProviderRegistry
 - room-firmware.js
 - Dashboard integration (JWT session & operator UI)
 - Troubleshooting guide
 - use-ai-chat.tsx
 - CrossChannelContinuity
-- ExpertRouter
+- expert-router.ts
 - game-checkpoint-crdt-yjs.ts
 - slash-commands.ts
 - thread-state.ts
@@ -629,8 +629,8 @@
 - Article mapping
 - adapter-errors.js
 - cross-platform.js
-- multimodal-ai.js
-- presence-escalation.js
+- AttachmentBackedMap
+- sampleCssBackground
 - StreamingMarkdownRenderer
 - javascript-live-cursors/package.json
 - FluxyChatClient
@@ -664,12 +664,12 @@
 - Lifecycle Callbacks
 - Memory System
 - fluxychat_sdk
-- agent-task-bus-http.js
+- autonomous-moderation-http.js
 - instant-ai-room-http.js
 - ip-whitelist.js
-- mobile-ux-http.js
-- collab-whiteboard.tsx
-- speculative-warmup.js
+- VideoGenerator
+- WebSocketClient.kt
+- AbTestingEngine
 - ToolInputStream
 - worker.e2e.test.js
 - compilerOptions
@@ -684,7 +684,7 @@
 - Changelog
 - data-residency.ts
 - FeatureFlagManager
-- mcp-integration.ts
+- worker-digital-twin-client.ts
 - token-crypto-impl.ts
 - VirtualWaitingRoom
 - cursors.tsx
@@ -719,13 +719,13 @@
 - Language Model Middleware
 - Activepieces integration (CRM / automation)
 - Production setup guide (free-tier friendly)
-- welcome-step.tsx
-- message-mentions.js
-- message-merge-conflicts.js
+- Faceless Explainer to HyperFrames
+- enterprise-agent-room-http.js
+- mcp-integration.ts
 - message-serialization.js
 - streaming-overlays-http.js
-- telco-inbound.js
-- message-enrichment.js
+- ephemeral-messages.js
+- addVisualContrastFindings
 - Unreleased
 - Implementation Approach
 - Adapter Lifecycle & Operations
@@ -737,9 +737,9 @@
 - DurableAITransport
 - attachments.ts
 - attestation-verify.ts
-- DeliverySemanticsApi
+- delivery-semantics.ts
 - SpatialCopresenceApi
-- live-stream-commerce.js
+- css
 - WebTransportAdapterApi
 - message-list.tsx
 - check-openapi-routes.mjs
@@ -764,7 +764,7 @@
 - Visual Style Library
 - Impeccable Asset Producer
 - optimize.md
-- ai-analytics-insights.js
+- knowledge-graph.js
 - journal.mjs
 - GEO Optimizer
 - .agents/skills/media-use/scripts/eval.mjs
@@ -774,11 +774,11 @@
 - Chat Singleton for Thread Deserialization
 - mobile-push.mdx
 - web-push-vapid.mdx
-- context-signals.mjs
-- room-intelligence-http.js
-- room-empathy.js
-- ephemeral-messages.js
-- Faceless Explainer to HyperFrames
+- Building the picker
+- canAccessRoom
+- live-stream-commerce.js
+- rich-previews.js
+- Brief contract
 - jwt_utils.dart
 - Cookbook: Auth / Token / JWT (role-based)
 - Language Model Middleware
@@ -790,10 +790,10 @@
 - fluxy-doctor.mjs
 - compilerOptions
 - DecentralizedRelayApi
-- mcp-identity-client.ts
+- Full-surface test campaign
 - emoji.ts
 - empathy-prosody.ts
-- agent-nested-run.js
+- Product Launch to HyperFrames
 - RegionalFailoverApi
 - compilerOptions
 - ui-kit/src/index.ts
@@ -803,7 +803,7 @@
 - agent/skills/changelog-video/scripts/align-captions.mjs
 - Pipeline
 - Scene Types — picking the right template
-- agent/skills/faceless-explainer/scripts/audio.mjs
+- data-residency-client.ts
 - Component quality bar
 - agent/skills/pr-to-video/scripts/audio.mjs
 - agent/skills/pr-to-video/scripts/fetch-pr.mjs
@@ -817,8 +817,8 @@
 - Scene Types — picking the right template
 - .agents/skills/faceless-explainer/scripts/audio.mjs
 - Component quality bar
-- room-firmware-client.ts
-- fluxyEntityId
+- cross-org-settlement.js
+- ambient-agents-client.ts
 - embed-prompt.mjs
 - pin.mjs
 - Email
@@ -832,15 +832,15 @@
 - compilerOptions
 - compilerOptions
 - Remotion → HyperFrames API Map
-- Building the picker
-- iot/page.tsx
+- RoomE2eSettingsPage
+- admin-jwt.cjs
 - Optional external services
 - Unified Chat API
 - Unified Reasoning
 - Publish KMP SDK to Maven Central (Sonatype)
 - room-message-seq.js
-- gamification-http.js
-- handoff-context.js
+- agent-durable-workflow.js
+- a2a-client.ts
 - Adapter Error Hierarchy
 - Chat Singleton for Thread Deserialization
 - Unified Reasoning
@@ -851,8 +851,8 @@
 - polls/src/App.tsx
 - whiteboard/src/App.tsx
 - compilerOptions
-- composable-ui.ts
-- Brief contract
+- ComposableUIKit
+- IpRateLimiterDurableObject
 - mcp-negotiation.ts
 - message-input.tsx
 - check-crypto-claims.mjs
@@ -893,7 +893,7 @@
 - Techniques
 - 4. DESIGN ENGINEERING DIRECTIVES (Bias Correction)
 - ai-agent/src/types.ts
-- decision-rooms-pack-http.js
+- analyzeVisualContrastCandidate
 - Modules
 - MCP Client Integration
 - Message-to-LLM Converter
@@ -901,11 +901,11 @@
 - Streaming Markdown Renderer
 - WorkflowAgent — Durable Execution
 - @fluxy-chat/react-native-sdk
-- scripts
-- ensureSession
+- agent-eval-client.ts
+- kb-client.ts
 - importAdminMessage
-- cmk-store.js
-- AgentLifecycleCallbacks
+- ai-analytics-insights.js
+- multimodal-ai.js
 - do-lock.test.js
 - IdentityResolver
 - room-extensions.js
@@ -931,7 +931,7 @@
 - MockWebSocket
 - RoomSequencerApi
 - StreamingMarkdownRenderer
-- voice-noise.ts
+- rehearsal-rooms.js
 - @fluxy-chat/ui-kit
 - compilerOptions
 - themes/index.ts
@@ -993,7 +993,7 @@
 - @fluxy-chat/ui
 - callback-url.js
 - do-queue.test.js
-- canAccessRoom
+- context-signals.mjs
 - createRealtimeProvider
 - replay-mode.js
 - room-voice-stage.js
@@ -1014,9 +1014,9 @@
 - live-cursors-chat/src/App.tsx
 - react/src/App.tsx
 - AROverlayManager
-- CallbackUrlApi
+- room-feeds.js
 - platform-adapter.ts
-- LockScopeHandle
+- tag-strategy.mjs
 - compilerOptions
 - @fluxy-chat/ui
 - compilerOptions
@@ -1035,7 +1035,7 @@
 - HyperFrames Tailwind
 - Resolve — command, flags, reuse, adopt, inventory
 - PR to HyperFrames
-- SandboxExecutor
+- Frame worker — PR-to-video delta
 - Eval: how to validate a translation end-to-end
 - Media translation: Audio, Video, Img, IFrame, staticFile
 - When presets are wrong
@@ -1047,13 +1047,13 @@
 - Web Animations API for HyperFrames
 - HyperFrames Tailwind
 - Init flow
-- live-streaming.test.js
-- hook.mjs
+- ConversationAnalytics
+- app/status/page.tsx
 - Scoring rubric
 - Social (LinkedIn / X)
 - Resolve — command, flags, reuse, adopt, inventory
 - PR to HyperFrames
-- Product Launch to HyperFrames
+- McpClient
 - Refactoring UI (Claude Code skill)
 - Eval: how to validate a translation end-to-end
 - Media translation: Audio, Video, Img, IFrame, staticFile
@@ -1089,7 +1089,7 @@
 - comments-board/src/App.tsx
 - iot-panel/src/App.tsx
 - voice-stage/src/App.tsx
-- react-native-sdk/src/agent-outbound.ts
+- e643d35712_f1c8b9a_a11yaxespec.js
 - dependencies
 - devDependencies
 - CrmIntegration
@@ -1142,7 +1142,7 @@
 - iOS platform
 - Operate mode depth (and Read notes)
 - Shape
-- readConfig
+- resolveAdminContext
 - nuxt.mjs
 - Copy Lab
 - Frameworks
@@ -1175,8 +1175,8 @@
 - webhook-secret-migration.mdx
 - browser.ts
 - perf-workload-check.mjs
-- IpRateLimiterDurableObject
-- enterprise-agent-room-http.js
+- sandbox-execution.ts
+- SseMcpClient
 - ./react
 - runtime-context.js
 - createFluxyHttpClient
@@ -1202,9 +1202,10 @@
 - ChatbotBuilder
 - FederationBridge
 - McpIdentityManager
+- ui/src/campaign-public-api.test.ts
+- agent-tool-policy.js
 - StreamingPlanApi
-- user-lookup.ts
-- voice-diarization.ts
+- Diarizer
 - WebhookEventCatalog
 - analyze-sdk-bundle.mjs
 - check-do-bindings.mjs
@@ -1297,6 +1298,7 @@
 - devDependencies
 - fix-docs-encoding.mjs
 - export-d1-baseline.mjs
+- mcp-identity-store.js
 - sensitive-context.js
 - smooth-stream.js
 - FluxyChat Full Codebase Audit — 2026-06-19
@@ -1320,7 +1322,9 @@
 - react-native-sdk/src/room-e2e.ts
 - AgentMarketplace
 - bot-protection.ts
+- message-mentions.js
 - TranslationService
+- room-export.js
 - fluxy-mock-server.ts
 - FluxyChat Swift SDK — **starter / unpublished**
 - dependencies
@@ -1408,6 +1412,7 @@
 - 11. REDESIGN PROTOCOL
 - 3. DEFAULT ARCHITECTURE & CONVENTIONS
 - 6. PERFORMANCE & ACCESSIBILITY GUARDRAILS
+- speculative-warmup.js
 - mermaid-to-excalidraw-pkg/package.json
 - MockIntersectionObserver
 - chat/route.ts
@@ -1489,7 +1494,9 @@
 - scripts
 - extract-fluxy-chat-client.mjs
 - DurableStreamStore
+- McpRegistry
 - policy-approvals.ts
+- mcp-identity-client.ts
 - @fluxy-chat/ui-kit
 - bandwidth-budget.mjs
 - check-ci-filters.mjs
@@ -1531,6 +1538,7 @@
 - STORYBOARD.md format — frames → groups
 - parseFrontmatter
 - Frame worker — per-frame composition author (music-to-video)
+- dependencies
 - Tier 2 — title-image-outro
 - Transitions translation: @remotion/transitions → HF crossfades / shader-transitions
 - Captions Overlay Doctrine
@@ -1560,7 +1568,9 @@
 - Wiring Components
 - bolder.md
 - /impeccable hooks
-- WebSocketClient.kt
+- handoff-context.js
+- digital-twin.ts
+- media-pipeline-client.ts
 - Sound effects (SFX)
 - .agents/skills/media-use/audio/scripts/lyria-recipe.py
 - Ownership matrix, usage stats, telemetry, privacy
@@ -1571,11 +1581,12 @@
 - STORYBOARD.md format — frames → groups
 - parseFrontmatter
 - Frame worker — per-frame composition author (music-to-video)
-- Frame worker — PR-to-video delta
+- generation-preflight.mjs
 - Tier 2 — title-image-outro
 - Transitions translation: @remotion/transitions → HF crossfades / shader-transitions
 - opengraph-image.tsx
 - ScrollExpand.tsx
+- rehearsal-rooms-client.ts
 - docs/layout.tsx
 - concepts.mdx
 - Message templates
@@ -1645,6 +1656,7 @@
 - Snippet: Next.js end-to-end (App Router)
 - scripts
 - patch-worker-routes.mjs
+- rate-limit-dashboard-http.js
 - Billing overage policy (v1)
 - Message templates
 - Daily AI digest (P12-F)
@@ -1667,10 +1679,11 @@
 - FluxyChat .NET SDK — **unpublished stub**
 - room_e2e.dart
 - room_rest.dart
+- DigitalTwinRoom
 - deterministic-models.ts
 - postable-object.ts
-- MockWebSocket
-- ComposerToolsMenu
+- react-native-sdk/src/agent-outbound.ts
+- collab-calendar.tsx
 - FluxyChat Unity SDK — **unpublished stub**
 - check-docs-links.mjs
 - fix-docs-guide-prefix.mjs
@@ -1740,6 +1753,14 @@
 - 5. CONTEXT-AWARE PROACTIVITY
 - 8. DARK MODE PROTOCOL
 - UI Skills Root
+- room-info-panel.tsx
+- link-preview.ts
+- SessionReplayManager
+- oauthFlow
+- voice-quality-dashboard.ts
+- GamificationApi
+- 2026-09-11.md
+- one-click-smoke.mjs
 - Chat only
 - connection-state.mdx
 - core/message-middleware.mdx
@@ -1798,7 +1819,9 @@
 - discord/src/bot.ts
 - telegram/src/bot.ts
 - FluxyChat Kotlin Multiplatform SDK — **unpublished stub**
+- MockWebSocket
 - peerDependenciesMeta
+- SummaryStore
 - @fluxy-chat/ui
 - primitives/reaction-picker.tsx
 - check-workflows-config.mjs
@@ -1901,6 +1924,7 @@
 - performance-stats.js
 - sandbox.js
 - slash-commands.js
+- LockScopeHandle
 - FluxyChat status incidents
 - Durable AI Transport
 - 3. LiveKit voice (free options)
@@ -1918,6 +1942,7 @@
 - 0.1.5 (2026-08-27)
 - ./continuity
 - ./event
+- live-streaming.test.js
 - ./yjs
 - repository
 - strip-heavy-barrel.mjs
@@ -2206,13 +2231,15 @@
 - WebSocketClient
 - InferenceSession
 - github.com/fluxychat/terraform-provider-fluxychat
+- secure-random.ts
+- 2026-09-17.md
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 415 edges
-2. `fetchWorkerJson()` - 390 edges
+2. `fetchWorkerJson()` - 391 edges
 3. `messageFromUnknown()` - 374 edges
 4. `pickRouteDeps()` - 359 edges
-5. `FluxyChatClient` - 246 edges
+5. `FluxyChatClient` - 247 edges
 6. `useDashboardSession()` - 222 edges
 7. `getPublicWorkerUrl()` - 199 edges
 8. `FluxyChatClient` - 172 edges
@@ -2220,8 +2247,6 @@
 10. `Button()` - 110 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `handleCopyCommand()` --indirect_call--> `installCommand()`  [INFERRED]
-  apps/dashboard/app/onboarding/finish-step.tsx → packages/create-fluxy-chat/src/utils.ts
 - `parseArgs()` --indirect_call--> `usage()`  [INFERRED]
   agent/skills/hyperframes-audio/scripts/carve.mjs → .agents/skills/impeccable/scripts/doctor.mjs
 - `simulate()` --indirect_call--> `payload()`  [INFERRED]
@@ -2230,6 +2255,8 @@
   apps/dashboard/app/components/webhook-playground-card.tsx → .agents/skills/impeccable/scripts/hook-lib.mjs
 - `createSignature()` --references--> `buffer`  [EXTRACTED]
   packages/sdk/src/webhook-catalog.ts → .agents/skills/impeccable/scripts/live-discard-manual-edits.mjs
+- `zb()` --indirect_call--> `ue()`  [INFERRED]
+  agent/skills/music-to-video/references/motion-primitives/assets/gsap.min.js → .agents/skills/impeccable/scripts/modern-screenshot.umd.js
 
 ## Import Cycles
 - 2-file cycle: `packages/sdk/src/index.ts -> packages/sdk/src/realtime-provider.tsx -> packages/sdk/src/index.ts`
@@ -2239,79 +2266,79 @@
 - 4-file cycle: `apps/worker/src/lib/agent-runtime.js -> apps/worker/src/lib/post-message-automations-safe.js -> apps/worker/src/lib/post-message-automations.js -> apps/worker/src/lib/ambient-agents.js -> apps/worker/src/lib/agent-runtime.js`
 - 4-file cycle: `apps/worker/src/lib/matrix-bridge.js -> apps/worker/src/lib/message-import.js -> apps/worker/src/lib/message-realtime-fanout.js -> apps/worker/src/lib/matrix-outbound-hook.js -> apps/worker/src/lib/matrix-bridge.js`
 
-## Communities (2311 total, 340 thin omitted)
+## Communities (2339 total, 354 thin omitted)
 
 ### Community 0 - "fetchWorkerJson"
 Cohesion: 0.02
-Nodes (259): handleCreateLangfuseConfig(), AiGovernancePage(), handleEvaluate(), handleExport(), tierBadge(), TIERS, EuConsentBanner(), handleAction() (+251 more)
+Nodes (272): CrossOrgAgentsPage(), handleApprove(), handleCounter(), handleCreateRoom(), handlePropose(), handleRegisterOrgA(), handleRegisterOrgB(), AgentDebatePage() (+264 more)
 
 ### Community 1 - "sdk/src/index.ts"
 Cohesion: 0.01
-Nodes (339): A2AArtifact, A2AEnvelope, A2AStatus, A2ATask, createA2AClient(), AgentDebateParticipantRole, AgentDebateSession, AgentDebateStep (+331 more)
+Nodes (377): AbTestConfig, AbTestResult, createAbTestingEngine(), TestVariant, AgentDebateParticipantRole, AgentDebateSession, AgentDebateStep, AgentDebateStepStatus (+369 more)
 
 ### Community 2 - "cn"
 Cohesion: 0.01
-Nodes (263): ChatPresenceStrip(), ChatPresenceStripProps, memberLabel(), HealthPayload, HealthView, WorkerHealthCard(), CHAT_API_METHODS, ChatApiMethod (+255 more)
+Nodes (251): AbTestPanel(), AgentPlatformPage(), AgentsPanel(), BuilderPanel(), createSeededPlatform(), DeployPanel(), EmotionPanel(), PersonalityPanel() (+243 more)
 
 ### Community 3 - "use-onboarding-wizard.ts"
-Cohesion: 0.02
-Nodes (145): ConsoleChrome(), CommandPaletteContext, CommandPaletteContextValue, CommandPaletteDialog(), CommandPaletteTrigger(), ConsoleCommandPaletteProvider(), onKeyDown(), isEditableTarget() (+137 more)
+Cohesion: 0.05
+Nodes (74): ClerkSessionBinder(), ConsoleAuthGate(), ConsoleChrome(), useCommandPalette(), ConsoleMobileNav(), isConsoleRoute(), ConsoleSurfaceBanner(), DashboardSessionProvider() (+66 more)
 
 ### Community 4 - "useDashboardSession"
 Cohesion: 0.03
-Nodes (189): ActivitiesPage(), ActivityRow, KindFilter, kindLabel(), statusVariant(), WORKER_URL, AdminAction, AuditEvent (+181 more)
+Nodes (191): ActivitiesPage(), ActivityRow, KindFilter, kindLabel(), statusVariant(), WORKER_URL, AdminAction, AdminPage() (+183 more)
 
 ### Community 5 - "fluxychat.tsx"
 Cohesion: 0.01
-Nodes (178): AgentCopilotConfirm(), AgentCopilotConfirmProps, AgentRoomMessage(), AgentRoomMessageProps, AgentRoomTemplateSelection, AgentRunStatus(), AgentRunStatusProps, statusVariant() (+170 more)
+Nodes (196): AgentCopilotConfirm(), AgentCopilotConfirmProps, AgentRoomMessage(), AgentRoomMessageProps, AgentRoomTemplateSelection, AgentRunHistoryRow(), AgentRunHistoryRowProps, statusVariant() (+188 more)
 
 ### Community 6 - "detect-antipatterns-browser.js"
 Cohesion: 0.02
-Nodes (229): addBrowserFindings(), addVisualContrastFindings(), addVisualContrastResult(), analyzeVisualContrast(), analyzeVisualContrastCandidate(), blendRgba(), borderColorsFromStyle(), borderWidthsFromStyle() (+221 more)
+Nodes (257): addBrowserFindings(), addVisualContrastFindings(), addVisualContrastResult(), analyzeVisualContrast(), analyzeVisualContrastCandidate(), blendRgba(), borderColorsFromStyle(), borderWidthsFromStyle() (+249 more)
 
 ### Community 7 - "FluxyChatClient"
 Cohesion: 0.02
-Nodes (28): appendCommentToThreads(), FluxyComment, FluxyCommentThread, FluxyCommentThreadMetadata, mergeCommentThread(), thread, FluxyChatClient, httpUrlToWebSocketBase() (+20 more)
+Nodes (25): appendCommentToThreads(), FluxyComment, FluxyCommentThread, FluxyCommentThreadMetadata, mergeCommentThread(), thread, FluxyChatClient, appendFeedMessage() (+17 more)
 
-### Community 8 - "react.ts"
-Cohesion: 0.02
-Nodes (104): messagesInReplyThread(), AnonCredential, FluxyClientCredentials, FluxyClientCredentialsOptions, b64Json(), fakeJwt(), buildFluxyConnectionState(), BuildFluxyConnectionStateInput (+96 more)
+### Community 8 - "room-shard.js"
+Cohesion: 0.09
+Nodes (39): SupergroupRouterDurableObject, broadcastMessageEdit(), generateId(), getMergeConflict(), isTrueMergeConflict(), listMergeConflicts(), mapConflictRow(), parseVersion() (+31 more)
 
 ### Community 9 - "checks.mjs"
 Cohesion: 0.03
-Nodes (187): borderColorsFromStyle(), borderWidthsFromStyle(), buildHtmlPatternCorpora(), checkBorders(), checkClippedOverflow(), checkColors(), checkCreamPalette(), checkEdgeFlushCardsDOM() (+179 more)
+Nodes (190): infiniteAnimationNames(), isNonRenderedText(), ANIMATION_VALUE_KEYWORDS, borderColorsFromStyle(), borderWidthsFromStyle(), buildHtmlPatternCorpora(), checkBorders(), checkClippedOverflow() (+182 more)
 
 ### Community 10 - "worker-runtime.ts"
 Cohesion: 0.01
-Nodes (103): ToolPreset, BotDeployment, BotDeploymentConfig, BotDeploymentManager, createBotDeploymentManager(), createPlatformAdapter(), Platform, PlatformAdapter (+95 more)
+Nodes (94): ToolPreset, BotDeployment, BotDeploymentConfig, BotDeploymentManager, createBotDeploymentManager(), createPlatformAdapter(), Platform, PlatformAdapter (+86 more)
 
-### Community 11 - "room-session.ts"
-Cohesion: 0.03
-Nodes (119): mergeDebateSteps(), isPointerLikeClientEventName(), warnIfPointerOnClientEvent(), burstStrategy(), processNext(), ConcurrencyConfig, ConcurrencyStrategy, ConcurrencyStrategyInstance (+111 more)
-
-### Community 12 - "fluxy-stream.ts"
+### Community 11 - "react.ts"
 Cohesion: 0.02
-Nodes (56): ConversationSummary, createMemorySearchIndex(), createMemorySummaryStore(), createMemoryTranslationCache(), createModerationEngine(), ModerationAction, ModerationConfig, ModerationReport (+48 more)
+Nodes (159): decodeRoomThreadCursor(), encodeRoomThreadCursor(), FluxyRoomThread, FluxyThreadListQuery, FluxyThreadPage, MAX_CHAT_THREAD_DEPTH, messagesInReplyThread(), AnonCredential (+151 more)
 
-### Community 13 - "FluxyChatRoomConnection"
-Cohesion: 0.03
-Nodes (72): computeReconnectBackoffMs(), describeConnectionError(), FLUXY_WS_CLOSE_NORMAL, FLUXY_WS_CLOSE_POLICY, FluxyAnonymousNotAllowedError, FluxyAuthError, FluxyConnectionError, FluxyConnectionErrorInfo (+64 more)
+### Community 12 - "WorkerFluxyStreamClient"
+Cohesion: 0.08
+Nodes (10): CameraAngle, LiveProduct, StreamHighlight, StreamStatus, createWorkerFluxyStreamClient(), StreamAngleReplay, StreamReplay, StreamReplayBundle (+2 more)
+
+### Community 13 - "fluxy-chat-client.ts"
+Cohesion: 0.02
+Nodes (105): AgentOutboundMessageInput, AgentOutboundValidationResult, buildAgentOutboundWsPayload(), validateAgentOutboundMessage(), FluxyTokenSource, computeReconnectBackoffMs(), describeConnectionError(), FLUXY_WS_CLOSE_NORMAL (+97 more)
 
 ### Community 14 - "src/worker.js"
-Cohesion: 0.04
-Nodes (88): isAdminAuthRequired(), mapBotRowToAgent(), upsertAgentFromBody(), timingSafeEqual(), createHttpGateApp(), MAX_HTTP_BODY_BYTES, requestLacksBearer(), extractFirstUrl() (+80 more)
+Cohesion: 0.03
+Nodes (104): isAdminAuthRequired(), mapBotRowToAgent(), upsertAgentFromBody(), hashApiKey(), legacyHashApiKey(), readSalt(), ensureDemoRoomSeeded(), getDemoStatus() (+96 more)
 
 ### Community 15 - "agents-console-context.tsx"
 Cohesion: 0.04
-Nodes (88): AgentRun, AgentsConsoleContext, AgentsConsoleContextValue, AgentsConsoleProvider(), useAgentsConsole(), WORKER_URL, AgentsSidebar(), AgentChatPage() (+80 more)
+Nodes (86): AgentRun, AgentsConsoleContext, AgentsConsoleContextValue, AgentsConsoleProvider(), useAgentsConsole(), WORKER_URL, AgentsSidebar(), AgentChatPage() (+78 more)
 
 ### Community 16 - "agent-runtime.js"
-Cohesion: 0.04
-Nodes (86): BUDGET_MONTH_KEY_RE, checkRoomAgentBudget(), currentMonthKey(), evaluateBudget(), getRoomAgentBudget(), getRoomMonthlyTokenUsage(), isValidMonthKey(), setRoomAgentBudget() (+78 more)
+Cohesion: 0.03
+Nodes (111): BUDGET_MONTH_KEY_RE, checkRoomAgentBudget(), currentMonthKey(), evaluateBudget(), getRoomAgentBudget(), getRoomMonthlyTokenUsage(), isValidMonthKey(), setRoomAgentBudget() (+103 more)
 
-### Community 17 - "visual-moderation.js"
+### Community 17 - "logError"
 Cohesion: 0.05
-Nodes (74): chatCompletion(), anthropicMessagesUrlFromGateway(), buildAiAuthHeaders(), getAiGatewayConnectionOverrides(), isAiConfigured(), isAiGatewayEnabled(), logAiTransportOnce(), resolveAiTransport() (+66 more)
+Nodes (75): buildEmbeddingsAuthHeaders(), analyzeContent(), applyAutoAction(), getModerationQueue(), getModerationStats(), MODERATION_CATEGORIES, queueModerationEvent(), reviewModerationEvent() (+67 more)
 
 ### Community 18 - "client.dart"
 Cohesion: 0.01
@@ -2329,17 +2356,17 @@ Nodes (61): CapabilityClient, CapabilityClientConfig, CapabilitySnapshot, create
 Cohesion: 0.03
 Nodes (78): anomalies, argv, bgmFields, bgmModeOverride, HERE, hyperframesDir, langOverride, lyriaRecipe (+70 more)
 
-### Community 23 - "session-store.mjs"
-Cohesion: 0.08
-Nodes (44): getLegacyLiveSessionsDir(), getLiveSessionsDir(), FORBIDDEN, verifyAcceptedFile(), completeCli(), completeThroughServer(), parseArgs(), readServerInfo() (+36 more)
+### Community 23 - "impeccable-paths.mjs"
+Cohesion: 0.06
+Nodes (66): resolveProjectRoot(), CRITIQUE_DIR, firstExisting(), getDesignSidecarCandidates(), getDesignSidecarPath(), getImpeccableDir(), getLegacyLiveAnnotationsDir(), getLegacyLiveConfigPath() (+58 more)
 
 ### Community 24 - ".agents/skills/media-use/audio/scripts/audio.mjs"
 Cohesion: 0.03
 Nodes (78): anomalies, argv, bgmFields, bgmModeOverride, HERE, hyperframesDir, langOverride, lyriaRecipe (+70 more)
 
-### Community 25 - "pricing/page.tsx"
-Cohesion: 0.05
-Nodes (34): FlowingMenu, LandingFeaturesClient(), MiddlewarePipelineViz, PILLARS, PillarsBento, ProductStoryReel, SectionFallback(), TeamsStartFlow (+26 more)
+### Community 25 - "voice-ai/page.tsx"
+Cohesion: 0.08
+Nodes (44): CONSOLE_NAV_INDUSTRIES, CONSOLE_NAV_PLATFORM, PlatformCatalogPage(), LandingPlatformSection(), PLATFORM_PRIMITIVES, PRODUCT_ICONS, VoiceAiPage(), handleCreateSession() (+36 more)
 
 ### Community 26 - "voice-pipeline.ts"
 Cohesion: 0.03
@@ -2351,7 +2378,7 @@ Nodes (83): _a(), Aa(), Ae(), Animation(), Ao(), _assertThisInitialized(), Ca(),
 
 ### Community 28 - "context.mjs"
 Cohesion: 0.04
-Nodes (104): appendAutonomyCounterDirective(), appendBuildPathDirective(), appendDetectorFallback(), appendImageGenDirective(), appendImageToolsDirective(), appendStalenessDirective(), appendSubagentAuthorizationDirective(), appendSurfaceBriefContext() (+96 more)
+Nodes (102): appendAutonomyCounterDirective(), appendBuildPathDirective(), appendDetectorFallback(), appendImageGenDirective(), appendImageToolsDirective(), appendStalenessDirective(), appendSubagentAuthorizationDirective(), appendSurfaceBriefContext() (+94 more)
 
 ### Community 29 - "agent/skills/music-to-video/references/motion-primitives/assets/gsap.min.js"
 Cohesion: 0.04
@@ -2365,29 +2392,29 @@ Nodes (82): _a(), Aa(), Ae(), Animation(), Ao(), _assertThisInitialized(), Ca(),
 Cohesion: 0.04
 Nodes (82): _a(), Aa(), Ae(), Animation(), Ao(), _assertThisInitialized(), Ca(), cb() (+74 more)
 
-### Community 32 - "email-inbound.js"
-Cohesion: 0.14
-Nodes (25): composeInboundText(), createEmailInboundRoute(), deleteEmailInboundRoute(), emailLocalPart(), handleCloudflareEmailMessage(), handleEmailInbound(), listEmailInboundRoutes(), lookupRoute() (+17 more)
+### Community 32 - "message-realtime-fanout.js"
+Cohesion: 0.08
+Nodes (38): maybeEnqueueAgentTaskForInbound(), maybeTriggerAmbientAgentsOnMessage(), composeInboundText(), createEmailInboundRoute(), deleteEmailInboundRoute(), emailLocalPart(), handleCloudflareEmailMessage(), handleEmailInbound() (+30 more)
 
-### Community 33 - "fluxy-chat-client.ts"
-Cohesion: 0.03
-Nodes (57): AgentOutboundMessageInput, AgentOutboundValidationResult, buildAgentOutboundWsPayload(), validateAgentOutboundMessage(), decodeRoomThreadCursor(), encodeRoomThreadCursor(), FluxyRoomThread, FluxyThreadListQuery (+49 more)
+### Community 33 - "labs-http-contract.test.js"
+Cohesion: 0.12
+Nodes (17): agentDb(), deps(), jsonReq(), roomStub(), createAuthMatrixDeps(), unauthorizedRequest(), deps(), huddleDb() (+9 more)
 
 ### Community 34 - "cli-bootstrap.ts"
-Cohesion: 0.06
-Nodes (67): POST(), NO_STORE, POST(), timingEqual(), POST(), GET(), POST(), POST() (+59 more)
+Cohesion: 0.08
+Nodes (51): POST(), POST(), GET(), POST(), POST(), RouteContext, POST(), GET() (+43 more)
 
-### Community 35 - "push-notifications.js"
-Cohesion: 0.05
-Nodes (74): base64UrlEncode(), buildApnsJwt(), cachedJwt, getApnsTokensForUser(), importApnsPrivateKey(), pemToArrayBuffer(), resolveApnsConfig(), sendApnsNotification() (+66 more)
+### Community 35 - "scheduled-runners.js"
+Cohesion: 0.06
+Nodes (59): collabDigestLines(), deliverUserDigest(), deliveryAlreadyRecorded(), digestDateUtc(), digestWindowBounds(), escapeHtml(), fallbackDigestHighlights(), fetchYesterdayComments() (+51 more)
 
 ### Community 36 - "worker-route-dispatch.js"
 Cohesion: 0.05
-Nodes (64): addMemory(), assignToRoom(), createCompanion(), deleteCompanion(), generateId(), getCompanion(), getCompanionStats(), listCompanionRooms() (+56 more)
+Nodes (53): authErrorResponse(), requireApiProjectAdmin(), withAuthProjectId(), cardToFallbackText(), createJsonResponder(), json(), jsonResponse(), resolveJsonInit() (+45 more)
 
 ### Community 37 - "analytics/page.tsx"
 Cohesion: 0.05
-Nodes (56): AlertsStats, AnalyticsPage(), exportRoomData(), BenchmarkStats, buildPerfSignalSummary(), ConversationAnalyticsSection(), CostStats, JOURNEY_ACTIONS (+48 more)
+Nodes (54): AlertsStats, AnalyticsPage(), exportRoomData(), BenchmarkStats, buildPerfSignalSummary(), ConversationAnalyticsSection(), CostStats, JOURNEY_ACTIONS (+46 more)
 
 ### Community 38 - "react-native-sdk/src/index.ts"
 Cohesion: 0.06
@@ -2402,24 +2429,24 @@ Cohesion: 0.05
 Nodes (80): heygenAuthMethod(), CANDIDATE_CAP, formatCandidates(), listCandidates(), meta(), rankScope(), shape(), paramsFromIntent() (+72 more)
 
 ### Community 41 - "[roomId]/page.tsx"
-Cohesion: 0.05
-Nodes (59): ALL_TABS, CollabCalendar, CollabDocument, CollabFiles, CollabLayout(), CollabNotes, CollabRoomPage(), CollabSpreadsheet (+51 more)
+Cohesion: 0.08
+Nodes (34): ALL_TABS, CollabDocument, CollabFiles, CollabLayout(), CollabNotes, CollabRoomPage(), CollabSpreadsheet, CollabSummaries (+26 more)
 
 ### Community 42 - "competitor-parity-http.js"
-Cohesion: 0.09
-Nodes (40): createCannedResponse(), deleteCannedResponse(), generateId(), getCannedResponseByShortcut(), listCannedResponses(), mapRow(), recordCannedResponseUse(), updateCannedResponse() (+32 more)
+Cohesion: 0.05
+Nodes (73): createCannedResponse(), deleteCannedResponse(), generateId(), getCannedResponseByShortcut(), listCannedResponses(), mapRow(), recordCannedResponseUse(), updateCannedResponse() (+65 more)
 
 ### Community 43 - "mcp-room-server.js"
 Cohesion: 0.06
-Nodes (70): createApiProvider(), createMcpClient(), headersFor(), metaParams(), rpc(), decodeMcpHeaderValue(), detectMcpEra(), discoverResult() (+62 more)
+Nodes (63): createApiProvider(), createMcpClient(), headersFor(), metaParams(), rpc(), decodeMcpHeaderValue(), detectMcpEra(), discoverResult() (+55 more)
 
 ### Community 44 - "live-server.mjs"
-Cohesion: 0.05
-Nodes (81): assembleLiveBrowserScript(), assertLiveBrowserScriptParts(), LIVE_BROWSER_SCRIPT_PARTS, readLiveBrowserScriptParts(), resolveLiveBrowserScriptParts(), buildGenerationPreflight(), compactError(), execFileAsync (+73 more)
+Cohesion: 0.06
+Nodes (71): assembleLiveBrowserScript(), assertLiveBrowserScriptParts(), LIVE_BROWSER_SCRIPT_PARTS, readLiveBrowserScriptParts(), resolveLiveBrowserScriptParts(), eventPriority(), selectAvailablePendingEvent(), acknowledgePendingEvent() (+63 more)
 
 ### Community 45 - "getPublicWorkerUrl"
 Cohesion: 0.02
-Nodes (147): AdminPage(), callAdminEndpoint(), ChannelFormsPage(), handleDispatch(), AgentHandoffBanner(), handleComplete(), handleTakeOver(), AgentHandoffBannerProps (+139 more)
+Nodes (121): AgentQueuePage(), formatSla(), handleCreateLangfuseConfig(), SpatialView, AgentHandoffBanner(), handleComplete(), handleTakeOver(), AgentRoomTemplatePicker() (+113 more)
 
 ### Community 46 - "protocol/src/index.ts"
 Cohesion: 0.05
@@ -2430,12 +2457,12 @@ Cohesion: 0.07
 Nodes (73): endGameMatch(), findOrCreateLobby(), getGameMatch(), listGameLeaderboard(), nowIso(), parseJson(), rowToLobby(), rowToMatch() (+65 more)
 
 ### Community 48 - "public-http.js"
-Cohesion: 0.08
-Nodes (42): issueAnonymousToken(), assertSecretApiKey(), isPublishableApiKey(), isSecretApiKey(), buildChannelAuthResponse(), CHANNEL_PREFIXES, parseRoomIdFromChannelName(), signPusherStyleChannelAuth() (+34 more)
+Cohesion: 0.04
+Nodes (90): issueAnonymousToken(), assertSecretApiKey(), isPublishableApiKey(), isSecretApiKey(), buildChannelAuthResponse(), CHANNEL_PREFIXES, parseRoomIdFromChannelName(), signPusherStyleChannelAuth() (+82 more)
 
 ### Community 49 - "detect-text.mjs"
 Cohesion: 0.05
-Nodes (71): detectUrl(), launchBrowser(), measureContentHiddenAfterReveal(), runVisualContrastFallback(), serializeDesignSystemForBrowser(), blankCssComments(), BLOCK_BRACE_PREFIX_KEYWORDS, CSS_IN_JS_EXTENSIONS (+63 more)
+Nodes (69): detectUrl(), launchBrowser(), measureContentHiddenAfterReveal(), runVisualContrastFallback(), serializeDesignSystemForBrowser(), blankCssComments(), BLOCK_BRACE_PREFIX_KEYWORDS, CSS_IN_JS_EXTENSIONS (+61 more)
 
 ### Community 50 - "resumeSession"
 Cohesion: 0.06
@@ -2444,10 +2471,6 @@ Nodes (85): abortSvelteComponentInjection(), applyParamDefaults(), applyPlacehol
 ### Community 51 - "svelte-component.mjs"
 Cohesion: 0.06
 Nodes (81): bakeParamValues(), collectAllSelectors(), collectSelectorsFromNodes(), collectUnusedSelectors(), escapeRegExp(), formatBody(), isToggleOn(), normalizeSelector() (+73 more)
-
-### Community 52 - "marketplace/page.tsx"
-Cohesion: 0.04
-Nodes (88): AgentsIndexPage(), installTemplate(), STARTER_TEMPLATES, ConfirmDialog(), ConfirmDialogProps, FluxyRealtimeShell(), ThemeProvider(), geist (+80 more)
 
 ### Community 53 - "live-streaming.js"
 Cohesion: 0.10
@@ -2462,8 +2485,8 @@ Cohesion: 0.03
 Nodes (57): anchorT, bgExtra, bgHtml, bgSkeleton(), body, CHARW, dna, esc() (+49 more)
 
 ### Community 56 - "agent-do.js"
-Cohesion: 0.04
-Nodes (71): ScheduleProbeDo, AgentDurableObject, AGENT_DO_META_KEY, AGENT_DO_TURNS_KEY, agentDoName(), appendCopilotTurn(), callAgentDo(), callRoomDo() (+63 more)
+Cohesion: 0.05
+Nodes (61): ScheduleProbeDo, AgentDurableObject, AGENT_DO_META_KEY, AGENT_DO_TURNS_KEY, agentDoName(), appendCopilotTurn(), callAgentDo(), callRoomDo() (+53 more)
 
 ### Community 57 - "messages-http.js"
 Cohesion: 0.06
@@ -2471,7 +2494,7 @@ Nodes (51): getAgentRunRecord(), isSideEffectTool(), listCounterfactualRuns(), m
 
 ### Community 58 - "create-fluxy-chat/src/index.ts"
 Cohesion: 0.05
-Nodes (72): bin, create-fluxy-chat, bugs, url, dependencies, @clack/prompts, picocolors, description (+64 more)
+Nodes (73): handleCopyCommand(), bin, create-fluxy-chat, bugs, url, dependencies, @clack/prompts, picocolors (+65 more)
 
 ### Community 59 - "enterprise-compliance-http.js"
 Cohesion: 0.07
@@ -2486,20 +2509,20 @@ Cohesion: 0.03
 Nodes (58): Faceless Explainer to HyperFrames, Quick Reference, Step 0: Setup, Step 1: Brief (no capture), Step 2: Design System, Step 3.1: Audio, Step 3: Storyboard and Script, Step 4: Frame Visual Design (+50 more)
 
 ### Community 62 - "doctor.mjs"
-Cohesion: 0.06
-Nodes (68): applyFixes(), cli(), collect(), parseArgs(), readProjectRootPatterns(), rel(), renderText(), safeRead() (+60 more)
+Cohesion: 0.07
+Nodes (64): applyFixes(), cli(), collect(), parseArgs(), readProjectRootPatterns(), rel(), renderText(), safeRead() (+56 more)
 
 ### Community 63 - "live-commit-manual-edits.mjs"
-Cohesion: 0.10
-Nodes (51): allEntryIds(), argVal(), buildRepairBatch(), candidatesForEntry(), changedFilesSinceSnapshot(), clearAppliedEntries(), collectApplyOwnedFiles(), collectRollbackFiles() (+43 more)
-
-### Community 64 - "marketing-shell.tsx"
 Cohesion: 0.07
-Nodes (28): CliAuthRedirect(), dynamic, ClerkRoot(), ClerkRootProps, ClerkShell(), ClerkShellProps, MarketingShell(), metadata (+20 more)
+Nodes (67): scrubManualEditsAgainstFile(), scrubManualEditsAgainstOriginalBlock(), allEntryIds(), argVal(), buildRepairBatch(), candidatesForEntry(), changedFilesSinceSnapshot(), clearAppliedEntries() (+59 more)
 
-### Community 65 - "telemetry.ts"
+### Community 64 - "room-session.ts"
 Cohesion: 0.03
-Nodes (20): ConsoleLogger, createLogger(), Logger, ConsoleTelemetryOptions, createConsoleTelemetryIntegration(), createOtlpTelemetryIntegration(), exportSpan(), createTelemetryManager() (+12 more)
+Nodes (119): mergeDebateSteps(), isPointerLikeClientEventName(), warnIfPointerOnClientEvent(), burstStrategy(), processNext(), ConcurrencyConfig, ConcurrencyStrategy, ConcurrencyStrategyInstance (+111 more)
+
+### Community 65 - "room-commands.js"
+Cohesion: 0.09
+Nodes (40): AGENT_BASE_BEHAVIOR, buildRoomUxContract(), composeAgentSystemPrompt(), FLUXYCHAT_PRODUCT_KNOWLEDGE, formatBuiltInSlashCatalog(), isProductGuideAgent(), normalizeAgentHandleKey(), PRODUCT_GUIDE_HANDLES (+32 more)
 
 ### Community 66 - "truth-market.js"
 Cohesion: 0.14
@@ -2507,11 +2530,11 @@ Nodes (29): adjustCredits(), createTruthClaim(), DEFAULT_INITIAL_CREDITS, DEFAUL
 
 ### Community 67 - "design-system.mjs"
 Cohesion: 0.07
-Nodes (71): addClampEndpoints(), addColorObject(), addDesignColor(), addFontSizeStep(), addRoundedScale(), addRoundedToken(), addSidecarColors(), addSidecarRadii() (+63 more)
+Nodes (72): addClampEndpoints(), addColorObject(), addDesignColor(), addFontSizeStep(), addRoundedScale(), addRoundedToken(), addSidecarColors(), addSidecarRadii() (+64 more)
 
 ### Community 68 - "safeOutboundFetch"
-Cohesion: 0.05
-Nodes (64): ACTION_HANDLERS, buildActionTools(), buildInputSchema(), createAction(), deleteAction(), executeAction(), executeCustom(), executeGitHubIssue() (+56 more)
+Cohesion: 0.06
+Nodes (55): CONTEXT_FETCH_TIMEOUT_MS, executeToolCall(), fetchAppContext(), ACTION_HANDLERS, buildActionTools(), buildInputSchema(), createAction(), deleteAction() (+47 more)
 
 ### Community 69 - "offline-sync.ts"
 Cohesion: 0.05
@@ -2527,7 +2550,7 @@ Nodes (56): Baseline contents, Existing environments (production / staging), Flu
 
 ### Community 72 - "identity-access-http.js"
 Cohesion: 0.08
-Nodes (59): createScimGroup(), createScimToken(), createScimUser(), deleteScimToken(), deleteScimUser(), extractEmail(), formatScimGroup(), formatScimUser() (+51 more)
+Nodes (58): createScimGroup(), createScimToken(), createScimUser(), deleteScimToken(), deleteScimUser(), extractEmail(), formatScimGroup(), formatScimUser() (+50 more)
 
 ### Community 73 - "css-cascade.mjs"
 Cohesion: 0.05
@@ -2537,29 +2560,29 @@ Nodes (36): applyStaticDeclaration(), buildBorderOverrideMap(), parseShorthand()
 Cohesion: 0.09
 Nodes (64): abandonForeignSession(), cancelEditing(), cancelEditingToPicking(), cancelInsertConfigure(), cleanup(), cleanupAcceptedSession(), clearAnnotations(), clearInsertPicking() (+56 more)
 
-### Community 75 - "jwt-auth.js"
-Cohesion: 0.08
-Nodes (32): base64urlEncode(), base64urlToBytes(), importHmacKey(), JWT_DUMMY_KEY_BYTES, signHs256Jwt(), signHs256Jwt(), verifyHs256Signature(), verifyJwtAndGetContext() (+24 more)
+### Community 75 - "roots.mjs"
+Cohesion: 0.10
+Nodes (40): parseTargetOptions(), parseTargetPath(), TargetArgError, __dirname, ensureServerRunning(), globToRegex(), liveCli(), relOrNull() (+32 more)
 
 ### Community 76 - "generative-ui.ts"
 Cohesion: 0.06
 Nodes (48): AgUiAdapter, AgUiAdapterOptions, AgUiRunState, AgUiStreamEvent, createAgUiAdapter(), mergeAgUiTextParts(), AgentWorkspaceContext, AgentWorkspaceStep (+40 more)
 
-### Community 77 - "logInfo"
-Cohesion: 0.05
-Nodes (65): appealAutoAction(), evaluateAndAct(), getAutoActionHistory(), getAutoModStats(), listAutoRules(), upsertAutoRule(), collabDigestLines(), deliverUserDigest() (+57 more)
+### Community 77 - "cards.ts"
+Cohesion: 0.08
+Nodes (41): Actions(), ActionsElement, ActionType, AnyCardElement, Button(), ButtonElement, ButtonStyle, Card() (+33 more)
 
 ### Community 78 - "hook-lib.mjs"
-Cohesion: 0.06
-Nodes (63): ACK_EXTS, ADVISORY_RULES, appendDesignSystemNote(), applyPatchText(), canonicalPath(), canonicalPathCache, clampByte(), cleanIgnoreValueDisplay() (+55 more)
+Cohesion: 0.04
+Nodes (91): ACK_EXTS, ADVISORY_RULES, appendDesignSystemNote(), applyConfigSource(), applyDetectorConfigSource(), applyPatchText(), canonicalPath(), canonicalPathCache (+83 more)
 
 ### Community 79 - "dashboard/package.json"
 Cohesion: 0.03
-Nodes (62): autoprefixer, class-variance-authority, clsx, @fluxy-chat/protocol, @fluxy-chat/react, @fluxy-chat/sdk, @fluxy-chat/ui, jsdom (+54 more)
+Nodes (61): autoprefixer, class-variance-authority, clsx, @fluxy-chat/protocol, @fluxy-chat/react, @fluxy-chat/sdk, @fluxy-chat/ui, jsdom (+53 more)
 
 ### Community 80 - "room-do.js"
 Cohesion: 0.04
-Nodes (79): DEFAULT_WS_HISTORY_LIMIT, EPHEMERAL_MODERATION_CACHE_KEY, EPHEMERAL_ROOM_STATE_KEY, EPHEMERAL_WS_RATE_LIMIT_KEY, LOCATION_STALE_TTL_MS, LOCATION_UPDATE_INTERVAL_MS, MAX_WS_HISTORY_LIMIT, parseWsConnectOptions() (+71 more)
+Nodes (78): DEFAULT_WS_HISTORY_LIMIT, EPHEMERAL_MODERATION_CACHE_KEY, EPHEMERAL_ROOM_STATE_KEY, EPHEMERAL_WS_RATE_LIMIT_KEY, LOCATION_STALE_TTL_MS, LOCATION_UPDATE_INTERVAL_MS, MAX_WS_HISTORY_LIMIT, parseWsConnectOptions() (+70 more)
 
 ### Community 81 - "hipaa-client.ts"
 Cohesion: 0.16
@@ -2577,9 +2600,9 @@ Nodes (46): createDynamicToolRegistry(), dynamicTool, DynamicToolConfig, Dynamic
 Cohesion: 0.08
 Nodes (58): Fa(), Fa(), ae(), be(), bt(), Ce(), s(), Ct() (+50 more)
 
-### Community 85 - "fanoutServerEvent"
-Cohesion: 0.06
-Nodes (51): closeBreakout(), createBreakout(), generateBreakoutId(), listBreakouts(), MAX_ACTIVE_BREAKOUTS, parseBreakoutInput(), addCommentToThread(), createCommentThread() (+43 more)
+### Community 85 - "logInfo"
+Cohesion: 0.10
+Nodes (31): closeBreakout(), createBreakout(), generateBreakoutId(), listBreakouts(), MAX_ACTIVE_BREAKOUTS, parseBreakoutInput(), checkIn(), checkOut() (+23 more)
 
 ### Community 86 - "index.tsx"
 Cohesion: 0.06
@@ -2602,16 +2625,16 @@ Cohesion: 0.09
 Nodes (43): cacheEntryDir(), cacheGet(), cacheGetByEntity(), cachePut(), contentHash(), findGlobalBySha(), globalMediaDir(), importFromCache() (+35 more)
 
 ### Community 91 - "vertical-studio.tsx"
-Cohesion: 0.06
-Nodes (41): LiveFeedItem, LiveVerticalId, verticalCapabilityType(), VerticalLiveWorkspace(), publishCapability(), VerticalLiveWorkspaceProps, liveMetrics(), READINESS_KEY (+33 more)
+Cohesion: 0.05
+Nodes (46): ProjectOverview, LiveFeedItem, LiveVerticalId, verticalCapabilityType(), VerticalLiveWorkspace(), publishCapability(), VerticalLiveWorkspaceProps, liveMetrics() (+38 more)
 
 ### Community 92 - "voice-ai-http.js"
 Cohesion: 0.08
 Nodes (43): buildTranscriptionAuthHeaders(), applyDuplexBargeIn(), buildOnHoldNarration(), createVoiceAiSession(), getKv(), getVoiceAiMetrics(), getVoiceAiProvider(), getVoiceAiStats() (+35 more)
 
 ### Community 93 - "moderation-queue.js"
-Cohesion: 0.15
-Nodes (25): bulkReviewEvents(), canModerateQueue(), computePriorityScore(), FEEDBACK_TYPES, generateId(), getFeedbackStats(), getPriorityQueue(), getReviewHistory() (+17 more)
+Cohesion: 0.16
+Nodes (24): bulkReviewEvents(), canModerateQueue(), computePriorityScore(), FEEDBACK_TYPES, generateId(), getFeedbackStats(), getPriorityQueue(), getReviewHistory() (+16 more)
 
 ### Community 94 - "initPageChat"
 Cohesion: 0.07
@@ -2622,8 +2645,8 @@ Cohesion: 0.04
 Nodes (57): dependencies, class-variance-authority, @clerk/nextjs, clsx, @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities, @docsearch/react (+49 more)
 
 ### Community 96 - "channel-structured-forms.js"
-Cohesion: 0.10
-Nodes (49): buildRcsSuggestedRepliesForField(), buildWhatsAppInteractiveForField(), dispatchStructuredForm(), generateId(), getChannelFormDelivery(), handleRcsFormWebhook(), handleWhatsAppFormWebhook(), ingestStructuredFormResponse() (+41 more)
+Cohesion: 0.19
+Nodes (25): buildRcsSuggestedRepliesForField(), buildWhatsAppInteractiveForField(), dispatchStructuredForm(), generateId(), getChannelFormDelivery(), handleRcsFormWebhook(), handleWhatsAppFormWebhook(), ingestStructuredFormResponse() (+17 more)
 
 ### Community 97 - "room_connection.dart"
 Cohesion: 0.04
@@ -2642,20 +2665,20 @@ Cohesion: 0.07
 Nodes (38): brandProvider, codexGeneratedDir(), codexImageGenerate(), codexRun(), codexUnavailableReason(), freshestGeneratedImage(), imageGenFlag(), NEW_CLI (+30 more)
 
 ### Community 101 - "insert-ui.mjs"
-Cohesion: 0.07
-Nodes (32): AGENT_PHASE_SET, FORBIDDEN_MANUAL_EDIT_TEXT_CHARS, INSERT_POSITIONS, isValidId(), isValidMountVariant(), isValidVariantId(), MOUNT_ERROR_MAX_LENGTH, MOUNT_URL_MAX_LENGTH (+24 more)
+Cohesion: 0.06
+Nodes (39): AGENT_PHASE_SET, FORBIDDEN_MANUAL_EDIT_TEXT_CHARS, INSERT_POSITIONS, isValidId(), isValidMountVariant(), isValidVariantId(), MOUNT_ERROR_MAX_LENGTH, MOUNT_URL_MAX_LENGTH (+31 more)
 
 ### Community 102 - "rooms-mutations-http.js"
 Cohesion: 0.08
-Nodes (38): LLM_PROVIDER_REGISTRY, mapMemberRow(), normalizeMemberPreferencesPatch(), parseMemberPreferencesJson(), MAX_MESSAGE_LENGTH, upsertProjectLlmCredential(), getRoomCatchUpForUser(), readMessageDraftFromPreferences() (+30 more)
+Nodes (34): LLM_PROVIDER_REGISTRY, mapMemberRow(), normalizeMemberPreferencesPatch(), parseMemberPreferencesJson(), upsertProjectLlmCredential(), getRoomCatchUpForUser(), bytesToBase64(), decryptRoomContentKeyFromStorage() (+26 more)
 
 ### Community 103 - "ApiClient"
 Cohesion: 0.07
 Nodes (15): ApiClient, UseChatOptions, UseChatReturn, UseRoomsReturn, UseTypingOptions, ConnectionStatus, FluxyChatRoom, FluxyInAppNotification (+7 more)
 
 ### Community 104 - "site-metadata.ts"
-Cohesion: 0.04
-Nodes (32): metadata, metadata, metadata, metadata, metadata, metadata, metadata, metadata (+24 more)
+Cohesion: 0.03
+Nodes (96): metadata, metadata, metadata, metadata, metadata, metadata, metadata, metadata (+88 more)
 
 ### Community 105 - "agent/skills/hyperframes-animation/scripts/animation-map.mjs"
 Cohesion: 0.06
@@ -2665,13 +2688,13 @@ Nodes (37): args, buildElementLifecycles(), captureSnapshots(), COMP_DIR, findLa
 Cohesion: 0.06
 Nodes (37): args, buildElementLifecycles(), captureSnapshots(), COMP_DIR, findLastBbox(), FRAMES, HEIGHT, markCollisions() (+29 more)
 
-### Community 107 - "voice-ai/page.tsx"
-Cohesion: 0.08
-Nodes (44): CONSOLE_NAV_INDUSTRIES, CONSOLE_NAV_PLATFORM, PlatformCatalogPage(), LandingPlatformSection(), PLATFORM_PRIMITIVES, PRODUCT_ICONS, VoiceAiPage(), handleCreateSession() (+36 more)
+### Community 107 - "conversation-intelligence.js"
+Cohesion: 0.21
+Nodes (26): canViewIntelligence(), createSnapshot(), extractIntentLabel(), generateId(), generateWeeklyDigest(), getEscalationReasons(), getIntentClusters(), getModerationTrends() (+18 more)
 
 ### Community 108 - "mcp-apps-http.js"
-Cohesion: 0.08
-Nodes (52): auditGradeFromScore(), getLatestMarketplaceAudit(), parseFindingsJson(), recordMarketplaceAudit(), CATALOG, getKv(), getMcpAppById(), getMcpAppByIdWithAudit() (+44 more)
+Cohesion: 0.10
+Nodes (38): auditGradeFromScore(), getLatestMarketplaceAudit(), parseFindingsJson(), recordMarketplaceAudit(), CATALOG, getKv(), getMcpAppById(), getMcpAppByIdWithAudit() (+30 more)
 
 ### Community 109 - "impeccable/SKILL.md"
 Cohesion: 0.05
@@ -2683,31 +2706,31 @@ Nodes (52): actionLabel(), bindConfigureCountPillTooltip(), bindConfigureInlineC
 
 ### Community 111 - "sso-saml.js"
 Cohesion: 0.06
-Nodes (45): buffer, c14nFactory, canonicalizeSignedInfo(), createConfiguration(), createSession(), decodeSamlResponse(), escapeXml(), extractAttributes() (+37 more)
+Nodes (42): buffer, c14nFactory, canonicalizeSignedInfo(), createConfiguration(), createSession(), decodeSamlResponse(), escapeXml(), extractAttributes() (+34 more)
 
 ### Community 112 - "manual-apply.mjs"
-Cohesion: 0.06
-Nodes (71): getLiveAnnotationsDir(), getLiveDir(), args, cwd, pageUrlFilter, remaining, addOpToManualApplyChunk(), APPLY_EVENT_HARD_TIMEOUT_MS (+63 more)
+Cohesion: 0.08
+Nodes (55): addOpToManualApplyChunk(), APPLY_EVENT_HARD_TIMEOUT_MS, APPLY_EVENT_SOFT_DEADLINE_MS, buildManualApplyAgentAction(), clearManualApplyTransaction(), collectManualApplyFiles(), compactManualApplyBatch(), compactManualApplyCandidates() (+47 more)
 
 ### Community 113 - "RoomDurableObject"
-Cohesion: 0.06
-Nodes (16): RoomDurableObject, normalizePresenceIntent(), PRESENCE_INTENTS, checkAndConsumeProjectQuota(), buildPresenceMembers(), buildRoomPresenceSnapshot(), clampCoord(), CURSOR_MAX_PER_MINUTE (+8 more)
+Cohesion: 0.08
+Nodes (6): RoomDurableObject, normalizePresenceIntent(), PRESENCE_INTENTS, fanoutWatchlistForTarget(), userDoId(), deliverWebhooks()
 
 ### Community 114 - "cn"
 Cohesion: 0.08
-Nodes (45): CallButton(), CallButtonProps, CallParticipant, CallScreen(), CallScreenProps, cn(), Attachment(), AttachmentAction() (+37 more)
+Nodes (37): CallButton(), CallButtonProps, CallParticipant, CallScreen(), CallScreenProps, ComposerToolsMenu(), onResize(), ComposerToolsMenuProps (+29 more)
 
 ### Community 115 - "live-wrap.mjs"
-Cohesion: 0.10
-Nodes (46): IMPECCABLE_DIR, hasGeneratedHeader(), HEADER_MARKERS, isGeneratedFile(), isGitIgnored(), matchesTemplateExtension(), resolveLiveTemplateExtensions(), findSessionFile() (+38 more)
+Cohesion: 0.13
+Nodes (38): hasGeneratedHeader(), HEADER_MARKERS, isGeneratedFile(), isGitIgnored(), resolveSourceTraits(), argVal(), buildInsertWrapperLines(), computeInsertLine() (+30 more)
 
-### Community 116 - "landing-home.tsx"
-Cohesion: 0.05
-Nodes (43): CapabilityGroup, CapabilityItem, LandingCapabilityIndex(), LandingCapabilityIndexProps, COLLAB_FEATURES, KanbanPreview(), LandingCollabSection(), MORE_TOOLS (+35 more)
+### Community 116 - "room-pitr.js"
+Cohesion: 0.24
+Nodes (10): AUTO_SNAPSHOT_MIN_INTERVAL_MS, captureRoomPitrSnapshot(), listRoomPitr(), MAX_PITR_SNAPSHOTS, PITR_META_KEY, PITR_RETENTION_DAYS, PITR_SNAPSHOTS_KEY, restoreRoomPitr() (+2 more)
 
 ### Community 117 - "search-http.js"
-Cohesion: 0.11
-Nodes (35): buildEmbeddingsAuthHeaders(), backfillEmbeddings(), contentHash(), cosineSimilarity(), generateEmbeddings(), searchSemanticMessages(), storeMessageEmbedding(), isProjectWideSearchRole() (+27 more)
+Cohesion: 0.14
+Nodes (29): toolSearchChat(), isProjectWideSearchRole(), sanitizeFtsQuery(), searchMessages(), addToFolder(), createFolder(), deleteFolder(), deleteSavedSearch() (+21 more)
 
 ### Community 118 - "customer-data.js"
 Cohesion: 0.09
@@ -2755,7 +2778,7 @@ Nodes (38): annotateFrame(), args, buildOverlaySVG(), COMP_DIR, compositeOver(),
 
 ### Community 129 - "worker/package.json"
 Cohesion: 0.04
-Nodes (43): dependencies, @fluxy-chat/config, @fluxy-chat/protocol, hono, @noble/curves, @noble/hashes, remark, remark-gfm (+35 more)
+Nodes (44): description, devDependencies, @cloudflare/vitest-pool-workers, @cloudflare/workers-types, typescript, vite, vitest, wrangler (+36 more)
 
 ### Community 130 - "media-pipeline.js"
 Cohesion: 0.09
@@ -2765,21 +2788,21 @@ Nodes (36): attachmentUrlToR2Key(), collectAttachmentR2Keys(), deleteUserAttachm
 Cohesion: 0.04
 Nodes (47): author, bugs, url, dependencies, @fluxy-chat/protocol, description, devDependencies, @types/react (+39 more)
 
-### Community 132 - "agent-platform.ts"
-Cohesion: 0.06
-Nodes (22): AbTestConfig, AbTestingEngine, AbTestResult, createAbTestingEngine(), TestVariant, AgentConfig, AgentFlow, AgentPersonality (+14 more)
+### Community 132 - "worker-agent-platform-client.ts"
+Cohesion: 0.21
+Nodes (5): AgentConfig, AgentStatus, MemoryEntry, createWorkerAgentPlatformClient(), WorkerAgentPlatformClient
 
 ### Community 133 - "agent/skills/media-use/scripts/lib/heygen-cli.mjs"
 Cohesion: 0.09
 Nodes (31): bgmProvider, ACTIONABLE_MESSAGES, classifyHeygenError(), classifyHeygenErrorCode(), classifyHeygenErrorResult(), HEYGEN_AUTH_COMMAND, HEYGEN_CLIENT_SOURCE_ARGV, HEYGEN_INSTALL_COMMAND (+23 more)
 
 ### Community 134 - "detect-antipatterns.mjs"
-Cohesion: 0.09
-Nodes (43): confirm(), detectCli(), detectLocalFile(), dim(), fileUrlToLocalPath(), formatAdvisorySection(), formatFindings(), formatFindingsBody() (+35 more)
+Cohesion: 0.10
+Nodes (40): confirm(), detectCli(), detectLocalFile(), dim(), fileUrlToLocalPath(), formatAdvisorySection(), formatFindings(), formatFindingsBody() (+32 more)
 
 ### Community 135 - "hook-admin.mjs"
 Cohesion: 0.12
-Nodes (44): ACTIONS, addIgnoreFile(), addIgnoreRule(), addIgnoreValue(), DETECTOR_CONFIG_KEYS, detectorSection(), fileHasImpeccableHookMarker(), HOOK_MANIFEST_TARGETS (+36 more)
+Nodes (43): ACTIONS, addIgnoreFile(), addIgnoreRule(), addIgnoreValue(), DETECTOR_CONFIG_KEYS, detectorSection(), fileHasImpeccableHookMarker(), HOOK_MANIFEST_TARGETS (+35 more)
 
 ### Community 136 - "impeccable-config.mjs"
 Cohesion: 0.10
@@ -2787,7 +2810,7 @@ Nodes (45): applyDetectionConfigSource(), clampByte(), cleanIgnoreValueDisplay()
 
 ### Community 137 - "live-accept.mjs"
 Cohesion: 0.10
-Nodes (46): isLiveServerPidReachable(), safeSessionId(), acceptCli(), acceptReceiptPath(), argVal(), buildAcceptedWrappedSource(), buildCarbonizeReplacement(), decodeHtmlAttr() (+38 more)
+Nodes (44): IMPECCABLE_DIR, matchesTemplateExtension(), resolveLiveTemplateExtensions(), acceptCli(), acceptReceiptPath(), argVal(), buildAcceptedWrappedSource(), buildCarbonizeReplacement() (+36 more)
 
 ### Community 138 - ".agents/skills/media-use/scripts/lib/heygen-cli.mjs"
 Cohesion: 0.09
@@ -2801,17 +2824,17 @@ Nodes (45): ConnectionStatus get, dart:async, Map, package:web_socket_channel/we
 Cohesion: 0.04
 Nodes (46): apiUrl, attachments, audioMimeType, audioSizeBytes, audioUrl, avatarUrl, ChatEvent, clientMessageId (+38 more)
 
-### Community 141 - "impeccable-paths.mjs"
-Cohesion: 0.07
-Nodes (56): resolveProjectRoot(), coerceSlug(), listSnapshots(), main(), nowFilenameStamp(), parseFrontmatter(), readLatestSnapshot(), readLatestSnapshotMatching() (+48 more)
+### Community 141 - "critique-storage.mjs"
+Cohesion: 0.15
+Nodes (25): coerceSlug(), listSnapshots(), main(), nowFilenameStamp(), parseFrontmatter(), readLatestSnapshot(), readLatestSnapshotAcrossTargets(), readLatestSnapshotMatching() (+17 more)
 
 ### Community 142 - "ai-tool-factory.js"
 Cohesion: 0.10
-Nodes (34): applyOverrides(), buildAddReaction(), buildDeleteMessage(), buildEditMessage(), buildFetchChannelMessages(), buildFetchMessages(), buildFetchThread(), buildGetChannelInfo() (+26 more)
+Nodes (35): applyOverrides(), buildAddReaction(), buildDeleteMessage(), buildEditMessage(), buildFetchChannelMessages(), buildFetchMessages(), buildFetchThread(), buildGetChannelInfo() (+27 more)
 
 ### Community 143 - "inbox-http.js"
-Cohesion: 0.18
-Nodes (21): canBypassRoomMembership(), clearRoomSnooze(), createFollowUp(), deleteFollowUp(), getInboxSummary(), listAccessibleRoomIds(), loadLastMessagePreview(), loadRoomMeta() (+13 more)
+Cohesion: 0.10
+Nodes (35): canBypassRoomMembership(), clearRoomSnooze(), createFollowUp(), deleteFollowUp(), getInboxSummary(), listAccessibleRoomIds(), loadLastMessagePreview(), loadRoomMeta() (+27 more)
 
 ### Community 144 - "API Reference"
 Cohesion: 0.04
@@ -2821,25 +2844,25 @@ Nodes (42): Available Callbacks, Backward Compatibility, Basic Usage, Debugging 
 Cohesion: 0.07
 Nodes (14): AIToolContext, AIMemoryConfig, AIMemoryEntry, AIMemoryQuery, AIMemoryStore, AUTO_MEMORY_SYSTEM_PROMPT, createMemoryTools(), CreateMemoryToolsOptions (+6 more)
 
-### Community 146 - "hosted-product.ts"
-Cohesion: 0.08
-Nodes (33): ClerkSessionBinder(), ConsoleAuthGate(), ConsoleEntryLink(), ConsoleEntryLinkProps, getConsoleSetupPhase(), useConsoleSetupPhase(), GetStartedAccessBanner(), GetStartedAuthCta() (+25 more)
+### Community 146 - "push-notifications.js"
+Cohesion: 0.05
+Nodes (72): base64UrlEncode(), buildApnsJwt(), cachedJwt, getApnsTokensForUser(), importApnsPrivateKey(), pemToArrayBuffer(), resolveApnsConfig(), sendApnsNotification() (+64 more)
 
 ### Community 147 - "ui/button.tsx"
 Cohesion: 0.03
-Nodes (91): CLI_STEPS, CLIPage(), QUICK_COMMANDS, TEMPLATES, ConnectFluxyButton(), connect(), ConnectFluxyButtonProps, DashboardProject (+83 more)
+Nodes (93): ConnectFluxyButton(), connect(), ConnectFluxyButtonProps, ConsoleProjectRoomBar(), ConsoleProjectRoomBarProps, OnboardingAuthStepClerk(), OnboardingAuthStepClerkProps, clerkOn (+85 more)
 
 ### Community 148 - "sync-docs-content.mjs"
 Cohesion: 0.09
 Nodes (42): buildRootMeta(), clearSyncedContent(), DASHBOARD_GUIDES, descriptionFromBody(), DEST, __dirname, escapeMdxInProse(), escapeTextDirectives() (+34 more)
 
-### Community 149 - "llm-providers.js"
-Cohesion: 0.11
-Nodes (27): fetchWithDoKeepalive(), outboundStreamTags(), openAiMessagesForModel(), sanitizeOpenAiCompatibleMessages(), stringifyLlmContent(), buildModelCatalogEntry(), DEFAULT_ANTHROPIC, DEFAULT_OPENAI_COMPAT (+19 more)
+### Community 149 - "docs/page.tsx"
+Cohesion: 0.09
+Nodes (22): DocsPage(), GUIDES, metadata, GuidesIndexPage(), metadata, algoliaEnabled, DocSearchAlgolia, DocSearchConfig (+14 more)
 
-### Community 150 - "room-export.js"
-Cohesion: 0.39
-Nodes (9): buildPageStream(), buildRoomMarkdown(), buildRoomPdf(), buildSimplePdf(), escapePdfText(), fetchRoomExportData(), markdownToPlainLines(), MAX_ROOM_EXPORT_MESSAGES (+1 more)
+### Community 150 - "telemetry.ts"
+Cohesion: 0.03
+Nodes (20): ConsoleLogger, createLogger(), Logger, ConsoleTelemetryOptions, createConsoleTelemetryIntegration(), createOtlpTelemetryIntegration(), exportSpan(), createTelemetryManager() (+12 more)
 
 ### Community 151 - "Vertical platform expansion"
 Cohesion: 0.05
@@ -2861,9 +2884,9 @@ Nodes (41): applyMockWrites(), buildCopyEditBatchPrompt(), checkFrameworkSourceS
 Cohesion: 0.07
 Nodes (35): argv, brandColors, brandColorStats, brandFonts, brandFontWeights, __dirname, framePath, hexToHsl() (+27 more)
 
-### Community 156 - "relatedGuidesExcept"
+### Community 156 - "hosted-product.ts"
 Cohesion: 0.04
-Nodes (80): AfterCfChatTutorialPage(), metadata, AgentEventsSameStreamPage(), metadata, ApiKeyManagementGuidePage(), metadata, BuildChatNextjsFluxychatPage(), metadata (+72 more)
+Nodes (62): CliAuthRedirect(), dynamic, ClerkRoot(), ClerkRootProps, ClerkShell(), ClerkShellProps, ConditionalHeader(), ConsoleEntryLink() (+54 more)
 
 ### Community 157 - "group-cipher.ts"
 Cohesion: 0.08
@@ -2881,13 +2904,13 @@ Nodes (38): completionAckForAcceptResult(), completionTypeForAcceptResult(), PRE
 Cohesion: 0.10
 Nodes (26): SKILL, buildArgv(), CAPABILITIES, describeModelLadder(), listModels(), meetsSpecs(), MODELS, rankedByPreference() (+18 more)
 
-### Community 161 - "room-shard.js"
-Cohesion: 0.12
-Nodes (25): config, moderatePublish, SupergroupRouterDurableObject, getFluxyClientDefaults(), getFluxyConfig(), hostedRoomsAsConfig(), isAnonymousAuth(), loadProjectPublishConfig() (+17 more)
+### Community 161 - "realtime-notifications.js"
+Cohesion: 0.21
+Nodes (22): broadcastNotification(), CHANNEL_TYPES, createChannel(), createRule(), deleteChannel(), deleteRule(), DELIVERY_STATUS, formatChannel() (+14 more)
 
 ### Community 162 - "chat-cartography.js"
-Cohesion: 0.10
-Nodes (31): buildRoomCartography(), CARTography_TTL_MS, fetchRoomEmbeddingMessages(), generateId(), getCartographyRoutingSuggestions(), getOrBuildRoomCartography(), getRoomCartography(), guessSkillsFromLabel() (+23 more)
+Cohesion: 0.20
+Nodes (18): buildRoomCartography(), CARTography_TTL_MS, fetchRoomEmbeddingMessages(), generateId(), getCartographyRoutingSuggestions(), getOrBuildRoomCartography(), getRoomCartography(), guessSkillsFromLabel() (+10 more)
 
 ### Community 163 - "Review: packages, Worker, dashboard"
 Cohesion: 0.05
@@ -2909,17 +2932,17 @@ Nodes (39): assessCoverage(), buildColor(), CANONICAL_SECTIONS, collectBullets()
 Cohesion: 0.05
 Nodes (33): argv, body, BOT_DENYLIST, botsFiltered, commitLines, consider(), diffByPath, diffSections (+25 more)
 
-### Community 168 - "messageFromUnknown"
-Cohesion: 0.02
-Nodes (234): A2AAgentsPage(), handleCreateTask(), handleHealth(), handleRegister(), handleSendEnvelope(), AmbientAgentsPage(), handleCreate(), handleDelete() (+226 more)
+### Community 168 - "dashboard/lib/utils.ts"
+Cohesion: 0.03
+Nodes (105): installTemplate(), CLI_STEPS, CLIPage(), QUICK_COMMANDS, TEMPLATES, ConfirmDialogProps, CommandPaletteContext, CommandPaletteContextValue (+97 more)
 
 ### Community 169 - "generate-saml-fixture.mjs"
 Cohesion: 0.06
 Nodes (35): assertionC14n, buildAssertionTree(), buildAssertionXml(), buildResponseWithWrappedSignature(), buildResponseXml(), buildSignedInfoTree(), certPem, computeAssertionDigest() (+27 more)
 
-### Community 170 - "hosted-saas-policy.js"
-Cohesion: 0.14
-Nodes (25): canCreateTenantProjects(), getPlatformProjectIdSet(), hostedTenantPlanMutationForbidden(), isHostedMultiTenantMode(), isPlatformOperatorProject(), tenantScopeForbidden(), ALLOWED_PLAN_NAMES, CANONICAL_TIER_LIMITS (+17 more)
+### Community 170 - "room-templates.js"
+Cohesion: 0.24
+Nodes (13): applyRoomBehaviorPreset(), PRESETS_BY_SLUG, resolveTemplatePreset(), createTemplate(), deleteTemplate(), getTemplate(), installTemplate(), listTemplates() (+5 more)
 
 ### Community 171 - "scripts"
 Cohesion: 0.05
@@ -2937,13 +2960,13 @@ Nodes (38): agentHasWorkInFlight(), agentStatusText(), barPaletteForTheme(), bra
 Cohesion: 0.07
 Nodes (33): argv, brandColors, brandColorStats, brandFonts, brandFontWeights, __dirname, framePath, hexToHsl() (+25 more)
 
-### Community 175 - "landing-shell.tsx"
-Cohesion: 0.07
-Nodes (36): ConditionalHeader(), HeaderAuth(), Header(), LINKS, MarketingTopNav(), TOP_NAV_LINK_CLASS, TOP_NAV_LINK_CLASS_THEME, TopNavLink (+28 more)
+### Community 175 - "proxy.ts"
+Cohesion: 0.14
+Nodes (20): NO_STORE, POST(), timingEqual(), CookieConsentBanner(), isMarketingPath(), apiOkVoid(), CONSOLE_ACK_COOKIE, getDashboardAccessMode() (+12 more)
 
 ### Community 176 - "WsSessionRegistry"
 Cohesion: 0.04
-Nodes (14): doDir, durableObjectSources(), FakePair, stripNonCode(), UserDurableObject, AttachmentBackedMap, installWsAutoResponse(), SocketSetView (+6 more)
+Nodes (21): doDir, durableObjectSources(), FakePair, stripNonCode(), UserDurableObject, MIGRATIONS_HISTORY_STORAGE_KEY, readMigrationHistory(), readSchemaVersion() (+13 more)
 
 ### Community 177 - "soc2-compliance.js"
 Cohesion: 0.07
@@ -2977,9 +3000,9 @@ Nodes (33): DNA_DIR, fs, heroImpact(), LEGACY, path, readJson(), resolveTokens()
 Cohesion: 0.08
 Nodes (32): argv, brandColors, brandColorStats, brandFonts, brandFontWeights, __dirname, framePath, hexToHsl() (+24 more)
 
-### Community 185 - "renderGroupedTemplate"
-Cohesion: 0.26
-Nodes (13): clampGroupedToBudget(), clampLastLine(), clampToBudget(), directiveFooter(), footerFallbacks(), formatDedupedFindingLine(), formatFindingLine(), isFindingLine() (+5 more)
+### Community 185 - "conversational-analytics.js"
+Cohesion: 0.15
+Nodes (23): ANALYTICS_INTENTS, clearQueryCache(), getActiveRooms(), getAgentPerformance(), getCachedResult(), getChurnStats(), getMessageVolume(), getModerationStats() (+15 more)
 
 ### Community 186 - "matrix-bridge.js"
 Cohesion: 0.17
@@ -3006,8 +3029,8 @@ Cohesion: 0.05
 Nodes (33): Archive size and `.hyperframesignore`, Authentication, cloud — HeyGen-hosted rendering (zero-infra), Fire-and-forget and webhooks, Managing renders, Render options, Safe retries, Templates and variables (+25 more)
 
 ### Community 192 - "hook-before-edit.mjs"
-Cohesion: 0.10
-Nodes (52): bumpCursorDenial(), cursorBlockMessage(), detectProposedHtml(), escapeRegExp(), findingSignature(), firstMatch(), firstString(), hasFragmentEditContent() (+44 more)
+Cohesion: 0.07
+Nodes (70): allow(), bumpCursorDenial(), cursorBlockMessage(), deny(), detectProposedHtml(), done(), escapeRegExp(), findingSignature() (+62 more)
 
 ### Community 193 - "README.md"
 Cohesion: 0.06
@@ -3019,7 +3042,7 @@ Nodes (37): Adapters, streaming, and cards, Agents, AI-native architecture, AI S
 
 ### Community 195 - "agent-queue.js"
 Cohesion: 0.17
-Nodes (26): AGENT_DISPOSITIONS, CODE_SET, getAgentDispositionStats(), listAgentDispositions(), normalizeAgentDisposition(), ACTIVE_STATUSES, AGENT_QUEUE_ROLES, canAccessAgentQueue() (+18 more)
+Nodes (25): AGENT_DISPOSITIONS, CODE_SET, getAgentDispositionStats(), listAgentDispositions(), normalizeAgentDisposition(), ACTIVE_STATUSES, AGENT_QUEUE_ROLES, canAccessAgentQueue() (+17 more)
 
 ### Community 196 - "sla-engagement-http.js"
 Cohesion: 0.14
@@ -3049,21 +3072,21 @@ Nodes (21): buildFramePackets(), CONFIG, SKILL_DIR, buildFramePackets(), CONFIG,
 Cohesion: 0.08
 Nodes (21): buildFramePackets(), CONFIG, SKILL_DIR, buildFramePackets(), CONFIG, SKILL_DIR, buildFramePackets(), buildRolePayload() (+13 more)
 
-### Community 203 - "inbox-filter.ts"
-Cohesion: 0.09
-Nodes (38): FluxyInboxSummary, applyInboxQuery(), filterFollowUps(), filterMentions(), filterRoomEntries(), FLUXY_INBOX_REFRESH_EVENT_NAMES, FluxyInboxFollowUpLike, FluxyInboxItemFields (+30 more)
+### Community 203 - "omnichannel.js"
+Cohesion: 0.22
+Nodes (24): canManageChannels(), canViewInbox(), createChannelConfig(), createRoutingRule(), deleteChannelConfig(), deleteRoutingRule(), getChannelConfig(), getRoomByExternalThread() (+16 more)
 
 ### Community 204 - "marketplace-http.js"
 Cohesion: 0.17
 Nodes (29): addReview(), CATEGORIES, generateId(), getAgent(), getAgentBySlug(), getMarketplaceStats(), installAgent(), listAgents() (+21 more)
 
-### Community 205 - "embed-config.js"
+### Community 205 - "fluxy-iot.ts"
 Cohesion: 0.09
-Nodes (32): parseAllowedOriginsField(), clampZIndex(), getAdminEmbedConfig(), getEffectiveEmbedOrigins(), getEmbedConfigForProject(), getPublicEmbedConfig(), isEmbedWidgetGloballyEnabled(), isEmbedWidgetGloballyEnabledSync() (+24 more)
+Nodes (18): Alert, DeviceShadow, DeviceStatus, DeviceType, Fleet, FluxyIoTApi, Geofence, IoTDevice (+10 more)
 
-### Community 206 - "room-commands.js"
-Cohesion: 0.10
-Nodes (37): buildRoomUxContract(), composeAgentSystemPrompt(), FLUXYCHAT_PRODUCT_KNOWLEDGE, formatBuiltInSlashCatalog(), isProductGuideAgent(), normalizeAgentHandleKey(), PRODUCT_GUIDE_HANDLES, tryDispatchSlashCommand() (+29 more)
+### Community 206 - "agent-profiles.js"
+Cohesion: 0.20
+Nodes (28): abTestAssign(), assignProfileToRoom(), buildProfilePrompt(), canManageProfiles(), clampWeight(), createProfile(), deleteProfile(), generateId() (+20 more)
 
 ### Community 207 - "adapter-pattern.md"
 Cohesion: 0.07
@@ -3089,13 +3112,9 @@ Nodes (27): Architecture data format, Building the picker, Content tokens in pre
 Cohesion: 0.08
 Nodes (31): allowPendingBgm, anomalies, approvedVideoAttrs(), approvedVideoLayout(), argv, attrPresent(), attrValue(), attrValueFrom() (+23 more)
 
-### Community 213 - "Adapter"
-Cohesion: 0.08
-Nodes (3): Adapter, NotImplementedError, sendViaAdapter()
-
 ### Community 214 - "cross-org-rooms.js"
-Cohesion: 0.08
-Nodes (55): appendRoomAuditChainEvent(), AUDIT_CHAIN_GENESIS_HASH, chainEnabled(), exportAllProjectAuditChainsToR2(), exportAuditChainToR2(), exportRoomAuditChain(), safeParseJson(), sha256Hex() (+47 more)
+Cohesion: 0.16
+Nodes (27): appendCrossOrgAuditEvent(), listCrossOrgAuditLog(), safeParseJson(), verifyCrossOrgAuditChain(), approveCommitment(), assertNegotiationFloorPrice(), counterCommitment(), createCrossOrgRoom() (+19 more)
 
 ### Community 215 - "hitl-approval-tick.js"
 Cohesion: 0.13
@@ -3131,8 +3150,8 @@ Cohesion: 0.08
 Nodes (18): createUnifiedDlpAdapter(), mergeResults(), createWorkerDlpIntegrationAdapter(), DlpScanContext, ExternalDlpAdapter, fallbackDlpResult(), UnifiedDlpAdapter, createDlpDetector() (+10 more)
 
 ### Community 223 - "voice.ts"
-Cohesion: 0.03
-Nodes (27): createFluxyId(), randomHex(), createJourneyMapping(), CustomerJourney, JourneyMapping, JourneyPath, JourneyStep, createSessionReplayManager() (+19 more)
+Cohesion: 0.04
+Nodes (19): createFluxyId(), randomHex(), createJourneyMapping(), CustomerJourney, JourneyMapping, JourneyPath, JourneyStep, audioToBase64() (+11 more)
 
 ### Community 224 - "Captions"
 Cohesion: 0.06
@@ -3151,8 +3170,8 @@ Cohesion: 0.06
 Nodes (33): 8mm Home Movie, Base payload, Base payload, Bounded tuning, Bounded tuning, Cached Error Diffusion, Creator Camcorder, Crosshatched Sketch (+25 more)
 
 ### Community 228 - "fleet-tracking.js"
-Cohesion: 0.08
-Nodes (61): hashDeviceSecret(), readDeviceBearer(), authenticateFleetVehicle(), createGeofence(), createTrip(), createVehicle(), dynamicPricing(), findNearestDrivers() (+53 more)
+Cohesion: 0.07
+Nodes (63): hashDeviceSecret(), readDeviceBearer(), authenticateFleetVehicle(), createGeofence(), createTrip(), createVehicle(), dynamicPricing(), findNearestDrivers() (+55 more)
 
 ### Community 229 - "agent-loop.ts"
 Cohesion: 0.17
@@ -3194,13 +3213,13 @@ Nodes (24): Critical Constraints, How It Works, Recipe, See also, Two-Phase Came
 Cohesion: 0.08
 Nodes (28): allowPendingBgm, anomalies, argv, attrPresent(), attrValue(), audio, audioMetaPath, body (+20 more)
 
-### Community 239 - "huddles-client.ts"
-Cohesion: 0.09
-Nodes (37): HuddlesPage(), handleCreateAndStart(), handleEnableStage(), handleEnd(), handleRefreshCall(), handleToggleRecording(), refreshParticipants(), applySfuDescription() (+29 more)
+### Community 239 - "live-stream-replay.js"
+Cohesion: 0.24
+Nodes (20): requireApiProjectMember(), createLiveInput(), deleteLiveInput(), listLiveInputVideos(), mapCustomerPlayback(), requireConfig(), streamApi(), eventSyncGroupId() (+12 more)
 
 ### Community 240 - "@playwright/test"
-Cohesion: 0.07
-Nodes (12): expectMessageListContains(), sendSampleAndWaitForEcho(), completeOnboardingToFirstMessage(), workerUrl, e2eEnv, isCi, e2eEnv, e2eEnv (+4 more)
+Cohesion: 0.08
+Nodes (20): ackConsole(), adminJwtOrSkip(), e2eSessionPayload(), expectMessageListContains(), isLoopbackHost(), isWorkerGet(), readAdminJwt(), readE2eProject() (+12 more)
 
 ### Community 241 - "local-development.mdx"
 Cohesion: 0.06
@@ -3255,8 +3274,8 @@ Cohesion: 0.06
 Nodes (29): Apply at system scale, Audit before choosing, Choose a strategy, Contrast and perception, Live-mode signature params, Verify, Visitor mode, Cleanup (+21 more)
 
 ### Community 254 - "live-inject.mjs"
-Cohesion: 0.12
-Nodes (30): describeInjectArtifacts(), frameworkIgnorePatterns(), resolveFramework(), appendOriginToDirective(), buildTagBlock(), commentClose(), commentOpen(), detectLineEnding() (+22 more)
+Cohesion: 0.18
+Nodes (20): describeInjectArtifacts(), frameworkIgnorePatterns(), resolveFramework(), clearInjectJournal(), recordInjection(), removeTag(), revertCspMeta(), unpatchTagFile() (+12 more)
 
 ### Community 255 - ".agents/skills/music-to-video/scripts/analyze-beatgrid.py"
 Cohesion: 0.11
@@ -3266,9 +3285,9 @@ Nodes (31): analyze(), annotate_section_feel(), band_energy_curves(), beat_grid(
 Cohesion: 0.07
 Nodes (4): BaseFormatConverter, createWebAdapter(), WebAdapter, WebFormatConverter
 
-### Community 257 - "agent-profiles.js"
-Cohesion: 0.18
-Nodes (29): AGENT_BASE_BEHAVIOR, abTestAssign(), assignProfileToRoom(), buildProfilePrompt(), canManageProfiles(), clampWeight(), createProfile(), deleteProfile() (+21 more)
+### Community 257 - "video-voice.js"
+Cohesion: 0.25
+Nodes (20): mintLiveKitAccessToken(), signJwtHs256(), createCallSession(), endCall(), generateId(), generateToken(), getCallSession(), getCallStats() (+12 more)
 
 ### Community 258 - "createAgentPlatform"
 Cohesion: 0.07
@@ -3358,9 +3377,9 @@ Nodes (26): ComparePage(), metadata, LandingCompareSection(), ABLY_ON_VERCEL, AL
 Cohesion: 0.07
 Nodes (29): class-variance-authority, lucide-react, next, next-themes, postcss, react, react-dom, tailwindcss (+21 more)
 
-### Community 280 - "conversation-intelligence.js"
-Cohesion: 0.21
-Nodes (26): canViewIntelligence(), createSnapshot(), extractIntentLabel(), generateId(), generateWeeklyDigest(), getEscalationReasons(), getIntentClusters(), getModerationTrends() (+18 more)
+### Community 280 - "live-dashboards.js"
+Cohesion: 0.27
+Nodes (21): createDashboard(), createWidget(), deleteDashboard(), deleteWidget(), formatDashboard(), formatDataPoint(), formatWidget(), generateDefaultDashboard() (+13 more)
 
 ### Community 281 - "config/package.json"
 Cohesion: 0.07
@@ -3371,8 +3390,8 @@ Cohesion: 0.17
 Nodes (29): answersPath, bold(), c(), dim(), ensureRoom(), envPath, fail(), fetchWithTimeout() (+21 more)
 
 ### Community 283 - "createFluxyIoT"
-Cohesion: 0.10
-Nodes (16): createFluxyIoT(), checkRules(), createOTAUpdate(), deviceToChatMessage(), diagnoseDevice(), executeRuleActions(), getDevice(), getFleetReadings() (+8 more)
+Cohesion: 0.09
+Nodes (17): createFluxyIoT(), checkRules(), createGeofence(), createOTAUpdate(), deviceToChatMessage(), diagnoseDevice(), executeRuleActions(), getDevice() (+9 more)
 
 ### Community 284 - "Failure Modes — learned the hard way"
 Cohesion: 0.07
@@ -3383,20 +3402,20 @@ Cohesion: 0.07
 Nodes (29): Animation, Aspect distortion / sharp channel-stride make the alpha garbage, Blending, Bright backgrounds wash out screen blend, Centered crown eaten by body, CoreML execution provider corrupts face alpha, Crown / centered text, Crown font too small for frame → half-swallowed (+21 more)
 
 ### Community 286 - "injected/index.mjs"
-Cohesion: 0.06
-Nodes (69): addBrowserFindings(), addVisualContrastFindings(), addVisualContrastResult(), analyzeVisualContrast(), analyzeVisualContrastCandidate(), blendRgba(), browserColorsClose(), browserDesignSystemConfig() (+61 more)
+Cohesion: 0.13
+Nodes (25): browserColorsClose(), browserDesignSystemConfig(), browserFindingsFromMap(), browserHasDirectText(), browserPrimaryFont(), browserRadiusTokens(), browserSampleText(), checkBrowserDesignSystemSources() (+17 more)
 
-### Community 287 - "enterprise-support.js"
-Cohesion: 0.10
-Nodes (33): createEscalationRule(), createKBArticle(), createSLAPolicy(), generateId(), getTicket(), getTicketByNumber(), listEscalationRules(), listKBArticles() (+25 more)
+### Community 287 - "landing-shell.tsx"
+Cohesion: 0.04
+Nodes (60): AnalyticsProCharts(), axisTooltip(), hourKey(), OpsPoint, pivotOpsHourly(), FLUXY_CHART_PALETTE, fluxyChartTheme(), FluxyEChart() (+52 more)
 
 ### Community 288 - "workflow-agent.ts"
 Cohesion: 0.10
 Nodes (16): advance(), clone(), createMemoryWorkflowStore(), createWorkflowAgent(), persist(), run(), StepStatus, workflow() (+8 more)
 
 ### Community 289 - "createFluxyStream"
-Cohesion: 0.06
-Nodes (3): createFluxyStream(), autoGenerateHighlights(), suggestHighlight()
+Cohesion: 0.02
+Nodes (33): AINPC, createFluxyGame(), inviteToParty(), spawnNPC(), FluxyGameApi, GameEntity, GameEvent, GameState (+25 more)
 
 ### Community 290 - "bridge.js"
 Cohesion: 0.22
@@ -3407,24 +3426,24 @@ Cohesion: 0.10
 Nodes (22): addParticipant(), createConversation(), createDelegation(), generateId(), getConversation(), getCurrentEmotion(), getPersonalityHistory(), getRecentEmotions() (+14 more)
 
 ### Community 292 - "MinimalChatView"
-Cohesion: 0.12
-Nodes (17): FluxyChatSDK, ChatListener, MinimalChatView, .body, .statusLabel, ConnectionStatus, Data, FluxyChatConfig (+9 more)
+Cohesion: 0.11
+Nodes (18): FluxyChatClient, FluxyChatSDK, ChatListener, MinimalChatView, .body, .statusLabel, ConnectionStatus, Data (+10 more)
 
 ### Community 293 - "overrides"
-Cohesion: 0.07
-Nodes (29): ajv, @babel/core, body-parser, brace-expansion, esbuild, @excalidraw/mermaid-to-excalidraw, fast-uri, flatted (+21 more)
+Cohesion: 0.05
+Nodes (38): ajv, @babel/core, baseline-browser-mapping, body-parser, brace-expansion, browserslist, esbuild, @excalidraw/mermaid-to-excalidraw (+30 more)
 
 ### Community 294 - "polls/package.json"
 Cohesion: 0.07
 Nodes (28): dependencies, @fluxy-chat/react, @fluxy-chat/sdk, react, react-dom, devDependencies, @types/react, @types/react-dom (+20 more)
 
-### Community 295 - "why/page.tsx"
-Cohesion: 0.09
-Nodes (17): metadata, LandingFaqSection(), LandingStructuredData(), metadata, metadata, metadata, metadata, metadata (+9 more)
+### Community 295 - "marketing-copy.ts"
+Cohesion: 0.11
+Nodes (11): metadata, LandingFaqSection(), LandingStructuredData(), metadata, metadata, metadata, metadata, KERNEL_PRODUCT (+3 more)
 
-### Community 296 - "eu-ai-act/page.tsx"
-Cohesion: 0.16
-Nodes (26): EuAiActCompliancePage(), handleExportDoc(), handleSaveProfile(), handleSaveSettings(), HITL_MODES, OVERSIGHT_LEVELS, RISK_CATEGORIES, riskBadge() (+18 more)
+### Community 296 - "approval-workflows.js"
+Cohesion: 0.20
+Nodes (20): cancelRequest(), castVote(), createRequest(), createWorkflow(), deleteWorkflow(), evaluateDecision(), formatRequest(), formatVote() (+12 more)
 
 ### Community 297 - "Fluxychat Dashboard Style Guide"
 Cohesion: 0.07
@@ -3435,20 +3454,20 @@ Cohesion: 0.16
 Nodes (22): parseDiscordWebhookBody(), parseSlackWebhookBody(), summarizeMatrixTransaction(), applyFrame(), assertFrameExpectations(), FRAMES_DIR, listFrameRecordings(), loadFrameRecording() (+14 more)
 
 ### Community 299 - "broadcast-segmentation.js"
-Cohesion: 0.20
-Nodes (23): BROADCAST_CHANNELS, CAMPAIGN_STATUS, completeCampaign(), createCampaign(), createDelivery(), createSegment(), deleteSegment(), formatCampaign() (+15 more)
+Cohesion: 0.21
+Nodes (22): BROADCAST_CHANNELS, CAMPAIGN_STATUS, completeCampaign(), createCampaign(), createDelivery(), createSegment(), deleteSegment(), formatCampaign() (+14 more)
 
-### Community 300 - "conversational-analytics.js"
-Cohesion: 0.15
-Nodes (23): ANALYTICS_INTENTS, clearQueryCache(), getActiveRooms(), getAgentPerformance(), getCachedResult(), getChurnStats(), getMessageVolume(), getModerationStats() (+15 more)
+### Community 300 - "svelte-ast.mjs"
+Cohesion: 0.22
+Nodes (20): Analysis, analyzeAttributes(), analyzeFragment(), analyzeNode(), analyzeSvelteMarkup(), applyReplacements(), classifyEachKey(), classifyRoots() (+12 more)
 
 ### Community 301 - "otel-export.js"
 Cohesion: 0.07
 Nodes (59): agentRunsToOtelSpans(), appendEvalCaseToDataset(), captureFailedAgentRunAsEvalCase(), createAgentEvalDataset(), deleteAgentEvalDataset(), fetchAgentRunOutputSnippet(), flushAgentEvalOtelQueue(), generateId() (+51 more)
 
-### Community 302 - "live-dashboards.js"
-Cohesion: 0.11
-Nodes (44): createDashboard(), createWidget(), deleteDashboard(), deleteWidget(), formatDashboard(), formatDataPoint(), formatWidget(), generateDefaultDashboard() (+36 more)
+### Community 302 - "incident-response.js"
+Cohesion: 0.19
+Nodes (20): acknowledgeAlert(), addIncidentUpdate(), createIncident(), formatAlert(), formatIncident(), formatUpdate(), getIncident(), getIncidentStats() (+12 more)
 
 ### Community 303 - "API endpoints"
 Cohesion: 0.07
@@ -3479,8 +3498,8 @@ Cohesion: 0.07
 Nodes (26): 10. Render to MP4, 11. Report Results, 1. Check Environment, 2. Create a Work Directory, 3. Extract Audio and Metadata, 4. Transcribe, 5. Correct Transcript, 6. Draft a Lightweight Storyboard (in chat) (+18 more)
 
 ### Community 310 - "live-manual-edit-evidence.mjs"
-Cohesion: 0.16
-Nodes (26): analyzeSourceHint(), buildCandidatesForOp(), buildContextHintsByRef(), buildManualEditEvidence(), collectSearchFiles(), countOps(), decodeBasicHtml(), escapeRegExp() (+18 more)
+Cohesion: 0.15
+Nodes (25): analyzeSourceHint(), buildCandidatesForOp(), buildContextHintsByRef(), collectSearchFiles(), countOps(), decodeBasicHtml(), escapeRegExp(), findContextMatches() (+17 more)
 
 ### Community 311 - "Workflow"
 Cohesion: 0.07
@@ -3494,9 +3513,9 @@ Nodes (20): FleetMapView, DeliveryMap, DeliveryMap(), DeliveryMapProps, dropoffI
 Cohesion: 0.08
 Nodes (22): afterPrivacy, beforePrivacy, dispatchers, dispatchPath, eagerFns, existing, fnSegments, HOT_SEGMENTS (+14 more)
 
-### Community 314 - "incident-response.js"
-Cohesion: 0.19
-Nodes (20): acknowledgeAlert(), addIncidentUpdate(), createIncident(), formatAlert(), formatIncident(), formatUpdate(), getIncident(), getIncidentStats() (+12 more)
+### Community 314 - "audit-chain.js"
+Cohesion: 0.21
+Nodes (19): appendRoomAuditChainEvent(), AUDIT_CHAIN_GENESIS_HASH, chainEnabled(), exportAllProjectAuditChainsToR2(), exportAuditChainToR2(), exportRoomAuditChain(), safeParseJson(), sha256Hex() (+11 more)
 
 ### Community 315 - "notification-controls.js"
 Cohesion: 0.21
@@ -3526,25 +3545,25 @@ Nodes (25): Assess Adaptation Challenge, Breakpoints: Content-Driven, Content Ad
 Cohesion: 0.10
 Nodes (17): AnimatedNumber(), Props, Props, StatCard(), Props, UnderlinedText(), defaultProps, RemotionRoot() (+9 more)
 
-### Community 322 - "scanCssTextForPulsingDot"
-Cohesion: 0.11
-Nodes (32): buildHtmlPatternCorpora(), checkElementGlow(), checkGlow(), checkHtmlPatterns(), collectCssCustomProps(), collectMarqueeKeyframes(), collectPulseKeyframes(), colorToHex() (+24 more)
+### Community 322 - "ai-companions.js"
+Cohesion: 0.27
+Nodes (20): addMemory(), assignToRoom(), createCompanion(), deleteCompanion(), generateId(), getCompanion(), getCompanionStats(), listCompanionRooms() (+12 more)
 
-### Community 323 - "approval-workflows.js"
-Cohesion: 0.20
-Nodes (20): cancelRequest(), castVote(), createRequest(), createWorkflow(), deleteWorkflow(), evaluateDecision(), formatRequest(), formatVote() (+12 more)
+### Community 323 - "channel-forms-client.ts"
+Cohesion: 0.24
+Nodes (10): ChannelFormsPage(), handleDispatch(), authHeaders(), BASE, ChannelFormDelivery, ChannelFormField, dispatchChannelForm(), listChannelFormDeliveries() (+2 more)
 
 ### Community 324 - "community-reputation.js"
 Cohesion: 0.20
 Nodes (19): addWarning(), computeTrustLevel(), createSpamRule(), DEFAULT_REPUTATION_POINTS, evaluateSpam(), formatEvent(), formatReputation(), formatSpamRule() (+11 more)
 
 ### Community 325 - "p26-features.test.js"
-Cohesion: 0.12
-Nodes (15): AdapterError, AdapterNotFoundError, AdapterRateLimitError, AuthenticationError, MessageNotFoundError, NetworkError, PermissionError, ResourceNotFoundError (+7 more)
+Cohesion: 0.14
+Nodes (12): AdapterError, AdapterNotFoundError, AdapterRateLimitError, AuthenticationError, MessageNotFoundError, NetworkError, PermissionError, ResourceNotFoundError (+4 more)
 
-### Community 326 - "identity-client.ts"
-Cohesion: 0.11
-Nodes (28): IdentitySettingsPage(), handleCreateScimToken(), handleDeletePasskey(), handleDeleteScimToken(), handleDownloadMetadata(), handleRegisterPasskey(), handleSaveSaml(), authHeaders() (+20 more)
+### Community 326 - "worker-fetch.ts"
+Cohesion: 0.04
+Nodes (68): runPurge(), save(), IdentitySettingsPage(), handleCreateScimToken(), handleDeletePasskey(), handleDeleteScimToken(), handleDownloadMetadata(), handleRegisterPasskey() (+60 more)
 
 ### Community 327 - "replay-timetravel.js"
 Cohesion: 0.12
@@ -3571,8 +3590,8 @@ Cohesion: 0.18
 Nodes (6): ConnectionStatus, WebSocket, WebSocketEventListener, WebSocketClient, WebSocketListener, Response
 
 ### Community 333 - "message-item.tsx"
-Cohesion: 0.11
-Nodes (13): AgentMessage(), AgentMessageProps, AttachmentCard(), MessageItem(), MessageItemProps, OgPreviewCard(), quoteSnippet(), Marker() (+5 more)
+Cohesion: 0.09
+Nodes (19): AgentMessage(), AgentMessageProps, AttachmentCard(), MessageItem(), MessageItemProps, quoteSnippet(), Attachment(), AttachmentAction() (+11 more)
 
 ### Community 334 - "Ambient Glow Bloom"
 Cohesion: 0.08
@@ -3678,13 +3697,13 @@ Nodes (22): AnyObject, Foundation, AgentOutboundValidationResult, buildAgentOutb
 Cohesion: 0.08
 Nodes (24): 1. Install Dependencies, 2. Configure Environment Variables, 3. Register Webhook in Fluxychat, 4. Register Bot in Fluxychat, 5. Run Locally, Agent Configuration, Anthropic (Planned), API Endpoints (+16 more)
 
-### Community 360 - "ai-workspace.js"
-Cohesion: 0.24
-Nodes (21): addTab(), applyTemplate(), createTemplate(), createWorkspace(), DEFAULT_TABS, generateId(), getWorkspace(), getWorkspaceStats() (+13 more)
+### Community 360 - "admin-route-context.js"
+Cohesion: 0.15
+Nodes (28): resolveMemberContext(), addTab(), applyTemplate(), createTemplate(), createWorkspace(), DEFAULT_TABS, generateId(), getWorkspace() (+20 more)
 
-### Community 361 - "roots.mjs"
-Cohesion: 0.16
-Nodes (27): CANDIDATE_SCAN_IGNORED, consumeTargetArg(), CONTEXT_FALLBACK_DIRS, DESIGN_NAMES, DEV_CONFIG_MARKERS, discoverAppCandidates(), enterLiveRoot(), exists() (+19 more)
+### Community 361 - "ai-qa-moderator.js"
+Cohesion: 0.22
+Nodes (18): approveQuestion(), categorizeQuestion(), computePriorityScore(), dismissQuestion(), endQASession(), formatQuestion(), formatSession(), generateSuggestedAnswer() (+10 more)
 
 ### Community 362 - "chat-api.js"
 Cohesion: 0.14
@@ -3694,9 +3713,9 @@ Nodes (18): chat, ChatApiError, createChatApi(), getUser(), openDM(), thread(), 
 Cohesion: 0.08
 Nodes (58): assertRiskTier(), exportGovernanceEvidence(), getGovernanceRegistry(), getKv(), readRegistry(), registerModel(), registerPrompt(), registerTool() (+50 more)
 
-### Community 364 - "route-http-deps.js"
-Cohesion: 0.07
-Nodes (47): agentInvokeSchema, asRecord(), authTokenSchema, botUpsertSchema, createRoomSchema, eventsTriggerSchema, fail(), parseAgentInvokeBody() (+39 more)
+### Community 364 - "a2a-worker.js"
+Cohesion: 0.29
+Nodes (19): buildAgentCardPublic(), createA2ATask(), delegateA2ATaskToRemote(), fetchExternalAgentCard(), generateId(), getA2AAgentCard(), getA2ATask(), listA2AAgentCards() (+11 more)
 
 ### Community 365 - "P9 feature reference"
 Cohesion: 0.08
@@ -3786,9 +3805,9 @@ Nodes (24): 1 · Cover (identity · move: oversized serif · green · left), 2 �
 Cohesion: 0.08
 Nodes (23): Component translation rules, Narrative mapping, Pitfalls, Scan mode (approach C: auto-extract, then confirm descriptive language), Schema, Seed mode, Step 1: Find the design assets, Step 1: Route through new-work's workshop (+15 more)
 
-### Community 387 - "svelte-ast.mjs"
-Cohesion: 0.22
-Nodes (20): Analysis, analyzeAttributes(), analyzeFragment(), analyzeNode(), analyzeSvelteMarkup(), applyReplacements(), classifyEachKey(), classifyRoots() (+12 more)
+### Community 387 - "landing-home.tsx"
+Cohesion: 0.04
+Nodes (50): COLLAB_FEATURES, KanbanPreview(), LandingCollabSection(), MORE_TOOLS, NotesPreview(), WhiteboardPreview(), LandingEnterpriseSection(), PILLARS (+42 more)
 
 ### Community 388 - "Part 1 — the move vocabulary"
 Cohesion: 0.08
@@ -3806,29 +3825,29 @@ Nodes (23): 1. Extract the product truth, 2. Choose the arc (the sequence backbo
 Cohesion: 0.07
 Nodes (33): FleetPage(), useMyLocation(), FleetTab, Geofence, statusBadge(), Trip, Vehicle, VoiceDispatch() (+25 more)
 
-### Community 392 - "logError"
-Cohesion: 0.19
-Nodes (23): workerSharedLlmAllowed(), notifyMentionedUsers(), AUTOMATION_MAX_DEPTH, generateRoomSummaryAndAnnounce(), maybeAppendMentionActivities(), maybeAutoTranslateRoomMessage(), maybeExtractKnowledgeGraph(), maybeExtractRoomMemory() (+15 more)
+### Community 392 - "compliance-export.js"
+Cohesion: 0.24
+Nodes (18): completeExport(), computeExportHash(), createExportRequest(), executeExport(), formatExport(), generateId(), getExportSnapshot(), listExportRequests() (+10 more)
 
-### Community 393 - "ai-qa-moderator.js"
-Cohesion: 0.22
-Nodes (18): approveQuestion(), categorizeQuestion(), computePriorityScore(), dismissQuestion(), endQASession(), formatQuestion(), formatSession(), generateSuggestedAnswer() (+10 more)
+### Community 393 - "dlp-integrations.js"
+Cohesion: 0.27
+Nodes (16): buildScanPayload(), createIntegration(), deleteIntegration(), generateId(), getDlpIntegrationStats(), getIntegration(), getProviderInfo(), getScanHistory() (+8 more)
 
 ### Community 394 - "cobrowsing-http.js"
 Cohesion: 0.27
 Nodes (20): addAnnotation(), createSession(), endSession(), generateId(), getCobrowsingStats(), getSession(), grantRemoteControl(), joinSession() (+12 more)
 
-### Community 395 - "compliance-export.js"
-Cohesion: 0.24
-Nodes (18): completeExport(), computeExportHash(), createExportRequest(), executeExport(), formatExport(), generateId(), getExportSnapshot(), listExportRequests() (+10 more)
+### Community 395 - "ediscovery-client.ts"
+Cohesion: 0.16
+Nodes (21): EdiscoveryPage(), handleAddCustodian(), handleCollectEvidence(), handleCreateCase(), handlePreserve(), addEdiscoveryCustodian(), authHeaders(), BASE (+13 more)
 
 ### Community 396 - "ediscovery.js"
 Cohesion: 0.26
 Nodes (20): addCustodian(), addCustodyRecord(), collectEvidence(), createCase(), generateId(), getCase(), getCaseStats(), getChainOfCustody() (+12 more)
 
-### Community 397 - "live-stream-replay.js"
-Cohesion: 0.24
-Nodes (20): requireApiProjectMember(), createLiveInput(), deleteLiveInput(), listLiveInputVideos(), mapCustomerPlayback(), requireConfig(), streamApi(), eventSyncGroupId() (+12 more)
+### Community 397 - "hosted-saas-policy.js"
+Cohesion: 0.13
+Nodes (26): timingSafeEqual(), canCreateTenantProjects(), getPlatformProjectIdSet(), hostedTenantPlanMutationForbidden(), isHostedMultiTenantMode(), isPlatformOperatorProject(), tenantScopeForbidden(), ALLOWED_PLAN_NAMES (+18 more)
 
 ### Community 398 - "Plan"
 Cohesion: 0.12
@@ -3863,8 +3882,8 @@ Cohesion: 0.09
 Nodes (23): 1. Hard constraints first — baked graphics, 2. Subject body bias — pick the bigger clean zone, 3. Gaze direction — the "looking room" rule (tiebreaker and aesthetic), 4. Narrative emphasis (for optional crown), champion (1920×1080, bookshelf backdrop), Conditions where a centered crown works, Decision summary, If scene has a cluttered but dark backdrop (bookshelf, plants, set dressing) (+15 more)
 
 ### Community 406 - "agent/skills/faceless-explainer/scripts/lib/storyboard.mjs"
-Cohesion: 0.15
-Nodes (22): applyDuration(), applyMeta(), applyPoster(), applyStatus(), assignGlobal(), buildFrame(), DEFAULT_FRAME_STATUS, emptyGlobals() (+14 more)
+Cohesion: 0.11
+Nodes (34): DEFAULT_ENGINE, flag(), HERE, neutralPath(), pad2(), parseScript(), runEngine(), runFetchSfx() (+26 more)
 
 ### Community 407 - "agent/skills/media-use/scripts/dither.mjs"
 Cohesion: 0.18
@@ -3938,21 +3957,21 @@ Nodes (22): Cache channels, Client events, Concept mapping, Connection state, De
 Cohesion: 0.09
 Nodes (23): dependencies, ai, @ai-sdk/openai-compatible, @ai-sdk/react, class-variance-authority, cnfast, @floating-ui/core, @floating-ui/dom (+15 more)
 
-### Community 425 - "a2a-worker.js"
-Cohesion: 0.29
-Nodes (19): buildAgentCardPublic(), createA2ATask(), delegateA2ATaskToRemote(), fetchExternalAgentCard(), generateId(), getA2AAgentCard(), getA2ATask(), listA2AAgentCards() (+11 more)
+### Community 425 - "eu-ai-act/page.tsx"
+Cohesion: 0.16
+Nodes (26): EuAiActCompliancePage(), handleExportDoc(), handleSaveProfile(), handleSaveSettings(), HITL_MODES, OVERSIGHT_LEVELS, RISK_CATEGORIES, riskBadge() (+18 more)
 
 ### Community 426 - "adapter.js"
-Cohesion: 0.17
-Nodes (16): adapterRegistry, ADAPTER_CATALOG, getAdapterInfo(), getAdaptersRequiringEnvVar(), getAvailableAdapters(), listAdapterCatalog(), validateAdapterEnv(), deleteViaAdapter() (+8 more)
+Cohesion: 0.16
+Nodes (17): adapterRegistry, ADAPTER_CATALOG, getAdapterInfo(), getAdaptersRequiringEnvVar(), getAvailableAdapters(), listAdapterCatalog(), validateAdapterEnv(), deleteViaAdapter() (+9 more)
 
 ### Community 427 - "digital-twin-http.js"
 Cohesion: 0.24
 Nodes (19): addSpatialEntity(), createSpatialScene(), deleteSpatialScene(), getSpatialScene(), grantSpatialAgent(), listSpatialScenes(), nowIso(), parseJson() (+11 more)
 
-### Community 428 - "offline-notify-sent.js"
-Cohesion: 0.22
-Nodes (17): extractSmsTargetFromPreferences(), isOfflineSmsEnabled(), isUserIdleInRoom(), maybeNotifyOfflineSms(), resolveSentDmChannels(), sendSentDmTemplate(), buildTelcoMediaTemplateParams(), DOCUMENT_KINDS (+9 more)
+### Community 428 - "live-auctions.js"
+Cohesion: 0.29
+Nodes (18): closeLot(), createLot(), extendLot(), generateId(), getAuctionStats(), getBidsForLot(), getLot(), getLotsByRoom() (+10 more)
 
 ### Community 429 - "room-analytics.js"
 Cohesion: 0.21
@@ -3974,9 +3993,9 @@ Nodes (8): awarenessMap, CrdtApi, CrdtAwareness, CrdtDocument, CrdtOperation, Cr
 Cohesion: 0.25
 Nodes (14): activeNativeFactory, activePartyFactory, getNativeSocketFactory(), getPartySocketFactory(), resetSocketFactories(), resolveSocketFactory(), setNativeSocketFactory(), setPartySocketFactory() (+6 more)
 
-### Community 434 - "WorkerFluxyGameClient"
-Cohesion: 0.05
-Nodes (18): AINPC, FluxyGameApi, GameEntity, GameEvent, GameState, GameStatus, InputAction, InputCommand (+10 more)
+### Community 434 - "iot/page.tsx"
+Cohesion: 0.23
+Nodes (18): DEVICE_TYPES, IotPage(), handleDesired(), handleIngest(), handleRegister(), handleRule(), authHeaders(), BASE (+10 more)
 
 ### Community 435 - "FluxyChat"
 Cohesion: 0.09
@@ -4030,17 +4049,17 @@ Nodes (13): buildFramePackets(), CONFIG, SKILL_DIR, sourceExcerpt(), validateFra
 Cohesion: 0.19
 Nodes (18): padFrameInternalDuration(), DEFAULT_REGISTRY_PATH, here, loadTransitionRegistry(), transitionsByName(), buildGsap(), extendFrameTail(), flag() (+10 more)
 
-### Community 448 - "message-threads.js"
-Cohesion: 0.16
-Nodes (19): assertChatThreadDepth(), buildThreadListItem(), canBypassRoomMembership(), compareThreadDesc(), decodeRoomThreadCursor(), encodeRoomThreadCursor(), listAccessibleRoomIds(), listRoomThreads() (+11 more)
-
-### Community 449 - "useTheme"
-Cohesion: 0.08
-Nodes (30): AnalyticsProCharts(), axisTooltip(), hourKey(), OpsPoint, pivotOpsHourly(), FLUXY_CHART_PALETTE, fluxyChartTheme(), FluxyEChart() (+22 more)
-
-### Community 450 - "docs/page.tsx"
+### Community 448 - "pricing/page.tsx"
 Cohesion: 0.11
-Nodes (18): DocsPage(), GUIDES, metadata, algoliaEnabled, DocSearchAlgolia, DocSearchConfig, DocsSearch(), DocsSearchProps (+10 more)
+Nodes (19): clerkOn, LandingPricingSection(), planEntries, clerkOn, COMPARISON_ROWS, ComparisonTable(), metadata, PlanCards() (+11 more)
+
+### Community 449 - "auth-matrix-hot-routes.test.js"
+Cohesion: 0.12
+Nodes (34): agentInvokeSchema, asRecord(), authTokenSchema, botUpsertSchema, createRoomSchema, eventsTriggerSchema, fail(), parseAgentInvokeBody() (+26 more)
+
+### Community 450 - "HttpMcpClient"
+Cohesion: 0.17
+Nodes (5): anySignal(), createPendingMap(), fetchWithTimeout(), HttpMcpClient, mcpRequest()
 
 ### Community 451 - "local-dev.mjs"
 Cohesion: 0.10
@@ -4050,25 +4069,25 @@ Nodes (19): args, DB_DIR, __dirname, MIGRATIONS_DIR, dependencies, miniflare, na
 Cohesion: 0.14
 Nodes (4): registerAdapter(), createMockAdapter(), MockAdapter, registerMockAdapter()
 
-### Community 453 - "live-auctions.js"
+### Community 453 - "oncall-collaboration-http.js"
 Cohesion: 0.29
-Nodes (18): closeLot(), createLot(), extendLot(), generateId(), getAuctionStats(), getBidsForLot(), getLot(), getLotsByRoom() (+10 more)
+Nodes (13): createSchedule(), createShift(), deleteSchedule(), formatSchedule(), formatShift(), getCurrentOnCall(), getOnCallHistory(), getSchedule() (+5 more)
 
-### Community 454 - "video-voice.js"
-Cohesion: 0.25
-Nodes (20): mintLiveKitAccessToken(), signJwtHs256(), createCallSession(), endCall(), generateId(), generateToken(), getCallSession(), getCallStats() (+12 more)
+### Community 454 - "ambient-agents.js"
+Cohesion: 0.27
+Nodes (17): createAgentPolicy(), deleteAgentPolicy(), dispatchAmbientEvent(), executeAmbientPolicy(), generateId(), isPolicyCooldownActive(), listAgentPolicies(), listAgentPolicyRuns() (+9 more)
 
-### Community 455 - "web-search.js"
-Cohesion: 0.23
-Nodes (20): buildWebSearchContext(), detectResearchMode(), extractResearchQuery(), fetchPageSnippets(), fetchWithTimeout(), formatResultsForLlm(), hasAnySearchProvider(), isConfigured() (+12 more)
+### Community 455 - "message-retention-room.js"
+Cohesion: 0.27
+Nodes (11): getRoomRetentionSettings(), listRoomsWithRetention(), mergeMessageExpiry(), purgeExpiredRoomMessages(), resolveMessageExpiryWithRoomPolicy(), resolveRoomDefaultExpiresAt(), upsertRoomRetentionSettings(), DEFAULT_MESSAGE_TTL_MAX_SECONDS (+3 more)
 
 ### Community 456 - "fluxychat_sdk.dart"
 Cohesion: 0.09
 Nodes (21): library, fluxychat_sdk, src/agent_outbound.dart, src/api_client.dart, src/client.dart, src/connection_state.dart, src/errors.dart, src/jwt_utils.dart (+13 more)
 
 ### Community 457 - "MinimalChatScreen.kt"
-Cohesion: 0.12
-Nodes (16): FluxyChatClient, ConnectionStatus, FluxyMessage, WebSocketEventListener, MinimalChatScreen(), WebSocketEventListener, parseMessage(), parseMessages() (+8 more)
+Cohesion: 0.10
+Nodes (16): ConnectionStatus, FluxyMessage, WebSocketEventListener, MinimalChatScreen(), WebSocketEventListener, parseMessage(), parseMessages(), ConnectionStatus (+8 more)
 
 ### Community 459 - "modal-context.ts"
 Cohesion: 0.12
@@ -4194,9 +4213,9 @@ Nodes (19): commitAgentVersion(), createAgentConfig(), deployAgentVersion(), get
 Cohesion: 0.27
 Nodes (18): createObject(), deleteObject(), generateId(), getEvents(), getObject(), getObjectsByRoom(), getObjectStats(), getSubscriptions() (+10 more)
 
-### Community 490 - "rate-limit-dashboard-http.js"
-Cohesion: 0.40
-Nodes (6): getRateLimitSummary(), getRateLimitThresholds(), getRecentDenials(), recordRateLimitEvent(), dispatchRateLimitDashboardRoutes, dispatchRateLimitDashboardRoutes()
+### Community 490 - "audit-log-export.js"
+Cohesion: 0.23
+Nodes (20): computeNextRun(), createExportSchedule(), deleteExportSchedule(), generateId(), getAuditStats(), getExportRuns(), listExportSchedules(), mapEventRow() (+12 more)
 
 ### Community 491 - "LockScopeManager"
 Cohesion: 0.16
@@ -4206,9 +4225,9 @@ Nodes (5): createLockScope(), createLockScopeManager(), createPlatformLockScope(
 Cohesion: 0.13
 Nodes (13): createJob(), generateId(), getProfile(), getRoomConfig(), listJobs(), mapJobRow(), mapProfileRow(), mapRoomRow() (+5 more)
 
-### Community 493 - "white-label.js"
-Cohesion: 0.26
-Nodes (16): createReseller(), deleteReseller(), escapeAttr(), generateEmbedSnippet(), getDefaultConfig(), getReseller(), getResellerStats(), getWhiteLabelConfig() (+8 more)
+### Community 493 - "agent-task-bus-http.js"
+Cohesion: 0.32
+Nodes (12): getAutonomousTask(), listAutonomousTasks(), rowToTask(), submitAutonomousTask(), updateAutonomousTask(), VALID_STATUSES, authContext(), dispatchAgentTaskBusRoutes() (+4 more)
 
 ### Community 494 - "discord/package.json"
 Cohesion: 0.10
@@ -4275,16 +4294,20 @@ Cohesion: 0.10
 Nodes (20): Clarity / rhetoric technique catalog, Continuity across frames, Core rule, Emotional beats, Final checklist, Frame template, Hook strategy, Music & silence (+12 more)
 
 ### Community 511 - "a11y.admin.integrated.spec.ts"
-Cohesion: 0.11
-Nodes (7): ADMIN_PAGES, BLOCKING_IMPACTS, BLOCKING_IMPACTS, PUBLIC_PAGES, FluxyChatClientTest, WebSocketClientTest, @axe-core/playwright
+Cohesion: 0.13
+Nodes (6): ADMIN_PAGES, BLOCKING_IMPACTS, BLOCKING_IMPACTS, PUBLIC_PAGES, WebSocketClientTest, @axe-core/playwright
 
 ### Community 512 - "compilerOptions"
 Cohesion: 0.10
 Nodes (19): compilerOptions, allowJs, baseUrl, esModuleInterop, incremental, isolatedModules, jsx, lib (+11 more)
 
-### Community 514 - "ambient-agents.js"
-Cohesion: 0.27
-Nodes (17): createAgentPolicy(), deleteAgentPolicy(), dispatchAmbientEvent(), executeAmbientPolicy(), generateId(), isPolicyCooldownActive(), listAgentPolicies(), listAgentPolicyRuns() (+9 more)
+### Community 513 - "ai-governance/page.tsx"
+Cohesion: 0.20
+Nodes (21): AiGovernancePage(), handleEvaluate(), handleExport(), tierBadge(), TIERS, authHeaders(), BASE, exportGovernanceEvidence() (+13 more)
+
+### Community 514 - "checkAndConsumeRateLimit"
+Cohesion: 0.09
+Nodes (29): config, moderatePublish, getFluxyClientDefaults(), getFluxyConfig(), hostedRoomsAsConfig(), isAnonymousAuth(), loadProjectPublishConfig(), parseRoomsJson() (+21 more)
 
 ### Community 515 - "crm-adapters.js"
 Cohesion: 0.29
@@ -4294,17 +4317,17 @@ Nodes (18): appendSyncLog(), connectionsKey(), contactsCacheKey(), createCrmTick
 Cohesion: 0.26
 Nodes (16): buildAllowedOriginsList(), createCustomDomain(), deleteCustomDomain(), DOMAIN_STATUSES, expandOriginAliases(), expandWwwOriginAlias(), getPublicHostConfig(), isPlatformWorkerHostname() (+8 more)
 
-### Community 517 - "hitl-approval-client.ts"
-Cohesion: 0.17
-Nodes (22): ApprovalsInboxPanel(), decide(), RoomApprovalChainPanel(), save(), RoomApprovalChainPanelProps, ToolApprovalPanel(), decide(), ToolApprovalPanelProps (+14 more)
+### Community 517 - "messageFromUnknown"
+Cohesion: 0.03
+Nodes (132): POST(), POST(), AutomationsPage(), handleCreate(), handleRun(), BridgesPage(), handleConnect(), handleCreateBridge() (+124 more)
 
-### Community 518 - "resolveAdminContext"
-Cohesion: 0.16
-Nodes (24): resolveAdminContext(), resolveMemberContext(), RouteAuthHandlers, requireApiProjectAdmin(), depsEnv(), cleanupOldInsights(), computeEngagementScore(), generateId() (+16 more)
+### Community 518 - "insights-http.js"
+Cohesion: 0.31
+Nodes (15): cleanupOldInsights(), computeEngagementScore(), generateId(), getInsightSubscriptions(), getInsightSummary(), getInsightTimeSeries(), getLatestInsights(), isValidInsightType() (+7 more)
 
 ### Community 519 - "realtime-sfu-http.js"
-Cohesion: 0.22
-Nodes (19): announceHuddleSfuTracks(), asTrimmedString(), generateId(), listHuddleSfuTracks(), sanitizeSessionDescription(), sanitizeSfuRenegotiatePayload(), sanitizeSfuSessionPayload(), sanitizeSfuTracksPayload() (+11 more)
+Cohesion: 0.12
+Nodes (38): addMeterBytes(), assertHuddleSfuBudget(), assertLocalPublishAllowed(), beginHuddleSfuSession(), chargeOpenRow(), DEFAULT_MAX_CONCURRENT, DEFAULT_MAX_SESSION_SECONDS, DEFAULT_MONTHLY_GB_CAP (+30 more)
 
 ### Community 520 - "FluxyChatClient"
 Cohesion: 0.09
@@ -4350,9 +4373,9 @@ Nodes (12): resolveNpxInvocation(), envWithNpxCli, WHISPER_ARGV, WHISPER_OPTS, m
 Cohesion: 0.11
 Nodes (18): description, devDependencies, @cloudflare/workers-types, vite, vitest, wrangler, @cloudflare/workers-types, vite (+10 more)
 
-### Community 531 - "audit-log-export.js"
+### Community 531 - "web-search.js"
 Cohesion: 0.23
-Nodes (20): computeNextRun(), createExportSchedule(), deleteExportSchedule(), generateId(), getAuditStats(), getExportRuns(), listExportSchedules(), mapEventRow() (+12 more)
+Nodes (21): buildWebSearchContext(), detectResearchMode(), extractResearchQuery(), fetchPageSnippets(), fetchWithTimeout(), formatResultsForLlm(), hasAnySearchProvider(), isConfigured() (+13 more)
 
 ### Community 532 - "docs-page-top-bar.tsx"
 Cohesion: 0.17
@@ -4363,28 +4386,28 @@ Cohesion: 0.11
 Nodes (18): AgentLoopOptions, API Reference, ApprovalRequest, ApprovalResponse, Decide Based on Tool Input, HMAC-Signed Approvals, Legacy Support, Manual Approval Flow (+10 more)
 
 ### Community 534 - "grainient.tsx"
-Cohesion: 0.10
-Nodes (19): Grainient, LandingBand(), LandingBandProps, HalftoneReveal(), HalftoneRevealProps, hexToRgb(), Mode, MODES (+11 more)
+Cohesion: 0.07
+Nodes (28): DemoWavesBackground(), GradientWaves, Grainient, LandingBand(), LandingBandProps, ctxMap, detailToSteps(), GradientWaves() (+20 more)
 
-### Community 535 - "ai-image-generation.js"
-Cohesion: 0.23
-Nodes (14): resolveImageTransport(), ALLOWED_QUALITIES, ALLOWED_SIZES, ALLOWED_STYLESS, checkContentPolicy(), deleteImageGeneration(), generateImage(), getDefaultModel() (+6 more)
+### Community 535 - "onboarding-playground.tsx"
+Cohesion: 0.07
+Nodes (35): CreateProjectStep(), CreateProjectStepProps, ExploreFeaturesStep(), ExploreFeaturesStepProps, FEATURES, FinishStepProps, FirstChatStep(), FirstChatStepProps (+27 more)
 
 ### Community 536 - "field-ops-http.js"
 Cohesion: 0.27
 Nodes (13): createTemplate(), deleteTemplate(), formatTemplate(), formatUpdate(), getTemplate(), getUnsyncedUpdates(), listTemplates(), listUpdates() (+5 more)
 
-### Community 537 - "knowledge-graph.js"
-Cohesion: 0.28
-Nodes (15): EDGE_TYPES, extractKnowledgeGraph(), getEntityTimeline(), getRoomGraph(), NODE_TYPES, persistKnowledgeGraph(), queryKnowledgeGraph(), dispatchExtract() (+7 more)
-
-### Community 538 - "oncall-collaboration-http.js"
-Cohesion: 0.29
-Nodes (13): createSchedule(), createShift(), deleteSchedule(), formatSchedule(), formatShift(), getCurrentOnCall(), getOnCallHistory(), getSchedule() (+5 more)
-
-### Community 539 - "rich-previews.js"
+### Community 537 - "white-label.js"
 Cohesion: 0.26
-Nodes (16): detectFileType(), escapeHtml(), EXT_ICONS, extractMarkdownFeatures(), generateAiLinkSummary(), generateRichPreview(), getExtension(), getFileCategory() (+8 more)
+Nodes (16): createReseller(), deleteReseller(), escapeAttr(), generateEmbedSnippet(), getDefaultConfig(), getReseller(), getResellerStats(), getWhiteLabelConfig() (+8 more)
+
+### Community 538 - "gamification-http.js"
+Cohesion: 0.36
+Nodes (9): awardXP(), checkAndAwardBadges(), DEFAULT_BADGES, getLeaderboard(), getUserProfile(), initDefaultBadges(), listBadges(), dispatchGamificationRoutes (+1 more)
+
+### Community 539 - "collab-whiteboard.tsx"
+Cohesion: 0.18
+Nodes (14): CollabWhiteboard, CollabExcalidrawBoardProps, cn(), CollabWhiteboard(), measure(), ExcalidrawBoard, isPlausibleElement(), clampBackingStoreSize() (+6 more)
 
 ### Community 540 - "Offline notify: in-app chat (FluxyChat) + SMS/WhatsApp (Sent.dm)"
 Cohesion: 0.11
@@ -4470,9 +4493,9 @@ Nodes (18): compilerOptions, allowSyntheticDefaultImports, declaration, declarat
 Cohesion: 0.11
 Nodes (18): compilerOptions, declaration, declarationMap, esModuleInterop, forceConsistentCasingInFileNames, jsx, lib, module (+10 more)
 
-### Community 562 - "ediscovery.ts"
-Cohesion: 0.12
-Nodes (9): AuditEntry, createEdiscoveryManager(), addAudit(), EdiscoveryConfig, EdiscoveryManager, ExportRequest, HoldStatus, LegalHold (+1 more)
+### Community 561 - "A2AClient"
+Cohesion: 0.11
+Nodes (6): A2AArtifact, A2AClient, A2AEnvelope, A2AStatus, A2ATask, createA2AClient()
 
 ### Community 563 - "The 10 moves"
 Cohesion: 0.11
@@ -4502,17 +4525,17 @@ Nodes (17): 1. never patterns (critical), 2. choose the mechanism (critical), 3.
 Cohesion: 0.11
 Nodes (17): 3D, Canvas / WebGL, Channels, CLI Proof, Contract, Diagnostic Reading, Done, Error Handling (+9 more)
 
-### Community 570 - "checkHeadingRhythmDOM"
-Cohesion: 0.36
-Nodes (10): checkHeadingRhythmDOM(), clusterTop(), edgeAbove(), edgeBelow(), hasOwnTopBoundary(), insideSmallCard(), isVisibleFlow(), overlapsX() (+2 more)
+### Community 570 - "SAFE_TAGS"
+Cohesion: 0.18
+Nodes (18): checkElementMotion(), checkElementMotionDOM(), checkMotion(), checkElementMotion(), checkElementMotionDOM(), checkHeadingRhythmDOM(), clusterTop(), edgeAbove() (+10 more)
 
 ### Community 571 - "constants.mjs"
-Cohesion: 0.11
-Nodes (19): checkPageTypography(), extractGoogleFontFamilies(), normalizeGoogleFontFamilyParam(), firstOverusedGoogleFont(), checkElementItalicSerif(), checkElementItalicSerifDOM(), checkItalicSerif(), checkPageTypography() (+11 more)
+Cohesion: 0.13
+Nodes (16): firstOverusedGoogleFont(), checkElementItalicSerif(), checkElementItalicSerifDOM(), checkItalicSerif(), checkPageTypography(), checkTypography(), resolveSerif(), BRAND_FONT_DOMAINS (+8 more)
 
 ### Community 572 - "detect-utils.mjs"
-Cohesion: 0.25
-Nodes (14): astro, detectAstroProject(), fileExists(), findConfigFile(), firstExistingFile(), hasAnyDependency(), literalConfigFiles(), readPackageDeps() (+6 more)
+Cohesion: 0.34
+Nodes (11): astro, detectAstroProject(), fileExists(), findConfigFile(), firstExistingFile(), hasAnyDependency(), literalConfigFiles(), readPackageDeps() (+3 more)
 
 ### Community 573 - ".agents/skills/media-use/audio/scripts/wait-bgm.mjs"
 Cohesion: 0.11
@@ -4524,7 +4547,7 @@ Nodes (17): applyDuration(), applyMeta(), applyPoster(), applyStatus(), buildFra
 
 ### Community 575 - "three"
 Cohesion: 0.16
-Nodes (10): HeroOrbitField(), setup(), setup(), frame(), kick(), onVis(), ShowcaseSignalMini(), setup() (+2 more)
+Nodes (11): HeroOrbitField(), setup(), HeroSignalField(), setup(), frame(), kick(), onVis(), ShowcaseSignalMini() (+3 more)
 
 ### Community 576 - "troubleshooting.mdx"
 Cohesion: 0.11
@@ -4534,33 +4557,37 @@ Nodes (17): 1) WebSocket disconnect / reconnect loop, 2) Webhook retry / backlog
 Cohesion: 0.29
 Nodes (13): createFeed(), deleteFeed(), EVENT_TYPES, formatEvent(), formatFeed(), getAggregatedFeed(), getFeed(), getFeedStats() (+5 more)
 
-### Community 578 - "agent-debate.js"
-Cohesion: 0.31
-Nodes (15): announceAgentStep(), announceRoomPayload(), buildDebateMessages(), createDebateRole(), DEFAULT_DEBATE_ROLES, deleteDebateRole(), generateId(), listDebateRoles() (+7 more)
+### Community 578 - "ai-gateway.js"
+Cohesion: 0.05
+Nodes (66): announceAgentStep(), announceRoomPayload(), buildDebateMessages(), createDebateRole(), DEFAULT_DEBATE_ROLES, deleteDebateRole(), generateId(), listDebateRoles() (+58 more)
 
-### Community 579 - "agent-durable-workflow.js"
-Cohesion: 0.24
-Nodes (13): createD1WorkflowStore(), generateId(), getDurableWorkflow(), listDurableWorkflows(), resumeDurableWorkflow(), resumeStuckDurableWorkflows(), startDurableWorkflow(), createMemoryWorkflowStore() (+5 more)
+### Community 579 - "presence-extensions.js"
+Cohesion: 0.15
+Nodes (25): clearPresence(), clearStalePresence(), generateId(), getCursorsByRoom(), getFocusByRoom(), getPresenceByRoom(), getPresenceByUser(), getPresenceSnapshot() (+17 more)
 
-### Community 580 - "resolve-project-id.ts"
+### Community 580 - "room-firmware-client.ts"
 Cohesion: 0.19
-Nodes (15): hashApiKey(), legacyHashApiKey(), readSalt(), provisionBuiltinAgents(), normalizeHandle(), resolveDemoAgent(), legacyDefaultProjectAllowed(), resolveProjectId() (+7 more)
+Nodes (11): mergeModules(), RoomFirmwareSettingsPage(), handleSave(), authHeaders(), BASE, FirmwareAuditEntry, FirmwareModuleConfig, getRoomFirmware() (+3 more)
+
+### Community 581 - "ai-image-generation.js"
+Cohesion: 0.23
+Nodes (14): resolveImageTransport(), ALLOWED_QUALITIES, ALLOWED_SIZES, ALLOWED_STYLESS, checkContentPolicy(), deleteImageGeneration(), generateImage(), getDefaultModel() (+6 more)
 
 ### Community 582 - "custom-retention.js"
 Cohesion: 0.34
 Nodes (14): createRetentionPolicy(), deleteRetentionPolicy(), generateId(), getEffectiveRetention(), getPurgeCandidates(), getPurgeLogs(), getRetentionPolicy(), getRetentionStats() (+6 more)
 
-### Community 583 - "message-retention-room.js"
-Cohesion: 0.25
-Nodes (12): getRoomRetentionSettings(), listRoomsWithRetention(), mergeMessageExpiry(), purgeAllConfiguredRoomRetention(), purgeExpiredRoomMessages(), resolveMessageExpiryWithRoomPolicy(), resolveRoomDefaultExpiresAt(), upsertRoomRetentionSettings() (+4 more)
+### Community 583 - "console-nav.ts"
+Cohesion: 0.06
+Nodes (53): CommandPaletteDialog(), CommandPaletteTrigger(), runCommandAction(), buildConsoleNavGroups(), CONSOLE_NAV_AGENTS, CONSOLE_NAV_BUILD, CONSOLE_NAV_CONNECT, CONSOLE_NAV_DEV_TOOLS (+45 more)
 
 ### Community 584 - "ModalContextManager"
 Cohesion: 0.20
 Nodes (7): createFeedbackModal(), createModal(), createModalState(), createSupportTicketModal(), getModalState(), ModalContextManager, updateModalState()
 
-### Community 585 - "presence-extensions.js"
-Cohesion: 0.32
-Nodes (14): clearPresence(), clearStalePresence(), generateId(), getCursorsByRoom(), getFocusByRoom(), getPresenceByRoom(), getPresenceByUser(), getPresenceSnapshot() (+6 more)
+### Community 585 - "route-http-deps.js"
+Cohesion: 0.07
+Nodes (41): addCommentToThread(), createCommentThread(), listCommentThreads(), mapComment(), mapThread(), parseMetadata(), sanitizeCommentMetadata(), updateCommentThread() (+33 more)
 
 ### Community 586 - "ProviderRegistry"
 Cohesion: 0.18
@@ -4586,6 +4613,10 @@ Nodes (15): AiChatMessage, AiKnowledgeEntry, AiToolEntry, mockCopilotReply(), se
 Cohesion: 0.12
 Nodes (7): ChannelIdentity, ChannelType, createCrossChannelContinuity(), identityKey(), indexIdentity(), CrossChannelContinuity, CrossChannelSession
 
+### Community 592 - "expert-router.ts"
+Cohesion: 0.12
+Nodes (8): AgentProfile, createExpertRouter(), ExpertRouter, RoutePriority, RoutingRequest, RoutingResult, SkillLevel, SlaPolicy
+
 ### Community 593 - "game-checkpoint-crdt-yjs.ts"
 Cohesion: 0.22
 Nodes (15): applyGameCheckpointCrdtUpdate(), base64ToUint8Array(), checkpointMapKey(), FLUXY_GAME_CHECKPOINTS_MAP_KEY, GameCheckpointCrdtSnapshot, GameCheckpointRecord, mergeCheckpointListWithYjsDoc(), mergeRestCheckpointWithYjsRecord() (+7 more)
@@ -4598,13 +4629,9 @@ Nodes (9): BUILTIN_COMMANDS, CommandContext, CommandResult, createSlashCommandRe
 Cohesion: 0.14
 Nodes (9): createThreadState(), createThreadStateStore(), KVNamespace, AgentState, MyState, THREAD_STATE_TTL_MS, ThreadState, ThreadStateStore (+1 more)
 
-### Community 596 - "VoiceInterfaceManager"
-Cohesion: 0.12
-Nodes (7): createVoiceInterfaceManager(), DEFAULT_STATE, VoiceCommand, VoiceFeedbackVisual, VoiceInterfaceManager, VoiceMode, VoiceSessionState
-
 ### Community 597 - "markdown-body.tsx"
-Cohesion: 0.25
-Nodes (13): attrFromTag(), cellAlignClass(), MarkdownBody(), MarkdownBodyProps, renderMediaUrl(), renderNode(), renderRow(), renderNodes() (+5 more)
+Cohesion: 0.23
+Nodes (14): attrFromTag(), cellAlignClass(), MarkdownBody(), MarkdownBodyProps, renderMediaUrl(), renderNode(), renderRow(), renderNodes() (+6 more)
 
 ### Community 598 - "agent/skills/figma/scripts/verify-motion.mjs"
 Cohesion: 0.12
@@ -4670,13 +4697,9 @@ Nodes (8): AdapterError, AdapterRateLimitError, AuthenticationError, MENTION_FOR
 Cohesion: 0.22
 Nodes (15): createAPIAdapter(), createDiscordAdapter(), createGitHubAdapter(), createGoogleChatAdapter(), createIRCAdapter(), createLineAdapter(), createLinearAdapter(), createMatrixAdapter() (+7 more)
 
-### Community 614 - "multimodal-ai.js"
-Cohesion: 0.28
-Nodes (12): analyzeMedia(), callAIForMedia(), formatAnalysis(), getDefaultModel(), getMediaAnalysis(), getMediaStats(), getPromptForType(), getRoomMediaAnalyses() (+4 more)
-
-### Community 615 - "presence-escalation.js"
-Cohesion: 0.36
-Nodes (14): clampNudgeInterval(), generateId(), getActivePresenceEscalation(), mapRow(), markPresenceEscalationResponded(), nowIso(), parseEscalationChain(), pickNextOnlineInChain() (+6 more)
+### Community 615 - "sampleCssBackground"
+Cohesion: 0.22
+Nodes (14): firstCssUrl(), getLayerValue(), loadVisualContrastImage(), parseObjectPosition(), parsePositionPair(), parsePositionToken(), pickWorstContrastColor(), pointToImageSource() (+6 more)
 
 ### Community 616 - "StreamingMarkdownRenderer"
 Cohesion: 0.20
@@ -4783,8 +4806,8 @@ Cohesion: 0.23
 Nodes (12): MergeConflictPanel(), handleResolve(), MergeConflictPanelProps, MergeConflictCompare(), MergeConflictCompareProps, authHeaders(), BASE, listMergeConflicts() (+4 more)
 
 ### Community 642 - "components.json"
-Cohesion: 0.10
-Nodes (20): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+12 more)
+Cohesion: 0.12
+Nodes (15): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+7 more)
 
 ### Community 643 - "PixelSwap.tsx"
 Cohesion: 0.20
@@ -4810,9 +4833,9 @@ Nodes (15): Agent Tools, `AIMemoryEntry`, `AIMemoryQuery`, `AIMemoryStore`, API 
 Cohesion: 0.12
 Nodes (15): AI Agents, API, Connection, Events, Features, fluxychat_sdk, FluxyChatClient, Installation (+7 more)
 
-### Community 649 - "agent-task-bus-http.js"
-Cohesion: 0.32
-Nodes (12): getAutonomousTask(), listAutonomousTasks(), rowToTask(), submitAutonomousTask(), updateAutonomousTask(), VALID_STATUSES, authContext(), dispatchAgentTaskBusRoutes() (+4 more)
+### Community 649 - "autonomous-moderation-http.js"
+Cohesion: 0.44
+Nodes (8): appealAutoAction(), evaluateAndAct(), getAutoActionHistory(), getAutoModStats(), listAutoRules(), upsertAutoRule(), dispatchAutonomousModRoutes, dispatchAutonomousModRoutes()
 
 ### Community 650 - "instant-ai-room-http.js"
 Cohesion: 0.33
@@ -4821,18 +4844,6 @@ Nodes (11): AGENT_PRESETS, createInstantAIRoom(), deleteInstantAIRoom(), formatC
 ### Community 651 - "ip-whitelist.js"
 Cohesion: 0.33
 Nodes (12): addWhitelistRule(), checkIpAccess(), generateId(), getWhitelistStats(), ipInCidr(), ipToNumber(), isIpAllowed(), listWhitelistRules() (+4 more)
-
-### Community 652 - "mobile-ux-http.js"
-Cohesion: 0.38
-Nodes (12): deactivateDevice(), enqueueOfflineMessage(), generatePWAManifest(), getPendingOfflineMessages(), getPushDeliveryStats(), listDevices(), logPushDelivery(), markOfflineMessagesSent() (+4 more)
-
-### Community 653 - "collab-whiteboard.tsx"
-Cohesion: 0.18
-Nodes (14): CollabWhiteboard, CollabExcalidrawBoardProps, cn(), CollabWhiteboard(), measure(), ExcalidrawBoard, isPlausibleElement(), clampBackingStoreSize() (+6 more)
-
-### Community 654 - "speculative-warmup.js"
-Cohesion: 0.24
-Nodes (13): buildWarmupCacheEntry(), consumeWarmupCacheEntry(), countWords(), fetchConsumedWarmupFromRoomDo(), formatWarmupContextForAgent(), isSpeculativeWarmupEnabled(), normalizeWarmupText(), runSpeculativeRetrieval() (+5 more)
 
 ### Community 655 - "ToolInputStream"
 Cohesion: 0.17
@@ -4886,9 +4897,13 @@ Nodes (15): [0.1.2] - 2026-08-19, [0.1.3] - 2026-08-25, [0.1.4] - 2026-08-26, [0
 Cohesion: 0.13
 Nodes (7): createResidencyValidator(), DataLocation, REGION_SUBPROCESSORS, RegionCode, RegionConstraint, ResidencyPolicy, ResidencyValidator
 
-### Community 669 - "mcp-integration.ts"
-Cohesion: 0.03
-Nodes (33): AgentSpatialGrant, createDigitalTwinRoom(), DigitalTwinRoom, GrantType, createDigitalTwinMcpRegistry(), DigitalTwinMcpRegistry, SpatialEntity, SpatialSceneState (+25 more)
+### Community 668 - "FeatureFlagManager"
+Cohesion: 0.13
+Nodes (6): createFeatureFlagManager(), FeatureFlag, FeatureFlagManager, FlagEvaluation, FlagStatus, MetricGuardrail
+
+### Community 669 - "worker-digital-twin-client.ts"
+Cohesion: 0.20
+Nodes (5): GrantType, SpatialEntity, SpatialSceneState, createWorkerDigitalTwinClient(), WorkerDigitalTwinClient
 
 ### Community 670 - "token-crypto-impl.ts"
 Cohesion: 0.26
@@ -5026,17 +5041,17 @@ Nodes (14): Activepieces integration (CRM / automation), API key (automations), 
 Cohesion: 0.13
 Nodes (14): 1. Cloudflare (required — you already have this), 2. MCP marketplace audit (free — no signup), 3. LiveKit voice (free options), 4. Activepieces automation (free — self-host, external link), 5. Dashboard env (Vercel / local), 6. Kotlin Multiplatform mobile (Maven Central), 7. Deploy order, 8. What you do **not** need for Phase 2 (+6 more)
 
-### Community 704 - "welcome-step.tsx"
-Cohesion: 0.14
-Nodes (13): VALUE_PROPS, WelcomeStep(), WelcomeStepProps, AnimatedContent(), AnimatedContentProps, ensureScrollTrigger(), FluxychatMark(), GlareHover() (+5 more)
+### Community 704 - "Faceless Explainer to HyperFrames"
+Cohesion: 0.13
+Nodes (13): Faceless Explainer to HyperFrames, Quick Reference, Step 0: Setup, Step 1: Brief (no capture), Step 2: Design System, Step 3.1: Audio, Step 3: Storyboard and Script, Step 4: Frame Visual Design (+5 more)
 
-### Community 705 - "message-mentions.js"
-Cohesion: 0.27
-Nodes (10): expandMentions(), filterMembersByRole(), listMentionSuggestions(), listRoomMemberRows(), mentionHandlesForAgentInvoke(), normalizeMentionToken(), ROLE_ALIASES, SPECIAL_MENTIONS (+2 more)
+### Community 705 - "enterprise-agent-room-http.js"
+Cohesion: 0.47
+Nodes (6): buildEnterpriseAgentRoomPreview(), ENTERPRISE_AGENT_ROOM_FEATURES, ENTERPRISE_AGENT_ROOM_PACK_ID, provisionEnterpriseAgentRoom(), dispatchEnterpriseAgentRoomRoutes, dispatchEnterpriseAgentRoomRoutes()
 
-### Community 706 - "message-merge-conflicts.js"
-Cohesion: 0.31
-Nodes (11): broadcastMessageEdit(), generateId(), getMergeConflict(), isTrueMergeConflict(), listMergeConflicts(), mapConflictRow(), parseVersion(), reportMergeConflict() (+3 more)
+### Community 706 - "mcp-integration.ts"
+Cohesion: 0.21
+Nodes (12): createMcpClient(), createMcpRegistry(), defaultTokenStore, fluxyChatResultToMcp(), JsonRpcRequest, JsonRpcResponse, McpResource, McpResourceTemplate (+4 more)
 
 ### Community 707 - "message-serialization.js"
 Cohesion: 0.15
@@ -5046,13 +5061,13 @@ Nodes (5): deserializeAst(), deserializeMessage(), serializeAst(), serializeMess
 Cohesion: 0.31
 Nodes (9): createOverlay(), deleteOverlay(), formatOverlay(), getOverlay(), getOverlayWidget(), listOverlays(), OVERLAY_TYPES, dispatchOverlayRoutes (+1 more)
 
-### Community 709 - "telco-inbound.js"
-Cohesion: 0.19
-Nodes (13): maybeEnqueueAgentTaskForInbound(), maybeTriggerAmbientAgentsOnMessage(), formatIotEventSummary(), ingestIotDeviceEvent(), fanoutPersistedMessage(), handleTelcoInboundMessage(), insertInboundMessage(), isTelcoInboundEnabled() (+5 more)
+### Community 709 - "ephemeral-messages.js"
+Cohesion: 0.29
+Nodes (13): broadcastEphemeral(), cleanupEphemeralMessages(), deleteEphemeralMessage(), envKV(), getEphemeralMessage(), isRoomMember(), listEphemeralMessages(), sendDmFallback() (+5 more)
 
-### Community 710 - "message-enrichment.js"
+### Community 710 - "addVisualContrastFindings"
 Cohesion: 0.19
-Nodes (13): browserMarkdownForUrl(), browserOgPreview(), browserScreenshotBytes(), extractQuickActionText(), isBrowserRunConfigured(), isBrowserRunEnabled(), parseMarkdownOg(), fetchOgPreview() (+5 more)
+Nodes (13): addBrowserFindings(), addVisualContrastFindings(), addVisualContrastResult(), clearOverlays(), detachOverlay(), disconnectLazyVisualContrastObserver(), postExtensionError(), rememberVisualContrastAnalysis() (+5 more)
 
 ### Community 711 - "Unreleased"
 Cohesion: 0.13
@@ -5098,21 +5113,25 @@ Nodes (8): Attachment, AttachmentConfig, AttachmentManager, AttachmentType, Atta
 Cohesion: 0.24
 Nodes (12): ATTESTATION_VERSION, AttestationEntry, AttestationHeader, attestationSigningPayload(), bytesToHex(), canonicalJson(), hmacSha256Hex(), sha256Hex() (+4 more)
 
+### Community 722 - "delivery-semantics.ts"
+Cohesion: 0.14
+Nodes (6): createDeliverySemantics(), DeliveryDedupEntry, DeliveryReceipt, DeliverySemantic, DeliverySemanticsApi, DeliveryStage
+
 ### Community 723 - "SpatialCopresenceApi"
 Cohesion: 0.14
 Nodes (5): createSpatialCopresence(), SpatialCopresenceApi, SpatialParticipant, SpatialPosition, SpatialRoomConfig
 
-### Community 724 - "live-stream-commerce.js"
-Cohesion: 0.21
-Nodes (10): fanoutLiveCommerce(), generateId(), mapProductRow(), recordCheckoutClick(), showLiveProduct(), upsertLiveProduct(), buildStripeSessionBody(), createStripeLiveCheckoutSession() (+2 more)
+### Community 724 - "css"
+Cohesion: 0.18
+Nodes (13): buildSelectorSegment(), generateSelector(), isLikelyHashedClass(), postSerializedFindings(), renderBrowserFindings(), scanResultMeta(), serializeFindings(), tailwind (+5 more)
 
 ### Community 725 - "WebTransportAdapterApi"
 Cohesion: 0.14
 Nodes (5): createWebTransportAdapter(), WebTransportAdapterApi, WebTransportCapability, WebTransportMessage, WebTransportNegotiation
 
 ### Community 726 - "message-list.tsx"
-Cohesion: 0.21
-Nodes (13): formatDay(), MessageList(), MessageListProps, toDay(), MessageScroller(), MessageScrollerButton(), MessageScrollerContent(), MessageScrollerDate() (+5 more)
+Cohesion: 0.16
+Nodes (17): formatDay(), MessageList(), MessageListProps, toDay(), Marker(), MarkerContent(), MarkerIcon(), markerVariants (+9 more)
 
 ### Community 727 - "check-openapi-routes.mjs"
 Cohesion: 0.22
@@ -5202,13 +5221,13 @@ Nodes (12): Core Rule, Decision Comps, Impeccable Asset Producer, Input Contract
 Cohesion: 0.14
 Nodes (13): Animation Performance, Assess Performance Issues, Core Web Vitals Optimization, Cumulative Layout Shift (CLS < 0.1), Interaction to Next Paint (INP < 200ms), Largest Contentful Paint (LCP < 2.5s), Loading Performance, Network Optimization (+5 more)
 
-### Community 749 - "ai-analytics-insights.js"
+### Community 749 - "knowledge-graph.js"
 Cohesion: 0.28
-Nodes (12): deleteInsight(), gatherAnalyticsData(), generateInsights(), generateWeeklyDigest(), getInsight(), INSIGHT_PROMPTS, INSIGHT_TYPES, isAnalyticsInsightsEnabled() (+4 more)
+Nodes (15): EDGE_TYPES, extractKnowledgeGraph(), getEntityTimeline(), getRoomGraph(), NODE_TYPES, persistKnowledgeGraph(), queryKnowledgeGraph(), dispatchExtract() (+7 more)
 
 ### Community 750 - "journal.mjs"
-Cohesion: 0.30
-Nodes (13): clearInjectJournal(), healArtifact(), healInjectJournal(), INJECT_JOURNAL_RELPATH, INJECT_JOURNAL_VERSION, injectJournalPath(), insideProject(), normalizeRel() (+5 more)
+Cohesion: 0.28
+Nodes (12): PATCH_UNDOERS, healArtifact(), healInjectJournal(), INJECT_JOURNAL_RELPATH, INJECT_JOURNAL_VERSION, injectJournalPath(), insideProject(), normalizeRel() (+4 more)
 
 ### Community 751 - "GEO Optimizer"
 Cohesion: 0.14
@@ -5242,25 +5261,25 @@ Nodes (13): Admin API, APNs, Compare providers, Delivery acknowledgement, FCM: l
 Cohesion: 0.14
 Nodes (13): 1. Service Worker, 2. Subscribe (with the SDK), 2b. React hook, 3. (Manual) Without the SDK, Browser setup, Cross-browser support, Environment variables, Migrations (+5 more)
 
-### Community 759 - "context-signals.mjs"
+### Community 759 - "Building the picker"
+Cohesion: 0.18
+Nodes (10): Architecture data format, Building the picker, Content tokens in preview_html, Contents, Design Picker, Example architecture object, Mood board data format, Prerequisites (+2 more)
+
+### Community 760 - "canAccessRoom"
+Cohesion: 0.08
+Nodes (41): getRoomAudienceScore(), NEGATIVE, POSITIVE, scoreReactionBuckets(), evaluateCapabilityPolicy(), EVENT_POLICY, findByIdempotency(), getCapabilitySnapshot() (+33 more)
+
+### Community 761 - "live-stream-commerce.js"
+Cohesion: 0.21
+Nodes (10): fanoutLiveCommerce(), generateId(), mapProductRow(), recordCheckoutClick(), showLiveProduct(), upsertLiveProduct(), buildStripeSessionBody(), createStripeLiveCheckoutSession() (+2 more)
+
+### Community 762 - "rich-previews.js"
 Cohesion: 0.26
-Nodes (13): cli(), COMMON_DEV_PORTS, devServerSignals(), gatherSignals(), gitSignals(), hasCode(), isVendoredPath(), latestCritique() (+5 more)
+Nodes (16): detectFileType(), escapeHtml(), EXT_ICONS, extractMarkdownFeatures(), generateAiLinkSummary(), generateRichPreview(), getExtension(), getFileCategory() (+8 more)
 
-### Community 760 - "room-intelligence-http.js"
-Cohesion: 0.29
-Nodes (9): getRoomAudienceScore(), NEGATIVE, POSITIVE, scoreReactionBuckets(), getRoomSessionProfile(), mapRow(), parseAsymmetryProfile(), putRoomSessionProfile() (+1 more)
-
-### Community 761 - "room-empathy.js"
-Cohesion: 0.31
-Nodes (11): buildEmpathyAgentPromptSuffix(), buildEmpathyPromptSuffix(), describeEmpathyAdaptationHint(), getKv(), getLatestProsodySignal(), getRoomEmpathySettings(), ingestProsodySignal(), kvKey() (+3 more)
-
-### Community 762 - "ephemeral-messages.js"
-Cohesion: 0.29
-Nodes (13): broadcastEphemeral(), cleanupEphemeralMessages(), deleteEphemeralMessage(), envKV(), getEphemeralMessage(), isRoomMember(), listEphemeralMessages(), sendDmFallback() (+5 more)
-
-### Community 763 - "Faceless Explainer to HyperFrames"
-Cohesion: 0.13
-Nodes (13): Faceless Explainer to HyperFrames, Quick Reference, Step 0: Setup, Step 1: Brief (no capture), Step 2: Design System, Step 3.1: Audio, Step 3: Storyboard and Script, Step 4: Frame Visual Design (+5 more)
+### Community 763 - "Brief contract"
+Cohesion: 0.20
+Nodes (9): 1. Run shape, 2. Shared fields, 3. Question protocol, Brief contract, Contents, Gate behavior, Remembered defaults, Signals and persistence (+1 more)
 
 ### Community 764 - "jwt_utils.dart"
 Cohesion: 0.14
@@ -5295,8 +5314,8 @@ Cohesion: 0.19
 Nodes (7): App(), DealBoard(), FluxySession, memberJwt, publicRoomId, useFluxySession(), workerUrl
 
 ### Community 772 - "fluxy-doctor.mjs"
-Cohesion: 0.31
-Nodes (13): bold(), c(), envPath, fail(), fetchOk(), green(), main(), parseEnvFile() (+5 more)
+Cohesion: 0.28
+Nodes (14): bold(), c(), envPath, fail(), fetchOk(), green(), isFluxyConsoleHost(), main() (+6 more)
 
 ### Community 773 - "compilerOptions"
 Cohesion: 0.14
@@ -5306,9 +5325,9 @@ Nodes (13): compilerOptions, declaration, esModuleInterop, forceConsistentCasing
 Cohesion: 0.15
 Nodes (4): createDecentralizedRelay(), DecentralizedRelayApi, RelayMessage, RelayPeer
 
-### Community 775 - "mcp-identity-client.ts"
-Cohesion: 0.22
-Nodes (13): McpIdentitySettingsPage(), handleRegisterServer(), handleRegisterTool(), authHeaders(), BASE, getMcpIdentityRegistry(), listMcpToolAudit(), McpIdentityRegistry (+5 more)
+### Community 775 - "Full-surface test campaign"
+Cohesion: 0.15
+Nodes (12): Checklist (tick when that slice has behavioral tests, not just coverage), Full-surface test campaign, How to run a slice in a later chat, Phase 0 — map (one session), Phase 0 result (2026-09-11), Phase 1 — kernel (users live here), Phase 2 — agents, Phase 3 — collab + verticals we sell as beta (+4 more)
 
 ### Community 776 - "emoji.ts"
 Cohesion: 0.15
@@ -5318,9 +5337,9 @@ Nodes (8): DEFAULT_EMOJI_MAP, EMOJI_CATEGORIES, EmojiFormats, emojiRegistry, Emo
 Cohesion: 0.16
 Nodes (7): buildEmpathyAgentPromptSuffix(), createEmpathyProsodyController(), EmpathyInferredState, EmpathyProsodyController, EmpathyProsodySample, ProsodyFeatures, ProsodySignal
 
-### Community 778 - "agent-nested-run.js"
-Cohesion: 0.30
-Nodes (11): isNestedAgentToolName(), isRunAgentToolEntry(), isSelfDelegate(), loadChildAgent(), MAX_NESTED_AGENT_DEPTH, NESTED_AGENT_TOOL_NAMES, nestedAgentToolOpenAi(), normalizeNestedToolName() (+3 more)
+### Community 778 - "Product Launch to HyperFrames"
+Cohesion: 0.20
+Nodes (10): Product Launch to HyperFrames, Quick Reference, Step 0: Setup, Step 1: Capture assets, Step 2: Design System, Step 3.1: Audio, Step 3: Storyboard and Script, Step 4: Frame Visual Design (+2 more)
 
 ### Community 779 - "RegionalFailoverApi"
 Cohesion: 0.15
@@ -5358,9 +5377,9 @@ Nodes (12): 0 · Bootstrap the project from THIS skill's assets — non-negotiab
 Cohesion: 0.15
 Nodes (13): Anti-examples (wall-embed would FAIL), Conditions, Conditions, corner-column-crown — "text sits in a clean region next to the subject", Four conditions — ALL must hold, Mode checklist (run this before committing to wall-embed), portrait-header — "subject fills center, text lives in top banner", Quick decision flow (+5 more)
 
-### Community 788 - "agent/skills/faceless-explainer/scripts/audio.mjs"
+### Community 788 - "data-residency-client.ts"
 Cohesion: 0.33
-Nodes (12): DEFAULT_ENGINE, flag(), HERE, neutralPath(), pad2(), parseScript(), runEngine(), runFetchSfx() (+4 more)
+Nodes (8): DataResidencySettingsPage(), handleSave(), authHeaders(), BASE, checkDataResidencyWrite(), DataResidencySettings, getDataResidencySettings(), updateDataResidencySettings()
 
 ### Community 789 - "Component quality bar"
 Cohesion: 0.15
@@ -5414,13 +5433,13 @@ Nodes (12): DEFAULT_ENGINE, flag(), HERE, neutralPath(), pad2(), parseScript(), 
 Cohesion: 0.15
 Nodes (12): Calibration, Checklist, Component quality bar, Duplicates, which one survives, Fatal, cut the item, Fixable, keep and repair, How an audit runs, Mechanical first pass (+4 more)
 
-### Community 802 - "room-firmware-client.ts"
-Cohesion: 0.19
-Nodes (11): mergeModules(), RoomFirmwareSettingsPage(), handleSave(), authHeaders(), BASE, FirmwareAuditEntry, FirmwareModuleConfig, getRoomFirmware() (+3 more)
+### Community 802 - "cross-org-settlement.js"
+Cohesion: 0.35
+Nodes (9): canTransitionSettlement(), createCommitmentSettlement(), DEFAULT_SETTLEMENT_PROVIDER, deriveSettlementTerms(), getSettlementByCommitment(), markSettlement(), nowIso(), postX402Facilitator() (+1 more)
 
-### Community 803 - "fluxyEntityId"
-Cohesion: 0.15
-Nodes (12): inviteToParty(), spawnNPC(), fluxyEntityId(), createGeofence(), addAngle(), addProduct(), coHostModerate(), coHostRespond() (+4 more)
+### Community 803 - "ambient-agents-client.ts"
+Cohesion: 0.18
+Nodes (17): AmbientAgentsPage(), handleCreate(), handleDelete(), handleDispatchWebhook(), handleTestPolicy(), AmbientAutonomy, AmbientPolicy, AmbientPolicyRun (+9 more)
 
 ### Community 804 - "embed-prompt.mjs"
 Cohesion: 0.19
@@ -5474,13 +5493,13 @@ Nodes (12): compilerOptions, esModuleInterop, forceConsistentCasingInFileNames, 
 Cohesion: 0.15
 Nodes (13): Composition root, Distributed rendering, Fonts, Lottie, Media, Parameters, React patterns, Reading this table (+5 more)
 
-### Community 817 - "Building the picker"
-Cohesion: 0.18
-Nodes (10): Architecture data format, Building the picker, Content tokens in preview_html, Contents, Design Picker, Example architecture object, Mood board data format, Prerequisites (+2 more)
+### Community 817 - "RoomE2eSettingsPage"
+Cohesion: 0.15
+Nodes (16): keyFingerprint(), RoomE2eSettingsPage(), enableMlsGroup(), rotateKey(), rotateMlsEpoch(), setEnabled(), authHeaders(), BASE (+8 more)
 
-### Community 818 - "iot/page.tsx"
-Cohesion: 0.05
-Nodes (56): AbTestPanel(), AgentPlatformPage(), AgentsPanel(), BuilderPanel(), createSeededPlatform(), DeployPanel(), EmotionPanel(), PersonalityPanel() (+48 more)
+### Community 818 - "admin-jwt.cjs"
+Cohesion: 0.20
+Nodes (16): decodeJwtPayload(), { dirname, join }, ensureAdminJwt(), envFiles(), { existsSync, mkdirSync, readFileSync, writeFileSync }, jwtFile, postJson(), readAdminJwt() (+8 more)
 
 ### Community 819 - "Optional external services"
 Cohesion: 0.15
@@ -5502,13 +5521,13 @@ Nodes (12): First release manual step, Publish KMP SDK to Maven Central (Sonatyp
 Cohesion: 0.29
 Nodes (8): makeEnv(), seedThreeEvents(), allocateRoomMessageSeq(), getRoomCurrentSeq(), getRoomMessageEventsSince(), nowIso(), parsePayload(), recordRoomMessageEvent()
 
-### Community 824 - "gamification-http.js"
-Cohesion: 0.36
-Nodes (9): awardXP(), checkAndAwardBadges(), DEFAULT_BADGES, getLeaderboard(), getUserProfile(), initDefaultBadges(), listBadges(), dispatchGamificationRoutes (+1 more)
+### Community 824 - "agent-durable-workflow.js"
+Cohesion: 0.24
+Nodes (13): createD1WorkflowStore(), generateId(), getDurableWorkflow(), listDurableWorkflows(), resumeDurableWorkflow(), resumeStuckDurableWorkflows(), startDurableWorkflow(), createMemoryWorkflowStore() (+5 more)
 
-### Community 825 - "handoff-context.js"
-Cohesion: 0.27
-Nodes (9): buildHandoffContext(), buildSummary(), fetchOpenQuestions(), fetchRecentActions(), fetchRecentEntities(), fetchRecentMessages(), fetchRoomFacts(), inferIntent() (+1 more)
+### Community 825 - "a2a-client.ts"
+Cohesion: 0.21
+Nodes (16): A2AAgentsPage(), handleCreateTask(), handleHealth(), handleRegister(), handleSendEnvelope(), A2AAgentCard, A2ATask, authHeaders() (+8 more)
 
 ### Community 826 - "Adapter Error Hierarchy"
 Cohesion: 0.15
@@ -5549,14 +5568,6 @@ Nodes (9): App(), Board(), chunkPoints(), Stroke, FluxySession, memberJwt, publi
 ### Community 835 - "compilerOptions"
 Cohesion: 0.15
 Nodes (12): compilerOptions, declaration, declarationMap, module, moduleResolution, noEmitOnError, outDir, rootDir (+4 more)
-
-### Community 836 - "composable-ui.ts"
-Cohesion: 0.08
-Nodes (12): ChannelListConfig, ComponentFramework, ComposableUIKit, ComposerConfig, createComposableUIKit(), DEFAULT_CHANNEL_LIST, DEFAULT_COMPOSER, DEFAULT_MESSAGE_LIST (+4 more)
-
-### Community 837 - "Brief contract"
-Cohesion: 0.20
-Nodes (9): 1. Run shape, 2. Shared fields, 3. Question protocol, Brief contract, Contents, Gate behavior, Remembered defaults, Signals and persistence (+1 more)
 
 ### Community 838 - "mcp-negotiation.ts"
 Cohesion: 0.17
@@ -5675,8 +5686,8 @@ Cohesion: 0.17
 Nodes (11): Accessibility Resilience, Assess Hardening Needs, Edge Cases & Boundary Conditions, Error Handling, Hardening Dimensions, Input Validation & Sanitization, Internationalization (i18n), Performance Resilience (+3 more)
 
 ### Community 868 - "frameworks/index.mjs"
-Cohesion: 0.18
-Nodes (10): COMMENT_SYNTAXES, FRAMEWORKS, INJECT_KINDS, PATCH_UNDOERS, PREVIEW_MODES, SOURCE_TRAIT_DEFAULTS, STYLE_MODES, TAG_PATCH_KIND (+2 more)
+Cohesion: 0.17
+Nodes (11): COMMENT_SYNTAXES, FRAMEWORKS, INJECT_KINDS, PREVIEW_MODES, SOURCE_TRAIT_DEFAULTS, STYLE_MODES, TAG_PATCH_KIND, nextjs (+3 more)
 
 ### Community 869 - "App Store Kit"
 Cohesion: 0.17
@@ -5718,9 +5729,9 @@ Nodes (12): 4.10 Quotes & Testimonials, 4.11 Page Theme Lock (Light / Dark Mode 
 Cohesion: 0.17
 Nodes (11): AgentConfig, AgentInvocationContext, AgentMode, AgentProviderRequest, AgentProviderResult, FluxyBotMessageRequest, FluxyBotMessageResponse, FluxyMentionWebhook (+3 more)
 
-### Community 880 - "decision-rooms-pack-http.js"
-Cohesion: 0.42
-Nodes (7): buildDecisionRoomPackPreview(), DECISION_ROOM_FEATURES, DECISION_ROOM_PACK_ID, DECISION_ROOM_TEMPLATES, provisionDecisionRoomPack(), dispatchDecisionRoomsPackRoutes, dispatchDecisionRoomsPackRoutes()
+### Community 880 - "analyzeVisualContrastCandidate"
+Cohesion: 0.24
+Nodes (10): analyzeVisualContrast(), analyzeVisualContrastCandidate(), blendRgba(), clampByte(), collectVisualContrastCandidates(), collectVisualContrastReasons(), getDirectText(), getDirectTextRect() (+2 more)
 
 ### Community 881 - "Modules"
 Cohesion: 0.17
@@ -5750,21 +5761,25 @@ Nodes (11): Basic Usage, Durable Execution, Integration with Cloudflare Workflow
 Cohesion: 0.17
 Nodes (11): API, Features, @fluxy-chat/react-native-sdk, FluxyChatClient, Hooks, Installation, License, Quick Start (+3 more)
 
-### Community 888 - "scripts"
-Cohesion: 0.17
-Nodes (12): scripts, db:export-baseline, deploy, dev, drill:tenant-recovery, perf:workload-check, smoke:remote, test (+4 more)
+### Community 888 - "agent-eval-client.ts"
+Cohesion: 0.20
+Nodes (16): AgentEvalPage(), handleCaptureFromRun(), handleCreateDefault(), handleExportOtel(), handleRun(), AgentEvalCase, AgentEvalDataset, AgentEvalRunResult (+8 more)
 
-### Community 889 - "ensureSession"
-Cohesion: 0.39
-Nodes (8): bumpEditCount(), consumeSessionNoticeFlag(), dedupeAgainstCache(), ensureFile(), ensureSession(), findingCacheKey(), rememberFindings(), touchFile()
+### Community 889 - "kb-client.ts"
+Cohesion: 0.19
+Nodes (16): KnowledgePage(), handleCreate(), handleDelete(), handleSearch(), handleSync(), authHeaders(), BASE, buildKbRagContext() (+8 more)
 
 ### Community 890 - "importAdminMessage"
 Cohesion: 0.35
 Nodes (6): deriveScopedClientMessageId(), normalizeClientMessageId(), importAdminMessage(), importAdminMessageBatch(), parseCreatedAt(), dispatchMessageImportRoutes()
 
-### Community 891 - "cmk-store.js"
-Cohesion: 0.50
-Nodes (10): createCmkKey(), encryptWithCmk(), getKv(), listCmkKeys(), readKeys(), revokeCmkKey(), rotateCmkKey(), storeKey() (+2 more)
+### Community 891 - "ai-analytics-insights.js"
+Cohesion: 0.28
+Nodes (12): deleteInsight(), gatherAnalyticsData(), generateInsights(), generateWeeklyDigest(), getInsight(), INSIGHT_PROMPTS, INSIGHT_TYPES, isAnalyticsInsightsEnabled() (+4 more)
+
+### Community 892 - "multimodal-ai.js"
+Cohesion: 0.28
+Nodes (12): analyzeMedia(), callAIForMedia(), formatAnalysis(), getDefaultModel(), getMediaAnalysis(), getMediaStats(), getPromptForType(), getRoomMediaAnalyses() (+4 more)
 
 ### Community 893 - "do-lock.test.js"
 Cohesion: 0.32
@@ -5854,9 +5869,9 @@ Nodes (3): createRoomSequencer(), RoomSequencerApi, SequencedEvent
 Cohesion: 0.26
 Nodes (4): createStreamingMarkdownRenderer(), StreamingMarkdownRenderer, useStreamingMarkdown(), UseStreamingMarkdownResult
 
-### Community 918 - "voice-noise.ts"
-Cohesion: 0.18
-Nodes (5): createNoiseProcessor(), DEFAULT_NOISE_CONFIG, DeviceDiagnostics, NoiseConfig, NoiseProcessor
+### Community 918 - "rehearsal-rooms.js"
+Cohesion: 0.26
+Nodes (13): buildRehearsalAgentSystemPrompt(), createRehearsalRoom(), DEFAULT_REHEARSAL_TTL_SECONDS, deleteRehearsalRoom(), expireRehearsalRooms(), generateId(), getRehearsal(), getRehearsalByRoomId() (+5 more)
 
 ### Community 919 - "@fluxy-chat/ui-kit"
 Cohesion: 0.17
@@ -6098,9 +6113,9 @@ Nodes (7): encodeCallbackValue(), generateToken(), hasCallbackButtons(), postToC
 Cohesion: 0.33
 Nodes (7): ack(), clear(), enqueue(), peek(), readQueueSize(), safeParse(), sweepExpired()
 
-### Community 980 - "canAccessRoom"
-Cohesion: 0.10
-Nodes (31): evaluateCapabilityPolicy(), EVENT_POLICY, findByIdempotency(), getCapabilitySnapshot(), hasRole(), listCapabilityEvents(), publishCapabilityEvent(), rowToEvent() (+23 more)
+### Community 980 - "context-signals.mjs"
+Cohesion: 0.25
+Nodes (14): extractPlatform(), loadContext(), cli(), COMMON_DEV_PORTS, devServerSignals(), gatherSignals(), gitSignals(), hasCode() (+6 more)
 
 ### Community 982 - "replay-mode.js"
 Cohesion: 0.31
@@ -6178,9 +6193,17 @@ Nodes (8): App(), FluxySession, memberJwt, MemberOrGuestApp(), publicRoomId, pub
 Cohesion: 0.12
 Nodes (5): ARCanvasObject, AROverlayManager, ARPresence, createAROverlayManager(), SpatialAudioSource
 
+### Community 1001 - "room-feeds.js"
+Cohesion: 0.32
+Nodes (12): createFeedMessage(), createRoomFeed(), FEED_KINDS, listFeedMessages(), listRoomFeeds(), mapFeed(), mapMessage(), parseMetadata() (+4 more)
+
 ### Community 1002 - "platform-adapter.ts"
 Cohesion: 0.20
 Nodes (6): AdapterPlatform, adapters, createPlatformAdapter(), PlatformAdapterApi, PlatformAdapterConfig, PlatformMessage
+
+### Community 1003 - "tag-strategy.mjs"
+Cohesion: 0.22
+Nodes (14): appendOriginToDirective(), buildTagBlock(), commentClose(), commentOpen(), detectLineEnding(), findCspMetaTags(), getAttr(), insertTag() (+6 more)
 
 ### Community 1004 - "compilerOptions"
 Cohesion: 0.18
@@ -6254,6 +6277,10 @@ Nodes (9): Adopt existing projects, Cross-project reuse, Examples, Flags, How it
 Cohesion: 0.12
 Nodes (15): PR to HyperFrames, Quick Reference, Step 0: Setup, Step 1: Ingest the PR (no capture), Step 2: Design System, Step 3.1: Audio, Step 3: Storyboard and Script, Step 4: Frame Visual Design (+7 more)
 
+### Community 1022 - "Frame worker — PR-to-video delta"
+Cohesion: 0.33
+Nodes (5): Batch dispatch — you build a small packet batch, Frame worker — PR-to-video delta, Mostly invented — you build the visual (except code blocks + the credits avatars), PR code beats, mechanism beats + the credits close, PR-specific self-check additions
+
 ### Community 1023 - "Eval: how to validate a translation end-to-end"
 Cohesion: 0.20
 Nodes (10): CI integration, Critical: encoder config, Eval: how to validate a translation end-to-end, Per-fixture flow, Reading `diff/summary.json`, The three scripts, Threshold rule of thumb, Validated tier thresholds (+2 more)
@@ -6298,9 +6325,9 @@ Nodes (9): Composition Pattern, Dynamic Class Safety, HyperFrames Tailwind, Quic
 Cohesion: 0.20
 Nodes (10): Completion gate, Init flow, Step 1: Load current state, Step 2: Explore the project, Step 3: Interview for product truth, Step 4: Write PRODUCT.md, Step 5: Record workflow defaults, Step 6: Wrap up or resume (+2 more)
 
-### Community 1035 - "hook.mjs"
-Cohesion: 0.39
-Nodes (7): allow(), deny(), done(), isStopEvent(), writeAuditLog(), main(), readStdin()
+### Community 1035 - "app/status/page.tsx"
+Cohesion: 0.20
+Nodes (12): dynamic, metadata, statusLabel(), StatusPage(), statusTone(), INCIDENTS_PATH, loadStatusIncidents(), parseField() (+4 more)
 
 ### Community 1036 - "Scoring rubric"
 Cohesion: 0.20
@@ -6317,10 +6344,6 @@ Nodes (9): Adopt existing projects, Cross-project reuse, Examples, Flags, How it
 ### Community 1039 - "PR to HyperFrames"
 Cohesion: 0.20
 Nodes (10): PR to HyperFrames, Quick Reference, Step 0: Setup, Step 1: Ingest the PR (no capture), Step 2: Design System, Step 3.1: Audio, Step 3: Storyboard and Script, Step 4: Frame Visual Design (+2 more)
-
-### Community 1040 - "Product Launch to HyperFrames"
-Cohesion: 0.20
-Nodes (10): Product Launch to HyperFrames, Quick Reference, Step 0: Setup, Step 1: Capture assets, Step 2: Design System, Step 3.1: Audio, Step 3: Storyboard and Script, Step 4: Frame Visual Design (+2 more)
 
 ### Community 1041 - "Refactoring UI (Claude Code skill)"
 Cohesion: 0.20
@@ -6462,10 +6485,6 @@ Nodes (6): App(), FluxySession, memberJwt, publicRoomId, useFluxySession(), work
 Cohesion: 0.29
 Nodes (6): App(), FluxySession, memberJwt, publicRoomId, useFluxySession(), workerUrl
 
-### Community 1076 - "react-native-sdk/src/agent-outbound.ts"
-Cohesion: 0.27
-Nodes (8): AgentOutboundMessageInput, AgentOutboundValidationResult, buildAgentOutboundWsPayload(), validateAgentOutboundMessage(), FLUXY_MAX_MESSAGE_LENGTH, FluxyRoomMember, normalizeRoomMember(), normalizeRoomMembers()
-
 ### Community 1077 - "dependencies"
 Cohesion: 0.20
 Nodes (10): dependencies, @fluxy-chat/protocol, mdast-util-to-string, partysocket, remark, remark-gfm, remend, @types/mdast (+2 more)
@@ -6477,10 +6496,6 @@ Nodes (10): devDependencies, react, react-dom, @types/node, @types/react, @types
 ### Community 1082 - "./chat"
 Cohesion: 0.50
 Nodes (4): default, import, types, ./chat
-
-### Community 1083 - "Web3Chat"
-Cohesion: 0.12
-Nodes (6): createWeb3Chat(), DecentralizedChatRoom, OnChainMessage, TokenGateRule, WalletProfile, Web3Chat
 
 ### Community 1084 - "audit-tenant-scope.mjs"
 Cohesion: 0.29
@@ -6662,13 +6677,13 @@ Nodes (9): Color, Components, Layout, Motion, Operate mode depth (and Read notes
 Cohesion: 0.22
 Nodes (8): Cadence, Confirm and stop, Phase 1: Discovery interview, Phase 2: Resolve the design direction, Phase 3: Write the brief, Round 1: purpose, people, and outcome, Round 2: material, behavior, and boundaries, Shape
 
-### Community 1129 - "readConfig"
-Cohesion: 0.13
-Nodes (17): applyConfigSource(), applyDetectorConfigSource(), cloneDefaultConfig(), detectorSection(), hookSection(), ignoreValueFilesKey(), mergeIgnoreValues(), numberOr() (+9 more)
+### Community 1129 - "resolveAdminContext"
+Cohesion: 0.36
+Nodes (12): resolveAdminContext(), createCmkKey(), encryptWithCmk(), getKv(), listCmkKeys(), readKeys(), revokeCmkKey(), rotateCmkKey() (+4 more)
 
 ### Community 1130 - "nuxt.mjs"
-Cohesion: 0.31
-Nodes (7): applyNuxtLiveAdapter(), buildNuxtPlugin(), nuxt, NUXT_PLUGIN_MARKER, NUXT_PLUGIN_NAME, removeNuxtLiveAdapter(), buildLiveScriptSrc()
+Cohesion: 0.27
+Nodes (8): applyNuxtLiveAdapter(), buildNuxtPlugin(), detectNuxtProject(), nuxt, NUXT_PLUGIN_MARKER, NUXT_PLUGIN_NAME, removeNuxtLiveAdapter(), buildLiveScriptSrc()
 
 ### Community 1131 - "Copy Lab"
 Cohesion: 0.22
@@ -6794,9 +6809,9 @@ Nodes (4): browserCollections, create, create, create
 Cohesion: 0.42
 Nodes (8): evaluateThresholds(), loadThresholds(), main(), parseArgs(), percentile(), resolveSafePath(), runPool(), toMs()
 
-### Community 1163 - "enterprise-agent-room-http.js"
-Cohesion: 0.47
-Nodes (6): buildEnterpriseAgentRoomPreview(), ENTERPRISE_AGENT_ROOM_FEATURES, ENTERPRISE_AGENT_ROOM_PACK_ID, provisionEnterpriseAgentRoom(), dispatchEnterpriseAgentRoomRoutes, dispatchEnterpriseAgentRoomRoutes()
+### Community 1162 - "sandbox-execution.ts"
+Cohesion: 0.20
+Nodes (5): createSandboxExecutor(), SandboxExecutionConfig, SandboxExecutionResult, SandboxExecutor, SandboxQuota
 
 ### Community 1164 - "./react"
 Cohesion: 0.50
@@ -6878,17 +6893,17 @@ Nodes (8): Exports, @fluxy-chat/react, Inbox demo, Install, License, Note on the
 Cohesion: 0.15
 Nodes (4): BroadcastApi, BroadcastMessage, BroadcastSegment, createBroadcastApi()
 
-### Community 1188 - "McpIdentityManager"
-Cohesion: 0.14
-Nodes (5): createMcpIdentityManager(), McpIdentityManager, McpInstructions, McpServerInfo, McpToolProvenance
+### Community 1187 - "FederationBridge"
+Cohesion: 0.12
+Nodes (7): BridgeConfig, BridgedMessage, BridgeStatus, createFederationBridge(), FederationBridge, FederationProtocol, RemoteIdentity
 
-### Community 1192 - "user-lookup.ts"
+### Community 1189 - "ui/src/campaign-public-api.test.ts"
+Cohesion: 0.40
+Nodes (4): exportsMap, README_HIGH_LEVEL, README_PRIMITIVES, README_THEMES
+
+### Community 1190 - "agent-tool-policy.js"
 Cohesion: 0.31
-Nodes (5): createUserLookup(), registerUser(), STORE, UserLookupApi, UserProfile
-
-### Community 1193 - "voice-diarization.ts"
-Cohesion: 0.10
-Nodes (10): createDiarizer(), DEFAULT_DIARIZATION_CONFIG, DiarizationConfig, DiarizationResult, DiarizationSession, Diarizer, OverlapRegion, SPEAKER_COLORS (+2 more)
+Nodes (11): DEFAULT_POLICY, evaluateProjectToolPolicy(), evaluateToolPolicyDocument(), getProjectToolPolicy(), matchesCondition(), normalizePolicyDocument(), recordToolPolicyAudit(), resolveOnHoldPhrase() (+3 more)
 
 ### Community 1195 - "analyze-sdk-bundle.mjs"
 Cohesion: 0.22
@@ -7246,6 +7261,10 @@ Nodes (6): docsRoot, fixFile(), fixMojibake(), MOJIBAKE, stripBoldInDescription(
 Cohesion: 0.25
 Nodes (6): outDir, outFile, root, rows, schemaQuery, statements
 
+### Community 1286 - "mcp-identity-store.js"
+Cohesion: 0.36
+Nodes (13): appendAudit(), auditKey(), getKv(), getMcpIdentityRegistry(), listMcpToolAudit(), logMcpToolCall(), readAudit(), readRegistry() (+5 more)
+
 ### Community 1288 - "sensitive-context.js"
 Cohesion: 0.39
 Nodes (7): containsSensitiveData(), createSensitiveContextSanitizer(), sanitizeObject(), sanitizeString(), DEFAULT_SENSITIVE_KEYS, DEFAULT_SENSITIVE_PATTERNS, sanitizeIfSensitive()
@@ -7333,6 +7352,14 @@ Nodes (7): base64ToBytes(), bytesToBase64(), decryptE2eContent(), encryptE2eCont
 ### Community 1310 - "bot-protection.ts"
 Cohesion: 0.12
 Nodes (8): BotProtection, BotProtectionEvent, createBotProtection(), LimitScope, RaidModeConfig, RateLimitConfig, TrustLevel, TrustScore
+
+### Community 1311 - "message-mentions.js"
+Cohesion: 0.27
+Nodes (10): expandMentions(), filterMembersByRole(), listMentionSuggestions(), listRoomMemberRows(), mentionHandlesForAgentInvoke(), normalizeMentionToken(), ROLE_ALIASES, SPECIAL_MENTIONS (+2 more)
+
+### Community 1313 - "room-export.js"
+Cohesion: 0.30
+Nodes (11): attachAttachmentsToMessages(), parseMentionsJson(), buildPageStream(), buildRoomMarkdown(), buildRoomPdf(), buildSimplePdf(), escapePdfText(), fetchRoomExportData() (+3 more)
 
 ### Community 1314 - "fluxy-mock-server.ts"
 Cohesion: 0.32
@@ -7619,8 +7646,8 @@ Cohesion: 0.29
 Nodes (6): Checks, Entry Atomicity, Impeccable Manual Edit Applier, Input Contract, Output Contract, Workflow
 
 ### Community 1387 - "checkHeadingRhythmDOM"
-Cohesion: 0.50
-Nodes (8): checkHeadingRhythmDOM(), clusterTop(), edgeAbove(), edgeBelow(), hasOwnTopBoundary(), insideSmallCard(), isVisibleFlow(), overlapsX()
+Cohesion: 0.62
+Nodes (7): checkHeadingRhythmDOM(), clusterTop(), edgeAbove(), edgeBelow(), hasOwnTopBoundary(), isVisibleFlow(), overlapsX()
 
 ### Community 1388 - "Media treatments"
 Cohesion: 0.29
@@ -7677,6 +7704,10 @@ Nodes (7): 3.A Stack, 3.B State, 3.C Icons, 3.D Emoji Policy, 3. DEFAULT ARCHITE
 ### Community 1402 - "6. PERFORMANCE & ACCESSIBILITY GUARDRAILS"
 Cohesion: 0.29
 Nodes (7): 6.A Hardware Acceleration, 6.B Reduced Motion (mandatory), 6.C Dark Mode (mandatory for any consumer-facing page), 6.D Core Web Vitals Targets, 6.E DOM Cost, 6.F Z-Index Restraint, 6. PERFORMANCE & ACCESSIBILITY GUARDRAILS
+
+### Community 1403 - "speculative-warmup.js"
+Cohesion: 0.24
+Nodes (13): buildWarmupCacheEntry(), consumeWarmupCacheEntry(), countWords(), fetchConsumedWarmupFromRoomDo(), formatWarmupContextForAgent(), isSpeculativeWarmupEnabled(), normalizeWarmupText(), runSpeculativeRetrieval() (+5 more)
 
 ### Community 1404 - "mermaid-to-excalidraw-pkg/package.json"
 Cohesion: 0.29
@@ -7986,6 +8017,10 @@ Nodes (6): client, head, indexPath, lines, srcDir, tail
 Cohesion: 0.13
 Nodes (7): createPolicyEngine(), OpaPolicy, PolicyDecision, PolicyEffect, PolicyEngine, PolicyInput, PolicyMode
 
+### Community 1487 - "mcp-identity-client.ts"
+Cohesion: 0.22
+Nodes (13): McpIdentitySettingsPage(), handleRegisterServer(), handleRegisterTool(), authHeaders(), BASE, getMcpIdentityRegistry(), listMcpToolAudit(), McpIdentityRegistry (+5 more)
+
 ### Community 1488 - "@fluxy-chat/ui-kit"
 Cohesion: 0.29
 Nodes (6): assistant-ui (optional), CLI, @fluxy-chat/ui-kit, FluxyChatWidget (3 lines), Inbox, Install
@@ -8150,6 +8185,10 @@ Nodes (6): assignGlobal(), emptyGlobals(), findFrontmatterRange(), parseFrontmat
 Cohesion: 0.33
 Nodes (5): Build, Frame worker — per-frame composition author (music-to-video), Inputs (your dispatch context), Self-check, What comes fixed — realize it as given
 
+### Community 1529 - "dependencies"
+Cohesion: 0.14
+Nodes (14): dependencies, @fluxy-chat/config, @fluxy-chat/protocol, hono, @noble/curves, @noble/hashes, remark, remark-gfm (+6 more)
+
 ### Community 1530 - "Tier 2 — title-image-outro"
 Cohesion: 0.33
 Nodes (5): How to render and evaluate, Tier 2 — title-image-outro, Translation walk-through, What it tests, Why threshold 0.95?
@@ -8266,6 +8305,18 @@ Nodes (5): Before you finish, Scope is sovereign, The amplification, The skeleto
 Cohesion: 0.33
 Nodes (6): Constraints, Failure modes, Flow, /impeccable hooks, Routing, Triage findings
 
+### Community 1559 - "handoff-context.js"
+Cohesion: 0.27
+Nodes (9): buildHandoffContext(), buildSummary(), fetchOpenQuestions(), fetchRecentActions(), fetchRecentEntities(), fetchRecentMessages(), fetchRoomFacts(), inferIntent() (+1 more)
+
+### Community 1560 - "digital-twin.ts"
+Cohesion: 0.22
+Nodes (5): AgentSpatialGrant, createDigitalTwinRoom(), createDigitalTwinMcpRegistry(), DigitalTwinMcpRegistry, McpToolDefinition
+
+### Community 1561 - "media-pipeline-client.ts"
+Cohesion: 0.24
+Nodes (10): formatMb(), MediaPipelineSettingsPage(), handleSave(), authHeaders(), BASE, getMediaSettings(), listMediaJobs(), MediaJob (+2 more)
+
 ### Community 1562 - "Sound effects (SFX)"
 Cohesion: 0.33
 Nodes (5): Bundled library (no credential), Cues — request → meta, HeyGen retrieval (credentialed), Rules, Sound effects (SFX)
@@ -8306,9 +8357,9 @@ Nodes (6): assignGlobal(), emptyGlobals(), findFrontmatterRange(), parseFrontmat
 Cohesion: 0.33
 Nodes (5): Build, Frame worker — per-frame composition author (music-to-video), Inputs (your dispatch context), Self-check, What comes fixed — realize it as given
 
-### Community 1572 - "Frame worker — PR-to-video delta"
-Cohesion: 0.33
-Nodes (5): Batch dispatch — you build a small packet batch, Frame worker — PR-to-video delta, Mostly invented — you build the visual (except code blocks + the credits avatars), PR code beats, mechanism beats + the credits close, PR-specific self-check additions
+### Community 1572 - "generation-preflight.mjs"
+Cohesion: 0.35
+Nodes (9): buildGenerationPreflight(), compactError(), execFileAsync, insertTarget(), normalizeTarget(), replaceTarget(), runGenerationPreflight(), sourceResolutionCache (+1 more)
 
 ### Community 1573 - "Tier 2 — title-image-outro"
 Cohesion: 0.33
@@ -8325,6 +8376,10 @@ Nodes (4): alt, contentType, runtime, size
 ### Community 1576 - "ScrollExpand.tsx"
 Cohesion: 0.53
 Nodes (5): clamp(), ConfigKey, ScrollExpand(), ScrollExpandProps, smoothstep()
+
+### Community 1577 - "rehearsal-rooms-client.ts"
+Cohesion: 0.29
+Nodes (10): RehearsalRoomsPage(), handleCreate(), handleDelete(), authHeaders(), BASE, createRehearsal(), deleteRehearsal(), getRehearsal() (+2 more)
 
 ### Community 1578 - "docs/layout.tsx"
 Cohesion: 0.53
@@ -8602,6 +8657,10 @@ Nodes (6): scripts, build, dev, generate:api, postinstall, start
 Cohesion: 0.33
 Nodes (5): end, lines, out, start, workerPath
 
+### Community 1648 - "rate-limit-dashboard-http.js"
+Cohesion: 0.40
+Nodes (6): getRateLimitSummary(), getRateLimitThresholds(), getRecentDenials(), recordRateLimitEvent(), dispatchRateLimitDashboardRoutes, dispatchRateLimitDashboardRoutes()
+
 ### Community 1649 - "Billing overage policy (v1)"
 Cohesion: 0.33
 Nodes (5): Billing overage policy (v1), Commercial notes, Current enforcement model, Operator actions when quota is exceeded, v1 overage behavior
@@ -8698,9 +8757,13 @@ Nodes (5): createDeterministicLanguageModel(), DeterministicLanguageModel, Deter
 Cohesion: 0.25
 Nodes (6): isPostableObject(), POSTABLE_OBJECT, PostableObject, PostableObjectContext, postPostableObject(), withPostable()
 
-### Community 1675 - "ComposerToolsMenu"
-Cohesion: 0.33
-Nodes (3): ComposerToolsMenu(), onResize(), ComposerToolsMenuProps
+### Community 1674 - "react-native-sdk/src/agent-outbound.ts"
+Cohesion: 0.27
+Nodes (8): AgentOutboundMessageInput, AgentOutboundValidationResult, buildAgentOutboundWsPayload(), validateAgentOutboundMessage(), FLUXY_MAX_MESSAGE_LENGTH, FluxyRoomMember, normalizeRoomMember(), normalizeRoomMembers()
+
+### Community 1675 - "collab-calendar.tsx"
+Cohesion: 0.25
+Nodes (8): CollabCalendar, CollabCalendar(), CollabEvent, toSxEvent(), WORKER_URL, @schedule-x/calendar, @schedule-x/events-service, @schedule-x/react
 
 ### Community 1676 - "FluxyChat Unity SDK — **unpublished stub**"
 Cohesion: 0.33
@@ -8962,6 +9025,22 @@ Nodes (5): 8.A Token Strategy (pick one, stick to it), 8.B Do Not Prescribe Spec
 Cohesion: 0.40
 Nodes (4): CLI, Protocol, Selection Rules, UI Skills Root
 
+### Community 1747 - "room-info-panel.tsx"
+Cohesion: 0.33
+Nodes (7): RoomInfoPanel(), RoomInfoPanelProps, RoomInfoToggle(), authHeaders(), BASE, fetchRoomInfoPanel(), RoomInfoPanelData
+
+### Community 1748 - "link-preview.ts"
+Cohesion: 0.32
+Nodes (4): createLinkPreview(), LinkPreviewApi, LinkPreviewData, linkPreviewFromData()
+
+### Community 1751 - "voice-quality-dashboard.ts"
+Cohesion: 0.20
+Nodes (5): createQualityCollector(), DeviceBreakdown, QualityCollector, QualityReport, QualitySnapshot
+
+### Community 1754 - "one-click-smoke.mjs"
+Cohesion: 0.29
+Nodes (4): cliEntry, projectDir, root, workDir
+
 ### Community 1755 - "Chat only"
 Cohesion: 0.40
 Nodes (4): Chat only, Compare & checklist, Start here, When you need more
@@ -9059,8 +9138,8 @@ Cohesion: 0.40
 Nodes (4): Component Registry, Generative UI, Parts, Type Guards
 
 ### Community 1779 - "huddles-webrtc.mdx"
-Cohesion: 0.33
-Nodes (5): Create and start a call, Realtime SFU signaling, Screen share and recording, SDK — local huddle, Stats
+Cohesion: 0.29
+Nodes (6): Bill cap (not Cloudflare's meter), Create and start a call, Realtime SFU signaling, Screen share and recording, SDK — local huddle, Stats
 
 ### Community 1780 - "Self-host in one command"
 Cohesion: 0.40
@@ -9647,24 +9726,24 @@ Cohesion: 0.67
 Nodes (3): 2. Target, Primary customer (today), Secondary customer (6–18 months)
 
 ## Knowledge Gaps
-- **13927 isolated node(s):** `argv`, `outFile`, `tail`, `script`, `stream` (+13922 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 17972 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **340 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **13963 isolated node(s):** `argv`, `outFile`, `tail`, `script`, `stream` (+13958 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 18023 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **354 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `buffer` connect `sso-saml.js` to `.agents/skills/hyperframes-creative/scripts/contrast-report.mjs`, `sdk/src/index.ts`, `detect-antipatterns.mjs`, `react.ts`, `hook.mjs`, `agent/skills/media-use/audio/scripts/audio.mjs`, `agent/skills/media-use/scripts/dither.mjs`, `.agents/skills/media-use/audio/scripts/audio.mjs`, `.agents/skills/media-use/scripts/dither.mjs`, `fluxy-chat-client.ts`, `embed-prompt.mjs`, `agent/skills/media-use/scripts/resolve.mjs`, `.agents/skills/media-use/scripts/resolve.mjs`, `agent/skills/pr-to-video/scripts/fetch-people-avatars.mjs`, `live-server.mjs`, `otel-export.js`, `detect-csp.mjs`, `hook-before-edit.mjs`, `message-threads.js`, `.agents/skills/pr-to-video/scripts/fetch-people-avatars.mjs`, `agent/skills/hyperframes-core/scripts/lib/frame-packets-core.mjs`, `.agents/skills/hyperframes-core/scripts/lib/frame-packets-core.mjs`, `bandwidth-budget.mjs`, `mcp-apps.ts`, `generate-image.mjs`, `agent/skills/media-use/scripts/lib/registry.mjs`, `.agents/skills/media-use/scripts/lib/registry.mjs`, `react-native-sdk/src/realtime-provider.tsx`, `manual-apply.mjs`, `live-wrap.mjs`, `live-inject.mjs`, `agent/skills/hyperframes-creative/scripts/contrast-report.mjs`?**
-  _High betweenness centrality (0.201) - this node is a cross-community bridge._
+- **Why does `buffer` connect `sso-saml.js` to `.agents/skills/hyperframes-creative/scripts/contrast-report.mjs`, `sdk/src/index.ts`, `detect-antipatterns.mjs`, `react.ts`, `inbox-http.js`, `agent/skills/media-use/audio/scripts/audio.mjs`, `agent/skills/media-use/scripts/dither.mjs`, `.agents/skills/media-use/audio/scripts/audio.mjs`, `.agents/skills/media-use/scripts/dither.mjs`, `embed-prompt.mjs`, `agent/skills/media-use/scripts/resolve.mjs`, `.agents/skills/media-use/scripts/resolve.mjs`, `agent/skills/pr-to-video/scripts/fetch-people-avatars.mjs`, `live-server.mjs`, `otel-export.js`, `admin-jwt.cjs`, `detect-csp.mjs`, `live-commit-manual-edits.mjs`, `hook-before-edit.mjs`, `.agents/skills/pr-to-video/scripts/fetch-people-avatars.mjs`, `agent/skills/hyperframes-core/scripts/lib/frame-packets-core.mjs`, `.agents/skills/hyperframes-core/scripts/lib/frame-packets-core.mjs`, `bandwidth-budget.mjs`, `mcp-apps.ts`, `generate-image.mjs`, `agent/skills/media-use/scripts/lib/registry.mjs`, `.agents/skills/media-use/scripts/lib/registry.mjs`, `tag-strategy.mjs`, `react-native-sdk/src/realtime-provider.tsx`, `@playwright/test`, `live-wrap.mjs`, `live-inject.mjs`, `agent/skills/hyperframes-creative/scripts/contrast-report.mjs`?**
+  _High betweenness centrality (0.235) - this node is a cross-community bridge._
 - **Why does `parseSamlAssertion()` connect `sso-saml.js` to `identity-access-http.js`?**
-  _High betweenness centrality (0.086) - this node is a cross-community bridge._
-- **Why does `FluxyChatClient` connect `FluxyChatClient` to `sdk/src/index.ts`, `fluxy-chat-client.ts`, `agent-platform.ts`, `react.ts`, `messageFromUnknown`, `room-session.ts`, `fluxy-stream.ts`, `FluxyChatRoomConnection`, `inbox-filter.ts`, `agent-to-agent.ts`, `WorkerFluxyGameClient`, `edu.ts`, `mcp-integration.ts`?**
-  _High betweenness centrality (0.081) - this node is a cross-community bridge._
+  _High betweenness centrality (0.095) - this node is a cross-community bridge._
+- **Why does `FluxyChatClient` connect `FluxyChatClient` to `fetchWorkerJson`, `sdk/src/index.ts`, `room-session.ts`, `createFluxyStream`, `worker-agent-platform-client.ts`, `react.ts`, `WorkerFluxyStreamClient`, `fluxy-chat-client.ts`, `fluxy-iot.ts`, `agent-to-agent.ts`, `edu.ts`, `worker-digital-twin-client.ts`?**
+  _High betweenness centrality (0.067) - this node is a cross-community bridge._
 - **What connects `argv`, `outFile`, `tail` to the rest of the system?**
-  _13927 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _13963 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `fetchWorkerJson` be split into smaller, more focused modules?**
-  _Cohesion score 0.01514797325728178 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.016609145815358068 - nodes in this community are weakly interconnected._
 - **Should `sdk/src/index.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.00836690424542919 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.007030393952096248 - nodes in this community are weakly interconnected._
 - **Should `cn` be split into smaller, more focused modules?**
-  _Cohesion score 0.0100438153016515 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.009965920604218477 - nodes in this community are weakly interconnected._

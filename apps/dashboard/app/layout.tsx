@@ -15,6 +15,7 @@ import { CookieConsentBanner } from "./components/cookie-consent-banner";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ROOT_METADATA } from "@/lib/site-metadata";
+import { hasClerkPublishableKey } from "@/lib/clerk-config";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
@@ -27,7 +28,9 @@ export const metadata: Metadata = {
   },
 };
 
-const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() ?? "";
+const clerkPublishableKey = hasClerkPublishableKey()
+  ? (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() ?? "")
+  : "";
 
 export default async function RootLayout({
   children,

@@ -1,21 +1,18 @@
 import { test, expect } from "@playwright/test";
-import { sendSampleAndWaitForEcho } from "./helpers";
-
-const adminJwt = process.env.E2E_ADMIN_JWT?.trim() ?? "";
+import { sendSampleAndWaitForEcho, skipWithoutAdminJwt } from "./helpers";
 
 /**
  * Full self-hosted path: dashboard + worker must be reachable.
  *
  * Local (auto-starts worker + dashboard):
- *   E2E_ADMIN_JWT=... pnpm test:e2e:integrated
+ *   pnpm test:e2e:integrated -- onboarding.integrated
  *
  * Manual servers:
- *   PLAYWRIGHT_SKIP_WEBSERVER=1 E2E_ADMIN_JWT=... pnpm test:e2e:integrated
+ *   PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_CHANNEL=chrome pnpm test:e2e:integrated -- onboarding.integrated
  */
 test.describe("onboarding integrated", () => {
-  test.skip(!adminJwt, "Set E2E_ADMIN_JWT to run integrated onboarding E2E");
-
   test("connect → project → member JWT → room → first message", async ({ page }) => {
+    const adminJwt = skipWithoutAdminJwt();
     const roomId = `e2e-${Date.now()}`;
 
     await page.goto("/onboarding");

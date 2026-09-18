@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import Link from "next/link";
 import { Bot, Loader2 } from "lucide-react";
 import { useClerkUser } from "@/lib/clerk-user";
@@ -82,11 +82,6 @@ export function AssistantRoomPanel({ memberJwt, adminJwt = "", projectId, client
       setBusy(false);
     }
   }, [memberJwt, adminJwt, memberUserId, projectId]);
-
-  useEffect(() => {
-    if (!memberJwt.trim()) return;
-    void bootstrap();
-  }, [memberJwt, bootstrap]);
 
   return (
     <Section

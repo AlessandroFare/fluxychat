@@ -199,7 +199,7 @@ export default function InboxPage() {
         </div>
       ) : null}
 
-      {items.length > 0 ? (
+      {token && !loading ? (
         <p className="mb-2 text-xs text-muted-foreground" data-testid="inbox-items-count">
           {items.length} item{items.length === 1 ? "" : "s"} in feed
         </p>

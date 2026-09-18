@@ -66,6 +66,11 @@ describe("API Report", () => {
 
   it("should export core expected symbols", () => {
     const core = [
+      "FluxyChatClient",
+      "FluxyNotMemberError",
+      "FluxyRateLimitError",
+      "getConnectionStatusLabel",
+      "describeConnectionError",
       "FluxyAuthError",
       "FluxyConnectionError",
       "ChatError",

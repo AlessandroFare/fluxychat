@@ -213,19 +213,31 @@ async function searchWikipedia(query, num) {
   const data = await res.json();
   const rows = (data?.query?.search || []).map((row) => ({
     title: row.title,
-    url: `https://en.wikipedia.org/wiki/${encodeURIComponent(String(row.title).replace(/ /g, "_"))}`,
-    snippet: String(row.snippet || "").replace(/<[^>]+>/g, ""),
+    url: wikipediaArticleUrl(row.title),
+    snippet: stripTagsByIndex(row.snippet || ""),
   }));
   return { ok: true, query, results: normalizeResults(rows, num), provider: "wikipedia" };
 }
 
-function stripHtml(html) {
-  return String(html || "")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+function wikipediaArticleUrl(title) {
+  const page = new URL("https://en.wikipedia.org/wiki/");
+  page.pathname = `/wiki/${encodeURIComponent(String(title).replaceAll(" ", "_"))}`;
+  return page.href;
+}
+
+function stripTagsByIndex(html) {
+  let out = String(html || "");
+  for (let guard = 0; guard < 512; guard += 1) {
+    const open = out.indexOf("<");
+    if (open === -1) return out.replace(/\s+/g, " ").trim();
+    const close = out.indexOf(">", open + 1);
+    if (close === -1) {
+      out = out.slice(0, open) + out.slice(open + 1);
+      continue;
+    }
+    out = `${out.slice(0, open)} ${out.slice(close + 1)}`;
+  }
+  return out.replace(/\s+/g, " ").trim();
 }
 
 async function fetchPageSnippets(urls, limit = 3) {
@@ -238,7 +250,7 @@ async function fetchPageSnippets(urls, limit = 3) {
       });
       if (!res.ok) continue;
       const html = await res.text();
-      const text = stripHtml(html).slice(0, 1600);
+      const text = stripTagsByIndex(html).slice(0, 1600);
       if (text.length > 80) snippets.push({ url: pageUrl, text });
     } catch {
       /* skip */

@@ -14,6 +14,10 @@ describe("stringifyLlmContent", () => {
     expect(stringifyLlmContent(null)).toBe("");
   });
 
+  it("stringifies plain objects so Chat Completions never get a non-string content field", () => {
+    expect(stringifyLlmContent({ foo: 1 })).toBe('{"foo":1}');
+  });
+
   it("flattens vision parts", () => {
     expect(
       stringifyLlmContent([

@@ -36,10 +36,12 @@ import {
 import { AGENT_RPC_METHODS, parseRpcRequest } from "../lib/do-rpc.js";
 import { executeAgentRun } from "../lib/agent-runtime.js";
 
+import { withRuntimeConfig } from "../lib/with-runtime-config.js";
+
 export class AgentDurableObject {
   constructor(state, env) {
     this.state = state;
-    this.env = env;
+    this.env = withRuntimeConfig(env);
     this.projectId = null;
     this.agentId = null;
     this.userId = null;

@@ -18,8 +18,10 @@ const MODES = new Set(["room", "agent", "both"]);
 export function normalizeEmailAddress(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
-  const angle = raw.match(/<([^>]+)>/);
-  return (angle ? angle[1] : raw).trim().toLowerCase();
+  const open = raw.lastIndexOf("<");
+  const close = raw.lastIndexOf(">");
+  const addr = open >= 0 && close > open ? raw.slice(open + 1, close) : raw;
+  return addr.trim().toLowerCase();
 }
 
 export function emailLocalPart(address) {

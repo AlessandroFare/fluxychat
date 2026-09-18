@@ -5,6 +5,7 @@ import {
   isInboxChannelRequest,
   shouldDeliverOnUserSocket,
 } from "../lib/user-channel-deliver.js";
+import { withRuntimeConfig } from "../lib/with-runtime-config.js";
 
 /**
  * Per-user fan-out channel. DO id scope: one instance per project user
@@ -19,7 +20,7 @@ import {
 export class UserDurableObject {
   constructor(state, env) {
     this.state = state;
-    this.env = env;
+    this.env = withRuntimeConfig(env);
 
     this.sessions = new WsSessionRegistry(state, {
       onAttachmentOverflow: ({ bytes, field }) =>

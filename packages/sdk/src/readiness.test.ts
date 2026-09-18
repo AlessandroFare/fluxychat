@@ -17,6 +17,7 @@ describe("PLATFORM_READINESS", () => {
     expect(PLATFORM_READINESS.web3.readiness).toBe("beta");
     expect(PLATFORM_READINESS.marketplace.readiness).toBe("beta");
     expect(PLATFORM_READINESS.health.readiness).toBe("labs");
+    expect(PLATFORM_READINESS.health.description).toMatch(/No HIPAA BAA/);
     expect(PLATFORM_READINESS.transport.readiness).toBe("labs");
   });
 

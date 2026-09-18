@@ -30,11 +30,26 @@ function stripNode(node: Node): void {
   [...el.childNodes].forEach(stripNode);
 }
 
+function stripTagsByIndex(html: string): string {
+  let out = html;
+  for (let guard = 0; guard < 512; guard += 1) {
+    const open = out.indexOf("<");
+    if (open === -1) return out;
+    const close = out.indexOf(">", open + 1);
+    if (close === -1) {
+      out = out.slice(0, open) + out.slice(open + 1);
+      continue;
+    }
+    out = out.slice(0, open) + out.slice(close + 1);
+  }
+  return out;
+}
+
 /** Allowlist HTML for collab/contenteditable. Drops scripts, handlers, and unknown tags. */
 export function sanitizeHtmlFragment(html: string): string {
   if (!html) return "";
   if (typeof window === "undefined" || typeof DOMParser === "undefined") {
-    return html.replace(/<[^>]*>/g, "");
+    return stripTagsByIndex(html);
   }
   const doc = new DOMParser().parseFromString(`<div id="root">${html}</div>`, "text/html");
   const root = doc.getElementById("root");

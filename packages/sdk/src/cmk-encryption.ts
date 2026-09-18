@@ -147,13 +147,12 @@ function additionalData(tenantId: string, keyId: string, algorithm: string): Arr
 }
 
 function randomKeyId(): string {
-  const bytes = randomBytes(9);
-  let out = "cmk-";
+  const bytes = randomBytes(8);
+  let hex = "";
   for (let i = 0; i < bytes.length; i += 1) {
-    const b = bytes[i];
-    out += (b % 26 + 97).toString(16);
+    hex += bytes[i].toString(16).padStart(2, "0");
   }
-  return out;
+  return `cmk-${hex}`;
 }
 
 export function createCmkManager(policy?: Partial<CmkPolicy>): CmkManager {

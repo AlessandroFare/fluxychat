@@ -9,6 +9,12 @@ import {
 } from "./index.js";
 
 describe("@fluxy-chat/protocol", () => {
+  it("documents inbound guards used in the README", () => {
+    expect(typeof isFluxyInboundEvent).toBe("function");
+    expect(FLUXY_INBOUND_EVENT_TYPES).toContain("message");
+    expect(FLUXY_INBOUND_EVENT_TYPES).toContain("tool_call");
+  });
+
   it("exposes a stable protocol version", () => {
     expect(FLUXY_PROTOCOL_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
   });
@@ -69,6 +75,7 @@ describe("outbound client events", () => {
       "agentTyping",
       "resume",
       "presence_state",
+      "derived_set",
     ];
     expect([...FLUXY_OUTBOUND_EVENT_TYPES].sort()).toEqual(roomDoTypes.sort());
   });
