@@ -1,6 +1,15 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { isClerkClientConfigured } from "@/lib/hosted-product";
 import { purgeLegacyUnscopedKeys, scopedStorageKey } from "@/lib/scoped-browser-storage";
 
@@ -74,6 +83,18 @@ function loadSessionForScope(clerkUserId: string | null): StoredDashboardSession
 
 function saveSessionForScope(clerkUserId: string | null, data: StoredDashboardSession): void {
   const key = storageKeyForScope(clerkUserId);
+  const nextJwt = (data.adminJwt || data.memberJwt || "").trim();
+  if (!nextJwt) {
+    try {
+      const existingRaw = window.sessionStorage.getItem(key);
+      if (existingRaw) {
+        const existing = JSON.parse(existingRaw) as StoredDashboardSession;
+        if ((existing.adminJwt || existing.memberJwt || "").trim()) return;
+      }
+    } catch {
+      // Ignore corrupted state and write the empty snapshot below.
+    }
+  }
   window.sessionStorage.setItem(key, JSON.stringify(data));
 }
 
@@ -133,13 +154,26 @@ export function DashboardSessionProvider({
     [applyStoredSession],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (clerkHosted) return;
     scopeRef.current = null;
     setClerkUserId(null);
-    applyStoredSession(loadSessionForScope(null));
+    const injected =
+      process.env.NEXT_PUBLIC_FLUXY_E2E_SELF_HOST === "1"
+        ? (window as Window & { __FLUXY_E2E_SESSION?: StoredDashboardSession }).__FLUXY_E2E_SESSION
+        : undefined;
+    applyStoredSession(injected || loadSessionForScope(null));
     setHasHydrated(true);
   }, [applyStoredSession, clerkHosted]);
+
+  useEffect(() => {
+    if (clerkHosted || !hasHydrated) return;
+    if (adminJwt.trim() || memberJwt.trim()) return;
+    const stored = loadSessionForScope(null);
+    if (stored && (stored.adminJwt?.trim() || stored.memberJwt?.trim())) {
+      applyStoredSession(stored);
+    }
+  }, [adminJwt, applyStoredSession, clerkHosted, hasHydrated, memberJwt]);
 
   useEffect(() => {
     if (!hasHydrated) return;

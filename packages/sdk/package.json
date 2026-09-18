@@ -131,7 +131,7 @@
     "react-dom": "^19.2.0",
     "typescript": "^5",
     "vite": "^8.0.16",
-    "vitest": "^4.1.5",
+    "vitest": "^4.1.11",
     "zustand": "^5.0.14"
   },
   "dependencies": {

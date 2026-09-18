@@ -5,7 +5,7 @@ import { useParams, usePathname } from "next/navigation";
 import { ConsoleShell } from "@/app/components/console-shell";
 import { ConsolePageHeader } from "@/app/components/console-page-header";
 import { ConsoleFeedback } from "@/app/components/console-feedback";
-import { Button } from "@/app/components/ui";
+import { Button, Panel } from "@/app/components/ui";
 import { cn } from "@/lib/utils";
 import { AgentsConsoleProvider, useAgentsConsole } from "./agents-console-context";
 import { AgentsSidebar } from "./agents-sidebar";
@@ -36,7 +36,7 @@ function AgentsLayoutInner({
   children: React.ReactNode;
   isLlmKeys: boolean;
 }) {
-  const { activeProject, loadingAgents, loadAgents, openLlmKeys, error, notice } = useAgentsConsole();
+  const { adminJwt, activeProject, loadingAgents, loadAgents, openLlmKeys, error, notice } = useAgentsConsole();
 
   return (
     <ConsoleShell>
@@ -61,7 +61,13 @@ function AgentsLayoutInner({
           </div>
         }
       />
-      <ConsoleFeedback error={error} notice={notice} className="mb-4 space-y-3" />
+      {!adminJwt.trim() ? (
+        <Panel className="mb-4 p-4 text-sm text-muted-foreground">
+          Admin JWT required. Configure session in Projects or use a valid token.
+        </Panel>
+      ) : (
+        <ConsoleFeedback error={error} notice={notice} className="mb-4 space-y-3" />
+      )}
       {isLlmKeys ? (
         children
       ) : (

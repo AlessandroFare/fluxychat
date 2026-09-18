@@ -21,6 +21,7 @@ import {
   readonlyConnectionError,
 } from "../lib/ws-readonly.js";
 import { logInfo, logError } from "../lib/worker-log.js";
+import { withRuntimeConfig } from "../lib/with-runtime-config.js";
 import {
   backoffMsForFailure,
   classifyDoFailure,
@@ -230,7 +231,7 @@ export function parseWsConnectOptions(request) {
 export class RoomDurableObject {
   constructor(state, env) {
     this.state = state;
-    this.env = env;
+    this.env = withRuntimeConfig(env);
 
     /**
      * Hibernation-safe socket registry.

@@ -14,7 +14,7 @@ describe("FluxyChatClient", () => {
     vi.restoreAllMocks();
   });
 
-  it("connect() builds ws url with userId + apiKey/token", () => {
+  it("connect() builds ws url with userId + publishable key + token", () => {
     const wsMock = vi.fn();
     vi.stubGlobal(
       "WebSocket",
@@ -28,7 +28,7 @@ describe("FluxyChatClient", () => {
     const client = new FluxyChatClient({
       baseUrl,
       userId: "alice",
-      apiKey: "fc_123",
+      publishableKey: "pk_live_abc",
       token: "jwt_abc",
     });
     client.connect("room 1");
@@ -36,9 +36,33 @@ describe("FluxyChatClient", () => {
     expect(wsMock).toHaveBeenCalledTimes(1);
     const url = String(wsMock.mock.calls[0]?.[0]);
     expect(url).toContain("ws://127.0.0.1:8787/ws/room/room%201");
-    expect(url).toContain("apiKey=fc_123");
+    expect(url).toContain("apiKey=pk_live_abc");
     expect(url).toContain("token=jwt_abc");
     expect(url).toContain("userId=alice");
+  });
+
+  it("connect() does not put fc_ secret keys on the WebSocket query string", () => {
+    const wsMock = vi.fn();
+    vi.stubGlobal(
+      "WebSocket",
+      function WebSocket(url: string) {
+        wsMock(url);
+        // @ts-expect-error minimal mock
+        this.readyState = 1;
+      } as unknown as typeof WebSocket
+    );
+
+    const client = new FluxyChatClient({
+      baseUrl,
+      userId: "alice",
+      apiKey: "fc_super_secret",
+      token: "jwt_abc",
+    });
+    client.connect("lobby");
+    const url = String(wsMock.mock.calls[0]?.[0]);
+    expect(url).toContain("token=jwt_abc");
+    expect(url).not.toContain("fc_super_secret");
+    expect(url).not.toMatch(/[?&]apiKey=fc_/);
   });
 
   it("connect() adds replay query params when options are set", () => {
@@ -708,6 +732,85 @@ describe("FluxyChatClient", () => {
       await expect(client.createMessage("lobby", "too deep", 99)).rejects.toBeInstanceOf(
         ThreadDepthExceededError,
       );
+    });
+
+    it("createMessage throws FluxyNotMemberError on 403 forbidden", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "forbidden" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const { FluxyNotMemberError } = await import("./errors");
+      await expect(client.createMessage("secret-room", "hi")).rejects.toBeInstanceOf(
+        FluxyNotMemberError,
+      );
+    });
+
+    it("createMessage throws FluxyRateLimitError on 429", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "rate_limit_exceeded" }), {
+          status: 429,
+          headers: { "Content-Type": "application/json", "Retry-After": "9" },
+        }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const { FluxyRateLimitError } = await import("./structured-errors");
+      try {
+        await client.createMessage("lobby", "hi");
+        throw new Error("expected rate limit");
+      } catch (err) {
+        expect(err).toBeInstanceOf(FluxyRateLimitError);
+        expect((err as InstanceType<typeof FluxyRateLimitError>).retryAfterMs).toBe(9000);
+      }
+    });
+  });
+
+  describe("invokeAgentRest", () => {
+    it("throws without a JWT", async () => {
+      const client = new FluxyChatClient({ baseUrl, userId: "u" });
+      await expect(client.invokeAgentRest("bot-1", "lobby", "hi")).rejects.toThrow(/JWT/);
+    });
+
+    it("maps 429 to FluxyRateLimitError", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "agent_rate_limit_exceeded" }), {
+          status: 429,
+          headers: { "Content-Type": "application/json", "Retry-After": "5" },
+        }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const { FluxyRateLimitError } = await import("./structured-errors");
+      try {
+        await client.invokeAgentRest("bot-1", "lobby", "hi");
+        throw new Error("expected rate limit");
+      } catch (err) {
+        expect(err).toBeInstanceOf(FluxyRateLimitError);
+        expect((err as InstanceType<typeof FluxyRateLimitError>).retryAfterMs).toBe(5000);
+      }
+    });
+
+    it("maps 404 to AGENT_NOT_FOUND", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "agent not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const { ChatError } = await import("./structured-errors");
+      try {
+        await client.invokeAgentRest("missing", "lobby", "hi");
+        throw new Error("expected agent not found");
+      } catch (err) {
+        expect(err).toBeInstanceOf(ChatError);
+        expect((err as InstanceType<typeof ChatError>).code).toBe("AGENT_NOT_FOUND");
+      }
     });
   });
 });

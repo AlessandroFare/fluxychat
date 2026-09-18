@@ -13,6 +13,7 @@ import { fluxyUserIdFromClerk } from "@/lib/fluxy-clerk-user";
 import { readJwtSub } from "@/lib/jwt-claims";
 import { RoomTypeSelect } from "../components/room-type-select";
 import { isRoomType } from "@/lib/room-types";
+import { roomsListEmptyCopy } from "@/lib/rooms-empty-copy";
 import { Banner, Button, Input, Section } from "../components/ui";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -329,6 +330,7 @@ export default function RoomsPage() {
   };
 
   const selected = rooms.find((r) => r.id === selectedId);
+  const roomsEmpty = roomsListEmptyCopy(Boolean(token));
 
   React.useEffect(() => {
     if (selected) setEditName(selected.name || "");
@@ -418,16 +420,16 @@ export default function RoomsPage() {
           <h2 className="font-heading mb-2 text-lg font-semibold text-foreground">Your rooms</h2>
           {rooms.length === 0 ? (
             <div className="rounded-md border border-dashed border-border bg-muted/30 p-3">
-              <p className="text-sm font-medium text-foreground">No rooms yet</p>
+              <p className="text-sm font-medium text-foreground">{roomsEmpty.title}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Create your first room to start chatting. Each room holds its own history and members.
+                {roomsEmpty.description}
               </p>
+              {token ? (
               <Button
                 size="sm"
                 variant="outline"
                 className="mt-2"
                 onClick={() => {
-                  // Scroll to the create form (it's the first card in the page).
                   document
                     .getElementById("create-room-form")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -435,6 +437,7 @@ export default function RoomsPage() {
               >
                 Create a room
               </Button>
+              ) : null}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">

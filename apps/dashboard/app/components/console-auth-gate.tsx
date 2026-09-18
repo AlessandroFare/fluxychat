@@ -8,19 +8,21 @@ import { HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
 
 /** Redirects unauthenticated users to Clerk sign-in on console routes. */
 export function ConsoleAuthGate({ children }: { children: ReactNode }) {
+  if (!isClerkClientConfigured()) return <>{children}</>;
+  return <ClerkConsoleAuthGate>{children}</ClerkConsoleAuthGate>;
+}
+
+function ClerkConsoleAuthGate({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const clerkOn = isClerkClientConfigured();
 
   useEffect(() => {
-    if (!clerkOn || !isLoaded || isSignedIn) return;
+    if (!isLoaded || isSignedIn) return;
     const returnTo = pathname && pathname !== "/" ? pathname : HOSTED_PATHS.console;
     const target = `${HOSTED_PATHS.signIn}?redirect_url=${encodeURIComponent(returnTo)}`;
     router.replace(target);
-  }, [clerkOn, isLoaded, isSignedIn, pathname, router]);
-
-  if (!clerkOn) return <>{children}</>;
+  }, [isLoaded, isSignedIn, pathname, router]);
 
   if (!isLoaded || !isSignedIn) {
     return (

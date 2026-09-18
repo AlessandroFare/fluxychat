@@ -24,6 +24,7 @@
     "approval_decision",
     "agentRun",
     "presence",
+    "derived",
     "cache_snapshot",
     "server_event",
     "capability_event",
@@ -54,6 +55,7 @@
     "location_track_ended",
     "agentTyping",
     "resume",
-    "presence_state"
+    "presence_state",
+    "derived_set"
   ]
 }

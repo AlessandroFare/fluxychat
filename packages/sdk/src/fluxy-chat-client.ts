@@ -1,6 +1,6 @@
 import { FluxyChatRoomConnection, type FluxyRoomConnectionOptions } from "./room-connection";
-import { FluxyAuthError, FluxySendError } from "./errors";
-import { ChatError, ThreadDepthExceededError } from "./structured-errors";
+import { FluxyAuthError, FluxyNotMemberError, FluxySendError } from "./errors";
+import { ChatError, FluxyRateLimitError, ThreadDepthExceededError } from "./structured-errors";
 import type { FluxyRoomThread, FluxyThreadListQuery, FluxyThreadPage } from "./chat-threads";
 import { clampHistoryLimit, sortMessagesChronological } from "./message-history";
 import { normalizeRoomMembers } from "./room-rest";
@@ -139,6 +139,11 @@ function httpUrlToWebSocketBase(url: string): string {
   if (url.startsWith("https://")) return `wss://${url.slice("https://".length)}`;
   if (url.startsWith("http://")) return `ws://${url.slice("http://".length)}`;
   return url;
+}
+
+/** `fc_` is a secret. WS/EventSource cannot send headers, so only `pk_` may go on the query string. */
+function putPublishableApiKeyOnUrl(url: URL, apiKey: string | undefined) {
+  if (apiKey?.startsWith("pk_")) url.searchParams.set("apiKey", apiKey);
 }
 
 export interface FluxyChatRoom {
@@ -1000,9 +1005,7 @@ export class FluxyChatClient {
       `/ws/room/${encodeURIComponent(roomId)}`,
       wsBase.endsWith("/") ? wsBase : `${wsBase}/`
     );
-    if (this.apiKey) {
-      url.searchParams.set("apiKey", this.apiKey);
-    }
+    putPublishableApiKeyOnUrl(url, this.apiKey);
     if (this.token) {
       url.searchParams.set("token", this.token);
     }
@@ -1242,7 +1245,7 @@ export class FluxyChatClient {
       `/ws/user/${encodeURIComponent(uid)}`,
       wsBase.endsWith("/") ? wsBase : `${wsBase}/`,
     );
-    if (this.apiKey) url.searchParams.set("apiKey", this.apiKey);
+    putPublishableApiKeyOnUrl(url, this.apiKey);
     if (this.token) url.searchParams.set("token", this.token);
     url.searchParams.set("userId", uid);
     return createFluxyWebSocket(url.toString(), this.usePartySocket);
@@ -1252,7 +1255,7 @@ export class FluxyChatClient {
   connectInbox(): WebSocket {
     const wsBase = httpUrlToWebSocketBase(this.baseUrl);
     const url = new URL("/ws/inbox", wsBase.endsWith("/") ? wsBase : `${wsBase}/`);
-    if (this.apiKey) url.searchParams.set("apiKey", this.apiKey);
+    putPublishableApiKeyOnUrl(url, this.apiKey);
     if (this.token) url.searchParams.set("token", this.token);
     if (this.userId) url.searchParams.set("userId", this.userId);
     return createFluxyWebSocket(url.toString(), this.usePartySocket);
@@ -1686,6 +1689,19 @@ export class FluxyChatClient {
       if (err === "thread_depth_exceeded") throw new ThreadDepthExceededError();
       if (err === "parent_not_found") {
         throw new ChatError("PARENT_NOT_FOUND", "Reply parent was not found in this room.");
+      }
+      if (res.status === 403) {
+        throw new FluxyNotMemberError(
+          err && err !== "forbidden" ? String(err) : undefined,
+        );
+      }
+      if (res.status === 429) {
+        const retrySec = Number(res.headers.get("Retry-After") || 1);
+        const ms = Number.isFinite(retrySec) ? Math.max(1, retrySec) * 1000 : 1000;
+        throw new FluxyRateLimitError(ms, err ? String(err) : undefined);
+      }
+      if (res.status === 402) {
+        throw new ChatError("QUOTA_EXCEEDED", err ? String(err) : "quota_exceeded");
       }
       throw new Error(`Failed to create message: ${res.status}`);
     }
@@ -4008,7 +4024,28 @@ export class FluxyChatClient {
         stream: options?.stream !== false,
       }),
     });
-    if (!res.ok) throw new Error(`Failed to invoke agent: ${res.status}`);
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      const err = (payload as { error?: string }).error;
+      if (res.status === 429) {
+        const retrySec = Number(res.headers.get("Retry-After") || 1);
+        const ms = Number.isFinite(retrySec) ? Math.max(1, retrySec) * 1000 : 1000;
+        throw new FluxyRateLimitError(ms, err ? String(err) : undefined);
+      }
+      if (res.status === 402) {
+        throw new ChatError("QUOTA_EXCEEDED", err ? String(err) : "quota_exceeded");
+      }
+      if (res.status === 404) {
+        throw new ChatError("AGENT_NOT_FOUND", err ? String(err) : "agent not found");
+      }
+      if (res.status === 409) {
+        throw new ChatError("HUMAN_HANDOFF", err ? String(err) : "human_handoff_active");
+      }
+      if (res.status === 422) {
+        throw new ChatError("MAX_RECURSION", err ? String(err) : "max_recursion_depth_exceeded");
+      }
+      throw new Error(`Failed to invoke agent: ${res.status}`);
+    }
     return res.json();
   }
 

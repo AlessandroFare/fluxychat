@@ -366,8 +366,12 @@ export default function ProjectsPage() {
           {projects.length === 0 && !loading ? (
             <EmptyState
               icon={FolderOpen}
-              title="No projects"
-              description="Click New project to add your first tenant."
+              title={adminJwt.trim() ? "No projects" : "Connect a session"}
+              description={
+                adminJwt.trim()
+                  ? "Click New project to add your first tenant."
+                  : "Paste an admin JWT under Session settings to load projects."
+              }
             />
           ) : null}
 

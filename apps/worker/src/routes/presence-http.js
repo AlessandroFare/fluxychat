@@ -25,12 +25,14 @@ export async function dispatchPresenceRoutes(request, url, h) {
     requestLogCtx,
     verifyJwtAndGetContext,
     logError,
+    canAccessRoom,
   } = pickRouteDeps(h, [
     "env",
     "corsHeaders",
     "requestLogCtx",
     "verifyJwtAndGetContext",
     "logError",
+    "canAccessRoom",
   ]);
 
   const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
@@ -43,6 +45,11 @@ export async function dispatchPresenceRoutes(request, url, h) {
   }
 
   const ctx = { ...h, corsHeaders, projectId: auth.projectId, userId: auth.userId };
+  const roomPresence = path.match(/^\/rooms\/([^/]+)\/presence/);
+  if (roomPresence) {
+    const allowed = await canAccessRoom(env, auth, roomPresence[1]);
+    if (!allowed) return json({ error: "forbidden" }, ctx, 403);
+  }
 
   if (request.method === "POST" && path.match(/^\/rooms\/[^/]+\/presence$/)) {
     const roomId = path.split("/")[2];

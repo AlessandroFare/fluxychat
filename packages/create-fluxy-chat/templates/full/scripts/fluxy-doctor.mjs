@@ -4,7 +4,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const envPath = join(root, ".env");
@@ -31,7 +31,7 @@ function fail(msg) {
   console.log(`  ${red("✗")} ${msg}`);
 }
 
-function parseEnvFile(path) {
+export function parseEnvFile(path) {
   if (!existsSync(path)) return {};
   const out = {};
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -53,6 +53,15 @@ async function fetchOk(url, init = {}) {
   }
 }
 
+export function isFluxyConsoleHost(raw) {
+  try {
+    const host = new URL(raw).hostname;
+    return host === "fluxychat.com" || host.endsWith(".fluxychat.com");
+  } catch {
+    return false;
+  }
+}
+
 async function main() {
   console.log(bold("\nFluxyChat doctor\n"));
 
@@ -71,7 +80,7 @@ async function main() {
   if (!workerUrl) fail("VITE_FLUXYCHAT_WORKER_URL unset");
   else pass(`worker URL: ${workerUrl}`);
 
-  const hosted = (env.VITE_FLUXYCHAT_CONSOLE_URL || "").includes("fluxychat.com");
+  const hosted = isFluxyConsoleHost(env.VITE_FLUXYCHAT_CONSOLE_URL || "");
   if (!jwt) {
     if (hosted) warn("VITE_FLUXYCHAT_MEMBER_JWT unset — sign in from the app (Clerk)");
     else fail("VITE_FLUXYCHAT_MEMBER_JWT unset");
@@ -119,7 +128,11 @@ async function main() {
   console.log(green(bold("All checks passed")) + (warnings ? ` · ${warnings} warning(s)` : ""));
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+const invokedDirectly =
+  Boolean(process.argv[1]) && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

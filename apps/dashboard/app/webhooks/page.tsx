@@ -77,8 +77,8 @@ export default function WebhooksPage() {
   }, [adminJwt]);
 
   useEffect(() => {
-    if (activeProject?.id) void load();
-  }, [activeProject?.id, load]);
+    void load();
+  }, [load]);
 
   const hasFailing = (webhooks ?? []).some((w) => w.consecutiveFailures >= 3);
 
@@ -89,7 +89,11 @@ export default function WebhooksPage() {
         description="Outbound HTTP endpoints that receive FluxyChat events. Add an endpoint to get notified about messages, mentions, and room changes."
       />
 
-      {error ? <Banner variant="error">{error}</Banner> : null}
+      {!adminJwt.trim() ? (
+        <Banner variant="warning">Mint an admin JWT in Quickstart to manage webhooks.</Banner>
+      ) : error ? (
+        <Banner variant="error">{error}</Banner>
+      ) : null}
       {hasFailing ? (
         <Banner variant="warn">
           One or more webhooks have failed 3 or more times in a row. Check the
