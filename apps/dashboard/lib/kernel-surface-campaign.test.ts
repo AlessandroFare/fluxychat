@@ -10,7 +10,7 @@ const AI_TELLS =
 
 const KERNEL_PRODUCT = ["/rooms", "/inbox", "/projects", "/onboarding", "/profile", "/embed", "/notifications"];
 
-function walkPages(dir, out = []) {
+function walkPages(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) walkPages(full, out);

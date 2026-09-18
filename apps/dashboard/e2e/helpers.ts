@@ -74,15 +74,10 @@ function e2eSessionPayload(jwt: string) {
 
 export async function seedAdminSession(page: Page, jwt: string) {
   const payload = e2eSessionPayload(jwt);
-  const apply = (data: ReturnType<typeof e2eSessionPayload>) => {
-    window.sessionStorage.setItem("fluxychat.dashboard.session.v1", JSON.stringify(data));
-    window.__FLUXY_E2E_SESSION = data;
-  };
-
   await page.context().addInitScript(
     (data) => {
       window.sessionStorage.setItem("fluxychat.dashboard.session.v1", JSON.stringify(data));
-      window.__FLUXY_E2E_SESSION = data;
+      (window as Window & { __FLUXY_E2E_SESSION?: typeof data }).__FLUXY_E2E_SESSION = data;
     },
     payload,
   );
