@@ -1,0 +1,5 @@
+name: FluxyChat CodeQL
+paths-ignore:
+  - "agent/skills/**/assets/test-corpus/**"
+  - ".agents/skills/**/assets/test-corpus/**"
+  - ".claude/skills/**/assets/test-corpus/**"
