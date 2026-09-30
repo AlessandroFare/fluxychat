@@ -34,7 +34,7 @@ function onMove(e: PointerEvent) {
     command: "npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room",
     snippet: `const { messages, invokeAgent } = useChat({ roomId });
 
-await invokeAgent(agentId, "Summarize the last 20 messages");`,
+await invokeAgent("Summarize the last 20 messages", { agentId });`,
     preview: "war",
   },
   {
@@ -54,9 +54,11 @@ await invokeAgent(agentId, "Summarize the last 20 messages");`,
     title: "Deal room",
     time: "a day",
     command: "npx @fluxy-chat/create-fluxy-chat@latest my-deal --example deal-room",
-    snippet: `await client.createDecision(roomId, { title: "Ship Friday?" });
-await client.ackDecision(roomId, decisionId);
-const md = await client.exportRoomMarkdown(roomId);`,
+    snippet: `sendMessage("Counsel only: redlines on section 4.", null, undefined, {
+  visibility: "whisper",
+  visibleTo: [selfUserId],
+});
+await invokeAgent("Summarize open decisions.", { agentId });`,
     preview: "deal",
   },
 ];
@@ -243,53 +245,62 @@ function IoTPreview() {
 }
 
 function DealPreview() {
-  const [acks, setAcks] = useState({ you: false, jordan: false });
-  const [exported, setExported] = useState(false);
-  const ready = acks.you && acks.jordan;
+  const [acks, setAcks] = useState({ buyer: false, counsel: false });
+  const [whisperOn, setWhisperOn] = useState(false);
+  const ready = acks.buyer && acks.counsel;
 
   return (
-    <div className="flex h-56 flex-col justify-between rounded-xl bg-zinc-950 p-3 text-left text-[12px] text-zinc-200 sm:h-72">
-      <div>
-        <p className="text-sm font-medium text-white">Ship Friday?</p>
-        <p className="mt-1 text-zinc-500">Decision in the deal room. Both sides ack, then export.</p>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+    <div className="flex h-56 flex-col gap-2 rounded-xl bg-zinc-950 p-2 text-left text-[11px] text-zinc-200 sm:h-72 sm:p-3 sm:text-[12px]">
+      <p className="text-[10px] uppercase tracking-wide text-zinc-500">
+        Preview · two seats. Whisper is filtered on the Worker, not CSS.
+      </p>
+      <div className="grid min-h-0 flex-1 grid-cols-2 gap-2">
+        <div className="flex flex-col rounded-lg border border-white/10 bg-zinc-900 p-2">
+          <p className="font-medium text-white">buyer</p>
+          <p className="mt-1 text-zinc-400">Approve term sheet?</p>
+          <p className="mt-2 text-zinc-500">{whisperOn ? "No counsel note on this tab." : "Open counsel, send a whisper."}</p>
           <button
             type="button"
-            onClick={() => setAcks((a) => ({ ...a, you: !a.you }))}
+            onClick={() => setAcks((a) => ({ ...a, buyer: !a.buyer }))}
             className={cn(
-              "rounded-md border px-3 py-2 text-left",
-              acks.you ? "border-emerald-400/50 bg-emerald-500/10" : "border-white/10 bg-zinc-900",
+              "mt-auto rounded-md border px-2 py-1.5 text-left",
+              acks.buyer ? "border-emerald-400/50 bg-emerald-500/10" : "border-white/10 bg-zinc-950",
             )}
           >
-            You · {acks.you ? "acked" : "pending"}
+            Ack · {acks.buyer ? "yes" : "pending"}
           </button>
+        </div>
+        <div className="flex flex-col rounded-lg border border-white/10 bg-zinc-900 p-2">
+          <p className="font-medium text-white">?seat=counsel</p>
+          <p className="mt-1 text-zinc-400">Approve term sheet?</p>
+          {whisperOn ? (
+            <p className="mt-2 rounded bg-orange-500/15 px-1.5 py-1 text-orange-100">
+              Counsel only: redlines on section 4.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setWhisperOn(true)}
+              className="mt-2 rounded-md border border-white/10 bg-zinc-950 px-2 py-1.5 text-left"
+            >
+              Counsel note
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setAcks((a) => ({ ...a, jordan: !a.jordan }))}
+            onClick={() => setAcks((a) => ({ ...a, counsel: !a.counsel }))}
             className={cn(
-              "rounded-md border px-3 py-2 text-left",
-              acks.jordan ? "border-emerald-400/50 bg-emerald-500/10" : "border-white/10 bg-zinc-900",
+              "mt-auto rounded-md border px-2 py-1.5 text-left",
+              acks.counsel ? "border-emerald-400/50 bg-emerald-500/10" : "border-white/10 bg-zinc-950",
             )}
           >
-            Jordan · {acks.jordan ? "acked" : "pending"}
+            Ack · {acks.counsel ? "yes" : "pending"}
           </button>
         </div>
       </div>
-      <div>
-        <button
-          type="button"
-          disabled={!ready}
-          onClick={() => setExported(true)}
-          className="rounded-md bg-[#ff6a1a] px-3 py-1.5 text-white disabled:opacity-40"
-        >
-          Export markdown
-        </button>
-        {exported ? (
-          <pre className="mt-2 overflow-x-auto rounded-md bg-zinc-900 p-2 font-mono text-[10px] text-zinc-300">
-            {`# Ship Friday?\nStatus: committed\nAcks: you, jordan`}
-          </pre>
-        ) : null}
-      </div>
+      <p className="text-[10px] text-zinc-500">
+        {ready ? "Quorum met. Traces stay in a feed, not chat." : "Ack both seats. Guest room so each seat is a different user."}
+      </p>
     </div>
   );
 }

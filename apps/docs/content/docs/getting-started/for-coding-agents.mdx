@@ -13,6 +13,8 @@ npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
 
 That writes a Vite chat app. After `pnpm setup:hosted` you sign in on fluxychat.com.
 
+Coding agents: `npx skills add AlessandroFare/fluxychat --skill fluxy-chat-room` (gold room: mention, stream, whisper, feeds). Or skip the skill and scaffold `--example deal-room` below.
+
 ## Gallery
 
 Each example needs `VITE_FLUXYCHAT_WORKER_URL` plus a **`pk_`** (`VITE_FLUXYCHAT_PUBLISHABLE_KEY`), a **public** room id (guest), or a member JWT. Open two tabs for anything collaborative.
@@ -37,6 +39,7 @@ npx @fluxy-chat/create-fluxy-chat@latest my-polls --example polls
 npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room
 npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
 npx @fluxy-chat/create-fluxy-chat@latest my-deal --example deal-room
+# Two tabs: this URL (buyer) and ?seat=counsel. Public guest room for whispers.
 npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
 npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick
 npx @fluxy-chat/create-fluxy-chat@latest my-stage --example voice-stage

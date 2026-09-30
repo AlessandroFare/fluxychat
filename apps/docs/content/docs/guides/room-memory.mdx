@@ -16,6 +16,8 @@ Authorization: Bearer <member-jwt>
 
 Optional filter: `?kind=decision`
 
+Keyword search: `?q=pricing` (D1 `LIKE`). If you bind Vectorize + Workers AI (`VECTORIZE`, `AI`), extract also upserts embeddings and `q` re-ranks hits that already matched D1. Unbound Vectorize is a no-op. Not Cloudflare AI Search. Not Notion/Drive connectors.
+
 ## Extract on demand
 
 ```http
@@ -27,7 +29,7 @@ Requires a configured LLM provider on the Worker. Returns extracted entries and 
 
 ## Dashboard
 
-**Rooms → Room memory** shows entries with kind badges, confidence, and source message ids. Use **Extract from messages** after a meaningful thread.
+**Rooms → Advanced → Room memory**. Search box calls `?q=`. Extract still needs an LLM on the Worker.
 
 ## Memory kinds
 

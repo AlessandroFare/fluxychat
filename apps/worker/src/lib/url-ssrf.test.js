@@ -52,6 +52,12 @@ describe("url-ssrf (P1 ENG-05)", () => {
     expect(isPrivateUrl("http://lvh.me/")).toBe(true);
   });
 
+  it("REQUIRE_SSRF_HOST_ALLOWLIST blocks public hosts not on the list", () => {
+    const env = { REQUIRE_SSRF_HOST_ALLOWLIST: "true", ALLOWED_SSRF_HOSTS: "hooks.stripe.com" };
+    expect(isPrivateUrl("https://hooks.stripe.com/", env)).toBe(false);
+    expect(isPrivateUrl("https://example.com/webhook", env)).toBe(true);
+  });
+
   it("honours ALLOWED_SSRF_HOSTS operator allowlist", () => {
     const env = { ALLOWED_SSRF_HOSTS: "internal.acme.com,*.staging.acme.com" };
     expect(isPrivateUrl("https://internal.acme.com/hook", env)).toBe(false);

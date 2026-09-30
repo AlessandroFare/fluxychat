@@ -25,6 +25,20 @@ import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
 
 `guest` on a public room. Hosted multi-tenant also needs `publishableKey` (`pk_`). Member JWT still works via `token` or a `client`.
 
+## Agent turn chrome (optional)
+
+`FluxyAgentTurnChrome` is a **presentational** strip: sibling count, citation list, reasoning `<details>`, a cost label, HITL status. You pass the data. The widget does not invent branches, Stripe lines, or an in-composer approve button.
+
+```tsx
+import { FluxyAgentTurnChrome } from "@fluxy-chat/ui-kit";
+
+<FluxyAgentTurnChrome
+  citations={[{ title: "Room memory", url: "https://docs.fluxychat.com/docs/guides/room-memory" }]}
+  costLabel="~1.2k tokens (operator estimate)"
+  approval={{ toolName: "http_request", status: "pending" }}
+/>
+```
+
 ## Inbox
 
 ```tsx

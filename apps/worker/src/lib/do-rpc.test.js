@@ -11,6 +11,7 @@ import { callAgentDo, callRoomDo } from "./agent-do-session.js";
 describe("do rpc", () => {
   it("allowlists methods", () => {
     expect(parseRpcRequest({ method: "turn", params: { content: "hi" } }, AGENT_RPC_METHODS).ok).toBe(true);
+    expect(parseRpcRequest({ method: "room_invoke" }, AGENT_RPC_METHODS).ok).toBe(true);
     expect(parseRpcRequest({ method: "explode" }, AGENT_RPC_METHODS).reason).toBe("rpc_method_forbidden");
     expect(parseRpcRequest({ method: "copilot_nudge" }, ROOM_RPC_METHODS).ok).toBe(true);
     expect(parseRpcRequest({ method: "turn" }, ROOM_RPC_METHODS).ok).toBe(false);

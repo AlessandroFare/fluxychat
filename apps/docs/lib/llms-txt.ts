@@ -4,7 +4,9 @@ export const FLUXYCHAT_LLMS_TXT = `# FluxyChat
 
 > Realtime rooms on Cloudflare Workers (Durable Objects + D1). Chat, presence, Yjs, agents, and HTTP ingest share one room Durable Object. MIT self-host or hosted beta.
 
-FluxyChat is a room layer for your product. Map roomId to a document, board, deal, classroom, or dispatch view. Public rooms: FluxyRealtimeProvider publishableKey (pk_; POST /tokens/anonymous) or FluxyChatClient.joinPublicRoomAsGuest (stable guestKey in localStorage). Private rooms: mint a member JWT with POST /auth/token and header X-Fluxy-Api-Key (fc_ keys are server-only; pk_ returns 403). Scaffold with npx @fluxy-chat/create-fluxy-chat@latest (the unscoped create-fluxy-chat package is not ours). Open two browser tabs for cursors, presence, or Yjs. Named errors: FluxyNotMemberError, FluxyTokenExpiredError, FluxyAnonymousNotAllowedError. Message quota: persisted chat + non-ephemeral client_event; cursors do not count.
+FluxyChat is a tenant room on a Durable Object. Map roomId to a deal, board, classroom, or dispatch view. Humans and invokeAgent share the chat timeline. Feeds are agent and workflow logs, not chat. Cloudflare Think is an Agent class. Document CRDT products are the file. We are the room.
+
+FluxyChat is a room layer for your product. Public rooms: FluxyRealtimeProvider publishableKey (pk_; POST /tokens/anonymous) or FluxyChatClient.joinPublicRoomAsGuest (stable guestKey in localStorage). Private rooms: mint a member JWT with POST /auth/token and header X-Fluxy-Api-Key (fc_ keys are server-only; pk_ returns 403). Scaffold with npx @fluxy-chat/create-fluxy-chat@latest (the unscoped create-fluxy-chat package is not ours). Open two browser tabs for cursors, presence, or Yjs. Named errors: FluxyNotMemberError, FluxyTokenExpiredError, FluxyAnonymousNotAllowedError. Message quota: persisted chat + non-ephemeral client_event; cursors do not count.
 
 Presence is sendCursor / liveCursors / presence_patch (WebSocket type cursor). Large rooms switch presenceKind to aggregate above 250 unique users. Derived late-joiner JSON is setDerivedState (not a CRDT, 16 KiB). Visibility is visibility/visibleTo on send (kernel, not UI-only). Broadcast is sendClientEvent; prefix client-ephemeral-* skips webhooks. Pointers on client_event warn in development. Storage is FluxyYjsProvider plus useStorage from @fluxy-chat/sdk/yjs. Nest it under FluxyRealtimeProvider or pass token/authTokenProvider. Feeds are /rooms/:id/feeds, not chat messages. Comment pins are /comment-threads (useThreads). Chat nested replies are parentId / useThread / GET /rooms/:id/threads. Room agents use invokeAgent. Copilots use RegisterAiKnowledge and AiChat (they do not write the timeline). Hosted onPublish overlay: PUT /admin/projects/:id/publish-config (CLI: pnpm fluxy:deploy) including rooms templates and extension slots. Inbox socket: GET /ws/inbox (connectInbox). Weekend demo: GET /public/demo-credentials when PUBLIC_DEMO_PUBLISHABLE_KEY is set. FluxyRealtimeProvider takes workerUrl plus publishableKey, authTokenProvider, or connectUrl (not token/config.baseUrl). Nest useChat under it. useChat and useLiveCursors share sessionScope app (one JSON WebSocket per room). Pass a distinct sessionScope for a second widget on the same room. Yjs opens a second binary WebSocket on the same /ws/room/:id route. Spec: /docs/core/wire-protocol.
 
@@ -13,11 +15,12 @@ IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.g
 ## Docs
 
 - [Docs home](https://docs.fluxychat.com/docs): Start here. Hosted, self-host, or SDK-only.
+- [Status and limits](https://docs.fluxychat.com/docs/learn/status-and-limits): What ships, what is labs, what is not claimed.
 - [Concepts](https://docs.fluxychat.com/docs/concepts): Projects, rooms, presence, broadcast, storage, feeds, threads, chat.
 - [Choose your path](https://docs.fluxychat.com/docs/getting-started/choose-your-path): Hosted CLI, your Worker, or a few lines of SDK.
 - [What to build](https://docs.fluxychat.com/docs/getting-started/what-to-build): Product idea to gallery example.
-- [Gallery](https://docs.fluxychat.com/docs/getting-started/gallery): Copy-paste Vite apps. Open two tabs.
-- [CLI and examples](https://docs.fluxychat.com/docs/getting-started/for-coding-agents): create-fluxy-chat flags, env vars, JWT mint.
+- [Gallery](https://docs.fluxychat.com/docs/getting-started/gallery): Copy-paste Vite apps. deal-room: this URL and ?seat=counsel.
+- [CLI and examples](https://docs.fluxychat.com/docs/getting-started/for-coding-agents): create-fluxy-chat flags, env vars, JWT mint. Skill: npx skills add AlessandroFare/fluxychat --skill fluxy-chat-room.
 - [Quickstart](https://docs.fluxychat.com/docs/getting-started/quickstart): pk_ in the browser, then member JWT.
 - [Wire protocol](https://docs.fluxychat.com/docs/core/wire-protocol): v1 frames and non-goals.
 - [Client setup](https://docs.fluxychat.com/docs/getting-started/client-setup): React, vanilla, React Native.
@@ -83,8 +86,17 @@ IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.g
 - [Hosted app](https://fluxychat.com): Console and playground.
 - [Pricing](https://fluxychat.com/pricing): Hosted plans. Open beta. Pin versions.
 - [Status](https://fluxychat.com/status): Worker /health. Not a fleet SLO.
+- [Trust](https://fluxychat.com/trust): DPA, subprocessors, security.txt. Not SOC 2.
+- [Import ChatGPT JSON](https://fluxychat.com/migrate-chatgpt): File you downloaded. Cap 400.
 - [Subprocessors](https://fluxychat.com/subprocessors): Cloudflare, Clerk, Stripe, LLM, Vercel.
 - [Cookbook](https://docs.fluxychat.com/docs/cookbook): JWT, RAG, offline.
+- [Integration kit](https://docs.fluxychat.com/docs/guides/integration-kit): Entity rooms, signed inbound webhooks.
+- [Public share](https://docs.fluxychat.com/docs/guides/public-share): Read-only URL for type=public rooms.
+- [Import transcript](https://docs.fluxychat.com/docs/guides/import-transcript): ChatGPT/Claude export JSON.
+- [Room tickets](https://docs.fluxychat.com/docs/guides/room-tickets): GitHub/Linear/Jira with your env tokens.
+- [Shared-room agent defaults](https://docs.fluxychat.com/docs/guides/security/shared-room-agent-defaults): Two-key HITL.
+- [Room Decisions](https://docs.fluxychat.com/docs/guides/room-decisions): Floor, route, NL policy.
+- [@fluxy-chat/auth](https://docs.fluxychat.com/docs/packages/auth): Mint helper. fc_ on the server.
 `;
 
 export function fluxyChatLlmsResponse(): Response {

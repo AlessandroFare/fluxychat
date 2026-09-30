@@ -1,0 +1,38 @@
+---
+title: Import a ChatGPT or Claude export
+description: Turn a JSON file you already downloaded into a FluxyChat group room.
+---
+
+# Import a ChatGPT or Claude export
+
+You download the file from ChatGPT or Claude, then upload it. We create a group room and insert up to 400 messages. Extra chats in a ChatGPT dump are skipped; first non-empty conversation wins.
+
+## Console
+
+**Rooms**, then Import ChatGPT/Claude JSON. Member or admin JWT.
+
+## API
+
+```http
+POST /rooms/import-transcript
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{
+  "export": { },
+  "roomName": "optional",
+  "inviteUserIds": ["user_optional"]
+}
+```
+
+`export` can be:
+
+- ChatGPT `conversations.json` (array of chats with `mapping`)
+- a Claude chat with `chat_messages`
+- `{ "title": "…", "messages": [{ "role": "user", "content": "…" }] }`
+
+Assistant lines are stored as `user_id=import_assistant`. They are **imported, unverified** (`trust: unverified`). They are not Art. 50-signed as FluxyChat agent output. You are the owner.
+
+This does not invite people by email. Pass FluxyChat user ids in `inviteUserIds` if they already exist.
+
+Public marketing page for the same importer: [fluxychat.com/migrate-chatgpt](https://fluxychat.com/migrate-chatgpt). OpenAI shutting group chats is their timeline.

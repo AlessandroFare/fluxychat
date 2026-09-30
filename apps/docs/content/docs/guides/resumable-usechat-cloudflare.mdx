@@ -1,0 +1,41 @@
+---
+title: Resumable useChat without Redis
+description: AI SDK ChatTransport on a Cloudflare room. KV snapshot after refresh. Not Think fiber resume.
+---
+
+Vercel AI SDK `useChat` resume often assumes Redis. FluxyChat does not. The session is the **room**.
+
+## What you get
+
+`FluxyRoomChatTransport` maps `sendMessages` to `invokeAgentRest` and `reconnectToStream` to `GET /ai/streams/active` then `GET /ai/streams/:id/resume`. Those routes read `RATE_LIMIT_KV` or `STREAM_RESUME_KV`. No Redis.
+
+Live token paint still uses the room WebSocket. The HTTP body is the full reply encoded as `text-delta` chunks.
+
+If the **room** Durable Object hibernates mid-call, that LLM request does not resume like Cloudflare Think `chatRecovery`. Generation for `POST /agents/:id/invoke` runs on the Worker isolate, and when `AGENT` is bound it runs on `AgentDurableObject` id `room-run:{project}:{room}` so two invokes serialize. Kill the room object; the run object can keep going. Kill the run object and you lose the in-flight model call.
+
+## Clone
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-room --example shared-ai-room
+```
+
+```ts
+import { FluxyChatClient, FluxyRoomChatTransport } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({
+  baseUrl: "https://your-worker.example.workers.dev",
+  userId: "alice",
+  token: jwt,
+});
+const transport = new FluxyRoomChatTransport({
+  client,
+  roomId: "general",
+  agentId: "assistant-id",
+});
+```
+
+Pass `transport` to AI SDK `useChat({ transport })`. Do not import `ai` from `@fluxy-chat/sdk`.
+
+Mid-turn inject: `POST /rooms/:roomId/agent-steer` with `{ content }`. Stop from another tab: `POST /rooms/:roomId/agent-stop`. Room `stopAgentStream` still aborts the Worker fetch.
+
+Dev.to / Show HN posting is on you. This page is the tutorial.

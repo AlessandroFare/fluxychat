@@ -18,6 +18,8 @@ POST   /rooms/:roomId/feeds/:feedId/messages    { body, metadata }
 
 Auth: **member JWT** (`canAccessRoom`) **or** project API key (`X-Fluxy-Api-Key`). API keys stay on the server (n8n, workers). Fan-out: `server_event` names `feed.created`, `feed.message`.
 
+There is no PATCH. Status changes are a new row (`createMessage` again with `metadata.status`).
+
 ## React
 
 ```tsx

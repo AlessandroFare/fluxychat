@@ -166,6 +166,7 @@ const dispatchActivityFeedRoutes = lazyRoute(() => import("../routes/activity-fe
 const dispatchNotificationEngineRoutes = lazyRoute(() => import("../routes/notification-engine-http.js"), "dispatchNotificationEngineRoutes");
 const dispatchQAModeratorRoutes = lazyRoute(() => import("../routes/qa-moderator-http.js"), "dispatchQAModeratorRoutes");
 const dispatchIncidentRoutes = lazyRoute(() => import("../routes/incident-response-http.js"), "dispatchIncidentRoutes");
+const dispatchIntegrationKitRoutes = lazyRoute(() => import("../routes/integration-kit-http.js"), "dispatchIntegrationKitRoutes");
 const dispatchApprovalRoutes = lazyRoute(() => import("../routes/approval-workflows-http.js"), "dispatchApprovalRoutes");
 const dispatchFieldOpsRoutes = lazyRoute(() => import("../routes/field-ops-http.js"), "dispatchFieldOpsRoutes");
 const dispatchHybridRoutes = lazyRoute(() => import("../routes/hybrid-events-http.js"), "dispatchHybridRoutes");
@@ -358,6 +359,7 @@ export const WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY = [
   dispatchPushRoutes,
   dispatchStripeWebhookRoutes,
   dispatchBridgeWebhookRoutes,
+  dispatchIntegrationKitRoutes,
 ];
 
 const PRIVACY_BILLING_DISPATCHERS = [dispatchGdprRoutes, dispatchBillingRoutes];
@@ -374,6 +376,9 @@ const WORKER_ROUTE_UNSCANNED = [
 export const WORKER_ROUTE_PREFIX_INDEX = {
   "a2a": [
     dispatchA2ARoutes,
+  ],
+  "ag-ui": [
+    dispatchMessagesAgentsRoutes,
   ],
   "activities": [
     dispatchMessagesAgentsRoutes,
@@ -584,6 +589,7 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   "integrations": [
     dispatchTelephonyHandoffRoutes,
     dispatchIntegrationsSentRoutes,
+    dispatchIntegrationKitRoutes,
   ],
   "intelligence": [
     dispatchIntelligenceRoutes,
@@ -775,7 +781,7 @@ export const WORKER_ROUTE_DISPATCHER_COUNT =
   PRIVACY_BILLING_DISPATCHERS.length +
   WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY.length;
 
-export const WORKER_ROUTE_LAZY_COUNT = 52;
+export const WORKER_ROUTE_LAZY_COUNT = 53;
 export const WORKER_ROUTE_EAGER_COUNT = 110;
 
 /**

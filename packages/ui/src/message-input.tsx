@@ -36,6 +36,8 @@ export interface MessageInputProps {
     file: File,
     kindHint: "image" | "file" | "audio"
   ) => Promise<FluxyChatAttachment | null | void>;
+  /** DOM id for the composer field (skip links). */
+  composerInputId?: string;
   /** Optional pending AI tool rendered as a dismissible composer chip. */
   pendingTool?:
     | null
@@ -114,6 +116,7 @@ export function MessageInput({
   mentionMaxSuggestions = 8,
   mentionPrioritizeHandles = [],
   uploadComposerFile,
+  composerInputId,
   pendingTool,
   onClearPendingTool,
 }: MessageInputProps) {
@@ -500,6 +503,8 @@ export function MessageInput({
           onSelect={syncMentionOpen}
           onClick={syncMentionOpen}
           placeholder={editingMessageId !== null ? "Edit message…" : "Type a message…"}
+          aria-label={editingMessageId !== null ? "Edit message" : "Message"}
+          id={composerInputId}
           autoComplete="off"
           aria-autocomplete={mentionOpen ? "list" : "none"}
           aria-expanded={mentionOpen}
@@ -508,7 +513,7 @@ export function MessageInput({
             flex: 1,
             padding: "6px 8px",
             borderRadius: 4,
-            border: "1px solid #ddd",
+            border: "1px solid #5c5c5c",
             fontSize: 14,
           }}
         />
@@ -520,7 +525,7 @@ export function MessageInput({
           style={{
             padding: "4px 6px",
             borderRadius: 4,
-            border: "1px solid #ddd",
+            border: "1px solid #5c5c5c",
             background: "#f9fafb",
             cursor: uploadBusy ? "default" : "pointer",
             fontSize: 12,
@@ -536,7 +541,7 @@ export function MessageInput({
           style={{
             padding: "4px 6px",
             borderRadius: 4,
-            border: "1px solid #ddd",
+            border: "1px solid #5c5c5c",
             background: "#f9fafb",
             cursor: uploadBusy ? "default" : "pointer",
             fontSize: 12,
@@ -552,7 +557,7 @@ export function MessageInput({
           style={{
             padding: "4px 6px",
             borderRadius: 4,
-            border: "1px solid #ddd",
+            border: "1px solid #5c5c5c",
             background: "#f9fafb",
             cursor: uploadBusy ? "default" : "pointer",
             fontSize: 12,
@@ -566,7 +571,7 @@ export function MessageInput({
           style={{
             padding: "4px 6px",
             borderRadius: 4,
-            border: "1px solid #ddd",
+            border: "1px solid #5c5c5c",
             background: "#f9fafb",
             cursor: "pointer",
             fontSize: 12,

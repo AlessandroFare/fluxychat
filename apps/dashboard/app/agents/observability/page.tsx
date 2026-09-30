@@ -24,6 +24,11 @@ interface AgentRunRow {
   createdAt: string;
   detail?: string;
   latencyMs?: number;
+  agentId?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  estimatedCost?: number;
+  toolCalls?: Array<{ name?: string; id?: string }>;
 }
 
 export default function AgentObservabilityPage() {
@@ -56,6 +61,42 @@ export default function AgentObservabilityPage() {
     setLoading(true);
     setError(null);
     try {
+      const trimmed = roomId.trim();
+      if (trimmed && token) {
+        const res = await fetch(
+          `${WORKER_URL}/rooms/${encodeURIComponent(trimmed)}/agent-runs?limit=40`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        const body = (await res.json().catch(() => ({}))) as {
+          runs?: Array<{
+            id: string;
+            agentId: string;
+            status: string;
+            latencyMs?: number;
+            inputTokens?: number;
+            outputTokens?: number;
+            estimatedCost?: number;
+            toolCalls?: Array<{ name?: string; id?: string }>;
+            createdAt: string;
+          }>;
+        };
+        if (!res.ok) throw new Error("inspector_load_failed");
+        setRows(
+          (body.runs ?? []).map((r) => ({
+            id: r.id,
+            status: r.status,
+            roomId: trimmed,
+            createdAt: r.createdAt,
+            latencyMs: r.latencyMs,
+            agentId: r.agentId,
+            inputTokens: r.inputTokens,
+            outputTokens: r.outputTokens,
+            estimatedCost: r.estimatedCost,
+            toolCalls: r.toolCalls,
+          })),
+        );
+        return;
+      }
       const activities = await client.listActivities({
         limit: 120,
         roomId: roomId.trim() || undefined,
@@ -76,7 +117,7 @@ export default function AgentObservabilityPage() {
     } finally {
       setLoading(false);
     }
-  }, [client, roomId]);
+  }, [client, roomId, token]);
 
   useEffect(() => {
     void load();
@@ -120,7 +161,7 @@ export default function AgentObservabilityPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Agent observability"
-        description="Recent agent runs from the activity feed: latency and failure rate for eval loops. Pair with OTel export for Langfuse."
+        description="Pick a room for the inspector (tools, tokens, cost). Without a room, this falls back to the activity feed."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">
@@ -212,16 +253,27 @@ export default function AgentObservabilityPage() {
       ) : (
         <ul className="divide-y rounded-lg bg-card shadow-[var(--shadow-2)]">
           {rows.map((r) => (
-            <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono text-xs">{r.id.slice(0, 8)}…</span>
-                <Badge variant={r.status === "failed" ? "destructive" : "secondary"}>{r.status}</Badge>
+            <li key={r.id} className="flex flex-col gap-1 px-4 py-3 text-sm" data-testid="agent-run-inspector-row">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-mono text-xs">{r.id.slice(0, 8)}…</span>
+                  {r.agentId ? <span className="text-xs text-muted-foreground">{r.agentId}</span> : null}
+                  <Badge variant={r.status === "failed" ? "destructive" : "secondary"}>{r.status}</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {r.roomId ?? "—"} · {formatDateTime(r.createdAt)}
+                  {r.latencyMs ? ` · ${r.latencyMs} ms` : ""}
+                </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {r.roomId ?? "—"} · {formatDateTime(r.createdAt)}
-                {r.latencyMs ? ` · ${r.latencyMs} ms` : ""}
-              </div>
+              {r.toolCalls?.length || r.inputTokens != null || r.estimatedCost != null ? (
+                <p className="text-xs text-muted-foreground">
+                  {(r.toolCalls ?? []).map((t) => t.name || t.id).filter(Boolean).join(" → ") || "no tools"}
+                  {r.inputTokens != null ? ` · in ${r.inputTokens}` : ""}
+                  {r.outputTokens != null ? ` / out ${r.outputTokens}` : ""}
+                  {r.estimatedCost != null ? ` · ~$${Number(r.estimatedCost).toFixed(4)}` : ""}
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>

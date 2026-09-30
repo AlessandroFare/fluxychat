@@ -173,7 +173,87 @@ export async function persistRoomMemory(env, input) {
     }
   }
 
+  try {
+    const { upsertRoomMemoryVector } = await import("./vectorize-retriever.js");
+    for (const entry of entries) {
+      if (!entry?.id || !entry?.content) continue;
+      await upsertRoomMemoryVector(env, {
+        projectId,
+        roomId,
+        entryId: entry.id,
+        content: entry.content,
+      }).catch(() => {});
+    }
+  } catch {
+    /* Vectorize optional */
+  }
+
   return { ok: true, inserted, updated };
+}
+
+function likeNeedle(query) {
+  const cleaned = String(query || "")
+    .replace(/[%_]/g, " ")
+    .trim()
+    .slice(0, 80);
+  if (!cleaned) return null;
+  return `%${cleaned}%`;
+}
+
+/**
+ * Keyword search on D1, optionally re-ranked with Vectorize when bound.
+ */
+export async function searchRoomMemory(env, input) {
+  const { projectId, roomId, query } = input;
+  const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 50);
+  const like = likeNeedle(query);
+  if (!like) return queryRoomMemory(env, { projectId, roomId, limit });
+
+  const rows = await env.DB.prepare(
+    `SELECT id, kind, content, source_message_ids, confidence, created_at, updated_at
+     FROM room_memory
+     WHERE project_id = ? AND room_id = ? AND (expires_at IS NULL OR expires_at > ?)
+       AND content LIKE ?
+     ORDER BY confidence DESC, updated_at DESC LIMIT ?`,
+  )
+    .bind(projectId, roomId, new Date().toISOString(), like, limit)
+    .all();
+
+  let entries = (rows.results || []).map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    content: r.content,
+    sourceMessageIds: JSON.parse(r.source_message_ids || "[]"),
+    confidence: r.confidence,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    source: "d1",
+  }));
+
+  try {
+    const { queryVectorizeRoomMemory } = await import("./vectorize-retriever.js");
+    const hits = await queryVectorizeRoomMemory(env, {
+      projectId,
+      roomId,
+      query: String(query),
+      topK: limit,
+    });
+    if (hits.length) {
+      const byId = new Map(entries.map((e) => [e.id, e]));
+      for (const hit of hits) {
+        const existing = byId.get(hit.entryId);
+        if (existing) {
+          existing.vectorScore = hit.score;
+          existing.source = "d1+vectorize";
+        }
+      }
+      entries.sort((a, b) => (b.vectorScore || 0) - (a.vectorScore || 0) || b.confidence - a.confidence);
+    }
+  } catch {
+    /* Vectorize optional */
+  }
+
+  return { entries };
 }
 
 /**

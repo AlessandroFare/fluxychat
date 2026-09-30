@@ -57,6 +57,18 @@ const { messages, sendMessage } = useChat("room-42");
 
 REST history: `GET /rooms/{roomId}/messages` replaces polling or Pusher cache channels.
 
+## Map an export with fluxy-migrate
+
+You download JSON from the old vendor. We do not scrape their API.
+
+```bash
+pnpm --filter @fluxy-chat/sdk build
+npx fluxy-migrate ./pusher-or-ably-export.json --out rows.json
+FLUXY_WORKER_URL=… FLUXY_ADMIN_JWT=… pnpm import-chat-history ./rows.json
+```
+
+Cap 400 rows. `private-` / `presence-` prefixes are stripped from channel names. This is not a live proxy of Pusher Channels.
+
 ## Import message history
 
 FluxyChat has no vendor lock-in import API — push history via REST:

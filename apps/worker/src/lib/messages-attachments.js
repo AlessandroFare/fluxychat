@@ -8,6 +8,16 @@ function parseMentionsJson(raw) {
   }
 }
 
+function parseArt50Metadata(raw) {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function attachAttachmentsToMessages(env, projectId, roomId, rows) {
   const mapped = rows.map((r) => ({
     id: r.id,
@@ -38,6 +48,8 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
     clientMessageId: r.client_message_id ?? undefined,
     seq: r.seq ?? undefined,
     version: r.version ?? 1,
+    participantType: r.participant_type || (parseArt50Metadata(r.metadata_json)?.participantType ?? undefined),
+    metadata: parseArt50Metadata(r.metadata_json),
     mentions: parseMentionsJson(r.mentions),
     preview: r.og_url
       ? {

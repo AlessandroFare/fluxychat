@@ -11,7 +11,8 @@
     "test": "vitest run --environment jsdom",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test",
-    "test:e2e:integrated": "playwright test -c playwright.integrated.config.ts"
+    "test:e2e:integrated": "playwright test -c playwright.integrated.config.ts",
+    "capture:deal-room": "playwright test -c playwright.capture.config.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.39.3",

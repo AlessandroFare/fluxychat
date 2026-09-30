@@ -155,12 +155,7 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
             // see it in their logs.
             logInfo("jwt.previous_secret_used_no_expire_at", { userId, projectId });
           }
-          return {
-            userId,
-            projectId,
-            roles,
-            ...(payloadJson.roomId ? { roomId: payloadJson.roomId } : {}),
-          };
+          return authContextFromPayload(payloadJson, userId, projectId, roles);
         }
       }
     } catch {
@@ -172,10 +167,15 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
     throw new Response("Unauthorized", { status: 401 });
   }
 
+  return authContextFromPayload(payloadJson, userId, projectId, roles);
+}
+
+function authContextFromPayload(payloadJson, userId, projectId, roles) {
   return {
     userId,
     projectId,
     roles,
     ...(payloadJson.roomId ? { roomId: payloadJson.roomId } : {}),
+    ...(payloadJson.shareSafe === true ? { shareSafe: true } : {}),
   };
 }

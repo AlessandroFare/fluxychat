@@ -121,6 +121,24 @@ export interface FluxyClientDefaults {
   pollIntervalMs?: number;
 }
 
+export interface FluxyAgentPolicy {
+  mention?: boolean;
+  tools?: string[];
+  dailyTokenCap?: number;
+  /** Tools run as the invoking user, not as the bot row. */
+  onBehalfOf?: boolean;
+  /**
+   * AI SDK 7-style approval. `user-approval` maps to room HITL (quorum / chain).
+   * `needsApproval` on tool() stays only for WorkflowAgent.
+   */
+  toolApproval?: "not-applicable" | "approved" | "denied" | "user-approval";
+  /**
+   * HTTPS OPA/Rego endpoint. POST body is `buildAgentPolicyOpaInput`.
+   * Same expectation as `@ai-sdk/policy-opa`; we do not vendor that package.
+   */
+  opaUrl?: string;
+}
+
 export interface FluxyConfig {
   /** Public worker URL hint for docs / CLI scaffolds. */
   workerUrl?: string;
@@ -130,11 +148,27 @@ export interface FluxyConfig {
     guestCanPublish?: boolean;
     iotAutoAgentId?: string | null;
   };
+  /** Room Decisions: System One / deterministic gates. Not chat generation. */
+  decisions?: {
+    shouldRespond?: { mode?: "keyword" | "invoke_only" | "calibrated" | "silent"; threshold?: number };
+    approveTool?: { mode?: "shadow" | "warn" | "enforce" };
+    routeModel?: { mode?: "shadow" | "warn" | "enforce" };
+    notifyTriage?: { mode?: "shadow" | "warn" | "enforce" };
+    autoSummon?: { mode?: "shadow" | "warn" | "enforce" };
+    nlPolicy?: { mode?: "shadow" | "warn" | "enforce" };
+  };
   auth?: FluxyAuthConfig;
   /** Room keys: exact id or template ending in `*` (Portal-style). */
   rooms?: Record<string, FluxyRoomConfig>;
   /** Defaults surfaced to SDK clients via GET /config/client. */
   client?: FluxyClientDefaults;
+  /**
+   * Who may @mention, which tools, daily token cap. Enforced when the Worker
+   * loads this file; hosted overlay does not run these callbacks.
+   */
+  agents?: Record<string, FluxyAgentPolicy>;
+  /** Hint for self-host wrangler `limits` / DO jurisdiction. Not applied by hosted SaaS. */
+  jurisdiction?: "eu";
 }
 
 export type FluxyMiddlewareKind = "publish" | "disconnect";

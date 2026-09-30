@@ -8,59 +8,154 @@ import {
   applyFluxyTheme,
   fluxyThemeClassName,
 } from "@fluxy-chat/ui";
-import type { FluxyThemeId } from "@fluxy-chat/ui";
+import { FluxyAgentTurnChrome } from "./fluxy-agent-turn-chrome";
 
 export interface FluxyChatWidgetProps {
   roomId: string;
-  /** Pre-built client — preferred when sharing with inbox */
   client?: FluxyChatClient;
   workerUrl?: string;
   token?: string;
   userId?: string;
-  /** Join a public room with joinPublicRoomAsGuest (no member JWT). */
   guest?: boolean;
-  /** Optional pk_ key sent with guest-session (hosted multi-tenant). */
   publishableKey?: string;
   displayName?: string;
   theme?: FluxyThemeId;
   className?: string;
   height?: string | number;
   title?: string;
+  agentId?: string;
+  /** Show a “Powered by FluxyChat” strip. Default on for guest embeds. */
+  poweredBy?: boolean;
+  /** Spectator: no composer, no Ask agent. */
+  readOnly?: boolean;
 }
 
 function WidgetInner({
   roomId,
   title,
   client,
+  agentId,
+  readOnly = false,
 }: {
   roomId: string;
   title?: string;
   client: FluxyChatClient;
+  agentId?: string;
+  readOnly?: boolean;
 }) {
-  const { messages, sendMessage, connectionState, typingUsers, online, agentTyping } = useChat({
+  const {
+    messages,
+    sendMessage,
+    connectionState,
+    typingUsers,
+    online,
+    agentTyping,
+    stopAgentStream,
+    invokeAgent,
+  } = useChat({
     roomId,
     client,
     markReadLatest: true,
   });
+  const streaming = messages.some((m) => m.streaming) || agentTyping;
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape" && streaming) stopAgentStream();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [streaming, stopAgentStream]);
+  const statusText = streaming
+    ? `${connectionState.status}, agent thinking`
+    : connectionState.status;
+  const lastAgent = [...messages].reverse().find((m) => m.userId === agentId || m.streaming);
+  const siblingIds =
+    lastAgent?.parentId != null
+      ? messages
+          .filter((m) => m.parentId === lastAgent.parentId && m.id !== lastAgent.id)
+          .map((m) => String(m.id))
+      : [];
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col" role="region" aria-label={title || "Chat"}>
+      {readOnly ? null : (
+        <a
+          href="#fluxy-chat-composer"
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            overflow: "hidden",
+            clip: "rect(0, 0, 0, 0)",
+          }}
+        >
+          Skip to message
+        </a>
+      )}
+      <div
+        aria-live="polite"
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: "hidden",
+          clip: "rect(0, 0, 0, 0)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
+      >
+        {statusText}
+      </div>
       {title && (
         <header className="border-b border-border px-4 py-2 text-sm font-semibold">
           {title}
-          <span className="ml-2 font-normal text-muted-foreground">
+          <span className="ml-2 font-normal text-muted-foreground" aria-hidden="true">
             {connectionState.status}
+            {streaming ? " · agent thinking" : ""}
           </span>
         </header>
       )}
+      {readOnly ? null : streaming || agentId ? (
+        <div className="flex flex-wrap gap-2 border-b border-border px-4 py-2 text-xs">
+          {streaming ? (
+            <button
+              type="button"
+              aria-label="Stop agent reply"
+              onClick={() => stopAgentStream()}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") stopAgentStream();
+              }}
+            >
+              Stop
+            </button>
+          ) : null}
+          {agentId ? (
+            <button
+              type="button"
+              disabled={streaming}
+              aria-label="Ask the agent to summarize this room"
+              onClick={() => void invokeAgent("Summarize this room.", { agentId })}
+            >
+              Ask agent
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="min-h-0 flex-1">
         <ChatWindow
           messages={messages}
           online={online}
           typingUsers={typingUsers}
           agentTyping={agentTyping && !messages.some((m) => m.streaming)}
-          onSend={(text) => sendMessage(text)}
+          agentTypingLabel="Agent thinking"
+          localUserId={client.userId}
+          readOnly={readOnly}
+          composerInputId={readOnly ? undefined : "fluxy-chat-composer"}
+          onSend={readOnly ? () => {} : (text) => sendMessage(text)}
         />
+        <FluxyAgentTurnChrome siblingIds={siblingIds} />
       </div>
     </div>
   );
@@ -80,6 +175,9 @@ export function FluxyChatWidget({
   className,
   height = 480,
   title,
+  agentId,
+  poweredBy,
+  readOnly = false,
 }: FluxyChatWidgetProps) {
   const tokenClient = useMemo(() => {
     if (clientProp) return clientProp;
@@ -145,11 +243,13 @@ export function FluxyChatWidget({
   }
 
   const h = typeof height === "number" ? `${height}px` : height;
+  const showPoweredBy = poweredBy ?? (guest || readOnly);
 
   return (
     <div
       className={[fluxyThemeClassName(theme), className].filter(Boolean).join(" ")}
       style={{
+        position: "relative",
         height: h,
         display: "flex",
         flexDirection: "column",
@@ -157,8 +257,38 @@ export function FluxyChatWidget({
         borderRadius: 12,
         border: "1px solid #e4e4e7",
       }}
+      role="complementary"
+      aria-label={title ?? "Chat widget"}
     >
-      <WidgetInner roomId={roomId} title={title ?? roomId} client={client} />
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <WidgetInner
+          roomId={roomId}
+          title={title ?? roomId}
+          client={client}
+          agentId={readOnly ? undefined : agentId}
+          readOnly={readOnly}
+        />
+      </div>
+      {showPoweredBy ? (
+        <p
+          style={{
+            margin: 0,
+            padding: "6px 12px",
+            borderTop: "1px solid #e4e4e7",
+            fontSize: 11,
+            color: "#71717a",
+          }}
+        >
+          <a
+            href="https://github.com/AlessandroFare/fluxychat"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "inherit" }}
+          >
+            Powered by FluxyChat
+          </a>
+        </p>
+      ) : null}
     </div>
   );
 }

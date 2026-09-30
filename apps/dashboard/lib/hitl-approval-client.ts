@@ -79,6 +79,26 @@ export async function fetchPendingApprovalsForRoom(
   return body.approvals ?? [];
 }
 
+export async function fetchHitlSlackUserMap(token: string): Promise<{ slackUserId: string; fluxyUserId: string }[]> {
+  const body = await fetchWorkerJson<{ mappings?: { slackUserId: string; fluxyUserId: string }[] }>(
+    `${BASE()}/api/hitl/slack-user-map`,
+    { headers: authHeaders(token) },
+  );
+  return body.mappings ?? [];
+}
+
+export async function putHitlSlackUserMap(
+  token: string,
+  slackUserId: string,
+  fluxyUserId?: string,
+): Promise<void> {
+  await fetchWorkerJson(`${BASE()}/api/hitl/slack-user-map`, {
+    method: "PUT",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ slackUserId, fluxyUserId }),
+  });
+}
+
 export async function postApprovalDecision(
   token: string,
   approvalRequestId: string,
@@ -90,6 +110,32 @@ export async function postApprovalDecision(
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ decision, note }),
   });
+}
+
+export async function fetchHitlEvidence(
+  token: string,
+  approvalRequestId: string,
+): Promise<Record<string, unknown>> {
+  const body = await fetchWorkerJson<{ evidence?: Record<string, unknown> }>(
+    `${BASE()}/api/hitl/approvals/${encodeURIComponent(approvalRequestId)}/evidence`,
+    { headers: authHeaders(token) },
+  );
+  return body.evidence ?? {};
+}
+
+export async function fetchHitlMetrics(token: string): Promise<{
+  pending: number;
+  decidedLast24h: number;
+  uniqueCurrentApprovers: number;
+}> {
+  const body = await fetchWorkerJson<{
+    metrics?: { pending?: number; decidedLast24h?: number; uniqueCurrentApprovers?: number };
+  }>(`${BASE()}/api/hitl/metrics`, { headers: authHeaders(token) });
+  return {
+    pending: Number(body.metrics?.pending || 0),
+    decidedLast24h: Number(body.metrics?.decidedLast24h || 0),
+    uniqueCurrentApprovers: Number(body.metrics?.uniqueCurrentApprovers || 0),
+  };
 }
 
 export function defaultApprovalChain(): ApprovalChainConfig {
@@ -115,4 +161,31 @@ export function parseChainJson(raw: string): ApprovalChainConfig | null {
   } catch {
     return null;
   }
+}
+
+export interface RoomSystemOneDecision {
+  id: string;
+  kind: string;
+  mode: string;
+  model: string | null;
+  choice: string | null;
+  noul: number | null;
+  margin: number | null;
+  cascadedFrom: string | null;
+  twoKey: boolean;
+  toolName: string | null;
+  humanOutcome: string | null;
+  createdAt: string;
+}
+
+export async function fetchRoomSystemOneDecisions(
+  token: string,
+  roomId: string,
+  limit = 40,
+): Promise<RoomSystemOneDecision[]> {
+  const body = await fetchWorkerJson<{ decisions?: RoomSystemOneDecision[] }>(
+    `${BASE()}/rooms/${encodeURIComponent(roomId)}/system-one-decisions?limit=${limit}`,
+    { headers: authHeaders(token) },
+  );
+  return Array.isArray(body.decisions) ? body.decisions : [];
 }

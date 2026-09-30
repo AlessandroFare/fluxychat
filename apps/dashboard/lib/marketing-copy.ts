@@ -12,7 +12,7 @@ export const PAGE_METADATA = {
   landing: buildPageMetadata({
     title: "Humans and agents in the same room",
     description:
-      "Chat, live presence, a shared document, and an agent on the same Durable Object. Public rooms use a pk_ in the browser. Self-host is MIT. Hosted is still beta.",
+      "Chat, presence, Yjs, and invokeAgent share one room Durable Object. Public rooms take a pk_ in the browser. Self-host is MIT. Hosted is beta.",
     path: "/",
   }),
   why: buildPageMetadata({
@@ -24,7 +24,7 @@ export const PAGE_METADATA = {
   getStarted: buildPageMetadata({
     title: "Quickstart",
     description:
-      "Create a Fluxychat account, install the SDK, and send your first room message on hosted cloud in a few steps.",
+      "Guest pk_ room first (shared-ai-room). Optional hosted account. Member JWT for private rooms.",
     path: "/get-started",
   }),
   docs: buildPageMetadata({

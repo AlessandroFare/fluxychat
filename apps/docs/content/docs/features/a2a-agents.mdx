@@ -32,12 +32,15 @@ FluxyChat implements an A2A adapter: fetch external Agent Cards, validate HTTPS 
 ## API
 
 ```http
-GET  /a2a/agents
-POST /a2a/agents
+GET  /a2a/agent-cards
+POST /admin/a2a/agent-cards
+POST /a2a/rooms/:roomId/join
 POST /a2a/tasks
 GET  /a2a/tasks/:taskId
-POST /a2a/tasks/:taskId/cancel
+POST /a2a/tasks/:taskId/delegate
 ```
+
+`POST /a2a/rooms/:roomId/join` with `{ "agentId": "…" }` adds a bot member and a room-scoped `agent_policy`. It does **not** stream the remote A2A endpoint into the room. Invoke the bot like any other agent.
 
 Agent Card JSON follows the [Linux Foundation A2A](https://github.com/a2aproject/A2A) spec.
 

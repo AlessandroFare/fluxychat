@@ -1,0 +1,55 @@
+---
+title: Integration kit (entity rooms)
+description: One webhook + entity link + write-intent foundation. Not ten Marketplace apps.
+---
+
+# Integration kit
+
+FluxyChat is a room behind a Linear issue, GitHub PR, PagerDuty incident, or Zendesk ticket. This Worker path is the shared plumbing: one HMAC URL, one entity-to-room row, write intents. It is not a FluxyChat OAuth app on each vendor, and it is not a Marketplace listing.
+
+## Entity link
+
+`linear:issue:ENG-123`, `github:pr:org/repo#45`, `pagerduty:incident:Q1XYZ`. One stable row per `(project, provider, type, id)` → `roomId`. Duplicate alerts with the same id reuse the same room if you linked that id.
+
+```http
+POST /integrations/entity-links
+Authorization: Bearer <jwt>
+
+{ "roomId": "room_…", "entity": "linear:issue:ENG-123" }
+```
+
+## Inbound webhook
+
+```http
+POST /integrations/webhooks/:projectId/:provider
+```
+
+HMAC with the signing secret you stored on `PUT /integrations/connections` (encrypted with `WEBHOOK_SECRET_ENCRYPTION_KEY`, same key as outbound webhooks). GitHub uses `X-Hub-Signature-256`. Linear uses `Linear-Signature`. Unknown or unlinked entities are acknowledged and not fanned out.
+
+Kill switch: `POST /integrations/connections/:provider/kill`.
+
+Inbound text is `untrusted` and unicode-stripped. Slack / Zendesk / Intercom / HubSpot default `no_train`.
+
+## Writes
+
+`POST /integrations/write-intents` then `POST /integrations/write-intents/:id/approve`.
+
+GitHub / Linear / Jira execute only if `dryRun` is false **and** a write token exists. Self-host may use Worker env PATs. Hosted needs an encrypted per-project `writeToken` on the connection. Payload hash is stored; if the preview changes, approve returns `payload_changed`. Everyone else stays dry-run. Agents do not get a bypass.
+
+## Catalog
+
+`GET /integrations/catalog` — eleven keys, `oauthApp: false`, `marketplace: false`.
+
+## Console
+
+**Integrations** → Entity rooms panel. Admin JWT.
+
+## Not built yet
+
+Linear agent-session OAuth, GitHub App required checks, Slack Marketplace, PagerDuty MCP writes, Zendesk Sunshine, Intercom Fin HITL, HubSpot custom channel, Notion External Agents, Jira Forge remote agents. Existing Bridges and HITL Slack stay where they are. Existing `/incidents` CRUD is separate from entity links.
+
+## Related
+
+- [Room tickets](/docs/guides/room-tickets)
+- [Shared-room agent defaults](/docs/guides/security/shared-room-agent-defaults)
+- [External event ingest](/docs/guides/external-event-ingest)

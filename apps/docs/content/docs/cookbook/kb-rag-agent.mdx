@@ -97,11 +97,7 @@ const client = new FluxyChatClient({ baseUrl, userId: "support-bot", token: serv
 export async function answerWithKb(roomId: string, userMessage: string) {
   const prompt = augmentPrompt(userMessage);
 
-  await client.invokeAgent(agentId, {
-    roomId,
-    prompt,
-    // optional: pass source citations back as a card after reply
-  });
+  await client.invokeAgentRest(agentId, roomId, prompt);
 }
 ```
 
@@ -112,7 +108,7 @@ In the dashboard, bind the agent to the support room under **Agents** → enable
 | Concern | Approach |
 |---------|----------|
 | Embeddings | Replace stub cosine in `createKnowledgeBase()` with Workers AI or external embeddings |
-| Storage | Persist chunks in D1 + Vectorize instead of in-memory Maps |
+| Storage | D1 is required. Optional Vectorize: bind `VECTORIZE` + Workers AI; see `createVectorRetriever` / room memory `?q=` |
 | Freshness | Notion webhooks / Confluence polling cron via Worker `scheduled` |
 | PII | Redact emails/phones before ingest; tenant-scoped source lists |
 | Citations | Post a `Card` with doc links when `results.length > 0` |

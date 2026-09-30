@@ -32,6 +32,7 @@ npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room
 npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
 npx @fluxy-chat/create-fluxy-chat@latest my-draw --example draw
 npx @fluxy-chat/create-fluxy-chat@latest my-deal --example deal-room
+npx @fluxy-chat/create-fluxy-chat@latest my-room --example shared-ai-room
 npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
 npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick
 npx @fluxy-chat/create-fluxy-chat@latest my-stage --example voice-stage
@@ -52,7 +53,7 @@ npx @fluxy-chat/create-fluxy-chat@latest my-bot --adapter slack --pm pnpm
 | `--yes` | `-y` | Skip prompts and accept defaults |
 | `--full` | | Full stack template: chat + `@assistant` + `pnpm setup` / `pnpm dev` |
 | `--minimal` | | Chat-only widget (`@fluxy-chat/ui-kit`), no platform modules |
-| `--example <name>` | | Gallery: `live-cursors`, `live-cursors-chat`, `javascript-live-cursors`, `tiptap-room`, `war-room`, `iot-panel`, `draw`, `deal-room`, `fleet-panel`, `game-tick`, `voice-stage`, `comments-board`, `polls`, `whiteboard` |
+| `--example <name>` | | Gallery: `live-cursors`, `live-cursors-chat`, `javascript-live-cursors`, `tiptap-room`, `war-room`, `iot-panel`, `draw`, `deal-room`, `shared-ai-room`, `fleet-panel`, `game-tick`, `voice-stage`, `comments-board`, `polls`, `whiteboard` |
 | `--skip-install` | | Skip dependency installation |
 | `--no-git` | | Skip git repository initialization |
 | `--help` | `-h` | Show help |

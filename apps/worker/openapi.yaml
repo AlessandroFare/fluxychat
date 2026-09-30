@@ -758,6 +758,69 @@ paths:
         "503":
           description: Critical dependency missing (e.g. database)
 
+  /approvals/require:
+    post:
+      summary: Open an ephemeral room for a tool approval
+      description: JWT. Creates a group room plus a HITL row. For agents that never adopted chat UI.
+      responses:
+        "200":
+          description: roomId and approvalId
+        "401":
+          description: Unauthorized
+
+  /api/hitl/metrics:
+    get:
+      summary: HITL fatigue counts for the tenant
+      description: Pending rows, decisions in the last 24h, distinct current approvers. Counts, not a score.
+      responses:
+        "200":
+          description: metrics object
+        "401":
+          description: Unauthorized
+
+  /api/hitl/approvals:
+    get:
+      summary: List pending HITL approvals
+      description: Query `roomId` or `approverId=me`.
+      responses:
+        "200":
+          description: approvals array
+        "401":
+          description: Unauthorized
+
+  /api/hitl/approvals/{id}/evidence:
+    get:
+      summary: Evidence pack for one HITL request
+      description: Snapshot of tool, chain, and decision fields. Room membership required.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: evidence object
+        "404":
+          description: Not found
+
+  /api/hitl/slack-user-map:
+    get:
+      summary: Slack user id map for HITL
+      responses:
+        "200":
+          description: mappings
+    put:
+      summary: Upsert Slack user map
+      responses:
+        "200":
+          description: mapping
+    delete:
+      summary: Delete Slack user map
+      responses:
+        "200":
+          description: ok
+
   /admin/scheduled/run:
     post:
       summary: Run a scheduled cron job manually (P12-L ops)

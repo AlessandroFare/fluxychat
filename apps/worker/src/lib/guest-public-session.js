@@ -65,6 +65,14 @@ export async function issuePublicGuestSession(env, deps, input, request) {
     return { ok: false, status: 403, body: { error: "room_not_public" } };
   }
 
+  let shareSafe = false;
+  if (input.shareToken) {
+    const { assertShareTokenForRoom } = await import("./public-share-meta.js");
+    const ok = await assertShareTokenForRoom(env, roomId, input.shareToken);
+    if (!ok) return { ok: false, status: 403, body: { error: "invalid_share_token" } };
+    shareSafe = true;
+  }
+
   // Never trust client-supplied userId. A guestKey (localStorage) yields a stable id per room.
   let guestUserId = await deriveStableGuestUserId(projectId, roomId, input.guestKey);
   if (!guestUserId || !isValidId(guestUserId)) {
@@ -98,6 +106,7 @@ export async function issuePublicGuestSession(env, deps, input, request) {
     tid: projectId,
     roles: ["guest"],
     roomId,
+    ...(shareSafe ? { shareSafe: true } : {}),
     ...(input.displayName ? { name: String(input.displayName).slice(0, 64) } : {}),
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + ttlSeconds,

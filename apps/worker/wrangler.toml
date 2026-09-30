@@ -24,12 +24,19 @@ BROWSER_ENABLED = "false"
 # Public rooms: joinPublicRoomAsGuest without minting a member JWT. Guests can send unless you set READ_ONLY.
 PUBLIC_GUEST_ENABLED = "true"
 PUBLIC_GUEST_READ_ONLY = "false"
+# Optional: skip ambient agent policies when the room has no live humans.
+# AMBIENT_REQUIRE_HUMANS=true
+# Self-host EU: `jurisdiction: "eu"` in fluxy.config.js, then
+# `node scripts/apply-do-jurisdiction.mjs --write` to set DO `jurisdiction = "eu"`.
+# D1 region is the database you created in the dashboard, not this script.
 
 # - Huddles: REALTIME_SFU_APP_ID + REALTIME_SFU_APP_SECRET (Worker proxies SDP). Optional LIVEKIT_* fallback.
 #   Caps (defaults in code; do not add more Worker secrets — Free plan max 64 vars).
 #   Optional pack of non-secret flags: one secret FLUXY_RUNTIME_JSON = {"REALTIME_SFU_MONTHLY_GB_CAP":"80"}
 # Runtime env/secrets checklist:
-# - AI binding `[ai]` below is the in-worker STT/TTS path (Whisper + MeloTTS/Aura).
+# - AI binding `[ai]` below is the in-worker STT/TTS path (Whisper + MeloTTS/Aura)
+#   and the default System One path (`typesafe/jev`). It does not replace Groq / room LLMs.
+#   Set SYSTEM_ONE_PROVIDER=off to disable Jev/CLM gates.
 # - Optional BYOK fallback: Cloudflare AI Gateway (P12-I) — AI_GATEWAY_ACCOUNT_ID + AI_GATEWAY_ID + AI_GATEWAY_TOKEN
 #   (+ AI_GATEWAY_PROVIDER_KEY or AI_API_KEY for upstream). Legacy fallback: AI_BASE_URL + AI_API_KEY.
 # - Optional automatic AI room summaries (requires AI configured via gateway or AI_BASE_URL):
@@ -58,6 +65,8 @@ PUBLIC_GUEST_READ_ONLY = "false"
 # - Web search ([web-search] / [deep-research] agent prompts):
 #   TAVILY_API_KEY=tvly-...   # primary (free tier ~1000/mo)
 #   SEARXNG_BASE_URL=https://searxng.yourdomain.com   # public HTTPS only — NOT 127.0.0.1
+# - Room tickets (POST /rooms/:id/tickets): GITHUB_TOKEN, LINEAR_API_KEY,
+#   JIRA_BASE_URL + JIRA_EMAIL + JIRA_API_TOKEN (secrets; not [vars])
 #   SEARXNG_BASIC_AUTH_USER=fluxyagent
 #   SEARXNG_BASIC_AUTH_PASS=...
 #   WEB_SEARCH_PROVIDER=tavily,searxng
@@ -107,6 +116,14 @@ preview_id = "536bdaedd5ce4e28b898e4bfb65ef3a2"   # npx wrangler kv namespace cr
 [[r2_buckets]]
 binding = "ATTACHMENTS"
 bucket_name = "fluxychat-attachments"
+
+# Optional Vectorize for room-memory search ranking (Workers AI embeddings).
+# wrangler vectorize create fluxychat-room-memory --dimensions=384 --metric=cosine
+# Then uncomment:
+# [[vectorize]]
+# binding = "VECTORIZE"
+# index_name = "fluxychat-room-memory"
+# VECTORIZE_EMBED_MODEL must match dimensions (default @cf/baai/bge-small-en-v1.5).
 
 # In-worker speech (CF-A-030): env.AI.run — Whisper STT + MeloTTS/Aura TTS.
 [ai]

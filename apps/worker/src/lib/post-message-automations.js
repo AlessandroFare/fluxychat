@@ -285,12 +285,15 @@ export async function generateRoomSummaryAndAnnounce(env, projectId, roomId) {
   }
 
   const rows = await env.DB.prepare(
-    "SELECT user_id, content, created_at FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50"
+    "SELECT user_id, content, created_at, visibility, visible_to_json FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50"
   )
     .bind(projectId, roomId)
     .all();
 
-  const messages = (rows.results || []).reverse();
+  const { messageVisibleToAgentContext } = await import("./message-visibility.js");
+  const messages = (rows.results || [])
+    .reverse()
+    .filter((m) => messageVisibleToAgentContext(m, "fluxychat-bot"));
   if (!messages.length) return;
 
   const transcript = messages

@@ -4,6 +4,7 @@ import { dispatchWatchlistRoutes } from "./watchlist-http.js";
 import { dispatchMessagesRoutes } from "./messages-http.js";
 import { dispatchLlmRoutes } from "./llm-http.js";
 import { dispatchAgentsRoutes } from "./agents-http.js";
+import { dispatchAgUiRoutes } from "./ag-ui-http.js";
 import { dispatchMessageTemplatesRoutes } from "./message-templates-http.js";
 import { dispatchTemplatesRoutes } from "./templates-http.js";
 import { dispatchActivitiesRoutes } from "./activities-http.js";
@@ -50,5 +51,7 @@ export async function dispatchMessagesAgentsRoutes(request, url, h) {
   if (resMessages) return resMessages;
   const resLlm = await dispatchLlmRoutes(request, url, h);
   if (resLlm) return resLlm;
+  const resAgUi = await dispatchAgUiRoutes(request, url, h);
+  if (resAgUi) return resAgUi;
   return dispatchAgentsRoutes(request, url, h);
 }

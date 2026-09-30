@@ -1,0 +1,47 @@
+---
+title: Art. 50 transparency checklist
+description: What FluxyChat ships for EU AI Act Art. 50 vs what remains your legal duty. Not legal advice.
+---
+
+# Art. 50 transparency checklist
+
+This is a **product mapping**, not a legal opinion. Regulation (EU) 2024/1689 Art. 50 interaction transparency applies from **2 August 2026** (no grace period). Art. 50(2) marking for systems already on the market has a grace window to **2 December 2026**. Confirm dates and scope with counsel.
+
+Hosted FluxyChat is beta. Self-host the MIT Cloudflare room layer if you need the code under your own account.
+
+## What the software does
+
+| Control | Where |
+| --- | --- |
+| `participantType: human \| ai` on protocol messages | Worker persist + WebSocket announce |
+| Visible **IA** badge on agent bubbles | `@fluxy-chat/ui` `MessageItem` |
+| First-contact notice (per project, default on) | Room banner + `metadata.firstContactInRoom` |
+| HMAC-signed machine-readable mark | `messages.metadata_json` |
+| Marks export | `GET /admin/eu-ai-act/art-50-marks` and console **Art. 50 marks** |
+| Prompt-side “I am an AI” suffix | Runtime policy when disclosure is on |
+| Gap assessment | `GET /admin/eu-ai-act/assessment` |
+
+HMAC is an **integrity** check for your export file. It is not secrecy and it is not a notified-body seal. Rotate `ART50_MARK_SECRET` and keep `ART50_MARK_SECRET_PREVIOUS` until old exports verify. Legal Art. 50 duties stay with the deployer of the agent, not with this HMAC.
+
+## What stays on you
+
+- Whether your use is in scope (chatbot vs other AI systems, deployers vs providers)
+- Copy for the first-contact notice in your jurisdiction and language
+- Training users not to treat agent output as a human operator
+- Deepfakes / synthetic media marking beyond in-room text (Art. 50(2) content)
+- EU database registration, FRIA, and notified-body work where required
+- Accessibility of the widget under the European Accessibility Act (separate from the AI Act; consumer services from 28 June 2025)
+
+## Operator steps
+
+1. Run D1 migration `0226_art50_message_marks.sql`.
+2. Keep **Enforce AI disclosure** on for customer-facing rooms.
+3. Keep **First-contact notice** on unless counsel says the room is out of scope.
+4. Export marks after a test invoke and store them with your audit pack.
+5. Read [EU AI Act readiness](/docs/features/eu-ai-act) for Art. 9–15 and Annex IV.
+
+## Related
+
+- [EU AI Act readiness](/docs/features/eu-ai-act)
+- [GDPR](/docs/learn/gdpr-compliance)
+- [Chat SDK adapter (FluxyChat)](/docs/guides/chat-sdk-adapter)

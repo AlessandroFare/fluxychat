@@ -70,6 +70,9 @@ Set `NEXT_PUBLIC_DASHBOARD_LABS=1` and open a room with an agent that declares `
 
 | Method | Path | Purpose |
 |--------|------|---------|
+| `GET` | `/public/hitl/tap?token=` | Email/Slack one-tap (HMAC, no session) |
+| `POST` | `/public/hitl/slack` | Slack interactivity (signing secret) |
+| `GET`/`PUT` | `/api/hitl/slack-user-map` | Slack user id → FluxyChat user |
 | `GET` | `/api/hitl/approvals/pending` | List pending approvals for a room |
 | `POST` | `/api/hitl/approvals/:id/respond` | Approve or deny with HMAC token |
 

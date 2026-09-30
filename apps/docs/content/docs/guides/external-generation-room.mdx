@@ -1,0 +1,34 @@
+---
+title: External generation into a room
+description: Inngest or Workflows owns the model. Post finished text, or PATCH the same chat row as your job yields strings.
+---
+
+# External generation into a room
+
+FluxyChat’s Agent Durable Object is one loop. If **your** Inngest / Trigger.dev / Workflows function already generated the answer, do not also `invokeAgent` for that turn. Post the finished string onto chat with a **member JWT** for the bot user (the bot must already be in the room).
+
+```ts
+import { publishExternalGenerationToRoom } from "@fluxy-chat/sdk";
+
+await publishExternalGenerationToRoom({
+  workerUrl: process.env.FLUXY_WORKER_URL!,
+  token: process.env.FLUXY_BOT_JWT!,
+  roomId: "lobby",
+  content: textYouAlreadyGenerated,
+});
+```
+
+This is `POST /messages`. If your job is still yielding strings, `publishExternalGenerationChunksToRoom` creates one row then `PATCH`es it. Room sockets see those edits. The Agent Durable Object stays out of that turn. Keep traces on **feeds**. Hosted is beta — this is not Think resume and not an Inngest product we run.
+
+```ts
+import { publishExternalGenerationChunksToRoom } from "@fluxy-chat/sdk";
+
+await publishExternalGenerationChunksToRoom({
+  workerUrl: process.env.FLUXY_WORKER_URL!,
+  token: process.env.FLUXY_BOT_JWT!,
+  roomId: "lobby",
+  chunks: streamOfStringsFromYourJob,
+});
+```
+
+Hosted is beta.

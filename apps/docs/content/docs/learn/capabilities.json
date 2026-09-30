@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "product": "FluxyChat",
+  "claims": [
+    {
+      "id": "hosted-beta",
+      "phrase": "Hosted is beta"
+    },
+    {
+      "id": "self-host-mit",
+      "phrase": "Self-host is MIT"
+    },
+    {
+      "id": "no-e2ee",
+      "phrase": "Not claimed"
+    },
+    {
+      "id": "no-soc2",
+      "phrase": "No BAA"
+    },
+    {
+      "id": "hosted-saml-off",
+      "phrase": "SAML_SSO_ENABLED"
+    },
+    {
+      "id": "public-share-token",
+      "phrase": "/share/:token"
+    },
+    {
+      "id": "hitl-post-confirm",
+      "phrase": "HITL"
+    },
+    {
+      "id": "integration-kit",
+      "phrase": "No Marketplace"
+    },
+    {
+      "id": "room-tickets-allowlist",
+      "phrase": "Not OAuth apps"
+    },
+    {
+      "id": "art-50-hmac-integrity",
+      "phrase": "Not a legal guarantee"
+    },
+    {
+      "id": "python-unpublished",
+      "phrase": "Python / Go server SDKs"
+    },
+    {
+      "id": "no-load-numbers",
+      "phrase": "published yet"
+    },
+    {
+      "id": "mcp-registry-unlisted",
+      "phrase": "Not listed on the official MCP registry"
+    }
+  ],
+  "notClaimed": ["SOC 2", "HIPAA BAA", "AI Act conformity assessment"]
+}

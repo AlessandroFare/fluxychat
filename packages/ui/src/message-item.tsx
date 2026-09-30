@@ -248,7 +248,10 @@ export function MessageItem({
   "data-message-id": dataMessageId,
 }: MessageItemProps) {
   const isAgent =
-    variant === "agent" || (m.senderId != null && m.senderId !== m.userId);
+    variant === "agent" ||
+    m.participantType === "ai" ||
+    m.metadata?.aiGenerated === true ||
+    (m.senderId != null && m.senderId !== m.userId);
   const isSelf = Boolean(localUserId && m.userId === localUserId);
   const isStreaming = Boolean(m.streaming);
   const parentId = m.parentId ?? null;
@@ -265,6 +268,11 @@ export function MessageItem({
   // Header: author name + agent badge + delivery status
   const displayName = authorName || m.userId;
   const hasReactions = Boolean(reactions && Object.keys(reactions).length > 0);
+  const iaLabel = m.metadata?.aiDisclosure
+    ? "IA"
+    : agentLabel === "agent"
+      ? "IA"
+      : agentLabel;
 
   return (
     <Message align={align} className={cn("gap-1", className)} data-testid={testId} data-streaming={dataStreaming} data-message-id={dataMessageId}>
@@ -274,8 +282,13 @@ export function MessageItem({
             {displayName}
           </span>
           {isAgent ? (
-            <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand ring-1 ring-brand/20">
-              {agentLabel}
+            <span
+              className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand ring-1 ring-brand/20"
+              data-testid="art50-ia-badge"
+              title={m.metadata?.aiDisclosure || "AI-generated"}
+              aria-label="AI-generated message"
+            >
+              {iaLabel}
             </span>
           ) : null}
           {m.deliveryStatus === "pending" ? (

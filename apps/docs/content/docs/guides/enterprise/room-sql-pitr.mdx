@@ -7,7 +7,7 @@ Every FluxyChat room is a SQLite-backed Durable Object (`new_sqlite_classes`). C
 
 ## Operator path
 
-1. Open a room in the dashboard.
+1. Open a room in the dashboard (**Rooms → Advanced**, or collab project overview).
 2. In **Room insights**, use **Snapshot now** before a risky cutover.
 3. After a bad write, **Restore** on the snapshot you want.
 4. The object applies `onNextSessionRestoreBookmark` and reloads that bookmark the next time it is constructed (hibernation / eviction). Live sockets reconnect.

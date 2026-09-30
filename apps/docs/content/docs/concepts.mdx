@@ -3,9 +3,9 @@ title: Concepts
 description: Rooms, primitives, and how people and agents share one room Durable Object.
 ---
 
-FluxyChat is the realtime **room** for your product: a Cloudflare Durable Object plus D1. Chat and presence share a JSON WebSocket; Yjs uses a second binary connection to the same object. Your auth, your backend, your data model stay yours. We mint member JWTs (or a public-room guest session) and fan out events.
+FluxyChat is a room on Cloudflare: one Durable Object plus D1. Map `roomId` to a deal, a classroom, a board, a dispatch view. Chat and presence share a JSON WebSocket. Yjs uses a second binary connection to the same object. Your auth and data model stay yours. Member JWTs (or a public-room guest session) open the socket. Hosted is beta. Self-host is MIT on your Cloudflare account.
 
-Think of a room as the artifact in your app: a document, a board, a deal, a classroom, a vehicle dispatch view. Map `roomId` to that artifact.
+Cloudflare Think treats the agent as the unit of compute. Document collab products treat the file as the unit. We treat the room as the unit: humans and `invokeAgent` write the same chat timeline. Copilot UI (`AiChat`) stays off that timeline.
 
 ## Building blocks
 
@@ -51,6 +51,8 @@ Server: project API key (`fc_…`) mints member JWTs (`POST /auth/token`). `pk_`
 
 ## Verticals on the same bus
 
-IoT, fleet, game ticks, voice stage, deal quorum: all `server_event` or chat on the same room WebSocket. [Gallery](/docs/getting-started/gallery) has a copy-paste app for each.
+IoT, fleet, game ticks, voice stage, deal quorum: all `server_event` or chat on the same room WebSocket. [Gallery](/docs/getting-started/gallery) has a copy-paste app for each. Those modules are optional. The product is the room.
+
+[Status and limits](/docs/learn/status-and-limits).
 
 Next: [Getting started](/docs/getting-started) · [CLI and examples](/docs/getting-started/for-coding-agents)

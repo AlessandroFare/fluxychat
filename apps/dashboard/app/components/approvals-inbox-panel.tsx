@@ -7,9 +7,12 @@ import { Button, Section } from "./ui";
 import { Badge } from "~/components/ui/badge";
 import {
   fetchPendingApprovalsForMe,
+  fetchHitlEvidence,
+  fetchHitlMetrics,
   postApprovalDecision,
   type HitlApprovalRequest,
 } from "@/lib/hitl-approval-client";
+import { routeHitlRisk } from "@/lib/hitl-risk-route";
 import { messageFromUnknown } from "@/lib/error-message";
 
 interface ApprovalsInboxPanelProps {
@@ -18,6 +21,11 @@ interface ApprovalsInboxPanelProps {
 
 export function ApprovalsInboxPanel({ memberJwt }: ApprovalsInboxPanelProps) {
   const [pending, setPending] = useState<HitlApprovalRequest[]>([]);
+  const [metrics, setMetrics] = useState<{
+    pending: number;
+    decidedLast24h: number;
+    uniqueCurrentApprovers: number;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -28,8 +36,12 @@ export function ApprovalsInboxPanel({ memberJwt }: ApprovalsInboxPanelProps) {
     setLoading(true);
     setError(null);
     try {
-      const list = await fetchPendingApprovalsForMe(memberJwt);
+      const [list, counts] = await Promise.all([
+        fetchPendingApprovalsForMe(memberJwt),
+        fetchHitlMetrics(memberJwt).catch(() => null),
+      ]);
       setPending(list);
+      if (counts) setMetrics(counts);
     } catch (err) {
       setError(messageFromUnknown(err, "Failed to load approvals inbox"));
     } finally {
@@ -62,18 +74,41 @@ export function ApprovalsInboxPanel({ memberJwt }: ApprovalsInboxPanelProps) {
     }
   }
 
+  async function downloadEvidence(id: string) {
+    if (!memberJwt.trim()) return;
+    setError(null);
+    try {
+      const evidence = await fetchHitlEvidence(memberJwt, id);
+      const blob = new Blob([JSON.stringify(evidence, null, 2)], { type: "application/json" });
+      const href = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = href;
+      anchor.download = `hitl-${id}.json`;
+      anchor.click();
+      URL.revokeObjectURL(href);
+    } catch (err) {
+      setError(messageFromUnknown(err, "Evidence download failed"));
+    }
+  }
+
   return (
     <Section
       title="Approvals inbox"
       description="Cross-room pending HITL tool approvals assigned to you."
     >
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => void load()}>
           {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Inbox className="mr-1.5 h-3.5 w-3.5" />}
           Refresh
         </Button>
         {pending.length ? (
           <Badge variant="secondary">{pending.length} pending</Badge>
+        ) : null}
+        {metrics ? (
+          <span className="text-xs text-muted-foreground">
+            {metrics.decidedLast24h} decided in 24h · {metrics.uniqueCurrentApprovers} current
+            approvers
+          </span>
         ) : null}
       </div>
 
@@ -85,6 +120,7 @@ export function ApprovalsInboxPanel({ memberJwt }: ApprovalsInboxPanelProps) {
             <li key={item.id} className="rounded-lg border bg-background p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <code className="text-xs font-semibold">{item.toolName}</code>
+                <Badge variant="outline">{routeHitlRisk(item.toolName).tier}</Badge>
                 <Link href={`/rooms?room=${encodeURIComponent(item.roomId)}`} className="text-xs text-brand underline">
                   room {item.roomId}
                 </Link>
@@ -124,6 +160,14 @@ export function ApprovalsInboxPanel({ memberJwt }: ApprovalsInboxPanelProps) {
                   onClick={() => void decide(item.id, "reject")}
                 >
                   <X className="h-3 w-3" /> Reject
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void downloadEvidence(item.id)}
+                >
+                  Evidence JSON
                 </Button>
                 {confirmId === item.id ? (
                   <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmId(null)}>

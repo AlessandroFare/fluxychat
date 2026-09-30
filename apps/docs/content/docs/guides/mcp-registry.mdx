@@ -1,0 +1,26 @@
+---
+title: MCP registry listing
+description: How to list the FluxyChat room MCP as a remote Streamable HTTP server. Not listed yet.
+---
+
+The Worker speaks MCP at `POST /mcp` (project) and `POST /mcp/rooms/:roomId` (one room). Manifest: `apps/worker/server.json`. `mcpName` on `@fluxy-chat/worker` is `io.github.alessandrofare/fluxychat`. That package is **private**; the registry listing is the remote URL, not an npm install.
+
+**Not on the official registry.** Do not tell buyers it is. Submit when `https://api.fluxychat.com/mcp` is the production Streamable HTTP endpoint you want indexed.
+
+## Files
+
+| File | Role |
+| --- | --- |
+| `apps/worker/server.json` | `name`, `remotes[0].url`, GitHub repo |
+| `apps/worker/package.json` `mcpName` | Must match `server.json` `name` |
+| `packages/sdk/package.json` `mcpName` | Same name on the public npm package. Listing still requires a registry submit after publish. |
+
+## Submit
+
+1. Confirm the remote URL in `server.json` is the host you actually serve (self-host: change it before you file).
+2. Follow the current [MCP registry](https://github.com/modelcontextprotocol/registry) publisher docs (server.json schema + GitHub identity). Those steps move; re-read them the day you publish.
+3. After it is live, change this page from “not listed” to the registry URL. Until then, clients point at your Worker with a member JWT.
+
+CI already runs `mcp-server-manifest.test.js` inside `pnpm run test:worker`. Root gate: `pnpm run check:mcp-server-json`.
+
+Not listed on the official MCP registry.

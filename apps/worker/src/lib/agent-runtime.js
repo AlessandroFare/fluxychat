@@ -3,6 +3,7 @@ import {
   formatModelRef,
   isAnthropicConnection,
   normalizeAgentLlmFields,
+  resolveLlmConnection,
   resolveLlmConnectionWithFallback,
 } from "./llm-providers.js";
 import { createAgentStreamHooks, roomStreamOp, isStreamStoppedError } from "./room-stream.js";
@@ -38,7 +39,7 @@ import { createLLMMiddleware, wrapLanguageModel, createLoggingMiddleware } from 
 import { createLoopController, LOOP_PRESETS } from "./loop-control.js";
 import { createApprovalStore, createApprovalGate } from "./hitl-approval.js";
 import { createD1ApprovalStore } from "./hitl-approval-d1.js";
-import { getRoomApprovalChain } from "./room-config.js";
+import { getRoomApprovalChain, getRoomConfig } from "./room-config.js";
 import { snapshotApprovalChain } from "./room-approval-chain.js";
 import { createPolicyAwareApprovalGate, getProjectToolPolicy, resolveOnHoldPhrase } from "./agent-tool-policy.js";
 import {
@@ -47,6 +48,24 @@ import {
 } from "./message-validation.js";
 import { safeSchedulePostMessageAutomations } from "./post-message-automations-safe.js";
 import { isHumanHandoffActive } from "./room-handoff.js";
+import {
+  evaluateTwoKeyTurn,
+  parseMarkdownHostAllowlist,
+  rewriteUntrustedMarkdown,
+  stripHiddenUnicode,
+  twoKeyGuardEnabled,
+  wrapTwoKeyApprovalGate,
+} from "./shared-room-agent-guard.js";
+import {
+  applySystemOneToolPass,
+  buildClmRoomState,
+  clmChoice,
+  filterAgentRowsByHandle,
+  isSystemOneConfigured,
+  logClmFeed,
+  shouldSystemOneEscalate,
+  wrapClmApprovalGate,
+} from "./clm-system-one.js";
 import { buildWebSearchContext, detectResearchMode } from "./web-search.js";
 import { composeAgentSystemPrompt } from "./fluxychat-product-knowledge.js";
 import { listCommands } from "./room-commands.js";
@@ -56,6 +75,8 @@ import {
   loadAttachmentsByMessageIds,
   userContentWithImages,
 } from "./agent-vision.js";
+import { persistArt50OnAgentMessage } from "./art-50-mark.js";
+import { getProjectEuAiActSettings } from "./eu-ai-act-compliance.js";
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -68,13 +89,17 @@ export function stripSpeakerPrefix(content, speakerId) {
   return content.replace(pattern, "").trimStart();
 }
 
-export function sanitizeAgentReply(content, agentId) {
+export function sanitizeAgentReply(content, agentId, options = {}) {
   if (typeof content !== "string") return content;
-  return stripSpeakerPrefix(content, agentId).trim();
+  let out = stripSpeakerPrefix(content, agentId).trim();
+  if (options.rewriteLinks) {
+    out = rewriteUntrustedMarkdown(out, options.allowedHosts);
+  }
+  return out;
 }
 
 export function buildHistoryMessage(msg, { userId, agentId }) {
-  const raw = typeof msg.content === "string" ? msg.content.trim() : "";
+  const raw = typeof msg.content === "string" ? stripHiddenUnicode(msg.content).trim() : "";
   if (!raw) return null;
   if (msg.user_id === agentId) {
     return { role: "assistant", content: sanitizeAgentReply(raw, agentId) };
@@ -118,6 +143,8 @@ export async function announceRoomChatMessage(env, {
   userId,
   parentId = null,
   createdAt,
+  participantType = null,
+  metadata = null,
 }) {
   const id = toFiniteMessageId(messageId);
   if (!id || !env?.ROOM || !roomId) return;
@@ -130,7 +157,63 @@ export async function announceRoomChatMessage(env, {
     senderId: userId,
     parentId,
     createdAt: createdAt || new Date().toISOString(),
+    ...(participantType ? { participantType } : {}),
+    ...(metadata ? { metadata } : {}),
   }, projectId);
+}
+
+export async function finalizeAgentChatMessage(env, {
+  roomId,
+  projectId,
+  messageId,
+  content,
+  userId,
+  parentId = null,
+  createdAt,
+  extraMetadata = null,
+}) {
+  const id = toFiniteMessageId(messageId);
+  if (!id) return null;
+  let firstContactDisclosure = true;
+  try {
+    const settings = await getProjectEuAiActSettings(env, projectId);
+    firstContactDisclosure = settings.firstContactDisclosure !== false && settings.enforceAiDisclosure !== false;
+  } catch {
+    firstContactDisclosure = true;
+  }
+  const metadata = await persistArt50OnAgentMessage(env, {
+    projectId,
+    roomId,
+    messageId: id,
+    agentId: userId,
+    createdAt,
+    extraMetadata,
+    firstContactDisclosure,
+  });
+  await announceRoomChatMessage(env, {
+    roomId,
+    projectId,
+    messageId: id,
+    content,
+    userId,
+    parentId,
+    createdAt,
+    participantType: "ai",
+    metadata,
+  });
+  if (metadata?.firstContactInRoom) {
+    await announceRoomEvent(env, roomId, {
+      type: "server_event",
+      name: "art50_first_contact",
+      data: {
+        notice: metadata.firstContactNotice,
+        agentId: userId,
+        messageId: id,
+      },
+      userId: userId || "system",
+    }, projectId).catch(() => {});
+  }
+  return metadata;
 }
 
 export function mapBotRowToAgent(row) {
@@ -259,6 +342,14 @@ async function persistMentionAgentRun(env, { runId, projectId, agentId, roomId, 
   } catch (err) {
     logError("agent.mention_invoke_persist_failed", err, { projectId, agentId, roomId, runId });
   }
+  if (status === "completed") {
+    const tokens = Number(result.inputTokens ?? 0) + Number(result.outputTokens ?? 0);
+    void import("./stripe-agent-meter.js")
+      .then((m) =>
+        m.reportStripeAgentTokenMeter(env, { projectId, tokens, identifier: runId }),
+      )
+      .catch(() => {});
+  }
 }
 
 export async function invokeMentionedAgents(
@@ -357,7 +448,57 @@ export async function invokeMentionedAgents(
     return;
   }
 
-  for (const agentRow of agentRows.results || []) {
+  let mentionAgentRows = agentRows.results || [];
+  if (mentionAgentRows.length >= 2 && isSystemOneConfigured(env)) {
+    const criteria = {};
+    for (const row of mentionAgentRows) {
+      const key = normalizeMentionHandle(row.handle);
+      if (key && !criteria[key]) criteria[key] = `${row.name || key} (@${key})`;
+    }
+    if (Object.keys(criteria).length >= 2) {
+      let historyRows = [];
+      try {
+        const hist = await env.DB.prepare(
+          "SELECT user_id, content FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 12",
+        )
+          .bind(projectId, roomId)
+          .all();
+        historyRows = (hist.results || []).reverse();
+      } catch {
+        historyRows = [];
+      }
+      const picked = await clmChoice(env, {
+        state: buildClmRoomState(content, historyRows),
+        questionId: "handle",
+        instructions: "Which room agent should answer this mention?",
+        criteria,
+      });
+      if (picked.ok) {
+        mentionAgentRows = filterAgentRowsByHandle(mentionAgentRows, picked.choice);
+        const { recordRoomDecision, choiceMargin } = await import("./room-decisions.js");
+        recordRoomDecision(env, {
+          projectId,
+          roomId,
+          kind: "shouldRespond",
+          mode: "enforce",
+          choice: picked.choice,
+          options: criteria,
+          probabilities: picked.probabilities,
+          margin: choiceMargin(picked.probabilities),
+          model: "system_one",
+        }).catch(() => {});
+        logClmFeed(env, {
+          projectId,
+          roomId,
+          userId,
+          body: `clm handle_router choice=${picked.choice}`,
+          status: "ok",
+        }).catch(() => {});
+      }
+    }
+  }
+
+  for (const agentRow of mentionAgentRows) {
     try {
       await announceRoomEvent(env, roomId, {
         type: "agentTyping",
@@ -411,7 +552,7 @@ export async function invokeMentionedAgents(
         }
 
         if (mentionMessageId) {
-          await announceRoomChatMessage(env, {
+          await finalizeAgentChatMessage(env, {
             roomId,
             projectId,
             messageId: mentionMessageId,
@@ -419,6 +560,7 @@ export async function invokeMentionedAgents(
             userId: agentRow.id,
             parentId: resolvedParentId,
             createdAt,
+            extraMetadata: { aiDisclosure: `${agentRow.name || "AI assistant"} (AI)` },
           }).catch(() => {});
         }
 
@@ -462,7 +604,7 @@ export async function invokeMentionedAgents(
               null,
             )
             .run();
-          await announceRoomChatMessage(env, {
+          await finalizeAgentChatMessage(env, {
             roomId,
             projectId,
             messageId: insert.meta.last_row_id,
@@ -470,6 +612,7 @@ export async function invokeMentionedAgents(
             userId: agentRow.id,
             parentId: resolvedParentId,
             createdAt,
+            extraMetadata: { aiDisclosure: `${agentRow.name || "AI assistant"} (AI)` },
           }).catch(() => {});
         } catch (announceErr) {
           logError("agent.mention_invoke_error_announce_failed", announceErr, {
@@ -578,6 +721,46 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     roomId,
     runId,
   };
+  const { routeTurnLlm } = await import("./room-decisions.js");
+  const routed = await routeTurnLlm(env, {
+    projectId,
+    roomId,
+    userMessage,
+    runId,
+    agentId: agentRow.id,
+  });
+  if (routed.apply && routed.choice === "skip") {
+    const latencyMs = Math.round(performance.now() - startTime);
+    await announce({
+      type: "agentRun",
+      run: {
+        id: runId,
+        status: "completed",
+        latency_ms: latencyMs,
+        input_tokens: 0,
+        output_tokens: 0,
+        estimated_cost: 0,
+        room_id: roomId,
+        tool_calls: [],
+        iterations: 0,
+        error: null,
+        created_at: new Date().toISOString(),
+      },
+    });
+    return {
+      runId,
+      status: "completed",
+      content: "OK.",
+      latencyMs,
+      inputTokens: 0,
+      outputTokens: 0,
+      estimatedCost: 0,
+      toolCalls: [],
+      contextFetched: 0,
+      iterations: 0,
+    };
+  }
+
   const { primary: primaryResolved, fallback: fallbackResolved } = await resolveLlmConnectionWithFallback(env, {
     provider: agentRow.provider || null,
     model: agentRow.model || null,
@@ -620,6 +803,19 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     };
   }
   let connection = primaryResolved;
+  if (routed.apply && routed.choice === "small") {
+    llmOpts.maxTokens = Math.min(Number(llmOpts.maxTokens) || 1024, 256);
+    const smallModel = String(env.ROOM_LLM_SMALL_MODEL || "").trim();
+    if (smallModel) {
+      const smallConn = await resolveLlmConnection(env, {
+        provider: agentRow.provider || null,
+        model: smallModel,
+        config: agentConfig,
+        projectId,
+      });
+      if (smallConn?.ok && smallConn.apiKey) connection = smallConn;
+    }
+  }
   const hasFallback = !!(fallbackResolved && fallbackResolved.ok);
   const { getRehearsalByRoomId, buildRehearsalAgentSystemPrompt } = await import("./rehearsal-rooms.js");
   const rehearsal = await getRehearsalByRoomId(env, projectId, roomId);
@@ -765,7 +961,22 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   const baseApprovalGate =
     euAiActPolicy.approvalGate ??
     (agentConfig?.approvalGate ? createApprovalGate(agentConfig.approvalGate) : null);
-  const approvalGate = createPolicyAwareApprovalGate(baseApprovalGate, env, projectId);
+  const clmHitlCtx = { stateText: userMessage, projectId, roomId, userId, runId, agentId: agentRow.id };
+  const twoKeyTurn = { readUntrusted: false, hasPrivateData: false };
+  const { config: roomCfg } = await getRoomConfig(env, { projectId, roomId });
+  const innerGate = wrapClmApprovalGate(
+    createPolicyAwareApprovalGate(baseApprovalGate, env, projectId),
+    env,
+    clmHitlCtx,
+  );
+  const approvalGate = twoKeyGuardEnabled(env, roomCfg)
+    ? wrapTwoKeyApprovalGate(innerGate, twoKeyTurn)
+    : innerGate;
+  const sanitizeOutgoing = (content) =>
+    sanitizeAgentReply(content, agentRow.id, {
+      rewriteLinks: twoKeyTurn.readUntrusted,
+      allowedHosts: parseMarkdownHostAllowlist(env),
+    });
 
   // P22-F6: Track multi-step agent run with plan
   const agentPlan = createPlan(`Agent run: ${agentRow.name}`);
@@ -774,9 +985,62 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
   try {
     const contextRows = await env.DB.prepare(
-      "SELECT id, user_id, content, created_at FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 30"
+      "SELECT id, user_id, content, created_at, visibility, visible_to_json, participant_type, metadata_json FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 30"
     ).bind(projectId, roomId).all();
-    const conversationHistory = (contextRows.results || []).reverse();
+    const { messageVisibleToAgentContext } = await import("./message-visibility.js");
+    const conversationHistory = (contextRows.results || [])
+      .reverse()
+      .filter((row) => messageVisibleToAgentContext(row, userId));
+    clmHitlCtx.stateText = buildClmRoomState(userMessage, conversationHistory);
+    clmHitlCtx.onDecision = (decision) =>
+      logClmFeed(env, {
+        projectId,
+        roomId,
+        userId,
+        agentId: agentRow.id,
+        body: `clm hitl_noul tool=${decision.toolName} noul=${decision.noul} human=${decision.requiresHuman}`,
+        status: decision.requiresHuman ? "hold" : "ok",
+      });
+    if (Array.isArray(tools) && isSystemOneConfigured(env)) {
+      const pass = await applySystemOneToolPass(env, { state: clmHitlCtx.stateText, tools });
+      tools = pass.tools;
+      if (pass.decision) {
+        const { recordRoomDecision } = await import("./room-decisions.js");
+        recordRoomDecision(env, {
+          projectId,
+          roomId,
+          kind: "nextTool",
+          mode: "shadow",
+          choice: pass.decision.choice || "none",
+          noul: pass.decision.needsTool,
+          agentId: agentRow.id,
+          runId,
+          model: "system_one",
+        }).catch(() => {});
+        logClmFeed(env, {
+          projectId,
+          roomId,
+          userId,
+          agentId: agentRow.id,
+          body: `system_one tool_pass needs=${pass.decision.needsTool} choice=${pass.decision.choice} escalate=${pass.decision.escalate}`,
+          status: shouldSystemOneEscalate(pass.decision.escalate, env) ? "hold" : "ok",
+        }).catch(() => {});
+        if (
+          shouldSystemOneEscalate(pass.decision.escalate, env) &&
+          (env.SYSTEM_ONE_AUTO_HANDOFF === "true" || env.SYSTEM_ONE_AUTO_HANDOFF === "1")
+        ) {
+          const { requestHumanHandoff } = await import("./room-handoff.js");
+          await requestHumanHandoff(env, {
+            projectId,
+            roomId,
+            userId,
+            agentId: agentRow.id,
+            source: "system_one",
+            note: `system_one escalate noul=${pass.decision.escalate}`,
+          }).catch(() => {});
+        }
+      }
+    }
     const historyAtts = await loadAttachmentsByMessageIds(
       env,
       projectId,
@@ -794,6 +1058,16 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         messages.push({ role: "system", content: `[App Context]\n${JSON.stringify(appContext).slice(0, 4000)}` });
       }
     }
+    Object.assign(
+      twoKeyTurn,
+      evaluateTwoKeyTurn({
+        history: conversationHistory,
+        invokerUserId: userId,
+        agentId: agentRow.id,
+        appContext,
+        contextFetchUrl,
+      }),
+    );
 
     const allowVision = Boolean(
       getModelCapabilities(connection.model, connection.apiStyle || "openai-compatible").imageInput,
@@ -858,6 +1132,19 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       iterations++;
       loopController.nextStep();
 
+      const { drainRoomAgentSteer, consumeRoomAgentStop } = await import("./room-agent-steer.js");
+      if (await consumeRoomAgentStop(env, projectId, roomId)) {
+        agentLog.info("agent_run_cross_device_stop", { projectId, agentId: agentRow.id, runId, roomId, userId });
+        break;
+      }
+      const steered = await drainRoomAgentSteer(env, projectId, roomId);
+      if (steered.length) {
+        messages.push({
+          role: "user",
+          content: `[mid-turn from room]\n${steered.join("\n")}`,
+        });
+      }
+
       // P24-2: Check loop stop conditions
       const loopContext = {
         step: iterations,
@@ -878,6 +1165,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
       if (canStreamFinal) {
         const streamStarted = Date.now();
+        const llmAbort = new AbortController();
         try {
           await streamHooks.onStart("");
           const { content, usage } = await callLlmOpenAIStream(
@@ -889,19 +1177,25 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
               ...llmOpts,
               chatCompletionsUrl: connection.chatCompletionsUrl,
               gatewayHeaders: connection.gatewayHeaders,
+              abortSignal: llmAbort.signal,
             },
             async (delta, fullContent) => {
-              await streamHooks.onDelta(
-                delta,
-                sanitizeAgentReply(fullContent, agentRow.id),
-              );
+              try {
+                await streamHooks.onDelta(
+                  delta,
+                  sanitizeOutgoing(fullContent),
+                );
+              } catch (deltaErr) {
+                if (isStreamStoppedError(deltaErr) && !llmAbort.signal.aborted) llmAbort.abort();
+                throw deltaErr;
+              }
             }
           );
           totalInputTokens += usage.prompt_tokens || 0;
           totalOutputTokens += usage.completion_tokens || 0;
 
           if (content?.trim()) {
-            const sanitized = sanitizeAgentReply(content, agentRow.id);
+            const sanitized = sanitizeOutgoing(content);
             await streamHooks.onEnd(sanitized);
             lastContent = sanitized;
             emitGenAiChatSpan(env, {
@@ -937,6 +1231,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           }
           // Same iteration: fall through to non-stream completion below.
         } catch (streamErr) {
+          if (!llmAbort.signal.aborted) llmAbort.abort();
           if (isStreamStoppedError(streamErr)) {
             streamHooks.clearMessageId();
             emitGenAiChatSpan(env, {
@@ -1063,7 +1358,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
           });
         }
       }
-      lastContent = sanitizeAgentReply(extracted.content, agentRow.id);
+      lastContent = sanitizeOutgoing(extracted.content);
 
       if (isAnthropicConnection(connection)) {
         totalInputTokens += response.usage?.input_tokens || 0;
@@ -1165,6 +1460,33 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
               approvalChainSnapshot: chainSnapshot,
               reason: `Tool "${tc.name}" requires human approval`,
             });
+            try {
+              const { linkDecisionToHitl, recordRoomDecision } = await import("./room-decisions.js");
+              const linked = await linkDecisionToHitl(env, {
+                projectId,
+                roomId,
+                runId,
+                toolName: tc.name,
+                hitlRequestId: request.id,
+              });
+              if (!linked) {
+                await recordRoomDecision(env, {
+                  projectId,
+                  roomId,
+                  kind: "approveTool",
+                  mode: "enforce",
+                  choice: "approve",
+                  model: "deterministic",
+                  toolName: tc.name,
+                  runId,
+                  agentId: agentRow.id,
+                  hitlRequestId: request.id,
+                  twoKey: Boolean(twoKeyTurn.readUntrusted && twoKeyTurn.hasPrivateData),
+                });
+              }
+            } catch {
+              /* audit must not block HITL */
+            }
             await announce( {
               type: "approval_requested",
               runId,
@@ -1271,14 +1593,33 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         });
         const resultMsg = buildToolResultMessage(connection, tc, toolResult);
         messages.push(resultMsg);
+        twoKeyTurn.readUntrusted = true;
         if (!toolResult.success) break;
       }
     }
 
     const latencyMs = Math.round(performance.now() - startTime);
     const trimmedContent =
-      typeof lastContent === "string" ? sanitizeAgentReply(lastContent, agentRow.id) : "";
-    let finalContent = trimmedContent;
+      typeof lastContent === "string"
+        ? sanitizeOutgoing(lastContent)
+        : "";
+    let gatedContent = trimmedContent;
+    try {
+      const { applyNlPolicyToAgentReply } = await import("./room-decisions.js");
+      const policyText = roomCfg?.nlPolicy || env.ROOM_NL_POLICY || "";
+      const gated = await applyNlPolicyToAgentReply(env, {
+        text: trimmedContent,
+        policyText,
+        projectId,
+        roomId,
+        agentId: agentRow.id,
+        runId,
+      });
+      gatedContent = gated.text;
+    } catch {
+      gatedContent = trimmedContent;
+    }
+    let finalContent = gatedContent;
     if (!finalContent) {
       if (totalOutputTokens > 0) {
         finalContent =

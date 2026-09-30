@@ -108,9 +108,9 @@ Two widgets on the same `roomId` (assistant panel + live chat) must pass differe
 ## Agents in-room
 
 ```tsx
-const { invokeAgent } = useChat({ roomId, client });
+const { invokeAgent } = useChat({ roomId });
 
-await invokeAgent("agent-id-here", "Summarize this thread");
+await invokeAgent("Summarize this thread", { agentId: "agt_…" });
 ```
 
 Mention-based invoke (`@assistant …`) is handled by the Worker when agents have handles configured.

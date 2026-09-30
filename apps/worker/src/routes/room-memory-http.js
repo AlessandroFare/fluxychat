@@ -3,13 +3,14 @@ import {
   extractRoomMemory,
   persistRoomMemory,
   queryRoomMemory,
+  searchRoomMemory,
   deleteRoomMemoryEntry,
 } from "../lib/room-memory.js";
 
 /**
  * Room Memory HTTP routes.
  *
- * GET  /rooms/:id/memory       — Query memory entries (filterable by kind)
+ * GET  /rooms/:id/memory       — Query memory (?kind= ?q= keyword; Vectorize optional rank)
  * POST /rooms/:id/memory/extract — Trigger AI memory extraction on-demand
  * DELETE /rooms/:id/memory/:entryId — Delete a memory entry
  */
@@ -84,13 +85,21 @@ export async function dispatchRoomMemoryRoutes(request, url, h) {
 async function handleGetMemory(request, url, { env, json, corsHeaders, roomId, auth }) {
   const kind = url.searchParams.get("kind") || undefined;
   const limit = url.searchParams.get("limit") || undefined;
+  const q = url.searchParams.get("q")?.trim() || "";
 
-  const result = await queryRoomMemory(env, {
-    projectId: auth.projectId,
-    roomId,
-    kind,
-    limit: limit ? Number(limit) : undefined,
-  });
+  const result = q
+    ? await searchRoomMemory(env, {
+        projectId: auth.projectId,
+        roomId,
+        query: q,
+        limit: limit ? Number(limit) : undefined,
+      })
+    : await queryRoomMemory(env, {
+        projectId: auth.projectId,
+        roomId,
+        kind,
+        limit: limit ? Number(limit) : undefined,
+      });
 
   return json({ roomId, entries: result.entries, count: result.entries.length }, { headers: corsHeaders });
 }

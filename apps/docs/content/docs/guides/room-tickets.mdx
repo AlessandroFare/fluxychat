@@ -1,0 +1,44 @@
+---
+title: Room tickets (GitHub, Linear, Jira)
+description: POST a ticket from a room using tokens you put on the Worker. Not a marketplace install.
+---
+
+# Room tickets
+
+Turn a room outcome into an issue in a tracker you already pay for. You put the tokens on the Worker. There is no FluxyChat OAuth app for Linear or Jira.
+
+## Route
+
+```http
+POST /rooms/:roomId/tickets
+Authorization: Bearer <member jwt>
+Content-Type: application/json
+
+{
+  "provider": "github",
+  "title": "Follow up from room",
+  "body": "optional markdown",
+  "repo": "owner/name"
+}
+```
+
+`provider` is `github`, `linear`, or `jira`.
+
+| Provider | Extra fields | Worker env |
+|----------|----------------|------------|
+| GitHub | `repo` (`owner/name`) | `GITHUB_TOKEN` |
+| Linear | `teamId` | `LINEAR_API_KEY` |
+| Jira | `projectKey` | `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` |
+
+The Worker appends the room id to the body. GitHub and Linear call only `api.github.com` and `api.linear.app`. Jira `JIRA_BASE_URL` must be `https://*.atlassian.net`. Hosted multi-tenant refuses Worker-env PATs; put a per-project encrypted `writeToken` on `PUT /integrations/connections`. Self-host may still use env PATs.
+
+## Not this product
+
+- Slack HITL taps stay on `/public/hitl/*`. This route does not post to Slack channels.
+- Agent-drafted bodies are still plaintext to the LLM that wrote them.
+- GitHub issues also exist as an **AI Action** (`github_issue`) with a token in the action config. Room tickets use the Worker env token so operators do not paste a PAT into every action row.
+
+## Related
+
+- [Import a transcript](/docs/guides/import-transcript)
+- [Shared-room agent defaults](/docs/guides/security/shared-room-agent-defaults)

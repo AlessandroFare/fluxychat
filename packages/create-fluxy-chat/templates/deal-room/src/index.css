@@ -6,7 +6,13 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; }
-.shell { max-width: 720px; margin: 0 auto; padding: 1.5rem; }
+.shell { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+.deal-layout { display: grid; gap: 1rem; }
+@media (min-width: 900px) {
+  .deal-layout { grid-template-columns: 1.4fr 0.8fr; }
+}
+.whisper { background: #fff7ed; margin: 0 -0.5rem; padding: 0.15rem 0.5rem; border-radius: 6px; }
+.traces .readings { min-height: 8rem; }
 .panel {
   border: 1px solid #e2e8f0;
   border-radius: 12px;

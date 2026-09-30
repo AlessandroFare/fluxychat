@@ -1,5 +1,7 @@
 {
   "pages": [
+    "status-and-limits",
+    "for-analysts",
     "after-cloudflare-chat-tutorial",
     "agent-events-same-websocket-stream",
     "api-key-management",

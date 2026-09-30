@@ -15,6 +15,9 @@ export const AGENT_RPC_METHODS = {
   cancel_schedule: "cancel_schedule",
   list_schedules: "list_schedules",
   room_event: "room_event",
+  room_invoke: "room_invoke",
+  inject: "inject",
+  stop_run: "stop_run",
 };
 
 export const ROOM_RPC_METHODS = {

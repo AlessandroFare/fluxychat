@@ -14,6 +14,8 @@
  *   const enhancedPrompt = await rag.enhancePrompt("What is FluxyChat?");
  */
 
+import { createVectorizeRetriever } from "./vectorize-retriever.js";
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -183,24 +185,7 @@ export function createRagMiddleware(config) {
  * @returns {Retriever}
  */
 export function createVectorRetriever(env) {
-  return {
-    async search(query, options = {}) {
-      const { limit = 5, threshold = 0.5 } = options;
-
-      // In production, use vector search (e.g., Cloudflare Vectorize)
-      // For now, return empty array
-      return [];
-    },
-
-    async index(document) {
-      // In production, compute embeddings and store in vector index
-    },
-
-    async delete(id) {
-      // In production, delete from vector index
-      return true;
-    },
-  };
+  return createVectorizeRetriever(env);
 }
 
 /**

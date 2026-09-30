@@ -6,6 +6,11 @@ export function isHostedMultiTenantMode(env) {
   return env.HOSTED_MULTI_TENANT === "true" || env.HOSTED_SAAS === "true";
 }
 
+/** Hosted tenants must not share Worker-env GitHub/Linear/Jira PATs. */
+export function hostedSharedWorkerPatForbidden(env) {
+  return isHostedMultiTenantMode(env);
+}
+
 export function getPlatformProjectIdSet(env) {
   const raw =
     env.FLUXY_PLATFORM_PROJECT_ID ||
@@ -68,4 +73,13 @@ export function workerSharedLlmAllowed(env, projectId) {
   if (!isHostedMultiTenantMode(env)) return true;
   if (env.ALLOW_WORKER_LLM_FALLBACK === "true") return true;
   return isPlatformOperatorProject(projectId, env);
+}
+
+/** Hosted ACS/login is off unless explicitly enabled after a SAML review. Self-host is unchanged. */
+export function isHostedSamlLoginEnabled(env) {
+  if (!isHostedMultiTenantMode(env)) return true;
+  const v = String(env.SAML_SSO_ENABLED || "")
+    .trim()
+    .toLowerCase();
+  return v === "true" || v === "1";
 }

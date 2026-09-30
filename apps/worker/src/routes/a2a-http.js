@@ -25,6 +25,7 @@ export async function dispatchA2ARoutes(request, url, h) {
     hasAnyRole,
     logError,
     requestLogCtx,
+    canAccessRoom,
   } = pickRouteDeps(h, [
     "env",
     "json",
@@ -33,6 +34,7 @@ export async function dispatchA2ARoutes(request, url, h) {
     "hasAnyRole",
     "logError",
     "requestLogCtx",
+    "canAccessRoom",
   ]);
 
   const path = url.pathname;
@@ -168,6 +170,29 @@ export async function dispatchA2ARoutes(request, url, h) {
       });
       if (!result.ok) return json(result, { status: 400, headers: corsHeaders });
       return json(result, { status: 201, headers: corsHeaders });
+    }
+
+    const joinMatch = path.match(/^\/a2a\/rooms\/([^/]+)\/join$/);
+    if (joinMatch && request.method === "POST") {
+      if (!hasAnyRole(auth.roles, ["owner", "admin", "moderator"])) {
+        return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+      }
+      const roomId = decodeURIComponent(joinMatch[1]);
+      const allowed = await canAccessRoom(env, auth, roomId);
+      if (!allowed) return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+      const body = await request.json().catch(() => ({}));
+      const { joinA2AAgentToRoom } = await import("../lib/a2a-room-join.js");
+      const result = await joinA2AAgentToRoom(env, {
+        projectId: auth.projectId,
+        roomId,
+        agentId: body.agentId,
+        actorUserId: auth.userId,
+      });
+      if (!result.ok) {
+        const status = result.error === "room_not_found" || result.error === "card_not_found" ? 404 : 400;
+        return json(result, { status, headers: corsHeaders });
+      }
+      return json(result, { headers: corsHeaders });
     }
 
     if (request.method === "GET" && path === "/a2a/envelopes/receive") {

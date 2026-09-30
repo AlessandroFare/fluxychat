@@ -59,4 +59,19 @@ describe("MessageItem bubble variant mapping", () => {
     const bubble = container.querySelector('[data-slot="bubble"]');
     expect(bubble).toHaveAttribute("data-variant", "secondary");
   });
+
+  it("shows IA badge when participantType is ai", () => {
+    const { container } = render(
+      <MessageItem
+        message={makeMessage({
+          userId: "bot_1",
+          participantType: "ai",
+          metadata: { aiGenerated: true, aiDisclosure: "Support (AI)" },
+        })}
+        localUserId="user-1"
+      />,
+    );
+    const badge = container.querySelector('[data-testid="art50-ia-badge"]');
+    expect(badge).toHaveTextContent("IA");
+  });
 });

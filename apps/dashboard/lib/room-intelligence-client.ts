@@ -41,14 +41,27 @@ export async function fetchAudienceScore(
   );
 }
 
+export function roomMemoryListUrl(
+  workerBase: string,
+  roomId: string,
+  opts?: { limit?: number; q?: string },
+): string {
+  const base = workerBase.replace(/\/$/, "");
+  const url = new URL(`${base}/rooms/${encodeURIComponent(roomId)}/memory`);
+  url.searchParams.set("limit", String(opts?.limit ?? 12));
+  const q = opts?.q?.trim();
+  if (q) url.searchParams.set("q", q);
+  return url.toString();
+}
+
 export async function fetchRoomMemory(
   roomId: string,
   memberJwt: string,
-  limit = 12,
+  opts?: { limit?: number; q?: string },
 ): Promise<{ entries: RoomMemoryEntry[]; count: number }> {
   const base = getPublicWorkerUrl().replace(/\/$/, "");
   return fetchWorkerJson<{ entries: RoomMemoryEntry[]; count: number }>(
-    `${base}/rooms/${encodeURIComponent(roomId)}/memory?limit=${limit}`,
+    roomMemoryListUrl(base, roomId, opts),
     { headers: { Authorization: `Bearer ${memberJwt}` } },
   );
 }

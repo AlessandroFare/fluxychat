@@ -3,6 +3,7 @@ import {
   persistRoomMemory,
   queryRoomMemory,
   deleteRoomMemoryEntry,
+  searchRoomMemory,
 } from "./room-memory.js";
 
 function createMemoryEnv(overrides = {}) {
@@ -31,7 +32,10 @@ function createMemoryEnv(overrides = {}) {
                   let filtered = memoryEntries.filter(
                     (e) => e.project_id === projectId && e.room_id === roomId,
                   );
-                  // args layout: [projectId, roomId, nowISO, kind?(optional), limit]
+                  if (sql.includes("AND content LIKE")) {
+                    const like = String(args[3] || "").replace(/%/g, "");
+                    filtered = filtered.filter((e) => String(e.content || "").includes(like));
+                  }
                   if (sql.includes("AND kind = ?")) {
                     const kind = args[3];
                     if (kind) {
@@ -314,5 +318,46 @@ describe("deleteRoomMemoryEntry", () => {
       roomId: "room_1",
     });
     expect(query.entries).toHaveLength(0);
+  });
+});
+
+describe("searchRoomMemory", () => {
+  it("filters D1 rows by substring", async () => {
+    const env = createMemoryEnv();
+    await persistRoomMemory(env, {
+      projectId: "proj_1",
+      roomId: "room_1",
+      entries: [
+        {
+          id: "mem_1",
+          project_id: "proj_1",
+          room_id: "room_1",
+          kind: "decision",
+          content: "We picked PostgreSQL",
+          source_message_ids: "[]",
+          confidence: 0.9,
+          created_at: "2026-06-11T10:00:00.000Z",
+          updated_at: "2026-06-11T10:00:00.000Z",
+        },
+        {
+          id: "mem_2",
+          project_id: "proj_1",
+          room_id: "room_1",
+          kind: "task",
+          content: "Write the README",
+          source_message_ids: "[]",
+          confidence: 0.8,
+          created_at: "2026-06-11T10:00:00.000Z",
+          updated_at: "2026-06-11T10:00:00.000Z",
+        },
+      ],
+    });
+    const hit = await searchRoomMemory(env, {
+      projectId: "proj_1",
+      roomId: "room_1",
+      query: "PostgreSQL",
+    });
+    expect(hit.entries).toHaveLength(1);
+    expect(hit.entries[0].id).toBe("mem_1");
   });
 });

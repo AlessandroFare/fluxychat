@@ -1,0 +1,26 @@
+{
+  "prompt": "search then answer",
+  "cases": [
+    {
+      "tag": "search",
+      "requiredTools": ["search"],
+      "expectedStatus": "completed",
+      "maxLatencyMs": 30000,
+      "expectedOutputContains": "ok",
+      "forbiddenOutputContains": "traceback"
+    }
+  ],
+  "runs": [
+    {
+      "id": "run_1",
+      "tag": "search",
+      "status": "completed",
+      "latency_ms": 812,
+      "estimated_cost": 0.01,
+      "input_tokens": 40,
+      "output_tokens": 80,
+      "tool_calls": [{ "name": "search" }],
+      "output": "looks ok"
+    }
+  ]
+}

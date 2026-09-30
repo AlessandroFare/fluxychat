@@ -48,6 +48,7 @@ describe("worker-route-dispatch (P0-2)", () => {
     expect(names("agents")).toContain("dispatchMessagesAgentsRoutes");
     expect(names("rooms")).toContain("dispatchMessagesAgentsRoutes");
     expect(names("bots")).toContain("dispatchMessagesAgentsRoutes");
+    expect(names("integrations")).toContain("dispatchIntegrationKitRoutes");
   });
 
   it("narrows candidates for /messages vs full before-privacy list", () => {

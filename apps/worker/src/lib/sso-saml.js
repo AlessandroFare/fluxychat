@@ -688,28 +688,25 @@ export async function parseSamlAssertion(encodedResponse, config) {
   // and read identity claims ONLY from the digest-verified node.
   const refUri = extractReferenceUri(xml);
   let signedNodeXml = xml;
-  if (config.wantAssertionsSigned) {
-    if (!refUri || !refUri.startsWith("#")) {
-      return {
-        isValid: false,
-        reason: "assertion_reference_missing",
-        issuer: config.idpEntityId,
-      };
-    }
-    const refId = refUri.slice(1);
-    const declaredDigest = extractDigestValue(xml);
-    const digestResult = await verifyReferenceDigest(parsedDoc, refId, declaredDigest);
-    if (!digestResult.ok) {
-      return {
-        isValid: false,
-        reason: `reference_digest_${digestResult.reason}`,
-        issuer: config.idpEntityId,
-      };
-    }
-    // Read claims only from the signed, digest-verified element.
-    const byId = extractElementById(xml, refId);
-    if (byId) signedNodeXml = byId;
+  if (!refUri || !refUri.startsWith("#")) {
+    return {
+      isValid: false,
+      reason: "assertion_reference_missing",
+      issuer: config.idpEntityId,
+    };
   }
+  const refId = refUri.slice(1);
+  const declaredDigest = extractDigestValue(xml);
+  const digestResult = await verifyReferenceDigest(parsedDoc, refId, declaredDigest);
+  if (!digestResult.ok) {
+    return {
+      isValid: false,
+      reason: `reference_digest_${digestResult.reason}`,
+      issuer: config.idpEntityId,
+    };
+  }
+  const byId = extractElementById(xml, refId);
+  if (byId) signedNodeXml = byId;
 
   // Extract identity claims (from the signed node when assertion-signing is on)
   const claims = extractIssuerAndNameId(signedNodeXml);

@@ -1,0 +1,54 @@
+---
+title: Vercel AI SDK ChatTransport
+description: Map AI SDK useChat sendMessages and reconnectToStream onto a FluxyChat room.
+---
+
+`FluxyRoomChatTransport` lives in `@fluxy-chat/sdk` and `@fluxy-chat/sdk/ai-sdk`. Pass it to AI SDK `useChat({ transport })`. It does not import the `ai` package.
+
+```ts
+import { FluxyChatClient, FluxyRoomChatTransport } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({
+  baseUrl: "https://api.example.com",
+  userId: "alice",
+  token: jwt,
+});
+const transport = new FluxyRoomChatTransport({
+  client,
+  roomId: "deal",
+  agentId: "assistant-id",
+});
+```
+
+| AI SDK | FluxyChat |
+| --- | --- |
+| `sendMessages` | Last user text → `invokeAgentRest`. `abortSignal` aborts that fetch. The HTTP response body is encoded as `text-delta` chunks. Live token paint on the chat row still uses the room WebSocket. |
+| `reconnectToStream` | `GET /ai/streams/active?roomId=` then `GET /ai/streams/:id/resume`. Returns `null` if nothing is stored. |
+
+`chatId` is ignored. The session is the **room**. If the room Durable Object hibernates mid-call, in-flight generation does not resume.
+
+Do not confuse this with SDK `FluxyChatTransport` (`websocket` \| `sse` \| `polling`).
+
+## Non-goals
+
+- Think-style fiber resume after Durable Object eviction.
+- Copilot `AiChat` writing the room timeline.
+- Replacing Groq / the room LLM.
+
+Gallery `deal-room` uses `@fluxy-chat/react` `useChat` on the room socket, not this transport. Use `FluxyRoomChatTransport` when the UI is Vercel AI SDK `useChat`.
+
+## AI SDK 7 tool approval
+
+`addToolApprovalResponse` lands as a `tool-approval-response` part. `sendMessages` POSTs `decideHitl` first (optional `signature` / `vercelSignature` HMAC), then `invokeAgent`, then lists pending HITL and may emit `tool-approval-request`.
+
+The HMAC matches `experimental_toolApprovalSecret`: `approvalId`, `toolCallId`, `toolName`, base64url SHA-256 of canonical JSON input. The room still applies quorum / approval chain. A valid SDK signature is not a skip for other approvers.
+
+`FluxyChatClient.requireApproval()` POSTs `/approvals/require` and opens an ephemeral group room. Use that when the agent never adopted chat UI. OpenAI Agents / LangGraph adapters: `openaiAgentsRequireApproval(client)`.
+
+`GET /api/hitl/metrics` returns pending count, decisions in the last 24h, and distinct current approvers. Counts, not a score.
+
+`GET /api/hitl/approvals/:id/evidence` returns a v=1 evidence pack (tool, chain, decision). Room membership required.
+
+`agentPolicy.opaUrl` (HTTPS only) is posted `buildAgentPolicyOpaInput` v=1. Localhost and RFC1918 hosts are rejected.
+
+Workspace package `@fluxy-chat/ai-sdk-workflow` is `createRoomReviewer`. It does not vendor Vercel `WorkflowAgent`.

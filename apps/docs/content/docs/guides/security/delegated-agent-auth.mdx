@@ -1,0 +1,20 @@
+---
+title: Delegated agent auth
+description: Invoker ∩ agent scopes. Never put a refresh token in the room.
+---
+
+# Delegated agent auth
+
+When an agent calls a third-party API, the token it uses must be the **intersection** of (1) what the **invoker** is allowed to do and (2) what the **agent** is allowed to do. A bot with a tenant-wide GitHub app token while a guest typed the prompt is a data leak.
+
+## What we do today
+
+- Room messages are not a secret store. `sensitive-context` redacts obvious `refresh_token` / API-key shaped strings in some log paths. That is not a vault.
+- HITL still gates external-effect tools in shared rooms ([defaults](/docs/guides/security/shared-room-agent-defaults)).
+- Member JWTs (`fc_`) identify the human. Guests are `guest_…` and untrusted.
+
+## What we do not ship
+
+We do not broker Auth0 / Arcade / Nango / Composio as the primary connector. Those can sit **behind your** `context_fetch_url` or a tool you register. We will not show a refresh token in the transcript or in MCP Apps state.
+
+When you add a connector later: short-lived access tokens, per-invoker account linking, revoke on room leave. Until that exists, keep write tools on HITL and do not paste OAuth secrets into chat.

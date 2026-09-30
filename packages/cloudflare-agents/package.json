@@ -1,0 +1,29 @@
+{
+  "name": "@fluxy-chat/cloudflare-agents",
+  "version": "0.1.0",
+  "description": "Join a FluxyChat room from a Cloudflare Agent isolate. Not a replacement for AIChatAgent.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "pnpm exec tsc -p tsconfig.json",
+    "test": "pnpm exec vitest run"
+  },
+  "dependencies": {
+    "@fluxy-chat/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

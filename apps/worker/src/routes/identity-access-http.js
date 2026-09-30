@@ -10,6 +10,7 @@ import { createScimUser, getScimUser, listScimUsers, updateScimUser, deleteScimU
 import { enrollTotp, verifyAndEnableTotp, verifyAdminTotp, isTotpEnabled, getTotpStatus, disableTotp } from '../lib/totp-2fa.js';
 import { buildAllowedOriginsList } from "../lib/custom-domains.js";
 import { resolveProjectId } from "../lib/resolve-project-id.js";
+import { isHostedSamlLoginEnabled } from "../lib/hosted-saas-policy.js";
 import { isValidId } from "../lib/valid-ids.js";
 import {
   listWebAuthnCredentials,
@@ -66,6 +67,16 @@ export async function dispatchIdentityRoutes(request, url, h) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
 
   const path = url.pathname;
+  const samlLoginOff = path.startsWith("/saml/") && !isHostedSamlLoginEnabled(env);
+  if (samlLoginOff && (path === "/saml/acs" || path === "/saml/metadata" || (path === "/saml/config" && request.method === "POST"))) {
+    return respond(
+      {
+        error: "saml_disabled",
+        hint: "Hosted SAML login is off. Self-host, or set SAML_SSO_ENABLED=true after a signature review.",
+      },
+      503,
+    );
+  }
 
   // ─── SAML Configuration (admin only) ───
 
@@ -74,6 +85,9 @@ export async function dispatchIdentityRoutes(request, url, h) {
     if (auth.error) return respond({ error: auth.error }, auth.status);
 
     const config = await getSamlConfig(env, auth.projectId);
+    if (!isHostedSamlLoginEnabled(env)) {
+      return respond({ configured: false, hostedDisabled: true });
+    }
     if (!config) return respond({ configured: false });
     return respond({
       configured: true,

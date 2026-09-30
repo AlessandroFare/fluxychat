@@ -10,6 +10,7 @@ Realtime chat on Cloudflare Workers: one Worker, WebSocket rooms, a TypeScript S
 |------|-------|
 | Try hosted | [fluxychat.com](https://fluxychat.com) |
 | Public documentation | [docs.fluxychat.com](https://docs.fluxychat.com) |
+| Status and limits | [docs/learn/status-and-limits](https://docs.fluxychat.com/docs/learn/status-and-limits) |
 | Operator console | `apps/dashboard` → start at `/onboarding` |
 | SDK (npm) | [@fluxy-chat/sdk](https://www.npmjs.com/package/@fluxy-chat/sdk) |
 | React hooks | [@fluxy-chat/react](https://www.npmjs.com/package/@fluxy-chat/react) |

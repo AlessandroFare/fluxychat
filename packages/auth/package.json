@@ -1,0 +1,26 @@
+{
+  "name": "@fluxy-chat/auth",
+  "version": "0.1.0",
+  "description": "Mint FluxyChat member JWTs (fc_) from Clerk, Auth.js, Better Auth, Lucia, Supabase, or OIDC sub. Not a vendor SDK.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "pnpm exec tsc -p tsconfig.json",
+    "test": "pnpm exec vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

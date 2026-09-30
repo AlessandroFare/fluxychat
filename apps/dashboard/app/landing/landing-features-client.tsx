@@ -226,6 +226,21 @@ export function LandingFeaturesClient() {
                 </Card>
               ))}
             </div>
+            <p className="mt-6 text-sm text-zinc-400">
+              Longer notes:{" "}
+              <Link href="/landing/incident" className="text-[var(--mkt-brand)] underline-offset-4 hover:underline">
+                incident
+              </Link>
+              {", "}
+              <Link href="/landing/support" className="text-[var(--mkt-brand)] underline-offset-4 hover:underline">
+                support
+              </Link>
+              {", "}
+              <Link href="/landing/pr-review" className="text-[var(--mkt-brand)] underline-offset-4 hover:underline">
+                PR review
+              </Link>
+              . Gallery apps, not separate SKUs.
+            </p>
           </div>
         </div>
       </section>

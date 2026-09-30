@@ -6,7 +6,9 @@ import { fanoutRoomInternal } from "../lib/room-shard.js";
 export async function dispatchRoomConfigRoutes(request, url, h) {
   const configMatch = url.pathname.match(/^\/rooms\/([^/]+)\/config$/);
   const timelineMatch = url.pathname.match(/^\/rooms\/([^/]+)\/timeline-events$/);
-  if (!configMatch && !timelineMatch) return null;
+  const decisionsMatch = url.pathname.match(/^\/rooms\/([^/]+)\/system-one-decisions$/);
+  const ticketsMatch = url.pathname.match(/^\/rooms\/([^/]+)\/tickets$/);
+  if (!configMatch && !timelineMatch && !decisionsMatch && !ticketsMatch) return null;
 
   const {
     env,
@@ -37,10 +39,50 @@ export async function dispatchRoomConfigRoutes(request, url, h) {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
-  const roomId = decodeURIComponent((configMatch || timelineMatch)[1]);
+  const roomId = decodeURIComponent((configMatch || timelineMatch || decisionsMatch || ticketsMatch)[1]);
   const allowed = await canAccessRoom(env, auth, roomId);
   if (!allowed) {
     return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+  }
+
+  if (ticketsMatch && request.method === "POST") {
+    const body = await request.json().catch(() => ({}));
+    const { createExternalTicket } = await import("../lib/room-tickets.js");
+    const { resolveProjectWriteCredentials } = await import("../lib/integration-kit.js");
+    const credentials = await resolveProjectWriteCredentials(env, {
+      projectId: auth.projectId,
+      provider: body?.provider,
+    });
+    const result = await createExternalTicket(env, {
+      projectId: auth.projectId,
+      roomId,
+      userId: auth.userId,
+      provider: body?.provider,
+      title: body?.title,
+      body: body?.body,
+      repo: body?.repo,
+      teamId: body?.teamId,
+      projectKey: body?.projectKey,
+      credentials: credentials || undefined,
+    });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: result.status || 400, headers: corsHeaders });
+    }
+    return json({ ticket: result.ticket }, { headers: corsHeaders });
+  }
+
+  if (decisionsMatch && request.method === "GET") {
+    try {
+      const { listRoomDecisions } = await import("../lib/room-decisions.js");
+      const rows = await listRoomDecisions(env, {
+        projectId: auth.projectId,
+        roomId,
+        limit: url.searchParams.get("limit"),
+      });
+      return json({ decisions: rows }, { headers: corsHeaders });
+    } catch {
+      return json({ decisions: [] }, { headers: corsHeaders });
+    }
   }
 
   if (timelineMatch && request.method === "GET") {

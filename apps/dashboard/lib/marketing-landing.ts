@@ -3,11 +3,11 @@
  */
 
 export const MARKETING_HERO = {
-  eyebrow: "Your product is a room",
+  eyebrow: "Shared AI rooms",
   headlineLead: "Humans and agents",
   headlineAccent: "in the same room",
   subhead:
-    "Chat, live presence, a shared document, and an agent on the same Durable Object. Public rooms use a pk_ in the browser. Self-host is MIT. Hosted is still beta.",
+    "Chat, presence, Yjs, and invokeAgent share one room Durable Object. Public rooms take a pk_ in the browser. Self-host is MIT. Hosted is beta.",
 } as const;
 
 export const MARKETING_WHY = {
@@ -49,13 +49,13 @@ export const MARKETING_ENTERPRISE = {
   eyebrow: "Enterprise default",
   title: "The room Cloudflare Agents will not ship",
   intro:
-    "Cloudflare Agents give you a Durable Object. FluxyChat is the room other orgs can join: private terms, quorum on the dangerous tools, a group cipher and a signed export. E2EE only if you keep the key. We never see it.",
+    "Cloudflare Agents give you a Durable Object. FluxyChat is a room other orgs can join: private terms, quorum on dangerous tools, a Worker-wrapped envelope, a signed export. The envelope is not customer KMS. An LLM still sees plaintext on invoke.",
   items: [
     "Cross-org rooms, private terms, and settlements",
     "Critical-action quorum on the same WebSocket as chat",
-    "Group cipher and signed export. E2EE only if you keep the key.",
+    "Worker-wrapped room envelope and signed export. Not zero-access E2EE.",
     "Room SQLite PITR (30-day bookmarks, restore on next wake)",
-    "SSO / SAML & SCIM provisioning",
+    "SSO / SCIM on self-host. Hosted SAML login is off unless enabled after review.",
     "Audit logs, retention, legal hold, GDPR export",
     "Per-tool HITL gates and OpenTelemetry gen_ai spans",
   ],
@@ -72,7 +72,11 @@ export const MARKETING_FINAL_CTA = {
 export const PRICING_FAQ = [
   {
     q: "Is chat end-to-end encrypted?",
-    a: "TLS in transit. If you want E2EE, you hold the key. Double Ratchet for private rooms is still on the roadmap.",
+    a: "TLS in transit. You can wrap payloads with a room key the Worker holds. Anyone with Worker secrets can unwrap. The model sees plaintext when invokeAgent runs. There is no customer KMS.",
+  },
+  {
+    q: "Do agents count as seats or MAU?",
+    a: "No. Console seats are humans. Agents cost invokes: streaming replies, tool calls, MCP. A chatty bot is not extra MAU.",
   },
   {
     q: "Why usage-based quotas?",

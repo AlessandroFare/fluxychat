@@ -29,7 +29,7 @@ Content-Type: application/json
 }
 ```
 
-Stored in `room_config` (same pattern as translation settings). Dashboard: **Rooms → HITL approval chain**.
+Stored in `room_config` (same pattern as translation settings). Dashboard: **Rooms → HITL approval chain**. Shared-room two-key HITL (guests + private context + outbound tools) is on unless the Worker env or this room’s skip checkbox turns it off. Audit table: **Rooms → Advanced → Room Decisions**.
 
 ## Snapshot on request
 
@@ -39,6 +39,19 @@ When an agent hits a tool that requires approval, the Worker:
 2. Copies it into `hitl_approval_requests.approval_chain_snapshot_json`
 3. Sets `current_approver_id` to step 0
 4. Writes `approval_requested` to `room_timeline_events`
+5. Notifies the current approver: in-app, web-push (if VAPID), email, Slack webhook
+
+## Email and Slack one-tap
+
+Approvers can decide from a signed link. No login cookie. The token is HMAC (`ART50_MARK_SECRET` or `JWT_SECRET`), bound to `approvalId`, `userId`, and `approve`/`deny`. `GET /public/hitl/tap?token=…` records the decision only if that user is still the current approver.
+
+Set `PUBLIC_APP_URL` to the **Worker origin** that serves `/public/hitl/tap`. Mail uses the same path as the daily digest (`EMAIL.send` or `RESEND_API_KEY`). Slack is an incoming webhook URL in `HITL_SLACK_WEBHOOK_URL` (`https://hooks.slack.com/…` only).
+
+Without `HITL_SLACK_SIGNING_SECRET`, buttons are **link** buttons that open `GET /public/hitl/tap`. With the signing secret, buttons are **interactive**: Slack POSTs to `POST /public/hitl/slack`. Point the Slack app Interactivity Request URL at that Worker path.
+
+Save a Slack member id on **Rooms → Advanced → HITL approval chain** (`PUT /api/hitl/slack-user-map`). When that id matches the current approver, the Slack button `value` is the approval UUID only. Email links still use HMAC. Unmapped rooms keep the tap token on the button — anyone who can click that message can use it, same as forwarding the GET link.
+
+Digest email opt-out (`email_enabled = 0`) skips HITL mail. Address comes from digest prefs, else `users.email`.
 
 Later config edits only affect **new** requests.
 
@@ -73,3 +86,8 @@ wrangler d1 migrations apply fluxychat --remote
 ```
 
 Files: `0208_room_config.sql`, `0209_hitl_approval_requests.sql`, `0210_room_timeline_events.sql`.
+
+## x402 is an approval card, not a wallet
+
+Cross-org settlement can POST an x402 facilitator URL (`X402_FACILITATOR_URL`) after both sides commit. That is **pay-retry HTTP**, stored as `external_ref` on the settlement row. It is not a room crypto wallet, not a browser extension, and not a spend log for every `http_request`. Operator cost stays on Rooms → Advanced (token budget) plus Stripe **tenant** meter if you enabled it.
+

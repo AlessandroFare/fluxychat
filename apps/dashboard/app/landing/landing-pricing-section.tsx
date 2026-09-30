@@ -22,7 +22,8 @@ export function LandingPricingSection() {
         <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-white">Pricing</h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
           One plan covers chat, AI agents, webhooks, and platform modules. Undercuts Pusher and Ably on message
-          quotas. Starter at $20/mo vs Pusher Startup at $49/mo for similar traffic.
+          quotas. Starter at $20/mo vs Pusher Startup at $49/mo for similar traffic. Agents are
+          invokes, not extra MAU.
         </p>
         <p className="mx-auto mt-2 max-w-xl text-center text-xs text-slate-400">
           Console routes can require a one-time ack on your dashboard host. Billable usage still needs your Worker

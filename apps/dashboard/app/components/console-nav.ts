@@ -98,7 +98,7 @@ export const CONSOLE_NAV_AGENTS: ConsoleNavItem[] = [
 export const CONSOLE_NAV_CONNECT: ConsoleNavItem[] = [
   { href: "/knowledge", label: "Knowledge base", icon: BookOpen, description: "KB connectors and RAG search" },
   { href: "/customers", label: "Customers", icon: Users, description: "CDP profiles and campaigns" },
-  { href: "/integrations", label: "Integrations", icon: Plug, description: "Turnstile, SMS, WhatsApp" },
+  { href: "/integrations", label: "Integrations", icon: Plug, description: "Entity rooms, Turnstile, SMS" },
   { href: "/bridges", label: "Bridges", icon: ArrowRightLeft, description: "Slack, Discord, Matrix" },
   { href: "/bridges/forms", label: "Channel forms", icon: MessageSquare, description: "WhatsApp / RCS structured forms" },
 ];

@@ -57,6 +57,7 @@ function mapSettingsRow(row) {
       providerLegalName: null,
       providerContact: null,
       enforceAiDisclosure: true,
+      firstContactDisclosure: true,
       enforceHitlHighRisk: true,
       recordRetentionDays: 365,
       requireConformityForHighRisk: true,
@@ -70,6 +71,7 @@ function mapSettingsRow(row) {
     providerLegalName: row.provider_legal_name ?? null,
     providerContact: row.provider_contact ?? null,
     enforceAiDisclosure: row.enforce_ai_disclosure !== 0,
+    firstContactDisclosure: row.first_contact_disclosure !== 0,
     enforceHitlHighRisk: row.enforce_hitl_high_risk !== 0,
     recordRetentionDays: row.record_retention_days ?? 365,
     requireConformityForHighRisk: row.require_conformity_for_high_risk !== 0,
@@ -110,14 +112,26 @@ function mapProfileRow(row) {
 }
 
 export async function getProjectEuAiActSettings(env, projectId) {
-  const row = await env.DB.prepare(
-    `SELECT enabled, provider_legal_name, provider_contact, enforce_ai_disclosure,
-            enforce_hitl_high_risk, record_retention_days, require_conformity_for_high_risk,
-            block_unacceptable_risk, updated_at
-     FROM project_eu_ai_act_settings WHERE project_id = ?`,
-  )
-    .bind(projectId)
-    .first();
+  let row = null;
+  try {
+    row = await env.DB.prepare(
+      `SELECT enabled, provider_legal_name, provider_contact, enforce_ai_disclosure,
+              first_contact_disclosure, enforce_hitl_high_risk, record_retention_days,
+              require_conformity_for_high_risk, block_unacceptable_risk, updated_at
+       FROM project_eu_ai_act_settings WHERE project_id = ?`,
+    )
+      .bind(projectId)
+      .first();
+  } catch {
+    row = await env.DB.prepare(
+      `SELECT enabled, provider_legal_name, provider_contact, enforce_ai_disclosure,
+              enforce_hitl_high_risk, record_retention_days, require_conformity_for_high_risk,
+              block_unacceptable_risk, updated_at
+       FROM project_eu_ai_act_settings WHERE project_id = ?`,
+    )
+      .bind(projectId)
+      .first();
+  }
   return mapSettingsRow(row);
 }
 
@@ -127,14 +141,15 @@ export async function upsertProjectEuAiActSettings(env, projectId, input) {
   await env.DB.prepare(
     `INSERT INTO project_eu_ai_act_settings
        (project_id, enabled, provider_legal_name, provider_contact, enforce_ai_disclosure,
-        enforce_hitl_high_risk, record_retention_days, require_conformity_for_high_risk,
-        block_unacceptable_risk, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        first_contact_disclosure, enforce_hitl_high_risk, record_retention_days,
+        require_conformity_for_high_risk, block_unacceptable_risk, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(project_id) DO UPDATE SET
        enabled = excluded.enabled,
        provider_legal_name = excluded.provider_legal_name,
        provider_contact = excluded.provider_contact,
        enforce_ai_disclosure = excluded.enforce_ai_disclosure,
+       first_contact_disclosure = excluded.first_contact_disclosure,
        enforce_hitl_high_risk = excluded.enforce_hitl_high_risk,
        record_retention_days = excluded.record_retention_days,
        require_conformity_for_high_risk = excluded.require_conformity_for_high_risk,
@@ -147,6 +162,7 @@ export async function upsertProjectEuAiActSettings(env, projectId, input) {
       input.providerLegalName?.trim() || null,
       input.providerContact?.trim() || null,
       input.enforceAiDisclosure === false ? 0 : 1,
+      input.firstContactDisclosure === false ? 0 : 1,
       input.enforceHitlHighRisk === false ? 0 : 1,
       retention,
       input.requireConformityForHighRisk === false ? 0 : 1,
@@ -377,14 +393,14 @@ export async function resolveEuAiActRuntimePolicy(env, { projectId, agentId, age
     ? `\n\n[EU AI Act transparency] You are an AI system. Identify yourself as "${disclosureLabel}" when asked or when your output could be mistaken for a human. Do not impersonate a human operator.`
     : "";
 
-  const messageMetadata = needsDisclosure
-    ? {
-        aiGenerated: true,
-        aiDisclosure: disclosureLabel,
-        euAiActRiskCategory: category,
-        humanOversightLevel: profile?.humanOversightLevel ?? null,
-      }
-    : { euAiActRiskCategory: category };
+  const messageMetadata = {
+    participantType: "ai",
+    aiGenerated: true,
+    aiDisclosure: disclosureLabel,
+    euAiActRiskCategory: category,
+    humanOversightLevel: profile?.humanOversightLevel ?? null,
+    art50: true,
+  };
 
   return {
     blocked: false,
@@ -408,6 +424,18 @@ export async function assessEuAiActCompliance(env, projectId) {
   const profileByAgent = new Map(profiles.map((p) => [p.agentId, p]));
 
   const gaps = [];
+
+  if (!settings.enforceAiDisclosure) {
+    gaps.push({
+      id: "art50_disclosure_off",
+      article: "Art. 50",
+      severity: "high",
+      title: "AI disclosure enforcement is off",
+      detail:
+        "Art. 50 interaction transparency applies from 2 Aug 2026. Keep enforceAiDisclosure on for customer-facing agents, and keep the IA badge plus signed message marks.",
+      fixPath: "/ai-governance/eu-ai-act",
+    });
+  }
 
   if (!settings.providerLegalName?.trim()) {
     gaps.push({
@@ -600,7 +628,12 @@ export async function buildEuAiActTechnicalDocumentation(env, projectId) {
     agents,
     governanceRegistry: registry,
     controls: {
-      transparency: ["Agent disclosure labels", "Streaming agent_step events", "Art. 50 metadata on messages"],
+      transparency: [
+        "IA / AI badge on agent messages (participantType=ai)",
+        "First-contact Art. 50 notice (configurable per project)",
+        "HMAC-signed machine-readable metadata on AI messages",
+        "Art. 50 marks export GET /admin/eu-ai-act/art-50-marks",
+      ],
       humanOversight: ["HITL tool approvals", "Moderation queue", "Agent queue handoff", "Async decisions"],
       logging: ["agent_runs D1 table", "eu_ai_act_audit_log", "OTel export", "SOC 2 evidence"],
       dataGovernance: ["EU consent/DPA", "Data residency", "PII redaction middleware", "Retention policies"],

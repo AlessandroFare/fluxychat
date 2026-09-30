@@ -109,6 +109,7 @@ export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts
       method: "POST",
       headers: streamHeaders,
       body: JSON.stringify(body),
+      ...(opts.abortSignal ? { signal: opts.abortSignal } : {}),
     },
     { feature: "llm_stream", projectId: opts.projectId, roomId: opts.roomId, runId: opts.runId },
   );
@@ -154,6 +155,11 @@ export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts
       await reader.cancel();
     } catch {
       /* already closed */
+    }
+    if (opts.abortSignal?.aborted) {
+      const stopped = new Error("stream_stopped");
+      stopped.code = "stream_stopped";
+      throw stopped;
     }
     throw err;
   }

@@ -1,8 +1,9 @@
 {
   "name": "@fluxy-chat/worker",
   "version": "0.1.0",
-  "description": "Fluxychat Cloudflare Worker â€“ WebSocket, Durable Objects, D1",
+  "description": "Fluxychat Cloudflare Worker – WebSocket, Durable Objects, D1",
   "private": true,
+  "mcpName": "io.github.alessandrofare/fluxychat",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev src/worker.js",

@@ -35,6 +35,8 @@ import {
 } from "../lib/agent-do-session.js";
 import { AGENT_RPC_METHODS, parseRpcRequest } from "../lib/do-rpc.js";
 import { executeAgentRun } from "../lib/agent-runtime.js";
+import { createAgentStreamHooks } from "../lib/room-stream.js";
+import { injectRoomAgentSteer, requestRoomAgentStop } from "../lib/room-agent-steer.js";
 
 import { withRuntimeConfig } from "../lib/with-runtime-config.js";
 
@@ -124,6 +126,15 @@ export class AgentDurableObject {
     }
     if (method === "room_event") {
       return this.handleRoomEvent(params);
+    }
+    if (method === "room_invoke") {
+      return this.handleRoomInvoke(params);
+    }
+    if (method === "inject") {
+      return this.handleInject(params);
+    }
+    if (method === "stop_run") {
+      return this.handleStopRun(params);
     }
     return Response.json({ ok: false, reason: "unknown_method" }, { status: 400 });
   }
@@ -277,6 +288,86 @@ export class AgentDurableObject {
     };
     await saveCopilotState(this.state.storage, { meta, turns });
     return Response.json({ ok: true, ...serializeCopilotState({ meta, turns }) });
+  }
+
+  async handleRoomInvoke(params) {
+    const content = String(params.content || "").trim();
+    const roomId = String(params.roomId || "").trim();
+    const agentId = String(params.agentId || this.agentId || "").trim();
+    const projectId = String(params.projectId || this.projectId || "").trim();
+    const userId = String(params.userId || this.userId || "").trim();
+    if (!content || !roomId || !agentId || !projectId || !userId) {
+      return Response.json({ ok: false, reason: "identity_required" }, { status: 400 });
+    }
+    await this.persistIdentity({ projectId, agentId, userId });
+    if (this.state?.storage) {
+      await this.state.storage.put("checkpoint", {
+        roomId,
+        agentId,
+        userId,
+        content,
+        status: "running",
+        at: Date.now(),
+      });
+    }
+    const agentRow = await this.env.DB.prepare(
+      `SELECT id, name, handle, provider, model, config, system_prompt, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm, allowed_tools
+       FROM bots WHERE project_id = ? AND id = ?`,
+    )
+      .bind(projectId, agentId)
+      .first();
+    if (!agentRow) {
+      return Response.json({ ok: false, reason: "agent_not_found" }, { status: 404 });
+    }
+    const streamHooks =
+      params.stream === false
+        ? null
+        : createAgentStreamHooks(this.env, {
+            projectId,
+            roomId,
+            userId: agentId,
+            parentId: params.replyTo || null,
+          });
+    const result = await executeAgentRun(this.env, {
+      agentRow,
+      projectId,
+      roomId,
+      userMessage: content,
+      userId,
+      traceId: params.traceId || roomId,
+      streamHooks,
+    });
+    if (this.state?.storage) {
+      await this.state.storage.put("checkpoint", {
+        roomId,
+        runId: result.runId,
+        status: result.status,
+        content: result.content || "",
+        at: Date.now(),
+      });
+    }
+    return Response.json({ ok: result.status !== "failed", run: result });
+  }
+
+  async handleInject(params) {
+    return Response.json(
+      await injectRoomAgentSteer(this.env, {
+        projectId: params.projectId || this.projectId,
+        roomId: params.roomId,
+        userId: params.userId || this.userId,
+        content: params.content,
+      }),
+    );
+  }
+
+  async handleStopRun(params) {
+    return Response.json(
+      await requestRoomAgentStop(this.env, {
+        projectId: params.projectId || this.projectId,
+        roomId: params.roomId,
+        userId: params.userId || this.userId,
+      }),
+    );
   }
 
   async armScheduleAlarm() {

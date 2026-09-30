@@ -6,6 +6,8 @@ const memberJwt = import.meta.env.VITE_FLUXYCHAT_MEMBER_JWT?.trim();
 const publicRoomId = import.meta.env.VITE_FLUXYCHAT_PUBLIC_ROOM_ID?.trim();
 const configuredRoomId = import.meta.env.VITE_FLUXYCHAT_ROOM_ID?.trim() || "demo";
 
+export type DealSeat = "buyer" | "counsel";
+
 export interface FluxySession {
   workerUrl: string;
   token: string;
@@ -14,7 +16,25 @@ export interface FluxySession {
   mode: "member" | "guest";
 }
 
-export function useFluxySession(): {
+function guestKeyForSeat(seat: DealSeat): string {
+  const storageKey = `fluxy.dealSeat.${seat}`;
+  let existing = sessionStorage.getItem(storageKey);
+  if (!existing || !/^[A-Za-z0-9_-]{16,128}$/.test(existing)) {
+    existing =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8)
+        : `${Date.now()}${Math.random().toString(36).slice(2, 18)}`;
+    sessionStorage.setItem(storageKey, existing);
+  }
+  return existing;
+}
+
+export function readDealSeat(): DealSeat {
+  if (typeof window === "undefined") return "buyer";
+  return new URLSearchParams(window.location.search).get("seat") === "counsel" ? "counsel" : "buyer";
+}
+
+export function useFluxySession(seat: DealSeat): {
   session: FluxySession | null;
   loading: boolean;
   error: string | null;
@@ -42,7 +62,8 @@ export function useFluxySession(): {
     if (publicRoomId) {
       let cancelled = false;
       void FluxyChatClient.joinPublicRoomAsGuest(workerUrl, publicRoomId, {
-        displayName: "Guest",
+        displayName: seat,
+        guestKey: guestKeyForSeat(seat),
       })
         .then((guest) => {
           if (cancelled) return;
@@ -65,7 +86,7 @@ export function useFluxySession(): {
       };
     }
     setLoading(false);
-  }, []);
+  }, [seat]);
 
   return { session, loading, error };
 }

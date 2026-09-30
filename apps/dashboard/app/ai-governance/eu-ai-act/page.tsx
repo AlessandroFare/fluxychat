@@ -14,6 +14,7 @@ import { messageFromUnknown } from "@/lib/error-message";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import {
   exportEuAiActTechnicalDocumentation,
+  exportArt50Marks,
   getEuAiActAssessment,
   getEuAiActSettings,
   listEuAiActProfiles,
@@ -135,6 +136,7 @@ export default function EuAiActCompliancePage() {
         providerLegalName: settings.providerLegalName ?? undefined,
         providerContact: settings.providerContact ?? undefined,
         enforceAiDisclosure: settings.enforceAiDisclosure,
+        firstContactDisclosure: settings.firstContactDisclosure,
         enforceHitlHighRisk: settings.enforceHitlHighRisk,
         recordRetentionDays: settings.recordRetentionDays,
         requireConformityForHighRisk: settings.requireConformityForHighRisk,
@@ -195,6 +197,26 @@ export default function EuAiActCompliancePage() {
     }
   }
 
+  async function handleExportArt50() {
+    if (!token) return;
+    setBusy("art50");
+    try {
+      const payload = await exportArt50Marks(token);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `art-50-marks-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setNotice("Art. 50 marks downloaded. HMAC checks integrity of the export, not legal compliance.");
+    } catch (err) {
+      setError(messageFromUnknown(err, "Art. 50 export failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <ConsoleShell className="max-w-5xl">
       <ConsolePageHeader
@@ -209,6 +231,10 @@ export default function EuAiActCompliancePage() {
             <Button size="sm" variant="outline" disabled={!token || busy !== null} onClick={() => void handleExportDoc()}>
               {busy === "doc" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
               Annex IV export
+            </Button>
+            <Button size="sm" variant="outline" disabled={!token || busy !== null} onClick={() => void handleExportArt50()}>
+              {busy === "art50" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
+              Art. 50 marks
             </Button>
           </div>
         }
@@ -330,6 +356,14 @@ export default function EuAiActCompliancePage() {
                       onChange={(e) => setSettings({ ...settings, enforceAiDisclosure: e.target.checked })}
                     />
                     Enforce AI disclosure (Art. 50)
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={settings.firstContactDisclosure !== false}
+                      onChange={(e) => setSettings({ ...settings, firstContactDisclosure: e.target.checked })}
+                    />
+                    First-contact notice in the room
                   </label>
                   <label className="flex items-center gap-2">
                     <input

@@ -74,6 +74,101 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     "writeAuditEvent",
   ]);
 
+  if (url.pathname === "/rooms/import-transcript" && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    const body = await request.json().catch(() => null);
+    const exportPayload = body?.export ?? body?.transcript ?? body;
+    const { parseTranscriptExport, importTranscriptToNewRoom } = await import("../lib/transcript-import.js");
+    const parsed = parseTranscriptExport(exportPayload);
+    if (!parsed.ok) return json({ error: parsed.error }, { status: 400, headers: corsHeaders });
+    try {
+      const result = await importTranscriptToNewRoom(env, {
+        projectId: auth.projectId,
+        ownerUserId: auth.userId,
+        parsed,
+        roomName: typeof body?.roomName === "string" ? body.roomName : parsed.title,
+        inviteUserIds: Array.isArray(body?.inviteUserIds) ? body.inviteUserIds : [],
+        isValidId,
+        validateRoomName,
+      });
+      if (!result.ok) return json({ error: result.error }, { status: 400, headers: corsHeaders });
+      await invalidateCache(env, `rooms:${auth.projectId}`).catch(() => {});
+      ctx.waitUntil(
+        writeAuditEvent(env, {
+          projectId: auth.projectId,
+          action: "room.import_transcript",
+          actorUserId: auth.userId,
+          targetType: "room",
+          targetId: result.roomId,
+          traceId,
+          metadata: { source: result.source, inserted: result.inserted },
+        }).catch(() => {}),
+      );
+      return json(result, { status: 201, headers: corsHeaders });
+    } catch (err) {
+      logError("room.import_transcript_failed", err, requestLogCtx);
+      return json({ error: "import_failed" }, { status: 500, headers: corsHeaders });
+    }
+  }
+
+  const shareMatch = url.pathname.match(/^\/rooms\/([^/]+)\/share$/);
+  if (shareMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    const roomId = decodeURIComponent(shareMatch[1]);
+    const allowed = await canAccessRoom(env, auth, roomId);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    const { getPublicShareMetaForRoom } = await import("../lib/public-share-meta.js");
+    const meta = await getPublicShareMetaForRoom(env, roomId);
+    if (!meta.ok) return json({ error: meta.error }, { status: meta.status, headers: corsHeaders });
+    return json(
+      {
+        ok: true,
+        roomId: meta.roomId,
+        name: meta.name,
+        shareToken: meta.shareToken,
+        path: meta.path,
+      },
+      { headers: corsHeaders },
+    );
+  }
+
+  const shareRevokeMatch = url.pathname.match(/^\/rooms\/([^/]+)\/share\/revoke$/);
+  if (shareRevokeMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    const roomId = decodeURIComponent(shareRevokeMatch[1]);
+    const allowed = await canAccessRoom(env, auth, roomId);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    const { revokeRoomShareLink, getPublicShareMetaForRoom } = await import("../lib/public-share-meta.js");
+    const minted = await revokeRoomShareLink(env, roomId);
+    if (!minted.ok) return json({ error: minted.error }, { status: minted.status, headers: corsHeaders });
+    const shaped = await getPublicShareMetaForRoom(env, roomId, minted.token);
+    if (!shaped.ok) return json({ error: shaped.error }, { status: shaped.status, headers: corsHeaders });
+    return json(
+      {
+        ok: true,
+        roomId: shaped.roomId,
+        name: shaped.name,
+        shareToken: shaped.shareToken,
+        path: shaped.path,
+      },
+      { headers: corsHeaders },
+    );
+  }
 
   if (url.pathname === "/rooms" && request.method === "POST") {
     const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
@@ -1160,6 +1255,166 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
           pricingVersion: "cf-2026-08",
         },
     });
+  }
+
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/mcp-apps/state") &&
+    (request.method === "GET" || request.method === "PUT" || request.method === "PATCH")
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const stateRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, stateRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    const { getMcpAppSharedState, putMcpAppSharedState, normalizeMcpAppId } = await import(
+      "../lib/mcp-app-state.js"
+    );
+    if (request.method === "GET") {
+      const appId = normalizeMcpAppId(url.searchParams.get("appId"));
+      if (!appId) return json({ error: "app_id_required" }, { status: 400 });
+      const current = await getMcpAppSharedState(env, {
+        projectId: auth.projectId,
+        roomId: stateRoomId,
+        appId,
+      });
+      return json({ ok: true, roomId: stateRoomId, appId, ...current });
+    }
+    const body = await request.json().catch(() => null);
+    const id = normalizeMcpAppId(body?.appId || url.searchParams.get("appId"));
+    if (!id) return json({ error: "app_id_required" }, { status: 400 });
+    const result = await putMcpAppSharedState(env, {
+      projectId: auth.projectId,
+      roomId: stateRoomId,
+      appId: id,
+      patch: body?.state && typeof body.state === "object" ? body.state : {},
+      replace: body?.replace === true,
+      userId: auth.userId,
+    });
+    if (!result.ok) return json({ error: result.error }, { status: 400 });
+    return json({ ok: true, roomId: stateRoomId, appId: id, ...result });
+  }
+
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.includes("/yjs/agent-suggestions")
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const parts = url.pathname.split("/").filter(Boolean);
+    const yjsRoomId = parts[1];
+    const canAccess = await canAccessRoom(env, auth, yjsRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    const {
+      serializeAgentSuggestion,
+      syncAgentSuggestionToRoom,
+    } = await import("../lib/yjs-agent-suggestions.js");
+
+    if (parts[4] && (parts[5] === "accept" || parts[5] === "reject") && request.method === "POST") {
+      const suggestionId = decodeURIComponent(parts[4]);
+      const decidedStatus = parts[5] === "accept" ? "accepted" : "rejected";
+      const { createD1ApprovalStore } = await import("../lib/hitl-approval-d1.js");
+      let store = null;
+      try {
+        store = createD1ApprovalStore(env);
+      } catch {
+        store = null;
+      }
+      const stubBody = await (async () => {
+        const { getRoomStubForProject } = await import("../lib/room-shard.js");
+        const stub = await getRoomStubForProject(env, auth.projectId, yjsRoomId, auth.userId);
+        const snap = await stub.fetch(
+          `https://internal/yjs/agent-suggestions/crdt-snapshot?suggestionId=${encodeURIComponent(suggestionId)}`,
+        );
+        return snap.json();
+      })();
+      const existing = stubBody?.record;
+      if (!existing?.id) return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
+      if (existing.approvalId && store) {
+        try {
+          if (decidedStatus === "accepted") await store.approve(existing.approvalId, auth.userId);
+          else await store.deny(existing.approvalId, auth.userId);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "decision_failed";
+          const status = message === "not_current_approver" ? 403 : 409;
+          return json({ error: message }, { status, headers: corsHeaders });
+        }
+      }
+      const decided = serializeAgentSuggestion({
+        ...existing,
+        status: decidedStatus,
+        updatedAt: new Date().toISOString(),
+      });
+      await syncAgentSuggestionToRoom(env, {
+        projectId: auth.projectId,
+        roomId: yjsRoomId,
+        userId: auth.userId,
+        record: decided,
+        applyStorage: decidedStatus === "accepted",
+      });
+      return json({ ok: true, suggestion: decided }, { headers: corsHeaders });
+    }
+
+    if (request.method === "GET" && parts.length === 4) {
+      const { getRoomStubForProject } = await import("../lib/room-shard.js");
+      const stub = await getRoomStubForProject(env, auth.projectId, yjsRoomId, auth.userId);
+      const snap = await stub.fetch("https://internal/yjs/agent-suggestions/crdt-snapshot");
+      const body = await snap.json();
+      return json(
+        { ok: true, suggestions: body.suggestions || [] },
+        { headers: corsHeaders },
+      );
+    }
+
+    if (request.method === "POST" && parts.length === 4) {
+      const body = await request.json().catch(() => ({}));
+      const storageKey = String(body.storageKey || "").slice(0, 64);
+      if (!storageKey) return json({ error: "storage_key_required" }, { status: 400, headers: corsHeaders });
+      const id = crypto.randomUUID();
+      let approvalId = null;
+      try {
+        const { createD1ApprovalStore } = await import("../lib/hitl-approval-d1.js");
+        const store = createD1ApprovalStore(env);
+        const approvers = Array.isArray(body.approverIds) ? body.approverIds.filter((id) => typeof id === "string") : [];
+        const approver = approvers[0] || auth.userId;
+        const entry = await store.create({
+          projectId: auth.projectId,
+          roomId: yjsRoomId,
+          toolName: "yjs.acceptSuggestion",
+          toolInput: { suggestionId: id, storageKey },
+          userId: auth.userId,
+          approvalChainSnapshot: {
+            steps: [{ approverId: approver }],
+            defaultTimeoutSeconds: 1800,
+          },
+        });
+        approvalId = entry?.id || null;
+      } catch {
+        approvalId = null;
+      }
+      const record = serializeAgentSuggestion({
+        id,
+        agentId: body.agentId || auth.userId,
+        storageKey,
+        value: body.value,
+        comment: body.comment,
+        status: "pending",
+        approvalId,
+      });
+      await syncAgentSuggestionToRoom(env, {
+        projectId: auth.projectId,
+        roomId: yjsRoomId,
+        userId: auth.userId,
+        record,
+      });
+      return json({ ok: true, suggestion: record }, { headers: corsHeaders });
+    }
+
+    return json({ error: "method_not_allowed" }, { status: 405, headers: corsHeaders });
   }
 
   if (

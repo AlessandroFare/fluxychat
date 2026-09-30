@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FluxyChatClient } from "./core";
+import { FluxyChatClient, FluxyRoomChatTransport } from "./core";
 
 describe("@fluxy-chat/sdk/core", () => {
   it("exports FluxyChatClient", () => {
@@ -10,5 +10,6 @@ describe("@fluxy-chat/sdk/core", () => {
       token: "test-token",
     });
     expect(client).toBeInstanceOf(FluxyChatClient);
+    expect(typeof FluxyRoomChatTransport).toBe("function");
   });
 });

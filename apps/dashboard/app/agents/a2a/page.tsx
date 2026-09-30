@@ -15,6 +15,7 @@ import {
   createA2ATask,
   listA2AAgentCards,
   listA2ATasks,
+  joinA2AAgentToRoom,
   receiveA2AEnvelopes,
   registerA2AAgentCard,
   sendA2AEnvelope,
@@ -40,6 +41,7 @@ export default function A2AAgentsPage() {
   const [endpointUrl, setEndpointUrl] = useState("");
   const [targetAgentId, setTargetAgentId] = useState("agent-beta");
   const [taskTitle, setTaskTitle] = useState("Translate greeting");
+  const [joinRoomId, setJoinRoomId] = useState("");
 
   const load = useCallback(async () => {
     if (!token) {
@@ -76,6 +78,23 @@ export default function A2AAgentsPage() {
       await load();
     } catch (err) {
       setError(messageFromUnknown(err, "Register failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleJoinRoom(card: A2AAgentCard) {
+    if (!token || !joinRoomId.trim()) {
+      setError("Enter a room id, then Join.");
+      return;
+    }
+    setBusy(`join-${card.agentId}`);
+    try {
+      const res = await joinA2AAgentToRoom(token, joinRoomId.trim(), card.agentId);
+      setNotice(`Seated ${card.agentId} as ${res.handle || res.botId}. This is a local bot row plus agent_policy, not a live remote A2A host.`);
+      setLog((prev) => [`joined ${card.agentId} → ${joinRoomId.trim()}`, ...prev].slice(0, 20));
+    } catch (err) {
+      setError(messageFromUnknown(err, "Join failed"));
     } finally {
       setBusy(null);
     }
@@ -190,6 +209,13 @@ export default function A2AAgentsPage() {
           </Section>
 
           <Section title="Agent cards">
+            <div className="mb-3">
+              <Input
+                placeholder="Room id to seat this card"
+                value={joinRoomId}
+                onChange={(e) => setJoinRoomId(e.target.value)}
+              />
+            </div>
             {cards.length === 0 ? (
               <p className="text-sm text-muted-foreground">No cards yet.</p>
             ) : (
@@ -204,6 +230,9 @@ export default function A2AAgentsPage() {
                       <Badge variant="outline">{c.status}</Badge>
                       <Button size="sm" variant="outline" disabled={busy === `health-${c.agentId}`} onClick={() => void handleHealth(c)}>
                         Health
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={busy === `join-${c.agentId}`} onClick={() => void handleJoinRoom(c)}>
+                        Join room
                       </Button>
                     </div>
                   </li>

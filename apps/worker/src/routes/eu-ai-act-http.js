@@ -10,6 +10,7 @@ import {
   upsertProjectEuAiActSettings,
   ANNEX_III_CATEGORIES,
 } from "../lib/eu-ai-act-compliance.js";
+import { listArt50Marks } from "../lib/art-50-mark.js";
 
 export async function dispatchEuAiActRoutes(request, url, h) {
   const path = url.pathname;
@@ -65,6 +66,17 @@ export async function dispatchEuAiActRoutes(request, url, h) {
     const limit = Number(url.searchParams.get("limit") || 100);
     const events = await listEuAiActAuditLog(env, projectId, { limit, agentId });
     return respond({ events }, h);
+  }
+
+  if (request.method === "GET" && path === "/admin/eu-ai-act/art-50-marks") {
+    const roomId = url.searchParams.get("roomId")?.trim() || undefined;
+    const limit = Number(url.searchParams.get("limit") || 500);
+    const marks = await listArt50Marks(env, projectId, { roomId, limit });
+    return respond({
+      disclaimer:
+        "HMAC marks help you export machine-readable Art. 50 metadata. They are not a legal guarantee of compliance.",
+      marks,
+    }, h);
   }
 
   return null;

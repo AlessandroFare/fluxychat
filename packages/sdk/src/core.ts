@@ -26,6 +26,22 @@ export {
 
 export { FluxyMessageStream } from "./message-stream";
 export { buildAgentOutboundWsPayload } from "./agent-outbound";
+export {
+  FluxyRoomChatTransport,
+  lastUserText,
+  lastToolApprovalResponse,
+  encodeUiMessageTextStream,
+  encodeToolApprovalRequestStream,
+  type FluxyAiUiMessage,
+  type FluxyAiUiMessageChunk,
+  type FluxyAiToolApprovalResponsePart,
+  type FluxyRoomChatTransportOptions,
+} from "./fluxy-room-chat-transport";
+
+export {
+  openaiAgentsRequireApproval,
+  langGraphRequireApproval,
+} from "./approval-adapters";
 
 export {
   FluxyAuthError,

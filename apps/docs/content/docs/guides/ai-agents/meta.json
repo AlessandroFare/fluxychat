@@ -5,6 +5,7 @@
     "agent-memory",
     "agent-lifecycle",
     "tool-approval-hmac",
+    "fluxy-eval",
     "handoff",
     "agent-queue"
   ]

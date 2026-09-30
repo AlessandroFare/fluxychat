@@ -21,6 +21,18 @@ function parseConfigJson(raw) {
   }
 }
 
+function parseSharedRoomTwoKey(value) {
+  if (value === false || value === 0 || value === "false" || value === "0") return false;
+  if (value === true || value === 1 || value === "true" || value === "1") return true;
+  return undefined;
+}
+
+function parseNlPolicy(value) {
+  if (value == null) return undefined;
+  const s = String(value).trim().slice(0, 500);
+  return s || undefined;
+}
+
 /**
  * @param {*} env
  * @param {{ projectId: string, roomId: string }} input
@@ -38,8 +50,16 @@ export async function getRoomConfig(env, input) {
     ? chainParsed.chain
     : { steps: [], defaultTimeoutSeconds: DEFAULT_APPROVAL_TIMEOUT_SECONDS };
 
+  const twoKey = parseSharedRoomTwoKey(config.sharedRoomTwoKey);
+  const nlPolicy = parseNlPolicy(config.nlPolicy);
+  const normalized = { ...config, approvalChain };
+  if (twoKey === undefined) delete normalized.sharedRoomTwoKey;
+  else normalized.sharedRoomTwoKey = twoKey;
+  if (nlPolicy === undefined) delete normalized.nlPolicy;
+  else normalized.nlPolicy = nlPolicy;
+
   return {
-    config: { ...config, approvalChain },
+    config: normalized,
     updatedAt: row?.updated_at ?? null,
     updatedBy: row?.updated_by ?? null,
   };
@@ -56,6 +76,24 @@ export async function patchRoomConfig(env, input) {
   });
 
   const next = { ...existing.config, ...input.patch };
+
+  if (Object.prototype.hasOwnProperty.call(input.patch, "sharedRoomTwoKey")) {
+    const parsed = parseSharedRoomTwoKey(input.patch.sharedRoomTwoKey);
+    if (parsed === undefined || input.patch.sharedRoomTwoKey === null) {
+      delete next.sharedRoomTwoKey;
+    } else {
+      next.sharedRoomTwoKey = parsed;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input.patch, "nlPolicy")) {
+    const parsed = parseNlPolicy(input.patch.nlPolicy);
+    if (parsed === undefined || input.patch.nlPolicy === null) {
+      delete next.nlPolicy;
+    } else {
+      next.nlPolicy = parsed;
+    }
+  }
 
   if (input.patch.approvalChain !== undefined) {
     const parsed = parseApprovalChain(input.patch.approvalChain);

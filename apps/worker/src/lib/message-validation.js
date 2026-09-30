@@ -1,10 +1,12 @@
+import { stripHiddenUnicode } from "./shared-room-agent-guard.js";
+
 export const MAX_MESSAGE_LENGTH = 4000;
 
 export function validateMessageContent(content) {
   if (typeof content !== "string") {
     return { valid: false, error: "content must be a string" };
   }
-  const trimmed = content.trim();
+  const trimmed = stripHiddenUnicode(content).trim();
   if (trimmed.length === 0) {
     return { valid: false, error: "content cannot be empty" };
   }

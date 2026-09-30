@@ -1,0 +1,8 @@
+{
+  "name": "FluxyChat",
+  "slug": "fluxychat",
+  "type": "platform",
+  "community": true,
+  "packageName": "chat-adapter-fluxychat",
+  "readme": "https://github.com/AlessandroFare/fluxychat/tree/3056ece05a95df5ec185debb7244624bb91d6a94/packages/chat-adapter-fluxychat"
+}

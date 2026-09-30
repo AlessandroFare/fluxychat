@@ -44,6 +44,18 @@ const config = defineConfig({
       onPublish: [moderatePublish.handler],
     },
   },
+  agents: {
+    "*": { mention: true, onBehalfOf: true },
+  },
+  decisions: {
+    shouldRespond: { mode: "keyword" },
+    approveTool: { mode: "shadow" },
+    routeModel: { mode: "shadow" },
+    notifyTriage: { mode: "shadow" },
+    autoSummon: { mode: "shadow" },
+    nlPolicy: { mode: "shadow" },
+  },
+  jurisdiction: "eu",
 });
 
 export default config;

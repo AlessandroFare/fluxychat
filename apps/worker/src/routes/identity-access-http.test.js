@@ -136,6 +136,19 @@ describe("dispatchIdentityRoutes  SAML", () => {
     expect(body.enabled).toBe(true);
   });
 
+  it("POST /saml/acs is 503 on hosted until SAML_SSO_ENABLED", async () => {
+    const req = new Request("http://127.0.0.1:8787/saml/acs", {
+      method: "POST",
+      body: new URLSearchParams({ SAMLResponse: "xx", RelayState: JSON.stringify({ projectId: "proj_1" }) }),
+    });
+    const res = await dispatchIdentityRoutes(req, new URL(req.url), {
+      env: { HOSTED_MULTI_TENANT: "true", DB: buildDb() },
+    });
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toBe("saml_disabled");
+  });
+
   it("POST /saml/acs returns 400 without SAMLResponse", async () => {
     const req = new Request("http://127.0.0.1:8787/saml/acs", {
       method: "POST",

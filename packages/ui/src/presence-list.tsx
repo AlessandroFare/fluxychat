@@ -31,7 +31,9 @@ export function PresenceList({
         }}
       >
         <span>{brandLabel}</span>
-        <span style={{ flexShrink: 0 }}>{onlineCount} online</span>
+        <span style={{ flexShrink: 0 }} aria-live="polite">
+          {onlineCount} online
+        </span>
       </div>
       {userIds.length > 0 ? (
         <div

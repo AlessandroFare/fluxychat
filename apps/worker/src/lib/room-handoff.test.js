@@ -56,6 +56,26 @@ describe("room-handoff", () => {
     expect(good.ok).toBe(true);
     expect(await isHumanHandoffActive(env, "proj_1", "room_1")).toBe(false);
   });
+
+  it("system_one auto handoff skips the queue role check only when flagged", async () => {
+    const denied = await requestHumanHandoff(createHandoffEnv(), {
+      projectId: "proj_1",
+      roomId: "room_1",
+      userId: "user_1",
+      source: "system_one",
+    });
+    expect(denied.ok).toBe(false);
+
+    const env = createHandoffEnv();
+    env.SYSTEM_ONE_AUTO_HANDOFF = "true";
+    const allowed = await requestHumanHandoff(env, {
+      projectId: "proj_1",
+      roomId: "room_1",
+      userId: "user_1",
+      source: "system_one",
+    });
+    expect(allowed.ok).toBe(true);
+  });
 });
 
 function createHandoffEnv() {

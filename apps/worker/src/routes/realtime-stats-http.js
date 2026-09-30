@@ -579,6 +579,7 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
       activeDaysPrev7Row,
       monthlyUsageRow,
       monthlyAgentInvokesRow,
+      messagesLast7Row,
     ] = await Promise.all([
       env.DB.prepare("SELECT id FROM projects WHERE id = ? LIMIT 1")
         .bind(auth.projectId)
@@ -622,6 +623,11 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
       )
         .bind(auth.projectId, monthStartIso)
         .first(),
+      env.DB.prepare(
+        "SELECT COUNT(*) as c FROM messages WHERE project_id = ? AND created_at >= ? AND deleted_at IS NULL"
+      )
+        .bind(auth.projectId, sevenDaysAgo)
+        .first(),
     ]);
 
     const onboardingChecks = {
@@ -643,6 +649,9 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
 
     const monthlyMessages = Number(monthlyUsageRow?.c || 0);
     const monthlyAgentInvokes = Number(monthlyAgentInvokesRow?.c || 0);
+    const messagesLast7 = Number(messagesLast7Row?.c || 0);
+    const ACTIVE_MESSAGES_7D = Number(env.ACTIVE_PROJECT_MESSAGES_7D || 100);
+    const activeProject = messagesLast7 >= ACTIVE_MESSAGES_7D;
     const freeMessagesQuota = Number(env.FREE_MESSAGES_QUOTA_PER_MONTH || 200_000);
     const pricePerMillionMessages = Number(env.PRICE_PER_MILLION_MESSAGES || 1);
     const pricePerAgentInvoke = Number(env.PRICE_PER_AGENT_INVOKE || 0);
@@ -659,6 +668,9 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
         totalOnboardingSteps,
         activationRate,
         checks: onboardingChecks,
+        messagesLast7,
+        activeThreshold: ACTIVE_MESSAGES_7D,
+        activeProject,
       },
       retention: {
         activeDaysLast7,
