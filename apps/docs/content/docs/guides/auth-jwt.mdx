@@ -39,6 +39,36 @@ Admin routes enforce role checks per endpoint. See OpenAPI docs for each route.
 
 ## Next.js Route Handler example
 
+Keep `fc_` on the server. `pk_` cannot mint member JWTs.
+
+```ts
+import { createFluxyTokenRoute } from "@fluxy-chat/sdk";
+import { auth } from "@clerk/nextjs/server"; // or Auth.js / Better Auth getSession
+
+export const POST = createFluxyTokenRoute({
+  workerUrl: process.env.FLUXY_BASE_URL!,
+  apiKey: process.env.FLUXY_API_KEY!,
+  getUserId: async () => (await auth()).userId,
+});
+```
+
+Same helper with Clerk or Auth.js via `@fluxy-chat/auth` (still `fc_` on the server):
+
+```ts
+import { auth } from "@clerk/nextjs/server";
+import { createClerkFluxyTokenRoute } from "@fluxy-chat/auth";
+
+export const POST = createClerkFluxyTokenRoute({
+  workerUrl: process.env.FLUXY_BASE_URL!,
+  apiKey: process.env.FLUXY_API_KEY!,
+  auth,
+});
+```
+
+Auth.js / NextAuth: `createAuthJsFluxyTokenRoute({ …, auth })` with your `auth()` that returns `{ user: { id } }`. Better Auth / Lucia: `createBetterAuthFluxyTokenRoute` / `createLuciaFluxyTokenRoute` (same shape). Supabase: `createSupabaseFluxyTokenRoute({ getUser: () => supabase.auth.getUser() })`. Auth0-style `{ user: { sub } }`: `createOidcFluxyTokenRoute` (`auth0|1` is stored as `auth0_1`). Handmade: `createFluxyTokenRoute({ getUserId })` from `@fluxy-chat/auth` or the SDK.
+
+Same helper with a handmade `getUserId` if you are not on Clerk:
+
 ```ts
 import { NextResponse } from "next/server";
 

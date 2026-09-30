@@ -1,0 +1,62 @@
+---
+title: Room Decisions
+description: System One gates on a room. Jev and CLM score options; they do not write chat. Deterministic policy still wins.
+---
+
+# Room Decisions
+
+Jev (TypeSafe, Workers AI `typesafe/jev`) and CLM-8B (Apache-2.0, self-hosted GPU) **do not generate messages**. They return a typed choice or a noul score. Groq (or your room LLM) still writes text. Thresholds, HITL, and two-key stay in application code.
+
+Author numbers (DeepSWE, Terminal-Bench, BFCL, WikiRacing, “13×”) are **theirs**. We do not claim them. CLM needs vLLM-class GPUs; that is not on the hosted free plan.
+
+## What is on
+
+| Kind | Default | What it does |
+|------|---------|----------------|
+| Floor (`shouldRespond`) | `keyword` | Legacy ambient keyword policies. Opt-in: `invoke_only`, `calibrated`, `silent`. |
+| Tool HITL (`approveTool`) | `shadow` | Log System One; extra alignment HITL only in `enforce`. Two-key remains last word. Auto-handoff stays off unless `SYSTEM_ONE_AUTO_HANDOFF`. |
+| Cost router (`routeModel`) | `shadow` | Logs skip / small / large. **`enforce`** may skip LLM (`OK.`) or cap tokens / `ROOM_LLM_SMALL_MODEL`. No published €/room-hour. |
+| Notify (`notifyTriage`) | `shadow` | Reuses existing priority scores. **`enforce`** skips push on low, non-mention. Mentions still push. |
+| Auto-summon | `shadow` | Fixed bot roster (max 12) + silence. **`enforce`** writes a feed suggestion. Does not add members. Not a 1k-candidate directory. |
+| NL policy | `shadow` | Room `nlPolicy` or `ROOM_NL_POLICY`. System One noul → ok / warn / block. **`enforce`** rewrites agent text only. Not a medical-device or legal filter. |
+| Labels | opt-in | D1 `room_system_one_decisions`: kind, options, probabilities, model, human outcome (approved / denied / escalated). Hosted needs `ROOM_DECISIONS_LABELS=true` or `decisions.labelsOptIn`. Skip rooms linked to `no_train` connections. |
+
+`GET /rooms/:id/system-one-decisions` (member JWT). Console: Rooms → Advanced → **Room Decisions**. Model counts on that page are not a significance test.
+
+## `fluxy.config`
+
+```ts
+decisions: {
+  shouldRespond: { mode: "keyword" },
+  approveTool: { mode: "shadow" },
+  routeModel: { mode: "shadow" },
+  notifyTriage: { mode: "shadow" },
+  autoSummon: { mode: "shadow" },
+  nlPolicy: { mode: "shadow" },
+}
+```
+
+Env: `ROOM_FLOOR_MODE`, `ROOM_TOOL_DECISION_MODE`, `ROOM_ROUTE_MODE`, `ROOM_NOTIFY_MODE`, `ROOM_SUMMON_MODE`, `SYSTEM_ONE_CASCADE=clm_then_jev`. `ROOM_DECISION_MARGIN_MIN` is per-decision-type, not copied from a Jev noul threshold.
+
+## Floor modes
+
+- **keyword** — today’s ambient `message_keyword` policies (no behavior change).
+- **invoke_only** — ambient only if the line contains `@handle` (CHI-style: don’t jump into small talk).
+- **calibrated** — System One `silence` vs `speak` on a **fixed** two-option menu. Low margin → silence.
+- **silent** — no ambient dispatch.
+
+@mentions still invoke agents on the mention path. That is not ambient.
+
+## Tool gate
+
+Deterministic two-key + tool policy first. System One noul can add HITL. Alignment noul (LlamaFirewall-style “does this serve the user’s goal?”) runs only in `enforce`. We do **not** abort the run: extra HITL or a tool error, not a silent kill. Shadow/warn only write the audit row.
+
+## Not in this slice
+
+Mid-stream abort. Best-of-N draft pick (Jev lost as a selector on two public benches; don’t sell it). A published cost-per-room-hour. Certified medical/legal compliance.
+
+## Related
+
+- [HITL](/docs/guides/hitl-approval-chain)
+- [Shared-room defaults](/docs/guides/security/shared-room-agent-defaults)
+- [fluxy.config](/docs/guides/fluxy-config)

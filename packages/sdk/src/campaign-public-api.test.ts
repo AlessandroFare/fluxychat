@@ -9,9 +9,11 @@ import {
   FluxyConnectionError,
   FluxyNotMemberError,
   FluxyRateLimitError,
+  FluxyRoomChatTransport,
   FluxySendError,
   FluxyTokenExpiredError,
   RateLimitError,
+  createFluxyTokenRoute,
   describeConnectionError,
   getConnectionStatusLabel,
 } from "./index";
@@ -22,6 +24,16 @@ describe("sdk README public API", () => {
     expect(typeof describeConnectionError).toBe("function");
     expect(getConnectionStatusLabel("connected")).toBe("Connected");
     expect(getConnectionStatusLabel("reconnecting")).toMatch(/Reconnecting/);
+    expect(typeof FluxyRoomChatTransport).toBe("function");
+    expect(typeof createFluxyTokenRoute).toBe("function");
+    const client = new FluxyChatClient({
+      baseUrl: "https://example.test",
+      userId: "user_1",
+      token: "test-token",
+    });
+    expect(typeof client.getActiveStreams).toBe("function");
+    expect(typeof client.resumeStream).toBe("function");
+    expect(typeof client.getMcpAppSharedState).toBe("function");
   });
 
   it("keeps documented error classes (not Error(\"undefined\"))", () => {

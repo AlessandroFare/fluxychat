@@ -20,13 +20,17 @@ export const PUBLIC_SITE_PATH_PREFIXES = [
   "/terms",
   "/privacy-policy",
   "/for-teams",
+  "/trust",
+  "/migrate-chatgpt",
   "/features",
   "/sign-in",
   "/sign-up",
+  "/r",
+  "/share",
 ] as const;
 
 export function isPublicSitePath(pathname: string): boolean {
-  if (pathname === "/" || pathname === "/favicon.ico") return true;
+  if (pathname === "/" || pathname === "/favicon.ico" || pathname === "/llms.txt") return true;
   return PUBLIC_SITE_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
@@ -36,6 +40,7 @@ export function isPublicSitePath(pathname: string): boolean {
 export function clerkPublicRoutePatterns(): string[] {
   const extra = [
     "/",
+    "/llms.txt",
     "/.well-known(.*)",
     "/api/console-ack(.*)",
     "/api/webhooks/clerk(.*)",

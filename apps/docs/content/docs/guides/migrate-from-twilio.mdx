@@ -1,0 +1,21 @@
+---
+title: After Twilio Conversations / Flex Chat
+description: Flex Programmable Chat closed. Import JSON later. Not a live Twilio proxy.
+---
+
+# After Twilio Conversations
+
+Twilio Flex Programmable Chat shut down on **1 June 2026**. FluxyChat is not a drop-in Conversations proxy and we are not building a billed Twilio channel this quarter.
+
+## What to do now
+
+1. Export history from Twilio while you still can (their tools, not ours).
+2. Shape JSON like the [transcript import](/docs/guides/import-transcript) `{ title, messages: [{ role, content }] }` form, or wait for a dedicated Twilio mapper **after** the room wedge is paying for itself.
+3. Put new live chat on FluxyChat rooms (`pk_` public or member JWT), not on a compatibility shim.
+
+SMS/voice **inbound** into a room is a separate telco handoff (`TELCO_INBOUND_*`), not Conversations.
+
+## Related
+
+- [Import a transcript](/docs/guides/import-transcript)
+- [Migrate from Pusher](/docs/guides/migrate-from-pusher)

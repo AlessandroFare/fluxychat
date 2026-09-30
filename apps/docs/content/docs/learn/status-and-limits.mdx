@@ -1,0 +1,48 @@
+---
+title: Status and limits
+description: What FluxyChat ships today, what is labs, and what is not claimed. For builders and buyers.
+---
+
+FluxyChat is a **room** on Cloudflare: one Durable Object plus D1. Humans and `invokeAgent` share the chat timeline. Hosted is beta. Self-host is MIT.
+
+Claim strings in this page are checked against `capabilities.json` in CI. Game, IoT, fleet, spatial, and voice **media** are optional modules on the same bus. They are not the product promise.
+
+The kernel is rooms, presence, Yjs, agents on that timeline, feeds (not chat), `visibility` / `visibleTo`, and `pk_` vs `fc_`.
+
+## Shipped
+
+| Area | Where | Limit |
+| --- | --- | --- |
+| Room sockets | Hibernation API (`acceptWebSocket`). [Cost notes](/docs/learn/durable-objects-hibernation-cost) | Code path exists. Idle-duration numbers from a Cloudflare invoice are **not** published yet. |
+| Agent mid-hibernate | [Agents](/docs/core/agents) | Room DO sleep is not Think `chatRecovery`. `POST /agents/:id/invoke` can run on `AgentDurableObject` `room-run:{project}:{room}` when `AGENT` is bound. |
+| Large rooms | Supergroup DO (`docs/supergroup-room-sharding.md` in the repo) | Sharding is in tree, not “roadmap only.” |
+| Search | [Search](/docs/core/search) | FTS and optional hybrid. |
+| Yjs / cursors | [Storage](/docs/core/storage), gallery boards | Second binary WebSocket, same room route. |
+| HITL / quorum / tool policy | [Tool presets](/docs/guides/ai-tool-presets), [quorum](/docs/guides/critical-action-quorum) | Email/Slack tap: GET shows confirm, POST decides (one-time token + payload hash). |
+| Public share | `/share/:token` · [guide](/docs/guides/public-share) | Unguessable token, `noindex`, no whispers/tool args. `type=public` only. |
+| Transcript import | `POST /rooms/import-transcript` · [guide](/docs/guides/import-transcript) | File you already have. Cap 400. Marked imported, unverified. |
+| Room tickets | `POST /rooms/:id/tickets` · [guide](/docs/guides/room-tickets) | Self-host env PAT. Hosted: per-project encrypted token. GitHub/Linear/Jira host allowlist. Not OAuth apps. |
+| Integration kit | HMAC webhooks + entity links · [guide](/docs/guides/integration-kit) | Maps 11 vendors. Writes need intent. No Marketplace. |
+| AG-UI events | `createAgUiAdapter` · `POST /ag-ui/join` · [Generative UI](/docs/guides/generative-ui) | Join + last-run replay. Not a CopilotKit host. Live tokens stay on the room socket. |
+| Connection fallback | SDK `FluxyChatTransport`: websocket / SSE / polling | Room socket fallback. |
+| AI SDK ChatTransport | `FluxyRoomChatTransport` in `@fluxy-chat/sdk` / `@fluxy-chat/sdk/ai-sdk` | [Guide](/docs/guides/vercel-ai-sdk-chat-transport). Full token stream still wants the room WebSocket. |
+| MCP official registry | [guide](/docs/guides/mcp-registry) | Manifest in-repo. Not listed on the official MCP registry. |
+| npm | `@fluxy-chat/sdk`, `react`, `ui`, `ui-kit`, `vue`, `svelte`, `agent` | Swift/Kotlin/Flutter/.NET are **source** under `packages/`. |
+| Clone | `github.com/AlessandroFare/fluxychat` | |
+| E2EE | [Compare](https://fluxychat.com/compare) | Not claimed. |
+| HIPAA / SOC 2 | README | Checklists are not attestations. No BAA. |
+| Bridges | Console | You create the vendor app. Not a 14-channel desk. |
+| System One | `SYSTEM_ONE_PROVIDER` | Gate next to the room LLM (e.g. Groq). Not a replacement chat model. See [Room Decisions](/docs/guides/room-decisions). |
+| Voice | `joinVoiceStage` | Signaling. Media is yours. |
+| Hosted SAML login | Off unless `SAML_SSO_ENABLED=true` | Self-host SAML is unchanged. |
+| Shared-room agent defaults | Two-key HITL · [guide](/docs/guides/security/shared-room-agent-defaults) | On unless you opt out. Tests use synthetic markers. |
+| Room Decisions | [guide](/docs/guides/room-decisions) | Labels + floor. Default shadow. Hosted labels opt-in. |
+| Art. 50 marks | [checklist](/docs/features/art-50-checklist) | HMAC integrity, key rotation. Not a legal guarantee. |
+
+## Not shipped yet (priority)
+
+1. A 60-second **hosted** clip: two humans, one agent, refresh mid-stream, a second seat approves a tool. Gallery `deal-room` is the closest app. Guest-first UI: `--example shared-ai-room`.
+2. Measured load and Durable Object duration from staging (idle sockets vs invoice). Do not treat qualitative hibernation docs as that number.
+3. Python / Go server SDKs.
+
+June 2026 audit files in git history are snapshots. Closed work lives in `docs/audit/REMEDIATION.md`. Open security work is not listed in this repository.

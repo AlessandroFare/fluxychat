@@ -20,7 +20,7 @@ export interface ChatWindowProps {
   online: number;
   typingUsers: Record<string, boolean>;
   seenBy?: Record<number, string[]>;
-  onSend: (
+  onSend?: (
     content: string,
     replyTo?: number | null,
     attachments?: FluxyChatAttachment[]
@@ -51,6 +51,11 @@ export interface ChatWindowProps {
     file: File,
     kindHint: "image" | "file" | "audio"
   ) => Promise<FluxyChatAttachment | null | void>;
+  /** Current viewer — used so own bubbles and receipts line up. */
+  localUserId?: string;
+  /** Hide the composer (public share / spectator). */
+  readOnly?: boolean;
+  composerInputId?: string;
 }
 
 /** Composite chat layout built from SPEC §8 primitives (`MessageList`, `MessageInput`, …). */
@@ -76,6 +81,9 @@ export function ChatWindow({
   mentionSuggestions = [],
   typingAgentId = null,
   uploadComposerFile,
+  localUserId,
+  readOnly = false,
+  composerInputId,
 }: ChatWindowProps) {
   const [draft, setDraft] = React.useState("");
   const [editingId, setEditingId] = React.useState<number | null>(null);
@@ -123,6 +131,13 @@ export function ChatWindow({
     return [...map.values()];
   }, [messages, onlineUserIds, mentionSuggestions]);
 
+  const firstContactNotice = React.useMemo(() => {
+    const hit = messages.find(
+      (m) => m.participantType === "ai" && m.metadata?.firstContactInRoom && m.metadata?.firstContactNotice,
+    );
+    return typeof hit?.metadata?.firstContactNotice === "string" ? hit.metadata.firstContactNotice : null;
+  }, [messages]);
+
   const mentionPrioritizeHandles = React.useMemo(() => {
     const prio: string[] = [];
     for (const [uid, typing] of Object.entries(typingUsers)) {
@@ -145,7 +160,7 @@ export function ChatWindow({
       setEditingText("");
       return;
     }
-    if (!draft.trim()) return;
+    if (!draft.trim() || !onSend) return;
     onSend(draft.trim(), replyToId, pendingAttachments);
     setDraft("");
     setReplyToId(null);
@@ -175,7 +190,7 @@ export function ChatWindow({
       style={{
         display: "flex",
         flexDirection: "column",
-        border: "1px solid #ddd",
+        border: "1px solid #5c5c5c",
         borderRadius: 8,
         height: 400,
         maxWidth: 420,
@@ -183,8 +198,17 @@ export function ChatWindow({
       }}
     >
       <PresenceList onlineCount={online} userIds={onlineUserIds} />
+      {firstContactNotice ? (
+        <p
+          className="border-b border-border px-3 py-2 text-xs text-muted-foreground"
+          data-testid="art50-first-contact"
+          role="status"
+        >
+          {firstContactNotice}
+        </p>
+      ) : null}
       {channels && onSelectChannel ? (
-        <div style={{ borderBottom: "1px solid #eee", maxHeight: 140, overflowY: "auto" }}>
+        <div style={{ borderBottom: "1px solid #5c5c5c", maxHeight: 140, overflowY: "auto" }}>
           <ChannelList
             channels={channels}
             activeId={activeChannelId}
@@ -198,16 +222,22 @@ export function ChatWindow({
         renderMessage={(m) => (
           <MessageItem
             message={m}
+            localUserId={localUserId}
             reactions={reactions?.[m.id]}
             seenByUserIds={seenBy?.[m.id]}
-            onReply={() => startReply(m)}
-            onEdit={onEditMessage ? () => startEdit(m) : undefined}
-            onDelete={onDeleteMessage ? () => onDeleteMessage(m.id) : undefined}
-            onReact={onReact ? (emoji) => onReact(m.id, emoji) : undefined}
+            onReply={readOnly ? undefined : () => startReply(m)}
+            onEdit={!readOnly && onEditMessage ? () => startEdit(m) : undefined}
+            onDelete={!readOnly && onDeleteMessage ? () => onDeleteMessage(m.id) : undefined}
+            onReact={!readOnly && onReact ? (emoji) => onReact(m.id, emoji) : undefined}
           />
         )}
         footer={listFooter}
       />
+      {readOnly ? (
+        <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
+          Read-only live view
+        </p>
+      ) : (
       <MessageInput
         value={draft}
         onChange={setDraft}
@@ -232,7 +262,9 @@ export function ChatWindow({
         mentionSuggestions={mergedMentionSuggestions}
         mentionPrioritizeHandles={mentionPrioritizeHandles}
         uploadComposerFile={uploadComposerFile}
+        composerInputId={composerInputId}
       />
+      )}
     </div>
   );
 }

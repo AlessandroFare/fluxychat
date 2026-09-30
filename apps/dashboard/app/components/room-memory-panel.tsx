@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Brain, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
-import { Button, Section } from "./ui";
+import { Button, Input, Section } from "./ui";
 import {
   extractRoomMemory,
   fetchRoomMemory,
@@ -23,20 +23,24 @@ export function RoomMemoryPanel({ roomId, memberJwt }: RoomMemoryPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [entries, setEntries] = useState<RoomMemoryEntry[]>([]);
+  const [query, setQuery] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
 
   const load = useCallback(async () => {
     if (!memberJwt.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchRoomMemory(roomId, memberJwt);
+      const data = await fetchRoomMemory(roomId, memberJwt, {
+        q: appliedQuery || undefined,
+      });
       setEntries(data.entries ?? []);
     } catch (err) {
       setError(messageFromUnknown(err, "Failed to load room memory"));
     } finally {
       setLoading(false);
     }
-  }, [memberJwt, roomId]);
+  }, [memberJwt, roomId, appliedQuery]);
 
   useEffect(() => {
     void load();
@@ -68,9 +72,31 @@ export function RoomMemoryPanel({ roomId, memberJwt }: RoomMemoryPanelProps) {
   return (
     <Section
       title="Room memory"
-      description="Operator-facing persistent facts extracted from the conversation (PH-132)."
+      description="Facts from this room (D1). Search is keyword match; Vectorize only ranks if you bound it."
     >
       <div className="flex flex-wrap gap-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search memory"
+          aria-label="Search room memory"
+          className="h-8 max-w-xs text-sm"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              setAppliedQuery(query.trim());
+            }
+          }}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={loading || extracting}
+          onClick={() => setAppliedQuery(query.trim())}
+        >
+          Search
+        </Button>
         <Button type="button" size="sm" variant="outline" disabled={loading || extracting} onClick={() => void load()}>
           {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
           Refresh

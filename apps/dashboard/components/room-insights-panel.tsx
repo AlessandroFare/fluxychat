@@ -77,7 +77,7 @@ export function RoomInsightsPanel({ roomId, token }: { roomId: string; token: st
   const [error, setError] = useState<string | null>(null);
   const [budgetDraft, setBudgetDraft] = useState("");
   const [savingBudget, setSavingBudget] = useState(false);
-  const [sqlText, setSqlText] = useState("");
+  const [sqlText, setSqlText] = useState("SELECT user_id, COUNT(*) AS n FROM messages GROUP BY user_id");
   const [sqlRunning, setSqlRunning] = useState(false);
   const [sqlResult, setSqlResult] = useState<{ rowCount: number; truncated: boolean; rows: Array<Record<string, unknown>> } | null>(null);
   const [sqlError, setSqlError] = useState<string | null>(null);
@@ -164,8 +164,9 @@ export function RoomInsightsPanel({ roomId, token }: { roomId: string; token: st
     const parsed = Number(budgetDraft);
     if (!token || !roomId || (budgetDraft.trim() && !Number.isFinite(parsed))) return;
     setSavingBudget(true);
+    setError(null);
     try {
-      await fetch(`${base}/rooms/${encodeURIComponent(roomId)}/agent-budget`, {
+      const res = await fetch(`${base}/rooms/${encodeURIComponent(roomId)}/agent-budget`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -173,6 +174,17 @@ export function RoomInsightsPanel({ roomId, token }: { roomId: string; token: st
           enabled: true,
         }),
       });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(
+          res.status === 403
+            ? "Owner or admin JWT required to set the token cap."
+            : typeof body.error === "string"
+              ? body.error
+              : "Could not save the token cap.",
+        );
+        return;
+      }
       await refresh();
     } finally {
       setSavingBudget(false);
@@ -237,12 +249,17 @@ export function RoomInsightsPanel({ roomId, token }: { roomId: string; token: st
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Room insights</CardTitle>
+        <CardTitle className="text-sm font-medium">Room insights · SQLite</CardTitle>
         <Button variant="ghost" size="sm" onClick={() => void refresh()} disabled={loading}>
           {loading ? "…" : "↻"}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
+        <p className="text-xs text-muted-foreground">
+          Worker usage here is an operator estimate for this room. The token cap counts
+          <code className="mx-1 text-[10px]">agent_runs</code>
+          tokens. Neither figure is Stripe billing of your customers.
+        </p>
         {error && <p className="text-xs text-destructive">{error}</p>}
 
         {/* F1 — live marginal cost */}
@@ -392,7 +409,7 @@ export function RoomInsightsPanel({ roomId, token }: { roomId: string; token: st
         {/* F5 — room-as-database console */}
         <section aria-label="Room SQL">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-muted-foreground">Query this room (read-only SQL)</span>
+            <span className="text-muted-foreground">This room is a SQLite database (read-only SELECT)</span>
           </div>
           <textarea
             className="h-16 w-full rounded-md border bg-transparent px-2 py-1 font-mono text-xs"

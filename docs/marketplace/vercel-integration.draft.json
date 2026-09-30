@@ -1,0 +1,14 @@
+{
+  "name": "FluxyChat",
+  "listed": false,
+  "reason": "Vercel Marketplace and native integrations require Vercel’s partner review. This file is a draft for that paperwork, not a live listing.",
+  "products": [
+    {
+      "slug": "fluxychat-room-worker",
+      "name": "FluxyChat room Worker",
+      "description": "Self-host the MIT Worker on the customer Cloudflare account. Hosted console stays beta."
+    }
+  ],
+  "env": ["FLUXY_WORKER_URL", "FLUXY_API_KEY"],
+  "docs": "/docs/operations/vercel-marketplace"
+}

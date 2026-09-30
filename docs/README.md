@@ -2,7 +2,7 @@
 
 Contributor-oriented documentation for the monorepo. **Integrators should use [docs.fluxychat.com](https://docs.fluxychat.com)** (built from `apps/docs`).
 
-**LLM / agent discovery:** [`llms.txt`](./llms.txt) · [`llms-full.txt`](./llms-full.txt)
+**LLM / agent discovery:** [`llms.txt`](./llms.txt) · [`llms-full.txt`](./llms-full.txt) · [Status and limits](https://docs.fluxychat.com/docs/learn/status-and-limits)
 
 ## Start here
 

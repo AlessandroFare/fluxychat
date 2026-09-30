@@ -1,4 +1,4 @@
 {
   "title": "Security & Auth",
-  "pages": ["index"]
+  "pages": ["index", "agent-untrusted-input", "shared-room-agent-defaults", "delegated-agent-auth", "room-content-keys"]
 }

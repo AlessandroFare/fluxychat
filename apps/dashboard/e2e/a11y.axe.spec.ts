@@ -18,6 +18,10 @@
  * intentional design choices) and is out of scope for the surgical
  * pre-launch pass.
  *
+ * Gallery: landing `/` includes `#build-gallery` (mock previews).
+ * Live Vite `--example` apps and docs MDX gallery are not in this file.
+ * Honest VPAT notes: docs/operations/accessibility-conformance.
+ *
  * Blocking impact levels: Critical, Serious, Moderate. Minor
  * (best-practice) violations are logged but do not fail the test.
  */

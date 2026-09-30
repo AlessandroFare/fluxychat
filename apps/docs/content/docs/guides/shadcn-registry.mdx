@@ -1,0 +1,18 @@
+---
+title: shadcn registry
+description: Add FluxyChat UI via npx shadcn add. Thin wrappers around published packages.
+---
+
+# shadcn registry
+
+This is **our** registry, not a listing on ui.shadcn.com. `npx shadcn add` fetches JSON from the hosted dashboard origin.
+
+```bash
+npx shadcn@latest add https://fluxychat.com/r/fluxy-chat-widget.json
+```
+
+Index: `GET /r/registry.json`. Other items: `fluxy-chat-window.json`.
+
+The files dropped in your repo import `@fluxy-chat/ui-kit` / `@fluxy-chat/ui`. Pin those packages. This is not a fork of the component source.
+
+Self-host: point the URL at your dashboard origin that serves `/r/:name`.

@@ -41,8 +41,8 @@ Live event messages: `POST /api/live/events/:eventId/messages`.
 Configure agents on the Worker (dashboard or `POST /agents`). Invoke from clients:
 
 ```tsx
-const { invokeAgent } = useChat({ roomId, client });
-await invokeAgent(agentId, "Summarize this thread");
+const { invokeAgent } = useChat({ roomId });
+await invokeAgent("Summarize this thread", { agentId });
 ```
 
 Mention handles (`@assistant`) trigger background invoke with streaming edits.

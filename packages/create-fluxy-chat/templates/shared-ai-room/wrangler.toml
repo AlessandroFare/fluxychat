@@ -1,0 +1,5 @@
+# UI only. Room sockets live on the FluxyChat Worker you deploy.
+
+name = "shared-ai-room-ui-placeholder"
+compatibility_date = "2024-12-01"
+# Deploy apps/worker from github.com/AlessandroFare/fluxychat instead of this file.

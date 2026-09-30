@@ -1,0 +1,27 @@
+---
+title: "Room agent token cap"
+description: "Operator monthly token budget on a room. Not Stripe billing of your customers."
+---
+
+# Room agent token cap
+
+Each room can refuse new `invokeAgent` turns after a monthly token total from `agent_runs`. Set it from **Rooms → Advanced → Room insights** (owner or admin JWT) or:
+
+```http
+GET /rooms/:roomId/agent-budget
+PUT /rooms/:roomId/agent-budget
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{ "monthlyTokenBudget": 500000, "enabled": true }
+```
+
+`PUT` is owner/admin. `GET` is any room member. Empty cap means agents are uncapped.
+
+The USD line on the same panel is a Cloudflare Worker usage estimate for that room. It is not an invoice and it is not Stripe metering of your customers' customers.
+
+Optional: set `STRIPE_AGENT_METER_EVENT_NAME` plus `STRIPE_SECRET_KEY` so completed `invokeAgent` turns report token totals to **your** Stripe Billing Meter, keyed by `project_plans.stripe_customer_id`. That is usage for the FluxyChat tenant, not for their users.
+
+## Dashboard
+
+Collab project overview already showed this panel. It now also sits on **Rooms → Advanced**, so operators do not have to leave the rooms page.

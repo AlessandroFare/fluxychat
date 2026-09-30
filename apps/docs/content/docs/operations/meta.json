@@ -4,6 +4,9 @@
   "pages": [
     "environment-setup",
     "hosted-multi-tenant",
+    "hybrid-control-plane",
+    "vercel-marketplace",
+    "accessibility-conformance",
     "observability",
     "post-launch-checklist",
     "production-demo-and-sms",

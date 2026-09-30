@@ -154,6 +154,35 @@ export function createMCPAppsClientCapabilities() {
   return { ...mcpAppClientCapabilities };
 }
 
+export async function requestMcpAppUiActionApproval(
+  action: { name: string; payload?: Record<string, unknown> },
+  approve: (action: { name: string; payload?: Record<string, unknown> }) => Promise<boolean> | boolean,
+): Promise<boolean> {
+  return Boolean(await approve(action));
+}
+
+/**
+ * Incoming iframe `MessageEvent.origin`. `*` is never allowed.
+ * srcDoc frames send origin `"null"` — list that string explicitly if you want those messages.
+ */
+export function isAllowedMcpAppMessageOrigin(eventOrigin: string, allowedOrigins: string[]): boolean {
+  const origin = String(eventOrigin || "");
+  if (!origin || origin === "*") return false;
+  if (!Array.isArray(allowedOrigins) || allowedOrigins.length === 0) return false;
+  if (allowedOrigins.includes("*")) return false;
+  return allowedOrigins.includes(origin);
+}
+
+/** Parent → iframe targetOrigin. Refuses `*`. srcDoc: pass `"null"` in the allow list to use `*` as the only working target. */
+export function mcpAppIframeTargetOrigin(allowedOrigins: string[]): string | null {
+  if (!Array.isArray(allowedOrigins) || allowedOrigins.includes("*")) return null;
+  if (allowedOrigins.includes("null")) return "*";
+  const https = allowedOrigins.find(
+    (o) => o.startsWith("https://") || o.startsWith("http://localhost") || o.startsWith("http://127.0.0.1"),
+  );
+  return https ?? null;
+}
+
 export interface MCPAppManager {
   isMCPAppTool(tool: Record<string, unknown>): boolean;
   getAppMeta(tool: Record<string, unknown>): MCPAppToolMeta | undefined;
@@ -182,7 +211,7 @@ export function createMCPAppManager(): MCPAppManager {
 
     createSandboxedRenderer(resource: MCPAppResource) {
       return createGuiSandboxManager({
-        allowedOrigins: ["*"],
+        allowedOrigins: [],
         cspDirectives: {
           "default-src": ["'self'"],
           "script-src": ["'none'"],

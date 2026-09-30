@@ -7,6 +7,22 @@ description: "Tool-name-prefixed parts for rendering AI tool results as UI compo
 
 Tool-name-prefixed parts for rendering AI tool results as UI components. Framework-agnostic core with `ComponentRegistry` for mapping tool names to renderers.
 
+AG-UI-shaped stream events map through `createAgUiAdapter` in `@fluxy-chat/sdk` (`packages/sdk/src/ag-ui-adapter.ts`). That is an event bridge, not a CopilotKit / LangGraph host.
+
+A LangGraph / CrewAI / Pydantic AI process can **join a room** and read the latest stored run:
+
+```bash
+curl -X POST "$WORKER/ag-ui/join" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"roomId":"deal-1"}'
+
+curl "$WORKER/ag-ui/events?roomId=deal-1&stream=1" \
+  -H "Authorization: Bearer $JWT"
+```
+
+`/ag-ui/events` replays `agent_runs` as `RUN_STARTED` / `TOOL_CALL_*` / `RUN_FINISHED`. Live tokens still come from the room WebSocket or Agent DO. Python: `FluxyChatClient.join_ag_ui` / `ag_ui_events`.
+
 ## Parts
 
 ```ts

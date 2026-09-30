@@ -1,5 +1,11 @@
 # @fluxy-chat/ui-kit
 
+## Unreleased
+
+### Added
+
+- `FluxyAgentTurnChrome` — optional citations / reasoning / cost / HITL status. Host supplies data.
+
 ## 0.1.6 (2026-09-09)
 
 ### Changed

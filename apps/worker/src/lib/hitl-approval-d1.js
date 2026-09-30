@@ -8,6 +8,7 @@ import {
   DEFAULT_APPROVAL_TIMEOUT_SECONDS,
 } from "./room-approval-chain.js";
 import { appendRoomTimelineEvent } from "./room-timeline-events.js";
+import { createInAppNotification } from "./in-app-notifications.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -122,6 +123,36 @@ export function createD1ApprovalStore(env) {
         });
       }
 
+      if (resolved.approverId && request.projectId) {
+        await createInAppNotification(env, {
+          projectId: request.projectId,
+          userId: resolved.approverId,
+          kind: "tool_approval",
+          title: "Tool approval needed",
+          body: `${request.toolName || "tool"} in room ${request.roomId}. Expires ${expiresAt}.`,
+          roomId: request.roomId ?? null,
+        }).catch(() => {});
+        const { sendWebPushToUser } = await import("./push-notifications.js");
+        await sendWebPushToUser(env, {
+          projectId: request.projectId,
+          userId: resolved.approverId,
+          title: "Tool approval needed",
+          body: `${request.toolName || "tool"} — tap to review. Expires ${expiresAt}.`,
+          roomId: request.roomId ?? null,
+          url: `/api/hitl/approvals?roomId=${encodeURIComponent(request.roomId || "")}`,
+        }).catch(() => {});
+        const { notifyHitlOffRoom } = await import("./hitl-offroom-notify.js");
+        await notifyHitlOffRoom(env, {
+          projectId: request.projectId,
+          roomId: request.roomId,
+          approvalId: id,
+          approverId: resolved.approverId,
+          toolName: request.toolName,
+          toolInput: request.toolInput ?? {},
+          expiresAt,
+        }).catch(() => {});
+      }
+
       return entry;
     },
 
@@ -166,6 +197,13 @@ export function createD1ApprovalStore(env) {
       )
         .bind(status, now, userId, note ?? null, id)
         .run();
+
+      try {
+        const { attachHumanOutcome } = await import("./room-decisions.js");
+        await attachHumanOutcome(env, { hitlRequestId: id, outcome: status, decidedBy: userId });
+      } catch {
+        /* labels must not fail the decision */
+      }
 
       return this.get(id);
     },

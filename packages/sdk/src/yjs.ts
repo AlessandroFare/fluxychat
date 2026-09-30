@@ -50,6 +50,8 @@ export {
   type StorageJson,
 } from "./yjs-storage";
 
+export { FLUXY_AGENT_SUGGESTIONS_MAP_KEY } from "./yjs-agent-suggestions";
+
 export {
   FluxyYjsProvider,
   useMutation,

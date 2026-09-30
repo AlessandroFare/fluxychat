@@ -1,0 +1,28 @@
+---
+title: Room content keys (not customer KMS)
+description: Worker-wrapped envelopes and LLM plaintext. Honest BYOK vs marketing E2EE.
+---
+
+# Room content keys
+
+Hosted and self-host can store a **room content envelope** (`e2e:1` JSON with ciphertext and IV). The wrapping key lives in Worker secrets crypto. That is **not** customer-managed KMS and **not** classic E2EE (only the human endpoints hold keys).
+
+## What is true
+
+- TLS on the wire.
+- Optional envelope so D1/R2 blobs are not stored as raw UTF-8.
+- Operators who can read Worker secrets can unwrap.
+- **`invokeAgent` sends plaintext to the model** for that turn. Private models you run still see the prompt.
+
+## What is not true
+
+- “We never see it” on hosted if we operate the Worker.
+- Proton Lumo-style “user-to-model” isolation unless you self-host and never call a third-party LLM.
+- Cloudflare AI Gateway / `AI_API_KEY` “BYOK” is **your LLM vendor key on the Worker**, not a customer HSM. Same plaintext rule.
+
+Roadmap notes about Double Ratchet are not a shipped feature.
+
+## Related
+
+- [Shared-room agent defaults](/docs/guides/security/shared-room-agent-defaults)
+- [Trust center](https://fluxychat.com/trust)

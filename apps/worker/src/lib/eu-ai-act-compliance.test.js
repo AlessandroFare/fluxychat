@@ -149,4 +149,23 @@ describe("eu-ai-act-compliance", () => {
     expect(assessment.gaps.some((g) => g.id === "provider_identity")).toBe(true);
     expect(assessment.readyForProduction).toBe(false);
   });
+
+  it("assessment flags Art. 50 when disclosure enforcement is off", async () => {
+    const env = createEnv({
+      settings: {
+        enabled: 1,
+        enforce_ai_disclosure: 0,
+        first_contact_disclosure: 1,
+        enforce_hitl_high_risk: 1,
+        record_retention_days: 365,
+        require_conformity_for_high_risk: 1,
+        block_unacceptable_risk: 1,
+        provider_legal_name: "Acme SpA",
+      },
+      profiles: [],
+      bots: [],
+    });
+    const assessment = await assessEuAiActCompliance(env, "proj_1");
+    expect(assessment.gaps.some((g) => g.id === "art50_disclosure_off")).toBe(true);
+  });
 });

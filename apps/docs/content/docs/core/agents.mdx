@@ -27,9 +27,11 @@ Agents with a **handle** (e.g. `@assistant`) auto-invoke when users mention them
 ## Invoke from useChat
 
 ```tsx
-const { invokeAgent } = useChat({ roomId, client });
+const { invokeAgent, stopAgentStream } = useChat({ roomId });
 
-await invokeAgent("agent-id", "What is our refund policy?");
+await invokeAgent("What is our refund policy?", { agentId: "agt_…" });
+// Token edits land on the chat row (`streaming: true`). Stop keeps text already shown.
+stopAgentStream();
 ```
 
 ## Invoke via REST
@@ -57,7 +59,9 @@ const handoff = await client.getRoomHandoff(roomId);
 
 ## Streaming
 
-When the provider supports it, agent replies stream as message edits over WebSocket (`streaming: true` on message rows). Tool calls appear as structured cards in the thread when `toolExecuteUrl` is set.
+When the provider supports it, agent replies stream as message edits over WebSocket (`streaming: true` on the chat row). `stopAgentStream()` sends `{ type: "stream", op: "stop" }` on the room socket. The Worker finalizes that chat row with text already shown and aborts the in-flight LLM `fetch`. Tool calls show as cards when `toolExecuteUrl` is set. That is not Stream’s `ai_indicator.*` protocol, and it is not Cloudflare Think fiber recover after eviction.
+
+If the room Durable Object hibernates while the model is still generating, that LLM call does not resume. Reconnect still loads messages that already hit D1. Think’s object is the agent. Ours is the room.
 
 ## Next steps
 

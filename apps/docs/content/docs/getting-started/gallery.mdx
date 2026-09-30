@@ -14,6 +14,7 @@ npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room
 npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
 npx @fluxy-chat/create-fluxy-chat@latest my-draw --example draw
 npx @fluxy-chat/create-fluxy-chat@latest my-deal --example deal-room
+npx @fluxy-chat/create-fluxy-chat@latest my-room --example shared-ai-room
 npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
 npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick
 npx @fluxy-chat/create-fluxy-chat@latest my-stage --example voice-stage
@@ -31,7 +32,8 @@ npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
 | `war-room` | `useChat` + `invokeAgent` + `AvatarStack` | Agent uses the same room, not a private DM |
 | `iot-panel` | HTTP ingest + `iot.reading` | Not MQTT. Hosted: `iotAutoAgentId` on publish-config invokes an agent without @mention. |
 | `draw` | cursors + `client-ephemeral-dot` | Not 60 Hz broadcast |
-| `deal-room` | `createDecision` / `ackDecision` / `visibility` / `invokeAgent` | `visibleTo` for private lines. Cross-org is REST `/cross-org`. Set `VITE_FLUXYCHAT_AGENT_ID` for Ask agent. |
+| `deal-room` | quorum + `visibility` whisper + `invokeAgent` + feeds | Two tabs: `?seat=buyer` and `?seat=counsel`. Guest room for whispers (shared member JWT is one user). Traces are feeds, not chat. Cross-org is REST `/cross-org`. |
+| `shared-ai-room` | `pk_` guest widget + optional `invokeAgent` | First contact without console signup. Deploy `apps/worker` with wrangler; this template is the UI. |
 | `fleet-panel` | `POST /fleet/gps` then `fleet.gps_update` | Not MQTT. Geofences: `listFleetGeofences` |
 | `game-tick` | lobby + `game.tick` | Server-authoritative input, not rollback netcode |
 | `voice-stage` | `joinVoiceStage` signaling | Bring LiveKit for the media plane |

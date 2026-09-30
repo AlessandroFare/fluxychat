@@ -1160,6 +1160,23 @@ export {
   type ResumableAgentStreamOptions,
 } from "./durable-ai-resume";
 
+export {
+  FluxyRoomChatTransport,
+  lastUserText,
+  lastToolApprovalResponse,
+  encodeUiMessageTextStream,
+  encodeToolApprovalRequestStream,
+  type FluxyAiUiMessage,
+  type FluxyAiUiMessageChunk,
+  type FluxyAiToolApprovalResponsePart,
+  type FluxyRoomChatTransportOptions,
+} from "./fluxy-room-chat-transport";
+
+export {
+  openaiAgentsRequireApproval,
+  langGraphRequireApproval,
+} from "./approval-adapters";
+
 // C-2: Collaborative editing (CRDT)
 export {
   createCrdt,
@@ -1774,6 +1791,9 @@ export {
   getMCPAppResourceFromReadResult,
   readMCPAppResource,
   createMCPAppsClientCapabilities,
+  requestMcpAppUiActionApproval,
+  isAllowedMcpAppMessageOrigin,
+  mcpAppIframeTargetOrigin,
   createMCPAppManager,
   type MCPAppToolMeta,
   type MCPAppResourceMeta,
@@ -1782,6 +1802,8 @@ export {
   type MCPAppManager,
   type ReadMCPAppResourceOptions,
 } from "./mcp-apps";
+
+export { createFluxyTokenRoute, type CreateFluxyTokenRouteOptions } from "./create-fluxy-token-route";
 
 // G-14: Resource links
 export {
@@ -2103,3 +2125,31 @@ export {
   type OTAUpdate,
   type Geofence,
 } from "./fluxy-iot";
+
+export {
+  scoreEvalCaseAgainstTranscript,
+  scoreTranscriptEvalFile,
+  matchRunForCase,
+  toolNamesFromEvalRun,
+  transcriptRunFromLiveInvoke,
+  diffLiveVsBaseline,
+  invokeAgentForEval,
+  scoreLiveReplay,
+  type TranscriptEvalCase,
+  type TranscriptEvalRun,
+  type TranscriptEvalFile,
+  type LiveEvalInvokeResult,
+} from "./fluxy-eval";
+
+export {
+  roomIdFromChannelName,
+  migrateVendorExportToImportRows,
+  type FluxyMigrateImportRow,
+} from "./fluxy-migrate";
+
+export {
+  publishExternalGenerationToRoom,
+  editExternalGenerationInRoom,
+  publishExternalGenerationChunksToRoom,
+  messageIdFromGenerationBody,
+} from "./fluxy-external-generation";

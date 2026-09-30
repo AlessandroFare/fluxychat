@@ -22,7 +22,9 @@ Cost surprises usually come from unbounded writes or one hot object, not from "u
 
 ## Hibernation + client replay
 
-When a DO hibernates, clients disconnect. Production apps use REST history + SDK loadMore() and connectionState. See the reconnect guide.
+When a DO hibernates, clients disconnect. Production apps use REST history + SDK `loadMore()` and `connectionState`. See the reconnect guide.
+
+Idle-socket **duration on the Cloudflare invoice** is not published here. To get a number: staging room, many idle connections, one hour, read Durable Object duration in the Cloudflare dashboard. If duration stays near zero, that is the figure for a cost page. Until then, treat this page as the mental model, not a measurement.
 
 ## What FluxyChat does
 

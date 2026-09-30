@@ -96,6 +96,9 @@ interface LaunchKpis {
     totalOnboardingSteps: number;
     activationRate: number;
     checks: Record<string, boolean>;
+    messagesLast7?: number;
+    activeThreshold?: number;
+    activeProject?: boolean;
   };
   retention: {
     activeDaysLast7: number;

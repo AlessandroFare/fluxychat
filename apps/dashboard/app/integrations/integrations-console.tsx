@@ -10,6 +10,7 @@ import {
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { IntegrationsStatusCard } from "../components/integrations-status-card";
+import { IntegrationKitPanel } from "./integration-kit-panel";
 import { Panel } from "~/components/ui/Panel";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -436,10 +437,14 @@ export function IntegrationsConsolePage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Integrations"
-        description="Turnstile, SMS, CRM, knowledge bases, translation, and resource links. Live SDK-powered demos from @fluxy-chat/sdk."
+        description="Turnstile, SMS, entity-room webhooks, and in-memory SDK demos. Hosted Marketplace apps are not this page."
       />
 
       <IntegrationsStatusCard />
+
+      <div className="mt-6">
+        <IntegrationKitPanel />
+      </div>
 
       <h2 className="mt-10 text-sm font-semibold">SDK Integration Modules (Interactive)</h2>
       <p className="text-xs text-muted-foreground">Each module runs in-memory using the real SDK factory. Try creating contacts, searching docs, validating links, and translating text.</p>

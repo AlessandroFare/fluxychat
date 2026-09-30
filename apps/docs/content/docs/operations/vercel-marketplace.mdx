@@ -1,0 +1,18 @@
+---
+title: Vercel Marketplace
+description: Draft only. FluxyChat is not listed on Vercel Marketplace until Vercel accepts a native integration.
+---
+
+# Vercel Marketplace
+
+There is **no live listing**. Native integrations go through Vercel’s partner process (manifest, OAuth or API keys, review). In-repo draft: `docs/marketplace/vercel-integration.draft.json`.
+
+What you can ship today without Marketplace:
+
+- Self-host the Worker on the customer Cloudflare account ([hybrid data plane](/docs/operations/hybrid-control-plane)).
+- Mint `fc_` from a Next.js route on Vercel with [`@fluxy-chat/auth`](/docs/guides/auth-jwt).
+- Point the dashboard at **your** Worker URL.
+
+`vercel integration add` only works for integrations Vercel already lists. We are not listed, so that command is not a supported install path. A Community badge on a future chat-sdk catalog is also not Marketplace.
+
+Do not write “available on Vercel Marketplace” in public copy until the listing exists.

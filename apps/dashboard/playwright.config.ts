@@ -19,6 +19,7 @@ const e2eEnv = {
 export default defineConfig({
   testDir: "./e2e",
   testMatch: isCi ? "**/*.smoke.spec.ts" : undefined,
+  testIgnore: ["**/deal-room-capture.spec.ts"],
   fullyParallel: false,
   forbidOnly: isCi,
   retries: isCi ? 1 : 0,

@@ -1,0 +1,29 @@
+---
+title: Shared-room agent defaults
+description: Trust labels, two-key HITL, and markdown host allowlisting. Not a pen test and not an exploit catalog.
+---
+
+# Shared-room agent defaults
+
+A public room with `pk_` guests, an agent that can see private app context, and tools that talk to the network is the combination you should treat as hostile by default. This Worker path is **on** unless you set `SHARED_ROOM_TWO_KEY=false`. A room can skip it with `config.sharedRoomTwoKey: false` (Rooms → HITL). `true` forces it on even if the env var is off.
+
+## What the engine does
+
+1. **Trust.** Guest ids (`guest_…`), inbound email/webhook kinds, and `metadata.trust=untrusted` are untrusted. Member JWT authors are trusted. Tool results in the same turn become untrusted for later steps.
+2. **Hidden characters.** Incoming chat bodies drop a fixed set of format/bidi/zero-width code points before length checks. Empty-after-strip is rejected.
+3. **Two-key HITL.** If the turn read untrusted text **and** the agent has private context (`context_fetch_url`, fetched app JSON, or trusted member lines in history), tools with external effect (`postMessage`, `http_request`, mail/webhook-style names, …) require the existing HITL store. Read tools such as `fetchMessages` do not.
+4. **Markdown egress.** When the turn was untrusted, agent replies drop markdown images and links unless the host is on `AGENT_MARKDOWN_HOST_ALLOWLIST` (HTTPS only).
+
+This extends HITL and tool policy. It is not a judge model and not a guarantee against every injection.
+
+## CI
+
+`apps/worker/src/lib/shared-room-agent-guard.test.js` uses **synthetic markers** only (zero-width chars, `guest_` ids, example.com URLs). We do not publish jailbreak strings.
+
+## Related
+
+- [Untrusted room text](/docs/guides/security/agent-untrusted-input)
+- [HITL approval chain](/docs/guides/hitl-approval-chain)
+- [Delegated agent auth](/docs/guides/security/delegated-agent-auth)
+- [Room tickets](/docs/guides/room-tickets)
+- [Room content keys](/docs/guides/security/room-content-keys)

@@ -92,6 +92,8 @@ sequenceDiagram
 | `PUBLIC_GUEST_ALLOWED_ORIGINS` | — | Still applies to guest-session |
 | `PUBLIC_GUEST_READ_ONLY` | read-only guests | When `false`, embed visitors can send messages |
 
+Guest `FluxyChatWidget` shows a “Powered by FluxyChat” strip (`poweredBy={false}` to hide).
+
 ## Custom domains
 
 Serve `embed.js` from `https://chat.yourcompany.com` so API, iframe, and WebSocket share the same origin. Parent marketing site origins still go in the embed allowlist.

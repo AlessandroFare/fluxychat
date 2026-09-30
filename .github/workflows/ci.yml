@@ -46,6 +46,9 @@ jobs:
       - name: Build workspace packages
         run: pnpm --filter @fluxy-chat/protocol build && pnpm --filter @fluxy-chat/config build && pnpm --filter @fluxy-chat/sdk build && pnpm --filter @fluxy-chat/react build
 
+      - name: fluxy-eval offline fixture
+        run: node packages/sdk/bin/fluxy-eval.mjs packages/sdk/fixtures/eval-search.json
+
       - name: Pricing consistency check (P0-1 / ENG-03)
         run: pnpm run check:pricing
 
@@ -84,6 +87,9 @@ jobs:
 
       - name: Upptime config validate (#62)
         run: pnpm run check:upptime
+
+      - name: MCP server.json mcpName
+        run: pnpm run check:mcp-server-json
 
       - name: Worker typecheck (ENG-06)
         run: pnpm --filter @fluxy-chat/worker typecheck

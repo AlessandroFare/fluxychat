@@ -201,6 +201,15 @@ export default function ComparePage() {
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Side-by-side with proprietary hosted chat SDKs, Stream, Ably, and Pusher.
         Rows are factual. Check each vendor&apos;s current docs before you buy.
+        List prices vs Sendbird Chat:{" "}
+        <Link href={HOSTED_PATHS.compareSendbird} className="text-brand underline underline-offset-2">
+          /compare/sendbird
+        </Link>
+        . CometChat Chat + agent credits:{" "}
+        <Link href={HOSTED_PATHS.compareCometchat} className="text-brand underline underline-offset-2">
+          /compare/cometchat
+        </Link>
+        .
       </p>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{COMPARE_LABS_NOTE}</p>
       <div className="mt-4">

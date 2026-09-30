@@ -1,0 +1,29 @@
+---
+title: Cloudflare Agents in a FluxyChat room
+description: AIChatAgent as a room participant. Complementary to Cloudflare Agents, not a replacement Agent class.
+---
+
+Cloudflare Agents put the **agent** in a Durable Object. FluxyChat puts **humans and invokeAgent** on a **room** Durable Object. Use both: keep your `AIChatAgent` for one-to-one tool loops, join the room as a user so other people see the same timeline.
+
+```ts
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+export async function joinRoomFromCloudflareAgent(opts: {
+  workerUrl: string;
+  token: string;
+  userId: string;
+  roomId: string;
+}) {
+  const client = new FluxyChatClient({
+    baseUrl: opts.workerUrl,
+    userId: opts.userId,
+    token: opts.token,
+  });
+  client.connect(opts.roomId);
+  return client;
+}
+```
+
+`packages/cloudflare-agents` re-exports this helper. It does not wrap `@cloudflare/ai-chat`. You still write the Agent class.
+
+Do not rebase the Room DO onto the Agents SDK.

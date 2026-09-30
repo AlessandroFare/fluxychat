@@ -64,7 +64,13 @@ export function MessageList({
 
   return (
     <MessageScrollerProvider autoScroll scrollPreviousItemPeek={64}>
-      <MessageScroller className={cn("flex-1 scroll-fade-b", className)} data-testid={testId}>
+      <MessageScroller
+        className={cn("flex-1 scroll-fade-b", className)}
+        data-testid={testId}
+        role="log"
+        aria-live="polite"
+        aria-label="Messages"
+      >
         <MessageScrollerViewport className="p-3">
           <MessageScrollerContent className="gap-2">
             {messages.flatMap((m, idx) => {

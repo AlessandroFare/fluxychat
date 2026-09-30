@@ -11,21 +11,27 @@ import { RoomAudienceScorePanel } from "../components/room-audience-score-panel"
 import { RoomMemoryPanel } from "../components/room-memory-panel";
 import { RoomKnowledgeGraphPanel } from "../components/room-knowledge-graph-panel";
 import { RoomApprovalChainPanel } from "../components/room-approval-chain-panel";
+import { RoomDecisionsPanel } from "../components/room-decisions-panel";
+import { RoomInsightsPanel } from "@/components/room-insights-panel";
 
 export function RoomAdvancedPanels({
   roomId,
   memberJwt,
   memberUserId,
+  adminJwt,
 }: {
   roomId: string;
   memberJwt: string;
   memberUserId?: string;
+  adminJwt?: string;
 }) {
+  const insightsToken = (adminJwt || memberJwt).trim();
   return (
     <div className="mt-4 space-y-6">
       <p className="text-xs text-muted-foreground">
         Advanced room modules (MCP, memory, quorum, …). Same Worker APIs; not required for chat.
       </p>
+      {insightsToken ? <RoomInsightsPanel roomId={roomId} token={insightsToken} /> : null}
       <RoomMcpConnectPanel roomId={roomId} memberJwt={memberJwt} />
       <RoomPresenceEscalationPanel roomId={roomId} memberJwt={memberJwt} />
       <RoomRoleVisibilityPanel roomId={roomId} />
@@ -35,6 +41,7 @@ export function RoomAdvancedPanels({
       <RoomAudienceScorePanel roomId={roomId} memberJwt={memberJwt} />
       <RoomMemoryPanel roomId={roomId} memberJwt={memberJwt} />
       <RoomApprovalChainPanel roomId={roomId} memberJwt={memberJwt} />
+      <RoomDecisionsPanel roomId={roomId} memberJwt={memberJwt} />
       <RoomKnowledgeGraphPanel roomId={roomId} memberJwt={memberJwt} />
       <RoomOfflineNotifySettings
         roomId={roomId}

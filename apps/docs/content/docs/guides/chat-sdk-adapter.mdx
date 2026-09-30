@@ -1,0 +1,39 @@
+---
+title: Chat SDK adapter
+description: Duck-typed FluxyChat adapter for Vercel Chat SDK. Publish under your own npm name; @chat-adapter/* is reserved.
+---
+
+# Chat SDK adapter
+
+Vercel Chat SDK lists **official** adapters under `@chat-adapter/*` and **vendor-official** adapters from the platform vendor. FluxyChat ships `chat-adapter-fluxychat` as a **community** package. `chat` is an optional peer; the factory still compiles without importing it.
+
+This is not a listing on chat-sdk.dev until a PR lands in [vercel/chat `apps/docs/adapters.json`](https://github.com/vercel/chat). Copy [`listing/adapters.entry.json`](https://github.com/AlessandroFare/fluxychat/blob/main/packages/chat-adapter-fluxychat/listing/adapters.entry.json) into that file. Pin `readme` to a commit SHA or tag. Publish `chat-adapter-fluxychat` to npm first. Liveblocks is vendor-official; we do not claim that tier. Capability list: [`PERMISSIONS.md`](https://github.com/AlessandroFare/fluxychat/blob/main/packages/chat-adapter-fluxychat/PERMISSIONS.md). Unsigned URL-loaded adapters are out.
+
+## Install
+
+```bash
+pnpm add chat-adapter-fluxychat @fluxy-chat/sdk
+```
+
+Thread ids look like `fluxychat:{roomId}`. `listThreads` maps `listRooms()` onto those ids. Still duck-typed: we do not import the `chat` package.
+
+```ts
+import { createFluxyChatSdkAdapter, parseFluxyChatThreadId } from "chat-adapter-fluxychat";
+
+const adapter = createFluxyChatSdkAdapter({
+  workerUrl: process.env.FLUXYCHAT_WORKER_URL!,
+  token: process.env.FLUXYCHAT_BOT_JWT!,
+  userId: "bot_support",
+});
+
+const { roomId } = parseFluxyChatThreadId("fluxychat:deal-42");
+await adapter.postMessage(`fluxychat:${roomId}`, "Hello from Chat SDK");
+```
+
+State for `useChat` on Cloudflare still lives in the **room Durable Object + D1**, not in Redis. See [stream resumption](/docs/guides/stream-resumption).
+
+## What this is not
+
+- Not an official `@chat-adapter/fluxychat` package
+- Not a replacement for [`FluxyRoomChatTransport`](/docs/guides/vercel-ai-sdk-chat-transport) (AI SDK UI transport)
+- Not listed until Vercel merges the catalog PR

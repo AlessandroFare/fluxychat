@@ -22,6 +22,10 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/activities",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/adapters",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -148,6 +152,18 @@
     {
       "path": "/admin/audit-export/stream",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/auth/wallet",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/admin/auth/wallet/allowlist",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/admin/auth/wallet/nonce",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
     },
     {
       "path": "/admin/bridges",
@@ -366,6 +382,10 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/admin/eu-ai-act/art-50-marks",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
       "path": "/admin/eu-ai-act/assessment",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -412,6 +432,10 @@
     {
       "path": "/admin/marketplace/agents",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/marketplace/apps",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
     },
     {
       "path": "/admin/marketplace/install",
@@ -558,6 +582,10 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/admin/tenant-usage",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/admin/truth-market/credits",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -666,6 +694,14 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/ag-ui/events",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/ag-ui/join",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
       "path": "/agent-profiles",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -730,6 +766,10 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/api/cards/send",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/api/cdp/broadcasts",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -779,6 +819,10 @@
     },
     {
       "path": "/api/companion-advanced/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/devtools/chat",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
@@ -990,6 +1034,14 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/auth/wallet",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/auth/wallet/nonce",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
       "path": "/auto-mod/appeal",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -1107,6 +1159,10 @@
     },
     {
       "path": "/demo/status",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/dev/provision",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
@@ -1370,6 +1426,14 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/games/federation/ingest",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/games/leaderboard",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
       "path": "/games/lobbies/matchmake",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -1432,6 +1496,26 @@
     {
       "path": "/incidents/stats",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/integrations/catalog",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/integrations/connections",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/integrations/entity-links",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/integrations/telephony/handoff",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/integrations/write-intents",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
     },
     {
       "path": "/intelligence/analytics/escalations",
@@ -1562,6 +1646,10 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/moderation/labels",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/notification/preferences",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -1674,8 +1762,24 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/public/activation-ping",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/public/demo-credentials",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
       "path": "/public/guest-hardening",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/public/hitl/slack",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/public/hitl/tap",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
     },
     {
       "path": "/push/config",
@@ -1822,6 +1926,10 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/threads",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/tokens/anonymous",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -1860,6 +1968,10 @@
     {
       "path": "/users/sync",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/voice-ai/clone-translate",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
     },
     {
       "path": "/webauthn/credentials",
@@ -1906,36 +2018,8 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
-      "path": "/activities",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/api/cards/send",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/dev/provision",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/api/devtools/chat",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/threads",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/moderation/labels",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/integrations/telephony/handoff",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/admin/tenant-usage",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+      "path": "/ws/inbox",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
     }
   ]
 }

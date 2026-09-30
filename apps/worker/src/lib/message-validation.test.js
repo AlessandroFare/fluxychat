@@ -19,4 +19,11 @@ describe("validateMessageContent", () => {
     expect(res.valid).toBe(true);
     expect(res.content).toHaveLength(MAX_MESSAGE_LENGTH);
   });
+
+  it("strips hidden unicode before accepting", () => {
+    const res = validateMessageContent("hello\u200b");
+    expect(res.valid).toBe(true);
+    expect(res.content).toBe("hello");
+    expect(validateMessageContent("\u200b\u200b").valid).toBe(false);
+  });
 });

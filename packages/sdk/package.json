@@ -20,6 +20,11 @@
     "cloudflare",
     "fluxychat"
   ],
+  "mcpName": "io.github.alessandrofare/fluxychat",
+  "bin": {
+    "fluxy-eval": "./bin/fluxy-eval.mjs",
+    "fluxy-migrate": "./bin/fluxy-migrate.mjs"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -68,6 +73,11 @@
       "import": "./dist/core.js",
       "default": "./dist/core.js"
     },
+    "./ai-sdk": {
+      "types": "./dist/fluxy-room-chat-transport.d.ts",
+      "import": "./dist/fluxy-room-chat-transport.js",
+      "default": "./dist/fluxy-room-chat-transport.js"
+    },
     "./chat": {
       "types": "./dist/chat.d.ts",
       "import": "./dist/chat.js",
@@ -97,6 +107,7 @@
   "sideEffects": false,
   "files": [
     "dist/**",
+    "bin/**",
     "LICENSE",
     "README.md"
   ],

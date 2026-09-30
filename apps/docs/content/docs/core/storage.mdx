@@ -64,3 +64,7 @@ npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
 ```
 
 Strokes live on `Y.Array` inside `Y.Map("storage")` (`storage.set("strokes", new Y.Array())`). Cursors stay on `useChat().sendCursor`. Same room DO. The dashboard can render that doc with Excalidraw in the browser. Excalidraw is not a second backend.
+
+## Agent suggestions
+
+`GET /rooms/:id/yjs/agent-suggestions` lists rows. `POST` writes a row (`comment` is the justification). Optional HITL tool `yjs.acceptSuggestion`. `POST .../accept` copies `value` onto `storage[storageKey]` and broadcasts a Yjs update. `POST .../reject` marks it rejected and denies HITL. SDK: `listYjsAgentSuggestions` / `proposeYjsAgentSuggestion` / `acceptYjsAgentSuggestion` / `rejectYjsAgentSuggestion`. Presence `agentStatus` is still the “bot is in the room” flag; this map is the edit proposal.

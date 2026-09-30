@@ -14,29 +14,29 @@ export const metadata: Metadata = PAGE_METADATA.getStarted;
 
 const HOSTED_STEPS = [
   {
-    icon: Cloud,
-    title: "Create your account",
-    body: "Sign up on Fluxychat Cloud. We provision a project and API credentials. No Worker deploy on day one.",
-  },
-  {
     icon: Package,
-    title: "Install the SDK or use the CLI",
-    body: "Run pnpm add @fluxy-chat/react, or npx @fluxy-chat/create-fluxy-chat@latest. Public rooms: FluxyRealtimeProvider plus publishableKey (pk_). No token endpoint.",
+    title: "Public room with pk_",
+    body: "npx @fluxy-chat/create-fluxy-chat@latest my-room --example shared-ai-room. Guest join, two tabs. Console signup is later, for ops.",
   },
   {
     icon: Code2,
-    title: "Send your first message",
-    body: "Open two tabs. pk_ in the browser for public rooms. Production apps mint a member JWT with POST /auth/token and X-Fluxy-Api-Key (fc_ keys stay server-only).",
+    title: "Or install the SDK in your app",
+    body: "pnpm add @fluxy-chat/react. FluxyRealtimeProvider plus publishableKey (pk_). No token endpoint on public rooms.",
+  },
+  {
+    icon: Cloud,
+    title: "Self-host the Worker when you need it",
+    body: "wrangler deploy on your Cloudflare account. Hosted cloud is beta if you want us to run the Worker.",
   },
   {
     icon: LayoutDashboard,
-    title: "Open the console for ops",
-    body: "Manage rooms, agents, MCP tools, quotas, and billing once you are signed in.",
+    title: "Console for agents, quotas, billing",
+    body: "Sign in when you need JWT minting, agents, or invoices. Not required to try a public room.",
   },
   {
     icon: KeyRound,
-    title: "Upgrade when you need more",
-    body: "Start on the free tier. Move to a paid plan in the console when quotas or AI agent invokes become a bottleneck.",
+    title: "Member JWT for private rooms",
+    body: "POST /auth/token with X-Fluxy-Api-Key (fc_ stays on the server). pk_ cannot mint member tokens.",
   },
 ] as const;
 
@@ -50,7 +50,7 @@ export default function GetStartedPage() {
         Get your first message live
       </h1>
       <p className="mt-3 text-muted-foreground">
-        Account, SDK, first room on hosted cloud. Legal pack for a company:{" "}
+        Account, SDK, first public room. Company legal pages:{" "}
         <Link href={HOSTED_PATHS.forTeams} className="font-medium text-primary underline-offset-2 hover:underline">
           /for-teams
         </Link>

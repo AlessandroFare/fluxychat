@@ -1,0 +1,33 @@
+---
+title: Untrusted room text and agents
+description: High-level controls when an agent reads messages it did not write. Not an exploit guide.
+---
+
+# Untrusted room text and agents
+
+If an agent can read a room, **any member (or guest) can put text in that context**. Treat that like form input: untrusted. This page is operational, not a catalogue of attacks.
+
+## What we already do
+
+- Tool calls that can change the world wait on HITL (`user-approval`, approval chain, one-tap HMAC for the current approver).
+- Hidden format characters are stripped on inbound chat (`validateMessageContent`). Guest lines are untrusted. Two-key HITL plus markdown host allowlisting: [shared-room agent defaults](/docs/guides/security/shared-room-agent-defaults).
+- Art. 50 marks AI output in the transcript. That is disclosure, not a filter.
+- MCP Apps UI actions need an explicit approve step in the host. Shared state is JSON merge in KV **and** a Y.Map (`fluxy_mcp_app_state`) on the room doc. Concurrent HTTP PUTs are still last-write-wins on KV. Yjs clients merge the map. This is not Automerge and not a CRDT over the HTTP JSON body.
+
+## Operator checklist
+
+1. **Least tools.** Per-bot `allowed_tools` and, if you need a kill switch, `AGENT_TOOL_ALLOWLIST`.
+2. **HITL on writes.** Search might be auto; `deleteRecord` / mail / HTTP tools should not be.
+3. **Caps.** Room token budget and ambient pause when the room is empty.
+4. **Stop.** Widget and SDK `stopAgentStream` abort the Worker generation path; do not assume a hung Room DO is still generating.
+5. **Do not paste secrets into the room** and then `@mention` an agent. The model sees what the invoker can see.
+
+## What this is not
+
+We have not done an external pen test. We will not publish bypass recipes, jailbreak payloads, or “try this string” examples. If you need a red team, hire one against your own prompt and tool list.
+
+## In-repo checks (not a pen test)
+
+CI already runs tenant-scope, outbound-fetch, crypto-claim, and Worker tests. That is automation on our code. An external pen test is a hired engagement against a running stack. We have not done that. Do not put “pen tested” on a sales page.
+
+Hosted is beta. Self-host: you own the model vendor and the network path.

@@ -65,6 +65,7 @@ import {
   runFluxyDisconnectHooks,
 } from "../lib/fluxy-config-runtime.js";
 import { serializeMessage } from "../lib/message-serialization.js";
+import { isPublicShareVisibleRow, redactPublicShareRow } from "../lib/message-visibility.js";
 import {
   notifyDmRecipient,
   notifyMentionedUsers,
@@ -119,6 +120,14 @@ import {
   getGameCheckpointCrdtSnapshotPayload,
   syncCheckpointToYjsRoomDoc,
 } from "../lib/yjs-game-checkpoint.js";
+import {
+  getMcpAppStateCrdtSnapshotPayload,
+  syncMcpAppStateToYjsRoomDoc,
+} from "../lib/yjs-mcp-app-state.js";
+import {
+  getAgentSuggestionsCrdtSnapshotPayload,
+  syncAgentSuggestionToYjsRoomDoc,
+} from "../lib/yjs-agent-suggestions.js";
 import { maybeSyncMatrixOutboundForMessage } from "../lib/matrix-outbound-hook.js";
 import { streamCheckpoint, streamTail } from "../lib/stream-offset.js";
 
@@ -754,6 +763,7 @@ export class RoomDurableObject {
         : (authz.capabilities ?? {}),
       r: auth.roles ?? [],
       p: auth.projectId,
+      ...(auth.shareSafe ? { ss: 1 } : {}),
       ...(spectator ? { ro: 1 } : {}),
     });
 
@@ -840,6 +850,7 @@ export class RoomDurableObject {
           limit: connectOpts.limit,
           envelopeType: connectOpts.replay === "connect" ? "replay" : "history",
           viewerUserId: userId,
+          shareSafe: Boolean(auth.shareSafe),
         });
       } catch (err) {
         logError("do.connect_snapshot_send_failed", err, { roomId, projectId });
@@ -1030,7 +1041,7 @@ export class RoomDurableObject {
     const result = await this.env.DB.prepare(
       `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
               mentions, og_title, og_description, og_image, og_url, client_message_id,
-              seq, version
+              seq, version, participant_type, metadata_json
               ${visibilityCols}${voiceCols}
        FROM messages
        WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL${extendedSchema ? vis.sql : ""}
@@ -1052,6 +1063,7 @@ export class RoomDurableObject {
     limit,
     envelopeType,
     viewerUserId,
+    shareSafe = false,
   }) {
     let rows = [];
     try {
@@ -1082,6 +1094,9 @@ export class RoomDurableObject {
     try {
       mapped = await attachAttachmentsToMessages(this.env, projectId, roomId, rows);
       mapped = await attachPollsToMessages(this.env, projectId, mapped, viewerUserId);
+      if (shareSafe) {
+        mapped = mapped.filter(isPublicShareVisibleRow).map(redactPublicShareRow);
+      }
     } catch (err) {
       logError("do.connect_snapshot_attach_failed", err, { roomId, projectId });
       mapped = [];
@@ -3371,6 +3386,80 @@ export class RoomDurableObject {
     }
 
     if (
+      new URL(request.url).pathname === "/mcp-apps/sync" &&
+      request.method === "POST"
+    ) {
+      const roomId = this.roomId || this.state.id.toString();
+      const body = await request.json().catch(() => ({}));
+      if (body.record) {
+        await syncMcpAppStateToYjsRoomDoc(
+          this.yjsSync,
+          roomId,
+          this.state.storage,
+          body.record,
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (
+      new URL(request.url).pathname === "/yjs/agent-suggestions/sync" &&
+      request.method === "POST"
+    ) {
+      const roomId = this.roomId || this.state.id.toString();
+      const body = await request.json().catch(() => ({}));
+      if (body.record) {
+        await syncAgentSuggestionToYjsRoomDoc(
+          this.yjsSync,
+          roomId,
+          this.state.storage,
+          body.record,
+          (frame) => this.broadcastBinary(frame),
+          { applyStorage: body.applyStorage === true },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (
+      new URL(request.url).pathname === "/yjs/agent-suggestions/crdt-snapshot" &&
+      request.method === "GET"
+    ) {
+      const roomId = this.roomId || this.state.id.toString();
+      const suggestionId = new URL(request.url).searchParams.get("suggestionId");
+      const payload = await getAgentSuggestionsCrdtSnapshotPayload(
+        this.yjsSync,
+        roomId,
+        this.state.storage,
+        suggestionId,
+      );
+      return new Response(JSON.stringify(payload), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (
+      new URL(request.url).pathname === "/mcp-apps/crdt-snapshot" &&
+      request.method === "GET"
+    ) {
+      const roomId = this.roomId || this.state.id.toString();
+      const appId = new URL(request.url).searchParams.get("appId");
+      const payload = await getMcpAppStateCrdtSnapshotPayload(
+        this.yjsSync,
+        roomId,
+        this.state.storage,
+        appId,
+      );
+      return new Response(JSON.stringify(payload), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (
       new URL(request.url).pathname === "/stage-sync" &&
       request.method === "POST"
     ) {
@@ -3809,6 +3898,19 @@ export class RoomDurableObject {
           },
           broadcastOpts,
         );
+      } else if (body.type === "mcp_app_state") {
+        this.broadcast(
+          {
+            type: "mcp_app_state",
+            roomId: body.roomId || roomIdStr,
+            appId: body.appId,
+            state: body.state ?? {},
+            version: body.version ?? 0,
+            updatedAt: body.updatedAt || new Date().toISOString(),
+            updatedBy: body.updatedBy || null,
+          },
+          broadcastOpts,
+        );
       } else if (body.type === "agent_step" && body.step) {
         this.broadcast(
           {
@@ -3840,6 +3942,8 @@ export class RoomDurableObject {
           preview: body.preview ?? null,
           attachments: Array.isArray(body.attachments) ? body.attachments : [],
           ...(body.clientMessageId ? { clientMessageId: body.clientMessageId } : {}),
+          ...(body.participantType ? { participantType: body.participantType } : {}),
+          ...(body.metadata ? { metadata: body.metadata } : {}),
           ...(body.kind ? { kind: body.kind } : {}),
           ...(body.audioUrl ? { audioUrl: body.audioUrl } : {}),
           ...(body.audioMimeType ? { audioMimeType: body.audioMimeType } : {}),

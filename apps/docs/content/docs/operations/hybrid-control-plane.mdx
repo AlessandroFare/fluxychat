@@ -1,0 +1,17 @@
+---
+title: Hybrid data plane
+description: Your Cloudflare account runs the room Worker. FluxyChat Cloud is not that Worker.
+---
+
+# Hybrid data plane
+
+Self-host is the data plane: your Cloudflare account, your D1, your room Durable Objects, MIT Worker in this repo. Hosted console and keys on fluxychat.com are a **separate** control plane and stay beta. There is no product SKU today that means “we operate your Worker while you keep the account.”
+
+What exists as ops, not as a sold hybrid:
+
+- Deploy the Worker with Wrangler / the in-repo Terraform sketches.
+- Mint `fc_` on **your** Worker. The hosted dashboard talks to **its** Worker URL.
+
+If you want that split later, the contract is: customer account = rooms + messages; we would only ship console + updates. Do not advertise that until it is a path you can buy.
+
+See [Self-host](/docs/guides/self-host-one-command).

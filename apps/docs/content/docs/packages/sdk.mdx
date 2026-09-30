@@ -565,7 +565,7 @@ Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sd
 
 | Feature | SDK export |
 |---------|------------|
-| Stream resumption | `client.resumeStream(streamId)`, `client.getActiveStreams(roomId)` |
+| Stream resumption | `getActiveStreams` / `resumeStream` (KV snapshot). Not Think fiber resume. |
 | Human-in-the-loop approval | `needsApproval` flag, approval workflow UI cards |
 | MCP client | `createMcpClient(\{ transport, url \})` — `.listTools()`, `.listResources()`, `.readResource()` |
 | MCP tool conversion | `convertMcpTools(mcpTools)` → FluxyChat tool definitions |
@@ -588,7 +588,8 @@ Adopted from the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sd
 | Multi-step loop control | `maxSteps`, `stopWhen`, `isStepCount`, `hasToolCall`, `isLoopFinished` |
 | Provider-defined tools | Provider supplies schema, developer provides `execute` |
 | Provider-executed tools | Server-side tools (web search, code execution) |
-| Pluggable transport | `DefaultChatTransport`, `ChatTransport` interface |
+| Room connection fallback | `FluxyChatTransport`: `websocket` \| `sse` \| `polling`. |
+| AI SDK `useChat` transport | `FluxyRoomChatTransport` (`@fluxy-chat/sdk/ai-sdk`). Client ctor is `baseUrl` + `userId`, not `workerUrl`. |
 | Typed UIMessage | Generic type parameter for end-to-end type safety |
 | Data parts | Stream arbitrary typed data alongside text |
 | extractReasoningMiddleware | `extractReasoningMiddleware()` |

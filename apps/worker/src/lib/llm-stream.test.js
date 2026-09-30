@@ -15,6 +15,7 @@ function mockSseResponse(chunks) {
             index += 1;
             return { done: false, value };
           },
+          async cancel() {},
         };
       },
     },
@@ -65,5 +66,59 @@ describe("callLlmOpenAIStream", () => {
     );
 
     expect(content).toBe("Ciao da Groq");
+  });
+
+  it("forwards abortSignal to fetch", async () => {
+    const abort = new AbortController();
+    globalThis.fetch = vi.fn(async (_url, init) => {
+      expect(init.signal).toBe(abort.signal);
+      return mockSseResponse([
+        'data: {"choices":[{"delta":{"content":"ok"}}]}\n',
+        "data: [DONE]\n",
+      ]);
+    });
+
+    await callLlmOpenAIStream(
+      "https://api.groq.com/openai/v1",
+      "gsk_test",
+      "llama-3.1-8b-instant",
+      [{ role: "user", content: "hi" }],
+      { abortSignal: abort.signal },
+      async () => {},
+    );
+  });
+
+  it("maps an aborted signal to stream_stopped", async () => {
+    const abort = new AbortController();
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      body: {
+        getReader() {
+          return {
+            async read() {
+              abort.abort();
+              const err = new Error("The operation was aborted");
+              err.name = "AbortError";
+              throw err;
+            },
+            async cancel() {},
+          };
+        },
+      },
+    }));
+
+    try {
+      await callLlmOpenAIStream(
+        "https://api.groq.com/openai/v1",
+        "gsk_test",
+        "llama-3.1-8b-instant",
+        [{ role: "user", content: "hi" }],
+        { abortSignal: abort.signal },
+        async () => {},
+      );
+      expect.fail("expected stream_stopped");
+    } catch (err) {
+      expect(err.code).toBe("stream_stopped");
+    }
   });
 });

@@ -16,6 +16,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${marketing}/`, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
     { url: `${marketing}/pricing`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${marketing}/compare`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${marketing}/compare/sendbird`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${marketing}/compare/cometchat`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${marketing}/get-started`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${marketing}/docs`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${marketing}/guides`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
@@ -27,5 +29,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${marketing}/terms`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${marketing}/privacy-policy`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${marketing}/for-teams`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${marketing}/trust`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${marketing}/migrate-chatgpt`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
   ];
 }

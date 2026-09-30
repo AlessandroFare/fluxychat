@@ -78,7 +78,7 @@ export const LANDING_NAV_MENUS: readonly LandingNavMenu[] = [
         links: [
           { href: "/#realtime", label: "Location & push" },
           { href: "/#realtime", label: "Stream & collab" },
-          { href: "/#realtime", label: "Game, IoT & fleet" },
+          { href: HOSTED_PATHS.docs, label: "Labs (gallery)" },
           { href: "/#realtime", label: "Bridges (you create the vendor app)" },
         ],
       },
@@ -88,9 +88,11 @@ export const LANDING_NAV_MENUS: readonly LandingNavMenu[] = [
     label: "Solutions",
     links: [
       { href: HOSTED_PATHS.why, label: "Why FluxyChat" },
+      { href: "/landing/incident", label: "Incident room" },
+      { href: "/landing/support", label: "Support copilot" },
+      { href: "/landing/pr-review", label: "PR review" },
       { href: HOSTED_PATHS.compare, label: "Compare vendors" },
-      { href: "/#realtime", label: "Education & events" },
-      { href: "/#realtime", label: "Health & finance" },
+      { href: HOSTED_PATHS.docs, label: "Labs (edu, health, events)" },
       { href: HOSTED_PATHS.guidesBuildNextjs, label: "Next.js quickstart" },
     ],
   },
@@ -102,6 +104,8 @@ export const LANDING_NAV_MENUS: readonly LandingNavMenu[] = [
       { href: HOSTED_PATHS.guides, label: "Guides" },
       { href: "/demo", label: "Try demo (no signup)" },
       { href: HOSTED_PATHS.status, label: "Status" },
+      { href: HOSTED_PATHS.trust, label: "Trust" },
+      { href: HOSTED_PATHS.migrateChatgpt, label: "ChatGPT import" },
       { href: "/#faq", label: "FAQ" },
     ],
   },
@@ -121,6 +125,7 @@ export const LANDING_NAV_LINKS: readonly TopNavLink[] = [
   { href: "/demo", label: "Demo" },
   { href: "/#faq", label: "FAQ" },
   { href: HOSTED_PATHS.status, label: "Status" },
+  { href: HOSTED_PATHS.trust, label: "Trust" },
 ];
 
 export const LANDING_MOBILE_MENU_ID = "landing-mobile-menu";

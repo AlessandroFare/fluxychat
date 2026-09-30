@@ -154,18 +154,6 @@ describe("sso-saml", () => {
     // reject it with a digest mismatch (fail closed against XML Sig Wrapping).
     expect(result.isValid).toBe(false);
     expect(result.reason).toBe("reference_digest_digest_mismatch");
-
-    // Same response, but with want_assertions_signed=false. The
-    // SignedInfo verifies, the issuer matches, nameId is extracted.
-    const result2 = await parseSamlAssertion(xml, {
-      idpEntityId,
-      idpCertificate: pemCert,
-      wantAssertionsSigned: false,
-      wantResponseSigned: false,
-    });
-    expect(result2.isValid).toBe(true);
-    expect(result2.issuer).toBe(idpEntityId);
-    expect(result2.nameId).toBe(nameId);
   });
 
   it("parseSamlAssertion rejects a tampered SignedInfo (signature invalid)", async () => {

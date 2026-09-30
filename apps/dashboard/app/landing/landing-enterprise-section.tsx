@@ -18,8 +18,8 @@ const PILLARS = [
   {
     href: "/rooms",
     icon: ShieldCheck,
-    title: "E2EE envelope + attestation",
-    body: "Group cipher for the payload. Signed conversation export any auditor can verify offline.",
+    title: "Room envelope + attestation",
+    body: "Worker-wrapped payload and a signed export. Operators with Worker secrets can unwrap. Not customer KMS.",
   },
 ] as const;
 

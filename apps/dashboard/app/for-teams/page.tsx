@@ -30,6 +30,8 @@ const COMPANY = [
   { href: "/privacy-policy", label: "Privacy policy" },
   { href: "/subprocessors", label: "Subprocessors" },
   { href: "/status", label: "Status (Worker /health)" },
+  { href: "/trust", label: "Trust (published docs only, not SOC 2)" },
+  { href: "/migrate-chatgpt", label: "Import ChatGPT JSON" },
   { href: "/pricing", label: "Pricing (self-serve Free / Starter / Pro)" },
 ];
 
@@ -38,12 +40,12 @@ export default function ForTeamsPage() {
     <MarketingShell className="max-w-3xl py-12">
       <h1 className="font-heading text-3xl font-bold tracking-tight">Ship this in a product</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        For a startup or SaaS that owns the app. Hosted is open beta: pin versions, no public SLA.
-        Self-host MIT if legal needs the Worker in your account. This is not an enterprise pack (SOC 2,
-        HIPAA BAA, 99.999% SLA).
+        For a startup that owns the app. Hosted is open beta: pin versions, no public SLA. Self-host
+        MIT if legal wants the Worker in your Cloudflare account. There is no SOC 2 pack, no HIPAA
+        BAA, and no 99.999% SLO on this page.
       </p>
 
-      <h2 className="mt-10 font-heading text-lg font-semibold">Kernel (this is the product)</h2>
+      <h2 className="mt-10 font-heading text-lg font-semibold">What we ship</h2>
       <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed">
         {KERNEL.map((item) => (
           <li key={item}>{item}</li>

@@ -63,6 +63,7 @@ const GALLERY_EXAMPLES = [
   "iot-panel",
   "draw",
   "deal-room",
+  "shared-ai-room",
   "fleet-panel",
   "game-tick",
   "voice-stage",
@@ -273,7 +274,8 @@ async function main(): Promise<void> {
       "war-room": "# Open two tabs — chat; set AGENT_ID to invokeAgent",
       "iot-panel": "# Keep this tab open; curl an ingest from another terminal",
       draw: "# Open two tabs — move and click",
-      "deal-room": "# Open two tabs — propose a decision and ack from both",
+      "deal-room": "# Two tabs: this URL (buyer) and ?seat=counsel. Guest room for whispers.",
+      "shared-ai-room": "# pk_ guest room. Ask agent, stop, two tabs.",
       "fleet-panel": "# Keep this tab open; click Post sample GPS",
       "game-tick": "# Matchmake + start, then Submit input (not netcode)",
       "voice-stage": "# Open two tabs — join speaker/listener (signaling, not WebRTC)",
@@ -520,6 +522,16 @@ async function main(): Promise<void> {
   outro(
     `${pc.green("Done!")} Visit ${pc.cyan("https://github.com/AlessandroFare/fluxychat")} for the docs.`,
   );
+
+  if (!process.env.FLUXYCHAT_NO_TELEMETRY) {
+    const pingUrl =
+      process.env.FLUXYCHAT_ACTIVATION_URL || "https://api.fluxychat.com/public/activation-ping";
+    void fetch(pingUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: "cli_launched" }),
+    }).catch(() => {});
+  }
 }
 
 main().catch((error) => {

@@ -75,11 +75,12 @@ Document each agent's intended purpose before production. Most team-chat agents 
 - [Counterfactual replay](/docs/features/counterfactual-replay)
 - [Agents → Observability](/agents/observability) for drift monitoring
 
-### Art. 43 / 50: Conformity and transparency to deployers
+### Art. 43 / 50: Conformity and transparency
 
 - Conformity assessed checkbox on high-risk agent profiles (blocks run until set)
 - Provider legal name and contact in project settings
 - GPAI: register foundation models in AI Governance; use provider DPAs
+- **Art. 50 product surface:** `participantType`, IA badge, first-contact notice, HMAC marks, export. See the [Art. 50 checklist](/docs/features/art-50-checklist). Tools are not a legal guarantee.
 
 ## API reference
 
@@ -98,6 +99,7 @@ PUT  /admin/eu-ai-act/agents/{agentId}
 GET  /admin/eu-ai-act/assessment
 GET  /admin/eu-ai-act/technical-documentation
 GET  /admin/eu-ai-act/audit-log?limit=100
+GET  /admin/eu-ai-act/art-50-marks?roomId=optional
 ```
 
 Example: register a high-risk agent profile:

@@ -1,6 +1,7 @@
 export { defineConfig, defineFluxyConfig } from "./define-config.js";
 export { allow, block, allowPublish, blockPublish, maskContent, defineMiddleware } from "./middleware.js";
 export { resolveRoomConfig, listRoomConfigKeys } from "./resolve-room.js";
+export { resolveAgentPolicy } from "./resolve-agent-policy.js";
 export {
   runRoomAuthz,
   runPublishMiddleware,
@@ -10,6 +11,7 @@ export {
   type FluxyPublishPipelineBlocked,
 } from "./runtime.js";
 export { toHostedOverlay, parseHostedOverlayBody, sanitizeHostedRooms } from "./hosted-overlay.js";
+export { applyWranglerDoJurisdiction } from "./wrangler-jurisdiction.js";
 export type {
   FluxyConfig,
   FluxyRoomConfig,
@@ -28,6 +30,7 @@ export type {
   FluxyNotifyContext,
   FluxyNotifyDescriptor,
   FluxyClientDefaults,
+  FluxyAgentPolicy,
   FluxyPublishMiddleware,
   FluxyDisconnectMiddleware,
 } from "./types.js";

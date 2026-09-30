@@ -287,6 +287,63 @@ paths:
       responses:
         "200":
           description: Worker is healthy
+  /approvals/require:
+    post:
+      summary: Open an ephemeral room for a tool approval
+      description: JWT. Creates a group room plus a HITL row.
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: roomId, approvalId, optional riskTier
+  /api/hitl/metrics:
+    get:
+      summary: HITL fatigue counts
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: metrics
+  /api/hitl/approvals:
+    get:
+      summary: List pending HITL approvals
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: approvals array
+  /api/hitl/approvals/{id}/evidence:
+    get:
+      summary: Evidence pack for one HITL request
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: evidence object
+  /api/hitl/slack-user-map:
+    get:
+      summary: Slack user id map for HITL
+      tags:
+        - Agents
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: mappings
   /agents:
     get:
       summary: List agents

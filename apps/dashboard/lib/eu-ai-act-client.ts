@@ -12,6 +12,7 @@ export interface EuAiActSettings {
   providerLegalName: string | null;
   providerContact: string | null;
   enforceAiDisclosure: boolean;
+  firstContactDisclosure: boolean;
   enforceHitlHighRisk: boolean;
   recordRetentionDays: number;
   requireConformityForHighRisk: boolean;
@@ -127,6 +128,19 @@ export async function listEuAiActAuditLog(
   if (opts?.limit) params.set("limit", String(opts.limit));
   const qs = params.toString();
   return fetchWorkerJson(`${BASE}/admin/eu-ai-act/audit-log${qs ? `?${qs}` : ""}`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function exportArt50Marks(
+  token: string,
+  opts?: { roomId?: string; limit?: number },
+): Promise<{ disclaimer: string; marks: unknown[] }> {
+  const params = new URLSearchParams();
+  if (opts?.roomId) params.set("roomId", opts.roomId);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  return fetchWorkerJson(`${BASE}/admin/eu-ai-act/art-50-marks${qs ? `?${qs}` : ""}`, {
     headers: authHeaders(token),
   });
 }

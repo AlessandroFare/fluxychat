@@ -1,0 +1,25 @@
+---
+title: Accessibility (WCAG 2.2 / VPAT)
+description: Honest status. Not a certified VPAT and not an EAA certificate.
+---
+
+# Accessibility (WCAG 2.2 / VPAT)
+
+This is an **internal status note**, not a completed Voluntary Product Accessibility Template you can attach to an RFP, and not an EN 301 549 / EAA certificate.
+
+## What we test
+
+| Surface | Check | Result we claim |
+|---------|--------|-----------------|
+| Dashboard public pages (`/`, `/why`, `/compare`, `/get-started`, `/docs`, `/enter`) | Playwright + axe-core (`apps/dashboard/e2e/a11y.axe.spec.ts`) | Fail the job on Critical / Serious / Moderate. Marketing contrast gaps on other routes are documented in that file, not hidden. |
+| Landing “build gallery” | Same `/` page (`#build-gallery`) | Covered only as part of landing, not as live Vite `--example` apps. |
+| Chat widget | Live region, skip link, Escape to stop, labeled stop/ask | First pass. Not WCAG 2.2 AA certified. |
+| Docs gallery MDX | Fumadocs | Not in the dashboard axe suite. |
+
+## WCAG 2.2 AA — not claimed
+
+We target **AA** for the widget composer and dashboard console where we have labels and contrast fixes (composer border `#5c5c5c`). We do **not** claim full 2.2 AA on marketing, Clerk iframes, or third-party embeds.
+
+## How to fill a real VPAT later
+
+Hire an auditor against a frozen build. Use [ITI VPAT](https://www.itic.org/policy/accessibility/vpat) 2.5 WCAG. Until then, do not put “VPAT available” on a sales page.

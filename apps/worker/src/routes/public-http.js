@@ -23,6 +23,7 @@ import { getPublicHostConfig } from "../lib/custom-domains.js";
 import { getClientFeatureFlags, isFlagshipConfigured } from "../lib/feature-flags.js";
 import { getFluxyClientDefaults } from "../lib/fluxy-config-runtime.js";
 import { isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
+import { logInfo } from "../lib/worker-log.js";
 import { parseAuthTokenBody } from "../lib/http-body.js";
 import { assertSecretApiKey } from "../lib/api-key-kind.js";
 import { base64urlToBytes } from "../lib/jwt-auth.js";
@@ -181,6 +182,64 @@ export async function dispatchPublicRoutes(request, url, h) {
       { ok: true, ...getPublicGuestHardeningConfig(env) },
       { headers: corsHeaders },
     );
+  }
+
+  if (url.pathname === "/public/hitl/tap" && (request.method === "GET" || request.method === "POST")) {
+    const { handlePublicHitlTap } = await import("../lib/hitl-tap-http.js");
+    return handlePublicHitlTap(request, url, env, json, corsHeaders);
+  }
+
+  if (url.pathname === "/public/hitl/slack" && request.method === "POST") {
+    const { handlePublicHitlSlack } = await import("../lib/hitl-slack-http.js");
+    return handlePublicHitlSlack(request, env);
+  }
+
+  const publicShareMatch = url.pathname.match(/^\/public\/share\/([^/]+)$/);
+  if (publicShareMatch && request.method === "GET") {
+    const limited = await checkAndConsumeIpRateLimit(env, {
+      request,
+      scope: "public-share",
+      limit: 60,
+      windowSeconds: 60,
+    }).catch(() => ({ allowed: true }));
+    if (limited && limited.allowed === false) {
+      return json({ ok: false, error: "rate_limited" }, { status: 429, headers: corsHeaders });
+    }
+    const { getPublicShareMetaByToken } = await import("../lib/public-share-meta.js");
+    const meta = await getPublicShareMetaByToken(env, decodeURIComponent(publicShareMatch[1]));
+    if (!meta.ok) return json({ error: meta.error }, { status: meta.status, headers: corsHeaders });
+    return json(
+      {
+        ok: true,
+        roomId: meta.roomId,
+        name: meta.name,
+        shareToken: meta.shareToken,
+        guestEnabled: meta.guestEnabled,
+        guestReadOnly: meta.guestReadOnly,
+        path: meta.path,
+      },
+      { headers: corsHeaders },
+    );
+  }
+
+  if (url.pathname === "/public/activation-ping" && request.method === "POST") {
+    const limited = await checkAndConsumeIpRateLimit(env, {
+      request,
+      scope: "activation-ping",
+      limit: 30,
+      windowSeconds: 60,
+    }).catch(() => ({ allowed: true }));
+    if (limited && limited.allowed === false) {
+      return json({ ok: false, error: "rate_limited" }, { status: 429, headers: corsHeaders });
+    }
+    const body = await request.json().catch(() => ({}));
+    const event = String(body?.event || "").trim();
+    const allowed = new Set(["cli_launched", "first_message", "first_agent_invoke"]);
+    if (!allowed.has(event)) {
+      return json({ ok: false, error: "unknown_event" }, { status: 400, headers: corsHeaders });
+    }
+    logInfo("activation.ping", { event });
+    return json({ ok: true, event }, { headers: corsHeaders });
   }
 
   if (url.pathname === "/public/demo-credentials" && request.method === "GET") {
@@ -664,6 +723,8 @@ export async function dispatchPublicRoutes(request, url, h) {
         roomId,
         displayName: body?.displayName ?? body?.name,
         turnstileToken: body?.turnstileToken,
+        guestKey: body?.guestKey,
+        shareToken: body?.shareToken,
         embedParentOrigin:
           typeof body?.embedParentOrigin === "string"
             ? body.embedParentOrigin

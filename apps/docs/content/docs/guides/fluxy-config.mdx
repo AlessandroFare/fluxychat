@@ -49,6 +49,10 @@ export default defineConfig({
 
 Copy from `packages/config/fluxy.config.example.ts` in the monorepo.
 
+`agents` on the same object: `mention`, `tools`, `dailyTokenCap`, `onBehalfOf`. `resolveAgentPolicy(config, agentId)` picks an exact id then `*`. Worker `POST /agents/:id/invoke` returns 403 when `mention: false`.
+
+`jurisdiction: "eu"` is for **self-host**. It does not move hosted Cloud. Run `node apps/worker/scripts/apply-do-jurisdiction.mjs --write` to copy that hint onto every `[[durable_objects.bindings]]` as `jurisdiction = "eu"`. D1 stays whatever region you created in the Cloudflare dashboard. Hosted has no project toggle that rewrites Wrangler.
+
 ## Room patterns
 
 | Pattern | Use case |
@@ -73,3 +77,4 @@ Room extension snapshots: `client.getRoomExtensions(roomId)` / `setRoomExtension
 
 - [Auth JWT](/docs/guides/auth-jwt)
 - [Self-host one command](/docs/guides/self-host-one-command)
+- [Room Decisions](/docs/guides/room-decisions)

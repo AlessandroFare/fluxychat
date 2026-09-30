@@ -1,0 +1,36 @@
+{
+  "name": "chat-adapter-fluxychat",
+  "version": "0.1.0",
+  "description": "FluxyChat adapter shaped for Vercel Chat SDK. Community package; not @chat-adapter/*.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "publishConfig": { "access": "public" },
+  "keywords": ["chat-sdk", "chat-adapter", "fluxychat", "cloudflare"],
+  "scripts": {
+    "build": "pnpm exec tsc -p tsconfig.json",
+    "test": "pnpm exec vitest run"
+  },
+  "dependencies": {
+    "@fluxy-chat/sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "chat": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "chat": { "optional": true }
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

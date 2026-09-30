@@ -9,6 +9,8 @@ This is a **room kernel primitive** (D1 `visibility` / `visible_to_json`, WebSoc
 
 Whisper messages target **specific user ids**. Role-scoped messages target **everyone with a room role** (for example all evaluators in an interview room). Candidates and guests in the same session do not see them on the timeline or over WebSocket.
 
+The gallery app [`deal-room`](/docs/getting-started/gallery) does the two-tab check: buyer vs `?seat=counsel`. Counsel sends a whisper `visibleTo` itself. Use a public guest room so each seat is a different user. A shared member JWT is one identity, so both tabs would see the note.
+
 ## Send from the SDK
 
 Assign roles with `room_members.role` when you add members (REST or provisioning). Then send with a `role:` prefix:

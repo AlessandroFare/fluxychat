@@ -2,7 +2,9 @@
 
 > Realtime rooms on Cloudflare Workers (Durable Objects + D1). Chat, presence, Yjs, agents, and HTTP ingest share one room Durable Object. MIT self-host or hosted beta.
 
-FluxyChat is a room layer for your product. Map roomId to a document, board, deal, classroom, or dispatch view. Public rooms: FluxyChatClient.joinPublicRoomAsGuest (stable guestKey in localStorage; writes on unless PUBLIC_GUEST_READ_ONLY). Private rooms: mint a member JWT with POST /auth/token and header X-Fluxy-Api-Key (fc_ keys are server-only). Scaffold with npx @fluxy-chat/create-fluxy-chat@latest (the unscoped create-fluxy-chat package is not ours). Open two browser tabs for cursors, presence, or Yjs.
+FluxyChat is a tenant room on a Durable Object. Map roomId to a deal, board, classroom, or dispatch view. Humans and invokeAgent share the chat timeline. Feeds are agent and workflow logs, not chat. Cloudflare Think is an Agent class. Document CRDT products are the file. We are the room.
+
+FluxyChat is a room layer for your product. Public rooms: FluxyChatClient.joinPublicRoomAsGuest (stable guestKey in localStorage; writes on unless PUBLIC_GUEST_READ_ONLY). Private rooms: mint a member JWT with POST /auth/token and header X-Fluxy-Api-Key (fc_ keys are server-only). Scaffold with npx @fluxy-chat/create-fluxy-chat@latest (the unscoped create-fluxy-chat package is not ours). Open two browser tabs for cursors, presence, or Yjs.
 
 Presence is sendCursor / liveCursors / presence_patch (WebSocket type cursor). Large rooms switch presenceKind to aggregate above 250 unique users. Derived late-joiner JSON is setDerivedState (not a CRDT, 16 KiB). Visibility is visibility/visibleTo on send (kernel, not UI-only). Broadcast is sendClientEvent; prefix client-ephemeral-* skips webhooks. Storage is FluxyYjsProvider plus useStorage from @fluxy-chat/sdk/yjs. Nest it under FluxyRealtimeProvider or pass token/authTokenProvider. Feeds are /rooms/:id/feeds, not chat messages. Threads are /comment-threads, not chat parentId. Room agents use invokeAgent. Copilots use RegisterAiKnowledge and AiChat (they do not write the timeline). FluxyRealtimeProvider takes workerUrl and authTokenProvider. Refresh JWTs with client.setToken / updateToken. Yjs opens a second binary WebSocket on the same /ws/room/:id route. Spec: https://docs.fluxychat.com/docs/core/wire-protocol.
 
@@ -13,11 +15,12 @@ Hosted catalog (same text): https://docs.fluxychat.com/llms.txt
 ## Docs
 
 - [Docs home](https://docs.fluxychat.com/docs): Start here. Hosted, self-host, or SDK-only.
+- [Status and limits](https://docs.fluxychat.com/docs/learn/status-and-limits): What ships, what is labs, what is not claimed.
 - [Concepts](https://docs.fluxychat.com/docs/concepts): Projects, rooms, presence, broadcast, storage, feeds, threads, chat.
 - [Choose your path](https://docs.fluxychat.com/docs/getting-started/choose-your-path): Hosted CLI, your Worker, or a few lines of SDK.
 - [What to build](https://docs.fluxychat.com/docs/getting-started/what-to-build): Product idea to gallery example.
-- [Gallery](https://docs.fluxychat.com/docs/getting-started/gallery): Copy-paste Vite apps. Open two tabs.
-- [CLI and examples](https://docs.fluxychat.com/docs/getting-started/for-coding-agents): create-fluxy-chat flags, env vars, JWT mint.
+- [Gallery](https://docs.fluxychat.com/docs/getting-started/gallery): Copy-paste Vite apps. deal-room: this URL and ?seat=counsel.
+- [CLI and examples](https://docs.fluxychat.com/docs/getting-started/for-coding-agents): create-fluxy-chat flags, env vars, JWT mint. Skill: npx skills add AlessandroFare/fluxychat --skill fluxy-chat-room.
 - [Quickstart](https://docs.fluxychat.com/docs/getting-started/quickstart): Guest first, then CLI, then member JWT.
 - [Wire protocol](https://docs.fluxychat.com/docs/core/wire-protocol): v1 frames and non-goals.
 - [Platform modules](https://docs.fluxychat.com/docs/features/platform-status): IoT, fleet, game, RCS, adapters, commerce, federation.
@@ -37,3 +40,7 @@ Hosted catalog (same text): https://docs.fluxychat.com/llms.txt
 
 - [GitHub](https://github.com/AlessandroFare/fluxychat): Source, MIT.
 - [Hosted app](https://fluxychat.com): Console and playground.
+- [Trust](https://fluxychat.com/trust): DPA and subprocessors. Not SOC 2.
+- [Status and limits](https://docs.fluxychat.com/docs/learn/status-and-limits): What ships.
+- [Integration kit](https://docs.fluxychat.com/docs/guides/integration-kit): Entity rooms, signed webhooks.
+

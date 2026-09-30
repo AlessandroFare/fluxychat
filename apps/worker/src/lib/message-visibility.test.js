@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   canUserSeeMessage,
+  messageVisibleToAgentContext,
   messageVisibilitySql,
   parseRoleFromVisibility,
   resolveMessageVisibility,
@@ -33,6 +34,20 @@ describe("message-visibility", () => {
     expect(parseRoleFromVisibility("room")).toBe(null);
   });
 
+  it("agent context drops another user's whisper", () => {
+    const whisper = {
+      user_id: "alice",
+      visibility: "whisper",
+      visible_to_json: '["alice"]',
+      content: "secret",
+    };
+    expect(messageVisibleToAgentContext(whisper, "bob")).toBe(false);
+    expect(messageVisibleToAgentContext(whisper, "alice")).toBe(true);
+    expect(messageVisibleToAgentContext({ user_id: "alice", visibility: "room", content: "hi" }, "bob")).toBe(
+      true,
+    );
+  });
+
   it("whisper recipients include sender", () => {
     const set = whisperRecipientSet("whisper", ["bob"], "alice");
     expect(set?.has("alice")).toBe(true);
@@ -44,6 +59,15 @@ describe("message-visibility", () => {
       canUserSeeMessage("whisper", '["bob"]', "carol", "alice"),
     ).toBe(false);
     expect(canUserSeeMessage("whisper", '["bob"]', "bob", "alice")).toBe(true);
+  });
+
+  it("deal-room: counsel whisper to self is hidden from the buyer guest", () => {
+    expect(
+      canUserSeeMessage("whisper", '["counsel-guest"]', "buyer-guest", "counsel-guest"),
+    ).toBe(false);
+    expect(
+      canUserSeeMessage("whisper", '["counsel-guest"]', "counsel-guest", "counsel-guest"),
+    ).toBe(true);
   });
 
   it("filters role visibility by viewer role", () => {

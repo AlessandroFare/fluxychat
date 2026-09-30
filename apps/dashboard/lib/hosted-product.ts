@@ -60,6 +60,8 @@ export const HOSTED_PATHS = {
   legacyLanding: "/landing",
   why: "/why",
   compare: "/compare",
+  compareSendbird: "/compare/sendbird",
+  compareCometchat: "/compare/cometchat",
   guides: "/guides",
   guidesCloudflareChat: "/guides/cloudflare-workers-chat",
   guidesDurableObjectsChat: "/guides/durable-objects-for-chat-rooms",
@@ -85,6 +87,8 @@ export const HOSTED_PATHS = {
   terms: "/terms",
   privacyPolicy: "/privacy-policy",
   forTeams: "/for-teams",
+  trust: "/trust",
+  migrateChatgpt: "/migrate-chatgpt",
   /** Fumadocs “Chat only” progressive disclosure slice */
   docsChatOnly: docsSiteHref("chat-only"),
 } as const;

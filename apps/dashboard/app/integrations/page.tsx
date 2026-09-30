@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/site-metadata";
 export const metadata = buildPageMetadata({
   title: "Integrations: Turnstile & SMS",
   description:
-    "Configure Cloudflare Turnstile for the public demo and Sent.dm offline SMS for mentions and DMs.",
+    "Configure Cloudflare Turnstile, Sent.dm SMS, and entity-room webhooks (Linear/GitHub/…).",
   path: "/integrations",
 });
 

@@ -6,3 +6,5 @@
 | Full M6 security review | [security-review-m6.md](../security-review-m6.md) |
 
 SSRF outbound policy: `apps/worker/src/lib/url-ssrf.ts` (`assertSafeOutboundUrl`).
+
+Closed items: [REMEDIATION.md](../audit/REMEDIATION.md). Open security work is not listed in this repository.

@@ -24,6 +24,8 @@ Open `http://localhost:3000/onboarding` â†’ paste admin JWT (from Worker `P
 | `ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` |
 | `REQUIRE_ADMIN_AUTH` | `true` |
 | `ALLOW_PLAINTEXT_WEBHOOK_SECRETS` | `true` (local only) |
+| `SHARED_ROOM_TWO_KEY` | omit or `true` (default). `false` only for a locked private-room experiment |
+| `AGENT_MARKDOWN_HOST_ALLOWLIST` | optional HTTPS hosts for agent markdown images/links after untrusted context |
 
 **Dashboard:** edit `apps/dashboard/.env.local`:
 

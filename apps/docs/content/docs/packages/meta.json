@@ -2,6 +2,7 @@
   "pages": [
     "ui-kit",
     "agent",
+    "auth",
     "config",
     "create-fluxy-chat",
     "flutter-sdk",

@@ -53,6 +53,21 @@ export function resolveMessageVisibility(body) {
  * @param {string} authorUserId
  * @param {string | null | undefined} [viewerRole]
  */
+/**
+ * LLM / auto-summary context. Room-visible lines always pass. Whispers and
+ * role-scoped rows only pass for the invoking viewer (never a third party).
+ */
+export function messageVisibleToAgentContext(row, viewerUserId, viewerRole) {
+  if (!row) return false;
+  return canUserSeeMessage(
+    row.visibility,
+    row.visible_to_json,
+    viewerUserId,
+    row.user_id,
+    viewerRole,
+  );
+}
+
 export function canUserSeeMessage(
   visibility,
   visibleToJson,
@@ -127,6 +142,42 @@ export async function getMessageVisibilityFilter(env, roomId, viewerUserId, jwtR
  * @param {string} senderUserId
  * @returns {Set<string> | null}
  */
+/** Public share spectators: room-visible lines only, no tool args or whisper lists. */
+export function isPublicShareVisibleRow(row) {
+  const vis = String(row?.visibility || "room").toLowerCase();
+  if (vis === "whisper" || vis.startsWith("role:")) return false;
+  return true;
+}
+
+export function redactPublicShareRow(row) {
+  if (!row) return row;
+  let metadata = row.metadata && typeof row.metadata === "object" ? { ...row.metadata } : null;
+  if (!metadata && row.metadata_json) {
+    try {
+      metadata = JSON.parse(row.metadata_json);
+    } catch {
+      metadata = null;
+    }
+  }
+  if (metadata && typeof metadata === "object") {
+    delete metadata.toolInput;
+    delete metadata.tool_input;
+    delete metadata.toolArgs;
+    delete metadata.arguments;
+    delete metadata.visibleTo;
+    metadata.shareRedacted = true;
+  }
+  return {
+    ...row,
+    visibility: "room",
+    visibleTo: undefined,
+    visible_to_json: null,
+    mentions: null,
+    metadata,
+    metadata_json: metadata ? JSON.stringify(metadata) : null,
+  };
+}
+
 export function whisperRecipientSet(visibility, visibleTo, senderUserId) {
   if (visibility !== "whisper") return null;
   const set = new Set([senderUserId, ...visibleTo]);

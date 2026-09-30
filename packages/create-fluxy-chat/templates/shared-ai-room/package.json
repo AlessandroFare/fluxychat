@@ -1,0 +1,26 @@
+{
+  "name": "fluxy-shared-ai-room",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fluxy-chat/ui-kit": "^0.1.6",
+    "@fluxy-chat/ui": "^0.1.5",
+    "@fluxy-chat/react": "^0.1.8",
+    "@fluxy-chat/sdk": "^0.6.12",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0"
+  }
+}

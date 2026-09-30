@@ -193,6 +193,9 @@ export async function maybePushNotifyOnMessage(env, detail) {
   } = detail;
 
   try {
+    const { recordNotifyTriage } = await import("./room-decisions.js");
+    const triage = await recordNotifyTriage(env, detail).catch(() => ({ skipPush: false }));
+    if (triage.skipPush) return;
     const members = await env.DB.prepare(
       `SELECT user_id, notify_enabled FROM room_members WHERE room_id = ?`,
     )

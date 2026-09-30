@@ -9,7 +9,7 @@
     "lint": "pnpm --filter @fluxy-chat/ui exec eslint src --ext .ts,.tsx",
     "test": "pnpm run test:all",
     "test:all": "pnpm run test:packages && pnpm run test:worker && pnpm run test:worker:e2e && pnpm run test:dashboard",
-    "test:packages": "pnpm --filter @fluxy-chat/protocol test && pnpm --filter @fluxy-chat/sdk test && pnpm --filter @fluxy-chat/react test && pnpm --filter @fluxy-chat/ui test && pnpm --filter @fluxy-chat/config test && pnpm --filter @fluxy-chat/agent test",
+    "test:packages": "pnpm --filter @fluxy-chat/protocol test && pnpm --filter @fluxy-chat/sdk test && pnpm --filter @fluxy-chat/react test && pnpm --filter @fluxy-chat/ui test && pnpm --filter @fluxy-chat/config test && pnpm --filter @fluxy-chat/agent test && pnpm --filter @fluxy-chat/auth test",
     "test:worker": "pnpm --filter @fluxy-chat/worker test && pnpm --filter @fluxy-chat/worker test:pool",
     "test:worker:e2e": "pnpm --filter @fluxy-chat/worker test:e2e",
     "test:dashboard": "pnpm --filter @fluxy-chat/dashboard test",
@@ -40,6 +40,7 @@
     "smoke:one-click": "node scripts/one-click-smoke.mjs",
     "check:env": "node scripts/check-env-readiness.mjs",
     "check:upptime": "node scripts/validate-upptime-config.mjs",
+    "check:mcp-server-json": "node scripts/check-mcp-server-json.mjs",
     "docs:sync": "node scripts/sync-docs-content.mjs",
     "docs:dev": "pnpm --filter docs dev",
     "docs:build": "pnpm --filter docs build"

@@ -35,7 +35,8 @@ export async function fetchRoomExportData(env, input) {
 
   const vis = messageVisibilitySql(input.userId);
   let sql = `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
-                    mentions, og_title, og_description, og_image, og_url, visibility, visible_to_json
+                    mentions, og_title, og_description, og_image, og_url, visibility, visible_to_json,
+                    participant_type, metadata_json
              FROM messages
              WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL${vis.sql}`;
   const params = [input.projectId, input.roomId, ...vis.binds];
@@ -51,12 +52,18 @@ export async function fetchRoomExportData(env, input) {
   sql += " ORDER BY created_at ASC LIMIT ?";
   params.push(limit);
 
-  const rows = await env.DB.prepare(sql).bind(...params).all();
+  let rowset;
+  try {
+    rowset = await env.DB.prepare(sql).bind(...params).all();
+  } catch {
+    const fallbackSql = sql.replace(/,\s*participant_type, metadata_json/, "");
+    rowset = await env.DB.prepare(fallbackSql).bind(...params).all();
+  }
   const messages = await attachAttachmentsToMessages(
     env,
     input.projectId,
     input.roomId,
-    rows.results || [],
+    rowset.results || [],
   );
 
   return {
@@ -68,7 +75,7 @@ export async function fetchRoomExportData(env, input) {
       createdAt: room.created_at,
     },
     messages,
-    truncated: (rows.results?.length ?? 0) >= limit,
+    truncated: (rowset.results?.length ?? 0) >= limit,
   };
 }
 
@@ -105,6 +112,12 @@ export function buildRoomMarkdown(input) {
     const ts = String(msg.createdAt || "");
     const author = String(msg.userId || "unknown");
     lines.push(`### ${ts} — ${author}`);
+    if (msg.participantType === "ai" || msg.metadata?.aiGenerated) {
+      lines.push(`_Art. 50: AI-generated (${msg.metadata?.aiDisclosure || "AI assistant"})_`);
+      if (msg.metadata?.sig) {
+        lines.push(`_Mark: HMAC-SHA256 ${String(msg.metadata.sig).slice(0, 16)}…_`);
+      }
+    }
     if (msg.parentId != null) {
       const parent = byId.get(msg.parentId);
       const parentAuthor = parent ? String(parent.userId || "unknown") : `#${msg.parentId}`;

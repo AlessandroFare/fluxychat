@@ -148,8 +148,17 @@ export function isPrivateUrl(urlString: string, env?: unknown): boolean {
 
     if (!["http:", "https:"].includes(parsed.protocol)) return true;
 
-    if (isOnAllowlist(hostname, readAllowlist(env))) {
-      return false; // explicit operator override
+    const allow = readAllowlist(env);
+    const requireAllowlist =
+      String((env as { REQUIRE_SSRF_HOST_ALLOWLIST?: string } | undefined)?.REQUIRE_SSRF_HOST_ALLOWLIST || "") ===
+        "true" ||
+      String((env as { REQUIRE_SSRF_HOST_ALLOWLIST?: string } | undefined)?.REQUIRE_SSRF_HOST_ALLOWLIST || "") === "1";
+    if (requireAllowlist) {
+      return !isOnAllowlist(hostname, allow);
+    }
+
+    if (isOnAllowlist(hostname, allow)) {
+      return false;
     }
 
     if (

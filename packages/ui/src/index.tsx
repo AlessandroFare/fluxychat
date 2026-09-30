@@ -95,3 +95,5 @@ export { CallButton } from "./call-button";
 export type { CallButtonProps } from "./call-button";
 export { CallScreen } from "./call-screen";
 export type { CallScreenProps, CallParticipant } from "./call-screen";
+export { McpAppFrame } from "./mcp-app-frame";
+export type { McpAppFrameProps, McpAppUiAction } from "./mcp-app-frame";

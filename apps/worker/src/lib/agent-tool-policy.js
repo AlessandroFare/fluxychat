@@ -209,22 +209,58 @@ export async function recordToolPolicyAudit(env, {
  * @param {*} env
  * @param {string} projectId
  */
-export function createPolicyAwareApprovalGate(baseGate, env, projectId) {
+async function resolveOpaUrl(agentId, hooks) {
+  if (hooks.opaUrl) return hooks.opaUrl;
+  try {
+    const { getFluxyConfig } = await import("./fluxy-config-runtime.js");
+    const { resolveAgentPolicy } = await import("@fluxy-chat/config");
+    return resolveAgentPolicy(getFluxyConfig(), agentId || "").opaUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+export function createPolicyAwareApprovalGate(baseGate, env, projectId, hooks = {}) {
   return {
     async needsApproval(toolName, input, context) {
-      const decision = await evaluateProjectToolPolicy(env, {
-        projectId,
-        toolName,
-        input,
-        context: { ...context, runId: context?.runId },
-      });
-      if (decision.denied) {
-        const err = new Error(decision.reason || "tool_denied_by_policy");
-        err.code = "policy_denied";
-        err.policyDecision = decision;
-        throw err;
+      if (!hooks.skipProjectPolicy) {
+        const decision = await evaluateProjectToolPolicy(env, {
+          projectId,
+          toolName,
+          input,
+          context: { ...context, runId: context?.runId },
+        });
+        if (decision.denied) {
+          const err = new Error(decision.reason || "tool_denied_by_policy");
+          err.code = "policy_denied";
+          err.policyDecision = decision;
+          throw err;
+        }
+        if (decision.requiresApproval) return true;
       }
-      if (decision.requiresApproval) return true;
+      const opaUrl = await resolveOpaUrl(context?.agentId, hooks);
+      if (opaUrl) {
+        const { evaluateAgentPolicyOpa, buildAgentPolicyOpaInput } = await import(
+          "./agent-policy-opa-input.js"
+        );
+        const evaluate = hooks.evaluateOpa || evaluateAgentPolicyOpa;
+        const opa = await evaluate(
+          opaUrl,
+          buildAgentPolicyOpaInput({
+            toolName,
+            arguments: input,
+            roomId: context?.roomId,
+            requesterUserId: context?.userId,
+            agentId: context?.agentId,
+            projectId,
+          }),
+        );
+        if (!opa.allow) {
+          const err = new Error("tool_denied_by_opa");
+          err.code = "opa_denied";
+          throw err;
+        }
+      }
       if (baseGate?.needsApproval) {
         return baseGate.needsApproval(toolName, input, context);
       }

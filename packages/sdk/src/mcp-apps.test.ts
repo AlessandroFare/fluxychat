@@ -7,6 +7,9 @@ import {
   getMCPAppResourceUris,
   getMCPAppResourceFromReadResult,
   createMCPAppManager,
+  requestMcpAppUiActionApproval,
+  isAllowedMcpAppMessageOrigin,
+  mcpAppIframeTargetOrigin,
 } from "./mcp-apps";
 
 describe("mcp-apps utilities", () => {
@@ -85,5 +88,22 @@ describe("mcp-apps utilities", () => {
     });
     expect(modelVisible.tools).toHaveLength(1);
     expect(appVisible.tools).toHaveLength(1);
+  });
+
+  it("requestMcpAppUiActionApproval waits for explicit approve", async () => {
+    const denied = await requestMcpAppUiActionApproval({ name: "submit" }, async () => false);
+    const allowed = await requestMcpAppUiActionApproval({ name: "submit" }, async () => true);
+    expect(denied).toBe(false);
+    expect(allowed).toBe(true);
+  });
+
+  it("never treats * as an allowed MCP App origin", () => {
+    expect(isAllowedMcpAppMessageOrigin("*", ["*"])).toBe(false);
+    expect(isAllowedMcpAppMessageOrigin("https://tool.example", ["*"])).toBe(false);
+    expect(isAllowedMcpAppMessageOrigin("https://tool.example", ["https://tool.example"])).toBe(true);
+    expect(isAllowedMcpAppMessageOrigin("null", ["null"])).toBe(true);
+    expect(mcpAppIframeTargetOrigin(["*"])).toBeNull();
+    expect(mcpAppIframeTargetOrigin(["null"])).toBe("*");
+    expect(mcpAppIframeTargetOrigin(["https://app.example"])).toBe("https://app.example");
   });
 });

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.alessandrofare/fluxychat",
+  "title": "FluxyChat room MCP",
+  "description": "Room-scoped MCP tools on a FluxyChat tenant Durable Object. Auth is the project JWT.",
+  "repository": {
+    "url": "https://github.com/AlessandroFare/fluxychat",
+    "source": "github"
+  },
+  "version": "0.6.12",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.fluxychat.com/mcp"
+    }
+  ]
+}

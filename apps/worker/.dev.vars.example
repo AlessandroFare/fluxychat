@@ -43,6 +43,18 @@ REQUIRE_ADMIN_AUTH=true
 # will never match a real tool), not as a separator.
 # AGENT_TOOL_ALLOWLIST=search,calculator
 
+# Shared-room agent default: two-key HITL when guests/untrusted text + private context
+# + an external-effect tool. Set false only for a locked-down private room experiment.
+# SHARED_ROOM_TWO_KEY=true
+# AGENT_MARKDOWN_HOST_ALLOWLIST=docs.fluxychat.com
+
+# Room tickets POST /rooms/:id/tickets (you bring the PAT / API keys)
+# GITHUB_TOKEN=
+# LINEAR_API_KEY=
+# JIRA_BASE_URL=https://your-site.atlassian.net
+# JIRA_EMAIL=
+# JIRA_API_TOKEN=
+
 # --- Self-host fallback (audit S-14) ---
 # In self-host mode (HOSTED_MULTI_TENANT unset/false), the worker previously
 # fell back to DEFAULT_PROJECT_ID for any request without a valid API key.
@@ -56,6 +68,8 @@ REQUIRE_ADMIN_AUTH=true
 # Mismatched key vs project id → Cloud connect "forbidden" and onboarding create project fails.
 # For simplest local dev you can leave HOSTED_MULTI_TENANT unset/false.
 # HOSTED_MULTI_TENANT=true
+# Hosted SAML ACS/login stays off unless you set this after a signature review.
+# SAML_SSO_ENABLED=true
 # FLUXY_PLATFORM_PROJECT_ID=<uuid-from-provision-bootstrap>
 # Tenants cannot use Worker AI_API_KEY; they must set project LLM credentials (or set for internal demos):
 # ALLOW_WORKER_LLM_FALLBACK=false
@@ -67,6 +81,9 @@ REQUIRE_ADMIN_AUTH=true
 # --- Stripe (billing) — leave empty until you run Stripe E2E ---
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
+# Optional Stripe Billing Meter for *this* project's stripe_customer_id (agent token totals).
+# Create a meter in Stripe, then set the event name. Does not bill the tenant's end users.
+# STRIPE_AGENT_METER_EVENT_NAME=agent_tokens
 
 # --- Feature flags (P12-J) — optional Flagship app; falls back to env vars below ---
 # FLAGSHIP_APP_ID=          # wrangler [[flagship]] app_id
@@ -173,6 +190,34 @@ SEMANTIC_SEARCH_ENABLED=true
 # VOICE_CLONE_URL=https://media.example.com/clone-translate
 # VOICE_CLONE_API_KEY=
 
+# System One gate (Jev / CLM). Does NOT replace Groq or any room LLM.
+# Default: jev via existing [ai] binding (`typesafe/jev`) when SYSTEM_ONE_PROVIDER is unset.
+# SYSTEM_ONE_PROVIDER=off
+# SYSTEM_ONE_PROVIDER=jev
+# SYSTEM_ONE_PROVIDER=clm
+# SYSTEM_ONE_AUTO_HANDOFF=false
+# SYSTEM_ONE_ESCALATE_NOUL_MIN=0.85
+# SYSTEM_ONE_CASCADE=clm_then_jev
+# ROOM_FLOOR_MODE=keyword
+# ROOM_TOOL_DECISION_MODE=shadow
+# ROOM_DECISION_MARGIN_MIN=0.15
+# ROOM_ALIGN_NOUL_MIN=0.4
+# ROOM_ROUTE_MODE=shadow
+# ROOM_NOTIFY_MODE=shadow
+# ROOM_SUMMON_MODE=shadow
+# ROOM_NL_POLICY_MODE=shadow
+# ROOM_NL_POLICY=
+# Hosted: set true to persist Jev/CLM labels (options, probabilities, human outcome). Self-host defaults on.
+# ROOM_DECISIONS_LABELS=true
+# ART50_MARK_SECRET=
+# ART50_MARK_SECRET_PREVIOUS=
+# ROOM_LLM_SMALL_MODEL=
+# Optional CLM GPU sidecar (only when SYSTEM_ONE_PROVIDER=clm, or when [ai] is missing).
+# POST {CLM_BASE_URL}/v1/systemone via safeOutboundFetch. Local 127.0.0.1 needs ALLOWED_SSRF_HOSTS.
+# CLM_BASE_URL=https://clm.example:8700
+# CLM_API_KEY=
+# CLM_HITL_NOUL_MIN=0.85
+
 # x402 facilitator (cross-org settlement). When set, committed deals POST here.
 # X402_FACILITATOR_URL=https://facilitator.example.com/x402
 # X402_FACILITATOR_KEY=
@@ -226,6 +271,7 @@ AUDIT_CHAIN_ENABLED=true
 # --- SSRF allowlist (audit S-15) ---
 # Comma-separated hostnames or suffix domains that bypass the SSRF blocklist.
 # Use for self-hosted webhooks that point at internal services.
+# Local CLM FastAPI on loopback also needs the host here (127.0.0.1 or localhost).
 # ALLOWED_SSRF_HOSTS=internal.acme.com,*.staging.acme.com
 
 # --- Webhook signing secrets at rest ---
@@ -349,6 +395,14 @@ AUDIT_CHAIN_ENABLED=true
 # OFFLINE_SMS_PER_USER_PER_HOUR=6
 # SENT_DM_WEBHOOK_SECRET=whsec_...   # verify POST /integrations/sent/webhook
 # PUBLIC_APP_URL=https://app.example.com   # room_url + media_url (relative /attachments/*) in Sent template params
+# HITL one-tap links also use PUBLIC_APP_URL (must be the Worker origin that serves GET /public/hitl/tap).
+# HITL_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # operator webhook only; optional
+# HITL_SLACK_SIGNING_SECRET=   # Slack app signing secret; enables POST /public/hitl/slack buttons
+# Optional: PUT /api/hitl/slack-user-map { slackUserId } so mapped buttons omit the HMAC tap token.
+
+# --- HITL email ---
+# Reuses digest mail: EMAIL.send binding or RESEND_API_KEY + DIGEST_EMAIL_FROM / EMAIL_FROM.
+# Approver address: user_digest_preferences.email, else users.email. Opt-out: email_enabled=0.
 # OFFLINE_SMS_MEDIA_ENABLED=true   # default on; set false to omit media_url from offline notify (P13-T3)
 # Members opt in via PATCH /rooms/:id/members/me/preferences → preferences.smsE164 + smsOptIn
 # Sent template chat_notify: add media variables media_url, media_name, media_type (WhatsApp/MMS)

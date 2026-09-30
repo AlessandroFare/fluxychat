@@ -4,6 +4,7 @@ import {
   toolNameMatches,
   normalizePolicyDocument,
   resolveOnHoldPhrase,
+  createPolicyAwareApprovalGate,
 } from "./agent-tool-policy.js";
 
 describe("agent-tool-policy", () => {
@@ -66,5 +67,16 @@ describe("agent-tool-policy", () => {
     expect(decision.onHoldPhrase).toBe("Searching the knowledge base…");
     expect(resolveOnHoldPhrase(policy, "web_search")).toBe("Searching the knowledge base…");
     expect(resolveOnHoldPhrase(policy, "other_tool")).toBe("One moment — I'm looking that up.");
+  });
+
+  it("fail-closes when OPA denies", async () => {
+    const gate = createPolicyAwareApprovalGate(null, {}, "p1", {
+      skipProjectPolicy: true,
+      opaUrl: "https://opa.example.com/v1/data",
+      evaluateOpa: async () => ({ allow: false }),
+    });
+    await expect(gate.needsApproval("transfer", { amount: 1 }, { agentId: "bot-legal" })).rejects.toMatchObject({
+      code: "opa_denied",
+    });
   });
 });

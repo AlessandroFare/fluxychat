@@ -103,6 +103,20 @@ export interface FluxyChatMessage {
   transcriptionStatus?: "pending" | "done" | "failed" | null;
   /** Rich interactive card payload (inline or parsed from content). */
   card?: import("./cards").CardElement;
+  /** Art. 50: who produced this message. Agent inserts set `ai`. */
+  participantType?: "human" | "ai";
+  /** Signed Art. 50 / EU AI Act machine-readable mark when present. */
+  metadata?: {
+    participantType?: "human" | "ai";
+    aiGenerated?: boolean;
+    aiDisclosure?: string;
+    firstContactInRoom?: boolean;
+    firstContactNotice?: string | null;
+    euAiActRiskCategory?: string | null;
+    sig?: string | null;
+    sigAlg?: string | null;
+    [key: string]: unknown;
+  };
 }
 
 export interface FluxyChatAttachment {
@@ -944,7 +958,13 @@ export class FluxyChatClient {
   static async joinPublicRoomAsGuest(
     baseUrl: string,
     roomId: string,
-    opts?: { displayName?: string; turnstileToken?: string; guestKey?: string; publishableKey?: string },
+    opts?: {
+      displayName?: string;
+      turnstileToken?: string;
+      guestKey?: string;
+      publishableKey?: string;
+      shareToken?: string;
+    },
   ): Promise<{
     token: string;
     userId: string;
@@ -967,6 +987,7 @@ export class FluxyChatClient {
         displayName: opts?.displayName,
         turnstileToken: opts?.turnstileToken,
         guestKey,
+        shareToken: opts?.shareToken,
       }),
     });
     if (!res.ok) throw new Error(`Failed to join public room as guest: ${res.status}`);
@@ -1645,6 +1666,39 @@ export class FluxyChatClient {
       const err = await res.json().catch(() => ({}));
       throw new Error(`openDM failed: ${res.status} ${(err as { error?: string }).error || ""}`);
     }
+    return res.json();
+  }
+
+  async getMcpAppSharedState(roomId: string, appId: string): Promise<{
+    state: Record<string, unknown>;
+    version: number;
+    updatedAt: string | null;
+    updatedBy: string | null;
+  }> {
+    if (!this.token) throw new Error("getMcpAppSharedState requires JWT token");
+    const url = new URL(`/rooms/${encodeURIComponent(roomId)}/mcp-apps/state`, this.baseUrl);
+    url.searchParams.set("appId", appId);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`mcp app state failed: ${res.status}`);
+    return res.json();
+  }
+
+  async putMcpAppSharedState(
+    roomId: string,
+    appId: string,
+    state: Record<string, unknown>,
+    options?: { replace?: boolean },
+  ): Promise<{ state: Record<string, unknown>; version: number }> {
+    if (!this.token) throw new Error("putMcpAppSharedState requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/mcp-apps/state`, this.baseUrl).toString(),
+      {
+        method: "PUT",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ appId, state, replace: options?.replace === true }),
+      },
+    );
+    if (!res.ok) throw new Error(`mcp app state save failed: ${res.status}`);
     return res.json();
   }
 
@@ -3994,6 +4048,7 @@ export class FluxyChatClient {
     options?: {
       replyTo?: number | null;
       stream?: boolean;
+      abortSignal?: AbortSignal;
     }
   ): Promise<{
     run: {
@@ -4023,6 +4078,7 @@ export class FluxyChatClient {
         replyTo: options?.replyTo ?? null,
         stream: options?.stream !== false,
       }),
+      signal: options?.abortSignal,
     });
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
@@ -4047,6 +4103,54 @@ export class FluxyChatClient {
       throw new Error(`Failed to invoke agent: ${res.status}`);
     }
     return res.json();
+  }
+
+  async listActiveAiStreams(roomId?: string): Promise<
+    Array<{
+      streamId: string;
+      roomId?: string | null;
+      agentId?: string | null;
+      content?: string;
+      active?: boolean;
+    }>
+  > {
+    if (!this.token) return [];
+    const url = new URL("/ai/streams/active", this.baseUrl);
+    if (roomId) url.searchParams.set("roomId", roomId);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) return [];
+    const body = await res.json().catch(() => ({}));
+    return Array.isArray(body.streams) ? body.streams : [];
+  }
+
+  async resumeAiStream(streamId: string): Promise<{
+    streamId: string;
+    content: string;
+    active: boolean;
+    roomId?: string | null;
+  } | null> {
+    if (!this.token) return null;
+    const url = new URL(`/ai/streams/${encodeURIComponent(streamId)}/resume`, this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) return null;
+    const body = await res.json().catch(() => null);
+    if (!body || typeof body.content !== "string") return null;
+    return {
+      streamId: String(body.streamId || streamId),
+      content: body.content,
+      active: body.active === true,
+      roomId: body.roomId ?? null,
+    };
+  }
+
+  /** Alias of `listActiveAiStreams`. */
+  async getActiveStreams(roomId?: string) {
+    return this.listActiveAiStreams(roomId);
+  }
+
+  /** Alias of `resumeAiStream`. KV snapshot after refresh, not Think-style fiber resume. */
+  async resumeStream(streamId: string) {
+    return this.resumeAiStream(streamId);
   }
 
   async getAgentRuns(agentId: string, limit = 50): Promise<FluxyChatAgentRun[]> {
@@ -4399,5 +4503,178 @@ export class FluxyChatClient {
     });
     if (!res.ok) throw new Error(`Failed to get dynamic pricing: ${res.status}`);
     return res.json();
+  }
+
+  async listHitlApprovals(
+    roomId: string,
+    options?: { abortSignal?: AbortSignal },
+  ): Promise<
+    Array<{
+      id: string;
+      toolCallId?: string;
+      toolName?: string;
+      toolInput?: unknown;
+      status?: string;
+      signature?: string;
+    }>
+  > {
+    if (!this.token) throw new Error("listHitlApprovals requires JWT token");
+    const url = new URL("/api/hitl/approvals", this.baseUrl);
+    url.searchParams.set("roomId", roomId);
+    const res = await fetch(url.toString(), {
+      headers: this.authHeaders(),
+      signal: options?.abortSignal,
+    });
+    if (!res.ok) throw new Error(`Failed to list HITL approvals: ${res.status}`);
+    const body = (await res.json()) as { approvals?: Array<Record<string, unknown>> };
+    return (body.approvals || []).map((row) => ({
+      id: String(row.id || ""),
+      toolCallId: row.toolCallId ? String(row.toolCallId) : undefined,
+      toolName: row.toolName ? String(row.toolName) : undefined,
+      toolInput: row.toolInput,
+      status: row.status ? String(row.status) : undefined,
+    }));
+  }
+
+  async decideHitl(
+    approvalId: string,
+    decision: "approve" | "deny",
+    options?: { note?: string; vercelSignature?: string; abortSignal?: AbortSignal },
+  ): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("decideHitl requires JWT token");
+    const path = `/api/hitl/approvals/${encodeURIComponent(approvalId)}/${decision}`;
+    const res = await fetch(new URL(path, this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({
+        note: options?.note,
+        vercelSignature: options?.vercelSignature,
+      }),
+      signal: options?.abortSignal,
+    });
+    if (!res.ok) throw new Error(`HITL decision failed: ${res.status}`);
+    return { ok: true };
+  }
+
+  /**
+   * Open an ephemeral room for a tool decision. You do not have to adopt chat UI.
+   */
+  async requireApproval(input: {
+    toolName: string;
+    toolInput?: Record<string, unknown>;
+    reason?: string;
+    approverIds?: string[];
+  }): Promise<{ roomId: string; approvalId: string; riskTier?: string; ok?: boolean }> {
+    if (!this.token) throw new Error("requireApproval requires JWT token");
+    const res = await fetch(new URL("/approvals/require", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(`requireApproval failed: ${res.status}`);
+    return res.json() as Promise<{ roomId: string; approvalId: string; riskTier?: string; ok?: boolean }>;
+  }
+
+  async listHitlMetrics(): Promise<{
+    pending: number;
+    decidedLast24h: number;
+    uniqueCurrentApprovers: number;
+  }> {
+    if (!this.token) throw new Error("listHitlMetrics requires JWT token");
+    const res = await fetch(new URL("/api/hitl/metrics", this.baseUrl).toString(), {
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`listHitlMetrics failed: ${res.status}`);
+    const body = (await res.json()) as {
+      metrics?: { pending?: number; decidedLast24h?: number; uniqueCurrentApprovers?: number };
+    };
+    return {
+      pending: Number(body.metrics?.pending || 0),
+      decidedLast24h: Number(body.metrics?.decidedLast24h || 0),
+      uniqueCurrentApprovers: Number(body.metrics?.uniqueCurrentApprovers || 0),
+    };
+  }
+
+  /**
+   * Propose a Yjs storage edit. Shows up on `fluxy_agent_suggestions`. Quorum via HITL.
+   */
+  async proposeYjsAgentSuggestion(
+    roomId: string,
+    input: {
+      agentId?: string;
+      storageKey: string;
+      value: unknown;
+      comment?: string;
+      approverIds?: string[];
+    },
+  ): Promise<{ ok: boolean; suggestion: { id: string; approvalId?: string | null } }> {
+    if (!this.token) throw new Error("proposeYjsAgentSuggestion requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/yjs/agent-suggestions`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify(input),
+      },
+    );
+    if (!res.ok) throw new Error(`proposeYjsAgentSuggestion failed: ${res.status}`);
+    return res.json() as Promise<{ ok: boolean; suggestion: { id: string; approvalId?: string | null } }>;
+  }
+
+  async acceptYjsAgentSuggestion(
+    roomId: string,
+    suggestionId: string,
+  ): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("acceptYjsAgentSuggestion requires JWT token");
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/yjs/agent-suggestions/${encodeURIComponent(suggestionId)}/accept`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "POST",
+        headers: this.authHeaders(),
+      },
+    );
+    if (!res.ok) throw new Error(`acceptYjsAgentSuggestion failed: ${res.status}`);
+    return { ok: true };
+  }
+
+  async rejectYjsAgentSuggestion(roomId: string, suggestionId: string): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("rejectYjsAgentSuggestion requires JWT token");
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/yjs/agent-suggestions/${encodeURIComponent(suggestionId)}/reject`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "POST",
+        headers: this.authHeaders(),
+      },
+    );
+    if (!res.ok) throw new Error(`rejectYjsAgentSuggestion failed: ${res.status}`);
+    return { ok: true };
+  }
+
+  async listYjsAgentSuggestions(roomId: string): Promise<Array<Record<string, unknown>>> {
+    if (!this.token) throw new Error("listYjsAgentSuggestions requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/yjs/agent-suggestions`, this.baseUrl).toString(),
+      { headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`listYjsAgentSuggestions failed: ${res.status}`);
+    const body = (await res.json()) as { suggestions?: Array<Record<string, unknown>> };
+    return body.suggestions || [];
+  }
+
+  async getHitlEvidence(approvalId: string): Promise<Record<string, unknown>> {
+    if (!this.token) throw new Error("getHitlEvidence requires JWT token");
+    const res = await fetch(
+      new URL(`/api/hitl/approvals/${encodeURIComponent(approvalId)}/evidence`, this.baseUrl).toString(),
+      { headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`getHitlEvidence failed: ${res.status}`);
+    const body = (await res.json()) as { evidence?: Record<string, unknown> };
+    return body.evidence || {};
   }
 }

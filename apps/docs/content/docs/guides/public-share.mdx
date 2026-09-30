@@ -1,0 +1,35 @@
+---
+title: Public share link
+description: A branded, read-only live URL for type=public rooms. Not a private-room leak.
+---
+
+# Public share link
+
+Hosted console: **Rooms** → pick a **public** room → **Copy public share link**. That URL is `/share/:token` on the dashboard origin. The token is random, not the room id. Optional `?pk=pk_…` if your Worker requires a publishable key for guest join. Never put `fc_` on this URL.
+
+The page is a spectator: no composer. Whispers, tool arguments, and `visibleTo` are stripped. Group and DM rooms return 404. Revoke with `POST /rooms/:id/share/revoke` (mints a new token). The HTML is `noindex`.
+
+## API
+
+```http
+GET /public/share/:token
+```
+
+No JWT. Rate-limited by IP. Response has `name`, `path`, `guestEnabled`, `guestReadOnly`. No API keys.
+
+Members can also:
+
+```http
+GET /rooms/:id/share
+Authorization: Bearer <jwt>
+```
+
+Same metadata after `canAccessRoom`. Still no keys.
+
+## Embed
+
+`FluxyChatWidget` and `ChatWindow` accept `readOnly`. Guest embeds still show **Powered by FluxyChat** unless `poweredBy={false}`.
+
+Worker flag `PUBLIC_GUEST_READ_ONLY` blocks guest writes on the API. The share page hides the composer even if that flag is off.
+
+Hosted is beta.

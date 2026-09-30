@@ -67,7 +67,8 @@ function PricingHero() {
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
           Free is the weekend plan: public rooms, a pk_ in the client, no card. Cursors and presence
-          do not count as messages. Starter is $20/mo when you outgrow 200k persisted messages.
+          do not count as messages. Agent invokes are not extra seats or MAU. Starter is $20/mo when you
+          outgrow 200k persisted messages.
           Hosted is beta. Pin SDK versions.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -95,8 +96,9 @@ function PlanCards() {
             All plans include{" "}
             <span className="font-semibold text-white">unlimited room ids</span>. Message quotas
             count persisted chat and webhooked <code className="text-xs">client_event</code>{" "}
-            frames. Cursors and <code className="text-xs">presence_patch</code> do not. Hosted is
-            beta; pin <code className="text-xs">@fluxy-chat/sdk</code>.
+            frames. Cursors and <code className="text-xs">presence_patch</code> do not. Agents are
+            invokes, not dashboard seats. Hosted is beta; pin{" "}
+            <code className="text-xs">@fluxy-chat/sdk</code>.
           </p>
         </div>
 
@@ -274,11 +276,11 @@ function ComparisonTable() {
 function FeatureShowcase() {
   const features = [
     { icon: Server, title: "Cloudflare Workers", desc: "Runs on Cloudflare's global network. PoP count and edge RTT are Cloudflare's, not a FluxyChat-measured SLO." },
-    { icon: Shield, title: "Encryption", desc: "TLS in transit. E2EE only if you hold the key. Double Ratchet for private rooms is still on the roadmap." },
+    { icon: Shield, title: "Encryption", desc: "TLS in transit. Room envelopes use a Worker-wrapped key. The LLM sees plaintext when invokeAgent runs." },
     { icon: Workflow, title: "Agents on the timeline", desc: "invokeAgent writes chat messages. Streaming markdown, MCP tools, HITL. The side-panel copilot is UI you wire to your own model." },
     { icon: GitFork, title: "Platform adapters", desc: "React, Vue, and Svelte packages on npm. React Native on npm. Flutter, Swift, and KMP live in this repo until they hit pub.dev / CocoaPods / Maven." },
-    { icon: GanttChartSquare, title: "Operator console", desc: "Full dashboard for room management, analytics, billing, and team management." },
-    { icon: Zap, title: "Real-time sync", desc: "Durable Objects + WebSocket. CRDT sync for collaborative features." },
+    { icon: GanttChartSquare, title: "Operator console", desc: "Rooms, agents, billing, and project keys. Hosted is beta." },
+    { icon: Zap, title: "Real-time sync", desc: "Durable Objects and WebSocket. Yjs is a second binary socket on the same room." },
   ];
 
   return (
@@ -377,6 +379,7 @@ function PricingFooter() {
             <Link href={HOSTED_PATHS.docs} className="hover:text-white">Docs</Link>
             <Link href={HOSTED_PATHS.compare} className="hover:text-white">Compare</Link>
             <Link href={HOSTED_PATHS.status} className="hover:text-white">Status</Link>
+            <Link href={HOSTED_PATHS.trust} className="hover:text-white">Trust</Link>
             <a href="mailto:fluxychat@outlook.com" className="hover:text-white">Contact</a>
           </nav>
         </div>

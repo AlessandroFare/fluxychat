@@ -5,8 +5,12 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { parseAgentInvokeBody, parseBotUpsertBody } from "../lib/http-body.js";
 import { isHumanHandoffActive } from "../lib/room-handoff.js";
+import { callDurableRpc } from "../lib/do-rpc.js";
+import { injectRoomAgentSteer, requestRoomAgentStop } from "../lib/room-agent-steer.js";
+import { getFluxyConfig } from "../lib/fluxy-config-runtime.js";
+import { resolveAgentPolicy } from "@fluxy-chat/config";
 import { maybeAutoCaptureFailedAgentRun } from "../lib/agent-eval.js";
-import { announceRoomChatMessage, toFiniteMessageId } from "../lib/agent-runtime.js";
+import { finalizeAgentChatMessage, toFiniteMessageId } from "../lib/agent-runtime.js";
 
 export async function dispatchAgentsRoutes(request, url, h) {
   const {
@@ -338,6 +342,57 @@ export async function dispatchAgentsRoutes(request, url, h) {
     return json({ ok: true });
   }
 
+  const steerMatch = url.pathname.match(/^\/rooms\/([^/]+)\/agent-steer$/);
+  if (steerMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    const roomId = decodeURIComponent(steerMatch[1]);
+    const body = await request.json().catch(() => ({}));
+    const out = await injectRoomAgentSteer(env, {
+      projectId: auth.projectId,
+      roomId,
+      userId: auth.userId,
+      content: body.content,
+    });
+    if (env.AGENT?.idFromName) {
+      const stub = env.AGENT.get(env.AGENT.idFromName(`room-run:${auth.projectId}:${roomId}`));
+      await callDurableRpc(stub, "inject", {
+        projectId: auth.projectId,
+        roomId,
+        userId: auth.userId,
+        content: body.content,
+      });
+    }
+    return json(out, { status: out.ok ? 200 : 400, headers: corsHeaders });
+  }
+
+  const stopMatch = url.pathname.match(/^\/rooms\/([^/]+)\/agent-stop$/);
+  if (stopMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      return null;
+    });
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    const roomId = decodeURIComponent(stopMatch[1]);
+    const out = await requestRoomAgentStop(env, {
+      projectId: auth.projectId,
+      roomId,
+      userId: auth.userId,
+    });
+    if (env.AGENT?.idFromName) {
+      const stub = env.AGENT.get(env.AGENT.idFromName(`room-run:${auth.projectId}:${roomId}`));
+      await callDurableRpc(stub, "stop_run", {
+        projectId: auth.projectId,
+        roomId,
+        userId: auth.userId,
+      });
+    }
+    return json(out, { headers: corsHeaders });
+  }
+
   if (
     url.pathname.startsWith("/agents/") &&
     url.pathname.endsWith("/invoke") &&
@@ -397,6 +452,11 @@ export async function dispatchAgentsRoutes(request, url, h) {
       return json({ error: "agent not found" }, { status: 404 });
     }
 
+    const agentPolicy = resolveAgentPolicy(getFluxyConfig(), agentId);
+    if (agentPolicy.mention === false) {
+      return json({ error: "agent_invoke_denied" }, { status: 403 });
+    }
+
     const agentRateLimit = await checkAndConsumeRateLimit(env, {
       key: `agent:${auth.projectId}:${agentId}`,
       limit: Number(agentRow.rate_limit_rpm || 60),
@@ -448,24 +508,45 @@ export async function dispatchAgentsRoutes(request, url, h) {
     );
 
     const useStream = body.stream !== false;
-    const streamHooks = useStream
-      ? createAgentStreamHooks(env, {
-          projectId: auth.projectId,
-          roomId: body.roomId,
-          userId: agentId,
-          parentId: body.replyTo || null,
-        })
-      : null;
-
-    const result = await executeAgentRun(env, {
-      agentRow,
-      projectId: auth.projectId,
-      roomId: body.roomId,
-      userMessage: contentValidation.content,
-      userId: auth.userId,
-      traceId,
-      streamHooks,
-    });
+    let streamHooks = null;
+    let ranOnAgentDo = false;
+    let result;
+    if (env.AGENT && typeof env.AGENT.idFromName === "function") {
+      const agentStub = env.AGENT.get(env.AGENT.idFromName(`room-run:${auth.projectId}:${body.roomId}`));
+      const rpc = await callDurableRpc(agentStub, "room_invoke", {
+        projectId: auth.projectId,
+        roomId: body.roomId,
+        agentId,
+        userId: auth.userId,
+        content: contentValidation.content,
+        traceId,
+        stream: useStream,
+        replyTo: body.replyTo || null,
+      });
+      if (rpc && rpc.run) {
+        result = rpc.run;
+        ranOnAgentDo = true;
+      }
+    }
+    if (!result) {
+      streamHooks = useStream
+        ? createAgentStreamHooks(env, {
+            projectId: auth.projectId,
+            roomId: body.roomId,
+            userId: agentId,
+            parentId: body.replyTo || null,
+          })
+        : null;
+      result = await executeAgentRun(env, {
+        agentRow,
+        projectId: auth.projectId,
+        roomId: body.roomId,
+        userMessage: contentValidation.content,
+        userId: auth.userId,
+        traceId,
+        streamHooks,
+      });
+    }
 
     ctx.waitUntil(
       doStub.fetch("https://internal/announce", {
@@ -481,7 +562,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
       const agentContent = contentValidation2.valid ? contentValidation2.content : result.content.slice(0, MAX_MESSAGE_LENGTH);
       let messageId = toFiniteMessageId(streamHooks?.getMessageId());
 
-      if (!messageId) {
+      if (!messageId && !ranOnAgentDo) {
         const insert = await env.DB.prepare(
           "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
@@ -491,7 +572,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
       }
 
       if (messageId) {
-        await announceRoomChatMessage(env, {
+        await finalizeAgentChatMessage(env, {
           roomId: body.roomId,
           projectId: auth.projectId,
           messageId,
@@ -499,6 +580,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
           userId: agentId,
           parentId: body.replyTo || null,
           createdAt,
+          extraMetadata: { aiDisclosure: "AI assistant" },
         }).catch((err) => logError("agent.announce_failed", err, requestLogCtx));
       }
 
@@ -524,7 +606,20 @@ export async function dispatchAgentsRoutes(request, url, h) {
           targetType: "agent",
           targetId: agentId,
           traceId,
-          metadata: { runId: result.runId, roomId: body.roomId, status: "completed", latencyMs: result.latencyMs, iterations: result.iterations, inputTokens: result.inputTokens, outputTokens: result.outputTokens, estimatedCost: result.estimatedCost, streamed: !!streamHooks },
+          metadata: {
+            runId: result.runId,
+            roomId: body.roomId,
+            status: "completed",
+            delegatedByUserId: auth.userId,
+            onBehalfOf: auth.userId,
+            ranOnAgentDo,
+            latencyMs: result.latencyMs,
+            iterations: result.iterations,
+            inputTokens: result.inputTokens,
+            outputTokens: result.outputTokens,
+            estimatedCost: result.estimatedCost,
+            streamed: !!streamHooks || ranOnAgentDo,
+          },
         }).catch(() => {})
       );
 
@@ -698,7 +793,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
 
     const messageId = resInsert.meta.last_row_id;
 
-    await announceRoomChatMessage(env, {
+    await finalizeAgentChatMessage(env, {
       roomId,
       projectId: authProjectId,
       messageId,
@@ -706,6 +801,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
       userId: body.botId,
       parentId,
       createdAt,
+      extraMetadata: { aiDisclosure: "AI assistant" },
     });
 
     ctx.waitUntil(

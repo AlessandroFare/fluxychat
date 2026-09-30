@@ -88,6 +88,24 @@ export async function sendA2AEnvelope(
   });
 }
 
+export async function joinA2AAgentToRoom(
+  token: string,
+  roomId: string,
+  agentId: string,
+) {
+  return fetchWorkerJson<{
+    ok: boolean;
+    botId?: string;
+    handle?: string;
+    policyId?: string | null;
+    error?: string;
+  }>(`${BASE}/a2a/rooms/${encodeURIComponent(roomId)}/join`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ agentId }),
+  });
+}
+
 export async function receiveA2AEnvelopes(token: string, agentId: string) {
   return fetchWorkerJson<{ ok: boolean; envelopes: Array<{ id: string; source: string; taskId: string }> }>(
     `${BASE}/a2a/envelopes/receive?agentId=${encodeURIComponent(agentId)}`,

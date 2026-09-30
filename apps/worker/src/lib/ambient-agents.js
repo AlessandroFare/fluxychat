@@ -241,6 +241,12 @@ export async function executeAmbientPolicy(env, policy, event) {
   const roomId = policy.roomId || event.roomId;
   if (!roomId) return { ok: false, reason: "room_id_required", policyId: policy.id };
 
+  const { roomHasLiveHumans } = await import("./room-agent-steer.js");
+  if (env.AMBIENT_REQUIRE_HUMANS === "true" || env.AMBIENT_REQUIRE_HUMANS === "1") {
+    const humans = await roomHasLiveHumans(env, roomId);
+    if (!humans) return { ok: false, reason: "no_humans_online", policyId: policy.id };
+  }
+
   const runId = generateId("aprun");
   const now = new Date().toISOString();
   const payload = {
@@ -398,6 +404,20 @@ export async function dispatchAmbientEvent(env, event) {
  */
 export async function maybeTriggerAmbientAgentsOnMessage(env, detail) {
   if (!detail?.projectId || !detail?.roomId || !detail?.content) return;
+  const { applyFloorControl, maybeSuggestSummon } = await import("./room-decisions.js");
+  const floor = await applyFloorControl(env, detail);
+  const summon = await maybeSuggestSummon(env, detail);
+  if (summon?.apply) {
+    const { logClmFeed } = await import("./clm-system-one.js");
+    await logClmFeed(env, {
+      projectId: detail.projectId,
+      roomId: detail.roomId,
+      userId: detail.authorUserId,
+      body: `autoSummon suggest @${summon.choice} (does not add members)`,
+      status: "ok",
+    });
+  }
+  if (!floor.allowAmbient) return;
   await dispatchAmbientEvent(env, {
     projectId: detail.projectId,
     triggerType: "message_keyword",

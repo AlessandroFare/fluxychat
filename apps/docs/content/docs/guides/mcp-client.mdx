@@ -97,7 +97,8 @@ MCP Apps render sandboxed iframes for tool UIs, letting tools show interactive i
 
 - **Model-visible tools:** AI calls them and reads results
 - **App-only tools:** UI renders for humans, AI doesn't see them
-- **Sandboxed:** Iframe isolation prevents unauthorized access
+- Sandboxed iframe. Pass `allowedOrigins` on `McpAppFrame`. `*` is rejected. srcDoc frames send origin `"null"` — list that string if you want those messages.
+- Room shared UI state: `PUT /rooms/:id/mcp-apps/state` (KV) plus Y.Map `fluxy_mcp_app_state` on the room doc for Yjs clients.
 
 ## Security
 

@@ -112,7 +112,10 @@ async function buildHandoffContextSummary(env, projectId, roomId) {
  * }} opts
  */
 export async function requestHumanHandoff(env, opts) {
-  if (!canAccessAgentQueue(opts.roles)) {
+  const systemOneAuto =
+    opts.source === "system_one" &&
+    (env?.SYSTEM_ONE_AUTO_HANDOFF === "true" || env?.SYSTEM_ONE_AUTO_HANDOFF === "1");
+  if (!systemOneAuto && !canAccessAgentQueue(opts.roles)) {
     return { ok: false, error: "forbidden" };
   }
 

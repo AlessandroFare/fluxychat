@@ -68,6 +68,9 @@ interface LaunchKpis {
     completedOnboardingSteps: number;
     totalOnboardingSteps: number;
     activationRate: number;
+    messagesLast7?: number;
+    activeThreshold?: number;
+    activeProject?: boolean;
   };
   retention: { retainedDevelopers: number; activeDaysLast7: number; activeDaysPrev7: number };
   conversion: {
@@ -332,7 +335,13 @@ export function AnalyticsVisualSections({
               <StatCard
                 label="Activation"
                 value={`${(kpis.activation.activationRate * 100).toFixed(0)}%`}
-                hint={`${kpis.activation.completedOnboardingSteps}/${kpis.activation.totalOnboardingSteps} steps`}
+                hint={`${kpis.activation.completedOnboardingSteps}/${kpis.activation.totalOnboardingSteps} steps${
+                  kpis.activation.activeProject === true
+                    ? ` · ${kpis.activation.messagesLast7} msgs/7d active`
+                    : kpis.activation.messagesLast7 != null
+                      ? ` · ${kpis.activation.messagesLast7} msgs/7d`
+                      : ""
+                }`}
               />
               <StatCard
                 label="Retention (7d)"

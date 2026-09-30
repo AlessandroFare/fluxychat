@@ -59,6 +59,7 @@ export default function RoomsPage() {
   const [creating, setCreating] = useState(false);
   const [creatingDecisionRoom, setCreatingDecisionRoom] = useState(false);
   const [creatingEnterpriseRoom, setCreatingEnterpriseRoom] = useState(false);
+  const [importingTranscript, setImportingTranscript] = useState(false);
 
   const [editName, setEditName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -152,6 +153,46 @@ export default function RoomsPage() {
       }),
     [memberJwt, adminJwt, fluxyMemberUserId],
   );
+
+  const importTranscriptFile = async (file: File | undefined) => {
+    const createToken = memberJwt.trim() || adminJwt.trim();
+    if (!createToken || !file) return;
+    setImportingTranscript(true);
+    setError(null);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as unknown;
+      const result = await fetchWorkerJson<{
+        ok: boolean;
+        roomId: string;
+        roomName: string;
+        inserted: number;
+        truncated?: boolean;
+        extraConversations?: number;
+      }>(`${WORKER_URL}/rooms/import-transcript`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${createToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          export: parsed,
+          inviteUserIds: fluxyMemberUserId ? [fluxyMemberUserId] : [],
+        }),
+      });
+      setNotice(
+        `Imported ${result.inserted} messages into ${result.roomName}.` +
+          (result.truncated ? " Hit the 400-message cap." : "") +
+          (result.extraConversations ? ` Extra conversations in the file were skipped.` : ""),
+      );
+      await loadRooms({ quiet: true });
+      if (result.roomId) setSelectedId(result.roomId);
+    } catch (err) {
+      setError(messageFromUnknown(err, "Import failed. Use a ChatGPT or Claude JSON export you already downloaded."));
+    } finally {
+      setImportingTranscript(false);
+    }
+  };
 
   const createRoom = async () => {
     const createToken = memberJwt.trim() || adminJwt.trim();
@@ -404,6 +445,23 @@ export default function RoomsPage() {
             {creatingEnterpriseRoom ? "Creating…" : "Enterprise Agent Room"}
           </Button>
         </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="import-transcript-file">
+            Import ChatGPT/Claude JSON
+          </label>
+          <input
+            id="import-transcript-file"
+            type="file"
+            accept="application/json,.json"
+            disabled={importingTranscript || !token}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              void importTranscriptFile(file);
+            }}
+          />
+          {importingTranscript ? <span className="text-xs text-muted-foreground">Importing…</span> : null}
+        </div>
         <p className="mt-2 text-xs text-muted-foreground">
           <strong>Decision Room</strong> seeds templates and links{" "}
           <a href="/agents/debate" className="text-primary underline">debate</a> +{" "}
@@ -555,6 +613,37 @@ export default function RoomsPage() {
                 >
                   Copy replay link
                 </Button>
+                {selected?.type === "public" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    onClick={async () => {
+                      const token = memberJwt.trim() || adminJwt.trim();
+                      if (!token) {
+                        setNotice("Sign in to mint a share token.");
+                        return;
+                      }
+                      try {
+                        const meta = await fetchWorkerJson<{
+                          path: string;
+                          shareToken?: string;
+                        }>(`${WORKER_URL}/rooms/${encodeURIComponent(selectedId)}/share`, {
+                          headers: { Authorization: `Bearer ${token}` },
+                        });
+                        const url = `${window.location.origin}${meta.path}`;
+                        void navigator.clipboard?.writeText(url);
+                        setNotice(
+                          "Public share link copied (unguessable token). Add ?pk=pk_… only if guest join requires a publishable key. Never put fc_ in the URL.",
+                        );
+                      } catch {
+                        setError("Could not mint a share link for this public room.");
+                      }
+                    }}
+                  >
+                    Copy public share link
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"
@@ -610,6 +699,7 @@ export default function RoomsPage() {
                     roomId={selectedId}
                     memberJwt={memberToken}
                     memberUserId={fluxyMemberUserId || undefined}
+                    adminJwt={adminJwt.trim() || undefined}
                   />
                 ) : (
                   <p className="mt-4 text-xs text-muted-foreground">
