@@ -274,6 +274,21 @@ describe("kernel HTTP — inbox, presence, notifications, GDPR", () => {
     );
   });
 
+  it("GET /inbox/agent without JWT is 401", async () => {
+    const req = jsonReq("/inbox/agent");
+    const res = await dispatchInboxRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /inbox/agent with JWT returns items", async () => {
+    const req = jsonReq("/inbox/agent");
+    const res = await dispatchInboxRoutes(req, new URL(req.url), deps());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.count).toBe(0);
+  });
+
   it("DELETE /gdpr/delete as a member is 403", async () => {
     const req = jsonReq("/gdpr/delete", { method: "DELETE" });
     const res = await dispatchGdprRoutes(req, new URL(req.url), deps());

@@ -19,7 +19,7 @@ IoT and fleet ingest HTTP and fan out server_event names iot.reading and fleet.g
 - [Concepts](https://docs.fluxychat.com/docs/concepts): Projects, rooms, presence, broadcast, storage, feeds, threads, chat.
 - [Choose your path](https://docs.fluxychat.com/docs/getting-started/choose-your-path): Hosted CLI, your Worker, or a few lines of SDK.
 - [What to build](https://docs.fluxychat.com/docs/getting-started/what-to-build): Product idea to gallery example.
-- [Gallery](https://docs.fluxychat.com/docs/getting-started/gallery): Copy-paste Vite apps. deal-room: this URL and ?seat=counsel.
+- [Gallery](https://docs.fluxychat.com/docs/getting-started/gallery): Copy-paste Vite apps. deal-room and negotiation-room: this URL and ?seat=counsel.
 - [CLI and examples](https://docs.fluxychat.com/docs/getting-started/for-coding-agents): create-fluxy-chat flags, env vars, JWT mint. Skill: npx skills add AlessandroFare/fluxychat --skill fluxy-chat-room.
 - [Quickstart](https://docs.fluxychat.com/docs/getting-started/quickstart): pk_ in the browser, then member JWT.
 - [Wire protocol](https://docs.fluxychat.com/docs/core/wire-protocol): v1 frames and non-goals.

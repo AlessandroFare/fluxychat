@@ -7,7 +7,7 @@ import { chatCompletion, isAiConfigured } from "./ai-chat-completion.js";
 import { validateMessageContent, MAX_MESSAGE_LENGTH } from "./message-validation.js";
 import { logInfo, logError } from "./worker-log.js";
 
-const VALID_TRIGGER_TYPES = new Set(["webhook", "message_keyword", "room_event"]);
+const VALID_TRIGGER_TYPES = new Set(["webhook", "message_keyword", "room_event", "cron"]);
 const VALID_AUTONOMY = new Set(["observe", "notify", "act"]);
 const DEFAULT_COOLDOWN_SECONDS = 60;
 
@@ -136,6 +136,10 @@ export async function listAgentPolicies(env, { projectId, triggerType }) {
   return (rows.results || []).map(mapAgentPolicyRow);
 }
 
+export function cronPolicyNeedsRoom(triggerType, roomId) {
+  return String(triggerType || "") === "cron" && !String(roomId || "").trim();
+}
+
 export async function createAgentPolicy(env, input) {
   const name = String(input.name ?? "").trim();
   const triggerType = String(input.triggerType ?? "").trim();
@@ -148,6 +152,8 @@ export async function createAgentPolicy(env, input) {
   if (!triggerPattern) return { ok: false, reason: "trigger_pattern_required" };
   if (!agentId) return { ok: false, reason: "agent_id_required" };
   if (!VALID_AUTONOMY.has(maxAutonomy)) return { ok: false, reason: "invalid_max_autonomy" };
+  const roomId = String(input.roomId ?? "").trim();
+  if (cronPolicyNeedsRoom(triggerType, roomId)) return { ok: false, reason: "room_id_required" };
 
   const agent = await env.DB.prepare(`SELECT id FROM bots WHERE project_id = ? AND id = ?`)
     .bind(input.projectId, agentId)
@@ -169,7 +175,7 @@ export async function createAgentPolicy(env, input) {
       triggerType,
       triggerPattern,
       agentId,
-      input.roomId?.trim() || null,
+      roomId || null,
       maxAutonomy,
       input.promptTemplate?.trim() || null,
       Math.min(3600, Math.max(0, Number(input.cooldownSeconds) || DEFAULT_COOLDOWN_SECONDS)),
@@ -399,9 +405,32 @@ export async function dispatchAmbientEvent(env, event) {
 }
 
 /**
- * @param {*} env
- * @param {{ projectId: string, roomId: string, messageId?: number, content?: string, authorUserId?: string, traceId?: string }} detail
+ * Worker cron: fire enabled ambient policies whose pattern matches this UTC minute.
  */
+export async function tickAmbientCronPolicies(env, now = new Date()) {
+  if (!env?.DB) return { ok: true, scanned: 0, fired: 0 };
+  const { cronMatchesNow } = await import("./agent-schedules.js");
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM agent_policies WHERE enabled != 0 AND trigger_type = 'cron' LIMIT 200`,
+  ).all();
+  const policies = (results || []).map(mapAgentPolicyRow);
+  const fired = [];
+  for (const policy of policies) {
+    if (!policy.roomId || cronPolicyNeedsRoom(policy.triggerType, policy.roomId)) continue;
+    if (!cronMatchesNow(policy.triggerPattern, now)) continue;
+    fired.push(
+      await executeAmbientPolicy(env, policy, {
+        triggerType: "cron",
+        triggerKey: policy.triggerPattern,
+        roomId: policy.roomId,
+        payload: { firedAt: now.toISOString() },
+        userId: "ambient-cron",
+      }),
+    );
+  }
+  return { ok: true, scanned: policies.length, fired: fired.length, results: fired };
+}
+
 export async function maybeTriggerAmbientAgentsOnMessage(env, detail) {
   if (!detail?.projectId || !detail?.roomId || !detail?.content) return;
   const { applyFloorControl, maybeSuggestSummon } = await import("./room-decisions.js");

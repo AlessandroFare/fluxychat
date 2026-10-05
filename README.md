@@ -67,7 +67,13 @@ function Chat() {
 }
 ```
 
-`fc_` stays on the server. `pk_` mints an anonymous JWT (`POST /tokens/anonymous`). Pin `@fluxy-chat/sdk@0.6.12` and `@fluxy-chat/react@0.1.8`.
+`fc_` stays on the server. `pk_` mints an anonymous JWT (`POST /tokens/anonymous`). Pin `@fluxy-chat/sdk@0.6.14` and `@fluxy-chat/react@0.1.8`.
+
+### Deploy the Worker to your Cloudflare account
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/AlessandroFare/fluxychat/tree/main/apps/worker)
+
+The button reads `apps/worker/wrangler.toml`. It can create D1 (migrations in `apps/worker/db`), KV, R2, and optional Vectorize. Replace the pasted `database_id` / KV ids if the form does not. **Secrets** (not `[vars]`): `JWT_SECRET` or per-project D1 secrets, `X-Fluxy-Api-Key` material, optional `AI_API_KEY`, ticket PATs. Hyperdrive is unused. Preview: [template notes](apps/worker/CLOUDFLARE-TEMPLATE.md). Hosted at fluxychat.com is a different account.
 
 GitHub About (paste in the repo UI): Room layer on Cloudflare. Chat, presence, Yjs, and agents on one Durable Object. MIT self-host or hosted beta.
 

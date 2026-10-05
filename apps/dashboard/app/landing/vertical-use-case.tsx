@@ -11,7 +11,7 @@ export function verticalPageMetadata(page: VerticalLandingPage): Metadata {
   return buildPageMetadata({
     title: page.title,
     description: page.lede,
-    path: `/landing/${page.slug}`,
+    path: `/${page.slug}`,
   });
 }
 

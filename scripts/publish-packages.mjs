@@ -50,6 +50,8 @@ const PACKAGES = [
   "packages/ui",
   "packages/ui-kit",
   "packages/react-native-sdk",
+  "packages/vue",
+  "packages/svelte",
   "packages/create-fluxy-chat",
 ];
 

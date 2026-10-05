@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cronPolicyNeedsRoom,
   isPolicyCooldownActive,
   mapAgentPolicyRow,
   policyMatchesEvent,
@@ -57,11 +58,36 @@ describe("ambient-agents", () => {
     expect(out).toContain("room-1");
   });
 
-  it("detects cooldown", () => {
-    const policy = {
-      cooldownSeconds: 60,
-      lastTriggeredAt: new Date().toISOString(),
+  it("matches cron trigger type", () => {
+    expect(
+      policyMatchesEvent(
+        { enabled: true, triggerType: "cron", triggerPattern: "*/15" },
+        { triggerType: "cron", triggerKey: "*/15 * * * *" },
+      ),
+    ).toBe(true);
+  });
+
+  it("requires a room on cron policies", () => {
+    expect(cronPolicyNeedsRoom("cron", "")).toBe(true);
+    expect(cronPolicyNeedsRoom("cron", "room-1")).toBe(false);
+    expect(cronPolicyNeedsRoom("webhook", "")).toBe(false);
+  });
+
+  it("tickAmbientCronPolicies scans cron rows", async () => {
+    const { tickAmbientCronPolicies } = await import("./ambient-agents.js");
+    const env = {
+      DB: {
+        prepare() {
+          return {
+            async all() {
+              return { results: [] };
+            },
+          };
+        },
+      },
     };
-    expect(isPolicyCooldownActive(policy)).toBe(true);
+    const out = await tickAmbientCronPolicies(env, new Date(Date.UTC(2026, 9, 3, 14, 15, 0)));
+    expect(out.scanned).toBe(0);
+    expect(out.fired).toBe(0);
   });
 });

@@ -148,4 +148,12 @@ describe("otel-export", () => {
       expect(input.error).toBe("publicKey and secretKey are required");
     });
   });
+
+  describe("buildDatadogOtelExportInput", () => {
+    it("points at Datadog OTLP traces", async () => {
+      const { buildDatadogOtelExportInput } = await import("./otel-export.js");
+      const input = buildDatadogOtelExportInput({ apiKey: "dd-key", site: "datadoghq.eu" });
+      expect(input.endpointUrl).toBe("https://otlp.datadoghq.eu/v1/traces");
+    });
+  });
 });

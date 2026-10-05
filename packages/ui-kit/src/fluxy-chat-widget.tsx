@@ -7,6 +7,7 @@ import {
   ChatWindow,
   applyFluxyTheme,
   fluxyThemeClassName,
+  type FluxyThemeId,
 } from "@fluxy-chat/ui";
 import { FluxyAgentTurnChrome } from "./fluxy-agent-turn-chrome";
 

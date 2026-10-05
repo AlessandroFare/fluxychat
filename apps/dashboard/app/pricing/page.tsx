@@ -3,7 +3,7 @@ import Link from "next/link";
 import { buildPageMetadata } from "@/lib/site-metadata";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { PUBLIC_PLAN_CATALOG, SALES_PLAN_CATALOG } from "~/lib/plan-catalog";
+import { landingPlanEntries } from "~/lib/plan-catalog";
 import { PRICING_FAQ } from "@/lib/marketing-landing";
 import { HOSTED_COPY, HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
 import { formatNumber } from "@/lib/format-number";
@@ -19,7 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 const clerkOn = isClerkClientConfigured();
-const planEntries = Object.entries(PUBLIC_PLAN_CATALOG);
+const planEntries = landingPlanEntries();
 const planKeys = planEntries.map(([k]) => k);
 
 function formatLimit(v: number): string {
@@ -42,16 +42,16 @@ const COMPARISON_ROWS: { feature: string; values: Record<string, string> }[] = [
     values: Object.fromEntries(planEntries.map(([k, p]) => [k, p.webhooks === -1 ? "Unlimited" : formatLimit(p.webhooks)])),
   },
   { feature: "Rooms", values: Object.fromEntries(planKeys.map((k) => [k, "Unlimited ids"])) },
-  { feature: "Projects", values: { free: "1", starter: "1", pro: "1", team: "5", growth: "Multiple" } },
-  { feature: "Team seats", values: { free: "1", starter: "1", pro: "1", team: "5", growth: "Unlimited" } },
+  { feature: "Projects", values: { free: "1", starter: "1", pro: "1" } },
+  { feature: "Team seats", values: { free: "1", starter: "1", pro: "1" } },
   { feature: "SDK & dashboard", values: Object.fromEntries(planKeys.map((k) => [k, "✓"])) },
   { feature: "Platform modules", values: Object.fromEntries(planKeys.map((k) => [k, "Same room DO"])) },
   { feature: "AI agents", values: Object.fromEntries(planKeys.map((k) => [k, "✓"])) },
-  { feature: "Webhooks", values: { free: "—", starter: "Signed + retries", pro: "✓", team: "✓", growth: "✓" } },
-  { feature: "GDPR export", values: { free: "Worker API", starter: "✓", pro: "✓", team: "✓", growth: "✓" } },
-  { feature: "Priority support", values: { free: "Community", starter: "Email (best effort)", pro: "Priority", team: "Priority", growth: "Priority" } },
-  { feature: "SSO / SAML", values: { free: "—", starter: "—", pro: "—", team: "—", growth: "Add-on" } },
-  { feature: "Audit logs", values: { free: "—", starter: "—", pro: "—", team: "—", growth: "Add-on" } },
+  { feature: "Webhooks", values: { free: "—", starter: "Signed + retries", pro: "Signed + retries" } },
+  { feature: "GDPR export", values: { free: "Worker API", starter: "✓", pro: "✓" } },
+  { feature: "Priority support", values: { free: "Community", starter: "Email (best effort)", pro: "Priority" } },
+  { feature: "SSO / SAML", values: { free: "Unavailable on hosted", starter: "Unavailable on hosted", pro: "Unavailable on hosted" } },
+  { feature: "Audit logs", values: { free: "—", starter: "—", pro: "Contact us" } },
 ];
 
 function PricingHero() {
@@ -68,7 +68,7 @@ function PricingHero() {
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
           Free is the weekend plan: public rooms, a pk_ in the client, no card. Cursors and presence
           do not count as messages. Agent invokes are not extra seats or MAU. Starter is $20/mo when you
-          outgrow 200k persisted messages.
+          outgrow 200k persisted messages. Pro is $50/mo for heavier traffic.
           Hosted is beta. Pin SDK versions.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -102,7 +102,7 @@ function PlanCards() {
           </p>
         </div>
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {planEntries.map(([key, plan]) => {
             const isFeatured = key === "starter";
             const showCta = key !== "growth";
@@ -190,32 +190,13 @@ function PlanCards() {
         </div>
 
         <div className="mx-auto mt-14 max-w-xl text-center">
-          <p className="text-sm font-medium text-slate-300">
-            Enterprise-grade plans for larger deployments
+          <p className="text-sm text-slate-400">
+            Higher limits: email{" "}
+            <a className="text-slate-300 underline underline-offset-2" href="mailto:fluxychat@outlook.com">
+              fluxychat@outlook.com
+            </a>
+            . Hosted login does not include SAML.
           </p>
-        </div>
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
-          {SALES_PLAN_CATALOG.map((plan) => (
-            <div
-              key={plan.label}
-              className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#252525]/50 p-6"
-            >
-              <h3 className="font-heading text-lg font-semibold text-white">{plan.label}</h3>
-              <div className="mt-1 text-2xl font-bold text-white">{plan.price}</div>
-              <p className="mt-2 text-sm text-slate-300">{plan.tagline}</p>
-              <ul className="mt-5 flex flex-1 flex-col gap-2 text-sm text-slate-300">
-                {plan.bullets.map((b) => (
-                  <li key={b} className="flex gap-2">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                    <span className="break-words">{b}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button asChild variant="secondary" className="mt-6 w-full bg-white/10 text-white hover:bg-white/20">
-                <a href={plan.href}>{plan.cta}</a>
-              </Button>
-            </div>
-          ))}
         </div>
       </div>
     </section>
@@ -343,7 +324,7 @@ function PricingCta() {
           Start building for free
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-slate-300">
-          No credit card required. Open beta — pin SDK versions and read the docs, not the compare table, as the spec.
+          No credit card. Open beta, so pin SDK versions. The docs are the spec, not the compare table.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="bg-[var(--fluxy-cta-color)] text-white hover:opacity-90">

@@ -105,7 +105,7 @@ function createMockDb({ deliveries = [], offlineQueue = [], devices = [] } = {})
                 self.devices.push({
                   id: args[0], project_id: args[1], user_id: args[2], platform: args[3],
                   endpoint: args[4], push_token: args[5], is_active: 1,
-                  last_seen_at: args[10], created_at: args[11],
+                  last_seen_at: args[9], created_at: args[10], push_backend: args[11] || null,
                 });
                 return { meta: { changes: 1 } };
               }
@@ -276,6 +276,23 @@ describe("mobile-ux", () => {
       });
       expect(result.ok).toBe(false);
       expect(result.error).toBe("invalid_platform");
+    });
+    it("stores expo / fcm-v1 / apns provider", async () => {
+      const db = createMockDb();
+      const result = await registerDevice({ DB: db }, {
+        projectId: "p1", userId: "u1", platform: "fcm", pushToken: "ExponentPushToken[x]", pushProvider: "expo",
+      });
+      expect(result.ok).toBe(true);
+      expect(result.pushProvider).toBe("expo");
+      expect(db.devices[0].push_backend).toBe("expo");
+    });
+    it("rejects unknown push provider", async () => {
+      const db = createMockDb();
+      const result = await registerDevice({ DB: db }, {
+        projectId: "p1", userId: "u1", platform: "fcm", pushProvider: "onesignal",
+      });
+      expect(result.ok).toBe(false);
+      expect(result.error).toBe("invalid_push_provider");
     });
   });
 

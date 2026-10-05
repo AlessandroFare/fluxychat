@@ -67,7 +67,11 @@ export async function handlePublicHitlTap(request, url, env, json, corsHeaders) 
     scope: "hitl-tap",
     limit: 30,
     windowSeconds: 60,
-  }).catch(() => ({ allowed: true }));
+  }).catch(() => {
+    const allowFallback =
+      env.RATE_LIMIT_FALLBACK_ALLOW === "true" || env.RATE_LIMIT_FALLBACK_ALLOW === "1";
+    return { allowed: allowFallback, retryAfterSeconds: 5 };
+  });
   if (limited && limited.allowed === false) {
     const wantsJson = String(request.headers.get("accept") || "").includes("application/json");
     return tapResponse({

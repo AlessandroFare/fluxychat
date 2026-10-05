@@ -1,109 +1,51 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Layers } from "lucide-react";
-import { ConsoleShell } from "../components/console-shell";
-import { ConsolePageHeader } from "../components/console-page-header";
-import { ReadinessBadge } from "~/components/ui/readiness-badge";
-import {
-  CONSOLE_NAV_INDUSTRIES,
-  CONSOLE_NAV_PLATFORM,
-} from "../components/console-nav";
-import { listIndustryReadiness, listProductReadiness } from "@/lib/readiness-display";
+import { buildPageMetadata } from "@/lib/site-metadata";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
+import { LandingShell } from "../landing/landing-shell";
+import { LandingBand } from "../landing/landing-band";
+import { LandingStreamSection } from "../landing/landing-stream-section";
+import { LandingBuildGallery } from "../landing/landing-build-gallery";
+import { LandingFooter } from "../landing/landing-footer";
 
-export default function PlatformCatalogPage() {
-  const products = listProductReadiness().filter((e) => e.id !== "chat");
-  const industries = listIndustryReadiness();
-  const extraProducts = CONSOLE_NAV_PLATFORM.filter(
-    (item) => !products.some((p) => p.href === item.href || item.href.startsWith(`${p.href}/`)),
-  );
-  const extraIndustries = CONSOLE_NAV_INDUSTRIES.filter(
-    (item) => !industries.some((p) => p.href === item.href),
-  );
+export const metadata: Metadata = buildPageMetadata({
+  title: "Labs: stream, game, IoT, fleet",
+  description:
+    "Stream, game, IoT, and fleet sit on the same room. Chat, presence, Yjs, and invokeAgent are the product.",
+  path: "/labs",
+});
 
+export default function LabsPage() {
   return (
-    <ConsoleShell>
-      <ConsolePageHeader
-        title="Platform"
-        icon={Layers}
-        description="Modules on the same room. Badges match PLATFORM_READINESS, not a GA claim."
-      />
-
-      <p className="mb-6 text-sm text-muted-foreground">
-        Chat, collab, and invokeAgent are the kernel. The rest rides the same Worker. Hosted is open beta.
-      </p>
-
-      <section className="mb-8">
-        <h2 className="mb-3 font-heading text-sm font-semibold text-foreground">Products</h2>
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {products.map((entry) => (
-            <li key={entry.id}>
-              <Link
-                href={entry.href}
-                className="block rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-foreground">{entry.label}</span>
-                  <ReadinessBadge label={entry.readinessLabel} />
-                </span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">{entry.description}</span>
-              </Link>
-            </li>
-          ))}
-          {extraProducts.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className="block rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-foreground">{item.label}</span>
-                  <ReadinessBadge label="Labs" />
-                </span>
-                {item.description ? (
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
-                ) : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section>
-        <h2 className="mb-3 font-heading text-sm font-semibold text-foreground">Industries</h2>
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {industries.map((entry) => (
-            <li key={entry.id}>
-              <Link
-                href={entry.href}
-                className="block rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-foreground">{entry.label}</span>
-                  <ReadinessBadge label={entry.readinessLabel} />
-                </span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">{entry.description}</span>
-              </Link>
-            </li>
-          ))}
-          {extraIndustries.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className="block rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-foreground">{item.label}</span>
-                  <ReadinessBadge label="Labs" />
-                </span>
-                {item.description ? (
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
-                ) : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </ConsoleShell>
+    <LandingShell>
+      <LandingBand tone="dark">
+        <section className="mx-auto max-w-3xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Labs</p>
+          <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-white">Off the main nav</h1>
+          <p className="mt-4 text-base leading-relaxed text-slate-300">
+            Stream overlays, game ticks, IoT ingest, and fleet GPS sit on the same
+            room Durable Object. They are optional. Chat, presence, Yjs, and invokeAgent are the product.
+            We don't sell healthcare. There is no BAA. Voice is transcripts in the room, not an SFU.
+          </p>
+          <p className="mt-4 text-sm text-slate-400">
+            <Link href={HOSTED_PATHS.landing} className="underline underline-offset-2 hover:text-white">
+              Back to home
+            </Link>
+            {" · "}
+            <Link href={HOSTED_PATHS.docs} className="underline underline-offset-2 hover:text-white">
+              Docs
+            </Link>
+          </p>
+        </section>
+        <LandingStreamSection />
+        <LandingBuildGallery
+          heading="Pick a scaffold"
+          subhead="Live cursors, war room, device panel, deal room. You need a Worker URL and a room first."
+        />
+      </LandingBand>
+      <LandingBand tone="glass">
+        <LandingFooter />
+      </LandingBand>
+    </LandingShell>
   );
 }

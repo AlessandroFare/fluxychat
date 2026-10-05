@@ -55,6 +55,9 @@ const TEMPLATE_CHOICES =
   "react, full, basic, slack, telegram, discord, web, hr-feedback";
 
 const GALLERY_EXAMPLES = [
+  "shared-ai-room",
+  "deal-room",
+  "negotiation-room",
   "live-cursors",
   "live-cursors-chat",
   "javascript-live-cursors",
@@ -62,8 +65,6 @@ const GALLERY_EXAMPLES = [
   "war-room",
   "iot-panel",
   "draw",
-  "deal-room",
-  "shared-ai-room",
   "fleet-panel",
   "game-tick",
   "voice-stage",
@@ -195,6 +196,7 @@ ${pc.bold("Options:")}
 ${pc.bold("Examples:")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-app --mode self-host")}
+  ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-room --example shared-ai-room")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room")}
   ${pc.cyan("npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room")}
@@ -275,6 +277,7 @@ async function main(): Promise<void> {
       "iot-panel": "# Keep this tab open; curl an ingest from another terminal",
       draw: "# Open two tabs — move and click",
       "deal-room": "# Two tabs: this URL (buyer) and ?seat=counsel. Guest room for whispers.",
+      "negotiation-room": "# Two tabs: buyer vs counsel. Clause policy auto / ask / deny.",
       "shared-ai-room": "# pk_ guest room. Ask agent, stop, two tabs.",
       "fleet-panel": "# Keep this tab open; click Post sample GPS",
       "game-tick": "# Matchmake + start, then Submit input (not netcode)",

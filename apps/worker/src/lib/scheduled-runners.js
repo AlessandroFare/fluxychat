@@ -156,6 +156,8 @@ export async function runScheduledCronJob(env, cron) {
       await tickHitlApprovalEscalations(env).catch(() => ({ processed: 0 }));
       const { runEscalationScan } = await import("./escalation-rules.js");
       await runEscalationScan(env).catch(() => ({ scanned: 0, escalated: 0 }));
+      const { tickAmbientCronPolicies } = await import("./ambient-agents.js");
+      await tickAmbientCronPolicies(env).catch(() => ({ scanned: 0, fired: 0 }));
       return { job: "webhook_flush" };
     case SCHEDULED_CRON_MODELS_SYNC:
       await syncModelsCatalog(env);

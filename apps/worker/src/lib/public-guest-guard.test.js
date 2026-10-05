@@ -74,6 +74,24 @@ describe("guardPublicGuestRequest", () => {
     expect(result.retryAfterSeconds).toBe(42);
   });
 
+  it("fails closed when Turnstile is required but not configured", async () => {
+    isTurnstileConfigured.mockReturnValue(false);
+    const env = { PUBLIC_GUEST_TURNSTILE_REQUIRED: "true" };
+    const result = await guardPublicGuestRequest(env, new Request("https://x"), {});
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("turnstile_not_configured");
+  });
+
+  it("requires Turnstile on hosted even without the env flag", async () => {
+    isTurnstileConfigured.mockReturnValue(false);
+    const result = await guardPublicGuestRequest(
+      { HOSTED_MULTI_TENANT: "true" },
+      new Request("https://x"),
+      {},
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("turnstile_not_configured");
+  });
   it("requires Turnstile when configured and required", async () => {
     isTurnstileConfigured.mockReturnValue(true);
     verifyTurnstileToken.mockResolvedValue({ success: false });

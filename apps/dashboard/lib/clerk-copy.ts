@@ -9,7 +9,7 @@ export const clerkLocalization = {
   signUp: {
     start: {
       title: "Create your Fluxychat account",
-      subtitle: "Hosted cloud — project and API keys provisioned after sign-up",
+      subtitle: "Hosted beta. You get a project and API keys after you sign up.",
     },
   },
   socialButtonsBlockButton: "Continue with {{provider|titleize}}",

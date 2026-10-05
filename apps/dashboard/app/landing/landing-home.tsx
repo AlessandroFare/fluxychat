@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PAGE_METADATA } from "@/lib/marketing-copy";
+import { HOSTED_PATHS, docsSiteHref } from "@/lib/hosted-product";
 import { CloudflareCostTable } from "~/components/marketing/cloudflare-cost-table";
 import { LandingCompareSection } from "./landing-compare-section";
 import { LandingEnterpriseSection } from "./landing-enterprise-section";
@@ -8,14 +10,13 @@ import { LandingFeaturesClient } from "./landing-features-client";
 import { LandingFinalCtaSection } from "./landing-final-cta-section";
 import { LandingFooter } from "./landing-footer";
 import { LandingDemoSection } from "./landing-demo-section";
-import { LandingBuildGallery } from "./landing-build-gallery";
+import { LandingBuildGallery, HOMEPAGE_EXAMPLES } from "./landing-build-gallery";
 import { LandingHeroClient } from "./landing-hero-client";
 import { LandingLifecycleSection } from "./landing-lifecycle-section";
 import { LandingLogoStrip } from "./landing-logo-strip";
 import { LandingPricingSection } from "./landing-pricing-section";
 import { LandingRealtimeSection } from "./landing-realtime-section";
 import { LandingCollabSection } from "./landing-collab-section";
-import { LandingStreamSection } from "./landing-stream-section";
 import { LandingShell } from "./landing-shell";
 import { LandingStatsSection } from "./landing-stats-section";
 import { LandingWhatsNewSection } from "./landing-whats-new-section";
@@ -33,7 +34,11 @@ export default function LandingHomePage() {
 
       <LandingBand tone="glass">
         <LandingDemoSection />
-        <LandingBuildGallery />
+        <LandingBuildGallery
+          examples={HOMEPAGE_EXAMPLES}
+          heading="One room, humans and an agent"
+          subhead="Same Durable Object. Pick a scaffold and copy the command."
+        />
       </LandingBand>
 
       <LandingBand tone="light">
@@ -57,8 +62,14 @@ export default function LandingHomePage() {
           </div>
           <LandingRealtimeSection />
           <LandingCollabSection />
-          <LandingStreamSection />
         </div>
+        <p className="px-4 pb-8 text-center text-sm text-slate-400 sm:px-6">
+          Stream, IoT, fleet, and game overlays are on{" "}
+          <Link href={HOSTED_PATHS.labs} className="underline underline-offset-2 hover:text-white">
+            /labs
+          </Link>
+          .
+        </p>
       </LandingBand>
 
       <LandingBand tone="light">
@@ -85,9 +96,13 @@ export default function LandingHomePage() {
               What does it actually cost on Cloudflare?
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-pretty text-center text-zinc-300">
-              Real numbers, not vague &quot;contact sales&quot; ranges. The free tier is
-              generous; the paid tier scales with usage; self-host is just your
-              Cloudflare bill. No per-connection pricing surprises.
+              Estimate only. Cloudflare&apos;s chat Durable Object sample was dominated by
+              <strong className="font-medium text-white"> duration</strong>, not request count.
+              We have not published idle-socket duration from a real invoice. See{" "}
+              <Link href={docsSiteHref("learn/status-and-limits")} className="underline underline-offset-2 hover:text-white">
+                Status and limits
+              </Link>
+              .
             </p>
             <div className="mt-10">
               <CloudflareCostTable variant="dark" />

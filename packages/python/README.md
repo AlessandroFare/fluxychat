@@ -1,5 +1,5 @@
 # fluxychat (Python)
 
-`FluxyChatClient.invoke_agent` and `list_active_streams`. WebSocket join is still the JS SDK. AG-UI: POST the same invoke HTTP, then map events with the JS `createAgUiAdapter` on a Node sidecar if you need it.
+HTTP: `FluxyChatClient.invoke_agent`, streams, AG-UI join. Room WebSocket: `connect_room_ws` (extra `websockets`). Generated REST: `scripts/generate-rest-sdks.md` (OpenAPI Generator, Apache-2.0). Not Speakeasy.
 
-Not published to PyPI yet.
+Not published to PyPI.

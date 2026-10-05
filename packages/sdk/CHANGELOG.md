@@ -1,10 +1,27 @@
 # @fluxy-chat/sdk
 
-## Unreleased
+## 0.6.14 (2026-10-05)
+
+### Added
+
+- `postBrowserHandoff`, A2UI catalog helpers, agent inbox client, `createPushProvider` / HITL push copy, voice room bridge events (`mapVoiceBridgeEvent`, `postVoiceBridgeEvent`).
+
+Publish **config 0.1.5** alongside this if you use `makerChecker` / `toolAutonomy`. Protocol stays 0.1.6 (no new wire events).
+
+## 0.6.13 (2026-09-30)
+
+### Added
+
+- `fluxy-eval` and `fluxy-migrate` CLIs.
+- `@fluxy-chat/sdk/ai-sdk` (`FluxyRoomChatTransport`) for Vercel AI SDK 7 `useChat`.
+- `mcpName` on the package for MCP registry listing (submit is still human).
+- HITL approval adapters, eval/migrate helpers, Cloudflare Realtime SFU session helper, `createFluxyTokenRoute`.
 
 ### Changed
 
 - `PLATFORM_READINESS` matches what you can sell: chat + Yjs `production`; stream/game/IoT/fleet/edu/marketplace/web3/chatbot-builder `beta`; voice, huddles, spatial, health, event, finance, continuity, cartography, truth-market, transport, driver, cross-channel `labs`. Transport copy no longer claims a live WebTransport listener. Huddles copy points at Cloudflare Realtime SFU, not a LiveKit VPS.
+
+Publish **protocol 0.1.6** first.
 
 ## 0.6.12 (2026-09-07)
 

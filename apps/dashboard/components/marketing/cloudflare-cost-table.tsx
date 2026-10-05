@@ -91,8 +91,10 @@ export function CloudflareCostTable({ variant = "dark" }: { variant?: "dark" | "
         </table>
       </div>
       <p className={`mt-5 text-xs leading-relaxed ${isDark ? "text-slate-400" : "text-muted-foreground"}`}>
-        * D1 storage cap: 10 GB on the free plan, unlimited on paid. Message
-        fanout uses Durable Object egress  see{" "}
+        * Request and D1 rows are not Durable Object <strong>duration</strong>.
+        Cloudflare&apos;s official chat sample billed almost entirely on duration.
+        FluxyChat has not published idle-socket duration from an invoice. Treat this
+        table as a request-side estimate. See{" "}
         <Link
           href="https://developers.cloudflare.com/workers/platform/pricing"
           className={

@@ -63,6 +63,29 @@ await invokeAgent("Summarize open decisions.", { agentId });`,
   },
 ];
 
+const liveCursorsExample = EXAMPLES[0];
+const warRoomExample = EXAMPLES[1];
+const dealRoomExample = EXAMPLES[3];
+
+export const HOMEPAGE_EXAMPLES: BuildExample[] = [
+  {
+    id: "shared",
+    title: "Shared AI room",
+    time: "about 15 minutes",
+    command: "npx @fluxy-chat/create-fluxy-chat@latest my-room --example shared-ai-room",
+    snippet: `const { messages, invokeAgent, stopAgentStream } = useChat({
+  roomId,
+  publishableKey,
+});
+
+await invokeAgent("Summarize open decisions", { agentId });`,
+    preview: "war",
+  },
+  warRoomExample,
+  dealRoomExample,
+  liveCursorsExample,
+];
+
 function CursorsPreview() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [you, setYou] = useState({ x: 88, y: 72 });
@@ -312,10 +335,24 @@ function Preview({ kind }: { kind: BuildExample["preview"] }) {
   return <DealPreview />;
 }
 
-export function LandingBuildGallery() {
-  const [activeId, setActiveId] = useState(EXAMPLES[0].id);
+export function LandingBuildGallery({
+  examples = EXAMPLES,
+  heading,
+  subhead,
+}: {
+  examples?: BuildExample[];
+  heading?: string;
+  subhead?: string;
+}) {
+  const [activeId, setActiveId] = useState(examples[0].id);
   const [tab, setTab] = useState<"ui" | "code">("ui");
-  const active = EXAMPLES.find((e) => e.id === activeId) ?? EXAMPLES[0];
+  const active = examples.find((e) => e.id === activeId) ?? examples[0];
+  const title = heading ?? (examples.length === 1 ? "One room, humans and an agent" : "Copy the scaffold after you try a room");
+  const lead =
+    subhead ??
+    (examples.length === 1
+      ? "The agent writes on the same chat log. Cursors and IoT demos are on /labs."
+      : "You need a Worker URL and a room first.");
 
   return (
     <section
@@ -324,15 +361,15 @@ export function LandingBuildGallery() {
     >
       <div className="mx-auto max-w-6xl">
         <h2 className="text-balance text-center font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
-          Try the product, then copy the scaffold
+          {title}
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-pretty text-center text-sm text-zinc-300 sm:text-base">
-          These are the gallery apps. Drag the cursors. Invoke an agent. Flick a sensor.
-          Times assume you already have a Worker URL and a room.
+          {lead}
         </p>
 
+        {examples.length === 1 ? null : (
         <div className="mt-8 grid grid-cols-2 gap-2 sm:mt-10 sm:grid-cols-4 sm:gap-3">
-          {EXAMPLES.map((ex) => (
+          {examples.map((ex) => (
             <button
               key={ex.id}
               type="button"
@@ -352,6 +389,7 @@ export function LandingBuildGallery() {
             </button>
           ))}
         </div>
+        )}
 
         <SpotlightCard className="mt-5 border-white/10 bg-zinc-950/80 sm:mt-6" spotlightColor="rgba(255, 106, 26, 0.22)">
           <div className="p-3 sm:p-6">

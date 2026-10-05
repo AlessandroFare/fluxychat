@@ -31,7 +31,7 @@ export function LandingRealtimeSection() {
             Chat, presence, Yjs, and agents in one room
           </h2>
           <p className="mx-auto max-w-2xl text-pretty leading-relaxed text-slate-300">
-            Start with useChat. Add cursors, Yjs, polls, HTTP ingest, and invokeAgent on the same Durable Object. Voice media is LiveKit. Bridges are console rows you wire yourself.
+            Start with useChat. Cursors and ingest demos are on /labs. Voice goes through LiveKit. You wire Slack yourself in the console.
           </p>
         </div>
 

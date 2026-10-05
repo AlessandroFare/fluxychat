@@ -2,13 +2,13 @@ import Link from "next/link";
 import { Bot, Check, MessageSquare, Webhook } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { PUBLIC_PLAN_CATALOG, SALES_PLAN_CATALOG, FREE_TIER_LIMITS } from "~/lib/plan-catalog";
+import { landingPlanEntries, FREE_TIER_LIMITS } from "~/lib/plan-catalog";
 import { PRICING_FAQ } from "@/lib/marketing-landing";
 import { HOSTED_COPY, HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
 import { formatNumber } from "@/lib/format-number";
 import { cn } from "@/lib/utils";
 
-const planEntries = Object.entries(PUBLIC_PLAN_CATALOG);
+const planEntries = landingPlanEntries();
 const clerkOn = isClerkClientConfigured();
 
 /** Server-rendered pricing block — keeps `landing-view` client bundle smaller (ENG-13). */
@@ -21,16 +21,16 @@ export function LandingPricingSection() {
       <div className="mx-auto max-w-6xl">
         <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-white">Pricing</h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
-          One plan covers chat, AI agents, webhooks, and platform modules. Undercuts Pusher and Ably on message
-          quotas. Starter at $20/mo vs Pusher Startup at $49/mo for similar traffic. Agents are
-          invokes, not extra MAU.
+          Free is the weekend plan. Starter is $20/mo after 200k persisted messages.
+          Pro is $50/mo for heavier rooms. Calling the agent does not cost an extra seat. Hosted is still beta.
         </p>
         <p className="mx-auto mt-2 max-w-xl text-center text-xs text-slate-400">
           Console routes can require a one-time ack on your dashboard host. Billable usage still needs your Worker
           credentials.
         </p>
         <p className="mx-auto mt-8 max-w-xl text-center text-sm font-medium text-slate-300">
-          Self-serve checkout today
+          Self-serve Stripe checkout when the Worker has <code className="text-slate-200">STRIPE_SECRET_KEY</code>.
+          If <code className="text-slate-200">/health.paymentsEnabled</code> is false, pick a plan in the console or email us. Cards will not charge.
         </p>
 
         {/* Free vs Pro summary card — qualifies traffic before the detailed grid */}
@@ -51,14 +51,13 @@ export function LandingPricingSection() {
             </span>
             {" "}webhook deliveries{" "}
             <span className="text-slate-400">/mo</span>.{" "}
-            <span className="text-primary">Pro</span>{" "}
-            <span className="text-slate-300">raises each to{" "}
-              <span className="font-semibold text-slate-200">10×</span>{" "}for{" "}
-              <span className="text-white">$50/mo</span>, ideal for production rooms with active agents.</span>
+            <span className="text-primary">Starter</span>
+            {" "}
+            <span className="text-slate-300">is $20/mo. Pro is $50/mo.</span>
           </p>
         </div>
 
-        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {planEntries.map(([key, plan]) => {
             const isFeatured = key === "starter";
             return (
@@ -150,36 +149,13 @@ export function LandingPricingSection() {
           })}
         </div>
 
-        <p className="mx-auto mt-14 max-w-xl text-center text-sm font-medium text-slate-300">
-          Sales-led plans for governance and higher limits
+        <p className="mx-auto mt-14 max-w-xl text-center text-sm text-slate-400">
+          Higher limits: email{" "}
+          <a className="text-slate-300 underline underline-offset-2" href="mailto:fluxychat@outlook.com">
+            fluxychat@outlook.com
+          </a>
+          . Hosted login does not include SAML.
         </p>
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
-          {SALES_PLAN_CATALOG.map((plan) => (
-            <div
-              key={plan.label}
-              className="mkt-lift flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/30 p-6"
-            >
-              <h3 className="font-heading text-lg font-semibold text-white">{plan.label}</h3>
-              <div className="mt-1 text-2xl font-bold text-white">{plan.price}</div>
-              <p className="mt-2 text-sm text-slate-300">{plan.tagline}</p>
-              <ul className="mt-5 flex flex-1 flex-col gap-2 text-sm text-slate-300">
-                {plan.bullets.map((b) => (
-                  <li key={b} className="flex gap-2">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-                    <span className="break-words">{b}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button
-                asChild
-                className="mt-6 w-full bg-white/10 text-white hover:bg-white/20"
-                variant="secondary"
-              >
-                <a href={plan.href}>{plan.cta}</a>
-              </Button>
-            </div>
-          ))}
-        </div>
 
         <div className="mx-auto mt-12 max-w-2xl space-y-3">
           {PRICING_FAQ.map((item) => (
@@ -201,11 +177,7 @@ export function LandingPricingSection() {
         </div>
 
         <p className="mt-10 text-center text-xs text-slate-400">
-          Need enterprise SSO, VPC-style isolation, or custom SLOs? Email{" "}
-          <a className="text-slate-300 underline underline-offset-2" href="mailto:fluxychat@outlook.com">
-            fluxychat@outlook.com
-          </a>
-          .
+          Hosted is beta. Pin SDK versions.
         </p>
       </div>
     </section>

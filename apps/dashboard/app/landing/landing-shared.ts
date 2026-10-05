@@ -34,14 +34,6 @@ export const LANDING_BADGES = [
     width: 150,
     height: 45,
   },
-  {
-    id: "sideprojectors",
-    href: "https://www.sideprojectors.com/project/80991/fluxychat",
-    imgSrc: "https://www.sideprojectors.com/img/badges/badge_show_black.png",
-    alt: "Check out Fluxychat at SideProjectors",
-    width: 200,
-    height: 40,
-  },
 ] as const;
 
 export interface LandingNavMenuLink {
@@ -78,7 +70,7 @@ export const LANDING_NAV_MENUS: readonly LandingNavMenu[] = [
         links: [
           { href: "/#realtime", label: "Location & push" },
           { href: "/#realtime", label: "Stream & collab" },
-          { href: HOSTED_PATHS.docs, label: "Labs (gallery)" },
+          { href: HOSTED_PATHS.labs, label: "Labs" },
           { href: "/#realtime", label: "Bridges (you create the vendor app)" },
         ],
       },
@@ -88,11 +80,11 @@ export const LANDING_NAV_MENUS: readonly LandingNavMenu[] = [
     label: "Solutions",
     links: [
       { href: HOSTED_PATHS.why, label: "Why FluxyChat" },
-      { href: "/landing/incident", label: "Incident room" },
-      { href: "/landing/support", label: "Support copilot" },
-      { href: "/landing/pr-review", label: "PR review" },
+      { href: HOSTED_PATHS.incident, label: "Incident room" },
+      { href: HOSTED_PATHS.support, label: "Support copilot" },
+      { href: HOSTED_PATHS.prReview, label: "PR review" },
       { href: HOSTED_PATHS.compare, label: "Compare vendors" },
-      { href: HOSTED_PATHS.docs, label: "Labs (edu, health, events)" },
+      { href: HOSTED_PATHS.labs, label: "Labs" },
       { href: HOSTED_PATHS.guidesBuildNextjs, label: "Next.js quickstart" },
     ],
   },
@@ -105,6 +97,7 @@ export const LANDING_NAV_MENUS: readonly LandingNavMenu[] = [
       { href: "/demo", label: "Try demo (no signup)" },
       { href: HOSTED_PATHS.status, label: "Status" },
       { href: HOSTED_PATHS.trust, label: "Trust" },
+      { href: HOSTED_PATHS.report, label: "Report content" },
       { href: HOSTED_PATHS.migrateChatgpt, label: "ChatGPT import" },
       { href: "/#faq", label: "FAQ" },
     ],
@@ -126,6 +119,7 @@ export const LANDING_NAV_LINKS: readonly TopNavLink[] = [
   { href: "/#faq", label: "FAQ" },
   { href: HOSTED_PATHS.status, label: "Status" },
   { href: HOSTED_PATHS.trust, label: "Trust" },
+  { href: HOSTED_PATHS.report, label: "Report" },
 ];
 
 export const LANDING_MOBILE_MENU_ID = "landing-mobile-menu";

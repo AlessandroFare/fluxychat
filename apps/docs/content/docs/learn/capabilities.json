@@ -44,7 +44,7 @@
     },
     {
       "id": "python-unpublished",
-      "phrase": "Python / Go server SDKs"
+      "phrase": "not published to PyPI"
     },
     {
       "id": "no-load-numbers",
@@ -53,6 +53,10 @@
     {
       "id": "mcp-registry-unlisted",
       "phrase": "Not listed on the official MCP registry"
+    },
+    {
+      "id": "dsa-not-legal-advice",
+      "phrase": "Not legal advice"
     }
   ],
   "notClaimed": ["SOC 2", "HIPAA BAA", "AI Act conformity assessment"]

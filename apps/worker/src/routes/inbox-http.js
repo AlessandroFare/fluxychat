@@ -55,6 +55,58 @@ export async function dispatchInboxRoutes(request, url, h) {
     return json(applyInboxQuery(summary, parsed.query), { headers: corsHeaders });
   }
 
+  if (url.pathname === "/inbox/agent" && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const { createD1ApprovalStore } = await import("../lib/hitl-approval-d1.js");
+    const { hitlRowToInboxItem, rankAgentInboxItems } = await import("../lib/agent-inbox.js");
+    const pending = await createD1ApprovalStore(env).getPendingForApprover(auth.projectId, auth.userId);
+    const items = rankAgentInboxItems((pending || []).map(hitlRowToInboxItem).filter(Boolean));
+    return json({ items, count: items.length }, { headers: corsHeaders });
+  }
+
+  const agentActMatch = url.pathname.match(/^\/inbox\/agent\/([^/]+)$/);
+  if (agentActMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const id = decodeURIComponent(agentActMatch[1]);
+    const body = await request.json().catch(() => ({}));
+    const action = String(body.action || "").toLowerCase();
+    const { createD1ApprovalStore } = await import("../lib/hitl-approval-d1.js");
+    const { applyAgentInboxAction, hitlRowToInboxItem } = await import("../lib/agent-inbox.js");
+    const store = createD1ApprovalStore(env);
+    const existing = await store.get(id);
+    if (!existing || existing.projectId !== auth.projectId) {
+      return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
+    }
+    const item = hitlRowToInboxItem(existing);
+    const applied = applyAgentInboxAction(item, action, {
+      reply: body.reply,
+      edited: body.edited,
+    });
+    if (!applied.ok) return json({ error: applied.error }, { status: 400, headers: corsHeaders });
+    const decision = action === "ignore" ? "denied" : "approved";
+    const note = applied.resume != null && applied.resume !== true ? String(applied.resume) : applied.status;
+    try {
+      const decided = await store.decide(id, auth.userId, decision, note);
+      return json({ ok: true, action: applied.status, request: decided }, { headers: corsHeaders });
+    } catch (err) {
+      return json({ error: err instanceof Error ? err.message : "decide_failed" }, { status: 400, headers: corsHeaders });
+    }
+  }
+
   const snoozeMatch = url.pathname.match(/^\/inbox\/rooms\/([^/]+)\/snooze$/);
   if (snoozeMatch && request.method === "PUT") {
     const auth = await verifyJwtAndGetContext(request, env).catch((err) => {

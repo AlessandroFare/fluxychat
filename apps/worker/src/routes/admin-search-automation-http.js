@@ -70,6 +70,76 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
     return json({ reports: rows.results || [] });
   }
 
+  if (url.pathname === "/admin/dsa-notices" && request.method === "GET") {
+    const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      return null;
+    });
+    if (!adminAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    if (!hasAnyRole(adminAuth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const { isPlatformOperatorProject } = await import("../lib/hosted-saas-policy.js");
+    if (!isPlatformOperatorProject(adminAuth.projectId, env)) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const limit = Math.min(100, Number(url.searchParams.get("limit") || "50"));
+    const rows = env.DB
+      ? await env.DB.prepare(
+          `SELECT id, explanation, content_url, contact, share_token, status, created_at
+           FROM dsa_notices ORDER BY created_at DESC LIMIT ?`,
+        )
+          .bind(limit)
+          .all()
+          .catch(() => ({ results: [] }))
+      : { results: [] };
+    return json({ notices: rows.results || [] }, { headers: corsHeaders });
+  }
+
+  const dsaCloseMatch = url.pathname.match(/^\/admin\/dsa-notices\/([^/]+)$/);
+  if (dsaCloseMatch && request.method === "PATCH") {
+    const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      return null;
+    });
+    if (!adminAuth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    if (!hasAnyRole(adminAuth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const { isPlatformOperatorProject } = await import("../lib/hosted-saas-policy.js");
+    if (!isPlatformOperatorProject(adminAuth.projectId, env)) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const { parseDsaClose, dsaRestrictionEmail } = await import("../lib/dsa-notice.js");
+    const body = await request.json().catch(() => ({}));
+    const parsed = parseDsaClose(body);
+    if (!parsed.ok) return json({ error: parsed.error }, { status: 400, headers: corsHeaders });
+    const id = decodeURIComponent(dsaCloseMatch[1]);
+    let row = null;
+    if (env.DB) {
+      row = await env.DB.prepare(`SELECT * FROM dsa_notices WHERE id = ?`).bind(id).first().catch(() => null);
+      if (row) {
+        await env.DB.prepare(
+          `UPDATE dsa_notices SET status = ?, restriction_reason = ?, decided_at = datetime('now') WHERE id = ?`,
+        )
+          .bind(parsed.status, parsed.reason, id)
+          .run()
+          .catch(() => {});
+      }
+    }
+    if (!row) return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
+    const mail = dsaRestrictionEmail({
+      url: row.content_url,
+      reason: parsed.reason,
+      contact: row.contact,
+    });
+    return json({ ok: true, id, status: parsed.status, email: mail }, { headers: corsHeaders });
+  }
+
   if (url.pathname === "/admin/audit/events" && request.method === "GET") {
     const adminAuth = await verifyJwtAndGetContext(request, env).catch((err) => {
       if (err instanceof Response) throw err;

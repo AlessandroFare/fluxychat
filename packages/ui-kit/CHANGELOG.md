@@ -1,10 +1,22 @@
 # @fluxy-chat/ui-kit
 
-## Unreleased
+## 0.1.8 (2026-10-05)
+
+### Changed
+
+- Widget imports `FluxyThemeId` from `@fluxy-chat/ui`.
+- Peer `@fluxy-chat/sdk` is `^0.6.14`. `@fluxy-chat/ui` is `^0.1.7`.
+
+## 0.1.7 (2026-09-30)
 
 ### Added
 
 - `FluxyAgentTurnChrome` — optional citations / reasoning / cost / HITL status. Host supplies data.
+
+### Changed
+
+- Widget live region / labels (EAA first pass).
+- Peers pin `@fluxy-chat/react@^0.1.8`, `@fluxy-chat/sdk@^0.6.13`, and `@fluxy-chat/ui@^0.1.6`.
 
 ## 0.1.6 (2026-09-09)
 

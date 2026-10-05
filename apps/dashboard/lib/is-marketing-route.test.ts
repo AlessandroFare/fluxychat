@@ -8,6 +8,7 @@ describe("isMarketingPath / isMarketingRoute", () => {
     expect(isMarketingPath("/for-teams")).toBe(true);
     expect(isMarketingPath("/subprocessors")).toBe(true);
     expect(isMarketingRoute("/subprocessors")).toBe(true);
+    expect(isMarketingRoute("/labs")).toBe(true);
   });
 
   it("treats operator pages as console", () => {

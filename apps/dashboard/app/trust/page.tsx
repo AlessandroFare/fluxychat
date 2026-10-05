@@ -59,11 +59,19 @@ export default function TrustPage() {
           if you found a hole.
         </li>
         <li>
-          <Link className="underline underline-offset-2" href="/landing/incident">
+          <Link className="underline underline-offset-2" href={HOSTED_PATHS.incident}>
             Incident rooms
           </Link>
           {" "}
           is product copy for a war-room scaffold. It is not our public postmortem feed.
+        </li>
+        <li>
+          <Link className="underline underline-offset-2" href={HOSTED_PATHS.report}>
+            Report illegal content
+          </Link>
+          {" "}
+          is a DSA hosting notice for public share URLs. We are not a very large online platform.
+          Contact: fluxychat@outlook.com. Not legal advice.
         </li>
       </ul>
 

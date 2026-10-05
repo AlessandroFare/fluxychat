@@ -101,6 +101,7 @@ const {
 - Read receipts
 - Message reactions
 - AI agent invocation
+- Device push registration (`usePushRegistration`, Expo / FCM / APNs)
 - Message search
 - Room export
 

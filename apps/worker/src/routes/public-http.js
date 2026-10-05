@@ -242,6 +242,36 @@ export async function dispatchPublicRoutes(request, url, h) {
     return json({ ok: true, event }, { headers: corsHeaders });
   }
 
+  if (url.pathname === "/public/dsa-report" && request.method === "POST") {
+    const limited = await checkAndConsumeIpRateLimit(env, {
+      request,
+      scope: "dsa-report",
+      limit: 10,
+      windowSeconds: 3600,
+    }).catch(() => ({ allowed: true }));
+    if (limited && limited.allowed === false) {
+      return json({ ok: false, error: "rate_limited" }, { status: 429, headers: corsHeaders });
+    }
+    const body = await request.json().catch(() => ({}));
+    const { parseDsaReport, disableShareToken } = await import("../lib/dsa-notice.js");
+    const parsed = parseDsaReport(body);
+    if (!parsed.ok) return json({ ok: false, error: parsed.error }, { status: 400, headers: corsHeaders });
+    const id = crypto.randomUUID();
+    if (env.DB) {
+      await env.DB.prepare(
+        `INSERT INTO dsa_notices (id, explanation, content_url, contact, share_token, status, created_at)
+         VALUES (?, ?, ?, ?, ?, 'open', datetime('now'))`,
+      )
+        .bind(id, parsed.report.explanation, parsed.report.url, parsed.report.contact, parsed.report.shareToken)
+        .run()
+        .catch(() => {});
+    }
+    let share = { ok: true, disabled: false };
+    if (parsed.report.shareToken) share = await disableShareToken(env, parsed.report.shareToken);
+    logInfo("dsa.notice", { id, shareDisabled: share.disabled });
+    return json({ ok: true, id, shareDisabled: Boolean(share.disabled) }, { headers: corsHeaders });
+  }
+
   if (url.pathname === "/public/demo-credentials" && request.method === "GET") {
     const publishableKey = String(env.PUBLIC_DEMO_PUBLISHABLE_KEY || "").trim();
     if (!publishableKey.startsWith("pk_")) {
@@ -289,6 +319,29 @@ export async function dispatchPublicRoutes(request, url, h) {
         ogPreview: isBrowserRunConfigured(env) ? "browser-run" : "html-fetch",
       },
       paymentsEnabled: Boolean(env.STRIPE_SECRET_KEY),
+      payments: {
+        stripeCheckout: Boolean(env.STRIPE_SECRET_KEY),
+        note: "Stripe checkout is off unless STRIPE_SECRET_KEY is set. Hosted pricing still lists plans.",
+      },
+      bindings: {
+        room: env.ROOM ? "connected" : "missing",
+        agent: env.AGENT ? "connected" : "unbound",
+        db: env.DB ? "connected" : "missing",
+        kv: env.RATE_LIMIT_KV ? "connected" : "missing",
+        r2: env.ATTACHMENTS ? "connected" : "missing",
+      },
+      routes: {
+        share: true,
+        importTranscript: true,
+        tickets: true,
+        hitl: true,
+        voiceBridge: true,
+        deviceRegister: true,
+        browserHandoff: true,
+        a2ui: true,
+        agentInbox: true,
+        dsaReport: true,
+      },
     };
     return json(healthData, { status: criticalOk ? 200 : 503 });
   }

@@ -5,6 +5,9 @@ description = "Join a FluxyChat room, stream tokens, tool events. Thin HTTP/WS c
 readme = "README.md"
 requires-python = ">=3.11"
 
+[project.optional-dependencies]
+ws = ["websockets>=14"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

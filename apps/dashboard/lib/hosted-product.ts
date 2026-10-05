@@ -89,6 +89,11 @@ export const HOSTED_PATHS = {
   forTeams: "/for-teams",
   trust: "/trust",
   migrateChatgpt: "/migrate-chatgpt",
+  incident: "/incident",
+  support: "/support",
+  prReview: "/pr-review",
+  labs: "/labs",
+  report: "/report",
   /** Fumadocs “Chat only” progressive disclosure slice */
   docsChatOnly: docsSiteHref("chat-only"),
 } as const;

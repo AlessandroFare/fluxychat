@@ -16,6 +16,8 @@ import {
   synthesizeWithWorkersAi,
 } from "../lib/workers-ai-speech.js";
 import { safeOutboundFetch } from "../lib/url-ssrf.js";
+import { mapVoiceBridgeEvent } from "../lib/voice-room-bridge.js";
+import { requestHumanHandoff } from "../lib/room-handoff.js";
 
 export async function dispatchVoiceAiRoutes(request, url, h) {
   const path = url.pathname;
@@ -23,6 +25,11 @@ export async function dispatchVoiceAiRoutes(request, url, h) {
   if (request.method === "GET" && path === "/voice-ai/providers") {
     const { json: respond } = pickRouteDeps(h, ["json"]);
     return respond({ providers: listVoiceAiProviders() }, h);
+  }
+
+  const voiceBridgeMatch = path.match(/^\/rooms\/([^/]+)\/voice-bridge$/);
+  if (request.method === "POST" && voiceBridgeMatch) {
+    return dispatchVoiceBridge(request, decodeURIComponent(voiceBridgeMatch[1]), h);
   }
 
   if (
@@ -268,4 +275,57 @@ async function dispatchMemberSpeech(request, path, h) {
     },
     { headers: corsHeaders },
   );
+}
+
+async function dispatchVoiceBridge(request, roomId, h) {
+  const {
+    env,
+    json,
+    corsHeaders,
+    requestLogCtx,
+    verifyJwtAndGetContext,
+    logError,
+  } = pickRouteDeps(h, [
+    "env",
+    "json",
+    "corsHeaders",
+    "requestLogCtx",
+    "verifyJwtAndGetContext",
+    "logError",
+  ]);
+  const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+    if (err instanceof Response) throw err;
+    logError("auth.jwt_verify_failed", err, requestLogCtx);
+    return null;
+  });
+  if (!auth) {
+    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  }
+  const allowed = await canAccessRoom(env, auth, roomId);
+  if (!allowed) return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+  const body = await request.json().catch(() => null);
+  const mapped = mapVoiceBridgeEvent(body);
+  if (!mapped.ok) return json({ error: mapped.error }, { status: 400, headers: corsHeaders });
+  const event = mapped.event;
+  if (event.kind === "handoff") {
+    const handoff = await requestHumanHandoff(env, {
+      projectId: auth.projectId,
+      roomId,
+      userId: auth.userId,
+      roles: auth.roles,
+      note: event.text || "voice_bridge_handoff",
+    });
+    if (!handoff.ok) return json(handoff, { status: 403, headers: corsHeaders });
+  }
+  await fanoutRoomInternal(env, auth.projectId, roomId, "/announce", {
+    method: "POST",
+    body: JSON.stringify({
+      ...event,
+      roomId,
+      userId: auth.userId,
+      visibility: event.kind === "coach_whisper" ? "whisper" : "room",
+      visibleTo: event.visibleToUserId ? [event.visibleToUserId] : undefined,
+    }),
+  });
+  return json({ ok: true, event }, { headers: corsHeaders });
 }

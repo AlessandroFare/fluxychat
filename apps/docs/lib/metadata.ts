@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 
 function docsBaseUrl(): URL {
   const fromEnv = process.env.NEXT_PUBLIC_DOCS_URL?.trim();
-  if (fromEnv) return new URL(fromEnv);
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
-    return new URL("https://docs.fluxychat.com");
+  if (fromEnv && !/localhost|127\.0\.0\.1/i.test(fromEnv)) return new URL(fromEnv);
+  if (process.env.NODE_ENV === "development" && !process.env.VERCEL && !process.env.CF_PAGES) {
+    return new URL("http://localhost:3001");
   }
-  return new URL("http://localhost:3001");
+  return new URL("https://docs.fluxychat.com");
 }
 
 export const baseUrl = docsBaseUrl();

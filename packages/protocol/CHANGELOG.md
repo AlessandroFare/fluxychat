@@ -1,5 +1,13 @@
 # @fluxy-chat/protocol
 
+## 0.1.6 (2026-09-30)
+
+### Added
+
+- Inbound `derived`, outbound `derived_set` in `protocol-events.json` (Room DO already used these names).
+
+Publish this **before** `@fluxy-chat/sdk@0.6.13`.
+
 ## 0.1.5 (2026-08-27)
 
 ### Added

@@ -26,9 +26,11 @@ export function LandingFooter() {
             <Link href={HOSTED_PATHS.guides} className="hover:text-white">Guides</Link>
             <Link href={HOSTED_PATHS.forTeams} className="hover:text-white">For teams</Link>
             <Link href={HOSTED_PATHS.trust} className="hover:text-white">Trust</Link>
+            <Link href={HOSTED_PATHS.report} className="hover:text-white">Report content</Link>
             <Link href={HOSTED_PATHS.migrateChatgpt} className="hover:text-white">ChatGPT import</Link>
-            <Link href="/landing/incident" className="hover:text-white">Incident</Link>
-            <Link href="/landing/support" className="hover:text-white">Support</Link>
+            <Link href={HOSTED_PATHS.incident} className="hover:text-white">Incident</Link>
+            <Link href={HOSTED_PATHS.support} className="hover:text-white">Support</Link>
+            <Link href={HOSTED_PATHS.labs} className="hover:text-white">Labs</Link>
             <Link href={HOSTED_PATHS.status} className="hover:text-white">Status</Link>
             <Link href={HOSTED_PATHS.dpa} className="hover:text-white">DPA</Link>
             <Link href={HOSTED_PATHS.terms} className="hover:text-white">Terms</Link>

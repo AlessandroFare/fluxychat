@@ -94,11 +94,18 @@ describe("resolveAgentPolicy", () => {
     const config = defineConfig({
       agents: {
         "*": { mention: true, dailyTokenCap: 10_000 },
-        "bot-legal": { mention: false, tools: ["search"], onBehalfOf: true, toolApproval: "user-approval" },
+        "bot-legal": {
+          mention: false,
+          tools: ["search"],
+          onBehalfOf: true,
+          toolApproval: "user-approval",
+          toolAutonomy: "act-with-approval",
+        },
       },
     });
     expect(resolveAgentPolicy(config, "bot-legal").mention).toBe(false);
     expect(resolveAgentPolicy(config, "bot-legal").toolApproval).toBe("user-approval");
+    expect(resolveAgentPolicy(config, "bot-legal").toolAutonomy).toBe("act-with-approval");
     expect(resolveAgentPolicy(config, "other").dailyTokenCap).toBe(10_000);
   });
 });
@@ -113,6 +120,7 @@ describe("toHostedOverlay", () => {
             anonymous: false,
             guestCanPublish: false,
             extensions: [{ id: "state", kind: "kv" }],
+            makerChecker: true,
             authz: () => block("nope"),
             onPublish: [() => allowPublish()],
           },
@@ -123,6 +131,7 @@ describe("toHostedOverlay", () => {
     expect(overlay.guestCanPublish).toBe(false);
     expect(overlay.rooms?.["support-*"]?.anonymous).toBe(false);
     expect(overlay.rooms?.["support-*"]?.extensions).toEqual([{ id: "state", kind: "kv" }]);
+    expect(overlay.rooms?.["support-*"]?.makerChecker).toBe(true);
     expect(overlay.rooms?.["support-*"]).not.toHaveProperty("authz");
   });
 });

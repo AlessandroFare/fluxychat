@@ -187,8 +187,8 @@ export async function dispatchHitlApprovalRoutes(request, url, h) {
         return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
       }
     }
-    const { buildHitlEvidencePack } = await import("../lib/hitl-evidence-pack.js");
-    return json({ ok: true, evidence: buildHitlEvidencePack(entry) }, { headers: corsHeaders });
+    const { sealHitlEvidencePack } = await import("../lib/hitl-evidence-pack.js");
+    return json({ ok: true, evidence: await sealHitlEvidencePack(entry) }, { headers: corsHeaders });
   }
 
   const legacyMatch = path.match(/^\/api\/hitl\/approvals\/([^/]+)\/(approve|deny)$/);
@@ -251,7 +251,13 @@ export async function dispatchHitlApprovalRoutes(request, url, h) {
     return json({ approval: updated, ok: true }, { headers: corsHeaders });
   } catch (err) {
     const message = err instanceof Error ? err.message : "decision_failed";
-    const status = message === "not_current_approver" ? 403 : 409;
+    const status =
+      message === "not_current_approver" ||
+      message === "requester_cannot_approve" ||
+      message === "agent_cannot_approve" ||
+      message === "maker_checker_requires_human"
+        ? 403
+        : 409;
     return json({ error: message }, { status, headers: corsHeaders });
   }
 }

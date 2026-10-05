@@ -13,10 +13,9 @@ function walk(dir) {
     if (name !== "package.json") continue;
     const s = fs.readFileSync(p, "utf8");
     const next = s
-      .replaceAll('"@fluxy-chat/react": "^0.1.7"', '"@fluxy-chat/react": "^0.1.8"')
-      .replaceAll('"@fluxy-chat/sdk": "^0.6.10"', '"@fluxy-chat/sdk": "^0.6.12"')
-      .replaceAll('"@fluxy-chat/ui": "^0.1.4"', '"@fluxy-chat/ui": "^0.1.5"')
-      .replaceAll('"@fluxy-chat/ui-kit": "^0.1.5"', '"@fluxy-chat/ui-kit": "^0.1.6"');
+      .replaceAll('"@fluxy-chat/ui-kit": "^0.1.7"', '"@fluxy-chat/ui-kit": "^0.1.8"')
+      .replaceAll('"@fluxy-chat/ui": "^0.1.6"', '"@fluxy-chat/ui": "^0.1.7"')
+      .replaceAll('"@fluxy-chat/sdk": "^0.6.13"', '"@fluxy-chat/sdk": "^0.6.14"');
     if (next !== s) {
       fs.writeFileSync(p, next);
       console.log("updated", p);

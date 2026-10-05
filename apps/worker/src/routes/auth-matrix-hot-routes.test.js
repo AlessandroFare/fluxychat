@@ -81,6 +81,11 @@ const cases401 = [
     request: () => unauthorizedRequest("/inbox"),
   },
   {
+    name: "GET /inbox/agent",
+    dispatch: dispatchInboxRoutes,
+    request: () => unauthorizedRequest("/inbox/agent"),
+  },
+  {
     name: "GET /notifications",
     dispatch: dispatchNotificationsRoutes,
     request: () => unauthorizedRequest("/notifications"),
@@ -109,6 +114,11 @@ const cases401 = [
     name: "GET /admin/reports",
     dispatch: dispatchAdminSearchAutomationRoutes,
     request: () => unauthorizedRequest("/admin/reports"),
+  },
+  {
+    name: "GET /admin/dsa-notices",
+    dispatch: dispatchAdminSearchAutomationRoutes,
+    request: () => unauthorizedRequest("/admin/dsa-notices"),
   },
   {
     name: "GET /digest/preferences",

@@ -70,6 +70,20 @@ describe("validateToolCall", () => {
     expect(r.valid).toBe(false);
     expect(r.warning).toContain("unknown_name");
   });
+
+  it("lets askHuman through an empty env allow-list", () => {
+    const r = validateToolCall(
+      {
+        id: "call_h",
+        function: { name: "askHuman", arguments: '{"prompt":"ok?"}' },
+      },
+      [{ function: { name: "askHuman" } }],
+      "run-h",
+      null,
+      new Set(),
+    );
+    expect(r.valid).toBe(true);
+  });
 });
 
 describe("extractOpenAIToolCalls", () => {

@@ -20,7 +20,7 @@ import {
   estimateCost,
 } from "./agent-llm.js";
 import { parseAgentToolAllowListFromEnv } from "./agent-tool-calls.js";
-import { emitGenAiChatSpan, emitGenAiToolSpan, tokenUsageFromLlmResponse } from "./genai-spans.js";
+import { emitGenAiChatSpan, emitGenAiToolSpan, emitGenAiInvokeAgentSpan, tokenUsageFromLlmResponse } from "./genai-spans.js";
 import { classifyDoFailure } from "./do-retry-taxonomy.js";
 import { executeToolCall, fetchAppContext } from "./agent-tools.js";
 import {
@@ -674,7 +674,7 @@ export async function invokeMentionedAgents(
   }
 }
 
-export async function executeAgentRun(env, { agentRow, projectId, roomId, userMessage, userId, traceId, streamHooks, parentRunId = null, parentToolCallId = null, nestDepth = 0, skipRoomAnnounce = false, attachments = [] }) {
+export async function executeAgentRun(env, { agentRow, projectId, roomId, userMessage, userId, invokerRoles, traceId, streamHooks, parentRunId = null, parentToolCallId = null, nestDepth = 0, skipRoomAnnounce = false, attachments = [] }) {
   const startTime = performance.now();
   const runId = crypto.randomUUID();
   const lineagePayload =
@@ -746,6 +746,16 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         error: null,
         created_at: new Date().toISOString(),
       },
+    });
+    emitGenAiInvokeAgentSpan(env, {
+      projectId,
+      roomId,
+      agentId: agentRow.id,
+      agentName: agentRow.name || agentRow.handle || agentRow.id,
+      runId,
+      ok: true,
+      startedAtMs: Date.now() - latencyMs,
+      endedAtMs: Date.now(),
     });
     return {
       runId,
@@ -860,6 +870,8 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
   // Builtin agents without tool_execute_url still get `run_agent` (room timeline).
   tools = withNestedAgentTool(tools, Boolean(toolExecuteUrl?.trim()));
+  const { withAskHumanTool } = await import("./agent-inbox.js");
+  tools = withAskHumanTool(tools);
   // Audit S-35: agent-level tool allow-list. NULL means "not set" (legacy
   // behaviour: trust the declared schema); an empty array means "deny all";
   // a non-empty array means "allow exactly these names". The list is
@@ -1063,6 +1075,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       evaluateTwoKeyTurn({
         history: conversationHistory,
         invokerUserId: userId,
+        invokerRoles,
         agentId: agentRow.id,
         appContext,
         contextFetchUrl,
@@ -1400,10 +1413,80 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       }
 
       for (const tc of extracted.toolCalls) {
+        let input = {};
+        try { input = JSON.parse(tc.arguments); } catch { input = {}; }
+        if (String(tc.name).toLowerCase() === "askhuman") {
+          const { askHumanTool } = await import("./agent-inbox.js");
+          const asked = askHumanTool(input);
+          if (!asked.ok) {
+            allToolCalls.push({
+              id: tc.id,
+              name: tc.name,
+              arguments: tc.arguments,
+              success: false,
+              error: asked.error || "ask_human_invalid",
+            });
+            messages.push(buildToolResultMessage(connection, tc, { success: false, error: asked.error }));
+            continue;
+          }
+          if (!activeApprovalStore) {
+            allToolCalls.push({
+              id: tc.id,
+              name: tc.name,
+              arguments: tc.arguments,
+              success: false,
+              error: "approval_required_no_store",
+            });
+            messages.push(
+              buildToolResultMessage(connection, tc, {
+                success: false,
+                error: "askHuman needs HITL store",
+              }),
+            );
+            continue;
+          }
+          const roomChain = await getRoomApprovalChain(env, projectId, roomId);
+          const chainSnapshot = snapshotApprovalChain(roomChain);
+          const request = await activeApprovalStore.create({
+            projectId,
+            toolName: "askHuman",
+            toolInput: input,
+            toolCallId: tc.id,
+            roomId,
+            userId,
+            agentId: agentRow.id,
+            runId,
+            approvalChainSnapshot: chainSnapshot,
+            reason: asked.interrupt.prompt,
+          });
+          await announce({
+            type: "approval_requested",
+            runId,
+            agentId: agentRow.id,
+            approvalRequestId: request.id,
+            toolCallId: tc.id,
+            toolName: "askHuman",
+            arguments: tc.arguments,
+            currentApproverId: request.currentApproverId ?? null,
+            approvalChainSnapshot: chainSnapshot,
+          });
+          allToolCalls.push({
+            id: tc.id,
+            name: "askHuman",
+            arguments: tc.arguments,
+            success: false,
+            error: "approval_required",
+          });
+          messages.push(
+            buildToolResultMessage(connection, tc, {
+              success: false,
+              error: "Waiting for a human on Agent Inbox",
+            }),
+          );
+          continue;
+        }
         // P23-2: HITL approval — check if tool call needs approval
         if (approvalGate) {
-          let input = {};
-          try { input = JSON.parse(tc.arguments); } catch { input = {}; }
           let needsApproval = false;
           try {
             needsApproval = await approvalGate.needsApproval(tc.name, input, {
@@ -1693,6 +1776,17 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         created_at: new Date().toISOString(),
       },
     });
+    emitGenAiInvokeAgentSpan(env, {
+      projectId,
+      roomId,
+      agentId: agentRow.id,
+      agentName: agentRow.name || agentRow.handle || agentRow.id,
+      model: connection.model,
+      runId,
+      ok: true,
+      startedAtMs: Date.now() - latencyMs,
+      endedAtMs: Date.now(),
+    });
 
     return {
       runId,
@@ -1728,6 +1822,16 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         retryable: classified.retry,
         created_at: new Date().toISOString(),
       },
+    });
+    emitGenAiInvokeAgentSpan(env, {
+      projectId,
+      roomId,
+      agentId: agentRow.id,
+      agentName: agentRow.name || agentRow.handle || agentRow.id,
+      runId,
+      ok: false,
+      startedAtMs: Date.now() - latencyMs,
+      endedAtMs: Date.now(),
     });
     return {
       runId,

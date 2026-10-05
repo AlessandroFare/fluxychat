@@ -9,6 +9,7 @@ import {
 } from "./room-approval-chain.js";
 import { appendRoomTimelineEvent } from "./room-timeline-events.js";
 import { createInAppNotification } from "./in-app-notifications.js";
+import { assertMakerCheckerDecision } from "./maker-checker.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -187,6 +188,17 @@ export function createD1ApprovalStore(env) {
       if (existing.currentApproverId && existing.currentApproverId !== userId) {
         throw new Error("not_current_approver");
       }
+      const makerChecker =
+        existing.approvalChainSnapshot?.makerChecker === true ||
+        env.HITL_MAKER_CHECKER === "true" ||
+        env.HITL_MAKER_CHECKER === "1";
+      const check = assertMakerCheckerDecision({
+        makerChecker,
+        requesterUserId: existing.requesterUserId,
+        decidedBy: userId,
+        agentId: existing.agentId,
+      });
+      if (!check.ok) throw new Error(check.error);
 
       const status = decision === "approve" || decision === "approved" ? "approved" : "denied";
       const now = nowIso();
@@ -203,6 +215,24 @@ export function createD1ApprovalStore(env) {
         await attachHumanOutcome(env, { hitlRequestId: id, outcome: status, decidedBy: userId });
       } catch {
         /* labels must not fail the decision */
+      }
+
+      try {
+        const { emitGenAiApprovalWaitSpan } = await import("./genai-spans.js");
+        const startedAtMs = existing.startedAt ? Date.parse(existing.startedAt) : Date.now();
+        emitGenAiApprovalWaitSpan(env, {
+          projectId: existing.projectId,
+          roomId: existing.roomId,
+          agentId: existing.agentId,
+          runId: existing.toolCallId || existing.id,
+          approvalId: existing.id,
+          status,
+          decidedBy: userId,
+          startedAtMs: Number.isFinite(startedAtMs) ? startedAtMs : Date.now(),
+          endedAtMs: Date.now(),
+        });
+      } catch {
+        /* telemetry must not fail the decision */
       }
 
       return this.get(id);

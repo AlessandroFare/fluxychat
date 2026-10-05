@@ -4,12 +4,12 @@ const LANDING_STATS = [
   {
     icon: Globe,
     value: "Bridges",
-    label: "Slack, Discord, Telegram, WhatsApp, Teams: you create the vendor app. Same channel_configs table, not a finished helpdesk.",
+    label: "You create the Slack, Discord, Telegram, WhatsApp, or Teams app and paste the token. WhatsApp in the EU is in a Commission case right now. We don't sell a WhatsApp channel.",
   },
   {
     icon: Cpu,
     value: "Agents in-room",
-    label: "invokeAgent streams on the same timeline as chat. Copilots do not write the timeline.",
+    label: "invokeAgent streams on the same timeline as chat. A copilot panel stays off the chat log.",
   },
   {
     icon: Layers,

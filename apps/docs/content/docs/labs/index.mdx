@@ -1,0 +1,26 @@
+---
+title: Labs
+description: Optional cookbooks and modules. Not the kernel. Not healthcare.
+---
+
+The product is a **room**: chat, presence, Yjs, `invokeAgent`, HITL. Stream overlays, IoT, fleet, game ticks, audience scores, and community simulations live here so they stay off the main nav.
+
+Healthcare is **not for sale**. There is no BAA and no SOC 2 Type II. A later hybrid (data in the customer Cloudflare account) is the only HIPAA-shaped path we would discuss, and we do not promise it.
+
+Cookbooks that used to sit at the top of docs: [Cookbook](/docs/cookbook).
+
+Voice: we do not run an SFU. `POST /rooms/:id/voice-bridge` takes transcripts, tool calls, and approval requests from LiveKit Agents, Pipecat, or OpenAI Realtime. Media stays in those products.
+
+Legal: `--example negotiation-room` is two counterparties in one room with auto / ask / deny. Ask is HITL. We do not sell a CLM.
+
+Finance: maker-checker on HITL (`rooms.*.makerChecker`), `toolAutonomy` on the agent, SHA-256 evidence pack on decide. Not a core banking rail.
+
+Native push: register with `expo` / `fcm-v1` / `apns`. Notification copy has no tool args. Approve/deny is POST with a one-time token.
+
+Browser handoff: `POST /rooms/:id/browser-handoff` publishes a Live View card as a whisper. Recording pauses on login/MFA. Screenshots do not go on the transcript. Browser Run traffic is bot-identified.
+
+A2UI: agents declare ui-kit catalog components (`POST /rooms/:id/a2ui`). Buttons are person-attributed and can require quorum.
+
+Agent Inbox: `GET /inbox/agent` lists pending HITL for you. Ambient `cron` policies need a `roomId` and a 5-field (or minute-step) pattern. Worker `*/5` ticks them.
+
+DSA: public `/report` posts to `POST /public/dsa-report`. Share tokens are disabled in place. Not a VLOP process and not legal advice.

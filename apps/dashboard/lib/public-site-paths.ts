@@ -27,6 +27,11 @@ export const PUBLIC_SITE_PATH_PREFIXES = [
   "/sign-up",
   "/r",
   "/share",
+  "/incident",
+  "/support",
+  "/pr-review",
+  "/labs",
+  "/report",
 ] as const;
 
 export function isPublicSitePath(pathname: string): boolean {
@@ -49,6 +54,7 @@ export function clerkPublicRoutePatterns(): string[] {
     "/api/fluxy/search-settings(.*)",
     "/api/fluxy/config(.*)",
     "/api/gdpr(.*)",
+    "/api/dsa-report(.*)",
   ];
   const pages = PUBLIC_SITE_PATH_PREFIXES.flatMap((prefix) => [prefix, `${prefix}/(.*)`]);
   return [...extra, ...pages];

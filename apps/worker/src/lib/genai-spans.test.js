@@ -109,7 +109,29 @@ describe("genai spans", () => {
       startedAtMs: 1_000,
       endedAtMs: 1_010,
     });
-    expect(tool.name).toBe("execute_tool");
+    expect(tool.name).toBe("execute_tool search");
     expect(tool.status.code).toBe("ERROR");
+  });
+
+  it("names invoke_agent and approval wait spans", async () => {
+    const { emitGenAiInvokeAgentSpan, emitGenAiApprovalWaitSpan } = await import("./genai-spans.js");
+    const agent = emitGenAiInvokeAgentSpan({}, {
+      runId: "run-abc",
+      agentName: "legal",
+      roomId: "room-1",
+      ok: true,
+      startedAtMs: 1_000,
+      endedAtMs: 2_000,
+    });
+    expect(agent.name).toBe("invoke_agent legal");
+    const wait = emitGenAiApprovalWaitSpan({}, {
+      approvalId: "apr_1",
+      runId: "run-abc",
+      status: "approved",
+      startedAtMs: 1_000,
+      endedAtMs: 4_000,
+    });
+    expect(wait.name).toBe("fluxy.approval.wait");
+    expect(wait.attributes.some((a) => a.key === "fluxy.approval.wait_ms" && a.value.stringValue === "3000")).toBe(true);
   });
 });
