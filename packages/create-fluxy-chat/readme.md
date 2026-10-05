@@ -26,13 +26,9 @@ Self-host writes `.fluxy/worker.dev.vars` (Worker URL, Groq key, signing key). M
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-app --mode hosted -y
 npx @fluxy-chat/create-fluxy-chat@latest my-app --full -y
-npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors
-npx @fluxy-chat/create-fluxy-chat@latest my-doc --example tiptap-room
-npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room
-npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
-npx @fluxy-chat/create-fluxy-chat@latest my-draw --example draw
-npx @fluxy-chat/create-fluxy-chat@latest my-deal --example deal-room
 npx @fluxy-chat/create-fluxy-chat@latest my-room --example shared-ai-room
+npx @fluxy-chat/create-fluxy-chat@latest my-deal --example deal-room
+npx @fluxy-chat/create-fluxy-chat@latest my-cursors --example live-cursors
 npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
 npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick
 npx @fluxy-chat/create-fluxy-chat@latest my-stage --example voice-stage

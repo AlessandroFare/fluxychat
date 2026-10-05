@@ -55,7 +55,16 @@ Report vulnerabilities privately — do not open public issues for exploitable b
 
 ## License
 
-By contributing, you agree your contributions are licensed under the same license as the project (see repository `LICENSE`).
+By contributing, you agree your contributions are licensed under the same license as the project (see repository `LICENSE`, currently MIT).
+
+Each commit must include a Developer Certificate of Origin sign-off (`DCO` in the repo root):
+
+```
+Signed-off-by: Your Name <you@example.com>
+```
+
+Git: `git commit -s`. A CLA is not collected yet. Relicensing (Apache-2.0 patent grant, or a separable enterprise folder for SSO/SCIM/hybrid control plane) is not happening until there are users. Do not move SSO/SCIM into a closed tree in this PR cycle.
+
 
 ## Community norms
 

@@ -3,7 +3,7 @@
  */
 
 export const MARKETING_HERO = {
-  eyebrow: "Shared AI rooms",
+  eyebrow: "MIT on your Cloudflare account",
   headlineLead: "Humans and agents",
   headlineAccent: "in the same room",
   subhead:
@@ -12,11 +12,11 @@ export const MARKETING_HERO = {
 
 export const MARKETING_WHY = {
   title: "What you stop paying for",
-  body: "Chat, presence, Yjs, and an agent sit on one Durable Object. Hosted is beta. Self-host is MIT. Pusher is transport. Liveblocks is the document. Stream is consumer chat.",
+  body: "Chat, presence, Yjs, and an agent sit on one Durable Object. Hosted is beta. Self-host is MIT. Pusher moves bytes. Liveblocks is the document. Stream Chat is a hosted chat product with channels and moderation.",
 } as const;
 
 export const MARKETING_PLATFORM_FEATURES = [
-  "One room Durable Object: chat, sendCursor, Yjs, invokeAgent, HTTP ingest",
+  "One room Durable Object: chat, presence, Yjs, invokeAgent",
   "Guest session or pk_ for public rooms; fc_ stays on the server",
   "fluxy.config onPublish plus hosted D1 overlay (no forked Worker)",
   "Bridges: you create Slack/Discord/Telegram apps on the same table",
@@ -33,37 +33,37 @@ export const MARKETING_USE_CASES = [
   },
   {
     title: "Bridges",
-    body: "Create the Slack, Discord, Telegram, WhatsApp, or Teams app yourself. Paste the token in the console and point the webhook at the Worker. SMS to phones still needs a telco.",
+    body: "Create the Slack, Discord, Telegram, WhatsApp, or Teams app yourself. Paste the token in the console and point the webhook at the Worker. SMS to phones still needs a telco. WhatsApp in the EU is in a Commission case right now. We don't sell a WhatsApp channel.",
   },
   {
     title: "Export, erasure, webhooks",
-    body: "GDPR export and erasure run on the Worker. Webhooks are signed. We do not sell that as a separate SKU.",
+    body: "GDPR export and erasure run on the Worker. Webhooks are signed.",
   },
   {
     title: "Ship without a socket fleet",
-    body: "JWT, the SDK, and a console. You do not have to be the person who keeps WebSockets alive at 3am.",
+    body: "JWT, the SDK, and a console. You don't have to keep a socket fleet alive at 3am.",
   },
 ] as const;
 
 export const MARKETING_ENTERPRISE = {
-  eyebrow: "Enterprise default",
-  title: "The room Cloudflare Agents will not ship",
+  eyebrow: "Cross-org rooms",
+  title: "A room other organisations can join",
   intro:
-    "Cloudflare Agents give you a Durable Object. FluxyChat is a room other orgs can join: private terms, quorum on dangerous tools, a Worker-wrapped envelope, a signed export. The envelope is not customer KMS. An LLM still sees plaintext on invoke.",
+    "Cloudflare Agents is one agent in a Durable Object. This is a room. Two companies can sit in it with private whispers. Dangerous tools wait for a human. We wrap the payload on the Worker and can sign an export. Anyone with Worker secrets can unwrap. The model sees plaintext on invoke.",
   items: [
-    "Cross-org rooms, private terms, and settlements",
-    "Critical-action quorum on the same WebSocket as chat",
-    "Worker-wrapped room envelope and signed export. Not zero-access E2EE.",
+    "Cross-org rooms and private terms",
+    "Quorum on dangerous tools, on the same WebSocket as chat",
+    "Worker-wrapped payload and a signed export. You do not hold a customer KMS.",
     "Room SQLite PITR (30-day bookmarks, restore on next wake)",
-    "SSO / SCIM on self-host. Hosted SAML login is off unless enabled after review.",
+    "SSO and SCIM on self-host. Hosted login does not include SAML.",
     "Audit logs, retention, legal hold, GDPR export",
-    "Per-tool HITL gates and OpenTelemetry gen_ai spans",
+    "Per-tool approval gates and OpenTelemetry gen_ai spans",
   ],
 } as const;
 
 export const MARKETING_FINAL_CTA = {
   title: "Same SDK on hosted or on your Cloudflare account.",
-  body: "Free has no card. Public rooms take a pk_. Private rooms take a member JWT minted with fc_ on the server. Hosted is beta. Self-host when procurement asks who owns D1.",
+  body: "Free has no card. Public rooms take a pk_. Private rooms take a member JWT minted with fc_ on the server. Hosted is beta. Self-host if procurement asks who owns D1.",
   primaryLabel: "Start free",
   secondaryLabel: "Book a pilot",
   secondaryHref: "mailto:fluxychat@outlook.com?subject=FluxyChat%20pilot",

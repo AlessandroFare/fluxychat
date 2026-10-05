@@ -61,6 +61,10 @@ coverage/
 # Misc local tooling
 *.local
 
+packages/python/generated/
+packages/sdk-go/generated/
+
+
 # Logo source bundle (canonical copies live in apps/dashboard)
 fluxychat-logo-assets/
 
@@ -112,3 +116,18 @@ docs/audit/REMEDIATION.open.md
 apps/docs/content/docs/operations/competitor-parity-roadmap.mdx
 apps/docs/content/docs/operations/next-wave-roadmap.mdx
 apps/docs/content/docs/architecture/competitive-strategy.mdx
+
+# Local Playwright Chromium (do not publish)
+.pw-browsers/
+
+# Graphify dumps (already in git; run git rm -r --cached graphify-out)
+graphify-out/
+
+# Daily session notes
+memory/
+
+# Internal test campaigns and war-room notes
+qa/
+
+# Founder GTM drafts (Italian research, scripts, sequences)
+docs/marketing/*.md

@@ -21,7 +21,10 @@ head_sampling_rate = 1.0
 WORKFLOW_SCHEDULES_ENABLED = "false"
 # Browser Run quickAction() incurs cost — set "true" only when you need SPA OG previews.
 BROWSER_ENABLED = "false"
-# Public rooms: joinPublicRoomAsGuest without minting a member JWT. Guests can send unless you set READ_ONLY.
+# Public rooms: joinPublicRoomAsGuest without minting a member JWT.
+# Self-host: PUBLIC_GUEST_READ_ONLY=false lets guests send. Hosted (HOSTED_MULTI_TENANT)
+# defaults guests to read-only unless PUBLIC_GUEST_ALLOW_WRITES=true; Turnstile is required.
+# Never set ALLOW_WORKER_LLM_FALLBACK=true on hosted.
 PUBLIC_GUEST_ENABLED = "true"
 PUBLIC_GUEST_READ_ONLY = "false"
 # Optional: skip ambient agent policies when the room has no live humans.

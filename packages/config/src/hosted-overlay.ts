@@ -60,6 +60,7 @@ export function sanitizeHostedRoomOverlay(raw: unknown): FluxyHostedRoomOverlay 
   if (capabilities) overlay.capabilities = capabilities;
   const extensions = sanitizeExtensions(row.extensions);
   if (extensions) overlay.extensions = extensions;
+  if (row.makerChecker === true) overlay.makerChecker = true;
   return Object.keys(overlay).length ? overlay : null;
 }
 
@@ -91,6 +92,7 @@ export function toHostedOverlay(config: FluxyConfig | null | undefined): FluxyHo
           denySubstrings: room.denySubstrings,
           capabilities: room.capabilities,
           extensions: room.extensions,
+          makerChecker: room.makerChecker,
         },
       ]),
     ),

@@ -2153,3 +2153,40 @@ export {
   publishExternalGenerationChunksToRoom,
   messageIdFromGenerationBody,
 } from "./fluxy-external-generation";
+
+export {
+  mapVoiceBridgeEvent,
+  postVoiceBridgeEvent,
+  VOICE_BRIDGE_SOURCES,
+  VOICE_BRIDGE_KINDS,
+  type VoiceBridgeSource,
+  type VoiceBridgeKind,
+  type VoiceBridgeEvent,
+  type VoiceBridgeEventInput,
+} from "./voice-room-bridge";
+
+export {
+  createPushProvider,
+  hitlPushCopy,
+  PUSH_BACKENDS,
+  type PushBackend,
+  type PushDeviceRecord,
+  type PushMessage,
+  type PushProvider,
+} from "./push-provider";
+
+export {
+  A2UI_CATALOG,
+  A2UI_CATALOG_VERSION,
+  postA2uiSurface,
+  type A2uiComponent,
+  type A2uiComponentType,
+} from "./a2ui";
+
+export { postBrowserHandoff } from "./browser-handoff";
+
+export {
+  fetchAgentInbox,
+  postAgentInboxAction,
+  type AgentInboxItem,
+} from "./agent-inbox";

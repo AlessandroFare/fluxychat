@@ -455,6 +455,117 @@ paths:
       responses:
         "200":
           description: Inbox summary
+  /inbox/agent:
+    get:
+      summary: Agent Inbox
+      description: Pending HITL and askHuman rows for the current approver.
+      tags:
+        - Inbox
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Ranked inbox items
+  /inbox/agent/{id}:
+    post:
+      summary: Act on an Agent Inbox item
+      description: accept and ignore map to HITL decide. edit and reply store a resume note.
+      tags:
+        - Inbox
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum: [accept, edit, reply, ignore]
+                reply:
+                  type: string
+                edited:
+                  type: string
+      responses:
+        "200":
+          description: Decision applied
+  /public/dsa-report:
+    post:
+      summary: Public DSA notice
+      description: Unauthenticated, rate-limited. Share tokens are revoked, not reminted. Not legal advice.
+      tags:
+        - Public
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - explanation
+                - url
+                - contact
+                - goodFaith
+              properties:
+                explanation:
+                  type: string
+                url:
+                  type: string
+                contact:
+                  type: string
+                goodFaith:
+                  type: boolean
+      responses:
+        "200":
+          description: Notice logged
+  /admin/dsa-notices:
+    get:
+      summary: List DSA notices
+      description: Platform operator only on hosted. Public notices from POST /public/dsa-report.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notice rows
+  /admin/dsa-notices/{id}:
+    patch:
+      summary: Close a DSA notice
+      description: Writes a restriction reason. Returns an email template. Not a court order.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                restrictionReason:
+                  type: string
+      responses:
+        "200":
+          description: Closed with reasons template
   /inbox/rooms/{roomId}/snooze:
     put:
       summary: Snooze room in inbox

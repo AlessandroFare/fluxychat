@@ -2,6 +2,8 @@
  * Guest-only JWT helpers (P10-SB6).
  */
 
+import { isHostedMultiTenantMode } from "./hosted-saas-policy.js";
+
 const MEMBER_PLUS_ROLES = ["member", "owner", "admin", "mod", "moderator", "bot"];
 
 /**
@@ -26,8 +28,20 @@ export function isPublicGuestEnabled(env) {
  * @param {*} env
  */
 export function isPublicGuestReadOnly(env) {
+  if (isHostedMultiTenantMode(env)) {
+    const allowWrites = String(env?.PUBLIC_GUEST_ALLOW_WRITES ?? "").toLowerCase();
+    return allowWrites !== "true" && allowWrites !== "1" && allowWrites !== "yes";
+  }
   const v = String(env?.PUBLIC_GUEST_READ_ONLY ?? "").toLowerCase();
   return v === "true" || v === "1" || v === "yes";
+}
+
+/** Hosted defaults on. Self-host only if PUBLIC_GUEST_TURNSTILE_REQUIRED is set. */
+export function isPublicGuestTurnstileRequired(env) {
+  const v = String(env?.PUBLIC_GUEST_TURNSTILE_REQUIRED ?? "").trim().toLowerCase();
+  if (v === "true" || v === "1" || v === "yes") return true;
+  if (v === "false" || v === "0" || v === "no") return false;
+  return isHostedMultiTenantMode(env);
 }
 
 /**

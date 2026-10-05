@@ -13,6 +13,8 @@ import {
   buildOtelMetricPayload,
   buildLangfuseOtelExportInput,
   createLangfuseOtelExportConfig,
+  buildDatadogOtelExportInput,
+  buildGrafanaOtelExportInput,
 } from "../lib/otel-export.js";
 
 export async function dispatchOtelRoutes(request, url, h) {
@@ -52,6 +54,33 @@ export async function dispatchOtelRoutes(request, url, h) {
       secretKey: body.secretKey,
       name: body.name,
     });
+    if (result.error) return respond(result, h, 400);
+    return respond(result, h, 201);
+  }
+
+  if (request.method === "POST" && path === "/otel/configs/datadog") {
+    const body = await request.json().catch(() => ({}));
+    const input = buildDatadogOtelExportInput({
+      site: body.site,
+      apiKey: body.apiKey,
+      name: body.name,
+    });
+    if (input.error) return respond(input, h, 400);
+    const result = await createExportConfig(env, { projectId, ...input });
+    if (result.error) return respond(result, h, 400);
+    return respond(result, h, 201);
+  }
+
+  if (request.method === "POST" && path === "/otel/configs/grafana") {
+    const body = await request.json().catch(() => ({}));
+    const input = buildGrafanaOtelExportInput({
+      tracesUrl: body.tracesUrl,
+      instanceId: body.instanceId,
+      apiToken: body.apiToken,
+      name: body.name,
+    });
+    if (input.error) return respond(input, h, 400);
+    const result = await createExportConfig(env, { projectId, ...input });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }

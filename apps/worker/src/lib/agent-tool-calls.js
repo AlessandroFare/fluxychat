@@ -122,7 +122,7 @@ export function validateToolCall(toolCallRaw, registeredTools, runId, projectAll
   // we check it FIRST so the operator can be confident that the env
   // var alone is sufficient to lock down tool access without needing
   // to also configure every project.
-  if (envAllowList !== null && !envAllowList.has(name)) {
+  if (envAllowList !== null && !envAllowList.has(name) && String(name).toLowerCase() !== "askhuman") {
     return {
       valid: false,
       toolCall: null,
@@ -143,7 +143,7 @@ export function validateToolCall(toolCallRaw, registeredTools, runId, projectAll
       };
     }
   }
-  if (projectAllowList && !projectAllowList.has(name)) {
+  if (projectAllowList && !projectAllowList.has(name) && String(name).toLowerCase() !== "askhuman") {
     return {
       valid: false,
       toolCall: null,

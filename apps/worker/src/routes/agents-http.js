@@ -518,6 +518,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
         roomId: body.roomId,
         agentId,
         userId: auth.userId,
+        invokerRoles: auth.roles,
         content: contentValidation.content,
         traceId,
         stream: useStream,
@@ -543,6 +544,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
         roomId: body.roomId,
         userMessage: contentValidation.content,
         userId: auth.userId,
+        invokerRoles: auth.roles,
         traceId,
         streamHooks,
       });

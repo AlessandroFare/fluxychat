@@ -188,12 +188,22 @@ export async function sweepExpiredOfflineQueue(env) {
 /**
  * Register or update a device.
  */
+const PUSH_PROVIDERS = ["expo", "fcm-v1", "apns"];
+
 export async function registerDevice(env, input) {
   const { projectId, userId, platform, endpoint, pushToken, appVersion, osVersion, deviceModel } = input;
   if (!platform) return { ok: false, error: "platform_required" };
 
   const validPlatforms = ["fcm", "apns", "web", "android", "ios"];
   if (!validPlatforms.includes(platform)) return { ok: false, error: "invalid_platform" };
+
+  const pushProviderRaw = input.pushProvider || input.backend || null;
+  let pushProvider = null;
+  if (pushProviderRaw) {
+    const normalized = String(pushProviderRaw).trim();
+    if (!PUSH_PROVIDERS.includes(normalized)) return { ok: false, error: "invalid_push_provider" };
+    pushProvider = normalized;
+  }
 
   const now = new Date().toISOString();
 
@@ -208,23 +218,24 @@ export async function registerDevice(env, input) {
     await env.DB.prepare(
       `UPDATE device_registrations SET push_token = COALESCE(?, push_token), endpoint = COALESCE(?, endpoint),
        app_version = COALESCE(?, app_version), os_version = COALESCE(?, os_version),
-       device_model = COALESCE(?, device_model), is_active = 1, last_seen_at = ?
+       device_model = COALESCE(?, device_model), push_backend = COALESCE(?, push_backend),
+       is_active = 1, last_seen_at = ?
        WHERE id = ?`
     )
-      .bind(pushToken || null, endpoint || null, appVersion || null, osVersion || null, deviceModel || null, now, existing.id)
+      .bind(pushToken || null, endpoint || null, appVersion || null, osVersion || null, deviceModel || null, pushProvider, now, existing.id)
       .run();
-    return { ok: true, id: existing.id, updated: true };
+    return { ok: true, id: existing.id, updated: true, pushProvider };
   }
 
   const id = crypto.randomUUID();
   await env.DB.prepare(
-    `INSERT INTO device_registrations (id, project_id, user_id, platform, endpoint, push_token, app_version, os_version, device_model, is_active, last_seen_at, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
+    `INSERT INTO device_registrations (id, project_id, user_id, platform, endpoint, push_token, app_version, os_version, device_model, is_active, last_seen_at, created_at, push_backend)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`
   )
-    .bind(id, projectId, userId, platform, endpoint || null, pushToken || null, appVersion || null, osVersion || null, deviceModel || null, now, now)
+    .bind(id, projectId, userId, platform, endpoint || null, pushToken || null, appVersion || null, osVersion || null, deviceModel || null, now, now, pushProvider)
     .run();
 
-  return { ok: true, id, updated: false };
+  return { ok: true, id, updated: false, pushProvider };
 }
 
 /**
@@ -244,6 +255,7 @@ export async function listDevices(env, input) {
   const devices = (rows.results || []).map((r) => ({
     id: r.id,
     platform: r.platform,
+    pushProvider: r.push_backend || null,
     appVersion: r.app_version,
     osVersion: r.os_version,
     deviceModel: r.device_model,

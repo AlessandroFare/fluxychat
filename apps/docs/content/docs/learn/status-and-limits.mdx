@@ -18,7 +18,13 @@ The kernel is rooms, presence, Yjs, agents on that timeline, feeds (not chat), `
 | Large rooms | Supergroup DO (`docs/supergroup-room-sharding.md` in the repo) | Sharding is in tree, not “roadmap only.” |
 | Search | [Search](/docs/core/search) | FTS and optional hybrid. |
 | Yjs / cursors | [Storage](/docs/core/storage), gallery boards | Second binary WebSocket, same room route. |
-| HITL / quorum / tool policy | [Tool presets](/docs/guides/ai-tool-presets), [quorum](/docs/guides/critical-action-quorum) | Email/Slack tap: GET shows confirm, POST decides (one-time token + payload hash). |
+| HITL / quorum / tool policy | [Tool presets](/docs/guides/ai-tool-presets), [quorum](/docs/guides/critical-action-quorum) | Email/Slack tap: GET shows confirm, POST decides (one-time token + payload hash). Maker-checker: requester and agent cannot approve. |
+| Voice → room | `POST /rooms/:id/voice-bridge` · [Labs](/docs/labs) | Transcripts, tool calls, coaching whispers, handoff. LiveKit Agents / Pipecat / OpenAI Realtime. **Not an SFU.** |
+| Maker-checker / evidence | HITL `decide` + `sealHitlEvidencePack` | Requester and agent cannot approve. Pack is SHA-256 over v2 JSON. Autonomy (`toolAutonomy`) still honors HITL. |
+| Native push | `POST /api/device/register` · SDK `createPushProvider` | Backends: expo, fcm-v1, apns. Expo Go (SDK 53+) does not receive remote push. |
+| GenAI traces | [OTel](/docs/reference/observability-otel) | `invoke_agent` / `execute_tool`, room as `gen_ai.conversation.id`. Spec: semantic-conventions-genai @ 1.42.0 Development. `fluxy.approval.wait` is ours. |
+| Browser handoff | `POST /rooms/:id/browser-handoff` | Cloudflare Browser Run / Browserbase Live View as a whisper card. Invoker only (plus named approvers). No screenshots on the transcript. |
+| A2UI | `POST /rooms/:id/a2ui` · SDK catalog | v0.9 data UI mapped to ui-kit. Buttons are attributed actions; quorum optional. Not an iframe. |
 | Public share | `/share/:token` · [guide](/docs/guides/public-share) | Unguessable token, `noindex`, no whispers/tool args. `type=public` only. |
 | Transcript import | `POST /rooms/import-transcript` · [guide](/docs/guides/import-transcript) | File you already have. Cap 400. Marked imported, unverified. |
 | Room tickets | `POST /rooms/:id/tickets` · [guide](/docs/guides/room-tickets) | Self-host env PAT. Hosted: per-project encrypted token. GitHub/Linear/Jira host allowlist. Not OAuth apps. |
@@ -27,22 +33,24 @@ The kernel is rooms, presence, Yjs, agents on that timeline, feeds (not chat), `
 | Connection fallback | SDK `FluxyChatTransport`: websocket / SSE / polling | Room socket fallback. |
 | AI SDK ChatTransport | `FluxyRoomChatTransport` in `@fluxy-chat/sdk` / `@fluxy-chat/sdk/ai-sdk` | [Guide](/docs/guides/vercel-ai-sdk-chat-transport). Full token stream still wants the room WebSocket. |
 | MCP official registry | [guide](/docs/guides/mcp-registry) | Manifest in-repo. Not listed on the official MCP registry. |
-| npm | `@fluxy-chat/sdk`, `react`, `ui`, `ui-kit`, `vue`, `svelte`, `agent` | Swift/Kotlin/Flutter/.NET are **source** under `packages/`. |
+| npm | `@fluxy-chat/sdk` (pin **0.6.13+** for ChatTransport / `requireApproval` / `mcpName`), `react`, `ui`, `ui-kit`, `vue`, `svelte`, `agent`, `protocol`, `config`, `create-fluxy-chat` | `@fluxy-chat/auth` is in-repo with `publishConfig` but may not be on npm yet. `@fluxy-chat/ai-sdk-workflow` is **private**. `chat-adapter-fluxychat` is unpublished. Swift/Kotlin/Flutter/.NET are **source** under `packages/`. Python HTTP + WS stub: `packages/python` — **not published to PyPI**. Go WS: `packages/sdk-go`. Generated REST: OpenAPI Generator, Apache-2.0, see `scripts/generate-rest-sdks.md`. Confirm with `npm view @fluxy-chat/sdk version`. |
 | Clone | `github.com/AlessandroFare/fluxychat` | |
 | E2EE | [Compare](https://fluxychat.com/compare) | Not claimed. |
-| HIPAA / SOC 2 | README | Checklists are not attestations. No BAA. |
+| HIPAA / SOC 2 | README | Checklists are not attestations. **No BAA. We do not sell healthcare.** |
 | Bridges | Console | You create the vendor app. Not a 14-channel desk. |
 | System One | `SYSTEM_ONE_PROVIDER` | Gate next to the room LLM (e.g. Groq). Not a replacement chat model. See [Room Decisions](/docs/guides/room-decisions). |
-| Voice | `joinVoiceStage` | Signaling. Media is yours. |
+| Voice | `joinVoiceStage` + voice-bridge | Signaling only for media. Transcripts on the room bus. Media is yours (LiveKit/Pipecat). |
 | Hosted SAML login | Off unless `SAML_SSO_ENABLED=true` | Self-host SAML is unchanged. |
 | Shared-room agent defaults | Two-key HITL · [guide](/docs/guides/security/shared-room-agent-defaults) | On unless you opt out. Tests use synthetic markers. |
 | Room Decisions | [guide](/docs/guides/room-decisions) | Labels + floor. Default shadow. Hosted labels opt-in. |
 | Art. 50 marks | [checklist](/docs/features/art-50-checklist) | HMAC integrity, key rotation. Not a legal guarantee. |
+| Agent Inbox | `GET /inbox/agent` · SDK `fetchAgentInbox` | Pending HITL for the current approver. Accept / ignore map to HITL decide. LangGraph `{ ns, value }` and `askHuman` land on the same queue. Ambient `cron` needs `roomId`. |
+| DSA notice | `POST /public/dsa-report` · [hosted /report](https://fluxychat.com/report) | Unauthenticated, rate-limited. Share tokens are revoked, not reminted. Not legal advice. |
+| RoomDojo | `apps/worker/src/lib/room-dojo.test.js` | Synthetic two-key ON vs OFF. No exploit recipes. |
 
 ## Not shipped yet (priority)
 
 1. A 60-second **hosted** clip: two humans, one agent, refresh mid-stream, a second seat approves a tool. Gallery `deal-room` is the closest app. Guest-first UI: `--example shared-ai-room`.
 2. Measured load and Durable Object duration from staging (idle sockets vs invoice). Do not treat qualitative hibernation docs as that number.
-3. Python / Go server SDKs.
 
 June 2026 audit files in git history are snapshots. Closed work lives in `docs/audit/REMEDIATION.md`. Open security work is not listed in this repository.

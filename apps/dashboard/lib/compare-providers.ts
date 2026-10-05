@@ -15,7 +15,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   {
     label: "Unit of value",
     portal: "Channel log + extensions (cloud)",
-    stream: "Consumer chat SaaS",
+    stream: "Hosted chat (channels, moderation, Video SKU separate)",
     ably: "Pub/sub network",
     pusher: "Pub/sub channels",
     fluxy: "The room: chat, presence, Yjs, invokeAgent on one Durable Object",
@@ -45,12 +45,12 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     fluxy: "D1 + useChat loadMore",
   },
   {
-    label: "First-class live cursors",
+    label: "Cursors on the same room",
     portal: "Ephemeral send (guide)",
     stream: "No",
     ably: "Spaces (partial)",
     pusher: "No",
-    fluxy: "sendCursor / type cursor. Not client_event",
+    fluxy: "sendCursor on the room object. Optional. See /labs.",
   },
   {
     label: "Yjs / shared document",
@@ -140,10 +140,48 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     pusher: "Enterprise-select SLA",
     fluxy: "Open beta. Pin npm. Written SLA only with a signed MSA",
   },
+  {
+    label: "Resumable stream / durable session",
+    portal: "Reconnect + history",
+    stream: "Connection recovery",
+    ably: "Durable streams with resume (Ably, 2025–2026 docs)",
+    pusher: "Reconnect + cache-ish",
+    fluxy: "Room WebSocket + REST history merge. Not Ably durable streaming SKU",
+  },
+  {
+    label: "Multi-device sync",
+    portal: "Yes (their cloud)",
+    stream: "Yes",
+    ably: "Yes",
+    pusher: "Channels per device",
+    fluxy: "Same room socket + D1 history. Inbox on User DO",
+  },
+  {
+    label: "Tool approvals",
+    portal: "DIY / their AI add-on",
+    stream: "GenAI add-on",
+    ably: "Not the product",
+    pusher: "No",
+    fluxy: "Mail previews do nothing. You press a button. You can require two people.",
+  },
 ] as const;
 
 export const COMPARE_LABS_NOTE =
-  "MCP, WorkflowAgent, FCM, PITR UI, and Bridges OAuth are not this table. Kernel first. Spatial, IoT, and Stream have their own docs.";
+  "This table is the room. Spatial, IoT, and Stream have their own pages.";
+
+const LANDING_COMPARE_LABELS = new Set([
+  "Unit of value",
+  "pk_ in the browser (public rooms)",
+  "MIT server you can fork",
+  "Chat history + pagination",
+  "Agent on the room timeline",
+  "Tool approvals",
+  "Hosted maturity",
+]);
+
+export const LANDING_COMPARE_ROWS = COMPARE_ROWS.filter((row) =>
+  LANDING_COMPARE_LABELS.has(row.label),
+);
 
 export interface AlternativeApproach {
   name: string;
@@ -174,6 +212,12 @@ export const ALTERNATIVE_APPROACHES: readonly AlternativeApproach[] = [
     bestFor: "Collab sessions, games, generic realtime “party” state, often mentioned beside Durable Objects in builder posts.",
     tradeoff: "Not tenant-scoped SaaS chat: no first-class multi-tenant JWT, D1 history ops, billing hooks, or operator console for your product.",
     fluxyAngle: "Pick FluxyChat when buyers need in-app messaging for customers, not a party runtime you extend into a full chat product.",
+  },
+  {
+    name: "Liveblocks",
+    bestFor: "Collaborative documents, comments, and presence on a document.",
+    tradeoff: "Not a chat room with agents, HITL, or MIT Worker+D1 tenancy.",
+    fluxyAngle: "Yjs on the same room object as chat. Liveblocks remains a strong pick when the product is the document, not the room.",
   },
   {
     name: "Workers + Upstash Redis (DIY)",

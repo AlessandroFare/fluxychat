@@ -3,6 +3,8 @@
  * Public docs: no attack recipes. Tests use synthetic markers only.
  */
 
+import { isGuestOnlyAuth } from "./guest-auth.js";
+
 const HIDDEN_CHARS_RE =
   /[\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF\u3164]/g;
 
@@ -26,7 +28,12 @@ export function stripHiddenUnicode(text) {
 }
 
 export function isGuestUserId(userId) {
-  return typeof userId === "string" && userId.startsWith("guest_");
+  return typeof userId === "string" && (userId.startsWith("guest_") || userId.startsWith("anon_"));
+}
+
+export function isUntrustedRoomActor(userId, roles) {
+  if (isGuestUserId(userId)) return true;
+  return isGuestOnlyAuth({ roles });
 }
 
 export function classifyMessageTrust(row) {
@@ -45,7 +52,7 @@ export function classifyMessageTrust(row) {
     }
   }
   if (meta && typeof meta === "object" && meta.trust === "untrusted") return "untrusted";
-  if (isGuestUserId(row.user_id)) return "untrusted";
+  if (isUntrustedRoomActor(row.user_id, meta?.roles || row.roles)) return "untrusted";
   return "trusted";
 }
 
@@ -59,13 +66,14 @@ export function isExternalEffectTool(toolName) {
 export function evaluateTwoKeyTurn({
   history = [],
   invokerUserId,
+  invokerRoles,
   agentId,
   appContext,
   contextFetchUrl,
 } = {}) {
   const rows = Array.isArray(history) ? history : [];
   const readUntrusted =
-    isGuestUserId(invokerUserId) ||
+    isUntrustedRoomActor(invokerUserId, invokerRoles) ||
     rows.some((row) => classifyMessageTrust(row) === "untrusted");
   const hasPrivateData =
     Boolean(appContext) ||

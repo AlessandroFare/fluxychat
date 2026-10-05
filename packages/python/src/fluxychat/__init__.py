@@ -6,6 +6,10 @@ from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 import json
 
+from .room import connect_room_ws
+
+__all__ = ["FluxyChatClient", "connect_room_ws"]
+
 
 class FluxyChatClient:
     def __init__(self, base_url: str, token: str, user_id: str) -> None:

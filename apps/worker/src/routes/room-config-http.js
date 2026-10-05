@@ -8,7 +8,9 @@ export async function dispatchRoomConfigRoutes(request, url, h) {
   const timelineMatch = url.pathname.match(/^\/rooms\/([^/]+)\/timeline-events$/);
   const decisionsMatch = url.pathname.match(/^\/rooms\/([^/]+)\/system-one-decisions$/);
   const ticketsMatch = url.pathname.match(/^\/rooms\/([^/]+)\/tickets$/);
-  if (!configMatch && !timelineMatch && !decisionsMatch && !ticketsMatch) return null;
+  const browserHandoffMatch = url.pathname.match(/^\/rooms\/([^/]+)\/browser-handoff$/);
+  const a2uiMatch = url.pathname.match(/^\/rooms\/([^/]+)\/a2ui$/);
+  if (!configMatch && !timelineMatch && !decisionsMatch && !ticketsMatch && !browserHandoffMatch && !a2uiMatch) return null;
 
   const {
     env,
@@ -39,7 +41,7 @@ export async function dispatchRoomConfigRoutes(request, url, h) {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
-  const roomId = decodeURIComponent((configMatch || timelineMatch || decisionsMatch || ticketsMatch)[1]);
+  const roomId = decodeURIComponent((configMatch || timelineMatch || decisionsMatch || ticketsMatch || browserHandoffMatch || a2uiMatch)[1]);
   const allowed = await canAccessRoom(env, auth, roomId);
   if (!allowed) {
     return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
@@ -57,6 +59,7 @@ export async function dispatchRoomConfigRoutes(request, url, h) {
       projectId: auth.projectId,
       roomId,
       userId: auth.userId,
+      runId: body?.runId,
       provider: body?.provider,
       title: body?.title,
       body: body?.body,
@@ -69,6 +72,43 @@ export async function dispatchRoomConfigRoutes(request, url, h) {
       return json({ error: result.error }, { status: result.status || 400, headers: corsHeaders });
     }
     return json({ ticket: result.ticket }, { headers: corsHeaders });
+  }
+
+  if (browserHandoffMatch && request.method === "POST") {
+    const body = await request.json().catch(() => ({}));
+    const { mapBrowserHandoffRequest, canTakeBrowserHandoff, browserHandoffRoomEvent } = await import(
+      "../lib/browser-handoff.js"
+    );
+    const mapped = mapBrowserHandoffRequest({ ...body, invokerUserId: body.invokerUserId || auth.userId });
+    if (!mapped.ok) return json({ error: mapped.error }, { status: 400, headers: corsHeaders });
+    if (!canTakeBrowserHandoff(mapped.handoff, auth.userId) && !hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    }
+    const event = browserHandoffRoomEvent(mapped.handoff);
+    await fanoutRoomInternal(env, auth.projectId, roomId, "/announce", {
+      method: "POST",
+      body: JSON.stringify({ ...event, roomId, userId: auth.userId }),
+    });
+    return json({ ok: true, event }, { headers: corsHeaders });
+  }
+
+  if (a2uiMatch && request.method === "POST") {
+    const body = await request.json().catch(() => ({}));
+    const { validateA2uiSurface } = await import("../lib/a2ui-catalog.js");
+    const surface = validateA2uiSurface(body);
+    if (!surface.ok) return json({ error: surface.error, type: surface.type }, { status: 400, headers: corsHeaders });
+    await fanoutRoomInternal(env, auth.projectId, roomId, "/announce", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "a2ui_surface",
+        roomId,
+        userId: auth.userId,
+        catalogVersion: surface.catalogVersion,
+        components: surface.components,
+        actions: surface.actions,
+      }),
+    });
+    return json({ ok: true, surface }, { headers: corsHeaders });
   }
 
   if (decisionsMatch && request.method === "GET") {

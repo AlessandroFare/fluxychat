@@ -1694,6 +1694,22 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/otel/configs/datadog",
+      "reason": "OTLP preset for Datadog GenAI traces; OpenAPI spec pending"
+    },
+    {
+      "path": "/otel/configs/grafana",
+      "reason": "OTLP preset for Grafana Tempo; OpenAPI spec pending"
+    },
+    {
+      "path": "/otel/configs/datadog",
+      "reason": "OTLP preset for Datadog GenAI traces"
+    },
+    {
+      "path": "/otel/configs/grafana",
+      "reason": "OTLP preset for Grafana Tempo / Cloud traces"
+    },
+    {
       "path": "/otel/export/metrics",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -1972,6 +1988,10 @@
     {
       "path": "/voice-ai/clone-translate",
       "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/rooms/:id/voice-bridge",
+      "reason": "Voice→room transcript/HITL ingest; OpenAPI spec pending"
     },
     {
       "path": "/webauthn/credentials",

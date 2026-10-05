@@ -1,3 +1,5 @@
 Contact: security@fluxychat.com
+Contact: fluxychat@outlook.com
 Expires: 2027-06-16T00:00:00.000Z
 Preferred-Languages: en, it
+Policy: https://fluxychat.com/report

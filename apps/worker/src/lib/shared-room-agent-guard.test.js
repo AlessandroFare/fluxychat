@@ -17,7 +17,22 @@ describe("shared-room-agent-guard", () => {
 
   it("labels guests untrusted and members trusted", () => {
     expect(classifyMessageTrust({ user_id: "guest_abc" })).toBe("untrusted");
+    expect(classifyMessageTrust({ user_id: "anon_abc" })).toBe("untrusted");
+    expect(classifyMessageTrust({ user_id: "user_ana", roles: ["guest"] })).toBe("untrusted");
     expect(classifyMessageTrust({ user_id: "user_ana" })).toBe("trusted");
+  });
+
+  it("treats anonymous JWT invokers as untrusted for two-key", () => {
+    const turn = evaluateTwoKeyTurn({
+      invokerUserId: "anon_abc123",
+      invokerRoles: ["guest"],
+      agentId: "bot_1",
+      contextFetchUrl: "https://app.example/context",
+      history: [{ user_id: "anon_abc123", content: "MARKER_UNTRUSTED_ROOM_TEXT" }],
+    });
+    expect(turn.readUntrusted).toBe(true);
+    expect(turn.hasPrivateData).toBe(true);
+    expect(twoKeyRequiresHitl(turn, "http_request")).toBe(true);
   });
 
   it("requires HITL when untrusted text + private context + external tool", () => {

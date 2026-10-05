@@ -1,7 +1,7 @@
 export function buildHitlEvidencePack(entry) {
   if (!entry || typeof entry !== "object") return null;
   return {
-    v: 1,
+    v: 2,
     kind: "fluxy.hitl.evidence",
     approvalId: entry.id || null,
     projectId: entry.projectId || null,
@@ -18,5 +18,16 @@ export function buildHitlEvidencePack(entry) {
     decidedAt: entry.decidedAt || null,
     decidedBy: entry.decidedBy || null,
     note: entry.note || null,
+    promptHash: entry.promptHash || null,
+    authorizationHash: entry.authorizationHash || null,
   };
+}
+
+export async function sealHitlEvidencePack(entry) {
+  const pack = buildHitlEvidencePack(entry);
+  if (!pack) return null;
+  const { sha256Hex } = await import("./audit-chain.js");
+  const canonical = JSON.stringify(pack);
+  const eventHash = await sha256Hex(canonical);
+  return { ...pack, eventHash };
 }

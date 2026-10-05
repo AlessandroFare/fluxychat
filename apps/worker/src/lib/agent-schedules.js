@@ -104,6 +104,24 @@ export function parseCronExpression(expr) {
   return { ok: true, fields };
 }
 
+/** True when a 5-field cron (or a minute-only token such as star-slash-15) matches `now` in UTC. */
+export function cronMatchesNow(expr, now = new Date()) {
+  const raw = String(expr || "").trim();
+  if (!raw) return false;
+  const parsed = parseCronExpression(raw);
+  if (parsed.ok) {
+    const [minute, hour, day, month, weekday] = parsed.fields;
+    return (
+      cronFieldMatches(minute, now.getUTCMinutes(), 0, 59) &&
+      cronFieldMatches(hour, now.getUTCHours(), 0, 23) &&
+      cronFieldMatches(day, now.getUTCDate(), 1, 31) &&
+      cronFieldMatches(month, now.getUTCMonth() + 1, 1, 12) &&
+      cronFieldMatches(weekday, now.getUTCDay(), 0, 6)
+    );
+  }
+  return cronFieldMatches(raw, now.getUTCMinutes(), 0, 59);
+}
+
 /**
  * Next UTC minute (inclusive of `afterMs + 60s`) that matches a 5-field cron.
  * @param {string} expr

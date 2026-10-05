@@ -45,6 +45,16 @@ interface Report {
   created_at: string;
 }
 
+interface DsaNotice {
+  id: string;
+  explanation: string;
+  content_url: string;
+  contact: string;
+  share_token?: string | null;
+  status: string;
+  created_at: string;
+}
+
 interface AuditEvent {
   id: string;
   action: string;
@@ -87,6 +97,8 @@ export default function AdminPage() {
   const [announcement, setAnnouncement] = useState("");
   const [reports, setReports] = useState<Report[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [dsaNotices, setDsaNotices] = useState<DsaNotice[]>([]);
+  const [loadingDsa, setLoadingDsa] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookEvents, setWebhookEvents] = useState(
     "message.created,report.created,moderation.auto_flag,room.occupied,room.vacated,client_event,cache_miss,user.event,member_joined,member_left,subscription_count"
@@ -177,6 +189,25 @@ export default function AdminPage() {
       ]);
     } finally {
       setLoadingReports(false);
+    }
+  };
+
+  const loadDsaNotices = async () => {
+    if (!adminJwt.trim()) {
+      setLog((logs) => ["Admin JWT required", ...logs]);
+      return;
+    }
+    setLoadingDsa(true);
+    try {
+      const json = await fetchWorkerJson<{ notices?: DsaNotice[] }>(`${WORKER_URL}/admin/dsa-notices`, {
+        headers: { Authorization: `Bearer ${adminJwt.trim()}` },
+      });
+      setDsaNotices(json.notices || []);
+      setNotice(`Loaded ${json.notices?.length || 0} DSA notices.`);
+    } catch (err: unknown) {
+      setLog((logs) => [messageFromUnknown(err, "Failed to load DSA notices"), ...logs]);
+    } finally {
+      setLoadingDsa(false);
     }
   };
 
@@ -336,6 +367,66 @@ export default function AdminPage() {
                     Ban user
                   </Button>
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section
+        title="DSA notices"
+        actions={
+          <Button onClick={() => void loadDsaNotices()} disabled={loadingDsa}>
+            {loadingDsa ? "Loading..." : "Refresh"}
+          </Button>
+        }
+      >
+        <p className="mb-2 text-sm text-muted-foreground">
+          Public reports from /report. Platform operators only on hosted. Share tokens are
+          already revoked. This is not legal advice.
+        </p>
+        {dsaNotices.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No DSA notices loaded.</p>
+        ) : (
+          <div className="flex flex-col gap-2 text-sm">
+            {dsaNotices.map((n) => (
+              <div key={n.id} className={consoleDarkCardClass}>
+                <div className={`flex items-center justify-between ${consoleDarkCardMutedClass}`}>
+                  <code className={consoleDarkCodeClass}>{n.status}</code>
+                  <span>{formatDateTime(n.created_at)}</span>
+                </div>
+                <p className="mt-1 break-all text-[#e5e7eb]">{n.content_url}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{n.explanation.slice(0, 280)}</p>
+                {n.status === "open" ? (
+                  <Button
+                    className="mt-2"
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          const json = await fetchWorkerJson<{ email?: { subject: string; text: string } }>(
+                            `${WORKER_URL}/admin/dsa-notices/${encodeURIComponent(n.id)}`,
+                            {
+                              method: "PATCH",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${adminJwt.trim()}`,
+                              },
+                              body: JSON.stringify({
+                                reason: "Share token disabled or notice reviewed. Not a court order.",
+                              }),
+                            },
+                          );
+                          setNotice(json.email?.subject || "Notice closed.");
+                          await loadDsaNotices();
+                        } catch (err: unknown) {
+                          setLog((logs) => [messageFromUnknown(err, "Close DSA notice failed"), ...logs]);
+                        }
+                      })();
+                    }}
+                  >
+                    Close with reasons template
+                  </Button>
+                ) : null}
               </div>
             ))}
           </div>

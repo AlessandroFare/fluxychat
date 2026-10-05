@@ -334,6 +334,7 @@ export class AgentDurableObject {
       roomId,
       userMessage: content,
       userId,
+      invokerRoles: params.invokerRoles,
       traceId: params.traceId || roomId,
       streamHooks,
     });

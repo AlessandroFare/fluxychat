@@ -9,7 +9,7 @@ export const MAX_CHAIN_STEPS = 20;
 
 /**
  * @typedef {{ approverId?: string, timeoutSeconds?: number, fallback?: string }} ApprovalChainStep
- * @typedef {{ steps?: ApprovalChainStep[], defaultTimeoutSeconds?: number }} ApprovalChainConfig
+ * @typedef {{ steps?: ApprovalChainStep[], defaultTimeoutSeconds?: number, makerChecker?: boolean }} ApprovalChainConfig
  */
 
 /**
@@ -55,7 +55,14 @@ export function parseApprovalChain(raw) {
     });
   }
 
-  return { ok: true, chain: { steps, defaultTimeoutSeconds } };
+  return {
+    ok: true,
+    chain: {
+      steps,
+      defaultTimeoutSeconds,
+      makerChecker: input.makerChecker === true,
+    },
+  };
 }
 
 function clampTimeout(value) {

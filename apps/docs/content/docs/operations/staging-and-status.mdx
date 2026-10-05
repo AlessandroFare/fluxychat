@@ -35,7 +35,7 @@ Optional custom domain:
 1. Add `status.fluxychat.com` (or your domain) in Vercel/hosting DNS → dashboard project.
 2. Link from marketing footer and console (already wired to `/status`).
 
-Health payload fields: `ok`, `degraded`, `checks`, `platformBindings`, `paymentsEnabled`.
+Health payload fields: `ok`, `degraded`, `checks`, `platformBindings`, `paymentsEnabled`, `payments.stripeCheckout`, `bindings.agent`, `routes` (share, importTranscript, tickets, hitl, voiceBridge, deviceRegister, browserHandoff, a2ui, agentInbox, dsaReport). `paymentsEnabled: false` means Stripe checkout is off, not that hosted plans are free forever.
 
 ## Console operational alerts (RD-6)
 

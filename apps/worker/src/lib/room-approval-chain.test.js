@@ -22,7 +22,11 @@ describe("room-approval-chain", () => {
     }
   });
 
-  it("rejects invalid approver id", () => {
+  it("keeps makerChecker on the snapshot", () => {
+    const parsed = parseApprovalChain({ makerChecker: true, steps: [{ approverId: "user_ana" }] });
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.chain.makerChecker).toBe(true);
+  });
     expect(parseApprovalChain({ steps: [{ approverId: "" }] }).ok).toBe(false);
   });
 

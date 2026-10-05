@@ -10,6 +10,7 @@ import {
   fetchHitlEvidence,
   fetchHitlMetrics,
   postApprovalDecision,
+  postAgentInboxAction,
   type HitlApprovalRequest,
 } from "@/lib/hitl-approval-client";
 import { routeHitlRisk } from "@/lib/hitl-risk-route";
@@ -29,6 +30,7 @@ export function ApprovalsInboxPanel({ memberJwt }: ApprovalsInboxPanelProps) {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -94,7 +96,7 @@ export function ApprovalsInboxPanel({ memberJwt }: ApprovalsInboxPanelProps) {
   return (
     <Section
       title="Approvals inbox"
-      description="Cross-room pending HITL tool approvals assigned to you."
+      description="HITL and askHuman pauses assigned to you. Accept and ignore go through Agent Inbox decide."
     >
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => void load()}>
@@ -168,6 +170,35 @@ export function ApprovalsInboxPanel({ memberJwt }: ApprovalsInboxPanelProps) {
                   onClick={() => void downloadEvidence(item.id)}
                 >
                   Evidence JSON
+                </Button>
+                <input
+                  className="min-w-40 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                  placeholder="Reply to askHuman"
+                  value={replyDraft[item.id] || ""}
+                  onChange={(e) =>
+                    setReplyDraft((prev) => ({ ...prev, [item.id]: e.target.value }))
+                  }
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy === item.id || !(replyDraft[item.id] || "").trim()}
+                  onClick={() => {
+                    const reply = (replyDraft[item.id] || "").trim();
+                    if (!reply) return;
+                    setBusy(item.id);
+                    setError(null);
+                    void postAgentInboxAction(memberJwt, item.id, "reply", { reply })
+                      .then(() => {
+                        setReplyDraft((prev) => ({ ...prev, [item.id]: "" }));
+                        return load();
+                      })
+                      .catch((err) => setError(messageFromUnknown(err, "Reply failed")))
+                      .finally(() => setBusy(null));
+                  }}
+                >
+                  Reply
                 </Button>
                 {confirmId === item.id ? (
                   <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmId(null)}>

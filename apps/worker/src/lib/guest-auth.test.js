@@ -20,9 +20,18 @@ describe("guest-auth", () => {
     expect(assertGuestCanWrite(env, { roles: ["member"] }).ok).toBe(true);
   });
 
-  it("allows guest writes by default", () => {
+  it("allows guest writes by default on self-host", () => {
     expect(isPublicGuestReadOnly({})).toBe(false);
     expect(assertGuestCanWrite({}, { roles: ["guest"] }).ok).toBe(true);
+  });
+
+  it("defaults hosted guests to read-only unless PUBLIC_GUEST_ALLOW_WRITES", () => {
+    const hosted = { HOSTED_MULTI_TENANT: "true" };
+    expect(isPublicGuestReadOnly(hosted)).toBe(true);
+    expect(assertGuestCanWrite(hosted, { roles: ["guest"] }).ok).toBe(false);
+    expect(
+      assertGuestCanWrite({ ...hosted, PUBLIC_GUEST_ALLOW_WRITES: "true" }, { roles: ["guest"] }).ok,
+    ).toBe(true);
   });
 
   it("picks guest role for room join", () => {

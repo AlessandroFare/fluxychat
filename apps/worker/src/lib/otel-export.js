@@ -2,10 +2,13 @@ import { logInfo, logError } from "./worker-log.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
 
 const OTEL_VERSION = "1.2.0";
+/** GenAI conventions pinned at the 1.42.0 split (Development). */
+export const GENAI_SEMCONV_PIN = "semantic-conventions-genai@1.42.0";
 const RESOURCE_ATTRIBUTES = {
   "service.name": "fluxychat",
   "service.version": "0.2.0",
   "service.environment": "production",
+  "fluxy.genai_semconv": GENAI_SEMCONV_PIN,
 };
 
 function generateId() {
@@ -435,4 +438,53 @@ export async function createLangfuseOtelExportConfig(env, { projectId, host, pub
   const input = buildLangfuseOtelExportInput({ host, publicKey, secretKey, name });
   if (input.error) return input;
   return createExportConfig(env, { projectId, ...input });
+}
+
+/**
+ * Datadog Agent OTLP HTTP ingest (native GenAI span mapping).
+ * @see https://docs.datadoghq.com/opentelemetry/
+ */
+export function buildDatadogOtelExportInput({
+  site = "datadoghq.com",
+  apiKey,
+  name = "Datadog OTLP",
+}) {
+  if (!apiKey?.trim()) return { error: "apiKey is required" };
+  const host = String(site).replace(/^https?:\/\//, "").replace(/\/$/, "");
+  return {
+    name,
+    endpointUrl: `https://otlp.${host}/v1/traces`,
+    exportType: "traces",
+    authHeader: apiKey.trim(),
+    headersJson: JSON.stringify({ "DD-API-KEY": apiKey.trim() }),
+    batchSize: 100,
+    flushIntervalSeconds: 60,
+  };
+}
+
+/** Grafana Cloud / Tempo OTLP HTTP. */
+export function buildGrafanaOtelExportInput({
+  tracesUrl,
+  instanceId,
+  apiToken,
+  name = "Grafana Tempo OTLP",
+}) {
+  if (!tracesUrl?.trim()) return { error: "tracesUrl is required" };
+  const headers = {};
+  if (instanceId && apiToken) {
+    const raw = `${String(instanceId).trim()}:${String(apiToken).trim()}`;
+    const basic = typeof btoa === "function" ? btoa(raw) : Buffer.from(raw, "utf8").toString("base64");
+    headers.Authorization = `Basic ${basic}`;
+  } else if (apiToken) {
+    headers.Authorization = `Bearer ${String(apiToken).trim()}`;
+  }
+  return {
+    name,
+    endpointUrl: String(tracesUrl).trim(),
+    exportType: "traces",
+    authHeader: headers.Authorization || undefined,
+    headersJson: Object.keys(headers).length ? JSON.stringify(headers) : undefined,
+    batchSize: 100,
+    flushIntervalSeconds: 60,
+  };
 }

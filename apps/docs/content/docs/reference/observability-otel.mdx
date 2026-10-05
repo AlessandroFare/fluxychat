@@ -51,7 +51,11 @@ attachOtlpTracingExport({
 |---------|-------------------|-------|
 | **Jaeger** | `http://localhost:4318/v1/traces` | All-in-one docker: `jaegertracing/all-in-one` |
 | **Grafana Tempo** | `http://localhost:4318/v1/traces` | Pair with Grafana for dashboards |
-| **Langfuse OSS** | See Langfuse docs for OTLP ingest URL | LLM-focused traces + cost |
+| **Langfuse OSS / Cloud** | `/api/public/otel/v1/traces` | `POST /otel/configs/langfuse` |
+| **Datadog** | `https://otlp.{site}/v1/traces` | `POST /otel/configs/datadog` (native GenAI mapping) |
+| **Grafana Tempo / Cloud** | your traces OTLP URL | `POST /otel/configs/grafana` |
+
+GenAI spans follow **semantic-conventions-genai** split from OpenTelemetry semconv **1.42.0** (Development): `invoke_agent {name}`, `execute_tool {tool}`, `gen_ai.conversation.id` = room id. HITL wait is a child span `fluxy.approval.wait` with `fluxy.approval.wait_ms`. Outbound webhooks and ticket HTTP carry W3C `traceparent`.
 
 Set `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` in Worker secrets or your app env. Telemetry export is best-effort and never blocks chat delivery.
 

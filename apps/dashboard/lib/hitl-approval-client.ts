@@ -138,6 +138,19 @@ export async function fetchHitlMetrics(token: string): Promise<{
   };
 }
 
+export async function postAgentInboxAction(
+  token: string,
+  id: string,
+  action: "accept" | "edit" | "reply" | "ignore",
+  extra?: { reply?: string; edited?: string },
+): Promise<void> {
+  await fetchWorkerJson(`${BASE()}/inbox/agent/${encodeURIComponent(id)}`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ action, reply: extra?.reply, edited: extra?.edited }),
+  });
+}
+
 export function defaultApprovalChain(): ApprovalChainConfig {
   return {
     defaultTimeoutSeconds: 180,

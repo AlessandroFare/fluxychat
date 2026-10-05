@@ -11,6 +11,15 @@ const config: NextConfig = {
   turbopack: {
     root: rootDir,
   },
+  async redirects() {
+    return [
+      {
+        source: "/docs/learn/for-analysts",
+        destination: "/docs/learn/status-and-limits",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 const withMDX = createMDX();

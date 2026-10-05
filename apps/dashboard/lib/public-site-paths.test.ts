@@ -19,6 +19,11 @@ describe("isPublicSitePath", () => {
     expect(isPublicSitePath("/llms.txt")).toBe(true);
     expect(isPublicSitePath("/r/registry.json")).toBe(true);
     expect(isPublicSitePath("/landing/incident")).toBe(true);
+    expect(isPublicSitePath("/incident")).toBe(true);
+    expect(isPublicSitePath("/support")).toBe(true);
+    expect(isPublicSitePath("/pr-review")).toBe(true);
+    expect(isPublicSitePath("/labs")).toBe(true);
+    expect(isPublicSitePath("/report")).toBe(true);
     expect(isPublicSitePath("/share/lobby")).toBe(true);
   });
 

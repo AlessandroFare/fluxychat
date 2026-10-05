@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.5.24] - 2026-10-05
+
+### Added
+
+- `negotiation-room` template.
+- Gallery default is `shared-ai-room`.
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.6.14`, `@fluxy-chat/react@^0.1.8`, `@fluxy-chat/ui@^0.1.7`, `@fluxy-chat/ui-kit@^0.1.8`. Publish **sdk 0.6.14**, **ui 0.1.7**, and **ui-kit 0.1.8** before this CLI.
+
+## [0.5.23] - 2026-09-30
+
+### Added
+
+- `shared-ai-room` template (`pk_` guest room).
+- Deal-room two-seat path (`?seat=counsel`).
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.6.13`, `@fluxy-chat/react@^0.1.8`, `@fluxy-chat/ui@^0.1.6`, `@fluxy-chat/ui-kit@^0.1.7`. Publish **protocol 0.1.6**, **sdk 0.6.13**, **ui 0.1.6**, **ui-kit 0.1.7** **before** this CLI.
+
 ## [0.5.22] - 2026-09-09
 
 ### Changed

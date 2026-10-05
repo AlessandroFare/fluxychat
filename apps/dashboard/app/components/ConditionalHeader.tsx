@@ -6,7 +6,7 @@ import Header from "./Header";
 import { MarketingTopNav } from "./marketing-top-nav";
 
 /**
- * Landing, enter, and pricing ship their own header.
+ * Landing, enter, pricing, and labs ship their own header (LandingShell).
  * Why/compare/guides/demo/docs/status/sign-in use MarketingTopNav.
  * Console routes use Header (auth controls).
  */
@@ -20,7 +20,9 @@ export default function ConditionalHeader() {
     pathname === "/enter" ||
     pathname?.startsWith("/enter/") ||
     pathname === "/pricing" ||
-    pathname?.startsWith("/pricing/")
+    pathname?.startsWith("/pricing/") ||
+    pathname === "/labs" ||
+    pathname?.startsWith("/labs/")
   ) {
     return null;
   }

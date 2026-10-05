@@ -6,6 +6,7 @@ import { hostedSharedWorkerPatForbidden } from "./hosted-saas-policy.js";
 import { assertTicketFetchUrl, githubIssuesUrl, jiraIssueUrl, linearGraphqlUrl, parseJiraBaseUrl } from "./ticket-hosts.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
 import { logInfo } from "./worker-log.js";
+import { injectW3cTraceHeaders } from "./w3c-trace-context.js";
 
 function str(v) {
   return typeof v === "string" ? v.trim() : "";
@@ -44,7 +45,7 @@ export async function createExternalTicket(env, input = {}) {
 
   const footer = `\n\n---\nFrom FluxyChat room \`${str(input.roomId)}\``;
   const text = `${body}${footer}`;
-  const useEnv = ticketEnv(env, input.credentials);
+  const useEnv = { ...ticketEnv(env, input.credentials), ticketTraceId: str(input.runId) || str(input.roomId) };
 
   if (provider === "github") {
     return createGitHubIssue(useEnv, { title, body: text, repo: str(input.repo) });
@@ -70,11 +71,14 @@ async function createGitHubIssue(env, { title, body, repo }) {
     url,
     {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "Content-Type": "application/json",
-      },
+      headers: injectW3cTraceHeaders(
+        {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        { traceId: env?.ticketTraceId, spanId: repo },
+      ),
       body: JSON.stringify({ title, body }),
     },
     env,
@@ -95,10 +99,13 @@ async function createLinearIssue(env, { title, body, teamId }) {
     url,
     {
       method: "POST",
-      headers: {
-        Authorization: token,
-        "Content-Type": "application/json",
-      },
+      headers: injectW3cTraceHeaders(
+        {
+          Authorization: token,
+          "Content-Type": "application/json",
+        },
+        { traceId: env?.ticketTraceId, spanId: teamId },
+      ),
       body: JSON.stringify({
         query:
           "mutation IssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url } } }",
@@ -131,11 +138,14 @@ async function createJiraIssue(env, { title, body, projectKey }) {
     url,
     {
       method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
+      headers: injectW3cTraceHeaders(
+        {
+          Authorization: `Basic ${auth}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        { traceId: env?.ticketTraceId, spanId: projectKey },
+      ),
       body: JSON.stringify({
         fields: {
           project: { key: projectKey },

@@ -178,3 +178,10 @@ export const PUBLIC_PLAN_CATALOG: Record<string, PublicPlanRow> = {
   },
 };
 
+/** Homepage /pricing marketing grid: Free, Starter, Pro. Higher tiers stay on console / sales. */
+export const LANDING_PLAN_KEYS = ["free", "starter", "pro"] as const;
+
+export function landingPlanEntries(): [string, PublicPlanRow][] {
+  return LANDING_PLAN_KEYS.map((key) => [key, PUBLIC_PLAN_CATALOG[key]]);
+}
+

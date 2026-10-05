@@ -88,6 +88,8 @@ export interface FluxyHostedRoomOverlay {
   denySubstrings?: string[];
   capabilities?: FluxyRoomCapabilities;
   extensions?: FluxyRoomExtensionSlot[];
+  /** Hosted four-eyes flag. Chain steps still live on the room DO. */
+  makerChecker?: boolean;
 }
 
 export interface FluxyHostedOverlay {
@@ -112,6 +114,8 @@ export interface FluxyRoomConfig {
   notify?: (
     ctx: FluxyNotifyContext,
   ) => FluxyNotifyDescriptor | null | Promise<FluxyNotifyDescriptor | null>;
+  /** Four-eyes: requester cannot approve; agent cannot approve. */
+  makerChecker?: boolean;
 }
 
 export interface FluxyClientDefaults {
@@ -137,6 +141,11 @@ export interface FluxyAgentPolicy {
    * Same expectation as `@ai-sdk/policy-opa`; we do not vendor that package.
    */
   opaUrl?: string;
+  /**
+   * Visible autonomy for this agent's tools. `act-autonomous` still respects HITL when
+   * `toolApproval` is `user-approval` or the room chain is set.
+   */
+  toolAutonomy?: "assist" | "recommend" | "act-with-approval" | "act-autonomous";
 }
 
 export interface FluxyConfig {

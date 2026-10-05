@@ -7,9 +7,9 @@ import { useEffect, useRef, useState } from "react";
 
 const FLOATING_MESSAGES = [
   { text: "Tell me about FluxyChat", align: "left", delay: 0 },
-  { text: "Chat, cursors, Yjs, and invokeAgent on one Durable Object. MIT self-host or hosted beta.", align: "right", delay: 1.5 },
-  { text: "How is it different from Pusher?", align: "left", delay: 3 },
-  { text: "Room layer, not a transport. Pusher moves bytes. We are the room those bytes live in.", align: "right", delay: 4.5 },
+  { text: "Humans and an agent share one room Durable Object. MIT self-host or hosted beta.", align: "right", delay: 1.5 },
+  { text: "Can two people approve a tool call?", align: "left", delay: 3 },
+  { text: "Yes. Gmail's link preview does nothing. You have to press the button. You can require two people.", align: "right", delay: 4.5 },
   { text: "Can you write a quickstart example?", align: "left", delay: 6 },
   { text: "pnpm add @fluxy-chat/react, then FluxyRealtimeProvider with publishableKey and useChat({ roomId }).", align: "right", delay: 7.5 },
 ];
@@ -122,17 +122,14 @@ export function LandingDemoSection() {
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-brand)]/30 bg-[var(--mkt-brand)]/15 px-4 py-1.5 text-xs font-medium text-[var(--mkt-brand-soft)]">
             <Sparkles className="size-3.5" />
-            Live Playground
+            Public room
           </div>
           <h2 className="text-balance font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Try it right now.
-            <span className="mt-1 block text-[var(--mkt-brand-soft)]">
-              No signup required.
-            </span>
+            Try it without signing up.
           </h2>
           <p className="mx-auto mt-2 max-w-2xl text-pretty leading-relaxed text-slate-400">
-            Jump into a live room with an AI agent. Ask questions, test real-time messaging, see how
-            Durable Objects work. Everything runs on Cloudflare&apos;s edge network.
+            Open a room, send a message, invoke an agent. This is the same Durable Object path as
+            self-host. Hosted is still beta.
           </p>
         </div>
 

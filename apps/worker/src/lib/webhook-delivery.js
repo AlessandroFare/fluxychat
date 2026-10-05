@@ -131,6 +131,14 @@ export async function processPendingWebhookDeliveries(env, maxBatch = 20) {
         headers["X-Fluxy-Event"] = String(payload.type || "unknown");
         headers["X-Fluxy-Project-Id"] = String(payload.projectId || "");
         headers["X-Fluxy-Delivery-Id"] = d.id;
+        const { injectW3cTraceHeaders } = await import("./w3c-trace-context.js");
+        Object.assign(
+          headers,
+          injectW3cTraceHeaders(headers, {
+            traceId: payload.traceId || payload.payload?.runId || d.id,
+            spanId: d.id,
+          }),
+        );
         if (isPrivateUrl(d.webhook_url)) {
           errorText = "webhook_url_blocked_ssrf";
         } else {

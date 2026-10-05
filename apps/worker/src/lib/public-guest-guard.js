@@ -2,7 +2,11 @@ import { parseAllowedOrigins, isDemoOriginAllowed } from "./demo-guard.js";
 import { checkAndConsumeIpRateLimit } from "./ip-rate-limit.js";
 import { isTurnstileConfigured, verifyTurnstileToken } from "./turnstile.js";
 import { validateEmbedParentOrigin } from "./embed-config.js";
-import { isPublicGuestEnabled, isPublicGuestReadOnly } from "./guest-auth.js";
+import {
+  isPublicGuestEnabled,
+  isPublicGuestReadOnly,
+  isPublicGuestTurnstileRequired,
+} from "./guest-auth.js";
 
 /**
  * Rate limit / origin / Turnstile gate for public guest sessions.
@@ -50,11 +54,13 @@ export async function guardPublicGuestRequest(env, request, options = {}) {
     };
   }
 
-  const turnstileRequired =
-    env.PUBLIC_GUEST_TURNSTILE_REQUIRED === "true" ||
-    env.PUBLIC_GUEST_TURNSTILE_REQUIRED === "1";
+  const turnstileRequired = isPublicGuestTurnstileRequired(env);
 
-  if (turnstileRequired && isTurnstileConfigured(env)) {
+  if (turnstileRequired && !isTurnstileConfigured(env)) {
+    return { ok: false, status: 503, error: "turnstile_not_configured" };
+  }
+
+  if (turnstileRequired) {
     const verified = await verifyTurnstileToken(
       env,
       options.turnstileToken,
@@ -74,9 +80,7 @@ export async function guardPublicGuestRequest(env, request, options = {}) {
  */
 export function getPublicGuestHardeningConfig(env) {
   const turnstileConfigured = isTurnstileConfigured(env);
-  const turnstileRequired =
-    env.PUBLIC_GUEST_TURNSTILE_REQUIRED === "true" ||
-    env.PUBLIC_GUEST_TURNSTILE_REQUIRED === "1";
+  const turnstileRequired = isPublicGuestTurnstileRequired(env);
   const siteKey = env.TURNSTILE_SITE_KEY?.trim() || null;
 
   return {

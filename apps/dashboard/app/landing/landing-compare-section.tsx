@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { COMPARE_ROWS, COMPARE_LABS_NOTE } from "@/lib/compare-providers";
+import { LANDING_COMPARE_ROWS, COMPARE_LABS_NOTE } from "@/lib/compare-providers";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 
 /** Server-rendered compare table — keeps marketing bundle smaller (ENG-13). */
@@ -14,13 +14,9 @@ export function LandingCompareSection() {
           How we compare
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-pretty text-center text-[var(--mkt-text-muted)]">
-          Not a feature shootout: rough fit vs Stream, Ably, Pusher, and DIY DO repos.{" "}
+          Rough fit vs Stream, Ably, Pusher, and a DIY Durable Object.{" "}
           <Link href={HOSTED_PATHS.compare} className="text-brand underline underline-offset-2">
             Full compare
-          </Link>
-          {" · "}
-          <Link href="/guides/pusher-alternative-saas" className="text-brand underline underline-offset-2">
-            Leaving Pusher
           </Link>
           .
         </p>
@@ -45,7 +41,7 @@ export function LandingCompareSection() {
               </tr>
             </thead>
             <tbody>
-              {COMPARE_ROWS.map((row) => (
+              {LANDING_COMPARE_ROWS.map((row) => (
                 <tr key={row.label} className="border-b border-[var(--mkt-border)] last:border-0">
                   <td className="px-4 py-[1.125rem] font-medium text-[var(--mkt-text)]">{row.label}</td>
                   <td className="px-4 py-[1.125rem] text-[var(--mkt-text-muted)]">{row.stream}</td>

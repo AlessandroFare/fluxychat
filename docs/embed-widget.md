@@ -89,7 +89,8 @@ sequenceDiagram
 |----------|---------|-------|
 | `EMBED_WIDGET_ENABLED` | enabled | Set `false` to disable widget globally |
 | `PUBLIC_GUEST_ALLOWED_ORIGINS` | — | Still applies to guest-session |
-| `PUBLIC_GUEST_READ_ONLY` | read-only guests | When `false`, embed visitors can send messages |
+| `PUBLIC_GUEST_READ_ONLY` | self-host: guests can send unless you set `true` | Hosted guests are read-only unless `PUBLIC_GUEST_ALLOW_WRITES=true` |
+| `PUBLIC_GUEST_ALLOW_WRITES` | hosted off | Set `true` only if hosted guests must send |
 
 ## Custom domains
 

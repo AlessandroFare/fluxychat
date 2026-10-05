@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CANONICAL_TIER_LIMITS,
   FREE_TIER_LIMITS,
+  LANDING_PLAN_KEYS,
   PUBLIC_PLAN_CATALOG,
   SALES_PLAN_CATALOG,
 } from "./plan-catalog";
@@ -77,9 +78,11 @@ describe("plan-catalog (P0-1 pricing source of truth)", () => {
 
   it("canonical limits are frozen at runtime", () => {
     expect(() => {
-      // Intentionally mutating a frozen object in test; Object.freeze
-      // enforces this at runtime (the type system does not encode it).
       CANONICAL_TIER_LIMITS.starter.messageLimitMonthly = 1;
     }).toThrow();
+  });
+
+  it("landing marketing shows Free, Starter, and Pro", () => {
+    expect(LANDING_PLAN_KEYS).toEqual(["free", "starter", "pro"]);
   });
 });

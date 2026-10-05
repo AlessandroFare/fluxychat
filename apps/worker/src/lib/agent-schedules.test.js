@@ -4,6 +4,7 @@ import {
   claimDueAgentSchedules,
   completeAgentScheduleFire,
   cronFieldMatches,
+  cronMatchesNow,
   earliestAgentScheduleDueAt,
   nextCronOccurrence,
   parseCronExpression,
@@ -26,6 +27,13 @@ describe("agent schedules", () => {
     expect(cronFieldMatches("*/15", 7, 0, 59)).toBe(false);
     expect(cronFieldMatches("1,15,30", 15, 0, 59)).toBe(true);
     expect(cronFieldMatches("10-12", 11, 0, 59)).toBe(true);
+  });
+
+  it("matches a 5-field cron at the UTC minute", () => {
+    const now = new Date(Date.UTC(2026, 9, 3, 14, 15, 0));
+    expect(cronMatchesNow("*/15 * * * *", now)).toBe(true);
+    expect(cronMatchesNow("*/15 * * * *", new Date(Date.UTC(2026, 9, 3, 14, 7, 0)))).toBe(false);
+    expect(cronMatchesNow("*/15", now)).toBe(true);
   });
 
   it("finds the next UTC cron minute", () => {

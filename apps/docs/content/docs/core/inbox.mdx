@@ -93,7 +93,9 @@ In chat UI, `useChat({ readOn: "mount" })` or `markReadLatest: true` sends read 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/inbox` | Inbox summary (mentions, unread, snoozed, follow-ups, counts) |
-| POST | `/inbox/rooms/:roomId/snooze` | Snooze a room |
+| GET | `/inbox/agent` | HITL / askHuman rows for the current approver |
+| POST | `/inbox/agent/:id` | accept, ignore, edit, reply |
+| PUT | `/inbox/rooms/:roomId/snooze` | Snooze a room |
 | POST | `/inbox/follow-ups` | Schedule follow-up |
 | POST | `/rooms/:roomId/read` | Advance read watermark `{ messageId }` |
 
@@ -105,7 +107,7 @@ When `realtime: true` (default when authenticated), `useInbox` opens **`GET /ws/
 
 ## Console
 
-The dashboard **Inbox** page (`/inbox`) shows the items feed, sidebar badge via `useInbox().counter`, live `onItem` banner, and **Mark read** on unread rows.
+The dashboard **Inbox** page (`/inbox`) shows the items feed, sidebar badge via `useInbox().counter`, live `onItem` banner, **Mark read** on unread rows, and the approvals inbox (HITL plus askHuman).
 
 ## Related
 

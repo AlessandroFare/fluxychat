@@ -149,9 +149,9 @@ export function LandingFeaturesClient() {
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: "Bridges", desc: "Slack, Discord, Telegram, WhatsApp, Teams: you create the vendor app. Same channel_configs table." },
+              { label: "Bridges", desc: "You create the vendor app. WhatsApp in the EU is in a Commission case. Build that connector yourself." },
               { label: "Streaming markdown", desc: "Table buffering, code fence tracking, inline marker healing for clean partial renders during AI streaming" },
-              { label: "invokeAgent", desc: "Agents on the same room timeline. Copilots do not write the timeline." },
+              { label: "invokeAgent", desc: "Agents on the same room timeline. A copilot panel stays off the chat log." },
               { label: "pk_ + guest", desc: "Publishable keys and joinPublicRoomAsGuest. fc_ stays on the server." },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 px-5 py-4">
@@ -228,18 +228,18 @@ export function LandingFeaturesClient() {
             </div>
             <p className="mt-6 text-sm text-zinc-400">
               Longer notes:{" "}
-              <Link href="/landing/incident" className="text-[var(--mkt-brand)] underline-offset-4 hover:underline">
+              <Link href={HOSTED_PATHS.incident} className="text-[var(--mkt-brand)] underline-offset-4 hover:underline">
                 incident
               </Link>
               {", "}
-              <Link href="/landing/support" className="text-[var(--mkt-brand)] underline-offset-4 hover:underline">
+              <Link href={HOSTED_PATHS.support} className="text-[var(--mkt-brand)] underline-offset-4 hover:underline">
                 support
               </Link>
               {", "}
-              <Link href="/landing/pr-review" className="text-[var(--mkt-brand)] underline-offset-4 hover:underline">
+              <Link href={HOSTED_PATHS.prReview} className="text-[var(--mkt-brand)] underline-offset-4 hover:underline">
                 PR review
               </Link>
-              . Gallery apps, not separate SKUs.
+              . Those are gallery apps.
             </p>
           </div>
         </div>
