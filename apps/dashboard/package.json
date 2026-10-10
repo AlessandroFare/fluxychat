@@ -40,7 +40,7 @@
     "@lexical/selection": "^0.48.0",
     "@lexical/table": "^0.48.0",
     "@lexical/text": "^0.48.0",
-    "@lexical/utils": "^0.48.0",
+    "@lexical/utils": "^0.52.0",
     "@lexical/yjs": "^0.48.0",
     "@schedule-x/calendar": "^4.6.1",
     "@schedule-x/events-service": "^4.6.1",
