@@ -35,7 +35,7 @@
     "@lexical/offset": "^0.48.0",
     "@lexical/overflow": "^0.48.0",
     "@lexical/plain-text": "^0.48.0",
-    "@lexical/react": "^0.48.0",
+    "@lexical/react": "^0.52.0",
     "@lexical/rich-text": "^0.48.0",
     "@lexical/selection": "^0.48.0",
     "@lexical/table": "^0.48.0",
