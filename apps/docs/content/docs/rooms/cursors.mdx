@@ -1,0 +1,27 @@
+---
+title: Live cursors
+description: Batch outbound points. Replay inbound offsets. Last position per user.
+---
+
+```ts
+await room.attach();
+
+room.cursors.subscribe("update", (cursor) => {
+  draw(cursor.userId, cursor.x, cursor.y);
+});
+
+window.addEventListener("mousemove", (event) => {
+  room.cursors.set({ x: event.clientX, y: event.clientY });
+});
+
+const all = room.cursors.getAll();
+const me = await room.cursors.getSelf();
+const others = await room.cursors.getOthers();
+const page = await room.cursors.history({ limit: 50 });
+```
+
+Outbound points batch (~100ms). Inbound replay uses `offset` so the remote pointer travels instead of teleporting. The Room DO skips fan-out when you are the only socket.
+
+On connect, the DO sends the last cursor per user (`snapshot: true`). `await history()` pages the in-session ring plus the Room DO trail from `GET /rooms/:id/live` (`cursorHistory`, cap 200). Hibernated DOs start empty — this is not a durable channel.history of every past point.
+
+`useCursors()` is the React hook on `FluxyRoomProvider`. `useLiveCursors({ roomId })` is the store path. UI: `Cursors` / `Cursor` in `@fluxy-chat/ui`.

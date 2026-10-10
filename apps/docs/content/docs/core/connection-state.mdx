@@ -12,6 +12,8 @@ description: Lifecycle, reconnect backoff, transport fallback, degraded-http.
 | `connecting` | First WebSocket handshake |
 | `connected` | Live on WebSocket |
 | `reconnecting` | Socket dropped, backoff retry in progress |
+| `suspended` | Long outage; the client still retries (`retryIn` on the status change) |
+| `failed` | Auth or max attempts; the client stops until you attach again |
 | `degraded-http` | Socket down, HTTP publish still works (`canPublishViaHttp`) |
 | `degraded` | Unhealthy, not the HTTP fallback path |
 | `disconnected` | Not connected (manual disconnect or fatal error) |
@@ -59,7 +61,10 @@ JWT refresh: `client.setToken(next)` (alias `updateToken`). Reconnect rooms if `
 
 If the live socket is blocked (corporate proxy, strict CSP), the UI should read `connectionState.status === "degraded-http"` and `canPublishViaHttp`. Sends still go over HTTP. This is not a second product; it is the same room.
 
+Per-room attach labels (`attached`, `suspended`, `failed`) are on `room.status()`. See [Room status](/docs/rooms/status).
+
 ## Related
 
+- [Room status](/docs/rooms/status)
 - [Wire protocol](/docs/core/wire-protocol)
 - [Transport fallback](/docs/cookbook/transport-fallback)

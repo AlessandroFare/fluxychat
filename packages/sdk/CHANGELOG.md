@@ -1,5 +1,15 @@
 # @fluxy-chat/sdk
 
+## 0.6.15 (2026-10-10)
+
+### Added
+
+- Worker clients for agent platform (versions, deploys, memories, costs, A/B), FluxyGame, and FluxyIoT.
+- `client.room()` attach/detach, occupancy, locks, `FLUXY_SDK_VERSION`.
+- Vertical readiness labels: Worker-backed modules `production`; huddles/spatial/transport stay `labs`.
+
+Publish **protocol 0.1.7** first.
+
 ## 0.6.14 (2026-10-05)
 
 ### Added

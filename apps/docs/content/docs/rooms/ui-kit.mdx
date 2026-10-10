@@ -1,0 +1,46 @@
+---
+title: UI kit
+description: ChatWindow, ChannelList, RoomInfo, AvatarStack. State still comes from the SDK.
+---
+
+`@fluxy-chat/ui` is layout. `@fluxy-chat/react` / `@fluxy-chat/sdk` own the socket.
+
+```tsx
+import { ChatWindow } from "@fluxy-chat/ui";
+import { useChat } from "@fluxy-chat/react";
+
+function Room({ roomId }: { roomId: string }) {
+  const { messages, sendMessage, online, typingUsers } = useChat({ roomId });
+
+  return (
+    <ChatWindow
+      roomName={roomId}
+      messages={messages}
+      online={online}
+      occupancy={{ connections: online, presenceMembers: 2 }}
+      typingUsers={typingUsers}
+      windowSize={300}
+      enableTypingIndicators
+      onSend={(text) => sendMessage(text)}
+    />
+  );
+}
+```
+
+`ChatWindow` props (not children): transcript, composer, optional `ChannelList`, `RoomInfo` header when `roomName` is set, typing footer, send-error alert, connection chrome, discontinuity banner, room-reaction bursts.
+
+| Piece | What it does |
+| --- | --- |
+| `ChatWindow` | Cap latest N (`windowSize`), load-older at the top, header/footer slots |
+| `RoomInfo` | `{name} · N in chat · M watching` (`M = connections − presenceMembers`) |
+| `ChannelList` | Occupancy per room, collapse, empty "Select a room…", add/leave |
+| `MessageInput` | Enter sends, textarea grows to 150px, emoji at caret, `onSendError` |
+| `MessageList` | Preserve scroll on prepend, `loadMoreThreshold` 150, empty “No messages yet” |
+| `AvatarStack` | `selfId` first, overflow `+N` |
+| `ParticipantList` | roster, self first, extra watchers |
+| `formatTypingCaption` | 1 / 2 / N people |
+| `formatSenderTooltip` | name, client id, time |
+
+Drop-in widget (guest + `pk_`): [`@fluxy-chat/ui-kit`](/docs/packages/ui-kit) `FluxyChatWidget`. It wires those `ChatWindow` props from `useChat`.
+
+`FluxyChatSettingsProvider` gates edit / delete / react on `ChatWindow`. Wrap the tree to change defaults. Delete asks `Delete this message?`. Pass `discontinuity` and `roomReactions` / `onSendRoomReaction` for the Ably hole banner and footer bursts. Pass `connectionStatus` for reconnect chrome.

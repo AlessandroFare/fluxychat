@@ -1,0 +1,30 @@
+---
+title: Message history
+description: PaginatedResult. newestFirst by default. fromSerial and beforeSerial.
+---
+
+```ts
+const page = await room.messages.history({ limit: 50 });
+for (const message of page.items) {
+  console.log(message.id, message.text, message.serial);
+}
+
+if (page.hasNext()) {
+  const older = await page.next();
+}
+```
+
+| Param | What it does |
+| --- | --- |
+| `limit` | Page size |
+| `orderBy` | `newestFirst` (default) or `oldestFirst` |
+| `before` | ISO timestamp, exclusive |
+| `fromSerial` | Numeric id, `id > n` |
+| `beforeSerial` | Numeric id, `id < n` |
+| `start` / `end` | Time window on `createdAt` |
+
+REST: `GET /messages` with the same bounds. The Worker does not speak MessagePack.
+
+Versions of one line: `room.messages.getVersions(id)` reads `room_message_events` (REST PATCH also records an update).
+
+If the socket resumes with a hole it cannot fill, you get `onDiscontinuity` (code 10200). Reload history from there. Cookbook: [message history](/docs/cookbook/message-history).

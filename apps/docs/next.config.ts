@@ -18,6 +18,16 @@ const config: NextConfig = {
         destination: "/docs/learn/status-and-limits",
         permanent: true,
       },
+      {
+        source: "/errors",
+        destination: "/docs/errors",
+        permanent: false,
+      },
+      {
+        source: "/errors/:slug",
+        destination: "/docs/errors/:slug",
+        permanent: false,
+      },
     ];
   },
 };

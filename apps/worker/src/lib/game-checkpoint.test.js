@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { upsertGameCheckpoint, federateGameCheckpoint } from "./game-checkpoint.js";
+import { upsertGameCheckpoint, federateGameCheckpoint, deleteGameCheckpoint } from "./game-checkpoint.js";
 import { createGameQuest, scanQuestContent } from "./game-quest.js";
 
 function checkpointEnv(existing = null) {
@@ -21,6 +21,9 @@ function checkpointEnv(existing = null) {
                 return null;
               },
               async run() {
+                if (sql.includes("DELETE FROM game_checkpoints")) {
+                  rows.delete(`${params[0]}:${params[1]}:${params[2]}`);
+                }
                 if (sql.includes("INSERT INTO game_checkpoints")) {
                   const [projectId, playerId, key, stateJson, version, updatedAt] = params;
                   rows.set(`${projectId}:${playerId}:${key}`, {
@@ -122,6 +125,15 @@ describe("game-checkpoint", () => {
     const result = await federateGameCheckpoint(env, auth, { checkpointKey: "level-3" });
     expect(result.ok).toBe(false);
     expect(result.error).toBe("checkpoint_source_target_required");
+  });
+
+  it("deletes a checkpoint", async () => {
+    const env = checkpointEnv();
+    const auth = { projectId: "p1", userId: "alice" };
+    await upsertGameCheckpoint(env, auth, { checkpointKey: "level-3", state: { hp: 1 } });
+    const deleted = await deleteGameCheckpoint(env, auth, "level-3", "alice");
+    expect(deleted.ok).toBe(true);
+    expect(env.rows.size).toBe(0);
   });
 });
 

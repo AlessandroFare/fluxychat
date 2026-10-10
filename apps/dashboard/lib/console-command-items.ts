@@ -108,7 +108,7 @@ export function buildConsoleCommandItems(quickstartHref: string): ConsoleCommand
       id: "action-support",
       group: "Actions",
       label: "Contact support",
-      description: "Email fluxychat@outlook.com",
+      description: "Email support@fluxychat.com",
       icon: LifeBuoy,
       action: "open-support",
       keywords: ["help", "email", "contact"],

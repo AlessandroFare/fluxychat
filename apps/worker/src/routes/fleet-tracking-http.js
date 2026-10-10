@@ -2,9 +2,11 @@ import { pickRouteDeps } from "./route-http-deps.js";
 import { readDeviceBearer } from "../lib/device-secret.js";
 import {
   parseGpsIngestBody,
+  parseRecorderTime,
   parseVehicleInput,
   parseTripInput,
   parseGeofenceInput,
+  parseGeofencePatch,
   parseDeliveryMatchInput,
   authenticateFleetVehicle,
   ingestGps,
@@ -18,6 +20,9 @@ import {
   updateTripStatus,
   listGeofences,
   createGeofence,
+  updateGeofence,
+  deleteGeofence,
+  listGeofenceEvents,
   findNearestDrivers,
   matchDelivery,
   routeCopilot,
@@ -59,32 +64,55 @@ export async function dispatchFleetTrackingRoutes(request, url, h) {
   const projectId = auth.projectId;
 
   try {
-    /* ── POST /fleet/gps (ingest) ── */
+    /* ── POST /fleet/gps (ingest; OwnTracks location JSON or array) ── */
     if (url.pathname === "/fleet/gps" && request.method === "POST") {
       const body = await request.json().catch(() => null);
-      const parsed = parseGpsIngestBody(body);
-      if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
-      if (auth.id && parsed.data.vehicleId !== auth.id) {
-        return json({ error: "vehicle_mismatch" }, { status: 403, headers: corsHeaders });
+      const limit = {
+        user: request.headers.get("X-Limit-User") || undefined,
+        device: request.headers.get("X-Limit-Device") || undefined,
+      };
+      const items = Array.isArray(body) ? body : [body];
+      const ingested = [];
+      for (const item of items) {
+        const parsed = parseGpsIngestBody(item, limit);
+        if (!parsed.ok) {
+          if (parsed.error === "skip_type") continue;
+          return json({ error: parsed.error }, { status: 400 });
+        }
+        if (auth.id) parsed.data.vehicleId = auth.id;
+        const result = await ingestGps(env, projectId, parsed.data);
+        if (result.error === "quota_exceeded") {
+          return json(result, { status: 429, headers: corsHeaders });
+        }
+        ingested.push(result);
       }
-      const result = await ingestGps(env, projectId, parsed.data);
-      const status = result.error === "quota_exceeded" ? 429 : 200;
-      return json(result, { status, headers: corsHeaders });
+      if (!ingested.length) return json({ error: "no_location" }, { status: 400 });
+      return json(ingested.length === 1 ? ingested[0] : { ok: true, count: ingested.length, results: ingested }, {
+        headers: corsHeaders,
+      });
     }
 
-    /* ── GET /fleet/gps/current ── */
-    if (url.pathname === "/fleet/gps/current" && request.method === "GET") {
-      const result = await listCurrentPositions(env, projectId);
+    /* ── GET /fleet/gps/current | /fleet/gps/last (recorder last) ── */
+    if ((url.pathname === "/fleet/gps/current" || url.pathname === "/fleet/gps/last") && request.method === "GET") {
+      const vehicleId = url.searchParams.get("vehicleId") || url.searchParams.get("device");
+      const result = await listCurrentPositions(env, projectId, vehicleId);
       return json(result, { headers: corsHeaders });
     }
 
-    /* ── GET /fleet/gps/history ── */
-    if (url.pathname === "/fleet/gps/history" && request.method === "GET") {
-      const vehicleId = url.searchParams.get("vehicleId");
-      const from = Number(url.searchParams.get("from")) || Date.now() - 3600000;
-      const to = Number(url.searchParams.get("to")) || Date.now();
+    /* ── GET /fleet/gps/history | /fleet/gps/locations (recorder locations) ── */
+    if ((url.pathname === "/fleet/gps/history" || url.pathname === "/fleet/gps/locations") && request.method === "GET") {
+      const vehicleId = url.searchParams.get("vehicleId") || url.searchParams.get("device");
+      const from = parseRecorderTime(
+        url.searchParams.get("from") || request.headers.get("X-Limit-From"),
+        Date.now() - 3600000,
+      );
+      const to = parseRecorderTime(
+        url.searchParams.get("to") || request.headers.get("X-Limit-To"),
+        Date.now(),
+      );
+      const limit = url.searchParams.get("limit");
       if (!vehicleId) return json({ error: "vehicleId query param required" }, { status: 400 });
-      const result = await getGpsHistory(env, projectId, vehicleId, from, to);
+      const result = await getGpsHistory(env, projectId, vehicleId, from, to, limit);
       return json(result, { headers: corsHeaders });
     }
 
@@ -158,6 +186,33 @@ export async function dispatchFleetTrackingRoutes(request, url, h) {
       if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
       const result = await createGeofence(env, projectId, parsed.data);
       return json(result, { status: 201, headers: corsHeaders });
+    }
+
+    /* ── PATCH /fleet/geofences/:id ── */
+    const geofenceMatch = url.pathname.match(/^\/fleet\/geofences\/([^/]+)$/);
+    if (geofenceMatch && request.method === "PATCH") {
+      const body = await request.json().catch(() => null);
+      const parsed = parseGeofencePatch(body);
+      if (!parsed.ok) return json({ error: parsed.error }, { status: 400, headers: corsHeaders });
+      const result = await updateGeofence(env, projectId, geofenceMatch[1], parsed.data);
+      if (!result.ok) return json(result, { status: result.status || 400, headers: corsHeaders });
+      return json(result, { headers: corsHeaders });
+    }
+
+    if (geofenceMatch && request.method === "DELETE") {
+      const result = await deleteGeofence(env, projectId, geofenceMatch[1]);
+      if (!result.ok) return json(result, { status: result.status || 400, headers: corsHeaders });
+      return json(result, { headers: corsHeaders });
+    }
+
+    /* ── GET /fleet/geofence-events ── */
+    if (url.pathname === "/fleet/geofence-events" && request.method === "GET") {
+      const result = await listGeofenceEvents(env, projectId, {
+        vehicleId: url.searchParams.get("vehicleId") || null,
+        geofenceId: url.searchParams.get("geofenceId") || null,
+        limit: url.searchParams.get("limit"),
+      });
+      return json(result, { headers: corsHeaders });
     }
 
     /* ── POST /fleet/delivery/nearest ── */

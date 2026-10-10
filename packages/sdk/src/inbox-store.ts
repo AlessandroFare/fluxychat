@@ -38,6 +38,7 @@ export function createFluxyInboxStore(): FluxyInboxStore & {
   setError: (error: Error | null) => void;
   setSummary: (summary: FluxyInboxSummary | null) => void;
   pushItem: (item: FluxyInboxItem) => void;
+  removeItem: (id: string) => void;
   reset: () => void;
 } {
   let snapshot: FluxyInboxStoreSnapshot = INERT_INBOX_SNAPSHOT;
@@ -112,6 +113,16 @@ export function createFluxyInboxStore(): FluxyInboxStore & {
           items,
           unseen: countUnseenItems(items),
           status: "ready",
+        }),
+      );
+    },
+    removeItem(id) {
+      const items = snapshot.items.filter((row) => row.id !== id);
+      emit(
+        derive({
+          items,
+          unseen: countUnseenItems(items),
+          status: snapshot.summary ? "ready" : snapshot.status,
         }),
       );
     },

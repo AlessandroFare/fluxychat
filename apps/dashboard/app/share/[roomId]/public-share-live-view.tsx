@@ -30,7 +30,17 @@ function PublicShareChat({
   title: string;
   client: FluxyChatClient;
 }) {
-  const { messages, connectionState, typingUsers, online, agentTyping } = useChat({
+  const {
+    messages,
+    connectionState,
+    typingUsers,
+    online,
+    agentTyping,
+    presenceCount,
+    presenceMembers,
+    subscriptionCount,
+    lastDiscontinuity,
+  } = useChat({
     roomId,
     client,
   });
@@ -43,17 +53,21 @@ function PublicShareChat({
 
   return (
     <div className={fluxyThemeClassName("default")} role="region" aria-label={title}>
-      <p className="mb-2 text-xs text-muted-foreground" aria-live="polite">
-        {status}
-        {agentTyping ? " · agent thinking" : ""}
-      </p>
       <ChatWindow
+        roomName={title}
+        occupancy={{
+          connections: subscriptionCount || online,
+          presenceMembers: presenceCount || presenceMembers.length,
+        }}
         messages={safeMessages}
         online={online}
         typingUsers={typingUsers}
         agentTyping={agentTyping && !messages.some((m) => m.streaming)}
         agentTypingLabel="Agent thinking"
         localUserId={client.userId}
+        connectionStatus={status}
+        nextRetryAt={connectionState.nextRetryAt}
+        discontinuity={lastDiscontinuity}
         readOnly
       />
     </div>

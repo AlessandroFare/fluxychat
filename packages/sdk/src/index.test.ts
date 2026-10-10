@@ -119,6 +119,27 @@ describe("FluxyChatClient", () => {
     expect(body.attachments[0].url).toContain("cdn.example");
   });
 
+  it("createMessage() includes metadata and headers", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: { id: 1, roomId: "r", userId: "u", content: "c", createdAt: new Date().toISOString() },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    await client.createMessage("room", "hello", null, undefined, undefined, {
+      metadata: { color: "red" },
+      headers: { source: "sdk" },
+    });
+    const [, init] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(String(init?.body));
+    expect(body.metadata).toEqual({ color: "red" });
+    expect(body.headers).toEqual({ source: "sdk" });
+  });
+
   it("fetchMessages() sends before cursor and returns chronological order", async () => {
     const fetchMock = vi.mocked(globalThis.fetch);
     fetchMock.mockResolvedValue(
@@ -144,6 +165,48 @@ describe("FluxyChatClient", () => {
     expect(calledUrl).toContain("before=2026-01-03");
     expect(calledUrl).toContain("limit=25");
     expect(messages.map((m) => m.id)).toEqual([1, 2]);
+    expect(messages.map((m) => m.serial)).toEqual(["1", "2"]);
+  });
+
+  it("fetchMessages() sends start/end history window", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ messages: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    await client.fetchMessages("room", {
+      start: Date.parse("2026-01-01T00:00:00.000Z"),
+      end: "2026-01-31T00:00:00.000Z",
+    });
+    const calledUrl = String(fetchMock.mock.calls[0]?.[0]);
+    expect(calledUrl).toContain("after=");
+    expect(calledUrl).toContain("end=2026-01-31");
+  });
+
+  it("FX-HIST-7 fetchMessages sends fromSerial rewind", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ messages: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    await client.fetchMessages("room", { fromSerial: 9 });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("fromSerial=9");
+  });
+
+  it("FX-REAC-4 sendReactionRest posts type and count", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    await client.sendReactionRest(9, "👏", "add", { type: "multiple", count: 3 });
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({ emoji: "👏", type: "multiple", count: 3 });
   });
 
   it("fetchRoomMembers() normalizes user_id to userId", async () => {
@@ -274,6 +337,8 @@ describe("FluxyChatClient", () => {
             { userId: "bob", userInfo: { name: "Bob" } },
           ],
           socketIds: ["s1", "s2", "s3"],
+          cursors: [{ type: "cursor", userId: "alice", x: 1, y: 2, ts: 9 }],
+          cursorHistory: [{ type: "cursor", userId: "alice", x: 1, y: 2, ts: 9 }],
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -294,6 +359,8 @@ describe("FluxyChatClient", () => {
     expect(live.members[0]?.userId).toBe("alice");
     expect(live.members[0]?.userInfo).toEqual({ name: "Alice", role: "owner" });
     expect(live.socketIds).toEqual(["s1", "s2", "s3"]);
+    expect(live.cursors[0]).toMatchObject({ userId: "alice", x: 1, y: 2 });
+    expect(live.cursorHistory).toHaveLength(1);
   });
 
   it("getRoomLive() returns an empty snapshot for an empty roomId without calling fetch", async () => {
@@ -642,6 +709,85 @@ describe("FluxyChatClient", () => {
     });
   });
 
+  describe("support canned + CSAT", () => {
+    it("lists canned responses and records use", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ responses: [{ id: "cr_1", shortcut: "hi", title: "Hi", body: "Hello" }] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const rows = await client.listCannedResponses();
+      expect(rows[0]?.shortcut).toBe("hi");
+      await client.useCannedResponse("cr_1");
+      expect(String(fetchMock.mock.calls[1]?.[0])).toContain("/support/canned-responses/cr_1/use");
+    });
+
+    it("creates, updates, and deletes a canned response", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, id: "cr_9" }), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const created = await client.createCannedResponse({
+        shortcut: "bye",
+        title: "Bye",
+        body: "Thanks",
+      });
+      expect(created.id).toBe("cr_9");
+      await client.updateCannedResponse("cr_9", { body: "Thank you" });
+      await client.deleteCannedResponse("cr_9");
+      expect((fetchMock.mock.calls[1]?.[1] as RequestInit).method).toBe("PATCH");
+      expect((fetchMock.mock.calls[2]?.[1] as RequestInit).method).toBe("DELETE");
+    });
+
+    it("loads pending CSAT and submits a rating", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ survey: { id: "sss_1", ticketId: "st_1", surveyType: "csat" } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const pending = await client.getPendingCsat("room-1");
+      expect(pending?.id).toBe("sss_1");
+      await client.respondCsat("sss_1", 5, "good");
+      expect(String(fetchMock.mock.calls[1]?.[0])).toContain("/support/csat/sss_1/respond");
+    });
+  });
+
+  describe("fleet geofences", () => {
+    it("updates, deletes, and lists geofence events", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, events: [{ id: "gfe_1", geofenceId: "gf_1", vehicleId: "v_1", eventType: "enter", occurredAt: "t" }] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      await client.updateFleetGeofence("gf_1", { name: "dock" });
+      await client.deleteFleetGeofence("gf_1");
+      const listed = await client.listFleetGeofenceEvents({ vehicleId: "v_1" });
+      expect((fetchMock.mock.calls[0]?.[1] as RequestInit).method).toBe("PATCH");
+      expect((fetchMock.mock.calls[1]?.[1] as RequestInit).method).toBe("DELETE");
+      expect(String(fetchMock.mock.calls[2]?.[0])).toContain("/fleet/geofence-events");
+      expect(listed.events[0]?.eventType).toBe("enter");
+    });
+  });
+
   describe("getAgentQueue (P13-T4)", () => {
     it("GET /client/feature-flags returns flags and reconnect backoff", async () => {
       const fetchMock = vi.mocked(fetch);
@@ -766,6 +912,157 @@ describe("FluxyChatClient", () => {
         expect(err).toBeInstanceOf(FluxyRateLimitError);
         expect((err as InstanceType<typeof FluxyRateLimitError>).retryAfterMs).toBe(9000);
       }
+    });
+  });
+
+  describe("agent schedules", () => {
+    it("lists room agent schedules", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, schedules: [{ id: "asch_1", agentId: "agt_1", kind: "delay", status: "pending", prompt: "wake", nextRunAt: 1 }] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const rows = await client.listAgentSchedules("lobby");
+      expect(rows[0]?.id).toBe("asch_1");
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/rooms/lobby/agent-schedules");
+    });
+
+    it("posts delay schedules and deletes by id", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, created: true, schedule: { id: "asch_2", agentId: "agt_1", kind: "delay", status: "pending", nextRunAt: 9 } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const created = await client.scheduleAgent("lobby", { agentId: "agt_1", kind: "delay", delayMs: 5000, prompt: "standup" });
+      expect(created.schedule.id).toBe("asch_2");
+      await client.cancelAgentSchedule("lobby", "asch_2");
+      expect(String(fetchMock.mock.calls[1]?.[0])).toContain("/rooms/lobby/agent-schedules/asch_2");
+      expect((fetchMock.mock.calls[1]?.[1] as RequestInit).method).toBe("DELETE");
+    });
+  });
+
+  describe("stream overlays", () => {
+    it("lists overlays for a room", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ overlays: [{ id: "o1", name: "Chat", overlayType: "chat", roomId: "live" }], count: 1 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const rows = await client.listStreamOverlays("live");
+      expect(rows[0]?.overlayType).toBe("chat");
+      expect(client.streamOverlayWidgetUrl("o1")).toContain("/overlays/o1/widget");
+    });
+
+    it("gets and patches overlay visibility", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "o1", name: "Chat", overlayType: "chat", roomId: "live", enabled: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "o1", name: "Chat", overlayType: "chat", enabled: false }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      const got = await client.getStreamOverlay("o1");
+      expect(got.enabled).toBe(true);
+      const patched = await client.updateStreamOverlay("o1", { enabled: false, style: { opacity: 0.4 } });
+      expect(patched.enabled).toBe(false);
+      expect((fetchMock.mock.calls[1]?.[1] as RequestInit).method).toBe("PATCH");
+    });
+  });
+
+  describe("edu breakouts", () => {
+    it("joins a breakout and ends all", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, memberCount: 1 }), { status: 200 }));
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, closed: ["brk_1"] }), { status: 200 }));
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      await client.joinBreakout("class-1", "brk_1");
+      await client.endAllBreakouts("class-1");
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/breakouts/brk_1/join");
+      expect(String(fetchMock.mock.calls[1]?.[0])).toContain("/breakouts/end-all");
+    });
+
+    it("votes a typed poll and activates the room timer", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, timer: { mode: "timer", running: false, timeMs: 60000 } }), { status: 200 }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      await client.voteTypedPoll("poll_1", "Blue");
+      await client.activateRoomTimer("class-1", { mode: "timer", timeMs: 60_000 });
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/polls/poll_1/vote");
+      expect(String(fetchMock.mock.calls[1]?.[0])).toContain("/rooms/class-1/timer/activate");
+    });
+  });
+
+  describe("workflows", () => {
+    it("dispatches a Botpress-style event", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, runs: [] }), { status: 200 }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      await client.dispatchWorkflowEvent("message_received", { role: "vip" });
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/workflows/events");
+    });
+
+    it("stops a workflow execution", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, status: "cancelled" }), { status: 200 }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      await client.stopWorkflowExecution("wfe_1");
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/workflows/executions/wfe_1/stop");
+    });
+
+    it("posts a production workflow webhook without JWT", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, runs: [] }), { status: 200 }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u" });
+      await client.ingestWorkflowWebhook("hookpath1", { method: "POST", body: { ping: 1 } });
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/hooks/workflows/hookpath1");
+    });
+
+    it("reads workflow state", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, value: { n: 1 } }), { status: 200 }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      await client.getWorkflowState("user", "u1", "step");
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/workflows/state");
+    });
+  });
+
+  describe("voice token", () => {
+    it("mints a member-scoped LiveKit token", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, token: { provider: "livekit", stub: true } }), { status: 200 }),
+      );
+      const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+      await client.getVoiceToken("lobby", { canPublish: false });
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/rooms/lobby/voice/token");
     });
   });
 

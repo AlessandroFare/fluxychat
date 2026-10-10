@@ -21,6 +21,8 @@ await client.votePoll(messageId, 0);
 
 `POST /polls` with `isAnonymous: true` stores votes without exposing voter ids in results. Use this for social-deduction and evaluator-only scoring. Close with `POST /polls/:id/close`.
 
+Typed polls (`pollType: "typed"`) start with no options. `voteTypedPoll` / `{ answer }` creates or reuses an option (BBB `pollSubmitUserTypedVote`).
+
 Private lines of chat (code only for the evaluator) still use `visibility` / `visibleTo` on `sendMessage`, not polls.
 
 ## Related

@@ -18,8 +18,22 @@ function parseArt50Metadata(raw) {
   }
 }
 
+function splitStoredExtras(raw) {
+  const parsed = parseArt50Metadata(raw);
+  if (!parsed) return { metadata: undefined, headers: undefined };
+  const { headers: rawHeaders, ...rest } = parsed;
+  const headers =
+    rawHeaders && typeof rawHeaders === "object" && !Array.isArray(rawHeaders)
+      ? Object.fromEntries(Object.entries(rawHeaders).map(([key, value]) => [key, String(value)]))
+      : undefined;
+  const metadata = Object.keys(rest).length ? rest : undefined;
+  return { metadata, headers };
+}
+
 export async function attachAttachmentsToMessages(env, projectId, roomId, rows) {
-  const mapped = rows.map((r) => ({
+  const mapped = rows.map((r) => {
+    const extras = splitStoredExtras(r.metadata_json);
+    return {
     id: r.id,
     roomId: r.room_id,
     userId: r.user_id,
@@ -27,6 +41,8 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
     content: r.content,
     createdAt: r.created_at,
     parentId: r.parent_id,
+    quotedMessageId:
+      typeof extras.metadata?.quotedMessageId === "number" ? extras.metadata.quotedMessageId : undefined,
     editedAt: r.edited_at ?? null,
     deletedAt: r.deleted_at ?? null,
     expiresAt: r.expires_at ?? null,
@@ -48,8 +64,9 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
     clientMessageId: r.client_message_id ?? undefined,
     seq: r.seq ?? undefined,
     version: r.version ?? 1,
-    participantType: r.participant_type || (parseArt50Metadata(r.metadata_json)?.participantType ?? undefined),
-    metadata: parseArt50Metadata(r.metadata_json),
+    participantType: r.participant_type || extras.metadata?.participantType || undefined,
+    metadata: extras.metadata,
+    headers: extras.headers,
     mentions: parseMentionsJson(r.mentions),
     preview: r.og_url
       ? {
@@ -60,7 +77,8 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
         }
       : undefined,
     attachments: [],
-  }));
+  };
+  });
 
   if (!mapped.length) return mapped;
   const ids = mapped.map((m) => m.id);
@@ -88,6 +106,28 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
   }
   for (const m of mapped) {
     m.attachments = byMessage.get(m.id) || [];
+  }
+
+  try {
+    const reactionRows = await env.DB.prepare(
+      `SELECT message_id, emoji, COUNT(*) as count FROM message_reactions
+       WHERE project_id = ? AND message_id IN (${placeholders})
+       GROUP BY message_id, emoji`,
+    )
+      .bind(projectId, ...ids)
+      .all();
+    const counts = new Map();
+    for (const row of reactionRows.results || []) {
+      const bucket = counts.get(row.message_id) || {};
+      bucket[row.emoji] = Number(row.count) || 0;
+      counts.set(row.message_id, bucket);
+    }
+    for (const m of mapped) {
+      const bucket = counts.get(m.id);
+      if (bucket && Object.keys(bucket).length) m.reactions = bucket;
+    }
+  } catch {
+    /* reaction tallies are optional on GET */
   }
 
   const previewUrls = [...new Set(mapped.map((m) => m.preview?.url).filter(Boolean))];

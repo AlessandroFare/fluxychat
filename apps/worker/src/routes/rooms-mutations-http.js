@@ -369,6 +369,48 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
 
   if (
     url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/unread") &&
+    request.method === "POST"
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const parts = url.pathname.split("/");
+    const unreadRoomId = parts[2];
+    const canAccess = await canAccessRoom(env, auth, unreadRoomId);
+    if (!canAccess) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    const body = await request.json().catch(() => null);
+    const { markUnreadFromMessage } = await import("../lib/room-catch-up.js");
+    const result = await markUnreadFromMessage(env.DB, {
+      projectId: auth.projectId,
+      roomId: unreadRoomId,
+      userId: auth.userId,
+      messageId: body?.messageId,
+    });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: 400 });
+    }
+    const { notifyInboxUpdated } = await import("../lib/user-inbox-push.js");
+    void notifyInboxUpdated(env, {
+      projectId: auth.projectId,
+      userId: auth.userId,
+      roomId: unreadRoomId,
+      kind: "unread",
+      messageId: body?.messageId,
+      unreadCount: result.unreadCount,
+    }).catch(() => {});
+    return json(result);
+  }
+
+  if (
+    url.pathname.startsWith("/rooms/") &&
     url.pathname.endsWith("/catch-up/digest") &&
     request.method === "GET"
   ) {
@@ -1968,6 +2010,23 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
   }
 
   const agentSchedCancel = url.pathname.match(/^\/rooms\/([^/]+)\/agent-schedules\/([^/]+)$/);
+  if (agentSchedCancel && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const [, schedRoomId, scheduleId] = agentSchedCancel;
+    const canAccess = await canAccessRoom(env, auth, schedRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    if (!env.ROOM) return json({ error: "room_binding_unavailable" }, { status: 503 });
+    const stub = env.ROOM.get(env.ROOM.idFromName(schedRoomId));
+    const res = await stub.fetch(
+      `https://internal/agent-schedules?scheduleId=${encodeURIComponent(scheduleId)}`,
+      { method: "GET" },
+    );
+    const payload = await res.json().catch(() => ({ ok: false }));
+    return json(payload, { status: res.status });
+  }
   if (agentSchedCancel && request.method === "DELETE") {
     const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
     if (!auth) {

@@ -31,9 +31,15 @@ export {
 export {
   decodeYjsFrame,
   encodeYjsFrame,
+  decodeYjsAwareness,
+  encodeYjsAwareness,
+  encodeYjsAwarenessLeave,
+  isPermanentYjsClose,
+  isYjsAwarenessLeave,
   YJS_MSG_AWARENESS,
   YJS_MSG_SYNC,
   YJS_MSG_UPDATE,
+  type FluxyYjsAwarenessState,
 } from "./yjs-binary";
 
 export {
@@ -54,12 +60,15 @@ export { FLUXY_AGENT_SUGGESTIONS_MAP_KEY } from "./yjs-agent-suggestions";
 
 export {
   FluxyYjsProvider,
+  useAwareness,
+  useYjsStatus,
   useMutation,
   useRedo,
   useStorage,
   useUndo,
   useYjsContext,
   useYjsDoc,
+  type FluxyYjsConnectionStatus,
   type FluxyYjsContextValue,
   type FluxyYjsProviderProps,
 } from "./use-storage";

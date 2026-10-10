@@ -1,0 +1,20 @@
+---
+title: "Room reactions"
+description: "Send an ephemeral emoji on the room socket. It is not a message and it is not stored."
+---
+
+# Room reactions
+
+`room.reactions.send(name)` broadcasts a `room_reaction` frame. Peers receive it once. The Room Durable Object does not write it to D1.
+
+This is not a message reaction. Message reactions attach to a `messageId`.
+
+```tsx
+const room = client.room("lobby");
+room.attach();
+room.reactions.subscribe((event) => {
+  console.log(event.reaction.userId, event.reaction.name);
+});
+
+return <button onClick={() => room.reactions.send("👏")}>Clap</button>;
+```

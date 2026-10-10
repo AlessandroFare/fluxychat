@@ -20,6 +20,22 @@ describe("presence patch", () => {
     expect(buildPresencePatchOutbound({})).toBeNull();
   });
 
+  it("round-trips uiLocation without touching GPS", () => {
+    expect(
+      buildPresencePatchOutbound({ uiLocation: { surface: "slide", id: "3" } }),
+    ).toEqual({
+      type: "presence_patch",
+      data: { uiLocation: { surface: "slide", id: "3" } },
+    });
+    expect(
+      parsePresencePatchEvent({
+        type: "presence_patch",
+        userId: "ada",
+        data: { ui_location: "deck:4" },
+      }),
+    ).toEqual({ uiLocation: "deck:4" });
+  });
+
   it("round-trips agentStatus", () => {
     expect(buildPresencePatchOutbound({ agentStatus: "running" })).toEqual({
       type: "presence_patch",

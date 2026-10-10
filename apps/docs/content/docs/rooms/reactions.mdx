@@ -1,0 +1,36 @@
+---
+title: Reactions
+description: Message emoji on the line. Room bursts on the footer.
+---
+
+Two APIs. Do not mix them.
+
+## Message reactions
+
+Tied to a message id. Persist. Summaries fold unique, distinct, and multiple.
+
+```ts
+await room.messages.reactions.send(messageId, "👍");
+await room.messages.reactions.delete(messageId, "👍");
+
+room.messages.reactions.subscribe((event) => {
+  console.log(event.type, event.summary);
+});
+```
+
+Raw create/delete frames need `messages: { rawMessageReactions: true }` on `rooms.get`. Default is off (`feature_not_enabled` on `subscribeRaw`). Operator CLI: `fluxy-room react|unreact|reactions --id <n> --emoji 👍`.
+
+## Room reactions
+
+Ephemeral. Everyone in the room sees a burst. Nothing is stored on a chat line.
+
+```ts
+await room.reactions.send("👏");
+await room.reactions.send({ name: "👏", metadata: { source: "header" } });
+
+room.reactions.subscribe((event) => {
+  console.log(event.type, event.reaction.name, event.reaction.userId);
+});
+```
+
+Wire name: `room_reaction`. Recipe: [Room reactions](/docs/cookbook/room-reactions). `ChatWindow` can show bursts in the footer if you pass them in.

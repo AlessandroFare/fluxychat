@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -25,14 +25,16 @@ import {
   Pin,
   Flag,
   Languages,
+  Trash2,
   X,
 } from "lucide-react";
-import { useChat, useFluxyChatOptional } from "@fluxy-chat/react";
+import { useChat, useChatSettings, useFluxyChatOptional } from "@fluxy-chat/react";
 import { SearchSnippet } from "@/app/search/search-snippet";
 import {
   buildDeepResearchPrompt,
   buildImageGenerationCaption,
   buildWebSearchPrompt,
+  formatFileSize,
   buildAgentWorkspaceSteps,
   isAgentWorkspaceLive,
   isDebateSessionLive,
@@ -146,6 +148,7 @@ import {
   MessageScrollerItem,
   MessageScrollerButton,
   MessageScrollerDate,
+  MessageScrollerLoader,
 } from "@/components/ui/message-scroller";
 import { Marker, MarkerIcon, MarkerContent } from "@/components/ui/marker";
 import {
@@ -156,6 +159,16 @@ import {
   ComposerToolbarRight,
   ComposerSubmitButton,
 } from "@/components/ui/composer";
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/components/ui/attachment";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import {
   Dialog,
@@ -167,7 +180,16 @@ import {
 } from "@/components/ui/dialog";
 import { ReactionPicker } from "@/components/ui/reaction-picker";
 import { VoiceMessageBubble } from "~/components/voice/voice-message-bubble";
-import { MarkdownBody } from "@fluxy-chat/ui";
+import {
+  MarkdownBody,
+  applyInsertedText,
+  captureScrollPrepend,
+  formatSenderTooltip,
+  insertTextAtCursor,
+  restoreScrollAfterPrepend,
+  windowMessages,
+  watchingFromOccupancy,
+} from "@fluxy-chat/ui";
 import {
   canBranchFromMessage,
   detectToolFromMessageContent,
@@ -246,6 +268,16 @@ function messageVisibilityBadge(
   return null;
 }
 
+const ROOM_FOOTER_REACTIONS = ["👍", "❤️", "😂", "🎉", "🔥"] as const;
+
+function formatTypingCaption(names: string[]): string | null {
+  const unique = [...new Set(names.map((n) => n.trim()).filter(Boolean))];
+  if (unique.length === 0) return null;
+  if (unique.length === 1) return `${unique[0]} is typing…`;
+  if (unique.length === 2) return `${unique[0]} and ${unique[1]} are typing…`;
+  return `${unique.length} people are typing…`;
+}
+
 function ChatAvatar({
   isAgent,
   isSelf,
@@ -322,6 +354,10 @@ export interface FluxyChatProps {
   variant?: FluxyChatVariant;
   /** Suggested prompts shown above the composer when there are no messages or draft. */
   suggestedPrompts?: string[];
+  /** Ably ChatWindow `enableTypingIndicators`. */
+  enableTypingIndicators?: boolean;
+  /** Ably ChatWindow `windowSize` (latest N rendered). */
+  windowSize?: number;
 }
 
 type PendingTool =
@@ -411,6 +447,8 @@ export function FluxyChat({
   variant = "full",
   suggestedPrompts,
   projectId = "",
+  enableTypingIndicators = true,
+  windowSize = 300,
 }: FluxyChatProps) {
   // Variant-based feature flags
   const showPlusMenu = variant === "full" || variant === "demo" || variant === "onboarding";
@@ -453,7 +491,13 @@ export function FluxyChat({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageGenerating, setImageGenerating] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<
-    Array<{ attachment: FluxyChatAttachment; uploading: boolean; error?: string }>
+    Array<{
+      localId: string;
+      attachment: FluxyChatAttachment;
+      uploading: boolean;
+      error?: string;
+      previewUrl?: string;
+    }>
   >([]);
   const [pendingTool, setPendingTool] = useState<PendingTool>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -477,6 +521,12 @@ export function FluxyChat({
   const [imagePrompt, setImagePrompt] = useState("");
   // + menu open state
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
+  const [discontinuityNotice, setDiscontinuityNotice] = useState<string | null>(null);
+  const [roomReactionBursts, setRoomReactionBursts] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
   const [composerAction, setComposerAction] = useState<ComposerAction>(null);
   const [scheduledRows, setScheduledRows] = useState<
     Array<{ id: number; content: string; send_at: string; status: string }>
@@ -558,6 +608,7 @@ export function FluxyChat({
   const runIdAtStartRef = useRef<string | null>(null);
   const runFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const pendingScrollRestore = useRef<{ height: number; top: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [showMentionMenu, setShowMentionMenu] = useState(false);
@@ -792,12 +843,14 @@ export function FluxyChat({
     sendReadReceipt,
     retryMessage,
     editMessage,
+    deleteMessage,
     branchRoomFromMessage,
     presenceMembers,
     subscriptionCount,
     reactions,
     sendReaction,
     setTyping,
+    sendPresencePatch,
     upsertMessage,
   } = useChat({
     roomId: activeRoomId,
@@ -835,6 +888,15 @@ export function FluxyChat({
     Boolean(fluxyClient?.isAuthenticated());
 
   useEffect(() => {
+    if (!connected || !trimmedRoomId) return;
+    sendPresencePatch({ agentStatus: null });
+  }, [connected, sendPresencePatch, trimmedRoomId]);
+
+  useEffect(() => {
+    if (!enableTypingIndicators) {
+      setTyping(false);
+      return;
+    }
     if (!canSendMessages || !trimmedRoomId) return;
     const text = draft.trim();
     if (!text) {
@@ -847,7 +909,117 @@ export function FluxyChat({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [canSendMessages, draft, setTyping, trimmedRoomId]);
+  }, [canSendMessages, draft, enableTypingIndicators, setTyping, trimmedRoomId]);
+
+  useEffect(() => {
+    if (!fluxyClient || !trimmedRoomId) return;
+    const sub = fluxyClient.room(trimmedRoomId).reactions.subscribe((event) => {
+      const burstId = `${event.reaction.userId}-${event.reaction.ts ?? Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setRoomReactionBursts((prev) => [...prev.slice(-8), { id: burstId, name: event.reaction.name }]);
+      window.setTimeout(() => {
+        setRoomReactionBursts((prev) => prev.filter((row) => row.id !== burstId));
+      }, 1600);
+    });
+    return () => sub.unsubscribe();
+  }, [fluxyClient, trimmedRoomId]);
+
+  useEffect(() => {
+    if (!fluxyClient || !trimmedRoomId) return;
+    const sub = fluxyClient.room(trimmedRoomId).onDiscontinuity((reason) => {
+      setDiscontinuityNotice(
+        reason.message?.trim() || "Missed some messages while disconnected. Reloading history.",
+      );
+      void loadHistory();
+    });
+    return () => sub.unsubscribe();
+  }, [fluxyClient, loadHistory, trimmedRoomId]);
+
+  const { visibleMessages, demoHiddenCount } = useMemo(() => {
+    if (!showDemoModeration) {
+      return { visibleMessages: messages, demoHiddenCount: 0 };
+    }
+    let hidden = 0;
+    const visible = messages.filter((m) => {
+      if (m.userId === agentId || m.streaming) return true;
+      const verdict = shouldHideDemoMessage({
+        content: m.content ?? "",
+        userId: m.userId ?? "",
+        messageId: m.id,
+        localUserId: chatUserId ?? null,
+        reportedIds: reportedMessageIds,
+      });
+      if (verdict.hidden) {
+        hidden += 1;
+        return false;
+      }
+      return true;
+    });
+    return { visibleMessages: visible, demoHiddenCount: hidden };
+  }, [messages, showDemoModeration, agentId, chatUserId, reportedMessageIds]);
+
+  const windowedMessages = useMemo(
+    () => windowMessages(visibleMessages, windowSize),
+    [visibleMessages, windowSize],
+  );
+
+  const loadOlderPreservingScroll = useCallback(async () => {
+    const el = listRef.current;
+    if (!hasMore || isLoadingMore || !historyLoaded) return;
+    pendingScrollRestore.current = captureScrollPrepend(el);
+    const started = await loadMore();
+    if (!started) pendingScrollRestore.current = null;
+  }, [hasMore, historyLoaded, isLoadingMore, loadMore]);
+
+  const wasLoadingMore = useRef(false);
+  useLayoutEffect(() => {
+    if (isLoadingMore) {
+      wasLoadingMore.current = true;
+      return;
+    }
+    if (!wasLoadingMore.current) return;
+    wasLoadingMore.current = false;
+    restoreScrollAfterPrepend(listRef.current, pendingScrollRestore.current);
+    pendingScrollRestore.current = null;
+  }, [isLoadingMore, windowedMessages.length]);
+
+  const handleMessageInView = useCallback(
+    (el: Element) => {
+      const raw = el.getAttribute("data-message-id");
+      const id = raw ? Number(raw) : NaN;
+      if (Number.isFinite(id) && id > 0) sendReadReceipt(id);
+    },
+    [sendReadReceipt],
+  );
+
+  useEffect(() => {
+    const root = listRef.current;
+    if (!root) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        let latest = 0;
+        let node: Element | null = null;
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const raw = entry.target.getAttribute("data-message-id");
+          const id = raw ? Number(raw) : NaN;
+          if (id > latest) {
+            latest = id;
+            node = entry.target;
+          }
+        }
+        if (node) handleMessageInView(node);
+      },
+      { root, threshold: 0.5 },
+    );
+    root.querySelectorAll("[data-message-id]").forEach((n) => io.observe(n));
+    return () => io.disconnect();
+  }, [handleMessageInView, windowedMessages.length]);
+
+  const handleTranscriptScroll = useCallback(() => {
+    const el = listRef.current;
+    if (!el || !hasMore || isLoadingMore || !historyLoaded) return;
+    if (el.scrollTop < 150) void loadOlderPreservingScroll();
+  }, [hasMore, historyLoaded, isLoadingMore, loadOlderPreservingScroll]);
 
   const [reconnectTick, setReconnectTick] = useState(0);
   useEffect(() => {
@@ -877,6 +1049,7 @@ export function FluxyChat({
     !showDemoStatusBar &&
     (connectionBlocked ||
       isDegradedConnectionStatus(connectionState.status) ||
+      connectionState.status === "connecting" ||
       connectionState.status === "reconnecting" ||
       (connectionState.status === "disconnected" && !connected));
 
@@ -974,29 +1147,6 @@ export function FluxyChat({
     return counts;
   }, [messages]);
 
-  const { visibleMessages, demoHiddenCount } = useMemo(() => {
-    if (!showDemoModeration) {
-      return { visibleMessages: messages, demoHiddenCount: 0 };
-    }
-    let hidden = 0;
-    const visible = messages.filter((m) => {
-      if (m.userId === agentId || m.streaming) return true;
-      const verdict = shouldHideDemoMessage({
-        content: m.content ?? "",
-        userId: m.userId ?? "",
-        messageId: m.id,
-        localUserId: chatUserId ?? null,
-        reportedIds: reportedMessageIds,
-      });
-      if (verdict.hidden) {
-        hidden += 1;
-        return false;
-      }
-      return true;
-    });
-    return { visibleMessages: visible, demoHiddenCount: hidden };
-  }, [messages, showDemoModeration, agentId, chatUserId, reportedMessageIds]);
-
   const replyTarget = replyToId != null ? messagesById.get(replyToId) : null;
   const branchTarget =
     branchFromMessageId != null ? messagesById.get(branchFromMessageId) : null;
@@ -1015,8 +1165,17 @@ export function FluxyChat({
 
   function openReactionPicker(e: React.MouseEvent, messageId: number) {
     const target = e.currentTarget as HTMLElement;
+    setComposerEmojiOpen(false);
     setReactionPickerAnchor(target.getBoundingClientRect());
     setReactionPickerMessageId(messageId);
+  }
+
+  function insertComposerEmoji(emoji: string) {
+    const input = textareaRef.current;
+    const { next, caret } = insertTextAtCursor(input, draft, emoji);
+    applyInsertedText(input, next, caret, setDraft);
+    setComposerEmojiOpen(false);
+    setReactionPickerAnchor(null);
   }
 
   const truncateFromMessage = useCallback(
@@ -1442,7 +1601,12 @@ export function FluxyChat({
     function clearComposer() {
       setTyping(false);
       setDraft("");
-      setPendingAttachments([]);
+      setPendingAttachments((prev) => {
+        for (const row of prev) {
+          if (row.previewUrl) URL.revokeObjectURL(row.previewUrl);
+        }
+        return [];
+      });
       setPendingTool(null);
       setTemplateSelection(null);
       setReplyToId(null);
@@ -1644,39 +1808,57 @@ export function FluxyChat({
       : file.type.startsWith("audio/")
         ? "audio"
         : "file";
-    const placeholder = {
-      attachment: {
-        kind: kindHint,
-        url: localId,
-        name: file.name,
-        sizeBytes: file.size,
-      } as FluxyChatAttachment,
-      uploading: true,
-    };
-    setPendingAttachments((prev) => [...prev, placeholder]);
+    const previewUrl = kindHint === "image" ? URL.createObjectURL(file) : undefined;
+    setPendingAttachments((prev) => [
+      ...prev,
+      {
+        localId,
+        attachment: {
+          kind: kindHint,
+          url: localId,
+          name: file.name,
+          sizeBytes: file.size,
+          contentType: file.type,
+        },
+        uploading: true,
+        previewUrl,
+      },
+    ]);
     try {
       const attachment = await fluxyClient.uploadFile(trimmedRoomId, file);
       setPendingAttachments((prev) =>
-        prev.map((p) =>
-          p.attachment.url === localId ? { attachment, uploading: false } : p,
-        ),
+        prev.map((p) => (p.localId === localId ? { ...p, attachment, uploading: false } : p)),
       );
     } catch (err: unknown) {
       const msg = messageFromUnknown(err, "Upload failed");
       setPendingAttachments((prev) =>
-        prev.map((p) =>
-          p.attachment.url === localId
-            ? { ...p, uploading: false, error: msg }
-            : p,
-        ),
+        prev.map((p) => (p.localId === localId ? { ...p, uploading: false, error: msg } : p)),
       );
     }
+  }
+
+  function removePendingAttachment(idx: number) {
+    setPendingAttachments((prev) => {
+      const row = prev[idx];
+      if (row?.previewUrl) URL.revokeObjectURL(row.previewUrl);
+      return prev.filter((_, i) => i !== idx);
+    });
   }
 
   // ─── Derived state ───
 
   const hasUploading = pendingAttachments.some((p) => p.uploading);
   const hasReadyAttachments = pendingAttachments.some((p) => !p.uploading && !p.error);
+
+  useEffect(() => {
+    return () => {
+      for (const row of pendingAttachments) {
+        if (row.previewUrl) URL.revokeObjectURL(row.previewUrl);
+      }
+    };
+    // Revoke leftover object URLs if the composer unmounts mid-upload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- unmount only
+  }, []);
   const canSend = Boolean(
     trimmedRoomId &&
       !isAgentBusy &&
@@ -1715,6 +1897,22 @@ export function FluxyChat({
     if (!id) return "unknown";
     return id.length > maxLen ? id.slice(0, maxLen) + "…" : id;
   }
+
+  const { getEffectiveSettings } = useChatSettings();
+  const chatUiSettings = getEffectiveSettings(trimmedRoomId);
+
+  const typingCaption = (() => {
+    const names: string[] = [];
+    for (const [uid, isTyping] of Object.entries(typingUsers)) {
+      if (!isTyping) continue;
+      if (chatUserId && uid === chatUserId) continue;
+      names.push(resolveDisplayName(uid));
+    }
+    if (agentTyping && streamingCount === 0 && !names.includes(agentName)) {
+      names.unshift(agentName);
+    }
+    return formatTypingCaption(names);
+  })();
 
   const handleSearch = useCallback(async (q: string) => {
     if (!q.trim() || !trimmedRoomId) { setSearchResults([]); return; }
@@ -1768,6 +1966,23 @@ export function FluxyChat({
         isOnboarding && "max-h-[min(520px,72vh)]",
       )}
     >
+      {discontinuityNotice ? (
+        <div
+          role="status"
+          data-testid="chat-discontinuity-banner"
+          className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+        >
+          <span className="min-w-0 flex-1">{discontinuityNotice}</span>
+          <button
+            type="button"
+            className="shrink-0 rounded px-1 hover:bg-amber-100"
+            onClick={() => setDiscontinuityNotice(null)}
+            aria-label="Dismiss discontinuity notice"
+          >
+            <X className="size-3.5" aria-hidden />
+          </button>
+        </div>
+      ) : null}
       {showConnectionBanner ? (
         <div
           role="status"
@@ -1849,7 +2064,14 @@ export function FluxyChat({
           {activeRoomId && roomAccessToken && showRoomInfo ? (
             <>
               <span className="mx-1.5 text-muted-foreground/40">|</span>
-              <RoomInfoToggle onClick={() => setRoomInfoOpen((open) => !open)} />
+              <RoomInfoToggle
+                onClick={() => setRoomInfoOpen((open) => !open)}
+                inChat={presenceMembers.length}
+                watching={watchingFromOccupancy({
+                  connections: subscriptionCount,
+                  presenceMembers: presenceMembers.length,
+                })}
+              />
             </>
           ) : null}
           <span className="mx-1.5 text-muted-foreground/40">|</span>
@@ -2100,6 +2322,9 @@ export function FluxyChat({
         <ChatPresenceStrip
           members={presenceMembers}
           subscriptionCount={subscriptionCount}
+          currentUserId={chatUserId}
+          typingUsers={typingUsers}
+          resolveName={(uid) => resolveDisplayName(uid)}
         />
       ) : null}
 
@@ -2173,6 +2398,7 @@ export function FluxyChat({
 
       {/* ─── Message scroller ─── */}
       <MessageScrollerProvider autoScroll scrollPreviousItemPeek={64}>
+        <div className="relative">
         <MessageScroller
           className={cn(
             "h-[min(420px,50vh)] scroll-fade-b rounded-xl bg-muted/40 text-card-foreground",
@@ -2181,12 +2407,39 @@ export function FluxyChat({
           )}
           data-testid="fluxychat-message-list"
         >
-          <MessageScrollerViewport className="overflow-x-visible p-3 scroll-fade" ref={listRef}>
+          <MessageScrollerViewport
+            className="overflow-x-visible p-3 scroll-fade"
+            ref={listRef}
+            onScroll={handleTranscriptScroll}
+          >
             <MessageScrollerContent className="gap-2">
-              {visibleMessages.length ? (
-                visibleMessages.map((m, idx) => {
-                  const isLastMessage = idx === visibleMessages.length - 1;
-                  const prev = idx > 0 ? visibleMessages[idx - 1] : null;
+              {hasMore && historyLoaded ? (
+                <MessageScrollerItem>
+                  {isLoadingMore ? (
+                    <MessageScrollerLoader />
+                  ) : (
+                    <button
+                      type="button"
+                      className="mx-auto block text-xs text-muted-foreground underline-offset-2 hover:underline"
+                      onClick={() => void loadOlderPreservingScroll()}
+                      data-testid="chat-load-older"
+                    >
+                      Load older messages
+                    </button>
+                  )}
+                </MessageScrollerItem>
+              ) : null}
+              {visibleMessages.length > windowedMessages.length ? (
+                <MessageScrollerItem>
+                  <p className="text-center text-[11px] text-muted-foreground" data-testid="chat-window-size-hint">
+                    Showing latest {windowedMessages.length} messages
+                  </p>
+                </MessageScrollerItem>
+              ) : null}
+              {windowedMessages.length ? (
+                windowedMessages.map((m, idx) => {
+                  const isLastMessage = idx === windowedMessages.length - 1;
+                  const prev = idx > 0 ? windowedMessages[idx - 1] : null;
                   const mTime = (m as { createdAt?: string }).createdAt;
                   const prevTime = prev ? (prev as { createdAt?: string }).createdAt : undefined;
                   const showDate = !prevTime || !mTime || !isSameDay(prevTime, mTime);
@@ -2196,6 +2449,7 @@ export function FluxyChat({
                   const isSelf = Boolean(chatUserId && m.userId === chatUserId);
                   const isStreaming = Boolean(m.streaming);
                   const isVoice = m.kind === "voice";
+                  const isDeleted = Boolean(m.deletedAt);
                   const parentId = m.parentId ?? null;
 
                   // Display name: Clerk user for self, truncated ID for others, agentName for agent
@@ -2211,7 +2465,7 @@ export function FluxyChat({
                       ? canBranchFromMessage(visibleMessages, m.id, chatUserId, agentId)
                       : { allowed: false as const };
 
-                  const floatingToolbar = m.id != null && !isStreaming ? (
+                  const floatingToolbar = m.id != null && !isStreaming && !isDeleted ? (
                     <MessageHoverToolbar align={isSelf ? "end" : "start"} side="below">
                       <MessageAction
                         label="Copy"
@@ -2219,20 +2473,26 @@ export function FluxyChat({
                       >
                         <Copy className="size-3.5" />
                       </MessageAction>
-                      {isSelf && branchPolicy.allowed ? (
+                      {(chatUiSettings.allowMessageUpdatesAny ||
+                        (isSelf && chatUiSettings.allowMessageUpdatesOwn)) &&
+                      branchPolicy.allowed ? (
                         <>
-                          <MessageAction
-                            label="Edit"
-                            onClick={() => beginEditMessage(m)}
-                          >
-                            <Pencil className="size-3.5" />
-                          </MessageAction>
-                          <MessageAction
-                            label="Retry"
-                            onClick={() => void retrySentMessage(m)}
-                          >
-                            <RotateCw className="size-3.5" />
-                          </MessageAction>
+                          {chatUiSettings.allowMessageUpdatesAny || isSelf ? (
+                            <MessageAction
+                              label="Edit"
+                              onClick={() => beginEditMessage(m)}
+                            >
+                              <Pencil className="size-3.5" />
+                            </MessageAction>
+                          ) : null}
+                          {isSelf ? (
+                            <MessageAction
+                              label="Retry"
+                              onClick={() => void retrySentMessage(m)}
+                            >
+                              <RotateCw className="size-3.5" />
+                            </MessageAction>
+                          ) : null}
                         </>
                       ) : isAgent && branchPolicy.allowed ? (
                         <MessageAction
@@ -2240,6 +2500,15 @@ export function FluxyChat({
                           onClick={() => void retryAgentMessage(m)}
                         >
                           <RotateCw className="size-3.5" />
+                        </MessageAction>
+                      ) : null}
+                      {chatUiSettings.allowMessageDeletesAny ||
+                      (isSelf && chatUiSettings.allowMessageDeletesOwn) ? (
+                        <MessageAction
+                          label="Delete"
+                          onClick={() => setPendingDeleteId(m.id!)}
+                        >
+                          <Trash2 className="size-3.5" />
                         </MessageAction>
                       ) : null}
                       {showPinnedBar && fluxyClient && trimmedRoomId ? (
@@ -2322,14 +2591,16 @@ export function FluxyChat({
                           Report
                         </button>
                       ) : null}
-                      <button
-                        type="button"
-                        onClick={(e) => openReactionPicker(e, m.id!)}
-                        className={messageToolbarIconButtonClass}
-                        aria-label="Add reaction"
-                      >
-                        <Smile className="size-3.5" />
-                      </button>
+                      {chatUiSettings.allowMessageReactions ? (
+                        <button
+                          type="button"
+                          onClick={(e) => openReactionPicker(e, m.id!)}
+                          className={messageToolbarIconButtonClass}
+                          aria-label="Add reaction"
+                        >
+                          <Smile className="size-3.5" />
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => setReplyToId(m.id!)}
@@ -2375,6 +2646,11 @@ export function FluxyChat({
                             {/* Avatar — top-aligned, beside bubble, clickable for non-agent */}
                             <MessageAvatar
                               status={isAgent ? "online" : null}
+                              title={formatSenderTooltip({
+                                displayName,
+                                userId: m.userId,
+                                createdAt: mTime,
+                              })}
                               className={cn(
                                 "size-8 shrink-0 self-start overflow-hidden rounded-full",
                                 !isAgent && "cursor-pointer",
@@ -2396,9 +2672,19 @@ export function FluxyChat({
                               <MessageHeader
                                 className={cn("px-0 mb-1", isSelf && "justify-end")}
                               >
-                                <span className="text-sm font-semibold text-card-foreground">
+                                <span
+                                  className="text-sm font-semibold text-card-foreground"
+                                  title={formatSenderTooltip({
+                                    displayName,
+                                    userId: m.userId,
+                                    createdAt: mTime,
+                                  })}
+                                >
                                   {displayName}
                                 </span>
+                                {mTime ? (
+                                  <MessageTimestamp timestamp={mTime} size="sm" className="ml-1.5" />
+                                ) : null}
                                 {isAgent ? (
                                   <span className="ml-1.5 rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand ring-1 ring-brand/20">
                                     agent
@@ -2455,7 +2741,11 @@ export function FluxyChat({
                                       >
                                         {resolveDisplayName(parentMessage.userId)}
                                       </span>
-                                      <span className="line-clamp-2">{parentMessage.content || ""}</span>
+                                      <span className="line-clamp-2">
+                                        {parentMessage.deletedAt
+                                          ? "This message was deleted"
+                                          : parentMessage.content || ""}
+                                      </span>
                                     </button>
                                   ) : null}
 
@@ -2483,8 +2773,17 @@ export function FluxyChat({
                                       </span>
                                     ) : null}
 
-                                    {/* Voice message */}
-                                    {isVoice ? (
+                                    {isDeleted ? (
+                                      <p
+                                        className={cn(
+                                          "italic text-sm",
+                                          isSelf ? "text-white/80" : "text-muted-foreground",
+                                        )}
+                                        data-testid="message-deleted-placeholder"
+                                      >
+                                        This message was deleted
+                                      </p>
+                                    ) : isVoice ? (
                                       <VoiceMessageBubble
                                         message={m}
                                         className={isSelf ? "items-end" : "items-start"}
@@ -2555,7 +2854,7 @@ export function FluxyChat({
                                     )}
 
                                     {/* Link preview */}
-                                    {m.preview?.url ? (
+                                    {!isDeleted && m.preview?.url ? (
                                       <LinkPreviewCard
                                         url={m.preview.url}
                                         title={m.preview.title}
@@ -2648,7 +2947,7 @@ export function FluxyChat({
                                       );
                                     })()}
 
-                                    {m.attachments && m.attachments.length > 0 ? (
+                                    {!isDeleted && m.attachments && m.attachments.length > 0 ? (
                                       <div className="mt-2 flex flex-col gap-2">
                                         {m.attachments.map((a) => (
                                           <FluxyAttachment
@@ -2774,15 +3073,15 @@ export function FluxyChat({
                 </MessageScrollerItem>
               ) : (
                 <MessageScrollerItem>
-                  <Marker>
-                    <MarkerIcon>
-                      <Loader2 className="size-3 animate-spin" />
-                    </MarkerIcon>
-                    <MarkerContent>
-                      Ask {agentName}. Replies stream over WebSocket; tool calls appear inline when
-                      the agent uses tools.
-                    </MarkerContent>
-                  </Marker>
+                  <div
+                    className="flex flex-col items-center justify-center py-10 text-center"
+                    data-testid="chat-empty-state"
+                  >
+                    <p className="text-sm font-medium text-foreground">No messages yet</p>
+                    <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
+                      Send a message to start the conversation.
+                    </p>
+                  </div>
                 </MessageScrollerItem>
               )}
 
@@ -2844,11 +3143,11 @@ export function FluxyChat({
               {/* Typing indicator */}
               <MessageScrollerItem>
                 <TypingIndicator
-                  visible={Boolean(agentTyping && streamingCount === 0)}
-                  name={agentName}
+                  visible={enableTypingIndicators && Boolean(typingCaption)}
+                  label={typingCaption ?? undefined}
                   avatar={
                     <div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-                      {agentName.charAt(0).toUpperCase()}
+                      {(typingCaption?.split(" ")[0] || agentName).charAt(0).toUpperCase()}
                     </div>
                   }
                 />
@@ -2856,9 +3155,28 @@ export function FluxyChat({
             </MessageScrollerContent>
           </MessageScrollerViewport>
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-            <MessageScrollerButton />
+            <MessageScrollerButton
+              onClick={() => {
+                const last = windowedMessages[windowedMessages.length - 1];
+                if (last?.id != null) sendReadReceipt(last.id);
+              }}
+            />
           </div>
         </MessageScroller>
+        {roomReactionBursts.length ? (
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-8 z-10 flex justify-center gap-2"
+            aria-hidden
+            data-testid="room-reaction-bursts"
+          >
+            {roomReactionBursts.map((burst) => (
+              <span key={burst.id} className="animate-bounce text-3xl drop-shadow-sm">
+                {burst.name}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        </div>
       </MessageScrollerProvider>
 
       {/* ─── Branch edit banner ─── */}
@@ -3046,7 +3364,7 @@ export function FluxyChat({
 
       {/* ─── Pending attachments / tool chips ─── */}
       {(pendingAttachments.length > 0 || pendingTool) && !pendingCompose ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
           {pendingTool ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--fluxy-mention-bg)] px-2.5 py-1 text-xs font-medium text-[var(--fluxy-mention-text)]">
               {pendingTool.type === "image" ? (
@@ -3071,39 +3389,56 @@ export function FluxyChat({
               </button>
             </span>
           ) : null}
-          {pendingAttachments.map((p, idx) => (
-            <span
-              key={p.attachment.url}
-              className={cn(
-                "inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-                p.error
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-muted text-foreground",
-              )}
-              title={p.error}
-            >
-              {p.uploading ? (
-                <Loader2 className="size-3 animate-spin" aria-hidden />
-              ) : p.attachment.kind === "image" ? (
-                <FileImage className="size-3" aria-hidden />
-              ) : (
-                <Paperclip className="size-3" aria-hidden />
-              )}
-              <span className="truncate">{p.attachment.name}</span>
-              {!p.uploading ? (
-                <button
-                  type="button"
-                  className="rounded p-0.5 hover:bg-muted-foreground/20"
-                  onClick={() =>
-                    setPendingAttachments((prev) => prev.filter((_, i) => i !== idx))
-                  }
-                  aria-label="Remove attachment"
+          {pendingAttachments.length > 0 ? (
+          <AttachmentGroup className="min-w-0 w-full py-0">
+            {pendingAttachments.map((p, idx) => {
+              const isImage = p.attachment.kind === "image";
+              return (
+                <Attachment
+                  key={p.localId}
+                  size="sm"
+                  orientation={isImage ? "vertical" : "horizontal"}
+                  state={p.error ? "error" : p.uploading ? "uploading" : "done"}
+                  title={p.error}
                 >
-                  <X className="size-3" aria-hidden />
-                </button>
-              ) : null}
-            </span>
-          ))}
+                  <AttachmentMedia variant={isImage && p.previewUrl ? "image" : "icon"}>
+                    {p.uploading ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                    ) : isImage && p.previewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- local object URL, not remote
+                      <img src={p.previewUrl} alt="" />
+                    ) : isImage ? (
+                      <FileImage className="size-4" aria-hidden />
+                    ) : (
+                      <Paperclip className="size-4" aria-hidden />
+                    )}
+                  </AttachmentMedia>
+                  <AttachmentContent>
+                    <AttachmentTitle>{p.attachment.name}</AttachmentTitle>
+                    <AttachmentDescription>
+                      {p.error
+                        ? p.error
+                        : p.uploading
+                          ? "Uploading…"
+                          : formatFileSize(p.attachment.sizeBytes ?? 0)}
+                    </AttachmentDescription>
+                  </AttachmentContent>
+                  {!p.uploading ? (
+                    <AttachmentActions>
+                      <AttachmentAction
+                        type="button"
+                        aria-label={`Remove ${p.attachment.name}`}
+                        onClick={() => removePendingAttachment(idx)}
+                      >
+                        <X className="size-3.5" aria-hidden />
+                      </AttachmentAction>
+                    </AttachmentActions>
+                  ) : null}
+                </Attachment>
+              );
+            })}
+          </AttachmentGroup>
+          ) : null}
         </div>
       ) : null}
 
@@ -3370,13 +3705,13 @@ export function FluxyChat({
               </button>
               {plusMenuOpen ? (
                 <div
-                  className="absolute bottom-full left-0 z-[200] mb-2 w-56 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg"
+                  className="absolute bottom-full left-0 z-[200] mb-2 w-56 rounded-lg border border-border bg-card p-1 text-card-foreground shadow-xl ring-1 ring-border"
                   role="menu"
                 >
                   {/* Add Photos & Files */}
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted"
                     role="menuitem"
                     onClick={() => {
                       setPlusMenuOpen(false);
@@ -3392,7 +3727,7 @@ export function FluxyChat({
                   {showImageGen ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted"
                     role="menuitem"
                     onClick={() => prepareImageGeneration()}
                   >
@@ -3406,7 +3741,7 @@ export function FluxyChat({
                   {showDeepResearch ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted"
                     role="menuitem"
                     onClick={() => sendResearchPrompt("deep-research")}
                   >
@@ -3420,7 +3755,7 @@ export function FluxyChat({
                   {showWebSearch ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted"
                     role="menuitem"
                     onClick={() => sendResearchPrompt("web-search")}
                   >
@@ -3434,7 +3769,7 @@ export function FluxyChat({
                   {showPollCreate ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted"
                     role="menuitem"
                     onClick={() => {
                       setPlusMenuOpen(false);
@@ -3452,7 +3787,7 @@ export function FluxyChat({
                   {showDecisionCreate ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted"
                     role="menuitem"
                     onClick={() => {
                       setPlusMenuOpen(false);
@@ -3470,7 +3805,7 @@ export function FluxyChat({
                   {showScheduleSend ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted"
                     role="menuitem"
                     onClick={() => {
                       setPlusMenuOpen(false);
@@ -3523,6 +3858,39 @@ export function FluxyChat({
               }}
             />
             ) : null}
+            <button
+              type="button"
+              className="flex h-full items-center rounded-md px-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Insert emoji"
+              data-testid="composer-emoji-button"
+              onClick={(e) => {
+                setReactionPickerMessageId(null);
+                setReactionPickerAnchor(e.currentTarget.getBoundingClientRect());
+                setComposerEmojiOpen((open) => !open);
+              }}
+            >
+              <Smile className="size-4" aria-hidden />
+            </button>
+            <div
+              className="flex items-center gap-0.5 self-stretch pl-1"
+              data-testid="room-reaction-footer"
+            >
+              {ROOM_FOOTER_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  className="flex h-full items-center rounded-md px-1.5 text-sm hover:bg-muted disabled:opacity-40"
+                  disabled={!trimmedRoomId || !fluxyClient}
+                  aria-label={`Send room reaction ${emoji}`}
+                  onClick={() => {
+                    if (!fluxyClient || !trimmedRoomId) return;
+                    fluxyClient.room(trimmedRoomId).reactions.send(emoji);
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
           </ComposerToolbarLeft>
           <ComposerToolbarRight>
             {streamingCount > 0 ? (
@@ -3667,18 +4035,51 @@ export function FluxyChat({
       </p>
 
       {/* ─── Reaction Picker ─── */}
+      <Dialog open={pendingDeleteId != null} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
+        <DialogContent className="max-w-sm" data-testid="chat-delete-confirm">
+          <DialogHeader>
+            <DialogTitle>Delete message</DialogTitle>
+            <DialogDescription>
+              This removes the message for everyone in the room. You cannot undo this.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+              onClick={() => setPendingDeleteId(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rounded-md bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingDeleteId != null) deleteMessage(pendingDeleteId);
+                setPendingDeleteId(null);
+              }}
+            >
+              Delete
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ReactionPicker
-        open={reactionPickerMessageId !== null}
+        open={reactionPickerMessageId !== null || composerEmojiOpen}
         anchorRect={reactionPickerAnchor}
         onClose={() => {
           setReactionPickerMessageId(null);
+          setComposerEmojiOpen(false);
           setReactionPickerAnchor(null);
         }}
         onReact={(emoji) => {
-          if (reactionPickerMessageId != null) {
+          if (composerEmojiOpen) insertComposerEmoji(emoji);
+          else if (reactionPickerMessageId != null) {
             toggleReaction(reactionPickerMessageId, emoji);
           }
           setReactionPickerMessageId(null);
+          setComposerEmojiOpen(false);
           setReactionPickerAnchor(null);
         }}
       />
@@ -3951,27 +4352,25 @@ function FluxyAttachment({
     );
   }
 
-  // Generic file
   const href = attachment.url;
   if (!href) return null;
   const fullHref = href.startsWith("http") ? href : `${mediaBaseUrl}${href}`;
   return (
-    <a
-      href={fullHref}
-      target="_blank"
-      rel="noreferrer"
-      className="mt-2 inline-flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] p-2 text-xs hover:bg-muted/50"
-    >
-      <Paperclip className="size-4 text-muted-foreground" />
-      <div className="min-w-0">
-        <div className="truncate font-medium">{attachment.name}</div>
+    <Attachment size="sm" orientation="horizontal" state="done" className="mt-2">
+      <AttachmentMedia>
+        <Paperclip aria-hidden />
+      </AttachmentMedia>
+      <AttachmentContent>
+        <AttachmentTitle>
+          <a href={fullHref} target="_blank" rel="noreferrer" className="hover:underline">
+            {attachment.name}
+          </a>
+        </AttachmentTitle>
         {attachment.sizeBytes ? (
-          <div className="text-[10px] text-muted-foreground">
-            {(attachment.sizeBytes / 1024).toFixed(0)} KB
-          </div>
+          <AttachmentDescription>{formatFileSize(attachment.sizeBytes)}</AttachmentDescription>
         ) : null}
-      </div>
-    </a>
+      </AttachmentContent>
+    </Attachment>
   );
 }
 

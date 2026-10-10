@@ -1,0 +1,22 @@
+---
+title: "Presence avatars"
+description: "Self, others, and leavers with a last-seen timeout."
+---
+
+# Presence avatars
+
+`useSelf` / `useOthers` / `useLeavers` split the roster. Leavers stay visible for two minutes after `member_left`, then drop.
+
+```tsx
+const { store } = useChat({ roomId: "lobby" });
+const self = useSelf(store, userId);
+const others = useOthers(store, userId);
+const leavers = useLeavers(store);
+const avatars = usePresenceAvatars(store, userId);
+```
+
+UI location (which slide or field) lives on `presence_patch.uiLocation`. `useLocations()` follows that. GPS stays on `location_update` / `useLocation`.
+
+`room.presence.enter(data)` / `update(data)` send that patch. Joining the occupancy set is `attach()`, not a second enter call.
+
+`usePresenceListener()` refreshes `presence.get()` on enter/leave patches. `presence.leave()` hides you from `presenceMembers` and keeps the socket open.

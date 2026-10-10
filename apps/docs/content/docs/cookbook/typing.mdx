@@ -1,0 +1,27 @@
+---
+title: "Typing indicator"
+description: "Broadcast typing on the room socket. It is ephemeral; it is not a message."
+---
+
+# Typing indicator
+
+`room.typing.keystroke()` sends a `typing` frame. Call it on each keypress; the SDK throttles to 2s and stops after 10s of silence. `stop()` sends idle immediately.
+
+`useChat({ roomId }).setTyping` is the same wire event.
+
+```tsx
+const room = client.room("lobby");
+room.attach();
+room.typing.subscribe((event) => {
+  console.log([...event.currentlyTyping], event.change);
+});
+
+return (
+  <input
+    onChange={() => room.typing.keystroke()}
+    onBlur={() => room.typing.stop()}
+  />
+);
+```
+
+Do not persist typing. Do not put pointer motion on `client_event`. Use `sendCursor` for that.

@@ -2,7 +2,7 @@ import { VerticalStudio } from "@/app/components/vertical-studio";
 
 export default function EventsPage() {
   return <VerticalStudio config={{
-    id: "events", name: "FluxyEvent", eyebrow: "Venue", readiness: "Labs",
+    id: "events", name: "FluxyEvent", eyebrow: "Venue", readiness: "Production",
     description: "Lobby, stage, Q&A, and polls on ordinary rooms. Spatial audio is not included.",
     journey: ["Verify attendee ticket", "Enter venue lobby", "Go live on main stage", "Moderate Q&A", "Publish event recap"],
     metrics: [{ label: "Capability events", value: "0" }, { label: "Stage live events", value: "0" }, { label: "Server fan-out", value: "0" }],

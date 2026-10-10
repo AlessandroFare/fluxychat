@@ -759,6 +759,9 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   "voice-ai": [
     dispatchVoiceAiRoutes,
   ],
+  "hooks": [
+    dispatchWorkflowAutomationRoutes,
+  ],
   "webauthn": [
     dispatchIdentityRoutes,
   ],

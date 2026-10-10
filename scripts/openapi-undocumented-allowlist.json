@@ -1382,6 +1382,10 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/fleet/geofence-events",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
       "path": "/fleet/geofences",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -1568,6 +1572,10 @@
     {
       "path": "/internal/marketplace/template-commit",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/iot/alarms",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
     },
     {
       "path": "/iot/devices",

@@ -1,0 +1,26 @@
+{
+  "name": "FluxyChat",
+  "tagline": "People and agents in the same room: chat, shared docs, tool calls. MIT Worker on your Cloudflare account, or hosted beta.",
+  "githubRepo": "https://github.com/AlessandroFare/fluxychat",
+  "githubIssues": "https://github.com/AlessandroFare/fluxychat/issues",
+  "site": "https://fluxychat.com",
+  "supportEmail": "support@fluxychat.com",
+  "founderEmail": "founder@fluxychat.com",
+  "betaBanner": "Open beta. Self-host is MIT. Report a bug on GitHub.",
+  "freeQuota": {
+    "messagesPerMonth": 200000,
+    "agentInvokesPerMonth": 5000,
+    "webhookDeliveriesPerMonth": 50000
+  },
+  "npm": {
+    "sdk": "0.6.15",
+    "react": "0.1.9",
+    "ui": "0.1.8",
+    "uiKit": "0.1.9",
+    "createFluxyChat": "0.5.25",
+    "agent": "0.2.1"
+  },
+  "bridges": "You create the Slack, Discord, Telegram, WhatsApp, or Teams app. Not a 14-channel helpdesk. We do not sell a WhatsApp channel.",
+  "hostedSaml": false,
+  "verticalsOnHome": true
+}

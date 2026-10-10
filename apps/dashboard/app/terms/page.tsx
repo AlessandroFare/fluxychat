@@ -47,8 +47,8 @@ export default function TermsPage() {
         </p>
         <p>
           Contact{" "}
-          <a className="underline underline-offset-2" href="mailto:fluxychat@outlook.com">
-            fluxychat@outlook.com
+          <a className="underline underline-offset-2" href="mailto:support@fluxychat.com">
+            support@fluxychat.com
           </a>
           .
         </p>

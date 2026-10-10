@@ -1,0 +1,19 @@
+---
+title: Share media
+description: Upload to the Worker R2 bucket. Send the attachment on the chat line.
+---
+
+Files go through the Worker (`uploadFile` / composer `uploadComposerFile`). The object lives in the `ATTACHMENTS` R2 bucket. The chat line stores metadata, not the bytes.
+
+```ts
+const client = new FluxyChatClient({ baseUrl: workerUrl, token: memberJwt, userId: "ada" });
+const attachment = await client.uploadFile(file, "image");
+await room.messages.send("see this");
+// useChat sendMessage(content, replyTo, [attachment])
+```
+
+In the UI kit, `ChatWindow` takes `uploadComposerFile`. The composer shows chips for pending files, then sends them with the next message.
+
+Limits: Worker enforces size and type. Do not put secrets in filenames. Treat the stored name as untrusted when you render it.
+
+Public guest rooms can be write-locked with `PUBLIC_GUEST_READ_ONLY=true`. Hosted is beta; check your plan quota in the dashboard, not this page.

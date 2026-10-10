@@ -195,7 +195,7 @@ export function AddressSearchField({
         <ul
           id={`${listboxId}-listbox`}
           role="listbox"
-          className="absolute z-[10000] mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-lg"
+          className="absolute z-[10000] mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-border bg-card py-1 text-card-foreground shadow-lg"
         >
           {suggestions.length > 0 ? (
             suggestions.map((s, index) => (

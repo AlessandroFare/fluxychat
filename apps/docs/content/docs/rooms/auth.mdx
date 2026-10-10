@@ -1,0 +1,32 @@
+---
+title: Authentication
+description: Member JWT in production. pk_ for public rooms. fc_ stays on the server.
+---
+
+The socket and REST both take a token. What you mint depends on the room.
+
+| Token | Where | Use |
+| --- | --- | --- |
+| Member JWT | Browser, after your sign-in | Private rooms, roles, production |
+| `pk_` publishable key | `FluxyRealtimeProvider` | Public rooms via `POST /tokens/anonymous` |
+| Guest session | `joinPublicRoomAsGuest` / widget `guest` | Same public path, stable `guestKey` in localStorage |
+| `fc_…` project key | Server only | `POST /auth/token`. 403 if you send it from the browser |
+
+```ts
+// Server
+const res = await fetch(`${workerUrl}/auth/token`, {
+  method: "POST",
+  headers: {
+    authorization: `Bearer ${process.env.FLUXY_API_KEY}`,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({ userId: "ada", roomId: "lobby" }),
+});
+const { token } = await res.json();
+```
+
+Pass that JWT to `FluxyChatClient` or `authTokenProvider`. Recipe: [JWT auth](/docs/cookbook/auth-jwt).
+
+Expired tokens close the socket with 1008 and `token_expired` (40100). Mint again, then `client.setToken(next)` / `attach()`. Catalog: [error codes](/docs/errors).
+
+Hosted is beta. Self-host SAML is separate from hosted login. Hosted SAML stays off unless you set `SAML_SSO_ENABLED`.

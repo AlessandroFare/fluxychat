@@ -1,5 +1,7 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { createStreamResumptionStore } from "../lib/stream-resumption.js";
+import { streamTail } from "../lib/stream-offset.js";
+import { roomStreamOp } from "../lib/room-stream.js";
 
 function getResumptionStore(env) {
   const kv = env.RATE_LIMIT_KV ?? env.STREAM_RESUME_KV;
@@ -15,6 +17,7 @@ export async function dispatchAiStreamRoutes(request, url, h) {
     requestLogCtx,
     verifyJwtAndGetContext,
     logError,
+    canAccessRoom,
   } = pickRouteDeps(h, [
     "env",
     "json",
@@ -22,6 +25,7 @@ export async function dispatchAiStreamRoutes(request, url, h) {
     "requestLogCtx",
     "verifyJwtAndGetContext",
     "logError",
+    "canAccessRoom",
   ]);
 
   const resumeMatch = url.pathname.match(/^\/ai\/streams\/([^/]+)\/resume$/);
@@ -46,17 +50,22 @@ export async function dispatchAiStreamRoutes(request, url, h) {
       return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
     }
 
+    const full = entry.content ?? "";
+    const tail = streamTail(full, url.searchParams.get("fromOffset"));
     return json(
       {
         streamId: entry.streamId,
         roomId: entry.roomId,
         agentId: entry.agentId,
         runId: entry.runId,
-        content: entry.content ?? "",
+        content: tail.content,
         active: entry.active === true,
         startedAt: entry.startedAt,
         lastActivityAt: entry.lastActivityAt,
-        fromOffset: 0,
+        fromOffset: tail.resumeFrom,
+        offset: tail.offset,
+        caughtUp: tail.caughtUp,
+        ...(entry.requestId ? { requestId: entry.requestId } : {}),
       },
       { headers: corsHeaders },
     );
@@ -135,6 +144,41 @@ export async function dispatchAiStreamRoutes(request, url, h) {
 
     const filtered = streams.filter((s) => s.projectId === auth.projectId);
     return json({ streams: filtered }, { headers: corsHeaders });
+  }
+
+  if (url.pathname === "/ai/streams/abort" && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "invalid_json" }, { status: 400, headers: corsHeaders });
+    }
+
+    const roomId = typeof body.roomId === "string" ? body.roomId.trim() : "";
+    if (!roomId) {
+      return json({ error: "roomId_required" }, { status: 400, headers: corsHeaders });
+    }
+    const canAccess = await canAccessRoom(env, auth, roomId);
+    if (!canAccess) {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    }
+
+    const result = await roomStreamOp(env, roomId, {
+      projectId: auth.projectId,
+      userId: typeof body.userId === "string" && body.userId.trim() ? body.userId.trim() : auth.userId,
+      op: "abort",
+      messageId: body.messageId,
+    });
+    return json(result, { status: result.ok ? 200 : 400, headers: corsHeaders });
   }
 
   return null;

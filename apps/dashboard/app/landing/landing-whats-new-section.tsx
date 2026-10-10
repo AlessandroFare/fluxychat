@@ -58,9 +58,9 @@ const AI_FEATURES = [
   },
   {
     icon: GitBranch,
-    title: "Stream resumption",
+    title: "Reconnect and history",
     description:
-      "Reconnect to in-progress AI responses after page refresh or network drop. No lost tokens.",
+      "The room socket reconnects and REST history merges. That is not Ably durable streaming. Refresh-during-stream is not a published E2E guarantee.",
   },
   {
     icon: Boxes,
@@ -120,7 +120,7 @@ const AI_FEATURES = [
     icon: Radio,
     title: "Platform modules",
     description:
-      "Stream, game, IoT, and marketplace sit on the same Worker. Spatial and cross-channel are labs. Hosted is still beta.",
+      "Stream, game, IoT, fleet, classrooms, and marketplace sit on the same Worker. Huddles media, cartography, and WebTransport stay labs. Hosted is still beta.",
   },
 ] as const;
 
@@ -130,7 +130,7 @@ const PLATFORM_EXTENSIONS = [
     title: "App Marketplace",
     description: "Publish and install apps with signed manifests, scoped grants, and tenant installs.",
     href: "/marketplace",
-    readiness: "beta" as const,
+    readiness: "production" as const,
   },
   {
     icon: Globe,
@@ -151,28 +151,28 @@ const PLATFORM_EXTENSIONS = [
     title: "Web3 Chat",
     description: "Wallet authentication, token-gated rooms, and on-chain message commitments.",
     href: "/web3",
-    readiness: "beta" as const,
+    readiness: "production" as const,
   },
   {
     icon: Puzzle,
     title: "Agent Marketplace",
     description: "Install pre-built agent skills with versioning and config schemas.",
     href: "/marketplace",
-    readiness: "beta" as const,
+    readiness: "production" as const,
   },
   {
     icon: Bot,
     title: "Chatbot Builder",
     description: "Visual trigger-action rules with conditions, priorities, and simulated events.",
     href: "/chatbot-builder",
-    readiness: "beta" as const,
+    readiness: "production" as const,
   },
   {
     icon: Radio,
     title: "FluxyStream: Live Broadcasting",
     description: "Events, ingest, HLS playback, and chat overlay on the room WebSocket.",
-    href: "/stream/demo",
-    readiness: "beta" as const,
+    href: "/stream",
+    readiness: "production" as const,
   },
   {
     icon: Zap,
@@ -193,21 +193,21 @@ const PLATFORM_EXTENSIONS = [
     title: "FluxyGame: Multiplayer SDK",
     description: "Matchmaking, ticks, AI NPCs, tournaments, and party rooms. Not rollback netcode.",
     href: "/game",
-    readiness: "beta" as const,
+    readiness: "production" as const,
   },
   {
     icon: Cpu,
     title: "FluxyIoT: HTTP ingest and device fleet",
     description: "Provision devices, ingest readings, shadow, rules, and GPS fleet on the room stream.",
     href: "/iot",
-    readiness: "beta" as const,
+    readiness: "production" as const,
   },
   {
     icon: GraduationCap,
     title: "FluxyEdu: Live classroom",
     description: "Polls, breakouts, attendance, and stage go-live on the room WebSocket.",
     href: "/edu",
-    readiness: "beta" as const,
+    readiness: "production" as const,
   },
 ] as const;
 
@@ -234,7 +234,7 @@ const CAPABILITY_GROUPS = [
       [
         "Streaming markdown",
         "AI tool presets",
-        "Stream resumption",
+        "Reconnect and history",
         "MCP client",
         "LLM middleware",
         "Realtime voice",
@@ -286,7 +286,7 @@ export function LandingWhatsNewSection() {
               Modules on the same Worker
             </h3>
             <p className="mt-2 text-sm text-[var(--mkt-text-muted)]">
-              Marketplace, Web3, classrooms, stream, game, and IoT live in the sidebar. They are beta or labs, not a second product you buy.
+              Marketplace, Web3, classrooms, stream, game, and IoT live in the sidebar. Worker-backed modules are production. Huddles media stays labs.
             </p>
           </div>
           <LandingPlatformIndex featured={FEATURED_EXTENSIONS} more={MORE_EXTENSIONS} />

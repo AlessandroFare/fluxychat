@@ -33,6 +33,12 @@ function makeEnv() {
               }
               return { results: [] };
             },
+            async first() {
+              if (sql.includes("room_channel_mutes") && params[1] === "u2-muted") {
+                return { muted_until: null, created_at: "2026-01-01T00:00:00.000Z" };
+              }
+              return null;
+            },
           };
         },
       },
@@ -69,5 +75,40 @@ describe("user-inbox-push", () => {
     expect(result.notified).toBe(1);
     expect(deliveries).toHaveLength(1);
     expect(deliveries[0].userId).toBe("u2");
+  });
+
+  it("skips inbox_updated for a muted member", async () => {
+    const { env, deliveries } = makeEnv();
+    env.DB.prepare = (sql) => {
+      let params = [];
+      return {
+        bind(...p) {
+          params = p;
+          return this;
+        },
+        async all() {
+          return {
+            results: [
+              { user_id: "u1", room_name: "General" },
+              { user_id: "u2-muted", room_name: "General" },
+            ],
+          };
+        },
+        async first() {
+          if (sql.includes("room_channel_mutes") && params[1] === "u2-muted") {
+            return { muted_until: null, created_at: "2026-01-01T00:00:00.000Z" };
+          }
+          return null;
+        },
+      };
+    };
+    const result = await notifyInboxUpdatedForRoomMembers(env, {
+      projectId: "p1",
+      roomId: "r1",
+      excludeUserId: "u1",
+      messageId: 7,
+    });
+    expect(result.notified).toBe(0);
+    expect(deliveries).toHaveLength(0);
   });
 });

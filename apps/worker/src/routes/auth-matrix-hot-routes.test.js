@@ -199,6 +199,11 @@ const cases401 = [
     request: () => unauthorizedRequest("/api/threads/t1/state"),
   },
   {
+    name: "GET /messages/:id",
+    dispatch: dispatchMessagesRoutes,
+    request: () => unauthorizedRequest("/messages/1"),
+  },
+  {
     name: "POST /messages/:id/summary",
     dispatch: dispatchThreadSummaryRoutes,
     request: () => unauthorizedRequest("/messages/1/summary", { method: "POST", body: {} }),

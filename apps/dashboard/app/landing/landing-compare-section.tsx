@@ -14,7 +14,7 @@ export function LandingCompareSection() {
           How we compare
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-pretty text-center text-[var(--mkt-text-muted)]">
-          Rough fit vs Stream, Ably, Pusher, and a DIY Durable Object.{" "}
+          Fit vs Stream Chat, Ably, and Pusher. Not a timed bake-off.{" "}
           <Link href={HOSTED_PATHS.compare} className="text-brand underline underline-offset-2">
             Full compare
           </Link>
@@ -29,15 +29,15 @@ export function LandingCompareSection() {
               <tr className="border-b border-[var(--mkt-border)] bg-[var(--mkt-surface-2)]">
                 <th className="px-4 py-[1.125rem] font-semibold text-[var(--mkt-text)]">Capability</th>
                 <th className="px-4 py-[1.125rem] font-medium text-[var(--mkt-text-muted)]">
-                  Typical stream APIs
+                  Stream Chat
                 </th>
                 <th className="px-4 py-[1.125rem] font-medium text-[var(--mkt-text-muted)]">
-                  Typical Ably-style
+                  Ably
                 </th>
                 <th className="px-4 py-[1.125rem] font-medium text-[var(--mkt-text-muted)]">
-                  Typical Channels (Pusher-style)
+                  Pusher Channels
                 </th>
-                <th className="px-4 py-[1.125rem] font-semibold text-[var(--mkt-brand)]">Fluxychat</th>
+                <th className="px-4 py-[1.125rem] font-semibold text-[var(--mkt-brand)]">FluxyChat</th>
               </tr>
             </thead>
             <tbody>
@@ -53,6 +53,18 @@ export function LandingCompareSection() {
             </tbody>
           </table>
         </div>
+        <p className="mx-auto mt-4 max-w-2xl text-pretty text-center text-xs text-[var(--mkt-text-muted)]">
+          Those cells come from public product docs, not our lab. Ably keeps SDKs and specs at{" "}
+          <a
+            className="underline underline-offset-2"
+            href="https://github.com/orgs/ably/repositories"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            github.com/orgs/ably/repositories
+          </a>
+          .
+        </p>
       </div>
     </section>
   );

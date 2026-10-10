@@ -4,11 +4,20 @@ import type { GameEvent, InputCommand, MatchResult, Player } from "./fluxy-game"
 export interface WorkerFluxyGameClient {
   upsertPlayer(input: Partial<Player> & { playerId?: string; cloudSave?: Record<string, unknown> }): Promise<Player>;
   matchmake(input: { playerId?: string; gameMode?: string; maxPlayers?: number; roomId?: string; skillRating?: number }): Promise<{ lobbyId: string; players: string[] }>;
+  listLobbies(filter?: { gameMode?: string; state?: string }): Promise<Array<{ id: string; gameMode: string; state: string; players: string[] }>>;
+  joinLobby(lobbyId: string, playerId?: string): Promise<{ lobbyId: string; players: string[]; state: string }>;
+  leaveLobby(lobbyId: string, playerId?: string): Promise<{ lobbyId: string; players: string[]; state: string }>;
+  listParties(): Promise<Array<{ id: string; members: string[]; leaderId: string }>>;
+  createParty(input?: { leaderId?: string; roomId?: string; maxMembers?: number }): Promise<{ id: string; members: string[]; leaderId: string }>;
+  getParty(partyId: string): Promise<{ id: string; members: string[]; leaderId: string }>;
+  joinParty(partyId: string, playerId?: string): Promise<{ id: string; members: string[] }>;
+  leaveParty(partyId: string, playerId?: string): Promise<{ id: string; members: string[] }>;
   startMatch(lobbyId: string): Promise<{ matchId: string }>;
+  listMatches(filter?: { status?: string }): Promise<Array<{ id: string; lobbyId?: string; status: string; size: number }>>;
   getMatch(matchId: string): Promise<{ status: string; state: Record<string, unknown> }>;
   submitInput(matchId: string, input: InputCommand | Record<string, unknown>): Promise<{ tick: number; events: GameEvent[] }>;
   endMatch(matchId: string, result?: MatchResult): Promise<void>;
-  listLeaderboard(limit?: number): Promise<
+  listLeaderboard(limit?: number, aroundPlayerId?: string): Promise<
     Array<{
       rank: number;
       playerId: string;
@@ -24,6 +33,7 @@ export interface WorkerFluxyGameClient {
   interactNpc(npcId: string, input: { message: string; playerId?: string }): Promise<{ reply: string; retryAfterSeconds?: number }>;
   listCheckpoints(playerId?: string, options?: { roomId?: string; crdt?: boolean }): Promise<Array<{ checkpointKey: string; state: Record<string, unknown>; version: number; updatedAt: string }>>;
   getCheckpoint(checkpointKey: string, playerId?: string, options?: { roomId?: string; crdt?: boolean }): Promise<{ checkpointKey: string; state: Record<string, unknown>; version: number; updatedAt: string } | null>;
+  deleteCheckpoint(checkpointKey: string, playerId?: string): Promise<{ deleted: boolean }>;
   upsertCheckpoint(input: { checkpointKey: string; state: Record<string, unknown>; expectedVersion?: number; playerId?: string; roomId?: string }): Promise<{ checkpoint: { checkpointKey: string; state: Record<string, unknown>; version: number; updatedAt: string }; conflict?: boolean }>;
   fetchCheckpointCrdtSnapshot(roomId: string): Promise<{ update: string; checkpointCount: number; roomId: string }>;
   federateCheckpoint(
@@ -41,6 +51,7 @@ export interface WorkerFluxyGameClient {
   updateQuestProgress(questId: string, input: { progress?: Record<string, unknown>; completed?: boolean; playerId?: string }): Promise<void>;
   listTournaments(filter?: { status?: string }): Promise<Array<{ id: string; name: string; status: string; prize: string; rounds: unknown[]; currentPlayers: number; maxPlayers: number }>>;
   createTournament(input: { name: string; maxPlayers?: number; prize?: string; roomId?: string; players?: string[] }): Promise<{ id: string; name: string; status: string }>;
+  joinTournament(tournamentId: string, playerId?: string): Promise<{ id: string; name: string; status: string }>;
   startTournament(tournamentId: string, input?: { players?: string[] }): Promise<{ id: string; name: string; status: string; rounds: unknown[] }>;
   reportTournamentMatch(tournamentId: string, matchId: string, winner: string): Promise<{ id: string; status: string; rounds: unknown[] }>;
 }
@@ -76,6 +87,79 @@ export function createWorkerFluxyGameClient(client: FluxyChatClient): WorkerFlux
       const body = (await res.json()) as { lobby: { id: string; players: string[] } };
       return { lobbyId: body.lobby.id, players: body.lobby.players };
     },
+    async listLobbies(filter) {
+      const url = new URL(`${base(client)}/games/lobbies`);
+      if (filter?.gameMode) url.searchParams.set("gameMode", filter.gameMode);
+      if (filter?.state) url.searchParams.set("state", filter.state);
+      const res = await fetch(url.toString(), { headers: await headers(client) });
+      if (!res.ok) throw new Error(`listLobbies failed: ${res.status}`);
+      const body = (await res.json()) as { lobbies?: Array<{ id: string; gameMode: string; state: string; players: string[] }> };
+      return body.lobbies ?? [];
+    },
+    async listParties() {
+      const res = await fetch(`${base(client)}/games/parties`, { headers: await headers(client) });
+      if (!res.ok) throw new Error(`listParties failed: ${res.status}`);
+      const body = (await res.json()) as { parties?: Array<{ id: string; members: string[]; leaderId: string }> };
+      return body.parties ?? [];
+    },
+    async createParty(input) {
+      const res = await fetch(`${base(client)}/games/parties`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await headers(client)) },
+        body: JSON.stringify(input ?? {}),
+      });
+      if (!res.ok) throw new Error(`createParty failed: ${res.status}`);
+      const body = (await res.json()) as { party: { id: string; members: string[]; leaderId: string } };
+      return body.party;
+    },
+    async getParty(partyId) {
+      const res = await fetch(`${base(client)}/games/parties/${encodeURIComponent(partyId)}`, {
+        headers: await headers(client),
+      });
+      if (!res.ok) throw new Error(`getParty failed: ${res.status}`);
+      const body = (await res.json()) as { party: { id: string; members: string[]; leaderId: string } };
+      return body.party;
+    },
+    async joinParty(partyId, playerId) {
+      const res = await fetch(`${base(client)}/games/parties/${encodeURIComponent(partyId)}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await headers(client)) },
+        body: JSON.stringify({ playerId }),
+      });
+      if (!res.ok) throw new Error(`joinParty failed: ${res.status}`);
+      const body = (await res.json()) as { party: { id: string; members: string[] } };
+      return body.party;
+    },
+    async leaveParty(partyId, playerId) {
+      const res = await fetch(`${base(client)}/games/parties/${encodeURIComponent(partyId)}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await headers(client)) },
+        body: JSON.stringify({ playerId }),
+      });
+      if (!res.ok) throw new Error(`leaveParty failed: ${res.status}`);
+      const body = (await res.json()) as { party: { id: string; members: string[] } };
+      return body.party;
+    },
+    async joinLobby(lobbyId, playerId) {
+      const res = await fetch(`${base(client)}/games/lobbies/${encodeURIComponent(lobbyId)}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await headers(client)) },
+        body: JSON.stringify({ playerId }),
+      });
+      if (!res.ok) throw new Error(`joinLobby failed: ${res.status}`);
+      const body = (await res.json()) as { lobby: { id: string; players: string[]; state: string } };
+      return { lobbyId: body.lobby.id, players: body.lobby.players, state: body.lobby.state };
+    },
+    async leaveLobby(lobbyId, playerId) {
+      const res = await fetch(`${base(client)}/games/lobbies/${encodeURIComponent(lobbyId)}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await headers(client)) },
+        body: JSON.stringify({ playerId }),
+      });
+      if (!res.ok) throw new Error(`leaveLobby failed: ${res.status}`);
+      const body = (await res.json()) as { lobby: { id: string; players: string[]; state: string } };
+      return { lobbyId: body.lobby.id, players: body.lobby.players, state: body.lobby.state };
+    },
     async startMatch(lobbyId) {
       const res = await fetch(`${base(client)}/games/lobbies/${encodeURIComponent(lobbyId)}/start`, {
         method: "POST",
@@ -84,6 +168,14 @@ export function createWorkerFluxyGameClient(client: FluxyChatClient): WorkerFlux
       if (!res.ok) throw new Error(`startMatch failed: ${res.status}`);
       const body = (await res.json()) as { match: { id: string } };
       return { matchId: body.match.id };
+    },
+    async listMatches(filter) {
+      const url = new URL(`${base(client)}/games/matches`);
+      if (filter?.status) url.searchParams.set("status", filter.status);
+      const res = await fetch(url.toString(), { headers: await headers(client) });
+      if (!res.ok) throw new Error(`listMatches failed: ${res.status}`);
+      const body = (await res.json()) as { matches?: Array<{ id: string; lobbyId?: string; status: string; size: number }> };
+      return body.matches ?? [];
     },
     async getMatch(matchId) {
       const res = await fetch(`${base(client)}/games/matches/${encodeURIComponent(matchId)}`, {
@@ -111,9 +203,10 @@ export function createWorkerFluxyGameClient(client: FluxyChatClient): WorkerFlux
       });
       if (!res.ok) throw new Error(`endMatch failed: ${res.status}`);
     },
-    async listLeaderboard(limit) {
+    async listLeaderboard(limit, aroundPlayerId) {
       const url = new URL(`${base(client)}/games/leaderboard`);
       if (limit) url.searchParams.set("limit", String(limit));
+      if (aroundPlayerId) url.searchParams.set("around", aroundPlayerId);
       const res = await fetch(url.toString(), { headers: await headers(client) });
       if (!res.ok) throw new Error(`listLeaderboard failed: ${res.status}`);
       const body = (await res.json()) as {
@@ -177,6 +270,14 @@ export function createWorkerFluxyGameClient(client: FluxyChatClient): WorkerFlux
       if (!res.ok) throw new Error(`getCheckpoint failed: ${res.status}`);
       const body = (await res.json()) as { checkpoint?: { checkpointKey: string; state: Record<string, unknown>; version: number; updatedAt: string } | null };
       return body.checkpoint ?? null;
+    },
+    async deleteCheckpoint(checkpointKey, playerId) {
+      const url = new URL(`${base(client)}/games/checkpoints/${encodeURIComponent(checkpointKey)}`);
+      if (playerId) url.searchParams.set("playerId", playerId);
+      const res = await fetch(url.toString(), { method: "DELETE", headers: await headers(client) });
+      if (!res.ok) throw new Error(`deleteCheckpoint failed: ${res.status}`);
+      const body = (await res.json()) as { deleted?: boolean };
+      return { deleted: Boolean(body.deleted) };
     },
     async upsertCheckpoint(input) {
       const res = await fetch(`${base(client)}/games/checkpoints`, {
@@ -264,6 +365,16 @@ export function createWorkerFluxyGameClient(client: FluxyChatClient): WorkerFlux
         body: JSON.stringify(input),
       });
       if (!res.ok) throw new Error(`createTournament failed: ${res.status}`);
+      const body = (await res.json()) as { tournament: { id: string; name: string; status: string } };
+      return body.tournament;
+    },
+    async joinTournament(tournamentId, playerId) {
+      const res = await fetch(`${base(client)}/games/tournaments/${encodeURIComponent(tournamentId)}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await headers(client)) },
+        body: JSON.stringify({ playerId }),
+      });
+      if (!res.ok) throw new Error(`joinTournament failed: ${res.status}`);
       const body = (await res.json()) as { tournament: { id: string; name: string; status: string } };
       return body.tournament;
     },

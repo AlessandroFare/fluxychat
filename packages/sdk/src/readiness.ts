@@ -9,8 +9,8 @@ export interface ReadinessEntry {
 
 /**
  * Product modules on the free path. Hosted is still open beta (no SLA).
- * Kernel chat + Yjs are production. Verticals ship; they are not a hosted GA claim.
- * Out of scope: SOC 2 attestation, HIPAA BAA, 99.999% uptime.
+ * Production = Worker persist + auth + tenancy + tests. Not a hosted GA / HIPAA / SFU SKU claim.
+ * Out of scope: SOC 2 attestation, HIPAA BAA, 99.999% uptime, MQTT broker, dedicated game servers.
  */
 export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
   chat: {
@@ -27,13 +27,13 @@ export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
   },
   stream: {
     label: "FluxyStream",
-    readiness: "beta",
+    readiness: "production",
     href: "/stream",
-    description: "Live event rooms + chat overlay. WHIP/HLS via Cloudflare Stream secrets",
+    description: "Live event rooms, overlays, and chat. WHIP/HLS needs Cloudflare Stream secrets",
   },
   voice: {
     label: "Voice AI",
-    readiness: "labs",
+    readiness: "production",
     href: "/voice-ai",
     description: "Workers AI STT/TTS and joinVoiceStage signaling. No unpublished latency SLA",
   },
@@ -41,7 +41,7 @@ export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
     label: "Huddles",
     readiness: "labs",
     href: "/huddles",
-    description: "Audio and video huddles. Default media path is Cloudflare Realtime SFU; LiveKit JWT is a fallback",
+    description: "Audio and video huddles. Media is Cloudflare Realtime SFU when secrets exist; not an SFU product",
   },
   cartography: {
     label: "Cartography",
@@ -53,7 +53,7 @@ export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
     label: "Truth Market",
     readiness: "labs",
     href: "/truth-market",
-    description: "Stake and dispute claims in-room",
+    description: "Stake and dispute claims in-room. Internal credits, not money",
   },
   transport: {
     label: "Fallback transports",
@@ -69,27 +69,27 @@ export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
   },
   driver: {
     label: "Driver app",
-    readiness: "labs",
+    readiness: "production",
     href: "/driver",
-    description: "PWA driver client for fleet rooms",
+    description: "PWA driver client for fleet GPS rooms",
   },
   game: {
     label: "FluxyGame",
-    readiness: "beta",
+    readiness: "production",
     href: "/game",
     description: "Match ticks, leaderboard, and checkpoints on D1. Not rollback netcode",
   },
   iot: {
     label: "FluxyIoT",
-    readiness: "beta",
+    readiness: "production",
     href: "/iot",
     description: "HTTP ingest, device shadow, and room fan-out. Not MQTT",
   },
   fleet: {
     label: "Fleet",
-    readiness: "beta",
+    readiness: "production",
     href: "/fleet",
-    description: "Vehicles, trips, geofences, and GPS fan-out",
+    description: "Vehicles, trips, geofences, and OwnTracks-shaped GPS ingest",
   },
   spatial: {
     label: "Spatial",
@@ -99,49 +99,49 @@ export const PLATFORM_READINESS: Readonly<Record<string, ReadinessEntry>> = {
   },
   edu: {
     label: "FluxyEdu",
-    readiness: "beta",
+    readiness: "production",
     href: "/edu",
-    description: "Polls, breakouts, and attendance heartbeats on the room",
+    description: "Polls, breakouts, attendance, and room timer on the classroom room",
   },
   health: {
     label: "FluxyHealth",
-    readiness: "labs",
+    readiness: "production",
     href: "/health",
     description: "Consent and care-room capability events. No HIPAA BAA",
   },
   event: {
     label: "FluxyEvent",
-    readiness: "labs",
+    readiness: "production",
     href: "/events",
-    description: "Stage live, hybrid check-in, and moderated Q&A",
+    description: "Stage live, hybrid check-in, and moderated Q&A on the room",
   },
   finance: {
     label: "FluxyFinance",
-    readiness: "labs",
+    readiness: "production",
     href: "/finance",
     description: "Risk flags and approval events. No PAN, no trade execution",
   },
   continuity: {
     label: "Continuity",
-    readiness: "labs",
+    readiness: "production",
     href: "/continuity",
     description: "Device checkpoints and handoff events on the room",
   },
   marketplace: {
     label: "Marketplace",
-    readiness: "beta",
+    readiness: "production",
     href: "/marketplace",
-    description: "Agent templates, KV apps, MCP catalog. ApyHub is remote MCP",
+    description: "Agent templates, KV apps, MCP catalog. Not a public app store",
   },
   "chatbot-builder": {
     label: "Chatbot builder",
-    readiness: "beta",
+    readiness: "production",
     href: "/chatbot-builder",
-    description: "Trigger-action rules stored on the Worker",
+    description: "Trigger-action rules and production webhooks on the Worker",
   },
   web3: {
     label: "Web3 rooms",
-    readiness: "beta",
+    readiness: "production",
     href: "/web3",
     description: "Worker SIWE mint plus optional address allowlist. NFT gates stay optional RPC on your side",
   },

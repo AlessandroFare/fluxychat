@@ -181,6 +181,174 @@ describe("kernel HTTP — messages", () => {
     expect(res.headers.get("access-control-allow-origin")).toBe("*");
   });
 
+  it("GET /messages/:id without JWT is 401", async () => {
+    const req = jsonReq("/messages/1");
+    const res = await dispatchMessagesRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /messages/:id returns the mapped message", async () => {
+    const db = {
+      prepare(sql) {
+        const text = String(sql);
+        return {
+          bind() {
+            return {
+              first: async () => {
+                if (text.includes("FROM rooms")) return { id: "room-1", type: "group" };
+                if (text.includes("FROM room_members")) return { ok: 1, user_id: "u1" };
+                if (text.includes("FROM messages")) {
+                  return {
+                    id: 1,
+                    room_id: "room-1",
+                    user_id: "u1",
+                    content: "hello",
+                    created_at: "2026-01-01T00:00:00.000Z",
+                    parent_id: null,
+                    edited_at: null,
+                    deleted_at: null,
+                    mentions: "[]",
+                    og_title: null,
+                    og_description: null,
+                    og_image: null,
+                    og_url: null,
+                    client_message_id: "c1",
+                    kind: "text",
+                    audio_url: null,
+                    duration_ms: null,
+                    transcription: null,
+                    transcription_status: null,
+                    metadata_json: JSON.stringify({ color: "red", headers: { source: "cli" } }),
+                  };
+                }
+                return null;
+              },
+              all: async () => ({ results: [] }),
+              run: async () => ({ success: true }),
+            };
+          },
+        };
+      },
+    };
+    const req = jsonReq("/messages/1");
+    const res = await dispatchMessagesRoutes(req, new URL(req.url), deps({ db }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.message.id).toBe(1);
+    expect(body.message.content).toBe("hello");
+    expect(body.message.roomId).toBe("room-1");
+    expect(body.message.metadata).toEqual({ color: "red" });
+    expect(body.message.headers).toEqual({ source: "cli" });
+  });
+
+  it("GET /messages/:id/reactions/summary without JWT is 401", async () => {
+    const req = jsonReq("/messages/1/reactions/summary");
+    const res = await dispatchMessagesRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /messages/:id/reactions/summary returns unique tallies", async () => {
+    const db = {
+      prepare(sql) {
+        const text = String(sql);
+        return {
+          bind() {
+            return {
+              first: async () => {
+                if (text.includes("FROM messages")) return { room_id: "room-1" };
+                return null;
+              },
+              all: async () => ({
+                results: text.includes("FROM message_reactions")
+                  ? [
+                      { emoji: "👍", user_id: "ada" },
+                      { emoji: "👍", user_id: "ada" },
+                      { emoji: "👍", user_id: "lin" },
+                    ]
+                  : [],
+              }),
+              run: async () => ({ success: true }),
+            };
+          },
+        };
+      },
+    };
+    const req = jsonReq("/messages/1/reactions/summary");
+    const res = await dispatchMessagesRoutes(req, new URL(req.url), deps({ db }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.messageId).toBe(1);
+    expect(body.unique["👍"].total).toBe(2);
+    expect(body.unique["👍"].clientIds).toEqual(["ada", "lin"]);
+    expect(body.distinct["👍"].total).toBe(2);
+    expect(body.multiple["👍"]).toMatchObject({
+      total: 3,
+      clientIds: { ada: 2, lin: 1 },
+      totalClientIds: 2,
+      clipped: false,
+    });
+  });
+
+  it("GET /messages/:id/reactions without JWT is 401", async () => {
+    const req = jsonReq("/messages/1/reactions");
+    const res = await dispatchMessagesRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /messages/:id/versions without JWT is 401", async () => {
+    const req = jsonReq("/messages/1/versions");
+    const res = await dispatchMessagesRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /messages/:id/versions falls back to the current row", async () => {
+    const db = {
+      prepare(sql) {
+        const text = String(sql);
+        return {
+          bind() {
+            return {
+              first: async () => {
+                if (text.includes("FROM messages")) {
+                  return {
+                    id: 1,
+                    room_id: "room-1",
+                    user_id: "u1",
+                    content: "hello",
+                    created_at: "2026-01-01T00:00:00.000Z",
+                    parent_id: null,
+                    edited_at: null,
+                    deleted_at: null,
+                    mentions: "[]",
+                    og_title: null,
+                    og_description: null,
+                    og_image: null,
+                    og_url: null,
+                    client_message_id: "c1",
+                    kind: "text",
+                    audio_url: null,
+                    duration_ms: null,
+                    transcription: null,
+                    transcription_status: null,
+                  };
+                }
+                return null;
+              },
+              all: async () => ({ results: [] }),
+              run: async () => ({ success: true }),
+            };
+          },
+        };
+      },
+    };
+    const req = jsonReq("/messages/1/versions");
+    const res = await dispatchMessagesRoutes(req, new URL(req.url), deps({ db }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].content).toBe("hello");
+  });
+
   it("PATCH /messages/:id without JWT is 401", async () => {
     const req = jsonReq("/messages/1", { method: "PATCH", body: { content: "edited" } });
     const res = await dispatchMessagesRoutes(req, new URL(req.url), createAuthMatrixDeps());
@@ -287,6 +455,33 @@ describe("kernel HTTP — inbox, presence, notifications, GDPR", () => {
     const body = await res.json();
     expect(Array.isArray(body.items)).toBe(true);
     expect(body.count).toBe(0);
+  });
+
+  it("PUT /inbox/rooms/:id/mute with JWT mutes the channel", async () => {
+    const req = jsonReq("/inbox/rooms/room-1/mute", { method: "PUT", body: {} });
+    const res = await dispatchInboxRoutes(req, new URL(req.url), deps());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.muted).toBe(true);
+  });
+
+  it("PUT /inbox/rooms/:id/mute without membership is 403", async () => {
+    const outsiderDb = {
+      prepare() {
+        return {
+          bind() {
+            return {
+              first: async () => null,
+              all: async () => ({ results: [] }),
+              run: async () => ({ success: true }),
+            };
+          },
+        };
+      },
+    };
+    const req = jsonReq("/inbox/rooms/room-1/mute", { method: "PUT", body: {} });
+    const res = await dispatchInboxRoutes(req, new URL(req.url), deps({ db: outsiderDb }));
+    expect(res.status).toBe(403);
   });
 
   it("DELETE /gdpr/delete as a member is 403", async () => {

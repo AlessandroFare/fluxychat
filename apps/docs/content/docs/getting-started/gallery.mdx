@@ -27,20 +27,20 @@ npx @fluxy-chat/create-fluxy-chat@latest my-board --example whiteboard
 | Example | Primitive | Scope (do not stretch) |
 | --- | --- | --- |
 | `live-cursors` | `sendCursor` / `type: cursor` | Not `client_event` for pointers |
-| `live-cursors-chat` | cursors + `useChat` | One JSON socket under the provider. Yjs is a second connection if you add storage. |
+| `live-cursors-chat` | cursors + `useChat` | One JSON socket. `?overlay=1` is OBS-transparent, not Overlayed Electron |
 | `javascript-live-cursors` | vanilla `connect` + `type: cursor` | React not required |
 | `tiptap-room` | Yjs `useStorage` + Collaboration | Not a second CRDT |
-| `war-room` | `useChat` + `invokeAgent` + `AvatarStack` | Agent uses the same room, not a private DM |
+| `war-room` | `useChat` + `invokeAgent` + `AvatarStack` | Same room WS. `scheduleAgent` is room-DO cron, not a CF Agents SKU |
 | `iot-panel` | HTTP ingest + `iot.reading` | Not MQTT. Hosted: `iotAutoAgentId` on publish-config invokes an agent without @mention. |
 | `draw` | cursors + `client-ephemeral-dot` | Not 60 Hz broadcast |
 | `deal-room` | quorum + `visibility` whisper + `invokeAgent` + feeds | Two tabs: `?seat=buyer` and `?seat=counsel`. Guest room for whispers (shared member JWT is one user). Traces are feeds, not chat. Cross-org is REST `/cross-org`. |
 | `negotiation-room` | same two-seat room + clause policy auto / ask / deny | Legal/procurement counterparties. HITL on **ask**. Not Harvey. Pin `rooms["nda-*"].makerChecker`. |
 | `shared-ai-room` | `pk_` guest widget + optional `invokeAgent` | First contact without console signup. Deploy `apps/worker` with wrangler; this template is the UI. |
 | `fleet-panel` | `POST /fleet/gps` then `fleet.gps_update` | Not MQTT. Geofences: `listFleetGeofences` |
-| `game-tick` | lobby + `game.tick` | Server-authoritative input, not rollback netcode |
+| `game-tick` | lobby + `game.tick` / `game.match_ended` | Authoritative input on the room, not Colyseus Schema |
 | `voice-stage` | `joinVoiceStage` signaling | Bring LiveKit for the media plane |
 | `comments-board` | `useThreads` + `FloatingComposer` | Not chat `parentId` as pins |
 | `polls` | `createPoll` / `votePoll` | Timeline polls. Anonymous ballots: `POST /polls` `isAnonymous` |
-| `whiteboard` | Yjs `Y.Array` strokes + cursors | Yjs on the room DO, not Excalidraw as a second backend |
+| `whiteboard` | Yjs strokes + cursors + Comment pins | Yjs on the room DO, not a tldraw SKU |
 
 Health is not HIPAA. Stream WHIP/HLS needs Cloudflare Stream secrets; there is no gallery WHIP example yet. Voice numbers: [Voice load report](/docs/operations/voice-load-test-report).

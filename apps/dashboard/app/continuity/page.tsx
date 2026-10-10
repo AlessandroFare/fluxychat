@@ -2,7 +2,7 @@ import { VerticalStudio } from "@/app/components/vertical-studio";
 
 export default function ContinuityPage() {
   return <VerticalStudio config={{
-    id: "continuity", name: "Cross-Reality Continuity", eyebrow: "Handoff", readiness: "Labs",
+    id: "continuity", name: "Cross-Reality Continuity", eyebrow: "Handoff", readiness: "Production",
     description: "Checkpoint the same room across devices. No latency SLA. XR stays in your client.",
     journey: ["Negotiate device capabilities", "Create session checkpoint", "Handoff active capability", "Resolve viewport state", "Confirm canonical room cursor"],
     metrics: [{ label: "Checkpoints", value: "0" }, { label: "Room events", value: "0" }, { label: "Capability ticks", value: "0" }],

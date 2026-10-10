@@ -1,6 +1,9 @@
 /** @vitest-environment jsdom */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
+import { createRoot } from "react-dom/client";
+import { act } from "react";
+import { FluxyChatClient } from "./fluxy-chat-client";
 import { FluxyRealtimeProvider } from "./realtime-provider";
 import { useFluxyChat } from "./use-fluxy-chat";
 
@@ -35,5 +38,25 @@ describe("FluxyRealtimeProvider publishableKey", () => {
     );
     expect(html).toContain('data-ready="false"');
     expect(html).toContain('data-has-client="false"');
+  });
+
+  it("closes the client when the provider unmounts", async () => {
+    const close = vi.spyOn(FluxyChatClient.prototype, "close");
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    await act(async () => {
+      root.render(
+        <FluxyRealtimeProvider workerUrl="https://api.example.com" publishableKey="pk_test">
+          <span />
+        </FluxyRealtimeProvider>,
+      );
+    });
+    await act(async () => {
+      root.unmount();
+    });
+    expect(close).toHaveBeenCalled();
+    close.mockRestore();
+    el.remove();
   });
 });

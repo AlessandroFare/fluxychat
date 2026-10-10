@@ -1,8 +1,8 @@
 # FluxyChat
 
-Realtime chat on Cloudflare Workers: one Worker, WebSocket rooms, a TypeScript SDK, and an operator console for projects, agents, and compliance.
+People and agents in the same room: chat, shared docs, tool calls. MIT Worker on your Cloudflare account, or hosted beta.
 
-> **Open beta.** [Try hosted](https://fluxychat.com) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Public docs](https://docs.fluxychat.com) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · **Support:** fluxychat@outlook.com
+> **Open beta.** Self-host is MIT. [Try hosted](https://fluxychat.com) · [Guides](https://fluxychat.com/guides) · [Compare](https://fluxychat.com/compare) · [Public docs](https://docs.fluxychat.com) · [npm SDK](https://www.npmjs.com/package/@fluxy-chat/sdk) · **Support:** support@fluxychat.com · **Founder:** founder@fluxychat.com
 
 ## Quick links
 
@@ -17,14 +17,16 @@ Realtime chat on Cloudflare Workers: one Worker, WebSocket rooms, a TypeScript S
 | Worker API | `apps/worker` · deploy with Wrangler |
 | Repo docs index | [docs/README.md](docs/README.md) · [Features overview](docs/features-overview.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Public 90-day list | [docs/public-roadmap.md](docs/public-roadmap.md) |
+| Releasing | [RELEASING.md](RELEASING.md) |
 
 ## What you get
 
 - **Realtime:** rooms, presence, Yjs (second binary socket), SSE/polling as `degraded-http`, inbox
 - **AI:** `invokeAgent` writes the room timeline. Copilot UI is a side panel you wire to your model.
 - **Ingest:** HTTP IoT/fleet fan-out (`iot.reading`, `fleet.gps_update`). Not MQTT.
-- **Enterprise:** SSO/SCIM and audit on Growth+. SOC 2/HIPAA checklists are not attestations.
-- **Distribution:** `@fluxy-chat/ui-kit` widget, Bridges (you create the vendor app), MCP
+- **Enterprise:** SSO/SCIM and audit exist on **self-host**. Hosted login does **not** include SAML. SOC 2/HIPAA checklists in-repo are not attestations.
+- **Bridges:** you create the Slack, Discord, Telegram, WhatsApp, or Teams app. This is not a 14-channel helpdesk. We do not sell a WhatsApp channel. Widget: `@fluxy-chat/ui-kit`. MCP is in the repo.
 
 **Stack:** Cloudflare Workers + Durable Objects (WebSocket, presence) · D1 SQLite at the edge (messages, metadata) · Next.js dashboard · `@fluxy-chat/sdk` + `@fluxy-chat/react`.
 
@@ -67,7 +69,7 @@ function Chat() {
 }
 ```
 
-`fc_` stays on the server. `pk_` mints an anonymous JWT (`POST /tokens/anonymous`). Pin `@fluxy-chat/sdk@0.6.14` and `@fluxy-chat/react@0.1.8`.
+`fc_` stays on the server. `pk_` mints an anonymous JWT (`POST /tokens/anonymous`). Pin `@fluxy-chat/sdk@0.6.15` and `@fluxy-chat/react@0.1.9`.
 
 ### Deploy the Worker to your Cloudflare account
 
@@ -175,46 +177,33 @@ Your messages and metadata live on **your Cloudflare Worker + D1** (multi-tenant
 | `packages/protocol` | Shared WebSocket event types |
 | `packages/agent` | Server-side bot / streaming helpers |
 
-## What's new (AI-native SDK)
+## SDK pieces
 
-Inspired by the [Vercel Chat SDK](https://chat-sdk.dev) and [AI SDK](https://sdk.vercel.ai). Public docs: [docs.fluxychat.com](https://docs.fluxychat.com/packages/sdk).
+Public docs: [docs.fluxychat.com](https://docs.fluxychat.com/packages/sdk).
 
-| Area | Highlights |
-|------|------------|
-| Adapters | Console Bridges (Slack/Discord/Telegram/WA/Teams). You create the vendor OAuth app. |
-| AI core | `invokeAgent`, HITL, MCP, streaming markdown on the room timeline |
-| Packages | `@fluxy-chat/sdk`, `react`, `ui`, `ui-kit`, `vue`, `svelte`, `agent`, `protocol`, `config` on npm |
+| Area | What is actually there |
+|------|------------------------|
+| Bridges | Slack, Discord, Telegram, WhatsApp, Teams. You create the vendor app. |
+| AI | `invokeAgent` on the room timeline, HITL, MCP |
+| npm | `@fluxy-chat/sdk`, `react`, `ui`, `ui-kit`, `vue`, `svelte`, `agent`, `protocol`, `config`. Pin versions. Pre-1.0. |
 
-## Publish to npm
-
-Scope **`@fluxy-chat`** on npm:
-
-```bash
-cd packages/sdk && pnpm run build && pnpm test
-npm login && npm publish --access public
-```
-
-Consumers set `baseUrl` to their Worker and mint JWTs server-side. See [packages/sdk/README.md](packages/sdk/README.md).
-
-`@fluxy-chat/ui`, `@fluxy-chat/ui-kit`, and `@fluxy-chat/agent` are published on npm (pin versions; pre-1.0).
+How to publish: [RELEASING.md](RELEASING.md).
 
 ## Documentation
 
 | Topic | Link |
 |-------|------|
 | Docs home (repo) | [docs/README.md](docs/README.md) |
-| Local dev setup | [docs/local-development.md](docs/local-development.md) |
-| Dashboard integration | [docs/dashboard-integration.md](docs/dashboard-integration.md) |
-| Production setup | [docs/operations/production-setup.md](docs/operations/production-setup.md) |
-| SPEC ↔ Worker map | [docs/spec-implementation-map.md](docs/spec-implementation-map.md) |
-| Distribution assets | [docs/distribution/README.md](docs/distribution/README.md) |
+| Local dev | [docs/local-development.md](docs/local-development.md) |
+| Dashboard | [docs/dashboard-integration.md](docs/dashboard-integration.md) |
+| Self-host | [docs/self-hosting.md](docs/self-hosting.md) |
+| Examples | [examples/README.md](examples/README.md) |
 
 ## Operations
 
 - Deploy / rollback: [RUNBOOK_DEPLOY_ROLLBACK.md](RUNBOOK_DEPLOY_ROLLBACK.md)
 - Tenant recovery drill: `apps/worker/scripts/tenant-recovery-drill.mjs`
-- Post-deploy smoke: `cd apps/worker && pnpm run smoke:remote -- --base-url … --admin-jwt …` ([operational checklist](docs/m6-operational-checklist.md))
-- End-to-end HTTP smoke: `export TEST_API_KEY=fc_...` then `pnpm smoke:bundled` (requires `bash` + `curl`)
+- Post-deploy smoke: `cd apps/worker && pnpm run smoke:remote -- --base-url … --admin-jwt …`
 
 ## API quickstart
 
@@ -233,9 +222,9 @@ curl -X POST "http://127.0.0.1:8787/auth/token" \
 
 ### Agents
 
-Public standard is **`/agents`**. Legacy **`/bots`** endpoints remain for existing integrations.
+Public path is **`/agents`**. Old **`/bots`** routes still answer.
 
-Create an agent (default: OpenCode Zen + DeepSeek Flash v4 free tier):
+The create example below uses OpenCode Zen (a third-party free model). Fine for a laptop demo. For hosted traffic, set your own `llmBaseUrl` and key. Do not treat Zen as a production SLA.
 
 ```bash
 curl -X POST "http://127.0.0.1:8787/agents" \
@@ -275,7 +264,7 @@ Default SLO env vars: `SLO_TARGET_REQUEST_ERROR_RATE` (0.01), `SLO_TARGET_WEBHOO
 
 ### Quotas and pricing
 
-- `QUOTAS_ENABLED` (default `true`), `QUOTA_MESSAGES_PER_MONTH` (50000), `QUOTA_AGENT_INVOKES_PER_MONTH` (1000)
+- `QUOTAS_ENABLED` (default `true`), `QUOTA_MESSAGES_PER_MONTH` (200000), `QUOTA_AGENT_INVOKES_PER_MONTH` (5000). Hosted Free matches these defaults.
 - `GET /stats/costs` with guardrails via `PRICE_PER_MILLION_MESSAGES`, `MIN_GROSS_MARGIN`, etc.
 
 ## SDK example
@@ -301,6 +290,11 @@ const { invokeAgent } = useChat({
 await invokeAgent("Draft a reply for this thread");
 ```
 
+## Why not build this on Durable Objects yourself?
+
+You can. A room object and a WebSocket is a weekend. Then you still need tenancy, JWT, D1 history, GDPR export, Bridges, tool approvals, and a console. I wrote that up here: [Durable Objects for chat rooms](https://fluxychat.com/guides/durable-objects-for-chat-rooms).
+
 ## Examples
 
-- [examples/agent-bot](examples/agent-bot): server-side bot with streaming via `@fluxy-chat/agent`
+- [examples/agent-bot](examples/agent-bot): server-side bot, streaming, `@fluxy-chat/agent` on npm
+- Shared-ai-room, war-room, and deal-room starters: `packages/create-fluxy-chat/templates/` (not copied into `examples/` yet)

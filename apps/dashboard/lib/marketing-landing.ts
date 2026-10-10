@@ -7,7 +7,7 @@ export const MARKETING_HERO = {
   headlineLead: "Humans and agents",
   headlineAccent: "in the same room",
   subhead:
-    "Chat, presence, Yjs, and invokeAgent share one room Durable Object. Public rooms take a pk_ in the browser. Self-host is MIT. Hosted is beta.",
+    "Chat in one product, the doc in another, the agent somewhere else. Permissions get copied. State drifts. You cannot replay the tool call. Here they sit on one room Durable Object. Public rooms take a publishable key in the browser. Self-host is MIT. Hosted is beta.",
 } as const;
 
 export const MARKETING_WHY = {
@@ -66,7 +66,7 @@ export const MARKETING_FINAL_CTA = {
   body: "Free has no card. Public rooms take a pk_. Private rooms take a member JWT minted with fc_ on the server. Hosted is beta. Self-host if procurement asks who owns D1.",
   primaryLabel: "Start free",
   secondaryLabel: "Book a pilot",
-  secondaryHref: "mailto:fluxychat@outlook.com?subject=FluxyChat%20pilot",
+  secondaryHref: "mailto:founder@fluxychat.com?subject=FluxyChat%20pilot",
 } as const;
 
 export const PRICING_FAQ = [

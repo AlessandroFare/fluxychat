@@ -129,3 +129,123 @@ export async function closeBreakout(env, input) {
 
   return { ok: true, closedAt: now };
 }
+
+async function loadActiveBreakout(env, projectId, breakoutId) {
+  const row = await env.DB.prepare(
+    `SELECT id, parent_room_id, status, member_count FROM breakout_rooms
+     WHERE id = ? AND project_id = ? LIMIT 1`,
+  )
+    .bind(breakoutId, projectId)
+    .first();
+  if (!row) return { ok: false, error: "breakout_not_found", status: 404 };
+  if (row.status !== "active") return { ok: false, error: "already_closed", status: 400 };
+  return { ok: true, row };
+}
+
+async function recountMembers(env, projectId, breakoutId) {
+  const count = await env.DB.prepare(
+    `SELECT COUNT(*) AS cnt FROM breakout_members WHERE project_id = ? AND breakout_id = ?`,
+  )
+    .bind(projectId, breakoutId)
+    .first();
+  await env.DB.prepare(
+    `UPDATE breakout_rooms SET member_count = ? WHERE id = ? AND project_id = ?`,
+  )
+    .bind(count?.cnt || 0, breakoutId, projectId)
+    .run();
+  return count?.cnt || 0;
+}
+
+/** BBB breakoutRoomMoveUser / requestJoin — assign a member into a breakout. */
+export async function joinBreakout(env, input) {
+  const loaded = await loadActiveBreakout(env, input.projectId, input.breakoutId);
+  if (!loaded.ok) return loaded;
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO breakout_members (breakout_id, project_id, user_id, joined_at)
+     VALUES (?, ?, ?, ?)`,
+  )
+    .bind(input.breakoutId, input.projectId, input.userId, new Date().toISOString())
+    .run();
+  const memberCount = await recountMembers(env, input.projectId, input.breakoutId);
+  await fanoutServerEvent(env, {
+    projectId: input.projectId,
+    roomId: loaded.row.parent_room_id,
+    name: "edu.breakout.assigned",
+    userId: input.userId,
+    data: { breakoutId: input.breakoutId, userId: input.userId, memberCount },
+  }).catch(() => {});
+  return { ok: true, breakoutId: input.breakoutId, userId: input.userId, memberCount };
+}
+
+export async function moveBreakoutUser(env, input) {
+  const loaded = await loadActiveBreakout(env, input.projectId, input.breakoutId);
+  if (!loaded.ok) return loaded;
+  const others = await env.DB.prepare(
+    `SELECT m.breakout_id FROM breakout_members m
+     JOIN breakout_rooms b ON b.id = m.breakout_id
+     WHERE m.project_id = ? AND m.user_id = ? AND b.parent_room_id = ? AND b.status = 'active'`,
+  )
+    .bind(input.projectId, input.userId, loaded.row.parent_room_id)
+    .all();
+  for (const row of others.results || []) {
+    await env.DB.prepare(
+      `DELETE FROM breakout_members WHERE breakout_id = ? AND project_id = ? AND user_id = ?`,
+    )
+      .bind(row.breakout_id, input.projectId, input.userId)
+      .run();
+    await recountMembers(env, input.projectId, row.breakout_id);
+  }
+  return joinBreakout(env, input);
+}
+
+export async function endAllBreakouts(env, input) {
+  const rows = await env.DB.prepare(
+    `SELECT id FROM breakout_rooms WHERE project_id = ? AND parent_room_id = ? AND status = 'active'`,
+  )
+    .bind(input.projectId, input.parentRoomId)
+    .all();
+  const closed = [];
+  for (const row of rows.results || []) {
+    const out = await closeBreakout(env, {
+      projectId: input.projectId,
+      breakoutId: row.id,
+      closedBy: input.closedBy,
+    });
+    if (out.ok) closed.push(row.id);
+  }
+  return { ok: true, closed };
+}
+
+export async function setBreakoutTime(env, input) {
+  const loaded = await loadActiveBreakout(env, input.projectId, input.breakoutId);
+  if (!loaded.ok) return loaded;
+  const minutes = Number(input.minutes);
+  if (!Number.isFinite(minutes) || minutes <= 0) return { ok: false, error: "minutes_required" };
+  const autoCloseAt = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+  await env.DB.prepare(
+    `UPDATE breakout_rooms SET auto_close_at = ? WHERE id = ? AND project_id = ?`,
+  )
+    .bind(autoCloseAt, input.breakoutId, input.projectId)
+    .run();
+  await fanoutServerEvent(env, {
+    projectId: input.projectId,
+    roomId: loaded.row.parent_room_id,
+    name: "edu.breakout.time",
+    userId: input.userId,
+    data: { breakoutId: input.breakoutId, autoCloseAt, minutes },
+  }).catch(() => {});
+  return { ok: true, autoCloseAt };
+}
+
+export async function broadcastToBreakouts(env, input) {
+  const content = String(input.content ?? "").trim();
+  if (!content) return { ok: false, error: "content_required" };
+  await fanoutServerEvent(env, {
+    projectId: input.projectId,
+    roomId: input.parentRoomId,
+    name: "edu.breakout.broadcast",
+    userId: input.userId,
+    data: { content },
+  }).catch(() => {});
+  return { ok: true };
+}

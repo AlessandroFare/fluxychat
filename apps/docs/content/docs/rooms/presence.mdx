@@ -1,0 +1,31 @@
+---
+title: Presence
+description: Enter, update, leave. Leave does not detach the socket.
+---
+
+Occupancy join is `attach()`. Presence is a separate roster: who opted in with `enter`.
+
+```ts
+await room.attach();
+await room.presence.enter({ name: "Ada" });
+await room.presence.update({ status: "away" });
+
+room.presence.subscribe((event) => {
+  console.log(event.type, event.member.userId);
+});
+
+room.presence.subscribe("enter", (event) => {
+  console.log("in", event.member.userId);
+});
+
+const members = await room.presence.get();
+const here = room.presence.isUserPresent("ada");
+
+await room.presence.leave({ name: "Ada" });
+```
+
+`leave(data?)` hides you from `presenceMembers`. The WebSocket stays open. REST `GET /rooms/:id/live` uses the same filter.
+
+Event types: `enter`, `leave`, `update`, `present`. `subscribe(type, listener)` filters. `onAnyEvent` still sees the wire names (`presence_patch`, `presence_leave`).
+
+`getSelf` / `getOthers` / `getAll` are on `room.presence` and `room.members`. Members keep leavers until `members.offlineTimeoutMs`. Avatars: [presence avatars](/docs/cookbook/presence-avatars). GPS is `location_update`, not this API. UI locus is [locations](/docs/rooms/locations).

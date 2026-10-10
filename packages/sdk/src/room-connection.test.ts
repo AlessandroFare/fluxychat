@@ -75,6 +75,7 @@ describe("FluxyChatRoomConnection", () => {
     conn.connect();
 
     await vi.waitFor(() => expect(instances.length).toBe(1));
+    expect(instances[0]!.url).toContain("protocol=1");
     conn.sendJson({ type: "typing", userId: "u", isTyping: true });
     expect(conn.getOutboundQueueDepth()).toBe(0);
 
@@ -84,7 +85,7 @@ describe("FluxyChatRoomConnection", () => {
     expect(onAuthError.mock.calls[0]?.[0]).toBeInstanceOf(FluxyAuthError);
     expect(onReconnectFailed).not.toHaveBeenCalled();
     expect(instances.length).toBe(1);
-    expect(conn.connectionStatus).toBe("disconnected");
+    expect(conn.connectionStatus).toBe("failed");
     expect(conn.getOutboundQueueDepth()).toBe(0);
   });
 
@@ -404,6 +405,205 @@ describe("FluxyChatRoomConnection", () => {
       streamOffsets: { "99": 6 },
     });
 
+    vi.useRealTimers();
+  });
+
+  it("marks auth close as failed (not disconnected)", async () => {
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const conn = client.connectRoom("room-auth-failed", { heartbeatIntervalMs: 0 });
+    conn.connect();
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    instances[0]!.emit("close", { code: FLUXY_WS_CLOSE_POLICY, reason: "not_member" });
+    await vi.waitFor(() => expect(conn.connectionStatus).toBe("failed"));
+  });
+
+  it("enters suspended after suspendedAfterAttempts, then failed at max", async () => {
+    vi.useFakeTimers();
+    const onFailed = vi.fn();
+    let socketCount = 0;
+    class BounceMockWebSocket {
+      static OPEN = 1;
+      static CLOSED = 3;
+      readyState = BounceMockWebSocket.OPEN;
+      url: string;
+      sent: string[] = [];
+      private listeners: Record<string, WsHandler[]> = {};
+
+      constructor(url: string) {
+        this.url = url;
+        instances.push(this);
+        socketCount += 1;
+        if (socketCount === 1) {
+          queueMicrotask(() => this.emit("open"));
+        }
+      }
+
+      addEventListener(type: string, handler: WsHandler) {
+        (this.listeners[type] ||= []).push(handler);
+      }
+
+      emit(type: string, event?: { code?: number; reason?: string; data?: string }) {
+        for (const handler of this.listeners[type] || []) {
+          handler(event);
+        }
+      }
+
+      close(code?: number, reason?: string) {
+        this.readyState = BounceMockWebSocket.CLOSED;
+        this.emit("close", { code: code ?? 1000, reason: reason ?? "" });
+      }
+
+      send(data: string) {
+        this.sent.push(data);
+      }
+    }
+    vi.stubGlobal("WebSocket", BounceMockWebSocket as unknown as typeof WebSocket);
+
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const conn = client.connectRoom("room-suspend", {
+      maxReconnectAttempts: 2,
+      suspendedAfterAttempts: 1,
+      baseBackoffMs: 50,
+      maxBackoffMs: 50,
+      heartbeatIntervalMs: 0,
+      replayHistoryOnReconnect: false,
+      onReconnectFailed: onFailed,
+    });
+    conn.connect();
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    instances[0]!.emit("close", { code: 1006, reason: "gone" });
+    await vi.waitFor(() => expect(conn.connectionStatus).toBe("reconnecting"));
+
+    await vi.advanceTimersByTimeAsync(50);
+    await vi.waitFor(() => expect(instances.length).toBe(2));
+    instances[1]!.emit("close", { code: 1006, reason: "gone" });
+    await vi.waitFor(() => expect(conn.connectionStatus).toBe("suspended"));
+
+    await vi.advanceTimersByTimeAsync(50);
+    await vi.waitFor(() => expect(instances.length).toBe(3));
+    instances[2]!.emit("close", { code: 1006, reason: "gone" });
+    await vi.waitFor(() => expect(conn.connectionStatus).toBe("failed"));
+    expect(onFailed).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("FX-OCC-1 notifies onOccupancy for occupancy frames", async () => {
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const onOccupancy = vi.fn();
+    const conn = client.connectRoom("room-occ", { heartbeatIntervalMs: 0, replayHistoryOnReconnect: false });
+    conn.onOccupancy(onOccupancy);
+    conn.connect();
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    instances[0]!.emit("message", {
+      data: JSON.stringify({ type: "occupancy", roomId: "room-occ", connections: 3, presenceMembers: 2 }),
+    });
+    expect(onOccupancy).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "occupancy", connections: 3, presenceMembers: 2 }),
+    );
+  });
+
+  it("fills a live seq gap from a resume replay", async () => {
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const onAny = vi.fn();
+    const conn = client.connectRoom("room-gap", {
+      heartbeatIntervalMs: 0,
+      replayHistoryOnReconnect: false,
+    });
+    conn.onAnyEvent(onAny);
+    conn.connect();
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    const ws = instances[0]!;
+    ws.emit("message", {
+      data: JSON.stringify({
+        type: "message",
+        id: 1,
+        seq: 1,
+        roomId: "room-gap",
+        userId: "u",
+        content: "one",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+    });
+    ws.emit("message", {
+      data: JSON.stringify({
+        type: "message",
+        id: 3,
+        seq: 3,
+        roomId: "room-gap",
+        userId: "u",
+        content: "three",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+    });
+    expect(conn.lastSeq).toBe(1);
+    expect(ws.sent.some((row) => row.includes('"type":"resume"') && row.includes('"lastSeq":1'))).toBe(
+      true,
+    );
+    expect(onAny.mock.calls.some((c) => c[0]?.content === "three")).toBe(false);
+
+    ws.emit("message", {
+      data: JSON.stringify({
+        type: "replay",
+        events: [
+          {
+            seq: 2,
+            messageId: 2,
+            eventType: "create",
+            payload: {
+              id: 2,
+              content: "two",
+              userId: "u",
+              roomId: "room-gap",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          },
+        ],
+      }),
+    });
+
+    const contents = onAny.mock.calls.map((c) => c[0]?.content).filter(Boolean);
+    expect(contents).toEqual(expect.arrayContaining(["one", "two", "three"]));
+    expect(conn.lastSeq).toBe(3);
+  });
+
+  it("emits discontinuity when a seq hole is not filled in time", async () => {
+    vi.useFakeTimers();
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const onAny = vi.fn();
+    const conn = client.connectRoom("room-disc", {
+      heartbeatIntervalMs: 0,
+      replayHistoryOnReconnect: false,
+      gapFillTimeoutMs: 40,
+    });
+    conn.onAnyEvent(onAny);
+    conn.connect();
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    instances[0]!.emit("message", {
+      data: JSON.stringify({
+        type: "message",
+        id: 1,
+        seq: 1,
+        roomId: "room-disc",
+        userId: "u",
+        content: "one",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+    });
+    instances[0]!.emit("message", {
+      data: JSON.stringify({
+        type: "message",
+        id: 4,
+        seq: 4,
+        roomId: "room-disc",
+        userId: "u",
+        content: "four",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+    });
+    await vi.advanceTimersByTimeAsync(40);
+    const disc = onAny.mock.calls.map((c) => c[0]).find((e) => e?.type === "discontinuity");
+    expect(disc).toMatchObject({ type: "discontinuity", code: 10200, expectedSeq: 2, receivedSeq: 4 });
+    expect(conn.lastSeq).toBe(4);
     vi.useRealTimers();
   });
 });

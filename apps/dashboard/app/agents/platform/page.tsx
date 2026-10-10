@@ -21,76 +21,22 @@ import {
   type AgentStatus,
   type SandboxResult,
   type AgentTier,
+  type DeployStage,
   type WorkerAgentPlatformClient,
 } from "@fluxy-chat/sdk";
 
-// ─── Seed ────────────────────────────────────────────
-
-function createSeededPlatform(): AgentPlatformApi {
+function localHelperPlatform(): AgentPlatformApi {
   const p = createAgentPlatform();
-
-  // Create agents
-  const support = p.createAgent({
-    name: "Support Agent",
-    description: "Customer support with FAQ lookup and escalation",
-    systemPrompt: "You are a helpful customer support agent. Be concise and empathetic.",
-    model: "gpt-4o-mini",
-    temperature: 0.3,
-    maxTokens: 500,
-    tools: ["faq_search", "ticket_create", "escalate"],
-    personality: p.createPersonality("supportive"),
-  });
-
   p.createAgent({
-    name: "Code Reviewer",
-    description: "Reviews PRs, suggests improvements, catches bugs",
-    systemPrompt: "You are an expert code reviewer. Focus on security, performance, and readability.",
-    model: "gpt-4o",
-    temperature: 0.2,
-    maxTokens: 2000,
-    tools: ["github_pr", "lint", "test_run"],
-    personality: p.createPersonality("analytical"),
-  });
-
-  p.createAgent({
-    name: "Sales Assistant",
-    description: "Qualifies leads, books demos, answers pricing questions",
-    systemPrompt: "You are a friendly sales assistant. Guide prospects through the funnel.",
+    name: "Rate probe",
+    description: "Local SDK helper for tier tables",
+    systemPrompt: "You are a probe.",
     model: "gpt-4o-mini",
-    temperature: 0.6,
-    maxTokens: 800,
-    tools: ["crm_lookup", "calendar_book", "pricing_calc"],
-    personality: p.createPersonality("energetic"),
+    temperature: 0,
+    maxTokens: 16,
+    tools: [],
+    personality: p.createPersonality("professional"),
   });
-
-  // Versioning
-  p.commitVersion("agent_1", "Added escalation tool", "alice");
-  p.commitVersion("agent_1", "Tuned temperature for consistency", "bob");
-
-  // Deploy
-  p.deploy("agent_1", "dev", "v1", "alice");
-  p.deploy("agent_1", "staging", "v2", "bob");
-  p.deploy("agent_1", "production", "v2", "alice");
-
-  // Cost data
-  p.recordCost({ agentId: "agent_1", inputTokens: 450, outputTokens: 320, model: "gpt-4o-mini", costCents: 3 });
-  p.recordCost({ agentId: "agent_1", inputTokens: 520, outputTokens: 410, model: "gpt-4o-mini", costCents: 4 });
-  p.recordCost({ agentId: "agent_1", inputTokens: 380, outputTokens: 290, model: "gpt-4o-mini", costCents: 2 });
-  p.recordCost({ agentId: "agent_2", inputTokens: 1200, outputTokens: 1800, model: "gpt-4o", costCents: 15 });
-  p.recordCost({ agentId: "agent_2", inputTokens: 980, outputTokens: 1500, model: "gpt-4o", costCents: 12 });
-  p.recordCost({ agentId: "agent_3", inputTokens: 600, outputTokens: 500, model: "gpt-4o-mini", costCents: 4 });
-
-  // Memory
-  p.storeMemory("agent_1", "user_123", "web", "preferred_language", "Italian");
-  p.storeMemory("agent_1", "user_123", "whatsapp", "last_issue", "Login problem");
-  p.storeMemory("agent_1", "user_123", "email", "plan", "Pro");
-
-  // A/B test
-  p.createAgentTest("Response style test", "Compare concise vs verbose responses", [
-    { id: "v_concise", name: "Concise", config: { maxTokens: 200 }, trafficPercent: 50 },
-    { id: "v_verbose", name: "Verbose", config: { maxTokens: 800 }, trafficPercent: 50 },
-  ], "satisfaction_score");
-
   return p;
 }
 
@@ -102,8 +48,8 @@ export default function AgentPlatformPage() {
     () => (chatClient ? createWorkerAgentPlatformClient(chatClient) : null),
     [chatClient],
   );
-  const [platform] = useState<AgentPlatformApi | null>(createSeededPlatform());
-  const [workerAgents, setWorkerAgents] = useState<Array<{ id: string; name: string; status: AgentStatus }>>([]);
+  const [platform] = useState<AgentPlatformApi | null>(localHelperPlatform());
+  const [workerAgents, setWorkerAgents] = useState<Array<{ id: string; name: string; status: AgentStatus; workspaceId?: string }>>([]);
   const [workerError, setWorkerError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"agents" | "builder" | "versioning" | "deploy" | "sandbox" | "tenancy" | "costs" | "rates" | "abtest" | "personality" | "emotion" | "memory">("agents");
   const [tick, setTick] = useState(0);
@@ -150,7 +96,7 @@ export default function AgentPlatformPage() {
       />
       <ConsoleProjectRoomBar
         requireProject
-        hint={workerPlatform ? "Agents, sandboxes, and memory sync to D1 on your Worker." : "Local seeded agents for exploration; sign in to create agents on your project."}
+        hint={workerPlatform ? "Agents, versions, deploy, memory, spend, and A/B counters are D1. Personality and tier tables stay SDK helpers." : "Sign in so listAgents hits the Worker."}
       />
       {workerError ? (
         <p className="mx-4 mt-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600">{workerError}</p>
@@ -174,7 +120,7 @@ export default function AgentPlatformPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-4" key={tick}>
-        {activeTab === "agents" && <AgentsPanel platform={platform} workerAgents={workerAgents} />}
+        {activeTab === "agents" && <AgentsPanel workerAgents={workerAgents} workerConnected={Boolean(workerPlatform)} />}
         {activeTab === "builder" && (
           <BuilderPanel
             platform={platform}
@@ -183,26 +129,46 @@ export default function AgentPlatformPage() {
             onWorkerError={setWorkerError}
           />
         )}
-        {activeTab === "versioning" && <VersioningPanel platform={platform} />}
-        {activeTab === "deploy" && (
-          <DeployPanel
-            platform={platform}
+        {activeTab === "versioning" && (
+          <VersioningPanel
             workerPlatform={workerPlatform}
             workerAgents={workerAgents}
             onReload={() => setTick((t) => t + 1)}
             onWorkerError={setWorkerError}
           />
         )}
-        {activeTab === "sandbox" && <SandboxPanel platform={platform} />}
-        {activeTab === "tenancy" && <TenancyPanel platform={platform} />}
-        {activeTab === "costs" && <CostsPanel platform={platform} />}
+        {activeTab === "deploy" && (
+          <DeployPanel
+            workerPlatform={workerPlatform}
+            workerAgents={workerAgents}
+            onReload={() => setTick((t) => t + 1)}
+            onWorkerError={setWorkerError}
+          />
+        )}
+        {activeTab === "sandbox" && (
+          <SandboxPanel workerPlatform={workerPlatform} workerAgents={workerAgents} onWorkerError={setWorkerError} />
+        )}
+        {activeTab === "tenancy" && <TenancyPanel workerAgents={workerAgents} workerConnected={Boolean(workerPlatform)} />}
+        {activeTab === "costs" && (
+          <CostsPanel
+            workerPlatform={workerPlatform}
+            workerAgents={workerAgents}
+            onReload={() => setTick((t) => t + 1)}
+            onWorkerError={setWorkerError}
+          />
+        )}
         {activeTab === "rates" && <RatesPanel platform={platform} />}
-        {activeTab === "abtest" && <AbTestPanel platform={platform} />}
+        {activeTab === "abtest" && (
+          <AbTestPanel
+            workerPlatform={workerPlatform}
+            onReload={() => setTick((t) => t + 1)}
+            onWorkerError={setWorkerError}
+          />
+        )}
         {activeTab === "personality" && <PersonalityPanel platform={platform} />}
         {activeTab === "emotion" && <EmotionPanel platform={platform} />}
         {activeTab === "memory" && (
           <MemoryPanel
-            platform={platform}
             workerPlatform={workerPlatform}
             workerAgents={workerAgents}
             onReload={() => setTick((t) => t + 1)}
@@ -217,67 +183,33 @@ export default function AgentPlatformPage() {
 // ─── Agents List ─────────────────────────────────────
 
 function AgentsPanel({
-  platform,
   workerAgents,
+  workerConnected,
 }: {
-  platform: AgentPlatformApi;
-  workerAgents: Array<{ id: string; name: string; status: AgentStatus }>;
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus; workspaceId?: string }>;
+  workerConnected: boolean;
 }) {
-  const agents = platform.listAgents();
+  if (!workerConnected) {
+    return <p className="text-sm text-muted-foreground">Sign in to list D1 agents (`GET /agents/platform/agents`). Seeded local agents are not production data.</p>;
+  }
   return (
     <div>
-      {workerAgents.length > 0 ? (
-        <div className="mb-6">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Worker persisted ({workerAgents.length})
-          </h3>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {workerAgents.map((agent) => (
-              <div key={agent.id} className="rounded-xl border border-primary/20 bg-primary/5 p-3">
-                <div className="text-sm font-semibold">{agent.name}</div>
-                <code className="text-[10px] text-muted-foreground">{agent.id}</code>
-                <div className="mt-1 text-[10px] uppercase text-muted-foreground">{agent.status}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Local demo agents ({agents.length})
+        Worker agents ({workerAgents.length})
       </h3>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {agents.map(({ id, config }) => (
-          <div key={id} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
-                  <Bot className="size-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold">{config.name}</h4>
-                  <code className="text-[10px] text-muted-foreground">{id}</code>
-                </div>
-              </div>
-              <span className={cn(
-                "rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase",
-                config.tier === "free" && "bg-muted text-muted-foreground",
-                config.tier === "starter" && "bg-blue-500/15 text-blue-600",
-                config.tier === "pro" && "bg-purple-500/15 text-purple-600",
-                config.tier === "enterprise" && "bg-amber-500/15 text-amber-600",
-              )}>{config.tier}</span>
+      {workerAgents.length === 0 ? (
+        <p className="text-sm text-muted-foreground">None yet. Use No-Code Builder; that POST goes to D1.</p>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {workerAgents.map((agent) => (
+            <div key={agent.id} className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <div className="text-sm font-semibold">{agent.name}</div>
+              <code className="text-[10px] text-muted-foreground">{agent.id}</code>
+              <div className="mt-1 text-[10px] uppercase text-muted-foreground">{agent.status}</div>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">{config.description}</p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {config.tools.map((t) => (
-                <span key={t} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">{t}</span>
-              ))}
-            </div>
-            <div className="mt-2 text-[10px] text-muted-foreground">
-              {config.model} · temp {config.temperature} · max {config.maxTokens}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -316,17 +248,17 @@ function BuilderPanel({
       tier,
       workspaceId: "default",
     };
-    platform.createAgent(config);
-    if (workerPlatform) {
-      void workerPlatform.createAgent({ name: config.name, workspaceId: "default", config })
-        .then(() => {
-          onWorkerError(null);
-          onReload();
-        })
-        .catch((err) => onWorkerError(err instanceof Error ? err.message : "Worker create failed"));
+    if (!workerPlatform) {
+      onWorkerError("Sign in so createAgent hits D1.");
+      return;
     }
+    void workerPlatform.createAgent({ name: config.name, workspaceId: "default", config })
+      .then(() => {
+        onWorkerError(null);
+        onReload();
+      })
+      .catch((err) => onWorkerError(err instanceof Error ? err.message : "Worker create failed"));
     setName(""); setDesc(""); setPrompt(""); setTools("");
-    onReload();
   };
 
   return (
@@ -409,19 +341,66 @@ function BuilderPanel({
 
 // ─── Versioning ──────────────────────────────────────
 
-function VersioningPanel({ platform }: { platform: AgentPlatformApi }) {
-  const [selectedAgent, setSelectedAgent] = useState("agent_1");
-  const versions = platform.getVersions(selectedAgent);
+function VersioningPanel({
+  workerPlatform,
+  workerAgents,
+  onReload,
+  onWorkerError,
+}: {
+  workerPlatform: WorkerAgentPlatformClient | null;
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus; workspaceId?: string }>;
+  onReload: () => void;
+  onWorkerError: (msg: string | null) => void;
+}) {
+  const [selectedAgent, setSelectedAgent] = useState("");
+  const [versions, setVersions] = useState<Array<{ version: string; commitHash: string; message: string | null; author: string; createdAt: string }>>([]);
+  const [message, setMessage] = useState("Dashboard commit");
+
+  useEffect(() => {
+    if (!selectedAgent && workerAgents[0]) setSelectedAgent(workerAgents[0].id);
+  }, [workerAgents, selectedAgent]);
+
+  useEffect(() => {
+    if (!workerPlatform || !selectedAgent) {
+      setVersions([]);
+      return;
+    }
+    void workerPlatform.listVersions(selectedAgent).then(setVersions).catch(() => setVersions([]));
+  }, [workerPlatform, selectedAgent]);
+
+  if (!workerPlatform) {
+    return <p className="text-sm text-muted-foreground">Sign in to list D1 versions (`GET /agents/platform/agents/:id/versions`).</p>;
+  }
+  if (workerAgents.length === 0) {
+    return <p className="text-sm text-muted-foreground">Create an agent in No-Code Builder first.</p>;
+  }
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="text-xs font-medium">Agent:</label>
         <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm">
-          {platform.listAgents().map(({ id, config }) => (
-            <option key={id} value={id}>{config.name} ({id})</option>
+          {workerAgents.map((agent) => (
+            <option key={agent.id} value={agent.id}>{agent.name} ({agent.id})</option>
           ))}
         </select>
+        <input value={message} onChange={(e) => setMessage(e.target.value)} className="min-w-[12rem] flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
+        <button
+          type="button"
+          onClick={() => {
+            if (!selectedAgent) return;
+            void workerPlatform.commitVersion(selectedAgent, { version: `v${Date.now()}`, message })
+              .then(() => {
+                onWorkerError(null);
+                onReload();
+                return workerPlatform.listVersions(selectedAgent).then(setVersions);
+              })
+              .catch((err) => onWorkerError(err instanceof Error ? err.message : "Commit failed"));
+          }}
+          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+        >
+          Commit version
+        </button>
       </div>
 
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -429,29 +408,20 @@ function VersioningPanel({ platform }: { platform: AgentPlatformApi }) {
       </h3>
       <div className="space-y-2">
         {versions.map((v, i) => (
-          <div key={v.version} className={cn(
+          <div key={`${v.version}-${v.commitHash}`} className={cn(
             "flex items-center gap-3 rounded-lg border p-3",
-            i === versions.length - 1 ? "border-foreground bg-foreground/5" : "border-border bg-card",
+            i === 0 ? "border-foreground bg-foreground/5" : "border-border bg-card",
           )}>
             <GitBranch className="size-4 text-muted-foreground" />
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">{v.version}</span>
                 <code className="text-[10px] text-muted-foreground">{v.commitHash.slice(0, 8)}</code>
-                {i === versions.length - 1 && <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-green-600">LATEST</span>}
+                {i === 0 && <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-green-600">LATEST</span>}
               </div>
-              <div className="text-xs text-muted-foreground">{v.message}</div>
-              <div className="text-[10px] text-muted-foreground">by {v.author} · {new Date(v.timestamp).toLocaleString()}</div>
+              <div className="text-xs text-muted-foreground">{v.message || "—"}</div>
+              <div className="text-[10px] text-muted-foreground">by {v.author} · {new Date(v.createdAt).toLocaleString()}</div>
             </div>
-            {i < versions.length - 1 && (
-              <button
-                type="button"
-                onClick={() => { platform.rollback(selectedAgent, v.version); }}
-                className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
-              >
-                Rollback
-              </button>
-            )}
           </div>
         ))}
       </div>
@@ -462,49 +432,61 @@ function VersioningPanel({ platform }: { platform: AgentPlatformApi }) {
 // ─── CI/CD Deploy ────────────────────────────────────
 
 function DeployPanel({
-  platform,
   workerPlatform,
   workerAgents,
   onReload,
   onWorkerError,
 }: {
-  platform: AgentPlatformApi;
   workerPlatform: WorkerAgentPlatformClient | null;
-  workerAgents: Array<{ id: string; name: string; status: AgentStatus }>;
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus; workspaceId?: string }>;
   onReload: () => void;
   onWorkerError: (msg: string | null) => void;
 }) {
-  const [selectedAgent, setSelectedAgent] = useState("agent_1");
-  const deploys = platform.getDeploys(selectedAgent);
-  const workerAgentId = workerAgents[0]?.id;
-
+  const [selectedAgent, setSelectedAgent] = useState("");
+  const [deploys, setDeploys] = useState<DeployStage[]>([]);
   const stages: Array<"dev" | "staging" | "production"> = ["dev", "staging", "production"];
   const stageColors = { dev: "bg-blue-500/15 text-blue-600", staging: "bg-amber-500/15 text-amber-600", production: "bg-green-500/15 text-green-600" };
 
+  useEffect(() => {
+    if (!selectedAgent && workerAgents[0]) setSelectedAgent(workerAgents[0].id);
+  }, [workerAgents, selectedAgent]);
+
+  useEffect(() => {
+    if (!workerPlatform || !selectedAgent) {
+      setDeploys([]);
+      return;
+    }
+    void workerPlatform.listDeploys(selectedAgent).then(setDeploys).catch(() => setDeploys([]));
+  }, [workerPlatform, selectedAgent]);
+
+  if (!workerPlatform) {
+    return <p className="text-sm text-muted-foreground">Sign in to deploy (`POST /agents/platform/agents/:id/deploy`).</p>;
+  }
+  if (workerAgents.length === 0) {
+    return <p className="text-sm text-muted-foreground">Create an agent first.</p>;
+  }
+
+  const client = workerPlatform;
+
+  function deployStage(stage: "dev" | "staging" | "production") {
+    if (!selectedAgent) return;
+    void client.commitVersion(selectedAgent, { version: `v${Date.now()}`, message: `Deploy ${stage}` })
+      .then(({ version }) => client.deploy(selectedAgent, { stage, version }))
+      .then(() => {
+        onWorkerError(null);
+        onReload();
+        return client.listDeploys(selectedAgent).then(setDeploys);
+      })
+      .catch((err) => onWorkerError(err instanceof Error ? err.message : "Worker deploy failed"));
+  }
+
   return (
     <div>
-      {workerPlatform && workerAgentId ? (
-        <button
-          type="button"
-          onClick={() => {
-            void workerPlatform.commitVersion(workerAgentId, { version: `v${Date.now()}`, message: "Dashboard deploy" })
-              .then(({ version }) => workerPlatform.deploy(workerAgentId, { stage: "staging", version }))
-              .then(() => {
-                onWorkerError(null);
-                onReload();
-              })
-              .catch((err) => onWorkerError(err instanceof Error ? err.message : "Worker deploy failed"));
-          }}
-          className="mb-4 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted"
-        >
-          Commit + deploy to staging (Worker)
-        </button>
-      ) : null}
       <div className="mb-4 flex items-center gap-3">
         <label className="text-xs font-medium">Agent:</label>
         <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm">
-          {platform.listAgents().map(({ id, config }) => (
-            <option key={id} value={id}>{config.name}</option>
+          {workerAgents.map((agent) => (
+            <option key={agent.id} value={agent.id}>{agent.name}</option>
           ))}
         </select>
       </div>
@@ -523,22 +505,20 @@ function DeployPanel({
                 <div className="mt-2">
                   <div className="text-sm font-medium">{active.version}</div>
                   <div className="text-[10px] text-muted-foreground">by {active.deployedBy} · {new Date(active.deployedAt).toLocaleString()}</div>
-                  <button
-                    type="button"
-                    onClick={() => { platform.rollbackDeploy(selectedAgent, stage); }}
-                    className="mt-2 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
-                  >
-                    Rollback
-                  </button>
                 </div>
               ) : (
                 <p className="mt-2 text-xs text-muted-foreground">No active deploy</p>
               )}
-              {stageDeploys.length > 1 && (
-                <div className="mt-2 text-[10px] text-muted-foreground">
-                  {stageDeploys.filter((d) => d.status === "rolled_back").length} previous version(s)
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => deployStage(stage)}
+                className="mt-2 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
+              >
+                Commit + deploy
+              </button>
+              {stageDeploys.length > 1 ? (
+                <div className="mt-2 text-[10px] text-muted-foreground">{stageDeploys.length} rows in D1</div>
+              ) : null}
             </div>
           );
         })}
@@ -549,24 +529,52 @@ function DeployPanel({
 
 // ─── Sandbox ─────────────────────────────────────────
 
-function SandboxPanel({ platform }: { platform: AgentPlatformApi }) {
-  const [selectedAgent, setSelectedAgent] = useState("agent_1");
+function SandboxPanel({
+  workerPlatform,
+  workerAgents,
+  onWorkerError,
+}: {
+  workerPlatform: WorkerAgentPlatformClient | null;
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus; workspaceId?: string }>;
+  onWorkerError: (msg: string | null) => void;
+}) {
+  const [selectedAgent, setSelectedAgent] = useState("");
   const [input, setInput] = useState("Hello, I need help with my account");
   const [result, setResult] = useState<SandboxResult | null>(null);
 
+  useEffect(() => {
+    if (!selectedAgent && workerAgents[0]) setSelectedAgent(workerAgents[0].id);
+  }, [workerAgents, selectedAgent]);
+
   const handleRun = () => {
-    setResult(platform.runSandbox(selectedAgent, input));
+    if (!workerPlatform || !selectedAgent) {
+      onWorkerError("Sign in and pick a Worker agent.");
+      return;
+    }
+    void workerPlatform.getAgent(selectedAgent).then((agent) => {
+      if (!agent) {
+        onWorkerError("Agent not found on Worker.");
+        return;
+      }
+      const local = createAgentPlatform();
+      local.createAgent(agent.config);
+      const id = local.listAgents()[0]?.id;
+      if (!id) return;
+      setResult(local.runSandbox(id, input));
+      onWorkerError(null);
+    }).catch((err) => onWorkerError(err instanceof Error ? err.message : "Sandbox failed"));
   };
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Testing sandbox</h3>
+        <p className="mb-3 text-xs text-muted-foreground">Loads the D1 config, then `runSandbox` in the browser. No LLM call, no D1 write.</p>
         <div className="mb-3">
           <label className="mb-1 block text-xs font-medium">Agent</label>
           <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
-            {platform.listAgents().map(({ id, config }) => (
-              <option key={id} value={id}>{config.name}</option>
+            {workerAgents.map((agent) => (
+              <option key={agent.id} value={agent.id}>{agent.name}</option>
             ))}
           </select>
         </div>
@@ -620,35 +628,43 @@ function SandboxPanel({ platform }: { platform: AgentPlatformApi }) {
 
 // ─── Multi-Tenancy ───────────────────────────────────
 
-function TenancyPanel({ platform }: { platform: AgentPlatformApi }) {
-  const workspaces = platform.listWorkspaces();
+function TenancyPanel({
+  workerAgents,
+  workerConnected,
+}: {
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus; workspaceId?: string }>;
+  workerConnected: boolean;
+}) {
+  if (!workerConnected) {
+    return <p className="text-sm text-muted-foreground">Sign in to group D1 agents by workspace_id.</p>;
+  }
+  const grouped = new Map<string, typeof workerAgents>();
+  for (const agent of workerAgents) {
+    const ws = agent.workspaceId || "default";
+    const list = grouped.get(ws) ?? [];
+    list.push(agent);
+    grouped.set(ws, list);
+  }
   return (
     <div>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Workspaces ({workspaces.length})
+        Workspaces ({grouped.size})
       </h3>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {workspaces.map((ws) => {
-          const agents = platform.listAgents(ws);
-          const totalCost = agents.reduce((s, { id }) => s + platform.getCostSummary(id).totalCostCents, 0);
-          return (
-            <div key={ws} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
-              <div className="flex items-center gap-2">
-                <Users className="size-4 text-muted-foreground" />
-                <h4 className="text-sm font-semibold">{ws}</h4>
-              </div>
-              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                <div>{agents.length} agent(s)</div>
-                <div>Total cost: ${(totalCost / 100).toFixed(2)}</div>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {agents.slice(0, 3).map(({ config }) => (
-                  <span key={config.name} className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{config.name}</span>
-                ))}
-              </div>
+        {[...grouped.entries()].map(([ws, agents]) => (
+          <div key={ws} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
+            <div className="flex items-center gap-2">
+              <Users className="size-4 text-muted-foreground" />
+              <h4 className="text-sm font-semibold">{ws}</h4>
             </div>
-          );
-        })}
+            <div className="mt-2 text-xs text-muted-foreground">{agents.length} agent(s) on this project</div>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {agents.slice(0, 3).map((agent) => (
+                <span key={agent.id} className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{agent.name}</span>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -656,25 +672,82 @@ function TenancyPanel({ platform }: { platform: AgentPlatformApi }) {
 
 // ─── Cost Tracking ───────────────────────────────────
 
-function CostsPanel({ platform }: { platform: AgentPlatformApi }) {
-  const agents = platform.listAgents();
+function CostsPanel({
+  workerPlatform,
+  workerAgents,
+  onReload,
+  onWorkerError,
+}: {
+  workerPlatform: WorkerAgentPlatformClient | null;
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus; workspaceId?: string }>;
+  onReload: () => void;
+  onWorkerError: (msg: string | null) => void;
+}) {
+  const [summaries, setSummaries] = useState<Array<{
+    agentId: string;
+    entries: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalCostCents: number;
+    avgCostPerRequest: number;
+  }>>([]);
+
+  useEffect(() => {
+    if (!workerPlatform) {
+      setSummaries([]);
+      return;
+    }
+    void workerPlatform.summarizeCosts().then(setSummaries).catch(() => setSummaries([]));
+  }, [workerPlatform]);
+
+  if (!workerPlatform) {
+    return <p className="text-sm text-muted-foreground">Sign in so spend hits D1 (`GET /agents/platform/costs`). This is a token ledger, not a Stripe invoice.</p>;
+  }
+
   return (
     <div>
+      <p className="mb-3 text-xs text-muted-foreground">Token rows in `agent_platform_costs`. Not billing, not Stripe.</p>
+      {workerAgents.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => {
+            const agent = workerAgents[0];
+            if (!agent) return;
+            void workerPlatform.recordCost(agent.id, {
+              inputTokens: 120,
+              outputTokens: 80,
+              model: "gpt-4o-mini",
+              costCents: 1,
+            })
+              .then(() => {
+                onWorkerError(null);
+                onReload();
+                return workerPlatform.summarizeCosts().then(setSummaries);
+              })
+              .catch((err) => onWorkerError(err instanceof Error ? err.message : "recordCost failed"));
+          }}
+          className="mb-3 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+        >
+          Record sample spend on {workerAgents[0]?.name}
+        </button>
+      ) : (
+        <p className="mb-3 text-sm text-muted-foreground">Create an agent first.</p>
+      )}
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Cost tracking per agent
       </h3>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {agents.map(({ id, config }) => {
-          const summary = platform.getCostSummary(id);
+        {workerAgents.map((agent) => {
+          const summary = summaries.find((s) => s.agentId === agent.id);
           return (
-            <div key={id} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
-              <h4 className="text-sm font-semibold">{config.name}</h4>
+            <div key={agent.id} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
+              <h4 className="text-sm font-semibold">{agent.name}</h4>
               <div className="mt-2 space-y-1 text-xs">
-                <div className="flex justify-between"><span className="text-muted-foreground">Requests</span><span className="tabular-nums">{summary.entries}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Input tokens</span><span className="tabular-nums">{summary.totalInputTokens.toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Output tokens</span><span className="tabular-nums">{summary.totalOutputTokens.toLocaleString()}</span></div>
-                <div className="flex justify-between border-t border-border pt-1 mt-1"><span className="text-muted-foreground">Total cost</span><span className="font-bold tabular-nums">${(summary.totalCostCents / 100).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Avg/req</span><span className="tabular-nums">${(summary.avgCostPerRequest / 100).toFixed(4)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Requests</span><span className="tabular-nums">{summary?.entries ?? 0}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Input tokens</span><span className="tabular-nums">{(summary?.totalInputTokens ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Output tokens</span><span className="tabular-nums">{(summary?.totalOutputTokens ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between border-t border-border pt-1 mt-1"><span className="text-muted-foreground">Total cost</span><span className="font-bold tabular-nums">${((summary?.totalCostCents ?? 0) / 100).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Avg/req</span><span className="tabular-nums">${((summary?.avgCostPerRequest ?? 0) / 100).toFixed(4)}</span></div>
               </div>
             </div>
           );
@@ -697,6 +770,7 @@ function RatesPanel({ platform }: { platform: AgentPlatformApi }) {
 
   return (
     <div>
+      <p className="mb-3 text-xs text-muted-foreground">Tier tables live in the SDK (`getRateLimit`). They are not D1 quotas.</p>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Rate limits by tier
       </h3>
@@ -721,7 +795,7 @@ function RatesPanel({ platform }: { platform: AgentPlatformApi }) {
       </h3>
       <div className="space-y-1">
         {Array.from({ length: 12 }, (_, i) => {
-          const result = platform.checkRateLimit("agent_1");
+          const result = platform.checkRateLimit(platform.listAgents()[0]?.id ?? "");
           return (
             <div key={i} className={cn("flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs", result.allowed ? "bg-green-500/5" : "bg-red-500/5")}>
               {result.allowed ? <CheckCircle2 className="size-3 text-green-500" /> : <XCircle className="size-3 text-red-500" />}
@@ -737,42 +811,97 @@ function RatesPanel({ platform }: { platform: AgentPlatformApi }) {
 
 // ─── A/B Testing ─────────────────────────────────────
 
-function AbTestPanel({ platform }: { platform: AgentPlatformApi }) {
-  const tests = platform.listTests();
+function AbTestPanel({
+  workerPlatform,
+  onReload,
+  onWorkerError,
+}: {
+  workerPlatform: WorkerAgentPlatformClient | null;
+  onReload: () => void;
+  onWorkerError: (msg: string | null) => void;
+}) {
+  const [tests, setTests] = useState<Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    status: string;
+    results: Array<{ variantId: string; variantName: string; exposures: number; conversions: number; conversionRate: number }>;
+  }>>([]);
+
+  useEffect(() => {
+    if (!workerPlatform) {
+      setTests([]);
+      return;
+    }
+    void workerPlatform.listAbTests().then(setTests).catch(() => setTests([]));
+  }, [workerPlatform]);
+
+  if (!workerPlatform) {
+    return <p className="text-sm text-muted-foreground">Sign in so A/B rows live in D1 (`GET /agents/platform/ab-tests`). Weighted pick + counters, not a stats warehouse.</p>;
+  }
+
   return (
     <div>
+      <p className="mb-3 text-xs text-muted-foreground">Counters persist on `agent_platform_ab_tests.variants_json`. Run records one exposure and one conversion.</p>
+      <button
+        type="button"
+        onClick={() => {
+          void workerPlatform.createAbTest({
+            name: "Response style test",
+            description: "Compare concise vs verbose responses",
+            metric: "satisfaction_score",
+            variants: [
+              { id: "v_concise", name: "Concise", trafficPercent: 50, config: { maxTokens: 200 } },
+              { id: "v_verbose", name: "Verbose", trafficPercent: 50, config: { maxTokens: 800 } },
+            ],
+          })
+            .then(() => {
+              onWorkerError(null);
+              onReload();
+              return workerPlatform.listAbTests().then(setTests);
+            })
+            .catch((err) => onWorkerError(err instanceof Error ? err.message : "createAbTest failed"));
+        }}
+        className="mb-3 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+      >
+        Create style test
+      </button>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         A/B Tests ({tests.length})
       </h3>
       <div className="space-y-3">
-        {tests.map((test) => {
-          const results = platform.getTestResults(test.id);
-          return (
-            <div key={test.id} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">{test.name}</h4>
-                <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase", test.status === "running" ? "bg-green-500/15 text-green-600" : "bg-muted text-muted-foreground")}>{test.status}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">{test.description}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {results.map((r) => (
-                  <div key={r.variantId} className="rounded-lg border border-border p-2 text-xs">
-                    <div className="font-semibold">{r.variantName}</div>
-                    <div className="text-muted-foreground">{r.exposures} exposures · {r.conversions} conversions</div>
-                    <div className="mt-1 font-bold tabular-nums">{(r.conversionRate * 100).toFixed(1)}%</div>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => { platform.runAgentTest(test.id, "agent_1"); }}
-                className="mt-2 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
-              >
-                Run test iteration
-              </button>
+        {tests.map((test) => (
+          <div key={test.id} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold">{test.name}</h4>
+              <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase", test.status === "running" ? "bg-green-500/15 text-green-600" : "bg-muted text-muted-foreground")}>{test.status}</span>
             </div>
-          );
-        })}
+            <p className="text-xs text-muted-foreground">{test.description}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {test.results.map((r) => (
+                <div key={r.variantId} className="rounded-lg border border-border p-2 text-xs">
+                  <div className="font-semibold">{r.variantName}</div>
+                  <div className="text-muted-foreground">{r.exposures} exposures · {r.conversions} conversions</div>
+                  <div className="mt-1 font-bold tabular-nums">{(r.conversionRate * 100).toFixed(1)}%</div>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                void workerPlatform.runAbTest(test.id)
+                  .then(() => {
+                    onWorkerError(null);
+                    return workerPlatform.listAbTests().then(setTests);
+                  })
+                  .catch((err) => onWorkerError(err instanceof Error ? err.message : "runAbTest failed"));
+              }}
+              className="mt-2 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
+            >
+              Run test iteration
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -897,60 +1026,61 @@ function EmotionPanel({ platform }: { platform: AgentPlatformApi }) {
 // ─── Cross-Platform Memory ───────────────────────────
 
 function MemoryPanel({
-  platform,
   workerPlatform,
   workerAgents,
   onReload,
   onWorkerError,
 }: {
-  platform: AgentPlatformApi;
   workerPlatform: WorkerAgentPlatformClient | null;
-  workerAgents: Array<{ id: string; name: string; status: AgentStatus }>;
+  workerAgents: Array<{ id: string; name: string; status: AgentStatus; workspaceId?: string }>;
   onReload: () => void;
   onWorkerError: (msg: string | null) => void;
 }) {
-  const [agentId, setAgentId] = useState("agent_1");
+  const [agentId, setAgentId] = useState("");
   const [userId, setUserId] = useState("user_123");
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [platformInput, setPlatformInput] = useState("web");
   const [tick, setTick] = useState(0);
-  const [workerMemories, setWorkerMemories] = useState<Array<{ key: string; value: string; platform: string }>>([]);
-
-  const workerAgentId = workerAgents[0]?.id;
+  const [workerMemories, setWorkerMemories] = useState<Array<{ key: string; value: string; platform: string; createdAt?: string }>>([]);
 
   useEffect(() => {
-    if (!workerPlatform || !workerAgentId) {
+    if (!agentId && workerAgents[0]) setAgentId(workerAgents[0].id);
+  }, [workerAgents, agentId]);
+
+  useEffect(() => {
+    if (!workerPlatform || !agentId) {
       setWorkerMemories([]);
       return;
     }
-    void workerPlatform.listMemories(workerAgentId, { userId })
-      .then((rows) => setWorkerMemories(rows.map((m) => ({ key: m.key, value: m.value, platform: m.platform }))))
+    void workerPlatform.listMemories(agentId, { userId })
+      .then((rows) => setWorkerMemories(rows.map((m) => ({ key: m.key, value: m.value, platform: m.platform, createdAt: m.timestamp }))))
       .catch(() => setWorkerMemories([]));
-  }, [workerPlatform, workerAgentId, userId, tick]);
+  }, [workerPlatform, agentId, userId, tick]);
 
-  const memories = platform.getMemory(agentId, userId);
-  const unified = platform.getUnifiedMemory(agentId, userId);
+  const unified = new Map<string, { value: string; platform: string; createdAt?: string }>();
+  for (const m of [...workerMemories].reverse()) {
+    unified.set(m.key, m);
+  }
 
   const handleStore = () => {
-    if (!key.trim() || !value.trim()) return;
-    platform.storeMemory(agentId, userId, platformInput, key.trim(), value.trim());
-    if (workerPlatform && workerAgentId) {
-      void workerPlatform.upsertMemory(workerAgentId, {
-        key: key.trim(),
-        value: value.trim(),
-        userId,
-        platform: platformInput,
-      })
-        .then(() => {
-          onWorkerError(null);
-          setTick((t) => t + 1);
-          onReload();
-        })
-        .catch((err) => onWorkerError(err instanceof Error ? err.message : "Worker memory failed"));
+    if (!key.trim() || !value.trim() || !workerPlatform || !agentId) {
+      onWorkerError("Sign in, pick an agent, then store.");
+      return;
     }
+    void workerPlatform.upsertMemory(agentId, {
+      key: key.trim(),
+      value: value.trim(),
+      userId,
+      platform: platformInput,
+    })
+      .then(() => {
+        onWorkerError(null);
+        setTick((t) => t + 1);
+        onReload();
+      })
+      .catch((err) => onWorkerError(err instanceof Error ? err.message : "Worker memory failed"));
     setKey(""); setValue("");
-    setTick((t) => t + 1);
   };
 
   const platformIcons: Record<string, string> = { web: "🌐", whatsapp: "💬", email: "📧", telegram: "✈️", slack: "💼" };
@@ -960,6 +1090,11 @@ function MemoryPanel({
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Store memory</h3>
         <div className="space-y-2">
+          <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+            {workerAgents.map((agent) => (
+              <option key={agent.id} value={agent.id}>{agent.name}</option>
+            ))}
+          </select>
           <div className="grid grid-cols-2 gap-2">
             <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="Key (e.g. preference)" className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
             <select value={platformInput} onChange={(e) => setPlatformInput(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
@@ -977,19 +1112,11 @@ function MemoryPanel({
         </div>
 
         <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Raw entries ({memories.length}){workerMemories.length ? ` · ${workerMemories.length} on Worker` : ""}
+          Raw entries ({workerMemories.length})
         </h3>
         <div className="space-y-1">
           {workerMemories.map((m) => (
             <div key={`w-${m.key}-${m.platform}`} className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs">
-              <span>{platformIcons[m.platform] || "📱"}</span>
-              <span className="font-medium">{m.key}:</span>
-              <span className="text-muted-foreground">{m.value}</span>
-              <span className="ml-auto text-[10px] text-muted-foreground">Worker</span>
-            </div>
-          ))}
-          {memories.map((m) => (
-            <div key={m.id} className="flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] px-3 py-1.5 text-xs">
               <span>{platformIcons[m.platform] || "📱"}</span>
               <span className="font-medium">{m.key}:</span>
               <span className="text-muted-foreground">{m.value}</span>
@@ -1004,7 +1131,7 @@ function MemoryPanel({
           Unified memory (cross-platform)
         </h3>
         <div className="space-y-2">
-          {Object.entries(unified).map(([k, v]) => (
+          {[...unified.entries()].map(([k, v]) => (
             <div key={k} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{platformIcons[v.platform] || "📱"}</span>
@@ -1013,7 +1140,7 @@ function MemoryPanel({
                   <div className="text-xs text-muted-foreground">{v.value}</div>
                 </div>
               </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">from {v.platform} · {new Date(v.timestamp).toLocaleString()}</div>
+              <div className="mt-1 text-[10px] text-muted-foreground">from {v.platform}{v.createdAt ? ` · ${new Date(v.createdAt).toLocaleString()}` : ""}</div>
             </div>
           ))}
         </div>

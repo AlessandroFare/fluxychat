@@ -30,8 +30,28 @@ export function readinessBadgeClass(readiness: PlatformReadinessLabel | string):
   return "bg-slate-500/15 text-slate-700";
 }
 
+const PRODUCT_IDS = [
+  "chat",
+  "collab",
+  "stream",
+  "voice",
+  "huddles",
+  "game",
+  "iot",
+  "fleet",
+  "driver",
+  "spatial",
+  "marketplace",
+  "chatbot-builder",
+  "web3",
+  "cartography",
+  "truth-market",
+  "transport",
+  "cross-channel",
+] as const;
+
 export function listProductReadiness(): ReadinessDisplayEntry[] {
-  return (["chat", "collab", "stream", "voice", "game", "iot", "fleet", "spatial", "marketplace", "chatbot-builder", "web3"] as const).map((id) => {
+  return PRODUCT_IDS.map((id) => {
     const entry = PLATFORM_READINESS[id];
     return {
       id,

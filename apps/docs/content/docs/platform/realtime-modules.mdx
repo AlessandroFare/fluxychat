@@ -92,13 +92,15 @@ const { lastEvent, connected } = useServerEvents({
 | Name | Source | Payload (summary) |
 |------|--------|-------------------|
 | `game.match_started` | FluxyGame | `{ matchId, lobbyId }` |
-| `game.tick` | FluxyGame | `{ matchId, tick, state }` |
+| `game.tick` | FluxyGame | `{ matchId, tick, state, events }` |
+| `game.match_ended` | FluxyGame | `{ matchId, lobbyId, result }` |
+| `game.party_updated` | FluxyGame | `{ partyId, members, action }` |
 | `iot.reading` | FluxyIoT | `{ deviceId, sensor, value, unit }` |
 | `live.event_created` | Live streaming | `{ eventId, title, status, roomId }` |
 | `live.event_live` / `live.event_ended` | Live streaming | `{ eventId, status }` |
 | `live.viewer_joined` / `live.viewer_left` | Live streaming | `{ eventId, userId, viewerCount }` |
 | `live.chat_message` | Live streaming | `{ eventId, messageId, content }` |
-| `fleet.gps_update` | Fleet GPS ingest | `{ vehicleId, lat, lng, speed, heading, ts }` |
+| `fleet.gps_update` | Fleet GPS ingest | `{ vehicleId, lat, lng, speed, heading, ts, geofenceEvents }` |
 | `poll.created` / `poll.voted` / `poll.closed` | Polls (edu/events) | `{ pollId, … }` |
 | `form.created` / `form.submitted` | Forms | `{ formId, … }` |
 | `spatial.scene_created` / `spatial.entity_added` | Digital twin | `{ sceneId, entityId, position, … }` |

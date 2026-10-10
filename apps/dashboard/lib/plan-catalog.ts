@@ -88,7 +88,7 @@ export const SALES_PLAN_CATALOG: SalesPlanRow[] = [
       "Priority support, white-label lite",
     ],
     cta: "Contact sales",
-    href: "mailto:fluxychat@outlook.com?subject=FluxyChat%20Business",
+    href: "mailto:founder@fluxychat.com?subject=FluxyChat%20Business",
   },
   {
     label: "Enterprise",
@@ -101,7 +101,7 @@ export const SALES_PLAN_CATALOG: SalesPlanRow[] = [
       "Dedicated support",
     ],
     cta: "Talk to us",
-    href: "mailto:fluxychat@outlook.com?subject=FluxyChat%20Enterprise",
+    href: "mailto:founder@fluxychat.com?subject=FluxyChat%20Enterprise",
   },
 ];
 

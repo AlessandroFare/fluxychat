@@ -16,19 +16,25 @@ import { createWorkerFluxyGameClient } from "@fluxy-chat/sdk";
 
 const game = createWorkerFluxyGameClient(client);
 const lobby = await game.matchmake({ playerId, roomId, maxPlayers: 2 });
+await game.joinLobby(inviteLobbyId, playerId); // Colyseus joinById
 const { matchId } = await game.startMatch(lobby.lobbyId);
 await game.submitInput(matchId, { playerId, actions: { move: "nudge" } });
+await game.getMatch(matchId); // reconnect: D1 snapshot, not a Colyseus seat token
+// leaveLobby(lobbyId, playerId) while state is still waiting
 ```
 
 ```ts
 useChat({
   roomId,
   onServerEvent: (ev) => {
+    if (ev.name === "game.lobby_updated") {
+      // ev.data.lobbyId, players, state, action
+    }
     if (ev.name === "game.tick") {
-      // ev.data.matchId, tick, events
+      // ev.data.matchId, tick, state, events
     }
   },
 });
 ```
 
-`startMatch` needs at least two lobby players. Pair with [war-room](/docs/getting-started/gallery) for chat + `invokeAgent` on the same socket.
+`startMatch` needs at least two lobby players. `listLobbies({ state: "waiting" })` is ListMatches HOW. `createParty` / `joinParty` is a pre-match roster on the same room (`game.party_updated`). `listLeaderboard(20, playerId)` is around-owner. Pair with [war-room](/docs/getting-started/gallery) for chat + `invokeAgent` on the same socket.

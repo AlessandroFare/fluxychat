@@ -95,6 +95,12 @@ export async function notifyInboxUpdatedForRoomMembers(env, input) {
     members.map(async (row) => {
       const userId = row.user_id;
       if (!userId || userId === excludeUserId) return;
+      try {
+        const { isChannelMuted } = await import("./channel-mute.js");
+        if (await isChannelMuted(env, { projectId, userId, roomId })) return;
+      } catch {
+        /* mute table may be missing on old D1 */
+      }
       const result = await notifyInboxUpdated(env, {
         projectId,
         userId,

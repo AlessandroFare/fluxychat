@@ -1,5 +1,6 @@
 {
   "version": "1.0.0",
+  "protocolInteger": 1,
   "inbound": [
     "message",
     "edit",
@@ -13,6 +14,9 @@
     "presence_patch",
     "subscription_succeeded",
     "subscription_count",
+    "occupancy",
+    "lock",
+    "room_reaction",
     "member_joined",
     "member_left",
     "client_event",
@@ -56,6 +60,10 @@
     "agentTyping",
     "resume",
     "presence_state",
-    "derived_set"
+    "derived_set",
+    "lock_acquire",
+    "lock_release",
+    "room_reaction",
+    "presence_leave"
   ]
 }

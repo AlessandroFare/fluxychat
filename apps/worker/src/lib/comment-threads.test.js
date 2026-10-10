@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   addCommentToThread,
   createCommentThread,
+  deleteComment,
+  deleteCommentThread,
+  editComment,
   listCommentThreads,
   sanitizeCommentMetadata,
+  setCommentReaction,
   updateCommentThread,
 } from "./comment-threads.js";
 
@@ -52,10 +56,46 @@ function createEnv() {
                   } else if (sql.includes("UPDATE room_comment_threads SET updated_at")) {
                     const row = threads.find((t) => t.id === args[1]);
                     if (row) row.updated_at = args[0];
+                  } else if (sql.includes("UPDATE room_comment_thread_comments SET reactions_json")) {
+                    const row = comments.find((c) => c.id === args[1]);
+                    if (row) row.reactions_json = args[0];
+                  } else if (sql.includes("UPDATE room_comment_thread_comments SET body")) {
+                    const row = comments.find((c) => c.id === args[2]);
+                    if (row) {
+                      row.body = args[0];
+                      row.edited_at = args[1];
+                    }
+                  } else if (sql.includes("DELETE FROM room_comment_thread_comments")) {
+                    const keep = sql.includes("WHERE id = ?")
+                      ? comments.filter(
+                          (c) =>
+                            !(c.id === args[0] && c.project_id === args[1] && c.room_id === args[2]),
+                        )
+                      : comments.filter(
+                          (c) =>
+                            !(c.thread_id === args[0] && c.project_id === args[1] && c.room_id === args[2]),
+                        );
+                    comments.length = 0;
+                    comments.push(...keep);
+                  } else if (sql.includes("DELETE FROM room_comment_threads")) {
+                    const keep = threads.filter(
+                      (t) => !(t.id === args[0] && t.project_id === args[1] && t.room_id === args[2]),
+                    );
+                    threads.length = 0;
+                    threads.push(...keep);
                   }
                   return { success: true };
                 },
                 async first() {
+                  if (sql.includes("FROM room_comment_thread_comments")) {
+                    return comments.find(
+                      (c) =>
+                        c.id === args[0] &&
+                        c.thread_id === args[1] &&
+                        c.project_id === args[2] &&
+                        c.room_id === args[3],
+                    ) || null;
+                  }
                   if (sql.includes("FROM room_comment_threads WHERE id")) {
                     return threads.find(
                       (t) => t.id === args[0] && t.project_id === args[1] && t.room_id === args[2],
@@ -139,5 +179,123 @@ describe("comment-threads", () => {
     const after = await listCommentThreads(env, { projectId: "p1", roomId: "r1" });
     expect(after[0].resolved).toBe(true);
     expect(after[0].comments).toHaveLength(2);
+  });
+
+  it("edits own comment and deletes own thread; rejects others", async () => {
+    const { env } = createEnv();
+    const created = await createCommentThread(env, {
+      projectId: "p1",
+      roomId: "r1",
+      userId: "ada",
+      body: "Look here",
+    });
+    const edited = await editComment(env, {
+      projectId: "p1",
+      roomId: "r1",
+      threadId: created.thread.id,
+      commentId: created.thread.comments[0].id,
+      userId: "ada",
+      body: "Look there",
+    });
+    expect(edited.ok).toBe(true);
+    expect(edited.comment.body).toBe("Look there");
+    expect(edited.comment.editedAt).toBeTruthy();
+
+    const stolen = await editComment(env, {
+      projectId: "p1",
+      roomId: "r1",
+      threadId: created.thread.id,
+      commentId: created.thread.comments[0].id,
+      userId: "bob",
+      body: "nope",
+    });
+    expect(stolen).toEqual({ ok: false, error: "forbidden" });
+
+    const denied = await deleteCommentThread(env, {
+      projectId: "p1",
+      roomId: "r1",
+      threadId: created.thread.id,
+      userId: "bob",
+    });
+    expect(denied).toEqual({ ok: false, error: "forbidden" });
+
+    const deleted = await deleteCommentThread(env, {
+      projectId: "p1",
+      roomId: "r1",
+      threadId: created.thread.id,
+      userId: "ada",
+    });
+    expect(deleted.ok).toBe(true);
+    const after = await listCommentThreads(env, { projectId: "p1", roomId: "r1" });
+    expect(after).toEqual([]);
+  });
+
+  it("deletes own comment and keeps the thread", async () => {
+    const { env } = createEnv();
+    const created = await createCommentThread(env, {
+      projectId: "p1",
+      roomId: "r1",
+      userId: "ada",
+      body: "Look here",
+    });
+    const added = await addCommentToThread(env, {
+      projectId: "p1",
+      roomId: "r1",
+      threadId: created.thread.id,
+      userId: "bob",
+      body: "Agreed",
+    });
+    const stolen = await deleteComment(env, {
+      projectId: "p1",
+      roomId: "r1",
+      threadId: created.thread.id,
+      commentId: added.comment.id,
+      userId: "ada",
+    });
+    expect(stolen).toEqual({ ok: false, error: "forbidden" });
+
+    const deleted = await deleteComment(env, {
+      projectId: "p1",
+      roomId: "r1",
+      threadId: created.thread.id,
+      commentId: added.comment.id,
+      userId: "bob",
+    });
+    expect(deleted.ok).toBe(true);
+    const after = await listCommentThreads(env, { projectId: "p1", roomId: "r1" });
+    expect(after).toHaveLength(1);
+    expect(after[0].comments).toHaveLength(1);
+    expect(after[0].comments[0].userId).toBe("ada");
+  });
+
+  it("adds and removes a comment reaction", async () => {
+    const { env } = createEnv();
+    const created = await createCommentThread(env, {
+      projectId: "p1",
+      roomId: "r1",
+      userId: "ada",
+      body: "Look here",
+    });
+    const commentId = created.thread.comments[0].id;
+    const added = await setCommentReaction(env, {
+      projectId: "p1",
+      roomId: "r1",
+      threadId: created.thread.id,
+      commentId,
+      userId: "bob",
+      emoji: "👍",
+    });
+    expect(added.ok).toBe(true);
+    expect(added.comment.reactions["👍"]).toEqual(["bob"]);
+    const gone = await setCommentReaction(env, {
+      projectId: "p1",
+      roomId: "r1",
+      threadId: created.thread.id,
+      commentId,
+      userId: "bob",
+      emoji: "👍",
+      remove: true,
+    });
+    expect(gone.comment.reactions["👍"]).toBeUndefined();
   });
 });

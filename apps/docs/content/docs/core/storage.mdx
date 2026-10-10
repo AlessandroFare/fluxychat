@@ -17,10 +17,11 @@ import {
   useUndo,
   useRedo,
   useYjsDoc,
+  useAwareness,
   uploadLiveFile,
 } from "@fluxy-chat/sdk/yjs";
 
-<FluxyYjsProvider workerUrl token={jwt} roomId>
+<FluxyYjsProvider workerUrl token={jwt} roomId awareness={{ userId, name }}>
   <Board />
 </FluxyYjsProvider>
 ```
@@ -35,6 +36,8 @@ const setTitle = useMutation((storage, next: string) => {
 ```
 
 `useStorage` reads a JSON snapshot of the `storage` Y.Map. `useMutation` writes that map inside a Yjs transaction. Undo/redo is `Y.UndoManager` on the map + Tiptap fragment (`prosemirror`).
+
+Awareness (y-websocket HOW) is JSON on binary type `2`: `useAwareness()`, `setLocalAwareness` from `useYjsContext()`. `synced` is true after the first server sync frame.
 
 The provider opens a **binary** WebSocket on the same `/ws/room/:id` (replay off). Chat `useChat` stays JSON on its own socket. Same room DO, same persistence key.
 

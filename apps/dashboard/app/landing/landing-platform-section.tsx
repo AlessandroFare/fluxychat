@@ -43,10 +43,10 @@ export function LandingPlatformSection() {
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-xs font-semibold uppercase text-zinc-500">Same Worker when the room grows</p>
           <h2 className="mt-3 text-balance font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Start with chat and a document. Add GPS or a live overlay later.
+            Chat, collab, stream, game, IoT, fleet, and industry rooms on one Durable Object.
           </h2>
           <p className="mt-4 text-pretty text-lg text-zinc-400">
-            Chat, presence, Yjs, and invokeAgent are the kernel. Polls, HTTP ingest, and Stream sit on that same Durable Object. Hosted is open beta. Pin npm.
+            Kernel plus every Worker-backed module. Hosted is open beta (no SLA). No HIPAA BAA. Voice is signaling + transcripts, not an SFU we sell. Pin npm.
           </p>
         </div>
 

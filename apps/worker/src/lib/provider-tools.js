@@ -56,8 +56,8 @@ export const PROVIDER_TOOL_SETS = {
           required: ["query"],
         },
         execute: async (input, ctx) => {
-          // Web search execution — in production, call a search API
-          return { results: [], query: input.query };
+          const { performWebSearch } = await import("./web-search.js");
+          return performWebSearch(ctx.env, input.query, { numResults: input.numResults });
         },
         category: "search",
       },

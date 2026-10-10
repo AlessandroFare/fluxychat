@@ -7,9 +7,11 @@ Console: `/edu`. The classroom is a normal room. Polls and breakouts go to Worke
 
 | Piece | API |
 |-------|-----|
-| Poll | `POST /polls`, then `GET /polls/:id`. Close with `POST /polls/:id/close`. You cannot vote on a poll you created. |
-| Breakout | `POST /rooms/:id/breakouts`, list with GET, close with POST on the breakout id |
-| Attendance | `attendance.heartbeat` capability events. Live counts: `GET /rooms/:id/capabilities/snapshot` |
+| Poll | `POST /polls`, then `GET /polls/:id`. Close with `POST /polls/:id/close`. You cannot vote on a poll you created. Typed polls (`pollType: typed`) take `POST /polls/:id/vote` with `{ answer }` (`voteTypedPoll`). |
+| Breakout | Create/list/close, plus `join`, `move`, `end-all`, `time`, `broadcast` (BBB graphql actions HOW, no SFU) |
+| Timer | `GET /rooms/:id/timer` plus `activate` / `start` / `stop` / `reset` / `deactivate` / `time` / `mode`. Fan-out `edu.timer`. Not an SFU clock. |
+| Attendance | SDK `sendAttendanceHeartbeat` → `attendance.heartbeat`. Snapshot: `GET /rooms/:id/capabilities/snapshot` |
+| Raise hand | SDK `setRaiseHand` → `edu.hand.raised` |
 | Whiteboard | Yjs on the same room. [Collab](/docs/platform/collab) |
 | Grading agent | Draft only. A teacher publishes. |
 

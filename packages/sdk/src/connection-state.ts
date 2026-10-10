@@ -69,7 +69,7 @@ export function buildFluxyConnectionState(
   const retryAttempt = input.retryAttempt ?? 0;
   let nextRetryAt: string | null = null;
 
-  if (input.status === "reconnecting") {
+  if (input.status === "reconnecting" || input.status === "suspended") {
     const delay =
       input.reconnectDelayMs ??
       computeReconnectBackoffMs(Math.max(retryAttempt, 1));
@@ -99,7 +99,13 @@ function transportFromStatus(
     if (rawStatus === "sse") return "sse";
   }
   if (normalizedStatus === "degraded-http") return "polling";
-  if (normalizedStatus === "connected" || normalizedStatus === "connecting" || normalizedStatus === "reconnecting" || normalizedStatus === "degraded") {
+  if (
+    normalizedStatus === "connected" ||
+    normalizedStatus === "connecting" ||
+    normalizedStatus === "reconnecting" ||
+    normalizedStatus === "suspended" ||
+    normalizedStatus === "degraded"
+  ) {
     return "websocket";
   }
   return "none";
@@ -123,6 +129,8 @@ export function getConnectionStatusLabel(
   if (normalized === "connected") return "Connected";
   if (normalized === "connecting") return "Connecting…";
   if (normalized === "disconnected") return "Disconnected";
+  if (normalized === "failed") return "Connection failed";
+  if (normalized === "suspended") return "Suspended — still retrying";
   if (normalized === "blocked") return "Connection blocked";
 
   if (normalized === "reconnecting") {

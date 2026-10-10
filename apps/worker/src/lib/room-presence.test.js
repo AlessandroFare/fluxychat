@@ -4,11 +4,17 @@ import {
   buildRoomPresenceSnapshot,
   normalizeClientEventName,
   parsePresenceInfoParam,
+  occupancyWatching,
   sanitizePresencePatch,
   shouldSkipClientEventWebhook,
 } from "./room-presence.js";
 
 describe("room-presence", () => {
+  it("FX-OCC-1 watching is extra sockets beyond presence members", () => {
+    expect(occupancyWatching(4, 2)).toBe(2);
+    expect(occupancyWatching(1, 3)).toBe(0);
+  });
+
   it("parses presence info JSON", () => {
     expect(parsePresenceInfoParam('{"name":"Alice"}')).toEqual({ name: "Alice" });
   });

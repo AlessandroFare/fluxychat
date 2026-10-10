@@ -1,12 +1,11 @@
 ---
 title: "@fluxy-chat/sdk"
-description: "["
+description: Client for a FluxyChat Worker. Rooms, messages, sockets, agents.
 ---
 
 # @fluxy-chat/sdk
 
-[
-Client for a **FluxyChat Worker** (self-hosted or [FluxyChat Cloud](https://github.com/AlessandroFare/fluxychat)): rooms, messages, WebSockets, agents, and vertical SDKs.
+Client for a FluxyChat Worker (self-hosted or hosted beta): rooms, messages, WebSockets, agents, and vertical SDKs.
 
 For **React hooks** (`useChat`, `useInbox`, `FluxyRealtimeProvider`), install [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) alongside this package.
 
@@ -26,7 +25,7 @@ pnpm add @fluxy-chat/sdk @fluxy-chat/react zustand
 
 ### Bundle size
 
-Import only what your app needs — the full `dist/index.js` artifact is ~112 KB uncompressed; tree-shaken app bundles (client + hooks via `@fluxy-chat/react`) are typically much smaller. Compare gzip size in your bundler (Vite/webpack) when evaluating against other chat SDKs.
+Import only what your app needs — the full `dist/index.js` artifact is ~112 KB uncompressed; tree-shaken app bundles (client + hooks via `@fluxy-chat/react`) are typically much smaller. Room kernel without IoT/edu: `@fluxy-chat/sdk/room`. Chat-only: `@fluxy-chat/sdk/chat`. Compare gzip size in your bundler (Vite/webpack) when evaluating against other chat SDKs.
 
 **Industry reference:** ~14 kB gzip for a chat-only React import path in comparable hosted SDKs. FluxyChat CI gates `@fluxy-chat/react` at **≤20 kB gzip** (`pnpm run check:bundle-size`).
 
@@ -404,7 +403,7 @@ See [docs/cookbook/bot-streaming-fluxy-message-stream.md](https://github.com/Ale
 | AI reply suggestions | `suggestReplies(roomId, parentId?)` |
 | Thread TL;DR | `summarizeThread(messageId)` |
 | Full-text search | `searchMessages(\{ q, roomId?, from?, to? \})` |
-| Unified inbox | `getInbox()`, `snoozeRoom()`, `createInboxFollowUp()` |
+| Unified inbox | `getInbox()`, `snoozeRoom()`, `muteChannel()` / `unmuteChannel()`, `createInboxFollowUp()` |
 | Room export | `exportRoomMarkdown(roomId)`, `exportRoomPdf(roomId)` |
 | Custom domains (admin) | `listCustomDomains()`, `createCustomDomain()`, … |
 | Embed config (admin) | `getEmbedConfig()`, `updateEmbedConfig()` |
@@ -626,7 +625,7 @@ Guides with examples: [`docs/guides/`](https://github.com/AlessandroFare/fluxych
 
 ## Support
 
-Questions: [fluxychat@outlook.com](mailto\:fluxychat@outlook.com) · Issues: [github.com/AlessandroFare/fluxychat/issues](https://github.com/AlessandroFare/fluxychat/issues)
+Questions: [support@fluxychat.com](mailto\:support@fluxychat.com) · Issues: [github.com/AlessandroFare/fluxychat/issues](https://github.com/AlessandroFare/fluxychat/issues)
 
 ## License
 

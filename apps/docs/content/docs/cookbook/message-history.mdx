@@ -1,0 +1,32 @@
+---
+title: "Message history"
+description: "Page room history newest-first. Live subscribe is a separate listener."
+---
+
+# Message history
+
+`room.messages.history()` loads REST pages. Default order is newest first. A full page means `hasNext()` is true; `next()` walks older rows with the `before` cursor.
+
+`subscribe()` is live frames only. `historyBeforeSubscribe()` fills the gap before the listener was attached.
+
+```ts
+const room = client.room("lobby");
+const sub = room.messages.subscribe((event) => {
+  if (event.type === "message.created") console.log(event.message.content);
+});
+room.attach();
+
+const page = await sub.historyBeforeSubscribe({ limit: 50 });
+for (const message of page.items) {
+  console.log(message.content);
+}
+if (page.hasNext()) await page.next();
+
+const one = await room.messages.get(9);
+const versions = await room.messages.getVersions(9);
+await room.messages.update(9, "edited");
+await room.messages.delete(9);
+await room.messages.reactions.send(9, "👍");
+```
+
+`useMessages()` on `FluxyRoomProvider` exposes the same send/update/delete helpers plus the latest live frame. `room.messages.reactions.subscribe` is each add/remove frame, not an Ably summary.

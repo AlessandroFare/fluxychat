@@ -1,6 +1,6 @@
-# FluxyChat Terraform module (starter)
+# FluxyChat Terraform module (experimental)
 
-Build-first IaC for self-hosted FluxyChat on Cloudflare. This module documents required bindings and outputs wrangler-style names; it does **not** replace `wrangler deploy` until you wire a Cloudflare provider token.
+Documents binding names. It does not replace `wrangler deploy`. You still need a Cloudflare token if you want Terraform to talk to the account.
 
 ## What it manages today
 

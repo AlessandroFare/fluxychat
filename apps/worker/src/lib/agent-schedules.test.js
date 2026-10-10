@@ -3,6 +3,7 @@ import {
   cancelAgentSchedule,
   claimDueAgentSchedules,
   completeAgentScheduleFire,
+  getAgentSchedule,
   cronFieldMatches,
   cronMatchesNow,
   earliestAgentScheduleDueAt,
@@ -151,5 +152,31 @@ describe("agent schedules", () => {
     const listed = await withAgentScheduleRows(storage, (rows) => ({ rows, listed: rows }));
     expect(listed.listed).toHaveLength(1);
     expect(listed.listed[0].agentId).toBe("bot");
+  });
+
+  it("schedules an absolute time and an interval", () => {
+    const now = 10_000;
+    const at = upsertAgentSchedule([], {
+      kind: "at",
+      agentId: "bot",
+      runAt: now + 5_000,
+      projectId: "p",
+      roomId: "r",
+    }, now);
+    expect(at.ok).toBe(true);
+    expect(at.schedule.nextRunAt).toBe(15_000);
+    expect(getAgentSchedule([at.schedule], at.schedule.id).ok).toBe(true);
+
+    const rows = [];
+    const interval = upsertAgentSchedule(rows, {
+      kind: "interval",
+      agentId: "bot",
+      intervalMs: 2_000,
+      projectId: "p",
+      roomId: "r",
+    }, now);
+    completeAgentScheduleFire(interval.schedule, { ok: true, now: now + 2_000 });
+    expect(interval.schedule.status).toBe("pending");
+    expect(interval.schedule.nextRunAt).toBe(now + 4_000);
   });
 });

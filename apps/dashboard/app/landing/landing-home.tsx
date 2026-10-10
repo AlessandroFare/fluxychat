@@ -37,7 +37,7 @@ export default function LandingHomePage() {
         <LandingBuildGallery
           examples={HOMEPAGE_EXAMPLES}
           heading="One room, humans and an agent"
-          subhead="Same Durable Object. Pick a scaffold and copy the command."
+          subhead="War room first: an agent on the timeline, humans approve the risky tools. Copy the CLI command."
         />
       </LandingBand>
 
@@ -64,7 +64,7 @@ export default function LandingHomePage() {
           <LandingCollabSection />
         </div>
         <p className="px-4 pb-8 text-center text-sm text-slate-400 sm:px-6">
-          Stream, IoT, fleet, and game overlays are on{" "}
+          Stream, IoT, fleet, and game run on the same worker. Extra scaffolds:{" "}
           <Link href={HOSTED_PATHS.labs} className="underline underline-offset-2 hover:text-white">
             /labs
           </Link>

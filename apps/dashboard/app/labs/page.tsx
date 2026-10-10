@@ -9,9 +9,9 @@ import { LandingBuildGallery } from "../landing/landing-build-gallery";
 import { LandingFooter } from "../landing/landing-footer";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Labs: stream, game, IoT, fleet",
+  title: "Labs: huddles, spatial, cartography",
   description:
-    "Stream, game, IoT, and fleet sit on the same room. Chat, presence, Yjs, and invokeAgent are the product.",
+    "Huddles media, spatial scenes, and cartography stay labs. Stream, game, IoT, and fleet persist on the Worker.",
   path: "/labs",
 });
 
@@ -21,11 +21,11 @@ export default function LabsPage() {
       <LandingBand tone="dark">
         <section className="mx-auto max-w-3xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Labs</p>
-          <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-white">Off the main nav</h1>
+          <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-white">Still labs on purpose</h1>
           <p className="mt-4 text-base leading-relaxed text-slate-300">
-            Stream overlays, game ticks, IoT ingest, and fleet GPS sit on the same
-            room Durable Object. They are optional. Chat, presence, Yjs, and invokeAgent are the product.
-            We don't sell healthcare. There is no BAA. Voice is transcripts in the room, not an SFU.
+            Huddles media, spatial scenes, cartography, and WebTransport stay here. Stream, game, IoT, and fleet
+            write D1 and fan out on the room. We don't sell healthcare. There is no BAA.
+            joinVoiceStage is signaling, not an SFU we sell.
           </p>
           <p className="mt-4 text-sm text-slate-400">
             <Link href={HOSTED_PATHS.landing} className="underline underline-offset-2 hover:text-white">

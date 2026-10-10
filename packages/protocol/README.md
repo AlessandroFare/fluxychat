@@ -7,6 +7,8 @@ Shared wire protocol for FluxyChat clients and the worker.
 - Canonical **inbound** WebSocket event types (server → client)
 - Canonical **outbound** client event types (client → room)
 - Lightweight runtime guards (`isFluxyInboundEvent`, `isFluxyOutboundEvent`)
+- Numeric **error catalog** (`errors/catalog.json` → `FLUXY_ERROR_CODES`). Edit the JSON, then `pnpm generate:errors`. Public pages: https://docs.fluxychat.com/errors
+- Exclusive room locks: outbound `lock_acquire` / `lock_release`, inbound `lock`
 
 ## Install
 

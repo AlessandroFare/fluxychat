@@ -15,6 +15,8 @@ const MAX_IDEMPOTENCY_LEN = 256;
 const EVENT_POLICY = {
   "edu.session.started": { selfActor: true, roles: ["member", "teacher", "admin", "owner"] },
   "attendance.heartbeat": { selfActor: true, roles: ["member", "teacher", "admin", "owner"] },
+  "edu.hand.raised": { selfActor: true, roles: ["member", "teacher", "admin", "owner"] },
+  "edu.timer": { roles: ["member", "teacher", "admin", "owner"] },
   "edu.breakout.assigned": { roles: ["member", "teacher", "admin", "owner"] },
   "edu.poll.created": { roles: ["member", "teacher", "admin", "owner"] },
   "poll.voted": { selfActor: true, roles: ["member", "admin", "owner"] },

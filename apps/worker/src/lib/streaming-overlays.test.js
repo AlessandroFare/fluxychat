@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   createOverlay, getOverlay, listOverlays, deleteOverlay, getOverlayWidget,
+  parseOverlayPatch, updateOverlay,
 } from "../lib/streaming-overlays.js";
 
 function mockDb(rows = []) {
@@ -63,10 +64,43 @@ describe("streaming-overlays", () => {
       expect(widget.refreshSeconds).toBe(15);
       expect(widget.widgetUrl).toContain("/widget");
     });
+    it("loads OBS widget by overlay id without a project", async () => {
+      const env = { DB: mockDb([{
+        id: "o1", project_id: "p1", room_id: "r1", name: "Chat",
+        overlay_type: "chat", config: "{}", style: "{}",
+        refresh_seconds: 5, enabled: 1, created_at: "2026-01-01",
+      }]) };
+      const widget = await getOverlayWidget(env, { overlayId: "o1" });
+      expect(widget.type).toBe("chat");
+    });
     it("returns null for missing", async () => {
       const env = { DB: mockDb([]) };
       const widget = await getOverlayWidget(env, { projectId: "p1", overlayId: "missing" });
       expect(widget).toBeNull();
+    });
+    it("hides the OBS widget when disabled", async () => {
+      const env = { DB: mockDb([{
+        id: "o1", project_id: "p1", room_id: "r1", name: "Chat",
+        overlay_type: "chat", config: "{}", style: "{}",
+        refresh_seconds: 5, enabled: 0, created_at: "2026-01-01",
+      }]) };
+      expect(await getOverlayWidget(env, { overlayId: "o1" })).toBeNull();
+    });
+  });
+
+  describe("updateOverlay", () => {
+    it("rejects an empty patch", () => {
+      expect(parseOverlayPatch({})).toEqual({ ok: false, error: "no fields to update" });
+    });
+    it("persists enabled false", async () => {
+      const env = { DB: mockDb([{
+        id: "o1", project_id: "p1", room_id: "r1", name: "Chat",
+        overlay_type: "chat", config: "{}", style: '{"opacity":0.5}',
+        refresh_seconds: 5, enabled: 0, created_at: "2026-01-01",
+      }]) };
+      const out = await updateOverlay(env, { projectId: "p1", overlayId: "o1", data: { enabled: false } });
+      expect(out.ok).toBe(true);
+      expect(out.overlay.enabled).toBe(false);
     });
   });
 

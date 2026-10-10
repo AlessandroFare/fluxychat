@@ -1,12 +1,27 @@
-import { FluxyChatRoomConnection, type FluxyRoomConnectionOptions } from "./room-connection";
-import { FluxyAuthError, FluxyNotMemberError, FluxySendError } from "./errors";
+import {
+  FluxyChatRoomConnection,
+  fingerprintRoomOptions,
+  type FluxyRoomConnectionOptions,
+} from "./room-connection";
+import { bindFluxyRoom, type FluxyBoundRoom } from "./fluxy-room";
+import {
+  aggregateClientConnectionStatus,
+  createClientConnection,
+  type FluxyClientConnection,
+  type FluxyClientConnectionListener,
+  type FluxyClientConnectionStatus,
+} from "./client-connection";
+import { FluxyAuthError, FluxyErrorInfo, FluxyNotMemberError, FluxySendError, unableTo } from "./errors";
+import { createLogger, type Logger } from "./logger";
 import { ChatError, FluxyRateLimitError, ThreadDepthExceededError } from "./structured-errors";
 import type { FluxyRoomThread, FluxyThreadListQuery, FluxyThreadPage } from "./chat-threads";
 import { clampHistoryLimit, sortMessagesChronological } from "./message-history";
+import { historyBoundParam } from "./history-bound";
 import { normalizeRoomMembers } from "./room-rest";
 import { trimTrailingSlashes } from "./url-utils";
 import { FluxyClientCredentials, type FluxyTokenSource } from "./client-credentials";
 import { applyInboxQuery, type FluxyInboxQuery } from "./inbox-filter";
+import { FLUXY_PROTOCOL_INTEGER } from "@fluxy-chat/protocol";
 import { createFluxyWebSocket } from "./websocket-factory";
 import { decodeFluxyJwtPayload } from "./jwt-utils";
 import type {
@@ -15,9 +30,27 @@ import type {
   FluxyCommentThreadMetadata,
 } from "./comment-threads";
 import type { FluxyFeed, FluxyFeedMessage, FluxyFeedMessageMetadata } from "./room-feeds";
+import { FLUXY_SDK_VERSION } from "./version";
+import { stampMessageText } from "./message-with";
+import { parseReactionSummary } from "./reaction-summary";
+
+export interface FluxyMessageVersion {
+  serial: string;
+  timestamp: string;
+  clientId?: string;
+  description?: string;
+}
 
 export interface FluxyChatMessage {
   id: number;
+  /** Ably `message.serial` — string form of numeric `id` on this kernel. */
+  serial?: string;
+  /** Ably `Message.text` alias of `content`. */
+  text?: string;
+  /** Ably `Message.clientId` alias of `userId`. */
+  clientId?: string;
+  /** Ably `Message.version` — later edits have a greater `serial`. */
+  version?: FluxyMessageVersion;
   roomId: string;
   userId: string;
   senderId?: string;
@@ -103,6 +136,8 @@ export interface FluxyChatMessage {
   transcriptionStatus?: "pending" | "done" | "failed" | null;
   /** Rich interactive card payload (inline or parsed from content). */
   card?: import("./cards").CardElement;
+  /** Stream `quoted_message_id` — citation, not a `parentId` thread. */
+  quotedMessageId?: number | null;
   /** Art. 50: who produced this message. Agent inserts set `ai`. */
   participantType?: "human" | "ai";
   /** Signed Art. 50 / EU AI Act machine-readable mark when present. */
@@ -117,6 +152,8 @@ export interface FluxyChatMessage {
     sigAlg?: string | null;
     [key: string]: unknown;
   };
+  /** Ably-style string headers (requestId, source, …). */
+  headers?: Record<string, string>;
 }
 
 export interface FluxyChatAttachment {
@@ -430,6 +467,15 @@ export interface FetchMessagesOptions {
   limit?: number;
   /** ISO `createdAt` cursor  returns messages older than this timestamp. */
   before?: string;
+  /** Inclusive lower bound (ISO or epoch ms). Ably history `start`. */
+  after?: string;
+  start?: string | number;
+  /** Exclusive upper bound (ISO or epoch ms). Ably history `end`. */
+  end?: string | number;
+  /** Rewind-lite: messages with `id` greater than this serial (numeric id). */
+  fromSerial?: string | number;
+  /** Page older: messages with `id` less than this serial. */
+  beforeSerial?: string | number;
   /** Direct replies to this message id (chat thread lens). */
   parentId?: number;
 }
@@ -517,6 +563,10 @@ export interface FluxyRoomLive {
   users: string[];
   members: FluxyRoomLiveMember[];
   socketIds: string[];
+  /** Last live cursor per user from the Room DO. */
+  cursors: Array<Record<string, unknown>>;
+  /** In-memory cursor trail from the Room DO (cap 200). */
+  cursorHistory: Array<Record<string, unknown>>;
 }
 
 export type FluxyChatEvent =
@@ -531,6 +581,7 @@ export type FluxyChatEvent =
       createdAt: string;
       parentId?: number | null;
       streaming: boolean;
+      requestId?: string;
     }
   | ({ type: "message" } & FluxyChatMessage)
   | {
@@ -589,6 +640,7 @@ export type FluxyChatEvent =
       op: "started";
       id: number;
       roomId: string;
+      requestId?: string;
     }
   | {
       type: "reaction";
@@ -626,6 +678,8 @@ export type FluxyChatEvent =
       userId: string;
       isTyping: boolean;
       intent?: import("./message-template").FluxyPresenceIntent;
+      /** Stream `keystroke(parent_id)` — null/absent is the room transcript. */
+      parentId?: number | null;
     }
   | {
       type: "cursor";
@@ -669,12 +723,45 @@ export type FluxyChatEvent =
       subscriptionCount: number;
     }
   | {
+      type: "occupancy";
+      roomId: string;
+      connections: number;
+      presenceMembers: number;
+    }
+  | {
+      type: "lock";
+      roomId?: string;
+      lockId?: string;
+      owner?: string | null;
+      expiresAt?: number;
+      held?: boolean;
+      acquired?: boolean;
+      snapshot?: boolean;
+      attributes?: Record<string, string | number | boolean>;
+      locks?: Array<{
+        lockId: string;
+        owner: string;
+        expiresAt: number;
+        held?: boolean;
+        attributes?: Record<string, string | number | boolean>;
+      }>;
+    }
+  | {
+      type: "room_reaction";
+      roomId?: string;
+      userId: string;
+      name: string;
+      ts?: number;
+      metadata?: Record<string, unknown>;
+      headers?: Record<string, string>;
+    }
+  | {
       type: "member_joined";
       roomId: string;
       userId: string;
       userInfo?: Record<string, unknown>;
     }
-  | { type: "member_left"; roomId: string; userId: string }
+  | { type: "member_left"; roomId: string; userId: string; data?: import("./presence-patch").FluxyPresence }
   | {
       type: "client_event";
       roomId: string;
@@ -792,6 +879,15 @@ export type FluxyChatEvent =
       roomId: string;
       previous: import("./room-connection").FluxyRoomConnectionStatus;
       current: import("./room-connection").FluxyRoomConnectionStatus;
+      error?: string;
+      retryIn?: number;
+    }
+  | {
+      type: "discontinuity";
+      roomId: string;
+      code: number;
+      expectedSeq: number;
+      receivedSeq: number;
     }
   | { type: "error"; message: string };
 
@@ -826,6 +922,9 @@ export interface FluxyChatClientOptions {
   token?: FluxyTokenSource;
   /** Use partysocket auto-reconnect for room/user WebSockets (default false). */
   usePartySocket?: boolean;
+  /** Ably `ChatClient` logger. Default level `error`. */
+  logger?: import("./logger").Logger;
+  logLevel?: import("./logger").FluxyLogLevel;
 }
 
 function rememberPublicGuestKey(baseUrl: string, roomId: string, explicit?: string): string | undefined {
@@ -854,12 +953,24 @@ export class FluxyChatClient {
   readonly apiKey?: string;
   private readonly credentials: FluxyClientCredentials | null;
   private readonly usePartySocket: boolean;
+  private readonly roomConnections = new Map<string, FluxyChatRoomConnection>();
+  private readonly roomOptionFingerprints = new Map<string, string>();
+  private readonly roomReleases = new Map<string, Promise<void>>();
+  private readonly roomConnectionUnsubs = new Map<string, () => void>();
+  private readonly clientConnectionListeners = new Set<FluxyClientConnectionListener>();
+  private lastClientConnectionStatus: FluxyClientConnectionStatus = "initialized";
+  private roomsDisposed = false;
+  private readonly _logger: Logger;
+  private readonly _logLevel: import("./logger").FluxyLogLevel;
 
   constructor(options: FluxyChatClientOptions) {
     this.baseUrl = trimTrailingSlashes(options.baseUrl);
     this._userId = options.userId;
     this.apiKey = options.publishableKey ?? options.apiKey;
     this.usePartySocket = options.usePartySocket ?? false;
+    this._logLevel = options.logLevel ?? "error";
+    this._logger =
+      options.logger ?? createLogger({ prefix: "fluxy", logLevel: this._logLevel });
     if (this.apiKey) {
       this.credentials = new FluxyClientCredentials({
         baseUrl: this.baseUrl,
@@ -884,6 +995,93 @@ export class FluxyChatClient {
   /** Effective user id (JWT `sub` after anonymous mint when applicable). */
   get userId(): string {
     return this.credentials?.getResolvedUserId(this._userId) ?? this._userId;
+  }
+
+  /** Ably `chatClient.clientId`. */
+  get clientId(): string {
+    return this.userId;
+  }
+
+  /** Ably `chatClient.logger`. */
+  get logger(): Logger {
+    return this._logger;
+  }
+
+  /** Ably `chatClient.clientOptions` — no secrets. */
+  get clientOptions(): { logLevel: import("./logger").FluxyLogLevel } {
+    return { logLevel: this._logLevel };
+  }
+
+  /** Ably chat-js `VERSION`. */
+  get version(): string {
+    return FLUXY_SDK_VERSION;
+  }
+
+  /** Ably `chatClient.realtime` aliases the connection facade. */
+  get realtime(): FluxyClientConnection {
+    return this.connection;
+  }
+
+  /** Ably `chatClient.connection` — aggregate of tracked room sockets. */
+  get connection(): FluxyClientConnection {
+    const client = this;
+    return createClientConnection({
+      status: () => client.clientConnectionStatus(),
+      error: () => client.clientConnectionError(),
+      subscribe: (listener) => {
+        client.clientConnectionListeners.add(listener);
+        return () => {
+          client.clientConnectionListeners.delete(listener);
+        };
+      },
+      ping: () => client.pingConnectedRoom(),
+    });
+  }
+
+  private clientConnectionStatus(): FluxyClientConnectionStatus {
+    return aggregateClientConnectionStatus(this.roomConnections.values(), this.roomsDisposed);
+  }
+
+  private clientConnectionError(): Error | undefined {
+    for (const room of this.roomConnections.values()) {
+      const err = room.getLastError();
+      if (err) return err;
+    }
+    return undefined;
+  }
+
+  private emitClientConnectionChange(error?: Error): void {
+    const current = this.clientConnectionStatus();
+    if (current === this.lastClientConnectionStatus && !error) return;
+    const change = {
+      current,
+      previous: this.lastClientConnectionStatus,
+      ...(error ? { error } : {}),
+    };
+    this.lastClientConnectionStatus = current;
+    for (const listener of this.clientConnectionListeners) {
+      try {
+        listener(change);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  private async pingConnectedRoom(): Promise<number> {
+    for (const room of this.roomConnections.values()) {
+      if (room.connectionStatus === "connected") return room.ping();
+    }
+    throw new FluxySendError("unable to ping; no connected room");
+  }
+
+  private watchRoomConnection(id: string, connection: FluxyChatRoomConnection): void {
+    this.roomConnectionUnsubs.get(id)?.();
+    const off = connection.onConnectionStatus(() => {
+      this.emitClientConnectionChange(connection.getLastError() ?? undefined);
+    });
+    this.roomConnectionUnsubs.set(id, off);
+    this.emitClientConnectionChange();
   }
 
   isAuthenticated(): boolean {
@@ -1031,6 +1229,7 @@ export class FluxyChatClient {
       url.searchParams.set("token", this.token);
     }
     url.searchParams.set("userId", this.userId);
+    url.searchParams.set("protocol", String(FLUXY_PROTOCOL_INTEGER));
     if (options?.replay === "off") {
       url.searchParams.set("replay", "off");
     } else {
@@ -1060,11 +1259,114 @@ export class FluxyChatClient {
    * Resilient room WebSocket with typed errors, exponential backoff reconnect,
    * and optional REST history replay after reconnect.
    */
+  private assertRoomsAvailable(operation = "get room"): void {
+    if (this.roomsDisposed) {
+      throw new FluxyErrorInfo({
+        identifier: "resource_disposed",
+        operation,
+        reason: "rooms instance has been disposed",
+      });
+    }
+  }
+
   connectRoom(roomId: string, options?: FluxyRoomConnectionOptions): FluxyChatRoomConnection {
-    return new FluxyChatRoomConnection(this, roomId, {
+    this.assertRoomsAvailable();
+    const id = roomId.trim();
+    const fingerprint = fingerprintRoomOptions(options);
+    const existing = this.roomConnections.get(id);
+    if (existing) {
+      const previous = this.roomOptionFingerprints.get(id);
+      if (fingerprint && previous && fingerprint !== previous) {
+        throw new Error(unableTo("get room", "options differ"));
+      }
+      return existing;
+    }
+    const connection = new FluxyChatRoomConnection(this, id, {
       usePartySocket: this.usePartySocket,
       ...options,
     });
+    this.roomConnections.set(id, connection);
+    if (fingerprint) this.roomOptionFingerprints.set(id, fingerprint);
+    this.watchRoomConnection(id, connection);
+    return connection;
+  }
+
+  /** CHA-GP3-style room bag: attach/detach, occupancy, shared connection. */
+  room(roomId: string, options?: FluxyRoomConnectionOptions): FluxyBoundRoom {
+    return bindFluxyRoom(roomId, this.connectRoom(roomId, options));
+  }
+
+  /** Ably `chatClient.rooms.get` / `release` (Promise, same bag as `room()`). */
+  get rooms() {
+    const client = this;
+    return {
+      get: async (name: string, options?: FluxyRoomConnectionOptions) => {
+        client.assertRoomsAvailable();
+        const id = name.trim();
+        const releasing = client.roomReleases.get(id);
+        if (releasing) await releasing;
+        client.assertRoomsAvailable();
+        return client.room(name, options);
+      },
+      release: (name: string) => client.releaseRoom(name),
+      dispose: async () => {
+        client.close();
+      },
+      get count() {
+        return client.roomConnections.size;
+      },
+      exists: async (name: string) => {
+        client.assertRoomsAvailable();
+        const id = name.trim();
+        if (!id) return false;
+        if (client.roomConnections.has(id)) return true;
+        try {
+          await client.getRoomLive(id);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+    };
+  }
+
+  releaseRoom(roomId: string): Promise<void> {
+    const id = roomId.trim();
+    const ongoing = this.roomReleases.get(id);
+    const connection = this.roomConnections.get(id);
+    if (!connection) return ongoing ?? Promise.resolve();
+    this.roomConnections.delete(id);
+    this.roomOptionFingerprints.delete(id);
+    this.roomConnectionUnsubs.get(id)?.();
+    this.roomConnectionUnsubs.delete(id);
+    const done = Promise.resolve().then(() => {
+      connection.close();
+      this.emitClientConnectionChange();
+    });
+    this.roomReleases.set(id, done);
+    return done.finally(() => {
+      if (this.roomReleases.get(id) === done) this.roomReleases.delete(id);
+    });
+  }
+
+  /** Close every tracked room socket (ChatClient.dispose). */
+  close(): void {
+    this.roomsDisposed = true;
+    for (const off of this.roomConnectionUnsubs.values()) off();
+    this.roomConnectionUnsubs.clear();
+    for (const connection of this.roomConnections.values()) {
+      connection.close();
+    }
+    this.roomConnections.clear();
+    this.roomOptionFingerprints.clear();
+    this.roomReleases.clear();
+    this.emitClientConnectionChange();
+  }
+
+  /** Ably `ChatClient.dispose` — same as `close()`, returns a Promise. */
+  dispose(): Promise<void> {
+    this.close();
+    return Promise.resolve();
   }
 
   /**
@@ -1085,6 +1387,8 @@ export class FluxyChatClient {
         users: [],
         members: [],
         socketIds: [],
+        cursors: [],
+        cursorHistory: [],
       };
     }
     const url = new URL(`/rooms/${encodeURIComponent(trimmedRoomId)}/live`, this.baseUrl);
@@ -1108,6 +1412,12 @@ export class FluxyChatClient {
             }))
         : [],
       socketIds: Array.isArray(body.socketIds) ? body.socketIds : [],
+      cursors: Array.isArray(body.cursors)
+        ? body.cursors.filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
+        : [],
+      cursorHistory: Array.isArray(body.cursorHistory)
+        ? body.cursorHistory.filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
+        : [],
     };
   }
 
@@ -1146,6 +1456,16 @@ export class FluxyChatClient {
     if (options.before?.trim()) {
       url.searchParams.set("before", options.before.trim());
     }
+    const after = historyBoundParam(options.after ?? options.start);
+    if (after) url.searchParams.set("after", after);
+    const until = historyBoundParam(options.end);
+    if (until) url.searchParams.set("end", until);
+    if (options.fromSerial != null && String(options.fromSerial).trim()) {
+      url.searchParams.set("fromSerial", String(options.fromSerial).trim());
+    }
+    if (options.beforeSerial != null && String(options.beforeSerial).trim()) {
+      url.searchParams.set("beforeSerial", String(options.beforeSerial).trim());
+    }
     if (options.parentId != null && Number.isFinite(options.parentId)) {
       url.searchParams.set("parentId", String(Math.floor(options.parentId)));
     }
@@ -1158,7 +1478,9 @@ export class FluxyChatClient {
     if (body.reactions && typeof body.reactions === "object") {
       this._lastFetchReactions = body.reactions;
     }
-    return sortMessagesChronological((body.messages ?? []) as FluxyChatMessage[]);
+    return sortMessagesChronological(
+      ((body.messages ?? []) as FluxyChatMessage[]).map((row) => stampMessageText(row)),
+    );
   }
 
   /** Yjs-encoded message-list snapshot from Room DO (offline merge). */
@@ -1734,6 +2056,9 @@ export class FluxyChatClient {
         ...(options?.expiresAt ? { expiresAt: options.expiresAt } : {}),
         ...(options?.visibility ? { visibility: options.visibility } : {}),
         ...(options?.visibleTo?.length ? { visibleTo: options.visibleTo } : {}),
+        ...(options?.metadata ? { metadata: options.metadata } : {}),
+        ...(options?.headers ? { headers: options.headers } : {}),
+        ...(options?.quotedMessageId != null ? { quotedMessageId: options.quotedMessageId } : {}),
       }),
     });
     const body = await res.json().catch(() => ({}));
@@ -1886,6 +2211,129 @@ export class FluxyChatClient {
       },
     );
     if (!res.ok) throw new Error(`markThreadAsResolved failed: ${res.status}`);
+  }
+
+  async markThreadAsUnresolved(roomId: string, threadId: string): Promise<void> {
+    return this.markThreadAsResolved(roomId, threadId, false);
+  }
+
+  async deleteCommentThread(roomId: string, threadId: string): Promise<void> {
+    if (!this.token) return;
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/comment-threads/${encodeURIComponent(threadId)}`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "DELETE",
+        headers: this.authHeaders(),
+      },
+    );
+    if (!res.ok) throw new Error(`deleteCommentThread failed: ${res.status}`);
+  }
+
+  async editComment(
+    roomId: string,
+    threadId: string,
+    commentId: string,
+    body: string,
+  ): Promise<FluxyComment | null> {
+    if (!this.token) return null;
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/comment-threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify({ body }),
+      },
+    );
+    if (!res.ok) throw new Error(`editComment failed: ${res.status}`);
+    const json = (await res.json()) as { comment?: FluxyComment };
+    return json.comment ?? null;
+  }
+
+  async deleteComment(roomId: string, threadId: string, commentId: string): Promise<void> {
+    if (!this.token) return;
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/comment-threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "DELETE",
+        headers: this.authHeaders(),
+      },
+    );
+    if (!res.ok) throw new Error(`deleteComment failed: ${res.status}`);
+  }
+
+  async addCommentReaction(
+    roomId: string,
+    threadId: string,
+    commentId: string,
+    emoji: string,
+  ): Promise<FluxyComment | null> {
+    if (!this.token) return null;
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/comment-threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}/reactions`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify({ emoji }),
+      },
+    );
+    if (!res.ok) throw new Error(`addCommentReaction failed: ${res.status}`);
+    const json = (await res.json()) as { comment?: FluxyComment };
+    return json.comment ?? null;
+  }
+
+  async removeCommentReaction(
+    roomId: string,
+    threadId: string,
+    commentId: string,
+    emoji: string,
+  ): Promise<FluxyComment | null> {
+    if (!this.token) return null;
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/comment-threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}/reactions`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify({ emoji }),
+      },
+    );
+    if (!res.ok) throw new Error(`removeCommentReaction failed: ${res.status}`);
+    const json = (await res.json()) as { comment?: FluxyComment };
+    return json.comment ?? null;
+  }
+
+  async editThreadMetadata(
+    roomId: string,
+    threadId: string,
+    metadata: FluxyCommentThreadMetadata,
+  ): Promise<void> {
+    if (!this.token) return;
+    const res = await fetch(
+      new URL(
+        `/rooms/${encodeURIComponent(roomId)}/comment-threads/${encodeURIComponent(threadId)}`,
+        this.baseUrl,
+      ).toString(),
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify({ metadata }),
+      },
+    );
+    if (!res.ok) throw new Error(`editThreadMetadata failed: ${res.status}`);
   }
 
   async listFeeds(roomId: string): Promise<FluxyFeed[]> {
@@ -2524,6 +2972,103 @@ export class FluxyChatClient {
     return (await res.json()) as FluxyInboxSummary;
   }
 
+  async listCannedResponses(category?: string): Promise<
+    Array<{ id: string; shortcut: string; title: string; body: string; category?: string | null }>
+  > {
+    if (!this.token) throw new Error("listCannedResponses requires JWT token");
+    const url = new URL("/support/canned-responses", this.baseUrl);
+    if (category) url.searchParams.set("category", category);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`listCannedResponses failed: ${res.status}`);
+    const body = (await res.json()) as {
+      responses?: Array<{ id: string; shortcut: string; title: string; body: string; category?: string | null }>;
+    };
+    return body.responses ?? [];
+  }
+
+  async useCannedResponse(id: string): Promise<void> {
+    if (!this.token) throw new Error("useCannedResponse requires JWT token");
+    const url = new URL(
+      `/support/canned-responses/${encodeURIComponent(id)}/use`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), { method: "POST", headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`useCannedResponse failed: ${res.status}`);
+  }
+
+  /** Chatwoot `canned_responses#create`. */
+  async createCannedResponse(input: {
+    shortcut: string;
+    title: string;
+    body: string;
+    category?: string | null;
+  }): Promise<{ id: string }> {
+    if (!this.token) throw new Error("createCannedResponse requires JWT token");
+    const url = new URL("/support/canned-responses", this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const body = (await res.json()) as { ok?: boolean; id?: string; error?: string };
+    if (!res.ok || !body.id) throw new Error(body.error || `createCannedResponse failed: ${res.status}`);
+    return { id: body.id };
+  }
+
+  async updateCannedResponse(
+    id: string,
+    input: { title?: string; body?: string; category?: string | null },
+  ): Promise<void> {
+    if (!this.token) throw new Error("updateCannedResponse requires JWT token");
+    const url = new URL(`/support/canned-responses/${encodeURIComponent(id)}`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "PATCH",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(`updateCannedResponse failed: ${res.status}`);
+  }
+
+  async deleteCannedResponse(id: string): Promise<void> {
+    if (!this.token) throw new Error("deleteCannedResponse requires JWT token");
+    const url = new URL(`/support/canned-responses/${encodeURIComponent(id)}`, this.baseUrl);
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`deleteCannedResponse failed: ${res.status}`);
+  }
+
+  async getPendingCsat(roomId: string): Promise<{ id: string; ticketId: string; surveyType: string } | null> {
+    if (!this.token) throw new Error("getPendingCsat requires JWT token");
+    const url = new URL("/support/csat/pending", this.baseUrl);
+    url.searchParams.set("roomId", roomId);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`getPendingCsat failed: ${res.status}`);
+    const body = (await res.json()) as { survey?: { id: string; ticketId: string; surveyType: string } | null };
+    return body.survey ?? null;
+  }
+
+  async triggerCsat(roomId: string): Promise<{ ok?: boolean; surveyId?: string }> {
+    if (!this.token) throw new Error("triggerCsat requires JWT token");
+    const url = new URL("/support/csat/trigger", this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId }),
+    });
+    if (!res.ok) throw new Error(`triggerCsat failed: ${res.status}`);
+    return (await res.json()) as { ok?: boolean; surveyId?: string };
+  }
+
+  async respondCsat(surveyId: string, rating: number, feedback?: string): Promise<void> {
+    if (!this.token) throw new Error("respondCsat requires JWT token");
+    const url = new URL(`/support/csat/${encodeURIComponent(surveyId)}/respond`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ rating, feedback }),
+    });
+    if (!res.ok) throw new Error(`respondCsat failed: ${res.status}`);
+  }
+
   async snoozeRoom(
     roomId: string,
     options: { until?: string; minutes?: number; hours?: number },
@@ -2551,6 +3096,35 @@ export class FluxyChatClient {
     const res = await fetch(url, { method: "DELETE", headers: this.authHeaders() });
     if (!res.ok) throw new Error(`unsnoozeRoom failed: ${res.status}`);
     return (await res.json()) as { ok: boolean };
+  }
+
+  /** Stream `channel.mute()` — skip inbox_updated for this room. */
+  async muteChannel(roomId: string, expiration?: string | null): Promise<{ muted: boolean; mutedUntil?: string | null }> {
+    if (!this.token) throw new Error("muteChannel requires JWT token");
+    const url = new URL(`/inbox/rooms/${encodeURIComponent(roomId)}/mute`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "PUT",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ expiration: expiration ?? null }),
+    });
+    if (!res.ok) throw new Error(`muteChannel failed: ${res.status}`);
+    return (await res.json()) as { muted: boolean; mutedUntil?: string | null };
+  }
+
+  async unmuteChannel(roomId: string): Promise<{ muted: boolean }> {
+    if (!this.token) throw new Error("unmuteChannel requires JWT token");
+    const url = new URL(`/inbox/rooms/${encodeURIComponent(roomId)}/mute`, this.baseUrl);
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`unmuteChannel failed: ${res.status}`);
+    return (await res.json()) as { muted: boolean };
+  }
+
+  async getChannelMute(roomId: string): Promise<{ muted: boolean; mutedUntil?: string | null }> {
+    if (!this.token) throw new Error("getChannelMute requires JWT token");
+    const url = new URL(`/inbox/rooms/${encodeURIComponent(roomId)}/mute`, this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`getChannelMute failed: ${res.status}`);
+    return (await res.json()) as { muted: boolean; mutedUntil?: string | null };
   }
 
   async createInboxFollowUp(input: {
@@ -2958,8 +3532,51 @@ export class FluxyChatClient {
     };
   }
 
-  async editMessageRest(messageId: number, content: string): Promise<void> {
-    if (!this.token) return;
+  async getMessageRest(messageId: number): Promise<FluxyChatMessage> {
+    const url = new URL(`/messages/${messageId}`, this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      message?: FluxyChatMessage;
+      error?: string;
+    };
+    if (res.status === 404) {
+      throw new FluxyErrorInfo({
+        identifier: "message_not_found",
+        operation: "get message",
+        reason: body.error ?? "message not found",
+      });
+    }
+    if (!res.ok || !body.message) {
+      throw new Error(unableTo("get message", body.error ?? `HTTP ${res.status}`));
+    }
+    return body.message;
+  }
+
+  async getMessageVersionsRest(roomId: string, messageId: number): Promise<FluxyChatMessage[]> {
+    const url = new URL(`/messages/${messageId}/versions`, this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      items?: FluxyChatMessage[];
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("get message versions", body.error ?? `HTTP ${res.status}`));
+    }
+    const items = Array.isArray(body.items) ? body.items : [];
+    return items.filter((row) => !row.roomId || row.roomId === roomId);
+  }
+
+  async editMessageRest(
+    messageId: number,
+    content: string,
+    extras?: {
+      metadata?: Record<string, unknown>;
+      headers?: Record<string, string>;
+      description?: string;
+      operationMetadata?: Record<string, unknown>;
+    },
+  ): Promise<FluxyChatMessage | null> {
+    if (!this.token) return null;
     const url = new URL(`/messages/${messageId}`, this.baseUrl);
     const res = await fetch(url.toString(), {
       method: "PATCH",
@@ -2967,23 +3584,43 @@ export class FluxyChatClient {
         "Content-Type": "application/json",
         ...this.authHeaders(),
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({
+        content,
+        ...(extras?.metadata ? { metadata: extras.metadata } : {}),
+        ...(extras?.headers ? { headers: extras.headers } : {}),
+        ...(extras?.description ? { description: extras.description } : {}),
+        ...(extras?.operationMetadata ? { operationMetadata: extras.operationMetadata } : {}),
+      }),
     });
+    const body = (await res.json().catch(() => ({}))) as { message?: FluxyChatMessage };
     if (!res.ok) {
       throw new Error(`Failed to edit message: ${res.status}`);
     }
+    return body.message ?? null;
   }
 
-  async deleteMessageRest(messageId: number): Promise<void> {
-    if (!this.token) return;
+  async deleteMessageRest(
+    messageId: number,
+    details?: { description?: string; metadata?: Record<string, unknown> },
+  ): Promise<FluxyChatMessage | null> {
+    if (!this.token) return null;
     const url = new URL(`/messages/${messageId}`, this.baseUrl);
     const res = await fetch(url.toString(), {
       method: "DELETE",
-      headers: this.authHeaders(),
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify({
+        ...(details?.description ? { description: details.description } : {}),
+        ...(details?.metadata ? { operationMetadata: details.metadata } : {}),
+      }),
     });
+    const body = (await res.json().catch(() => ({}))) as { message?: FluxyChatMessage };
     if (!res.ok) {
       throw new Error(`Failed to delete message: ${res.status}`);
     }
+    return body.message ?? null;
   }
 
   async branchRoomFromMessageRest(
@@ -3066,10 +3703,67 @@ export class FluxyChatClient {
     return res.json();
   }
 
+  async getClientReactionsRest(
+    messageId: number,
+    userId?: string,
+  ): Promise<import("./room-messages").FluxyClientReactions> {
+    const url = new URL(`/messages/${messageId}/reactions`, this.baseUrl);
+    if (userId?.trim()) url.searchParams.set("userId", userId.trim());
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      userId?: string;
+      names?: string[];
+      unique?: import("./reaction-summary").FluxyMessageReactionSummary["unique"];
+      distinct?: import("./reaction-summary").FluxyMessageReactionSummary["distinct"];
+      multiple?: unknown;
+      error?: string;
+    };
+    if (res.status === 404) {
+      throw new FluxyErrorInfo({
+        identifier: "message_not_found",
+        operation: "get client reactions",
+        reason: body.error ?? "message not found",
+      });
+    }
+    if (!res.ok) {
+      throw new Error(unableTo("get client reactions", body.error ?? `HTTP ${res.status}`));
+    }
+    const folded = parseReactionSummary(messageId, body);
+    return {
+      userId: body.userId ?? userId ?? this.userId,
+      names: Array.isArray(body.names) ? body.names : [],
+      unique: folded.unique,
+      distinct: folded.distinct,
+      multiple: folded.multiple,
+    };
+  }
+
+  async getReactionSummaryRest(messageId: number): Promise<import("./reaction-summary").FluxyMessageReactionSummary> {
+    const url = new URL(`/messages/${messageId}/reactions/summary`, this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      messageId?: number;
+      unique?: import("./reaction-summary").FluxyMessageReactionSummary["unique"];
+      error?: string;
+    };
+    if (res.status === 404) {
+      throw new FluxyErrorInfo({
+        identifier: "message_not_found",
+        operation: "get reaction summary",
+        reason: body.error ?? "message not found",
+      });
+    }
+    if (!res.ok) {
+      throw new Error(unableTo("get reaction summary", body.error ?? `HTTP ${res.status}`));
+    }
+    return parseReactionSummary(messageId, body);
+  }
+
   async sendReactionRest(
     messageId: number,
     emoji: string,
-    op: "add" | "remove" = "add"
+    op: "add" | "remove" = "add",
+    extras?: { type?: "unique" | "distinct" | "multiple"; count?: number },
   ): Promise<void> {
     if (!this.token) return;
     const url = new URL(`/messages/${messageId}/reactions`, this.baseUrl);
@@ -3079,7 +3773,11 @@ export class FluxyChatClient {
         "Content-Type": "application/json",
         ...this.authHeaders(),
       },
-      body: JSON.stringify({ emoji }),
+      body: JSON.stringify({
+        ...(emoji ? { emoji } : {}),
+        ...(extras?.type ? { type: extras.type } : {}),
+        ...(extras?.count != null ? { count: extras.count } : {}),
+      }),
     });
     if (!res.ok) {
       throw new Error(`Failed to update reaction: ${res.status}`);
@@ -3137,6 +3835,55 @@ export class FluxyChatClient {
     if (!res.ok) {
       throw new Error(`Failed to mark read: ${res.status}`);
     }
+  }
+
+  async patchRoomConfig(roomId: string, patch: Record<string, unknown>): Promise<unknown> {
+    if (!this.token) throw new Error("patchRoomConfig requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/config`, this.baseUrl).toString(),
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify(patch),
+      },
+    );
+    if (!res.ok) throw new Error(`patchRoomConfig failed: ${res.status}`);
+    return res.json();
+  }
+
+  /** Stream `channel.enableSlowMode(coolDownInterval)`. */
+  async enableSlowMode(roomId: string, coolDownInterval: number): Promise<unknown> {
+    return this.patchRoomConfig(roomId, { slowModeSeconds: coolDownInterval });
+  }
+
+  async disableSlowMode(roomId: string): Promise<unknown> {
+    return this.patchRoomConfig(roomId, { slowModeSeconds: 0 });
+  }
+
+  /** Stream `channel.markUnread({ message_id })` — rewind the room watermark. */
+  async markUnreadRest(roomId: string, messageId: number): Promise<FluxyRoomCatchUp> {
+    if (!this.token) {
+      return { unreadCount: 0, lastReadMessageId: 0, firstUnreadMessageId: null };
+    }
+    const url = new URL(`/rooms/${encodeURIComponent(roomId)}/unread`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify({ messageId }),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to mark unread: ${res.status}`);
+    }
+    const body = await res.json();
+    return {
+      unreadCount: Number(body.unreadCount) || 0,
+      lastReadMessageId: Number(body.lastReadMessageId) || 0,
+      firstUnreadMessageId:
+        body.firstUnreadMessageId != null ? Number(body.firstUnreadMessageId) : null,
+    };
   }
 
   async getRoomCatchUp(roomId: string): Promise<FluxyRoomCatchUp> {
@@ -3408,6 +4155,14 @@ export class FluxyChatClient {
     return body.decision ?? body;
   }
 
+  /** Stream `channel.getPinnedMessages()`. */
+  async getPinnedMessages(
+    roomId: string,
+    opts?: { category?: string; limit?: number },
+  ): Promise<{ ok: boolean; pins: Array<Record<string, unknown>>; count: number }> {
+    return this.listRoomPins(roomId, opts);
+  }
+
   async listRoomPins(
     roomId: string,
     opts?: { category?: string; limit?: number },
@@ -3505,6 +4260,460 @@ export class FluxyChatClient {
       headers: this.authHeaders(),
     });
     if (!res.ok) throw new Error(`Failed to close breakout: ${res.status}`);
+    return res.json();
+  }
+
+  async joinBreakout(roomId: string, breakoutId: string): Promise<{ ok: boolean; memberCount?: number }> {
+    if (!this.token) throw new Error("joinBreakout requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/breakouts/${encodeURIComponent(breakoutId)}/join`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to join breakout: ${res.status}`);
+    return res.json();
+  }
+
+  async moveBreakoutUser(
+    roomId: string,
+    breakoutId: string,
+    userId: string,
+  ): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("moveBreakoutUser requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/breakouts/${encodeURIComponent(breakoutId)}/move`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to move breakout user: ${res.status}`);
+    return res.json();
+  }
+
+  async endAllBreakouts(roomId: string): Promise<{ ok: boolean; closed?: string[] }> {
+    if (!this.token) throw new Error("endAllBreakouts requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/breakouts/end-all`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to end breakouts: ${res.status}`);
+    return res.json();
+  }
+
+  async setBreakoutTime(
+    roomId: string,
+    breakoutId: string,
+    minutes: number,
+  ): Promise<{ ok: boolean; autoCloseAt?: string }> {
+    if (!this.token) throw new Error("setBreakoutTime requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/breakouts/${encodeURIComponent(breakoutId)}/time`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ minutes }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to set breakout time: ${res.status}`);
+    return res.json();
+  }
+
+  async broadcastToBreakouts(roomId: string, content: string): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("broadcastToBreakouts requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/breakouts/broadcast`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to broadcast to breakouts: ${res.status}`);
+    return res.json();
+  }
+
+  /** BBB userSendActivitySign / userSetConnectionAlive — capability `attendance.heartbeat`. */
+  async sendAttendanceHeartbeat(roomId: string): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("sendAttendanceHeartbeat requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/capabilities/events`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vertical: "edu",
+          type: "attendance.heartbeat",
+          actor: { id: this.userId, type: "user" },
+          idempotencyKey: `attendance-${this.userId}-${Math.floor(Date.now() / 60000)}`,
+          payload: { userId: this.userId },
+        }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to send attendance heartbeat: ${res.status}`);
+    return res.json();
+  }
+
+  /** BBB `userSetRaiseHand`. */
+  async setRaiseHand(roomId: string, raised: boolean): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("setRaiseHand requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/capabilities/events`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vertical: "edu",
+          type: "edu.hand.raised",
+          actor: { id: this.userId, type: "user" },
+          idempotencyKey: `hand-${this.userId}-${raised}-${Math.floor(Date.now() / 1000)}`,
+          payload: { userId: this.userId, raised },
+        }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to set raise hand: ${res.status}`);
+    return res.json();
+  }
+
+  /** BBB `pollSubmitUserTypedVote` against `POST /polls/:id/vote`. */
+  async voteTypedPoll(pollId: string, answer: string): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("voteTypedPoll requires JWT token");
+    const res = await fetch(
+      new URL(`/polls/${encodeURIComponent(pollId)}/vote`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ answer }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to submit typed poll vote: ${res.status}`);
+    return res.json();
+  }
+
+  /** BBB `timerActivate` / start / stop / setTime / switchMode. */
+  async getRoomTimer(roomId: string): Promise<{ ok: boolean; timer: Record<string, unknown> }> {
+    if (!this.token) throw new Error("getRoomTimer requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/timer`, this.baseUrl).toString(),
+      { headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to get room timer: ${res.status}`);
+    return res.json();
+  }
+
+  async activateRoomTimer(
+    roomId: string,
+    opts?: { mode?: "timer" | "stopwatch"; stopwatch?: boolean; timeMs?: number; running?: boolean },
+  ): Promise<{ ok: boolean; timer: Record<string, unknown> }> {
+    if (!this.token) throw new Error("activateRoomTimer requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/timer/activate`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(opts ?? {}),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to activate room timer: ${res.status}`);
+    return res.json();
+  }
+
+  async startRoomTimer(roomId: string): Promise<{ ok: boolean; timer: Record<string, unknown> }> {
+    if (!this.token) throw new Error("startRoomTimer requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/timer/start`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to start room timer: ${res.status}`);
+    return res.json();
+  }
+
+  async stopRoomTimer(roomId: string): Promise<{ ok: boolean; timer: Record<string, unknown> }> {
+    if (!this.token) throw new Error("stopRoomTimer requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/timer/stop`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to stop room timer: ${res.status}`);
+    return res.json();
+  }
+
+  async resetRoomTimer(roomId: string): Promise<{ ok: boolean; timer: Record<string, unknown> }> {
+    if (!this.token) throw new Error("resetRoomTimer requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/timer/reset`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to reset room timer: ${res.status}`);
+    return res.json();
+  }
+
+  async setRoomTimerTime(roomId: string, timeMs: number): Promise<{ ok: boolean; timer: Record<string, unknown> }> {
+    if (!this.token) throw new Error("setRoomTimerTime requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/timer/time`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ timeMs }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to set room timer: ${res.status}`);
+    return res.json();
+  }
+
+  async setRoomTimerMode(
+    roomId: string,
+    mode: "timer" | "stopwatch",
+  ): Promise<{ ok: boolean; timer: Record<string, unknown> }> {
+    if (!this.token) throw new Error("setRoomTimerMode requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/timer/mode`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ mode }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to switch room timer mode: ${res.status}`);
+    return res.json();
+  }
+
+  /** LiveKit TokenSource HOW — member JWT, identity is the caller (not admin spoof). */
+  async getVoiceToken(
+    roomId: string,
+    opts?: { displayName?: string; canPublish?: boolean; canSubscribe?: boolean; provider?: string },
+  ): Promise<{ ok: boolean; token: Record<string, unknown> }> {
+    if (!this.token) throw new Error("getVoiceToken requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/voice/token`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(opts ?? {}),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to mint voice token: ${res.status}`);
+    return res.json();
+  }
+
+  async getVoiceStage(roomId: string): Promise<{ ok: boolean; stage: Record<string, unknown> | null }> {
+    if (!this.token) throw new Error("getVoiceStage requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/voice-stage`, this.baseUrl).toString(),
+      { headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to get voice stage: ${res.status}`);
+    return res.json();
+  }
+
+  async setVoiceStageMutedHttp(roomId: string, muted: boolean): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("setVoiceStageMutedHttp requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/voice-stage/mute`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ muted }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to mute voice stage: ${res.status}`);
+    return res.json();
+  }
+
+  async listWorkflows(opts?: { status?: string; triggerType?: string }): Promise<unknown> {
+    if (!this.token) throw new Error("listWorkflows requires JWT token");
+    const url = new URL("/api/workflows", this.baseUrl);
+    if (opts?.status) url.searchParams.set("status", opts.status);
+    if (opts?.triggerType) url.searchParams.set("triggerType", opts.triggerType);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to list workflows: ${res.status}`);
+    return res.json();
+  }
+
+  async createWorkflow(body: {
+    name: string;
+    triggerType: string;
+    actions: Array<Record<string, unknown>>;
+    conditions?: unknown;
+    description?: string;
+  }): Promise<{ id: string }> {
+    if (!this.token) throw new Error("createWorkflow requires JWT token");
+    const res = await fetch(new URL("/api/workflows", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Failed to create workflow: ${res.status}`);
+    return res.json();
+  }
+
+  async runWorkflow(workflowId: string, triggerData?: Record<string, unknown>): Promise<{ id: string }> {
+    if (!this.token) throw new Error("runWorkflow requires JWT token");
+    const res = await fetch(
+      new URL(`/api/workflows/${encodeURIComponent(workflowId)}/run`, this.baseUrl).toString(),
+      {
+        method: "POST",
+        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ triggerData: triggerData ?? {} }),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to run workflow: ${res.status}`);
+    return res.json();
+  }
+
+  async activateWorkflow(workflowId: string): Promise<{ ok: boolean; status?: string }> {
+    if (!this.token) throw new Error("activateWorkflow requires JWT token");
+    const res = await fetch(
+      new URL(`/api/workflows/${encodeURIComponent(workflowId)}/activate`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to activate workflow: ${res.status}`);
+    return res.json();
+  }
+
+  async deactivateWorkflow(workflowId: string): Promise<{ ok: boolean; status?: string }> {
+    if (!this.token) throw new Error("deactivateWorkflow requires JWT token");
+    const res = await fetch(
+      new URL(`/api/workflows/${encodeURIComponent(workflowId)}/deactivate`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to deactivate workflow: ${res.status}`);
+    return res.json();
+  }
+
+  async getWorkflowExecution(executionId: string): Promise<unknown> {
+    if (!this.token) throw new Error("getWorkflowExecution requires JWT token");
+    const res = await fetch(
+      new URL(`/api/workflows/executions/${encodeURIComponent(executionId)}`, this.baseUrl).toString(),
+      { headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to get workflow execution: ${res.status}`);
+    return res.json();
+  }
+
+  async retryWorkflowExecution(executionId: string): Promise<{ id: string }> {
+    if (!this.token) throw new Error("retryWorkflowExecution requires JWT token");
+    const res = await fetch(
+      new URL(`/api/workflows/executions/${encodeURIComponent(executionId)}/retry`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to retry workflow execution: ${res.status}`);
+    return res.json();
+  }
+
+  async stopWorkflowExecution(executionId: string): Promise<{ ok: boolean; status?: string }> {
+    if (!this.token) throw new Error("stopWorkflowExecution requires JWT token");
+    const res = await fetch(
+      new URL(`/api/workflows/executions/${encodeURIComponent(executionId)}/stop`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to stop workflow execution: ${res.status}`);
+    return res.json();
+  }
+
+  async deleteWorkflowExecution(executionId: string): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("deleteWorkflowExecution requires JWT token");
+    const res = await fetch(
+      new URL(`/api/workflows/executions/${encodeURIComponent(executionId)}`, this.baseUrl).toString(),
+      { method: "DELETE", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to delete workflow execution: ${res.status}`);
+    return res.json();
+  }
+
+  async deleteWorkflow(workflowId: string): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("deleteWorkflow requires JWT token");
+    const res = await fetch(
+      new URL(`/api/workflows/${encodeURIComponent(workflowId)}`, this.baseUrl).toString(),
+      { method: "DELETE", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to delete workflow: ${res.status}`);
+    return res.json();
+  }
+
+  async archiveWorkflow(workflowId: string): Promise<{ ok: boolean; status?: string }> {
+    if (!this.token) throw new Error("archiveWorkflow requires JWT token");
+    const res = await fetch(
+      new URL(`/api/workflows/${encodeURIComponent(workflowId)}/archive`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to archive workflow: ${res.status}`);
+    return res.json();
+  }
+
+  /** n8n production webhook HOW — no JWT; path is the secret. */
+  async ingestWorkflowWebhook(
+    hookPath: string,
+    opts?: { method?: string; body?: unknown; query?: Record<string, string> },
+  ): Promise<{ ok: boolean; runs?: unknown[] }> {
+    const url = new URL(`/hooks/workflows/${encodeURIComponent(hookPath)}`, this.baseUrl);
+    for (const [k, v] of Object.entries(opts?.query || {})) url.searchParams.set(k, v);
+    const method = (opts?.method || "POST").toUpperCase();
+    const res = await fetch(url.toString(), {
+      method,
+      headers: opts?.body != null ? { "Content-Type": "application/json" } : undefined,
+      body: opts?.body != null ? JSON.stringify(opts.body) : undefined,
+    });
+    if (!res.ok) throw new Error(`Failed to ingest workflow webhook: ${res.status}`);
+    return res.json();
+  }
+
+  /** Botpress `event_received` HOW — match active rules, no tenant JS. */
+  async dispatchWorkflowEvent(
+    triggerType: string,
+    triggerData?: Record<string, unknown>,
+  ): Promise<{ ok: boolean; runs?: unknown[] }> {
+    if (!this.token) throw new Error("dispatchWorkflowEvent requires JWT token");
+    const res = await fetch(new URL("/api/workflows/events", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ triggerType, triggerData }),
+    });
+    if (!res.ok) throw new Error(`Failed to dispatch workflow event: ${res.status}`);
+    return res.json();
+  }
+
+  /** Botpress conversation/user/bot/workflow state (KV, not tables SKU). */
+  async getWorkflowState(
+    scope: "conversation" | "user" | "bot" | "workflow",
+    scopeId: string,
+    key: string,
+  ): Promise<{ ok: boolean; value: unknown }> {
+    if (!this.token) throw new Error("getWorkflowState requires JWT token");
+    const url = new URL("/api/workflows/state", this.baseUrl);
+    url.searchParams.set("scope", scope);
+    url.searchParams.set("scopeId", scopeId);
+    url.searchParams.set("key", key);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to get workflow state: ${res.status}`);
+    return res.json();
+  }
+
+  async setWorkflowState(
+    scope: "conversation" | "user" | "bot" | "workflow",
+    scopeId: string,
+    key: string,
+    value: unknown,
+    opts?: { ttlSeconds?: number },
+  ): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("setWorkflowState requires JWT token");
+    const res = await fetch(new URL("/api/workflows/state", this.baseUrl).toString(), {
+      method: "PUT",
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ scope, scopeId, key, value, ttlSeconds: opts?.ttlSeconds }),
+    });
+    if (!res.ok) throw new Error(`Failed to set workflow state: ${res.status}`);
+    return res.json();
+  }
+
+  async requestVoiceStageSpeakHttp(roomId: string): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("requestVoiceStageSpeakHttp requires JWT token");
+    const res = await fetch(
+      new URL(`/rooms/${encodeURIComponent(roomId)}/voice-stage/request-speak`, this.baseUrl).toString(),
+      { method: "POST", headers: this.authHeaders() },
+    );
+    if (!res.ok) throw new Error(`Failed to request speak: ${res.status}`);
     return res.json();
   }
 
@@ -4041,6 +5250,111 @@ export class FluxyChatClient {
     return body.agents ?? [];
   }
 
+  async listAgentSchedules(roomId: string): Promise<
+    Array<{
+      id: string;
+      agentId: string;
+      kind: string;
+      status: string;
+      prompt: string;
+      cron?: string | null;
+      delayMs?: number | null;
+      nextRunAt: number;
+    }>
+  > {
+    if (!this.token) throw new Error("listAgentSchedules requires JWT token");
+    const url = new URL(`/rooms/${encodeURIComponent(roomId)}/agent-schedules`, this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`listAgentSchedules failed: ${res.status}`);
+    const body = (await res.json()) as { schedules?: Array<{
+      id: string;
+      agentId: string;
+      kind: string;
+      status: string;
+      prompt: string;
+      cron?: string | null;
+      delayMs?: number | null;
+      nextRunAt: number;
+    }> };
+    return body.schedules ?? [];
+  }
+
+  async scheduleAgent(
+    roomId: string,
+    input: {
+      agentId: string;
+      kind: "delay" | "cron" | "at" | "interval";
+      prompt?: string;
+      delayMs?: number;
+      cron?: string;
+      runAt?: number | string;
+      intervalMs?: number;
+      intervalSeconds?: number;
+      idempotencyKey?: string;
+    },
+  ): Promise<{
+    created?: boolean;
+    schedule: {
+      id: string;
+      agentId: string;
+      kind: string;
+      status: string;
+      nextRunAt: number;
+    };
+  }> {
+    if (!this.token) throw new Error("scheduleAgent requires JWT token");
+    const url = new URL(`/rooms/${encodeURIComponent(roomId)}/agent-schedules`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.authHeaders(),
+      },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(`scheduleAgent failed: ${res.status}`);
+    return (await res.json()) as {
+      created?: boolean;
+      schedule: { id: string; agentId: string; kind: string; status: string; nextRunAt: number };
+    };
+  }
+
+  async getAgentSchedule(
+    roomId: string,
+    scheduleId: string,
+  ): Promise<{
+    id: string;
+    agentId: string;
+    kind: string;
+    status: string;
+    nextRunAt: number;
+  }> {
+    if (!this.token) throw new Error("getAgentSchedule requires JWT token");
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/agent-schedules/${encodeURIComponent(scheduleId)}`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`getAgentSchedule failed: ${res.status}`);
+    const body = (await res.json()) as {
+      schedule: { id: string; agentId: string; kind: string; status: string; nextRunAt: number };
+    };
+    return body.schedule;
+  }
+
+  async cancelAgentSchedule(roomId: string, scheduleId: string): Promise<void> {
+    if (!this.token) throw new Error("cancelAgentSchedule requires JWT token");
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/agent-schedules/${encodeURIComponent(scheduleId)}`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), {
+      method: "DELETE",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`cancelAgentSchedule failed: ${res.status}`);
+  }
+
   async invokeAgentRest(
     agentId: string,
     roomId: string,
@@ -4049,6 +5363,7 @@ export class FluxyChatClient {
       replyTo?: number | null;
       stream?: boolean;
       abortSignal?: AbortSignal;
+      clientMessageId?: string;
     }
   ): Promise<{
     run: {
@@ -4077,6 +5392,7 @@ export class FluxyChatClient {
         content,
         replyTo: options?.replyTo ?? null,
         stream: options?.stream !== false,
+        ...(options?.clientMessageId ? { clientMessageId: options.clientMessageId } : {}),
       }),
       signal: options?.abortSignal,
     });
@@ -4123,14 +5439,24 @@ export class FluxyChatClient {
     return Array.isArray(body.streams) ? body.streams : [];
   }
 
-  async resumeAiStream(streamId: string): Promise<{
+  async resumeAiStream(
+    streamId: string,
+    options?: { fromOffset?: number },
+  ): Promise<{
     streamId: string;
     content: string;
     active: boolean;
     roomId?: string | null;
+    fromOffset: number;
+    offset: number;
+    caughtUp: boolean;
   } | null> {
     if (!this.token) return null;
     const url = new URL(`/ai/streams/${encodeURIComponent(streamId)}/resume`, this.baseUrl);
+    const fromOffset = Number(options?.fromOffset);
+    if (Number.isFinite(fromOffset) && fromOffset > 0) {
+      url.searchParams.set("fromOffset", String(Math.floor(fromOffset)));
+    }
     const res = await fetch(url.toString(), { headers: this.authHeaders() });
     if (!res.ok) return null;
     const body = await res.json().catch(() => null);
@@ -4140,6 +5466,9 @@ export class FluxyChatClient {
       content: body.content,
       active: body.active === true,
       roomId: body.roomId ?? null,
+      fromOffset: Number(body.fromOffset) || 0,
+      offset: Number(body.offset) || body.content.length,
+      caughtUp: body.caughtUp === true,
     };
   }
 
@@ -4149,8 +5478,29 @@ export class FluxyChatClient {
   }
 
   /** Alias of `resumeAiStream`. KV snapshot after refresh, not Think-style fiber resume. */
-  async resumeStream(streamId: string) {
-    return this.resumeAiStream(streamId);
+  async resumeStream(streamId: string, options?: { fromOffset?: number }) {
+    return this.resumeAiStream(streamId, options);
+  }
+
+  /** Stop an in-flight room agent stream (any member). */
+  async abortRoomStream(
+    roomId: string,
+    options?: { userId?: string; messageId?: number },
+  ): Promise<{ ok: boolean; error?: string }> {
+    if (!this.token) return { ok: false, error: "unauthorized" };
+    const url = new URL("/ai/streams/abort", this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({
+        roomId,
+        userId: options?.userId,
+        messageId: options?.messageId,
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: String(body.error || res.status) };
+    return { ok: body.ok !== false, error: body.error };
   }
 
   async getAgentRuns(agentId: string, limit = 50): Promise<FluxyChatAgentRun[]> {
@@ -4316,12 +5666,97 @@ export class FluxyChatClient {
     if (!res.ok) throw new Error(`Failed to delete webhook: ${res.status}`);
   }
 
+  async listStreamOverlays(roomId?: string): Promise<
+    Array<{ id: string; name: string; overlayType: string; roomId: string }>
+  > {
+    if (!this.token) throw new Error("listStreamOverlays requires JWT token");
+    const url = new URL("/overlays", this.baseUrl);
+    if (roomId) url.searchParams.set("roomId", roomId);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`listStreamOverlays failed: ${res.status}`);
+    const body = (await res.json()) as {
+      overlays?: Array<{ id: string; name: string; overlayType: string; roomId: string }>;
+    };
+    return body.overlays ?? [];
+  }
+
+  async createStreamOverlay(input: {
+    roomId: string;
+    name: string;
+    overlayType?: string;
+    config?: Record<string, unknown>;
+    style?: Record<string, unknown>;
+    refreshSeconds?: number;
+  }): Promise<{ id: string; name: string; overlayType: string }> {
+    if (!this.token) throw new Error("createStreamOverlay requires JWT token");
+    const res = await fetch(new URL("/overlays", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(`createStreamOverlay failed: ${res.status}`);
+    return (await res.json()) as { id: string; name: string; overlayType: string };
+  }
+
+  async getStreamOverlay(overlayId: string): Promise<{
+    id: string; name: string; overlayType: string; roomId: string; enabled?: boolean;
+  }> {
+    if (!this.token) throw new Error("getStreamOverlay requires JWT token");
+    const res = await fetch(new URL(`/overlays/${encodeURIComponent(overlayId)}`, this.baseUrl).toString(), {
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`getStreamOverlay failed: ${res.status}`);
+    return (await res.json()) as {
+      id: string; name: string; overlayType: string; roomId: string; enabled?: boolean;
+    };
+  }
+
+  async updateStreamOverlay(
+    overlayId: string,
+    input: {
+      name?: string;
+      config?: Record<string, unknown>;
+      style?: Record<string, unknown>;
+      refreshSeconds?: number;
+      enabled?: boolean;
+    },
+  ): Promise<{ id: string; name: string; overlayType: string; enabled?: boolean }> {
+    if (!this.token) throw new Error("updateStreamOverlay requires JWT token");
+    const res = await fetch(new URL(`/overlays/${encodeURIComponent(overlayId)}`, this.baseUrl).toString(), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(`updateStreamOverlay failed: ${res.status}`);
+    return (await res.json()) as { id: string; name: string; overlayType: string; enabled?: boolean };
+  }
+
+  async deleteStreamOverlay(overlayId: string): Promise<void> {
+    if (!this.token) throw new Error("deleteStreamOverlay requires JWT token");
+    const res = await fetch(new URL(`/overlays/${encodeURIComponent(overlayId)}`, this.baseUrl).toString(), {
+      method: "DELETE",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`deleteStreamOverlay failed: ${res.status}`);
+  }
+
+  streamOverlayWidgetUrl(overlayId: string): string {
+    return new URL(`/overlays/${encodeURIComponent(overlayId)}/widget`, this.baseUrl).toString();
+  }
+
   // ── FluxyTrack: Fleet & GPS Tracking ──
 
   async ingestGps(data: {
-    vehicleId: string;
+    vehicleId?: string;
     lat: number;
-    lng: number;
+    lng?: number;
+    lon?: number;
+    _type?: "location";
+    tid?: string;
+    tst?: number;
+    acc?: number;
+    vel?: number;
+    cog?: number;
     speed?: number;
     heading?: number;
     accuracy?: number;
@@ -4437,6 +5872,48 @@ export class FluxyChatClient {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error(`Failed to create fleet geofence: ${res.status}`);
+    return res.json();
+  }
+
+  async updateFleetGeofence(
+    geofenceId: string,
+    data: { name?: string; lat?: number; lng?: number; radiusMeters?: number },
+  ): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("updateFleetGeofence requires JWT token");
+    const res = await fetch(new URL(`/fleet/geofences/${encodeURIComponent(geofenceId)}`, this.baseUrl).toString(), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to update fleet geofence: ${res.status}`);
+    return res.json();
+  }
+
+  async deleteFleetGeofence(geofenceId: string): Promise<{ ok: boolean }> {
+    if (!this.token) throw new Error("deleteFleetGeofence requires JWT token");
+    const res = await fetch(new URL(`/fleet/geofences/${encodeURIComponent(geofenceId)}`, this.baseUrl).toString(), {
+      method: "DELETE",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to delete fleet geofence: ${res.status}`);
+    return res.json();
+  }
+
+  async listFleetGeofenceEvents(filters?: {
+    vehicleId?: string;
+    geofenceId?: string;
+    limit?: number;
+  }): Promise<{
+    ok: boolean;
+    events: Array<{ id: string; geofenceId: string; vehicleId: string; eventType: string; occurredAt: string }>;
+  }> {
+    if (!this.token) throw new Error("listFleetGeofenceEvents requires JWT token");
+    const url = new URL("/fleet/geofence-events", this.baseUrl);
+    if (filters?.vehicleId) url.searchParams.set("vehicleId", filters.vehicleId);
+    if (filters?.geofenceId) url.searchParams.set("geofenceId", filters.geofenceId);
+    if (filters?.limit) url.searchParams.set("limit", String(filters.limit));
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Failed to list fleet geofence events: ${res.status}`);
     return res.json();
   }
 

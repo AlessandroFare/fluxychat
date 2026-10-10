@@ -59,6 +59,9 @@ const OUTBOUND_SAMPLES: Array<{ label: string; frame: Record<string, unknown> }>
   { label: "edit", frame: { type: "edit", messageId: 1, content: "updated" } },
   { label: "reaction", frame: { type: "reaction", messageId: 1, emoji: "👍" } },
   { label: "read", frame: { type: "read", messageId: 99 } },
+  { label: "lock_acquire", frame: { type: "lock_acquire", lockId: "slide-1" } },
+  { label: "room_reaction", frame: { type: "room_reaction", name: "👏" } },
+  { label: "presence_leave", frame: { type: "presence_leave" } },
   { label: "client_event", frame: { type: "client_event", event: "cursor-move", data: { x: 1 } } },
 ];
 

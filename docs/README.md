@@ -76,7 +76,10 @@ Production audit snapshots stay in this repo only. Public docs use stubs in `app
 
 ## Research (local clones, not shipped)
 
-See [research/README.md](./research/README.md). Vendored upstream repos for comparison only.
+Trees under `docs/research/` are gitignored. Method: HOW vs HOW, reimplement, do not vendor source.
+
+- Ably kernel: [ably-sdk-lessons.md](./ably-sdk-lessons.md) · tracker `docs/research/ably/GAP-TRACKER.md`
+- Labs / verticals: [labs-verticals-lessons.md](./labs-verticals-lessons.md) · master `docs/research/GAP-TRACKER.md` (Liveblocks, Stream, Yjs, tldraw, Colyseus, Nakama, Cloudflare Agents, Chatwoot, Traccar, Overlayed)
 
 ## Internal only
 

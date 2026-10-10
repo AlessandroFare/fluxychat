@@ -9,7 +9,7 @@
  *   • Multiple overlays per room
  */
 
-const OVERLAY_TYPES = ["qa", "poll", "reactions", "scoreboard", "countdown", "ticker"];
+const OVERLAY_TYPES = ["qa", "poll", "reactions", "scoreboard", "countdown", "ticker", "chat"];
 
 export async function createOverlay(env, {
   projectId, roomId, name, overlayType, config, style, refreshSeconds,
@@ -48,9 +48,90 @@ export async function deleteOverlay(env, { projectId, overlayId }) {
   return info.meta?.changes > 0;
 }
 
-export async function getOverlayWidget(env, { projectId, overlayId }) {
+/** Overlayed hide/show + persist opacity/style without shipping Electron. */
+export function parseOverlayPatch(body) {
+  if (!body || typeof body !== "object") return { ok: false, error: "body required" };
+  const data = {};
+  if (body.name !== undefined) {
+    const name = String(body.name).trim();
+    if (!name || name.length > 100) return { ok: false, error: "name required (max 100 chars)" };
+    data.name = name;
+  }
+  if (body.config !== undefined) {
+    if (!body.config || typeof body.config !== "object" || Array.isArray(body.config)) {
+      return { ok: false, error: "config must be an object" };
+    }
+    data.config = body.config;
+  }
+  if (body.style !== undefined) {
+    if (!body.style || typeof body.style !== "object" || Array.isArray(body.style)) {
+      return { ok: false, error: "style must be an object" };
+    }
+    data.style = body.style;
+  }
+  if (body.refreshSeconds !== undefined) {
+    const refreshSeconds = Number(body.refreshSeconds);
+    if (!Number.isFinite(refreshSeconds) || refreshSeconds < 1) {
+      return { ok: false, error: "invalid refreshSeconds" };
+    }
+    data.refreshSeconds = refreshSeconds;
+  }
+  if (body.enabled !== undefined) {
+    if (typeof body.enabled !== "boolean") return { ok: false, error: "enabled must be boolean" };
+    data.enabled = body.enabled;
+  }
+  if (!Object.keys(data).length) return { ok: false, error: "no fields to update" };
+  return { ok: true, data };
+}
+
+export async function updateOverlay(env, { projectId, overlayId, data }) {
+  const fields = [];
+  const values = [];
+  if (data.name != null) {
+    fields.push("name = ?");
+    values.push(data.name);
+  }
+  if (data.config != null) {
+    fields.push("config = ?");
+    values.push(JSON.stringify(data.config));
+  }
+  if (data.style != null) {
+    fields.push("style = ?");
+    values.push(JSON.stringify(data.style));
+  }
+  if (data.refreshSeconds != null) {
+    fields.push("refresh_seconds = ?");
+    values.push(data.refreshSeconds);
+  }
+  if (data.enabled !== undefined) {
+    fields.push("enabled = ?");
+    values.push(data.enabled ? 1 : 0);
+  }
+  if (!fields.length) return { ok: false, error: "no fields to update" };
+  values.push(projectId, overlayId);
+  const info = await env.DB.prepare(
+    `UPDATE streaming_overlays SET ${fields.join(", ")} WHERE project_id = ? AND id = ?`,
+  ).bind(...values).run();
+  if (info?.meta?.changes === 0) return { ok: false, error: "not_found", status: 404 };
   const overlay = await getOverlay(env, { projectId, overlayId });
+  return { ok: true, overlay };
+}
+
+export async function getOverlayById(env, overlayId) {
+  const row = await env.DB.prepare(
+    `SELECT * FROM streaming_overlays WHERE id = ?`,
+  )
+    .bind(overlayId)
+    .first();
+  return row ? formatOverlay(row) : null;
+}
+
+export async function getOverlayWidget(env, { projectId, overlayId }) {
+  const overlay = projectId
+    ? await getOverlay(env, { projectId, overlayId })
+    : await getOverlayById(env, overlayId);
   if (!overlay) return null;
+  if (!overlay.enabled) return null;
   return {
     type: overlay.overlayType,
     config: overlay.config,

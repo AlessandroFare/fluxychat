@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { FluxyChatClient } from "@fluxy-chat/sdk";
-import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FluxyChatClient, createRoomFrameLog, getConnectionStatusLabel } from "@fluxy-chat/sdk";
+import { FluxyRealtimeProvider, useChat, useOccupancy } from "@fluxy-chat/react";
 
 const workerUrl = import.meta.env.VITE_FLUXYCHAT_WORKER_URL?.trim();
 const publishableKey = import.meta.env.VITE_FLUXYCHAT_PUBLISHABLE_KEY?.trim();
@@ -77,11 +77,26 @@ function useFluxySession(): {
   return { session, loading, error };
 }
 
+function labsDebugEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("debug") === "1";
+}
+
 function ChatPanel({ roomId }: { roomId: string }) {
-  const { messages, sendMessage, connectionState, stopAgentStream } = useChat({
+  const debug = labsDebugEnabled();
+  const frameLog = useRef(createRoomFrameLog(24));
+  const [frames, setFrames] = useState<{ type?: string }[]>([]);
+  const { messages, sendMessage, connectionState, stopAgentStream, store } = useChat({
     roomId,
     markReadLatest: true,
+    onAnyEvent: debug
+      ? (event) => {
+          frameLog.current.push(event);
+          setFrames(frameLog.current.list().map((row) => row.event));
+        }
+      : undefined,
   });
+  const { connections, presenceMembers } = useOccupancy(store);
   const [draft, setDraft] = useState("");
   const isStreaming = messages.some((m) => m.streaming);
 
@@ -89,7 +104,15 @@ function ChatPanel({ roomId }: { roomId: string }) {
     <section className="chat-panel">
       <header className="chat-header">
         <strong>{roomId}</strong>
-        <span className="status">{connectionState.status}</span>
+        <span className="status">
+          {getConnectionStatusLabel(connectionState.status, {
+            nextRetryAt: connectionState.nextRetryAt,
+            includeTransport: true,
+          })}
+        </span>
+        <span className="status">
+          {connections} sockets · {presenceMembers} people
+        </span>
         {isStreaming ? (
           <button type="button" onClick={() => stopAgentStream()}>
             Stop
@@ -122,12 +145,27 @@ function ChatPanel({ roomId }: { roomId: string }) {
         />
         <button type="submit">Send</button>
       </form>
+      {debug ? (
+        <pre className="frame-log" aria-label="Last room frames">
+          {frames
+            .slice()
+            .reverse()
+            .map((event) => event.type ?? "event")
+            .join("\n") || "waiting for frames…"}
+        </pre>
+      ) : null}
     </section>
   );
 }
 
+function roomIdFromUrl(fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const pinned = new URLSearchParams(window.location.search).get("room")?.trim();
+  return pinned || fallback;
+}
+
 export function App() {
-  const pkRoomId = publicRoomId || configuredRoomId;
+  const pkRoomId = roomIdFromUrl(publicRoomId || configuredRoomId);
 
   if (!workerUrl) {
     return (
@@ -158,7 +196,7 @@ export function App() {
 
 function MemberOrGuestApp() {
   const { session, loading, error } = useFluxySession();
-  const [roomId, setRoomId] = useState(configuredRoomId);
+  const [roomId, setRoomId] = useState(() => roomIdFromUrl(configuredRoomId));
 
   const activeRoomId = useMemo(() => {
     if (session?.mode === "guest") return session.roomId;

@@ -1,0 +1,24 @@
+---
+title: "Component locks"
+description: "Exclusive lock per id on the Room Durable Object. One holder at a time."
+---
+
+# Component locks
+
+Use this when two people must not edit the same field. Not Yjs. One holder per `lockId`. TTL defaults to 30s; the same owner may refresh.
+
+```ts
+const room = client.room("board");
+room.locks.subscribe((event) => {
+  if (event.lockId === "slide-1" && event.held) {
+    console.log("held by", event.owner);
+  }
+});
+room.attach();
+room.locks.acquire("slide-1", { ttlMs: 30_000 });
+room.locks.release("slide-1");
+```
+
+A second user receives `held: true` and `acquired: false`. Locks drop when the holder leaves the room.
+
+`useLocks()` on `FluxyRoomProvider` wraps acquire/release and keeps the latest lock frame. `useLock("slide-1")` is the holder for one id.

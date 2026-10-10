@@ -1,11 +1,11 @@
 ---
 title: "@fluxy-chat/ui-kit"
-description: "Drop-in FluxyChatWidget and FluxyInboxPanel — polished chat UI in three lines, built on @fluxy-chat/ui and @fluxy-chat/react."
+description: FluxyChatWidget and FluxyInboxPanel, built on @fluxy-chat/ui.
 ---
 
 # @fluxy-chat/ui-kit
 
-Drop-in **chat widget** and **inbox panel** for FluxyChat. Use this when you want a hosted-SDK-style experience without building layout from primitives.
+Widget and inbox panel. Use this when you do not want to assemble `ChatWindow` yourself.
 
 Built on [`@fluxy-chat/ui`](/docs/packages/ui) + [`@fluxy-chat/react`](/docs/packages/react). Optional bridge to [assistant-ui](https://assistant-ui.com) via `useFluxyAssistantRuntime`.
 
@@ -17,7 +17,7 @@ pnpm add @fluxy-chat/ui-kit @fluxy-chat/ui @fluxy-chat/react @fluxy-chat/sdk
 
 Your app needs Tailwind (same as `@fluxy-chat/ui`). Member JWT **or** `guest` plus `publishableKey` (`pk_`) on a public room.
 
-## FluxyChatWidget (3 lines)
+## FluxyChatWidget
 
 ```tsx
 import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
@@ -31,7 +31,7 @@ import { FluxyChatWidget } from "@fluxy-chat/ui-kit";
 />
 ```
 
-Pass `token` instead of `guest` when you already have a member JWT.
+Pass `token` instead of `guest` when you already have a member JWT. The widget feeds `ChatWindow` occupancy, typing, edit/delete/react, room-reaction bursts, load-older, and a discontinuity banner from `useChat`.
 
 ### Props
 

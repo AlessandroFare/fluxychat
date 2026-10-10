@@ -83,6 +83,37 @@ export {
 
 export type { FluxyInboxItem, FluxyInboxItemKind } from "@fluxy-chat/sdk";
 
+export { useOccupancy } from "@fluxy-chat/sdk";
+export { useTyping } from "@fluxy-chat/sdk";
+export { useRoomReactions } from "@fluxy-chat/sdk";
+export { useRoomStatus, useStatus } from "@fluxy-chat/sdk";
+export { useChatConnection } from "@fluxy-chat/sdk";
+export { useChatClient } from "@fluxy-chat/sdk";
+export { usePresence } from "@fluxy-chat/sdk";
+export { useMessages } from "@fluxy-chat/sdk";
+export { usePresenceListener } from "@fluxy-chat/sdk";
+export { useLocks } from "@fluxy-chat/sdk";
+export { useLock } from "@fluxy-chat/sdk";
+export { useLocations } from "@fluxy-chat/sdk";
+export { useCursors } from "@fluxy-chat/sdk";
+export { useMembers } from "@fluxy-chat/sdk";
+export { FluxyRoomProvider, useRoom, useIsInsideRoom } from "@fluxy-chat/sdk";
+export {
+  FluxyChatSettingsProvider,
+  useChatSettings,
+  getEffectiveChatSettings,
+  mergeChatSettings,
+  canUpdateChatMessage,
+  canDeleteChatMessage,
+  canReactToChatMessage,
+  DEFAULT_CHAT_SETTINGS,
+} from "@fluxy-chat/sdk";
+export type {
+  FluxyChatSettings,
+  FluxyChatSettingsProviderProps,
+  FluxyChatSettingsContextValue,
+} from "@fluxy-chat/sdk";
+
 export {
   useLiveCursors,
   type UseLiveCursorsOptions,
@@ -93,13 +124,24 @@ export {
   type LiveCursor,
   type LiveCursorPublishInput,
   useOthers,
+  useOther,
+  useOthersMapped,
+  useOthersConnectionIds,
+  useLostConnectionListener,
+  lostConnectionEventFromStatus,
+  useSelf,
+  useLeavers,
+  usePresenceAvatars,
   useMyPresence,
   useUpdateMyPresence,
   useBroadcastEvent,
   useEventListener,
+  useOthersListener,
+  useErrorListener,
   othersFromRoomState,
   type FluxyPresence,
   type FluxyPresenceOther,
+  type FluxyLostConnectionEvent,
   useThreads,
   type UseThreadsOptions,
   type UseThreadsResult,

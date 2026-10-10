@@ -1,0 +1,24 @@
+---
+title: Message replies
+description: parentId on the same messages table. Not comment pins.
+---
+
+A reply is another chat row with `parentId` set to the parent message id. Same room, same socket.
+
+`room.messages.send({ text, replyTo })` sets REST `replyTo` / `parentId` / `threadParentId` (same field). `useChat().sendMessage(content, replyTo)` is the store path.
+
+```ts
+await room.messages.send({ text: "reply", replyTo: 42 });
+```
+
+`useThread({ roomId, threadParentId: 42 }).sendMessage("reply")` is the same parent id.
+
+Max thread depth is 8. Deeper replies return `thread_depth_exceeded`.
+
+A Stream-style **quote** (`quotedMessageId`) cites a message without setting `parentId`. Use Quote in `ChatWindow`, not Reply.
+
+Thread typing: `room.typing.keystroke(parentId)` / `useThread().setTyping` — does not light the main transcript.
+
+Canvas pins (`useThreads`, `/comment-threads`) are a different table. Do not mix them with chat replies.
+
+Full page: [Chat reply threads](/docs/core/nested-threads).

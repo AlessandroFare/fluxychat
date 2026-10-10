@@ -112,10 +112,13 @@ export async function fetchAggregatedRoomLive(env, projectId, roomId) {
     occupied: false,
     subscriptionCount: 0,
     userCount: 0,
+    watching: 0,
     online: 0,
     users: /** @type {string[]} */ ([]),
     members: /** @type {Array<{ userId: string; userInfo?: Record<string, unknown> }>} */ ([]),
     socketIds: /** @type {string[]} */ ([]),
+    cursors: /** @type {Array<Record<string, unknown>>} */ ([]),
+    cursorHistory: /** @type {Array<Record<string, unknown>>} */ ([]),
   };
 
   const mergeBody = (body) => {
@@ -123,6 +126,7 @@ export async function fetchAggregatedRoomLive(env, projectId, roomId) {
     base.occupied = base.occupied || Boolean(body.occupied ?? body.online > 0);
     base.online += Number(body.online ?? 0);
     base.subscriptionCount += Number(body.subscriptionCount ?? body.online ?? 0);
+    base.userCount += Number(body.userCount ?? 0);
     const users = Array.isArray(body.users) ? body.users : [];
     for (const uid of users) {
       if (uid && !base.users.includes(uid)) base.users.push(uid);
@@ -143,6 +147,20 @@ export async function fetchAggregatedRoomLive(env, projectId, roomId) {
     const sockets = Array.isArray(body.socketIds) ? body.socketIds : [];
     for (const sid of sockets) {
       if (sid && !base.socketIds.includes(sid)) base.socketIds.push(sid);
+    }
+    const cursors = Array.isArray(body.cursors) ? body.cursors : [];
+    const seenCursors = new Map(base.cursors.map((row) => [String(row.userId || ""), row]));
+    for (const row of cursors) {
+      if (!row || typeof row !== "object" || !row.userId) continue;
+      seenCursors.set(String(row.userId), row);
+    }
+    base.cursors = [...seenCursors.values()];
+    const trail = Array.isArray(body.cursorHistory) ? body.cursorHistory : [];
+    for (const row of trail) {
+      if (row && typeof row === "object") base.cursorHistory.push(row);
+    }
+    if (base.cursorHistory.length > 200) {
+      base.cursorHistory = base.cursorHistory.slice(-200);
     }
   };
 
@@ -165,7 +183,8 @@ export async function fetchAggregatedRoomLive(env, projectId, roomId) {
     });
   }
 
-  base.userCount = base.users.length;
+  if (!base.userCount) base.userCount = base.users.length;
+  base.watching = Math.max(0, base.subscriptionCount - base.userCount);
   return base;
 }
 

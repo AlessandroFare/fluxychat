@@ -87,7 +87,7 @@ export function DsaReportForm() {
       </label>
       {status === "err" ? (
         <p className="text-sm text-red-600" role="alert">
-          Could not send ({error}). Try again or email fluxychat@outlook.com.
+          Could not send ({error}). Try again or email support@fluxychat.com.
         </p>
       ) : null}
       <button

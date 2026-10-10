@@ -76,7 +76,7 @@ export function ComposerToolsMenu({
   const popover = open ? (
     <div
       ref={popoverRef}
-      className="fixed z-[110] w-56 rounded-lg border border-border bg-popover/100 p-1 shadow-xl ring-1 ring-border"
+      className="fixed z-[110] w-56 rounded-lg border border-border bg-card p-1 text-card-foreground shadow-xl ring-1 ring-border"
       style={{ left: position.left, bottom: position.bottom }}
       role="menu"
     >

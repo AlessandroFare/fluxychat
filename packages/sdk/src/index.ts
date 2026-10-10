@@ -1,5 +1,6 @@
 export {
   FluxyAuthError,
+  FluxyErrorInfo,
   FluxyNotMemberError,
   FluxyTokenExpiredError,
   FluxyAnonymousNotAllowedError,
@@ -12,6 +13,9 @@ export {
   mapWebSocketCloseToError,
   parseConnectionRefusal,
   describeConnectionError,
+  toFluxyErrorInfo,
+  errorInfoIs,
+  unableTo,
   type FluxyConnectionErrorInfo,
 } from "./errors";
 
@@ -37,7 +41,10 @@ export {
 export {
   createLogger,
   type Logger,
+  type FluxyLogLevel,
 } from "./logger";
+export { FLUXY_SDK_VERSION } from "./version";
+export { fluxySubscription, type FluxySubscription } from "./fluxy-subscription";
 
 
 
@@ -608,6 +615,7 @@ export {
   FLUXY_INBOUND_EVENT_TYPES,
   FLUXY_OUTBOUND_EVENT_TYPES,
   FLUXY_PROTOCOL_VERSION,
+  FLUXY_PROTOCOL_INTEGER,
   isFluxyInboundEvent,
   parseInboundWsFrame,
   dispatchInboundWsFrame,
@@ -622,6 +630,160 @@ export {
 
 export { applyStreamTailToLocal } from "./stream-offset";
 export { highestRoomSeq, resumeLogEventToClientEvent } from "./seq-resume";
+export { FluxyResumeGapWalker } from "./resume-gap";
+export {
+  bindFluxyRoom,
+  type FluxyBoundRoom,
+  type FluxyRoomOccupancy,
+  type FluxyRoomMessages,
+  type FluxyRoomStatus,
+  type FluxyRoomStatusChange,
+} from "./fluxy-room";
+export {
+  bindRoomTyping,
+  typingCurrentFn,
+  type FluxyRoomTyping,
+  type FluxyTypingSetEvent,
+  type FluxyTypingMember,
+  type FluxyTypingCurrent,
+} from "./room-typing";
+export {
+  bindRoomReactions,
+  roomReactionEventFromWire,
+  type FluxyRoomReactions,
+  type FluxyRoomReactionEvent,
+  type FluxyRoomReaction,
+} from "./room-reactions";
+export {
+  bindRoomPresence,
+  presenceEventsFromWire,
+  waitForPresenceSync,
+  type FluxyRoomPresence,
+  type FluxyPresenceChatEvent,
+  type FluxyPresenceEventType,
+  type FluxyPresenceGetParams,
+  type FluxyPresenceStateChange,
+} from "./room-presence";
+export {
+  bindRoomMembers,
+  type FluxyRoomMembers,
+  type FluxyMemberEvent,
+  type FluxyMemberEventType,
+  type FluxySpaceMember,
+} from "./room-members";
+export { bindRoomLocations, type FluxyRoomLocations } from "./room-locations";
+export {
+  withChatMessage,
+  copyChatMessage,
+  stampMessageText,
+  messageVersionSerial,
+  type FluxyMessageCopyParams,
+} from "./message-with";
+export {
+  bindRoomMessages,
+  chatMessageEventFromWire,
+  type FluxySendMessageParams,
+  type FluxyUpdateMessageParams,
+  type FluxyOperationDetails,
+  type FluxyChatMessageEvent,
+  type FluxyChatMessageEventType,
+  type FluxyRoomMessageEvent,
+  rawReactionEventFromWire,
+  type FluxyMessageReactionSummaryEvent,
+  type FluxyMessageReactionRawEvent,
+  type FluxyMessageReactionType,
+  type FluxySendMessageReactionParams,
+  type FluxyDeleteMessageReactionParams,
+  type FluxyClientReactions,
+} from "./room-messages";
+export {
+  applyRawReaction,
+  emptyReactionSummary,
+  summaryFromRows,
+  parseReactionSummary,
+  parseMultiple,
+  type FluxyMessageReactionSummary,
+  type FluxyReactionUnique,
+  type FluxyReactionMultiple,
+} from "./reaction-summary";
+export {
+  fetchMessageHistoryPage,
+  singlePageResult,
+  type FluxyHistoryParams,
+  type FluxyPaginatedResult,
+  type FluxyHistoryOrder,
+} from "./paginated-messages";
+export {
+  attachStatusFromConnection,
+  roomStatusFn,
+  type FluxyRoomAttachStatus,
+  type FluxyRoomStatusHandle,
+} from "./room-status";
+export {
+  roomOptionsFromConnection,
+  type FluxyNormalizedRoomOptions,
+} from "./room-options";
+export {
+  occupancyFromLive,
+  occupancyFromEvent,
+  occupancyEventFromData,
+  occupancyCurrentFn,
+  watchingFromOccupancyCounts,
+  type FluxyOccupancyData,
+  type FluxyOccupancyEvent,
+  type FluxyOccupancyCurrent,
+} from "./occupancy";
+export {
+  aggregateClientConnectionStatus,
+  mapRoomStatusToClientConnection,
+  type FluxyClientConnection,
+  type FluxyClientConnectionStatus,
+  type FluxyClientConnectionStatusChange,
+} from "./client-connection";
+export { useOccupancy } from "./use-occupancy";
+export { useTyping } from "./use-typing";
+export { useRoomReactions } from "./use-room-reactions";
+export { useRoomStatus, useStatus } from "./use-room-status";
+export { useChatConnection } from "./use-chat-connection";
+export { useChatClient } from "./use-chat-client";
+export { usePresence, type UsePresenceRoomOptions } from "./use-presence-room";
+export { useMessages } from "./use-messages";
+export { usePresenceListener } from "./use-presence-listener";
+export { useLocks } from "./use-locks";
+export { useLock } from "./use-lock";
+export { useLocations } from "./use-locations";
+export { useCursors } from "./use-cursors";
+export { useMembers } from "./use-members";
+export { bindRoomObjects, type FluxyRoomObjects } from "./room-objects";
+export {
+  bindRoomCursors,
+  pageCursorHistory,
+  type FluxyRoomCursors,
+  type FluxyCursorHistoryParams,
+} from "./room-cursors";
+export { FluxyRoomProvider, useRoom, useIsInsideRoom, type FluxyRoomProviderProps } from "./fluxy-room-provider";
+export {
+  FluxyChatSettingsProvider,
+  useChatSettings,
+  getEffectiveChatSettings,
+  mergeChatSettings,
+  canUpdateChatMessage,
+  canDeleteChatMessage,
+  canReactToChatMessage,
+  DEFAULT_CHAT_SETTINGS,
+  type FluxyChatSettings,
+  type FluxyChatSettingsProviderProps,
+  type FluxyChatSettingsContextValue,
+} from "./chat-settings";
+export { createRoomFrameLog, type FluxyFrameLogEntry } from "./room-frame-log";
+export {
+  bindRoomLocks,
+  type FluxyRoomLocks,
+  type FluxyLockRecord,
+  type FluxyLockEvent,
+  type FluxyLockStatus,
+  type FluxyLockAttributes,
+} from "./room-locks";
 
 export {
   locationTrack,
@@ -680,6 +842,7 @@ export {
   type FluxyRealtimeProviderProps,
   type FluxyAuthTokenResult,
 } from "./realtime-provider";
+export { FluxyRoomContext, useBoundRoom } from "./use-bound-room";
 
 export { useFluxyChat, useFluxyChatOptional, type FluxyRealtimeContextValue } from "./use-fluxy-chat";
 
@@ -714,8 +877,13 @@ export {
 
 export {
   parseLiveCursorEvent,
+  parseCursorBatchPoints,
   buildCursorOutbound,
+  buildCursorBatchOutbound,
   createCursorThrottle,
+  createCursorBatcher,
+  createCursorDispenser,
+  shouldSendCursor,
   clampCursorCoordinate,
   type LiveCursor,
   type LiveCursorPointer,
@@ -724,14 +892,38 @@ export {
 
 export {
   useOthers,
+  useOther,
+  useOthersMapped,
+  useOthersConnectionIds,
+  useLostConnectionListener,
+  lostConnectionEventFromStatus,
+  useSelf,
+  useLeavers,
+  usePresenceAvatars,
   useMyPresence,
   useUpdateMyPresence,
   useBroadcastEvent,
   useEventListener,
+  useOthersListener,
+  useErrorListener,
   othersFromRoomState,
   type FluxyPresence,
+  type FluxyUiLocation,
   type FluxyPresenceOther,
+  type FluxyLostConnectionEvent,
 } from "./use-presence";
+
+export {
+  classifyPresenceAvatars,
+  selfFromMembers,
+  rememberLeaver,
+  forgetLeaver,
+  pruneLeavers,
+  FLUXY_LEAVER_TTL_MS,
+  type FluxyPresenceAvatar,
+  type FluxyLeaver,
+  type FluxyAvatarRole,
+} from "./presence-avatars";
 
 export {
   useThreads,
@@ -776,9 +968,20 @@ export {
 } from "./ai-copilot";
 
 export type {
+  CommentThreadFilter,
   FluxyComment,
   FluxyCommentThread,
   FluxyCommentThreadMetadata,
+} from "./comment-threads";
+export {
+  mergeCommentThread,
+  appendCommentToThreads,
+  replaceCommentInThreads,
+  removeThreadById,
+  removeCommentFromThreads,
+  searchCommentThreads,
+  filterCommentThreads,
+  commentThreadPreview,
 } from "./comment-threads";
 
 export {
@@ -795,6 +998,12 @@ export {
 } from "./use-livekit-token";
 
 export {
+  createVoiceTokenSource,
+  type VoiceTokenGrant,
+  type VoiceTokenEnvelope,
+} from "./voice-token-source";
+
+export {
   useInbox,
   type UseInboxOptions,
   type UseInboxResult,
@@ -805,6 +1014,7 @@ export {
   mergeInboxItem,
   countUnseenItems,
   commentEventToInboxItem,
+  inboxItemReadMessageId,
   type FluxyInboxItem,
   type FluxyInboxItemKind,
 } from "./inbox-items";
@@ -2146,6 +2356,25 @@ export {
   migrateVendorExportToImportRows,
   type FluxyMigrateImportRow,
 } from "./fluxy-migrate";
+
+export {
+  parseFluxyRoomArgs,
+  formatRoomEventLine,
+  fluxyRoomCliHelp,
+  runHealth,
+  runOccupancy,
+  runExists,
+  runHistory,
+  runPresence,
+  runUpdate,
+  runDelete,
+  runGet,
+  runReact,
+  runUnreact,
+  runReactionSummary,
+  runVersions,
+  type FluxyRoomCliCommand,
+} from "./fluxy-room-cli";
 
 export {
   publishExternalGenerationToRoom,

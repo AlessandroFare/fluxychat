@@ -38,6 +38,8 @@ describe("room-shard", () => {
           { userId: "bob", userInfo: { name: "Bob" } },
         ],
         socketIds: ["s1", "s2"],
+        cursors: [{ type: "cursor", userId: "alice", x: 1, y: 2, ts: 10 }],
+        cursorHistory: [{ type: "cursor", userId: "alice", x: 1, y: 2, ts: 10 }],
       },
       {
         occupied: true,
@@ -48,6 +50,8 @@ describe("room-shard", () => {
           { userId: "agent-1", userInfo: { name: "Helper", agentId: "agent-1" } },
         ],
         socketIds: ["s3"],
+        cursors: [{ type: "cursor", userId: "bob", x: 9, y: 9, ts: 20 }],
+        cursorHistory: [{ type: "cursor", userId: "bob", x: 9, y: 9, ts: 20 }],
       },
     ];
     let call = 0;
@@ -81,6 +85,40 @@ describe("room-shard", () => {
     expect(alice?.userInfo).toEqual({ name: "Alice", role: "owner" });
     const agent = live.members.find((m) => m.userId === "agent-1");
     expect(agent?.userInfo?.agentId).toBe("agent-1");
+    expect(live.cursors.map((row) => row.userId).sort()).toEqual(["alice", "bob"]);
+    expect(live.cursorHistory).toHaveLength(2);
+    expect(live.watching).toBe(0);
+  });
+
+  it("FX-OCC-1 watching is extra sockets beyond presence userCount", async () => {
+    const env = {
+      DB: {
+        prepare: () => ({
+          bind: () => ({
+            first: async () => ({ shard_count: 1 }),
+          }),
+        }),
+      },
+      ROOM: {
+        idFromName: (name) => name,
+        get: () => ({
+          fetch: async () =>
+            new Response(
+              JSON.stringify({
+                occupied: true,
+                online: 4,
+                subscriptionCount: 4,
+                userCount: 2,
+                users: ["alice", "bob"],
+              }),
+              { status: 200 },
+            ),
+        }),
+      },
+    };
+    const live = await fetchAggregatedRoomLive(env, "proj-1", "lobby");
+    expect(live.userCount).toBe(2);
+    expect(live.watching).toBe(2);
   });
 
   it("returns an empty snapshot when the DO is cold", async () => {

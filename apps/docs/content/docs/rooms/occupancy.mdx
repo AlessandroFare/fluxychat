@@ -1,0 +1,34 @@
+---
+title: Occupancy
+description: connections is sockets. presenceMembers is unique users who entered.
+---
+
+A viewer can be connected without being present. Watching is `connections − presenceMembers` on the occupancy frame, `/live`, `GET /rooms/:id/info`, and the kit (“2 in chat · 2 watching” when there are 4 sockets and 2 members).
+
+```ts
+const room = await client.rooms.get("lobby", {
+  occupancy: { enableEvents: true },
+});
+
+room.occupancy.subscribe((event) => {
+  const { connections, presenceMembers, watching } = event.occupancy;
+  console.log(event.type); // occupancy.updated
+  console.log(connections, presenceMembers, watching);
+});
+
+await room.attach();
+
+const live = await room.occupancy.get();
+const cached = room.occupancy.current();
+console.log(room.occupancy.current.connections, room.occupancy.current.watching);
+```
+
+`get()` is REST (`GET /rooms/:id/live`). It works while detached.
+
+`current()` is the last realtime frame. It is `null` until the first event. With `occupancy.enableEvents: false`, `subscribe` and `current()` throw `feature_not_enabled` (40040). `get()` still works.
+
+Events ride the room socket. There is no extra occupancy channel.
+
+React: `useOccupancy(store)` on `useChat`, or `useOccupancy()` inside `FluxyRoomProvider`.
+
+Recipe: [Live occupancy](/docs/cookbook/occupancy).

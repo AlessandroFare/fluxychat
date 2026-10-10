@@ -13,7 +13,7 @@ function GameBoard({ roomId, userId }: { roomId: string; userId: string }) {
     roomId,
     replay: "request",
     onServerEvent: (ev) => {
-      if (ev.name === "game.tick" || ev.name === "game.match_started") {
+      if (ev.name === "game.tick" || ev.name === "game.match_started" || ev.name === "game.match_ended") {
         setTicks((prev) => [`${ev.name} ${JSON.stringify(ev.data)}`, ...prev].slice(0, 40));
       }
     },

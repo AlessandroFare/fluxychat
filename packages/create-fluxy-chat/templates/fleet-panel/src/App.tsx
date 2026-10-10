@@ -13,7 +13,14 @@ function FleetBoard({ roomId }: { roomId: string }) {
       if (ev.name !== "fleet.gps_update") return;
       const d = ev.data;
       setRows((prev) =>
-        [`${String(d.vehicleId)} ${String(d.lat)},${String(d.lng)}`, ...prev].slice(0, 40),
+        [
+          `${String(d.vehicleId)} ${String(d.lat)},${String(d.lng)}${
+            Array.isArray(d.geofenceEvents) && d.geofenceEvents.length
+              ? ` ${d.geofenceEvents.map((e: { eventType: string }) => e.eventType).join(",")}`
+              : ""
+          }`,
+          ...prev,
+        ].slice(0, 40),
       );
     },
   });

@@ -15,7 +15,7 @@ Browser (livekit-client)  ←WebRTC→  LiveKit SFU
 FluxyChat Worker  (POST /voice/token or dashboard voice-ai routes)
 ```
 
-- **Worker**: token minting with [`jose`](https://github.com/panva/jose) (`video-voice.js`, `voice-realtime.ts` stubs).
+- **Worker**: member token mint `POST /rooms/:id/voice/token` (identity is the JWT user). Admin `POST /admin/calls/token` remains. Media never runs on the Worker.
 - **Dashboard**: `/voice-ai` for agent voice configuration.
 - **Client**: add `livekit-client` in React apps; connect with token from Worker.
 

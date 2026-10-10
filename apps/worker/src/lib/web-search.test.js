@@ -4,6 +4,7 @@ import {
   extractResearchQuery,
   isLocalhostUrl,
   resolveWebSearchProviders,
+  sanitizeSearchQuery,
   searxngAuthHeader,
 } from "./web-search.js";
 
@@ -19,8 +20,15 @@ describe("web-search helpers", () => {
     expect(extractResearchQuery(prompt)).toBe("FluxyChat pricing");
   });
 
-  it("defaults provider chain to tavily, searxng, brave, wikipedia", () => {
-    expect(resolveWebSearchProviders({})).toEqual(["tavily", "searxng", "brave", "wikipedia"]);
+  it("strips PII before the query leaves the worker", () => {
+    expect(
+      sanitizeSearchQuery("email me at ada@fluxychat.com about pricing token=eyJhbGciOiJIUzI1NiJ9.aaa.bbb"),
+    ).not.toMatch(/@|eyJ/);
+    expect(sanitizeSearchQuery("FluxyChat pricing")).toBe("FluxyChat pricing");
+  });
+
+  it("defaults provider chain to wikipedia first", () => {
+    expect(resolveWebSearchProviders({})).toEqual(["wikipedia", "brave", "tavily", "searxng"]);
     expect(resolveWebSearchProviders({ WEB_SEARCH_PROVIDER: "searxng,tavily" })).toEqual([
       "searxng",
       "tavily",

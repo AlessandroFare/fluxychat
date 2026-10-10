@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fluxy-chat/react": "^0.1.8",
-    "@fluxy-chat/sdk": "^0.6.14",
+    "@fluxy-chat/react": "^0.1.9",
+    "@fluxy-chat/sdk": "^0.6.15",
     "@tiptap/extension-collaboration": "^2.11.5",
     "@tiptap/pm": "^2.11.5",
     "@tiptap/react": "^2.11.5",

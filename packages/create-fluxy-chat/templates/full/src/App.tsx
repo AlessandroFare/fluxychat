@@ -138,6 +138,22 @@ function ChatRoom({ session }: { session: CliSession }) {
     typingUsers,
     online,
     stopAgentStream,
+    setTyping,
+    editMessage,
+    deleteMessage,
+    sendReaction,
+    sendRoomReaction,
+    reactions,
+    roomReactions,
+    lastDiscontinuity,
+    seenBy,
+    presenceCount,
+    presenceMembers,
+    subscriptionCount,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    sendPresencePatch,
   } = useChat({
     roomId: session.roomId,
     agentId: session.agentId || undefined,
@@ -183,12 +199,34 @@ function ChatRoom({ session }: { session: CliSession }) {
 
       <div className="chat-frame">
         <ChatWindow
+          roomName={session.roomId}
+          occupancy={{
+            connections: subscriptionCount || online || 0,
+            presenceMembers: presenceCount || presenceMembers.length,
+          }}
           messages={messages}
           online={online ?? 0}
           typingUsers={typingUsers ?? {}}
+          localUserId={session.userId}
+          seenBy={seenBy}
+          reactions={reactions}
+          roomReactions={roomReactions}
+          discontinuity={lastDiscontinuity}
+          connectionStatus={connectionState.status}
+          nextRetryAt={connectionState.nextRetryAt}
           onSend={(content) => {
             void onSend(content);
           }}
+          onTyping={setTyping}
+          onEditMessage={editMessage}
+          onDeleteMessage={deleteMessage}
+          onReact={sendReaction}
+          onSendRoomReaction={sendRoomReaction}
+          onLoadMoreHistory={loadMore}
+          hasMoreHistory={hasMore}
+          isLoadingHistory={isLoadingMore}
+          onEnterPresence={() => sendPresencePatch({ agentStatus: null })}
+          onError={{ sendMessage: (err) => setError(err.message) }}
           agentTyping={Boolean(agentTyping)}
           agentTypingLabel={session.agentHandle || "@assistant"}
           mentionSuggestions={[

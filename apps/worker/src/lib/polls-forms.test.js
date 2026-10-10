@@ -47,6 +47,14 @@ function createMockDb({ polls = [], options = [], votes = [], forms = [], submis
               if (sql.includes("SELECT id FROM poll_options WHERE id")) {
                 return self.options.find((o) => o.id === args[0] && o.poll_id === args[1]) || null;
               }
+              if (sql.includes("FROM poll_options") && sql.includes("LOWER(option_text)")) {
+                return self.options.find(
+                  (o) => o.poll_id === args[0] && String(o.option_text || "").toLowerCase() === String(args[1] || "").toLowerCase(),
+                ) || null;
+              }
+              if (sql.includes("COUNT(*)") && sql.includes("FROM poll_options")) {
+                return { cnt: self.options.filter((o) => o.poll_id === args[0]).length };
+              }
               if (sql.includes("COUNT(DISTINCT user_id)")) {
                 const unique = new Set(self.votes.filter((v) => v.poll_id === args[0]).map((v) => v.user_id));
                 return { cnt: unique.size };
@@ -157,6 +165,15 @@ describe("polls-forms", () => {
       });
       expect(result.ok).toBe(false);
     });
+    it("creates a typed poll without seed options", async () => {
+      const db = createMockDb();
+      const result = await createPoll({ DB: db }, {
+        projectId: "p1", roomId: "r1", createdBy: "u1",
+        title: "Favorite word?", pollType: "typed",
+      });
+      expect(result.ok).toBe(true);
+      expect(db.options.length).toBe(0);
+    });
     it("rejects more than 20 open polls in a room", async () => {
       const polls = Array.from({ length: 20 }, (_, i) => ({
         id: `p${i}`, project_id: "p1", room_id: "r1", created_by: "u1", is_closed: 0,
@@ -181,6 +198,41 @@ describe("polls-forms", () => {
       });
       expect(result.ok).toBe(true);
       expect(db.votes.length).toBe(1);
+    });
+    it("records a typed answer as a new option", async () => {
+      const db = createMockDb({
+        polls: [{ id: "poll1", project_id: "p1", created_by: "u1", is_closed: 0, expires_at: null, poll_type: "typed", max_selections: 1, room_id: "r1" }],
+      });
+      const result = await votePoll({ DB: db }, {
+        projectId: "p1", pollId: "poll1", userId: "u2", answer: "Blue",
+      });
+      expect(result.ok).toBe(true);
+      expect(db.options.length).toBe(1);
+      expect(db.options[0].option_text).toBe("Blue");
+      expect(db.votes.length).toBe(1);
+    });
+    it("reuses a matching typed answer", async () => {
+      const db = createMockDb({
+        polls: [{ id: "poll1", project_id: "p1", created_by: "u1", is_closed: 0, expires_at: null, poll_type: "typed", max_selections: 1, room_id: "r1" }],
+        options: [{ id: "opt1", poll_id: "poll1", option_text: "Blue" }],
+      });
+      const result = await votePoll({ DB: db }, {
+        projectId: "p1", pollId: "poll1", userId: "u2", answer: "blue",
+      });
+      expect(result.ok).toBe(true);
+      expect(db.options.length).toBe(1);
+      expect(db.votes[0].option_id).toBe("opt1");
+    });
+    it("rejects typed answers on click polls", async () => {
+      const db = createMockDb({
+        polls: [{ id: "poll1", project_id: "p1", created_by: "u1", is_closed: 0, expires_at: null, poll_type: "single", max_selections: 1 }],
+        options: [{ id: "opt1", poll_id: "poll1", option_text: "A" }],
+      });
+      const result = await votePoll({ DB: db }, {
+        projectId: "p1", pollId: "poll1", userId: "u2", answer: "A",
+      });
+      expect(result.ok).toBe(false);
+      expect(result.error).toBe("typed_vote_not_allowed");
     });
     it("rejects vote on closed poll", async () => {
       const db = createMockDb({

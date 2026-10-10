@@ -4,6 +4,8 @@
  */
 export {
   FluxyYjsProvider,
+  useAwareness,
+  useYjsStatus,
   useMutation,
   useRedo,
   useStorage,
@@ -16,6 +18,8 @@ export {
   FLUXY_YJS_EDITOR_FRAGMENT,
   FLUXY_YJS_STORAGE_MAP,
   type FluxyLiveFile,
+  type FluxyYjsAwarenessState,
+  type FluxyYjsConnectionStatus,
   type FluxyYjsContextValue,
   type FluxyYjsProviderProps,
   type StorageJson,

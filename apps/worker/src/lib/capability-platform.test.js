@@ -2,6 +2,24 @@ import { describe, expect, it } from "vitest";
 import { evaluateCapabilityPolicy } from "./capability-platform.js";
 
 describe("capability platform policy", () => {
+  it("allows teachers to drive the room timer", () => {
+    const out = evaluateCapabilityPolicy(
+      { userId: "t1", roles: ["teacher"] },
+      { id: "t1", type: "user" },
+      "edu.timer",
+    );
+    expect(out.ok).toBe(true);
+  });
+
+  it("allows self-actor raise-hand", () => {
+    const out = evaluateCapabilityPolicy(
+      { userId: "u1", roles: ["member"] },
+      { id: "u1", type: "user" },
+      "edu.hand.raised",
+    );
+    expect(out.ok).toBe(true);
+  });
+
   it("allows self-actor attendance heartbeats", () => {
     const result = evaluateCapabilityPolicy(
       { userId: "u1", roles: ["student"] },

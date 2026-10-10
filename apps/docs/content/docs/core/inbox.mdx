@@ -33,7 +33,15 @@ export function App({ workerUrl, memberJwt }: { workerUrl: string; memberJwt: st
 }
 
 function InboxSidebar() {
-  const { items, counter, unseen, status } = useInbox({ pollIntervalMs: 30_000, realtime: true });
+  const {
+    items,
+    counter,
+    unseen,
+    unreadInboxNotificationsCount,
+    status,
+    markInboxNotificationAsRead,
+    markAllInboxNotificationsAsRead,
+  } = useInbox({ pollIntervalMs: 30_000, realtime: true });
 
   return (
     <div>
@@ -79,11 +87,11 @@ useInbox({ query: { unread: true } }); // narrows REST snapshot client-side
 
 ## Mark read (room channel)
 
-Marking a room read advances the **channel watermark**, not the inbox snooze state:
+Liveblocks names on `useInbox`: `markInboxNotificationAsRead(item.id)`, `markAllInboxNotificationsAsRead()`, `deleteInboxNotification(item.id)`, `unreadInboxNotificationsCount`. Those call `markReadRest` using the item payload (`messageId` / `lastMessage` / `firstUnreadMessageId`).
 
 ```tsx
-await client.markReadRest(roomId, messageId);
-await reload(); // refresh inbox summary
+await markInboxNotificationAsRead(item.id);
+await markAllInboxNotificationsAsRead();
 ```
 
 In chat UI, `useChat({ readOn: "mount" })` or `markReadLatest: true` sends read receipts when the user opens a room.
@@ -96,10 +104,25 @@ In chat UI, `useChat({ readOn: "mount" })` or `markReadLatest: true` sends read 
 | GET | `/inbox/agent` | HITL / askHuman rows for the current approver |
 | POST | `/inbox/agent/:id` | accept, ignore, edit, reply |
 | PUT | `/inbox/rooms/:roomId/snooze` | Snooze a room |
+| PUT / GET / DELETE | `/inbox/rooms/:roomId/mute` | Stream `channel.mute()` — skip `inbox_updated` |
 | POST | `/inbox/follow-ups` | Schedule follow-up |
 | POST | `/rooms/:roomId/read` | Advance read watermark `{ messageId }` |
+| POST | `/rooms/:roomId/unread` | Rewind watermark from `{ messageId }` |
 
 Requires authenticated member JWT (same as chat).
+
+Canned macros and CSAT live on the same Worker (Chatwoot HOW, not a Zendesk SKU):
+
+```ts
+const created = await client.createCannedResponse({ shortcut: "hi", title: "Hi", body: "Hello" });
+await client.updateCannedResponse(created.id, { body: "Hello there" });
+const macros = await client.listCannedResponses();
+await client.useCannedResponse(macros[0].id);
+await client.deleteCannedResponse(created.id);
+await client.triggerCsat(roomId);
+const survey = await client.getPendingCsat(roomId);
+if (survey) await client.respondCsat(survey.id, 5);
+```
 
 ## Realtime
 
@@ -107,7 +130,7 @@ When `realtime: true` (default when authenticated), `useInbox` opens **`GET /ws/
 
 ## Console
 
-The dashboard **Inbox** page (`/inbox`) shows the items feed, sidebar badge via `useInbox().counter`, live `onItem` banner, **Mark read** on unread rows, and the approvals inbox (HITL plus askHuman).
+The dashboard **Inbox** page (`/inbox`) shows the items feed, sidebar badge via `useInbox().counter`, live `onItem` banner, **Mark read** / **Mark all read**, and the approvals inbox (HITL plus askHuman).
 
 ## Related
 

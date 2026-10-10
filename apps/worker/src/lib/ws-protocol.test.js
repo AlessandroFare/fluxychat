@@ -6,6 +6,8 @@ describe("ws-protocol", () => {
     expect(isValidClientWsPayload({ type: "message", content: "hi" })).toBe(true);
     expect(isValidClientWsPayload({ type: "typing", isTyping: true })).toBe(true);
     expect(isValidClientWsPayload({ type: "cursor", x: 1, y: 2 })).toBe(true);
+    expect(isValidClientWsPayload({ type: "room_reaction", name: "👏" })).toBe(true);
+    expect(isValidClientWsPayload({ type: "presence_leave" })).toBe(true);
   });
 
   it("rejects unknown client events", () => {

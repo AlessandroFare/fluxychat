@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { commentEventToInboxItem, countUnseenItems, inboxSummaryToItems, mergeInboxItem } from "./inbox-items";
+import {
+  commentEventToInboxItem,
+  countUnseenItems,
+  inboxItemReadMessageId,
+  inboxSummaryToItems,
+  mergeInboxItem,
+} from "./inbox-items";
 import type { FluxyInboxSummary } from "./index";
 
 describe("inbox-items", () => {
@@ -89,5 +95,35 @@ describe("inbox-items", () => {
     });
     expect(item.kind).toBe("thread");
     expect(countUnseenItems([item])).toBe(1);
+  });
+
+  it("picks a mark-read message id from inbox payload", () => {
+    expect(
+      inboxItemReadMessageId({
+        id: "m1",
+        kind: "mention",
+        roomId: "r1",
+        receivedAt: "t0",
+        payload: { messageId: 9 },
+      }),
+    ).toBe(9);
+    expect(
+      inboxItemReadMessageId({
+        id: "u1",
+        kind: "unread",
+        roomId: "r2",
+        receivedAt: "t0",
+        payload: { lastMessage: { messageId: 4 }, lastReadMessageId: 1 },
+      }),
+    ).toBe(4);
+    expect(
+      inboxItemReadMessageId({
+        id: "u2",
+        kind: "unread",
+        roomId: "r3",
+        receivedAt: "t0",
+        payload: { firstUnreadMessageId: 2 },
+      }),
+    ).toBe(2);
   });
 });

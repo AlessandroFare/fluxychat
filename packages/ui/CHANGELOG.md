@@ -1,5 +1,11 @@
 # @fluxy-chat/ui
 
+## 0.1.8 (2026-10-10)
+
+### Changed
+
+- Peer `@fluxy-chat/sdk` is `^0.6.15`. Comments list, room info, participant list stay in this package.
+
 ## 0.1.7 (2026-10-05)
 
 ### Changed

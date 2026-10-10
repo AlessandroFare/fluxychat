@@ -48,7 +48,10 @@ describe("dashboard-feature-flags", () => {
   it("classifies kernel as ga and former labs as labs", () => {
     expect(getDashboardSurfaceKind("/rooms")).toBe("ga");
     expect(getDashboardSurfaceKind("/game")).toBe("ga");
-    expect(getDashboardSurfaceKind("/stream/abc/broadcast")).toBe("labs");
+    expect(getDashboardSurfaceKind("/stream")).toBe("ga");
+    expect(getDashboardSurfaceKind("/stream/demo")).toBe("labs");
+    expect(getDashboardSurfaceKind("/edu")).toBe("ga");
+    expect(getDashboardSurfaceKind("/huddles")).toBe("labs");
     expect(getDashboardSurfaceKind("/agents/platform")).toBe("preview");
   });
 });

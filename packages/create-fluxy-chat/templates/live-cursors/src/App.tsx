@@ -149,8 +149,14 @@ function hashCode(value: string): number {
   return hash;
 }
 
+function roomIdFromUrl(fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const pinned = new URLSearchParams(window.location.search).get("room")?.trim();
+  return pinned || fallback;
+}
+
 export function App() {
-  const pkRoomId = publicRoomId || configuredRoomId;
+  const pkRoomId = roomIdFromUrl(publicRoomId || configuredRoomId);
   if (workerUrl && publishableKey) {
     return (
       <main className="shell">
@@ -168,7 +174,7 @@ export function App() {
 
 function MemberOrGuestCursors() {
   const { session, loading, error } = useFluxySession();
-  const [roomId, setRoomId] = useState(configuredRoomId);
+  const [roomId, setRoomId] = useState(() => roomIdFromUrl(configuredRoomId));
 
   const activeRoomId = useMemo(() => {
     if (session?.mode === "guest") return session.roomId;

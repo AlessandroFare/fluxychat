@@ -90,6 +90,7 @@ export async function getRoomInfoPanel(env, input) {
       ? {
           online: live.online,
           userCount: live.userCount,
+          watching: live.watching ?? Math.max(0, Number(live.online) - Number(live.userCount || 0)),
           users: live.users,
         }
       : null,

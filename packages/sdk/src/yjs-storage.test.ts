@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
-import { decodeYjsFrame, encodeYjsFrame, YJS_MSG_UPDATE } from "./yjs-binary";
+import {
+  decodeYjsAwareness,
+  decodeYjsFrame,
+  encodeYjsAwareness,
+  encodeYjsFrame,
+  YJS_MSG_AWARENESS,
+  YJS_MSG_UPDATE,
+} from "./yjs-binary";
 import {
   applyStoragePatch,
   FLUXY_YJS_STORAGE_MAP,
@@ -17,6 +24,31 @@ describe("yjs binary frames", () => {
     const decoded = decodeYjsFrame(frame);
     expect(decoded?.type).toBe(1);
     expect(Array.from(decoded?.payload ?? [])).toEqual([9, 8, 7]);
+  });
+
+  it("encodes JSON awareness as type 2", () => {
+    const frame = encodeYjsAwareness({ userId: "ada", name: "Ada", color: "#111" });
+    const decoded = decodeYjsFrame(frame);
+    expect(decoded?.type).toBe(YJS_MSG_AWARENESS);
+    expect(decodeYjsAwareness(decoded?.payload ?? new Uint8Array())).toEqual({
+      userId: "ada",
+      name: "Ada",
+      color: "#111",
+    });
+    expect(decodeYjsAwareness(new TextEncoder().encode("{}"))).toBeNull();
+  });
+
+  it("encodes awareness leave and flags permanent close codes", async () => {
+    const { encodeYjsAwarenessLeave, isPermanentYjsClose, isYjsAwarenessLeave } = await import(
+      "./yjs-binary"
+    );
+    const frame = encodeYjsAwarenessLeave("ada");
+    const decoded = decodeYjsFrame(frame);
+    const state = decodeYjsAwareness(decoded?.payload ?? new Uint8Array());
+    expect(isYjsAwarenessLeave(state)).toBe(true);
+    expect(isPermanentYjsClose(1008)).toBe(true);
+    expect(isPermanentYjsClose(4401)).toBe(true);
+    expect(isPermanentYjsClose(1006)).toBe(false);
   });
 });
 

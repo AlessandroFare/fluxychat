@@ -66,6 +66,8 @@ describe("buildFluxyConnectionState", () => {
 describe("getConnectionStatusLabel", () => {
   it("maps Portal-style statuses to UI copy", () => {
     expect(getConnectionStatusLabel("connected")).toBe("Connected");
+    expect(getConnectionStatusLabel("failed")).toBe("Connection failed");
+    expect(getConnectionStatusLabel("suspended")).toBe("Suspended — still retrying");
     expect(getConnectionStatusLabel("blocked")).toBe("Connection blocked");
     expect(getConnectionStatusLabel("degraded")).toBe("Degraded — realtime limited");
     expect(getConnectionStatusLabel("degraded-http", { includeTransport: true })).toBe(

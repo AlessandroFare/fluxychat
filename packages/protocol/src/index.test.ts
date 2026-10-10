@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  FLUXY_ERROR_CATALOG,
+  FLUXY_ERROR_CODES,
   FLUXY_INBOUND_EVENT_TYPES,
   FLUXY_OUTBOUND_EVENT_TYPES,
+  FLUXY_PROTOCOL_INTEGER,
   FLUXY_PROTOCOL_VERSION,
   assertInboundEventType,
+  fluxyErrorByCode,
+  fluxyErrorByIdentifier,
   isFluxyInboundEvent,
   isFluxyOutboundEvent,
 } from "./index.js";
@@ -17,6 +22,11 @@ describe("@fluxy-chat/protocol", () => {
 
   it("exposes a stable protocol version", () => {
     expect(FLUXY_PROTOCOL_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  it("FX-RTN-1 exposes an integer protocol revision", () => {
+    expect(FLUXY_PROTOCOL_INTEGER).toBe(1);
+    expect(FLUXY_INBOUND_EVENT_TYPES).toContain("occupancy");
   });
 
   it("recognizes core inbound events", () => {
@@ -50,9 +60,28 @@ describe("@fluxy-chat/protocol", () => {
       "location_update",
       "message",
       "presence_patch",
+      "room_reaction",
       "stream",
       "typing",
     ]);
+  });
+});
+
+describe("error catalog", () => {
+  it("maps refusal identifiers used on WebSocket close 1008", () => {
+    expect(FLUXY_ERROR_CODES.not_member).toBe(40300);
+    expect(fluxyErrorByIdentifier("token_expired")?.httpStatus).toBe(401);
+    expect(fluxyErrorByCode(10200)?.identifier).toBe("discontinuity");
+    expect(FLUXY_ERROR_CODES.feature_not_enabled).toBe(40040);
+    expect(FLUXY_ERROR_CODES.resource_disposed).toBe(40041);
+    expect(FLUXY_ERROR_CODES.message_not_found).toBe(40400);
+  });
+
+  it("gives every entry a docs href", () => {
+    expect(FLUXY_ERROR_CATALOG.length).toBeGreaterThan(0);
+    for (const entry of FLUXY_ERROR_CATALOG) {
+      expect(entry.href).toContain(entry.identifier);
+    }
   });
 });
 
@@ -76,6 +105,10 @@ describe("outbound client events", () => {
       "resume",
       "presence_state",
       "derived_set",
+      "lock_acquire",
+      "lock_release",
+      "room_reaction",
+      "presence_leave",
     ];
     expect([...FLUXY_OUTBOUND_EVENT_TYPES].sort()).toEqual(roomDoTypes.sort());
   });

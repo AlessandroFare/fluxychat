@@ -349,7 +349,7 @@ export default function PrivacyPage() {
 
       <Section title="Contact" description="Questions about your data?">
         <div className="text-sm text-muted-foreground leading-relaxed">
-          <p>For privacy questions, contact your project admin or fluxychat@outlook.com.</p>
+          <p>For privacy questions, contact your project admin or support@fluxychat.com.</p>
         </div>
       </Section>
 

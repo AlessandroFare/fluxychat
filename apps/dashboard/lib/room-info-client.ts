@@ -19,7 +19,7 @@ export interface RoomInfoPanelData {
   messageCount: number;
   pins: Array<{ messageId: number; pinnedBy: string; pinnedAt: string }>;
   retention: { mode: string; ttlSeconds: number | null; updatedAt: string } | null;
-  live: { online: number; userCount: number; users: string[] } | null;
+  live: { online: number; userCount: number; watching?: number; users: string[] } | null;
 }
 
 function authHeaders(token: string): HeadersInit {

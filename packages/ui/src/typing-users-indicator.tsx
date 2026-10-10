@@ -1,24 +1,24 @@
 import * as React from "react";
+import { formatTypingCaptionFromMap } from "./format-typing-caption";
 
 export interface TypingUsersIndicatorProps {
   typingUsers: Record<string, boolean>;
+  excludeUserId?: string | null;
+  resolveName?: (userId: string) => string;
 }
 
-/** Renders rows like `alice is typing…` from the hook’s typing map. */
-export function TypingUsersIndicator({ typingUsers }: TypingUsersIndicatorProps) {
-  const ids = Object.entries(typingUsers)
-    .filter(([, active]) => active)
-    .map(([uid]) => uid);
-
-  if (ids.length === 0) return null;
+/** One Ably-style line: `Ada is typing…` / `Ada and Bob are typing…` / `N people are typing…`. */
+export function TypingUsersIndicator({
+  typingUsers,
+  excludeUserId,
+  resolveName,
+}: TypingUsersIndicatorProps) {
+  const caption = formatTypingCaptionFromMap(typingUsers, { excludeUserId, resolveName });
+  if (!caption) return null;
 
   return (
-    <>
-      {ids.map((userId) => (
-        <div key={userId} style={{ fontSize: 11, color: "#777" }}>
-          {userId} is typing…
-        </div>
-      ))}
-    </>
+    <div data-testid="typing-users" role="status" aria-live="polite" style={{ fontSize: 11, color: "#777" }}>
+      {caption}
+    </div>
   );
 }

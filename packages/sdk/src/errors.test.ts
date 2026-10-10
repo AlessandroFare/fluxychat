@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   FluxyAuthError,
+  FluxyErrorInfo,
   FluxyNotMemberError,
   FluxyTokenExpiredError,
   describeConnectionError,
   FLUXY_WS_CLOSE_POLICY,
   computeReconnectBackoffMs,
   mapWebSocketCloseToError,
+  toFluxyErrorInfo,
+  unableTo,
 } from "./errors";
 
 describe("fluxy sdk errors", () => {
@@ -37,6 +40,18 @@ describe("fluxy sdk errors", () => {
     expect(info?.isTerminal).toBe(true);
     expect(info?.isMemberIssue).toBe(true);
     expect(info?.code).toBe("not_member");
+    expect(info?.numericCode).toBe(40300);
+    expect(info?.href).toContain("not_member");
+  });
+
+  it("wraps subclasses as FluxyErrorInfo with unable-to copy", () => {
+    const err = mapWebSocketCloseToError(FLUXY_WS_CLOSE_POLICY, "not_member");
+    const info = toFluxyErrorInfo(err as Error, "connect");
+    expect(info).toBeInstanceOf(FluxyErrorInfo);
+    expect(info.code).toBe(40300);
+    expect(info.statusCode).toBe(403);
+    expect(info.message).toBe(unableTo("connect", (err as FluxyNotMemberError).message));
+    expect(info.terminal).toBe(true);
   });
 
   it("returns null for normal close 1000", () => {

@@ -24,9 +24,9 @@ export type FluxyAiUiMessage = {
 };
 
 export type FluxyAiUiMessageChunk =
-  | { type: "text-start"; id: string }
-  | { type: "text-delta"; id: string; delta: string }
-  | { type: "text-end"; id: string }
+  | { type: "text-start"; id: string; requestId?: string }
+  | { type: "text-delta"; id: string; delta: string; requestId?: string }
+  | { type: "text-end"; id: string; requestId?: string }
   | {
       type: "tool-approval-request";
       approvalId: string;
@@ -34,8 +34,9 @@ export type FluxyAiUiMessageChunk =
       toolName: string;
       input?: unknown;
       signature?: string;
+      requestId?: string;
     }
-  | { type: "finish"; finishReason: string };
+  | { type: "finish"; finishReason: string; requestId?: string };
 
 export type FluxyRoomChatTransportOptions = {
   client: FluxyChatClient;
@@ -79,12 +80,17 @@ export function lastToolApprovalResponse(
   return null;
 }
 
-export function encodeUiMessageTextStream(text: string, id = "0"): ReadableStream<FluxyAiUiMessageChunk> {
+export function encodeUiMessageTextStream(
+  text: string,
+  id = "0",
+  requestId?: string,
+): ReadableStream<FluxyAiUiMessageChunk> {
+  const rid = requestId?.trim() || undefined;
   const chunks: FluxyAiUiMessageChunk[] = [
-    { type: "text-start", id },
-    { type: "text-delta", id, delta: text },
-    { type: "text-end", id },
-    { type: "finish", finishReason: "stop" },
+    { type: "text-start", id, ...(rid ? { requestId: rid } : {}) },
+    { type: "text-delta", id, delta: text, ...(rid ? { requestId: rid } : {}) },
+    { type: "text-end", id, ...(rid ? { requestId: rid } : {}) },
+    { type: "finish", finishReason: "stop", ...(rid ? { requestId: rid } : {}) },
   ];
   return new ReadableStream({
     start(controller) {
@@ -100,7 +106,9 @@ export function encodeToolApprovalRequestStream(entry: {
   toolName?: string;
   toolInput?: unknown;
   signature?: string;
+  requestId?: string;
 }): ReadableStream<FluxyAiUiMessageChunk> {
+  const rid = entry.requestId?.trim() || undefined;
   const chunks: FluxyAiUiMessageChunk[] = [
     {
       type: "tool-approval-request",
@@ -109,8 +117,9 @@ export function encodeToolApprovalRequestStream(entry: {
       toolName: entry.toolName || "tool",
       input: entry.toolInput,
       signature: entry.signature,
+      ...(rid ? { requestId: rid } : {}),
     },
-    { type: "finish", finishReason: "tool-calls" },
+    { type: "finish", finishReason: "tool-calls", ...(rid ? { requestId: rid } : {}) },
   ];
   return new ReadableStream({
     start(controller) {
@@ -152,6 +161,7 @@ export class FluxyRoomChatTransport {
       });
     }
 
+    const requestId = String(options.chatId || options.messageId || "").trim() || undefined;
     const content = lastUserText(options.messages);
     if (content) {
       const result = await this.client.invokeAgentRest(this.agentId, this.roomId, content, {
@@ -160,29 +170,42 @@ export class FluxyRoomChatTransport {
       const text = typeof result.message?.content === "string" ? result.message.content : "";
       const pending = await this.client.listHitlApprovals(this.roomId, { abortSignal: options.abortSignal });
       const first = pending[0];
-      if (first?.id) return encodeToolApprovalRequestStream(first);
-      return encodeUiMessageTextStream(text);
+      if (first?.id) return encodeToolApprovalRequestStream({ ...first, requestId });
+      return encodeUiMessageTextStream(text, "0", requestId);
     }
 
     const pending = await this.client.listHitlApprovals(this.roomId, { abortSignal: options.abortSignal });
     const first = pending[0];
-    if (first?.id) return encodeToolApprovalRequestStream(first);
-    return encodeUiMessageTextStream("");
+    if (first?.id) return encodeToolApprovalRequestStream({ ...first, requestId });
+    return encodeUiMessageTextStream("", "0", requestId);
   }
 
   async reconnectToStream(options: {
     chatId?: string;
     abortSignal?: AbortSignal;
+    fromOffset?: number;
   }): Promise<ReadableStream<FluxyAiUiMessageChunk> | null> {
-    void options;
     const pending = await this.client.listHitlApprovals(this.roomId).catch(() => []);
-    if (pending[0]?.id) return encodeToolApprovalRequestStream(pending[0]);
+    const requestId = String(options.chatId || "").trim() || undefined;
+    if (pending[0]?.id) return encodeToolApprovalRequestStream({ ...pending[0], requestId });
     const active = await this.client.listActiveAiStreams(this.roomId);
     const hit = active.find((s) => s.active !== false) ?? active[0];
     if (!hit?.streamId) return null;
-    const resumed = await this.client.resumeAiStream(hit.streamId);
+    const resumed = await this.client.resumeAiStream(hit.streamId, {
+      fromOffset: options.fromOffset,
+    });
     if (!resumed) return null;
+    if (resumed.caughtUp) return encodeUiMessageTextStream("", "0", requestId);
     if (!resumed.content && !resumed.active) return null;
-    return encodeUiMessageTextStream(resumed.content || "");
+    return encodeUiMessageTextStream(resumed.content || "", "0", requestId);
+  }
+
+  /** Any room member can stop the in-flight agent stream (other tab included). */
+  abortStream(options?: { agentId?: string; messageId?: number }): Promise<{ ok: boolean; error?: string }> {
+    const agentId = options?.agentId ?? this.agentId;
+    return this.client.abortRoomStream(this.roomId, {
+      userId: agentId,
+      messageId: options?.messageId,
+    });
   }
 }

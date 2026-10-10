@@ -9,7 +9,7 @@ export interface ChatCatchUpBannerProps {
   roomId: string;
   messages: FluxyChatMessage[];
   listRef: React.RefObject<HTMLDivElement | null>;
-  loadMore?: () => Promise<void>;
+  loadMore?: () => Promise<boolean | void>;
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onMarkRead?: (messageId: number) => void;

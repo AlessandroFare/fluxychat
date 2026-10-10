@@ -124,13 +124,15 @@ export function createChatbotBuilder(): ChatbotBuilder {
       for (const rule of sorted) {
         if (!matchTrigger(rule.trigger, event)) continue;
         const matched = evaluateConditions(rule.conditions, context);
-        const executedActions = rule.actions.map((action) => {
-          try {
-            return { action, success: true, result: `executed ${action.type}` };
-          } catch (e) {
-            return { action, success: false, error: String(e) };
-          }
-        });
+        const executedActions = matched
+          ? rule.actions.map((action) => {
+              try {
+                return { action, success: true, result: `executed ${action.type}` };
+              } catch (e) {
+                return { action, success: false, error: String(e) };
+              }
+            })
+          : [];
 
         const execution: WorkflowExecution = {
           ruleId: rule.id,

@@ -6,6 +6,8 @@ export interface VoiceStageParticipant {
   displayName: string | null;
   vadScore: number;
   isActiveSpeaker: boolean;
+  isMuted: boolean;
+  requestedSpeak: boolean;
   joinedAt: string;
 }
 
@@ -15,6 +17,7 @@ export interface VoiceStageSnapshot {
   participants: VoiceStageParticipant[];
   speakerCount: number;
   listenerCount: number;
+  speakRequests: string[];
 }
 
 export function findStageParticipant(

@@ -22,26 +22,16 @@ export const dashboardFeatureFlags = getDashboardFeatureFlags();
 
 /** Product + industry routes (always in sidebar). */
 export const DASHBOARD_LAB_HREFS = new Set([
-  "/continuity",
-  "/stream",
   "/stream/demo",
   "/spatial",
   "/transport",
   "/huddles",
-  "/voice-ai",
-  "/edu",
-  "/health",
-  "/events",
-  "/finance",
   "/truth-market",
   "/cartography",
 ]);
 
 /** Additional platform routes (always in sidebar). */
 export const DASHBOARD_PREVIEW_HREFS = new Set([
-  "/web3",
-  "/driver",
-  "/marketplace",
   "/cross-channel",
   "/agents/platform",
   "/agents/a2a",
@@ -50,7 +40,6 @@ export const DASHBOARD_PREVIEW_HREFS = new Set([
   "/agents/ambient",
   "/agents/observability",
   "/agents/eval",
-  "/chatbot-builder",
 ]);
 
 export type DashboardSurfaceKind = "ga" | "labs" | "preview";

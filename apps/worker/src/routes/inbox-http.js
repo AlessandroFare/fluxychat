@@ -9,6 +9,7 @@ import {
   deleteFollowUp,
   resolveSnoozeUntil,
 } from "../lib/inbox.js";
+import { upsertChannelMute, clearChannelMute, getChannelMute } from "../lib/channel-mute.js";
 import { applyInboxQuery, parseInboxQueryParams } from "../lib/inbox-where.js";
 import { notifyInboxUpdated } from "../lib/user-inbox-push.js";
 
@@ -164,6 +165,66 @@ export async function dispatchInboxRoutes(request, url, h) {
       roomId,
     });
     return json({ ok: true }, { headers: corsHeaders });
+  }
+
+  const muteMatch = url.pathname.match(/^\/inbox\/rooms\/([^/]+)\/mute$/);
+  if (muteMatch && request.method === "PUT") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const roomId = decodeURIComponent(muteMatch[1]);
+    if (!isValidId(roomId)) {
+      return json({ error: "invalid_room_id" }, { status: 400, headers: corsHeaders });
+    }
+    const allowed = await canAccessRoom(env, auth, roomId);
+    if (!allowed) {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    }
+    const body = await request.json().catch(() => null);
+    const result = await upsertChannelMute(env, {
+      projectId: auth.projectId,
+      userId: auth.userId,
+      roomId,
+      mutedUntil: body?.expiration ?? body?.mutedUntil ?? null,
+    });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: 400, headers: corsHeaders });
+    }
+    return json(result, { headers: corsHeaders });
+  }
+
+  if (muteMatch && (request.method === "GET" || request.method === "DELETE")) {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const roomId = decodeURIComponent(muteMatch[1]);
+    if (!isValidId(roomId)) {
+      return json({ error: "invalid_room_id" }, { status: 400, headers: corsHeaders });
+    }
+    if (request.method === "GET") {
+      const status = await getChannelMute(env, {
+        projectId: auth.projectId,
+        userId: auth.userId,
+        roomId,
+      });
+      return json(status, { headers: corsHeaders });
+    }
+    const cleared = await clearChannelMute(env, {
+      projectId: auth.projectId,
+      userId: auth.userId,
+      roomId,
+    });
+    return json(cleared, { headers: corsHeaders });
   }
 
   if (url.pathname === "/inbox/follow-ups" && request.method === "POST") {

@@ -68,6 +68,7 @@ describe("isKnownOutboundClientEvent", () => {
     expect(isKnownOutboundClientEvent({ type: "message", content: "x" })).toBe(true);
     expect(isKnownOutboundClientEvent({ type: "edit", id: 1 })).toBe(true);
     expect(isKnownOutboundClientEvent({ type: "derived_set", state: { score: 1 } })).toBe(true);
+    expect(isKnownOutboundClientEvent({ type: "room_reaction", name: "👏" })).toBe(true);
   });
 
   it("rejects unknown outbound types", () => {

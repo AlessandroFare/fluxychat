@@ -65,6 +65,8 @@ export interface UseChatOptions {
    * Two widgets on `/rooms` must pass different values (e.g. `assistant` vs `live`).
    */
   sessionScope?: string;
+  /** When false, skip the WebSocket until `client.room(roomId).attach()`. Default true. */
+  autoConnect?: boolean;
 }
 
 export function useChat({
@@ -86,6 +88,7 @@ export function useChat({
   onAnyEvent,
   onServerEvent,
   sessionScope,
+  autoConnect = true,
 }: UseChatOptions) {
   const effectiveHistoryLimit = replayLimit ?? historyLimit;
   const effectiveReadOn: UseChatReadOn = markReadLatest ? "mount" : (readOn ?? "manual");
@@ -138,6 +141,7 @@ export function useChat({
         onAnyEvent: (event) => onAnyEventRef.current?.(event),
         onServerEvent: (ev) => onServerEventRef.current?.(ev),
         onRefreshSession: (...args) => refreshSessionRef.current?.(...args),
+        autoConnect,
       }),
     );
     return () => {
@@ -159,6 +163,7 @@ export function useChat({
     e2eKey,
     e2eAutoFetch,
     crdtMessageList,
+    autoConnect,
   ]);
 
   const state = useFluxyRoomStoreState(store);
@@ -187,6 +192,7 @@ export function useChat({
     live: state.liveSnapshot,
     online: state.online,
     typingUsers: state.typingUsers,
+    typingByThread: state.typingByThread,
     typingIntents: state.typingIntents,
     seenBy: state.seenBy,
     onlineUsers: state.onlineUsers,
@@ -204,10 +210,13 @@ export function useChat({
     agentTyping: state.agentTyping,
     typingAgentId: state.wsTypingAgentId ?? state.invokeTypingAgentId,
     reactions: state.reactions,
+    roomReactions: state.roomReactions,
+    lastDiscontinuity: state.lastDiscontinuity,
     sendMessage: state.sendMessage,
     setTyping: state.setTyping,
     editMessage: state.editMessage,
     sendReaction: state.sendReaction,
+    sendRoomReaction: state.sendRoomReaction,
     sendReadReceipt: state.sendReadReceipt,
     deleteMessage: state.deleteMessage,
     branchRoomFromMessage: state.branchRoomFromMessage,
@@ -221,6 +230,8 @@ export function useChat({
     voiceStage: state.voiceStage,
     joinVoiceStage: state.joinVoiceStage,
     leaveVoiceStage: state.leaveVoiceStage,
+    setVoiceStageMuted: state.setVoiceStageMuted,
+    requestVoiceStageSpeak: state.requestVoiceStageSpeak,
     promoteVoiceStageListener: state.promoteVoiceStageListener,
     sendVoiceStageVad: state.sendVoiceStageVad,
     sendClientEvent: state.sendClientEvent,

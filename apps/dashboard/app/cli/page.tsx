@@ -113,7 +113,7 @@ const QUICK_COMMANDS = [
   },
 ] as const;
 
-const GITHUB_URL = "https://github.com/fluxychat/create-fluxy-chat";
+const GITHUB_URL = "https://github.com/AlessandroFare/fluxychat/tree/main/packages/create-fluxy-chat";
 
 /* -------------------------------------------------------------------------- */
 /*  Page                                                                      */

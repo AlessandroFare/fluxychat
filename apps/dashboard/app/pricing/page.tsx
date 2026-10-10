@@ -79,7 +79,7 @@ function PricingHero() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
-            <a href="mailto:fluxychat@outlook.com?subject=FluxyChat%20sales">Talk to sales</a>
+            <a href="mailto:founder@fluxychat.com?subject=FluxyChat%20sales">Talk to sales</a>
           </Button>
         </div>
       </div>
@@ -192,8 +192,8 @@ function PlanCards() {
         <div className="mx-auto mt-14 max-w-xl text-center">
           <p className="text-sm text-slate-400">
             Higher limits: email{" "}
-            <a className="text-slate-300 underline underline-offset-2" href="mailto:fluxychat@outlook.com">
-              fluxychat@outlook.com
+            <a className="text-slate-300 underline underline-offset-2" href="mailto:founder@fluxychat.com">
+              founder@fluxychat.com
             </a>
             . Hosted login does not include SAML.
           </p>
@@ -339,7 +339,7 @@ function PricingCta() {
         </div>
         <p className="mt-6 text-sm text-slate-400">
           Need enterprise SSO, VPC-style isolation, or custom SLOs?{" "}
-          <a className="text-slate-300 underline underline-offset-2" href="mailto:fluxychat@outlook.com">
+          <a className="text-slate-300 underline underline-offset-2" href="mailto:founder@fluxychat.com">
             Email us
           </a>
           .
@@ -361,7 +361,7 @@ function PricingFooter() {
             <Link href={HOSTED_PATHS.compare} className="hover:text-white">Compare</Link>
             <Link href={HOSTED_PATHS.status} className="hover:text-white">Status</Link>
             <Link href={HOSTED_PATHS.trust} className="hover:text-white">Trust</Link>
-            <a href="mailto:fluxychat@outlook.com" className="hover:text-white">Contact</a>
+            <a href="mailto:founder@fluxychat.com" className="hover:text-white">Contact</a>
           </nav>
         </div>
       </div>

@@ -197,6 +197,19 @@ describe("MessageInput", () => {
     expect(within(container).getByText("🔎 Web Search")).toBeInTheDocument();
   });
 
+  it("inserts an emoji at the caret", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<StatefulMessageInput initialValue="hi " />);
+    const view = within(container);
+    const input = view.getByPlaceholderText("Type a message…");
+    await user.click(input);
+    await user.click(view.getByTitle("Insert emoji"));
+    await user.click(view.getByLabelText("Insert 🎉"));
+    await waitFor(() => {
+      expect(input).toHaveValue("hi 🎉");
+    });
+  });
+
   it("does not render a tool chip when pendingTool is null", () => {
     const { container } = render(<StatefulMessageInput pendingTool={null} />);
     expect(within(container).queryByLabelText("Remove tool")).not.toBeInTheDocument();

@@ -38,6 +38,8 @@ export function buildStageSnapshot(stageByUserId, activeSpeakerUserId) {
     displayName: meta.displayName ?? null,
     vadScore: meta.vadScore ?? 0,
     isActiveSpeaker: userId === activeSpeakerUserId,
+    isMuted: meta.isMuted === true,
+    requestedSpeak: meta.requestedSpeak === true,
     joinedAt: meta.joinedAt,
   }));
   return {
@@ -46,7 +48,96 @@ export function buildStageSnapshot(stageByUserId, activeSpeakerUserId) {
     participants,
     speakerCount: participants.filter((p) => p.role === "speaker").length,
     listenerCount: participants.filter((p) => p.role === "listener").length,
+    speakRequests: participants.filter((p) => p.requestedSpeak).map((p) => p.userId),
   };
+}
+
+/**
+ * LiveKit LocalParticipant.setMicrophoneEnabled / Room.connect roster HOW — signaling only.
+ * @param {Map<string, object>} stageByUserId
+ * @param {number} maxSpeakers
+ * @param {{ op: string, userId: string, role?: string, displayName?: string, muted?: boolean, targetUserId?: string }} cmd
+ */
+export function applyStageCommand(stageByUserId, maxSpeakers, cmd) {
+  const userId = String(cmd?.userId || "").trim();
+  if (!userId) return { ok: false, error: "user_required" };
+  const cap = Math.min(20, Math.max(1, Number(maxSpeakers) || DEFAULT_MAX_SPEAKERS));
+  const speakerCount = () => [...stageByUserId.values()].filter((m) => m.role === "speaker").length;
+
+  if (cmd.op === "join" || cmd.op === "role") {
+    const role = cmd.role === "speaker" ? "speaker" : "listener";
+    const existing = stageByUserId.get(userId);
+    if (cmd.op === "role" && !existing) return { ok: false, error: "not_on_stage" };
+    if (role === "speaker" && existing?.role !== "speaker" && speakerCount() >= cap) {
+      return { ok: false, error: "stage_speaker_limit" };
+    }
+    const displayName =
+      typeof cmd.displayName === "string" ? cmd.displayName.trim().slice(0, 64) : existing?.displayName;
+    stageByUserId.set(userId, {
+      role,
+      displayName,
+      joinedAt: existing?.joinedAt || new Date().toISOString(),
+      vadScore: existing?.vadScore ?? 0,
+      lastVadAt: existing?.lastVadAt ?? 0,
+      isMuted: existing?.isMuted === true,
+      requestedSpeak: role === "speaker" ? false : existing?.requestedSpeak === true,
+    });
+    return { ok: true, changed: true };
+  }
+
+  if (cmd.op === "leave") {
+    if (!stageByUserId.has(userId)) return { ok: true, changed: false };
+    stageByUserId.delete(userId);
+    return { ok: true, changed: true };
+  }
+
+  if (cmd.op === "mute") {
+    const meta = stageByUserId.get(userId);
+    if (!meta) return { ok: false, error: "not_on_stage" };
+    const muted = cmd.muted === true;
+    if (meta.isMuted === muted) return { ok: true, changed: false };
+    meta.isMuted = muted;
+    stageByUserId.set(userId, meta);
+    return { ok: true, changed: true };
+  }
+
+  if (cmd.op === "requestSpeak") {
+    const meta = stageByUserId.get(userId);
+    if (!meta) return { ok: false, error: "not_on_stage" };
+    if (meta.role === "speaker" || meta.requestedSpeak) return { ok: true, changed: false };
+    meta.requestedSpeak = true;
+    stageByUserId.set(userId, meta);
+    return { ok: true, changed: true };
+  }
+
+  if (cmd.op === "promote") {
+    const targetUserId = String(cmd.targetUserId || "").trim();
+    const actor = stageByUserId.get(userId);
+    if (!actor || actor.role !== "speaker") return { ok: false, error: "stage_promote_forbidden" };
+    const target = stageByUserId.get(targetUserId);
+    if (!target || target.role !== "listener") return { ok: false, error: "not_on_stage" };
+    if (speakerCount() >= cap) return { ok: false, error: "stage_speaker_limit" };
+    target.role = "speaker";
+    target.requestedSpeak = false;
+    stageByUserId.set(targetUserId, target);
+    return { ok: true, changed: true };
+  }
+
+  return { ok: false, error: "unknown_op" };
+}
+
+export async function runRoomStageCommand(env, roomId, cmd) {
+  try {
+    const id = env.ROOM.idFromName(roomId);
+    const stub = env.ROOM.get(id);
+    const res = await stub.fetch("https://internal/stage-command", {
+      method: "POST",
+      body: JSON.stringify(cmd),
+    });
+    return await res.json().catch(() => ({ ok: false, error: "stage_command_failed" }));
+  } catch {
+    return { ok: false, error: "stage_command_failed" };
+  }
 }
 
 /**

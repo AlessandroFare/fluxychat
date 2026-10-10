@@ -1,11 +1,19 @@
 {
   "pages": [
     "auth-jwt",
+    "connection-status",
     "bot-streaming-fluxy-message-stream",
     "kb-rag-agent",
+    "locks",
+    "message-history",
     "message-templates",
+    "occupancy",
+    "presence-avatars",
     "offline-notify-sent-dm",
     "public-demo-hardening",
-    "transport-fallback"
+    "realtime-provider",
+    "room-reactions",
+    "transport-fallback",
+    "typing"
   ]
 }

@@ -1,1 +1,0 @@
-{"nodes": [{"id": "pkg_fluxychat", "label": "fluxychat", "file_type": "code", "type": "package", "ecosystem": "python", "source_file": "packages/python/pyproject.toml", "source_location": "L1", "version": "0.1.0"}], "edges": []}

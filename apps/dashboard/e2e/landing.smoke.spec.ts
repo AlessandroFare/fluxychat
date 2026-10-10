@@ -25,7 +25,7 @@ test.describe("landing smoke", () => {
 
   test("labs uses one header", async ({ page }) => {
     await page.goto("/labs", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("Off the main nav", {
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Still labs on purpose", {
       timeout: 15_000,
     });
     await expect(page.getByRole("banner")).toHaveCount(1);

@@ -68,6 +68,7 @@ const warRoomExample = EXAMPLES[1];
 const dealRoomExample = EXAMPLES[3];
 
 export const HOMEPAGE_EXAMPLES: BuildExample[] = [
+  warRoomExample,
   {
     id: "shared",
     title: "Shared AI room",
@@ -81,7 +82,6 @@ export const HOMEPAGE_EXAMPLES: BuildExample[] = [
 await invokeAgent("Summarize open decisions", { agentId });`,
     preview: "war",
   },
-  warRoomExample,
   dealRoomExample,
   liveCursorsExample,
 ];

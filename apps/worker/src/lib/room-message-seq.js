@@ -119,6 +119,28 @@ export async function getRoomMessageEventsSince(env, input) {
  * @param {string} projectId
  * @param {string} roomId
  */
+export async function getRoomMessageVersions(env, input) {
+  if (!env?.DB) return [];
+  const messageId = Number(input.messageId);
+  if (!Number.isFinite(messageId) || messageId < 1) return [];
+  const { results } = await env.DB.prepare(
+    `SELECT seq, message_id, event_type, version, payload_json, created_at
+     FROM room_message_events
+     WHERE project_id = ? AND room_id = ? AND message_id = ?
+     ORDER BY seq ASC`,
+  )
+    .bind(input.projectId, input.roomId, messageId)
+    .all();
+  return (results || []).map((row) => ({
+    seq: row.seq,
+    messageId: row.message_id,
+    eventType: row.event_type,
+    version: row.version,
+    createdAt: row.created_at,
+    payload: parsePayload(row.payload_json),
+  }));
+}
+
 export async function getRoomCurrentSeq(env, projectId, roomId) {
   if (!env?.DB) return 0;
   const row = await env.DB.prepare(

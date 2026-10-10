@@ -3,6 +3,7 @@ import protocolEvents from "../protocol-events.json" with { type: "json" };
 import {
   FLUXY_INBOUND_EVENT_TYPES,
   FLUXY_OUTBOUND_EVENT_TYPES,
+  FLUXY_PROTOCOL_INTEGER,
   FLUXY_PROTOCOL_VERSION,
 } from "./event-types.js";
 
@@ -15,5 +16,6 @@ describe("protocol-events.json cross-SDK manifest", () => {
       [...FLUXY_OUTBOUND_EVENT_TYPES].sort(),
     );
     expect(protocolEvents.version).toBe(FLUXY_PROTOCOL_VERSION);
+    expect(protocolEvents.protocolInteger).toBe(FLUXY_PROTOCOL_INTEGER);
   });
 });

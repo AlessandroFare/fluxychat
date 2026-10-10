@@ -1,7 +1,8 @@
 import { useRef, useState, type PointerEvent } from "react";
 import * as Y from "yjs";
-import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+import { FluxyRealtimeProvider, useChat, useThreads } from "@fluxy-chat/react";
 import { FluxyYjsProvider, useMutation, useStorage } from "@fluxy-chat/sdk/yjs";
+import { CommentPin, CommentsList, FloatingComposer, Thread, type CommentThreadFilter } from "@fluxy-chat/ui";
 import { useFluxySession, workerUrl } from "./session";
 
 interface Stroke {
@@ -20,24 +21,63 @@ function Board({ roomId, selfUserId }: { roomId: string; selfUserId: string }) {
     }
     (arr as Y.Array<Stroke>).push([stroke]);
   }, []);
-  const { liveCursors, sendCursor, connected } = useChat({ roomId, replay: "off" });
+  const {
+    threads,
+    createThread,
+    createComment,
+    markThreadAsResolved,
+    deleteThread,
+    deleteComment,
+    editComment,
+    addReaction,
+    reload,
+  } = useThreads({ roomId });
+  const { liveCursors, sendCursor, connected } = useChat({
+    roomId,
+    replay: "off",
+    onServerEvent: (ev) => {
+      if (ev.name.startsWith("comment.")) void reload();
+    },
+  });
   const current = useRef<number[]>([]);
   const [preview, setPreview] = useState<number[]>([]);
+  const [tool, setTool] = useState<"draw" | "comment">("draw");
+  const [draftPin, setDraftPin] = useState<{ x: number; y: number } | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [pinsHidden, setPinsHidden] = useState(false);
+  const [threadFilter, setThreadFilter] = useState<CommentThreadFilter>("open");
 
   function point(event: PointerEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     return [event.clientX - rect.left, event.clientY - rect.top] as const;
   }
 
+  const openThread = threads.find((t) => t.id === openId) ?? null;
+
   return (
     <section className="panel">
       <header className="chat-header">
         <strong>Whiteboard · {roomId}</strong>
-        <span className="status">{connected ? "Yjs + cursors" : "connecting"}</span>
+        <span className="status">{connected ? "Yjs + cursors + pins" : "connecting"}</span>
+        <span className="tools">
+          <button type="button" className={tool === "draw" ? "primary" : ""} onClick={() => setTool("draw")}>
+            Draw
+          </button>
+          <button type="button" className={tool === "comment" ? "primary" : ""} onClick={() => setTool("comment")}>
+            Comment
+          </button>
+          <button type="button" onClick={() => setPinsHidden((v) => !v)}>
+            {pinsHidden ? "Show pins" : "Hide pins"}
+          </button>
+          <button type="button" onClick={() => setThreadFilter((v) => (v === "open" ? "all" : "open"))}>
+            {threadFilter === "open" ? "Open only" : "All threads"}
+          </button>
+        </span>
       </header>
       <div
         className="canvas"
         onPointerDown={(event) => {
+          if (tool !== "draw") return;
           event.currentTarget.setPointerCapture(event.pointerId);
           const [x, y] = point(event);
           current.current = [x, y];
@@ -46,16 +86,22 @@ function Board({ roomId, selfUserId }: { roomId: string; selfUserId: string }) {
         onPointerMove={(event) => {
           const [x, y] = point(event);
           sendCursor({ x, y, color: "#2563eb", label: selfUserId.slice(0, 12) });
-          if (event.buttons === 0) return;
+          if (tool !== "draw" || event.buttons === 0) return;
           current.current = [...current.current, x, y];
           setPreview([...current.current]);
         }}
         onPointerUp={() => {
+          if (tool !== "draw") return;
           const points = current.current;
           current.current = [];
           setPreview([]);
           if (points.length < 4) return;
           addStroke({ id: crypto.randomUUID(), color: "#0f172a", points });
+        }}
+        onClick={(event) => {
+          if (tool !== "comment") return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          setDraftPin({ x: event.clientX - rect.left, y: event.clientY - rect.top });
         }}
       >
         <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
@@ -80,6 +126,31 @@ function Board({ roomId, selfUserId }: { roomId: string; selfUserId: string }) {
             />
           ) : null}
         </svg>
+        {!pinsHidden &&
+          threads.map((thread) =>
+            thread.metadata.x != null && thread.metadata.y != null ? (
+              <CommentPin
+                key={thread.id}
+                x={thread.metadata.x}
+                y={thread.metadata.y}
+                count={thread.comments.length}
+                resolved={thread.resolved}
+                onClick={() => setOpenId(thread.id)}
+              />
+            ) : null,
+          )}
+        {draftPin ? (
+          <FloatingComposer
+            x={draftPin.x}
+            y={draftPin.y}
+            onCancel={() => setDraftPin(null)}
+            onSubmit={async (body) => {
+              const created = await createThread({ body, metadata: { x: draftPin.x, y: draftPin.y } });
+              setDraftPin(null);
+              if (created) setOpenId(created.id);
+            }}
+          />
+        ) : null}
         {Object.values(liveCursors)
           .filter((c) => c.userId !== selfUserId)
           .map((cursor) => (
@@ -92,6 +163,25 @@ function Board({ roomId, selfUserId }: { roomId: string; selfUserId: string }) {
             </div>
           ))}
       </div>
+      <aside style={{ padding: 12, borderTop: "1px solid #e2e8f0" }}>
+        <CommentsList threads={threads} openId={openId} filter={threadFilter} onSelect={setOpenId} />
+        {openThread ? (
+          <div style={{ marginTop: 12 }}>
+            <Thread
+              thread={openThread}
+              onReply={(body) => createComment(openThread.id, body)}
+              onResolve={(resolved) => markThreadAsResolved(openThread.id, resolved)}
+              onDelete={async () => {
+                await deleteThread(openThread.id);
+                setOpenId(null);
+              }}
+              onEditComment={(commentId, body) => editComment(openThread.id, commentId, body)}
+              onDeleteComment={(commentId) => deleteComment(openThread.id, commentId)}
+              onReact={(commentId, emoji) => addReaction(openThread.id, commentId, emoji)}
+            />
+          </div>
+        ) : null}
+      </aside>
     </section>
   );
 }
@@ -111,9 +201,15 @@ export function App() {
 
   return (
     <div className="shell">
-      <p className="mode-badge">{session.mode} · draw in two tabs — Yjs strokes, not Excalidraw lock-in</p>
+      <p className="mode-badge">{session.mode} · Draw or Comment — Yjs + pins, not a tldraw SKU</p>
       <FluxyRealtimeProvider workerUrl={session.workerUrl} authTokenProvider={session.token} userId={session.userId}>
-        <FluxyYjsProvider workerUrl={session.workerUrl} token={session.token} userId={session.userId} roomId={session.roomId}>
+        <FluxyYjsProvider
+          workerUrl={session.workerUrl}
+          token={session.token}
+          userId={session.userId}
+          roomId={session.roomId}
+          awareness={{ userId: session.userId }}
+        >
           <Board roomId={session.roomId} selfUserId={session.userId} />
         </FluxyYjsProvider>
       </FluxyRealtimeProvider>

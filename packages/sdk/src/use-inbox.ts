@@ -8,7 +8,7 @@ import {
   parseInboxItemFromUserEvent,
   type FluxyInboxQuery,
 } from "./inbox-filter";
-import type { FluxyInboxItem } from "./inbox-items";
+import { inboxItemReadMessageId, type FluxyInboxItem } from "./inbox-items";
 import { createFluxyInboxStore, INERT_INBOX_SNAPSHOT } from "./inbox-store";
 
 export interface UseInboxOptions {
@@ -38,6 +38,13 @@ export interface UseInboxResult {
   isLoading: boolean;
   error: Error | null;
   reload: () => Promise<void>;
+  /** Liveblocks `useMarkInboxNotificationAsRead` — catch-up that room. */
+  markInboxNotificationAsRead: (itemId: string) => Promise<void>;
+  /** Liveblocks `useMarkAllInboxNotificationsAsRead`. */
+  markAllInboxNotificationsAsRead: () => Promise<void>;
+  /** Liveblocks `useDeleteInboxNotification` — dismiss locally after mark-read. */
+  deleteInboxNotification: (itemId: string) => Promise<void>;
+  unreadInboxNotificationsCount: number;
 }
 
 /**
@@ -140,14 +147,46 @@ export function useInbox(options: UseInboxOptions = {}): UseInboxResult {
     };
   }, [canFetch, enabled, realtime, client, reload, store]);
 
+  const markInboxNotificationAsRead = useCallback(
+    async (itemId: string) => {
+      if (!client) return;
+      const item = store.getSnapshot().items.find((row) => row.id === itemId);
+      if (!item) return;
+      const messageId = inboxItemReadMessageId(item);
+      if (messageId != null) await client.markReadRest(item.roomId, messageId);
+      store.removeItem(itemId);
+    },
+    [client, store],
+  );
+
+  const markAllInboxNotificationsAsRead = useCallback(async () => {
+    if (!client) return;
+    for (const item of store.getSnapshot().items) {
+      const messageId = inboxItemReadMessageId(item);
+      if (messageId != null) await client.markReadRest(item.roomId, messageId);
+    }
+    await reload();
+  }, [client, reload, store]);
+
+  const deleteInboxNotification = useCallback(
+    async (itemId: string) => {
+      await markInboxNotificationAsRead(itemId);
+    },
+    [markInboxNotificationAsRead],
+  );
+
   return {
     summary: snapshot.summary,
     items: snapshot.items,
     counter: snapshot.counter,
     unseen: snapshot.unseen,
+    unreadInboxNotificationsCount: snapshot.unseen,
     status: snapshot.status,
     isLoading: snapshot.isLoading,
     error: snapshot.error,
     reload,
+    markInboxNotificationAsRead,
+    markAllInboxNotificationsAsRead,
+    deleteInboxNotification,
   };
 }

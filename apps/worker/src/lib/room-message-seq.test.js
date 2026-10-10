@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateRoomMessageSeq, recordRoomMessageEvent, getRoomMessageEventsSince } from "./room-message-seq.js";
+import { allocateRoomMessageSeq, recordRoomMessageEvent, getRoomMessageEventsSince, getRoomMessageVersions } from "./room-message-seq.js";
 
 function makeEnv() {
   const seqState = new Map();
@@ -41,6 +41,18 @@ function makeEnv() {
                   return null;
                 },
                 async all() {
+                  if (sql.includes("room_message_events") && sql.includes("message_id = ?")) {
+                    const [projectId, roomId, messageId] = binds;
+                    const filtered = events
+                      .filter(
+                        (e) =>
+                          e.project_id === projectId &&
+                          e.room_id === roomId &&
+                          e.message_id === messageId,
+                      )
+                      .sort((a, b) => a.seq - b.seq);
+                    return { results: filtered };
+                  }
                   if (sql.includes("room_message_events") && sql.includes("seq >")) {
                     const [projectId, roomId, afterSeq] = binds;
                     const filtered = events
@@ -99,5 +111,11 @@ describe("room-message-seq", () => {
     });
     expect(replay.events).toHaveLength(1);
     expect(replay.events[0].eventType).toBe("update");
+    const versions = await getRoomMessageVersions(env, {
+      projectId: "p1",
+      roomId: "r1",
+      messageId: 10,
+    });
+    expect(versions.map((row) => row.eventType)).toEqual(["create", "update"]);
   });
 });

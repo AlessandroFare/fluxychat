@@ -188,7 +188,7 @@ export async function getCallStats(env, { projectId }) {
   };
 }
 
-export async function generateToken(env, provider, { roomId, userId, displayName, ttl, roomName }) {
+export async function generateToken(env, provider, { roomId, userId, displayName, ttl, roomName, canPublish, canSubscribe }) {
   const livekitRoom = roomName || roomId;
   const resolved = defaultHuddleProvider(env, provider);
 
@@ -216,6 +216,8 @@ export async function generateToken(env, provider, { roomId, userId, displayName
       identity: userId,
       displayName,
       ttlSeconds: ttl || 3600,
+      canPublish: canPublish !== false,
+      canSubscribe: canSubscribe !== false,
     });
     if (minted.error) {
       const exp = Math.floor(Date.now() / 1000) + (ttl || 86400);

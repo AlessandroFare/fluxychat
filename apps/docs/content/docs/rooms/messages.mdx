@@ -1,0 +1,50 @@
+---
+title: Messages
+description: Send, subscribe, edit, delete, and Message.with.
+---
+
+Chat lines are D1 rows on the room. The live socket emits `message` / `edit` / `delete`. The room bag maps those to `message.created`, `message.updated`, `message.deleted`.
+
+```ts
+const room = client.room("lobby");
+await room.attach();
+
+const sub = room.messages.subscribe((event) => {
+  console.log(event.type, event.message.id, event.message.text);
+});
+
+await room.messages.send("hello");
+await room.messages.send({
+  text: "hello with extras",
+  metadata: { ticket: "42" },
+  headers: { "x-source": "cli" },
+  replyTo: 12,
+  quotedMessageId: 8,
+});
+
+const one = await room.messages.get(1);
+await room.messages.update(1, { text: "hello (edit)" });
+await room.messages.delete(1);
+sub.unsubscribe();
+```
+
+`message.serial` is a string form of the numeric id. `fromSerial` / `beforeSerial` use that id, not an Ably-style lex serial.
+
+`messages.with(message, event)` applies a later event if the version serial is newer. Older or same serial is skipped. `messages.copy(message, params)` is a local clone.
+
+Subscribe before attach if you want `historyBeforeSubscribe` on the subscription (newest-first page, then live events).
+
+```ts
+const sub = room.messages.subscribe((event) => {
+  /* live */
+});
+const page = await sub.historyBeforeSubscribe({ limit: 50 });
+```
+
+Message reactions: `room.messages.reactions.send(id, emoji)` / `delete`. Summaries fold unique / distinct / multiple. Raw create/delete events need `messages: { rawMessageReactions: true }`.
+
+Operator CLI (Worker JWT, not Control): `fluxy-room get|update|delete|react|unreact|reactions|versions --id <n>`.
+
+Room-level bursts (👏 in the footer) are [room reactions](/docs/rooms/reactions), not this API.
+
+Nested replies: `parentId` / `useThread`. Stream-style quotes use `quotedMessageId` (citation, not a thread). Comment pins are a different primitive (`useThreads`). See [nested threads](/docs/core/nested-threads). Slow mode: `client.enableSlowMode(roomId, seconds)`.

@@ -60,6 +60,28 @@ describe("MessageItem bubble variant mapping", () => {
     expect(bubble).toHaveAttribute("data-variant", "secondary");
   });
 
+  it("puts sender info on the header tooltip", () => {
+    const { getByText } = render(
+      <MessageItem
+        message={makeMessage({ userId: "user-1", content: "Hello" })}
+        authorName="Ada"
+        localUserId="user-2"
+      />,
+    );
+    expect(getByText("Ada").getAttribute("title")).toContain("Ada");
+    expect(getByText("Ada").getAttribute("title")).toContain("user-1");
+  });
+
+  it("renders a deleted-message placeholder", () => {
+    const { getByTestId } = render(
+      <MessageItem
+        message={makeMessage({ content: "secret", deletedAt: "2026-10-09T00:00:00Z" })}
+        localUserId="user-2"
+      />,
+    );
+    expect(getByTestId("message-deleted-placeholder")).toHaveTextContent("This message was deleted");
+  });
+
   it("shows IA badge when participantType is ai", () => {
     const { container } = render(
       <MessageItem

@@ -30,4 +30,8 @@ export const SUB_PROCESSORS = [
     name: "OpenAI / Anthropic (or your gateway)",
     role: "LLM inference when in-room agents are configured to call them",
   },
+  {
+    name: "OpenCode Zen",
+    role: "Optional demo model in the docs curl. Not an SLA. Production should set llmBaseUrl and a key you control.",
+  },
 ] as const;

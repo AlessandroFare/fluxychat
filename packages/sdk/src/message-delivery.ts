@@ -9,6 +9,8 @@ export interface FluxyDeliverableMessage {
   content: string;
   createdAt: string;
   parentId?: number | null;
+  /** Stream quote — does not start a reply thread. */
+  quotedMessageId?: number | null;
   editedAt?: string | null;
   deletedAt?: string | null;
   attachments?: Array<{
@@ -58,6 +60,7 @@ export interface CreateOptimisticMessageInput {
   content: string;
   clientMessageId: string;
   parentId?: number | null;
+  quotedMessageId?: number | null;
   attachments?: FluxyDeliverableMessage["attachments"];
 }
 
@@ -71,6 +74,7 @@ export function createOptimisticMessage(
     content: input.content,
     createdAt: new Date().toISOString(),
     parentId: input.parentId ?? null,
+    quotedMessageId: input.quotedMessageId ?? null,
     attachments: input.attachments,
     clientMessageId: input.clientMessageId,
     deliveryStatus: "pending",

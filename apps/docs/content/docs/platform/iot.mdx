@@ -47,4 +47,6 @@ useChat({
 });
 ```
 
-SDK: `createWorkerFluxyIoTClient(client)` for register/ingest/shadow.
+SDK: `createWorkerFluxyIoTClient(client)` — register, ingest, `listReadings` / `listReadingKeys` / `getHealth`, shadow (device token can GET and PATCH reported), `listRules`, alarms (`listAlarms` / `ackAlarm`), RPC (`sendRpc` / `pullRpc` / `replyRpc`).
+
+Rules stored on the Worker fire on ingest and open `iot_alarms`. Last-seen older than 10 minutes lists as offline. Not MQTT. Not ThingsBoard Cloud.

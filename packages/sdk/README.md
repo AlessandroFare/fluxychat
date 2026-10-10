@@ -6,6 +6,12 @@ For **React hooks** (`useChat`, `useInbox`, `FluxyRealtimeProvider`), install [`
 
 The SDK talks to **your** Worker URL. It does **not** include LLM API keys; only your Fluxy **project API key** or **member JWT**.
 
+## Versioning
+
+This package is pre-1.0. Breaking changes can land in a minor bump. Pin the version (`docs/product-facts.json` in the repo, currently 0.6.15).
+
+HTTP: use `/agents`. `/bots` still answers for old clients. No removal date until 1.0.
+
 ## Install
 
 ```bash
@@ -635,7 +641,7 @@ Guides with examples: [`docs/guides/`](https://github.com/AlessandroFare/fluxych
 
 ## Support
 
-Questions: [fluxychat@outlook.com](mailto:fluxychat@outlook.com) · Issues: [github.com/AlessandroFare/fluxychat/issues](https://github.com/AlessandroFare/fluxychat/issues)
+Questions: [support@fluxychat.com](mailto:support@fluxychat.com) · Issues: [github.com/AlessandroFare/fluxychat/issues](https://github.com/AlessandroFare/fluxychat/issues)
 
 ## License
 
