@@ -29,7 +29,7 @@
     "@fluxy-chat/sdk": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "typescript": "^7",
     "svelte": "^5.28.2",
     "vitest": "^4.1.11"
   },
