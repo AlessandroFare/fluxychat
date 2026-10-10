@@ -29,8 +29,8 @@ export default function ReportPage() {
       <DsaReportForm />
       <p className="mt-8 text-sm">
         Trusted flagger / DSA contact:{" "}
-        <a className="underline underline-offset-2" href="mailto:fluxychat@outlook.com">
-          fluxychat@outlook.com
+        <a className="underline underline-offset-2" href="mailto:support@fluxychat.com">
+          support@fluxychat.com
         </a>
         {" · "}
         <Link className="underline underline-offset-2" href={HOSTED_PATHS.trust}>

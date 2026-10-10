@@ -42,6 +42,20 @@ await client.invokeAgentRest(agentId, roomId, "Summarize the last 10 messages");
 
 Requires member JWT on the client.
 
+## Schedule (Cloudflare Agents `schedule()` HOW)
+
+One-shot delay or 5-field UTC cron on the **room** Durable Object — not a second Agent DO.
+
+```ts
+await client.scheduleAgent(roomId, { agentId, kind: "delay", delayMs: 60_000, prompt: "Standup recap" });
+await client.scheduleAgent(roomId, { agentId, kind: "cron", cron: "0 9 * * 1-5", prompt: "Daily briefing" });
+await client.scheduleAgent(roomId, { agentId, kind: "at", runAt: Date.now() + 120_000, prompt: "Later" });
+await client.scheduleAgent(roomId, { agentId, kind: "interval", intervalMs: 60_000, prompt: "Heartbeat" });
+await client.getAgentSchedule(roomId, scheduleId);
+const pending = await client.listAgentSchedules(roomId);
+await client.cancelAgentSchedule(roomId, pending[0].id);
+```
+
 ## Several agents in one room
 
 `invokeAgent` can run more than one agent on the same `roomId`. Each call counts against the project's monthly `agent_invokes` quota (Free includes 5k). Handles (`@assistant`) auto-invoke from mentions and count the same way.

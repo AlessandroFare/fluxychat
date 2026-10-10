@@ -26,7 +26,9 @@ Worker routes under `/api/live/events/:eventId/messages` support posting and lis
 
 Use this for:
 
-- Live stream chat overlays
+- Live stream chat overlays (`createStreamOverlay`, `getStreamOverlay`, `updateStreamOverlay`, `listStreamOverlays`, `streamOverlayWidgetUrl` — OBS browser source, not Overlayed Electron)
+- Overlay types: `qa`, `poll`, `reactions`, `scoreboard`, `countdown`, `ticker`, `chat`
+- Public widget: `GET /overlays/:id/widget` (id only, no JWT). Disabled overlays (`enabled: false`) return 404 — hide without deleting.
 - Event-scoped moderation
 - High-volume fan-out with room isolation
 

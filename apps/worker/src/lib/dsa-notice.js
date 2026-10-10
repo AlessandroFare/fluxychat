@@ -51,7 +51,7 @@ export function dsaRestrictionEmail({ url, reason, contact }) {
       `What we did: ${reason}`,
       `Contact on the notice: ${contact}`,
       "If we disabled a share link, the token no longer resolves. Room data may still exist for the operator.",
-      "Reply to fluxychat@outlook.com. This is not legal advice.",
+      "Reply to support@fluxychat.com. This is not legal advice.",
     ].join("\n\n"),
   };
 }

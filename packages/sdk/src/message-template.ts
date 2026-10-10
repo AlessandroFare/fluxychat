@@ -19,6 +19,10 @@ export interface FluxySendMessageOptions {
   expiresAt?: string;
   visibility?: FluxyMessageVisibility;
   visibleTo?: string[];
+  metadata?: Record<string, unknown>;
+  headers?: Record<string, string>;
+  /** Stream quote — stored in metadata, does not start a reply thread. */
+  quotedMessageId?: number | null;
 }
 
 export type FluxyPresenceIntent = "composing" | "away" | "viewing_thread" | "idle";

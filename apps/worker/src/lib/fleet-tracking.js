@@ -3,6 +3,15 @@ import { hashDeviceSecret } from "./device-secret.js";
 import { checkAndConsumeRateLimit } from "./rate-limit.js";
 
 export const FLEET_GPS_PER_VEHICLE_PER_MINUTE = 60;
+/** Traccar `status.timeout` default (10 min) — last ping older than this is offline. */
+export const FLEET_ONLINE_TIMEOUT_MS = 10 * 60 * 1000;
+
+export function isFleetLastSeenOnline(lastSeenAt, now = Date.now()) {
+  if (!lastSeenAt) return false;
+  const t = Date.parse(lastSeenAt);
+  if (!Number.isFinite(t)) return false;
+  return now - t <= FLEET_ONLINE_TIMEOUT_MS;
+}
 
 const GPS_RAW_TTL_SEC = 7 * 86400;
 const AGG_INTERVAL_SEC = 300;
@@ -32,23 +41,60 @@ export function pointInGeofence(lat, lng, centerLat, centerLng, radiusMeters) {
   return haversine(lat, lng, centerLat, centerLng) <= radiusMeters;
 }
 
-export function parseGpsIngestBody(body) {
-  if (!body || typeof body !== "object") return { ok: false, error: "body required" };
-  const vehicleId = String(body.vehicleId ?? "").trim();
+/**
+ * OwnTracks json-schema `_type: location` (lat/lon/tst) plus Fluxy vehicleId/lng.
+ * @param {unknown} body
+ * @param {{ user?: string, device?: string }} [limit]
+ */
+/** Recorder `from`/`to` — unix ms, unix seconds, or ISO / YYYY-MM-DD. */
+export function parseRecorderTime(value, fallbackMs) {
+  if (value == null || value === "") return fallbackMs;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1e11 ? Math.floor(value) : Math.floor(value * 1000);
+  }
+  const raw = String(value).trim();
+  if (!raw) return fallbackMs;
+  if (/^\d+$/.test(raw)) {
+    const n = Number(raw);
+    return n > 1e11 ? n : n * 1000;
+  }
+  const parsed = Date.parse(raw.includes("T") ? raw : `${raw}T00:00:00.000Z`);
+  return Number.isFinite(parsed) ? parsed : fallbackMs;
+}
+
+export function parseGpsIngestBody(body, limit = {}) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return { ok: false, error: "body required" };
+  const type = body._type != null ? String(body._type) : "";
+  if (type && type !== "location") return { ok: false, error: "skip_type", type };
+  const vehicleId = String(
+    body.vehicleId || body.tid || (limit.user && limit.device ? `${limit.user}:${limit.device}` : ""),
+  ).trim();
   if (!vehicleId) return { ok: false, error: "vehicleId required" };
   const lat = Number(body.lat);
-  const lng = Number(body.lng);
+  const lng = Number(body.lng ?? body.lon);
   if (!isFinite(lat) || !isFinite(lng)) return { ok: false, error: "invalid lat/lng" };
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return { ok: false, error: "lat/lng out of range" };
+  const tst = body.tst != null ? Number(body.tst) : NaN;
+  const ts = !Number.isFinite(tst) || tst <= 0
+    ? null
+    : tst > 1e11
+      ? Math.floor(tst)
+      : Math.floor(tst * 1000);
+  const speedRaw = body.speed ?? body.vel;
+  const headingRaw = body.heading ?? body.cog;
+  const accuracyRaw = body.accuracy ?? body.acc;
   return {
     ok: true,
     data: {
       vehicleId,
       lat,
       lng,
-      speed: body.speed != null ? Number(body.speed) : null,
-      heading: body.heading != null ? Number(body.heading) : null,
-      accuracy: body.accuracy != null ? Number(body.accuracy) : null,
+      speed: speedRaw != null && isFinite(Number(speedRaw)) ? Number(speedRaw) : null,
+      heading: headingRaw != null && isFinite(Number(headingRaw)) ? Number(headingRaw) : null,
+      accuracy: accuracyRaw != null && isFinite(Number(accuracyRaw)) ? Number(accuracyRaw) : null,
+      tid: body.tid != null ? String(body.tid).trim().slice(0, 32) : null,
+      batt: body.batt != null && isFinite(Number(body.batt)) ? Number(body.batt) : null,
+      ts,
       roomId: body.roomId ? String(body.roomId).trim() : null,
     },
   };
@@ -92,6 +138,33 @@ export function parseGeofenceInput(body) {
   return { ok: true, data: { name, lat, lng, radiusMeters } };
 }
 
+export function parseGeofencePatch(body) {
+  if (!body || typeof body !== "object") return { ok: false, error: "body required" };
+  const data = {};
+  if (body.name !== undefined) {
+    const name = String(body.name).trim();
+    if (!name || name.length > 100) return { ok: false, error: "name required (max 100 chars)" };
+    data.name = name;
+  }
+  if (body.lat !== undefined) {
+    const lat = Number(body.lat);
+    if (!isFinite(lat) || lat < -90 || lat > 90) return { ok: false, error: "invalid lat" };
+    data.lat = lat;
+  }
+  if (body.lng !== undefined) {
+    const lng = Number(body.lng);
+    if (!isFinite(lng) || lng < -180 || lng > 180) return { ok: false, error: "invalid lng" };
+    data.lng = lng;
+  }
+  if (body.radiusMeters !== undefined) {
+    const radiusMeters = Number(body.radiusMeters);
+    if (!isFinite(radiusMeters) || radiusMeters <= 0) return { ok: false, error: "invalid radiusMeters" };
+    data.radiusMeters = radiusMeters;
+  }
+  if (!Object.keys(data).length) return { ok: false, error: "no fields to update" };
+  return { ok: true, data };
+}
+
 export async function authenticateFleetVehicle(env, apiKey) {
   const key = String(apiKey || "").trim();
   if (!key.startsWith("fleet_")) return null;
@@ -114,7 +187,7 @@ export async function ingestGps(env, projectId, data) {
   if (!quota.allowed) {
     return { ok: false, error: "quota_exceeded", retryAfterSeconds: quota.retryAfterSeconds };
   }
-  const ts = Date.now();
+  const ts = Number.isFinite(data.ts) ? data.ts : Date.now();
   await env.DB.prepare(
     `INSERT OR IGNORE INTO gps_raw (vehicle_id, fleet_id, timestamp, lat, lng, speed, heading, accuracy)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -138,14 +211,27 @@ export async function ingestGps(env, projectId, data) {
   ).bind(projectId).all();
   const events = [];
   for (const gf of geofences.results || []) {
-    if (pointInGeofence(data.lat, data.lng, gf.lat, gf.lng, gf.radius_meters)) {
-      const eid = generateId("gfe_");
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO fleet_geofence_events (id, fleet_id, geofence_id, vehicle_id, event_type, occurred_at)
-         VALUES (?, ?, ?, ?, 'enter', ?)`,
-      ).bind(eid, projectId, gf.id, data.vehicleId, nowISO()).run();
-      events.push({ id: eid, geofenceId: gf.id, vehicleId: data.vehicleId, eventType: "enter" });
-    }
+    const inside = pointInGeofence(data.lat, data.lng, gf.lat, gf.lng, gf.radius_meters);
+    const last = await env.DB.prepare(
+      `SELECT event_type FROM fleet_geofence_events
+       WHERE fleet_id = ? AND geofence_id = ? AND vehicle_id = ?
+       ORDER BY occurred_at DESC, id DESC LIMIT 1`,
+    )
+      .bind(projectId, gf.id, data.vehicleId)
+      .first();
+    const lastType = last?.event_type || null;
+    let eventType = null;
+    if (inside && lastType !== "enter") eventType = "enter";
+    if (!inside && lastType === "enter") eventType = "exit";
+    if (!eventType) continue;
+    const eid = generateId("gfe_");
+    await env.DB.prepare(
+      `INSERT INTO fleet_geofence_events (id, fleet_id, geofence_id, vehicle_id, event_type, occurred_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(eid, projectId, gf.id, data.vehicleId, eventType, nowISO())
+      .run();
+    events.push({ id: eid, geofenceId: gf.id, vehicleId: data.vehicleId, eventType });
   }
 
   const dispatchRoomId = data.roomId || `fleet:${projectId}`;
@@ -161,6 +247,8 @@ export async function ingestGps(env, projectId, data) {
       speed: data.speed,
       heading: data.heading,
       ts,
+      tid: data.tid || undefined,
+      batt: data.batt ?? undefined,
       geofenceEvents: events,
     },
   }).catch(() => {});
@@ -168,15 +256,23 @@ export async function ingestGps(env, projectId, data) {
   return { ok: true, ts, geofenceEvents: events };
 }
 
-export async function listCurrentPositions(env, projectId) {
+export async function listCurrentPositions(env, projectId, vehicleId) {
   const rows = await env.DB.prepare(
     `SELECT id, name, plate, status, last_lat, last_lng, last_heading, last_speed, last_seen_at
      FROM fleet_vehicles WHERE fleet_id = ? AND status = 'online'
      ORDER BY name ASC`,
   ).bind(projectId).all();
-  return {
-    ok: true,
-    vehicles: (rows.results || []).map((r) => ({
+  const now = Date.now();
+  const vehicles = [];
+  for (const r of rows.results || []) {
+    if (vehicleId && r.id !== vehicleId) continue;
+    if (!isFleetLastSeenOnline(r.last_seen_at, now)) {
+      await env.DB.prepare(
+        `UPDATE fleet_vehicles SET status = 'offline' WHERE id = ? AND fleet_id = ?`,
+      ).bind(r.id, projectId).run();
+      continue;
+    }
+    vehicles.push({
       id: r.id,
       name: r.name,
       plate: r.plate,
@@ -186,20 +282,22 @@ export async function listCurrentPositions(env, projectId) {
       heading: r.last_heading,
       speed: r.last_speed,
       lastSeenAt: r.last_seen_at,
-    })),
-  };
+    });
+  }
+  return { ok: true, vehicles };
 }
 
-export async function getGpsHistory(env, projectId, vehicleId, fromTs, toTs) {
+export async function getGpsHistory(env, projectId, vehicleId, fromTs, toTs, limit) {
+  const cap = Math.min(10_000, Math.max(1, Number(limit) || 10_000));
   const rows = await env.DB.prepare(
     `SELECT timestamp, lat, lng, speed, heading
      FROM gps_raw
      WHERE vehicle_id = ? AND fleet_id = ? AND timestamp >= ? AND timestamp <= ?
-     ORDER BY timestamp ASC LIMIT 10000`,
-  ).bind(vehicleId, projectId, fromTs, toTs).all();
+     ORDER BY timestamp DESC LIMIT ?`,
+  ).bind(vehicleId, projectId, fromTs, toTs, cap).all();
   return {
     ok: true,
-    points: (rows.results || []).map((r) => ({
+    points: [...(rows.results || [])].reverse().map((r) => ({
       ts: r.timestamp,
       lat: r.lat,
       lng: r.lng,
@@ -337,6 +435,70 @@ export async function createGeofence(env, projectId, data) {
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   ).bind(id, projectId, data.name, data.lat, data.lng, data.radiusMeters, nowISO()).run();
   return { ok: true, geofence: { id, name: data.name, lat: data.lat, lng: data.lng, radiusMeters: data.radiusMeters } };
+}
+
+export async function updateGeofence(env, projectId, geofenceId, data) {
+  const fields = [];
+  const values = [];
+  if (data.name != null) {
+    fields.push("name = ?");
+    values.push(data.name);
+  }
+  if (data.lat != null) {
+    fields.push("lat = ?");
+    values.push(data.lat);
+  }
+  if (data.lng != null) {
+    fields.push("lng = ?");
+    values.push(data.lng);
+  }
+  if (data.radiusMeters != null) {
+    fields.push("radius_meters = ?");
+    values.push(data.radiusMeters);
+  }
+  if (!fields.length) return { ok: false, error: "no fields to update" };
+  values.push(geofenceId, projectId);
+  const result = await env.DB.prepare(
+    `UPDATE fleet_geofences SET ${fields.join(", ")} WHERE id = ? AND fleet_id = ?`,
+  ).bind(...values).run();
+  if (result?.meta?.changes === 0) return { ok: false, error: "geofence_not_found", status: 404 };
+  return { ok: true };
+}
+
+export async function deleteGeofence(env, projectId, geofenceId) {
+  const result = await env.DB.prepare(
+    `DELETE FROM fleet_geofences WHERE id = ? AND fleet_id = ?`,
+  ).bind(geofenceId, projectId).run();
+  if (result?.meta?.changes === 0) return { ok: false, error: "geofence_not_found", status: 404 };
+  return { ok: true };
+}
+
+export async function listGeofenceEvents(env, projectId, { vehicleId, geofenceId, limit } = {}) {
+  let sql = `SELECT id, geofence_id, vehicle_id, event_type, occurred_at
+             FROM fleet_geofence_events WHERE fleet_id = ?`;
+  const params = [projectId];
+  if (vehicleId) {
+    sql += " AND vehicle_id = ?";
+    params.push(vehicleId);
+  }
+  if (geofenceId) {
+    sql += " AND geofence_id = ?";
+    params.push(geofenceId);
+  }
+  const cap = Math.min(Number(limit) || 100, 500);
+  sql += " ORDER BY occurred_at DESC LIMIT ?";
+  params.push(cap);
+  const rows = await env.DB.prepare(sql).bind(...params).all();
+  return {
+    ok: true,
+    events: (rows.results || []).map((r) => ({
+      id: r.id,
+      geofenceId: r.geofence_id,
+      vehicleId: r.vehicle_id,
+      eventType: r.event_type,
+      occurredAt: r.occurred_at,
+    })),
+  };
 }
 
 /* ── Delivery dispatch (crowdsourced matching) ── */

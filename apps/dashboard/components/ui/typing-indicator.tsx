@@ -8,6 +8,8 @@ export interface TypingIndicatorProps {
   visible: boolean
   /** Display name of the person typing. */
   name?: string
+  /** Full status copy (Ably threshold: “N people are typing…”). Overrides `name`. */
+  label?: string
   /** Avatar element to show next to the dots. */
   avatar?: React.ReactNode
   className?: string
@@ -22,11 +24,13 @@ export interface TypingIndicatorProps {
 export function TypingIndicator({
   visible,
   name,
+  label,
   avatar,
   className,
   "data-testid": testId,
 }: TypingIndicatorProps) {
   if (!visible) return null
+  const caption = label ?? (name ? `${name} is typing…` : null)
 
   return (
     <div
@@ -34,7 +38,7 @@ export function TypingIndicator({
       data-testid={testId}
       role="status"
       aria-live="polite"
-      aria-label={name ? `${name} is typing` : "Someone is typing"}
+      aria-label={caption ?? "Someone is typing"}
     >
       {avatar ? (
         <div className="flex shrink-0 items-end" aria-hidden>
@@ -54,9 +58,9 @@ export function TypingIndicator({
             />
           ))}
         </span>
-        {name ? (
+        {caption ? (
           <span className="ml-1 text-xs text-muted-foreground">
-            {name} is typing…
+            {caption}
           </span>
         ) : null}
       </div>

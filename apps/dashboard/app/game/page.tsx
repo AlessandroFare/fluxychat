@@ -12,33 +12,10 @@ import { WorkerBackendBadge } from "@/app/components/worker-backend-badge";
 import { cn } from "@/lib/utils";
 import { useWorkerChatClient } from "@/lib/use-worker-chat-client";
 import {
-  createFluxyGame,
   createWorkerFluxyGameClient,
-  type FluxyGameApi,
   type MatchResult,
   type WorkerFluxyGameClient,
 } from "@fluxy-chat/sdk";
-
-interface GameLeaderboardEntry {
-  playerId: string;
-  username: string;
-  score: number;
-  rank: number;
-  wins: number;
-  losses: number;
-  kdRatio: number;
-}
-
-function createSeededGame(): FluxyGameApi {
-  const game = createFluxyGame();
-  game.registerPlayer("p1", "Alice", "eu", 1200);
-  game.registerPlayer("p2", "Bob", "eu", 1150);
-  game.registerPlayer("p3", "Charlie", "eu", 1300);
-  game.registerPlayer("p4", "Diana", "eu", 950);
-  game.registerPlayer("p5", "Eve", "eu", 1400);
-  game.registerPlayer("p6", "Frank", "eu", 1050);
-  return game;
-}
 
 export default function FluxyGamePage() {
   const chatClient = useWorkerChatClient("game-demo");
@@ -46,8 +23,6 @@ export default function FluxyGamePage() {
     () => (chatClient ? createWorkerFluxyGameClient(chatClient) : null),
     [chatClient],
   );
-  const [game] = useState<FluxyGameApi | null>(createSeededGame());
-  const [tick, setTick] = useState(0);
   const [activeTab, setActiveTab] = useState<"match" | "leaderboard" | "npc" | "quests" | "tournament" | "party">("match");
   const [matchId, setMatchId] = useState<string | null>(null);
   const [workerMatchId, setWorkerMatchId] = useState<string | null>(null);
@@ -55,35 +30,17 @@ export default function FluxyGamePage() {
   const [workerTick, setWorkerTick] = useState(0);
   const [workerBusy, setWorkerBusy] = useState(false);
   const [workerError, setWorkerError] = useState<string | null>(null);
-  const [spectating, setSpectating] = useState(false);
+  const [lobbies, setLobbies] = useState<Array<{ id: string; gameMode: string; state: string; players: string[] }>>([]);
   const autoStarted = useRef(false);
 
   useEffect(() => {
-    if (!game || autoStarted.current) return;
     autoStarted.current = true;
-    const id = game.findMatch("p1", "deathmatch", 4);
-    game.findMatch("p2", "deathmatch", 4);
-    game.findMatch("p3", "deathmatch", 4);
-    game.findMatch("p4", "deathmatch", 4);
-    if (id) {
-      const mid = game.startMatch(id);
-      if (!mid) return;
-      setMatchId(mid);
-      for (let i = 0; i < 10; i++) {
-        const playerId = ["p1", "p2", "p3", "p4"][i % 4]!;
-        game.processInput(mid, {
-          tick: i, playerId, sequence: i,
-          actions: i % 3 === 0
-            ? [{ type: "shoot", payload: { targetId: ["p1", "p2", "p3", "p4"].filter((p) => p !== playerId)[i % 3] } }]
-            : [{ type: "move", payload: { dx: Math.random() - 0.5, dy: Math.random() - 0.5 } }],
-        });
-        game.tickMatch(mid);
-      }
-      setTick(10);
-    }
-  }, [game]);
+  }, []);
 
-  if (!game) return null;
+  useEffect(() => {
+    if (!workerGame) return;
+    void workerGame.listLobbies({ state: "waiting" }).then(setLobbies).catch(() => setLobbies([]));
+  }, [workerGame, workerMatchId]);
 
   const activeMatchId = workerMatchId ?? matchId;
   const workerConnected = Boolean(workerGame);
@@ -113,16 +70,7 @@ export default function FluxyGamePage() {
       return;
     }
 
-    const id1 = game.findMatch("p1", "deathmatch", 4);
-    game.findMatch("p2", "deathmatch", 4);
-    game.findMatch("p3", "deathmatch", 4);
-    game.findMatch("p4", "deathmatch", 4);
-    if (id1) {
-      const mid = game.startMatch(id1);
-      setMatchId(mid);
-      setWorkerMatchId(null);
-      setMatchResult(null);
-    }
+    setWorkerError("Sign in so matchmake hits D1. Local createFluxyGame() is not a production match.");
   };
 
   const handleSimulate = async () => {
@@ -149,19 +97,7 @@ export default function FluxyGamePage() {
       return;
     }
 
-    if (!matchId) return;
-    for (let i = 0; i < 20; i++) {
-      const playerId = ["p1", "p2", "p3", "p4"][i % 4];
-      const targetId = ["p1", "p2", "p3", "p4"].filter((p) => p !== playerId)[i % 3];
-      game.processInput(matchId, {
-        tick: i, playerId, sequence: i,
-        actions: i % 3 === 0
-          ? [{ type: "shoot", payload: { targetId } }]
-          : [{ type: "move", payload: { dx: Math.random() - 0.5, dy: Math.random() - 0.5 } }],
-      });
-      game.tickMatch(matchId);
-    }
-    setTick((v) => v + 1);
+    setWorkerError("No Worker match. Local tickMatch() is not production.");
   };
 
   const handleEndMatch = async () => {
@@ -193,11 +129,7 @@ export default function FluxyGamePage() {
       return;
     }
 
-    if (!matchId) return;
-    const result = game.endMatch(matchId);
-    setMatchResult(result);
-    setMatchId(null);
-    setSpectating(false);
+    setWorkerError("No Worker match to end.");
   };
 
   const tabs: { id: typeof activeTab; label: string; icon: React.ReactNode }[] = [
@@ -239,6 +171,35 @@ export default function FluxyGamePage() {
               <div className="space-y-3 rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
                 {workerError ? (
                   <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600">{workerError}</p>
+                ) : null}
+                {workerGame && lobbies.length > 0 ? (
+                  <div className="rounded-lg border border-border p-2 text-xs">
+                    <div className="mb-1 text-[10px] uppercase text-muted-foreground">Waiting lobbies (Colyseus joinById / Nakama ListMatches)</div>
+                    {lobbies.map((lobby) => (
+                      <button
+                        key={lobby.id}
+                        type="button"
+                        disabled={workerBusy}
+                        onClick={() => {
+                          void (async () => {
+                            setWorkerBusy(true);
+                            try {
+                              await workerGame.joinLobby(lobby.id, "p1");
+                              const refreshed = await workerGame.listLobbies({ state: "waiting" });
+                              setLobbies(refreshed);
+                            } catch (err) {
+                              setWorkerError(err instanceof Error ? err.message : "joinLobby failed");
+                            } finally {
+                              setWorkerBusy(false);
+                            }
+                          })();
+                        }}
+                        className="mt-1 w-full rounded bg-muted px-2 py-1 text-left hover:bg-muted/80 disabled:opacity-50"
+                      >
+                        {lobby.id} · {lobby.players.length} players · {lobby.gameMode}
+                      </button>
+                    ))}
+                  </div>
                 ) : null}
                 {!activeMatchId && !matchResult && (
                   <button type="button" onClick={() => void handleQuickMatch()} disabled={workerBusy} className="w-full rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50">
@@ -284,39 +245,60 @@ export default function FluxyGamePage() {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Game design info</h3>
               <div className="space-y-2 rounded-xl bg-card shadow-[var(--shadow-2)] p-4 text-xs text-muted-foreground">
-                <p>🎯 <span className="font-medium text-foreground">Server-authoritative</span>: DO @20fps tick, client @60fps interpolation</p>
-                <p>⚠️ <span className="font-medium text-foreground">NO setAlarm()</span>: $810/DO/day at 60fps. Direct WebSocket loop only.</p>
-                <p>🎮 <span className="font-medium text-foreground">Anti-cheat</span>: all decisions server-side, client sends input only</p>
-                <p>📺 <span className="font-medium text-foreground">Spectator</span>: read-only WebSocket, same DO</p>
-                <p>🔄 <span className="font-medium text-foreground">Replay</span>: journal of all inputs+events per tick</p>
-                <p>🏆 <span className="font-medium text-foreground">ELO rating</span>: +25 win, -15 loss, dynamic adjustment</p>
+                <p><span className="font-medium text-foreground">Authoritative tick</span>: `submitInput` writes D1 and fans out `game.tick` on the lobby room. Not 60fps netcode.</p>
+                <p><span className="font-medium text-foreground">Reconnect</span>: `getMatch` returns the D1 snapshot. No Colyseus seat token.</p>
+                <p><span className="font-medium text-foreground">Anti-cheat</span>: the Worker applies input; the browser does not own the score.</p>
+                <p><span className="font-medium text-foreground">Leaderboard</span>: `GET /games/leaderboard` on the project, not a local seed list.</p>
               </div>
             </div>
           </div>
         )}
 
-        {activeTab === "leaderboard" && <LeaderboardTab game={game} />}
-        {activeTab === "npc" && <NPCTab game={game} workerGame={workerGame} />}
+        {activeTab === "leaderboard" && <LeaderboardTab workerGame={workerGame} />}
+        {activeTab === "npc" && <NPCTab workerGame={workerGame} />}
         {activeTab === "quests" && <QuestsTab workerGame={workerGame} />}
-        {activeTab === "tournament" && <TournamentTab game={game} workerGame={workerGame} />}
-        {activeTab === "party" && <PartyTab game={game} />}
+        {activeTab === "tournament" && <TournamentTab workerGame={workerGame} />}
+        {activeTab === "party" && <PartyTab workerGame={workerGame} />}
       </div>
     </ConsoleShell>
   );
 }
 
-function LeaderboardTab({ game }: { game: FluxyGameApi }) {
-  const board = game.getLeaderboard(10);
-  const medals = ["🥇", "🥈", "🥉"];
+function LeaderboardTab({ workerGame }: { workerGame: WorkerFluxyGameClient | null }) {
+  const [board, setBoard] = useState<Array<{ playerId: string; username: string; skillRating: number; rank: number }>>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!workerGame) return;
+    void workerGame.listLeaderboard(10, "p1").then((rows) => {
+      setBoard(rows.map((row) => ({
+        playerId: row.playerId,
+        username: row.username,
+        skillRating: row.skillRating,
+        rank: row.rank,
+      })));
+      setError(null);
+    }).catch((err) => {
+      setError(err instanceof Error ? err.message : "Leaderboard failed");
+    });
+  }, [workerGame]);
+
+  if (!workerGame) {
+    return <p className="text-sm text-muted-foreground">Sign in to load the D1 leaderboard. Local seed scores are not production data.</p>;
+  }
+
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Leaderboard</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Leaderboard · D1</h3>
+      {error ? <p className="mb-2 text-xs text-red-600">{error}</p> : null}
       <div className="space-y-1.5">
-        {board.map((entry: GameLeaderboardEntry, i: number) => (
+        {board.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No rows yet. Run a Worker match so upsertPlayer writes ratings.</p>
+        ) : board.map((entry, i) => (
           <div key={entry.playerId} className={cn("flex items-center gap-3 rounded-lg border p-3", i === 0 ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-card")}>
-            <span className="w-6 text-center text-lg">{i < 3 ? medals[i] : <span className="text-sm text-muted-foreground">#{i + 1}</span>}</span>
+            <span className="w-6 text-center text-sm text-muted-foreground">#{entry.rank || i + 1}</span>
             <div className="flex-1"><span className="text-sm font-medium">{entry.username}</span></div>
-            <div className="text-right"><div className="text-sm font-bold tabular-nums">{entry.score}</div><div className="text-[9px] uppercase text-muted-foreground">ELO</div></div>
+            <div className="text-right"><div className="text-sm font-bold tabular-nums">{entry.skillRating}</div><div className="text-[9px] uppercase text-muted-foreground">rating</div></div>
           </div>
         ))}
       </div>
@@ -324,91 +306,97 @@ function LeaderboardTab({ game }: { game: FluxyGameApi }) {
   );
 }
 
-function NPCTab({ game, workerGame }: { game: FluxyGameApi; workerGame: WorkerFluxyGameClient | null }) {
-  const [npcs, setNpcs] = useState(() => [
-    game.spawnNPC("Merlin", "friendly", 0.6),
-    game.spawnNPC("Dragon Lord", "hostile", 0.8),
-    game.spawnNPC("Shopkeeper", "merchant", 0.3),
-  ]);
+function NPCTab({ workerGame }: { workerGame: WorkerFluxyGameClient | null }) {
+  const [npcs, setNpcs] = useState<Array<{ id: string; name: string; personality: string; difficulty: number }>>([]);
   const [selected, setSelected] = useState(0);
   const [input, setInput] = useState("");
   const [response, setResponse] = useState("");
-  const [workerNpcIds, setWorkerNpcIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [rateLimitSec, setRateLimitSec] = useState<number | null>(null);
-  const seededWorker = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refresh() {
+    if (!workerGame) return;
+    const list = await workerGame.listNpcs();
+    setNpcs(list);
+  }
 
   useEffect(() => {
-    if (!workerGame || seededWorker.current) return;
-    seededWorker.current = true;
-    void (async () => {
-      try {
-        let list = await workerGame.listNpcs();
-        if (list.length === 0) {
-          await Promise.all([
-            workerGame.upsertNpc({ id: "npc_merlin", name: "Merlin", personality: "friendly", difficulty: 0.6 }),
-            workerGame.upsertNpc({ id: "npc_dragon", name: "Dragon Lord", personality: "hostile", difficulty: 0.8 }),
-            workerGame.upsertNpc({ id: "npc_merchant", name: "Shopkeeper", personality: "merchant", difficulty: 0.3 }),
-          ]);
-          list = await workerGame.listNpcs();
-        }
-        setWorkerNpcIds(list.map((n) => n.id));
-      } catch {
-        setWorkerNpcIds([]);
-      }
-    })();
+    if (!workerGame) {
+      setNpcs([]);
+      return;
+    }
+    void refresh().catch((err) => setError(err instanceof Error ? err.message : "listNpcs failed"));
   }, [workerGame]);
 
+  const handleSeed = async () => {
+    if (!workerGame) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await Promise.all([
+        workerGame.upsertNpc({ id: "npc_merlin", name: "Merlin", personality: "friendly", difficulty: 0.6 }),
+        workerGame.upsertNpc({ id: "npc_dragon", name: "Dragon Lord", personality: "hostile", difficulty: 0.8 }),
+        workerGame.upsertNpc({ id: "npc_merchant", name: "Shopkeeper", personality: "merchant", difficulty: 0.3 }),
+      ]);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "upsertNpc failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleTalk = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !workerGame || !npcs[selected]) return;
     const message = input.trim();
     setInput("");
     setRateLimitSec(null);
-
-    if (workerGame && workerNpcIds[selected]) {
-      setBusy(true);
-      try {
-        const result = await workerGame.interactNpc(workerNpcIds[selected], { message, playerId: "p1" });
-        if (result.retryAfterSeconds) {
-          setRateLimitSec(result.retryAfterSeconds);
-          setResponse("");
-          return;
-        }
-        setResponse(result.reply);
-      } catch (err) {
-        setResponse(err instanceof Error ? err.message : "Worker NPC failed");
-      } finally {
-        setBusy(false);
+    setBusy(true);
+    try {
+      const result = await workerGame.interactNpc(npcs[selected].id, { message, playerId: "p1" });
+      if (result.retryAfterSeconds) {
+        setRateLimitSec(result.retryAfterSeconds);
+        setResponse("");
+        return;
       }
-      return;
+      setResponse(result.reply);
+    } catch (err) {
+      setResponse(err instanceof Error ? err.message : "Worker NPC failed");
+    } finally {
+      setBusy(false);
     }
-
-    const resp = game.npcInteract(npcs[selected].id, "p1", message);
-    setResponse(resp);
   };
 
-  const displayNpcs = workerGame && workerNpcIds.length > 0
-    ? npcs.slice(0, workerNpcIds.length).map((n, i) => ({ ...n, id: workerNpcIds[i] ?? n.id, workerBacked: true }))
-    : npcs.map((n) => ({ ...n, workerBacked: false }));
+  if (!workerGame) {
+    return <p className="text-sm text-muted-foreground">Sign in so Talk hits `POST /games/npcs/:id/interact` (D1 memory + GAME_NPC_RATE_LIMIT_RPM). Local spawnNPC is not production.</p>;
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          AI NPCs ({displayNpcs.length}){workerGame ? " · Worker D1" : " · local demo"}
+          AI NPCs ({npcs.length}) · Worker D1
         </h3>
-        <div className="space-y-2">
-          {displayNpcs.map((npc, i) => (
-            <button key={npc.id} type="button" onClick={() => setSelected(i)}
-              className={cn("flex w-full items-center gap-3 rounded-lg border p-3 text-left", selected === i ? "border-foreground bg-foreground/5" : "border-border bg-card hover:bg-muted")}>
-              <Bot className="size-4 text-muted-foreground" />
-              <div className="flex-1"><div className="text-sm font-medium">{npc.name}</div><div className="text-[10px] text-muted-foreground">{npc.personality} · difficulty {(npc.difficulty * 100).toFixed(0)}%{npc.workerBacked ? " · rate-limited" : ""}</div></div>
-            </button>
-          ))}
-        </div>
+        {error ? <p className="mb-2 text-xs text-red-600">{error}</p> : null}
+        {npcs.length === 0 ? (
+          <button type="button" onClick={() => void handleSeed()} disabled={busy} className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50">
+            Upsert Merlin / Dragon / Shopkeeper
+          </button>
+        ) : (
+          <div className="space-y-2">
+            {npcs.map((npc, i) => (
+              <button key={npc.id} type="button" onClick={() => setSelected(i)}
+                className={cn("flex w-full items-center gap-3 rounded-lg border p-3 text-left", selected === i ? "border-foreground bg-foreground/5" : "border-border bg-card hover:bg-muted")}>
+                <Bot className="size-4 text-muted-foreground" />
+                <div className="flex-1"><div className="text-sm font-medium">{npc.name}</div><div className="text-[10px] text-muted-foreground">{npc.personality} · difficulty {(npc.difficulty * 100).toFixed(0)}% · rate-limited</div></div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Talk to {displayNpcs[selected]?.name}</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Talk to {npcs[selected]?.name || "—"}</h3>
         <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
           {rateLimitSec ? (
             <div className="mb-3 rounded-lg bg-amber-500/10 p-2 text-sm text-amber-700">
@@ -417,19 +405,17 @@ function NPCTab({ game, workerGame }: { game: FluxyGameApi; workerGame: WorkerFl
           ) : null}
           {response && !rateLimitSec ? (
             <div className="mb-3 rounded-lg bg-blue-500/10 p-2 text-sm">
-              <span className="font-semibold text-blue-600">{displayNpcs[selected]?.name}:</span> {response}
+              <span className="font-semibold text-blue-600">{npcs[selected]?.name}:</span> {response}
             </div>
           ) : null}
           <div className="flex gap-2">
-            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void handleTalk()} placeholder="Say something..." className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm" disabled={busy} />
-            <button type="button" onClick={() => void handleTalk()} disabled={busy} className="rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50">
+            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void handleTalk()} placeholder="Say something..." className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm" disabled={busy || npcs.length === 0} />
+            <button type="button" onClick={() => void handleTalk()} disabled={busy || npcs.length === 0} className="rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50">
               {busy ? <Loader2 className="size-4 animate-spin" /> : "Talk"}
             </button>
           </div>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            {workerGame
-              ? "Worker-backed NPCs use D1 memory and per-player rate limits (GAME_NPC_RATE_LIMIT_RPM)."
-              : "NPCs remember your last interaction and reference it in future conversations."}
+            Replies persist NPC memory in D1. Template lines, not an LLM.
           </p>
         </div>
       </div>
@@ -591,11 +577,7 @@ function QuestsTab({ workerGame }: { workerGame: WorkerFluxyGameClient | null })
   );
 }
 
-function TournamentTab({ game, workerGame }: { game: FluxyGameApi; workerGame: WorkerFluxyGameClient | null }) {
-  const [tourney, setTourney] = useState(() => {
-    const t = game.createTournament("Summer Cup 2026", 8, "$500 + FluxyChat Pro Annual");
-    return t;
-  });
+function TournamentTab({ workerGame }: { workerGame: WorkerFluxyGameClient | null }) {
   const [workerTourney, setWorkerTourney] = useState<{
     id: string; name: string; status: string; prize: string;
     currentPlayers: number; maxPlayers: number;
@@ -604,15 +586,33 @@ function TournamentTab({ game, workerGame }: { game: FluxyGameApi; workerGame: W
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
-  const display = workerTourney ?? {
-    id: tourney.id,
-    name: tourney.name,
-    status: tourney.status,
-    prize: tourney.prize,
-    currentPlayers: tourney.currentPlayers,
-    maxPlayers: tourney.maxPlayers,
-    rounds: tourney.rounds,
-  };
+  useEffect(() => {
+    if (!workerGame) {
+      setWorkerTourney(null);
+      return;
+    }
+    void workerGame.listTournaments().then((rows) => {
+      const first = rows[0];
+      if (!first) return;
+      setWorkerTourney({
+        id: first.id,
+        name: first.name,
+        status: first.status,
+        prize: first.prize,
+        currentPlayers: first.currentPlayers,
+        maxPlayers: first.maxPlayers,
+        rounds: Array.isArray(first.rounds)
+          ? first.rounds as Array<{ round: number; matches: Array<{ id: string; player1: string; player2: string; winner: string | null }> }>
+          : [],
+      });
+    }).catch(() => setWorkerTourney(null));
+  }, [workerGame]);
+
+  const display = workerTourney;
+
+  if (!workerGame) {
+    return <p className="text-sm text-muted-foreground">Sign in so brackets live in D1 (`POST /games/tournaments`). Local createTournament is not production.</p>;
+  }
 
   const handleWorkerCreate = async () => {
     if (!workerGame) return;
@@ -636,6 +636,20 @@ function TournamentTab({ game, workerGame }: { game: FluxyGameApi; workerGame: W
     }
   };
 
+  const handleJoin = async () => {
+    if (!workerGame || !workerTourney) return;
+    setBusy(true);
+    try {
+      const updated = await workerGame.joinTournament(workerTourney.id, "p5");
+      setWorkerTourney({ ...workerTourney, ...updated, currentPlayers: workerTourney.currentPlayers + 1 });
+      setNote("Joined tournament (Nakama JoinTournament HOW).");
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "Join tournament failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleReportFirstMatch = async () => {
     if (!workerGame || !workerTourney?.rounds[0]?.matches[0]) return;
     setBusy(true);
@@ -653,7 +667,7 @@ function TournamentTab({ game, workerGame }: { game: FluxyGameApi; workerGame: W
   return (
     <div>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Tournament{workerGame ? " · Worker D1" : " · local demo"}
+        Tournament · Worker D1
       </h3>
       {workerGame && !workerTourney ? (
         <button type="button" onClick={() => void handleWorkerCreate()} disabled={busy}
@@ -661,7 +675,16 @@ function TournamentTab({ game, workerGame }: { game: FluxyGameApi; workerGame: W
           Create & start on Worker
         </button>
       ) : null}
+      {workerGame && workerTourney ? (
+        <button type="button" onClick={() => void handleJoin()} disabled={busy}
+          className="mb-3 ml-2 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50">
+          Join as p5
+        </button>
+      ) : null}
       {note ? <p className="mb-2 text-xs text-muted-foreground">{note}</p> : null}
+      {!display ? (
+        <p className="text-sm text-muted-foreground">Create a tournament on the Worker to persist the bracket in D1.</p>
+      ) : (
       <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
         <div className="flex items-center justify-between">
           <div><h4 className="text-sm font-semibold">{display.name}</h4><p className="text-xs text-muted-foreground">Prize: {display.prize}</p></div>
@@ -694,60 +717,72 @@ function TournamentTab({ game, workerGame }: { game: FluxyGameApi; workerGame: W
           </button>
         ) : null}
       </div>
+      )}
     </div>
   );
 }
 
-function PartyTab({ game }: { game: FluxyGameApi }) {
-  const [partyId, setPartyId] = useState<string | null>(null);
-  const [invites, setInvites] = useState<ReturnType<FluxyGameApi["inviteToParty"]>[]>([]);
+function PartyTab({ workerGame }: { workerGame: WorkerFluxyGameClient | null }) {
+  const [party, setParty] = useState<{ id: string; members: string[]; leaderId: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCreate = () => {
-    const id = game.createParty("p1");
-    setPartyId(id);
+  useEffect(() => {
+    if (!workerGame) return;
+    void workerGame.listParties().then((parties) => {
+      if (parties[0]) setParty(parties[0]);
+    }).catch(() => {});
+  }, [workerGame]);
+
+  const handleCreate = async () => {
+    if (!workerGame) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await workerGame.createParty({ leaderId: "p1", roomId: "game-demo" });
+      setParty(created);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Create party failed");
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleInvite = (toPlayer: string) => {
-    if (!partyId) return;
-    const inv = game.inviteToParty(partyId, "p1", toPlayer);
-    setInvites([...invites, inv]);
+  const handleInvite = async (toPlayer: string) => {
+    if (!workerGame || !party) return;
+    setBusy(true);
+    try {
+      const updated = await workerGame.joinParty(party.id, toPlayer);
+      setParty({ ...updated, leaderId: party.leaderId });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Join party failed");
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleAccept = (inviteId: string) => {
-    game.acceptPartyInvite(inviteId);
-    setInvites(invites.filter((i) => i.id !== inviteId));
-  };
-
-  const party = partyId ? game.getParty(partyId) : null;
+  if (!workerGame) {
+    return <p className="text-sm text-muted-foreground">Sign in to create a D1 party (`POST /games/parties`). Local invite lists are not production data.</p>;
+  }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Party</h3>
-        {!partyId ? (
-          <button type="button" onClick={handleCreate} className="w-full rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90"><Plus className="mr-1 inline size-3.5" /> Create party</button>
-        ) : (
-          <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
-            <div className="text-sm font-medium">Party: {partyId}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Leader: {party?.leader}</div>
-            <div className="mt-2"><div className="text-[10px] uppercase text-muted-foreground">Members</div>{party?.members.map((m) => (<div key={m} className="text-sm">{m}</div>))}</div>
-            <div className="mt-3 flex flex-wrap gap-1">
-              {["p2", "p3", "p4", "p5"].map((p) => (<button key={p} type="button" onClick={() => handleInvite(p)} className="rounded bg-muted px-2 py-1 text-[10px] hover:bg-muted/80">Invite {p}</button>))}
-            </div>
+    <div className="max-w-md">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Party · D1</h3>
+      {error ? <p className="mb-2 text-xs text-red-600">{error}</p> : null}
+      {!party ? (
+        <button type="button" onClick={() => void handleCreate()} disabled={busy} className="w-full rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"><Plus className="mr-1 inline size-3.5" /> Create party</button>
+      ) : (
+        <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
+          <div className="text-sm font-medium">Party: {party.id}</div>
+          <div className="mt-2 text-xs text-muted-foreground">Leader: {party.leaderId}</div>
+          <div className="mt-2"><div className="text-[10px] uppercase text-muted-foreground">Members</div>{party.members.map((m) => (<div key={m} className="text-sm">{m}</div>))}</div>
+          <div className="mt-3 flex flex-wrap gap-1">
+            {["p2", "p3", "p4"].filter((p) => !party.members.includes(p)).map((p) => (
+              <button key={p} type="button" onClick={() => void handleInvite(p)} disabled={busy} className="rounded bg-muted px-2 py-1 text-[10px] hover:bg-muted/80 disabled:opacity-50">Join {p}</button>
+            ))}
           </div>
-        )}
-      </div>
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending invites ({invites.length})</h3>
-        <div className="space-y-2">
-          {invites.length === 0 ? <p className="text-sm text-muted-foreground">No pending invites</p> : invites.map((inv) => (
-            <div key={inv.id} className="flex items-center gap-2 rounded-lg bg-card shadow-[var(--shadow-2)] p-2 text-xs">
-              <span>{inv.fromPlayer} → {inv.toPlayer}</span>
-              <button type="button" onClick={() => handleAccept(inv.id)} className="ml-auto rounded bg-green-500/15 px-2 py-0.5 text-[10px] font-medium text-green-600 hover:bg-green-500/25">Accept</button>
-            </div>
-          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }

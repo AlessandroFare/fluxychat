@@ -45,6 +45,7 @@ export async function dispatchPollsFormsRoutes(request, url, h) {
       projectId,
       pollId: voteMatch[1],
       optionIds: body.optionIds || [],
+      answer: body.answer,
       userId,
     });
     return json(result, { status: result.ok ? 200 : 400 });

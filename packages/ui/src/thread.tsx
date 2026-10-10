@@ -5,14 +5,79 @@ import type { FluxyComment, FluxyCommentThread } from "@fluxy-chat/sdk";
 
 export interface CommentProps {
   comment: FluxyComment;
+  onEdit?: (body: string) => void | Promise<void>;
+  onDelete?: () => void | Promise<void>;
+  onReact?: (emoji: string) => void | Promise<void>;
 }
 
-export function Comment({ comment }: CommentProps) {
+export function Comment({ comment, onEdit, onDelete, onReact }: CommentProps) {
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(comment.body);
+
+  async function save() {
+    const body = draft.trim();
+    if (!body || !onEdit) return;
+    await onEdit(body);
+    setEditing(false);
+  }
+
   return (
     <article style={{ fontSize: 13, marginBottom: 8 }}>
       <strong>{comment.userId}</strong>
       <span style={{ color: "#94a3b8", marginLeft: 8, fontSize: 11 }}>{comment.createdAt}</span>
-      <p style={{ margin: "4px 0 0" }}>{comment.body}</p>
+      {comment.editedAt ? (
+        <span style={{ color: "#94a3b8", marginLeft: 6, fontSize: 11 }}>edited</span>
+      ) : null}
+      {editing ? (
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            style={{ flex: 1, padding: "4px 6px", border: "1px solid #cbd5e1", borderRadius: 6 }}
+          />
+          <button type="button" onClick={() => void save()}>
+            Save
+          </button>
+          <button type="button" onClick={() => { setEditing(false); setDraft(comment.body); }}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <p style={{ margin: "4px 0 0" }}>{comment.body}</p>
+      )}
+      {onEdit && !editing ? (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          style={{ marginTop: 2, marginRight: 8, fontSize: 11, background: "none", border: 0, color: "#64748b" }}
+        >
+          Edit
+        </button>
+      ) : null}
+      {onDelete && !editing ? (
+        <button
+          type="button"
+          onClick={() => void onDelete()}
+          style={{ marginTop: 2, fontSize: 11, background: "none", border: 0, color: "#64748b" }}
+        >
+          Delete
+        </button>
+      ) : null}
+      {onReact && !editing ? (
+        <span style={{ marginLeft: 8 }}>
+          {["👍", "👀", "✅"].map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => void onReact(emoji)}
+              style={{ marginRight: 4, fontSize: 11, background: "none", border: 0, cursor: "pointer" }}
+            >
+              {emoji}
+              {comment.reactions?.[emoji]?.length ? ` ${comment.reactions[emoji].length}` : ""}
+            </button>
+          ))}
+        </span>
+      ) : null}
     </article>
   );
 }
@@ -59,9 +124,13 @@ export interface ThreadProps {
   thread: FluxyCommentThread;
   onReply?: (body: string) => void | Promise<void>;
   onResolve?: (resolved: boolean) => void | Promise<void>;
+  onDelete?: () => void | Promise<void>;
+  onEditComment?: (commentId: string, body: string) => void | Promise<void>;
+  onDeleteComment?: (commentId: string) => void | Promise<void>;
+  onReact?: (commentId: string, emoji: string) => void | Promise<void>;
 }
 
-export function Thread({ thread, onReply, onResolve }: ThreadProps) {
+export function Thread({ thread, onReply, onResolve, onDelete, onEditComment, onDeleteComment, onReact }: ThreadProps) {
   return (
     <section
       style={{
@@ -71,16 +140,29 @@ export function Thread({ thread, onReply, onResolve }: ThreadProps) {
         background: thread.resolved ? "#f8fafc" : "#fff",
       }}
     >
-      <header style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12, color: "#64748b" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 8, fontSize: 12, color: "#64748b" }}>
         <span>{thread.resolved ? "Resolved" : "Open"}</span>
-        {onResolve ? (
-          <button type="button" onClick={() => void onResolve(!thread.resolved)}>
-            {thread.resolved ? "Reopen" : "Resolve"}
-          </button>
-        ) : null}
+        <span style={{ display: "flex", gap: 8 }}>
+          {onResolve ? (
+            <button type="button" onClick={() => void onResolve(!thread.resolved)}>
+              {thread.resolved ? "Reopen" : "Resolve"}
+            </button>
+          ) : null}
+          {onDelete ? (
+            <button type="button" onClick={() => void onDelete()}>
+              Delete
+            </button>
+          ) : null}
+        </span>
       </header>
       {thread.comments.map((comment) => (
-        <Comment key={comment.id} comment={comment} />
+        <Comment
+          key={comment.id}
+          comment={comment}
+          onEdit={onEditComment ? (body) => onEditComment(comment.id, body) : undefined}
+          onDelete={onDeleteComment ? () => onDeleteComment(comment.id) : undefined}
+          onReact={onReact ? (emoji) => onReact(comment.id, emoji) : undefined}
+        />
       ))}
       {onReply ? <ThreadComposer onSubmit={onReply} placeholder="Reply…" /> : null}
     </section>

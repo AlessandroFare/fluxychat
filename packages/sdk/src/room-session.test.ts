@@ -213,4 +213,41 @@ describe("room-session message_updated (P12-B UI)", () => {
 
     stop();
   });
+
+  it("collects room_reaction bursts and discontinuity for ChatWindow", async () => {
+    const client = new FluxyChatClient({
+      baseUrl: "http://127.0.0.1:8787",
+      userId: "alice",
+      token: "jwt_abc",
+    });
+    const fake = makeFakeConnection();
+    vi.spyOn(client, "connectRoom").mockReturnValue(fake as unknown as FluxyChatRoomConnection);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ messages: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const { store, stop } = createFluxyRoomSession({
+      roomId: "lobby",
+      client,
+      replay: "connect",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (const listener of fake.listeners) {
+      listener({ type: "room_reaction", userId: "bob", name: "👏", roomId: "lobby" });
+      listener({
+        type: "discontinuity",
+        roomId: "lobby",
+        code: 10200,
+        expectedSeq: 2,
+        receivedSeq: 9,
+      });
+    }
+    expect(store.getState().roomReactions).toEqual([{ name: "👏", userId: "bob" }]);
+    expect(store.getState().lastDiscontinuity?.message).toMatch(/expected 2 received 9/);
+    store.getState().sendRoomReaction("🔥");
+    expect(fake.sendJson).toHaveBeenCalledWith({ type: "room_reaction", name: "🔥" });
+    stop();
+  });
 });

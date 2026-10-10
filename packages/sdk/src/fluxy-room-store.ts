@@ -35,10 +35,14 @@ export interface FluxyRoomStoreState {
   historyLoaded: boolean;
   online: number;
   typingUsers: Record<string, boolean>;
+  /** Stream thread-scoped typing, keyed by `parentId`. */
+  typingByThread: Record<number, Record<string, boolean>>;
   typingIntents: Record<string, import("./index").FluxyPresenceIntent>;
   seenBy: Record<number, string[]>;
   onlineUsers: string[];
   presenceMembers: Array<{ userId: string; userInfo?: Record<string, unknown> }>;
+  /** Recently departed members (spaces Leavers). Pruned by last-seen TTL. */
+  presenceLeavers: Record<string, import("./presence-avatars").FluxyLeaver>;
   /** `detailed` roster vs `aggregate` count for large rooms. */
   presenceKind: "detailed" | "aggregate";
   presenceCount: number;
@@ -69,6 +73,9 @@ export interface FluxyRoomStoreState {
   wsTypingAgentId: string | null;
   invokeTypingAgentId: string | null;
   reactions: Record<number, Record<string, number>>;
+  /** Last room-level bursts (Ably ChatWindow footer). */
+  roomReactions: Array<{ name: string; userId: string }>;
+  lastDiscontinuity: Error | null;
   toolThreadEvents: FluxyToolThreadEvent[];
   lastAgentRun: FluxyChatAgentRun | null;
   debateSteps: import("./agent-debate").AgentDebateStep[];
@@ -86,12 +93,18 @@ export interface FluxyRoomStoreState {
   ) => void;
   retryMessage: (clientMessageId: string) => void;
   loadHistory: () => Promise<void>;
-  loadMore: () => Promise<void>;
+  loadMore: () => Promise<boolean>;
   /** Refresh `liveSnapshot` from `GET /rooms/:id/live` (Portal-style). */
   loadLive: () => Promise<void>;
-  setTyping: (isTyping: boolean, intent?: import("./message-template").FluxyPresenceIntent, partialText?: string) => void;
+  setTyping: (
+    isTyping: boolean,
+    intent?: import("./message-template").FluxyPresenceIntent,
+    partialText?: string,
+    parentId?: number | null,
+  ) => void;
   editMessage: (messageId: number, content: string) => void;
   sendReaction: (messageId: number, emoji: string, op?: "add" | "remove") => void;
+  sendRoomReaction: (name: string) => void;
   sendReadReceipt: (messageId: number) => void;
   deleteMessage: (messageId: number) => void;
   branchRoomFromMessage: (fromMessageId: number) => Promise<void>;
@@ -105,6 +118,8 @@ export interface FluxyRoomStoreState {
   clearDebateThread: () => void;
   joinVoiceStage: (role: import("./voice-stage").VoiceStageRole, displayName?: string) => void;
   leaveVoiceStage: () => void;
+  setVoiceStageMuted: (muted: boolean) => void;
+  requestVoiceStageSpeak: () => void;
   promoteVoiceStageListener: (targetUserId: string) => void;
   sendVoiceStageVad: (score: number) => void;
   sendClientEvent: (eventName: string, data: unknown) => void;
@@ -134,6 +149,7 @@ const inertRoomActions: Pick<
   | "setTyping"
   | "editMessage"
   | "sendReaction"
+  | "sendRoomReaction"
   | "sendReadReceipt"
   | "deleteMessage"
   | "branchRoomFromMessage"
@@ -143,6 +159,8 @@ const inertRoomActions: Pick<
   | "clearDebateThread"
   | "joinVoiceStage"
   | "leaveVoiceStage"
+  | "setVoiceStageMuted"
+  | "requestVoiceStageSpeak"
   | "promoteVoiceStageListener"
   | "sendVoiceStageVad"
   | "sendClientEvent"
@@ -154,11 +172,12 @@ const inertRoomActions: Pick<
   sendMessage: noop,
   retryMessage: noop,
   loadHistory: async () => {},
-  loadMore: async () => {},
+  loadMore: async () => false,
   loadLive: async () => {},
   setTyping: noop,
   editMessage: noop,
   sendReaction: noop,
+  sendRoomReaction: noop,
   sendReadReceipt: noop,
   deleteMessage: noop,
   branchRoomFromMessage: async () => notReady(),
@@ -168,6 +187,8 @@ const inertRoomActions: Pick<
   clearDebateThread: noop,
   joinVoiceStage: noop,
   leaveVoiceStage: noop,
+  setVoiceStageMuted: noop,
+  requestVoiceStageSpeak: noop,
   promoteVoiceStageListener: noop,
   sendVoiceStageVad: noop,
   sendClientEvent: noop,
@@ -188,10 +209,12 @@ export const INERT_FLUXY_ROOM_SNAPSHOT: FluxyRoomStoreState = Object.freeze({
   historyLoaded: false,
   online: 0,
   typingUsers: {} as Record<string, boolean>,
+  typingByThread: {} as Record<number, Record<string, boolean>>,
   typingIntents: {} as Record<string, import("./index").FluxyPresenceIntent>,
   seenBy: {} as Record<number, string[]>,
   onlineUsers: [] as string[],
   presenceMembers: [] as Array<{ userId: string; userInfo?: Record<string, unknown> }>,
+  presenceLeavers: {} as Record<string, import("./presence-avatars").FluxyLeaver>,
   presenceKind: "detailed" as const,
   presenceCount: 0,
   derivedState: {} as Record<string, unknown>,
@@ -212,6 +235,8 @@ export const INERT_FLUXY_ROOM_SNAPSHOT: FluxyRoomStoreState = Object.freeze({
   wsTypingAgentId: null,
   invokeTypingAgentId: null,
   reactions: {} as Record<number, Record<string, number>>,
+  roomReactions: [] as Array<{ name: string; userId: string }>,
+  lastDiscontinuity: null,
   toolThreadEvents: [] as FluxyToolThreadEvent[],
   lastAgentRun: null,
   debateSteps: [],
@@ -230,10 +255,12 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     historyLoaded: false,
     online: 0,
     typingUsers: {},
+    typingByThread: {},
     typingIntents: {},
     seenBy: {},
     onlineUsers: [],
     presenceMembers: [],
+    presenceLeavers: {},
     presenceKind: "detailed",
     presenceCount: 0,
     derivedState: {},
@@ -254,6 +281,8 @@ export function createFluxyRoomStore(): FluxyRoomStore {
     wsTypingAgentId: null,
     invokeTypingAgentId: null,
     reactions: {},
+    roomReactions: [],
+    lastDiscontinuity: null,
     toolThreadEvents: [],
     lastAgentRun: null,
     debateSteps: [],

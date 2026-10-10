@@ -1,6 +1,6 @@
-# Terraform provider `fluxychat`
+# Terraform provider `fluxychat` (experimental)
 
-Official-style Terraform provider for FluxyChat admin APIs. Ships **`fluxychat_project`** today; webhooks and rooms follow the same pattern.
+Not a HashiCorp registry provider. Local build only. Ships `fluxychat_project`; webhooks and rooms follow the same pattern. Prefer Wrangler for real deploys.
 
 ## Build (local dev)
 

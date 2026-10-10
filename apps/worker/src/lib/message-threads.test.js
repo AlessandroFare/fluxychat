@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { listRoomThreads, listUserThreads, assertChatThreadDepth, parseReplyParentId } from "./message-threads.js";
+import { listRoomThreads, listUserThreads, assertChatThreadDepth, parseReplyParentId, parseTypingParentId } from "./message-threads.js";
 
 function createEnv({ rooms, members, messages }) {
   return {
@@ -245,6 +245,14 @@ describe("parseReplyParentId", () => {
     expect(parseReplyParentId({ parentId: 9 })).toBe(9);
     expect(parseReplyParentId({ threadParentId: "9" })).toBe(9);
     expect(parseReplyParentId({})).toBeNull();
+  });
+});
+
+describe("parseTypingParentId", () => {
+  it("reads Stream keystroke parent_id", () => {
+    expect(parseTypingParentId({ parentId: 8 })).toBe(8);
+    expect(parseTypingParentId({ parent_id: "8" })).toBe(8);
+    expect(parseTypingParentId({})).toBeNull();
   });
 });
 

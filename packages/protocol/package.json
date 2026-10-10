@@ -1,6 +1,6 @@
 {
     "name":  "@fluxy-chat/protocol",
-    "version":  "0.1.6",
+    "version":  "0.1.7",
     "description":  "Shared FluxyChat wire protocol — WebSocket event types and validators for SDKs and the worker",
     "license":  "MIT",
     "type":  "module",
@@ -14,6 +14,7 @@
                 },
     "files":  [
                   "dist",
+                  "errors",
                   "protocol-events.json",
                   "README.md"
               ],
@@ -34,8 +35,10 @@
                  ],
     "author":  "Fluxychat",
     "scripts":  {
+                    "generate:errors":  "node scripts/generate-error-codes.mjs",
+                    "check:errors":  "node scripts/generate-error-codes.mjs --check",
                     "build":  "pnpm exec tsc -p tsconfig.json",
-                    "test":  "vitest run",
+                    "test":  "node scripts/generate-error-codes.mjs --check && vitest run",
                     "typecheck":  "tsc -p tsconfig.json --noEmit",
                     "prepublishOnly":  "pnpm run build && node ../../scripts/verify-publish-manifest.mjs"
                 },

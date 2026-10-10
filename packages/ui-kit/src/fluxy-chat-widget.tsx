@@ -53,6 +53,22 @@ function WidgetInner({
     agentTyping,
     stopAgentStream,
     invokeAgent,
+    setTyping,
+    editMessage,
+    deleteMessage,
+    sendReaction,
+    sendRoomReaction,
+    reactions,
+    roomReactions,
+    lastDiscontinuity,
+    seenBy,
+    presenceMembers,
+    presenceCount,
+    subscriptionCount,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    sendPresencePatch,
   } = useChat({
     roomId,
     client,
@@ -109,15 +125,6 @@ function WidgetInner({
       >
         {statusText}
       </div>
-      {title && (
-        <header className="border-b border-border px-4 py-2 text-sm font-semibold">
-          {title}
-          <span className="ml-2 font-normal text-muted-foreground" aria-hidden="true">
-            {connectionState.status}
-            {streaming ? " · agent thinking" : ""}
-          </span>
-        </header>
-      )}
       {readOnly ? null : streaming || agentId ? (
         <div className="flex flex-wrap gap-2 border-b border-border px-4 py-2 text-xs">
           {streaming ? (
@@ -146,15 +153,38 @@ function WidgetInner({
       ) : null}
       <div className="min-h-0 flex-1">
         <ChatWindow
+          roomName={title || roomId}
+          occupancy={{
+            connections: subscriptionCount || online,
+            presenceMembers: presenceCount || presenceMembers.length,
+          }}
           messages={messages}
           online={online}
           typingUsers={typingUsers}
           agentTyping={agentTyping && !messages.some((m) => m.streaming)}
           agentTypingLabel="Agent thinking"
           localUserId={client.userId}
+          seenBy={seenBy}
           readOnly={readOnly}
           composerInputId={readOnly ? undefined : "fluxy-chat-composer"}
+          reactions={reactions}
+          roomReactions={roomReactions}
+          discontinuity={lastDiscontinuity}
+          connectionStatus={connectionState.status}
+          nextRetryAt={connectionState.nextRetryAt}
           onSend={readOnly ? () => {} : (text) => sendMessage(text)}
+          onTyping={readOnly ? undefined : setTyping}
+          onEditMessage={readOnly ? undefined : editMessage}
+          onDeleteMessage={readOnly ? undefined : deleteMessage}
+          onReact={readOnly ? undefined : sendReaction}
+          onSendRoomReaction={readOnly ? undefined : sendRoomReaction}
+          onLoadMoreHistory={loadMore}
+          hasMoreHistory={hasMore}
+          isLoadingHistory={isLoadingMore}
+          autoEnterPresence={!readOnly}
+          onEnterPresence={
+            readOnly ? undefined : () => sendPresencePatch({ agentStatus: null })
+          }
         />
         <FluxyAgentTurnChrome siblingIds={siblingIds} />
       </div>

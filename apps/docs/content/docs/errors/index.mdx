@@ -1,0 +1,32 @@
+---
+title: "Error codes"
+description: "Numeric FluxyChat error catalog. Same registry as packages/protocol/errors/catalog.json."
+---
+
+# Error codes
+
+These codes sit on `FluxyErrorInfo.code`. The Worker still closes sockets with 1008 and a short reason (`token_expired`, `not_member`). The numeric code is for SDKs and docs.
+
+Registry: `packages/protocol/errors/catalog.json`. Do not invent codes in app copy.
+
+| Code | Identifier | HTTP | Terminal |
+|------|------------|------|----------|
+| 40100 | [token_expired](/docs/errors/token_expired) | 401 | yes |
+| 40101 | [invalid_token](/docs/errors/invalid_token) | 401 | yes |
+| 40102 | [invalid_api_key](/docs/errors/invalid_api_key) | 401 | yes |
+| 40103 | [anonymous_not_allowed](/docs/errors/anonymous_not_allowed) | 401 | yes |
+| 40108 | [auth_refused](/docs/errors/auth_refused) | 401 | yes |
+| 40300 | [not_member](/docs/errors/not_member) | 403 | yes |
+| 40301 | [banned](/docs/errors/banned) | 403 | yes |
+| 40302 | [forbidden](/docs/errors/forbidden) | 403 | yes |
+| 42900 | [rate_limited](/docs/errors/rate_limited) | 429 | no |
+| 44000 | [channel_at_capacity](/docs/errors/channel_at_capacity) | 429 | yes |
+| 10000 | [send_not_open](/docs/errors/send_not_open) | — | no |
+| 10008 | [ws_policy](/docs/errors/ws_policy) | 403 | yes |
+| 40040 | [feature_not_enabled](/docs/errors/feature_not_enabled) | 400 | no |
+| 40041 | [resource_disposed](/docs/errors/resource_disposed) | 400 | yes |
+| 40400 | [message_not_found](/docs/errors/message_not_found) | 404 | no |
+| 10200 | [discontinuity](/docs/errors/discontinuity) | — | no |
+| 50000 | [connection_failed](/docs/errors/connection_failed) | — | no |
+
+Stable URL shape: `https://docs.fluxychat.com/errors/<identifier>`.

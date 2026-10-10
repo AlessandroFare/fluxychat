@@ -53,6 +53,26 @@ describe("RoomDurableObject message handlers", () => {
     vi.restoreAllMocks();
   });
 
+  it("FX-OCC-1 broadcasts occupancy with connections and unique members", async () => {
+    const { roomDo } = createRoomDo();
+    const a = createMockWebSocket();
+    const b = createMockWebSocket();
+    roomDo.clients.add(a);
+    roomDo.clients.add(b);
+    roomDo.userIds.set(a, userId);
+    roomDo.userIds.set(b, userId);
+
+    await roomDo.broadcastSubscriptionCount();
+
+    const occupancy = a.sent.map((row) => JSON.parse(row)).find((row) => row.type === "occupancy");
+    expect(occupancy).toMatchObject({
+      type: "occupancy",
+      connections: 2,
+      presenceMembers: 1,
+      watching: 1,
+    });
+  });
+
   it("fans out live cursor frames without echoing to the sender", async () => {
     const { roomDo } = createRoomDo();
     const sender = createMockWebSocket();
@@ -74,6 +94,74 @@ describe("RoomDurableObject message handlers", () => {
       x: 12.5,
       y: 80,
       label: "Ada",
+    });
+  });
+
+  it("FX-CUR-6 stores last cursor and replays it on snapshot", async () => {
+    const { roomDo } = createRoomDo();
+    const sender = createMockWebSocket();
+    roomDo.clients.add(sender);
+    roomDo.userIds.set(sender, userId);
+
+    await roomDo.onMessage(sender, {
+      data: JSON.stringify({ type: "cursor", x: 3, y: 4, label: "Ada" }),
+    });
+
+    expect(sender.sent).toHaveLength(0);
+    expect(roomDo.lastCursors.get(userId)).toMatchObject({ x: 3, y: 4, userId });
+    expect(roomDo.cursorHistory.at(-1)).toMatchObject({ x: 3, y: 4, userId });
+    const joiner = createMockWebSocket();
+    roomDo.sendCursorSnapshot(joiner);
+    expect(JSON.parse(joiner.sent[0])).toMatchObject({
+      type: "cursor",
+      x: 3,
+      y: 4,
+      snapshot: true,
+    });
+  });
+
+  it("does not fan out cursors when nobody else is in the room", async () => {
+    const { roomDo } = createRoomDo();
+    const sender = createMockWebSocket();
+    roomDo.clients.add(sender);
+    roomDo.userIds.set(sender, userId);
+
+    await roomDo.onMessage(sender, {
+      data: JSON.stringify({ type: "cursor", x: 1, y: 2 }),
+    });
+
+    expect(sender.sent).toHaveLength(0);
+  });
+
+  it("fans out cursor batches with positions", async () => {
+    const { roomDo } = createRoomDo();
+    const sender = createMockWebSocket();
+    const peer = createMockWebSocket();
+    roomDo.clients.add(sender);
+    roomDo.clients.add(peer);
+    roomDo.userIds.set(sender, userId);
+    roomDo.userIds.set(peer, "user_peer");
+
+    await roomDo.onMessage(sender, {
+      data: JSON.stringify({
+        type: "cursor",
+        x: 8,
+        y: 9,
+        positions: [
+          { x: 1, y: 1, offsetMs: 0 },
+          { x: 8, y: 9, offsetMs: 40 },
+        ],
+      }),
+    });
+
+    expect(JSON.parse(peer.sent[0])).toMatchObject({
+      type: "cursor",
+      x: 8,
+      y: 9,
+      positions: [
+        { x: 1, y: 1, offsetMs: 0 },
+        { x: 8, y: 9, offsetMs: 40 },
+      ],
     });
   });
 
@@ -333,6 +421,49 @@ describe("RoomDurableObject message handlers", () => {
     expect(roomDo.activeStreams.has(userId)).toBe(false);
   });
 
+  it("echoes requestId on stream start", async () => {
+    vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+    });
+    const { roomDo } = createRoomDo();
+    const started = await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "start",
+      content: "hel",
+      parentId: null,
+      requestId: "turn-9",
+    });
+    expect(started).toMatchObject({ ok: true, requestId: "turn-9" });
+    expect(roomDo.activeStreams.get(userId).requestId).toBe("turn-9");
+  });
+
+  it("lets another member abort the only active stream", async () => {
+    vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+    });
+    const { roomDo } = createRoomDo();
+    await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "start",
+      content: "hel",
+      parentId: null,
+    });
+    const peer = createMockWebSocket();
+    roomDo.clients.add(peer);
+    roomDo.userIds.set(peer, "user_peer");
+
+    await roomDo.onMessage(peer, {
+      data: JSON.stringify({ type: "stream", op: "abort" }),
+    });
+
+    expect(roomDo.activeStreams.has(userId)).toBe(false);
+    expect(peer.sent.some((row) => JSON.parse(row).type === "delete")).toBe(true);
+  });
+
   it("processStreamOp start returns quota_exceeded when quota is denied", async () => {
     vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
       allowed: false,
@@ -371,6 +502,7 @@ describe("RoomDurableObject message handlers", () => {
       limit: MAX_WS_HISTORY_LIMIT,
       cache: false,
       readonly: false,
+      protocol: null,
     });
 
     const connectReq = new Request(
@@ -381,6 +513,7 @@ describe("RoomDurableObject message handlers", () => {
       limit: 120,
       cache: false,
       readonly: false,
+      protocol: null,
     });
 
     const cacheReq = new Request(
@@ -398,6 +531,12 @@ describe("RoomDurableObject message handlers", () => {
       replay: "off",
       readonly: true,
     });
+
+    expect(
+      parseWsConnectOptions(
+        new Request(`https://worker/ws/room/${roomId}?protocol=2&replay=off`),
+      ).protocol,
+    ).toBe(2);
   });
 
   it("rejects mutating frames on a readonly socket", async () => {
@@ -649,5 +788,87 @@ describe("RoomDurableObject message handlers", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.run.status).toBe("completed");
+  });
+
+  it("FX-LOCK-1 grants exclusive locks and denies a second holder", async () => {
+    const { roomDo } = createRoomDo();
+    const ada = createMockWebSocket();
+    const bob = createMockWebSocket();
+    roomDo.clients.add(ada);
+    roomDo.clients.add(bob);
+    roomDo.userIds.set(ada, userId);
+    roomDo.userIds.set(bob, "user_bob");
+
+    await roomDo.onMessage(ada, {
+      data: JSON.stringify({
+        type: "lock_acquire",
+        lockId: "slide-1",
+        attributes: { component: "slide-1" },
+      }),
+    });
+    expect(JSON.parse(ada.sent[0])).toMatchObject({
+      type: "lock",
+      lockId: "slide-1",
+      owner: userId,
+      held: true,
+      acquired: true,
+      attributes: { component: "slide-1" },
+    });
+    expect(JSON.parse(bob.sent[0])).toMatchObject({ lockId: "slide-1", acquired: true });
+
+    await roomDo.onMessage(bob, {
+      data: JSON.stringify({ type: "lock_acquire", lockId: "slide-1" }),
+    });
+    expect(JSON.parse(bob.sent[1])).toMatchObject({
+      type: "lock",
+      owner: userId,
+      acquired: false,
+      held: true,
+    });
+  });
+
+  it("FX-RREAC-1 fans out ephemeral room_reaction without persistence", async () => {
+    const { roomDo } = createRoomDo();
+    const ada = createMockWebSocket();
+    const bob = createMockWebSocket();
+    roomDo.clients.add(ada);
+    roomDo.clients.add(bob);
+    roomDo.userIds.set(ada, userId);
+    roomDo.userIds.set(bob, "user_bob");
+
+    await roomDo.onMessage(ada, {
+      data: JSON.stringify({ type: "room_reaction", name: "👏" }),
+    });
+    expect(JSON.parse(ada.sent[0])).toMatchObject({
+      type: "room_reaction",
+      userId,
+      name: "👏",
+    });
+    expect(JSON.parse(bob.sent[0])).toMatchObject({
+      type: "room_reaction",
+      userId,
+      name: "👏",
+    });
+  });
+
+  it("FX-PRES-1 presence_leave drops occupancy members without closing the socket", async () => {
+    const { roomDo } = createRoomDo();
+    const ada = createMockWebSocket();
+    const bob = createMockWebSocket();
+    roomDo.clients.add(ada);
+    roomDo.clients.add(bob);
+    roomDo.userIds.set(ada, userId);
+    roomDo.userIds.set(bob, "user_bob");
+
+    await roomDo.onMessage(ada, {
+      data: JSON.stringify({ type: "presence_leave", data: { agentStatus: "offline" } }),
+    });
+    expect(JSON.parse(bob.sent.find((row) => row.includes("member_left")))).toMatchObject({
+      type: "member_left",
+      userId,
+      data: { agentStatus: "offline" },
+    });
+    expect(roomDo.clients.has(ada)).toBe(true);
+    expect(roomDo.occupancyPresenceUserIds()).toEqual(["user_bob"]);
   });
 });

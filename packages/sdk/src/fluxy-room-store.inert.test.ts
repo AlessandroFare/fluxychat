@@ -12,5 +12,6 @@ describe("INERT_FLUXY_ROOM_SNAPSHOT", () => {
   it("exposes no-op actions without throwing until session binds real handlers", () => {
     expect(() => INERT_FLUXY_ROOM_SNAPSHOT.sendMessage("hi")).not.toThrow();
     expect(() => INERT_FLUXY_ROOM_SNAPSHOT.setTyping(true)).not.toThrow();
+    expect(() => INERT_FLUXY_ROOM_SNAPSHOT.sendRoomReaction("👏")).not.toThrow();
   });
 });

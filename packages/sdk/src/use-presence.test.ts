@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { othersFromRoomState } from "./use-presence";
+import { lostConnectionEventFromStatus, othersFromRoomState } from "./use-presence";
 
 describe("othersFromRoomState", () => {
   it("merges presence members with live cursors and hides self", () => {
@@ -41,5 +41,14 @@ describe("othersFromRoomState", () => {
       livePresence: { ada: { selection: { x: 1, y: 2, x2: 3, y2: 4 } } },
     });
     expect(others[0]?.presence.selection).toEqual({ x: 1, y: 2, x2: 3, y2: 4 });
+  });
+});
+
+describe("lostConnectionEventFromStatus", () => {
+  it("maps reconnect and restore", () => {
+    expect(lostConnectionEventFromStatus("connected", "reconnecting")).toBe("lost");
+    expect(lostConnectionEventFromStatus("reconnecting", "connected")).toBe("restored");
+    expect(lostConnectionEventFromStatus("connected", "failed")).toBe("failed");
+    expect(lostConnectionEventFromStatus("connected", "connected")).toBeNull();
   });
 });

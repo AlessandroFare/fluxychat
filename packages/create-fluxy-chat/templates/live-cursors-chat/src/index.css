@@ -13,6 +13,19 @@ body {
   margin: 0;
 }
 
+html.obs-overlay,
+html.obs-overlay body {
+  background: transparent;
+}
+html.obs-overlay .obs-overlay-shell {
+  max-width: none;
+  padding: 0;
+}
+html.obs-overlay .mode-badge,
+html.obs-overlay .room-picker {
+  display: none;
+}
+
 .shell {
   max-width: 960px;
   margin: 0 auto;

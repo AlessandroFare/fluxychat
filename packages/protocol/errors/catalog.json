@@ -1,0 +1,124 @@
+{
+  "hrefBase": "https://docs.fluxychat.com/errors",
+  "errors": [
+    {
+      "code": 40100,
+      "identifier": "token_expired",
+      "title": "Session token expired or invalid",
+      "httpStatus": 401,
+      "terminal": true
+    },
+    {
+      "code": 40101,
+      "identifier": "invalid_token",
+      "title": "Session token is not valid",
+      "httpStatus": 401,
+      "terminal": true
+    },
+    {
+      "code": 40102,
+      "identifier": "invalid_api_key",
+      "title": "API key is not valid",
+      "httpStatus": 401,
+      "terminal": true
+    },
+    {
+      "code": 40103,
+      "identifier": "anonymous_not_allowed",
+      "title": "This room does not allow anonymous access",
+      "httpStatus": 401,
+      "terminal": true
+    },
+    {
+      "code": 40108,
+      "identifier": "auth_refused",
+      "title": "Authentication or room access failed",
+      "httpStatus": 401,
+      "terminal": true
+    },
+    {
+      "code": 40300,
+      "identifier": "not_member",
+      "title": "You are not a member of this room",
+      "httpStatus": 403,
+      "terminal": true
+    },
+    {
+      "code": 40301,
+      "identifier": "banned",
+      "title": "You are banned from this room",
+      "httpStatus": 403,
+      "terminal": true
+    },
+    {
+      "code": 40302,
+      "identifier": "forbidden",
+      "title": "You are not allowed to join this room",
+      "httpStatus": 403,
+      "terminal": true
+    },
+    {
+      "code": 42900,
+      "identifier": "rate_limited",
+      "title": "Too many requests",
+      "httpStatus": 429,
+      "terminal": false
+    },
+    {
+      "code": 44000,
+      "identifier": "channel_at_capacity",
+      "title": "This room is at capacity",
+      "httpStatus": 429,
+      "terminal": true
+    },
+    {
+      "code": 10000,
+      "identifier": "send_not_open",
+      "title": "Cannot send because the socket is not open",
+      "httpStatus": 0,
+      "terminal": false
+    },
+    {
+      "code": 10008,
+      "identifier": "ws_policy",
+      "title": "WebSocket closed with policy violation",
+      "httpStatus": 403,
+      "terminal": true
+    },
+    {
+      "code": 40400,
+      "identifier": "message_not_found",
+      "title": "Message not found",
+      "httpStatus": 404,
+      "terminal": false
+    },
+    {
+      "code": 40040,
+      "identifier": "feature_not_enabled",
+      "title": "This room feature is turned off",
+      "httpStatus": 400,
+      "terminal": false
+    },
+    {
+      "code": 40041,
+      "identifier": "resource_disposed",
+      "title": "This rooms instance has been disposed",
+      "httpStatus": 400,
+      "terminal": true
+    },
+    {
+      "code": 10200,
+      "identifier": "discontinuity",
+      "title": "Realtime history has a gap that could not be filled",
+      "httpStatus": 0,
+      "terminal": false
+    },
+    {
+      "code": 50000,
+      "identifier": "connection_failed",
+      "title": "WebSocket closed unexpectedly",
+      "httpStatus": 0,
+      "terminal": false
+    }
+  ]
+}

@@ -238,6 +238,10 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     const roomId = url.searchParams.get("roomId");
     const limit = Number(url.searchParams.get("limit") || "50");
     const before = url.searchParams.get("before") || null;
+    const after = url.searchParams.get("after") || url.searchParams.get("start") || null;
+    const until = url.searchParams.get("end") || null;
+    const fromSerialRaw = url.searchParams.get("fromSerial");
+    const beforeSerialRaw = url.searchParams.get("beforeSerial");
 
     if (!roomId) {
       return json({ error: "roomId required" }, { status: 400 });
@@ -264,6 +268,30 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     if (before) {
       sql += "AND created_at < ? ";
       params.push(before);
+    }
+    if (after) {
+      sql += "AND created_at >= ? ";
+      params.push(after);
+    }
+    if (until) {
+      sql += "AND created_at < ? ";
+      params.push(until);
+    }
+    if (fromSerialRaw) {
+      const fromSerial = Number(fromSerialRaw);
+      if (!Number.isFinite(fromSerial) || fromSerial < 0) {
+        return json({ error: "invalid_from_serial" }, { status: 400 });
+      }
+      sql += "AND id > ? ";
+      params.push(Math.floor(fromSerial));
+    }
+    if (beforeSerialRaw) {
+      const beforeSerial = Number(beforeSerialRaw);
+      if (!Number.isFinite(beforeSerial) || beforeSerial < 0) {
+        return json({ error: "invalid_before_serial" }, { status: 400 });
+      }
+      sql += "AND id < ? ";
+      params.push(Math.floor(beforeSerial));
     }
 
     sql += "ORDER BY created_at DESC LIMIT ?";

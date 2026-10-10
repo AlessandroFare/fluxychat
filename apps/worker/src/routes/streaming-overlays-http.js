@@ -4,6 +4,7 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import {
   createOverlay, getOverlay, listOverlays, deleteOverlay, getOverlayWidget,
+  parseOverlayPatch, updateOverlay,
 } from "../lib/streaming-overlays.js";
 
 export async function dispatchOverlayRoutes(request, url, h) {
@@ -48,6 +49,20 @@ export async function dispatchOverlayRoutes(request, url, h) {
     if (!ov) return json({ error: "not_found" }, { status: 404 });
     return json(ov);
   }
+  if (ovMatch && request.method === "PATCH") {
+    const auth = await adminAuth();
+    if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    const body = await request.json().catch(() => null);
+    const parsed = parseOverlayPatch(body);
+    if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+    const result = await updateOverlay(env, {
+      projectId: auth.projectId,
+      overlayId: decodeURIComponent(ovMatch[1]),
+      data: parsed.data,
+    });
+    if (!result.ok) return json({ error: result.error }, { status: result.status || 400 });
+    return json(result.overlay);
+  }
   if (ovMatch && request.method === "DELETE") {
     const auth = await adminAuth();
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
@@ -58,7 +73,7 @@ export async function dispatchOverlayRoutes(request, url, h) {
   const widgetMatch = url.pathname.match(/^\/overlays\/([^/]+)\/widget$/);
   if (widgetMatch && request.method === "GET") {
     const widget = await getOverlayWidget(env, {
-      projectId: "default", overlayId: decodeURIComponent(widgetMatch[1]),
+      overlayId: decodeURIComponent(widgetMatch[1]),
     });
     if (!widget) return json({ error: "not_found" }, { status: 404 });
     return json(widget);

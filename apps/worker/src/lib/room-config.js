@@ -33,6 +33,14 @@ function parseNlPolicy(value) {
   return s || undefined;
 }
 
+/** Stream `enableSlowMode(coolDownInterval)` — seconds between sends, 0 = off. */
+export function parseSlowModeSeconds(value) {
+  if (value == null || value === false || value === "") return 0;
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.min(3600, n);
+}
+
 /**
  * @param {*} env
  * @param {{ projectId: string, roomId: string }} input
@@ -52,11 +60,13 @@ export async function getRoomConfig(env, input) {
 
   const twoKey = parseSharedRoomTwoKey(config.sharedRoomTwoKey);
   const nlPolicy = parseNlPolicy(config.nlPolicy);
+  const slowModeSeconds = parseSlowModeSeconds(config.slowModeSeconds);
   const normalized = { ...config, approvalChain };
   if (twoKey === undefined) delete normalized.sharedRoomTwoKey;
   else normalized.sharedRoomTwoKey = twoKey;
   if (nlPolicy === undefined) delete normalized.nlPolicy;
   else normalized.nlPolicy = nlPolicy;
+  normalized.slowModeSeconds = slowModeSeconds == null ? 0 : slowModeSeconds;
 
   return {
     config: normalized,
@@ -93,6 +103,12 @@ export async function patchRoomConfig(env, input) {
     } else {
       next.nlPolicy = parsed;
     }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input.patch, "slowModeSeconds")) {
+    const parsed = parseSlowModeSeconds(input.patch.slowModeSeconds);
+    if (parsed == null) return { ok: false, error: "invalid_slow_mode" };
+    next.slowModeSeconds = parsed;
   }
 
   if (input.patch.approvalChain !== undefined) {
@@ -142,6 +158,28 @@ export async function patchRoomConfig(env, input) {
 /**
  * Load approval chain only (used when creating HITL requests).
  */
+export async function assertRoomSlowModeAllowed(env, { projectId, roomId, userId }) {
+  const { config } = await getRoomConfig(env, { projectId, roomId });
+  const sec = Number(config.slowModeSeconds) || 0;
+  if (sec <= 0) return { ok: true, slowModeSeconds: 0 };
+  const last = await env.DB.prepare(
+    `SELECT created_at FROM messages
+     WHERE project_id = ? AND room_id = ? AND user_id = ? AND deleted_at IS NULL
+     ORDER BY id DESC LIMIT 1`,
+  )
+    .bind(projectId, roomId, userId)
+    .first();
+  if (!last?.created_at) return { ok: true, slowModeSeconds: sec };
+  const elapsed = (Date.now() - Date.parse(String(last.created_at))) / 1000;
+  if (!Number.isFinite(elapsed) || elapsed >= sec) return { ok: true, slowModeSeconds: sec };
+  return {
+    ok: false,
+    error: "slow_mode",
+    slowModeSeconds: sec,
+    retryAfterSeconds: Math.max(1, Math.ceil(sec - elapsed)),
+  };
+}
+
 export async function getRoomApprovalChain(env, projectId, roomId) {
   const { config } = await getRoomConfig(env, { projectId, roomId });
   return config.approvalChain ?? { steps: [], defaultTimeoutSeconds: DEFAULT_APPROVAL_TIMEOUT_SECONDS };

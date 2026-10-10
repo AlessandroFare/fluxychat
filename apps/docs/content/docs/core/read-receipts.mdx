@@ -9,6 +9,7 @@ FluxyChat tracks per-user read position per room in D1. Clients update via REST;
 
 ```ts
 await client.markReadRest("general", latestMessageId);
+await client.markUnreadRest("general", firstUnreadId);
 ```
 
 Or enable automatic read on mount:
@@ -29,6 +30,7 @@ const { unreadCount, firstUnreadMessageId } = await client.getRoomCatchUp(roomId
 |--------|------|-------------|
 | POST | `/rooms/{id}/read` | Body `{ messageId }` |
 | GET | `/rooms/{id}/unread` | Unread count + first unread id |
+| POST | `/rooms/{id}/unread` | Stream `markUnread` — rewind from `{ messageId }` |
 | GET | `/rooms?userId=` | Room list includes `unreadCount` per room |
 
 Read receipts sync to [Inbox](/docs/core/inbox) and the user channel (`inbox_updated` events).

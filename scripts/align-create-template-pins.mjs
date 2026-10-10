@@ -10,12 +10,17 @@ function walk(dir) {
       walk(p);
       continue;
     }
-    if (name !== "package.json") continue;
+    if (name !== "package.json" && name !== "README.md") continue;
     const s = fs.readFileSync(p, "utf8");
     const next = s
-      .replaceAll('"@fluxy-chat/ui-kit": "^0.1.7"', '"@fluxy-chat/ui-kit": "^0.1.8"')
-      .replaceAll('"@fluxy-chat/ui": "^0.1.6"', '"@fluxy-chat/ui": "^0.1.7"')
-      .replaceAll('"@fluxy-chat/sdk": "^0.6.13"', '"@fluxy-chat/sdk": "^0.6.14"');
+      .replaceAll('"@fluxy-chat/ui-kit": "^0.1.8"', '"@fluxy-chat/ui-kit": "^0.1.9"')
+      .replaceAll('"@fluxy-chat/ui": "^0.1.7"', '"@fluxy-chat/ui": "^0.1.8"')
+      .replaceAll('"@fluxy-chat/react": "^0.1.8"', '"@fluxy-chat/react": "^0.1.9"')
+      .replaceAll('"@fluxy-chat/sdk": "^0.6.14"', '"@fluxy-chat/sdk": "^0.6.15"')
+      .replaceAll("@fluxy-chat/sdk@0.6.14", "@fluxy-chat/sdk@0.6.15")
+      .replaceAll("@fluxy-chat/react@0.1.8", "@fluxy-chat/react@0.1.9")
+      .replaceAll("@fluxy-chat/ui@0.1.7", "@fluxy-chat/ui@0.1.8")
+      .replaceAll("@fluxy-chat/ui-kit@0.1.8", "@fluxy-chat/ui-kit@0.1.9");
     if (next !== s) {
       fs.writeFileSync(p, next);
       console.log("updated", p);

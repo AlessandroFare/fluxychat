@@ -14,7 +14,7 @@ export function LandingFooter() {
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-white">
             <FluxychatIcon size={28} />
-            <span className="font-heading text-sm font-semibold">Fluxychat</span>
+            <span className="font-heading text-sm font-semibold">FluxyChat</span>
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-6 text-sm">
             <ConsoleEntryLink className="hover:text-white">{HOSTED_COPY.console}</ConsoleEntryLink>
@@ -44,8 +44,8 @@ export function LandingFooter() {
             >
               Dev.to
             </a>
-            <a href="mailto:fluxychat@outlook.com" className="underline underline-offset-2 hover:text-white">
-              fluxychat@outlook.com
+            <a href="mailto:support@fluxychat.com" className="underline underline-offset-2 hover:text-white">
+              support@fluxychat.com
             </a>
             <a
               href="https://github.com/AlessandroFare/fluxychat"

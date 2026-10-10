@@ -190,7 +190,7 @@ export default function AgentObservabilityPage() {
         <p className="text-xs text-muted-foreground">
           One-click OTel export to Langfuse. Self-host: use your VPS URL (e.g. https://langfuse.example.com).{" "}
           <a
-            href="https://github.com/fluxychat/Chat/blob/main/docs/LANGFUSE_VPS_RUNBOOK.md"
+            href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/LANGFUSE_VPS_RUNBOOK.md"
             className="font-medium underline-offset-2 hover:underline"
           >
             Langfuse VPS runbook

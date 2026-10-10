@@ -1,0 +1,10 @@
+---
+title: "40100 token_expired"
+description: "Session token expired or invalid"
+---
+
+# 40100 — token_expired
+
+The JWT is expired or not a Fluxy member token. This is terminal: stop retrying with the same credential.
+
+HTTP 401. WebSocket close 1008, reason `token_expired`. Mint a new JWT and connect again.

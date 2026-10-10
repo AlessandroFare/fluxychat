@@ -159,7 +159,57 @@ export function validateAgentScheduleInput(input, now = Date.now()) {
     ? String(input.idempotencyKey).trim().slice(0, 128)
     : "";
   if (!agentId) return { ok: false, reason: "agent_id_required" };
-  if (kind !== "delay" && kind !== "cron") return { ok: false, reason: "kind_must_be_delay_or_cron" };
+  if (kind !== "delay" && kind !== "cron" && kind !== "at" && kind !== "interval") {
+    return { ok: false, reason: "kind_must_be_delay_cron_at_or_interval" };
+  }
+
+  if (kind === "at") {
+    const raw = input.runAt ?? input.time ?? input.when;
+    const runAt =
+      typeof raw === "number"
+        ? raw > 1e9 && raw < 1e12
+          ? raw * 1000
+          : raw
+        : Date.parse(String(raw || ""));
+    if (!Number.isFinite(runAt)) return { ok: false, reason: "run_at_required" };
+    if (runAt - now < 1_000) return { ok: false, reason: "run_at_in_the_past" };
+    if (runAt - now > MAX_DELAY_MS) return { ok: false, reason: "run_at_too_far" };
+    return {
+      ok: true,
+      value: {
+        kind,
+        agentId,
+        prompt,
+        idempotencyKey: idempotencyKey || null,
+        delayMs: null,
+        cronExpression: null,
+        nextRunAt: runAt,
+      },
+    };
+  }
+
+  if (kind === "interval") {
+    const intervalMs =
+      input.intervalMs != null
+        ? Number(input.intervalMs)
+        : Number(input.intervalSeconds) * 1000;
+    if (!Number.isFinite(intervalMs) || intervalMs < 1_000) {
+      return { ok: false, reason: "interval_ms_min_1000" };
+    }
+    if (intervalMs > MAX_DELAY_MS) return { ok: false, reason: "interval_ms_too_large" };
+    return {
+      ok: true,
+      value: {
+        kind,
+        agentId,
+        prompt,
+        idempotencyKey: idempotencyKey || null,
+        delayMs: intervalMs,
+        cronExpression: null,
+        nextRunAt: now + intervalMs,
+      },
+    };
+  }
 
   if (kind === "delay") {
     const delayMs = Number(input.delayMs);
@@ -255,6 +305,13 @@ export function upsertAgentSchedule(rows, input, now = Date.now()) {
   return { ok: true, created: true, schedule, rows: list };
 }
 
+export function getAgentSchedule(rows, scheduleId) {
+  const list = Array.isArray(rows) ? rows : [];
+  const row = list.find((r) => r.id === scheduleId);
+  if (!row) return { ok: false, reason: "not_found" };
+  return { ok: true, schedule: row };
+}
+
 export function cancelAgentSchedule(rows, scheduleId) {
   const list = Array.isArray(rows) ? rows : [];
   const row = list.find((r) => r.id === scheduleId);
@@ -308,6 +365,15 @@ export function completeAgentScheduleFire(row, {
     else row.failCount = 0;
     return row;
   }
+  if (row.kind === "interval") {
+    const step = Number(row.delayMs);
+    row.status = "pending";
+    row.claimedAt = null;
+    row.nextRunAt = now + (Number.isFinite(step) && step >= 1000 ? step : 60_000);
+    if (!ok) row.failCount = Number(row.failCount || 0) + 1;
+    else row.failCount = 0;
+    return row;
+  }
   if (ok) {
     row.status = "done";
     row.claimedAt = null;
@@ -351,7 +417,8 @@ export function serializeSchedule(row) {
     prompt: row.prompt,
     idempotencyKey: row.idempotencyKey,
     cron: row.cronExpression,
-    delayMs: row.delayMs,
+    delayMs: row.kind === "interval" ? null : row.delayMs,
+    intervalMs: row.kind === "interval" ? row.delayMs : null,
     nextRunAt: row.nextRunAt,
     lastRunId: row.lastRunId,
     failCount: row.failCount,

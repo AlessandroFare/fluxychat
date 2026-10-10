@@ -18,6 +18,12 @@ export const FLUXY_INBOUND_EVENT_TYPES = [
   "presence_patch",
   "subscription_succeeded",
   "subscription_count",
+  /** Live socket + unique-member counts (join/leave). */
+  "occupancy",
+  /** Exclusive room lock (spaces-style). One holder per lockId. */
+  "lock",
+  /** Ephemeral room-level reaction (not a message reaction). */
+  "room_reaction",
   "member_joined",
   "member_left",
   "client_event",
@@ -72,15 +78,22 @@ export const FLUXY_OUTBOUND_EVENT_TYPES = [
    */
   "presence_state",
   "derived_set",
+  "lock_acquire",
+  "lock_release",
+  "room_reaction",
+  /** Leave the presence set without closing the socket (occupancy connections stay). */
+  "presence_leave",
 ] as const;
 
 /** Worker → client transport frames handled before dispatch. */
 export const FLUXY_TRANSPORT_INBOUND_TYPES = ["pong", "replay"] as const;
 
 /** Client-side synthetic events (REST replay / local merge). */
-export const FLUXY_SDK_SYNTHETIC_INBOUND_TYPES = ["history"] as const;
+export const FLUXY_SDK_SYNTHETIC_INBOUND_TYPES = ["history", "discontinuity"] as const;
 
 export type FluxyInboundEventType = (typeof FLUXY_INBOUND_EVENT_TYPES)[number];
 export type FluxyOutboundEventType = (typeof FLUXY_OUTBOUND_EVENT_TYPES)[number];
 
 export const FLUXY_PROTOCOL_VERSION = "1.0.0";
+/** Integer wire revision on WS/REST (`protocol=`). Unknown majors are rejected. */
+export const FLUXY_PROTOCOL_INTEGER = 1;

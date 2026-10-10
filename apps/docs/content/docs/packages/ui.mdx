@@ -1,11 +1,11 @@
 ---
 title: "@fluxy-chat/ui"
-description: "React UI components for FluxyChat — shadcn-style chat primitives built on Radix UI and Tailwind."
+description: React chat primitives. Tailwind plus Radix. State still comes from the SDK.
 ---
 
 # @fluxy-chat/ui
 
-React UI components for FluxyChat — shadcn-style chat primitives built on Radix UI and Tailwind.
+React chat primitives on Radix and Tailwind. Pair with `@fluxy-chat/react` for the socket.
 
 Pair with [`@fluxy-chat/react`](https://www.npmjs.com/package/@fluxy-chat/react) for realtime state and [`@fluxy-chat/sdk`](https://www.npmjs.com/package/@fluxy-chat/sdk) for the client.
 
@@ -20,17 +20,20 @@ pnpm add @fluxy-chat/ui @fluxy-chat/react @fluxy-chat/sdk
 ## Quick start
 
 ```tsx
-import { ChatWindow, MessageList, MessageInput } from "@fluxy-chat/ui";
+import { ChatWindow } from "@fluxy-chat/ui";
 import { useChat } from "@fluxy-chat/react";
 
 function Room({ roomId }: { roomId: string }) {
-  const { messages, sendMessage } = useChat({ roomId });
+  const { messages, sendMessage, online, typingUsers } = useChat({ roomId });
 
   return (
-    <ChatWindow>
-      <MessageList messages={messages} />
-      <MessageInput onSend={(text) => sendMessage(text)} />
-    </ChatWindow>
+    <ChatWindow
+      roomName={roomId}
+      messages={messages}
+      online={online}
+      typingUsers={typingUsers}
+      onSend={(text) => sendMessage(text)}
+    />
   );
 }
 ```
@@ -39,8 +42,8 @@ function Room({ roomId }: { roomId: string }) {
 
 ### High-level
 
-- `ChatWindow`, `MessageList`, `MessageItem`, `MessageInput`
-- `ChannelList`, `PresenceList`, `TypingUsersIndicator`
+- `ChatWindow`, `RoomInfo`, `MessageList`, `MessageItem`, `MessageInput`
+- `ChannelList`, `PresenceList`, `TypingUsersIndicator`, `AvatarStack`
 - `AgentMessage`, `AgentTypingIndicator`
 - `ComposerToolsMenu`, composer prompt helpers
 

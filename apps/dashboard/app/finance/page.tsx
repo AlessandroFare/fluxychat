@@ -2,7 +2,7 @@ import { VerticalStudio } from "@/app/components/vertical-studio";
 
 export default function FinancePage() {
   return <VerticalStudio config={{
-    id: "finance", name: "FluxyFinance", eyebrow: "Market room", readiness: "Labs",
+    id: "finance", name: "FluxyFinance", eyebrow: "Market room", readiness: "Production",
     description: "Alerts and invoice drafts on the room. No PAN. No trade execution.",
     journey: ["Open market room", "Attach provider snapshot", "Review risk alert", "Approve invoice draft", "Export audit trail"],
     metrics: [{ label: "Risk flags", value: "0" }, { label: "Room events", value: "0" }, { label: "Capability ticks", value: "0" }],

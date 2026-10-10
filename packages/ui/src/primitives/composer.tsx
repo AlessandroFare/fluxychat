@@ -52,7 +52,7 @@ const ComposerTextarea = React.forwardRef<
     maxHeight?: number
   }
 >(function ComposerTextarea(
-  { className, maxHeight = 200, onInput, ...props },
+  { className, maxHeight = 150, onInput, value, ...props },
   ref
 ) {
   const innerRef = React.useRef<HTMLTextAreaElement | null>(null)
@@ -69,13 +69,20 @@ const ComposerTextarea = React.forwardRef<
     const el = innerRef.current
     if (!el) return
     el.style.height = "auto"
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`
+    const next = Math.min(el.scrollHeight, maxHeight)
+    el.style.height = `${next}px`
+    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden"
   }, [maxHeight])
+
+  React.useLayoutEffect(() => {
+    resize()
+  }, [value, resize])
 
   return (
     <textarea
       ref={setRef}
       data-slot="composer-textarea"
+      value={value}
       className={cn(
         "min-h-[40px] w-full resize-none border-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
         className

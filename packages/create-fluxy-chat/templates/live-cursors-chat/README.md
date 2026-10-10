@@ -9,3 +9,5 @@ npm run dev
 ```
 
 Open two tabs. Move the pointer and send a chat line.
+
+OBS browser source (not Overlayed Electron): append `?overlay=1` for a transparent chat+cursors layer. Worker `GET /overlays/:id/widget` is the JSON widget URL.

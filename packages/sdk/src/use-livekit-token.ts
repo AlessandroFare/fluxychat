@@ -15,10 +15,15 @@ export interface LiveKitTokenResponse {
 
 export interface UseLiveKitTokenOptions {
   workerUrl: string;
-  adminJwt: string;
+  /** Admin path `/admin/calls/token`. Prefer `token` + member room path. */
+  adminJwt?: string;
+  /** Member JWT — LiveKit TokenSource HOW (`POST /rooms/:id/voice/token`). */
+  token?: string;
   roomId: string;
   roomName?: string;
   displayName?: string;
+  canPublish?: boolean;
+  canSubscribe?: boolean;
 }
 
 export interface UseLiveKitTokenResult {
@@ -38,17 +43,24 @@ export function useLiveKitToken(options: UseLiveKitTokenOptions): UseLiveKitToke
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${options.workerUrl.replace(/\/$/, "")}/admin/calls/token`, {
+      const jwt = options.token || options.adminJwt;
+      if (!jwt) throw new Error("token or adminJwt required");
+      const path = options.token
+        ? `/rooms/${encodeURIComponent(options.roomId)}/voice/token`
+        : "/admin/calls/token";
+      const res = await fetch(`${options.workerUrl.replace(/\/$/, "")}${path}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${options.adminJwt}`,
+          Authorization: `Bearer ${jwt}`,
         },
         body: JSON.stringify({
           provider: "livekit",
           roomId: options.roomId,
           roomName: options.roomName,
           displayName: options.displayName,
+          canPublish: options.canPublish,
+          canSubscribe: options.canSubscribe,
         }),
       });
       const data = (await res.json()) as { token?: LiveKitTokenResponse; error?: string };
@@ -65,7 +77,7 @@ export function useLiveKitToken(options: UseLiveKitTokenOptions): UseLiveKitToke
     } finally {
       setIsLoading(false);
     }
-  }, [options.adminJwt, options.displayName, options.roomId, options.roomName, options.workerUrl]);
+  }, [options.adminJwt, options.canPublish, options.canSubscribe, options.displayName, options.roomId, options.roomName, options.token, options.workerUrl]);
 
   return { token, isLoading, error, fetchToken };
 }

@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Loader2, Radio, Users, Vote } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Clock, Loader2, Radio, Users, Vote } from "lucide-react";
 import {
   createCapabilityClient,
   type CapabilityClient,
 } from "@fluxy-chat/sdk";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import {
+  activateRoomTimer,
   checkInHybridEvent,
   closeLivePoll,
   closeRoomBreakout,
@@ -16,8 +17,10 @@ import {
   createRoomBreakout,
   createRoomPoll,
   getLivePollResults,
+  getRoomTimer,
   goLiveStageEvent,
   listRoomBreakouts,
+  stopRoomTimer,
 } from "@/lib/vertical-live-client";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -38,6 +41,14 @@ interface LiveFeedItem {
   id: string;
   label: string;
   at: string;
+}
+
+function formatTimerMs(timeMs?: number): string {
+  const ms = Math.max(0, Math.floor(Number(timeMs) || 0));
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min}:${String(sec).padStart(2, "0")}`;
 }
 
 function verticalCapabilityType(verticalId: LiveVerticalId): string {
@@ -67,10 +78,13 @@ export function VerticalLiveWorkspace({
   const [hybridEventId, setHybridEventId] = useState<string | null>(null);
   const [liveEventId, setLiveEventId] = useState<string | null>(null);
   const [whipUrl, setWhipUrl] = useState<string | null>(null);
+  const [timer, setTimer] = useState<{ running?: boolean; timeMs?: number } | null>(null);
+  const [auditEvents, setAuditEvents] = useState<Array<{ eventId: string; type: string; occurredAt: string }>>([]);
 
-  const capabilityClient: CapabilityClient | null = token
-    ? createCapabilityClient({ baseUrl: getPublicWorkerUrl(), token })
-    : null;
+  const capabilityClient: CapabilityClient | null = useMemo(
+    () => (token ? createCapabilityClient({ baseUrl: getPublicWorkerUrl(), token }) : null),
+    [token],
+  );
 
   const pushFeed = useCallback((label: string) => {
     const item = { id: crypto.randomUUID(), label, at: new Date().toLocaleTimeString() };
@@ -84,6 +98,28 @@ export function VerticalLiveWorkspace({
     setBreakouts(result.breakouts ?? []);
   }, [token, roomId]);
 
+  const refreshTimer = useCallback(async () => {
+    if (!token || !roomId || verticalId !== "edu") return;
+    const result = await getRoomTimer(token, roomId);
+    if (result.ok) setTimer(result.timer ?? null);
+  }, [token, roomId, verticalId]);
+
+  const refreshAudit = useCallback(async () => {
+    if (!capabilityClient || !roomId) return;
+    const result = await capabilityClient.list(roomId);
+    if (!result.ok) return;
+    const type = verticalCapabilityType(verticalId);
+    const rows = (result.events ?? [])
+      .filter((event) => event.type === type)
+      .slice(-12)
+      .reverse();
+    setAuditEvents(rows.map((event) => ({
+      eventId: event.eventId,
+      type: event.type,
+      occurredAt: event.occurredAt,
+    })));
+  }, [capabilityClient, roomId, verticalId]);
+
   useEffect(() => {
     setHybridEventId(null);
     setLiveEventId(null);
@@ -93,8 +129,27 @@ export function VerticalLiveWorkspace({
     setError(null);
     setPolls([]);
     setBreakouts([]);
-    if (verticalId === "edu") void refreshBreakouts();
-  }, [roomId, verticalId, refreshBreakouts]);
+    setTimer(null);
+    setAuditEvents([]);
+    if (verticalId === "edu") {
+      void refreshBreakouts();
+      void refreshTimer();
+    }
+    if (verticalId === "health" || verticalId === "finance" || verticalId === "continuity") {
+      void refreshAudit();
+    }
+  }, [roomId, verticalId, refreshBreakouts, refreshTimer, refreshAudit]);
+
+  useEffect(() => {
+    if (verticalId !== "edu" || !timer?.running) return;
+    const id = window.setInterval(() => {
+      setTimer((prev) => {
+        if (!prev?.running) return prev;
+        return { ...prev, timeMs: Math.max(0, (prev.timeMs ?? 0) - 1000) };
+      });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [verticalId, timer?.running]);
 
   async function publishCapability(extra?: Record<string, unknown>) {
     if (!capabilityClient) throw new Error("Sign in to publish capability events");
@@ -203,6 +258,51 @@ export function VerticalLiveWorkspace({
               >
                 {busy === "attend" ? <Loader2 className="size-3 animate-spin" /> : null}
                 Mark attendance
+              </Button>
+            </div>
+            <div className="rounded-xl border border-border p-4">
+              <div className="flex items-center gap-2">
+                <Clock className="size-4" aria-hidden />
+                <p className="font-medium">Class timer</p>
+              </div>
+              <p className="mt-2 font-mono text-sm tabular-nums">
+                {formatTimerMs(timer?.timeMs)} {timer?.running ? "running" : "stopped"}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                className="mt-3"
+                disabled={!!busy}
+                onClick={() => void runAction("timer-start", async () => {
+                  const result = await activateRoomTimer(token, roomId, {
+                    mode: "timer",
+                    timeMs: 5 * 60 * 1000,
+                    running: true,
+                  });
+                  if (!result.ok) throw new Error(result.error || "timer_failed");
+                  setTimer(result.timer ?? { running: true, timeMs: 5 * 60 * 1000 });
+                  pushFeed("Timer 5:00 · D1");
+                  setNotice("Room timer is on the Worker (`POST /rooms/:id/timer/activate`). Same fan-out as BBB timerActivate.");
+                })}
+              >
+                {busy === "timer-start" ? <Loader2 className="size-3 animate-spin" /> : null}
+                Start 5 min
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-3 ml-2"
+                disabled={!!busy}
+                onClick={() => void runAction("timer-stop", async () => {
+                  const result = await stopRoomTimer(token, roomId);
+                  if (!result.ok) throw new Error(result.error || "timer_stop_failed");
+                  setTimer(result.timer ?? { running: false });
+                  pushFeed("Timer stopped");
+                })}
+              >
+                {busy === "timer-stop" ? <Loader2 className="size-3 animate-spin" /> : null}
+                Stop
               </Button>
             </div>
             <div className="rounded-xl border border-border p-4">
@@ -385,6 +485,18 @@ export function VerticalLiveWorkspace({
             <p className="mt-1 text-sm text-muted-foreground">
               Publish a versioned capability event for audit trails: {verticalCapabilityType(verticalId)}.
             </p>
+            {auditEvents.length > 0 ? (
+              <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+                {auditEvents.map((event) => (
+                  <li key={event.eventId} className="flex justify-between gap-2 font-mono">
+                    <span className="truncate">{event.type}</span>
+                    <span className="shrink-0">{new Date(event.occurredAt).toLocaleTimeString()}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">No rows yet for this room. Publish, then the list comes from D1.</p>
+            )}
             <Button
               type="button"
               size="sm"
@@ -399,7 +511,8 @@ export function VerticalLiveWorkspace({
                       ? { desk: "equities", session: "open" }
                       : { deviceClass: "mobile", trustScore: 0.92 },
                 );
-                setNotice("Capability event persisted and broadcast on room WS.");
+                await refreshAudit();
+                setNotice("Capability event persisted. List below is GET /rooms/:id/capabilities/events.");
               })}
             >
               Publish compliance event

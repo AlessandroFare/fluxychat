@@ -145,6 +145,47 @@ export async function createLiveStageEvent(
   return { event: created.event };
 }
 
+export async function getRoomTimer(
+  token: string,
+  roomId: string,
+): Promise<{ ok: boolean; timer?: { mode?: string; running?: boolean; timeMs?: number }; error?: string }> {
+  return fetchWorkerJson(`${BASE}/rooms/${encodeURIComponent(roomId)}/timer`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function activateRoomTimer(
+  token: string,
+  roomId: string,
+  opts?: { mode?: "timer" | "stopwatch"; timeMs?: number; running?: boolean },
+): Promise<{ ok: boolean; timer?: { mode?: string; running?: boolean; timeMs?: number }; error?: string }> {
+  return fetchWorkerJson(`${BASE}/rooms/${encodeURIComponent(roomId)}/timer/activate`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(opts ?? { mode: "timer", timeMs: 5 * 60 * 1000, running: true }),
+  });
+}
+
+export async function startRoomTimer(
+  token: string,
+  roomId: string,
+): Promise<{ ok: boolean; timer?: { mode?: string; running?: boolean; timeMs?: number }; error?: string }> {
+  return fetchWorkerJson(`${BASE}/rooms/${encodeURIComponent(roomId)}/timer/start`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function stopRoomTimer(
+  token: string,
+  roomId: string,
+): Promise<{ ok: boolean; timer?: { mode?: string; running?: boolean; timeMs?: number }; error?: string }> {
+  return fetchWorkerJson(`${BASE}/rooms/${encodeURIComponent(roomId)}/timer/stop`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function goLiveStageEvent(
   adminToken: string,
   eventId: string,

@@ -1,6 +1,9 @@
 import * as React from "react";
 import type { FluxyChatAttachment } from "@fluxy-chat/sdk";
 import { getActiveMentionAtCursor, mentionMatchesQuery } from "./mention-utils";
+import { applyInsertedText, insertTextAtCursor } from "./insert-text-at-cursor";
+
+const COMPOSER_EMOJIS = ["😀", "😂", "😍", "👍", "❤️", "🎉", "🔥", "🙏"] as const;
 
 export interface MentionSuggestion {
   /** Handle inserted as @handle */
@@ -18,10 +21,17 @@ export interface MessageInputProps {
   replyToId: number | null;
   replyPreview: string | null;
   onCancelReply: () => void;
+  quoteToId?: number | null;
+  quotePreview?: string | null;
+  onCancelQuote?: () => void;
   pendingAttachments: FluxyChatAttachment[];
   onRemoveAttachment: (index: number) => void;
   onAppendAttachments: (next: FluxyChatAttachment[]) => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
+  /** Ably MessageInput `onSendError`. */
+  onSendError?: (error: Error) => void;
+  /** Ably MessageInput `enableTyping` (default true). */
+  enableTyping?: boolean;
   /** User/agent handles suggested after typing `@` */
   mentionSuggestions?: MentionSuggestion[];
   /** Cap visible rows in the dropdown (default 8) */
@@ -108,10 +118,15 @@ export function MessageInput({
   replyToId,
   replyPreview,
   onCancelReply,
+  quoteToId = null,
+  quotePreview = null,
+  onCancelQuote,
   pendingAttachments,
   onRemoveAttachment,
   onAppendAttachments,
   onSubmit,
+  onSendError,
+  enableTyping = true,
   mentionSuggestions = [],
   mentionMaxSuggestions = 8,
   mentionPrioritizeHandles = [],
@@ -120,11 +135,12 @@ export function MessageInput({
   pendingTool,
   onClearPendingTool,
 }: MessageInputProps) {
-  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const inputRef = React.useRef<HTMLTextAreaElement | null>(null);
   const uploadInputRef = React.useRef<HTMLInputElement | null>(null);
   const uploadKindRef = React.useRef<"image" | "file" | "audio">("file");
   const [uploadBusy, setUploadBusy] = React.useState(false);
   const [mentionOpen, setMentionOpen] = React.useState(false);
+  const [emojiOpen, setEmojiOpen] = React.useState(false);
   const [mentionHighlight, setMentionHighlight] = React.useState(0);
   const [mentionCtx, setMentionCtx] = React.useState<{ start: number; query: string } | null>(
     null
@@ -255,39 +271,83 @@ export function MessageInput({
       .finally(() => setUploadBusy(false));
   };
 
-  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value;
     if (editingMessageId !== null) onEditingChange(v);
     else {
       onChange(v);
-      onTyping?.(true);
+      if (enableTyping) onTyping?.(true);
     }
     queueMicrotask(syncMentionOpen);
   };
 
-  const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!mentionOpen || !filteredMentions.length) return;
-    if (e.key === "ArrowDown") {
+  function sendWithErrorHandling() {
+    try {
+      const result = onSubmit();
+      if (result && typeof (result as Promise<void>).then === "function") {
+        void (result as Promise<void>).catch((err: unknown) => {
+          onSendError?.(err instanceof Error ? err : new Error(String(err)));
+        });
+      }
+    } catch (err: unknown) {
+      onSendError?.(err instanceof Error ? err : new Error(String(err)));
+    }
+  }
+
+  function insertComposerEmoji(emoji: string) {
+    const current = editingMessageId !== null ? editingValue : value;
+    const { next, caret } = insertTextAtCursor(inputRef.current, current, emoji);
+    if (editingMessageId !== null) applyInsertedText(inputRef.current, next, caret, onEditingChange);
+    else {
+      applyInsertedText(inputRef.current, next, caret, onChange);
+      if (enableTyping) onTyping?.(true);
+    }
+    setEmojiOpen(false);
+  }
+
+  const onInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionOpen && filteredMentions.length) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionHighlight((i) => (i + 1) % filteredMentions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionHighlight((i) =>
+          i <= 0 ? filteredMentions.length - 1 : i - 1
+        );
+        return;
+      }
+      if (e.key === "Enter" && filteredMentions[mentionHighlight]) {
+        e.preventDefault();
+        applyMentionSelection(filteredMentions[mentionHighlight].handle);
+        return;
+      }
+      if (e.key === "Escape") {
+        setMentionOpen(false);
+        return;
+      }
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      setMentionHighlight((i) => (i + 1) % filteredMentions.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setMentionHighlight((i) =>
-        i <= 0 ? filteredMentions.length - 1 : i - 1
-      );
-    } else if (e.key === "Enter" && filteredMentions[mentionHighlight]) {
-      e.preventDefault();
-      applyMentionSelection(filteredMentions[mentionHighlight].handle);
-    } else if (e.key === "Escape") {
-      setMentionOpen(false);
+      sendWithErrorHandling();
     }
   };
+
+  React.useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 150)}px`;
+    el.style.overflowY = el.scrollHeight > 150 ? "auto" : "hidden";
+  }, [text]);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit();
+        sendWithErrorHandling();
       }}
       style={{
         padding: "8px 12px",
@@ -483,6 +543,40 @@ export function MessageInput({
           </button>
         </div>
       ) : null}
+      {quoteToId !== null ? (
+        <div
+          data-testid="composer-quote-chip"
+          style={{
+            marginBottom: 2,
+            padding: "4px 8px",
+            borderRadius: 6,
+            background: "rgba(15,23,42,0.9)",
+            color: "#e5e7eb",
+            fontSize: 11,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>
+            Quoting #{quoteToId}
+            {quotePreview ? ` · ${quotePreview}` : ""}
+          </span>
+          <button
+            type="button"
+            onClick={() => onCancelQuote?.()}
+            style={{
+              border: "none",
+              background: "transparent",
+              color: "#9ca3af",
+              cursor: "pointer",
+              fontSize: 11,
+            }}
+          >
+            cancel
+          </button>
+        </div>
+      ) : null}
       <div
         style={{
           display: "flex",
@@ -490,8 +584,9 @@ export function MessageInput({
           alignItems: "center",
         }}
       >
-        <input
+        <textarea
           ref={inputRef}
+          rows={1}
           value={editingMessageId !== null ? editingValue : value}
           onChange={onInputChange}
           onKeyDown={onInputKeyDown}
@@ -515,8 +610,60 @@ export function MessageInput({
             borderRadius: 4,
             border: "1px solid #5c5c5c",
             fontSize: 14,
+            minHeight: 40,
+            maxHeight: 150,
+            resize: "none",
+            overflowY: "hidden",
+            lineHeight: 1.4,
           }}
         />
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            onClick={() => setEmojiOpen((open) => !open)}
+            aria-label="Insert emoji"
+            title="Insert emoji"
+            style={{
+              padding: "4px 6px",
+              borderRadius: 4,
+              border: "1px solid #5c5c5c",
+              background: "#f9fafb",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            😊
+          </button>
+          {emojiOpen ? (
+            <div
+              data-testid="composer-emoji-picker"
+              style={{
+                position: "absolute",
+                bottom: "110%",
+                left: 0,
+                display: "flex",
+                gap: 4,
+                padding: 6,
+                border: "1px solid #5c5c5c",
+                borderRadius: 6,
+                background: "#fff",
+                zIndex: 20,
+              }}
+            >
+              {COMPOSER_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  aria-label={`Insert ${emoji}`}
+                  onClick={() => insertComposerEmoji(emoji)}
+                  style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 16 }}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={() => triggerComposerUpload("image", "image")}

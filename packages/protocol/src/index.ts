@@ -2,6 +2,7 @@ import {
   FLUXY_INBOUND_EVENT_TYPES,
   FLUXY_OUTBOUND_EVENT_TYPES,
   FLUXY_PROTOCOL_VERSION,
+  FLUXY_PROTOCOL_INTEGER,
   FLUXY_SDK_SYNTHETIC_INBOUND_TYPES,
   FLUXY_TRANSPORT_INBOUND_TYPES,
   type FluxyInboundEventType,
@@ -12,6 +13,7 @@ export {
   FLUXY_INBOUND_EVENT_TYPES,
   FLUXY_OUTBOUND_EVENT_TYPES,
   FLUXY_PROTOCOL_VERSION,
+  FLUXY_PROTOCOL_INTEGER,
   FLUXY_SDK_SYNTHETIC_INBOUND_TYPES,
   FLUXY_TRANSPORT_INBOUND_TYPES,
   type FluxyInboundEventType,
@@ -96,3 +98,13 @@ export {
 } from "./server-realtime-events.js";
 
 export { isValidChatMessageEvent } from "./message-event.js";
+
+export {
+  FLUXY_ERROR_CATALOG,
+  FLUXY_ERROR_CODES,
+  FLUXY_ERROR_HREF_BASE,
+  fluxyErrorByCode,
+  fluxyErrorByIdentifier,
+  type FluxyErrorCatalogEntry,
+  type FluxyErrorIdentifier,
+} from "./error-codes.js";

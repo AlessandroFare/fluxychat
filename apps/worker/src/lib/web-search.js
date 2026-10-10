@@ -7,7 +7,14 @@ import { safeOutboundFetch } from "./url-ssrf.js";
 import { logInfo, logError } from "./worker-log.js";
 
 const SEARCH_TIMEOUT_MS = 12_000;
-const DEFAULT_PROVIDER_CHAIN = "tavily,searxng,brave,wikipedia";
+/** Wikipedia first: always free. Paid/SaaS search only if the operator keys them. */
+const DEFAULT_PROVIDER_CHAIN = "wikipedia,brave,tavily,searxng";
+const MAX_QUERY_CHARS = 220;
+const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
+const PHONE_RE = /\b(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}\b/g;
+const SSN_RE = /\b\d{3}-\d{2}-\d{4}\b/g;
+const JWT_RE = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
+const BEARER_RE = /\b(?:bearer|token|api[_-]?key|sk-|jwt)[=:\s][^\s]{8,}/gi;
 
 export function detectResearchMode(text) {
   if (typeof text !== "string") return null;
@@ -35,6 +42,24 @@ export function extractResearchQuery(text) {
     .replace(/\.\s*Summarize findings.*$/i, "")
     .replace(/\.\s*Structure your answer.*$/i, "")
     .trim();
+}
+
+/**
+ * Strip PII/secrets and cap length before any search provider sees the query.
+ * No extra LLM: Groq never receives emails/tokens for search rewrite.
+ */
+export function sanitizeSearchQuery(raw) {
+  let text = String(raw || "");
+  text = text.replace(JWT_RE, " ");
+  text = text.replace(BEARER_RE, " ");
+  text = text.replace(EMAIL_RE, " ");
+  text = text.replace(SSN_RE, " ");
+  text = text.replace(PHONE_RE, " ");
+  text = text.replace(/https?:\/\/\S+/gi, " ");
+  text = text.replace(/[^\p{L}\p{N}\s.+#-]/gu, " ");
+  text = text.replace(/\s+/g, " ").trim();
+  if (text.length > MAX_QUERY_CHARS) text = text.slice(0, MAX_QUERY_CHARS).trim();
+  return text;
 }
 
 export function resolveWebSearchProviders(env) {
@@ -282,7 +307,7 @@ function isConfigured(env, provider) {
  * @param {{ numResults?: number, mode?: "web-search"|"deep-research" }} [opts]
  */
 export async function performWebSearch(env, query, opts = {}) {
-  const q = String(query || "").trim();
+  const q = sanitizeSearchQuery(query);
   if (!q) {
     return { ok: false, error: "empty_query", results: [] };
   }
@@ -297,7 +322,7 @@ export async function performWebSearch(env, query, opts = {}) {
     try {
       const result = await searchWithProvider(env, provider, q, num, mode);
       if (result.ok && result.results.length > 0) {
-        logInfo("web_search.ok", { provider, query: q.slice(0, 80), count: result.results.length });
+        logInfo("web_search.ok", { provider, query: q.slice(0, 40), count: result.results.length });
         return result;
       }
       if (result.error && result.error !== "not_configured") {
@@ -306,7 +331,7 @@ export async function performWebSearch(env, query, opts = {}) {
       }
     } catch (err) {
       lastError = err?.message || "web_search_failed";
-      logError("web_search.provider_error", err, { provider, query: q.slice(0, 80) });
+      logError("web_search.provider_error", err, { provider, query: q.slice(0, 40) });
     }
   }
 
@@ -335,14 +360,14 @@ function hasAnySearchProvider(env) {
  * @param {"web-search"|"deep-research"} mode
  */
 export async function buildWebSearchContext(env, userMessage, mode) {
-  const query = extractResearchQuery(userMessage);
+  const query = sanitizeSearchQuery(extractResearchQuery(userMessage));
   if (!query) return null;
 
   if (!hasAnySearchProvider(env)) {
     logInfo("web_search.skipped_no_api_key", { mode });
     return [
       "The user requested a live web search, but no search provider is configured on the Worker.",
-      "Set TAVILY_API_KEY (recommended), or SEARXNG_BASE_URL with a public HTTPS URL + Basic Auth.",
+      "Wikipedia is on by default. Optional: BRAVE_SEARCH_API_KEY, TAVILY_API_KEY, or a private SearXNG URL.",
       "Do NOT claim you ran a web search. Say search is unavailable until the operator configures a provider.",
       `Intended query: ${query}`,
     ].join("\n");
@@ -369,14 +394,17 @@ export async function buildWebSearchContext(env, userMessage, mode) {
     if (secondary.ok && secondary.results.length) {
       block += `\n\n---\n\nAdditional results:\n\n${formatResultsForLlm(secondary.results, followUp)}`;
     }
-    const extracts = await fetchPageSnippets(
-      primary.results.map((row) => row.url),
-      3,
-    );
-    if (extracts.length > 0) {
-      block += `\n\n---\n\nPage extracts:\n\n${extracts
-        .map((row, i) => `${i + 1}. ${row.url}\n${row.text}`)
-        .join("\n\n")}`;
+    const fetchPages = env.WEB_SEARCH_FETCH_PAGES === "1" || env.WEB_SEARCH_FETCH_PAGES === "true";
+    if (fetchPages) {
+      const extracts = await fetchPageSnippets(
+        primary.results.map((row) => row.url),
+        3,
+      );
+      if (extracts.length > 0) {
+        block += `\n\n---\n\nPage extracts:\n\n${extracts
+          .map((row, i) => `${i + 1}. ${row.url}\n${row.text}`)
+          .join("\n\n")}`;
+      }
     }
   }
 

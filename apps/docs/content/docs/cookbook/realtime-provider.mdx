@@ -1,0 +1,49 @@
+---
+title: "FluxyRealtimeProvider (browser-only)"
+description: "Mount the provider in a client component. It closes room sockets on unmount."
+---
+
+# FluxyRealtimeProvider (browser-only)
+
+`FluxyRealtimeProvider` owns a `FluxyChatClient`. Put it in a Client Component (`"use client"`). Do not import it from a Server Component.
+
+It calls `client.close()` when the tree unmounts, and when the guest or JWT client instance is replaced (token refresh). That tears down every tracked room socket. Next.js Strict Mode remounts once in development; you may see a brief extra connect. That is expected.
+
+```tsx
+"use client";
+
+import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+
+export function ChatShell({ workerUrl, jwt }: { workerUrl: string; jwt: string }) {
+  return (
+    <FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={jwt}>
+      <Room />
+    </FluxyRealtimeProvider>
+  );
+}
+
+function Room() {
+  const { messages } = useChat({ roomId: "lobby" });
+  return <ul>{messages.map((m) => <li key={m.id}>{m.content}</li>)}</ul>;
+}
+```
+
+`FluxyRoomProvider` attaches the room on mount and detaches when the last provider unmounts. Child hooks (`useTyping`, `useMessages`, `usePresence`, `usePresenceListener`, `useOccupancy`, `useLocks`, `useCursors`, `useMembers`, `useRoom`) read that room from context. `useChatClient()` returns `{ clientId, client }` from the realtime provider.
+
+`room.objects` is the shared JSON bag on the room (`derived_set`). Same job as a LiveObjects map on the channel, on our wire.
+
+Release a cached room with `client.rooms.release(name)` (same as Ably `rooms.get` / `release`). `client.room(name)` still works.
+
+```tsx
+<FluxyRealtimeProvider workerUrl={workerUrl} authTokenProvider={jwt}>
+  <FluxyRoomProvider roomId="lobby">
+    <TypingBar />
+  </FluxyRoomProvider>
+</FluxyRealtimeProvider>
+```
+
+For attach without auto-connect (CHA-GP2): `useChat({ roomId, autoConnect: false })` then `client.room(roomId).attach()`.
+
+Room-only import (no IoT/edu barrel): `@fluxy-chat/sdk/room`.
+
+Demo scaffold: `?room=` pins the room. `?debug=1` prints the last 24 inbound frames.

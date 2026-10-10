@@ -34,3 +34,33 @@ export async function getRoomCatchUpForUser(db, { projectId, roomId, userId }) {
 
   return { unreadCount, lastReadMessageId, firstUnreadMessageId };
 }
+
+/**
+ * Stream `channel.markUnread({ message_id })`: that message and later are unread.
+ * Watermark becomes the previous message id (or 0).
+ */
+export async function markUnreadFromMessage(db, { projectId, roomId, userId, messageId }) {
+  const id = Math.floor(Number(messageId));
+  if (!Number.isFinite(id) || id < 1) return { ok: false, error: "messageId required" };
+
+  await db
+    .prepare(
+      "DELETE FROM read_receipts WHERE project_id = ? AND room_id = ? AND user_id = ? AND message_id >= ?",
+    )
+    .bind(projectId, roomId, userId, id)
+    .run();
+
+  const previous = id - 1;
+  if (previous >= 1) {
+    const now = new Date().toISOString();
+    await db
+      .prepare(
+        "INSERT OR IGNORE INTO read_receipts (project_id, room_id, user_id, message_id, created_at) VALUES (?, ?, ?, ?, ?)",
+      )
+      .bind(projectId, roomId, userId, previous, now)
+      .run();
+  }
+
+  const catchUp = await getRoomCatchUpForUser(db, { projectId, roomId, userId });
+  return { ok: true, ...catchUp };
+}

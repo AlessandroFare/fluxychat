@@ -1,6 +1,6 @@
 # FluxyChat game tick
 
-Lobby → match → `POST /games/matches/:id/input` fans out `server_event` `game.tick` on the same room WebSocket. **Not a netcode engine.**
+Lobby → match → input fans out `game.tick` (includes `state`). `leaveLobby` while waiting. `getMatch` is reconnect. **Not Colyseus Schema / netcode.**
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-game --example game-tick

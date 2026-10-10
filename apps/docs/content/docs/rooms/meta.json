@@ -1,0 +1,22 @@
+{
+  "title": "Rooms",
+  "icon": "MessageSquare",
+  "pages": [
+    "index",
+    "auth",
+    "status",
+    "messages",
+    "history",
+    "replies",
+    "presence",
+    "members",
+    "occupancy",
+    "typing",
+    "reactions",
+    "media",
+    "cursors",
+    "locks",
+    "locations",
+    "ui-kit"
+  ]
+}

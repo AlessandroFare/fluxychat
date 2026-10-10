@@ -1,6 +1,6 @@
 {
   "name": "@fluxy-chat/sdk",
-  "version": "0.6.14",
+  "version": "0.6.15",
   "description": "FluxyChat JavaScript/TypeScript SDK — WebSocket rooms, REST messages, FluxyChatClient, agents, and vertical SDKs",
   "license": "MIT",
   "author": "Fluxychat",
@@ -23,7 +23,8 @@
   "mcpName": "io.github.alessandrofare/fluxychat",
   "bin": {
     "fluxy-eval": "./bin/fluxy-eval.mjs",
-    "fluxy-migrate": "./bin/fluxy-migrate.mjs"
+    "fluxy-migrate": "./bin/fluxy-migrate.mjs",
+    "fluxy-room": "./bin/fluxy-room.mjs"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -72,6 +73,11 @@
       "types": "./dist/core.d.ts",
       "import": "./dist/core.js",
       "default": "./dist/core.js"
+    },
+    "./room": {
+      "types": "./dist/room.d.ts",
+      "import": "./dist/room.js",
+      "default": "./dist/room.js"
     },
     "./ai-sdk": {
       "types": "./dist/fluxy-room-chat-transport.d.ts",

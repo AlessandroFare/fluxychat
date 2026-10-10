@@ -25,6 +25,14 @@ function decodeRoomThreadCursor(raw) {
   }
 }
 
+export function parseTypingParentId(body) {
+  const raw = body?.parentId ?? body?.parent_id ?? body?.threadParentId;
+  if (raw == null || raw === "") return null;
+  const id = Number(raw);
+  if (!Number.isFinite(id) || id < 1) return null;
+  return Math.floor(id);
+}
+
 export function parseReplyParentId(body) {
   const raw = body?.replyTo ?? body?.parentId ?? body?.threadParentId;
   if (raw == null || raw === "") return null;

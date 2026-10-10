@@ -77,8 +77,8 @@ export default function DpaPage() {
 
       <p className="mt-8 text-sm text-muted-foreground">
         Questions:{" "}
-        <a className="underline underline-offset-2" href="mailto:fluxychat@outlook.com">
-          fluxychat@outlook.com
+        <a className="underline underline-offset-2" href="mailto:support@fluxychat.com">
+          support@fluxychat.com
         </a>
         . Privacy policy:{" "}
         <Link className="underline underline-offset-2" href={HOSTED_PATHS.privacyPolicy}>

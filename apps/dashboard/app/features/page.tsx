@@ -53,8 +53,8 @@ const GROUPS: FeatureGroup[] = [
         description: "Table buffering, code fence tracking, and inline marker healing for clean partial renders during AI streaming.",
       },
       {
-        title: "Stream resumption",
-        description: "Reconnect to in-progress AI responses after page refresh or network drop without losing partial output.",
+        title: "Reconnect and history",
+        description: "The room socket reconnects and REST history merges. Refresh-during-stream is not a published E2E guarantee.",
       },
       {
         title: "Realtime voice",

@@ -12,11 +12,15 @@ describe("PLATFORM_READINESS", () => {
     expect(PLATFORM_READINESS.huddles.readiness).toBe("labs");
   });
 
-  it("does not stamp verticals as hosted GA", () => {
-    expect(PLATFORM_READINESS.iot.readiness).toBe("beta");
-    expect(PLATFORM_READINESS.web3.readiness).toBe("beta");
-    expect(PLATFORM_READINESS.marketplace.readiness).toBe("beta");
-    expect(PLATFORM_READINESS.health.readiness).toBe("labs");
+  it("stamps Worker-backed verticals production without hosted GA / HIPAA claims", () => {
+    expect(PLATFORM_READINESS.iot.readiness).toBe("production");
+    expect(PLATFORM_READINESS.game.readiness).toBe("production");
+    expect(PLATFORM_READINESS.fleet.readiness).toBe("production");
+    expect(PLATFORM_READINESS.stream.readiness).toBe("production");
+    expect(PLATFORM_READINESS.edu.readiness).toBe("production");
+    expect(PLATFORM_READINESS.web3.readiness).toBe("production");
+    expect(PLATFORM_READINESS.marketplace.readiness).toBe("production");
+    expect(PLATFORM_READINESS.health.readiness).toBe("production");
     expect(PLATFORM_READINESS.health.description).toMatch(/No HIPAA BAA/);
     expect(PLATFORM_READINESS.transport.readiness).toBe("labs");
   });

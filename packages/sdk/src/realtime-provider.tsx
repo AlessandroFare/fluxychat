@@ -231,6 +231,18 @@ export function FluxyRealtimeProvider({
 
   const client = guestClient ?? jwtClient;
 
+  React.useEffect(() => {
+    return () => {
+      guestClient?.close();
+    };
+  }, [guestClient]);
+
+  React.useEffect(() => {
+    return () => {
+      jwtClient?.close();
+    };
+  }, [jwtClient]);
+
   const value = React.useMemo<FluxyRealtimeContextValue>(
     () => ({
       client,

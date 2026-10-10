@@ -106,6 +106,20 @@ export function mergeInboxItem(
   return next;
 }
 
+export function inboxItemReadMessageId(item: FluxyInboxItem): number | null {
+  const payload = item.payload;
+  if (!payload || typeof payload !== "object") return null;
+  const rec = payload as Record<string, unknown>;
+  if (typeof rec.messageId === "number") return rec.messageId;
+  const last = rec.lastMessage;
+  if (last && typeof last === "object" && typeof (last as { messageId?: unknown }).messageId === "number") {
+    return (last as { messageId: number }).messageId;
+  }
+  if (typeof rec.firstUnreadMessageId === "number") return rec.firstUnreadMessageId;
+  if (typeof rec.lastReadMessageId === "number" && rec.lastReadMessageId > 0) return rec.lastReadMessageId;
+  return null;
+}
+
 export function countUnseenItems(items: readonly FluxyInboxItem[]): number {
   return items.filter(
     (row) =>

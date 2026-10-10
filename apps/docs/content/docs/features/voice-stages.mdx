@@ -25,11 +25,16 @@ Split voice participants into speakers and listeners. Only speakers publish audi
 ```http
 GET  /rooms/:roomId/voice-stage
 POST /rooms/:roomId/voice-stage/join
+POST /rooms/:roomId/voice-stage/leave
 POST /rooms/:roomId/voice-stage/role
+POST /rooms/:roomId/voice-stage/mute
 POST /rooms/:roomId/voice-stage/request-speak
+POST /rooms/:roomId/voice/token
 ```
 
-Stage state also syncs via Room DO WebSocket presence (`speaker` | `listener`).
+WS: `stage_join` / `leave` / `mute` / `request_speak` / `promote`. After reconnect the SDK re-sends the last `stage_join` (LiveKit Room reconnect HOW, signaling only).
+
+Media is not this API. Mint `getVoiceToken` (or `createVoiceTokenSource` to cache until expiry) then connect `livekit-client` yourself. `canPublish: false` / `canSubscribe: false` map to LiveKit JWT grants. Identity is the member JWT, not a spoofed `userId`.
 
 ## Environment
 

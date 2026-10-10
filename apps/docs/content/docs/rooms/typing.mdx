@@ -1,0 +1,24 @@
+---
+title: Typing
+description: Ephemeral. Throttled outbound. Not a chat line.
+---
+
+```ts
+await room.attach();
+
+room.typing.subscribe((event) => {
+  const names = [...event.currentlyTyping];
+  console.log(names.length, names);
+});
+
+input.addEventListener("input", () => room.typing.keystroke());
+input.addEventListener("blur", () => room.typing.stop());
+```
+
+`keystroke()` / `start()` send `typing` started. The SDK throttles outbound starts (default 10s heartbeat). After 10s of silence it sends stop. `stop()` sends idle now.
+
+`typing.current()` is a `Set` of user ids. `currentlyTyping` on the event is a snapshot Set. Do not persist it.
+
+`useChat().setTyping` is the same wire event. `useTyping()` reads the bound room.
+
+Caption helper in `@fluxy-chat/ui`: `formatTypingCaption`. Recipe: [Typing](/docs/cookbook/typing).

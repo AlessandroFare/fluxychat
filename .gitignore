@@ -123,6 +123,17 @@ apps/docs/content/docs/architecture/competitive-strategy.mdx
 # Graphify dumps (already in git; run git rm -r --cached graphify-out)
 graphify-out/
 
+# Local HOW clones / dumps if they ever land at repo root (canonical: docs/research/, already ignored)
+partykit-main/
+portal-sdk-main/
+agents-main/
+ai-main/
+chat-main-vercel/
+CLM-main/
+fumadocs-dev/
+models.dev-dev/
+*.zip
+
 # Daily session notes
 memory/
 
@@ -131,3 +142,23 @@ qa/
 
 # Founder GTM drafts (Italian research, scripts, sequences)
 docs/marketing/*.md
+
+# Generated reports (run in CI, do not commit)
+bandwidth-budget-report.json
+bundle-size-report.json
+temp_blocks.txt
+
+# Founder-only research (keep locally)
+fluxychat-market-research-2026.md
+market-research-2026.md
+skills-lock.json
+
+# Generated reports (CI artifacts, do not commit)
+bandwidth-budget-report.json
+bundle-size-report.json
+temp_blocks.txt
+
+# Internal research (keep local; not public clone)
+fluxychat-market-research-2026.md
+market-research-2026.md
+skills-lock.json

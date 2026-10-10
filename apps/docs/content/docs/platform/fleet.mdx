@@ -23,10 +23,10 @@ useChat({
   roomId,
   onServerEvent: (ev) => {
     if (ev.name === "fleet.gps_update") {
-      // ev.data.vehicleId, lat, lng
+      // ev.data.vehicleId, lat, lng, geofenceEvents (enter/exit transitions)
     }
   },
 });
 ```
 
-Register vehicles with `POST /fleet/vehicles` (SDK `createFleetVehicle`). The response includes `apiKey` (`fleet_…`) once. Drivers POST GPS with that key; other fleet routes still need a member JWT. Default fan-out room is `fleet:{projectId}` if `roomId` is omitted. Cap: 60 GPS points per vehicle per minute.
+Register vehicles with `POST /fleet/vehicles` (SDK `createFleetVehicle`). The response includes `apiKey` (`fleet_…`) once. Drivers POST GPS with that key; other fleet routes still need a member JWT. OwnTracks location JSON (`_type`, `lat`/`lon`/`tst`, `acc`/`vel`/`cog`/`tid`) is accepted on the same POST (array ok; `lwt` skipped). Last/history aliases: `GET /fleet/gps/last`, `GET /fleet/gps/locations?vehicleId=&from=&to=&limit=` (`from`/`to` unix or ISO date). Default fan-out room is `fleet:{projectId}` if `roomId` is omitted. Cap: 60 GPS points per vehicle per minute. Geofences are `GET/POST/PATCH/DELETE /fleet/geofences`; stored enter/exit rows are `GET /fleet/geofence-events`. Current positions omit vehicles whose last ping is older than 10 minutes. Not MQTT.

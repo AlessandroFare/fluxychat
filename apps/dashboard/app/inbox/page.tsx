@@ -50,6 +50,8 @@ export default function InboxPage() {
     error: inboxError,
     reload,
     counter: unreadCounter,
+    markInboxNotificationAsRead,
+    markAllInboxNotificationsAsRead,
   } = useInbox({
     client,
     pollIntervalMs: 30_000,
@@ -128,6 +130,19 @@ export default function InboxPage() {
       <ConsolePageHeader
         title="Inbox"
         description={`Mentions, unread rooms, snoozed channels, and follow-ups.${unreadCounter > 0 ? ` ${unreadCounter} unread room${unreadCounter === 1 ? "" : "s"}.` : ""}${unseen > 0 ? ` ${unseen} in view.` : ""}`}
+        actions={
+          items.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              data-testid="inbox-mark-all-read"
+              onClick={() => void markAllInboxNotificationsAsRead()}
+            >
+              Mark all read
+            </Button>
+          ) : null
+        }
       />
 
       {token ? (
@@ -155,25 +170,13 @@ export default function InboxPage() {
                       <p className="mt-1 text-xs text-muted-foreground">{item.unreadCount} unread</p>
                     ) : null}
                   </div>
-                  {item.kind === "unread" ? (
+                  {item.kind === "unread" || item.kind === "mention" || item.kind === "thread" || item.kind === "comment" ? (
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       data-testid={`inbox-mark-read-${item.roomId}`}
-                      onClick={() => {
-                        const payload = item.payload as {
-                          firstUnreadMessageId?: number | null;
-                          lastReadMessageId?: number;
-                          lastMessage?: { messageId: number } | null;
-                        };
-                        const messageId = resolveMarkReadMessageId({
-                          firstUnreadMessageId: payload.firstUnreadMessageId ?? null,
-                          lastReadMessageId: payload.lastReadMessageId ?? 0,
-                          lastMessage: payload.lastMessage ?? null,
-                        });
-                        if (messageId != null) void handleMarkRead(item.roomId, messageId);
-                      }}
+                      onClick={() => void markInboxNotificationAsRead(item.id)}
                     >
                       Mark read
                     </Button>

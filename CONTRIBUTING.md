@@ -1,14 +1,14 @@
-# Contributing to FluxyChat
+# Contributing
 
-Thanks for helping make FluxyChat the reference stack for chat + AI on Cloudflare Workers. This guide covers the essentials — no corporate process, just clear expectations.
+Small PRs. Search issues first. Match the TypeScript style already in the tree.
 
 ## Before you open a PR
 
-1. **Search existing issues** — avoid duplicate work.
-2. **Small PRs win** — one feature or fix per PR when possible.
-3. **Match repo conventions** — TypeScript functional style, Vue/React Composition API in apps, worker routes under `apps/worker/src/routes/`.
-4. **Tests** — add or update Vitest tests for worker/lib and SDK changes when behavior changes.
-5. **Docs** — update MDX in `apps/docs/content/docs/` when user-facing behavior changes.
+1. Search existing issues.
+2. One feature or fix per PR when you can.
+3. Match the TypeScript already in the tree. Worker routes live under `apps/worker/src/routes/`.
+4. Add or update Vitest tests when behavior changes.
+5. Update MDX in `apps/docs/content/docs/` when user-facing behavior changes.
 
 ## Development setup
 
@@ -31,7 +31,6 @@ Quick smoke: `pnpm first-message` (requires local worker).
 | `packages/sdk/` | Browser/Node client (`@fluxy-chat/sdk`) |
 | `packages/react/` | React hooks (`@fluxy-chat/react`) |
 | `packages/protocol/` | Wire protocol types |
-| `docs/BEAT-PORTAL-ROADMAP.md` | Product engineering roadmap |
 
 ## Pull request checklist
 
@@ -49,9 +48,13 @@ Quick smoke: `pnpm first-message` (requires local worker).
 | `bug` | Broken behavior vs docs or spec |
 | `enhancement` | New capability aligned with roadmap |
 
+## Releasing
+
+See [RELEASING.md](RELEASING.md). Do not paste npm publish steps into the root README.
+
 ## Security
 
-Report vulnerabilities privately — do not open public issues for exploitable bugs. Include reproduction steps and impact.
+Email support@fluxychat.com. Do not open a public issue for an exploitable bug.
 
 ## License
 
@@ -70,4 +73,4 @@ Git: `git commit -s`. A CLA is not collected yet. Relicensing (Apache-2.0 patent
 
 - Be direct and kind in reviews.
 - Prefer build-first solutions (OSS/self-host) over paid SaaS dependencies unless explicitly discussed.
-- Marketing-only PRs (case studies, launch copy) are lower priority — see `docs/BEAT-PORTAL-ROADMAP.md` Fase 4 marketing deferrals.
+- Marketing-only PRs (case studies, launch copy) wait.

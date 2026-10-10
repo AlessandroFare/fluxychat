@@ -6,13 +6,13 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
 export const SITE_DESCRIPTION =
-  "In-app chat on a Cloudflare Durable Object. Humans and agents share the room. MIT self-host or hosted beta.";
+  "People and agents in the same room. MIT Worker on your Cloudflare account, or hosted beta.";
 
 export const PAGE_METADATA = {
   landing: buildPageMetadata({
     title: "Humans and agents in the same room",
     description:
-      "Chat, presence, Yjs, and invokeAgent share one room Durable Object. Public rooms take a pk_ in the browser. Self-host is MIT. Hosted is beta.",
+      "Chat, the doc, and the agent on one room Durable Object. Public rooms take a publishable key in the browser. Self-host is MIT. Hosted is beta.",
     path: "/",
   }),
   why: buildPageMetadata({

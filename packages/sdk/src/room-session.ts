@@ -30,6 +30,7 @@ import {
   sortMessagesChronological,
 } from "./message-history";
 import { FluxyChatRoomConnection } from "./room-connection";
+import { forgetLeaver, pruneLeavers, rememberLeaver } from "./presence-avatars";
 import { applyStreamTailToLocal } from "./stream-offset";
 import {
   createStreamingEditBatcher,
@@ -54,9 +55,9 @@ import {
 import { scheduleSessionTokenRefresh } from "./session-token-refresh";
 import { createOfflineSyncController, type OfflineSyncController } from "./offline-sync";
 import {
-  buildCursorOutbound,
-  createCursorThrottle,
-  parseLiveCursorEvent,
+  createCursorBatcher,
+  createCursorDispenser,
+  shouldSendCursor,
   type LiveCursorPublishInput,
 } from "./live-cursors";
 import { buildPresencePatchOutbound, parsePresencePatchEvent } from "./presence-patch";
@@ -85,6 +86,8 @@ export interface StartFluxyRoomSessionOptions {
   crdtMessageList?: boolean;
   /** NW-100: queue sends in IndexedDB outbox when offline; flush on reconnect. Default true. */
   offlineFirst?: boolean;
+  /** When false, open the socket only after `client.room(id).attach()`. Default true. */
+  autoConnect?: boolean;
   onAnyEvent?: (event: FluxyChatEvent) => void;
   /** Worker vertical/labs fan-out (`server_event` frames). */
   onServerEvent?: ServerEventHandler;
@@ -111,6 +114,7 @@ export function startFluxyRoomSession(
     concurrency,
     crdtMessageList = true,
     offlineFirst = true,
+    autoConnect = true,
     onAnyEvent,
     onServerEvent,
     onRefreshSession,
@@ -186,6 +190,12 @@ export function startFluxyRoomSession(
   };
 
   let scheduleMarkLatest: () => void = () => {};
+
+  const cursorDispenser = createCursorDispenser((cursor) => {
+    setState((s) => ({
+      liveCursors: { ...s.liveCursors, [cursor.userId]: cursor },
+    }));
+  });
 
   const streamEditBatcher = createStreamingEditBatcher((updates) => {
     setState((s) => {
@@ -364,6 +374,12 @@ export function startFluxyRoomSession(
       });
     } else if (data.type === "subscription_count") {
       setState({ subscriptionCount: data.subscriptionCount });
+    } else if (data.type === "occupancy") {
+      setState({
+        subscriptionCount: data.connections,
+        online: data.connections,
+        presenceCount: data.presenceMembers,
+      });
     } else if (data.type === "member_joined") {
       setState((s) => {
         const existing = s.presenceMembers.filter((m) => m.userId !== data.userId);
@@ -373,14 +389,23 @@ export function startFluxyRoomSession(
             ...existing,
             { userId: data.userId, userInfo: data.userInfo },
           ],
+          presenceLeavers: forgetLeaver(s.presenceLeavers, data.userId),
           presenceCount: wasNew ? (s.presenceCount || s.presenceMembers.length) + 1 : s.presenceCount,
         };
       });
     } else if (data.type === "member_left") {
-      setState((s) => ({
-        presenceMembers: s.presenceMembers.filter((m) => m.userId !== data.userId),
-        presenceCount: Math.max(0, (s.presenceCount || s.presenceMembers.length) - 1),
-      }));
+      setState((s) => {
+        const leaving = s.presenceMembers.find((m) => m.userId === data.userId);
+        const now = Date.now();
+        return {
+          presenceMembers: s.presenceMembers.filter((m) => m.userId !== data.userId),
+          presenceCount: Math.max(0, (s.presenceCount || s.presenceMembers.length) - 1),
+          presenceLeavers: pruneLeavers(
+            rememberLeaver(s.presenceLeavers, leaving ?? { userId: data.userId }, now),
+            now,
+          ),
+        };
+      });
     } else if (data.type === "cache_snapshot") {
       const inner = data.event;
       if (inner && typeof inner === "object" && inner.type === "message") {
@@ -389,20 +414,28 @@ export function startFluxyRoomSession(
     } else if (data.type === "server_event") {
       /* app-level handlers can listen on connection; no default store mutation */
     } else if (data.type === "typing") {
-      setState((s) => ({
-        typingUsers: { ...s.typingUsers, [data.userId]: data.isTyping },
-        typingIntents: {
-          ...s.typingIntents,
-          [data.userId]: data.intent ?? (data.isTyping ? "composing" : "idle"),
-        },
-      }));
+      const threadId = Number(data.parentId);
+      const hasThread = Number.isFinite(threadId) && threadId >= 1;
+      setState((s) => {
+        if (hasThread) {
+          const prev = s.typingByThread[threadId] ?? {};
+          return {
+            typingByThread: {
+              ...s.typingByThread,
+              [threadId]: { ...prev, [data.userId]: data.isTyping },
+            },
+          };
+        }
+        return {
+          typingUsers: { ...s.typingUsers, [data.userId]: data.isTyping },
+          typingIntents: {
+            ...s.typingIntents,
+            [data.userId]: data.intent ?? (data.isTyping ? "composing" : "idle"),
+          },
+        };
+      });
     } else if (data.type === "cursor") {
-      const cursor = parseLiveCursorEvent(data);
-      if (cursor) {
-        setState((s) => ({
-          liveCursors: { ...s.liveCursors, [cursor.userId]: cursor },
-        }));
-      }
+      cursorDispenser.ingest(data);
     } else if (data.type === "presence_patch") {
       const userId = typeof data.userId === "string" ? data.userId : "";
       const patch = parsePresencePatchEvent(data);
@@ -574,6 +607,20 @@ export function startFluxyRoomSession(
         if (Object.keys(current).length === 0) delete byMessage[data.messageId];
         else byMessage[data.messageId] = current;
         return { reactions: byMessage };
+      });
+    } else if (data.type === "room_reaction") {
+      const name = String(data.name || "").trim();
+      const userId = String(data.userId || "").trim();
+      if (name && userId) {
+        setState((s) => ({
+          roomReactions: [...s.roomReactions, { name, userId }].slice(-8),
+        }));
+      }
+    } else if (data.type === "discontinuity") {
+      setState({
+        lastDiscontinuity: new Error(
+          `history hole expected ${data.expectedSeq} received ${data.receivedSeq}`,
+        ),
       });
     } else if (data.type === "read") {
       setState((s) => {
@@ -755,6 +802,7 @@ export function startFluxyRoomSession(
         content: displayContent,
         clientMessageId,
         parentId: replyTo ?? null,
+        quotedMessageId: options?.quotedMessageId ?? null,
         attachments,
       });
       setState((s) => ({
@@ -821,6 +869,8 @@ export function startFluxyRoomSession(
               clientMessageId,
               parentId: replyTo ?? null,
               attachments: attachments ?? [],
+              ...(options?.quotedMessageId != null ? { quotedMessageId: options.quotedMessageId } : {}),
+              ...(options?.metadata ? { metadata: options.metadata } : {}),
               ...(options?.expiresInSeconds != null
                 ? { expiresInSeconds: options.expiresInSeconds }
                 : {}),
@@ -905,10 +955,10 @@ export function startFluxyRoomSession(
 
   const loadMore = async () => {
     const s = getState();
-    if (!client || s.isLoadingMore || !s.hasMore || !trimmedRoomId) return;
+    if (!client || s.isLoadingMore || !s.hasMore || !trimmedRoomId) return false;
     const chronological = sortMessagesChronological(s.messages);
     const oldest = chronological[0];
-    if (!oldest?.createdAt) return;
+    if (!oldest?.createdAt) return false;
 
     setState({ isLoadingMore: true });
     try {
@@ -921,8 +971,10 @@ export function startFluxyRoomSession(
         hasMore: older.length >= historyLimit,
         isLoadingMore: false,
       }));
+      return true;
     } catch {
       setState({ isLoadingMore: false });
+      return false;
     }
   };
 
@@ -944,6 +996,7 @@ export function startFluxyRoomSession(
     isTyping: boolean,
     intent?: FluxyPresenceIntent,
     partialText?: string,
+    parentId?: number | null,
   ) => {
     if (!client) return;
     try {
@@ -955,6 +1008,7 @@ export function startFluxyRoomSession(
       };
       const trimmedPartial = partialText?.trim();
       if (trimmedPartial) payload.partialText = trimmedPartial.slice(0, 2000);
+      if (parentId != null && Number.isFinite(parentId) && parentId >= 1) payload.parentId = Math.floor(parentId);
       connectionRef?.sendJson(payload);
     } catch {
       /* ignore */
@@ -1018,6 +1072,7 @@ export function startFluxyRoomSession(
             messageId,
             emoji,
             op,
+            reactionType: "distinct",
           });
         } catch {
           /* ignore */
@@ -1032,7 +1087,18 @@ export function startFluxyRoomSession(
         messageId,
         emoji,
         op,
+        reactionType: "distinct",
       });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const sendRoomReaction = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || !client) return;
+    try {
+      connectionRef?.sendJson({ type: "room_reaction", name: trimmed });
     } catch {
       /* ignore */
     }
@@ -1112,6 +1178,7 @@ export function startFluxyRoomSession(
       try {
         const result = await client.invokeAgentRest(targetAgentId, trimmedRoomId, content, {
           replyTo: invokeOptions?.replyTo,
+          clientMessageId: createClientMessageId(),
         });
         const invoked = result?.message;
         const invokedId = Number(invoked?.id);
@@ -1173,7 +1240,10 @@ export function startFluxyRoomSession(
     setState({ debateSteps: [], debateSessionId: null });
   };
 
+  const lastStageJoin = { current: null as { role: import("./voice-stage").VoiceStageRole; displayName?: string } | null };
+
   const joinVoiceStage = (role: import("./voice-stage").VoiceStageRole, displayName?: string) => {
+    lastStageJoin.current = { role, ...(displayName ? { displayName } : {}) };
     try {
       connectionRef?.sendJson({
         type: "stage_join",
@@ -1186,8 +1256,25 @@ export function startFluxyRoomSession(
   };
 
   const leaveVoiceStage = () => {
+    lastStageJoin.current = null;
     try {
       connectionRef?.sendJson({ type: "stage_leave" });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const setVoiceStageMuted = (muted: boolean) => {
+    try {
+      connectionRef?.sendJson({ type: "stage_mute", muted: muted === true });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const requestVoiceStageSpeak = () => {
+    try {
+      connectionRef?.sendJson({ type: "stage_request_speak" });
     } catch {
       /* ignore */
     }
@@ -1224,15 +1311,26 @@ export function startFluxyRoomSession(
     }
   };
 
-  const cursorThrottle = createCursorThrottle(50);
+  const cursorBatcher = createCursorBatcher(100);
   const sendCursor = (input: LiveCursorPublishInput) => {
-    cursorThrottle.publish(input, (next) => {
-      try {
-        connectionRef?.sendJson(buildCursorOutbound(next));
-      } catch {
-        /* ignore */
-      }
-    });
+    const occupancy = getState();
+    cursorBatcher.publish(
+      input,
+      (frame) => {
+        try {
+          connectionRef?.sendJson(frame);
+        } catch {
+          /* ignore */
+        }
+      },
+      {
+        shouldSend: shouldSendCursor({
+          online: occupancy.online,
+          presenceCount: occupancy.presenceCount,
+          onlineUsers: occupancy.onlineUsers,
+        }),
+      },
+    );
   };
 
   const sendPresencePatch = (patch: import("./presence-patch").FluxyPresence) => {
@@ -1307,6 +1405,7 @@ export function startFluxyRoomSession(
     setTyping,
     editMessage,
     sendReaction,
+    sendRoomReaction,
     sendReadReceipt,
     deleteMessage,
     branchRoomFromMessage,
@@ -1316,6 +1415,8 @@ export function startFluxyRoomSession(
     clearDebateThread,
     joinVoiceStage,
     leaveVoiceStage,
+    setVoiceStageMuted,
+    requestVoiceStageSpeak,
     promoteVoiceStageListener,
     sendVoiceStageVad,
     sendClientEvent,
@@ -1336,7 +1437,8 @@ export function startFluxyRoomSession(
     });
     return () => {
       active = false;
-      cursorThrottle.dispose();
+      cursorBatcher.dispose();
+      cursorDispenser.dispose();
     };
   }
 
@@ -1463,6 +1565,18 @@ export function startFluxyRoomSession(
             connectionError: null,
             reconnectDelayMs: 0,
           });
+          const resume = lastStageJoin.current;
+          if (resume) {
+            try {
+              connection.sendJson({
+                type: "stage_join",
+                role: resume.role,
+                ...(resume.displayName ? { displayName: resume.displayName } : {}),
+              });
+            } catch {
+              /* ignore */
+            }
+          }
         } else if (status === "connecting") {
           patchConnection({
             connectionStatus: "connecting",
@@ -1474,6 +1588,20 @@ export function startFluxyRoomSession(
             connected: false,
             reconnectAttempt: connection.reconnectAttempts,
             reconnectDelayMs: connection.getScheduledReconnectDelayMs(),
+          });
+        } else if (status === "suspended") {
+          patchConnection({
+            connectionStatus: "suspended",
+            connected: false,
+            reconnectAttempt: connection.reconnectAttempts,
+            reconnectDelayMs: connection.getScheduledReconnectDelayMs(),
+          });
+        } else if (status === "failed") {
+          offlineSyncRef?.setConnected(false);
+          patchConnection({
+            connectionStatus: "failed",
+            connected: false,
+            reconnectAttempt: connection.reconnectAttempts,
           });
         } else if (status === "disconnected") {
           offlineSyncRef?.setConnected(false);
@@ -1528,7 +1656,7 @@ export function startFluxyRoomSession(
       });
     }
     connectionRef = connection;
-    connection.connect();
+    if (autoConnect) connection.connect();
 
     stopTokenRefresh = scheduleSessionTokenRefresh(client, {
       onRefresh: async () => {
@@ -1556,7 +1684,8 @@ export function startFluxyRoomSession(
     connectionRef = null;
     offlineSyncCleanup?.();
     offlineSyncRef = null;
-    cursorThrottle.dispose();
+    cursorBatcher.dispose();
+    cursorDispenser.dispose();
     patchConnection({ connectionStatus: "disconnected", connected: false });
   };
 }

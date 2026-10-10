@@ -21,6 +21,16 @@ body { margin: 0; }
   color: #fff;
 }
 .status { font-size: 0.75rem; opacity: 0.9; }
+.tools { display: flex; gap: 0.35rem; }
+.tools button {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
 .roster {
   margin: 0;
   padding: 0.5rem 1rem;

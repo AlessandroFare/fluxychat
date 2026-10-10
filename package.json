@@ -24,6 +24,7 @@
     "sanitize:plans": "node scripts/sanitize-project-plans.mjs",
     "sanitize:plans:apply": "node scripts/sanitize-project-plans.mjs -- --apply",
     "check:pricing": "node scripts/check-pricing-consistency.mjs",
+    "check:facts": "node scripts/check-product-facts.mjs",
     "check:tenant-scope": "node scripts/audit-tenant-scope.mjs",
     "check:openapi": "node scripts/check-openapi-routes.mjs",
     "check:crypto-claims": "node scripts/check-crypto-claims.mjs",
@@ -50,7 +51,7 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "pnpm": {
     "overrides": {

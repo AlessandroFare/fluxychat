@@ -25,6 +25,11 @@ import { assertGuestCanWrite } from "../lib/guest-auth.js";
 import { assertCanPostToRoom } from "../lib/room-post-policy.js";
 import { isValidEmoji, normalizeEmoji } from "../lib/emoji.js";
 import {
+  applyReactionPlan,
+  foldReactionSummary,
+  planReactionMutation,
+} from "../lib/reaction-summary-fold.js";
+import {
   parsePollCreateInput,
   insertMessagePoll,
   getMessagePoll,
@@ -65,6 +70,11 @@ import {
   mapAgentRunRow,
   replayCounterfactualToolCall,
 } from "../lib/counterfactual-replay.js";
+import {
+  getRoomMessageVersions,
+  recordRoomMessageEvent,
+} from "../lib/room-message-seq.js";
+import { mergeMessageExtras, parseOperationDetails, parseQuotedMessageId } from "../lib/message-extras.js";
 
 export async function dispatchMessagesRoutes(request, url, h) {
   const {
@@ -419,6 +429,21 @@ export async function dispatchMessagesRoutes(request, url, h) {
         }
       );
     }
+    const { assertRoomSlowModeAllowed } = await import("../lib/room-config.js");
+    const slowMode = await assertRoomSlowModeAllowed(env, {
+      projectId: authProjectId,
+      roomId,
+      userId: authUserId,
+    });
+    if (!slowMode.ok) {
+      return json(
+        { error: "slow_mode", retryAfterSeconds: slowMode.retryAfterSeconds },
+        {
+          status: 429,
+          headers: { "Retry-After": String(slowMode.retryAfterSeconds) },
+        },
+      );
+    }
 
     const mentionsRaw = extractMentions(content);
     let onlineUserIds = [];
@@ -447,12 +472,25 @@ export async function dispatchMessagesRoutes(request, url, h) {
       preview = await fetchOgPreview(firstUrl, env);
     }
 
+    const quotedMessageId = parseQuotedMessageId(body);
+    const extras = mergeMessageExtras(
+      null,
+      {
+        ...(body.metadata && typeof body.metadata === "object" ? body.metadata : {}),
+        ...(quotedMessageId != null ? { quotedMessageId } : {}),
+      },
+      body.headers,
+    );
+    if (extras.error) {
+      return json({ error: extras.error }, { status: 400 });
+    }
+
     const insertRes = await env.DB.prepare(
       `INSERT INTO messages (
         project_id, room_id, user_id, content, created_at, parent_id,
         mentions, og_title, og_description, og_image, og_url, client_message_id, expires_at,
-        visibility, visible_to_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        visibility, visible_to_json, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         authProjectId,
@@ -470,6 +508,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
         messageExpiresAt,
         visibility === "room" ? null : visibility,
         visibleToJson,
+        extras.json,
       )
       .run();
     ctx.waitUntil(
@@ -679,6 +718,9 @@ export async function dispatchMessagesRoutes(request, url, h) {
           sizeBytes: a.sizeBytes,
           contentType: a.contentType,
         })),
+        ...(extras.extras.metadata ? { metadata: extras.extras.metadata } : {}),
+        ...(extras.extras.headers ? { headers: extras.extras.headers } : {}),
+        ...(quotedMessageId != null ? { quotedMessageId } : {}),
       }),
     });
 
@@ -781,6 +823,9 @@ export async function dispatchMessagesRoutes(request, url, h) {
           : {}),
         ...(pollSnapshot ? { poll: pollSnapshot } : {}),
         ...(decisionSnapshot ? { decision: decisionSnapshot } : {}),
+        ...(extras.extras.metadata ? { metadata: extras.extras.metadata } : {}),
+        ...(extras.extras.headers ? { headers: extras.extras.headers } : {}),
+        ...(quotedMessageId != null ? { quotedMessageId } : {}),
       },
     });
   }
@@ -1088,6 +1133,77 @@ export async function dispatchMessagesRoutes(request, url, h) {
     return json({ messageId, deliveries });
   }
 
+  const messageVersionsMatch = url.pathname.match(/^\/messages\/(\d+)\/versions$/);
+  if (messageVersionsMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(messageVersionsMatch[1]);
+    if (!Number.isFinite(messageId) || messageId < 1) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const row = await env.DB.prepare(
+      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!row) return json({ error: "message not found" }, { status: 404 });
+    const allowed = await canAccessRoom(env, auth, row.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+    const events = await getRoomMessageVersions(env, {
+      projectId: auth.projectId,
+      roomId: row.room_id,
+      messageId,
+    });
+    const [current] = await attachAttachmentsToMessages(env, auth.projectId, row.room_id, [row]);
+    const items =
+      events.length > 0
+        ? events.map((event) => ({
+            id: event.messageId,
+            roomId: row.room_id,
+            userId: event.payload.userId ?? row.user_id,
+            content: event.payload.content ?? row.content,
+            createdAt: event.createdAt,
+            editedAt: event.payload.editedAt ?? null,
+            version: event.version,
+            action: event.eventType,
+          }))
+        : [current];
+    return json({ items });
+  }
+
+  // Ably-style single fetch: GET /messages/:id (numeric id, not a string serial)
+  const singleMessageMatch = url.pathname.match(/^\/messages\/(\d+)$/);
+  if (singleMessageMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(singleMessageMatch[1]);
+    if (!Number.isFinite(messageId) || messageId < 1) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const row = await env.DB.prepare(
+      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status, metadata_json FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!row) return json({ error: "message not found" }, { status: 404 });
+    const allowed = await canAccessRoom(env, auth, row.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+    const [mapped] = await attachAttachmentsToMessages(env, auth.projectId, row.room_id, [row]);
+    return json({ message: mapped });
+  }
+
   // Authenticated message edit endpoint: PATCH /messages/:id
   if (
     url.pathname.startsWith("/messages/") &&
@@ -1119,7 +1235,8 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     const body = await request.json().catch(() => null);
-    if (!body || !body.content) {
+    const nextContent = typeof body?.content === "string" ? body.content : typeof body?.text === "string" ? body.text : "";
+    if (!body || !nextContent) {
       return json({ error: "content required" }, { status: 400 });
     }
 
@@ -1127,7 +1244,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
 
     // Ensure message exists and belongs to this user + project
     const existing = await env.DB.prepare(
-      "SELECT id, room_id, user_id, deleted_at FROM messages WHERE id = ? AND project_id = ?"
+      "SELECT id, room_id, user_id, deleted_at, version, metadata_json FROM messages WHERE id = ? AND project_id = ?"
     )
       .bind(messageId, authProjectId)
       .first();
@@ -1143,11 +1260,42 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     const now = new Date().toISOString();
+    const nextVersion = (Number(existing.version) || 1) + 1;
+    const extras = mergeMessageExtras(existing.metadata_json, body.metadata, body.headers);
+    if (extras.error) {
+      return json({ error: extras.error }, { status: 400 });
+    }
+    const operation = parseOperationDetails(body);
+    if (operation.error) {
+      return json({ error: operation.error }, { status: 400 });
+    }
     await env.DB.prepare(
-      "UPDATE messages SET content = ?, edited_at = ? WHERE id = ? AND project_id = ?"
+      "UPDATE messages SET content = ?, edited_at = ?, metadata_json = ? WHERE id = ? AND project_id = ?"
     )
-      .bind(body.content, now, messageId, authProjectId)
+      .bind(nextContent, now, extras.json ?? existing.metadata_json ?? null, messageId, authProjectId)
       .run();
+
+    try {
+      await recordRoomMessageEvent(env, {
+        projectId: authProjectId,
+        roomId: existing.room_id,
+        messageId: Number(messageId),
+        eventType: "update",
+        version: nextVersion,
+        payload: {
+          id: Number(messageId),
+          content: nextContent,
+          userId,
+          editedAt: now,
+          version: nextVersion,
+          ...(extras.extras.metadata ? { metadata: extras.extras.metadata } : {}),
+          ...(extras.extras.headers ? { headers: extras.extras.headers } : {}),
+          ...(operation.operation ? { operation: operation.operation } : {}),
+        },
+      });
+    } catch (err) {
+      logError("messages.patch_seq_failed", err, requestLogCtx);
+    }
 
     // Broadcast edit event to room via DO
     const roomId = existing.room_id;
@@ -1158,18 +1306,25 @@ export async function dispatchMessagesRoutes(request, url, h) {
         id: messageId,
         roomId,
         userId,
-        content: body.content,
+        content: nextContent,
         editedAt: now,
+        ...(extras.extras.metadata ? { metadata: extras.extras.metadata } : {}),
+        ...(extras.extras.headers ? { headers: extras.extras.headers } : {}),
+        ...(operation.operation ? { operation: operation.operation } : {}),
       }),
     });
 
     return json({
       message: {
-        id: messageId,
+        id: Number(messageId),
         roomId,
+        userId,
         senderId: userId,
-        content: body.content,
+        content: nextContent,
         editedAt: now,
+        ...(extras.extras.metadata ? { metadata: extras.extras.metadata } : {}),
+        ...(extras.extras.headers ? { headers: extras.extras.headers } : {}),
+        ...(operation.operation ? { operation: operation.operation } : {}),
       },
     });
   }
@@ -1399,10 +1554,15 @@ export async function dispatchMessagesRoutes(request, url, h) {
 
     const { userId, projectId: authProjectId, roles } = auth;
     const hardDeleteRequested = url.searchParams.get("hard") === "true";
+    const deleteBody = await request.json().catch(() => null);
+    const operation = parseOperationDetails(deleteBody);
+    if (operation.error) {
+      return json({ error: operation.error }, { status: 400 });
+    }
 
     // Ensure message exists and belongs to this user + project
     const existing = await env.DB.prepare(
-      "SELECT id, room_id, user_id FROM messages WHERE id = ? AND project_id = ?"
+      "SELECT id, room_id, user_id, content FROM messages WHERE id = ? AND project_id = ?"
     )
       .bind(messageId, authProjectId)
       .first();
@@ -1455,11 +1615,88 @@ export async function dispatchMessagesRoutes(request, url, h) {
         roomId,
         userId,
         hard: hardDeleteRequested,
-        deletedAt: hardDeleteRequested ? now : now,
+        deletedAt: now,
+        ...(operation.operation ? { operation: operation.operation } : {}),
       }),
     });
 
-    return json({ ok: true, hard: hardDeleteRequested, deletedAt: now });
+    return json({
+      ok: true,
+      hard: hardDeleteRequested,
+      deletedAt: now,
+      message: {
+        id: Number(messageId),
+        roomId,
+        userId,
+        senderId: userId,
+        content: hardDeleteRequested ? "" : "[deleted]",
+        deletedAt: now,
+        ...(operation.operation ? { operation: operation.operation } : {}),
+      },
+    });
+  }
+
+  const reactionSummaryMatch = url.pathname.match(/^\/messages\/(\d+)\/reactions\/summary$/);
+  if (reactionSummaryMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(reactionSummaryMatch[1]);
+    if (!Number.isFinite(messageId) || messageId < 1) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const existing = await env.DB.prepare(
+      "SELECT room_id FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!existing) return json({ error: "message not found" }, { status: 404 });
+    const allowed = await canAccessRoom(env, auth, existing.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+    const rows = await env.DB.prepare(
+      "SELECT emoji, user_id FROM message_reactions WHERE project_id = ? AND message_id = ?",
+    )
+      .bind(auth.projectId, messageId)
+      .all();
+    return json(foldReactionSummary(messageId, rows.results || []));
+  }
+
+  const clientReactionsMatch = url.pathname.match(/^\/messages\/(\d+)\/reactions$/);
+  if (clientReactionsMatch && request.method === "GET") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(clientReactionsMatch[1]);
+    if (!Number.isFinite(messageId) || messageId < 1) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const existing = await env.DB.prepare(
+      "SELECT room_id FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!existing) return json({ error: "message not found" }, { status: 404 });
+    const allowed = await canAccessRoom(env, auth, existing.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+    const forUser = String(url.searchParams.get("userId") || auth.userId || "").trim();
+    const rows = await env.DB.prepare(
+      "SELECT emoji, user_id FROM message_reactions WHERE project_id = ? AND message_id = ? AND user_id = ?",
+    )
+      .bind(auth.projectId, messageId, forUser)
+      .all();
+    const folded = foldReactionSummary(messageId, rows.results || []);
+    const names = [...new Set((rows.results || []).map((row) => row.emoji).filter(Boolean))];
+    return json({ userId: forUser, names, ...folded });
   }
 
   // Authenticated reactions endpoints:
@@ -1489,12 +1726,16 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
 
     const body = await request.json().catch(() => null);
-    const rawEmoji = body?.emoji;
-    if (!rawEmoji) {
-      return json({ error: "emoji required" }, { status: 400 });
+    const plan = planReactionMutation(request.method === "DELETE" ? "remove" : "add", {
+      type: body?.type,
+      name: body?.emoji ?? body?.name,
+      count: body?.count,
+    });
+    if (plan.error) {
+      return json({ error: plan.error }, { status: 400 });
     }
-    const emoji = normalizeEmoji(rawEmoji);
-    if (!isValidEmoji(emoji)) {
+    let emoji = plan.name ? normalizeEmoji(plan.name) : "";
+    if (emoji && !isValidEmoji(emoji)) {
       return json({ error: "invalid emoji" }, { status: 400 });
     }
 
@@ -1511,20 +1752,11 @@ export async function dispatchMessagesRoutes(request, url, h) {
     }
     const roomId = existing.room_id;
     const now = new Date().toISOString();
-
-    if (request.method === "DELETE") {
-      await env.DB.prepare(
-        "DELETE FROM message_reactions WHERE project_id = ? AND message_id = ? AND room_id = ? AND user_id = ? AND emoji = ?"
-      )
-        .bind(authProjectId, messageId, roomId, userId, emoji)
-        .run();
-    } else {
-      await env.DB.prepare(
-        "INSERT INTO message_reactions (project_id, message_id, room_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-      )
-        .bind(authProjectId, messageId, roomId, userId, emoji, now)
-        .run();
-    }
+    await applyReactionPlan(
+      env.DB,
+      { projectId: authProjectId, messageId, roomId, userId, now, emoji },
+      plan,
+    );
 
     const op = request.method === "DELETE" ? "remove" : "add";
 

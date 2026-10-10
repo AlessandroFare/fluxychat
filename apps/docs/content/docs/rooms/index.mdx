@@ -1,0 +1,65 @@
+---
+title: Rooms
+description: One Durable Object per room. Attach, options, and the room bag.
+---
+
+A room is one Durable Object plus D1. Chat, presence, occupancy, typing, locks, and cursors share the JSON WebSocket. Yjs uses a second binary connection on the same `/ws/room/:id` route.
+
+Hosted is beta. Pin `@fluxy-chat/sdk` (see [status and limits](/docs/learn/status-and-limits)).
+
+## Get a room
+
+```ts
+import { FluxyChatClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({
+  baseUrl: workerUrl,
+  token: memberJwt,
+  userId: "ada",
+});
+
+const room = await client.rooms.get("lobby");
+await room.attach();
+```
+
+`client.room("lobby")` is the same object, without waiting. `await room.attach()` resolves when the socket is attached, or rejects on `suspended` / `failed`. `rooms.get` rejects if you request the same id with different options (`unable to get room; options differ`). `rooms.release("lobby")` detaches and drops the cache. `client.close()` / `rooms.dispose()` tears down every tracked room.
+
+`useChat({ roomId })` still connects as a side effect. For attach-on-purpose, use `useChat({ roomId, autoConnect: false })` and call `attach()`, or wrap with `FluxyRoomProvider`.
+
+## What is on the bag
+
+| Field | Job |
+| --- | --- |
+| `messages` | Send, history, edit, delete, message reactions |
+| `presence` | Enter, leave, update. Leave does not close the socket |
+| `occupancy` | Socket count vs unique members |
+| `typing` | Ephemeral `keystroke` / `stop` |
+| `reactions` | Room-level bursts (`room_reaction`), not message emoji |
+| `cursors` | Batched pointer + last-position map |
+| `locks` | Exclusive lock on the Room DO |
+| `locations` | UI locus (`uiLocation`), not GPS |
+| `members` | Roster + leaver TTL |
+| `objects` | Shared JSON bag (`derived` / `derived_set`) |
+| `status` | Attach lifecycle |
+| `onDiscontinuity` | Resume hole you could not fill |
+
+React hooks with the same names live on `FluxyRoomProvider`: `useMessages`, `usePresence`, `useOccupancy`, `useTyping`, `useLocks`, `useCursors`, `useMembers`, `useRoomStatus`.
+
+## Options
+
+```ts
+const room = await client.rooms.get("lobby", {
+  occupancy: { enableEvents: true },
+  messages: { rawMessageReactions: false },
+});
+```
+
+Occupancy events default on (same socket, not a second channel). Set `enableEvents: false` if you only want `occupancy.get()`. Raw message reactions default off.
+
+## Related
+
+- [Auth](/docs/rooms/auth)
+- [Cookbook](/docs/cookbook)
+- [Connection state](/docs/core/connection-state)
+- [Wire protocol](/docs/core/wire-protocol)
+- [Error codes](/docs/errors)

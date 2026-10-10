@@ -51,6 +51,11 @@ export function RoomInfoPanel({
 
   if (!open) return null;
 
+  const liveWatching =
+    data?.live != null
+      ? data.live.watching ?? Math.max(0, data.live.online - data.live.userCount)
+      : 0;
+
   return (
     <aside
       className={cn(
@@ -99,7 +104,10 @@ export function RoomInfoPanel({
                   </Badge>
                 ) : null}
                 {data.live ? (
-                  <Badge variant="outline">{data.live.online} online</Badge>
+                  <Badge variant="outline">
+                    {data.live.userCount} in chat
+                    {liveWatching > 0 ? ` · ${liveWatching} watching` : ""}
+                  </Badge>
                 ) : null}
               </div>
             </section>
@@ -174,10 +182,18 @@ export function RoomInfoPanel({
 export function RoomInfoToggle({
   onClick,
   className,
+  inChat,
+  watching,
 }: {
   onClick: () => void;
   className?: string;
+  inChat?: number;
+  watching?: number;
 }) {
+  const occupancy =
+    inChat != null
+      ? `${inChat} in chat${watching != null && watching > 0 ? ` · ${watching} watching` : ""}`
+      : "Info";
   return (
     <button
       type="button"
@@ -187,9 +203,10 @@ export function RoomInfoToggle({
         className,
       )}
       aria-label="Open room info"
+      data-testid="chat-room-info-toggle"
     >
       <Info className="size-3.5" />
-      Info
+      {occupancy}
     </button>
   );
 }

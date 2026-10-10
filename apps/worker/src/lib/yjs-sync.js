@@ -86,13 +86,30 @@ export class YjsSyncHandler {
       this.awarenessByRoom.set(roomId, new Map());
     }
     const roomAw = this.awarenessByRoom.get(roomId);
-    roomAw.set(senderWs, { userId: `user:${Date.now()}`, ts: Date.now() });
+    let userId = null;
+    try {
+      const parsed = JSON.parse(new TextDecoder().decode(payload));
+      if (parsed && typeof parsed.userId === "string" && parsed.userId.trim()) {
+        userId = parsed.userId.trim();
+      }
+    } catch {
+      /* non-JSON awareness still fans out */
+    }
+    roomAw.set(senderWs, { userId, ts: Date.now() });
     broadcastFn(new Uint8Array([2, ...payload]), senderWs);
     this._maybeAnnounceActivity(onActivity, roomId, "collab.awareness", payload.byteLength, senderWs);
   }
 
-  removeClient(ws, roomId) {
+  removeClient(ws, roomId, broadcastFn) {
     const roomAw = this.awarenessByRoom.get(roomId);
+    const entry = roomAw?.get(ws);
     if (roomAw) roomAw.delete(ws);
+    if (entry?.userId && typeof broadcastFn === "function") {
+      const leave = new TextEncoder().encode(JSON.stringify({ userId: entry.userId, left: true }));
+      const frame = new Uint8Array(1 + leave.byteLength);
+      frame[0] = 2;
+      frame.set(leave, 1);
+      broadcastFn(frame, ws);
+    }
   }
 }

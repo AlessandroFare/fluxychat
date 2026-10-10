@@ -1,6 +1,6 @@
 # FluxyChat war room
 
-Chat + presence + `invokeAgent` on **one** room WebSocket. Open **two tabs**. Not MQTT, not a second agent socket.
+Chat + presence + `invokeAgent` on **one** room WebSocket. `scheduleAgent` is room-DO cron/delay, not a Cloudflare Agents SKU. Open **two tabs**.
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-war --example war-room

@@ -89,11 +89,22 @@ export function useThread(options: UseThreadOptions) {
     threadParentId,
   ]);
 
+  const setTyping = React.useCallback(
+    (
+      isTyping: boolean,
+      intent?: import("./message-template").FluxyPresenceIntent,
+      partialText?: string,
+    ) => chat.setTyping(isTyping, intent, partialText, threadParentId),
+    [chat.setTyping, threadParentId],
+  );
+
   return {
     ...chat,
     threadParentId,
     messages,
     sendMessage,
+    setTyping,
+    typingUsers: chat.typingByThread?.[threadParentId] ?? {},
     loadPrevious,
     hasPrevious,
     isLoadingPrevious,

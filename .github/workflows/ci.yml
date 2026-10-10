@@ -52,6 +52,9 @@ jobs:
       - name: Pricing consistency check (P0-1 / ENG-03)
         run: pnpm run check:pricing
 
+      - name: Product facts (emails, quotas, GitHub URL)
+        run: pnpm run check:facts
+
       - name: Tenant-scope audit (P1 ENG-07)
         run: pnpm run check:tenant-scope
 

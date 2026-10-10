@@ -2,7 +2,7 @@ import { VerticalStudio } from "@/app/components/vertical-studio";
 
 export default function HealthPage() {
   return <VerticalStudio config={{
-    id: "health", name: "FluxyHealth", eyebrow: "Care room", readiness: "Labs",
+    id: "health", name: "FluxyHealth", eyebrow: "Care room", readiness: "Production",
     description: "Consent events and a care-team room. No HIPAA BAA. Do not put PHI in chat payloads.",
     journey: ["Verify consent", "Open care room", "Start provider session", "Share FHIR context", "Seal audit record"],
     metrics: [{ label: "Consent events", value: "0" }, { label: "Care-room events", value: "0" }, { label: "Capability ticks", value: "0" }],

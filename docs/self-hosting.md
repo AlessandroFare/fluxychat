@@ -17,7 +17,7 @@ third-party vulnerability reports.
 
 > The minimum bar is an autoresponder that issues a CVE-style
 > ticket ID and pages a human within one business day. The
-> `fluxychat@outlook.com` general support address is **not** a
+> `support@fluxychat.com` general support address is **not** a
 > suitable substitute  researchers should be able to report a
 > vulnerability without it being triaged alongside billing
 > questions. See `RUNBOOK_DEPLOY_ROLLBACK.md` §8 for the

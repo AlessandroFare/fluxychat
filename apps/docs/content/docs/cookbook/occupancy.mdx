@@ -1,0 +1,38 @@
+---
+title: "Live occupancy"
+description: "Subscribe to connection and unique-member counts on a room."
+---
+
+# Live occupancy
+
+The Room Durable Object broadcasts `occupancy` on join and leave: `connections` (sockets) and `presenceMembers` (unique users).
+
+```tsx
+const { store } = useChat({ roomId: "lobby" });
+const { connections, presenceMembers } = useOccupancy(store);
+
+return (
+  <p>
+    {connections} sockets · {presenceMembers} people
+  </p>
+);
+```
+
+Inside `FluxyRoomProvider`, `useOccupancy()` reads the bound room. Pass the store when you are on `useChat` instead.
+
+Without React:
+
+```ts
+const room = client.room("lobby");
+room.occupancy.subscribe((event) => {
+  const { connections, presenceMembers } = event.occupancy;
+  console.log(event.type, connections, presenceMembers);
+});
+room.attach();
+
+const snapshot = await room.occupancy.get();
+```
+
+`get()` hits `GET /rooms/:id/live`. `current()` is the last realtime frame, or `null` before the first event. `current.connections` is the same number. `occupancy.enableEvents: false` throws `feature_not_enabled` on subscribe and on `current()`.
+
+Full page: [Rooms / Occupancy](/docs/rooms/occupancy).

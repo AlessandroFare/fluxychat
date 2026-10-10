@@ -26,11 +26,11 @@ Devices `POST` JSON. The room fans out `iot.reading` or `fleet.gps_update`.
 - Register and ingest: [IoT](/docs/platform/iot)
 - GPS: [Fleet](/docs/platform/fleet)
 - Health: `GET /iot/devices/:id/health` scores recent readings (mean, slope, alerts).
-- Geofence: Worker REST `GET/POST /fleet/geofences` via `client.listFleetGeofences()` / `createFleetGeofence()`. There is no separate “location SDK” package. The in-memory helpers on `createFluxyIoT()` are local rule helpers, not the fleet API.
+- Geofence: Worker REST `GET/POST/PATCH/DELETE /fleet/geofences` plus `GET /fleet/geofence-events`. SDK: `listFleetGeofences` / `createFleetGeofence` / `updateFleetGeofence` / `deleteFleetGeofence` / `listFleetGeofenceEvents`. Current positions drop vehicles whose last ping is older than 10 minutes (Traccar status timeout). There is no separate “location SDK” package. The in-memory helpers on `createFluxyIoT()` are local rule helpers, not the fleet API.
 
 ## Game
 
-`createWorkerFluxyGameClient` covers matchmake, `startMatch`, `submitInput` (`game.tick`), `endMatch`, D1 `GET /games/leaderboard`, checkpoints, NPC, quests, tournaments. Checkpoint `federate` copies save state between rooms (and to a peer Worker if you set the federation URL). Scaffold: `--example game-tick`. Two players to start a match.
+`createWorkerFluxyGameClient` covers matchmake, `joinLobby`, `listLobbies`, `listMatches`, `listParties`, `leaveLobby`, `startMatch`, `submitInput` (`game.tick` + `state`), `endMatch`, `game.lobby_updated` / `game.party_updated`. Leaderboard `?around=`, checkpoints (`deleteCheckpoint`), NPC, quests, tournaments (`joinTournament`). Checkpoint `federate` copies save state between rooms. Scaffold: `--example game-tick`.
 
 ## RCS
 

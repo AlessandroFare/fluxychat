@@ -6,6 +6,7 @@ import {
   MessageContent,
   MessageFooter,
   MessageHoverToolbar,
+  MessageTimestamp,
   messageToolbarButtonClass,
 } from "./primitives/message";
 import {
@@ -17,6 +18,7 @@ import { Attachment, AttachmentMedia, AttachmentContent, AttachmentTitle, Attach
 import { Marker, MarkerIcon, MarkerContent } from "./primitives/marker";
 import { cn } from "./lib/utils";
 import { renderContentWithMentions } from "./render-content-with-mentions";
+import { formatSenderTooltip } from "./format-sender-tooltip";
 import { safeUrl } from "./safe-url";
 import { resolveMediaUrl } from "./resolve-media-url";
 
@@ -206,6 +208,8 @@ export interface MessageItemProps {
   mediaBaseUrl?: string;
   // ── Action callbacks ──
   onReply?: () => void;
+  /** Stream quote (citation) — not a `parentId` thread. */
+  onQuote?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onReact?: (emoji: string) => void;
@@ -238,6 +242,7 @@ export function MessageItem({
   localUserId,
   mediaBaseUrl,
   onReply,
+  onQuote,
   onEdit,
   onDelete,
   onReact,
@@ -255,6 +260,9 @@ export function MessageItem({
   const isSelf = Boolean(localUserId && m.userId === localUserId);
   const isStreaming = Boolean(m.streaming);
   const parentId = m.parentId ?? null;
+  const quotedMessageId =
+    m.quotedMessageId ??
+    (typeof m.metadata?.quotedMessageId === "number" ? m.metadata.quotedMessageId : null);
 
   // Agent rooms: user on the right, agent + others on the left.
   const align: "start" | "end" = isSelf ? "end" : "start";
@@ -267,7 +275,13 @@ export function MessageItem({
 
   // Header: author name + agent badge + delivery status
   const displayName = authorName || m.userId;
+  const senderTooltip = formatSenderTooltip({
+    displayName,
+    userId: m.userId,
+    createdAt: m.createdAt,
+  });
   const hasReactions = Boolean(reactions && Object.keys(reactions).length > 0);
+  const isDeleted = Boolean(m.deletedAt);
   const iaLabel = m.metadata?.aiDisclosure
     ? "IA"
     : agentLabel === "agent"
@@ -278,9 +292,15 @@ export function MessageItem({
     <Message align={align} className={cn("gap-1", className)} data-testid={testId} data-streaming={dataStreaming} data-message-id={dataMessageId}>
       <MessageContent>
         <MessageHeader className={cn("px-0", align === "end" ? "justify-end text-right" : "justify-start")}>
-          <span className={cn("text-xs font-medium", isAgent ? "text-brand" : "text-card-foreground")}>
+          <span
+            className={cn("text-xs font-medium", isAgent ? "text-brand" : "text-card-foreground")}
+            title={senderTooltip}
+          >
             {displayName}
           </span>
+          {m.createdAt ? (
+            <MessageTimestamp timestamp={m.createdAt} size="sm" />
+          ) : null}
           {isAgent ? (
             <span
               className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand ring-1 ring-brand/20"
@@ -320,46 +340,63 @@ export function MessageItem({
         </MessageHeader>
 
         {/* ── Reply quote ── */}
-        {parentId && parentMessage ? (
-          <Marker variant="default" className="mb-1.5 rounded-md bg-muted/40 px-2.5 py-1.5" data-testid="message-reply-quote">
+        {(parentId || quotedMessageId) && parentMessage ? (
+          <Marker variant="default" className="mb-1.5 rounded-md bg-muted/40 px-2.5 py-1.5" data-testid={quotedMessageId && !parentId ? "message-quote" : "message-reply-quote"}>
             <MarkerIcon className="mt-0.5 shrink-0 text-primary">
               <CornerDownRightIcon className="size-3" />
             </MarkerIcon>
             <MarkerContent>
               <span className="font-medium text-foreground">{authorName || parentMessage.userId || parentMessage.userId}</span>
               {": "}
-              {quoteSnippet(parentMessage.content || "")}
+              {parentMessage.deletedAt
+                ? "This message was deleted"
+                : quoteSnippet(parentMessage.content || "")}
             </MarkerContent>
           </Marker>
         ) : null}
 
         {/* ── Bubble ── */}
         <Bubble variant={bubbleVariant} align={align} className={hasReactions ? "mb-5" : undefined}>
-          {onReply && m.id && !isStreaming ? (
+          {(onReply || onQuote) && m.id && !isStreaming && !isDeleted ? (
             <MessageHoverToolbar align={align}>
-              <button type="button" onClick={onReply} className={messageToolbarButtonClass} aria-label="Reply to message">
-                <ReplyIcon className="size-3" />
-                Reply
-              </button>
+              {onReply ? (
+                <button type="button" onClick={onReply} className={messageToolbarButtonClass} aria-label="Reply to message">
+                  <ReplyIcon className="size-3" />
+                  Reply
+                </button>
+              ) : null}
+              {onQuote ? (
+                <button type="button" onClick={onQuote} className={messageToolbarButtonClass} aria-label="Quote message">
+                  Quote
+                </button>
+              ) : null}
             </MessageHoverToolbar>
           ) : null}
           <BubbleContent>
-            {/* ── Message body ── */}
-            <p className={cn("whitespace-pre-wrap break-words", isSelf ? "text-primary-foreground" : "text-foreground")}>
-              {renderContentWithMentions(m.content)}
-              {m.content || isStreaming ? null : "…"}
-              {isStreaming ? (
-                <span
-                  className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-primary align-middle"
-                  aria-hidden
-                />
-              ) : null}
-            </p>
-
-            {/* ── Edited label ── */}
-            {m.editedAt && !isStreaming ? (
-              <div className="mt-1 text-[10px] text-muted-foreground">edited</div>
-            ) : null}
+            {isDeleted ? (
+              <p
+                className={cn("italic text-sm", isSelf ? "text-primary-foreground/80" : "text-muted-foreground")}
+                data-testid="message-deleted-placeholder"
+              >
+                This message was deleted
+              </p>
+            ) : (
+              <>
+                <p className={cn("whitespace-pre-wrap break-words", isSelf ? "text-primary-foreground" : "text-foreground")}>
+                  {renderContentWithMentions(m.content)}
+                  {m.content || isStreaming ? null : "…"}
+                  {isStreaming ? (
+                    <span
+                      className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-primary align-middle"
+                      aria-hidden
+                    />
+                  ) : null}
+                </p>
+                {m.editedAt && !isStreaming ? (
+                  <div className="mt-1 text-[10px] text-muted-foreground">edited</div>
+                ) : null}
+              </>
+            )}
           </BubbleContent>
 
           {/* ── Reactions ── */}
@@ -381,7 +418,7 @@ export function MessageItem({
         </Bubble>
 
         {/* ── Attachments ── */}
-        {m.attachments && m.attachments.length > 0 ? (
+        {!isDeleted && m.attachments && m.attachments.length > 0 ? (
           <div className="mt-1 flex flex-col gap-2">
             {m.attachments.map((a) => (
               <AttachmentCard key={a.url} attachment={a} mediaBaseUrl={mediaBaseUrl} />
@@ -390,7 +427,7 @@ export function MessageItem({
         ) : null}
 
         {/* ── OG preview ── */}
-        {m.preview ? <OgPreviewCard preview={m.preview} /> : null}
+        {!isDeleted && m.preview ? <OgPreviewCard preview={m.preview} /> : null}
       </MessageContent>
 
       {/* ── Footer: seen-by + action buttons ── */}

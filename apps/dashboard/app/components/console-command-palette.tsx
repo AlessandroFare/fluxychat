@@ -44,7 +44,7 @@ export function useCommandPalette(): CommandPaletteContextValue {
 }
 
 const SUPPORT_MAILTO =
-  "mailto:fluxychat@outlook.com?subject=FluxyChat%20support";
+  "mailto:support@fluxychat.com?subject=FluxyChat%20support";
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;

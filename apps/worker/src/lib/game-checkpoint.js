@@ -119,6 +119,19 @@ export async function upsertGameCheckpoint(env, auth, input) {
   return { ok: true, checkpoint };
 }
 
+/** Nakama `DeleteStorageObjects`. */
+export async function deleteGameCheckpoint(env, auth, checkpointKey, playerId) {
+  const key = String(checkpointKey ?? "").trim().slice(0, 64);
+  const pid = String(playerId ?? auth.userId).trim();
+  if (!key || !pid) return { ok: false, error: "checkpoint_required" };
+  await env.DB.prepare(
+    `DELETE FROM game_checkpoints WHERE project_id = ? AND player_id = ? AND checkpoint_key = ?`,
+  )
+    .bind(auth.projectId, pid, key)
+    .run();
+  return { ok: true, deleted: true, checkpointKey: key };
+}
+
 export async function getGameCheckpointMerged(env, auth, checkpointKey, playerId, roomId) {
   const base = await getGameCheckpoint(env, auth, checkpointKey, playerId);
   if (!base.ok || !roomId?.trim()) return base;

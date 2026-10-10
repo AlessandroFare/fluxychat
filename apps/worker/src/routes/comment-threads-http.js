@@ -3,22 +3,34 @@
  * GET/POST /rooms/:roomId/comment-threads
  * POST /rooms/:roomId/comment-threads/:threadId/comments
  * PATCH /rooms/:roomId/comment-threads/:threadId
+ * DELETE /rooms/:roomId/comment-threads/:threadId
+ * PATCH /rooms/:roomId/comment-threads/:threadId/comments/:commentId
  */
 import { pickRouteDeps } from "./route-http-deps.js";
 import {
   addCommentToThread,
   createCommentThread,
+  deleteComment,
+  deleteCommentThread,
+  editComment,
   listCommentThreads,
+  setCommentReaction,
   updateCommentThread,
 } from "../lib/comment-threads.js";
 
 export async function dispatchCommentThreadsRoutes(request, url, h) {
+  const reactionMatch = url.pathname.match(
+    /^\/rooms\/([^/]+)\/comment-threads\/([^/]+)\/comments\/([^/]+)\/reactions$/,
+  );
+  const commentItemMatch = url.pathname.match(
+    /^\/rooms\/([^/]+)\/comment-threads\/([^/]+)\/comments\/([^/]+)$/,
+  );
   const commentsMatch = url.pathname.match(
     /^\/rooms\/([^/]+)\/comment-threads\/([^/]+)\/comments$/,
   );
   const threadMatch = url.pathname.match(/^\/rooms\/([^/]+)\/comment-threads\/([^/]+)$/);
   const listMatch = url.pathname.match(/^\/rooms\/([^/]+)\/comment-threads$/);
-  if (!commentsMatch && !threadMatch && !listMatch) return null;
+  if (!reactionMatch && !commentItemMatch && !commentsMatch && !threadMatch && !listMatch) return null;
 
   const {
     env,
@@ -50,7 +62,7 @@ export async function dispatchCommentThreadsRoutes(request, url, h) {
   }
 
   const roomId = decodeURIComponent(
-    (commentsMatch || threadMatch || listMatch)[1],
+    (reactionMatch || commentItemMatch || commentsMatch || threadMatch || listMatch)[1],
   );
   if (!isValidId(roomId)) {
     return json({ error: "invalid_room" }, { status: 400, headers: corsHeaders });
@@ -107,6 +119,83 @@ export async function dispatchCommentThreadsRoutes(request, url, h) {
       return json({ error: result.error }, { status, headers: corsHeaders });
     }
     return json({ comment: result.comment }, { status: 201, headers: corsHeaders });
+  }
+
+  if (reactionMatch && (request.method === "POST" || request.method === "DELETE")) {
+    let body = {};
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+    const result = await setCommentReaction(env, {
+      projectId: auth.projectId,
+      roomId,
+      threadId: decodeURIComponent(reactionMatch[2]),
+      commentId: decodeURIComponent(reactionMatch[3]),
+      userId: auth.userId,
+      emoji: body.emoji,
+      remove: request.method === "DELETE",
+    });
+    if (!result.ok) {
+      const status = result.error === "comment_not_found" ? 404 : 400;
+      return json({ error: result.error }, { status, headers: corsHeaders });
+    }
+    return json({ comment: result.comment }, { status: 200, headers: corsHeaders });
+  }
+
+  if (commentItemMatch && request.method === "DELETE") {
+    const result = await deleteComment(env, {
+      projectId: auth.projectId,
+      roomId,
+      threadId: decodeURIComponent(commentItemMatch[2]),
+      commentId: decodeURIComponent(commentItemMatch[3]),
+      userId: auth.userId,
+    });
+    if (!result.ok) {
+      const status =
+        result.error === "comment_not_found" ? 404 : result.error === "forbidden" ? 403 : 400;
+      return json({ error: result.error }, { status, headers: corsHeaders });
+    }
+    return json({ ok: true }, { status: 200, headers: corsHeaders });
+  }
+
+  if (commentItemMatch && request.method === "PATCH") {
+    let body = {};
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+    const result = await editComment(env, {
+      projectId: auth.projectId,
+      roomId,
+      threadId: decodeURIComponent(commentItemMatch[2]),
+      commentId: decodeURIComponent(commentItemMatch[3]),
+      userId: auth.userId,
+      body: body.body ?? body.content,
+    });
+    if (!result.ok) {
+      const status =
+        result.error === "comment_not_found" ? 404 : result.error === "forbidden" ? 403 : 400;
+      return json({ error: result.error }, { status, headers: corsHeaders });
+    }
+    return json({ comment: result.comment }, { status: 200, headers: corsHeaders });
+  }
+
+  if (threadMatch && request.method === "DELETE") {
+    const result = await deleteCommentThread(env, {
+      projectId: auth.projectId,
+      roomId,
+      threadId: decodeURIComponent(threadMatch[2]),
+      userId: auth.userId,
+    });
+    if (!result.ok) {
+      const status =
+        result.error === "thread_not_found" ? 404 : result.error === "forbidden" ? 403 : 400;
+      return json({ error: result.error }, { status, headers: corsHeaders });
+    }
+    return json({ ok: true }, { status: 200, headers: corsHeaders });
   }
 
   if (threadMatch && request.method === "PATCH") {

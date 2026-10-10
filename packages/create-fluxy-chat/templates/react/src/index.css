@@ -114,3 +114,13 @@ body {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
 }
+
+.frame-log {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  max-height: 8rem;
+  overflow: auto;
+  font-size: 0.75rem;
+  background: #0f172a;
+  color: #e2e8f0;
+}

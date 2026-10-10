@@ -11,10 +11,15 @@ Pins on a canvas (`x`, `y`, a quote) live in `/comment-threads`. Chat replies ar
 GET    /rooms/:roomId/comment-threads
 POST   /rooms/:roomId/comment-threads          { body, metadata }
 POST   /rooms/:roomId/comment-threads/:id/comments  { body }
+PATCH  /rooms/:roomId/comment-threads/:id/comments/:commentId  { body }
+DELETE /rooms/:roomId/comment-threads/:id/comments/:commentId
 PATCH  /rooms/:roomId/comment-threads/:id      { resolved, metadata }
+DELETE /rooms/:roomId/comment-threads/:id
+POST   /rooms/:roomId/comment-threads/:id/comments/:commentId/reactions  { emoji }
+DELETE /rooms/:roomId/comment-threads/:id/comments/:commentId/reactions  { emoji }
 ```
 
-Fan-out on the room WebSocket as `server_event` names `comment.thread`, `comment.created`, `comment.thread.updated`. Member JWT required (`canAccessRoom`).
+Fan-out names: `comment.thread`, `comment.created`, `comment.updated`, `comment.deleted`, `comment.thread.updated`, `comment.thread.deleted`, `comment.reaction`. Edit/delete a comment is the author. Delete a thread is the creator. `useThreads` also has `searchThreads`, `editThreadMetadata`, `markThreadAsUnresolved`, `addReaction` / `removeReaction`.
 
 ## React
 
@@ -22,12 +27,12 @@ Fan-out on the room WebSocket as `server_event` names `comment.thread`, `comment
 import { useThreads } from "@fluxy-chat/react";
 import { CommentPin, FloatingComposer, Thread } from "@fluxy-chat/ui";
 
-const { threads, createThread, createComment, markThreadAsResolved } = useThreads({ roomId });
+const { threads, createThread, createComment, markThreadAsResolved, markThreadAsUnresolved, deleteThread, deleteComment, editComment, searchThreads } = useThreads({ roomId });
 
 await createThread({ body: "Check this", metadata: { x: 120, y: 80 } });
 ```
 
-Render pins with `<CommentPin />`, overlay `<FloatingComposer />`, and `<Thread />` for replies/resolve. Scaffold: `--example comments-board`.
+Render pins with `<CommentPin />`, overlay `<FloatingComposer />`, and `<Thread />` for replies/resolve/edit/delete. Scaffold: `--example comments-board`. `markThreadAsUnresolved` is Liveblocks-shaped (`resolved: false`).
 
 Inbox: merge `commentEventToInboxItem` into `useInbox().onItem`, then `<InboxNotification />`. Daily email digest includes yesterday's thread comments (enable `DAILY_DIGEST_ENABLED`; see [Notifications](/docs/core/notifications)).
 

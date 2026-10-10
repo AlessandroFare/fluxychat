@@ -2,6 +2,11 @@
  * Pusher-style presence helpers for Room DO.
  */
 
+/** Extra sockets beyond unique presence members (Ably kit “watching”). */
+export function occupancyWatching(connections, presenceMembers) {
+  return Math.max(0, (Number(connections) || 0) - (Number(presenceMembers) || 0));
+}
+
 /**
  * @param {Map<WebSocket, string>} userIds
  * @param {Map<string, number>} userConnectionCounts
@@ -182,6 +187,18 @@ export function sanitizePresencePatch(raw) {
       data.agentStatus = source.agentStatus.replace(/[<>]/g, "").slice(0, 64);
     } else {
       return { ok: false, error: "presence_agent_status_invalid" };
+    }
+  }
+  const locRaw = "uiLocation" in source ? source.uiLocation : source.ui_location;
+  if ("uiLocation" in source || "ui_location" in source) {
+    if (locRaw === null) data.uiLocation = null;
+    else if (typeof locRaw === "string") {
+      const text = locRaw.trim().slice(0, 128);
+      if (text) data.uiLocation = text;
+    } else if (locRaw && typeof locRaw === "object" && !Array.isArray(locRaw)) {
+      const surface = typeof locRaw.surface === "string" ? locRaw.surface.trim().slice(0, 64) : "";
+      const id = typeof locRaw.id === "string" ? locRaw.id.trim().slice(0, 64) : "";
+      if (surface && id) data.uiLocation = { surface, id };
     }
   }
   const encoded = JSON.stringify(data);

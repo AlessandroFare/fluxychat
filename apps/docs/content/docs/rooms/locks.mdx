@@ -1,0 +1,24 @@
+---
+title: Locks
+description: One holder per lock id on the Room Durable Object.
+---
+
+Locks are not Yjs. They are a table on the room: `pending`, `locked`, `unlocked`.
+
+```ts
+await room.attach();
+
+room.locks.subscribe((event) => {
+  console.log(event.lockId, event.held, event.acquired, event.owner);
+});
+
+room.locks.acquire("slide-1", { ttlMs: 30_000, attributes: { section: "intro" } });
+const mine = await room.locks.getSelf();
+const others = await room.locks.getOthers();
+const all = await room.locks.getAll();
+room.locks.release("slide-1");
+```
+
+`getAll` / `getSelf` / `getOthers` skip pending. `get(id)` is sync and still returns a pending row.
+
+React: `useLock("slide-1")`, `useLocks()`. Recipe: [Locks](/docs/cookbook/locks).

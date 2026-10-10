@@ -1,13 +1,21 @@
 ---
 title: Cookbook
-description: Copy-paste recipes for JWT auth, transport fallback, and agents.
+description: Short recipes for the room socket. Full API lives under Rooms.
 ---
 
-Short recipes. Use a [how-to guide](/docs/guides) when you need the full story.
+Short recipes. The [Rooms](/docs/rooms) section is the feature map. Use a [how-to](/docs/guides) when you need the long path.
 
 <Cards>
   <Card title="JWT auth" description="POST /auth/token from your backend." href="/docs/cookbook/auth-jwt" />
-  <Card title="Transport fallback" description="WebSocket down, HTTP still publishes." href="/docs/cookbook/transport-fallback" />
+  <Card title="Realtime provider" description="Browser-only. close() on unmount." href="/docs/cookbook/realtime-provider" />
+  <Card title="Connection status" description="suspended, failed, retryIn." href="/docs/cookbook/connection-status" />
+  <Card title="Message history" description="history, fromSerial, beforeSerial." href="/docs/cookbook/message-history" />
+  <Card title="Occupancy" description="connections vs presenceMembers." href="/docs/cookbook/occupancy" />
+  <Card title="Typing" description="keystroke, stop, currentlyTyping." href="/docs/cookbook/typing" />
+  <Card title="Presence avatars" description="self, others, last-seen." href="/docs/cookbook/presence-avatars" />
+  <Card title="Room reactions" description="Ephemeral room_reaction bursts." href="/docs/cookbook/room-reactions" />
+  <Card title="Locks" description="Exclusive lock on the Room DO." href="/docs/cookbook/locks" />
+  <Card title="Transport fallback" description="Socket down, HTTP still publishes." href="/docs/cookbook/transport-fallback" />
   <Card title="KB + RAG agent" description="Ground @assistant in your docs." href="/docs/cookbook/kb-rag-agent" />
   <Card title="Message templates" description="Reusable payloads." href="/docs/cookbook/message-templates" />
   <Card title="Bot streaming" description="Fluxy message stream." href="/docs/cookbook/bot-streaming-fluxy-message-stream" />

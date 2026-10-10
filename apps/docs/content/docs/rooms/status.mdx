@@ -1,0 +1,37 @@
+---
+title: Room status
+description: Attach lifecycle. suspended still retries. failed stops.
+---
+
+`room.status()` (and `room.status.current()`) is the attach label. `onStatusChange` / `status.subscribe` emit `{ current, previous, retryIn, error }`.
+
+| Label | Means |
+| --- | --- |
+| `initialized` | Object exists. Socket idle |
+| `attaching` | Handshake in progress |
+| `attached` | Live on WebSocket |
+| `suspended` | Long outage. Client still retries (`retryIn`) |
+| `failed` | Auth or max attempts. Call `attach()` again after you fix the token |
+| `detached` | You called `detach()`, or the socket is down without a retry |
+
+```ts
+const room = client.room("lobby");
+
+if (room.status() === "attached") {
+  await room.messages.send("hello");
+}
+
+room.onStatusChange((change) => {
+  console.log(change.previous, "->", change.current, change.retryIn);
+});
+
+await room.attach(); // waits until attached; rejects on suspended or failed
+```
+
+`String(room.status)` is the same label. Strict `room.status === "attached"` is false because `status` is also the subscribe handle. Use `room.status()`.
+
+Client-wide socket state is `client.connection` (`ping()`, `whenState`). Per-room attach status and client connection are not the same object. See [Connection state](/docs/core/connection-state).
+
+`room.error` is the last attach error, or `null`.
+
+React: `useRoomStatus()` inside `FluxyRoomProvider`.

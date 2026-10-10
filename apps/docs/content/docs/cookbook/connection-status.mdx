@@ -1,0 +1,25 @@
+---
+title: "Connection status"
+description: "Attach status is a pill, not a boolean. retryIn is set while reconnecting."
+---
+
+# Connection status
+
+`room.status()` (same as `room.status.current()`) maps the socket onto attach names: attaching, attached, suspended, failed, detached.
+
+`subscribe` fires `{ current, previous, retryIn, error }` on each change. `retryIn` is set in milliseconds while the client is reconnecting or suspended.
+
+```tsx
+const room = client.room("lobby");
+const { current, change } = useRoomStatus(room);
+const { currentStatus, retryIn } = useChatConnection(room.connection);
+
+return (
+  <p>
+    {current} · socket {currentStatus}
+    {retryIn ? ` · retry in ${retryIn}ms` : ""}
+  </p>
+);
+```
+
+Full page: [Room status](/docs/rooms/status).

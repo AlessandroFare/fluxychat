@@ -5,7 +5,7 @@ description: Trigger-action rules stored as Worker workflows.
 
 Console: `/chatbot-builder`. Saving a rule POSTs `/api/workflows`. A test run POSTs `/api/workflows/:id/run`. Same table as [Automations](/docs/guides/scheduled-workflows) if you already use that page.
 
-Triggers are event names (`message_received`, `user_joined`, and similar). Conditions are keyword lists. Actions are JSON the Worker stores (notify, invoke agent, ticket). Status starts as `draft`. Archive with PATCH `status: archived`.
+Triggers are event names (`message_received`, `user_joined`, and similar). Conditions are `{ field, operator, value }` lists (Botpress handler HOW: unmatched rules do not run actions). `POST /api/workflows/:id/run` executes stored actions as room `workflow.*` fan-out. `POST /api/workflows/events` matches **active** rules (incoming event HOW). Conversation/user/bot/workflow KV: `GET/PUT/DELETE /api/workflows/state`. Production webhook (n8n HOW): `POST/GET /hooks/workflows/:path` on **active** `triggerType: webhook` with `triggerConfig.path` (8–128 chars) and optional header auth. Wait resume: `/hooks/workflows/wait/:executionId?token=`. Activate/deactivate, archive, delete, get/retry/stop execution, due schedules: `/api/workflows/:id/activate`, `/archive`, `DELETE /api/workflows/:id`, `/executions/:id`, `/executions/:id/retry`, `/executions/:id/stop`, `/schedules/due`. Duplicate webhook paths return 409 on activate. Webhook actions are recorded, not fetched. Hosted does not eval tenant JavaScript. Status starts as `draft`. Archive with PATCH `status: archived`.
 
 You need an admin JWT and an active project. Hosted does not eval tenant JavaScript in the room. This is a persisted rule list.
 

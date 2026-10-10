@@ -42,6 +42,45 @@ export interface MessageListProps {
   className?: string;
   /** Extra attributes forwarded to the outer MessageScroller. */
   "data-testid"?: string;
+  /** Ably ChatMessageList `onViewLatest`. */
+  onViewLatest?: () => void;
+  onLoadMoreHistory?: () => void;
+  isLoading?: boolean;
+  hasMoreHistory?: boolean;
+  loadMoreThreshold?: number;
+  /** Ably ChatMessageList `onMessageInView`. */
+  onMessageInView?: (message: FluxyChatMessage) => void;
+  /** Ably empty transcript copy. */
+  emptyState?: React.ReactNode;
+  /** Stream unread separator — marker before this message id. */
+  firstUnreadMessageId?: number | null;
+}
+
+function MessageInViewProbe({
+  message,
+  onMessageInView,
+  children,
+}: {
+  message: FluxyChatMessage;
+  onMessageInView: (message: FluxyChatMessage) => void;
+  children: React.ReactNode;
+}) {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const cb = React.useRef(onMessageInView);
+  cb.current = onMessageInView;
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) cb.current(message);
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [message]);
+  return <div ref={ref}>{children}</div>;
 }
 
 /**
@@ -59,8 +98,27 @@ export function MessageList({
   showDateSeparators = true,
   className,
   "data-testid": testId,
+  onViewLatest,
+  onLoadMoreHistory,
+  isLoading = false,
+  hasMoreHistory = false,
+  loadMoreThreshold = 150,
+  onMessageInView,
+  emptyState = "No messages yet",
+  firstUnreadMessageId = null,
 }: MessageListProps) {
   let lastDay = "";
+  const viewportRef = React.useRef<HTMLDivElement | null>(null);
+  const pendingScroll = React.useRef<{ height: number; top: number } | null>(null);
+
+  React.useLayoutEffect(() => {
+    if (isLoading) return;
+    const el = viewportRef.current;
+    const before = pendingScroll.current;
+    if (!el || !before) return;
+    el.scrollTop = before.top + (el.scrollHeight - before.height);
+    pendingScroll.current = null;
+  }, [isLoading, messages.length]);
 
   return (
     <MessageScrollerProvider autoScroll scrollPreviousItemPeek={64}>
@@ -71,8 +129,29 @@ export function MessageList({
         aria-live="polite"
         aria-label="Messages"
       >
-        <MessageScrollerViewport className="p-3">
+        <MessageScrollerViewport
+          className="p-3"
+          ref={viewportRef}
+          onScroll={() => {
+            const el = viewportRef.current;
+            if (!el || !onLoadMoreHistory || !hasMoreHistory || isLoading) return;
+            if (el.scrollTop < loadMoreThreshold) {
+              pendingScroll.current = { height: el.scrollHeight, top: el.scrollTop };
+              onLoadMoreHistory();
+            }
+          }}
+        >
           <MessageScrollerContent className="gap-2">
+            {messages.length === 0 && emptyState ? (
+              <MessageScrollerItem>
+                <p
+                  data-testid="message-list-empty"
+                  className="py-8 text-center text-sm text-muted-foreground"
+                >
+                  {emptyState}
+                </p>
+              </MessageScrollerItem>
+            ) : null}
             {messages.flatMap((m, idx) => {
               const isLastMessage = idx === messages.length - 1;
               const elements: React.ReactNode[] = [];
@@ -92,6 +171,16 @@ export function MessageList({
                 }
               }
 
+              if (firstUnreadMessageId != null && m.id === firstUnreadMessageId) {
+                elements.push(
+                  <MessageScrollerItem key={`unread-${m.id}`}>
+                    <Marker variant="separator" className="my-1" data-testid="unread-separator">
+                      <MarkerContent>New messages</MarkerContent>
+                    </Marker>
+                  </MessageScrollerItem>,
+                );
+              }
+
               // Message row
               elements.push(
                 <MessageScrollerItem
@@ -100,7 +189,13 @@ export function MessageList({
                   scrollAnchor={isLastMessage}
                   className={cn(m.streaming && "animate-in fade-in-0 duration-300")}
                 >
-                  {renderMessage(m, idx)}
+                  {onMessageInView ? (
+                    <MessageInViewProbe message={m} onMessageInView={onMessageInView}>
+                      {renderMessage(m, idx)}
+                    </MessageInViewProbe>
+                  ) : (
+                    renderMessage(m, idx)
+                  )}
                 </MessageScrollerItem>
               );
 
@@ -112,7 +207,7 @@ export function MessageList({
             ) : null}
           </MessageScrollerContent>
         </MessageScrollerViewport>
-        <MessageScrollerButton />
+        <MessageScrollerButton onClick={onViewLatest} />
       </MessageScroller>
     </MessageScrollerProvider>
   );

@@ -1,12 +1,24 @@
 import { useState } from "react";
 import { FluxyRealtimeProvider, useChat, useThreads } from "@fluxy-chat/react";
-import { CommentPin, FloatingComposer, Thread } from "@fluxy-chat/ui";
+import { CommentPin, CommentsList, FloatingComposer, Thread, type CommentThreadFilter } from "@fluxy-chat/ui";
 import { useFluxySession, workerUrl } from "./session";
 
 function CommentsBoard({ roomId }: { roomId: string }) {
-  const { threads, createThread, createComment, markThreadAsResolved, reload } = useThreads({ roomId });
+  const {
+    threads,
+    createThread,
+    createComment,
+    markThreadAsResolved,
+    deleteThread,
+    deleteComment,
+    editComment,
+    addReaction,
+    reload,
+  } = useThreads({ roomId });
   const [draftPin, setDraftPin] = useState<{ x: number; y: number } | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [pinsHidden, setPinsHidden] = useState(false);
+  const [threadFilter, setThreadFilter] = useState<CommentThreadFilter>("open");
   useChat({
     roomId,
     replay: "off",
@@ -22,6 +34,12 @@ function CommentsBoard({ roomId }: { roomId: string }) {
       <header className="chat-header">
         <strong>Comments · {roomId}</strong>
         <span className="status">pins + threads, not chat replies</span>
+        <button type="button" onClick={() => setPinsHidden((v) => !v)}>
+          {pinsHidden ? "Show pins" : "Hide pins"}
+        </button>
+        <button type="button" onClick={() => setThreadFilter((v) => (v === "open" ? "all" : "open"))}>
+          {threadFilter === "open" ? "Open only" : "All threads"}
+        </button>
       </header>
       <div
         className="canvas"
@@ -30,18 +48,19 @@ function CommentsBoard({ roomId }: { roomId: string }) {
           setDraftPin({ x: event.clientX - rect.left, y: event.clientY - rect.top });
         }}
       >
-        {threads.map((thread) =>
-          thread.metadata.x != null && thread.metadata.y != null ? (
-            <CommentPin
-              key={thread.id}
-              x={thread.metadata.x}
-              y={thread.metadata.y}
-              count={thread.comments.length}
-              resolved={thread.resolved}
-              onClick={() => setOpenId(thread.id)}
-            />
-          ) : null,
-        )}
+        {!pinsHidden &&
+          threads.map((thread) =>
+            thread.metadata.x != null && thread.metadata.y != null ? (
+              <CommentPin
+                key={thread.id}
+                x={thread.metadata.x}
+                y={thread.metadata.y}
+                count={thread.comments.length}
+                resolved={thread.resolved}
+                onClick={() => setOpenId(thread.id)}
+              />
+            ) : null,
+          )}
         {draftPin ? (
           <FloatingComposer
             x={draftPin.x}
@@ -55,15 +74,25 @@ function CommentsBoard({ roomId }: { roomId: string }) {
           />
         ) : null}
       </div>
-      {openThread ? (
-        <div style={{ padding: 12 }}>
-          <Thread
-            thread={openThread}
-            onReply={(body) => createComment(openThread.id, body)}
-            onResolve={(resolved) => markThreadAsResolved(openThread.id, resolved)}
-          />
-        </div>
-      ) : null}
+      <aside style={{ padding: 12, borderTop: "1px solid #e2e8f0" }}>
+        <CommentsList threads={threads} openId={openId} filter={threadFilter} onSelect={setOpenId} />
+        {openThread ? (
+          <div style={{ marginTop: 12 }}>
+            <Thread
+              thread={openThread}
+              onReply={(body) => createComment(openThread.id, body)}
+              onResolve={(resolved) => markThreadAsResolved(openThread.id, resolved)}
+              onDelete={async () => {
+                await deleteThread(openThread.id);
+                setOpenId(null);
+              }}
+              onEditComment={(commentId, body) => editComment(openThread.id, commentId, body)}
+              onDeleteComment={(commentId) => deleteComment(openThread.id, commentId)}
+              onReact={(commentId, emoji) => addReaction(openThread.id, commentId, emoji)}
+            />
+          </div>
+        ) : null}
+      </aside>
     </section>
   );
 }

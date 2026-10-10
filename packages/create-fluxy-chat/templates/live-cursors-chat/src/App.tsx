@@ -178,6 +178,12 @@ function hashCode(value: string): number {
 export function App() {
   const { session, loading, error } = useFluxySession();
   const [roomId, setRoomId] = useState(configuredRoomId);
+  const obsOverlay = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("overlay");
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("obs-overlay", obsOverlay);
+    return () => document.documentElement.classList.remove("obs-overlay");
+  }, [obsOverlay]);
 
   const activeRoomId = useMemo(() => {
     if (session?.mode === "guest") return session.roomId;
@@ -218,8 +224,8 @@ export function App() {
   }
 
   return (
-    <main className="shell">
-      <h1>Live cursors + chat</h1>
+    <main className={obsOverlay ? "shell obs-overlay-shell" : "shell"}>
+      {obsOverlay ? null : <h1>Live cursors + chat</h1>}
       <p className="mode-badge">
         {session.mode === "guest" ? "Guest session" : "Member JWT"} — two tabs, same room
       </p>

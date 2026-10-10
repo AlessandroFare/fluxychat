@@ -2,7 +2,7 @@ import { VerticalStudio } from "@/app/components/vertical-studio";
 
 export default function EduPage() {
   return <VerticalStudio config={{
-    id: "edu", name: "FluxyEdu", eyebrow: "Classroom", readiness: "Beta",
+    id: "edu", name: "FluxyEdu", eyebrow: "Classroom", readiness: "Production",
     description: "Same room as chat. Polls, breakouts, attendance on the timeline. Video goes through Cloudflare Realtime SFU if you set the secrets. LiveKit if you already have it. Grading drafts stay unpublished until a teacher signs off.",
     journey: ["Create classroom", "Open live session", "Run a knowledge check", "Assign breakout groups", "Review the session report"],
     metrics: [{ label: "Attendance heartbeats", value: "0" }, { label: "Room events", value: "—" }, { label: "Poll ticks", value: "0" }],

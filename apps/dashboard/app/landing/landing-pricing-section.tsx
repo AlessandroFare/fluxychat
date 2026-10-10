@@ -151,8 +151,8 @@ export function LandingPricingSection() {
 
         <p className="mx-auto mt-14 max-w-xl text-center text-sm text-slate-400">
           Higher limits: email{" "}
-          <a className="text-slate-300 underline underline-offset-2" href="mailto:fluxychat@outlook.com">
-            fluxychat@outlook.com
+          <a className="text-slate-300 underline underline-offset-2" href="mailto:support@fluxychat.com">
+            support@fluxychat.com
           </a>
           . Hosted login does not include SAML.
         </p>

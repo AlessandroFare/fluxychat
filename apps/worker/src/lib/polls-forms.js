@@ -19,12 +19,13 @@ export const MAX_OPEN_POLLS_PER_ROOM = 20;
 export async function createPoll(env, input) {
   const { projectId, roomId, createdBy, title, description, pollType, isAnonymous, maxSelections, expiresAt, options } = input;
   if (!title?.trim()) return { ok: false, error: "title_required" };
-  if (!options?.length) return { ok: false, error: "options_required" };
-  if (options.length > MAX_POLL_OPTIONS) return { ok: false, error: "too_many_options", max: MAX_POLL_OPTIONS };
 
-  const validTypes = ["single", "multi", "rating", "yes_no"];
+  const validTypes = ["single", "multi", "rating", "yes_no", "typed"];
   const type = pollType || "single";
   if (!validTypes.includes(type)) return { ok: false, error: "invalid_poll_type" };
+
+  if (type !== "typed" && !options?.length) return { ok: false, error: "options_required" };
+  if (options?.length > MAX_POLL_OPTIONS) return { ok: false, error: "too_many_options", max: MAX_POLL_OPTIONS };
 
   const openCount = await env.DB.prepare(
     `SELECT COUNT(*) as cnt FROM polls WHERE project_id = ? AND room_id = ? AND COALESCE(is_closed, 0) = 0`,
@@ -43,7 +44,7 @@ export async function createPoll(env, input) {
     ? ["1 - Poor", "2 - Fair", "3 - Good", "4 - Very Good", "5 - Excellent"]
     : type === "yes_no"
       ? ["Yes", "No"]
-      : options;
+      : (options || []);
 
   await env.DB.prepare(
     `INSERT INTO polls (id, project_id, room_id, created_by, title, description, poll_type, is_anonymous, max_selections, expires_at, created_at)
@@ -78,9 +79,12 @@ export async function createPoll(env, input) {
 /**
  * Vote on a poll.
  */
+const MAX_TYPED_ANSWER = 200;
+
 export async function votePoll(env, input) {
-  const { projectId, pollId, optionIds, userId } = input;
-  if (!optionIds?.length) return { ok: false, error: "option_required" };
+  const { projectId, pollId, userId } = input;
+  let optionIds = Array.isArray(input.optionIds) ? input.optionIds : [];
+  const answer = typeof input.answer === "string" ? input.answer.trim() : "";
 
   // Get poll
   const poll = await env.DB.prepare(
@@ -96,13 +100,44 @@ export async function votePoll(env, input) {
   }
   if (poll.created_by === userId) return { ok: false, error: "cannot_vote_own_poll" };
 
+  if (answer) {
+    if (poll.poll_type !== "typed") return { ok: false, error: "typed_vote_not_allowed" };
+    if (answer.length > MAX_TYPED_ANSWER) return { ok: false, error: "answer_too_long" };
+    const existing = await env.DB.prepare(
+      "SELECT id FROM poll_options WHERE poll_id = ? AND LOWER(option_text) = LOWER(?)",
+    )
+      .bind(pollId, answer)
+      .first();
+    if (existing?.id) {
+      optionIds = [existing.id];
+    } else {
+      const countRow = await env.DB.prepare(
+        "SELECT COUNT(*) as cnt FROM poll_options WHERE poll_id = ?",
+      )
+        .bind(pollId)
+        .first();
+      if ((countRow?.cnt || 0) >= MAX_POLL_OPTIONS) {
+        return { ok: false, error: "too_many_options", max: MAX_POLL_OPTIONS };
+      }
+      const optionId = crypto.randomUUID();
+      await env.DB.prepare(
+        "INSERT INTO poll_options (id, poll_id, option_text, sort_order, color) VALUES (?, ?, ?, ?, ?)",
+      )
+        .bind(optionId, pollId, answer, countRow?.cnt || 0, null)
+        .run();
+      optionIds = [optionId];
+    }
+  }
+
+  if (!optionIds?.length) return { ok: false, error: "option_required" };
+
   // Validate max selections
   if (optionIds.length > (poll.max_selections || 1)) {
     return { ok: false, error: "too_many_selections", max: poll.max_selections };
   }
 
-  // For single/yes_no, only allow 1
-  if ((poll.poll_type === "single" || poll.poll_type === "yes_no") && optionIds.length !== 1) {
+  // For single/yes_no/typed, only allow 1
+  if ((poll.poll_type === "single" || poll.poll_type === "yes_no" || poll.poll_type === "typed") && optionIds.length !== 1) {
     return { ok: false, error: "single_choice_required" };
   }
 

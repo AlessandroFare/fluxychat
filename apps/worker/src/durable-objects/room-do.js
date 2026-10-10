@@ -1,5 +1,5 @@
 import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
-import { FLUXY_MAX_WS_FRAME_CHARS } from "@fluxy-chat/protocol";
+import { FLUXY_MAX_WS_FRAME_CHARS, FLUXY_PROTOCOL_INTEGER } from "@fluxy-chat/protocol";
 import { WsSessionRegistry, installWsAutoResponse } from "../lib/do-ws-sessions.js";
 import {
   emptyLedger,
@@ -16,11 +16,19 @@ import {
   isValidLocationUpdate,
 } from "../lib/ws-protocol.js";
 import {
+  applyLockAcquire,
+  applyLockRelease,
+  normalizeLockId,
+  releaseLocksOwnedBy,
+  serializeLiveLocks,
+} from "../lib/room-lock.js";
+import {
   isReadonlyAllowedClientType,
   isReadonlyWsConnect,
   readonlyConnectionError,
 } from "../lib/ws-readonly.js";
 import { logInfo, logError } from "../lib/worker-log.js";
+import { applyReactionPlan, planReactionMutation } from "../lib/reaction-summary-fold.js";
 import { withRuntimeConfig } from "../lib/with-runtime-config.js";
 import {
   backoffMsForFailure,
@@ -40,6 +48,7 @@ import {
 import {
   AGENT_SCHEDULE_ALARM_JOB,
   cancelAgentSchedule,
+  getAgentSchedule,
   claimDueAgentSchedules,
   completeAgentScheduleFire,
   earliestAgentScheduleDueAt,
@@ -87,6 +96,7 @@ import {
   listActivePresenceUserIds,
   normalizeClientEventName,
   parsePresenceInfoParam,
+  occupancyWatching,
   sanitizePresencePatch,
   shouldSkipClientEventWebhook,
   CLIENT_EVENT_MAX_PER_MINUTE,
@@ -96,7 +106,7 @@ import {
   sanitizeDerivedState,
   DERIVED_SET_MAX_PER_MINUTE,
 } from "../lib/room-derived.js";
-import { buildStageSnapshot, pickActiveSpeaker } from "../lib/room-voice-stage.js";
+import { applyStageCommand, buildStageSnapshot, pickActiveSpeaker } from "../lib/room-voice-stage.js";
 import {
   ROOM_CACHE_STORAGE_KEY,
   isCacheableBroadcast,
@@ -206,8 +216,14 @@ export function parseWsConnectOptions(request) {
   let limit = DEFAULT_WS_HISTORY_LIMIT;
   let cache = false;
   let readonly = false;
+  let protocol = null;
   try {
     const url = new URL(request.url);
+    const protocolRaw = url.searchParams.get("protocol");
+    if (protocolRaw) {
+      const n = Number(protocolRaw);
+      if (Number.isFinite(n) && n > 0) protocol = Math.floor(n);
+    }
     cache = parseCacheConnectParam(url.searchParams.get("cache"));
     readonly = isReadonlyWsConnect({
       queryReadonly: url.searchParams.get("readonly"),
@@ -234,7 +250,7 @@ export function parseWsConnectOptions(request) {
   } catch {
     /* keep defaults */
   }
-  return { replay, limit, cache, readonly };
+  return { replay, limit, cache, readonly, protocol };
 }
 
 export class RoomDurableObject {
@@ -279,6 +295,12 @@ export class RoomDurableObject {
     this.wsInboundQueues = new Map();
     /** Optional profile payload from `presenceInfo` WS query param. */
     this.userInfoByUserId = new Map();
+    /** Users who called presence_leave while the socket stays open. */
+    this.presenceLeft = new Set();
+    /** Last cursor per user (Spaces getLastCursorUpdate). */
+    this.lastCursors = new Map();
+    /** Newest-first-capable in-memory trail for CursorHistory REST (cap 200). */
+    this.cursorHistory = [];
     /** Per-connection id (exclude-sender / debugging), attachment field `s`. */
     this.socketIds = this.sessions.field("s");
     /** @type {Map<WebSocket, Record<string, boolean | undefined>>} attachment field `c` */
@@ -298,6 +320,8 @@ export class RoomDurableObject {
     /** JSON bag sent on connect so late joiners render without replaying the log. */
     this.derivedState = {};
     this.derivedSeq = 0;
+    /** @type {Map<string, { owner: string, expiresAt: number }>} exclusive locks (FX-LOCK-1) */
+    this.locks = new Map();
     /** Last accepted update time per user/track, enforcing the 1 Hz ceiling. */
     this.locationUpdateTimes = new Map();
     /** @type {Map<string, number>} */
@@ -476,6 +500,11 @@ export class RoomDurableObject {
     return listActivePresenceUserIds(this.userIds, this.userConnectionCounts);
   }
 
+  occupancyPresenceUserIds() {
+    const hidden = this.presenceLeft || new Set();
+    return this.getActiveUserIds().filter((id) => !hidden.has(id));
+  }
+
   /**
    * R6 presence-aware AI cost control.
    *
@@ -496,7 +525,7 @@ export class RoomDurableObject {
   }
 
   getPresenceSnapshot() {
-    const userIds = this.getActiveUserIds();
+    const userIds = this.occupancyPresenceUserIds();
     let live = 0;
     for (const ws of this.sessions.sockets()) {
       if (!this.sessions.read(ws)?.ro) live += 1;
@@ -552,15 +581,24 @@ export class RoomDurableObject {
 
   broadcastSubscriptionCount() {
     const roomIdStr = this.roomId || this.state.id.toString();
-    const count = this.clients.size;
+    const connections = this.clients.size;
+    const presenceMembers = this.occupancyPresenceUserIds().length;
+    const watching = occupancyWatching(connections, presenceMembers);
     this.broadcast({
       type: "subscription_count",
       roomId: roomIdStr,
-      subscriptionCount: count,
+      subscriptionCount: connections,
+    });
+    this.broadcast({
+      type: "occupancy",
+      roomId: roomIdStr,
+      connections,
+      presenceMembers,
+      watching,
     });
     void this.notifyPresenceWebhook("subscription_count", {
       roomId: roomIdStr,
-      subscriptionCount: count,
+      subscriptionCount: connections,
       at: new Date().toISOString(),
     });
   }
@@ -650,6 +688,21 @@ export class RoomDurableObject {
     }
   }
 
+  sendCursorSnapshot(webSocket) {
+    if (!this.lastCursors || this.lastCursors.size === 0) return;
+    const roomId = this.roomId || this.state.id.toString();
+    for (const cursor of this.lastCursors.values()) {
+      webSocket.send(
+        JSON.stringify({
+          ...cursor,
+          type: "cursor",
+          roomId,
+          snapshot: true,
+        }),
+      );
+    }
+  }
+
   sendLocationSnapshot(webSocket) {
     this.pruneLocationTracks();
     webSocket.send(
@@ -660,6 +713,35 @@ export class RoomDurableObject {
         generatedAt: new Date().toISOString(),
       }),
     );
+  }
+
+  sendLocksSnapshot(webSocket) {
+    const locks = serializeLiveLocks(this.locks, Date.now());
+    if (!locks.length) return;
+    webSocket.send(
+      JSON.stringify({
+        type: "lock",
+        roomId: this.roomId || this.state.id.toString(),
+        locks,
+        snapshot: true,
+      }),
+    );
+  }
+
+  releaseLocksForUser(userId) {
+    const released = releaseLocksOwnedBy(this.locks, userId);
+    const roomId = this.roomId || this.state.id.toString();
+    for (const lockId of released) {
+      void this.broadcast({
+        type: "lock",
+        roomId,
+        lockId,
+        owner: null,
+        expiresAt: 0,
+        held: false,
+        acquired: false,
+      });
+    }
   }
 
   /**
@@ -716,6 +798,14 @@ export class RoomDurableObject {
       webSocket.close(1008, "Unauthorized");
       return;
     }
+    const connectOptsEarly = parseWsConnectOptions(request);
+    if (
+      connectOptsEarly.protocol != null &&
+      connectOptsEarly.protocol > FLUXY_PROTOCOL_INTEGER
+    ) {
+      webSocket.close(1008, "protocol_unsupported");
+      return;
+    }
     const tags = [
       `user:${auth.userId}`,
       ...(auth.roles ?? []).map((r) => `role:${r}`),
@@ -745,7 +835,6 @@ export class RoomDurableObject {
 
     const userId = auth.userId;
     const socketId = crypto.randomUUID();
-    const connectOptsEarly = parseWsConnectOptions(request);
     const spectator = isReadonlyWsConnect({
       queryReadonly: connectOptsEarly.readonly ? "1" : "",
       roles: auth.roles,
@@ -870,6 +959,18 @@ export class RoomDurableObject {
       this.sendLocationSnapshot(webSocket);
     } catch (err) {
       logError("do.location_snapshot_failed", err, { roomId, projectId });
+    }
+
+    try {
+      this.sendCursorSnapshot(webSocket);
+    } catch (err) {
+      logError("do.cursor_snapshot_failed", err, { roomId, projectId });
+    }
+
+    try {
+      this.sendLocksSnapshot(webSocket);
+    } catch (err) {
+      logError("do.locks_snapshot_failed", err, { roomId, projectId });
     }
 
     this.wsInboundQueues.delete(webSocket);
@@ -1161,6 +1262,7 @@ export class RoomDurableObject {
             createdAt: row.created_at,
             parentId: row.parent_id ? Number(row.parent_id) || null : null,
             streaming: true,
+            ...(stream.requestId ? { requestId: stream.requestId } : {}),
           }),
         );
         continue;
@@ -1180,12 +1282,13 @@ export class RoomDurableObject {
           createdAt: stream.createdAt || new Date().toISOString(),
           parentId: stream.parentId ?? null,
           streaming: true,
+          ...(stream.requestId ? { requestId: stream.requestId } : {}),
         }),
       );
     }
   }
 
-  async processStreamOp({ projectId, roomId, userId, op, content, messageId, parentId }) {
+  async processStreamOp({ projectId, roomId, userId, op, content, messageId, parentId, requestId }) {
     const STREAM_FLUSH_MS = 180;
     if (!userId || !projectId) {
       return { ok: false, error: "stream_requires_project_and_user" };
@@ -1244,6 +1347,8 @@ export class RoomDurableObject {
         .run();
       const newMessageId = Number(insert.meta.last_row_id);
       const checkpoint = streamCheckpoint(initialContent);
+      const streamRequestId =
+        typeof requestId === "string" && requestId.trim() ? requestId.trim().slice(0, 128) : "";
       this.activeStreams.set(userId, {
         messageId: newMessageId,
         lastFlushMs: Date.now(),
@@ -1251,6 +1356,7 @@ export class RoomDurableObject {
         offset: checkpoint.offset,
         createdAt,
         parentId: parentId ? Number(parentId) || null : null,
+        ...(streamRequestId ? { requestId: streamRequestId } : {}),
       });
       void this.persistRoomStateToStorage().catch(() => {});
 
@@ -1269,7 +1375,7 @@ export class RoomDurableObject {
         streaming: true,
       });
 
-      return { ok: true, id: newMessageId };
+      return { ok: true, id: newMessageId, ...(streamRequestId ? { requestId: streamRequestId } : {}) };
     }
 
     if (op === "delta" || op === "end" || op === "stop") {
@@ -1645,6 +1751,25 @@ export class RoomDurableObject {
           return;
         }
 
+        if (this.projectId) {
+          const { assertRoomSlowModeAllowed } = await import("../lib/room-config.js");
+          const slowMode = await assertRoomSlowModeAllowed(this.env, {
+            projectId: this.projectId,
+            roomId,
+            userId,
+          });
+          if (!slowMode.ok) {
+            webSocket.send(
+              JSON.stringify({
+                type: "error",
+                message: "slow_mode",
+                retryAfterSeconds: slowMode.retryAfterSeconds,
+              }),
+            );
+            return;
+          }
+        }
+
         const moderation = await this.checkModeration(roomId, userId);
         if (moderation.banned) {
           webSocket.send(
@@ -1668,6 +1793,16 @@ export class RoomDurableObject {
 
         const createdAt = new Date().toISOString();
         const projectId = this.projectId;
+        const { mergeMessageExtras, parseQuotedMessageId } = await import("../lib/message-extras.js");
+        const quotedMessageId = parseQuotedMessageId(msg);
+        const extras = mergeMessageExtras(
+          null,
+          {
+            ...(msg.metadata && typeof msg.metadata === "object" ? msg.metadata : {}),
+            ...(quotedMessageId != null ? { quotedMessageId } : {}),
+          },
+          msg.headers,
+        );
         const mentionsRaw = extractMentions(validatedContent);
         const presenceForMentions = this.getPresenceSnapshot();
         const mentions = await expandMentions(this.env, {
@@ -1705,7 +1840,7 @@ export class RoomDurableObject {
 
         if (!messageId) {
           const result = await this.env.DB.prepare(
-            "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url, expires_at, visibility, visible_to_json, client_message_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url, expires_at, visibility, visible_to_json, client_message_id, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
           )
             .bind(
               projectId,
@@ -1723,6 +1858,7 @@ export class RoomDurableObject {
               visibility === "room" ? null : visibility,
               visibleToJson,
               clientMessageId,
+              extras.error ? null : extras.json,
             )
             .run();
           messageId = result.meta.last_row_id;
@@ -1901,6 +2037,8 @@ export class RoomDurableObject {
           content: validatedContent,
           createdAt,
           parentId: parentId || null,
+          ...(quotedMessageId != null ? { quotedMessageId } : {}),
+          ...(extras.extras?.metadata ? { metadata: extras.extras.metadata } : {}),
           mentions,
           preview,
           attachments: Array.isArray(attachments) ? attachments : [],
@@ -1958,10 +2096,18 @@ export class RoomDurableObject {
         const projectId = this.projectId;
         const op = String(msg.op || "");
         const parentId = msg.parentId ? Number(msg.parentId) || null : null;
-        const targetUserId =
-          op === "stop" && typeof msg.targetUserId === "string" && msg.targetUserId.trim()
-            ? msg.targetUserId.trim()
-            : socketUserId;
+        const claimedOwner =
+          (typeof msg.targetUserId === "string" && msg.targetUserId.trim()) ||
+          (typeof msg.userId === "string" && msg.userId.trim()) ||
+          socketUserId;
+        let targetUserId = socketUserId;
+        if (op === "stop" || op === "abort") {
+          if (this.activeStreams.has(claimedOwner)) targetUserId = claimedOwner;
+          else if (this.activeStreams.has(socketUserId)) targetUserId = socketUserId;
+          else if (this.activeStreams.size === 1) {
+            targetUserId = this.activeStreams.keys().next().value;
+          }
+        }
 
         if (!socketUserId || !projectId) {
           webSocket.send(
@@ -1970,7 +2116,11 @@ export class RoomDurableObject {
           return;
         }
 
-        if (op === "stop" && targetUserId !== socketUserId && !this.activeStreams.has(targetUserId)) {
+        if (
+          (op === "stop" || op === "abort") &&
+          targetUserId !== socketUserId &&
+          !this.activeStreams.has(targetUserId)
+        ) {
           webSocket.send(JSON.stringify({ type: "error", message: "stream_not_active" }));
           return;
         }
@@ -1983,6 +2133,7 @@ export class RoomDurableObject {
           content: msg.content,
           messageId: msg.messageId,
           parentId,
+          requestId: msg.requestId ?? msg.clientMessageId,
         });
 
         if (!result.ok) {
@@ -1998,7 +2149,13 @@ export class RoomDurableObject {
 
         if (op === "start") {
           webSocket.send(
-            JSON.stringify({ type: "stream", op: "started", id: result.id, roomId })
+            JSON.stringify({
+              type: "stream",
+              op: "started",
+              id: result.id,
+              roomId,
+              ...(result.requestId ? { requestId: result.requestId } : {}),
+            })
           );
         }
         return;
@@ -2087,19 +2244,20 @@ export class RoomDurableObject {
         const now = new Date().toISOString();
 
         const projectId = this.projectId;
-        if (op === "remove") {
-          await this.env.DB.prepare(
-            "DELETE FROM message_reactions WHERE project_id = ? AND message_id = ? AND room_id = ? AND user_id = ? AND emoji = ?"
-          )
-            .bind(projectId, messageId, roomId, userId, emoji)
-            .run();
-        } else {
-          await this.env.DB.prepare(
-            "INSERT INTO message_reactions (project_id, message_id, room_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-          )
-            .bind(projectId, messageId, roomId, userId, emoji, now)
-            .run();
+        const plan = planReactionMutation(op === "remove" ? "remove" : "add", {
+          type: msg.reactionType,
+          name: emoji,
+          count: msg.count,
+        });
+        if (plan.error) {
+          webSocket.send(JSON.stringify({ type: "error", message: plan.error }));
+          return;
         }
+        await applyReactionPlan(
+          this.env.DB,
+          { projectId, messageId, roomId, userId, now, emoji: plan.name || emoji },
+          plan,
+        );
 
         const payload = {
           type: "reaction",
@@ -2347,30 +2505,29 @@ export class RoomDurableObject {
         return;
       }
 
-      if (msg.type === "stage_join") {
+      if (msg.type === "stage_join" || msg.type === "stage_mute" || msg.type === "stage_request_speak" || msg.type === "stage_role") {
         const userId = this.userIds.get(webSocket);
         if (!userId) {
           webSocket.send(JSON.stringify({ type: "error", message: "stage_requires_auth" }));
           return;
         }
-        const role = msg.role === "speaker" ? "speaker" : "listener";
-        const existing = this.stageByUserId.get(userId);
-        if (role === "speaker" && existing?.role !== "speaker") {
-          const speakerCount = [...this.stageByUserId.values()].filter((m) => m.role === "speaker").length;
-          if (speakerCount >= this.maxStageSpeakers) {
-            webSocket.send(JSON.stringify({ type: "error", message: "stage_speaker_limit" }));
-            return;
-          }
-        }
-        this.stageByUserId.set(userId, {
-          role,
-          displayName:
-            typeof msg.displayName === "string" ? msg.displayName.trim().slice(0, 64) : undefined,
-          joinedAt: new Date().toISOString(),
-          vadScore: existing?.vadScore ?? 0,
-          lastVadAt: existing?.lastVadAt ?? 0,
+        const op =
+          msg.type === "stage_join" ? "join"
+            : msg.type === "stage_mute" ? "mute"
+              : msg.type === "stage_request_speak" ? "requestSpeak"
+                : "role";
+        const result = applyStageCommand(this.stageByUserId, this.maxStageSpeakers, {
+          op,
+          userId,
+          role: msg.role,
+          displayName: msg.displayName,
+          muted: msg.muted,
         });
-        this.broadcastStageState();
+        if (!result.ok) {
+          webSocket.send(JSON.stringify({ type: "error", message: result.error }));
+          return;
+        }
+        if (result.changed) this.broadcastStageState();
         return;
       }
 
@@ -2402,38 +2559,71 @@ export class RoomDurableObject {
 
       if (msg.type === "stage_promote") {
         const actorId = this.userIds.get(webSocket);
-        const targetUserId = typeof msg.targetUserId === "string" ? msg.targetUserId.trim() : "";
-        if (!actorId || !targetUserId) return;
-        const actor = this.stageByUserId.get(actorId);
-        if (!actor || actor.role !== "speaker") {
-          webSocket.send(JSON.stringify({ type: "error", message: "stage_promote_forbidden" }));
+        const result = applyStageCommand(this.stageByUserId, this.maxStageSpeakers, {
+          op: "promote",
+          userId: actorId,
+          targetUserId: msg.targetUserId,
+        });
+        if (!result.ok) {
+          webSocket.send(JSON.stringify({ type: "error", message: result.error }));
           return;
         }
-        const target = this.stageByUserId.get(targetUserId);
-        if (!target || target.role !== "listener") return;
-        const speakerCount = [...this.stageByUserId.values()].filter((m) => m.role === "speaker").length;
-        if (speakerCount >= this.maxStageSpeakers) {
-          webSocket.send(JSON.stringify({ type: "error", message: "stage_speaker_limit" }));
-          return;
-        }
-        target.role = "speaker";
-        this.stageByUserId.set(targetUserId, target);
-        this.broadcastStageState();
+        if (result.changed) this.broadcastStageState();
         return;
       }
 
       if (msg.type === "typing") {
         const { normalizePresenceIntent } = await import("../lib/presence-intent.js");
         const isTyping = !!msg.isTyping;
+        const typingUserId = this.userIds.get(webSocket) || msg.userId;
+        const { parseTypingParentId } = await import("../lib/message-threads.js");
+        const typingParentId = parseTypingParentId(msg);
         const payload = {
           type: "typing",
-          userId: msg.userId,
+          userId: typingUserId,
           isTyping,
           intent: normalizePresenceIntent(msg.intent, isTyping),
+          ...(typingParentId != null ? { parentId: typingParentId } : {}),
         };
         this.broadcast(payload);
         const partialText = typeof msg.partialText === "string" ? msg.partialText : "";
-        void this.maybeRunSpeculativeWarmup(msg.userId, partialText, isTyping).catch(() => {});
+        void this.maybeRunSpeculativeWarmup(typingUserId, partialText, isTyping).catch(() => {});
+        return;
+      }
+
+      if (msg.type === "room_reaction") {
+        const roomId = this.roomId || this.state.id.toString();
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "room_reaction_requires_auth" }));
+          return;
+        }
+        const name = String(msg.name || msg.emoji || "").trim().slice(0, 32);
+        if (!name) {
+          webSocket.send(JSON.stringify({ type: "error", message: "room_reaction_invalid_name" }));
+          return;
+        }
+        const metadata =
+          msg.metadata && typeof msg.metadata === "object" && !Array.isArray(msg.metadata)
+            ? msg.metadata
+            : undefined;
+        const headers =
+          msg.headers && typeof msg.headers === "object" && !Array.isArray(msg.headers)
+            ? Object.fromEntries(
+                Object.entries(msg.headers)
+                  .filter(([, value]) => value == null || typeof value === "string" || typeof value === "number")
+                  .map(([key, value]) => [key, String(value)]),
+              )
+            : undefined;
+        this.broadcast({
+          type: "room_reaction",
+          roomId,
+          userId,
+          name,
+          ts: Date.now(),
+          ...(metadata ? { metadata } : {}),
+          ...(headers && Object.keys(headers).length ? { headers } : {}),
+        });
         return;
       }
 
@@ -2450,6 +2640,48 @@ export class RoomDurableObject {
           webSocket.send(JSON.stringify({ type: "error", message: "cursor_invalid_position" }));
           return;
         }
+        let peerCount = 0;
+        for (const client of this.clients) {
+          if (client !== webSocket) peerCount += 1;
+        }
+        const positions = Array.isArray(msg.positions)
+          ? msg.positions
+              .slice(0, 24)
+              .map((row) => {
+                if (!row || typeof row !== "object") return null;
+                const px = Number(row.x);
+                const py = Number(row.y);
+                if (!Number.isFinite(px) || !Number.isFinite(py)) return null;
+                return {
+                  x: Math.max(-1e6, Math.min(1e6, px)),
+                  y: Math.max(-1e6, Math.min(1e6, py)),
+                  offsetMs: Math.max(0, Math.min(5_000, Number(row.offsetMs) || 0)),
+                };
+              })
+              .filter(Boolean)
+          : [];
+        const cursorPayload = {
+          type: "cursor",
+          roomId,
+          userId,
+          x,
+          y,
+          pointer: msg.pointer === "touch" ? "touch" : "mouse",
+          color: typeof msg.color === "string" ? msg.color.slice(0, 32) : undefined,
+          label: typeof msg.label === "string" ? msg.label.slice(0, 64) : undefined,
+          ts: Date.now(),
+          ...(positions.length > 1 ? { positions } : {}),
+        };
+        this.lastCursors.set(userId, cursorPayload);
+        if (this.lastCursors.size > 250) {
+          const oldest = this.lastCursors.keys().next().value;
+          if (oldest) this.lastCursors.delete(oldest);
+        }
+        this.cursorHistory.push(cursorPayload);
+        if (this.cursorHistory.length > 200) {
+          this.cursorHistory.splice(0, this.cursorHistory.length - 200);
+        }
+        if (peerCount === 0) return;
         const cursorRate = this.consumeWsRateLimit(
           `cursor:${this.projectId}:${roomId}:${userId}`,
           CURSOR_MAX_PER_MINUTE,
@@ -2464,20 +2696,7 @@ export class RoomDurableObject {
           );
           return;
         }
-        this.broadcast(
-          {
-            type: "cursor",
-            roomId,
-            userId,
-            x,
-            y,
-            pointer: msg.pointer === "touch" ? "touch" : "mouse",
-            color: typeof msg.color === "string" ? msg.color.slice(0, 32) : undefined,
-            label: typeof msg.label === "string" ? msg.label.slice(0, 64) : undefined,
-            ts: Date.now(),
-          },
-          { excludeWebSocket: webSocket },
-        );
+        this.broadcast(cursorPayload, { excludeWebSocket: webSocket });
         return;
       }
 
@@ -2532,6 +2751,8 @@ export class RoomDurableObject {
           webSocket.send(JSON.stringify({ type: "error", message: sanitized.error }));
           return;
         }
+        const wasHidden = this.presenceLeft.has(userId);
+        this.presenceLeft.delete(userId);
         const presenceRate = this.consumeWsRateLimit(
           `presence:${this.projectId}:${roomId}:${userId}`,
           CURSOR_MAX_PER_MINUTE,
@@ -2556,6 +2777,28 @@ export class RoomDurableObject {
           },
           { excludeWebSocket: webSocket },
         );
+        if (wasHidden) this.broadcastSubscriptionCount();
+        return;
+      }
+
+      if (msg.type === "presence_leave") {
+        const roomId = this.roomId || this.state.id.toString();
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "presence_leave_requires_auth" }));
+          return;
+        }
+        this.presenceLeft.add(userId);
+        const leaveData =
+          msg.data && typeof msg.data === "object" && !Array.isArray(msg.data) ? msg.data : null;
+        const encoded = leaveData ? JSON.stringify(leaveData) : "";
+        this.broadcast({
+          type: "member_left",
+          roomId,
+          userId,
+          ...(encoded && encoded.length <= 2048 ? { data: leaveData } : {}),
+        });
+        this.broadcastSubscriptionCount();
         return;
       }
 
@@ -2566,6 +2809,68 @@ export class RoomDurableObject {
       if (msg.type === "presence_state") {
         const state = msg.state === "background" ? "background" : "active";
         this.sessions.write(webSocket, { st: state });
+        return;
+      }
+
+      if (msg.type === "lock_acquire" || msg.type === "lock_release") {
+        const roomId = this.roomId || this.state.id.toString();
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "lock_requires_auth" }));
+          return;
+        }
+        const lockId = normalizeLockId(msg.lockId ?? msg.id);
+        if (!lockId) {
+          webSocket.send(JSON.stringify({ type: "error", message: "lock_invalid_id" }));
+          return;
+        }
+        const now = Date.now();
+        if (msg.type === "lock_acquire") {
+          const result = applyLockAcquire(this.locks, {
+            lockId,
+            owner: userId,
+            now,
+            ttlMs: msg.ttlMs,
+            attributes: msg.attributes,
+          });
+          const payload = {
+            type: "lock",
+            roomId,
+            lockId,
+            owner: result.lock.owner,
+            expiresAt: result.lock.expiresAt,
+            held: true,
+            acquired: result.ok && result.lock.owner === userId,
+            ...(result.lock.attributes ? { attributes: result.lock.attributes } : {}),
+          };
+          if (result.ok) this.broadcast(payload);
+          else webSocket.send(JSON.stringify(payload));
+          return;
+        }
+        const result = applyLockRelease(this.locks, { lockId, owner: userId, now });
+        if (!result.ok) {
+          webSocket.send(
+            JSON.stringify({
+              type: "lock",
+              roomId,
+              lockId,
+              owner: result.lock.owner,
+              expiresAt: result.lock.expiresAt,
+              held: true,
+              acquired: false,
+            }),
+          );
+          return;
+        }
+        this.broadcast({
+          type: "lock",
+          roomId,
+          lockId,
+          owner: null,
+          expiresAt: 0,
+          held: false,
+          acquired: false,
+        });
         return;
       }
 
@@ -2598,7 +2903,9 @@ export class RoomDurableObject {
     const userId = this.userIds.get(webSocket);
     const wasReadonly = Boolean(this.sessions.read(webSocket)?.ro);
     const roomId = this.roomId || this.state.id.toString();
-    this.yjsSync.removeClient(webSocket, roomId);
+    this.yjsSync.removeClient(webSocket, roomId, (data, excludeWs) =>
+      this.broadcastBinary(data, excludeWs),
+    );
     this.wsInboundQueues.delete(webSocket);
     // Single call drops every per-socket field at once (identity, socket id,
     // capabilities, roles) and removes the socket from the live set.
@@ -2611,7 +2918,9 @@ export class RoomDurableObject {
       const remaining = this.decrementUserConnection(userId);
       if (remaining === 0) {
         memberLeft = true;
+        this.presenceLeft.delete(userId);
         this.removeUserFromStage(userId);
+        this.releaseLocksForUser(userId);
         const leftPayload = {
           type: "member_left",
           roomId: roomIdStr,
@@ -3329,6 +3638,7 @@ export class RoomDurableObject {
         content: body.content,
         messageId: body.messageId,
         parentId: body.parentId ?? null,
+        requestId: body.requestId ?? body.clientMessageId,
       });
       return new Response(JSON.stringify(result), {
         status: result.ok ? 200 : 400,
@@ -3459,6 +3769,33 @@ export class RoomDurableObject {
       });
     }
 
+    if (new URL(request.url).pathname === "/stage-snapshot" && request.method === "GET") {
+      return new Response(JSON.stringify({ ok: true, stage: this.getStageSnapshot() }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (new URL(request.url).pathname === "/stage-command" && request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      if (body.op === "leave") {
+        this.removeUserFromStage(body.userId);
+        return new Response(JSON.stringify({ ok: true, stage: this.getStageSnapshot() }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const result = applyStageCommand(this.stageByUserId, this.maxStageSpeakers, body);
+      if (!result.ok) {
+        return new Response(JSON.stringify(result), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (result.changed) this.broadcastStageState();
+      return new Response(JSON.stringify({ ok: true, stage: this.getStageSnapshot() }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (
       new URL(request.url).pathname === "/stage-sync" &&
       request.method === "POST"
@@ -3482,15 +3819,19 @@ export class RoomDurableObject {
       request.method === "GET"
     ) {
       const snapshot = this.getPresenceSnapshot();
+      const presenceMembers = this.occupancyPresenceUserIds().length;
       return new Response(
         JSON.stringify({
           occupied: this.clients.size > 0,
           online: snapshot.online,
           subscriptionCount: snapshot.subscriptionCount,
-          userCount: this.getActiveUserIds().length,
+          userCount: presenceMembers,
+          watching: occupancyWatching(snapshot.subscriptionCount, presenceMembers),
           users: snapshot.users,
           members: snapshot.members,
           socketIds: [...this.socketIds.values()],
+          cursors: [...(this.lastCursors?.values() ?? [])],
+          cursorHistory: [...(this.cursorHistory ?? [])],
         }),
         { headers: { "Content-Type": "application/json" } },
       );
@@ -3512,6 +3853,14 @@ export class RoomDurableObject {
         return Response.json({ ok: false, reason: "storage_unavailable" }, { status: 503 });
       }
       if (request.method === "GET") {
+        const scheduleId = new URL(request.url).searchParams.get("scheduleId");
+        if (scheduleId) {
+          const found = await withAgentScheduleRows(storage, (rows) => getAgentSchedule(rows, scheduleId));
+          if (!found.ok) {
+            return Response.json({ ok: false, reason: found.reason }, { status: 404 });
+          }
+          return Response.json({ ok: true, schedule: serializeSchedule(found.schedule) });
+        }
         const listed = await withAgentScheduleRows(storage, (rows) => ({
           rows,
           schedules: rows

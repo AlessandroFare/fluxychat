@@ -16,9 +16,9 @@ export default function TrustPage() {
     <MarketingShell className="max-w-3xl py-12">
       <h1 className="font-heading text-3xl font-bold tracking-tight">Trust</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        Hosted FluxyChat is open beta. Below are the pages we actually publish. There is no SOC 2
-        letter, no pen-test PDF, and no HIPAA BAA on this site. Those wait on paying customers and a
-        written MSA.
+        Hosted FluxyChat is open beta. No SLA. No SOC 2 letter, no pen-test PDF, no HIPAA BAA.
+        Hosted login does not include SAML. SSO/SCIM is for self-host. A written MSA waits on a
+        paying customer.
       </p>
 
       <h2 className="mt-10 font-heading text-lg font-semibold">Legal and ops</h2>
@@ -71,7 +71,7 @@ export default function TrustPage() {
           </Link>
           {" "}
           is a DSA hosting notice for public share URLs. We are not a very large online platform.
-          Contact: fluxychat@outlook.com. Not legal advice.
+          Contact: support@fluxychat.com. Not legal advice.
         </li>
       </ul>
 

@@ -44,6 +44,10 @@ export default {
           DEFAULT: "rgb(var(--surface-card-rgb) / <alpha-value>)",
           foreground: "rgb(var(--foreground-rgb) / <alpha-value>)",
         },
+        popover: {
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
+        },
         border: "rgb(var(--border-rgb) / <alpha-value>)",
         surface: {
           DEFAULT: "rgb(var(--background-rgb) / <alpha-value>)",

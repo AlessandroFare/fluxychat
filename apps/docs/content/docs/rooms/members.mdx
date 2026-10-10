@@ -1,0 +1,22 @@
+---
+title: Members
+description: Roster plus leavers. Avatars sit on this list.
+---
+
+`room.members` is the Spaces-style roster. Presence is who entered. Members also keep people who just left, until `members.offlineTimeoutMs`.
+
+```ts
+await room.attach();
+await room.presence.enter({ name: "Ada" });
+
+room.members.subscribe((event) => {
+  console.log(event.type, event.member.userId);
+});
+
+const all = await room.members.getAll();
+room.members.updateProfile({ name: "Ada L." });
+```
+
+React: `useMembers()` on `FluxyRoomProvider`. Split helpers: `useSelf`, `useOthers`, `useLeavers`, `usePresenceAvatars`. UI: `AvatarStack` with `selfId`.
+
+Recipe: [Presence avatars](/docs/cookbook/presence-avatars). Enter/leave on the occupancy set is still `attach()` / `detach()`.

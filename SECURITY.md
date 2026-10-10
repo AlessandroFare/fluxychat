@@ -1,11 +1,10 @@
 # Security
 
-Thanks for helping keep FluxyChat safe.
+Do not open a public GitHub issue for a security hole. Email **support@fluxychat.com**.
 
 ## Reporting a vulnerability
 
-**Please do not file a public issue for security problems.** Email
-**fluxychat@outlook.com** with:
+Include:
 
 - A short description of the issue and its impact
 - Reproduction steps (proof-of-concept code, screenshots, or a screen recording)
@@ -36,15 +35,13 @@ In scope:
 Out of scope:
 
 - The Cloudflare platform itself
-- Third-party services we integrate with (Stripe, Clerk, Sent.dm, etc.)
-  — please report to them directly
+- Third-party services we integrate with (Stripe, Clerk, LLM vendors). Report those to them.
 - Rate-limiting bypasses that require >1,000 RPS from a single IP
   (we have DDoS-layer protection upstream)
 
-## Hardening we have already shipped
+## Hardening already in the tree
 
-See `FLUXYCHAT_FULL_AUDIT.md` (if present in the repo) for the live
-audit. Highlights:
+Highlights (not a pen-test report):
 
 - HMAC-SHA-256 with a server-side salt for API key hashing
   (env `API_KEY_HASH_SALT`)

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
+import { PRODUCT_BETA_BANNER, PRODUCT_GITHUB_ISSUES } from "@/lib/product-facts";
 
 const forceBetaNotice =
   process.env.NEXT_PUBLIC_BETA_BANNER === "1" ||
@@ -49,7 +50,7 @@ export function BetaBanner() {
     ? "Beta: cannot reach the chat API. Check worker URL / deployment."
     : workerPaymentsDisabled
       ? "Beta: billing upgrades are disabled on this host (payments not configured)."
-      : "Beta build. Report issues to your operator channel.";
+      : PRODUCT_BETA_BANNER;
 
   return (
     <div
@@ -61,6 +62,13 @@ export function BetaBanner() {
       className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950"
     >
       <span>{message}</span>{" "}
+      {message === PRODUCT_BETA_BANNER ? (
+        <>
+          <a className="underline underline-offset-2 hover:text-amber-900" href={PRODUCT_GITHUB_ISSUES}>
+            GitHub
+          </a>{" "}
+        </>
+      ) : null}
       <button
         type="button"
         className="underline underline-offset-2 hover:text-amber-900"

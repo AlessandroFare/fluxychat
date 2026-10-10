@@ -8,6 +8,7 @@ import { dispatchPollsFormsRoutes } from "./polls-forms-http.js";
 import { dispatchFleetTrackingRoutes } from "./fleet-tracking-http.js";
 import { dispatchFluxyIoTRoutes } from "./fluxy-iot-http.js";
 import { dispatchBreakoutRoomsRoutes } from "./breakout-rooms-http.js";
+import { dispatchRoomVoiceStageRoutes } from "./room-voice-stage-http.js";
 import { dispatchReportsWebhooksRoutes } from "./reports-webhooks-http.js";
 import { FLEET_GPS_PER_VEHICLE_PER_MINUTE } from "../lib/fleet-tracking.js";
 
@@ -156,6 +157,18 @@ describe("edu polls and breakouts", () => {
     expect(res.status).toBe(401);
   });
 
+  it("POST /rooms/:id/breakouts/:id/join without JWT is 401", async () => {
+    const req = jsonReq("/rooms/room-1/breakouts/brk_1/join", { method: "POST" });
+    const res = await dispatchBreakoutRoomsRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /rooms/:id/timer without JWT is 401", async () => {
+    const req = jsonReq("/rooms/room-1/timer");
+    const res = await dispatchBreakoutRoomsRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
   it("GET /rooms/:id/breakouts without membership is 403", async () => {
     const req = jsonReq("/rooms/room-1/breakouts");
     const res = await dispatchBreakoutRoomsRoutes(
@@ -164,6 +177,36 @@ describe("edu polls and breakouts", () => {
       deps({ canAccessRoom: async () => false }),
     );
     expect(res.status).toBe(403);
+  });
+});
+
+describe("voice stage", () => {
+  it("POST /rooms/:id/voice/token without JWT is 401", async () => {
+    const req = jsonReq("/rooms/room-1/voice/token", { method: "POST" });
+    const res = await dispatchRoomVoiceStageRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /rooms/:id/voice-stage/mute without JWT is 401", async () => {
+    const req = jsonReq("/rooms/room-1/voice-stage/mute", { method: "POST", body: { muted: true } });
+    const res = await dispatchRoomVoiceStageRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /rooms/:id/voice/token uses JWT identity not spoofed userId", async () => {
+    const req = jsonReq("/rooms/room-1/voice/token", {
+      method: "POST",
+      body: { provider: "livekit", userId: "attacker" },
+    });
+    const res = await dispatchRoomVoiceStageRoutes(
+      req,
+      new URL(req.url),
+      deps({ db: bindsDb({ first: { ok: 1, id: "room-1", type: "public" } }) }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.token.payload.sub).toBe("u1");
+    expect(body.token.payload.sub).not.toBe("attacker");
   });
 });
 
@@ -218,6 +261,35 @@ describe("fleet GPS", () => {
     const body = await res.json();
     expect(body.error).toBe("quota_exceeded");
   });
+
+  it("PATCH /fleet/geofences/:id with empty body is 400", async () => {
+    const req = jsonReq("/fleet/geofences/gf_1", { method: "PATCH", body: {} });
+    const res = await dispatchFleetTrackingRoutes(req, new URL(req.url), deps());
+    expect(res.status).toBe(400);
+  });
+
+  it("GET /fleet/geofence-events returns stored rows", async () => {
+    const db = {
+      prepare() {
+        return {
+          bind() {
+            return {
+              first: async () => null,
+              all: async () => ({
+                results: [{ id: "gfe_1", geofence_id: "gf_1", vehicle_id: "v_1", event_type: "exit", occurred_at: "t" }],
+              }),
+              run: async () => ({ success: true, meta: { changes: 1 } }),
+            };
+          },
+        };
+      },
+    };
+    const req = jsonReq("/fleet/geofence-events?vehicleId=v_1");
+    const res = await dispatchFleetTrackingRoutes(req, new URL(req.url), deps({ db }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.events[0]?.eventType).toBe("exit");
+  });
 });
 
 describe("IoT ingest", () => {
@@ -240,6 +312,24 @@ describe("IoT ingest", () => {
       headers: { Authorization: "Bearer iot_" + "a".repeat(32) },
     });
     const res = await dispatchFluxyIoTRoutes(req, new URL(req.url), deps({ db }));
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /iot/devices/:id/readings without JWT is 401", async () => {
+    const req = jsonReq("/iot/devices/dev_1/readings");
+    const res = await dispatchFluxyIoTRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /iot/alarms without JWT is 401", async () => {
+    const req = jsonReq("/iot/alarms");
+    const res = await dispatchFluxyIoTRoutes(req, new URL(req.url), createAuthMatrixDeps());
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /iot/devices/:id without JWT is 401", async () => {
+    const req = jsonReq("/iot/devices/dev_1");
+    const res = await dispatchFluxyIoTRoutes(req, new URL(req.url), createAuthMatrixDeps());
     expect(res.status).toBe(401);
   });
 });

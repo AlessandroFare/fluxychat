@@ -265,7 +265,7 @@ export default function MatrixBridgesPage() {
       <p className="text-xs text-muted-foreground">
         Docs: <Link href="/docs/guides/matrix-bridge" className="font-medium underline-offset-2 hover:underline">Matrix bridge guide</Link>
         {" · "}
-        <a href="https://github.com/fluxychat/Chat/blob/main/docs/MATRIX_SYNAPSE_RUNBOOK.md" className="font-medium underline-offset-2 hover:underline">Synapse runbook</a>
+        <a href="https://github.com/AlessandroFare/fluxychat/blob/main/docs/MATRIX_SYNAPSE_RUNBOOK.md" className="font-medium underline-offset-2 hover:underline">Synapse runbook</a>
       </p>
 
       <ConsoleFeedback error={error} notice={notice} className="mt-4" />

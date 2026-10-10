@@ -1,9 +1,18 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import {
+  createGameParty,
   endGameMatch,
   findOrCreateLobby,
   getGameMatch,
+  listGameMatches,
+  getGameParty,
+  listGameParties,
+  joinGameParty,
+  joinGameLobby,
+  leaveGameLobby,
+  leaveGameParty,
   listGameLeaderboard,
+  listGameLobbies,
   startGameMatch,
   submitGameInput,
   upsertGamePlayer,
@@ -14,6 +23,7 @@ import {
   listGameCheckpoints,
   listGameCheckpointsMerged,
   upsertGameCheckpoint,
+  deleteGameCheckpoint,
   federateGameCheckpoint,
   ingestFederatedCheckpoint,
   verifyFederationSecret,
@@ -31,6 +41,7 @@ import {
   listGameTournaments,
   reportTournamentMatch,
   startGameTournament,
+  registerTournamentPlayers,
 } from "../lib/game-tournament.js";
 import { interactGameNpc, listGameNpcs, upsertGameNpc } from "../lib/game-npc.js";
 
@@ -54,13 +65,48 @@ export async function dispatchFluxyGameRoutes(request, url, h) {
   if (path === "/games/npcs" && request.method === "PUT") {
     return dispatchUpsertNpc(request, h);
   }
+  if (path === "/games/lobbies" && request.method === "GET") {
+    return dispatchListLobbies(request, url, h);
+  }
   if (path === "/games/lobbies/matchmake" && request.method === "POST") {
     return dispatchMatchmake(request, h);
+  }
+  if (path === "/games/parties" && request.method === "GET") {
+    return dispatchListParties(request, h);
+  }
+  if (path === "/games/parties" && request.method === "POST") {
+    return dispatchCreateParty(request, h);
+  }
+  if (path === "/games/matches" && request.method === "GET") {
+    return dispatchListMatches(request, url, h);
   }
 
   const startMatch = path.match(/^\/games\/lobbies\/([^/]+)\/start$/);
   if (startMatch && request.method === "POST") {
     return dispatchStart(request, h, decodeURIComponent(startMatch[1]));
+  }
+
+  const joinLobby = path.match(/^\/games\/lobbies\/([^/]+)\/join$/);
+  if (joinLobby && request.method === "POST") {
+    return dispatchJoinLobby(request, h, decodeURIComponent(joinLobby[1]));
+  }
+
+  const leaveLobby = path.match(/^\/games\/lobbies\/([^/]+)\/leave$/);
+  if (leaveLobby && request.method === "POST") {
+    return dispatchLeaveLobby(request, h, decodeURIComponent(leaveLobby[1]));
+  }
+
+  const partyJoin = path.match(/^\/games\/parties\/([^/]+)\/join$/);
+  if (partyJoin && request.method === "POST") {
+    return dispatchJoinParty(request, h, decodeURIComponent(partyJoin[1]));
+  }
+  const partyLeave = path.match(/^\/games\/parties\/([^/]+)\/leave$/);
+  if (partyLeave && request.method === "POST") {
+    return dispatchLeaveParty(request, h, decodeURIComponent(partyLeave[1]));
+  }
+  const partyGet = path.match(/^\/games\/parties\/([^/]+)$/);
+  if (partyGet && request.method === "GET") {
+    return dispatchGetParty(request, h, decodeURIComponent(partyGet[1]));
   }
 
   const matchGet = path.match(/^\/games\/matches\/([^/]+)$/);
@@ -97,6 +143,9 @@ export async function dispatchFluxyGameRoutes(request, url, h) {
   if (checkpointGet && request.method === "GET") {
     return dispatchGetCheckpoint(request, h, decodeURIComponent(checkpointGet[1]));
   }
+  if (checkpointGet && request.method === "DELETE") {
+    return dispatchDeleteCheckpoint(request, h, decodeURIComponent(checkpointGet[1]));
+  }
 
   const checkpointFederate = path.match(/^\/games\/checkpoints\/([^/]+)\/federate$/);
   if (checkpointFederate && request.method === "POST") {
@@ -130,6 +179,11 @@ export async function dispatchFluxyGameRoutes(request, url, h) {
   const tournamentGet = path.match(/^\/games\/tournaments\/([^/]+)$/);
   if (tournamentGet && request.method === "GET") {
     return dispatchGetTournament(request, h, decodeURIComponent(tournamentGet[1]));
+  }
+
+  const tournamentJoin = path.match(/^\/games\/tournaments\/([^/]+)\/join$/);
+  if (tournamentJoin && request.method === "POST") {
+    return dispatchJoinTournament(request, h, decodeURIComponent(tournamentJoin[1]));
   }
 
   const tournamentStart = path.match(/^\/games\/tournaments\/([^/]+)\/start$/);
@@ -185,7 +239,84 @@ async function dispatchLeaderboard(request, url, h) {
   const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
   const auth = await authContext(request, env, h);
   if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-  const result = await listGameLeaderboard(env, auth, url.searchParams.get("limit"));
+  const result = await listGameLeaderboard(
+    env,
+    auth,
+    url.searchParams.get("limit"),
+    url.searchParams.get("around") || undefined,
+  );
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchListLobbies(request, url, h) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const result = await listGameLobbies(env, auth, {
+    gameMode: url.searchParams.get("gameMode") || undefined,
+    state: url.searchParams.get("state") || undefined,
+  });
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchCreateParty(request, h) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const body = await request.json().catch(() => null);
+  const result = await createGameParty(env, auth, body ?? {});
+  if (!result.ok) return json({ error: result.error }, { status: 400, headers: corsHeaders });
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchListParties(request, h) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const result = await listGameParties(env, auth);
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchListMatches(request, url, h) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const result = await listGameMatches(env, auth, { status: url.searchParams.get("status") || "" });
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchGetParty(request, h, partyId) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const result = await getGameParty(env, auth, partyId);
+  if (!result.ok) return json({ error: result.error }, { status: 404, headers: corsHeaders });
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchJoinParty(request, h, partyId) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const body = await request.json().catch(() => null);
+  const result = await joinGameParty(env, auth, partyId, body?.playerId);
+  if (!result.ok) {
+    const status = result.error === "not_found" ? 404 : 400;
+    return json({ error: result.error }, { status, headers: corsHeaders });
+  }
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchLeaveParty(request, h, partyId) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const body = await request.json().catch(() => null);
+  const result = await leaveGameParty(env, auth, partyId, body?.playerId);
+  if (!result.ok) {
+    const status = result.error === "not_found" ? 404 : 400;
+    return json({ error: result.error }, { status, headers: corsHeaders });
+  }
   return json(result, { headers: corsHeaders });
 }
 
@@ -214,6 +345,32 @@ async function dispatchMatchmake(request, h) {
   const body = await request.json().catch(() => null);
   const result = await findOrCreateLobby(env, auth, body ?? {});
   if (!result.ok) return json({ error: result.error }, { status: 400, headers: corsHeaders });
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchJoinLobby(request, h, lobbyId) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const body = await request.json().catch(() => null);
+  const result = await joinGameLobby(env, auth, lobbyId, body?.playerId);
+  if (!result.ok) {
+    const status = result.error === "lobby_not_found" ? 404 : 400;
+    return json({ error: result.error }, { status, headers: corsHeaders });
+  }
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchLeaveLobby(request, h, lobbyId) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const body = await request.json().catch(() => null);
+  const result = await leaveGameLobby(env, auth, lobbyId, body?.playerId);
+  if (!result.ok) {
+    const status = result.error === "lobby_not_found" ? 404 : 400;
+    return json({ error: result.error }, { status, headers: corsHeaders });
+  }
   return json(result, { headers: corsHeaders });
 }
 
@@ -316,6 +473,17 @@ async function dispatchGetCheckpoint(request, h, checkpointKey) {
   return json(result, { headers: corsHeaders });
 }
 
+async function dispatchDeleteCheckpoint(request, h, checkpointKey) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const url = new URL(request.url);
+  const playerId = url.searchParams.get("playerId") ?? auth.userId;
+  const result = await deleteGameCheckpoint(env, auth, checkpointKey, playerId);
+  if (!result.ok) return json({ error: result.error }, { status: 400, headers: corsHeaders });
+  return json(result, { headers: corsHeaders });
+}
+
 async function dispatchUpsertCheckpoint(request, h) {
   const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
   const auth = await authContext(request, env, h);
@@ -414,6 +582,20 @@ async function dispatchGetTournament(request, h, tournamentId) {
   if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   const result = await getGameTournament(env, auth, tournamentId);
   if (!result.ok) return json({ error: result.error }, { status: 404, headers: corsHeaders });
+  return json(result, { headers: corsHeaders });
+}
+
+async function dispatchJoinTournament(request, h, tournamentId) {
+  const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
+  const auth = await authContext(request, env, h);
+  if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const body = await request.json().catch(() => null);
+  const playerId = String(body?.playerId ?? auth.userId).trim();
+  const result = await registerTournamentPlayers(env, auth, tournamentId, [playerId]);
+  if (!result.ok) {
+    const status = result.error === "not_found" ? 404 : 400;
+    return json({ error: result.error }, { status, headers: corsHeaders });
+  }
   return json(result, { headers: corsHeaders });
 }
 

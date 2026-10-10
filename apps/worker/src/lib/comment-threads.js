@@ -47,6 +47,19 @@ function mapThread(row, comments = []) {
   };
 }
 
+const EMOJI_MAX = 32;
+
+export function parseCommentReactions(raw) {
+  const parsed = parseMetadata(typeof raw === "string" ? raw : JSON.stringify(raw || {}));
+  const out = {};
+  for (const [emoji, users] of Object.entries(parsed)) {
+    if (!Array.isArray(users)) continue;
+    const ids = users.map((id) => String(id)).filter(Boolean).slice(0, 64);
+    if (ids.length) out[String(emoji).slice(0, EMOJI_MAX)] = ids;
+  }
+  return out;
+}
+
 function mapComment(row) {
   return {
     id: row.id,
@@ -55,6 +68,7 @@ function mapComment(row) {
     body: row.body,
     createdAt: row.created_at,
     editedAt: row.edited_at ?? null,
+    reactions: parseCommentReactions(row.reactions_json),
   };
 }
 
@@ -71,7 +85,7 @@ export async function listCommentThreads(env, { projectId, roomId }) {
   if (threads.length === 0) return [];
 
   const commentRows = await env.DB.prepare(
-    `SELECT id, thread_id, user_id, body, created_at, edited_at
+    `SELECT id, thread_id, user_id, body, created_at, edited_at, reactions_json
      FROM room_comment_thread_comments
      WHERE project_id = ? AND room_id = ?
      ORDER BY created_at ASC`,
@@ -127,6 +141,7 @@ export async function createCommentThread(env, { projectId, roomId, userId, body
         body: text,
         createdAt: now,
         editedAt: null,
+        reactions: {},
       },
     ],
   };
@@ -174,6 +189,7 @@ export async function addCommentToThread(env, { projectId, roomId, threadId, use
     body: text,
     createdAt: now,
     editedAt: null,
+    reactions: {},
   };
 
   await fanoutServerEvent(env, {
@@ -223,4 +239,149 @@ export async function updateCommentThread(env, { projectId, roomId, threadId, re
   }).catch(() => {});
 
   return { ok: true };
+}
+
+export async function deleteCommentThread(env, { projectId, roomId, threadId, userId }) {
+  const row = await env.DB.prepare(
+    `SELECT id, created_by FROM room_comment_threads WHERE id = ? AND project_id = ? AND room_id = ? LIMIT 1`,
+  )
+    .bind(threadId, projectId, roomId)
+    .first();
+  if (!row) return { ok: false, error: "thread_not_found" };
+  if (String(row.created_by) !== String(userId)) return { ok: false, error: "forbidden" };
+
+  await env.DB.prepare(
+    `DELETE FROM room_comment_thread_comments WHERE thread_id = ? AND project_id = ? AND room_id = ?`,
+  )
+    .bind(threadId, projectId, roomId)
+    .run();
+  await env.DB.prepare(
+    `DELETE FROM room_comment_threads WHERE id = ? AND project_id = ? AND room_id = ?`,
+  )
+    .bind(threadId, projectId, roomId)
+    .run();
+
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId,
+    name: "comment.thread.deleted",
+    data: { id: threadId },
+    userId,
+  }).catch(() => {});
+
+  return { ok: true };
+}
+
+export async function editComment(env, { projectId, roomId, threadId, commentId, userId, body }) {
+  const text = String(body || "").trim().slice(0, BODY_MAX);
+  if (!text) return { ok: false, error: "body_required" };
+  const row = await env.DB.prepare(
+    `SELECT id, thread_id, user_id, body, created_at FROM room_comment_thread_comments
+     WHERE id = ? AND thread_id = ? AND project_id = ? AND room_id = ? LIMIT 1`,
+  )
+    .bind(commentId, threadId, projectId, roomId)
+    .first();
+  if (!row) return { ok: false, error: "comment_not_found" };
+  if (String(row.user_id) !== String(userId)) return { ok: false, error: "forbidden" };
+
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `UPDATE room_comment_thread_comments SET body = ?, edited_at = ? WHERE id = ?`,
+  )
+    .bind(text, now, commentId)
+    .run();
+  await env.DB.prepare(
+    `UPDATE room_comment_threads SET updated_at = ? WHERE id = ?`,
+  )
+    .bind(now, threadId)
+    .run();
+
+  const comment = {
+    id: commentId,
+    threadId,
+    userId,
+    body: text,
+    createdAt: row.created_at ?? now,
+    editedAt: now,
+    reactions: parseCommentReactions(row.reactions_json),
+  };
+
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId,
+    name: "comment.updated",
+    data: comment,
+    userId,
+  }).catch(() => {});
+
+  return { ok: true, comment };
+}
+
+export async function deleteComment(env, { projectId, roomId, threadId, commentId, userId }) {
+  const row = await env.DB.prepare(
+    `SELECT id, thread_id, user_id FROM room_comment_thread_comments
+     WHERE id = ? AND thread_id = ? AND project_id = ? AND room_id = ? LIMIT 1`,
+  )
+    .bind(commentId, threadId, projectId, roomId)
+    .first();
+  if (!row) return { ok: false, error: "comment_not_found" };
+  if (String(row.user_id) !== String(userId)) return { ok: false, error: "forbidden" };
+
+  await env.DB.prepare(
+    `DELETE FROM room_comment_thread_comments WHERE id = ? AND project_id = ? AND room_id = ?`,
+  )
+    .bind(commentId, projectId, roomId)
+    .run();
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `UPDATE room_comment_threads SET updated_at = ? WHERE id = ?`,
+  )
+    .bind(now, threadId)
+    .run();
+
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId,
+    name: "comment.deleted",
+    data: { id: commentId, threadId },
+    userId,
+  }).catch(() => {});
+
+  return { ok: true };
+}
+
+export async function setCommentReaction(env, { projectId, roomId, threadId, commentId, userId, emoji, remove }) {
+  const mark = String(emoji || "").trim().slice(0, EMOJI_MAX);
+  if (!mark) return { ok: false, error: "emoji_required" };
+  const row = await env.DB.prepare(
+    `SELECT id, thread_id, user_id, body, created_at, edited_at, reactions_json
+     FROM room_comment_thread_comments
+     WHERE id = ? AND thread_id = ? AND project_id = ? AND room_id = ? LIMIT 1`,
+  )
+    .bind(commentId, threadId, projectId, roomId)
+    .first();
+  if (!row) return { ok: false, error: "comment_not_found" };
+
+  const reactions = parseCommentReactions(row.reactions_json);
+  const users = new Set(reactions[mark] || []);
+  if (remove) users.delete(String(userId));
+  else users.add(String(userId));
+  if (users.size) reactions[mark] = [...users];
+  else delete reactions[mark];
+
+  await env.DB.prepare(
+    `UPDATE room_comment_thread_comments SET reactions_json = ? WHERE id = ?`,
+  )
+    .bind(JSON.stringify(reactions), commentId)
+    .run();
+
+  const comment = mapComment({ ...row, reactions_json: JSON.stringify(reactions) });
+  await fanoutServerEvent(env, {
+    projectId,
+    roomId,
+    name: "comment.reaction",
+    data: { commentId, threadId, emoji: mark, userId, remove: Boolean(remove), reactions },
+    userId,
+  }).catch(() => {});
+  return { ok: true, comment };
 }

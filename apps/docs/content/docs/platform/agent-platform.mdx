@@ -38,6 +38,7 @@ Dashboard **Agents → Chat in room** opens a live WebSocket session (member JWT
 
 ```ts
 await client.invokeAgentRest(agentId, roomId, "Help with billing");
+await client.scheduleAgent(roomId, { agentId, kind: "delay", delayMs: 60_000, prompt: "Follow up" });
 const handoff = await client.getRoomHandoff(roomId);
 ```
 

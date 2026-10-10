@@ -1,0 +1,24 @@
+name: Good first issue
+description: Small, documented starter task
+labels: ["good first issue", "help wanted"]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this is small
+      placeholder: What file to touch, what "done" looks like, how to test.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Suggested steps
+    validations:
+      required: true
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      placeholder: worker / sdk / dashboard / docs
+    validations:
+      required: true

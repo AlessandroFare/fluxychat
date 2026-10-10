@@ -1,0 +1,26 @@
+---
+title: Locations
+description: UI locus on presence_patch. GPS is a different event.
+---
+
+A location here is "which slide / which node", not lat/lng.
+
+```ts
+await room.attach();
+await room.presence.enter();
+
+room.locations.subscribe((event) => {
+  console.log(event.member.userId, event.currentLocation, event.previousLocation);
+});
+
+await room.locations.set({ surface: "slide", id: "3" });
+
+const self = await room.locations.getSelf();
+const others = await room.locations.getOthers();
+```
+
+Wire: `uiLocation` on `presence_patch`. Aliases on the event: `member`, `currentLocation`, `previousLocation` (plus `userId` / `current` / `previous`).
+
+Fleet GPS stays `location_update`. Do not put 60 Hz pointers on `client_event`. Use [cursors](/docs/rooms/cursors).
+
+`useLocations()` is the React hook.

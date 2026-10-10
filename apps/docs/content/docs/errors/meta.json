@@ -1,0 +1,23 @@
+{
+  "title": "Error codes",
+  "pages": [
+    "index",
+    "token_expired",
+    "invalid_token",
+    "invalid_api_key",
+    "anonymous_not_allowed",
+    "auth_refused",
+    "not_member",
+    "banned",
+    "forbidden",
+    "rate_limited",
+    "channel_at_capacity",
+    "send_not_open",
+    "ws_policy",
+    "feature_not_enabled",
+    "resource_disposed",
+    "message_not_found",
+    "discontinuity",
+    "connection_failed"
+  ]
+}
