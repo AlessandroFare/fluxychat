@@ -1559,21 +1559,58 @@ export async function dispatchMessagesRoutes(request, url, h) {
     if (operation.error) {
       return json({ error: operation.error }, { status: 400 });
     }
+    const numericId = Number(messageId);
+    const clientMessageId =
+      typeof deleteBody?.clientMessageId === "string" && deleteBody.clientMessageId.trim()
+        ? deleteBody.clientMessageId.trim()
+        : typeof deleteBody?.operationMetadata?.clientMessageId === "string"
+          ? String(deleteBody.operationMetadata.clientMessageId).trim()
+          : "";
+    const roomIdHint =
+      typeof deleteBody?.roomId === "string" && deleteBody.roomId.trim()
+        ? deleteBody.roomId.trim()
+        : "";
+    if (roomIdHint) {
+      const { flushRoomMessageWalStub } = await import("../lib/message-d1-write-behind.js");
+      await flushRoomMessageWalStub(env, roomIdHint, authProjectId).catch((err) =>
+        logError("messages.delete_wal_flush_failed", err, requestLogCtx),
+      );
+    }
 
-    // Ensure message exists and belongs to this user + project
-    const existing = await env.DB.prepare(
-      "SELECT id, room_id, user_id, content FROM messages WHERE id = ? AND project_id = ?"
-    )
-      .bind(messageId, authProjectId)
-      .first();
+    async function loadDeletable() {
+      if (Number.isFinite(numericId) && numericId > 0) {
+        const byId = await env.DB.prepare(
+          "SELECT id, room_id, user_id, content FROM messages WHERE id = ? AND project_id = ?",
+        )
+          .bind(numericId, authProjectId)
+          .first();
+        if (byId) return byId;
+      }
+      if (clientMessageId) {
+        return env.DB.prepare(
+          "SELECT id, room_id, user_id, content FROM messages WHERE project_id = ? AND client_message_id = ? ORDER BY id DESC LIMIT 1",
+        )
+          .bind(authProjectId, clientMessageId)
+          .first();
+      }
+      return null;
+    }
+
+    let existing = await loadDeletable();
+    if (!existing && roomIdHint) {
+      existing = await loadDeletable();
+    }
 
     if (!existing) {
       return json({ error: "message not found" }, { status: 404 });
     }
-    if (existing.user_id !== userId) {
+    const isAuthor = String(existing.user_id) === String(userId);
+    const isPrivileged = hasAnyRole(roles, ["owner", "admin", "moderator"]);
+    if (!isAuthor && !isPrivileged) {
       return json({ error: "forbidden" }, { status: 403 });
     }
     const now = new Date().toISOString();
+    const persistId = existing.id;
     if (hardDeleteRequested) {
       // Hard-delete is reserved for admin/owner flows (e.g. GDPR requests).
       if (!hasAnyRole(roles, ["owner", "admin"])) {
@@ -1583,52 +1620,77 @@ export async function dispatchMessagesRoutes(request, url, h) {
       await env.DB.batch([
         env.DB.prepare(
           "DELETE FROM message_reactions WHERE message_id = ? AND project_id = ?"
-        ).bind(messageId, authProjectId),
+        ).bind(persistId, authProjectId),
         env.DB.prepare(
           "DELETE FROM message_mentions WHERE message_id = ? AND project_id = ?"
-        ).bind(messageId, authProjectId),
+        ).bind(persistId, authProjectId),
         env.DB.prepare(
           "DELETE FROM attachments WHERE message_id = ? AND project_id = ?"
-        ).bind(messageId, authProjectId),
+        ).bind(persistId, authProjectId),
         env.DB.prepare(
           "DELETE FROM message_deliveries WHERE message_id = ?"
-        ).bind(messageId),
+        ).bind(persistId),
         env.DB.prepare(
           "DELETE FROM messages WHERE id = ? AND project_id = ?"
-        ).bind(messageId, authProjectId),
+        ).bind(persistId, authProjectId),
       ]);
     } else {
-      await env.DB.prepare(
-        "UPDATE messages SET deleted_at = ?, content = ? WHERE id = ? AND project_id = ? AND user_id = ?"
-      )
-        .bind(now, "[deleted]", messageId, authProjectId, userId)
-        .run();
+      try {
+        const updated = await env.DB.prepare(
+          "UPDATE messages SET deleted_at = ?, content = ? WHERE id = ? AND project_id = ?",
+        )
+          .bind(now, "[deleted]", persistId, authProjectId)
+          .run();
+        if (Number(updated?.meta?.changes) === 0) {
+          logError("messages.delete_update_zero_rows", new Error("zero_rows"), {
+            ...requestLogCtx,
+            persistId,
+            authProjectId,
+          });
+        }
+      } catch (err) {
+        logError("messages.delete_update_failed", err, requestLogCtx);
+        try {
+          await env.DB.prepare(
+            "UPDATE messages SET content = ? WHERE id = ? AND project_id = ?",
+          )
+            .bind("[deleted]", persistId, authProjectId)
+            .run();
+        } catch (fallbackErr) {
+          logError("messages.delete_content_fallback_failed", fallbackErr, requestLogCtx);
+          return json({ error: "delete_failed" }, { status: 500 });
+        }
+      }
     }
 
-    // Broadcast delete event to room via DO
     const roomId = existing.room_id;
-    await fanoutRoomInternal(env, authProjectId, roomId, "/announce", {
-      method: "POST",
-      body: JSON.stringify({
-        type: "delete",
-        id: messageId,
-        roomId,
-        userId,
-        hard: hardDeleteRequested,
-        deletedAt: now,
-        ...(operation.operation ? { operation: operation.operation } : {}),
-      }),
-    });
+    try {
+      await fanoutRoomInternal(env, authProjectId, roomId, "/announce", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "delete",
+          id: Number(persistId),
+          messageId: Number(persistId),
+          roomId,
+          userId: existing.user_id,
+          hard: hardDeleteRequested,
+          deletedAt: now,
+          ...(operation.operation ? { operation: operation.operation } : {}),
+        }),
+      });
+    } catch (err) {
+      logError("messages.delete_fanout_failed", err, requestLogCtx);
+    }
 
     return json({
       ok: true,
       hard: hardDeleteRequested,
       deletedAt: now,
       message: {
-        id: Number(messageId),
+        id: Number(persistId),
         roomId,
-        userId,
-        senderId: userId,
+        userId: existing.user_id,
+        senderId: existing.user_id,
         content: hardDeleteRequested ? "" : "[deleted]",
         deletedAt: now,
         ...(operation.operation ? { operation: operation.operation } : {}),

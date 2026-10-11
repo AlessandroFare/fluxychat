@@ -3602,10 +3602,19 @@ export class FluxyChatClient {
 
   async deleteMessageRest(
     messageId: number,
-    details?: { description?: string; metadata?: Record<string, unknown> },
+    details?: {
+      description?: string;
+      metadata?: Record<string, unknown>;
+      roomId?: string;
+      clientMessageId?: string;
+    },
   ): Promise<FluxyChatMessage | null> {
-    if (!this.token) return null;
-    const url = new URL(`/messages/${messageId}`, this.baseUrl);
+    if (!this.token) {
+      throw new Error("Failed to delete message: unauthenticated");
+    }
+    const pathId =
+      Number.isFinite(Number(messageId)) && Number(messageId) > 0 ? Number(messageId) : 0;
+    const url = new URL(`/messages/${pathId || "0"}`, this.baseUrl);
     const res = await fetch(url.toString(), {
       method: "DELETE",
       headers: {
@@ -3615,11 +3624,16 @@ export class FluxyChatClient {
       body: JSON.stringify({
         ...(details?.description ? { description: details.description } : {}),
         ...(details?.metadata ? { operationMetadata: details.metadata } : {}),
+        ...(details?.roomId ? { roomId: details.roomId } : {}),
+        ...(details?.clientMessageId ? { clientMessageId: details.clientMessageId } : {}),
       }),
     });
-    const body = (await res.json().catch(() => ({}))) as { message?: FluxyChatMessage };
+    const body = (await res.json().catch(() => ({}))) as {
+      message?: FluxyChatMessage;
+      error?: string;
+    };
     if (!res.ok) {
-      throw new Error(`Failed to delete message: ${res.status}`);
+      throw new Error(body.error ? `Failed to delete message: ${body.error}` : `Failed to delete message: ${res.status}`);
     }
     return body.message ?? null;
   }

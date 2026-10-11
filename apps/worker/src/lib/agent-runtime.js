@@ -66,7 +66,7 @@ import {
   shouldSystemOneEscalate,
   wrapClmApprovalGate,
 } from "./clm-system-one.js";
-import { buildWebSearchContext, detectResearchMode } from "./web-search.js";
+import { buildWebSearchContext, compactResearchUserMessage, detectResearchMode } from "./web-search.js";
 import { composeAgentSystemPrompt } from "./fluxychat-product-knowledge.js";
 import { listCommands } from "./room-commands.js";
 import { getModelCapabilities } from "./llm-model-catalog.js";
@@ -1089,6 +1089,9 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
     for (const msg of conversationHistory) {
       const historyMsg = buildHistoryMessage(msg, { userId, agentId: agentRow.id });
       if (!historyMsg) continue;
+      if (typeof historyMsg.content === "string") {
+        historyMsg.content = compactResearchUserMessage(historyMsg.content);
+      }
       const histImages =
         allowVision && historyMsg.role === "user"
           ? await imagePartsFromAttachments(env, historyAtts.get(msg.id) || [], projectId)
@@ -1107,7 +1110,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
       : [];
     messages.push({
       role: "user",
-      content: userContentWithImages(userMessage, promptImages),
+      content: userContentWithImages(compactResearchUserMessage(userMessage), promptImages),
     });
 
     const {
@@ -1135,6 +1138,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
 
     const researchMode = detectResearchMode(userMessage);
     if (researchMode) {
+      tools = null;
       const searchContext = await buildWebSearchContext(env, userMessage, researchMode);
       if (searchContext) {
         messages.push({ role: "system", content: searchContext });

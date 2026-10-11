@@ -13,7 +13,7 @@ export function buildDeepResearchPrompt({
 }: ComposerToolPromptOptions): string {
   const q = cleanTopic(topic);
   const handle = agentHandle?.replace(/^@/, "") || "assistant";
-  return `@${handle} [deep-research] Conduct thorough, multi-step research on: ${q}. Structure your answer with: (1) executive summary, (2) key findings with evidence, (3) sources or references when available, (4) open questions and limitations.`;
+  return `@${handle} [deep-research] ${q}`;
 }
 
 export function buildWebSearchPrompt({
@@ -22,7 +22,7 @@ export function buildWebSearchPrompt({
 }: ComposerToolPromptOptions): string {
   const q = cleanTopic(topic);
   const handle = agentHandle?.replace(/^@/, "") || "assistant";
-  return `@${handle} [web-search] Search the web for current, factual information about: ${q}. Summarize findings, cite sources with URLs when possible, and note when information may be outdated.`;
+  return `@${handle} [web-search] ${q}`;
 }
 
 export function buildImageGenerationCaption(prompt: string): string {

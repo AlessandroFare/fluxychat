@@ -10,6 +10,9 @@ const SEARCH_TIMEOUT_MS = 12_000;
 /** Wikipedia first: always free. Paid/SaaS search only if the operator keys them. */
 const DEFAULT_PROVIDER_CHAIN = "wikipedia,brave,tavily,searxng";
 const MAX_QUERY_CHARS = 220;
+const MAX_SNIPPET_CHARS = 160;
+const MAX_WEB_RESULTS = 3;
+const MAX_DEEP_RESULTS = 5;
 const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 const PHONE_RE = /\b(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}\b/g;
 const SSN_RE = /\b\d{3}-\d{2}-\d{4}\b/g;
@@ -58,6 +61,16 @@ export function extractResearchQuery(text) {
     }
   }
   return stripTrailingInstruction(cleaned);
+}
+
+/** Shrink composer/history research prompts so the LLM does not eat TPM on instructions. */
+export function compactResearchUserMessage(text) {
+  if (typeof text !== "string") return text;
+  const mode = detectResearchMode(text);
+  if (!mode) return text;
+  const q = sanitizeSearchQuery(extractResearchQuery(text));
+  if (!q) return text;
+  return mode === "deep-research" ? `[deep-research] ${q}` : `[web-search] ${q}`;
 }
 
 /**
@@ -328,7 +341,8 @@ export async function performWebSearch(env, query, opts = {}) {
     return { ok: false, error: "empty_query", results: [] };
   }
 
-  const num = Math.min(Math.max(opts.numResults ?? 5, 1), 10);
+  const defaultNum = opts.mode === "deep-research" ? MAX_DEEP_RESULTS : MAX_WEB_RESULTS;
+  const num = Math.min(Math.max(opts.numResults ?? defaultNum, 1), MAX_DEEP_RESULTS);
   const mode = opts.mode || "web-search";
   const providers = resolveWebSearchProviders(env);
   let lastError = "web_search_not_configured";
@@ -354,15 +368,20 @@ export async function performWebSearch(env, query, opts = {}) {
   return { ok: false, error: lastError, results: [] };
 }
 
+function clipSnippet(text) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  if (s.length <= MAX_SNIPPET_CHARS) return s;
+  return `${s.slice(0, MAX_SNIPPET_CHARS).trim()}…`;
+}
+
 function formatResultsForLlm(results, query) {
   if (!results.length) {
-    return `Web search for "${query}" returned no results.`;
+    return `No results for "${query}".`;
   }
   const lines = results.map(
-    (r, i) =>
-      `${i + 1}. **${r.title || "Untitled"}**\n   URL: ${r.url}\n   ${r.snippet || ""}`.trim(),
+    (r, i) => `${i + 1}. ${r.title || "Untitled"} | ${r.url} | ${clipSnippet(r.snippet)}`,
   );
-  return `Web search results for "${query}":\n\n${lines.join("\n\n")}`;
+  return `Results for "${query}":\n${lines.join("\n")}`;
 }
 
 function hasAnySearchProvider(env) {
@@ -381,52 +400,31 @@ export async function buildWebSearchContext(env, userMessage, mode) {
 
   if (!hasAnySearchProvider(env)) {
     logInfo("web_search.skipped_no_api_key", { mode });
-    return [
-      "The user requested a live web search, but no search provider is configured on the Worker.",
-      "Wikipedia is on by default. Optional: BRAVE_SEARCH_API_KEY, TAVILY_API_KEY, or a private SearXNG URL.",
-      "Do NOT claim you ran a web search. Say search is unavailable until the operator configures a provider.",
-      `Intended query: ${query}`,
-    ].join("\n");
+    return `Search unavailable. Query: ${query}`;
   }
 
   const primary = await performWebSearch(env, query, {
-    numResults: mode === "deep-research" ? 8 : 5,
+    numResults: mode === "deep-research" ? MAX_DEEP_RESULTS : MAX_WEB_RESULTS,
     mode,
   });
   if (!primary.ok) {
-    return [
-      "A web search was attempted but failed across configured providers.",
-      `Error: ${primary.error}`,
-      "Tell the user search failed and answer from general knowledge with clear uncertainty.",
-      `Query: ${query}`,
-    ].join("\n");
+    return `Search failed (${primary.error}). Query: ${query}. Answer briefly from general knowledge and say it is not live search.`;
   }
 
   let block = formatResultsForLlm(primary.results, primary.query || query);
 
-  if (mode === "deep-research" && primary.results.length > 0) {
-    const followUp = `${query} latest news updates`;
-    const secondary = await performWebSearch(env, followUp, { numResults: 4, mode });
-    if (secondary.ok && secondary.results.length) {
-      block += `\n\n---\n\nAdditional results:\n\n${formatResultsForLlm(secondary.results, followUp)}`;
-    }
-    const fetchPages = env.WEB_SEARCH_FETCH_PAGES === "1" || env.WEB_SEARCH_FETCH_PAGES === "true";
-    if (fetchPages) {
-      const extracts = await fetchPageSnippets(
-        primary.results.map((row) => row.url),
-        3,
-      );
-      if (extracts.length > 0) {
-        block += `\n\n---\n\nPage extracts:\n\n${extracts
-          .map((row, i) => `${i + 1}. ${row.url}\n${row.text}`)
-          .join("\n\n")}`;
-      }
+  const fetchPages = env.WEB_SEARCH_FETCH_PAGES === "1" || env.WEB_SEARCH_FETCH_PAGES === "true";
+  if (mode === "deep-research" && fetchPages && primary.results.length > 0) {
+    const extracts = await fetchPageSnippets(
+      primary.results.map((row) => row.url),
+      2,
+    );
+    if (extracts.length > 0) {
+      block += `\nExtracts:\n${extracts
+        .map((row) => `${row.url}: ${clipSnippet(row.text)}`)
+        .join("\n")}`;
     }
   }
 
-  return [
-    "LIVE WEB SEARCH RESULTS (use these — do NOT say you cannot search the web):",
-    block,
-    "Cite source URLs inline. If results are thin, say so explicitly.",
-  ].join("\n\n");
+  return `Live search. Cite URLs. Max 8 sentences.\n${block}`;
 }

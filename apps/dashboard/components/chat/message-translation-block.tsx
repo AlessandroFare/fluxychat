@@ -1,6 +1,7 @@
 "use client";
 
 import { Languages } from "lucide-react";
+import { MarkdownBody } from "@fluxy-chat/ui";
 import { cn } from "@/lib/utils";
 
 export interface MessageTranslationEntry {
@@ -16,6 +17,7 @@ interface MessageTranslationBlockProps {
   showOriginal: boolean;
   onToggle: () => void;
   isSelf?: boolean;
+  markdown?: boolean;
   className?: string;
 }
 
@@ -28,6 +30,7 @@ export function MessageTranslationBlock({
   showOriginal,
   onToggle,
   isSelf = false,
+  markdown = false,
   className,
 }: MessageTranslationBlockProps) {
   const displayText = showOriginal ? originalText : translation.translatedText;
@@ -36,16 +39,22 @@ export function MessageTranslationBlock({
     : "Show original";
 
   return (
-    <div className={cn("mt-1", className)}>
-      <p
-        className={cn(
-          "whitespace-pre-wrap break-words text-sm",
-          !showOriginal && "italic",
-          isSelf ? "text-white/90" : "text-foreground",
-        )}
-      >
-        {displayText}
-      </p>
+    <div className={cn("mt-1 min-w-0", className)}>
+      {markdown ? (
+        <div className={cn("min-w-0 break-words", !showOriginal && "italic")}>
+          <MarkdownBody content={displayText} invert={isSelf} />
+        </div>
+      ) : (
+        <p
+          className={cn(
+            "whitespace-pre-wrap break-words text-sm",
+            !showOriginal && "italic",
+            isSelf ? "text-white/90" : "text-foreground",
+          )}
+        >
+          {displayText}
+        </p>
+      )}
       <button
         type="button"
         onClick={onToggle}

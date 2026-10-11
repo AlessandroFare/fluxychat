@@ -5,6 +5,8 @@ import {
   readMessagesFromDoc,
   serializeMessageForYjs,
   shouldPreferYjsRecord,
+  tombstoneDeletedMessagesFromD1,
+  tombstoneMessageInDoc,
   upsertMessageInDoc,
 } from "./yjs-message-list.js";
 
@@ -42,6 +44,57 @@ describe("yjs-message-list", () => {
     });
     expect(shouldPreferYjsRecord(older, newer)).toBe(true);
     expect(shouldPreferYjsRecord(newer, older)).toBe(false);
+  });
+
+  it("tombstones every Y.Map key for a numeric id", () => {
+    const doc = new Y.Doc();
+    upsertMessageInDoc(doc, {
+      id: 75,
+      roomId: "r1",
+      userId: "alice",
+      content: "live",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      clientMessageId: "cmsg_75",
+    });
+    tombstoneMessageInDoc(doc, {
+      id: 75,
+      deletedAt: "2026-01-01T00:05:00.000Z",
+    });
+    expect(readMessagesFromDoc(doc)).toHaveLength(0);
+  });
+
+  it("reconciles D1 deleted rows into the Yjs snapshot", async () => {
+    const doc = new Y.Doc();
+    upsertMessageInDoc(doc, {
+      id: 75,
+      roomId: "public-demo-room",
+      userId: "alice",
+      content: "still live in yjs",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    const db = {
+      prepare() {
+        return {
+          bind() {
+            return {
+              all: async () => ({
+                results: [
+                  {
+                    id: 75,
+                    user_id: "alice",
+                    created_at: "2026-01-01T00:00:00.000Z",
+                    client_message_id: null,
+                    deleted_at: "2026-01-01T00:06:00.000Z",
+                  },
+                ],
+              }),
+            };
+          },
+        };
+      },
+    };
+    await tombstoneDeletedMessagesFromD1(doc, db, "p1", "public-demo-room");
+    expect(readMessagesFromDoc(doc)).toHaveLength(0);
   });
 
   it("tombstones deleted messages out of read list", () => {

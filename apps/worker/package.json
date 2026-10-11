@@ -16,7 +16,8 @@
     "drill:tenant-recovery": "node scripts/tenant-recovery-drill.mjs",
     "perf:workload-check": "node scripts/perf-workload-check.mjs",
     "smoke:remote": "node scripts/smoke-remote.mjs",
-    "db:export-baseline": "node scripts/export-d1-baseline.mjs"
+    "db:export-baseline": "node scripts/export-d1-baseline.mjs",
+    "db:migrate:local": "node scripts/apply-d1-migrations-local.mjs"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.20",

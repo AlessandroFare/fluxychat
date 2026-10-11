@@ -145,7 +145,7 @@ export function readMessagesFromDoc(doc: Y.Doc): YjsMessageRecord[] {
   const map = doc.getMap(FLUXY_MESSAGES_MAP_KEY);
   const out: YjsMessageRecord[] = [];
   map.forEach((value) => {
-    if (value && typeof value === "object" && !(value as YjsMessageRecord).deletedAt) {
+    if (value && typeof value === "object") {
       out.push(value as YjsMessageRecord);
     }
   });
@@ -158,6 +158,44 @@ export function upsertMessageInDoc(doc: Y.Doc, message: YjsMessageRecord): void 
   const existing = map.get(key) as YjsMessageRecord | undefined;
   if (existing && messageVersionTs(message) < messageVersionTs(existing)) return;
   map.set(key, message);
+}
+
+/** Mark every Y.Map entry with this numeric id as deleted (covers `c:` and `s:` keys). */
+export function tombstoneMessageInDoc(
+  doc: Y.Doc,
+  messageId: number,
+  deletedAt: string,
+  extras?: Partial<YjsMessageRecord>,
+): void {
+  const map = doc.getMap(FLUXY_MESSAGES_MAP_KEY);
+  const targetId = Number(messageId);
+  let matched = false;
+  map.forEach((value, key) => {
+    if (!value || typeof value !== "object") return;
+    const record = value as YjsMessageRecord;
+    if (Number(record.id) !== targetId) return;
+    matched = true;
+    map.set(key, {
+      ...record,
+      ...extras,
+      id: targetId,
+      content: "[deleted]",
+      deletedAt,
+    });
+  });
+  if (matched) return;
+  upsertMessageInDoc(doc, {
+    id: targetId,
+    roomId: String(extras?.roomId ?? ""),
+    userId: String(extras?.userId ?? ""),
+    senderId: extras?.senderId,
+    content: "[deleted]",
+    createdAt: String(extras?.createdAt ?? deletedAt),
+    parentId: extras?.parentId ?? null,
+    clientMessageId: extras?.clientMessageId ?? null,
+    editedAt: extras?.editedAt ?? null,
+    deletedAt,
+  });
 }
 
 export function base64ToUint8Array(base64: string): Uint8Array {
@@ -207,15 +245,29 @@ export function mergeRestHistoryWithYjsRecords(
 
   for (const record of yjsRecords) {
     if (record.deletedAt) {
-      byId.delete(record.id);
-      if (record.clientMessageId) byClientId.delete(record.clientMessageId);
+      const existing =
+        (record.clientMessageId ? byClientId.get(record.clientMessageId) : undefined) ??
+        byId.get(record.id);
+      const tombstone = {
+        ...(existing ?? yjsRecordToMessage(record)),
+        ...yjsRecordToMessage(record),
+        content: "[deleted]",
+        deletedAt: record.deletedAt,
+      };
+      byId.set(tombstone.id, tombstone);
+      if (tombstone.clientMessageId) byClientId.set(tombstone.clientMessageId, tombstone);
       continue;
     }
     const candidate = yjsRecordToMessage(record);
     const existing =
       (record.clientMessageId ? byClientId.get(record.clientMessageId) : undefined) ??
       byId.get(record.id);
+    if (existing?.deletedAt) continue;
     if (!existing) {
+      const serverId = Number(record.id);
+      const isUnsyncedOptimistic = !Number.isFinite(serverId) || serverId <= 0;
+      // Do not resurrect a server-backed copy that REST did not return.
+      if (!isUnsyncedOptimistic) continue;
       byId.set(candidate.id, candidate);
       if (candidate.clientMessageId) byClientId.set(candidate.clientMessageId, candidate);
       continue;

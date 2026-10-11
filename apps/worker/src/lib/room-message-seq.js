@@ -2,6 +2,44 @@
  * Monotonic per-room message sequence + event log for reconnect resume.
  */
 
+let messageVersioningEnsured = false;
+
+/**
+ * Create seq tables if missing. Do not ALTER messages — that races wrangler
+ * migrations (0211/0226) and fails with duplicate column name: seq.
+ */
+export async function ensureMessageVersioningSchema(env) {
+  if (!env?.DB || messageVersioningEnsured) return;
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS room_message_seq (
+      project_id TEXT NOT NULL,
+      room_id TEXT NOT NULL,
+      last_seq INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (project_id, room_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS room_message_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id TEXT NOT NULL,
+      room_id TEXT NOT NULL,
+      seq INTEGER NOT NULL,
+      message_id INTEGER NOT NULL,
+      event_type TEXT NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      payload_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      UNIQUE (project_id, room_id, seq)
+    )`,
+  ];
+  for (const sql of statements) {
+    try {
+      await env.DB.prepare(sql).run();
+    } catch {
+      /* column or table already exists */
+    }
+  }
+  messageVersioningEnsured = true;
+}
+
 function nowIso() {
   return new Date().toISOString();
 }

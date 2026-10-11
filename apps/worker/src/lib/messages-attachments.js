@@ -38,7 +38,7 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
     roomId: r.room_id,
     userId: r.user_id,
     senderId: r.user_id,
-    content: r.content,
+    content: r.deleted_at ? "[deleted]" : r.content,
     createdAt: r.created_at,
     parentId: r.parent_id,
     quotedMessageId:

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compactResearchUserMessage,
   detectResearchMode,
   extractResearchQuery,
   isLocalhostUrl,
@@ -18,6 +19,15 @@ describe("web-search helpers", () => {
     const prompt =
       "@groq [web-search] Search the web for current, factual information about: FluxyChat pricing. Summarize findings";
     expect(extractResearchQuery(prompt)).toBe("FluxyChat pricing");
+    expect(extractResearchQuery("@assistant [web-search] how is the weather now in kilimanjaro?")).toBe(
+      "how is the weather now in kilimanjaro?",
+    );
+  });
+
+  it("compacts long research prompts before the LLM", () => {
+    const long =
+      "@assistant [web-search] Search the web for current, factual information about: kilimanjaro weather. Summarize findings, cite sources with URLs when possible, and note when information may be outdated.";
+    expect(compactResearchUserMessage(long)).toBe("[web-search] kilimanjaro weather");
   });
 
   it("strips PII before the query leaves the worker", () => {
