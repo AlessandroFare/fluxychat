@@ -1,0 +1,35 @@
+---
+title: Shared AI room in 10 minutes
+description: Humans and an agent on one Durable Object. Not a Notion clone — Yjs plus invokeAgent on the same room.
+---
+
+# Shared AI room in 10 minutes
+
+This is the gallery app for “people and agents in the same room.” It is not a Notion clone. Chat, a Yjs document, and `invokeAgent` share one Cloudflare Durable Object. You already have the template; this page is the 10-minute path.
+
+## 1. Scaffold
+
+```bash
+npx @fluxy-chat/create-fluxy-chat@latest my-room --example shared-ai-room
+cd my-room
+cp .env.example .env
+```
+
+Pin `@fluxy-chat/sdk@0.6.16` (the template already does). Hosted beta: set `VITE_FLUXYCHAT_WORKER_URL` to `https://api.fluxychat.com` and a `pk_` from the console. Self-host: deploy `apps/worker` from this repo, then point the Vite app at that origin.
+
+## 2. Run two tabs
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Open the URL twice. Guest `pk_` rooms do not mint a member JWT. Send a message in one tab; it should appear in the other. If you wired an agent, `@assistant` (or your handle) writes `tool_call` / `tool_result` on the same timeline.
+
+## 3. What you are not building
+
+- Not MQTT, not an SFU, not a 14-channel helpdesk.
+- Bridges exist: you create the Slack/Discord/Telegram/WhatsApp/Teams app and paste the token. We do not sell a WhatsApp channel.
+- Hosted is open beta, no SLA.
+
+Next: [Gallery](/docs/getting-started/gallery), [Choose your path](/docs/getting-started/choose-your-path), [Reconnect + jitter](/docs/learn/reconnect-durable-objects-hibernation).

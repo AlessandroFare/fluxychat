@@ -3,6 +3,7 @@
  * Does not replace the room LLM (Groq / etc). Fail-closed. Decisions on feeds, not chat.
  */
 import { safeOutboundFetch } from "./url-ssrf.js";
+import { trimTrailingSlashes } from "./trim-trailing-slashes.js";
 import { logInfo } from "./worker-log.js";
 
 const CLM_STATE_MAX_CHARS = 8192;
@@ -40,7 +41,7 @@ export function isSystemOneConfigured(env) {
 }
 
 export function clmSystemOneUrl(env) {
-  const base = String(env?.CLM_BASE_URL || "").trim().replace(/\/+$/, "");
+  const base = trimTrailingSlashes(String(env?.CLM_BASE_URL || "").trim());
   return `${base}/v1/systemone`;
 }
 

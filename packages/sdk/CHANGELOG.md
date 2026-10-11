@@ -1,5 +1,11 @@
 # @fluxy-chat/sdk
 
+## 0.6.16 (2026-10-11)
+
+### Changed
+
+- Reconnect backoff uses equal jitter. `FluxyDeliverableMessage` carries `quotedMessageId`. `watchRoomConnection` only calls a previous unsubscribe when it is a function. MCP client pin is `>=1.32.1`.
+
 ## 0.6.15 (2026-10-10)
 
 ### Added

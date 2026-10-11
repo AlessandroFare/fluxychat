@@ -27,6 +27,8 @@ BROWSER_ENABLED = "false"
 # Never set ALLOW_WORKER_LLM_FALLBACK=true on hosted.
 PUBLIC_GUEST_ENABLED = "true"
 PUBLIC_GUEST_READ_ONLY = "false"
+# Room DO chat: WAL in DO storage then D1.batch. Set "false" to INSERT each message immediately.
+# MESSAGE_D1_WRITE_BEHIND = "false"
 # Optional: skip ambient agent policies when the room has no live humans.
 # AMBIENT_REQUIRE_HUMANS=true
 # Self-host EU: `jurisdiction: "eu"` in fluxy.config.js, then

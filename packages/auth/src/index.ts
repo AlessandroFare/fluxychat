@@ -14,7 +14,8 @@ export function createFluxyTokenRoute(options: FluxyTokenRouteEnv & {
     if (!userId?.trim()) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }
-    const base = options.workerUrl.replace(/\/+$/, "");
+    let base = options.workerUrl;
+    while (base.endsWith("/")) base = base.slice(0, -1);
     const res = await fetch(`${base}/auth/token`, {
       method: "POST",
       headers: {

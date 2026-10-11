@@ -3,8 +3,16 @@ const ROOM_ID_RE = /^[a-zA-Z0-9_-]{1,128}$/;
 /** Map a Pusher/Ably/Stream/PartyKit channel name to a FluxyChat room id. */
 export function roomIdFromChannelName(name: string): string {
   const trimmed = String(name || "").trim();
-  const stripped = trimmed.replace(/^(private-|presence-|public-)/, "");
-  const slug = stripped.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 128);
+  const prefix =
+    trimmed.startsWith("private-") ? "private-"
+    : trimmed.startsWith("presence-") ? "presence-"
+    : trimmed.startsWith("public-") ? "public-"
+    : "";
+  const stripped = prefix ? trimmed.slice(prefix.length) : trimmed;
+  let slug = stripped.replace(/[^a-zA-Z0-9_-]+/g, "_");
+  while (slug.startsWith("_")) slug = slug.slice(1);
+  while (slug.endsWith("_")) slug = slug.slice(0, -1);
+  slug = slug.slice(0, 128);
   if (ROOM_ID_RE.test(slug)) return slug;
   return `ch_${slug.replace(/[^a-zA-Z0-9]/g, "").slice(0, 120) || "imported"}`;
 }

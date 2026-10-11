@@ -1,3 +1,5 @@
+import { trimTrailingSlashes } from "./url-utils";
+
 export function toolNamesFromEvalRun(run?: {
   tool_calls?: Array<{ name?: string; toolName?: string; tool?: string }>;
   tool_calls_json?: string;
@@ -229,7 +231,7 @@ export async function invokeAgentForEval(options: {
   prompt: string;
   fetchImpl?: typeof fetch;
 }): Promise<LiveEvalInvokeResult> {
-  const base = options.workerUrl.replace(/\/+$/, "");
+  const base = trimTrailingSlashes(options.workerUrl);
   const fetchImpl = options.fetchImpl ?? fetch;
   const res = await fetchImpl(`${base}/agents/${encodeURIComponent(options.agentId)}/invoke`, {
     method: "POST",

@@ -1,3 +1,4 @@
+import { trimTrailingSlashes } from "./trim-trailing-slashes.js";
 import { canonicalPayloadHash } from "./canonical-payload-hash.js";
 import { sendDigestEmail } from "./digest-email.js";
 import { getDigestPreferences } from "./daily-digest.js";
@@ -6,7 +7,7 @@ import { hitlSlackActionElements, hitlSlackSigningSecret } from "./hitl-slack-si
 import { getSlackUserIdForFluxyUser } from "./hitl-slack-user-map.js";
 
 function appOrigin(env) {
-  return String(env.PUBLIC_APP_URL || env.WORKER_PUBLIC_URL || "").replace(/\/+$/, "");
+  return trimTrailingSlashes(env.PUBLIC_APP_URL || env.WORKER_PUBLIC_URL || "");
 }
 
 export function isOperatorSlackWebhookUrl(urlString) {

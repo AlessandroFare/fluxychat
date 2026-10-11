@@ -1,3 +1,5 @@
+import { trimTrailingSlashes } from "./url-utils";
+
 export interface McpServerConfig {
   name: string;
   url?: string;
@@ -147,8 +149,9 @@ async function oauthFlow(config: McpServerConfig, serverUrl: string, store: OAut
   if (existing && (!existing.expiresAt || existing.expiresAt > Date.now())) {
     return existing.accessToken;
   }
-  const authUrl = oauth.authorizationUrl || `${serverUrl.replace(/\/+$/, "")}/oauth/authorize`;
-  const tokenUrl = oauth.tokenUrl || `${serverUrl.replace(/\/+$/, "")}/oauth/token`;
+  const origin = trimTrailingSlashes(serverUrl);
+  const authUrl = oauth.authorizationUrl || `${origin}/oauth/authorize`;
+  const tokenUrl = oauth.tokenUrl || `${origin}/oauth/token`;
   const redirectUri = "http://localhost:port/callback";
   const state = Math.random().toString(36).slice(2);
   const codeVerifier = Math.random().toString(36).slice(2, 42);

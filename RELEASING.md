@@ -5,13 +5,15 @@ GitHub Releases and Packages are empty until someone cuts a tag. Do not invent a
 Current pins (also in `docs/product-facts.json`):
 
 - `@fluxy-chat/protocol` 0.1.7
-- `@fluxy-chat/sdk` 0.6.15
-- `@fluxy-chat/react` 0.1.9
-- `@fluxy-chat/vue` 0.1.4
-- `@fluxy-chat/svelte` 0.1.2
-- `@fluxy-chat/ui` 0.1.8
-- `@fluxy-chat/ui-kit` 0.1.9
-- `@fluxy-chat/create-fluxy-chat` 0.5.25
+- `@fluxy-chat/sdk` 0.6.16
+- `@fluxy-chat/auth` 0.1.1
+- `@fluxy-chat/react-native-sdk` 1.1.3
+- `@fluxy-chat/react` 0.1.10
+- `@fluxy-chat/vue` 0.1.5
+- `@fluxy-chat/svelte` 0.1.3
+- `@fluxy-chat/ui` 0.1.9
+- `@fluxy-chat/ui-kit` 0.1.10
+- `@fluxy-chat/create-fluxy-chat` 0.5.26
 - `@fluxy-chat/agent` 0.2.1 (skip this cut unless the package changed)
 
 Tag from the package version you actually published, then paste the changelog from `packages/*/CHANGELOG.md`.

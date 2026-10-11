@@ -13,6 +13,12 @@ Durable Objects can hibernate idle WebSocket connections to save resources. When
 
 That is why production chat pairs live WebSocket events with persisted history in D1.
 
+## Reconnect storms (backoff + jitter)
+
+`computeReconnectBackoffMs` is on by default in `@fluxy-chat/sdk` (`FluxyChatRoomConnection.scheduleReconnect`). Exponential cap is 20s from a 500ms base. **Equal jitter** (`delay * (0.5 + random()/2)`) spreads retries so a Worker or DO blip does not slam one room with every client at 500ms, 1s, 2s.
+
+`GET /client/feature-flags` can advertise `reconnectBackoff: { baseBackoffMs, maxBackoffMs }`. Optional PartySocket transport already uses `reconnectionDelayGrowFactor: 1.5` (1s–30s). Auth close **1008** does not retry.
+
 ## What the SDK does for you
 
 - connectionState.status: connected, connecting, reconnecting, disconnected.

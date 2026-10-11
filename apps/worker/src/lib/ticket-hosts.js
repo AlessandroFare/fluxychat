@@ -3,6 +3,8 @@
  * except a Jira site hostname that must end with .atlassian.net.
  */
 
+import { trimTrailingSlashes } from "./trim-trailing-slashes.js";
+
 const GITHUB_API = "api.github.com";
 const LINEAR_API = "api.linear.app";
 
@@ -22,9 +24,7 @@ export function linearGraphqlUrl() {
 }
 
 export function jiraIssueUrl(base) {
-  const cleaned = String(base || "")
-    .trim()
-    .replace(/\/+$/, "");
+  const cleaned = trimTrailingSlashes(String(base || "").trim());
   return `${cleaned}/rest/api/3/issue`;
 }
 
@@ -53,9 +53,7 @@ export function assertTicketFetchUrl(provider, urlString) {
 }
 
 export function parseJiraBaseUrl(raw) {
-  const cleaned = String(raw || "")
-    .trim()
-    .replace(/\/+$/, "");
+  const cleaned = trimTrailingSlashes(String(raw || "").trim());
   if (!cleaned) return { ok: false, error: "jira_env_missing" };
   try {
     const url = new URL(cleaned.includes("://") ? cleaned : `https://${cleaned}`);

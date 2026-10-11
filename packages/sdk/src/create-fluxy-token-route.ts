@@ -3,6 +3,8 @@
  * Clerk / Auth.js / Better Auth: pass getUserId from your session. pk_ cannot mint.
  */
 
+import { trimTrailingSlashes } from "./url-utils";
+
 export interface CreateFluxyTokenRouteOptions {
   workerUrl: string;
   /** Secret API key (fc_). Never send to the browser. */
@@ -19,7 +21,7 @@ export function createFluxyTokenRoute(options: CreateFluxyTokenRouteOptions) {
     if (!userId?.trim()) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }
-    const base = options.workerUrl.replace(/\/+$/, "");
+    const base = trimTrailingSlashes(options.workerUrl);
     const res = await fetch(`${base}/auth/token`, {
       method: "POST",
       headers: {

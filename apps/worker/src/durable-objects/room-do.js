@@ -41,6 +41,16 @@ import {
   takeDueDoAlarmJobs,
 } from "../lib/do-alarm-scheduler.js";
 import {
+  MESSAGE_D1_WAL_ALARM_JOB,
+  MESSAGE_D1_WAL_FLUSH_MS,
+  MESSAGE_D1_WAL_MAX_BATCH,
+  enqueueMessageWal,
+  flushMessageWal,
+  isMessageWriteBehindEnabled,
+  loadMessageWal,
+  walHasClientMessageId,
+} from "../lib/message-d1-write-behind.js";
+import {
   captureRoomPitrSnapshot,
   listRoomPitr,
   restoreRoomPitr,
@@ -1133,6 +1143,7 @@ export class RoomDurableObject {
    * @param {{ projectId: string, roomId: string, limit: number, envelopeType: "history" | "replay" }} opts
    */
   async loadConnectSnapshotRows(projectId, roomId, limit, viewerUserId, extendedSchema) {
+    await this.flushMessageWalAndFanout();
     const { getMessageVisibilityFilter } = await import("../lib/message-visibility.js");
     const vis = await getMessageVisibilityFilter(this.env, roomId, viewerUserId || "");
     const voiceCols = extendedSchema
@@ -1835,7 +1846,61 @@ export class RoomDurableObject {
           if (existing?.id) {
             messageId = existing.id;
             isDuplicateResend = true;
+          } else if (isMessageWriteBehindEnabled(this.env) && this.state?.storage) {
+            const pendingWal = await loadMessageWal(this.state.storage);
+            if (walHasClientMessageId(pendingWal, clientMessageId)) {
+              return;
+            }
           }
+        }
+
+        if (
+          !messageId &&
+          isMessageWriteBehindEnabled(this.env) &&
+          this.state?.storage
+        ) {
+          const wal = await enqueueMessageWal(this.state.storage, {
+            projectId,
+            roomId,
+            userId,
+            content: validatedContent,
+            createdAt,
+            parentId: parentId || null,
+            mentions,
+            mentionsRaw,
+            preview,
+            quotedMessageId,
+            metadataJson: extras.error ? null : extras.json,
+            extrasMetadata: extras.extras?.metadata,
+            clientMessageId,
+            messageExpiresAt,
+            visibility,
+            visibleToJson,
+            visibleTo,
+            attachments: Array.isArray(attachments) ? attachments : [],
+            middlewareMeta: middlewareResult.meta,
+          });
+          if (wal.length < MESSAGE_D1_WAL_MAX_BATCH) {
+            await scheduleDoAlarmJob(
+              this.state.storage,
+              MESSAGE_D1_WAL_ALARM_JOB,
+              Date.now() + MESSAGE_D1_WAL_FLUSH_MS,
+              MESSAGE_D1_WAL_ALARM_JOB,
+            );
+            if (typeof this.state.waitUntil === "function") {
+              this.state.waitUntil(
+                (async () => {
+                  await new Promise((resolve) => setTimeout(resolve, MESSAGE_D1_WAL_FLUSH_MS));
+                  await this.flushMessageWalAndFanout();
+                })().catch((err) =>
+                  logError("do.message_wal_waituntil_failed", err, { projectId, roomId }),
+                ),
+              );
+            }
+            return;
+          }
+          await this.flushMessageWalAndFanout();
+          return;
         }
 
         if (!messageId) {
@@ -3239,10 +3304,201 @@ export class RoomDurableObject {
     }
   }
 
+  async flushMessageWalAndFanout() {
+    if (!this.state?.storage || !this.env?.DB) return [];
+    const flushed = await flushMessageWal(this.state.storage, this.env.DB);
+    for (const row of flushed) {
+      await this.emitPersistedChatMessage(row);
+    }
+    return flushed;
+  }
+
+  async emitPersistedChatMessage(entry) {
+    const projectId = entry.projectId;
+    const roomId = entry.roomId;
+    const userId = entry.userId;
+    const messageId = entry.messageId;
+    const validatedContent = entry.content;
+    const createdAt = entry.createdAt;
+    const parentId = entry.parentId || null;
+    const mentions = Array.isArray(entry.mentions) ? entry.mentions : [];
+    const attachments = Array.isArray(entry.attachments) ? entry.attachments : [];
+    const clientMessageId = entry.clientMessageId;
+    const quotedMessageId = entry.quotedMessageId;
+    const preview = entry.preview;
+    const visibility = entry.visibility || "room";
+    const visibleTo = Array.isArray(entry.visibleTo) ? entry.visibleTo : [];
+    const mentionsRaw = Array.isArray(entry.mentionsRaw) ? entry.mentionsRaw : [];
+
+    if (entry.messageExpiresAt) {
+      void this.scheduleMessageExpiryAlarm();
+    }
+
+    if (mentions.length) {
+      await deliverWebhooks(this.env, projectId, "mention", {
+        roomId,
+        fromUserId: userId,
+        toUserIds: mentions,
+        messageId,
+        createdAt,
+      }).catch((err) => console.error("webhook mention error", err));
+
+      void notifyMentionedUsers(this.env, {
+        projectId,
+        roomId,
+        fromUserId: userId,
+        toUserIds: mentions,
+        messageId,
+        preview: validatedContent,
+      }).catch((err) =>
+        logError("notifications.mention_failed", err, { projectId, roomId }),
+      );
+    }
+
+    const agentHandles = mentionHandlesForAgentInvoke(mentionsRaw);
+    if (agentHandles.length) {
+      void invokeMentionedAgents(
+        this.env,
+        projectId,
+        roomId,
+        userId,
+        validatedContent,
+        agentHandles,
+        undefined,
+        parentId,
+        { attachments },
+      ).catch((err) =>
+        logError("agent.mention_invoke_error", err, { projectId, roomId }),
+      );
+    }
+
+    const roomRow = await this.env.DB.prepare(
+      "SELECT type FROM rooms WHERE project_id = ? AND id = ?",
+    )
+      .bind(projectId, roomId)
+      .first();
+    if (roomRow?.type === "dm") {
+      await this.env.DB.prepare(
+        "INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at) VALUES (?, ?, ?, ?, ?)",
+      )
+        .bind(
+          projectId,
+          "dm_message",
+          roomId,
+          JSON.stringify({ fromUserId: userId, messageId }),
+          createdAt,
+        )
+        .run();
+      void notifyDmRecipient(this.env, {
+        projectId,
+        roomId,
+        fromUserId: userId,
+        messageId,
+        preview: validatedContent,
+      }).catch((err) =>
+        logError("notifications.dm_failed", err, { projectId, roomId }),
+      );
+    }
+
+    void safeSchedulePostMessageAutomations(this.env, {
+      projectId,
+      roomId,
+      authorUserId: userId,
+      messageId,
+      content: validatedContent,
+      traceId: undefined,
+      mentionedUserIds: mentions,
+      roomType: roomRow?.type ?? null,
+      attachments,
+    });
+
+    let messageSeq = null;
+    let messageVersion = 1;
+    try {
+      const { recordRoomMessageEvent } = await import("../lib/room-message-seq.js");
+      const recorded = await recordRoomMessageEvent(this.env, {
+        projectId,
+        roomId,
+        messageId,
+        eventType: "create",
+        version: 1,
+        payload: {
+          id: messageId,
+          content: validatedContent,
+          userId,
+          createdAt,
+          clientMessageId: clientMessageId ?? null,
+        },
+      });
+      messageSeq = recorded?.seq ?? null;
+    } catch (err) {
+      logError("do.message_seq_create_failed", err, { roomId, messageId });
+    }
+
+    const payload = {
+      type: "message",
+      id: messageId,
+      roomId,
+      userId,
+      senderId: userId,
+      content: validatedContent,
+      createdAt,
+      parentId,
+      ...(quotedMessageId != null ? { quotedMessageId } : {}),
+      ...(entry.extrasMetadata ? { metadata: entry.extrasMetadata } : {}),
+      mentions,
+      preview,
+      attachments,
+      ...(clientMessageId ? { clientMessageId } : {}),
+      ...(entry.messageExpiresAt ? { expiresAt: entry.messageExpiresAt } : {}),
+      ...(messageSeq != null ? { seq: messageSeq, version: messageVersion } : {}),
+      ...(visibility !== "room"
+        ? { visibility, ...(visibleTo.length ? { visibleTo } : {}) }
+        : {}),
+      ...(entry.middlewareMeta ? { middleware: entry.middlewareMeta } : {}),
+    };
+
+    const { resolveVisibilityRecipientUserIds } = await import("../lib/message-visibility.js");
+    const scopedRecipients = await resolveVisibilityRecipientUserIds(
+      this.env,
+      roomId,
+      visibility,
+      visibleTo,
+      userId,
+    );
+    this.broadcast(
+      payload,
+      scopedRecipients ? { recipientUserIds: scopedRecipients } : {},
+    );
+
+    this.syncYjsMessage({
+      id: messageId,
+      roomId,
+      userId,
+      senderId: userId,
+      content: validatedContent,
+      createdAt,
+      parentId,
+      clientMessageId,
+    });
+
+    if (validatedContent) {
+      void maybeSyncMatrixOutboundForMessage(this.env, {
+        projectId,
+        roomId,
+        messageId,
+        content: validatedContent,
+      }).catch((err) =>
+        logError("matrix.outbound_hook_failed", err, { projectId, roomId }),
+      );
+    }
+  }
+
   async alarm() {
     recordAlarmCost(this.costLedger);
     const step = await runDoAlarmStep(this.state, async () => {
       await takeDueDoAlarmJobs(this.state.storage);
+      await this.flushMessageWalAndFanout();
       await this.expireDueMessagesInRoom();
       const projectId = this.projectId;
       const roomId = this.roomId || this.state.id.toString();
@@ -3467,6 +3723,10 @@ export class RoomDurableObject {
     // F1: live marginal cost for this room. Auth is enforced by the caller
     // (admin route); the DO itself sits on the private binding.
     const requestUrl = new URL(request.url);
+    if (requestUrl.pathname === "/flush-message-wal" && request.method === "POST") {
+      const flushed = await this.flushMessageWalAndFanout();
+      return Response.json({ ok: true, flushed: flushed.length });
+    }
     if (requestUrl.pathname === "/extensions" || requestUrl.pathname.startsWith("/extensions/")) {
       const { snapshotRoomExtensions, putRoomExtension } = await import("../lib/room-extensions.js");
       const storage = this.state?.storage;
