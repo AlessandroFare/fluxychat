@@ -29,7 +29,11 @@ function parseArgs(argv) {
     if (value !== "true") i += 1;
   }
   return {
-    baseUrl: String(map.get("base-url") || "http://127.0.0.1:8787").replace(/\/+$/, ""),
+    baseUrl: (() => {
+      let url = String(map.get("base-url") || "http://127.0.0.1:8787");
+      while (url.endsWith("/")) url = url.slice(0, -1);
+      return url;
+    })(),
     memberToken: String(map.get("member-token") || ""),
     adminToken: String(map.get("admin-token") || ""),
     roomId: String(map.get("room-id") || "perf-room"),

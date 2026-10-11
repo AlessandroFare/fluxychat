@@ -180,9 +180,14 @@ export function computeReconnectBackoffMs(
   attempt: number,
   baseMs = 500,
   maxMs = 20_000,
+  random: () => number = Math.random,
 ): number {
   const capped = Math.min(Math.max(attempt, 0), 6);
-  return Math.min(maxMs, baseMs * 2 ** capped);
+  const exponential = Math.min(maxMs, baseMs * 2 ** capped);
+  const raw = random();
+  const unit = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : Math.random();
+  // Equal jitter so a Cloudflare blip does not stampede the same Room DO.
+  return Math.floor(exponential * (0.5 + unit / 2));
 }
 
 export interface FluxyConnectionErrorInfo {

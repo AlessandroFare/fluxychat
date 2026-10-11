@@ -22,9 +22,11 @@ function parseArgs(argv) {
     if (value !== "true") i += 1;
   }
   return {
-    baseUrl: String(
-      map.get("base-url") || process.env.SMOKE_BASE_URL || ""
-    ).replace(/\/+$/, ""),
+    baseUrl: (() => {
+      let url = String(map.get("base-url") || process.env.SMOKE_BASE_URL || "");
+      while (url.endsWith("/")) url = url.slice(0, -1);
+      return url;
+    })(),
     adminJwt: String(map.get("admin-jwt") || process.env.SMOKE_ADMIN_JWT || ""),
   };
 }

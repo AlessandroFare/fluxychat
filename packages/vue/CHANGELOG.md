@@ -1,5 +1,11 @@
 # @fluxy-chat/vue
 
+## 0.1.5 (2026-10-11)
+
+### Changed
+
+- Peer `@fluxy-chat/sdk` is `^0.6.16`.
+
 ## 0.1.4 (2026-10-10)
 
 ### Changed

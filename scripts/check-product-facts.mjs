@@ -62,6 +62,20 @@ if (!readme.includes(String(facts.freeQuota.messagesPerMonth)) && !readme.includ
 if (readme.includes("## Publish to npm")) {
   errors.push("README.md still has Publish to npm; that belongs in RELEASING.md");
 }
+if (/14 channel adapters/i.test(readme) || /14 finished adapters/i.test(readme)) {
+  errors.push("README.md must not sell 14 channel adapters");
+}
+
+const sdkReadme = read("packages/sdk/README.md");
+const sdkDocs = read("apps/docs/content/docs/packages/sdk.mdx");
+for (const [rel, text] of [
+  ["packages/sdk/README.md", sdkReadme],
+  ["apps/docs/content/docs/packages/sdk.mdx", sdkDocs],
+]) {
+  if (text.includes("@fluxy-chat/sdk@0.5.0")) {
+    errors.push(`${rel} still pins smoke comment to sdk@0.5.0`);
+  }
+}
 
 if (errors.length) {
   console.error(errors.map((e) => `- ${e}`).join("\n"));

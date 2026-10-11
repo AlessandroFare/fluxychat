@@ -16,7 +16,7 @@ Cost surprises usually come from unbounded writes or one hot object, not from "u
 ## Mental model for chat billing
 
 - Room DO: live fan-out, presence, typing; wake on message or connection.
-- D1: durable messages; batch/async off the hot path.
+- D1: durable messages. Room DO chat frames go through a **write-behind WAL in `state.storage`**, then `D1.batch()` (default on; `MESSAGE_D1_WRITE_BEHIND=false` restores one INSERT per message). That cuts D1 round-trips. It is **not** a measured Cloudflare invoice. Broadcast waits for the batch so message ids stay D1 `last_row_id`. History REST and GDPR export flush the WAL first.
 - One DO per room: blast radius stays room-scoped (not one global coordinator).
 - Avoid logging every keystroke into DO storage; rate-limit abusive clients.
 

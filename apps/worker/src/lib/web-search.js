@@ -24,24 +24,40 @@ export function detectResearchMode(text) {
 }
 
 /** Extract the user topic from a composer research prompt. */
+function stripTrailingInstruction(text) {
+  const markers = [". Summarize findings", ". Structure your answer"];
+  let out = text;
+  for (const marker of markers) {
+    const idx = out.toLowerCase().indexOf(marker.toLowerCase());
+    if (idx >= 0) out = out.slice(0, idx);
+  }
+  return out.trim();
+}
+
 export function extractResearchQuery(text) {
   if (typeof text !== "string") return "";
-  const cleaned = text
-    .replace(/^@[\w.-]+\s*/i, "")
-    .replace(/\[(web-search|deep-research)\]\s*/i, "")
-    .trim();
-  const aboutMatch = cleaned.match(/(?:about|on):\s*(.+)/i);
-  if (aboutMatch) {
-    return aboutMatch[1]
-      .replace(/\.\s*Summarize findings.*$/i, "")
-      .replace(/\.\s*Structure your answer.*$/i, "")
-      .trim();
+  let cleaned = text.trim();
+  if (cleaned.startsWith("@")) {
+    const space = cleaned.indexOf(" ");
+    cleaned = space === -1 ? "" : cleaned.slice(space + 1).trim();
   }
-  return cleaned.replace(/^Search the web for current, factual information about\s*/i, "")
-    .replace(/^Conduct thorough, multi-step research on:\s*/i, "")
-    .replace(/\.\s*Summarize findings.*$/i, "")
-    .replace(/\.\s*Structure your answer.*$/i, "")
-    .trim();
+  cleaned = cleaned.replace("[web-search]", "").replace("[WEB-SEARCH]", "");
+  cleaned = cleaned.replace("[deep-research]", "").replace("[DEEP-RESEARCH]", "").trim();
+  const aboutIdx = /(?:about|on):\s*/i.exec(cleaned);
+  if (aboutIdx) {
+    return stripTrailingInstruction(cleaned.slice(aboutIdx.index + aboutIdx[0].length));
+  }
+  const prefixes = [
+    "Search the web for current, factual information about ",
+    "Conduct thorough, multi-step research on: ",
+  ];
+  for (const prefix of prefixes) {
+    if (cleaned.toLowerCase().startsWith(prefix.toLowerCase())) {
+      cleaned = cleaned.slice(prefix.length);
+      break;
+    }
+  }
+  return stripTrailingInstruction(cleaned);
 }
 
 /**

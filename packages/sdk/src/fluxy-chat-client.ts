@@ -1076,7 +1076,8 @@ export class FluxyChatClient {
   }
 
   private watchRoomConnection(id: string, connection: FluxyChatRoomConnection): void {
-    this.roomConnectionUnsubs.get(id)?.();
+    const previous = this.roomConnectionUnsubs.get(id);
+    if (typeof previous === "function") previous();
     const off = connection.onConnectionStatus(() => {
       this.emitClientConnectionChange(connection.getLastError() ?? undefined);
     });

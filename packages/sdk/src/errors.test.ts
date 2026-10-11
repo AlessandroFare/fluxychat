@@ -59,8 +59,13 @@ describe("fluxy sdk errors", () => {
   });
 
   it("computes exponential backoff capped at max", () => {
-    expect(computeReconnectBackoffMs(0)).toBe(500);
-    expect(computeReconnectBackoffMs(1)).toBe(1000);
-    expect(computeReconnectBackoffMs(10)).toBe(20_000);
+    expect(computeReconnectBackoffMs(0, 500, 20_000, () => 1)).toBe(500);
+    expect(computeReconnectBackoffMs(1, 500, 20_000, () => 1)).toBe(1000);
+    expect(computeReconnectBackoffMs(10, 500, 20_000, () => 1)).toBe(20_000);
+  });
+
+  it("applies equal jitter below the exponential delay", () => {
+    expect(computeReconnectBackoffMs(1, 500, 20_000, () => 0)).toBe(500);
+    expect(computeReconnectBackoffMs(1, 500, 20_000, () => 0.5)).toBe(750);
   });
 });

@@ -17,7 +17,11 @@ const PROVIDERS: ProviderConfig[] = [
   },
   {
     name: "opencode",
-    baseURL: (process.env.AI_BASE_URL || "https://opencode.ai/zen").replace(/\/+$/, "") + "/v1",
+    baseURL: ((value) => {
+      let base = value;
+      while (base.endsWith("/")) base = base.slice(0, -1);
+      return `${base}/v1`;
+    })(process.env.AI_BASE_URL || "https://opencode.ai/zen"),
     apiKey: process.env.AI_API_KEY,
     model: process.env.AI_MODEL || "deepseek-v4-flash-free",
   },

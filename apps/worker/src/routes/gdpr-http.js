@@ -46,6 +46,24 @@ export async function dispatchGdprRoutes(request, url, h) {
     }
     const { userId, projectId } = auth;
 
+    try {
+      const membershipsForFlush = await env.DB.prepare(
+        `SELECT rm.room_id FROM room_members rm
+         INNER JOIN rooms r ON r.id = rm.room_id
+         WHERE r.project_id = ? AND rm.user_id = ?`,
+      )
+        .bind(projectId, userId)
+        .all();
+      const { flushRoomMessageWalStub } = await import("../lib/message-d1-write-behind.js");
+      for (const row of membershipsForFlush.results || []) {
+        if (row.room_id) {
+          await flushRoomMessageWalStub(env, row.room_id, projectId).catch(() => {});
+        }
+      }
+    } catch {
+      /* WAL flush is best-effort; export still reads D1. */
+    }
+
     const [messages, reactions, readReceipts, moderationEvents, roomMembers, mentions] =
       await Promise.all([
         env.DB.prepare(

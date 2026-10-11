@@ -1,5 +1,11 @@
 # @fluxy-chat/ui
 
+## 0.1.9 (2026-10-11)
+
+### Changed
+
+- Peer `@fluxy-chat/sdk` is `^0.6.16`.
+
 ## 0.1.8 (2026-10-10)
 
 ### Changed

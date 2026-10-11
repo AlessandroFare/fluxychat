@@ -1,5 +1,7 @@
+import { trimTrailingSlashes } from "./url-utils";
+
 function workerOrigin(url: string) {
-  return String(url || "").replace(/\/+$/, "");
+  return trimTrailingSlashes(String(url || ""));
 }
 
 function parseJsonBody(text: string): unknown {

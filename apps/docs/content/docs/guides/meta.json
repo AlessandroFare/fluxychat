@@ -4,6 +4,7 @@
   "pages": [
     "index",
     "create-fluxy-chat",
+    "shared-ai-room-10-minutes",
     "adapter-pattern",
     "vercel-ai-sdk-chat-transport",
     "chat-sdk-adapter",
