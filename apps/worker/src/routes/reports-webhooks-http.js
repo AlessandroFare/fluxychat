@@ -99,19 +99,33 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
       );
     }
 
-    const insert = await env.DB.prepare(
-      "INSERT INTO moderation_events (project_id, room_id, user_id, action, reason, created_at, target_message_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
-      .bind(
-        authProjectId,
-        body.roomId,
-        userId,
-        "report",
-        body.reason || "user_report",
-        now,
-        body.messageId
+    let insert;
+    try {
+      insert = await env.DB.prepare(
+        "INSERT INTO moderation_events (project_id, room_id, user_id, action, reason, created_at, target_message_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
       )
-      .run();
+        .bind(
+          authProjectId,
+          body.roomId,
+          userId,
+          "report",
+          body.reason || "user_report",
+          now,
+          body.messageId,
+        )
+        .run();
+    } catch {
+      try {
+        insert = await env.DB.prepare(
+          "INSERT INTO moderation_events (room_id, user_id, action, reason, created_at) VALUES (?, ?, ?, ?, ?)",
+        )
+          .bind(body.roomId, userId, "report", body.reason || "user_report", now)
+          .run();
+      } catch (err) {
+        logError("reports.insert_failed", err, requestLogCtx);
+        return json({ error: "report_failed" }, { status: 500 });
+      }
+    }
 
     ctx.waitUntil(
       deliverWebhooks(env, authProjectId, "report.created", {

@@ -200,7 +200,7 @@ function MessageStatus({
 }
 
 const messageActionsVariants = cva(
-  "flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-slate-900 shadow-md data-[align=end]:flex-row-reverse",
+  "flex flex-nowrap items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-slate-900 shadow-md data-[align=end]:flex-row-reverse",
   {
     variants: {
       align: {
@@ -246,7 +246,7 @@ function MessageHoverToolbar({
     <div
       data-slot="message-hover-toolbar"
       className={cn(
-        "pointer-events-none absolute z-30 invisible group-hover/message:pointer-events-auto group-hover/message:visible",
+        "pointer-events-none absolute z-30 invisible group-hover/message:pointer-events-auto group-hover/message:visible group-hover/bubble:pointer-events-auto group-hover/bubble:visible group-focus-within/message:pointer-events-auto group-focus-within/message:visible",
         side === "below" ? "top-full mt-1" : "bottom-full mb-1",
         align === "end" ? "right-0" : "left-0",
         className,

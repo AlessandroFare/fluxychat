@@ -41,6 +41,51 @@ export function upsertMessageInDoc(doc, message) {
   return true;
 }
 
+export function tombstoneMessageInDoc(doc, message) {
+  const map = doc.getMap(FLUXY_MESSAGES_MAP_KEY);
+  const targetId = Number(message.id);
+  const deletedAt = String(message.deletedAt || new Date().toISOString());
+  let matched = false;
+  map.forEach((value, key) => {
+    if (!value || typeof value !== "object") return;
+    if (Number(value.id) !== targetId) return;
+    matched = true;
+    map.set(key, {
+      ...value,
+      content: "[deleted]",
+      deletedAt,
+    });
+  });
+  if (matched) return true;
+  return upsertMessageInDoc(doc, {
+    ...message,
+    content: "[deleted]",
+    deletedAt,
+  });
+}
+
+export async function tombstoneDeletedMessagesFromD1(doc, db, projectId, roomId) {
+  if (!db || !projectId || !roomId || typeof db.prepare !== "function") return 0;
+  const result = await db
+    .prepare(
+      "SELECT id, user_id, created_at, client_message_id, deleted_at FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NOT NULL",
+    )
+    .bind(projectId, roomId)
+    .all();
+  const rows = result?.results || [];
+  for (const row of rows) {
+    tombstoneMessageInDoc(doc, {
+      id: Number(row.id),
+      roomId,
+      userId: row.user_id,
+      createdAt: row.created_at,
+      clientMessageId: row.client_message_id,
+      deletedAt: row.deleted_at,
+    });
+  }
+  return rows.length;
+}
+
 export function readMessagesFromDoc(doc) {
   const map = doc.getMap(FLUXY_MESSAGES_MAP_KEY);
   /** @type {ReturnType<typeof serializeMessageForYjs>[]} */
@@ -130,7 +175,7 @@ export async function syncMessageEditToYjsRoomDoc(yjsSync, roomId, storage, mess
 export async function syncMessageDeleteToYjsRoomDoc(yjsSync, roomId, storage, message, broadcastFn) {
   const doc = await yjsSync.getDoc(roomId, storage);
   const stateVector = Y.encodeStateVector(doc);
-  const changed = upsertMessageInDoc(doc, {
+  const changed = tombstoneMessageInDoc(doc, {
     ...message,
     content: message.content ?? "[deleted]",
     deletedAt: message.deletedAt ?? new Date().toISOString(),
@@ -152,8 +197,11 @@ export async function syncMessageDeleteToYjsRoomDoc(yjsSync, roomId, storage, me
  * @param {string} roomId
  * @param {import("@cloudflare/workers-types").DurableObjectStorage} storage
  */
-export async function getMessageCrdtSnapshotPayload(yjsSync, roomId, storage) {
+export async function getMessageCrdtSnapshotPayload(yjsSync, roomId, storage, opts = {}) {
   const doc = await yjsSync.getDoc(roomId, storage);
+  if (opts.db && opts.projectId) {
+    await tombstoneDeletedMessagesFromD1(doc, opts.db, opts.projectId, roomId);
+  }
   const update = encodeMessageCrdtSnapshot(doc);
   const messages = readMessagesFromDoc(doc);
   return {

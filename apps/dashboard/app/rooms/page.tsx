@@ -25,6 +25,7 @@ import { FluxyChat } from "@/components/chat";
 import { provisionDecisionRoomPack } from "@/lib/decision-rooms-client";
 import { provisionEnterpriseAgentRoom } from "@/lib/enterprise-agent-room-client";
 import dynamic from "next/dynamic";
+import { FileJson } from "lucide-react";
 
 const RoomAdvancedPanels = dynamic(
   () => import("./room-advanced-panels").then((m) => m.RoomAdvancedPanels),
@@ -445,14 +446,12 @@ export default function RoomsPage() {
             {creatingEnterpriseRoom ? "Creating…" : "Enterprise Agent Room"}
           </Button>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="import-transcript-file">
-            Import ChatGPT/Claude JSON
-          </label>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
             id="import-transcript-file"
             type="file"
             accept="application/json,.json"
+            className="sr-only"
             disabled={importingTranscript || !token}
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -460,7 +459,19 @@ export default function RoomsPage() {
               void importTranscriptFile(file);
             }}
           />
-          {importingTranscript ? <span className="text-xs text-muted-foreground">Importing…</span> : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={importingTranscript || !token}
+            onClick={() => document.getElementById("import-transcript-file")?.click()}
+          >
+            <FileJson className="size-3.5" aria-hidden />
+            {importingTranscript ? "Importing…" : "Import ChatGPT/Claude JSON"}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Choose an export you already downloaded.
+          </span>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           <strong>Decision Room</strong> seeds templates and links{" "}
@@ -473,7 +484,7 @@ export default function RoomsPage() {
         </Section>
       </div>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
+      <section className="mt-4 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)] lg:items-start">
         <div className="rounded-xl bg-white/90 p-4 shadow-[var(--shadow-2)] backdrop-blur-sm">
           <h2 className="font-heading mb-2 text-lg font-semibold text-foreground">Your rooms</h2>
           {rooms.length === 0 ? (
@@ -528,7 +539,7 @@ export default function RoomsPage() {
           )}
         </div>
 
-        <div className="rounded-xl bg-white/90 p-4 shadow-[var(--shadow-2)] backdrop-blur-sm">
+        <div className="min-w-0 overflow-hidden rounded-xl bg-white/90 p-4 shadow-[var(--shadow-2)] backdrop-blur-sm">
           {!selectedId ? (
             <p className="text-muted-foreground">Select a room.</p>
           ) : (
@@ -678,14 +689,15 @@ export default function RoomsPage() {
               ) : null}
 
               {chatClient?.isAuthenticated() ? (
-                <div className="mt-6">
+                <div className="mt-6 min-w-0">
                   <h3 className="mb-2 text-sm font-semibold">Live chat</h3>
-                  <div className="min-h-[24rem] rounded-lg border border-border">
+                  <div className="flex min-h-[24rem] min-w-0 flex-col overflow-hidden rounded-lg border border-border p-2 sm:p-3">
                     <FluxyChat
                       roomId={selectedId}
                       client={chatClient}
                       scrollToMessageId={messageIdFromQuery}
                       variant="minimal"
+                      className="min-h-0 min-w-0"
                     />
                   </div>
                 </div>

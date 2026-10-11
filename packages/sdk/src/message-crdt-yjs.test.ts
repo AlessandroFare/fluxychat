@@ -8,6 +8,7 @@ import {
   readMessagesFromDoc,
   resetRoomMessageCrdtDocsForTests,
   subscribeMessageCrdtMultiTabSync,
+  tombstoneMessageInDoc,
   upsertMessageInDoc,
 } from "./message-crdt-yjs";
 
@@ -25,7 +26,7 @@ describe("message-crdt-yjs", () => {
       ],
       [
         {
-          id: 10,
+          id: -1,
           roomId: "r1",
           userId: "alice",
           content: "from crdt",
@@ -35,7 +36,7 @@ describe("message-crdt-yjs", () => {
       ],
     );
     expect(merged).toHaveLength(2);
-    expect(merged.map((m) => m.id)).toEqual([9, 10]);
+    expect(merged.map((m) => m.id)).toEqual([9, -1]);
   });
 
   it("applies snapshot update into local doc", () => {
@@ -109,6 +110,61 @@ describe("message-crdt-yjs", () => {
     );
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0]?.autoResolvable).toBe(false);
+  });
+
+  it("keeps Yjs tombstones over REST copies", () => {
+    const doc = new Y.Doc();
+    upsertMessageInDoc(doc, {
+      id: 7,
+      roomId: "r1",
+      userId: "alice",
+      content: "still here",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      clientMessageId: "cmsg_7",
+    });
+    tombstoneMessageInDoc(doc, 7, "2026-01-01T00:04:00.000Z");
+    const fromDoc = readMessagesFromDoc(doc);
+    expect(fromDoc).toHaveLength(1);
+    expect(fromDoc[0]?.deletedAt).toBe("2026-01-01T00:04:00.000Z");
+    const merged = mergeRestHistoryWithYjsDoc(
+      [
+        {
+          id: 7,
+          roomId: "r1",
+          userId: "alice",
+          content: "still here",
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      doc,
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.deletedAt).toBe("2026-01-01T00:04:00.000Z");
+    expect(merged[0]?.content).toBe("[deleted]");
+  });
+
+  it("does not resurrect server ids omitted from REST history", () => {
+    const merged = mergeRestHistoryWithYjsRecords(
+      [
+        {
+          id: 8,
+          roomId: "r1",
+          userId: "bob",
+          content: "kept",
+          createdAt: "2026-01-01T00:02:00.000Z",
+        },
+      ],
+      [
+        {
+          id: 7,
+          roomId: "r1",
+          userId: "alice",
+          content: "should stay deleted",
+          createdAt: "2026-01-01T00:01:00.000Z",
+        },
+      ],
+    );
+    expect(merged.map((m) => m.id)).toEqual([8]);
   });
 
   it("noop multi-tab sync when BroadcastChannel is unavailable", () => {

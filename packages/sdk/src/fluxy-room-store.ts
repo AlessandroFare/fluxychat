@@ -106,7 +106,7 @@ export interface FluxyRoomStoreState {
   sendReaction: (messageId: number, emoji: string, op?: "add" | "remove") => void;
   sendRoomReaction: (name: string) => void;
   sendReadReceipt: (messageId: number) => void;
-  deleteMessage: (messageId: number) => void;
+  deleteMessage: (messageId: number) => void | Promise<void>;
   branchRoomFromMessage: (fromMessageId: number) => Promise<void>;
   invokeAgent: (
     content: string,

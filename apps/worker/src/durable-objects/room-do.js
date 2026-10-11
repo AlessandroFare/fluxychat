@@ -71,6 +71,8 @@ import {
 import { parseRpcRequest, ROOM_RPC_METHODS } from "../lib/do-rpc.js";
 import { callAgentDo } from "../lib/agent-do-session.js";
 import { isRoomMember, canAccessRoom } from "../lib/room-access.js";
+import { ensurePublicRoomMembership } from "../lib/public-room-access.js";
+import { ensureMessageVersioningSchema } from "../lib/room-message-seq.js";
 import { guestMemberRoleForJoin } from "../lib/guest-auth.js";
 import { attachAttachmentsToMessages } from "../lib/messages-attachments.js";
 import { attachPollsToMessages } from "../lib/message-polls.js";
@@ -659,9 +661,12 @@ export class RoomDurableObject {
           ? syncMessageEditToYjsRoomDoc
           : syncMessageToYjsRoomDoc;
     const broadcastFn = (frame) => this.broadcastBinary(frame);
-    void syncFn(this.yjsSync, roomId, this.state.storage, message, broadcastFn).catch((err) =>
+    const pending = syncFn(this.yjsSync, roomId, this.state.storage, message, broadcastFn).catch((err) =>
       logError("yjs.message_sync_failed", err, { roomId, messageId: message.id }),
     );
+    if (op === "delete") return pending;
+    void pending;
+    return pending;
   }
 
   /**
@@ -1144,29 +1149,46 @@ export class RoomDurableObject {
    */
   async loadConnectSnapshotRows(projectId, roomId, limit, viewerUserId, extendedSchema) {
     await this.flushMessageWalAndFanout();
+    await ensureMessageVersioningSchema(this.env);
     const { getMessageVisibilityFilter } = await import("../lib/message-visibility.js");
     const vis = await getMessageVisibilityFilter(this.env, roomId, viewerUserId || "");
     const voiceCols = extendedSchema
       ? ", kind, audio_url, duration_ms, transcription, transcription_status"
       : "";
     const visibilityCols = extendedSchema ? ", visibility, visible_to_json" : "";
-    const result = await this.env.DB.prepare(
-      `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
-              mentions, og_title, og_description, og_image, og_url, client_message_id,
-              seq, version, participant_type, metadata_json
-              ${visibilityCols}${voiceCols}
-       FROM messages
-       WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL${extendedSchema ? vis.sql : ""}
-       ORDER BY created_at DESC LIMIT ?`,
-    )
-      .bind(
-        projectId,
-        roomId,
-        ...(extendedSchema ? vis.binds : []),
-        limit,
+    const seqCols = extendedSchema
+      ? ", seq, version, participant_type, metadata_json"
+      : "";
+    try {
+      const result = await this.env.DB.prepare(
+        `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
+                mentions, og_title, og_description, og_image, og_url, client_message_id
+                ${seqCols}${visibilityCols}${voiceCols}
+         FROM messages
+         WHERE project_id = ? AND room_id = ?${extendedSchema ? vis.sql : ""}
+         ORDER BY created_at DESC LIMIT ?`,
       )
-      .all();
-    return result.results || [];
+        .bind(
+          projectId,
+          roomId,
+          ...(extendedSchema ? vis.binds : []),
+          limit,
+        )
+        .all();
+      return result.results || [];
+    } catch (err) {
+      if (!extendedSchema) throw err;
+      const lean = await this.env.DB.prepare(
+        `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
+                mentions, og_title, og_description, og_image, og_url, client_message_id
+         FROM messages
+         WHERE project_id = ? AND room_id = ?
+         ORDER BY created_at DESC LIMIT ?`,
+      )
+        .bind(projectId, roomId, limit)
+        .all();
+      return lean.results || [];
+    }
   }
 
   async sendConnectSnapshot(webSocket, {
@@ -3866,7 +3888,7 @@ export class RoomDurableObject {
 
       const projectId = this.projectId;
       this.env.DB.prepare(
-        "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE project_id = ? AND room_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50"
+        "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE project_id = ? AND room_id = ? ORDER BY created_at DESC LIMIT 50"
       ).bind(projectId, roomId).all().then(async (result) => {
         const rows = result.results || [];
         const mappedRaw = await attachAttachmentsToMessages(this.env, projectId, roomId, rows);
@@ -3915,6 +3937,7 @@ export class RoomDurableObject {
         this.yjsSync,
         roomId,
         this.state.storage,
+        { db: this.env.DB, projectId: this.projectId },
       );
       return new Response(JSON.stringify(payload), {
         headers: { "Content-Type": "application/json" },
@@ -4396,7 +4419,7 @@ export class RoomDurableObject {
           },
           broadcastOpts,
         );
-        this.syncYjsMessage(
+        await this.syncYjsMessage(
           {
             id: body.id,
             roomId: body.roomId || roomIdStr,

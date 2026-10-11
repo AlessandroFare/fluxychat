@@ -62,6 +62,28 @@ describe("message-history", () => {
     });
   });
 
+  it("mergeMessagesChronological keeps a tombstone over longer REST text", () => {
+    const merged = mergeMessagesChronological(
+      [
+        {
+          id: 75,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          content: "[deleted]",
+          deletedAt: "2026-01-01T00:06:00.000Z",
+        },
+      ],
+      [
+        {
+          id: 75,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          content: "a much longer original body that used to win on length",
+        },
+      ],
+    );
+    expect(merged[0]?.content).toBe("[deleted]");
+    expect(merged[0]?.deletedAt).toBe("2026-01-01T00:06:00.000Z");
+  });
+
   it("clampHistoryLimit enforces bounds", () => {
     expect(clampHistoryLimit()).toBe(50);
     expect(clampHistoryLimit(0)).toBe(50);

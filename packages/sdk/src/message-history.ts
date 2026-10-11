@@ -44,6 +44,16 @@ function keepIfMissing<T>(incoming: T | undefined, existing: T | undefined): T |
 }
 
 export function mergeSameIdHistoryMessage<T extends HistoryMessage>(prev: T, msg: T): T {
+  const deletedAt = msg.deletedAt || prev.deletedAt;
+  if (deletedAt) {
+    return {
+      ...prev,
+      ...msg,
+      content: "[deleted]",
+      deletedAt,
+      attachments: undefined,
+    };
+  }
   const prevLen = contentLength(prev);
   const msgLen = contentLength(msg);
   const rich = {

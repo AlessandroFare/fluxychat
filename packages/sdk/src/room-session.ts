@@ -14,6 +14,7 @@ import {
   mergeRestHistoryWithYjsDoc,
   subscribeMessageCrdtMultiTabSync,
   trackInboundMessageInCrdtDoc,
+  tombstoneMessageInDoc,
   upsertMessageInDoc,
 } from "./message-crdt-yjs";
 import type { FluxyDeliverableMessage } from "./message-delivery";
@@ -647,24 +648,26 @@ export function startFluxyRoomSession(
         ),
       }));
     } else if (data.type === "delete") {
-      if (crdtMessageList && typeof data.id === "number") {
-        upsertMessageInDoc(getRoomMessageCrdtDoc(trimmedRoomId), {
-          id: data.id,
-          roomId: String(data.roomId ?? trimmedRoomId),
-          userId: String(data.userId ?? ""),
-          content: "[deleted]",
-          createdAt: String(data.deletedAt ?? new Date().toISOString()),
-          deletedAt: data.deletedAt ?? new Date().toISOString(),
-        });
+      const deletedId = Number(data.id ?? data.messageId);
+      if (crdtMessageList && Number.isFinite(deletedId)) {
+        tombstoneMessageInDoc(
+          getRoomMessageCrdtDoc(trimmedRoomId),
+          deletedId,
+          String(data.deletedAt ?? new Date().toISOString()),
+          {
+            roomId: String(data.roomId ?? trimmedRoomId),
+            userId: String(data.userId ?? ""),
+          },
+        );
       }
       if (data.hard) {
         setState((s) => ({
-          messages: s.messages.filter((m) => m.id !== data.id),
+          messages: s.messages.filter((m) => Number(m.id) !== deletedId),
         }));
       } else {
         setState((s) => ({
           messages: s.messages.map((m) =>
-            m.id === data.id
+            Number(m.id) === deletedId
               ? { ...m, content: "[deleted]", deletedAt: data.deletedAt }
               : m,
           ),
@@ -735,8 +738,11 @@ export function startFluxyRoomSession(
       try {
         const next = await client.fetchMessages(trimmedRoomId, { limit: historyLimit });
         if (active) {
+          const withYjs = crdtMessageList
+            ? mergeRestHistoryWithYjsDoc(next, getRoomMessageCrdtDoc(trimmedRoomId))
+            : next;
           setState((s) => ({
-            messages: mergeHistoryWithPendingDelivery(s.messages, next),
+            messages: mergeHistoryWithPendingDelivery(s.messages, withYjs),
             hasMore: next.length >= historyLimit,
           }));
         }
@@ -1133,18 +1139,73 @@ export function startFluxyRoomSession(
     }
   };
 
-  const deleteMessage = (messageId: number) => {
-    if (!client) return;
+  const deleteMessage = async (messageId: number) => {
+    if (!client) throw new Error("not connected");
+    const deletedAt = new Date().toISOString();
+    const targetId = Number(messageId);
+    const snapshot = getState();
+    const target =
+      snapshot.messages.find((m) => Number(m.id) === targetId) ??
+      snapshot.messages.find((m) => m.clientMessageId && m.id === messageId);
+    if (crdtMessageList && target && Number.isFinite(Number(target.id))) {
+      tombstoneMessageInDoc(getRoomMessageCrdtDoc(trimmedRoomId), Number(target.id), deletedAt, {
+        roomId: String(target.roomId ?? trimmedRoomId),
+        userId: String(target.userId ?? ""),
+        senderId: target.senderId ?? target.userId,
+        createdAt: String(target.createdAt ?? deletedAt),
+        parentId: target.parentId ?? null,
+        clientMessageId: target.clientMessageId ?? null,
+        editedAt: target.editedAt ?? null,
+      });
+    }
+    setState((s) => ({
+      messages: s.messages.map((m) =>
+        Number(m.id) === targetId ||
+        (target?.clientMessageId && m.clientMessageId === target.clientMessageId)
+          ? { ...m, content: "[deleted]", deletedAt }
+          : m,
+      ),
+    }));
     const tryWsDelete = () => {
       try {
-        connectionRef?.sendJson({ type: "delete", messageId });
+        connectionRef?.sendJson({
+          type: "delete",
+          messageId: Number.isFinite(targetId) && targetId > 0 ? targetId : target?.id,
+          clientMessageId: target?.clientMessageId,
+        });
       } catch {
         /* ignore */
       }
     };
     if (client.isAuthenticated()) {
-      void client.deleteMessageRest(messageId).catch(() => tryWsDelete());
-      return;
+      try {
+        const deleted = await client.deleteMessageRest(
+          Number.isFinite(targetId) && targetId > 0 ? targetId : 0,
+          {
+            roomId: trimmedRoomId,
+            clientMessageId: target?.clientMessageId,
+          },
+        );
+        const confirmedAt = deleted?.deletedAt ?? deletedAt;
+        if (crdtMessageList) {
+          tombstoneMessageInDoc(getRoomMessageCrdtDoc(trimmedRoomId), targetId, confirmedAt, {
+            roomId: trimmedRoomId,
+            clientMessageId: target?.clientMessageId ?? deleted?.clientMessageId ?? null,
+          });
+        }
+        setState((s) => ({
+          messages: s.messages.map((m) =>
+            Number(m.id) === Number(deleted?.id ?? targetId) ||
+            (target?.clientMessageId && m.clientMessageId === target.clientMessageId)
+              ? { ...m, ...deleted, content: "[deleted]", deletedAt: confirmedAt }
+              : m,
+          ),
+        }));
+        return;
+      } catch (err) {
+        tryWsDelete();
+        throw err;
+      }
     }
     tryWsDelete();
   };

@@ -422,8 +422,8 @@ function filesFromClipboardOrDrop(data: DataTransfer | null): File[] {
 // variants (driven by the --fluxy-bubble-* design tokens in globals.css).
 // These classes only handle alignment and width.
 
-const sentBubbleClass = "ml-auto max-w-[72%]";
-const receivedBubbleClass = "mr-auto max-w-[72%]";
+const sentBubbleClass = "ml-auto max-w-[min(72%,100%)]";
+const receivedBubbleClass = "mr-auto max-w-[min(72%,100%)]";
 const bubbleContentPadding = "px-3.5 py-2.5";
 
 // ─── Component ───
@@ -522,6 +522,7 @@ export function FluxyChat({
   // + menu open state
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const pendingDeleteIdRef = useRef<number | null>(null);
   const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
   const [discontinuityNotice, setDiscontinuityNotice] = useState<string | null>(null);
   const [roomReactionBursts, setRoomReactionBursts] = useState<
@@ -1956,14 +1957,17 @@ export function FluxyChat({
 
   const isOnboarding = variant === "onboarding";
 
+  const isMinimal = variant === "minimal";
+
   return (
     <div
-      className={cn("relative flex gap-3", className)}
+      className={cn("relative flex w-full min-w-0 gap-3", className)}
     >
     <div
       className={cn(
         "relative flex min-w-0 flex-1 flex-col gap-3",
         isOnboarding && "max-h-[min(520px,72vh)]",
+        isMinimal && "min-h-0",
       )}
     >
       {discontinuityNotice ? (
@@ -2401,14 +2405,15 @@ export function FluxyChat({
         <div className="relative">
         <MessageScroller
           className={cn(
-            "h-[min(420px,50vh)] scroll-fade-b rounded-xl bg-muted/40 text-card-foreground",
+            "h-[min(420px,50vh)] min-w-0 scroll-fade-b rounded-xl bg-muted/40 text-card-foreground",
             variant === "demo" && "h-[min(480px,58vh)] bg-muted",
             isOnboarding && "h-[min(200px,26vh)] shrink-0 bg-muted/20",
+            isMinimal && "h-[min(22rem,48vh)] max-h-[28rem]",
           )}
           data-testid="fluxychat-message-list"
         >
           <MessageScrollerViewport
-            className="overflow-x-visible p-3 scroll-fade"
+            className="overflow-x-hidden p-3 scroll-fade"
             ref={listRef}
             onScroll={handleTranscriptScroll}
           >
@@ -2506,7 +2511,10 @@ export function FluxyChat({
                       (isSelf && chatUiSettings.allowMessageDeletesOwn) ? (
                         <MessageAction
                           label="Delete"
-                          onClick={() => setPendingDeleteId(m.id!)}
+                          onClick={() => {
+                            pendingDeleteIdRef.current = m.id!;
+                            setPendingDeleteId(m.id!);
+                          }}
                         >
                           <Trash2 className="size-3.5" />
                         </MessageAction>
@@ -2534,7 +2542,8 @@ export function FluxyChat({
                       {fluxyClient ? (
                         <button
                           type="button"
-                          onClick={async () => {
+                          onClick={async (e) => {
+                            e.stopPropagation();
                             if (m.id == null) return;
                             try {
                               const res = await fluxyClient.translateMessage(
@@ -2556,9 +2565,11 @@ export function FluxyChat({
                                   ...p,
                                   [String(m.id)]: false,
                                 }));
+                              } else {
+                                setInputError("Translation returned empty text.");
                               }
-                            } catch {
-                              /* ignore */
+                            } catch (err) {
+                              setInputError(messageFromUnknown(err, "Could not translate this message."));
                             }
                           }}
                           className={messageToolbarButtonClass}
@@ -2571,8 +2582,10 @@ export function FluxyChat({
                       {fluxyClient && trimmedRoomId ? (
                         <button
                           type="button"
-                          onClick={async () => {
+                          onClick={async (e) => {
+                            e.stopPropagation();
                             if (m.id == null) return;
+                            if (reportedMessageIds.has(m.id)) return;
                             try {
                               await fluxyClient.reportMessage(trimmedRoomId, m.id);
                               setReportedMessageIds((prev) => {
@@ -2580,15 +2593,16 @@ export function FluxyChat({
                                 next.add(m.id!);
                                 return next;
                               });
-                            } catch {
-                              /* ignore */
+                            } catch (err) {
+                              setInputError(messageFromUnknown(err, "Could not report this message."));
                             }
                           }}
                           className={messageToolbarButtonClass}
-                          title="Report message"
+                          title={m.id != null && reportedMessageIds.has(m.id) ? "Reported" : "Report message"}
+                          disabled={m.id != null && reportedMessageIds.has(m.id)}
                         >
                           <Flag className="size-3" />
-                          Report
+                          {m.id != null && reportedMessageIds.has(m.id) ? "Reported" : "Report"}
                         </button>
                       ) : null}
                       {chatUiSettings.allowMessageReactions ? (
@@ -2743,7 +2757,7 @@ export function FluxyChat({
                                       </span>
                                       <span className="line-clamp-2">
                                         {parentMessage.deletedAt
-                                          ? "This message was deleted"
+                                          ? "This message has been deleted"
                                           : parentMessage.content || ""}
                                       </span>
                                     </button>
@@ -2781,7 +2795,7 @@ export function FluxyChat({
                                         )}
                                         data-testid="message-deleted-placeholder"
                                       >
-                                        This message was deleted
+                                        This message has been deleted
                                       </p>
                                     ) : isVoice ? (
                                       <VoiceMessageBubble
@@ -2812,6 +2826,25 @@ export function FluxyChat({
                                           const useMarkdown =
                                             isAgent ||
                                             (!isSelf && messageContentUsesMarkdown(bodyText));
+                                          const translation =
+                                            m.id != null ? translatedMessages[String(m.id)] : undefined;
+                                          if (translation) {
+                                            return (
+                                              <MessageTranslationBlock
+                                                originalText={bodyText}
+                                                translation={translation}
+                                                showOriginal={showOriginalByMessageId[String(m.id)] ?? false}
+                                                onToggle={() =>
+                                                  setShowOriginalByMessageId((prev) => ({
+                                                    ...prev,
+                                                    [String(m.id)]: !(prev[String(m.id)] ?? false),
+                                                  }))
+                                                }
+                                                isSelf={isSelf}
+                                                markdown={useMarkdown}
+                                              />
+                                            );
+                                          }
                                           return useMarkdown ? (
                                             !bodyText.trim() && isStreaming ? (
                                               <p className="whitespace-pre-wrap break-words">…</p>
@@ -2821,22 +2854,9 @@ export function FluxyChat({
                                                 invert={isSelf}
                                               />
                                             )
-                                          ) : m.id != null && translatedMessages[String(m.id)] ? (
-                                            <MessageTranslationBlock
-                                              originalText={cardDisplayText(m)}
-                                              translation={translatedMessages[String(m.id)]}
-                                              showOriginal={showOriginalByMessageId[String(m.id)] ?? false}
-                                              onToggle={() =>
-                                                setShowOriginalByMessageId((prev) => ({
-                                                  ...prev,
-                                                  [String(m.id)]: !(prev[String(m.id)] ?? false),
-                                                }))
-                                              }
-                                              isSelf={isSelf}
-                                            />
                                           ) : (
                                             <p className="whitespace-pre-wrap break-words">
-                                              {cardDisplayText(m)}
+                                              {bodyText}
                                               {!m.content && isStreaming ? "…" : null}
                                             </p>
                                           );
@@ -4034,36 +4054,46 @@ export function FluxyChat({
         Set <code className="text-xs">toolExecuteUrl</code> on the agent profile for tool rounds.
       </p>
 
-      {/* ─── Reaction Picker ─── */}
-      <Dialog open={pendingDeleteId != null} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
-        <DialogContent className="max-w-sm" data-testid="chat-delete-confirm">
-          <DialogHeader>
-            <DialogTitle>Delete message</DialogTitle>
-            <DialogDescription>
+      {pendingDeleteId != null ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          data-testid="chat-delete-confirm"
+        >
+          <div className="w-full max-w-sm rounded-lg border border-border bg-background p-4 shadow-lg">
+            <p className="text-sm font-medium">Delete message</p>
+            <p className="mt-1 text-sm text-muted-foreground">
               This removes the message for everyone in the room. You cannot undo this.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <button
-              type="button"
-              className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
-              onClick={() => setPendingDeleteId(null)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="rounded-md bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (pendingDeleteId != null) deleteMessage(pendingDeleteId);
-                setPendingDeleteId(null);
-              }}
-            >
-              Delete
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+                onClick={() => {
+                  pendingDeleteIdRef.current = null;
+                  setPendingDeleteId(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-md bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  const id = pendingDeleteIdRef.current ?? pendingDeleteId;
+                  pendingDeleteIdRef.current = null;
+                  setPendingDeleteId(null);
+                  if (id == null) return;
+                  void Promise.resolve(deleteMessage(id)).catch((err) => {
+                    setInputError(messageFromUnknown(err, "Failed to delete message"));
+                  });
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <ReactionPicker
         open={reactionPickerMessageId !== null || composerEmojiOpen}

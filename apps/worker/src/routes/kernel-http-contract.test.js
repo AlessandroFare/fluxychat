@@ -392,6 +392,40 @@ describe("kernel HTTP — messages", () => {
     const res = await dispatchMessagesRoutes(req, new URL(req.url), createAuthMatrixDeps());
     expect(res.status).toBe(401);
   });
+
+  it("DELETE /messages/:id soft-deletes by persist id not URL id", async () => {
+    const updates = [];
+    const db = {
+      prepare(sql) {
+        const text = String(sql);
+        return {
+          bind(...args) {
+            return {
+              first: async () => {
+                if (text.includes("FROM messages")) {
+                  return { id: 42, room_id: "room-1", user_id: "u1", content: "hello" };
+                }
+                return null;
+              },
+              run: async () => {
+                updates.push({ text, args });
+                return { success: true };
+              },
+              all: async () => ({ results: [] }),
+            };
+          },
+        };
+      },
+    };
+    const req = jsonReq("/messages/42", { method: "DELETE", body: { roomId: "room-1" } });
+    const res = await dispatchMessagesRoutes(req, new URL(req.url), deps({ db }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.message.id).toBe(42);
+    expect(body.message.content).toBe("[deleted]");
+    expect(updates.some((row) => String(row.text).includes("deleted_at"))).toBe(true);
+    expect(updates[0]?.args).toEqual(expect.arrayContaining([42, "p1"]));
+  });
 });
 
 describe("kernel HTTP — rooms", () => {

@@ -172,12 +172,11 @@ class FakeDB {
     }
 
     if (sql.includes("UPDATE messages SET deleted_at = ?, content = ?")) {
-      const [deletedAt, content, id, projectId, userId] = args;
+      const [deletedAt, content, id, projectId] = args;
       const row = this.messages.find(
         (m) =>
           String(m.id) === String(id) &&
-          m.project_id === projectId &&
-          m.user_id === userId
+          m.project_id === projectId
       );
       if (!row) return { meta: { changes: 0 } };
       row.deleted_at = deletedAt;
