@@ -14,11 +14,18 @@ import { messageFromUnknown } from "@/lib/error-message";
 interface ToolApprovalPanelProps {
   roomId: string;
   enabled?: boolean;
+  token?: string;
+  onDecided?: (decision: "approve" | "reject") => void;
 }
 
-export function ToolApprovalPanel({ roomId, enabled = true }: ToolApprovalPanelProps) {
+export function ToolApprovalPanel({
+  roomId,
+  enabled = true,
+  token: tokenProp,
+  onDecided,
+}: ToolApprovalPanelProps) {
   const { adminJwt, memberJwt } = useDashboardSession();
-  const token = (adminJwt || memberJwt).trim();
+  const token = (tokenProp || adminJwt || memberJwt).trim();
   const [pending, setPending] = useState<HitlApprovalRequest[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -55,6 +62,7 @@ export function ToolApprovalPanel({ roomId, enabled = true }: ToolApprovalPanelP
     try {
       await postApprovalDecision(token, id, decision);
       setConfirmId(null);
+      onDecided?.(decision);
       await load();
     } catch (err) {
       console.error(messageFromUnknown(err, "Approval decision failed"));

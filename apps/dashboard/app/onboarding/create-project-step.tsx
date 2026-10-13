@@ -48,11 +48,11 @@ export function CreateProjectStep({ wizard: w }: CreateProjectStepProps) {
 
       {/* Project creation */}
       {w.adminJwt.trim() && (
-        <div className="space-y-5">
+        <div className="space-y-5" data-tour="create-project">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Create your project</h3>
+            <h3 className="text-lg font-semibold text-foreground">Project name</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your project is your isolated namespace. All traffic, quotas, and keys live here.
+              One name. Then you can try an agent that asks before it spends money.
             </p>
           </div>
 
@@ -66,35 +66,34 @@ export function CreateProjectStep({ wizard: w }: CreateProjectStepProps) {
                   </div>
                   <span className="font-semibold">{w.project.name}</span>
                 </div>
-                <code className="mt-2 block text-xs text-emerald-600">{w.project.id}</code>
               </div>
 
-              {/* Member JWT display */}
-              {w.memberJwt && (
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Your member token (JWT)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <pre className="flex-1 max-h-20 overflow-auto rounded-lg border border-border bg-[#0d1117] p-2.5 font-mono text-xs text-[#e6edf3]">
-                      {w.memberJwt.slice(0, 80)}...
+              <details className="rounded-lg border border-border bg-muted/20 p-3 text-left">
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                  Developer details
+                </summary>
+                <p className="mt-2 font-mono text-[11px] text-muted-foreground">Project id: {w.project.id}</p>
+                {w.memberJwt ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <pre className="max-h-16 flex-1 overflow-auto rounded border bg-[#0d1117] p-2 font-mono text-[10px] text-[#e6edf3]">
+                      {w.memberJwt.slice(0, 48)}…
                     </pre>
                     <button
                       type="button"
                       onClick={handleCopyToken}
                       className={cn(
-                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded border",
                         copied
-                          ? "border-emerald-300 bg-emerald-50 text-emerald-600"
-                          : "border-border bg-background text-muted-foreground hover:bg-muted",
+                          ? "border-emerald-300 text-emerald-600"
+                          : "border-border text-muted-foreground",
                       )}
                       title="Copy JWT"
                     >
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </button>
                   </div>
-                </div>
-              )}
+                ) : null}
+              </details>
 
               {w.notice && (
                 <p className="text-xs text-emerald-600">{w.notice}</p>
@@ -123,7 +122,7 @@ export function CreateProjectStep({ wizard: w }: CreateProjectStepProps) {
                   ref={w.projectNameInputRef}
                   value={w.projectName}
                   onChange={(e) => w.setProjectName(e.target.value)}
-                  placeholder="Project name (e.g. Acme Support)"
+                  placeholder="My first project"
                   className="sm:flex-1"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && w.projectName.trim()) {
@@ -147,7 +146,7 @@ export function CreateProjectStep({ wizard: w }: CreateProjectStepProps) {
                   }}
                   disabled={w.creatingProject || w.provisioningCloud || !w.projectName.trim()}
                 >
-                  {w.creatingProject || w.provisioningCloud ? "Creating..." : "Create project"}
+                  {w.creatingProject || w.provisioningCloud ? "Creating..." : "Create and try it"}
                 </Button>
               </div>
 

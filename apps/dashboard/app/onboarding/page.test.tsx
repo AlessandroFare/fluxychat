@@ -29,6 +29,10 @@ vi.mock("@fluxy-chat/sdk", () => ({
   },
 }));
 
+vi.mock("@fluxy-chat/sdk/markdown", () => ({
+  parseMarkdown: () => [],
+}));
+
 vi.mock("@fluxy-chat/react", () => ({
   useChat: () => ({
     messages: [],
@@ -36,6 +40,10 @@ vi.mock("@fluxy-chat/react", () => ({
     connectionStatus: "disconnected",
   }),
   useFluxyChatOptional: () => null,
+}));
+
+vi.mock("@/components/chat", () => ({
+  FluxyChat: () => null,
 }));
 
 const SESSION_KEY = scopedStorageKey("fluxychat.dashboard.session.v1", CLERK_USER_ID);

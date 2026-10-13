@@ -872,6 +872,14 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   tools = withNestedAgentTool(tools, Boolean(toolExecuteUrl?.trim()));
   const { withAskHumanTool } = await import("./agent-inbox.js");
   tools = withAskHumanTool(tools);
+  const { withRefundOrderTool } = await import("./demo-refund-tool.js");
+  const demoRoomId = String(env.DEMO_ROOM_ID || "").trim();
+  const assistantHandle = String(agentRow.handle || "")
+    .replace(/^@/, "")
+    .toLowerCase();
+  if ((demoRoomId && roomId === demoRoomId) || assistantHandle === "assistant") {
+    tools = withRefundOrderTool(tools);
+  }
   // Audit S-35: agent-level tool allow-list. NULL means "not set" (legacy
   // behaviour: trust the declared schema); an empty array means "deny all";
   // a non-empty array means "allow exactly these names". The list is
@@ -976,8 +984,9 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   const clmHitlCtx = { stateText: userMessage, projectId, roomId, userId, runId, agentId: agentRow.id };
   const twoKeyTurn = { readUntrusted: false, hasPrivateData: false };
   const { config: roomCfg } = await getRoomConfig(env, { projectId, roomId });
+  const { withRefundOrderGate } = await import("./demo-refund-tool.js");
   const innerGate = wrapClmApprovalGate(
-    createPolicyAwareApprovalGate(baseApprovalGate, env, projectId),
+    createPolicyAwareApprovalGate(withRefundOrderGate(baseApprovalGate), env, projectId),
     env,
     clmHitlCtx,
   );
@@ -1641,7 +1650,9 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
               nestDepth: Math.max(0, Number(nestDepth) || 0),
               toolCall: tc,
             })
-          : toolExecuteUrl
+          : tc.name === "refund_order"
+            ? (await import("./demo-refund-tool.js")).executeDemoRefundOrder(input)
+            : toolExecuteUrl
             ? await executeToolCall(env, toolExecuteUrl, tc, projectId, runId, traceId)
             : { success: false, error: "tool_execute_url_missing" };
         agentLog.info("agent_lifecycle_onToolExecutionEnd", {

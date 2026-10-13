@@ -19,6 +19,16 @@ export function ConsoleChrome({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  if (pathname.startsWith("/onboarding")) {
+    return (
+      <Suspense fallback={null}>
+        <QuickstartGate>
+          <ConsoleAuthGate>{children}</ConsoleAuthGate>
+        </QuickstartGate>
+      </Suspense>
+    );
+  }
+
   return (
     <Suspense fallback={null}>
       <ConsoleCommandPaletteProvider>
