@@ -660,6 +660,8 @@ export type FluxyChatEvent =
   | {
       type: "delete";
       id: number;
+      /** Some clients/tests send `messageId` instead of `id`. */
+      messageId?: number;
       roomId: string;
       userId: string;
       deletedAt: string;
