@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import type { LucideProps } from "lucide-react";
-import { Sparkles, Layers, MessageSquare, Compass, CheckCircle2 } from "lucide-react";
+import { Sparkles, ShieldCheck, Code2 } from "lucide-react";
 
 export interface CreatedProject {
   id: string;
@@ -27,39 +27,23 @@ export interface OnboardingStepDef {
 }
 
 /**
- * Redesigned 5-step onboarding flow.
- *
- * 0 — Welcome: hero screen with value props
- * 1 — Create Project: name, description, auto API key
- * 2 — First Chat: live chat with the AI agent
- * 3 — Explore Features: cards linking to key areas
- * 4 — You're all set: summary and next steps
+ * Three-screen onboarding: project, approval in the room, then drop-in snippet.
  */
 export const ONBOARDING_STEPS: readonly OnboardingStepDef[] = [
   {
-    title: "Welcome",
-    short: "AI-native chat that runs on your edge.",
+    title: "Project",
+    short: "Humans and agents in the same room.",
     icon: Sparkles,
   },
   {
-    title: "Create Project",
-    short: "Your isolated namespace. All traffic, quotas, and keys live here.",
-    icon: Layers,
+    title: "Approval",
+    short: "See an agent ask for permission.",
+    icon: ShieldCheck,
   },
   {
-    title: "First Chat",
-    short: "Send a message and see the AI respond in real time.",
-    icon: MessageSquare,
-  },
-  {
-    title: "Explore Features",
-    short: "Discover Card Builder, DevTools, CLI, and Security.",
-    icon: Compass,
-  },
-  {
-    title: "You're all set",
-    short: "Everything is ready. Go build something great.",
-    icon: CheckCircle2,
+    title: "Your app",
+    short: "Run it in a Next.js, Vite, or plain JS project.",
+    icon: Code2,
   },
 ] as const;
 
@@ -73,13 +57,11 @@ export interface OnboardingStepContext {
 }
 
 export function isOnboardingStepComplete(step: number, args: OnboardingStepContext): boolean {
-  const { adminJwt, activeProject, memberJwt, room, userSentMessage } = args;
+  const { activeProject, memberJwt, userSentMessage } = args;
   const hasMember = Boolean(memberJwt.trim());
-  if (step === 0) return true; // Welcome is always "complete" (it's a landing screen)
-  if (step === 1) return Boolean(activeProject?.id);
-  if (step >= 2 && !hasMember) return false;
-  if (step === 2) return Boolean(userSentMessage);
-  if (step === 3) return true; // Explore is optional — always passable
+  if (step === 0) return Boolean(activeProject?.id);
+  if (step >= 1 && !hasMember) return false;
+  if (step === 1) return Boolean(userSentMessage);
   return true;
 }
 

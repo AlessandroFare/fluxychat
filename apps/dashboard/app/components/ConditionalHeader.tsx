@@ -13,6 +13,10 @@ import { MarketingTopNav } from "./marketing-top-nav";
 export default function ConditionalHeader() {
   const pathname = usePathname();
 
+  if (pathname?.startsWith("/onboarding")) {
+    return null;
+  }
+
   if (
     pathname === "/" ||
     pathname === "/landing" ||

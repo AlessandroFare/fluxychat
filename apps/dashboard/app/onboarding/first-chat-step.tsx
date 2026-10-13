@@ -1,17 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MessageSquare, Sparkles, X } from "lucide-react";
-import BlurText from "@/components/BlurText";
-import ShinyText from "@/components/ShinyText";
+import { useState } from "react";
 import { FluxyChat } from "@/components/chat";
 import type { OnboardingWizard } from "./use-onboarding-wizard";
 
-const SUGGESTED_PROMPTS = [
-  "Tell me about FluxyChat features",
-  "Show me a card example",
-  "Search the web for AI chat trends",
-  "Generate an image",
+const CHIPS = [
+  {
+    id: "refund",
+    label: "Refund order #1042 (240 €)",
+    prompt: "@assistant Please refund order #1042 for 240 EUR.",
+  },
+  {
+    id: "summarize",
+    label: "Summarize this room",
+    prompt: "@assistant Summarize this room in three bullets.",
+  },
+  {
+    id: "draft",
+    label: "Draft a reply to the customer",
+    prompt: "@assistant Draft a short reply to the customer about the refund.",
+  },
 ] as const;
 
 interface FirstChatStepProps {
@@ -22,95 +30,39 @@ export function FirstChatStep({ wizard: w }: FirstChatStepProps) {
   const canChat = Boolean(w.memberJwt.trim() && w.room?.id);
   const agentId = w.agent?.id ?? "";
   const agentName = w.agent?.name ?? "Assistant";
-  const roomLabel = w.room?.name ?? w.room?.id ?? "your assistant room";
-
-  const [showWelcome, setShowWelcome] = useState(true);
-
-  useEffect(() => {
-    if (w.userSentMessage) setShowWelcome(false);
-  }, [w.userSentMessage]);
+  const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <div className="text-center">
-        <BlurText
-          text="Try your first chat"
-          className="justify-center text-lg font-semibold text-foreground"
-          delay={40}
-          animateBy="words"
-        />
-        <p className="mt-2 text-sm text-muted-foreground">
-          Type a message in the box below and press{" "}
-          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium">Enter</kbd>.
-          Messages to <span className="font-medium text-foreground">@assistant</span> trigger the AI.
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">See an agent ask for permission</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Click a chip. The refund prompt is sent to the agent. If it calls refund_order, the
+          approval card in this timeline is the live HITL request.
         </p>
       </div>
 
-      {showWelcome && canChat && !w.userSentMessage ? (
-        <div
-          className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/5 via-background to-violet-500/5 p-4 shadow-sm"
-          role="status"
-        >
+      <div className="flex flex-wrap gap-2">
+        {CHIPS.map((chip) => (
           <button
+            key={chip.id}
             type="button"
-            className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-            onClick={() => setShowWelcome(false)}
-            aria-label="Dismiss welcome hint"
+            disabled={!canChat}
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            onClick={() => setQueuedPrompt(chip.prompt)}
           >
-            <X className="h-4 w-4" />
+            {chip.label}
           </button>
-          <div className="flex gap-3 pr-8">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <MessageSquare className="h-5 w-5" />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold text-foreground">
-                Welcome to{" "}
-                <ShinyText
-                  text={roomLabel}
-                  speed={2.5}
-                  color="hsl(var(--foreground))"
-                  shineColor="hsl(var(--primary))"
-                  className="font-semibold"
-                />
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                This is your live chat room. The message box is right below. Send anything to continue the tour.
-                We add <code className="text-[10px]">@assistant</code> automatically when needed.
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {w.showCelebration && w.userSentMessage ? (
-        <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 animate-in fade-in duration-300">
-          <Sparkles className="h-5 w-5 shrink-0 text-primary" />
-          <div>
-            <p className="font-medium text-foreground">You&apos;re live!</p>
-            <p className="text-sm text-muted-foreground">
-              Your message was delivered over WebSocket. The stack is working.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="ml-auto text-xs text-muted-foreground underline underline-offset-2"
-            onClick={() => w.setShowCelebration(false)}
-          >
-            Dismiss
-          </button>
-        </div>
-      ) : null}
+        ))}
+      </div>
 
       {!canChat ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <p className="text-sm text-muted-foreground">
           {w.creatingRoom || w.creatingAgent
-            ? "Setting up your chat room and assistant…"
-            : "Setting up your chat room… This will be ready in a moment."}
-        </div>
-      ) : null}
-
-      {canChat ? (
+            ? "Setting up the room…"
+            : "Waiting for the room. Create the project on the previous screen if this stays empty."}
+        </p>
+      ) : (
         <FluxyChat
           roomId={w.room!.id}
           projectId={w.project?.id ?? ""}
@@ -122,25 +74,18 @@ export function FirstChatStep({ wizard: w }: FirstChatStepProps) {
           memberUserId={w.userId}
           variant="onboarding"
           coPilotConfirm={false}
-          suggestedPrompts={[...SUGGESTED_PROMPTS]}
-          onMessageSent={() => {
-            w.markMessageSent();
-            setShowWelcome(false);
-          }}
+          queuedPrompt={queuedPrompt}
+          suggestedPrompts={CHIPS.map((c) => c.prompt)}
+          onMessageSent={() => w.markMessageSent()}
         />
-      ) : (
-        <div
-          className="flex h-48 items-center justify-center rounded-2xl bg-muted/20 p-3 text-center"
-          data-testid="message-list"
-        >
-          <div>
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mx-auto">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <p className="text-sm font-medium text-foreground">Preparing your room…</p>
-          </div>
-        </div>
       )}
+
+      <details className="text-xs text-muted-foreground">
+        <summary className="cursor-pointer">Developer notes</summary>
+        <p className="mt-2">
+          Worker: <code>{w.workerUrl}</code>. Tool rounds use the agent profile, not this page.
+        </p>
+      </details>
 
       {w.error ? <p className="text-xs text-red-500">{w.error}</p> : null}
     </div>

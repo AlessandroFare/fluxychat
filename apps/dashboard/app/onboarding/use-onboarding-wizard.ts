@@ -48,7 +48,7 @@ export function useOnboardingWizard() {
     setLastRoom,
   } = useDashboardSession();
 
-  const [projectName, setProjectName] = useState("");
+  const [projectName, setProjectName] = useState("My first project");
   const [creatingProject, setCreatingProject] = useState(false);
   const [provisioningCloud, setProvisioningCloud] = useState(false);
   const [userId, setUserId] = useState("alice");
@@ -117,7 +117,7 @@ export function useOnboardingWizard() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("cli") === "1" || params.get("from") === "cli") {
       setCliImportOpen(true);
-      setActiveStep(1);
+      setActiveStep(0);
     }
   }, []);
 
@@ -174,7 +174,7 @@ export function useOnboardingWizard() {
       messageCount: sent ? 1 : 0,
       userSentMessage: sent,
     });
-    if (first > 1) setActiveStep(first);
+    if (first > 0) setActiveStep(first);
   }, [
     progressHydrated,
     userSentMessage,
@@ -577,7 +577,7 @@ export function useOnboardingWizard() {
     }
     if (parsed.userId?.trim()) setUserId(parsed.userId.trim());
     setActiveStep(2);
-    setNotice("Imported CLI .env — you're on First Chat.");
+    setNotice("Imported CLI .env.");
     return true;
   }
 
@@ -659,6 +659,7 @@ export function useOnboardingWizard() {
     invokingAgent,
     error,
     notice,
+    setNotice,
     activeStep,
     setActiveStep,
     furthest,

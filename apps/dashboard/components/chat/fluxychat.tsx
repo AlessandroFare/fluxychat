@@ -159,6 +159,8 @@ import {
   ComposerToolbarRight,
   ComposerSubmitButton,
 } from "@/components/ui/composer";
+import { useDemoScene } from "@/components/chat/demo-scene-context";
+import { hasOtherPresenceMember } from "@/lib/demo-presence";
 import {
   Attachment,
   AttachmentAction,
@@ -354,6 +356,8 @@ export interface FluxyChatProps {
   variant?: FluxyChatVariant;
   /** Suggested prompts shown above the composer when there are no messages or draft. */
   suggestedPrompts?: string[];
+  /** When this value changes, send it once (onboarding chips). */
+  queuedPrompt?: string | null;
   /** Ably ChatWindow `enableTypingIndicators`. */
   enableTypingIndicators?: boolean;
   /** Ably ChatWindow `windowSize` (latest N rendered). */
@@ -446,6 +450,7 @@ export function FluxyChat({
   className,
   variant = "full",
   suggestedPrompts,
+  queuedPrompt = null,
   projectId = "",
   enableTypingIndicators = true,
   windowSize = 300,
@@ -470,7 +475,11 @@ export function FluxyChat({
   const showSuggestedPrompts = (variant === "demo" || variant === "onboarding") && suggestedPrompts && suggestedPrompts.length > 0;
   const showRoomInfo = variant === "full";
   const showBreakouts = variant === "full";
-  const showHitlApprovals = variant === "full";
+  const showHitlApprovals = variant === "full" || variant === "demo" || variant === "onboarding";
+  const showHuddleBar = variant === "full";
+  const showCompactStatus = variant === "demo" || variant === "onboarding";
+  const showTechFooter = variant === "full";
+  const demoScene = useDemoScene();
   const showPinnedBar = variant === "full";
   const showMessageSearch = variant === "full";
   const showDemoStatusBar = variant === "demo";
@@ -912,6 +921,70 @@ export function FluxyChat({
     };
   }, [canSendMessages, draft, enableTypingIndicators, setTyping, trimmedRoomId]);
 
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const connectedRef = useRef(connected);
+  connectedRef.current = connected;
+  const historyLoadedRef = useRef(historyLoaded);
+  historyLoadedRef.current = historyLoaded;
+
+  useEffect(() => {
+    if (!demoScene || !fluxyClient || !trimmedRoomId) return;
+    demoScene.registerDisconnect(() => {
+      void (async () => {
+        const idsBefore = new Set(
+          messagesRef.current.map((m) => (m.id == null ? "" : String(m.id))).filter(Boolean),
+        );
+        const started = Date.now();
+        const bag = fluxyClient.room(trimmedRoomId);
+        await bag.detach();
+        await new Promise((resolve) => window.setTimeout(resolve, 500));
+        await bag.attach();
+        for (let i = 0; i < 40; i += 1) {
+          if (connectedRef.current && historyLoadedRef.current) break;
+          await new Promise((resolve) => window.setTimeout(resolve, 200));
+        }
+        const restored = messagesRef.current.filter((m) =>
+          idsBefore.has(m.id == null ? "" : String(m.id)),
+        ).length;
+        demoScene.completeReplay({
+          durationSec: Math.max(0, (Date.now() - started) / 1000),
+          replayed: restored,
+        });
+      })();
+    });
+    demoScene.registerSend((text) => {
+      void sendMessage(text);
+    });
+  }, [demoScene, fluxyClient, sendMessage, trimmedRoomId]);
+
+  useEffect(() => {
+    if (!demoScene || !fluxyClient || !trimmedRoomId || !connected) return;
+    let cancelled = false;
+    const tick = () => {
+      const connection = fluxyClient.connectRoom(trimmedRoomId);
+      void connection
+        .ping(4000)
+        .then((ms) => {
+          if (!cancelled) demoScene.setPingMs(ms);
+        })
+        .catch(() => {});
+    };
+    tick();
+    const id = window.setInterval(tick, 8000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [connected, demoScene, fluxyClient, trimmedRoomId]);
+
+  useEffect(() => {
+    if (!demoScene) return;
+    if (hasOtherPresenceMember(presenceMembers, chatUserId ?? "")) {
+      demoScene.markPresenceDone();
+    }
+  }, [chatUserId, demoScene, presenceMembers]);
+
   useEffect(() => {
     if (!fluxyClient || !trimmedRoomId) return;
     const sub = fluxyClient.room(trimmedRoomId).reactions.subscribe((event) => {
@@ -1047,7 +1120,7 @@ export function FluxyChat({
   );
 
   const showConnectionBanner =
-    !showDemoStatusBar &&
+    !showCompactStatus &&
     (connectionBlocked ||
       isDegradedConnectionStatus(connectionState.status) ||
       connectionState.status === "connecting" ||
@@ -1800,6 +1873,15 @@ export function FluxyChat({
     });
   }
 
+  const queuedPromptRef = useRef<string | null>(null);
+  useEffect(() => {
+    const text = queuedPrompt?.trim() || "";
+    if (!text || queuedPromptRef.current === text) return;
+    if (!canSendMessages || isAgentBusy) return;
+    queuedPromptRef.current = text;
+    sendSuggestedPrompt(text);
+  }, [canSendMessages, isAgentBusy, queuedPrompt]);
+
   async function uploadPendingFile(file: File) {
     if (!fluxyClient || !trimmedRoomId) return;
     setUploadError(null);
@@ -2037,7 +2119,7 @@ export function FluxyChat({
         </div>
       ) : null}
       {/* Status bar */}
-      {showDemoStatusBar ? (
+      {showCompactStatus ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-card px-3 py-2 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-2">
             <span className="relative flex size-2">
@@ -2046,11 +2128,22 @@ export function FluxyChat({
             <span className="font-medium text-foreground">
               {connected ? "Connected" : connectionLabel}
             </span>
-            <span className="text-muted-foreground">· public demo room</span>
+            <span className="text-muted-foreground">
+              {variant === "demo" ? "· public demo room" : "· this room"}
+            </span>
           </span>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="inline-flex items-center gap-2 text-[10px] text-muted-foreground">
             Be respectful · rate-limited guest session
             {demoHiddenCount > 0 ? ` · ${demoHiddenCount} filtered` : ""}
+            {demoScene ? (
+              <button
+                type="button"
+                className="rounded-md border border-border px-2 py-0.5 text-[10px] hover:bg-muted"
+                onClick={() => demoScene.disconnectAndReplay()}
+              >
+                Disconnect, then replay
+              </button>
+            ) : null}
           </span>
         </div>
       ) : (
@@ -2432,6 +2525,16 @@ export function FluxyChat({
                       Load older messages
                     </button>
                   )}
+                </MessageScrollerItem>
+              ) : null}
+              {demoScene?.replayMarker ? (
+                <MessageScrollerItem>
+                  <Marker role="status" data-testid="demo-replay-marker">
+                    <MarkerContent>
+                      Disconnected {demoScene.replayMarker.durationSec.toFixed(1)}s · replayed{" "}
+                      {demoScene.replayMarker.replayed} messages
+                    </MarkerContent>
+                  </Marker>
                 </MessageScrollerItem>
               ) : null}
               {visibleMessages.length > windowedMessages.length ? (
@@ -3107,7 +3210,14 @@ export function FluxyChat({
 
               {/* Tool approvals (HITL) */}
               {showHitlApprovals && trimmedRoomId ? (
-                <ToolApprovalPanel roomId={trimmedRoomId} enabled={showHitlApprovals} />
+                <ToolApprovalPanel
+                  roomId={trimmedRoomId}
+                  enabled={showHitlApprovals}
+                  token={memberJwt}
+                  onDecided={(decision) => {
+                    demoScene?.setDecision(decision === "approve" ? "approved" : "rejected");
+                  }}
+                />
               ) : null}
 
               {/* Tool events — AG-UI renderer (roadmap #5) */}
@@ -3573,6 +3683,7 @@ export function FluxyChat({
 
       {/* ─── Composer with + menu ─── */}
       <Composer
+        data-tour={variant === "onboarding" ? "first-chat" : undefined}
         onSubmit={(e) => {
           e.preventDefault();
           if (!canSend) return;
@@ -3934,6 +4045,7 @@ export function FluxyChat({
       </Composer>
 
       {/* ─── Huddle toolbar ─── */}
+      {showHuddleBar ? (
       <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
         <button
           type="button"
@@ -4019,6 +4131,7 @@ export function FluxyChat({
           </>
         )}
       </div>
+      ) : null}
 
       {/* ─── Errors ─── */}
       {inputError || uploadError ? (
@@ -4047,12 +4160,14 @@ export function FluxyChat({
         />
       ) : null}
 
+      {showTechFooter ? (
       <p className="text-xs text-muted-foreground">
         {usesMentionInvoke
           ? "Sends @mention; tools stream in-thread over WebSocket. Run banner polls every 2s (admin JWT)."
           : "REST invoke: tools stream live when connected; run summary in the banner above."}{" "}
         Set <code className="text-xs">toolExecuteUrl</code> on the agent profile for tool rounds.
       </p>
+      ) : null}
 
       {pendingDeleteId != null ? (
         <div

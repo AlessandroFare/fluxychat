@@ -27,11 +27,7 @@ export interface ProvisionResult {
   createdNewProject: boolean;
 }
 
-function defaultProjectName(user: User | null): string {
-  const fromName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
-  if (fromName) return `${fromName}'s project`.slice(0, 64);
-  const email = user?.primaryEmailAddress?.emailAddress;
-  if (email) return `${email.split("@")[0]}'s project`.slice(0, 64);
+function defaultProjectName(_user: User | null): string {
   return "My first project";
 }
 
