@@ -1,0 +1,60 @@
+---
+title: Run a process
+description: D1 tables, optional AI Search, console JWT, guest invites, SDK helpers.
+---
+
+Self-host needs the `ops_*` D1 migrations (`0242` through `0244` under `apps/worker/db`). Hosted already applies Worker migrations on deploy.
+
+## Console
+
+Sign in so the dashboard has a project JWT (`NEXT_PUBLIC_FLUXYCHAT_WORKER_URL` is the same Worker you already use). Open **Processes**.
+
+1. Describe the work. Example chips are prompts, not a product SKU.
+2. If lint passes, request publish. The builder cannot publish itself.
+3. A reviewer approves in Inbox or on the draft. Then start a run.
+4. Complete human steps on **Runs**. Stop a run with the kill switch.
+
+Tools and policy: enable connectors there. Guests need an allowed email domain. Named views list columns you may filter. Free SQL is not a feature.
+
+## Search and files
+
+`files.search` talks to Cloudflare AI Search when you bind it. Response shape is `chunks` plus `citations` (`sourceId`, `title`, `score`). Legacy AutoRAG `{ data }` still maps.
+
+If AI Search is missing, search falls back to Vectorize room memory, then a D1 text scan.
+
+File bytes go to `OPS_R2` if you add that bucket, otherwise the existing `ATTACHMENTS` binding. OCR uses stored text first. Empty files can go through Workers AI `toMarkdown` when `env.AI.toMarkdown` exists.
+
+## Optional Wrangler
+
+Keep `[ai]` for speech. For Processes search, create an AI Search instance in the Cloudflare dashboard, then uncomment in `wrangler.toml`:
+
+```toml
+# [[ai_search]]
+# binding = "OPS_AI_SEARCH"
+# instance = "fluxychat-ops-default"
+
+# [[ai_search_namespaces]]
+# binding = "AI_SEARCH"
+# namespace = "default"
+```
+
+Namespace `get(projectId)` / `create({ id })` is used when the binding supports it. Vectorize stays the optional ranking index you already had commented.
+
+No extra `NEXT_PUBLIC_*` keys on the dashboard. Guests need `JWT_SECRET` on the Worker (you already use it for JWTs).
+
+## HTTP sketch
+
+```ts
+import { startBuilderSession, fetchOpsInbox } from "@fluxy-chat/sdk";
+
+const session = await startBuilderSession(client, "When someone asks for time off, their manager approves, then notify HR.");
+const inbox = await fetchOpsInbox(client);
+```
+
+Inbox summaries may include `opsTasks`. That is the same queue as `/ops/inbox`.
+
+Guest invites: `POST /ops/guests/invite` with `comment` and/or `upload_file`. Redeem at `/ops/guest` without a member JWT.
+
+## What we are not doing
+
+Nango is ELv2. Do not embed it. New SaaS connectors wait for a real partner. Do not re-export Cloudflare `useAgent`.

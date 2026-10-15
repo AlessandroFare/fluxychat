@@ -1,0 +1,32 @@
+---
+title: Processes
+description: Plain-language workplace flows on the same Worker. Humans approve writes.
+---
+
+Console: `/ops`. This is not the [chatbot builder](/docs/platform/chatbot-builder) and not room IF-THEN automations. Those keep trigger-action rules. Processes store a definition (steps, tools, timeouts) and a generic interpreter runs it in a room.
+
+You describe the job in chat. The builder can only pick tools the project already enabled. It cannot publish. A reviewer approves the exact payload hash, then you start a run.
+
+Writes default to deny. If the payload changes after approval, that approval is void.
+
+## What it is good for
+
+Time off, production access, supplier files, incident comms. Same engine. Do not add a per-process invoice module.
+
+## Where it lives
+
+| Piece | Place |
+| --- | --- |
+| Draft / publish | `/ops` |
+| Open tasks | `/ops/runs` and Inbox |
+| Tool catalog | `/ops/settings` |
+| Guest link | `/ops/guest` |
+| HTTP | `/ops/*` on the Worker |
+
+Tenant key is `project_id`.
+
+## Related
+
+- [Run and publish a process](/docs/guides/processes)
+- [Inbox](/docs/core/inbox)
+- [Integration kit](/docs/guides/integration-kit)

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.27] - 2026-10-15
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.6.17`, `@fluxy-chat/react@^0.1.11`, `@fluxy-chat/ui@^0.1.10`, `@fluxy-chat/ui-kit@^0.1.11`. Publish those npm packages **before** this CLI.
+
 ## [0.5.26] - 2026-10-11
 
 ### Changed

@@ -305,18 +305,29 @@ export interface FluxyInboxThread {
   lastReplyAt?: string;
 }
 
+export interface FluxyOpsInboxTask {
+  id: string;
+  runId: string;
+  stepId: string;
+  assignee?: string | null;
+  role?: string | null;
+  dueAt?: string | null;
+}
+
 export interface FluxyInboxSummary {
   mentions: FluxyInboxMention[];
   unreadRooms: FluxyInboxRoomEntry[];
   snoozedRooms: FluxyInboxRoomEntry[];
   followUps: FluxyInboxFollowUp[];
   threads?: FluxyInboxThread[];
+  opsTasks?: FluxyOpsInboxTask[];
   counts: {
     mentions: number;
     unreadRooms: number;
     snoozedRooms: number;
     followUps: number;
     threads?: number;
+    opsTasks?: number;
   };
 }
 

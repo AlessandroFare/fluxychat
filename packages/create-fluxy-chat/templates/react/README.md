@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Pin `@fluxy-chat/sdk@0.6.16` and `@fluxy-chat/react@0.1.10`.
+Pin `@fluxy-chat/sdk@0.6.17` and `@fluxy-chat/react@0.1.11`.
 
 Open two tabs. Add `?room=lobby` to pin the room. Add `?debug=1` to print the last room frames.
 

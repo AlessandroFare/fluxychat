@@ -16,6 +16,7 @@ import { LandingLifecycleSection } from "./landing-lifecycle-section";
 import { LandingLogoStrip } from "./landing-logo-strip";
 import { LandingPricingSection } from "./landing-pricing-section";
 import { LandingRealtimeSection } from "./landing-realtime-section";
+import { LandingProcessesSection } from "./landing-processes-section";
 import { LandingCollabSection } from "./landing-collab-section";
 import { LandingShell } from "./landing-shell";
 import { LandingStatsSection } from "./landing-stats-section";
@@ -61,6 +62,7 @@ export default function LandingHomePage() {
             <LandingPinBar />
           </div>
           <LandingRealtimeSection />
+          <LandingProcessesSection />
           <LandingCollabSection />
         </div>
         <p className="px-4 pb-8 text-center text-sm text-slate-400 sm:px-6">

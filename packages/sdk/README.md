@@ -8,7 +8,7 @@ The SDK talks to **your** Worker URL. It does **not** include LLM API keys; only
 
 ## Versioning
 
-This package is pre-1.0. Breaking changes can land in a minor bump. Pin the version (`docs/product-facts.json` in the repo, currently 0.6.16).
+This package is pre-1.0. Breaking changes can land in a minor bump. Pin the version (`docs/product-facts.json` in the repo, currently 0.6.17).
 
 HTTP: use `/agents`. `/bots` still answers for old clients. No removal date until 1.0.
 
@@ -178,7 +178,7 @@ curl -sS -X POST "$WORKER_URL/messages" \
 # 2. Read it back
 curl -sS "$WORKER_URL/api/messages?roomId=$ROOM_ID&limit=1" \
   -H "Authorization: Bearer $JWT"
-# Verified against @fluxy-chat/sdk@0.6.16
+# Verified against @fluxy-chat/sdk@0.6.17
 ```
 
 If both calls return 200 and the message id round-trips, your Worker URL, JWT, and room are wired correctly. Skip to Option A below.

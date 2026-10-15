@@ -1,5 +1,11 @@
 # @fluxy-chat/sdk
 
+## 0.6.17 (2026-10-15)
+
+### Added
+
+- Processes helpers (`startBuilderSession`, `fetchOpsInbox`, `fetchOpsRun`) and inbox `opsTasks` on `FluxyInboxSummary`.
+
 ## 0.6.16 (2026-10-11)
 
 ### Changed

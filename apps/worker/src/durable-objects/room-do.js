@@ -3540,6 +3540,15 @@ export class RoomDurableObject {
       }
       await this.scheduleMessageExpiryAlarm();
       await this.processDueAgentSchedules();
+      if (projectId && roomId) {
+        try {
+          const { getOpsStore } = await import("../routes/ops-http.js");
+          const { processOpsRunAlarms } = await import("../lib/ops-engine.js");
+          await processOpsRunAlarms(this.env, getOpsStore(this.env), { projectId, roomId });
+        } catch {
+          /* ops optional */
+        }
+      }
     }, { reason: "alarm" });
     if (!step.ok && step.retry && this.state?.storage?.setAlarm) {
       const delay = backoffMsForFailure(step, 0);

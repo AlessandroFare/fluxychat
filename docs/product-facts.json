@@ -13,11 +13,11 @@
     "webhookDeliveriesPerMonth": 50000
   },
   "npm": {
-    "sdk": "0.6.16",
-    "react": "0.1.10",
-    "ui": "0.1.9",
-    "uiKit": "0.1.10",
-    "createFluxyChat": "0.5.26",
+    "sdk": "0.6.17",
+    "react": "0.1.11",
+    "ui": "0.1.10",
+    "uiKit": "0.1.11",
+    "createFluxyChat": "0.5.27",
     "agent": "0.2.1"
   },
   "bridges": "You create the Slack, Discord, Telegram, WhatsApp, or Teams app. Not a 14-channel helpdesk. We do not sell a WhatsApp channel.",

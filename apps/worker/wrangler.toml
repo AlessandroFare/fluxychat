@@ -134,6 +134,15 @@ bucket_name = "fluxychat-attachments"
 [ai]
 binding = "AI"
 
+# Optional AI Search (ex AutoRAG) for FluxyOps files.search. Keep Vectorize as fallback.
+# Create an instance in the dashboard, then uncomment one of:
+# [[ai_search]]
+# binding = "OPS_AI_SEARCH"
+# instance = "fluxychat-ops-default"
+# [[ai_search_namespaces]]
+# binding = "AI_SEARCH"
+# namespace = "default"
+
 # Free Workers plan requires SQLite-backed DO (new_sqlite_classes, not new_classes).
 [[migrations]]
 tag = "v1"
