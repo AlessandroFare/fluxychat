@@ -1,5 +1,11 @@
 # @fluxy-chat/ui-kit
 
+## 0.1.11 (2026-10-15)
+
+### Changed
+
+- Peers: `@fluxy-chat/sdk@^0.6.17`, `@fluxy-chat/react@^0.1.11`, `@fluxy-chat/ui@^0.1.10`.
+
 ## 0.1.10 (2026-10-11)
 
 ### Changed

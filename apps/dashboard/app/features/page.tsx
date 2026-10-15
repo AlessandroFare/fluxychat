@@ -329,6 +329,12 @@ const GROUPS: FeatureGroup[] = [
         hrefLabel: "Automations",
       },
       {
+        title: "Processes",
+        description: "Describe any workplace flow in chat. A generic engine runs it; people approve writes. Not on the public homepage until a partner uses it.",
+        href: "/ops",
+        hrefLabel: "Processes",
+      },
+      {
         title: "AST markdown system",
         description: "Complete mdast builder (text, strong, link, code, etc.) with parseMarkdown/stringifyMarkdown via unified/remark with GFM support.",
       },

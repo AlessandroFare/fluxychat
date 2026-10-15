@@ -10,6 +10,7 @@ import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { ApprovalsInboxPanel } from "../components/approvals-inbox-panel";
+import { OpsInboxPanel } from "../components/ops-inbox-panel";
 import { Banner, Button, EmptyState, Panel, SkeletonCard } from "../components/ui";
 import { formatDateTime } from "@/lib/format-datetime";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
@@ -146,8 +147,9 @@ export default function InboxPage() {
       />
 
       {token ? (
-        <div className="mb-8">
+        <div className="mb-8 space-y-6">
           <ApprovalsInboxPanel memberJwt={token} />
+          <OpsInboxPanel memberJwt={token} />
         </div>
       ) : null}
 

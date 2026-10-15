@@ -55,12 +55,14 @@ export interface FluxyInboxSummaryLike {
   snoozedRooms: FluxyInboxRoomEntryLike[];
   followUps: FluxyInboxFollowUpLike[];
   threads?: FluxyInboxThreadLike[];
+  opsTasks?: Array<{ id: string; runId: string; stepId: string }>;
   counts: {
     mentions: number;
     unreadRooms: number;
     snoozedRooms: number;
     followUps: number;
     threads?: number;
+    opsTasks?: number;
   };
 }
 
@@ -155,6 +157,7 @@ export function applyInboxQuery<T extends FluxyInboxSummaryLike>(
       snoozedRooms: snoozedRooms.length,
       followUps: followUps.length,
       threads: threads.length,
+      opsTasks: summary.counts.opsTasks ?? summary.opsTasks?.length ?? 0,
     },
   };
 }

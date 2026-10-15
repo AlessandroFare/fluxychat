@@ -166,7 +166,6 @@ const dispatchActivityFeedRoutes = lazyRoute(() => import("../routes/activity-fe
 const dispatchNotificationEngineRoutes = lazyRoute(() => import("../routes/notification-engine-http.js"), "dispatchNotificationEngineRoutes");
 const dispatchQAModeratorRoutes = lazyRoute(() => import("../routes/qa-moderator-http.js"), "dispatchQAModeratorRoutes");
 const dispatchIncidentRoutes = lazyRoute(() => import("../routes/incident-response-http.js"), "dispatchIncidentRoutes");
-const dispatchIntegrationKitRoutes = lazyRoute(() => import("../routes/integration-kit-http.js"), "dispatchIntegrationKitRoutes");
 const dispatchApprovalRoutes = lazyRoute(() => import("../routes/approval-workflows-http.js"), "dispatchApprovalRoutes");
 const dispatchFieldOpsRoutes = lazyRoute(() => import("../routes/field-ops-http.js"), "dispatchFieldOpsRoutes");
 const dispatchHybridRoutes = lazyRoute(() => import("../routes/hybrid-events-http.js"), "dispatchHybridRoutes");
@@ -189,9 +188,11 @@ const dispatchAnonymousFeedbackRoutes = lazyRoute(() => import("../routes/anonym
 const dispatchIntelligenceRoutes = lazyRoute(() => import("../routes/intelligence-http.js"), "dispatchIntelligenceRoutes");
 const dispatchModerationQueueRoutes = lazyRoute(() => import("../routes/moderation-queue-http.js"), "dispatchModerationQueueRoutes");
 const dispatchAdaptersRoutes = lazyRoute(() => import("../routes/adapters-http.js"), "dispatchAdaptersRoutes");
+const dispatchOpsRoutes = lazyRoute(() => import("../routes/ops-http.js"), "dispatchOpsRoutes");
 const dispatchAgentProfilesRoutes = lazyRoute(() => import("../routes/agent-profiles-http.js"), "dispatchAgentProfilesRoutes");
 const dispatchUserBlocksRoutes = lazyRoute(() => import("../routes/user-blocks-http.js"), "dispatchUserBlocksRoutes");
 const dispatchPushRoutes = lazyRoute(() => import("../routes/push-http.js"), "dispatchPushRoutes");
+const dispatchIntegrationKitRoutes = lazyRoute(() => import("../routes/integration-kit-http.js"), "dispatchIntegrationKitRoutes");
 
 /** @type {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} */
 export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
@@ -343,6 +344,7 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchIntelligenceRoutes,
   dispatchModerationQueueRoutes,
   dispatchAdaptersRoutes,
+  dispatchOpsRoutes,
   dispatchAgentProfilesRoutes,
 ];
 
@@ -374,11 +376,11 @@ const WORKER_ROUTE_UNSCANNED = [
  * @type {Record<string, Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>>}
  */
 export const WORKER_ROUTE_PREFIX_INDEX = {
+  ".well-known": [
+    dispatchMcpRoutes,
+  ],
   "a2a": [
     dispatchA2ARoutes,
-  ],
-  "ag-ui": [
-    dispatchMessagesAgentsRoutes,
   ],
   "activities": [
     dispatchMessagesAgentsRoutes,
@@ -440,6 +442,9 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
     dispatchRoomTranslationSettingsRoutes,
     dispatchAdminProjectsRoutes,
     dispatchIntegrationsSentRoutes,
+  ],
+  "ag-ui": [
+    dispatchMessagesAgentsRoutes,
   ],
   "agent-profiles": [
     dispatchAgentProfilesRoutes,
@@ -576,6 +581,9 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   "gamification": [
     dispatchGamificationRoutes,
   ],
+  "hooks": [
+    dispatchWorkflowAutomationRoutes,
+  ],
   "hybrid": [
     dispatchHybridRoutes,
   ],
@@ -637,6 +645,9 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   "oncall": [
     dispatchOnCallRoutes,
   ],
+  "ops": [
+    dispatchOpsRoutes,
+  ],
   "otel": [
     dispatchOtelRoutes,
   ],
@@ -694,6 +705,7 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
     dispatchBreakoutRoomsRoutes,
     dispatchCapabilitiesRoutes,
     dispatchRealtimeSfuRoutes,
+    dispatchVoiceAiRoutes,
     dispatchPresenceRoutes,
     dispatchInsightsRoutes,
     dispatchBusinessObjectRoutes,
@@ -759,9 +771,6 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   "voice-ai": [
     dispatchVoiceAiRoutes,
   ],
-  "hooks": [
-    dispatchWorkflowAutomationRoutes,
-  ],
   "webauthn": [
     dispatchIdentityRoutes,
   ],
@@ -784,7 +793,7 @@ export const WORKER_ROUTE_DISPATCHER_COUNT =
   PRIVACY_BILLING_DISPATCHERS.length +
   WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY.length;
 
-export const WORKER_ROUTE_LAZY_COUNT = 53;
+export const WORKER_ROUTE_LAZY_COUNT = 54;
 export const WORKER_ROUTE_EAGER_COUNT = 110;
 
 /**

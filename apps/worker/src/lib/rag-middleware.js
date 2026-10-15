@@ -15,6 +15,7 @@
  */
 
 import { createVectorizeRetriever } from "./vectorize-retriever.js";
+import { citationsFromDocuments } from "./ops-search-hits.js";
 
 // =============================================================================
 // Types
@@ -128,8 +129,9 @@ export function createRagMiddleware(config) {
       const enhancedPrompt = context
         ? `${context}\n\n## User Query:\n${query}`
         : query;
+      const citations = includeSources ? citationsFromDocuments(documents) : [];
 
-      return { enhancedPrompt, documents };
+      return { enhancedPrompt, documents, citations };
     },
 
     /**

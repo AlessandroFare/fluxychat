@@ -202,18 +202,29 @@ export async function getInboxSummary(env, scope) {
     lastReplyAt: t.lastReply?.createdAt ?? t.rootCreatedAt,
   }));
 
+  let opsTasks = [];
+  try {
+    const { getOpsStore } = await import("../routes/ops-http.js");
+    const store = getOpsStore(env);
+    opsTasks = await store.listOpenTasks(projectId, { assignee: userId });
+  } catch {
+    opsTasks = [];
+  }
+
   return {
     mentions,
     unreadRooms,
     snoozedRooms,
     followUps,
     threads,
+    opsTasks,
     counts: {
       mentions: mentions.length,
       unreadRooms: unreadRooms.length,
       snoozedRooms: snoozedRooms.length,
       followUps: followUps.length,
       threads: threads.length,
+      opsTasks: opsTasks.length,
     },
   };
 }

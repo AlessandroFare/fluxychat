@@ -1,5 +1,11 @@
 # @fluxy-chat/svelte
 
+## 0.1.4 (2026-10-15)
+
+### Changed
+
+- Peer `@fluxy-chat/sdk` is `^0.6.17`.
+
 ## 0.1.3 (2026-10-11)
 
 ### Changed

@@ -47,6 +47,14 @@ bucket_name = "fluxychat-attachments-staging"
 [ai]
 binding = "AI"
 
+# Optional AI Search for FluxyOps (same as wrangler.toml). Uncomment after creating the instance.
+# [[ai_search]]
+# binding = "OPS_AI_SEARCH"
+# instance = "fluxychat-ops-staging"
+# [[ai_search_namespaces]]
+# binding = "AI_SEARCH"
+# namespace = "default"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RoomDurableObject"]

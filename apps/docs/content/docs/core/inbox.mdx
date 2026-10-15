@@ -14,7 +14,7 @@ FluxyChat separates three concepts that are easy to conflate:
 | **Unseen** | Rows in the current view that need attention (mentions + unread) | `useInbox().unseen` |
 | **Channel watermark** | Per-room “how far you read” in chat history | `markReadRest(roomId, messageId)` / `markReadLatest` in `useChat` |
 
-The **inbox** tracks *noticing* (mentions, unread rooms, snooze, follow-ups).  
+The **inbox** tracks *noticing* (mentions, unread rooms, snooze, follow-ups). Process human steps can show up as `opsTasks` on the Worker summary. The console Inbox panel loads the same list from `/ops/inbox`.  
 The **room channel** tracks *reading* (last read message id inside a room). Clearing inbox unread does not automatically advance the room watermark unless you call mark-read.
 
 Nest `useInbox` under `FluxyRealtimeProvider` (same as `useChat`). Omit `client` when the provider owns the session. Member JWT required; guest/`pk_` inbox is empty.

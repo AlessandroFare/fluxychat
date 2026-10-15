@@ -69,7 +69,7 @@ function Chat() {
 }
 ```
 
-`fc_` stays on the server. `pk_` mints an anonymous JWT (`POST /tokens/anonymous`). Pin `@fluxy-chat/sdk@0.6.16` and `@fluxy-chat/react@0.1.10`.
+`fc_` stays on the server. `pk_` mints an anonymous JWT (`POST /tokens/anonymous`). Pin `@fluxy-chat/sdk@0.6.17` and `@fluxy-chat/react@0.1.11`.
 
 ### Deploy the Worker to your Cloudflare account
 

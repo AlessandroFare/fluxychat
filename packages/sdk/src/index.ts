@@ -344,6 +344,15 @@ export {
   type WorkflowAgent,
 } from "./workflow-agent";
 
+export {
+  opsPaths,
+  startBuilderSession,
+  fetchOpsInbox,
+  fetchOpsRun,
+  type OpsStepType,
+  type OpsClient,
+} from "./ops";
+
 export type {
   SandboxStatus,
   SandboxConfig,

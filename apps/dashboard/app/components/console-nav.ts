@@ -113,6 +113,7 @@ export const CONSOLE_NAV_OPERATE: ConsoleNavItem[] = [
   { href: "/user-activity", label: "My activity", icon: Bell, description: "Cross-room mentions feed" },
   { href: "/agent-queue", label: "Agent queue", icon: Headphones, description: "Claim rooms, SLA timers, handoffs" },
   { href: "/automations", label: "Automations", icon: Zap, description: "IF-THEN workflow rules" },
+  { href: "/ops", label: "Processes", icon: ClipboardCheck, description: "Describe work in plain language; people still approve writes" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, description: "Room stats and cost estimates" },
   { href: "/activities", label: "Activities", icon: Activity, description: "Webhooks, agents, automation" },
   { href: "/billing", label: "Billing", icon: CreditCard, description: "Usage and plan changes" },
