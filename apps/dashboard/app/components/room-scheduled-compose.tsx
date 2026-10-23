@@ -71,7 +71,7 @@ export function RoomScheduledCompose({ client, roomId }: RoomScheduledComposePro
       {notice ? <Banner variant="success">{notice}</Banner> : null}
       <div className="grid gap-2">
         <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={2} placeholder="Message to send later" />
-        <Input type="datetime-local" value={sendAt} onChange={(e) => setSendAt(e.target.value)} />
+        <Input type="datetime-local" aria-label="Send at (local time)" value={sendAt} onChange={(e) => setSendAt(e.target.value)} />
         <Button type="button" variant="primary" disabled={busy || !content.trim() || !sendAt} onClick={() => void schedule()}>
           Schedule
         </Button>

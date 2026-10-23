@@ -22,7 +22,7 @@ export function LandingFooter() {
             <a href="#faq" className="hover:text-white">FAQ</a>
             <Link href={HOSTED_PATHS.why} className="hover:text-white">Why</Link>
             <Link href={HOSTED_PATHS.compare} className="hover:text-white">Compare</Link>
-            <Link href="/demo" className="hover:text-white">Demo</Link>
+            <Link href="/demo" className="hover:text-white">Playground</Link>
             <Link href={HOSTED_PATHS.guides} className="hover:text-white">Guides</Link>
             <Link href={HOSTED_PATHS.forTeams} className="hover:text-white">For teams</Link>
             <Link href={HOSTED_PATHS.trust} className="hover:text-white">Trust</Link>

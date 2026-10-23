@@ -6,11 +6,13 @@ import { pickRouteDeps } from "./route-http-deps.js";
 import { parseAgentInvokeBody, parseBotUpsertBody } from "../lib/http-body.js";
 import { isHumanHandoffActive } from "../lib/room-handoff.js";
 import { callDurableRpc } from "../lib/do-rpc.js";
+import { invokeRoomRunAgent } from "../lib/agent-do-session.js";
 import { injectRoomAgentSteer, requestRoomAgentStop } from "../lib/room-agent-steer.js";
 import { getFluxyConfig } from "../lib/fluxy-config-runtime.js";
 import { resolveAgentPolicy } from "@fluxy-chat/config";
 import { maybeAutoCaptureFailedAgentRun } from "../lib/agent-eval.js";
 import { finalizeAgentChatMessage, toFiniteMessageId } from "../lib/agent-runtime.js";
+import { internalDoHeaders } from "../lib/room-shard.js";
 
 export async function dispatchAgentsRoutes(request, url, h) {
   const {
@@ -42,6 +44,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
     executeAgentRun,
     createAgentStreamHooks,
     writeAuditEvent,
+    canAccessRoom,
   } = pickRouteDeps(h, [
     "env",
     "ctx",
@@ -71,6 +74,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
     "executeAgentRun",
     "createAgentStreamHooks",
     "writeAuditEvent",
+    "canAccessRoom",
   ]);
 
   // Create or update bot/agent: POST /bots
@@ -85,6 +89,10 @@ export async function dispatchAgentsRoutes(request, url, h) {
         status: 401,
         headers: corsHeaders,
       });
+    }
+    // Audit F-44: agents carry prompts/config/tool URLs — admin-only writes.
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
     }
     const { projectId: authProjectId } = auth;
     const rawBody = await request.json().catch(() => null);
@@ -199,6 +207,10 @@ export async function dispatchAgentsRoutes(request, url, h) {
     if (!auth) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
+    // Audit F-44: admin-only agent creation.
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    }
     const body = await request.json().catch(() => null);
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     if (!name || name.length > 128) {
@@ -248,6 +260,10 @@ export async function dispatchAgentsRoutes(request, url, h) {
     const body = await request.json().catch(() => null);
     if (!agentId || !body) {
       return json({ error: "agent id and body required" }, { status: 400 });
+    }
+    // Audit F-44: admin-only agent updates.
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
     }
     const existing = await env.DB.prepare(
       "SELECT id FROM bots WHERE id = ? AND project_id = ?"
@@ -432,8 +448,15 @@ export async function dispatchAgentsRoutes(request, url, h) {
       return json({ error: contentValidation.error }, { status: 400 });
     }
 
+    // Audit F-39: the DO is keyed by raw roomId (globally, not per project), so
+    // invoking an agent into a room of another project would fan out there.
+    // Verify membership/access in the caller's project before any DO call.
+    if (!(await canAccessRoom(env, auth, body.roomId))) {
+      return json({ error: "room_not_found" }, { status: 404 });
+    }
+
     const agentRow = await env.DB.prepare(
-      "SELECT id, name, provider, model, config, system_prompt, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm FROM bots WHERE id = ? AND project_id = ?"
+      "SELECT id, name, provider, model, config, system_prompt, context_fetch_url, tool_execute_url, tools_schema, rate_limit_rpm, allowed_tools FROM bots WHERE id = ? AND project_id = ?"
     )
       .bind(agentId, auth.projectId)
       .first();
@@ -466,11 +489,18 @@ export async function dispatchAgentsRoutes(request, url, h) {
       return json({ error: "agent_rate_limit_exceeded", retryAfterSeconds: agentRateLimit.retryAfterSeconds }, { status: 429, headers: { "Retry-After": String(agentRateLimit.retryAfterSeconds) } });
     }
 
-    const quotaResult = await checkAndConsumeProjectQuota(env, {
-      projectId: auth.projectId,
-      metricName: "agent_invokes",
-      amount: 1,
-    }).catch(() => ({ allowed: true }));
+    // Audit F-47: a quota check that errors must not fail open.
+    let quotaResult;
+    try {
+      quotaResult = await checkAndConsumeProjectQuota(env, {
+        projectId: auth.projectId,
+        metricName: "agent_invokes",
+        amount: 1,
+      });
+    } catch (err) {
+      logError("agents.quota_check_failed", err, { projectId: auth.projectId });
+      return json({ error: "quota_check_failed" }, { status: 503, headers: corsHeaders });
+    }
     if (!quotaResult.allowed) {
       const reset = quotaResetInfo();
       return json(
@@ -500,34 +530,49 @@ export async function dispatchAgentsRoutes(request, url, h) {
     const doId = env.ROOM.idFromName(body.roomId);
     const doStub = env.ROOM.get(doId);
 
-    ctx.waitUntil(
-      doStub.fetch("https://internal/announce", {
-        method: "POST",
-        body: JSON.stringify({ type: "agentTyping", agentId, isTyping: true }),
-      }).catch(() => {})
-    );
+    const announceTyping = (isTyping) =>
+      ctx.waitUntil(
+        doStub.fetch("https://internal/announce", {
+          method: "POST",
+          headers: internalDoHeaders(env),
+          body: JSON.stringify({ type: "agentTyping", agentId, isTyping }),
+        }).catch(() => {})
+      );
+
+    announceTyping(true);
 
     const useStream = body.stream !== false;
     let streamHooks = null;
     let ranOnAgentDo = false;
+    let doMessageId = null;
     let result;
-    if (env.AGENT && typeof env.AGENT.idFromName === "function") {
-      const agentStub = env.AGENT.get(env.AGENT.idFromName(`room-run:${auth.projectId}:${body.roomId}`));
-      const rpc = await callDurableRpc(agentStub, "room_invoke", {
-        projectId: auth.projectId,
-        roomId: body.roomId,
-        agentId,
-        userId: auth.userId,
-        invokerRoles: auth.roles,
-        content: contentValidation.content,
-        traceId,
-        stream: useStream,
-        replyTo: body.replyTo || null,
-      });
-      if (rpc && rpc.run) {
-        result = rpc.run;
-        ranOnAgentDo = true;
-      }
+    const roomRun = await invokeRoomRunAgent(env, {
+      projectId: auth.projectId,
+      roomId: body.roomId,
+      agentId,
+      userId: auth.userId,
+      invokerRoles: auth.roles,
+      content: contentValidation.content,
+      traceId,
+      stream: useStream,
+      replyTo: body.replyTo || null,
+    });
+    if (roomRun?.run) {
+      result = roomRun.run;
+      ranOnAgentDo = true;
+      // The DO owns the stream hooks; it returns the message it streamed (or
+      // inserted) so the route can finalize Art.50 and answer with the id.
+      doMessageId = toFiniteMessageId(roomRun.messageId);
+    } else if (roomRun?.reason === "turn_queue_full") {
+      announceTyping(false);
+      return json(
+        {
+          error: "turn_queue_full",
+          message: "The room agent is handling another turn. Retry shortly.",
+          retryAfterSeconds: roomRun.retryAfterSeconds || 5,
+        },
+        { status: 429, headers: { "Retry-After": String(roomRun.retryAfterSeconds || 5) } },
+      );
     }
     if (!result) {
       streamHooks = useStream
@@ -550,21 +595,17 @@ export async function dispatchAgentsRoutes(request, url, h) {
       });
     }
 
-    ctx.waitUntil(
-      doStub.fetch("https://internal/announce", {
-        method: "POST",
-        body: JSON.stringify({ type: "agentTyping", agentId, isTyping: false }),
-      }).catch(() => {})
-    );
+    announceTyping(false);
 
     const createdAt = new Date().toISOString();
 
     if (result.status === "completed" && result.content) {
       const contentValidation2 = validateMessageContent(result.content);
       const agentContent = contentValidation2.valid ? contentValidation2.content : result.content.slice(0, MAX_MESSAGE_LENGTH);
-      let messageId = toFiniteMessageId(streamHooks?.getMessageId());
+      const streamedMessageId = toFiniteMessageId(streamHooks?.getMessageId()) || doMessageId;
+      let messageId = streamedMessageId;
 
-      if (!messageId && !ranOnAgentDo) {
+      if (!messageId) {
         const insert = await env.DB.prepare(
           "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
@@ -598,7 +639,7 @@ export async function dispatchAgentsRoutes(request, url, h) {
         )
         .run();
 
-      logInfo("agent.invoke_completed", { ...requestLogCtx, projectId: auth.projectId, agentId, roomId: body.roomId, runId: result.runId, latencyMs: result.latencyMs, iterations: result.iterations, toolCallsCount: result.toolCalls.length, streamed: !!streamHooks });
+      logInfo("agent.invoke_completed", { ...requestLogCtx, projectId: auth.projectId, agentId, roomId: body.roomId, runId: result.runId, latencyMs: result.latencyMs, iterations: result.iterations, toolCallsCount: result.toolCalls.length, streamed: !!streamedMessageId });
 
       ctx.waitUntil(
         writeAuditEvent(env, {
@@ -620,12 +661,12 @@ export async function dispatchAgentsRoutes(request, url, h) {
             inputTokens: result.inputTokens,
             outputTokens: result.outputTokens,
             estimatedCost: result.estimatedCost,
-            streamed: !!streamHooks || ranOnAgentDo,
+            streamed: !!streamedMessageId,
           },
         }).catch(() => {})
       );
 
-      if (!streamHooks) {
+      if (!streamedMessageId) {
         ctx.waitUntil(
           safeSchedulePostMessageAutomations(env, {
             projectId: auth.projectId,

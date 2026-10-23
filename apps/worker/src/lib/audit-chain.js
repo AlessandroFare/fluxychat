@@ -17,6 +17,22 @@ function chainEnabled(env) {
   return env?.AUDIT_CHAIN_ENABLED === "true" || env?.AUDIT_CHAIN_ENABLED === "1";
 }
 
+// Per-project append queue. shortcut: serializes within one isolate only — a
+// cross-isolate writer could still fork the chain; upgrade to a DB constraint
+// or a single-writer DO if appends run on multiple isolates concurrently.
+const appendQueues = new Map();
+
+function serializeProjectAppend(projectId, task) {
+  const previous = appendQueues.get(projectId) || Promise.resolve();
+  const current = previous.then(task, task);
+  const tail = current.catch(() => {});
+  appendQueues.set(projectId, tail);
+  tail.then(() => {
+    if (appendQueues.get(projectId) === tail) appendQueues.delete(projectId);
+  });
+  return current;
+}
+
 /**
  * @param {*} env
  * @param {{ projectId: string, event: Record<string, unknown> }} input
@@ -26,25 +42,29 @@ export async function appendRoomAuditChainEvent(env, input) {
     return { ok: false, skipped: true };
   }
 
-  const last = await env.DB.prepare(
-    `SELECT event_hash FROM room_audit_chain WHERE project_id = ? ORDER BY id DESC LIMIT 1`,
-  )
-    .bind(input.projectId)
-    .first();
+  // Audit fix A2-14a: serialized so two concurrent appends cannot read the
+  // same tip and fork the chain.
+  return serializeProjectAppend(input.projectId, async () => {
+    const last = await env.DB.prepare(
+      `SELECT event_hash FROM room_audit_chain WHERE project_id = ? ORDER BY id DESC LIMIT 1`,
+    )
+      .bind(input.projectId)
+      .first();
 
-  const prevHash = last?.event_hash ?? AUDIT_CHAIN_GENESIS_HASH;
-  const createdAt = new Date().toISOString();
-  const eventJson = JSON.stringify({ ...input.event, createdAt });
-  const eventHash = await sha256Hex(`${prevHash}:${eventJson}`);
+    const prevHash = last?.event_hash ?? AUDIT_CHAIN_GENESIS_HASH;
+    const createdAt = new Date().toISOString();
+    const eventJson = JSON.stringify({ ...input.event, createdAt });
+    const eventHash = await sha256Hex(`${prevHash}:${eventJson}`);
 
-  await env.DB.prepare(
-    `INSERT INTO room_audit_chain (project_id, prev_hash, event_hash, event_json, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-  )
-    .bind(input.projectId, prevHash, eventHash, eventJson, createdAt)
-    .run();
+    await env.DB.prepare(
+      `INSERT INTO room_audit_chain (project_id, prev_hash, event_hash, event_json, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+      .bind(input.projectId, prevHash, eventHash, eventJson, createdAt)
+      .run();
 
-  return { ok: true, eventHash, prevHash };
+    return { ok: true, eventHash, prevHash };
+  });
 }
 
 /**
@@ -79,10 +99,21 @@ export async function verifyRoomAuditChain(env, input) {
     prevHash = row.event_hash;
   }
 
+  const count = (rows.results || []).length;
+  // Audit fix A2-14b: a capped scan must say so, otherwise a longer tampered
+  // chain verifies "valid" on its untampered prefix alone.
+  const totalRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS total FROM room_audit_chain WHERE project_id = ?`,
+  )
+    .bind(input.projectId)
+    .first();
+  const truncated = Number(totalRow?.total ?? count) > count;
+
   return {
     ok: true,
     valid,
-    count: (rows.results || []).length,
+    count,
+    truncated,
     firstBreakId,
     tipHash: prevHash,
   };

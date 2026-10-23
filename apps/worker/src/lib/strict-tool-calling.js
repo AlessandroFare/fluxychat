@@ -21,6 +21,8 @@
  *   await strictTool.execute({}); // Throws validation error
  */
 
+import { compileSafeRegex } from "./safe-regex.js";
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -55,20 +57,25 @@ export function validateSchema(value, schema, path = '') {
 
   if (!schema) return errors;
 
-  // Type validation
+  // Type validation. Handles JSON Schema type unions (["string","null"]) and
+  // `nullable` so a valid tool call is never rejected for shape we cannot
+  // read; `null` is its own type (typeof null === "object" would pass object).
   if (schema.type) {
-    const actualType = typeof value;
-    const expectedType = schema.type;
+    const actualType = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+    const expectedTypes = Array.isArray(schema.type) ? schema.type : [schema.type];
+    const nullableOk = value === null && schema.nullable === true;
 
-    if (expectedType === 'array') {
-      if (!Array.isArray(value)) {
-        errors.push(`${path || 'root'} must be an array`);
-        return errors;
-      }
-    } else if (actualType !== expectedType) {
-      errors.push(`${path || 'root'} must be of type ${expectedType}, got ${actualType}`);
+    if (!nullableOk && !expectedTypes.includes(actualType)) {
+      errors.push(`${path || 'root'} must be of type ${expectedTypes.join('|')}, got ${actualType}`);
       return errors;
     }
+  }
+
+  // Array item validation
+  if (schema.items && Array.isArray(value)) {
+    value.forEach((item, i) => {
+      errors.push(...validateSchema(item, schema.items, `${path}[${i}]`));
+    });
   }
 
   // Required properties
@@ -114,10 +121,11 @@ export function validateSchema(value, schema, path = '') {
     }
   }
 
-  // Pattern validation
+  // Pattern validation (audit F-51: schema patterns can be model-generated —
+  // skip unsafe shapes instead of risking a hang).
   if (schema.pattern && typeof value === 'string') {
-    const regex = new RegExp(schema.pattern);
-    if (!regex.test(value)) {
+    const regex = compileSafeRegex(schema.pattern);
+    if (regex && !regex.test(value)) {
       errors.push(`${path || 'root'} must match pattern: ${schema.pattern}`);
     }
   }

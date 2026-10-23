@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Lock } from "lucide-react";
+import { ChevronDown, ExternalLink, Lock } from "lucide-react";
 import { useState } from "react";
 import { FluxychatLogotype } from "@/components/FluxychatLogo";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,7 @@ function NavLink({
   label,
   icon: Icon,
   locked,
+  newTab,
 }: ConsoleNavItem & { locked?: boolean }) {
   const pathname = usePathname();
   const isActive = isConsoleNavItemActive(href, pathname);
@@ -32,7 +33,7 @@ function NavLink({
   if (locked) {
     return (
       <span
-        className="flex cursor-not-allowed items-center gap-2.5 rounded-lg border-l-[3px] border-l-transparent px-2.5 py-2 text-sm font-normal text-slate-400 opacity-50"
+        className="flex cursor-not-allowed items-center gap-2.5 rounded-sm border-l-[3px] border-l-transparent px-2.5 py-2 text-sm font-normal text-muted-foreground opacity-50"
         title="Complete onboarding first"
         aria-disabled="true"
       >
@@ -44,9 +45,20 @@ function NavLink({
   }
 
   return (
-    <Link href={href} className={consoleNavLinkClass(isActive)}>
+    <Link
+      href={href}
+      target={newTab ? "_blank" : undefined}
+      rel={newTab ? "noreferrer" : undefined}
+      className={consoleNavLinkClass(isActive)}
+    >
       <Icon className={consoleNavIconClass(isActive)} aria-hidden />
       {label}
+      {newTab ? (
+        <>
+          <ExternalLink className="ml-auto h-3 w-3 shrink-0 opacity-60" aria-hidden />
+          <span className="sr-only">(opens in a new tab)</span>
+        </>
+      ) : null}
     </Link>
   );
 }
@@ -73,14 +85,14 @@ function NavSubgroup({ subgroup, navLocked }: { subgroup: ConsoleNavSubgroup; na
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-xs font-semibold uppercase tracking-[0.05em] text-[color:var(--text-tertiary)] hover:bg-muted"
+        className="mb-1 flex w-full items-center justify-between rounded-sm px-2 py-1 text-left font-mono text-[11px] font-medium uppercase tracking-[0.09em] text-[color:var(--text-muted)] hover:bg-muted"
         aria-expanded={open}
       >
         {subgroup.label}
         <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} aria-hidden />
       </button>
       {open ? (
-        <ul className="ml-1 flex flex-col gap-0.5 border-l border-slate-200/80 pl-2">
+        <ul className="ml-1 flex flex-col gap-0.5 border-l border-border pl-2">
           {subgroup.items.map((item) => (
             <li key={item.href}>
               <NavItemRow item={item} locked={navLocked && item.href !== "/onboarding"} />
@@ -120,7 +132,7 @@ function CollapsibleNavGroup({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="mb-2 flex w-full items-center justify-between rounded-lg px-2.5 py-1 text-left text-xs font-semibold uppercase tracking-[0.05em] text-[color:var(--text-tertiary)] hover:bg-muted"
+        className="mb-2 flex w-full items-center justify-between rounded-sm px-2.5 py-1 text-left font-mono text-[11px] font-medium uppercase tracking-[0.09em] text-[color:var(--text-muted)] hover:bg-muted"
         aria-expanded={open}
       >
         {label}
@@ -150,14 +162,14 @@ export function ConsoleSidebar() {
   const { locked: navLocked } = useQuickstartNavLock();
 
   return (
-    <aside className="hidden w-56 shrink-0 border-r border-border bg-background lg:flex lg:flex-col">
-      <div className="flex h-14 items-center border-b border-border px-4">
+    <aside className="hidden w-60 shrink-0 border-r border-border bg-[var(--surface-card)] lg:flex lg:flex-col">
+      <div className="flex h-14 items-center border-b border-border px-5">
         <Link href={HOSTED_PATHS.console} className="text-foreground" aria-label="Fluxychat console home">
           <FluxychatLogotype size={24} />
         </Link>
       </div>
       {navLocked ? (
-        <div className="mx-3 mt-3 rounded-lg border border-amber-200/80 bg-amber-50/90 px-2.5 py-2 text-[10px] leading-snug text-amber-900">
+        <div className="mx-3 mt-3 rounded-lg border border-amber-200/80 bg-amber-50/90 px-2.5 py-2 text-[11px] leading-snug text-amber-900">
           Finish <strong>Quickstart</strong> to unlock the rest of the console.
         </div>
       ) : null}
@@ -175,24 +187,9 @@ export function ConsoleSidebar() {
       </nav>
       <div className="space-y-2 border-t border-border p-3">
         <CommandPaletteTrigger />
-        {navLocked ? (
-          <span
-            className="block cursor-not-allowed rounded-lg px-2.5 py-2 text-xs font-normal text-slate-400 opacity-50"
-            aria-disabled="true"
-          >
-            Settings
-          </span>
-        ) : (
-          <Link
-            href="/settings"
-            className="block rounded-lg px-2.5 py-2 text-xs font-normal text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Settings
-          </Link>
-        )}
         <Link
           href={HOSTED_PATHS.landing}
-          className="block rounded-lg px-2.5 py-2 text-xs font-normal text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="block rounded-sm px-2.5 py-2 font-mono text-[11px] font-normal uppercase tracking-[0.07em] text-[color:var(--text-muted)] transition-colors hover:bg-muted hover:text-foreground"
         >
           ← Product &amp; pricing
         </Link>

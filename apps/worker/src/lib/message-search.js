@@ -7,6 +7,7 @@ function isProjectWideSearchRole(roles) {
   if (!Array.isArray(roles)) return false;
   return roles.some((r) => r === "owner" || r === "admin" || r === "moderator");
 }
+export { isProjectWideSearchRole };
 
 export function sanitizeFtsQuery(raw) {
   const trimmed = String(raw || "").trim();
@@ -15,8 +16,31 @@ export function sanitizeFtsQuery(raw) {
   return trimmed.replace(/[^\p{L}\p{N}\s"'_-]/gu, " ").replace(/\s+/g, " ").trim();
 }
 
+const FTS_OPERATORS = new Set(["AND", "OR", "NOT", "NEAR"]);
+
+/**
+ * Audit F-91: sanitizeFtsQuery kept `"` which starts an FTS5 phrase — one
+ * unbalanced quote made D1 throw a syntax error (surfaced as a 500). Build a
+ * MATCH string from quoted terms so the syntax is always valid.
+ */
+export function toFtsMatchQuery(sanitized) {
+  const terms = String(sanitized || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 16);
+  if (!terms.length) return "";
+  return terms
+    .map((term) => {
+      const bare = term.replace(/"/g, "");
+      if (FTS_OPERATORS.has(bare.toUpperCase())) return bare.toUpperCase();
+      return bare ? `"${bare}"` : null;
+    })
+    .filter(Boolean)
+    .join(" ");
+}
+
 export async function searchMessages(env, input) {
-  const q = sanitizeFtsQuery(input.query);
+  const q = toFtsMatchQuery(sanitizeFtsQuery(input.query));
   if (!q) {
     return { ok: false, error: "query_required" };
   }

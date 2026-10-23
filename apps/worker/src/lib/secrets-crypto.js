@@ -63,3 +63,24 @@ export function maskSecretPreview(secret) {
   if (!secret || secret.length < 8) return "••••";
   return `${secret.slice(0, 4)}…${secret.slice(-4)}`;
 }
+
+/**
+ * Audit F-30/F-75/F-87: seal a secret for a single text column. Legacy
+ * plaintext values pass through `openSecretAtRest` unchanged, so storage can
+ * be upgraded lazily on the next write.
+ */
+const SECRET_AT_REST_PREFIX = "enc:v1:";
+
+export async function sealSecretAtRest(env, plain) {
+  const enc = await encryptSecret(env, String(plain ?? ""));
+  if (!enc) return String(plain ?? "");
+  return `${SECRET_AT_REST_PREFIX}${enc.iv}:${enc.ciphertext}`;
+}
+
+export async function openSecretAtRest(env, stored) {
+  const raw = String(stored ?? "");
+  if (!raw.startsWith(SECRET_AT_REST_PREFIX)) return raw;
+  const [iv, ciphertext] = raw.slice(SECRET_AT_REST_PREFIX.length).split(":");
+  const plain = await decryptSecret(env, ciphertext, iv);
+  return plain == null ? null : plain;
+}

@@ -44,7 +44,12 @@ export async function dispatchThreadStateRoutes(request, url, h) {
 
   if (request.method === "PUT") {
     const body = await request.json().catch(() => ({}));
+    // Audit fix A2-27: NaN/Infinity/negative ttl used to store a permanent
+    // entry or make KV throw on expirationTtl. 0 keeps meaning "no expiry".
     const ttlMs = body.ttlMs != null ? Number(body.ttlMs) : 30 * 24 * 60 * 60 * 1000;
+    if (!Number.isFinite(ttlMs) || ttlMs < 0) {
+      return json({ error: "invalid_ttl" }, { status: 400, headers: corsHeaders });
+    }
     await store.set(scopedKey, body.state ?? {}, ttlMs);
     return json({ ok: true, threadId }, { headers: corsHeaders });
   }

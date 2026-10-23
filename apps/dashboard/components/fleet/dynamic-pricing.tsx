@@ -58,6 +58,8 @@ export function DynamicPricing({ data, loading }: DynamicPricingProps) {
         <span><Users className="mr-0.5 inline h-3 w-3" /> {data.availableDrivers} available</span>
         <span><TrendingUp className="mr-0.5 inline h-3 w-3" /> Demand ratio: {data.demandRatio.toFixed(1)}</span>
       </div>
+
+      <div className="mt-2 text-[10px] text-muted-foreground/70">Demand ratio is live; base price is demo-grade.</div>
     </div>
   );
 }

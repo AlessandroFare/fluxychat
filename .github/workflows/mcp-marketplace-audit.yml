@@ -34,18 +34,39 @@ jobs:
         run: |
           set +e
           mcp-audit check --path . --json > audit.json
+          SCAN_EXIT=$?
           set -e
           bash ../../../scripts/mcp-audit-github-output.sh audit.json
+          # Audit F-94: the scanner's exit code was discarded with `set +e`, so
+          # the gate could never fail — a failing audit went green.
+          if [ "$SCAN_EXIT" -ne 0 ]; then
+            echo "::error::mcp-audit check failed (exit $SCAN_EXIT)"
+            exit "$SCAN_EXIT"
+          fi
 
       - name: Upload audit artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcp-audit-${{ matrix.server }}
           path: examples/mcp/${{ matrix.server }}/audit.json
           if-no-files-found: ignore
 
+      - name: Check webhook is configured
+        id: webhook
+        env:
+          WORKER_AUDIT_WEBHOOK_URL: ${{ secrets.WORKER_AUDIT_WEBHOOK_URL }}
+        run: |
+          # Audit F-94: `if: env.X != ''` never saw the variable (it was only
+          # set inside the step), so the webhook step was dead.
+          if [ -n "$WORKER_AUDIT_WEBHOOK_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Post audit result to Worker
-        if: env.WORKER_AUDIT_WEBHOOK_URL != ''
+        if: steps.webhook.outputs.configured == 'true'
         env:
           WORKER_AUDIT_WEBHOOK_URL: ${{ secrets.WORKER_AUDIT_WEBHOOK_URL }}
           WORKER_AUDIT_HMAC_SECRET: ${{ secrets.WORKER_AUDIT_HMAC_SECRET }}
@@ -64,4 +85,4 @@ jobs:
           curl -sfS -X POST "$WORKER_AUDIT_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -H "X-Fluxy-Signature: sha256=$SIG" \
-            -d "$BODY" || echo "Webhook not configured — audit ran locally only"
+            -d "$BODY"

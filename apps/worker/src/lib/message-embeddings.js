@@ -15,6 +15,8 @@
 import { logError } from "./worker-log.js";
 import { resolveEmbeddingsTransport, buildEmbeddingsAuthHeaders } from "./ai-gateway.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
+import { canAccessRoom } from "./room-access.js";
+import { isProjectWideSearchRole } from "./message-search.js";
 
 const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
 const DEFAULT_DIMENSIONS = 1536;
@@ -199,6 +201,25 @@ export async function searchSemanticMessages(env, input) {
     return { ok: false, error: "query_required" };
   }
 
+  // Audit F-78: keyword search enforced room access; semantic search did not,
+  // so any member could vector-search private rooms (room-scoped) or the whole
+  // project (project-wide). Mirror message-search's rules.
+  if (roomId) {
+    const allowed = await canAccessRoom(
+      env,
+      { projectId, userId: input.userId, roles: input.roles },
+      roomId,
+    );
+    if (!allowed) {
+      return { ok: false, error: "forbidden" };
+    }
+  }
+  const projectWide = isProjectWideSearchRole(input.roles);
+  const memberJoin = projectWide
+    ? ""
+    : "JOIN room_members rm ON rm.room_id = m.room_id AND rm.user_id = ?";
+  const memberParams = projectWide ? [] : [input.userId];
+
   const emb = await generateEmbeddings(env, {
     input: input.query,
     logContext: { projectId, feature: "semantic_search" },
@@ -234,10 +255,11 @@ export async function searchSemanticMessages(env, input) {
         SELECT me.message_id, me.embedding, m.content, m.user_id, m.room_id, m.created_at
         FROM message_embeddings me
         JOIN messages m ON m.id = me.message_id AND m.room_id = me.room_id
+        ${memberJoin}
         WHERE me.project_id = ?
           AND m.deleted_at IS NULL
       `;
-      params.push(projectId);
+      params.push(...memberParams, projectId);
     }
 
     if (ftsQuery) {
@@ -251,10 +273,11 @@ export async function searchSemanticMessages(env, input) {
       SELECT me.message_id, me.embedding, m.content, m.user_id, m.room_id, m.created_at
       FROM message_embeddings me
       JOIN messages m ON m.id = me.message_id AND m.room_id = me.room_id
+      ${memberJoin}
       WHERE me.project_id = ?
         AND m.deleted_at IS NULL
     `;
-    params.push(projectId);
+    params.push(...memberParams, projectId);
   }
 
   if (input.from) {

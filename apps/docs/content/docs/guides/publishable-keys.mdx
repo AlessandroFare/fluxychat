@@ -43,3 +43,5 @@ const guest = await FluxyChatClient.joinPublicRoomAsGuest(workerUrl, "general", 
 ```
 
 New projects return both `apiKey` (`fc_`) and `publishableKey` (`pk_`). Rotate secret keys with the existing rotate route (does not revoke `pk_`). Mint or rotate `pk_` with `POST /admin/projects/:id/publishable-key`.
+
+When a guest later signs up, [link the guest identity to the account](/docs/guides/guest-to-account) — room memberships move over, nothing is lost.

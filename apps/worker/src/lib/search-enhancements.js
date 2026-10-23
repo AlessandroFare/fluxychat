@@ -13,7 +13,25 @@
  * - P12-C (inbox) for unified views
  */
 
-import { searchMessages, sanitizeFtsQuery } from "./message-search.js";
+import { searchMessages, sanitizeFtsQuery, isProjectWideSearchRole } from "./message-search.js";
+import { canAccessRoom } from "./room-access.js";
+
+/**
+ * Audit F-79: entity hits leak room content unless they pass the same access
+ * rules used by keyword/semantic search. Project-wide roles
+ * (owner/admin/moderator) bypass membership.
+ */
+async function filterNodesByRoomAccess(env, { nodes, projectId, userId, roles }) {
+  if (isProjectWideSearchRole(roles)) return nodes;
+  const access = new Map();
+  for (const roomId of new Set(nodes.map((n) => n.roomId))) {
+    access.set(
+      roomId,
+      Boolean(roomId) && (await canAccessRoom(env, { projectId, userId, roles }, roomId)),
+    );
+  }
+  return nodes.filter((n) => access.get(n.roomId));
+}
 
 /**
  * Unified search across keyword, semantic, and entity sources.
@@ -126,9 +144,19 @@ export async function unifiedSearch(env, input) {
 
       if (kgResult.ok && kgResult.nodes?.length) {
         const queryLower = input.query.toLowerCase();
-        const matchedNodes = kgResult.nodes.filter((n) =>
+        let matchedNodes = kgResult.nodes.filter((n) =>
           n.label.toLowerCase().includes(queryLower)
         );
+        // Audit F-79: KG nodes follow the same room access rules as the
+        // keyword and semantic sources.
+        if (matchedNodes.length) {
+          matchedNodes = await filterNodesByRoomAccess(env, {
+            nodes: matchedNodes,
+            projectId,
+            userId,
+            roles,
+          });
+        }
 
         for (const node of matchedNodes.slice(0, limit)) {
           results.push({
@@ -253,13 +281,15 @@ export async function deleteSavedSearch(env, input) {
 /**
  * Increment use count on a saved search.
  */
-export async function recordSearchUse(env, searchId) {
-  if (!searchId) return;
+export async function recordSearchUse(env, searchId, projectId) {
+  if (!searchId || !projectId) return;
   const now = new Date().toISOString();
+  // Audit F-91: scoped by project — the unscoped update let a member of any
+  // project bump another project's saved-search counters by id.
   await env.DB.prepare(
-    "UPDATE saved_searches SET use_count = use_count + 1, last_used_at = ?, updated_at = ? WHERE id = ?"
+    "UPDATE saved_searches SET use_count = use_count + 1, last_used_at = ?, updated_at = ? WHERE id = ? AND project_id = ?"
   )
-    .bind(now, now, searchId)
+    .bind(now, now, searchId, projectId)
     .run();
 }
 

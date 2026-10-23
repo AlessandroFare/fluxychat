@@ -28,8 +28,10 @@ describe("buildContentSecurityPolicy", () => {
     const nonce = "test-nonce-abc123";
     const csp = buildContentSecurityPolicy(nonce);
 
-    expect(csp).toContain(`script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com 'nonce-${nonce}'`);
+    expect(csp).toContain(`script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://cdn.jsdelivr.net 'nonce-${nonce}'`);
     expect(csp).toContain(`style-src 'self' 'nonce-${nonce}' https://*.clerk.accounts.dev https://*.clerk.com https://cdn.jsdelivr.net`);
+    const connectSrc = csp.split("; ").find((part) => part.startsWith("connect-src"));
+    expect(connectSrc).toContain("https://cdn.jsdelivr.net");
     expect(csp).not.toContain("'unsafe-inline'");
   });
 

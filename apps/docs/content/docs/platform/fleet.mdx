@@ -1,32 +1,106 @@
 ---
 title: Fleet
-description: HTTP GPS ingest on the same room bus.
+description: HTTP GPS ingest, geofences, trips and delivery dispatch on D1 — not MQTT.
 ---
 
 # Fleet module
 
-Vehicles POST GPS to the Worker. The room WebSocket fans out `server_event` `fleet.gps_update`. **Not MQTT.**
+Vehicles POST GPS over HTTP to the Worker (`/fleet/*`, D1-backed). The room WebSocket fans out `server_event` `fleet.gps_update` with enter/exit geofence transitions. There is **no native MQTT** transport (see [What you bring](#what-you-bring)).
+
+## Scaffold
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-fleet --example fleet-panel
 ```
 
+Register a vehicle with a member JWT. The Worker returns `apiKey` (`fleet_…`) once — store it on the tracker.
+
 ```bash
-curl -X POST "$WORKER/fleet/gps" \
-  -H "Authorization: Bearer $FLEET_DEVICE_KEY" \
+curl -X POST "$WORKER/fleet/vehicles" \
+  -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/json" \
-  -d '{"vehicleId":"veh_1","lat":45.46,"lng":9.18,"roomId":"demo"}'
+  -d '{"name":"Van 1","plate":"AB123CD"}'
+
+curl -X POST "$WORKER/fleet/gps" \
+  -H "Authorization: Bearer $FLEET_VEHICLE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"lat":45.46,"lng":9.18,"roomId":"YOUR_ROOM"}'
 ```
 
+The ingest accepts **OwnTracks location JSON** (`_type:"location"`, `lat`/`lon`/`tst`, `acc`/`vel`/`cog`/`tid`/`batt`) and arrays of points; `lwt` and other `_type`s are skipped. With `X-Limit-User`/`X-Limit-Device` headers a body without `vehicleId` is keyed as `user:device`. Without `roomId` the fan-out room is `fleet:{projectId}`.
+
+## SDK
+
 ```ts
+import { FluxyChatClient, createWorkerFluxyFleetClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({ baseUrl, userId, token }); // member JWT
+const fleet = createWorkerFluxyFleetClient(client);
+
+const { vehicle, apiKey } = await fleet.createVehicle({ name: "Van 1", plate: "AB123CD" });
+await fleet.ingestGps(
+  { _type: "location", lat: 45.46, lon: 9.18, tst: Date.now() / 1000 },
+  { vehicleKey: apiKey }, // device auth: works on this route only
+);
+
+await fleet.listCurrentPositions(); // online vehicles (offline after 10 min)
+await fleet.listGpsHistory(vehicle.id, { from: Date.now() - 3_600_000, limit: 500 });
+
+const fence = await fleet.createGeofence({ name: "Depot", lat: 45.46, lng: 9.18, radiusMeters: 250 });
+await fleet.listGeofenceEvents({ vehicleId: vehicle.id }); // enter/exit rows
+
+const trip = await fleet.createTrip({ vehicleId: vehicle.id, pickupLat: 45.4, pickupLng: 9.1, dropoffLat: 45.5, dropoffLng: 9.2 });
+await fleet.updateTripStatus(trip.id, "active"); // pending → active → completed|cancelled
+
+await fleet.findNearestDrivers(45.4, 9.1, 3);
+await fleet.matchDelivery({ pickupLat: 45.4, pickupLng: 9.1, dropoffLat: 45.5, dropoffLng: 9.2 }); // 404 no_available_drivers
+```
+
+The legacy instance methods on `FluxyChatClient` (`client.createFleetVehicle()`, `client.listFleetTrips()` …) still work for JWT callers; the worker client is the surface with **device-key ingest** and batch support.
+
+## Realtime
+
+```tsx
 useChat({
   roomId,
   onServerEvent: (ev) => {
     if (ev.name === "fleet.gps_update") {
-      // ev.data.vehicleId, lat, lng, geofenceEvents (enter/exit transitions)
+      // ev.data: vehicleId, lat, lng, speed, heading, ts, tid, batt, geofenceEvents
     }
   },
 });
 ```
 
-Register vehicles with `POST /fleet/vehicles` (SDK `createFleetVehicle`). The response includes `apiKey` (`fleet_…`) once. Drivers POST GPS with that key; other fleet routes still need a member JWT. OwnTracks location JSON (`_type`, `lat`/`lon`/`tst`, `acc`/`vel`/`cog`/`tid`) is accepted on the same POST (array ok; `lwt` skipped). Last/history aliases: `GET /fleet/gps/last`, `GET /fleet/gps/locations?vehicleId=&from=&to=&limit=` (`from`/`to` unix or ISO date). Default fan-out room is `fleet:{projectId}` if `roomId` is omitted. Cap: 60 GPS points per vehicle per minute. Geofences are `GET/POST/PATCH/DELETE /fleet/geofences`; stored enter/exit rows are `GET /fleet/geofence-events`. Current positions omit vehicles whose last ping is older than 10 minutes. Not MQTT.
+## Tracking surface
+
+| Area | Routes |
+| --- | --- |
+| Ingest | `POST /fleet/gps` (single or array, vehicle key or JWT) |
+| Positions | `GET /fleet/gps/current` · `GET /fleet/gps/last` (alias) |
+| History | `GET /fleet/gps/history?vehicleId=&from=&to=&limit=` · `GET /fleet/gps/locations` (alias; `from`/`to` unix ms, unix seconds or ISO date, default last hour) |
+| Vehicles | `GET/POST /fleet/vehicles`, `PATCH /fleet/vehicles/{id}` |
+| Trips | `GET/POST /fleet/trips`, `PATCH /fleet/trips/{id}` (`pending → active → completed\|cancelled`; distances via haversine) |
+| Geofences | `GET/POST /fleet/geofences`, `PATCH/DELETE /fleet/geofences/{id}` — enter/exit transitions are latched per vehicle and stored |
+| Events | `GET /fleet/geofence-events?vehicleId=&geofenceId=&limit=` |
+| Delivery | `POST /fleet/delivery/nearest`, `POST /fleet/delivery/match` |
+
+## Limits
+
+60 GPS points per vehicle per minute (over that: HTTP **429** `quota_exceeded` + `retryAfterSeconds`). A vehicle lists `offline` after 10 minutes without points. Caps: history 10,000 points, geofence events 500, trips 100.
+
+## Readiness
+
+| Piece | Status |
+| --- | --- |
+| GPS ingest, positions, history, vehicles, trips, geofences, events | **Beta** — Worker + D1, route and SDK tests |
+| Delivery nearest/match (ETA heuristic) | **Beta (heuristic)** — distance over ~30 km/h |
+| Route copilot / delivery window / pricing | **Preview (heuristic)** — hour-of-day traffic table and randomised weather, past-trip averages, live demand ratio. **Not** live traffic, maps or ML |
+| `fleet-panel` scaffold | Working example |
+
+## What you bring
+
+- **Trackers or a simulator**: any device that can POST JSON works; OwnTracks is supported out of the box. If your fleet speaks **MQTT**, run an MQTT→HTTP bridge — the Worker owns auth, quota, storage and fan-out, not the device session.
+- **Maps, geocoding and routing** providers for your UI and real ETAs: the copilot/window/pricing endpoints are deliberately heuristic and demo-grade.
+- A member JWT for management calls; vehicle keys come from `POST /fleet/vehicles`.
+
+Related: [API reference](/docs/api-reference) — `/fleet/*` is in the OpenAPI spec; dashboard `/fleet`; [IoT](/docs/platform/iot) shares the device-key model; [JWT auth](/docs/guides/auth-jwt).

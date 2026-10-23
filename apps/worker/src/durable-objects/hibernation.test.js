@@ -11,6 +11,10 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+// Static import: a cold dynamic import of room-do.js inside the first test used
+// to blow the 5s per-test budget before the module was cached.
+import { RoomDurableObject } from "./room-do.js";
+import { UserDurableObject } from "./user-do.js";
 
 const doDir = dirname(fileURLToPath(import.meta.url));
 
@@ -129,7 +133,6 @@ describe("RoomDurableObject hibernation behaviour", () => {
   }
 
   it("accepts through the hibernation API and never calls accept()", async () => {
-    const { RoomDurableObject } = await import("./room-do.js");
     const state = makeState();
     const room = new RoomDurableObject(state, { DB: {} });
     const ws = makeSocket();
@@ -142,7 +145,6 @@ describe("RoomDurableObject hibernation behaviour", () => {
   });
 
   it("rebuilds per-user connection counts after a wake instead of losing them", async () => {
-    const { RoomDurableObject } = await import("./room-do.js");
     const state = makeState();
     const first = new RoomDurableObject(state, { DB: {} });
     const a = makeSocket();
@@ -163,7 +165,6 @@ describe("RoomDurableObject hibernation behaviour", () => {
   });
 
   it("does not emit a duplicate join for a user already connected before the wake", async () => {
-    const { RoomDurableObject } = await import("./room-do.js");
     const state = makeState();
     const before = new RoomDurableObject(state, { DB: {} });
     const a = makeSocket();
@@ -181,7 +182,6 @@ describe("RoomDurableObject hibernation behaviour", () => {
   });
 
   it("reports 0 remaining connections once the last socket for a user closes", async () => {
-    const { RoomDurableObject } = await import("./room-do.js");
     const state = makeState();
     const room = new RoomDurableObject(state, { DB: {} });
     const a = makeSocket();
@@ -194,7 +194,6 @@ describe("RoomDurableObject hibernation behaviour", () => {
   });
 
   it("persists and restores room-scoped live state across a wake", async () => {
-    const { RoomDurableObject } = await import("./room-do.js");
     const state = makeState();
     const before = new RoomDurableObject(state, { DB: {} });
     await before.ensureStorageHydrated();
@@ -218,7 +217,6 @@ describe("RoomDurableObject hibernation behaviour", () => {
   });
 
   it("clears persisted room state when the room goes quiet", async () => {
-    const { RoomDurableObject } = await import("./room-do.js");
     const state = makeState();
     const room = new RoomDurableObject(state, { DB: {} });
     await room.ensureStorageHydrated();
@@ -235,7 +233,6 @@ describe("RoomDurableObject hibernation behaviour", () => {
   });
 
   it("installs the auto-responder on construction", async () => {
-    const { RoomDurableObject } = await import("./room-do.js");
     class FakePair {
       constructor(a, b) {
         this.a = a;
@@ -296,7 +293,6 @@ describe("UserDurableObject hibernation behaviour", () => {
   }
 
   it("keeps delivering to sockets opened before a wake", async () => {
-    const { UserDurableObject } = await import("./user-do.js");
     const state = makeState();
     const before = new UserDurableObject(state, {});
     const ws = makeSocket();
@@ -312,7 +308,6 @@ describe("UserDurableObject hibernation behaviour", () => {
   });
 
   it("honours excludeSocketId after a wake using the attachment-backed socket id", async () => {
-    const { UserDurableObject } = await import("./user-do.js");
     const state = makeState();
     const before = new UserDurableObject(state, {});
     const a = makeSocket();
@@ -331,7 +326,6 @@ describe("UserDurableObject hibernation behaviour", () => {
   });
 
   it("restores channel identity so /deliver works on a woken object", async () => {
-    const { UserDurableObject } = await import("./user-do.js");
     const state = makeState();
     await state.storage.put({ projectId: "proj", userId: "alice" });
 

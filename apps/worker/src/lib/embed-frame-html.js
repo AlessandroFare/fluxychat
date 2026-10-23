@@ -52,7 +52,13 @@ export function buildEmbedFrameHtml(options = {}) {
 (function () {
   var params = new URLSearchParams(location.search);
   var roomId = params.get("roomId") || "";
-  var parentOrigin = params.get("parentOrigin") || "";
+  // Audit F-85: prefer the browser-provided referrer (the real parent page) over
+  // the URL parameter, which the embedder controls. Shortcut: a parent page with
+  // a no-referrer policy still falls back to the parameter.
+  function originOf(value) {
+    try { return new URL(value).origin; } catch (e) { return ""; }
+  }
+  var parentOrigin = originOf(document.referrer) || params.get("parentOrigin") || "";
   var readOnly = ${readOnly ? "true" : "false"};
   var statusEl = document.getElementById("status");
   var errorEl = document.getElementById("error");

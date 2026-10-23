@@ -2,7 +2,7 @@ function hexFromBuffer(buf) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function stableStringify(value) {
+export function stableStringify(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map((item) => stableStringify(item)).join(",")}]`;
   const keys = Object.keys(value).sort();

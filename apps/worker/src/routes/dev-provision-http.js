@@ -170,7 +170,8 @@ export async function handleDevProvision(request, env) {
   await env.DB.prepare(
     "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
   )
-    .bind(apiKey, DEV_PROJECT_ID, keyPrefix, keyHash, keyHash, now)
+    // Audit #28: secret key (fc_) is stored with an opaque id, never plaintext.
+    .bind(crypto.randomUUID(), DEV_PROJECT_ID, keyPrefix, keyHash, keyHash, now)
     .run();
 
   const publishableKey = await ensureDevPublishableKey();

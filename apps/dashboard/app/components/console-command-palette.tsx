@@ -183,7 +183,7 @@ function CommandPaletteDialog({
             autoComplete="off"
             spellCheck={false}
           />
-          <kbd className="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 sm:inline">
+          <kbd className="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 sm:inline">
             esc
           </kbd>
         </div>
@@ -214,7 +214,7 @@ function CommandPaletteDialog({
                           className={cn(
                             "flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
                             isSelected
-                              ? "bg-primary/10 text-primary"
+                              ? "bg-primary/10 text-[var(--brand-hover)]"
                               : "text-slate-700 hover:bg-slate-50",
                           )}
                           onMouseEnter={() => setSelectedIndex(index)}
@@ -307,7 +307,7 @@ export function CommandPaletteTrigger({
         <Search className="h-3.5 w-3.5 opacity-70" aria-hidden />
         Search…
       </span>
-      <kbd className="rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-600">
+      <kbd className="rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
         {isMac ? "⌘K" : "Ctrl+K"}
       </kbd>
     </button>

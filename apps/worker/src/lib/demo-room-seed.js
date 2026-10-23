@@ -46,6 +46,61 @@ export async function ensureDemoRoomSeeded(env, projectId, roomId, authorUserId 
   return { seeded: true, messageCount: WELCOME_MESSAGES.length };
 }
 
+/**
+ * Seed a "general" public room with one welcome message so a brand-new
+ * project has something to look at (Area 5.1). Moved here from worker.js so
+ * the id scoping is testable.
+ */
+export async function seedDemoRooms(env, projectId) {
+  const now = new Date().toISOString();
+  // Audit fix A2-21: rooms.id is a global PK — scope the starter room to the
+  // project or every project after the first silently gets none (and its
+  // welcome message lands in another project's room).
+  const generalRoomId = `general_${projectId}`;
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, 'public', ?, ?)"
+  )
+    .bind(generalRoomId, projectId, "general", now)
+    .run();
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)"
+  )
+    .bind(generalRoomId, "fluxybot", now)
+    .run();
+
+  const configuredDemoRoom = String(env.DEMO_ROOM_ID || "").trim();
+  if (configuredDemoRoom) {
+    // The configured demo room is intentionally shared across projects.
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, 'public', ?, ?)"
+    )
+      .bind(configuredDemoRoom, projectId, configuredDemoRoom, now)
+      .run();
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)"
+    )
+      .bind(configuredDemoRoom, "fluxybot", now)
+      .run();
+  }
+
+  await env.DB.prepare(
+    `INSERT INTO messages (project_id, room_id, user_id, content, created_at)
+     VALUES (?, ?, ?, ?, ?)`
+  )
+    .bind(
+      projectId,
+      generalRoomId,
+      "fluxybot",
+      "Welcome to FluxyChat! This is your first room. Say hi 👋",
+      now,
+    )
+    .run();
+
+  if (configuredDemoRoom && projectId) {
+    await ensureDemoRoomSeeded(env, projectId, configuredDemoRoom, "fluxybot").catch(() => {});
+  }
+}
+
 export function getDemoStatus(env) {
   const enabled = env.DEMO_ENABLED === "true";
   const roomId = (env.DEMO_ROOM_ID || "").trim();

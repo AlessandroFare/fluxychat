@@ -19,6 +19,7 @@ export const MCP_META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapab
 export const MCP_META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
 export const MCP_ERROR_HEADER_MISMATCH = -32020;
+export const MCP_ERROR_MISSING_CLIENT_CAPABILITY = -32021;
 export const MCP_ERROR_UNSUPPORTED_PROTOCOL = -32022;
 export const MCP_ERROR_METHOD_NOT_FOUND = -32601;
 
@@ -44,12 +45,27 @@ export function decodeMcpHeaderValue(raw) {
   if (value.startsWith("=?base64?") && value.endsWith("?=")) {
     const encoded = value.slice("=?base64?".length, -2);
     try {
-      return atob(encoded);
+      const binary = atob(encoded);
+      return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
     } catch {
       return value;
     }
   }
   return value;
+}
+
+/**
+ * Header values are plain printable ASCII; anything else travels as a Base64
+ * sentinel (MCP 2026-07-28 transport rules). The client uses this so a tool
+ * name with non-ASCII characters still matches the Mcp-Name header check.
+ */
+export function encodeMcpHeaderValue(raw) {
+  const value = String(raw ?? "");
+  if (/^[\x20-\x7E]*$/.test(value)) return value;
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return `=?base64?${btoa(binary)}?=`;
 }
 
 export function isJsonRpcNotification(body) {
@@ -59,6 +75,19 @@ export function isJsonRpcNotification(body) {
       typeof body.method === "string" &&
       !Object.prototype.hasOwnProperty.call(body, "id"),
   );
+}
+
+/**
+ * Operational-metric name for one MCP request, per method (agentgateway-style
+ * `mcp_requests`). The metrics table has no label columns, so the method is
+ * encoded in the name; per-tool detail stays in the MCP audit log.
+ */
+export function mcpRequestMetricName(method) {
+  const slug = String(method || "unknown")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+  return `mcp_requests.${slug || "unknown"}`;
 }
 
 export function mcpRpc({ id, result, error, httpStatus }) {
@@ -104,6 +133,28 @@ export function methodNotFoundError(id, method, era) {
       message: `Method not found: ${method}`,
     },
   });
+}
+
+/**
+ * The request needs a client capability the caller never declared (MCP
+ * 2026-07-28): HTTP 400 plus the capabilities the server requires.
+ */
+export function missingClientCapabilityError(id, requiredCapabilities) {
+  return mcpRpc({
+    id,
+    httpStatus: 400,
+    error: {
+      code: MCP_ERROR_MISSING_CLIENT_CAPABILITY,
+      message: `Server requires the ${Object.keys(requiredCapabilities).join(", ")} capability for this request`,
+      data: { requiredCapabilities },
+    },
+  });
+}
+
+/** Elicitation is a client capability: only a client that declared it may be asked. */
+export function clientSupportsElicitation(params) {
+  const caps = params?._meta?.[MCP_META_CLIENT_CAPABILITIES];
+  return Boolean(caps && typeof caps === "object" && caps.elicitation);
 }
 
 export function detectMcpEra(body, headers) {
@@ -257,23 +308,33 @@ export function emptyResourcesList(era, serverInfo) {
   return withModernResult(era, serverInfo, { resources: [] }, { cacheable: true });
 }
 
+export function emptyResourceTemplatesList(era, serverInfo) {
+  return withModernResult(era, serverInfo, { resourceTemplates: [] }, { cacheable: true });
+}
+
 export function mcpCapabilities() {
+  // `elicitation` is a client capability (ClientCapabilities), never a server
+  // one: the server may only elicit from clients that declared it.
   return {
     tools: {},
     prompts: {},
     resources: {},
-    elicitation: { form: {} },
   };
 }
 
 /**
  * Merge Multi Round-Trip `inputResponses` into tool arguments (MCP 2026-07-28 MRTR).
+ * The spec shape is a map keyed by request id; the older array shape is accepted.
  */
 export function mergeMcpInputResponses(params) {
   const args = { ...(params?.arguments || {}) };
   const responses = params?.inputResponses;
-  if (!Array.isArray(responses)) return args;
-  for (const item of responses) {
+  const list = Array.isArray(responses)
+    ? responses
+    : responses && typeof responses === "object"
+      ? Object.values(responses)
+      : [];
+  for (const item of list) {
     const payload = item?.result || item;
     if (payload?.action && payload.action !== "accept") continue;
     const content = payload?.content;
@@ -301,9 +362,9 @@ export function elicitationInputRequired({ message, fieldName = "content", schem
   };
   return {
     resultType: "input_required",
-    inputRequests: [
-      {
-        id: "elicit-1",
+    // InputRequests is a map keyed by request id (2026-07-28), not an array.
+    inputRequests: {
+      "elicit-1": {
         method: "elicitation/create",
         params: {
           mode: "form",
@@ -311,7 +372,7 @@ export function elicitationInputRequired({ message, fieldName = "content", schem
           requestedSchema,
         },
       },
-    ],
+    },
   };
 }
 

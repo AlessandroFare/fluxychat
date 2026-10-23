@@ -1,7 +1,7 @@
-import { submitHrFeedback } from "./feedback.js";
+import { submitHrFeedback, type FeedbackEnv } from "./feedback.js";
 
 export default {
-  async fetch(request: Request, env: Record<string, string>): Promise<Response> {
+  async fetch(request: Request, env: FeedbackEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/" && request.method === "GET") {

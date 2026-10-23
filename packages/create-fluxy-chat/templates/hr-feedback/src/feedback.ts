@@ -1,4 +1,4 @@
-interface FeedbackEnv {
+export interface FeedbackEnv {
   FLUXY_BASE_URL: string;
   FLUXY_API_KEY: string;
   HR_FEEDBACK_ROOM_ID?: string;

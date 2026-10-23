@@ -7,4 +7,15 @@ description: "API key is not valid"
 
 `X-Fluxy-Api-Key` is missing, revoked, or not an `fc_` server key. `pk_` keys cannot mint member JWTs.
 
-HTTP 401. Terminal for that request.
+**At a glance** — HTTP 401 · terminal for that request.
+
+## What to do
+
+- Send the project's `fc_` key on the server-side call that needs it (`POST /auth/token`, admin routes, REST) — see the [Auth / JWT cookbook](/docs/cookbook/auth-jwt).
+- `pk_` publishable keys are for public rooms in the browser. They never mint JWTs.
+- If the key was rotated, update the server environment and retry.
+
+## Related
+
+- [40100 token_expired](/docs/errors/token_expired)
+- [40108 auth_refused](/docs/errors/auth_refused)

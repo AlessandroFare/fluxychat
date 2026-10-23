@@ -58,6 +58,7 @@ import { createOfflineSyncController, type OfflineSyncController } from "./offli
 import {
   createCursorBatcher,
   createCursorDispenser,
+  cursorLayerKey,
   shouldSendCursor,
   type LiveCursorPublishInput,
 } from "./live-cursors";
@@ -194,7 +195,7 @@ export function startFluxyRoomSession(
 
   const cursorDispenser = createCursorDispenser((cursor) => {
     setState((s) => ({
-      liveCursors: { ...s.liveCursors, [cursor.userId]: cursor },
+      liveCursors: { ...s.liveCursors, [cursorLayerKey(cursor)]: cursor },
     }));
   });
 
@@ -876,6 +877,7 @@ export function startFluxyRoomSession(
               parentId: replyTo ?? null,
               attachments: attachments ?? [],
               ...(options?.quotedMessageId != null ? { quotedMessageId: options.quotedMessageId } : {}),
+              ...(options?.alsoSendToChannel ? { alsoSendToChannel: true } : {}),
               ...(options?.metadata ? { metadata: options.metadata } : {}),
               ...(options?.expiresInSeconds != null
                 ? { expiresInSeconds: options.expiresInSeconds }
@@ -904,6 +906,7 @@ export function startFluxyRoomSession(
           clientMessageId,
           parentId: replyTo ?? null,
           attachments: attachments ?? [],
+          ...(options?.alsoSendToChannel ? { alsoSendToChannel: true } : {}),
           ...(options?.expiresInSeconds != null
             ? { expiresInSeconds: options.expiresInSeconds }
             : {}),
@@ -1564,6 +1567,7 @@ export function startFluxyRoomSession(
               (payload.replyTo as number | null | undefined) ?? null,
               (payload.attachments as FluxyChatAttachment[] | undefined) ?? undefined,
               String(payload.clientMessageId ?? entry.id),
+              (payload.options as FluxySendMessageOptions | undefined) ?? undefined,
             );
             if (!serverMessage) return false;
             const ackId = String(payload.clientMessageId ?? entry.id);
@@ -1579,6 +1583,9 @@ export function startFluxyRoomSession(
             clientMessageId: String(payload.clientMessageId ?? entry.id),
             parentId: (payload.replyTo as number | null | undefined) ?? null,
             attachments: (payload.attachments as FluxyChatAttachment[] | undefined) ?? [],
+            ...((payload.options as { alsoSendToChannel?: boolean } | undefined)?.alsoSendToChannel
+              ? { alsoSendToChannel: true }
+              : {}),
           });
           return true;
         } catch {

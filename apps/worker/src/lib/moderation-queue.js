@@ -88,9 +88,16 @@ export async function getPriorityQueue(env, { projectId, roomId, severity, pendi
     `SELECT COUNT(*) AS cnt FROM ai_moderation_queue WHERE ${where}`
   ).bind(...params).first();
 
+  // Audit F-89: bound the read — the old code loaded every matching row and
+  // sorted in JS (full-table scan). SQL orders by severity first (the dominant
+  // score term) so the JS re-sort only ever sees a small window.
+  const fetchLimit = Math.max((Number(limit) + Number(offset)) * 5, 200);
   const rows = await env.DB.prepare(
-    `SELECT * FROM ai_moderation_queue WHERE ${where}`
-  ).bind(...params).all();
+    `SELECT * FROM ai_moderation_queue WHERE ${where}
+     ORDER BY CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END ASC,
+              created_at ASC
+     LIMIT ?`
+  ).bind(...params, fetchLimit).all();
 
   const events = (rows.results || []).map((r) => {
     const mapped = mapQueueEvent(r);

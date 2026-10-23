@@ -17,20 +17,48 @@ const CHALLENGE_TTL_MS = 5 * 60 * 1000;
  * @param {string | null | undefined} requestOrigin
  */
 export function getWebAuthnConfig(env, requestOrigin) {
-  const fallbackHost = requestOrigin
-    ? new URL(requestOrigin).hostname
-    : "localhost";
-  const rpID = String(env.WEBAUTHN_RP_ID || fallbackHost).trim();
+  const nodeEnv = String(env?.NODE_ENV || "").trim().toLowerCase();
+  const isDev = nodeEnv === "development" || nodeEnv === "test";
+  const rpIDConfigured = String(env.WEBAUTHN_RP_ID || "").trim();
+  const originConfigured = String(env.WEBAUTHN_ORIGIN || "").trim();
+  // Audit F-33: outside development/test the trust anchor (rpID/origin) must
+  // come from configuration, not from the caller's Origin header. A deployment
+  // that cannot set it can opt back into the legacy behaviour explicitly.
+  const trustRequestOrigin =
+    isDev || env.WEBAUTHN_TRUST_REQUEST_ORIGIN === "true";
+
+  if (!originConfigured && !rpIDConfigured && !trustRequestOrigin) {
+    return { configured: false, rpID: "", rpName: "", origin: "" };
+  }
+
+  const rpID = rpIDConfigured
+    || (trustRequestOrigin && requestOrigin ? new URL(requestOrigin).hostname : "")
+    || "localhost";
   const rpName = String(env.WEBAUTHN_RP_NAME || "FluxyChat").trim();
-  const originRaw = String(env.WEBAUTHN_ORIGIN || requestOrigin || `https://${rpID}`).trim();
+  let originRaw = originConfigured;
+  if (!originRaw && trustRequestOrigin && requestOrigin) {
+    originRaw = String(requestOrigin);
+  }
+  if (!originRaw && rpIDConfigured) {
+    originRaw = `https://${rpID}`;
+  }
   const origin = originRaw.includes(",")
     ? originRaw.split(",").map((v) => v.trim()).filter(Boolean)
     : originRaw;
-  return { rpID, rpName, origin };
+  return { configured: Boolean(rpID) && Boolean(originRaw), rpID, rpName, origin };
 }
 
 function userIdToBytes(projectId, userId) {
   return new TextEncoder().encode(`${projectId}:${userId}`);
+}
+
+/**
+ * Audit F-33: user verification (PIN/biometric) is required by default — with
+ * it off, a discovered/borrowed authenticator alone authenticates. Deployments
+ * with UV-incapable authenticators can opt out explicitly.
+ */
+function requireUserVerification(env) {
+  return env.WEBAUTHN_REQUIRE_UV !== "false";
 }
 
 function bytesToBase64url(bytes) {
@@ -53,6 +81,18 @@ async function storeChallenge(env, { challenge, projectId, userId, challengeType
 }
 
 async function consumeChallenge(env, challenge, challengeType, projectId, userId) {
+  // Audit F-33: consume with a single atomic DELETE so two concurrent
+  // verifications cannot both redeem the same challenge (SELECT-then-DELETE
+  // allowed a race where both callers passed the check).
+  const deleted = await env.DB.prepare(
+    `DELETE FROM webauthn_challenges
+     WHERE challenge = ? AND challenge_type = ? AND project_id = ? AND user_id = ? AND expires_at >= ?`,
+  )
+    .bind(challenge, challengeType, projectId, userId, new Date().toISOString())
+    .run();
+  if (Number(deleted.meta?.changes || 0) > 0) return { ok: true };
+
+  // Diagnose for the caller: missing, wrong type/user, expired, or already used.
   const row = await env.DB.prepare(
     `SELECT challenge, project_id, user_id, challenge_type, expires_at
      FROM webauthn_challenges WHERE challenge = ?`,
@@ -68,8 +108,7 @@ async function consumeChallenge(env, challenge, challengeType, projectId, userId
     await env.DB.prepare(`DELETE FROM webauthn_challenges WHERE challenge = ?`).bind(challenge).run();
     return { ok: false, reason: "challenge_expired" };
   }
-  await env.DB.prepare(`DELETE FROM webauthn_challenges WHERE challenge = ?`).bind(challenge).run();
-  return { ok: true };
+  return { ok: false, reason: "challenge_already_used" };
 }
 
 export async function purgeExpiredWebAuthnChallenges(env) {
@@ -112,7 +151,10 @@ export async function deleteWebAuthnCredential(env, projectId, userId, credentia
  * @param {{ projectId: string, userId: string, userDisplayName?: string, requestOrigin?: string | null }} input
  */
 export async function createRegistrationOptions(env, input) {
-  const { rpID, rpName, origin } = getWebAuthnConfig(env, input.requestOrigin);
+  const config = getWebAuthnConfig(env, input.requestOrigin);
+  const { rpID, rpName, origin } = config;
+  // Audit F-33: refuse to mint options against an unconfigured trust anchor.
+  if (!config.configured) return { error: "webauthn_origin_unconfigured", status: 503 };
   const existing = await env.DB.prepare(
     `SELECT credential_id, transports FROM webauthn_credentials WHERE project_id = ? AND user_id = ?`,
   )
@@ -132,7 +174,7 @@ export async function createRegistrationOptions(env, input) {
     })),
     authenticatorSelection: {
       residentKey: "preferred",
-      userVerification: "preferred",
+      userVerification: requireUserVerification(env) ? "required" : "preferred",
     },
   });
 
@@ -151,7 +193,9 @@ export async function createRegistrationOptions(env, input) {
  * @param {{ projectId: string, userId: string, response: object, requestOrigin?: string | null }} input
  */
 export async function verifyRegistration(env, input) {
-  const { rpID, origin } = getWebAuthnConfig(env, input.requestOrigin);
+  const config = getWebAuthnConfig(env, input.requestOrigin);
+  if (!config.configured) return { verified: false, reason: "webauthn_origin_unconfigured" };
+  const { rpID, origin } = config;
   if (!input.response?.response?.clientDataJSON) {
     return { verified: false, reason: "missing_client_data" };
   }
@@ -172,7 +216,7 @@ export async function verifyRegistration(env, input) {
     expectedChallenge: clientData.challenge,
     expectedOrigin: origin,
     expectedRPID: rpID,
-    requireUserVerification: false,
+    requireUserVerification: requireUserVerification(env),
   }).catch(() => null);
 
   if (!verified?.verified || !verified.registrationInfo) {
@@ -208,7 +252,9 @@ export async function verifyRegistration(env, input) {
  * @param {{ projectId: string, userId: string, requestOrigin?: string | null }} input
  */
 export async function createAuthenticationOptions(env, input) {
-  const { rpID, origin } = getWebAuthnConfig(env, input.requestOrigin);
+  const config = getWebAuthnConfig(env, input.requestOrigin);
+  if (!config.configured) return { error: "webauthn_origin_unconfigured", status: 503 };
+  const { rpID, origin } = config;
   const rows = await env.DB.prepare(
     `SELECT credential_id, transports, public_key, counter
      FROM webauthn_credentials WHERE project_id = ? AND user_id = ?`,
@@ -226,7 +272,7 @@ export async function createAuthenticationOptions(env, input) {
       id: String(row.credential_id),
       transports: row.transports ? String(row.transports).split(",").filter(Boolean) : [],
     })),
-    userVerification: "preferred",
+    userVerification: requireUserVerification(env) ? "required" : "preferred",
   });
 
   await storeChallenge(env, {
@@ -244,7 +290,9 @@ export async function createAuthenticationOptions(env, input) {
  * @param {{ projectId: string, userId: string, response: object, requestOrigin?: string | null }} input
  */
 export async function verifyAuthentication(env, input) {
-  const { rpID, origin } = getWebAuthnConfig(env, input.requestOrigin);
+  const config = getWebAuthnConfig(env, input.requestOrigin);
+  if (!config.configured) return { verified: false, reason: "webauthn_origin_unconfigured" };
+  const { rpID, origin } = config;
   const credentialId = String(input.response?.id || "");
   if (!credentialId) return { verified: false, reason: "missing_credential_id" };
 
@@ -283,7 +331,7 @@ export async function verifyAuthentication(env, input) {
       counter: Number(row.counter) || 0,
       transports: [],
     },
-    requireUserVerification: false,
+    requireUserVerification: requireUserVerification(env),
   }).catch(() => null);
 
   if (!verification?.verified) {

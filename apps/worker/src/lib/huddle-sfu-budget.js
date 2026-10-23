@@ -100,24 +100,25 @@ export async function beginHuddleSfuSession(env, { sessionId, projectId, roomId,
 
 async function addMeterBytes(env, bytes) {
   const month = monthUtcKey();
-  const row = await env.DB.prepare("SELECT month_utc, bytes_used FROM huddle_sfu_meter WHERE month_utc = ?")
-    .bind(month)
-    .first();
-  const next = Number(row?.bytes_used || 0) + bytes;
-  if (row?.month_utc) {
-    await env.DB.prepare("UPDATE huddle_sfu_meter SET bytes_used = ? WHERE month_utc = ?")
-      .bind(next, month)
-      .run();
-  } else {
-    await env.DB.prepare("INSERT INTO huddle_sfu_meter (month_utc, bytes_used) VALUES (?, ?)")
-      .bind(month, next)
-      .run();
-  }
+  // Audit fix M6: single atomic upsert — read-modify-write lost concurrent
+  // charges (two readers both wrote from the same stale value).
+  await env.DB.prepare(
+    `INSERT INTO huddle_sfu_meter (month_utc, bytes_used) VALUES (?, ?)
+     ON CONFLICT(month_utc) DO UPDATE SET bytes_used = bytes_used + excluded.bytes_used`,
+  )
+    .bind(month, bytes)
+    .run();
 }
 
 async function chargeOpenRow(env, row) {
   if (!row) return;
   const openRow = await env.DB.prepare("SELECT COUNT(*) as n FROM huddle_sfu_open").first();
+  // Audit fix M8: claim the row before charging — only the caller whose DELETE
+  // matches charges it, so a concurrent settle/sweep cannot double charge.
+  const claimed = await env.DB.prepare("DELETE FROM huddle_sfu_open WHERE session_id = ?")
+    .bind(row.session_id)
+    .run();
+  if (Number(claimed?.meta?.changes ?? 0) === 0) return;
   const durationMs = Math.max(1000, Date.now() - new Date(row.started_at).getTime());
   const bytes = estimateHuddleBytes({
     durationMs,
@@ -125,7 +126,6 @@ async function chargeOpenRow(env, row) {
     peerCount: Math.max(2, Number(openRow?.n || 1)),
   });
   await addMeterBytes(env, bytes);
-  await env.DB.prepare("DELETE FROM huddle_sfu_open WHERE session_id = ?").bind(row.session_id).run();
 }
 
 export async function settleHuddleSfuSession(env, { sessionId, projectId, roomId, userId }) {

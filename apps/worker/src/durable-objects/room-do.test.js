@@ -120,6 +120,41 @@ describe("RoomDurableObject message handlers", () => {
     });
   });
 
+  it("keeps a named cursor layer (presenceKey) separate from the default layer", async () => {
+    const { roomDo } = createRoomDo();
+    const sender = createMockWebSocket();
+    const peer = createMockWebSocket();
+    roomDo.clients.add(sender);
+    roomDo.clients.add(peer);
+    roomDo.userIds.set(sender, userId);
+    roomDo.userIds.set(peer, "user_peer");
+
+    await roomDo.onMessage(sender, {
+      data: JSON.stringify({ type: "cursor", x: 3, y: 4, label: "Ada" }),
+    });
+    await roomDo.onMessage(sender, {
+      data: JSON.stringify({ type: "cursor", x: 40, y: 50, presenceKey: "agent", label: "assistant" }),
+    });
+
+    const frames = peer.sent.map((row) => JSON.parse(row));
+    expect(frames[1]).toMatchObject({
+      type: "cursor",
+      userId,
+      presenceKey: "agent",
+      x: 40,
+      y: 50,
+    });
+    // The agent layer never overwrites the human cursor of the same user.
+    expect(roomDo.lastCursors.get(userId)).toMatchObject({ x: 3, y: 4 });
+    expect(roomDo.lastCursors.get(`${userId}#agent`)).toMatchObject({ presenceKey: "agent", x: 40 });
+
+    const joiner = createMockWebSocket();
+    roomDo.sendCursorSnapshot(joiner);
+    const replayed = joiner.sent.map((row) => JSON.parse(row));
+    expect(replayed).toHaveLength(2);
+    expect(replayed.some((frame) => frame.presenceKey === "agent" && frame.x === 40)).toBe(true);
+  });
+
   it("does not fan out cursors when nobody else is in the room", async () => {
     const { roomDo } = createRoomDo();
     const sender = createMockWebSocket();
@@ -298,6 +333,105 @@ describe("RoomDurableObject message handlers", () => {
     });
   });
 
+  it("attributes a WS message to the authenticated socket, not the frame userId (P2)", async () => {
+    vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+      metricName: "messages_created",
+      limit: 100,
+      used: 0,
+      monthKey: "2026-10",
+    });
+    const inserts = [];
+    const db = {
+      prepare(sql) {
+        return {
+          bind(...args) {
+            return {
+              sql,
+              args,
+              run: async () => {
+                if (sql.includes("INSERT INTO messages")) inserts.push({ sql, args });
+                return { meta: { last_row_id: 99 } };
+              },
+              first: async () => null,
+              all: async () => ({ results: [] }),
+            };
+          },
+        };
+      },
+      batch: async () => [],
+    };
+    const { roomDo } = createRoomDo({ DB: db });
+    const ws = createMockWebSocket();
+    roomDo.clients.add(ws);
+    roomDo.userIds.set(ws, userId);
+
+    await roomDo.onMessage(ws, {
+      data: JSON.stringify({ type: "message", userId: "user_impersonated", content: "hi" }),
+    });
+
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].args[2]).toBe(userId);
+
+    // A socket with no verified identity cannot author a message at all.
+    const anonymous = createMockWebSocket();
+    roomDo.clients.add(anonymous);
+    await roomDo.onMessage(anonymous, {
+      data: JSON.stringify({ type: "message", userId: "user_impersonated", content: "hi" }),
+    });
+    const frames = anonymous.sent.map((s) => JSON.parse(s));
+    expect(frames).toContainEqual(
+      expect.objectContaining({ type: "error", message: "message_requires_authenticated_socket" }),
+    );
+    expect(inserts).toHaveLength(1);
+  });
+
+  it("ignores a client-supplied message id and persists under the server id (P4)", async () => {
+    vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+      metricName: "messages_created",
+      limit: 100,
+      used: 0,
+      monthKey: "2026-10",
+    });
+    const inserts = [];
+    const db = {
+      prepare(sql) {
+        return {
+          bind(...args) {
+            return {
+              sql,
+              args,
+              run: async () => {
+                if (sql.includes("INSERT INTO messages")) inserts.push({ sql, args });
+                return { meta: { last_row_id: 99 } };
+              },
+              first: async () => null,
+              all: async () => ({ results: [] }),
+            };
+          },
+        };
+      },
+      batch: async () => [],
+    };
+    const { roomDo } = createRoomDo({ DB: db });
+    const sender = createMockWebSocket();
+    const observer = createMockWebSocket();
+    roomDo.clients.add(sender);
+    roomDo.clients.add(observer);
+    roomDo.userIds.set(sender, userId);
+
+    await roomDo.onMessage(sender, {
+      data: JSON.stringify({ type: "message", id: 999999, content: "hi" }),
+    });
+
+    expect(inserts).toHaveLength(1);
+    const frames = observer.sent.map((s) => JSON.parse(s));
+    const broadcast = frames.find((f) => f.type === "message");
+    expect(broadcast).toBeTruthy();
+    expect(broadcast.id).toBe(99);
+  });
+
   it("returns quota_exceeded on WS message when messages_created quota is denied", async () => {
     vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
       allowed: false,
@@ -340,6 +474,32 @@ describe("RoomDurableObject message handlers", () => {
         amount: 1,
       })
     );
+  });
+
+  it("processStreamOp rejects a cross-project rebind once the DO is bound (F-40)", async () => {
+    vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+    });
+    const { roomDo } = createRoomDo();
+    const result = await roomDo.processStreamOp({
+      projectId: "proj_attacker",
+      roomId,
+      userId,
+      op: "start",
+      content: "hi",
+      parentId: null,
+    });
+    expect(result).toEqual({ ok: false, error: "project_mismatch" });
+    expect(roomDo.projectId).toBe(projectId);
+  });
+
+  it("persistRoomContext refuses to rebind the DO to another project (F-40)", async () => {
+    const { roomDo } = createRoomDo();
+    const ok = await roomDo.persistRoomContext("proj_attacker", roomId);
+    expect(ok).toBe(false);
+    expect(roomDo.projectId).toBe(projectId);
+    const sameProject = await roomDo.persistRoomContext(projectId, roomId);
+    expect(sameProject).toBe(true);
   });
 
   it("processStreamOp start allows empty content for agent streaming", async () => {
@@ -462,6 +622,41 @@ describe("RoomDurableObject message handlers", () => {
 
     expect(roomDo.activeStreams.has(userId)).toBe(false);
     expect(peer.sent.some((row) => JSON.parse(row).type === "delete")).toBe(true);
+  });
+
+  it("finalizes a stale stream so a disconnected owner can restart (#19)", async () => {
+    vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+    });
+    const { roomDo } = createRoomDo();
+    await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "start",
+      content: "hel",
+      parentId: null,
+    });
+    const blocked = await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "start",
+      content: "again",
+    });
+    expect(blocked.error).toBe("stream_already_active");
+
+    await roomDo.finalizeStaleStream(userId);
+    expect(roomDo.activeStreams.has(userId)).toBe(false);
+
+    const restarted = await roomDo.processStreamOp({
+      projectId,
+      roomId,
+      userId,
+      op: "start",
+      content: "again",
+    });
+    expect(restarted.ok).toBe(true);
   });
 
   it("processStreamOp start returns quota_exceeded when quota is denied", async () => {
@@ -711,6 +906,183 @@ describe("RoomDurableObject message handlers", () => {
     });
   });
 
+  it("P13: synthetic announce message ids stay unique within the same millisecond", async () => {
+    const { roomDo } = createRoomDo();
+    const ws = createMockWebSocket();
+    roomDo.clients.add(ws);
+    roomDo.socketIds.set(ws, "socket-synthetic");
+
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    for (let i = 0; i < 2; i += 1) {
+      const res = await roomDo.fetch(
+        new Request("https://internal/announce", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "message", roomId, content: `system ${i}` }),
+        }),
+      );
+      expect(res.status).toBe(200);
+    }
+
+    const ids = ws.sent
+      .filter((entry) => typeof entry === "string" && entry.startsWith("{"))
+      .map((entry) => JSON.parse(entry))
+      .filter((payload) => payload.type === "message")
+      .map((payload) => payload.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    expect(ids[1]).toBeGreaterThan(ids[0]);
+  });
+
+  it("M2: a duplicate resend (clientMessageId) does not consume quota", async () => {
+    const quota = vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+      metricName: "messages_created",
+      limit: 100,
+      used: 0,
+      monthKey: "2026-10",
+    });
+    const db = {
+      prepare(sql) {
+        return {
+          bind(...args) {
+            return {
+              sql,
+              args,
+              run: async () => ({ meta: { last_row_id: 99 } }),
+              first: async () => (sql.includes("client_message_id") ? { id: 42 } : null),
+              all: async () => ({ results: [] }),
+            };
+          },
+        };
+      },
+      batch: async () => [],
+    };
+    const { roomDo } = createRoomDo({ DB: db });
+    const ws = createMockWebSocket();
+    roomDo.clients.add(ws);
+    roomDo.userIds.set(ws, userId);
+
+    await roomDo.onMessage(ws, {
+      data: JSON.stringify({ type: "message", content: "retry", clientMessageId: "abc12345" }),
+    });
+
+    expect(quota).not.toHaveBeenCalled();
+    const frames = ws.sent
+      .filter((entry) => typeof entry === "string" && entry.startsWith("{"))
+      .map((entry) => JSON.parse(entry));
+    expect(frames.find((f) => f.type === "message")?.id).toBe(42);
+  });
+
+  it("M2: a rate-limited WS send does not consume quota", async () => {
+    const quota = vi.spyOn(projectPlanQuota, "checkAndConsumeProjectQuota").mockResolvedValue({
+      allowed: true,
+      metricName: "messages_created",
+      limit: 100,
+      used: 0,
+      monthKey: "2026-10",
+    });
+    const { roomDo } = createRoomDo({ RATE_LIMIT_WS_MESSAGES_PER_MINUTE: "1" });
+    const ws = createMockWebSocket();
+    roomDo.clients.add(ws);
+    roomDo.userIds.set(ws, userId);
+
+    await roomDo.onMessage(ws, {
+      data: JSON.stringify({ type: "message", content: "one" }),
+    });
+    await roomDo.onMessage(ws, {
+      data: JSON.stringify({ type: "message", content: "two" }),
+    });
+
+    expect(quota).toHaveBeenCalledTimes(1);
+    const frames = ws.sent
+      .filter((entry) => typeof entry === "string" && entry.startsWith("{"))
+      .map((entry) => JSON.parse(entry));
+    expect(
+      frames.some((f) => f.type === "error" && String(f.message).includes("rate_limit")),
+    ).toBe(true);
+  });
+
+  it("/announce fans out a server cursor on the agent layer by default", async () => {
+    const { roomDo } = createRoomDo();
+    const ws = createMockWebSocket();
+    roomDo.clients.add(ws);
+    roomDo.socketIds.set(ws, "socket-cursor");
+
+    const req = new Request("https://internal/announce", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "cursor", agentId: "bot_ada", x: 12, y: 34, label: "Ada" }),
+    });
+
+    const res = await roomDo.fetch(req);
+    expect(res.status).toBe(200);
+    expect(ws.sent).toHaveLength(1);
+    expect(JSON.parse(ws.sent[0])).toMatchObject({
+      type: "cursor",
+      userId: "bot_ada",
+      presenceKey: "agent",
+      x: 12,
+      y: 34,
+      label: "Ada",
+    });
+    // Server cursors are ephemeral: nothing lands in the snapshot map.
+    expect(roomDo.lastCursors.size).toBe(0);
+
+    const bad = await roomDo.fetch(
+      new Request("https://internal/announce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "cursor", x: "not-a-number", y: 1 }),
+      }),
+    );
+    expect(bad.status).toBe(400);
+    expect(ws.sent).toHaveLength(1);
+  });
+
+  it("gates /announce on the internal token when INTERNAL_DO_TOKEN is set (#15)", async () => {
+    const { roomDo } = createRoomDo({ INTERNAL_DO_TOKEN: "internal-secret" });
+    const ws = createMockWebSocket();
+    roomDo.clients.add(ws);
+    roomDo.socketIds.set(ws, "socket-z");
+    const body = JSON.stringify({ type: "agentTyping", agentId: "bot_1", isTyping: true });
+
+    const denied = await roomDo.fetch(
+      new Request("https://internal/announce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      }),
+    );
+    expect(denied.status).toBe(403);
+    expect(ws.sent).toHaveLength(0);
+
+    const allowed = await roomDo.fetch(
+      new Request("https://internal/announce", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Do-Token": "internal-secret",
+        },
+        body,
+      }),
+    );
+    expect(allowed.status).toBe(200);
+    expect(ws.sent).toHaveLength(1);
+  });
+
+  it("gates /stream on the internal token when INTERNAL_DO_TOKEN is set (#15)", async () => {
+    const { roomDo } = createRoomDo({ INTERNAL_DO_TOKEN: "internal-secret" });
+    const res = await roomDo.fetch(
+      new Request("https://internal/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ op: "start", userId, projectId, content: "hi" }),
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+
   it("persists delay agent schedules with idempotent upsert", async () => {
     const bag = new Map();
     const { roomDo } = createRoomDo();
@@ -849,6 +1221,41 @@ describe("RoomDurableObject message handlers", () => {
       userId,
       name: "👏",
     });
+  });
+
+  it("P12-b: a concurrent edit that loses the version guard is rejected, not broadcast", async () => {
+    const db = {
+      prepare(sql) {
+        return {
+          bind() {
+            return {
+              run: async () =>
+                sql.includes("UPDATE messages") ? { meta: { changes: 0 } } : { meta: { last_row_id: 1 } },
+              first: async () => (sql.includes("SELECT version") ? { version: 3, seq: 5 } : null),
+              all: async () => ({ results: [] }),
+            };
+          },
+        };
+      },
+      batch: async () => [],
+    };
+    const { roomDo } = createRoomDo({ DB: db });
+    const sender = createMockWebSocket();
+    const peer = createMockWebSocket();
+    roomDo.clients.add(sender);
+    roomDo.clients.add(peer);
+    roomDo.userIds.set(sender, userId);
+
+    await roomDo.onMessage(sender, {
+      data: JSON.stringify({ type: "edit", messageId: 42, content: "edited" }),
+    });
+
+    const frames = sender.sent.map((s) => JSON.parse(s));
+    expect(
+      frames.some((f) => f.type === "error" && f.message === "edit_conflict"),
+    ).toBe(true);
+    const peerFrames = peer.sent.map((s) => JSON.parse(s));
+    expect(peerFrames.some((f) => f.type === "edit" || f.type === "message_updated")).toBe(false);
   });
 
   it("FX-PRES-1 presence_leave drops occupancy members without closing the socket", async () => {

@@ -25,7 +25,7 @@ export default function CompareSendbirdPage() {
       </h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">
         Sendbird sells Chat on monthly active users. FluxyChat sells a room: chat, presence, Yjs, and{" "}
-        <code className="text-foreground">invokeAgent</code> on one Cloudflare Durable Object. Hosted FluxyChat is
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">invokeAgent</code> on one Cloudflare Durable Object. Hosted FluxyChat is
         still beta. Self-host is MIT on your account.
       </p>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">

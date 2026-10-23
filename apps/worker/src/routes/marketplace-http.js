@@ -97,7 +97,7 @@ export async function dispatchMarketplaceRoutes(request, url, h) {
     if (!isAdmin) return respond({ error: "forbidden" }, h, 403);
     const id = path.split("/").pop();
     const body = await request.json();
-    const result = await updateAgent(env, { id, publisherId: userId, ...body });
+    const result = await updateAgent(env, { ...body, id, publisherId: userId });
     return respond(result, h);
   }
 
@@ -145,7 +145,8 @@ export async function dispatchMarketplaceRoutes(request, url, h) {
     const result = await addReview(env, {
       agentId: body.agentId,
       projectId,
-      userId: body.userId || userId,
+      // Audit fix A2-7: attribute the review to the authenticated user only.
+      userId,
       rating: body.rating,
       title: body.title,
       body: body.body,

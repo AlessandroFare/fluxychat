@@ -3,6 +3,8 @@
  * Lightweight SCIM User/Group CRUD for Okta/Entra/Google sync
  */
 
+import { hashApiKey } from "./api-key-hash.js";
+
 const SCIM_USER_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:User';
 const SCIM_GROUP_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:Group';
 
@@ -14,14 +16,31 @@ export async function verifyScimToken(env, projectId, authHeader) {
     return null;
   }
   const token = authHeader.slice(7);
-  const tokenHash = await sha256Hex(token);
+  // Audit #21: salted HMAC hash (same path as API keys), not bare SHA-256.
+  const tokenHash = await hashApiKey(token, env);
 
-  const row = await env.DB.prepare(
+  let row = await env.DB.prepare(
     `SELECT id, project_id, description, scopes, expires_at
      FROM scim_tokens WHERE project_id = ? AND token_hash = ?`
   )
     .bind(projectId, tokenHash)
     .first();
+
+  if (!row) {
+    // Legacy unsalted SHA-256 rows (pre-fix): verify once, then re-hash in place.
+    const legacyHash = await sha256Hex(token);
+    row = await env.DB.prepare(
+      `SELECT id, project_id, description, scopes, expires_at
+       FROM scim_tokens WHERE project_id = ? AND token_hash = ?`
+    )
+      .bind(projectId, legacyHash)
+      .first();
+    if (row) {
+      await env.DB.prepare(`UPDATE scim_tokens SET token_hash = ? WHERE id = ?`)
+        .bind(tokenHash, row.id)
+        .run();
+    }
+  }
 
   if (!row) return null;
   if (row.expires_at && new Date(row.expires_at) < new Date()) return null;
@@ -208,7 +227,8 @@ export async function listScimGroups(env, projectId, startIndex = 1, count = 25)
 export async function createScimToken(env, projectId, description, scopes) {
   const id = crypto.randomUUID();
   const token = generateScimToken();
-  const tokenHash = await sha256Hex(token);
+  // Audit #21: store the salted HMAC hash, never the bare SHA-256 digest.
+  const tokenHash = await hashApiKey(token, env);
   const now = new Date().toISOString();
 
   await env.DB.prepare(

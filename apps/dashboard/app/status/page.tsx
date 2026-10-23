@@ -2,8 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { fetchWorkerHealth } from "@/lib/worker-health";
 import { loadStatusIncidents } from "@/lib/status-incidents";
-import { MarketingShell } from "../components/marketing-shell";
 import { buildPageMetadata } from "@/lib/site-metadata";
+import { MarketingShell } from "../components/marketing-shell";
+import styles from "../landing/landing-c.module.css";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "System status: FluxyChat",
@@ -21,11 +22,11 @@ function statusLabel(ok: boolean | undefined, degraded?: boolean): string {
   return "Operational";
 }
 
-function statusTone(ok: boolean | undefined, degraded?: boolean): string {
-  if (ok === undefined) return "text-muted-foreground";
-  if (!ok) return "text-red-600";
-  if (degraded) return "text-amber-600";
-  return "text-emerald-600";
+function statusColor(ok: boolean | undefined, degraded?: boolean): string {
+  if (ok === undefined) return "var(--ink-2)";
+  if (!ok) return "#b42318";
+  if (degraded) return "var(--brand-text)";
+  return "var(--accent)";
 }
 
 export default async function StatusPage() {
@@ -34,124 +35,187 @@ export default async function StatusPage() {
   const ok = health.data?.ok;
   const degraded = health.data?.degraded;
   const label = statusLabel(ok, degraded);
-  const tone = statusTone(ok, degraded);
 
   return (
-    <MarketingShell className="max-w-3xl py-12 sm:py-12">
-        <h1 data-testid="status-heading" className="font-heading text-3xl font-bold tracking-tight">System status</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Live <code className="text-xs">GET /health</code> for this Worker. Hosted is open beta.
-          This page is not a published fleet SLO. Cloudflare PoP RTT is Cloudflare&apos;s.
-        </p>
-
-        <div className="mt-8 rounded-2xl bg-card p-6 shadow-sm">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="font-heading text-lg font-semibold">Chat API</h2>
-            <span className={`text-sm font-medium ${tone}`}>{label}</span>
-          </div>
-          <dl className="mt-6 space-y-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Endpoint</dt>
-              <dd className="truncate font-mono text-xs">{health.workerUrl}/health</dd>
-            </div>
-            {health.error ? (
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Error</dt>
-                <dd className="text-red-600">{health.error}</dd>
-              </div>
-            ) : null}
-            {health.httpStatus != null ? (
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">HTTP</dt>
-                <dd>{health.httpStatus}</dd>
-              </div>
-            ) : null}
-            {health.data?.version ? (
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Version</dt>
-                <dd>{health.data.version}</dd>
-              </div>
-            ) : null}
-            {health.data?.ts ? (
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Checked at</dt>
-                <dd>{new Date(health.data.ts).toISOString()}</dd>
-              </div>
-            ) : null}
-          </dl>
-
-          {health.data?.checks ? (
-            <div className="mt-8">
-              <h3 className="text-sm font-medium">Bindings</h3>
-              <ul className="mt-3 space-y-2 text-sm">
-                {Object.entries(health.data.checks).map(([key, value]) => (
-                  <li key={key} className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">{key}</span>
-                    <span className={value === "connected" ? "text-emerald-600" : "text-amber-600"}>
-                      {value}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {health.data?.degradedFeatures ? (
-            <div className="mt-8">
-              <h3 className="text-sm font-medium">Feature modes</h3>
-              <ul className="mt-3 space-y-2 text-sm">
-                {Object.entries(health.data.degradedFeatures).map(([key, value]) => (
-                  <li key={key} className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">{key}</span>
-                    <span>{value}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+    <MarketingShell className={styles.pageNarrow}>
+      <header className={styles.pageHero}>
+        <div className={styles.pageHeroCopy}>
+          <span className={styles.pageEyebrow}>Status / worker health</span>
+          <h1 data-testid="status-heading" className={styles.pageTitle}>
+            System status.
+          </h1>
+          <p className={styles.pageLede}>
+            Live <code>GET /health</code> for this Worker. Hosted is open beta. This page is not a
+            published fleet SLO. Cloudflare PoP RTT is Cloudflare&apos;s.
+          </p>
         </div>
+        <div className={styles.pageMeta}>
+          <span>
+            <strong style={{ color: statusColor(ok, degraded) }}>{label}</strong>
+          </span>
+          <span>
+            <strong>Worker</strong> /health
+          </span>
+          <span>
+            <strong>Beta</strong> no SLO
+          </span>
+        </div>
+      </header>
 
-        <div className="mt-8 rounded-2xl bg-card p-6 shadow-sm">
-          <h2 className="font-heading text-lg font-semibold">Incidents</h2>
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>Chat API</span>
+          <h2 className={styles.pageH2}>The endpoint, not a promise.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <div className={styles.pageTableWrap}>
+            <table className={styles.pageTable}>
+              <tbody>
+                <tr>
+                  <th>Endpoint</th>
+                  <td>
+                    <code>
+                      {health.workerUrl}/health
+                    </code>
+                  </td>
+                </tr>
+                <tr>
+                  <th>Status</th>
+                  <td style={{ color: statusColor(ok, degraded) }}>{label}</td>
+                </tr>
+                {health.error ? (
+                  <tr>
+                    <th>Error</th>
+                    <td style={{ color: "#b42318" }}>{health.error}</td>
+                  </tr>
+                ) : null}
+                {health.httpStatus != null ? (
+                  <tr>
+                    <th>HTTP</th>
+                    <td>{health.httpStatus}</td>
+                  </tr>
+                ) : null}
+                {health.data?.version ? (
+                  <tr>
+                    <th>Version</th>
+                    <td>{health.data.version}</td>
+                  </tr>
+                ) : null}
+                {health.data?.ts ? (
+                  <tr>
+                    <th>Checked at</th>
+                    <td>{new Date(health.data.ts).toISOString()}</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {health.data?.checks ? (
+        <section className={styles.pageSection}>
+          <div className={styles.pageSectionHead}>
+            <span className={styles.pageEyebrow}>Bindings</span>
+            <h2 className={styles.pageH2}>What the Worker can see.</h2>
+          </div>
+          <div className={styles.pageBody}>
+            <div className={styles.pageTableWrap}>
+              <table className={styles.pageTable}>
+                <tbody>
+                  {Object.entries(health.data.checks).map(([key, value]) => (
+                    <tr key={key}>
+                      <th>{key}</th>
+                      <td>{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {health.data?.degradedFeatures ? (
+        <section className={styles.pageSection}>
+          <div className={styles.pageSectionHead}>
+            <span className={styles.pageEyebrow}>Feature modes</span>
+            <h2 className={styles.pageH2}>What is on, off, or degraded.</h2>
+          </div>
+          <div className={styles.pageBody}>
+            <div className={styles.pageTableWrap}>
+              <table className={styles.pageTable}>
+                <tbody>
+                  {Object.entries(health.data.degradedFeatures).map(([key, value]) => (
+                    <tr key={key}>
+                      <th>{key}</th>
+                      <td>{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>Incidents</span>
+          <h2 className={styles.pageH2}>Active and recently resolved.</h2>
+        </div>
+        <div className={styles.pageBody}>
           {incidents.active.length === 0 ? (
-            <p className="mt-3 text-sm text-emerald-600">All systems operational. No active incidents.</p>
+            <p style={{ color: "var(--ink)" }}>All systems operational. No active incidents.</p>
           ) : (
-            <ul className="mt-4 space-y-4">
+            <ul>
               {incidents.active.map((incident) => (
-                <li key={incident.title} className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
-                  <p className="font-medium">{incident.title}</p>
-                  {incident.impact ? <p className="mt-1 text-sm text-muted-foreground">{incident.impact}</p> : null}
-                  {incident.summary ? <p className="mt-2 text-sm">{incident.summary}</p> : null}
+                <li key={incident.title}>
+                  <strong>{incident.title}</strong>
+                  {incident.impact ? <p>{incident.impact}</p> : null}
+                  {incident.summary ? <p>{incident.summary}</p> : null}
                 </li>
               ))}
             </ul>
           )}
 
           {incidents.resolved.length > 0 ? (
-            <div className="mt-8">
-              <h3 className="text-sm font-medium text-muted-foreground">Recent resolved</h3>
-              <ul className="mt-3 space-y-3 text-sm">
+            <>
+              <h3>Recent resolved</h3>
+              <ul>
                 {incidents.resolved.slice(0, 5).map((incident) => (
-                  <li key={`${incident.date}-${incident.title}`} className="flex flex-col gap-1 border-b border-border pb-3 last:border-0">
-                    <span className="font-medium">{incident.title}</span>
-                    <span className="text-muted-foreground">
+                  <li key={`${incident.date}-${incident.title}`}>
+                    <strong>{incident.title}</strong>
+                    <p>
                       {[incident.date, incident.duration, incident.status].filter(Boolean).join(" · ")}
-                    </span>
-                    {incident.summary ? <span>{incident.summary}</span> : null}
+                    </p>
+                    {incident.summary ? <p>{incident.summary}</p> : null}
                   </li>
                 ))}
               </ul>
-            </div>
+            </>
           ) : null}
         </div>
+      </section>
 
-        <p className="mt-8 text-xs text-muted-foreground">
-          For tenant-specific incidents (webhook failures, quota spikes), open{" "}
-          <Link href="/analytics" className="underline underline-offset-2">
-            Analytics
-          </Link>{" "}
-          in the console after connecting your project.
-        </p>
+      <div className={styles.pageCta}>
+        <div>
+          <span className={styles.pageEyebrow}>Tenant view</span>
+          <p className={styles.pageH2}>Your incidents, not ours.</p>
+          <p>
+            For tenant-specific incidents (webhook failures, quota spikes), open Analytics in the
+            console after connecting your project.
+          </p>
+        </div>
+        <div className={styles.pageActions}>
+          <Link href="/analytics" className={`${styles.btn} ${styles.btnPrimary}`}>
+            Open Analytics
+          </Link>
+          <Link href="/trust" className={`${styles.btn} ${styles.btnGhost}`}>
+            Trust
+          </Link>
+        </div>
+      </div>
     </MarketingShell>
   );
 }

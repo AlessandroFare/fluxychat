@@ -11,12 +11,15 @@ export {
   FLUXY_WS_CLOSE_POLICY,
   computeReconnectBackoffMs,
   mapWebSocketCloseToError,
+  mapWebSocketCloseToDisconnectReason,
   parseConnectionRefusal,
   describeConnectionError,
   toFluxyErrorInfo,
   errorInfoIs,
   unableTo,
   type FluxyConnectionErrorInfo,
+  type FluxyDisconnectInfo,
+  type FluxyDisconnectReason,
 } from "./errors";
 
 export {
@@ -37,6 +40,19 @@ export {
   FluxyBlockedError,
   ThreadDepthExceededError,
 } from "./structured-errors";
+
+export {
+  AdapterError,
+  AdapterRateLimitError,
+  AuthenticationError,
+  ResourceNotFoundError,
+  PermissionError,
+  ValidationError,
+  NetworkError,
+  AdapterNotFoundError,
+  ThreadNotFoundError,
+  MessageNotFoundError,
+} from "./adapter-errors";
 
 export {
   createLogger,
@@ -892,6 +908,7 @@ export {
   createCursorThrottle,
   createCursorBatcher,
   createCursorDispenser,
+  cursorLayerKey,
   shouldSendCursor,
   clampCursorCoordinate,
   type LiveCursor,
@@ -2296,6 +2313,23 @@ export {
 } from "./worker-fluxy-iot-client";
 
 export {
+  createWorkerFluxyFleetClient,
+  type WorkerFluxyFleetClient,
+  type FleetVehicle,
+  type FleetPosition,
+  type FleetGpsPoint,
+  type FleetTrip,
+  type FleetGeofence,
+  type FleetGeofenceEvent,
+  type FleetDriver,
+  type FleetCopilotPlan,
+  type FleetDeliveryWindow,
+  type FleetPricing,
+  type FleetGpsIngestBody,
+  type FleetGpsIngestResult,
+} from "./worker-fluxy-fleet-client";
+
+export {
   createWorkerAgentPlatformClient,
   type WorkerAgentPlatformClient,
 } from "./worker-agent-platform-client";
@@ -2304,6 +2338,19 @@ export {
   createWorkerFluxyStreamClient,
   type WorkerFluxyStreamClient,
   type WorkerFluxyStreamEvent,
+  type StreamReplay,
+  type StreamAngleReplay,
+  type StreamReplayBundle,
+  type LiveStreamViewer,
+  type StreamPinnedMessage,
+  type StreamChatMessage,
+  type StreamAnalyticsBucket,
+  type StreamGift,
+  type StreamSentimentBucket,
+  type StreamChatRules,
+  type LiveStreamStats,
+  type StreamTurnCredentials,
+  type StreamModerationResult,
 } from "./worker-fluxy-stream-client";
 
 export {

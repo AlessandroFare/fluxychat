@@ -158,6 +158,11 @@ describe('P18-F: Compliance Export', () => {
       expect(csv).toContain('"hello, world"');
     });
 
+    it('should neutralize spreadsheet formulas in cells', () => {
+      const csv = toCsv([{ a: '=1+1', b: '-2+3', c: '@SUM(A1:A2)', d: '+cmd|calc', e: 'plain' }]);
+      expect(csv.split('\n')[1]).toBe("'=1+1,'-2+3,'@SUM(A1:A2),'+cmd|calc,plain");
+    });
+
     it('should use provided columns', () => {
       const csv = toCsv([{ a: 1, b: 2, c: 3 }], ['a', 'c']);
       expect(csv).toBe('a,c\n1,3');

@@ -6,6 +6,8 @@
  * The catalog is domain-agnostic. Invoice, PTO, incidents, onboarding, etc. are
  * definitions the Builder writes — never special-cased in the engine.
  */
+import { normalizeGuardrails } from "./ops-guardrails.js";
+import { normalizeAdaptiveGates } from "./ops-adaptive-gates.js";
 
 export const OPS_STEP_TYPES = [
   "human_task",
@@ -18,7 +20,7 @@ export const OPS_STEP_TYPES = [
   "end",
 ];
 
-export const OPS_GUEST_CAN = ["upload_file", "comment"];
+export const OPS_GUEST_CAN = ["upload_file", "comment", "approve"];
 
 export const OPS_NAMED_VIEWS = [
   {
@@ -113,6 +115,21 @@ export const DEFAULT_OPS_TOOL_REGISTRY = [
     },
   },
   {
+    name: "incidents.read",
+    description: "Read a tracked incident and its recent timeline (defaults to the incident that started this run)",
+    side: "read",
+    risk: "low",
+    requiresApproval: false,
+    dataClasses: ["incident"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        incidentId: { type: "string" },
+        limit: { type: "number" },
+      },
+    },
+  },
+  {
     name: "notify.send",
     description: "Notify a role or user inside the workspace",
     side: "write",
@@ -131,7 +148,7 @@ export const DEFAULT_OPS_TOOL_REGISTRY = [
   },
   {
     name: "mcp.call",
-    description: "Call an enabled MCP tool by name (payload checked by the gateway)",
+    description: "Call a tool on a registered MCP server (server and tool must be allow-listed)",
     side: "write",
     risk: "high",
     requiresApproval: true,
@@ -139,10 +156,11 @@ export const DEFAULT_OPS_TOOL_REGISTRY = [
     inputSchema: {
       type: "object",
       properties: {
+        server: { type: "string" },
         tool: { type: "string" },
         arguments: { type: "object" },
       },
-      required: ["tool"],
+      required: ["server", "tool"],
     },
   },
   {
@@ -192,7 +210,118 @@ export function defaultOpsPolicy() {
     },
     allowedSources: ["files", "named_views", "mcp"],
     allowedViews: OPS_NAMED_VIEWS.map((view) => view.name),
+    // C5: per-tool windowed quotas, evaluated at the gateway before execution.
+    toolQuotas: [],
+    // C7: tool → who may call it ("user:<id>" / "role:<role>"); empty = allowlist decides.
+    toolAcls: [],
+    // C6/I6: tools whose output stays hash-only in the console and the audit.
+    confidentialTools: [],
+    // Wren-style lookup notes: admin free text folded into the lookup step
+    // instruction (bounded); never a free-SQL escape hatch.
+    lookupNotes: null,
+    // C4: optional pre/post pattern guardrails on MCP calls (off by default).
+    guardrails: { enabled: false, block: [], redact: [] },
+    // I2: behavioral gates on statically-allowed tools (off by default).
+    adaptiveGates: { enabled: false, firstUse: false, offHours: null, spike: null, approveRoles: ["owner"] },
+    // Incident events (integration kit webhooks) start this published
+    // workflow in the linked incident room. null = incidents are tracked only.
+    incidentWorkflowSlug: null,
+    // Per-phase overrides for the incident lifecycle; "created" falls back to
+    // incidentWorkflowSlug when the map is empty.
+    incidentWorkflowSlugs: { created: null, acknowledged: null, resolved: null },
   };
+}
+
+function normalizeWorkflowSlug(value) {
+  const slug = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, 64);
+  return slug || null;
+}
+
+function normalizeWorkflowSlugs(value) {
+  const raw = value && typeof value === "object" ? value : {};
+  return {
+    created: normalizeWorkflowSlug(raw.created),
+    acknowledged: normalizeWorkflowSlug(raw.acknowledged),
+    resolved: normalizeWorkflowSlug(raw.resolved),
+  };
+}
+
+/** The workflow slug an incident phase should start, legacy knob included. */
+export function incidentWorkflowSlugFor(policy, action) {
+  const byPhase = policy?.incidentWorkflowSlugs || {};
+  return byPhase[action] || (action === "created" ? policy?.incidentWorkflowSlug || null : null);
+}
+
+export const OPS_TOOL_QUOTA_MAX = 10_000;
+export const OPS_TOOL_QUOTA_WINDOW_MINUTES_MAX = 7 * 24 * 60;
+
+/**
+ * C5: `[{ tool, max, windowMinutes }]` — a call that would exceed `max` in the
+ * rolling window is denied. Bad entries are dropped, not silently clamped to 0.
+ */
+export function normalizeToolQuotas(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const item of raw.slice(0, 50)) {
+    const tool = String(item?.tool || "").trim().slice(0, 128);
+    const max = Math.floor(Number(item?.max));
+    const windowMinutes = Math.floor(Number(item?.windowMinutes));
+    if (!tool || !Number.isFinite(max) || max < 1) continue;
+    if (!Number.isFinite(windowMinutes) || windowMinutes < 1) continue;
+    out.push({
+      tool,
+      max: Math.min(max, OPS_TOOL_QUOTA_MAX),
+      windowMinutes: Math.min(windowMinutes, OPS_TOOL_QUOTA_WINDOW_MINUTES_MAX),
+    });
+  }
+  return out;
+}
+
+export const OPS_TOOL_ACL_MAX_SELECTORS = 50;
+
+/**
+ * C7: `[{ tool, allow: ["user:<id>", "role:<role>"] }]`. When an entry exists
+ * for a tool, only the listed users/roles may call it — the project allowlist
+ * is no longer enough. Entries that could never match are dropped.
+ */
+export function normalizeToolAcls(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const item of raw.slice(0, 50)) {
+    const tool = String(item?.tool || "").trim().slice(0, 128);
+    const allow = Array.isArray(item?.allow)
+      ? item.allow
+          .map((selector) => String(selector || "").trim())
+          .filter((selector) => /^(user|role):[^\s:]+$/.test(selector))
+          .slice(0, OPS_TOOL_ACL_MAX_SELECTORS)
+      : [];
+    if (!tool || !allow.length) continue;
+    out.push({ tool, allow });
+  }
+  return out;
+}
+
+/** C6/I6: tool names whose result is stored as a hash, never as the payload. */
+export function normalizeConfidentialTools(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const item of raw.slice(0, 50)) {
+    const tool = String(item || "").trim().slice(0, 128);
+    if (tool && !out.includes(tool)) out.push(tool);
+  }
+  return out;
+}
+
+export const OPS_LOOKUP_NOTES_MAX = 4000;
+
+/** Wren-style lookup notes: trimmed, 4KB cap, null when empty. */
+export function normalizeLookupNotes(value) {
+  const notes = String(value || "").trim();
+  return notes ? notes.slice(0, OPS_LOOKUP_NOTES_MAX) : null;
 }
 
 export function normalizeOpsPolicy(raw) {
@@ -207,7 +336,15 @@ export function normalizeOpsPolicy(raw) {
       ? raw.forbiddenActions.map(String)
       : base.forbiddenActions,
     allowedViews: Array.isArray(raw.allowedViews) ? raw.allowedViews.map(String) : base.allowedViews,
+    toolQuotas: normalizeToolQuotas(raw.toolQuotas),
+    guardrails: normalizeGuardrails(raw.guardrails),
+    adaptiveGates: normalizeAdaptiveGates(raw.adaptiveGates),
+    toolAcls: normalizeToolAcls(raw.toolAcls),
+    confidentialTools: normalizeConfidentialTools(raw.confidentialTools),
+    lookupNotes: normalizeLookupNotes(raw.lookupNotes),
     highRiskQuorum: Number(raw.highRiskQuorum) >= 1 ? Number(raw.highRiskQuorum) : base.highRiskQuorum,
+    incidentWorkflowSlug: normalizeWorkflowSlug(raw.incidentWorkflowSlug),
+    incidentWorkflowSlugs: normalizeWorkflowSlugs(raw.incidentWorkflowSlugs),
   };
 }
 

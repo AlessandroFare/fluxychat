@@ -109,6 +109,7 @@ export const HOSTED_COPY = {
   startFree: "Create free account",
   signIn: "Sign in",
   console: "Console",
+  openConsole: "Open console",
   connectAccount: "Connect account",
   quickstart: "Quickstart",
   viewDocs: "View docs",

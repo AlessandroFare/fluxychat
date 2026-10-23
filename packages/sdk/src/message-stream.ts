@@ -27,6 +27,7 @@ export class FluxyMessageStream {
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private lastFlushMs = 0;
   private captureBound = false;
+  private captureHandler: ((event: FluxyChatEvent) => void) | null = null;
 
   constructor(
     connection: FluxyChatRoomConnection,
@@ -67,14 +68,20 @@ export class FluxyMessageStream {
     this.assertOpen("end");
     this.closed = true;
     this.clearFlushTimer();
-    if (!this.started) return;
-    void this.flush(true);
+    if (!this.started) {
+      this.unbindCapture();
+      return;
+    }
+    // Unbind only after the final flush resolved the message id through the
+    // capture listener.
+    void this.flush(true).finally(() => this.unbindCapture());
   }
 
   abort(): void {
     if (this.closed) return;
     this.closed = true;
     this.clearFlushTimer();
+    this.unbindCapture();
     if (!this.messageId) return;
     try {
       this.connection.sendJson({
@@ -93,7 +100,7 @@ export class FluxyMessageStream {
   private bindCapture(): void {
     if (this.captureBound) return;
     this.captureBound = true;
-    this.connection.addEventListener("message", (event: FluxyChatEvent) => {
+    const handler = (event: FluxyChatEvent) => {
       if (this.messageId) return;
       if (event.type === "stream" && event.op === "started") {
         this.messageId = event.id;
@@ -107,7 +114,22 @@ export class FluxyMessageStream {
       ) {
         this.messageId = event.id;
       }
-    });
+    };
+    this.captureHandler = handler;
+    this.connection.addEventListener("message", handler);
+  }
+
+  private unbindCapture(): void {
+    if (!this.captureBound) return;
+    if (this.captureHandler) {
+      try {
+        this.connection.removeEventListener("message", this.captureHandler);
+      } catch {
+        /* socket closed */
+      }
+    }
+    this.captureBound = false;
+    this.captureHandler = null;
   }
 
   private scheduleFlush(): void {

@@ -271,4 +271,72 @@ describe("stripe-billing (P1 ENG-10)", () => {
     expect(body.duplicate).toBe(true);
     expect(store.projectPlans.size).toBe(1);
   });
+
+  it("maps non-paying subscription statuses away from active (fail closed)", async () => {
+    const store = createMockDb();
+    const webhookSecret = "whsec_test_status_map";
+    const env = { ...store, DEFAULT_PRICING_VERSION: "v1", STRIPE_WEBHOOK_SECRET: webhookSecret };
+    const h = {
+      json: (body, init) =>
+        new Response(JSON.stringify(body), {
+          status: init?.status || 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      logError: vi.fn(),
+      logInfo: vi.fn(),
+    };
+
+    const send = async (id, status) => {
+      const event = {
+        id,
+        type: "customer.subscription.updated",
+        data: {
+          object: {
+            id: "sub_status_map",
+            customer: "cus_status_map",
+            status,
+            metadata: { project_id: "proj_status_map", plan_name: "pro" },
+          },
+        },
+      };
+      const eventBody = JSON.stringify(event);
+      const signature = await buildStripeSignature(eventBody, webhookSecret);
+      const res = await handleStripeWebhookPost(
+        new Request("https://worker.example/webhooks/stripe", {
+          method: "POST",
+          headers: { "Stripe-Signature": signature },
+          body: eventBody,
+        }),
+        env,
+        h,
+      );
+      expect(res.status).toBe(200);
+      return store.projectPlans.get("proj_status_map").billing_status;
+    };
+
+    expect(await send("evt_status_active", "active")).toBe("active");
+    expect(await send("evt_status_trialing", "trialing")).toBe("active");
+    expect(await send("evt_status_past_due", "past_due")).toBe("past_due");
+    expect(await send("evt_status_canceled", "canceled")).toBe("cancelled");
+    expect(await send("evt_status_paused", "paused")).toBe("cancelled");
+    expect(await send("evt_status_incomplete", "incomplete")).toBe("cancelled");
+    expect(await send("evt_status_missing", "")).toBe("cancelled");
+  });
+});
+
+describe("verifyStripeWebhookSignatureAsync (audit M9)", () => {
+  it("M9: accepts any v1 signature in the header (secret rotation)", async () => {
+    const secret = "whsec_rotation";
+    const payload = JSON.stringify({ id: "evt_rotation" });
+    const full = await buildStripeSignature(payload, secret);
+    const [tPart, goodPart] = full.split(",");
+    const decoy = `v1=${"0".repeat(64)}`;
+
+    // Stripe sends every active endpoint secret's v1 during rotation; the
+    // valid one is not necessarily in the header.
+    expect((await verifyStripeWebhookSignatureAsync(payload, `${tPart},${goodPart},${decoy}`, secret)).valid).toBe(true);
+    expect((await verifyStripeWebhookSignatureAsync(payload, `${tPart},${decoy},${goodPart}`, secret)).valid).toBe(true);
+    // No matching v1 still fails.
+    expect((await verifyStripeWebhookSignatureAsync(payload, `${tPart},${decoy}`, secret)).valid).toBe(false);
+  });
 });

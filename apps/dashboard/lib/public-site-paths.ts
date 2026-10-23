@@ -31,11 +31,21 @@ export const PUBLIC_SITE_PATH_PREFIXES = [
   "/support",
   "/pr-review",
   "/labs",
+  "/solutions",
   "/report",
 ] as const;
 
 export function isPublicSitePath(pathname: string): boolean {
-  if (pathname === "/" || pathname === "/favicon.ico" || pathname === "/llms.txt") return true;
+  if (
+    pathname === "/" ||
+    pathname === "/favicon.ico" ||
+    pathname === "/llms.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/robots.txt" ||
+    pathname === "/opengraph-image"
+  ) {
+    return true;
+  }
   return PUBLIC_SITE_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
@@ -46,6 +56,9 @@ export function clerkPublicRoutePatterns(): string[] {
   const extra = [
     "/",
     "/llms.txt",
+    "/sitemap.xml",
+    "/robots.txt",
+    "/opengraph-image",
     "/.well-known(.*)",
     "/api/console-ack(.*)",
     "/api/webhooks/clerk(.*)",

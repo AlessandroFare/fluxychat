@@ -78,7 +78,7 @@ describe("verifyJwtAndGetContext  per-project previous-secret rotation expiry", 
     const pastIso = new Date(Date.now() - 60_000).toISOString();
 
     const token = await signHs256Jwt(
-      { sub: USER_ID, tid: PROJECT_ID, roles: ["member"], exp: futureExp },
+      { sub: USER_ID, tid: PROJECT_ID, roles: ["member"], jti: "jti_r", exp: futureExp },
       "old-secret"
     );
     const request = new Request("https://fluxy.local/ws/room/r1", {
@@ -100,7 +100,7 @@ describe("verifyJwtAndGetContext  per-project previous-secret rotation expiry", 
     const futureIso = new Date(Date.now() + 3600_000).toISOString();
 
     const token = await signHs256Jwt(
-      { sub: USER_ID, tid: PROJECT_ID, roles: ["member"], exp: futureExp },
+      { sub: USER_ID, tid: PROJECT_ID, roles: ["member"], jti: "jti_r", exp: futureExp },
       "old-secret"
     );
     const request = new Request("https://fluxy.local/ws/room/r1", {
@@ -125,7 +125,7 @@ describe("verifyJwtAndGetContext  per-project previous-secret rotation expiry", 
     const pastIso = new Date(Date.now() - 60_000).toISOString();
 
     const token = await signHs256Jwt(
-      { sub: USER_ID, tid: PROJECT_ID, roles: ["owner"], exp: futureExp },
+      { sub: USER_ID, tid: PROJECT_ID, roles: ["owner"], jti: "jti_r", exp: futureExp },
       "new-secret"
     );
     const request = new Request("https://fluxy.local/ws/room/r1", {

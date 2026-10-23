@@ -53,7 +53,7 @@ export async function dispatchAuditExportRoutes(request, url, h) {
   if (request.method === "PATCH" && path.match(/^\/admin\/audit-export\/schedules\/[^/]+$/)) {
     const id = path.split("/").pop();
     const body = await request.json();
-    const result = await toggleExportSchedule(env, { id, enabled: body.enabled });
+    const result = await toggleExportSchedule(env, { id, projectId, enabled: body.enabled });
     return respond(result, h);
   }
 

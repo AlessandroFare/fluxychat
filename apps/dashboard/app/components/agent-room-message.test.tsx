@@ -20,6 +20,7 @@ describe("AgentRoomMessage", () => {
     );
     expect(screen.getByTestId("agent-message-streaming")).toBeInTheDocument();
     expect(screen.getByText("streaming")).toBeInTheDocument();
-    expect(screen.getByText("agent")).toBeInTheDocument();
+    // The shared MessageItem renders the localized IA badge for the default label.
+    expect(screen.getByTestId("art50-ia-badge")).toHaveTextContent("IA");
   });
 });

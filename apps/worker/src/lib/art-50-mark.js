@@ -10,8 +10,14 @@ function hexFromBuffer(buf) {
 }
 
 export function art50Secret(env) {
-  const secret = env?.ART50_MARK_SECRET || env?.JWT_SECRET || "";
-  return typeof secret === "string" ? secret : "";
+  const dedicated = env?.ART50_MARK_SECRET;
+  if (typeof dedicated === "string" && dedicated) return dedicated;
+  // Audit F-91: the mark key fell back to JWT_SECRET — a session signing key
+  // must not double as an Art. 50 integrity key. In production the mark stays
+  // unsigned until ART50_MARK_SECRET is set; dev/test keep the fallback.
+  if (env?.NODE_ENV === "production" || env?.ENVIRONMENT === "production") return "";
+  const fallback = env?.JWT_SECRET || "";
+  return typeof fallback === "string" ? fallback : "";
 }
 
 export function buildArt50Unsigned({

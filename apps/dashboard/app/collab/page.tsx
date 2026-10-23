@@ -54,7 +54,7 @@ export default function CollabPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="FluxyCollab"
-        description="Collaborative workspace with whiteboard, notes, kanban & CRDT sync"
+        description="Collaborative workspace with whiteboard, notes, kanban, docs & comments on CRDT sync"
       />
 
       <div className="flex flex-1 flex-col gap-4 p-4 pt-2">
@@ -88,7 +88,7 @@ export default function CollabPage() {
             <Pen className="h-12 w-12 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Sign in to list workspaces</h2>
             <p className="max-w-sm text-sm text-muted-foreground">
-              FluxyCollab attaches a whiteboard, notes, and kanban to each room. Sign in with your project JWT, then pick a room below.
+              FluxyCollab attaches a whiteboard, notes, kanban, and comments to each room. Sign in with your project JWT, then pick a room below.
             </p>
             <Link href="/enter" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
               Connect session
@@ -101,7 +101,7 @@ export default function CollabPage() {
             <Pen className="h-12 w-12 text-muted-foreground" />
             <h2 className="text-lg font-semibold">No rooms in this project yet</h2>
             <p className="max-w-sm text-sm text-muted-foreground">
-              Create or join a room first. Each room gets its own collab workspace (whiteboard, notes, kanban) at{" "}
+              Create or join a room first. Each room gets its own collab workspace (whiteboard, notes, kanban, comments) at{" "}
               <code className="text-xs">/collab/[roomId]</code>.
             </p>
             <Link href="/rooms" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">

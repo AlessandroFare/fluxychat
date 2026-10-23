@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.28] - 2026-10-23
+
+### Changed
+
+- Templates pin `@fluxy-chat/sdk@^0.7.0`, `@fluxy-chat/react@^0.1.12`, `@fluxy-chat/ui@^0.1.11`, `@fluxy-chat/ui-kit@^0.1.12`. Publish those npm packages **before** this CLI.
+- The generated `@fluxy-chat/sdk` dependency in `src/templates.ts` now matches the templates.
+- The live-cursors template uses `useLiveCursors` and `@fluxy-chat/ui`; generated Cloudflare handler environment types are exported and typed.
+
 ## [0.5.27] - 2026-10-15
 
 ### Changed

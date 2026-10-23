@@ -13,7 +13,9 @@
     "public-demo-hardening",
     "realtime-provider",
     "room-reactions",
+    "room-to-ai-messages",
     "transport-fallback",
-    "typing"
+    "typing",
+    "..."
   ]
 }

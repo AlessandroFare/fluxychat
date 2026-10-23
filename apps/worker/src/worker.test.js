@@ -1,10 +1,12 @@
-import { describe, expect, it } from "vitest";
-import {
+import { describe, expect, it, vi } from "vitest";
+import worker, {
   checkAndConsumeRateLimit,
   hasAnyRole,
   resolveCacheVersionKey,
   retryDelayMsForAttempt,
+  sanitizeLogContext,
   truncateForStorage,
+  validateRoles,
 } from "./worker.js";
 import {
   encryptWebhookSecret,
@@ -22,8 +24,10 @@ import {
 } from "./lib/jwt-auth.js";
 
 async function signJwtHs256Test(secret, payload) {
+  // Audit F-04: verification requires a jti; mirror the production signer.
+  const body = payload?.jti ? payload : { ...payload, jti: "test-jti" };
   const headerB64 = base64urlEncode(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const payloadB64 = base64urlEncode(JSON.stringify(payload));
+  const payloadB64 = base64urlEncode(JSON.stringify(body));
   const signingInput = `${headerB64}.${payloadB64}`;
   const key = await crypto.subtle.importKey(
     "raw",
@@ -45,6 +49,41 @@ describe("worker reliability helpers", () => {
     expect(hasAnyRole(["member"], ["owner", "admin"])).toBe(false);
     expect(hasAnyRole(["moderator"], ["owner", "moderator"])).toBe(true);
     expect(hasAnyRole([], ["owner"])).toBe(false);
+  });
+
+  it("A2-1: hasAnyRole accepts the auth context shape, staying fail-closed", () => {
+    expect(hasAnyRole({ roles: ["owner"] }, ["owner", "admin"])).toBe(true);
+    expect(hasAnyRole({ roles: ["member"] }, ["owner", "admin"])).toBe(false);
+    expect(hasAnyRole({ roles: [] }, ["owner"])).toBe(false);
+    expect(hasAnyRole({}, ["owner"])).toBe(false);
+    expect(hasAnyRole(null, ["owner"])).toBe(false);
+  });
+
+  it("A2c: mints the canonical moderator role, mod is a normalized legacy alias", () => {
+    expect(validateRoles(["moderator"]).roles).toEqual(["moderator"]);
+    expect(validateRoles(["mod"]).roles).toEqual(["moderator"]);
+    expect(validateRoles(["mod", "moderator"]).roles).toEqual(["moderator"]);
+    expect(validateRoles([" MOD "]).roles).toEqual(["moderator"]);
+    expect(validateRoles(["owner", "mod"]).roles).toEqual(["owner", "moderator"]);
+    expect(validateRoles(["mod"], { capElevated: true }).roles).toEqual(["moderator"]);
+    expect(validateRoles(["owner"], { capElevated: true }).roles).toEqual(["member"]);
+    expect(validateRoles(["wizard"]).roles).toEqual(["member"]);
+  });
+
+  it("redacts sensitive query params in logged search strings (audit F-01)", () => {
+    const out = sanitizeLogContext({
+      path: "/ws/room/r1",
+      search: "?token=supersecretjwtvalue&roomId=r1&apiKey=pk_publishable123456",
+    });
+    expect(out.search).toContain("roomId=r1");
+    expect(out.search).not.toContain("supersecretjwtvalue");
+    expect(out.search).not.toContain("pk_publishable123456");
+    expect(out.search).toContain("token=supe...alue");
+  });
+
+  it("leaves a search without sensitive params intact", () => {
+    const out = sanitizeLogContext({ search: "?roomId=r1&limit=20" });
+    expect(out.search).toBe("?roomId=r1&limit=20");
   });
 
   it("uses expected retry backoff schedule", () => {
@@ -399,5 +438,14 @@ describe("verifyJwtAndGetContext", () => {
     await expect(verifyJwtAndGetContext(req, env)).rejects.toMatchObject({
       status: 401,
     });
+  });
+});
+
+describe("email handler rejections (A2-22)", () => {
+  it("rejects temporary failures so the MTA retries instead of dropping mail", async () => {
+    const message = { setReject: vi.fn() };
+    // No DB → handleEmailInbound reports { ok: false, reject: "temporary failure" }.
+    await worker.email(message, {}, {});
+    expect(message.setReject).toHaveBeenCalledWith("temporary failure");
   });
 });

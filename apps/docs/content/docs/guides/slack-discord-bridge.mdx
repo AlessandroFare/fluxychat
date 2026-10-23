@@ -1,9 +1,9 @@
 ---
 title: Slack and Discord bridge
-description: Sync inbound messages from Slack or Discord channels into FluxyChat rooms via webhooks.
+description: Two-way sync between Slack or Discord channels and FluxyChat rooms, with signed inbound webhooks and retried outbound delivery.
 ---
 
-Bridge external chat platforms into FluxyChat rooms with **inbound webhooks** and **channel mappings**.
+Bridge external chat platforms into FluxyChat rooms with **two-way channel mappings**: room messages are delivered out to the platform, and **signed webhooks** sync replies back.
 
 Manage bridges from the dashboard [**Bridges**](/bridges) page or the admin REST API.
 
@@ -16,22 +16,41 @@ curl -X POST "$WORKER_URL/admin/bridges" \
   -d '{
     "platform": "slack",
     "name": "Support Slack",
-    "token": "xoxb-..."
+    "token": "xoxb-...",
+    "signingSecret": "a1b2c3..."
   }'
 ```
 
 Supported platforms: `slack`, `discord`.
 
+- `token` (optional) is the bot token used for outbound delivery.
+- `signingSecret` (optional, but inbound returns `503` without it) is the Slack signing secret or the Discord application public key.
+- Both secrets are encrypted at rest when the worker has `WEBHOOK_SECRET_ENCRYPTION_KEY` configured.
+
+Rotate or add secrets later without recreating the bridge (recreating deletes its mappings and message map):
+
+```bash
+curl -X PATCH "$WORKER_URL/admin/bridges/br_abc123" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{ "signingSecret": "rotated-secret" }'
+```
+
 ## Inbound webhook URLs
 
-Point your Slack Event Subscriptions or Discord webhook at:
+Point your Slack Event Subscriptions or Discord interactions endpoint at:
 
 | Platform | URL |
 |----------|-----|
 | Slack | `POST {WORKER_URL}/webhooks/bridge/slack/{bridgeId}` |
 | Discord | `POST {WORKER_URL}/webhooks/bridge/discord/{bridgeId}` |
 
-Slack URL verification (`url_verification` challenge) is handled automatically.
+Inbound requests are verified before parsing:
+
+- Slack: `x-slack-signature` (v0 scheme); `x-slack-request-timestamp` must be within 5 minutes.
+- Discord: `x-signature-ed25519` over `{timestamp}{body}`.
+
+Failures are fail-closed: `401` for a bad or stale signature, `503 signature_not_configured` when the bridge has no secret. Slack URL verification (`url_verification` challenge) is answered after the signature check.
 
 ## Channel mappings
 
@@ -46,9 +65,27 @@ curl -X POST "$WORKER_URL/admin/bridges/mappings" \
     "roomId": "room_support",
     "externalChannelId": "C01234567",
     "externalChannelName": "#support",
-    "syncDirection": "bidirectional"
+    "syncDirection": "both"
   }'
 ```
+
+`syncDirection` accepts `both` (default), `inbound`, or `outbound`.
+
+## Outbound delivery
+
+Messages sent in a mapped room of a `connected` bridge are queued in `bridge_deliveries` and delivered with the bridge credentials:
+
+- Slack: `chat.postMessage` with the bot token, or the configured `webhookUrl` (incoming webhook) when no token is set.
+- Discord: `POST /channels/{channel_id}/messages` with the bot token, or the configured webhook URL.
+
+Failures retry with backoff (60s, 5m, 30m, 1h) on the webhook-flush cron until `BRIDGE_MAX_ATTEMPTS` (default 5), then land as `failed` with the provider error surfaced on the bridge. Inspect the last 20 deliveries:
+
+```bash
+curl "$WORKER_URL/admin/bridges/br_abc123/deliveries" \
+  -H "Authorization: Bearer $ADMIN_JWT"
+```
+
+Messages imported from a platform are never echoed back to that same platform.
 
 ## Connect and monitor
 
@@ -66,8 +103,11 @@ curl "$WORKER_URL/admin/bridges/stats" -H "Authorization: Bearer $ADMIN_JWT"
 
 ## Troubleshooting
 
-- **404 on webhook** — verify `bridgeId` and platform match (`slack` bridge only accepts `/slack/` path).
-- **Messages not appearing** — confirm a mapping exists for the external `channel_id` and the bridge status is `connected`.
+- **503 on webhook** — no signing secret configured. Add one from the dashboard (Secrets) or with PATCH.
+- **401 on webhook** — signature mismatch or a Slack timestamp older than 5 minutes.
+- **404 on webhook** — verify `bridgeId` and platform match (`slack` bridge only accepts the `/slack/` path).
+- **Messages not appearing inbound** — confirm a mapping exists for the external `channel_id` and the bridge status is `connected`.
+- **Outbound stuck pending or failed** — check `GET /deliveries` for `lastError`; delivery needs a bot token or a webhook URL.
 - **Slack duplicates** — ignore bot subtypes; the parser skips `message` events with `subtype`.
 
 See also [Webhooks catalog](/docs/webhooks/catalog) for delivery signing and replay tooling, and [Matrix bridge](/docs/guides/matrix-bridge) for federation.

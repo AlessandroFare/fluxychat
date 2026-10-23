@@ -1,6 +1,6 @@
 {
     "name":  "@fluxy-chat/agent",
-    "version":  "0.2.1",
+    "version":  "0.2.2",
     "description":  "FluxyChat server-side agent SDK (WebSocket bots, streaming, waitFor, AI providers)",
     "license":  "MIT",
     "author":  "Fluxychat",

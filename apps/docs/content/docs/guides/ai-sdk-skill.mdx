@@ -1,24 +1,23 @@
 ---
 title: "FluxyChat SDK — AI Agent Skill"
-description: "You are coding with FluxyChat SDK (`@fluxychat/sdk`). All imports from `@fluxychat/sdk` or local `./index`. Core pattern: factory functions (`createXyz()`) retu"
+description: "You are coding with the FluxyChat SDK (`@fluxy-chat/sdk`). Factory functions (`createXyz()`) return interfaces with per-instance state."
 ---
 
 # FluxyChat SDK — AI Agent Skill
 
 ## Identity
-You are coding with FluxyChat SDK (`@fluxychat/sdk`). All imports from `@fluxychat/sdk` or local `./index`. Core pattern: factory functions (`createXyz()`) returning interfaces with per-instance state.
+You are coding with the FluxyChat SDK (`@fluxy-chat/sdk`). All imports from `@fluxy-chat/sdk` (subpath entries: `./react`, `./room`, `./chat`, `./testing`, `./core`, `./markdown`, and more). Core pattern: factory functions (`createXyz()`) returning interfaces with per-instance state.
 
 ## Modules
 
 ### Core
-- **ThreadState** — `createThreadState()`, `createThreadStateComposer()`: thread management with state merging
-- **Outbox** — `createOutbox()`: message queue with dedup, flush, bump
-- **Transport** — `createWebSocketTransport()`, `createAdaptiveTransport()`, `createDurableTransport()`, `createWebTransport()`: WebSocket/WebTransport with backpressure
+- **ThreadState** — `createThreadState()`: thread management with state merging
+- **Outbox** — `createMessageOutbox()`, `createOutboxProcessor()`: dedup and flush for outbound messages
+- **Transport** — `createWebSocketTransport()`, `createAdaptiveTransport()`, `createDurableTransport()`: WebSocket transport with backpressure
 - **Sync** — `delta-sync.ts`: CRDT-like state sync with patches
 
 ### Media & Voice
 - **Voice pipeline** — `createVoicePipeline()`: mic→ASR→LLM→TTS→speaker 5-stage orchestrator with per-stage metrics
-- **Voice realtime** — `createRealtimeProvider()`, `createSemanticEOTDetector()`: realtime audio with WebRTC, semantic endpointing
 - **Voice quality** — `createSloTracker()` (TTFA percentiles), `createNoiseProcessor()` (AEC/noise/gain), `createQualityCollector()` (snapshot breakdown)
 - **Turn detection** — `createTurnDetector()`: VAD energy gate + semantic EOT, dynamic endpointing
 - **Voice controls** — `createProsodyController()` (style/rate/pitch), `createDiarizer()` (speaker ID/overlap/correction)
@@ -31,31 +30,22 @@ You are coding with FluxyChat SDK (`@fluxychat/sdk`). All imports from `@fluxych
 - **Dynamic tools** — `dynamicTool()`, `createDynamicToolRegistry()`: runtime tool registration
 - **Call options** — `callOptionsSchema()`, `prepareCall()`, `createAgentWithCallOptions()`: type-safe runtime config
 - **Workflow agent** — `createWorkflowAgent()`: LLM-powered multi-step agent
-- **Agent delegation** — `createAgentDelegation()`: cross-agent routing with skills, retries, fallback
-- **Agent-to-agent** — `createAgentToAgent()`: direct agent messaging
-- **Regex matching** — `createRegexMessageMatching()`: pattern-based message routing
-- **Slash commands** — `createSlashCommands()`: /command parser
+- **Agent delegation** — `delegateToAgent()`: hand a task off to another agent
+- **Slash commands** — `createSlashCommandRegistry()`: /command parser
 - **Gamification** — `createGamification()`: XP/levels/badges/streaks
-- **Moderation** — `createModeration()`: profanity/spam/PII/content policies
-- **Generative UI** — `createGenerativeUI()`: dynamic React component rendering, approve/revoke
-- **MCP** — `createMcpServer()`, `createMcpClient()`, `createMcpNegotiation()`, `createMcpIntegration()`
-- **Transcripts** — `createTranscriptStore()`: search/tag/export
-- **Message serialization** — `createMessageSerialization()`: compress/decompress, migration
+- **Moderation** — `createModerationEngine()`, `evaluateModerationRules()`: profanity/spam/PII/content policies
+- **Rendering** — `ComponentRenderer`, `renderParts()`: pluggable component/message rendering
 
 ### Real-time Infrastructure
-- **Connections** — `createConnections()`: connection pool with join/leave
-- **Concurrency** — `ConcurrentQueue`, `createSubscriptionSet()`
-- **Relay** — `createDecentralizedRelay()`: peer-to-peer relay with DHT
+- **Relay** — `createDecentralizedRelay()`: peer-to-peer relay
 - **Failover** — `createRegionalFailover()`: multi-region fallback
-- **Room** — `createRoomConnection()`, `createRoomSession()`, `createRoomSequencer()`, `createBroadcast()`, `createMessageDelivery()`, `createMessageHistory()`, `createRoomRestClient()`
+- **Room** — `createFluxyRoomSession()`, `acquireFluxyRoomSession()`, `createRoomSequencer()`, `createBroadcastApi()`
 - **Delivery** — `createDeliverySemantics()`: at-most-once/at-least-once/exactly-once
-- **Streaming** — `createStreamingEnhancements()`, `createStreamingEditBatcher()`
-- **Sync primitives** — `createLockManager()`, `createSyncPrimitives()`, `createMutex()`, `createRWLock()`, `createConditionVariable()`, `createSemaphore()`
-- **Ephemeral** — `createEphemeralStorage()`: auto-expiring key-value
-- **Platform adapter** — `createPlatformAdapter()`: platform abstraction
+- **Streaming** — `createFluxyStream()`, `createResumableAgentStream()`
+- **Ephemeral** — `postEphemeral()`: post an ephemeral message (optional DM fallback)
 
 ### Enterprise/Security
-- **MLS E2EE** — `createMlsManager()`: MLS protocol groups, key rotation, encrypt/decrypt, 3 cipher suites
+- **Group cipher** — `createGroupCipher({ keyMaterial })`: AES-256-GCM with HKDF-SHA256 per-epoch keys and AAD binding. (`createMlsManager()` throws with migration text; it never performed the cryptography it claimed.)
 - **AI governance** — `createAiGovernance()`: model/prompt/tool registry, risk tiering, approvals
 - **eDiscovery** — `createEdiscoveryManager()`: legal hold, export, SHA-256 audit log
 - **DLP** — `createDlpDetector()`: PHI/PCI pattern scan, redact/block/flag
@@ -71,19 +61,17 @@ You are coding with FluxyChat SDK (`@fluxychat/sdk`). All imports from `@fluxych
 - **GUI sandbox** — `createGuiSandboxManager()`: iframe sandbox, CSP, capability grants
 
 ### Developer Experience
-- **Testing utils** — `createMockAdapter()`, `createMockState()`, `createMockChatInstance()`, `matchers` (Vitest custom)
+- **Testing utils** — `createMockAdapter()`, `matchers` (Vitest custom)
 - **Telemetry** — `createTelemetryManager()`, `OpenTelemetryIntegration()`, `DevToolsTelemetryIntegration()`
 - **DevTools** — `createDevToolsStore()`, `createDevToolsInspector()`
 - **Deterministic models** — `createDeterministicLanguageModel()`: scripted output/chunks/errors
 - **Stream fixtures** — `streamFixtures`, `simulateStream()`: edge case stream patterns
-- **Dynamic tools** — `dynamicTool()`, `createDynamicToolRegistry()`: runtime tool registration
-- **Call options** — `callOptionsSchema()`, `prepareCall()`: type-safe runtime config
 - **Error hierarchy** — `ChatError`, `RateLimitError`, `LockError`, `NotImplementedError`
 
 ## Patterns
 1. Factory functions only (no class exports, no module-level state)
 2. Each factory returns typed interface with per-instance mutable state
-3. In-memory implementations — deployer wires real infrastructure (LiveKit, Redis, MLS provider, etc.)
+3. In-memory implementations — deployer wires real infrastructure (LiveKit, Redis, your provider, etc.)
 4. Tests use `vi.fn()` mocks, no external services
 5. Guide docs in `docs/guides/*.md` with usage examples
 
@@ -91,4 +79,4 @@ You are coding with FluxyChat SDK (`@fluxychat/sdk`). All imports from `@fluxych
 ```bash
 cd packages/sdk && npx vitest run
 ```
-688+ tests across 82+ files.
+1,300+ tests across 200+ files.

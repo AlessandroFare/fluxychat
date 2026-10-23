@@ -1,6 +1,7 @@
 import { OPS_GUEST_CAN, OPS_STEP_TYPES } from "./ops-policy.js";
 import { isJsonLogicRule } from "./ops-jsonlogic.js";
 
+
 const MAX_STEPS = 40;
 const MAX_ID = 64;
 

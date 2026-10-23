@@ -52,6 +52,31 @@ describe('SSO/SAML', () => {
       expect(result.valid).toBe(false);
       expect(result.reason).toContain('not yet valid');
     });
+
+    it('should reject expired assertions carrying ISO timestamps (parseSamlAssertion output)', () => {
+      const assertion = {
+        notBefore: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        notOnOrAfter: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+      };
+      const result = validateSamlTiming(assertion, 300);
+      expect(result.valid).toBe(false);
+      expect(result.reason).toContain('expired');
+    });
+
+    it('should reject not-yet-valid assertions carrying ISO timestamps', () => {
+      const assertion = {
+        notBefore: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        notOnOrAfter: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      };
+      const result = validateSamlTiming(assertion, 300);
+      expect(result.valid).toBe(false);
+      expect(result.reason).toContain('not yet valid');
+    });
+
+    it('should fail closed on unparseable timestamps', () => {
+      const result = validateSamlTiming({ notOnOrAfter: 'not-a-date' }, 300);
+      expect(result.valid).toBe(false);
+    });
   });
 
   describe('generateSpMetadata', () => {
@@ -278,7 +303,9 @@ describe('TOTP 2FA', () => {
     expect(codes.length).toBe(10);
     expect(codeHashes.length).toBe(10);
     for (const code of codes) {
-      expect(code).toMatch(/^[A-F0-9]{4}-[A-F0-9]{4}$/);
+      // Audit #24: 80-bit codes formatted in four groups of five hex chars.
+      expect(code).toMatch(/^[A-F0-9]{5}(-[A-F0-9]{5}){3}$/);
+      expect(code.replace(/-/g, '')).toHaveLength(20);
     }
   });
 

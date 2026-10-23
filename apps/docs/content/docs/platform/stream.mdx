@@ -1,35 +1,151 @@
 ---
 title: Stream
-description: Live streaming chat and event messages.
+description: Live events, chat, moderation, multi-angle replays, shopping, gifts and OBS overlays on the same Worker.
 ---
-
-Dashboard: [`/stream`](/stream). Live event chat overlays on the same Worker. There is no second socket fleet.
-
-WHIP/HLS ingest needs Cloudflare Stream secrets on the Worker. The gallery does not yet include a copy-paste WHIP example.
 
 # Stream module
 
-Live event chat overlays and stream-scoped messaging via `createWorkerFluxyStreamClient`.
+Live events are **HTTP + D1 records** on the Worker (`/api/live/*`), and the room WebSocket fans out `live.*` server events to the event room. Video ingest and playback run on **Cloudflare Stream** (WHIP or RTMPS in; HLS/DASH out) on *your* Cloudflare account — the Worker provisions and stores the input keys and never transcodes. There is no second socket fleet.
+
+## Quickstart
+
+Create an event. The room defaults to `live-{projectId}`; pass `roomId` to reuse an existing room for the chat:
+
+```bash
+curl -X POST "$WORKER/api/live/events" \
+  -H "Authorization: Bearer $JWT" -H "Content-Type: application/json" \
+  -d '{"title":"Launch party","roomId":"YOUR_ROOM"}'
+# → { "event": { "id": "le_…", "status": "scheduled", … } }
+```
+
+Provision a Cloudflare Stream live input (idempotent once `liveInputUid` is set). Without the Worker's Stream secrets this is an honest `503 cloudflare_stream_not_configured`:
+
+```bash
+curl -X POST "$WORKER/api/live/events/le_…/provision" -H "Authorization: Bearer $JWT"
+# → event with rtmpsUrl, streamKey, whipUrl, playbackHls, playbackDash
+```
+
+Point OBS at `rtmpsUrl` + `streamKey` (or any WHIP client at `whipUrl`), then go live — the room receives `live.event_live`. Sending `{"status":"ended"}` closes the event and re-attempts the angle-replay reconciliation:
+
+```bash
+curl -X PATCH "$WORKER/api/live/events/le_…" \
+  -H "Authorization: Bearer $JWT" -H "Content-Type: application/json" \
+  -d '{"status":"live"}'
+```
+
+Chat and moderation ride the same Worker — no second connection:
+
+```bash
+curl -X POST "$WORKER/api/live/events/le_…/join" \
+  -H "Authorization: Bearer $JWT" -H "Content-Type: application/json" -d '{}'
+
+curl -X POST "$WORKER/api/live/events/le_…/messages" \
+  -H "Authorization: Bearer $JWT" -H "Content-Type: application/json" \
+  -d '{"content":"hello from the chat"}'
+```
+
+## SDK
+
+Every route above is covered by the worker client (member or guest JWT):
 
 ```ts
-import { createWorkerFluxyStreamClient } from "@fluxy-chat/sdk";
+import { FluxyChatClient, createWorkerFluxyStreamClient } from "@fluxy-chat/sdk";
 
-const stream = createWorkerFluxyStreamClient({
-  baseUrl: process.env.NEXT_PUBLIC_FLUXY_BASE_URL!,
-  token: memberJwt,
+const client = new FluxyChatClient({ baseUrl, userId, token });
+const stream = createWorkerFluxyStreamClient(client);
+
+const event = await stream.createEvent({ title: "Launch party", roomId });
+const provisioned = await stream.provision(event.id); // 503 cloudflare_stream_not_configured until Stream secrets are set
+await stream.goLive(event.id);                        // PATCH status=live
+
+// Chat, rules, moderation
+await stream.join(event.id);                          // { id, alreadyJoined? }
+await stream.upsertChatRules(event.id, { slowModeSeconds: 5, linkProtection: true });
+await stream.sendMessage(event.id, { content: "hello" });
+await stream.listMessages(event.id, { limit: 50 });   // ascending, before=ISO cursor
+await stream.pinMessage(event.id, messageId);
+await stream.muteViewer(event.id, userId, true);
+await stream.banViewer(event.id, userId);             // bans and marks the viewer left
+
+// Viewers, analytics
+await stream.getViewerCount(event.id);                // { count }
+await stream.listViewers(event.id, { role: "viewer", limit: 50 });
+await stream.updatePeak(event.id);                    // recompute peak from the live count
+await stream.recordAnalytics(event.id, { timestampBucket: "2026-10-16T10:00Z", messagesCount: 12 });
+await stream.getStats();                              // events by status, totals
+
+// Multi-angle, highlights, replays
+await stream.createAngle(event.id, { label: "Cam 2", provisionCloudflare: true });
+await stream.createHighlight(event.id, { title: "Save", startSeconds: 120, endSeconds: 150 });
+await stream.reconcileReplays(event.id);              // pull finished Cloudflare videos
+const bundle = await stream.getReplayBundle(event.id); // primary + per-angle + chat timeline
+
+// Shopping, gifts, ops
+const product = await stream.upsertProduct(event.id, { name: "Mug", checkoutUrl: "https://shop.example/mug", inventoryQty: 50, moq: 1 });
+await stream.recordCheckoutClick(event.id, product.id, 1); // 409 insufficient_inventory | below_moq
+await stream.sendGift(event.id, { giftType: "tip", amount: 5 });
+await stream.getTurnCredentials();                    // STUN fallback until TURN_SECRET / TURN_API_* are set
+```
+
+The legacy instance methods on `FluxyChatClient` (`createStream`, `updateStream`, `getViewerCount`, `joinStream`, `leaveStream`, overlays) still work for JWT callers; the worker client is the surface with moderation, analytics, angles, replays, commerce and gifts.
+
+## Realtime
+
+The event room receives typed frames on the same WebSocket as chat:
+
+```tsx
+useChat({
+  roomId, // the event room — default live-{projectId}
+  onServerEvent: (ev) => {
+    if (ev.name === "live.chat_message") { /* eventId, messageId, content, contentType, username */ }
+    if (ev.name === "live.viewer_joined" || ev.name === "live.viewer_left") { /* eventId, userId, viewerCount */ }
+    if (ev.name === "live.event_live" || ev.name === "live.event_ended") { /* eventId, status */ }
+    if (ev.name === "live.event_created") { /* title, status, roomId */ }
+  },
 });
 ```
 
-## HTTP endpoints
+## API surface
 
-Worker routes under `/api/live/events/:eventId/messages` support posting and listing stream messages for a live event.
+| Area | Routes |
+| --- | --- |
+| Events | `GET/POST /api/live/events` · `GET/PATCH /api/live/events/{id}` |
+| Ingest | `POST …/{id}/provision` · `DELETE …/{id}/input` |
+| Chat | `POST/GET …/{id}/messages` · `GET/POST …/{id}/rules` |
+| Moderation | `POST …/{id}/ban` · `…/mute` · `…/pin` · `…/unpin` · `GET …/{id}/pinned` · `POST …/{id}/moderate-frame` |
+| Viewers | `POST …/{id}/join` · `…/{id}/leave` · `GET …/{id}/viewers` · `…/{id}/viewer-count` · `GET/POST …/{id}/peak` |
+| Analytics | `POST/GET …/{id}/analytics` · `GET /api/live/stats` |
+| Angles | `GET/POST …/{id}/angles` — each angle can get its own Cloudflare live input |
+| Highlights | `GET/POST …/{id}/highlights` |
+| Shopping | `GET/POST …/{id}/products` · `POST …/{id}/products/{pid}/show` · `…/checkout-click` |
+| Replays | `GET/POST …/{id}/replays` · `…/replays/reconcile` · `…/replays/reconcile-angles` · `GET …/{id}/replay` · `…/{id}/replay/primary` |
+| Gifts | `GET/POST …/{id}/gifts` |
+| OBS overlays | `POST/GET /overlays` · `GET/PATCH/DELETE /overlays/{id}` · public widget `GET /overlays/{id}/widget` |
 
-Use this for:
+All `/api/live/*` routes accept a member or guest JWT; `/overlays` writes need owner/admin; the widget is public by design. Overlay types: `qa`, `poll`, `reactions`, `scoreboard`, `countdown`, `ticker`, `chat`. Disabled overlays (`enabled: false`) return 404 — hide without deleting.
 
-- Live stream chat overlays (`createStreamOverlay`, `getStreamOverlay`, `updateStreamOverlay`, `listStreamOverlays`, `streamOverlayWidgetUrl` — OBS browser source, not Overlayed Electron)
-- Overlay types: `qa`, `poll`, `reactions`, `scoreboard`, `countdown`, `ticker`, `chat`
-- Public widget: `GET /overlays/:id/widget` (id only, no JWT). Disabled overlays (`enabled: false`) return 404 — hide without deleting.
-- Event-scoped moderation
-- High-volume fan-out with room isolation
+## Readiness
 
-See [Realtime modules](/docs/platform/realtime-modules) for the full module map.
+| Piece | Status |
+| --- | --- |
+| Events, chat, rules, pins, viewers, peak, moderation, analytics, stats | **Beta** — Worker + D1, route and SDK tests |
+| Cloudflare Stream ingest (`provision`, WHIP/RTMPS, HLS/DASH) | **Beta** — your Cloudflare account. `goLive` tries an auto-provision and swallows failures; the `provision` route reports them (`503`/`502`) |
+| Multi-angle + replay reconciliation and sync groups | **Beta** — same Cloudflare dependency |
+| Live shopping | **Beta** — external HTTPS checkout; inventory and MOQ enforced in D1; optional `stripePriceId` (project Stripe secret, `stripe_not_configured` otherwise) |
+| Gifts / tips ledger | **Beta** — rows start `payment_status: pending`; settling payments is yours |
+| Visual frame moderation | **Preview** — needs the project's moderation model, otherwise `503 visual_moderation_disabled` |
+| Sentiment buckets | **Preview, read-only** — the Worker has no producer for `live_stream_sentiment`; feed it from your pipeline |
+| TURN credentials | STUN fallback with an explicit note; HMAC (`TURN_SECRET`, Coturn REST pattern) or Metered proxy when configured |
+| LiveKit voice/video tokens (`POST /rooms/{id}/voice/token`) | **Not configured by default** — real tokens with `LIVEKIT_*` keys, otherwise `503 livekit_not_configured` (never a fake payload) |
+| OBS overlays | **Beta** |
+| Stream scaffold template | **Not shipped yet** — the dashboard `/stream` is the reference UI |
+
+## What you bring
+
+- **A Cloudflare Stream account** (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_API_TOKEN`, `CLOUDFLARE_STREAM_CUSTOMER_CODE` on the Worker) or an equivalent of your own. Ingest minutes and playback are billed to you by the provider.
+- **An encoder**: OBS/WHIP, RTMPS, or your own; the Worker hands you the keys, it does not push frames.
+- **A TURN relay for production WebRTC** — the Worker mints HMAC or Metered credentials, but the relay host is yours.
+- **Payments**: checkout is an external HTTPS URL and gifts settle outside; the Worker is the ledger, not the PSP.
+- **Your moderation model budget** if you enable frame moderation, and a sentiment producer for the sentiment table.
+
+Related: [API reference](/docs/api-reference) — `/api/live/*` and `/overlays` are in the OpenAPI spec; dashboard [`/stream`](/stream); [Realtime modules](/docs/platform/realtime-modules); [JWT auth](/docs/guides/auth-jwt).

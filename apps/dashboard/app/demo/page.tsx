@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { DemoWavesBackground } from "./demo-waves-background";
 import { DemoWorkbench } from "./demo-workbench";
+import { LandingFooter } from "../landing/landing-chrome";
 
 interface DemoSession {
   enabled: boolean;
@@ -59,7 +60,7 @@ function DemoChatShell({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl bg-card text-foreground shadow-xl">
+    <div className="overflow-hidden rounded-sm border border-border bg-card text-foreground">
       <div className="flex items-center justify-between gap-3 border-b border-[var(--fluxy-header-bg)]/20 bg-[var(--fluxy-header-bg)] px-4 py-3 text-white">
         <div className="flex items-center gap-2">
           <span className={cn("relative flex size-2", badgeClass)}>
@@ -71,7 +72,7 @@ function DemoChatShell({
           <span className="text-xs font-semibold">{badge}</span>
           <span className="text-xs text-white/75">{title}</span>
         </div>
-        <span className="hidden text-[10px] text-white/70 sm:inline">No signup · guest session</span>
+        <span className="hidden text-[11px] text-white/70 sm:inline">No signup · guest session</span>
       </div>
       <div className="p-4 sm:p-5">{children}</div>
     </div>
@@ -104,25 +105,36 @@ function DemoHeroSection() {
     <div className="relative border-b border-border">
       <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-            <Sparkles className="size-3.5" />
-            Public playground · guest session
+          <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+            <span className="size-1.5 bg-[var(--ring)]" aria-hidden />
+            Public playground / guest session
           </div>
-          <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+          <h1 className="font-heading text-[clamp(3rem,6vw,5.4rem)] font-normal leading-[0.95] tracking-[-0.045em] text-foreground">
             Humans and agents
-            <span className="mt-2 block text-[var(--fluxy-cta-color)]">in the same room</span>
+            <span className="mt-2 block text-[#c2410c] dark:text-[#ff9a66]">in the same room</span>
           </h1>
-          <p className="mx-auto max-w-2xl text-balance leading-relaxed text-muted-foreground">
+          <p className="mx-auto max-w-2xl text-balance text-base leading-relaxed text-muted-foreground">
             Approve a refund call, watch the WebSocket, and copy the useChat snippet. No signup.
             Simulated demo scenes are labeled.
           </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-8 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><Bot className="size-3.5 text-primary" /> AI Agent</span>
-            <span className="flex items-center gap-1.5"><MessageSquare className="size-3.5 text-primary" /> Real-time Chat</span>
-            <span className="flex items-center gap-1.5"><Zap className="size-3.5 text-primary" /> WebSocket</span>
-            <span className="flex items-center gap-1.5"><Globe className="size-3.5 text-primary" /> Cloudflare Edge</span>
-            <span className="flex items-center gap-1.5"><Shield className="size-3.5 text-primary" /> No Signup</span>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+            <span className="flex items-center gap-1.5"><Bot className="size-3.5 text-[var(--ring)]" /> AI Agent</span>
+            <span className="flex items-center gap-1.5"><MessageSquare className="size-3.5 text-[var(--ring)]" /> Real-time Chat</span>
+            <span className="flex items-center gap-1.5"><Zap className="size-3.5 text-[var(--ring)]" /> WebSocket</span>
+            <span className="flex items-center gap-1.5"><Globe className="size-3.5 text-[var(--ring)]" /> Cloudflare Edge</span>
+            <span className="flex items-center gap-1.5"><Shield className="size-3.5 text-[var(--ring)]" /> No Signup</span>
           </div>
+          <p className="mt-8 max-w-3xl text-xs text-muted-foreground">
+            One demo story: this public room (guest, real Worker),{" "}
+            <Link href="/features/realtime" className="text-brand underline underline-offset-2">
+              Realtime features
+            </Link>{" "}
+            in the console (same SDK, your rooms), and{" "}
+            <Link href="/stream/demo" className="text-brand underline underline-offset-2">
+              Stream studio
+            </Link>{" "}
+            in Labs (seeded stream UI).
+          </p>
         </div>
       </div>
     </div>
@@ -206,22 +218,31 @@ function DemoRoomPageContent() {
   );
 
   useEffect(() => {
-    if (demoStatus === null) return;
-    if (!demoStatus.ready) {
-      if (!demoStatus.enabled) {
-        setError("demo_disabled");
-      } else if (!demoStatus.configured) {
-        setError("demo_not_configured");
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (cancelled || demoStatus === null) return;
+      if (!demoStatus.ready) {
+        if (!demoStatus.enabled) {
+          setError("demo_disabled");
+        } else if (!demoStatus.configured) {
+          setError("demo_not_configured");
+        }
+        return;
       }
-      return;
-    }
-    if (isDemoTurnstileEnabled() || demoStatus.turnstileRequired) return;
-    if (sessionLoadedRef.current) return;
-    sessionLoadedRef.current = true;
-    setLoadingTimeout(false);
-    void loadDemoSession();
-    const timer = setTimeout(() => setLoadingTimeout(true), 5000);
-    return () => clearTimeout(timer);
+      if (isDemoTurnstileEnabled() || demoStatus.turnstileRequired) return;
+      if (sessionLoadedRef.current) return;
+      sessionLoadedRef.current = true;
+      setLoadingTimeout(false);
+      void loadDemoSession();
+      timer = setTimeout(() => setLoadingTimeout(true), 5000);
+    })();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [demoStatus, loadDemoSession]);
 
   const showFallback = demoStatus?.ready && !session && !error && loadingTimeout;
@@ -238,6 +259,7 @@ function DemoRoomPageContent() {
   const readOnly = session?.readOnly === true;
 
   return (
+    <>
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <DemoWavesBackground />
       <div className="relative z-10">
@@ -250,7 +272,7 @@ function DemoRoomPageContent() {
           {!session && !error && !showFallback && (demoStatus === null || demoStatus.ready) && (
             <div className="flex flex-col items-center justify-center gap-4 py-24">
               <div className="relative">
-                <div className="absolute inset-0 animate-ping rounded-full bg-blue-400/20" />
+                <div className="absolute inset-0 animate-ping rounded-full bg-[var(--ring)]/20" />
                 <div className="relative flex size-16 items-center justify-center rounded-full bg-primary">
                   <Loader2 className="size-7 animate-spin text-primary-foreground" />
                 </div>
@@ -262,8 +284,8 @@ function DemoRoomPageContent() {
           {/* Error State */}
           {error && !showSimulated && (
             <div className="flex flex-col items-center gap-6 py-16 text-center">
-              <div className="rounded-full bg-amber-500/10 p-4">
-                <Bot className="size-8 text-amber-400" />
+              <div className="rounded-sm border border-amber-500/25 bg-amber-500/10 p-4">
+                <Bot className="size-8 text-amber-500" />
               </div>
               <div className="max-w-md">
                 <h3 className="text-lg font-semibold text-foreground">Backend Demo Mode</h3>
@@ -278,7 +300,7 @@ function DemoRoomPageContent() {
               <button
                 type="button"
                 onClick={() => setShowSimulated(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-card shadow-[var(--shadow-2)] px-5 py-3 text-sm font-medium text-foreground transition-all hover:bg-muted"
+                className="inline-flex items-center gap-2 rounded-sm border border-border bg-card px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 <Zap className="size-4" />
                 Show Live Demo Preview
@@ -350,7 +372,7 @@ function DemoRoomPageContent() {
 
           {/* Simulated Mode (fallback) */}
           {showSimulated && (
-            <DemoChatShell badge="Preview" badgeClass="text-blue-400" title="FluxyChat Playground">
+            <DemoChatShell badge="Preview" badgeClass="text-[var(--ring)]" title="FluxyChat Playground">
               <div className="space-y-6">
                 <div className="flex items-start gap-3">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--fluxy-logo-color)] to-[var(--fluxy-cta-color)]">
@@ -360,7 +382,7 @@ function DemoRoomPageContent() {
                     {SEED_MESSAGES.map((msg) => (
                       <div key={msg.id} className="rounded-xl border border-border bg-[var(--fluxy-bubble-received-bg)] px-4 py-3">
                         <p className="text-sm text-foreground">{msg.content}</p>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
+                        <p className="mt-1 text-[11px] text-muted-foreground">
                           {new Date(msg.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
@@ -423,9 +445,9 @@ function DemoRoomPageContent() {
                 desc: "Jump right in. Ephemeral guest sessions are rate-limited and auto-expire. Your privacy is respected.",
               },
             ].map((feature) => (
-              <div key={feature.title} className="rounded-xl bg-card shadow-[var(--shadow-2)] p-6">
-                <feature.icon className="size-6 text-primary" />
-                <h3 className="mt-4 font-semibold text-foreground">{feature.title}</h3>
+              <div key={feature.title} className="rounded-sm border border-border bg-card p-6">
+                <feature.icon className="size-6 text-[var(--ring)]" />
+                <h3 className="mt-4 font-heading text-lg font-normal tracking-[-0.01em] text-foreground">{feature.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.desc}</p>
               </div>
             ))}
@@ -469,5 +491,7 @@ function DemoRoomPageContent() {
       </div>
       </div>
     </main>
+    <LandingFooter />
+    </>
   );
 }

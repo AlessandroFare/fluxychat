@@ -94,7 +94,7 @@ export async function dispatchTemplatesRoutes(request, url, h) {
     if (!hasAnyRole(a, ["owner", "admin"])) return new Response("Forbidden", { status: 403, headers: corsHeaders });
     const id = decodeURIComponent(idMatch[1]);
     const body = await request.json().catch(() => null);
-    const result = await updateTemplate(env, { projectId: a.projectId, id, ...body });
+    const result = await updateTemplate(env, { ...body, id, projectId: a.projectId });
     return json(result, { status: result.ok ? 200 : 400 });
   }
 

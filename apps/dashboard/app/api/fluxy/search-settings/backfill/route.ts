@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { getWorkerUrl } from "@/lib/fluxy-server";
 import { messageFromUnknown } from "@/lib/error-message";
+import { rejectUnauthorizedProxyRequest } from "@/lib/api-guard";
 
 /** POST /api/fluxy/search-settings/backfill */
 export async function POST(request: Request) {
+  const rejected = await rejectUnauthorizedProxyRequest(request);
+  if (rejected) return rejected;
+
   const auth = request.headers.get("authorization")?.trim();
   if (!auth) {
     return NextResponse.json({ error: "Authorization header required" }, { status: 401 });

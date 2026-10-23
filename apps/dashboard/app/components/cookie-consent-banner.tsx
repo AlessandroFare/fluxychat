@@ -3,26 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button } from "./ui";
 import { isPublicSitePath } from "@/lib/public-site-paths";
+import { cMono, cSans } from "../landing/c-fonts";
+import styles from "../landing/landing-c.module.css";
 
 const COOKIE_CONSENT_KEY = "fluxychat_cookie_consent";
-
-function isMarketingPath(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return isPublicSitePath(pathname);
-}
 
 export function CookieConsentBanner() {
   const pathname = usePathname();
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    if (!isMarketingPath(pathname)) {
-      setShowBanner(false);
-      return;
-    }
+    if (!pathname || !isPublicSitePath(pathname)) return;
     const stored = localStorage.getItem(COOKIE_CONSENT_KEY);
+    // Reading the consent store is an external-system sync, not derived state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowBanner(stored !== "accepted" && stored !== "rejected");
   }, [pathname]);
 
@@ -36,27 +31,29 @@ export function CookieConsentBanner() {
     setShowBanner(false);
   }
 
-  if (!showBanner) return null;
+  if (!showBanner || !pathname || !isPublicSitePath(pathname)) return null;
 
   return (
     <div
       role="dialog"
       aria-label="Cookie consent"
-      className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-start justify-between gap-3 bg-background px-4 py-4 shadow-[var(--shadow-3)] sm:flex-row sm:items-center sm:px-6"
+      className={`${styles.chrome} ${pathname === "/" ? "" : styles.themeable} ${styles.cookieBanner} ${cSans.variable} ${cMono.variable}`}
     >
-      <p className="text-sm text-muted-foreground">
+      <p>
         We use essential cookies for sign-in and session. No ad or third-party tracking.{" "}
-        <Link href="/privacy" className="font-medium text-foreground underline-offset-2 hover:underline">
-          Privacy & GDPR
-        </Link>
+        <Link href="/privacy-policy">Privacy &amp; GDPR</Link>
       </p>
-      <div className="flex shrink-0 gap-2">
-        <Button variant="primary" onClick={accept}>
-          Accept
-        </Button>
-        <Button variant="ghost" onClick={reject}>
+      <div className={styles.cookieActions}>
+        <button type="button" className={styles.cookieButton} onClick={reject}>
           Reject
-        </Button>
+        </button>
+        <button
+          type="button"
+          className={`${styles.cookieButton} ${styles.cookieButtonPrimary}`}
+          onClick={accept}
+        >
+          Accept
+        </button>
       </div>
     </div>
   );

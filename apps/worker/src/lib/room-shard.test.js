@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   fetchAggregatedRoomLive,
+  fanoutRoomInternal,
+  internalDoHeaders,
   normalizeShardCount,
   shardIndexForUser,
   roomDoName,
@@ -11,6 +13,51 @@ describe("room-shard", () => {
     expect(normalizeShardCount(0)).toBe(1);
     expect(normalizeShardCount(99)).toBe(16);
     expect(normalizeShardCount(4)).toBe(4);
+  });
+
+  it("internalDoHeaders attaches the token only when configured (#15)", () => {
+    const base = { "Content-Type": "application/json" };
+    expect(internalDoHeaders({}, base)).toBe(base);
+    expect(internalDoHeaders({ INTERNAL_DO_TOKEN: "tok" }, base)).toEqual({
+      "Content-Type": "application/json",
+      "X-Internal-Do-Token": "tok",
+    });
+    expect(internalDoHeaders({ INTERNAL_DO_TOKEN: "tok" })).toEqual({
+      "X-Internal-Do-Token": "tok",
+    });
+  });
+
+  it("fanoutRoomInternal forwards init with the internal header when set (#15)", async () => {
+    const seen = [];
+    const env = {
+      INTERNAL_DO_TOKEN: "tok",
+      DB: {
+        prepare: () => ({
+          bind: () => ({
+            first: async () => ({ shard_count: 1 }),
+          }),
+        }),
+      },
+      ROOM: {
+        idFromName: (name) => name,
+        get: () => ({
+          fetch: async (url, init) => {
+            seen.push({ url, headers: init.headers });
+            return new Response(JSON.stringify({ ok: true }), { status: 200 });
+          },
+        }),
+      },
+    };
+    await fanoutRoomInternal(env, "proj-1", "lobby", "/announce", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    expect(seen).toHaveLength(1);
+    expect(seen[0].headers).toEqual({
+      "Content-Type": "application/json",
+      "X-Internal-Do-Token": "tok",
+    });
   });
 
   it("uses stable shard index per user", () => {

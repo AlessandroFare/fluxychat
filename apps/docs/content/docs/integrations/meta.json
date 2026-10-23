@@ -4,6 +4,8 @@
   "pages": [
     "activepieces",
     "kotlin-multiplatform",
-    "livekit"
+    "livekit",
+    "maven-central-publish",
+    "..."
   ]
 }

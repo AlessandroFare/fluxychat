@@ -5,7 +5,7 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { parseWebhookRegisterBody, parseReportCreateBody } from "../lib/http-body.js";
 import { isPrivateUrl } from "../lib/url-ssrf.js";
-import { prepareWebhookSecretForStorage, signWebhookPayload } from "../lib/webhook-signing.js";
+import { prepareWebhookSecretForStorage, resolveWebhookSigningSecret, signWebhookPayload } from "../lib/webhook-signing.js";
 import {
   verifyWebhookSignature,
   verifyWebhookEventBatch,
@@ -167,6 +167,11 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
         headers: corsHeaders,
       });
     }
+    // Audit #17: registering a webhook that the platform later fetches is an
+    // admin-only operation (PATCH/DELETE already gate the same way).
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
     const { projectId: authProjectId } = auth;
     const rawBody = await request.json().catch(() => null);
     const parsedWebhook = parseWebhookRegisterBody(rawBody);
@@ -234,7 +239,7 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
         metadata: { url: body.url, eventTypes: body.eventTypes },
       }).catch(() => {})
     );
-    return json({ webhook: { id, projectId: authProjectId, url: body.url, secretSet: secretPrep.secretHash ? true : secretPrep.enc ? true : true, warning: "The secret is shown only once. Store it securely." } });
+    return json({ webhook: { id, projectId: authProjectId, url: body.url, secretSet: Boolean(secretHash || enc || secretPrep.secretPlain), warning: "The secret is shown only once. Store it securely." } });
   }
 
   if (
@@ -261,7 +266,19 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
     if (!existing) return json({ error: "webhook not found" }, { status: 404 });
     const updates = [];
     const values = [];
-    if (body.url !== undefined) { updates.push("url = ?"); values.push(body.url); }
+    if (body.url !== undefined) {
+      // Audit F-66: PATCH accepted any URL — the same SSRF validation as
+      // registration must apply before the platform fetches it.
+      if (typeof body.url !== "string" || !body.url.trim()) {
+        return json({ error: "invalid_url" }, { status: 400 });
+      }
+      const nextUrl = body.url.trim();
+      if (isPrivateUrl(nextUrl, env)) {
+        return json({ error: "ssrf_blocked" }, { status: 400 });
+      }
+      updates.push("url = ?");
+      values.push(nextUrl);
+    }
     if (body.eventTypes !== undefined) {
       const nextTypes = Array.isArray(body.eventTypes) ? body.eventTypes : String(body.eventTypes).split(",").map((s) => s.trim()).filter(Boolean);
       const eventCheck = validateWebhookEventTypes(nextTypes);
@@ -380,16 +397,20 @@ export async function dispatchReportsWebhooksRoutes(request, url, h) {
     if (!webhookId) {
       return json({ error: "webhookId required" }, { status: 400 });
     }
+    // Audit F-72: verify against the webhook's own stored secret and scope by
+    // project — the caller used to pass `secret`, which made `valid` prove
+    // nothing, and an unscoped id probe leaked other projects' webhooks.
     const wh = await env.DB.prepare(
-      "SELECT id, secret_hash FROM webhooks WHERE id = ?"
-    ).bind(webhookId).first();
+      "SELECT id, secret, secret_ciphertext, secret_iv FROM webhooks WHERE id = ? AND project_id = ?"
+    ).bind(webhookId, auth.projectId).first();
     if (!wh) {
       return json({ error: "webhook not found" }, { status: 404 });
     }
-    if (!wh.secret_hash) {
-      return json({ error: "webhook has no secret_hash configured" }, { status: 400 });
+    const resolved = await resolveWebhookSigningSecret(env, wh);
+    if (!resolved?.secret) {
+      return json({ error: "webhook has no signing secret configured" }, { status: 400 });
     }
-    const expectedSignature = await signWebhookPayload(body.secret || "", body.payload);
+    const expectedSignature = await signWebhookPayload(resolved.secret, body.payload);
     const receivedSig = body.signature.startsWith("sha256=") ? body.signature : `sha256=${body.signature}`;
     const expectedHex = expectedSignature.replace("sha256=", "");
     const receivedHex = receivedSig.replace("sha256=", "");

@@ -642,7 +642,7 @@ export default function DevToolsPage() {
                   className={cn(
                     "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
                     chatApiMethod === m.id
-                      ? "border-primary bg-primary/10 text-primary"
+                      ? "border-primary bg-primary/10 text-[var(--brand-hover)]"
                       : "border-border bg-background text-muted-foreground hover:bg-muted/50",
                   )}
                 >
@@ -754,7 +754,7 @@ export default function DevToolsPage() {
                       className={cn(
                         "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
                         postableType === pt.type
-                          ? "border-primary bg-primary/10 text-primary"
+                          ? "border-primary bg-primary/10 text-[var(--brand-hover)]"
                           : "border-border bg-background text-muted-foreground hover:bg-muted/50",
                       )}
                     >

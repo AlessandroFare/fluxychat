@@ -49,7 +49,10 @@ export function QuickstartSdkSnippet() {
   }
 
   return (
-    <div className="mt-8 space-y-3 rounded-2xl border border-black/[0.06] bg-[#111111] p-4 text-slate-100 shadow-md">
+    <div
+      data-dark-surface
+      className="mt-8 space-y-3 rounded-2xl border border-black/[0.06] bg-[#111111] p-4 text-slate-100 shadow-md"
+    >
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">SDK quickstart</p>
       <div className="flex items-center gap-2 font-mono text-sm">
         <code className="min-w-0 flex-1 truncate">{INSTALL}</code>

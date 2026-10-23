@@ -158,7 +158,7 @@ function NotesPreview() {
 
   return (
     <div className="h-full overflow-hidden p-3 font-mono text-[9px] leading-relaxed text-slate-200">
-      {text || <span className="text-slate-500">Typing...</span>}
+      {text || <span className="text-slate-400">Typing...</span>}
     </div>
   );
 }
@@ -238,7 +238,7 @@ export function LandingCollabSection() {
                   {visible && <Preview />}
                 </div>
                 <div className="px-4 pb-4">
-                  <p className={cn("text-xs leading-relaxed transition-opacity duration-300", active ? "text-slate-300" : "text-slate-600")}>
+                  <p className={cn("text-xs leading-relaxed transition-opacity duration-300", active ? "text-slate-300" : "text-slate-400")}>
                     {feat.desc}
                   </p>
                 </div>
@@ -262,7 +262,7 @@ export function LandingCollabSection() {
           })}
           <Link
             href="/collab"
-            className="inline-flex animate-pulse items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs text-purple-300 hover:bg-purple-500/20"
+            className="inline-flex animate-pulse items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs text-purple-300 hover:bg-purple-500/20 motion-reduce:animate-none"
           >
             Explore all <ArrowRight className="h-3 w-3" />
           </Link>

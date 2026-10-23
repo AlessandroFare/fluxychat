@@ -28,6 +28,8 @@ HMAC with the signing secret you stored on `PUT /integrations/connections` (encr
 
 Kill switch: `POST /integrations/connections/:provider/kill`.
 
+Failed deliveries come back to you: when a delivery to a webhook URL exhausts its retries, the project receives a metadata-only `webhook.delivery_failed` event (`deliveryId`, `webhookId`, `eventType`, `attempts`, `lastHttpStatus`). The failing webhook is excluded from its own notice, only exhausted retries emit, and a failed failure notice is not re-emitted. Rooms sealed after repeated Durable Object boot crashes skip fan-out (inbound is acknowledged, nothing is delivered) — `POST /rooms/:id/sealed` unseals (owner/admin).
+
 Inbound text is `untrusted` and unicode-stripped. Slack / Zendesk / Intercom / HubSpot default `no_train`.
 
 ## Writes

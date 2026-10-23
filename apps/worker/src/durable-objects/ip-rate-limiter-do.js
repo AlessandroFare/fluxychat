@@ -64,11 +64,13 @@ export class IpRateLimiterDurableObject {
 
   async alarm() {
     const bucket = await this.state.storage.get("bucket");
-    if (!bucket || bucket.expiresAt <= Date.now()) {
+    if (!bucket) return;
+    if (bucket.expiresAt <= Date.now()) {
       await this.state.storage.delete("bucket");
-      if (typeof this.state.storage.deleteAlarm === "function") {
-        await this.state.storage.deleteAlarm();
-      }
+      return;
     }
+    // Audit F-55: the alarm fired before the window expired (early wake-up /
+    // clock skew). Re-arm instead of leaving the bucket with no cleanup.
+    await this.scheduleAlarm(bucket.expiresAt);
   }
 }

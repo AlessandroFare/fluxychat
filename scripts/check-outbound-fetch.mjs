@@ -51,6 +51,7 @@ const ALLOWLIST = new Map([
   ["durable-objects/user-do.js", "Durable Object stub fetch (internal routing)"],
   ["durable-objects/ip-rate-limiter-do.js", "Durable Object stub fetch (internal routing)"],
   ["durable-objects/supergroup-router-do.js", "Durable Object stub fetch (internal routing)"],
+  ["durable-objects/agent-do.js", "the only fetch( is the DO entrypoint method definition (async fetch(request)), not an outbound call"],
   ["lib/embed-frame-html.js", "generates HTML for the browser; fetch appears inside a template string"],
   ["lib/embed-loader.js", "generates client-side loader JS; fetch appears inside a template string"],
   ["lib/transport.js", "generic transport primitive; callers must pass a guarded base URL"],
@@ -70,6 +71,9 @@ const ALLOWLIST = new Map([
   ["lib/agent-llm.js", "fixed hostname api.anthropic.com; the configurable OpenAI path uses safeOutboundFetch"],
   ["lib/ai-image-generation.js", "fixed hostname image.pollinations.ai; the configurable path is guarded"],
   ["lib/channel-structured-forms.js", "fixed hostname graph.facebook.com; the tenant-supplied RCS path is guarded"],
+  ["lib/realtime-sfu.js", "fixed hostname rtc.live.cloudflare.com; env supplies only the app id and secret"],
+  ["lib/hitl-offroom-notify.js", "env.HITL_SLACK_WEBHOOK_URL is hostname-validated to hooks.slack.com (isOperatorSlackWebhookUrl) before the fetch"],
+  ["lib/ops-approval-notify.js", "same operator webhook as hitl-offroom-notify; hostname-validated to hooks.slack.com (isOperatorSlackWebhookUrl) before the fetch"],
 
   // Operator-configured endpoints that are allowed to be internal by design.
   [

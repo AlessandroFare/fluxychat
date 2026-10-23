@@ -1,5 +1,5 @@
 /**
- * Long-form positioning for /why — written for developers evaluating Fluxychat.
+ * Long-form positioning for /why â€” written for developers evaluating FluxyChat.
  */
 
 export const WHY_THESIS =
@@ -15,10 +15,10 @@ export interface WhySection {
 export const WHY_SECTIONS: readonly WhySection[] = [
   {
     id: "exists",
-    title: "Why Fluxychat exists",
+    title: "Why FluxyChat exists",
     paragraphs: [
       "Most modern hosts make HTTP easy. Stateful WebSockets are still awkward on the same platform, and the managed realtime products that fill the gap often come with sales calls, stiff pricing, or a push to move your database over to them.",
-      "I built Fluxychat because I wanted chat to deploy like the rest of my stack: application code on a Worker, rooms without running a separate socket cluster.",
+      "I built FluxyChat because I wanted chat to deploy like the rest of my stack: application code on a Worker, rooms without running a separate socket cluster.",
       "This is open beta. I work on it solo. I'd rather hear what's confusing in onboarding than get a long feature list.",
     ],
   },
@@ -59,7 +59,7 @@ export const WHY_SECTIONS: readonly WhySection[] = [
     paragraphs: [
       "REST on Vercel is easy. Long-lived WebSockets often are not, because of limits, pricing, and workarounds on serverless hosts.",
       "FluxyChat keeps your Next.js or Nuxt app where it is and runs room WebSockets on Workers + one Durable Object per room. You skip a separate Pusher/Ably line item and avoid running your own socket VPS.",
-      "See /guides/cloudflare-workers-chat for the step-by-step mental model after Cloudflare’s official chat demo.",
+      "See /guides/cloudflare-workers-chat for the step-by-step mental model after Cloudflareâ€™s official chat demo.",
     ],
   },
   {
@@ -92,11 +92,11 @@ export const WHY_SECTIONS: readonly WhySection[] = [
     id: "compare",
     title: "How to think about alternatives",
     paragraphs: [
-      "Stream and TalkJS get you to polished chat UI fast. Fluxychat is for people who want messages on their Worker, readable source, and a hosted trial that can become self-host without rewriting transport.",
+      "Stream and TalkJS get you to polished chat UI fast. FluxyChat is for people who want messages on their Worker, readable source, and a hosted trial that can become self-host without rewriting transport.",
       "PartyKit and generic edge realtime tools excel at collab sessions and custom party state, not tenant-scoped chat with history, templates, and operator tooling. See the comparison table on /compare.",
-      "Supabase Realtime and Convex bundle realtime with their database. Fluxychat does not ask you to migrate Postgres. You deploy Worker + D1, or use our hosted stack.",
-      "Pusher and Ably are strong managed channels at scale. Fluxychat fits if you'd rather pay Cloudflare and own the schema, or try hosted first and fork when you need to.",
-      "Workers + Upstash Redis DIY is valid if you want to build every piece. Fluxychat is the pre-wired chat layer (room DO, D1, SDK, reconnect semantics).",
+      "Supabase Realtime and Convex bundle realtime with their database. FluxyChat does not ask you to migrate Postgres. You deploy Worker + D1, or use our hosted stack.",
+      "Pusher and Ably are strong managed channels at scale. FluxyChat fits if you'd rather pay Cloudflare and own the schema, or try hosted first and fork when you need to.",
+      "Workers + Upstash Redis DIY is valid if you want to build every piece. FluxyChat is the pre-wired chat layer (room DO, D1, SDK, reconnect semantics).",
       "Vercel WebSocket workarounds and Ably's Next.js tutorials solve adjacent problems. FluxyChat targets in-app chat on Cloudflare with room-per-DO scaling. See /compare.",
     ],
   },
@@ -112,14 +112,14 @@ export const WHY_SECTIONS: readonly WhySection[] = [
       "Set Cloudflare budget alerts and test in staging before production traffic.",
       "Avoid hot loops that write to D1 on every keystroke; use DO state for ephemeral signals (typing) and batch persistence where it makes sense.",
       "Room-scoped Durable Objects limit blast radius compared to one monolithic socket server. Idle rooms still cost something; monitor and archive old rooms.",
-      "Read Cloudflare’s DO and D1 pricing pages when sizing; FluxyChat does not hide CF usage behind a flat “connections” SKU.",
+      "Read Cloudflareâ€™s DO and D1 pricing pages when sizing; FluxyChat does not hide CF usage behind a flat â€œconnectionsâ€ SKU.",
     ],
   },
   {
     id: "architecture",
     title: "Architecture in one pass",
     paragraphs: [
-      "Browser or server SDK → Worker (HTTP + WebSocket) → Durable Object per room for live state → D1 for messages, projects, and webhooks. Admin JWTs mint member tokens server-side so API keys stay off the client. An optional agent worker handles mentions via webhooks and posts replies into the same room stream.",
+      "Browser or server SDK â†’ Worker (HTTP + WebSocket) â†’ Durable Object per room for live state â†’ D1 for messages, projects, and webhooks. Admin JWTs mint member tokens server-side so API keys stay off the client. An optional agent worker handles mentions via webhooks and posts replies into the same room stream.",
     ],
   },
 ] as const satisfies readonly WhySection[];
@@ -167,4 +167,3 @@ export const WHY_CTA = {
   title: "Try the open beta",
   body: "Quickstart wizard, SDK on npm, MIT repo on GitHub. Tell me what breaks.",
 } as const;
-

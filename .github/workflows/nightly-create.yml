@@ -11,7 +11,7 @@ permissions:
 jobs:
   scaffold:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
@@ -25,3 +25,5 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Scaffold smoke
         run: pnpm run smoke:create-fluxy-chat
+      - name: Typecheck templates
+        run: pnpm run smoke:typecheck-templates

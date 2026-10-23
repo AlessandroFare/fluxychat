@@ -1,6 +1,6 @@
 import { FluxyChatClient } from "@fluxy-chat/sdk";
 
-interface BotEnv {
+export interface BotEnv {
   FLUXY_BASE_URL: string;
   FLUXY_API_KEY: string;
 }

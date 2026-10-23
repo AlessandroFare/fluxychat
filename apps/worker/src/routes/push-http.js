@@ -12,9 +12,13 @@ import {
   registerWebPushSubscription,
   unregisterWebPushSubscription,
   listWebPushSubscriptions,
-  getVapidPublicKeyForProject,
   recordPushDeliveryAck,
 } from "../lib/push-notifications.js";
+import {
+  getExistingVapidPublicKeyJwk,
+  getOrCreateVapidKeyPair,
+  getVapidPublicKeyRaw,
+} from "../lib/vapid.js";
 import {
   getProjectPushConfig,
   listProjectPushConfigs,
@@ -100,7 +104,22 @@ export async function dispatchPushRoutes(request, url, h) {
     if (!projectId) {
       return json({ error: "projectId required" }, { status: 400 });
     }
-    const publicKey = await getVapidPublicKeyForProject(env, projectId);
+    let publicKey = null;
+    const existing = await getExistingVapidPublicKeyJwk(env, projectId);
+    if (existing) {
+      publicKey = await getVapidPublicKeyRaw(existing);
+    } else {
+      // Audit F-91: this endpoint is public — mint a key only for a project
+      // that exists (arbitrary ids used to insert key rows).
+      const project = await env.DB.prepare("SELECT id FROM projects WHERE id = ?")
+        .bind(projectId)
+        .first()
+        .catch(() => null);
+      if (project) {
+        const pair = await getOrCreateVapidKeyPair(env, projectId).catch(() => null);
+        if (pair) publicKey = await getVapidPublicKeyRaw(pair.publicKey);
+      }
+    }
     if (!publicKey) {
       return json({ error: "vapid_unavailable" }, { status: 503 });
     }

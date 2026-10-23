@@ -5,4 +5,19 @@ description: "Authentication or room access failed"
 
 # 40108 — auth_refused
 
-Catch-all auth refusal when a more specific identifier is not set. Terminal. Check the JWT `tid`, `sub`, and room membership.
+Catch-all auth refusal, set when a more specific identifier is not available. Terminal.
+
+**At a glance** — HTTP 401 · close 1008 (unmapped reason) · terminal · SDK `FluxyAuthError` (check `refusalCode`).
+
+## What to do
+
+- Check the JWT `tid` (project), `sub` (user), and that the user is a member of the room.
+- The raw close reason often names the real refusal (`not_member`, `token_expired`, …) — branch on that first; `auth_refused` is the fallback.
+- `describeConnectionError()` resolves the catalog entry the SDK matched, and falls back to this one when nothing parsed.
+
+## Related
+
+- [40100 token_expired](/docs/errors/token_expired)
+- [40101 invalid_token](/docs/errors/invalid_token)
+- [40300 not_member](/docs/errors/not_member)
+- [10008 ws_policy](/docs/errors/ws_policy)

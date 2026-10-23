@@ -19,6 +19,7 @@ import {
   notifyDmRecipient,
   notifyMentionedUsers,
   notifyAnnouncementMembers,
+  notifyKeywordWatchers,
 } from "../lib/in-app-notifications.js";
 import { isBlockedBetween, filterBlockedUserIds } from "../lib/user-blocks.js";
 import { assertGuestCanWrite } from "../lib/guest-auth.js";
@@ -38,6 +39,10 @@ import {
 } from "../lib/message-polls.js";
 import { tryDispatchSlashCommand } from "../lib/room-command-dispatch.js";
 import { expandMentions, mentionHandlesForAgentInvoke } from "../lib/message-mentions.js";
+import { forwardMessage } from "../lib/message-forward.js";
+import { saveMessage, unsaveMessage } from "../lib/saved-messages.js";
+import { matchNotificationKeywordUsers } from "../lib/notification-keywords.js";
+import { summarizeMessageAttachments } from "../lib/attachment-file-summary.js";
 import { fetchAggregatedRoomLive } from "../lib/room-shard.js";
 import { runRoomFirmwareHook } from "../lib/room-firmware.js";
 import {
@@ -168,6 +173,36 @@ export async function dispatchMessagesRoutes(request, url, h) {
       return json({ error: "forbidden" }, { status: 403 });
     }
 
+    const clientMessageId = normalizeClientMessageId(body.clientMessageId);
+    const loadExistingByClientMessageId = async () => {
+      if (!clientMessageId) return null;
+      const existing = await env.DB.prepare(
+        `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
+                mentions, og_title, og_description, og_image, og_url, client_message_id, also_to_channel
+         FROM messages
+         WHERE project_id = ? AND room_id = ? AND client_message_id = ? AND deleted_at IS NULL
+         LIMIT 1`
+      )
+        .bind(authProjectId, roomId, clientMessageId)
+        .first();
+      if (!existing) return null;
+      const [mapped] = await attachAttachmentsToMessages(
+        env,
+        authProjectId,
+        existing.room_id,
+        [existing],
+      );
+      return mapped;
+    };
+
+    // Audit fix P6: answer idempotent retries before any side effect. This
+    // lookup used to run after slash-command dispatch, so a client retry
+    // re-executed the command (a second /poll was created).
+    const existingMessage = await loadExistingByClientMessageId();
+    if (existingMessage) {
+      return json({ message: existingMessage });
+    }
+
     const authz = await runFluxyRoomAuthz(roomId, auth, { env });
     if (authz.action === "block") {
       return json({ error: authz.reason, code: "blocked" }, { status: 403 });
@@ -267,7 +302,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
         content,
         jwtRoles: auth.roles ?? [],
         parentId: parseReplyParentId(body),
-        clientMessageId: normalizeClientMessageId(body.clientMessageId),
+        clientMessageId,
       });
       if (slashDispatch.handled) {
         if (!slashDispatch.ok) {
@@ -355,6 +390,9 @@ export async function dispatchMessagesRoutes(request, url, h) {
     const visibleToJson =
       visibility === "whisper" ? JSON.stringify(visibleTo) : null;
     const parentId = parseReplyParentId(body);
+    const alsoSendToChannel =
+      parentId != null &&
+      (body.alsoSendToChannel === true || body.also_send_to_channel === true);
     if (parentId) {
       const depth = await assertChatThreadDepth(env, {
         projectId: authProjectId,
@@ -369,50 +407,8 @@ export async function dispatchMessagesRoutes(request, url, h) {
         );
       }
     }
-    const clientMessageId = normalizeClientMessageId(body.clientMessageId);
     const createdAt = new Date().toISOString();
 
-    if (clientMessageId) {
-      const existing = await env.DB.prepare(
-        `SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at,
-                mentions, og_title, og_description, og_image, og_url, client_message_id
-         FROM messages
-         WHERE project_id = ? AND room_id = ? AND client_message_id = ? AND deleted_at IS NULL
-         LIMIT 1`
-      )
-        .bind(authProjectId, roomId, clientMessageId)
-        .first();
-      if (existing) {
-        const [mapped] = await attachAttachmentsToMessages(
-          env,
-          authProjectId,
-          existing.room_id,
-          [existing],
-        );
-        return json({ message: mapped });
-      }
-    }
-
-    const quotaResult = await checkAndConsumeProjectQuota(env, {
-      projectId: authProjectId,
-      metricName: "messages_created",
-      amount: 1,
-    }).catch(() => ({ allowed: true }));
-    if (!quotaResult.allowed) {
-      const reset = quotaResetInfo();
-      return json(
-        {
-          error: "quota_exceeded",
-          metric: quotaResult.metricName,
-          limit: quotaResult.limit,
-          used: quotaResult.used,
-          month: quotaResult.monthKey,
-          resetsAt: reset.resetsAt,
-          retryAfterSeconds: reset.retryAfterSeconds,
-        },
-        { status: 402, headers: { "Retry-After": String(reset.retryAfterSeconds) } }
-      );
-    }
     const messageRate = await checkAndConsumeRateLimit(env, {
       key: `msg:${authProjectId}:${authUserId}:${roomId}`,
       limit: Number(env.RATE_LIMIT_MESSAGES_PER_MINUTE || 60),
@@ -485,32 +481,78 @@ export async function dispatchMessagesRoutes(request, url, h) {
       return json({ error: extras.error }, { status: 400 });
     }
 
-    const insertRes = await env.DB.prepare(
-      `INSERT INTO messages (
+    // Audit fix M3: consume quota only after the cheap rejects (rate limit,
+    // slow mode, extras validation) so rejected sends no longer over-count.
+    // Audit F-47: a quota check that errors must not fail open.
+    let quotaResult;
+    try {
+      quotaResult = await checkAndConsumeProjectQuota(env, {
+        projectId: authProjectId,
+        metricName: "messages_created",
+        amount: 1,
+      });
+    } catch (err) {
+      logError("messages.quota_check_failed", err, { projectId: authProjectId });
+      return json({ error: "quota_check_failed" }, { status: 503, headers: corsHeaders });
+    }
+    if (!quotaResult.allowed) {
+      const reset = quotaResetInfo();
+      return json(
+        {
+          error: "quota_exceeded",
+          metric: quotaResult.metricName,
+          limit: quotaResult.limit,
+          used: quotaResult.used,
+          month: quotaResult.monthKey,
+          resetsAt: reset.resetsAt,
+          retryAfterSeconds: reset.retryAfterSeconds,
+        },
+        { status: 402, headers: { "Retry-After": String(reset.retryAfterSeconds) } }
+      );
+    }
+
+    let insertRes;
+    try {
+      insertRes = await env.DB.prepare(
+        `INSERT INTO messages (
         project_id, room_id, user_id, content, created_at, parent_id,
         mentions, og_title, og_description, og_image, og_url, client_message_id, expires_at,
-        visibility, visible_to_json, metadata_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        authProjectId,
-        roomId,
-        authUserId,
-        content,
-        createdAt,
-        parentId,
-        mentions.length ? JSON.stringify(mentions) : null,
-        preview?.title || null,
-        preview?.description || null,
-        preview?.imageUrl || null,
-        preview?.url || null,
-        clientMessageId,
-        messageExpiresAt,
-        visibility === "room" ? null : visibility,
-        visibleToJson,
-        extras.json,
+        visibility, visible_to_json, metadata_json, also_to_channel
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run();
+        .bind(
+          authProjectId,
+          roomId,
+          authUserId,
+          content,
+          createdAt,
+          parentId,
+          mentions.length ? JSON.stringify(mentions) : null,
+          preview?.title || null,
+          preview?.description || null,
+          preview?.imageUrl || null,
+          preview?.url || null,
+          clientMessageId,
+          messageExpiresAt,
+          visibility === "room" ? null : visibility,
+          visibleToJson,
+          extras.json,
+          alsoSendToChannel ? 1 : 0,
+        )
+        .run();
+    } catch (err) {
+      // Audit fix P7: a concurrent retry with the same clientMessageId can lose
+      // the dedupe race; the unique index rejects the loser here. Answer with
+      // the winner's row instead of surfacing a 500.
+      const message = String(err?.message || err || "");
+      if (clientMessageId && message.includes("UNIQUE")) {
+        const racedMessage = await loadExistingByClientMessageId();
+        if (racedMessage) {
+          return json({ message: racedMessage });
+        }
+      }
+      throw err;
+    }
     ctx.waitUntil(
       incrementOperationalMetric(env, {
         metricName: "messages_created",
@@ -585,6 +627,12 @@ export async function dispatchMessagesRoutes(request, url, h) {
         )
       );
       await env.DB.batch(attStmts);
+
+      ctx.waitUntil(
+        summarizeMessageAttachments(env, { projectId: authProjectId, messageId }).catch(
+          (err) => logError("attachments.ai_summary_failed", err, requestLogCtx),
+        ),
+      );
     }
 
     if (mentions.length) {
@@ -639,6 +687,44 @@ export async function dispatchMessagesRoutes(request, url, h) {
         ),
       );
     }
+
+    // Wave E — personal keyword alerts (Mattermost-style), on top of mentions.
+    ctx.waitUntil(
+      (async () => {
+        try {
+          const memberRows = await env.DB.prepare(
+            "SELECT user_id FROM room_members WHERE project_id = ? AND room_id = ?",
+          )
+            .bind(authProjectId, roomId)
+            .all();
+          const memberIds = (memberRows.results || [])
+            .map((row) => row.user_id)
+            .filter(Boolean);
+          const keywordUserIds = await matchNotificationKeywordUsers(env, {
+            projectId: authProjectId,
+            content,
+            excludeUserId: authUserId,
+            memberIds,
+          });
+          const mentionSet = new Set(mentions);
+          const keywordOnly = (
+            await filterBlockedUserIds(env, authProjectId, authUserId, keywordUserIds)
+          ).filter((id) => !mentionSet.has(id));
+          if (keywordOnly.length) {
+            await notifyKeywordWatchers(env, {
+              projectId: authProjectId,
+              roomId,
+              fromUserId: authUserId,
+              toUserIds: keywordOnly,
+              messageId,
+              preview: content,
+            });
+          }
+        } catch (err) {
+          logError("notifications.keyword_failed", err, requestLogCtx);
+        }
+      })(),
+    );
 
     const roomRow = await env.DB.prepare(
       "SELECT type, name FROM rooms WHERE project_id = ? AND id = ?",
@@ -721,6 +807,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
         ...(extras.extras.metadata ? { metadata: extras.extras.metadata } : {}),
         ...(extras.extras.headers ? { headers: extras.extras.headers } : {}),
         ...(quotedMessageId != null ? { quotedMessageId } : {}),
+        ...(alsoSendToChannel ? { alsoToChannel: true } : {}),
       }),
     });
 
@@ -807,6 +894,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
         content,
         createdAt,
         parentId,
+        ...(alsoSendToChannel ? { alsoToChannel: true } : {}),
         clientMessageId: clientMessageId ?? undefined,
         mentions,
         preview,
@@ -901,6 +989,16 @@ export async function dispatchMessagesRoutes(request, url, h) {
     if (!Number.isFinite(messageId)) {
       return json({ error: "invalid message id" }, { status: 400 });
     }
+    const msgRow = await env.DB.prepare(
+      "SELECT room_id FROM messages WHERE id = ? AND project_id = ? AND deleted_at IS NULL LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!msgRow) return json({ error: "poll not found" }, { status: 404 });
+    // Audit fix P10-b: the poll hangs off a message — same room gate as the
+    // rest of the message surface.
+    const allowed = await canAccessRoom(env, auth, msgRow.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
     const poll = await getMessagePoll(env, messageId, auth.projectId, auth.userId);
     if (!poll) return json({ error: "poll not found" }, { status: 404 });
     return json({ poll });
@@ -928,6 +1026,11 @@ export async function dispatchMessagesRoutes(request, url, h) {
       .bind(messageId, auth.projectId)
       .first();
     if (!msgRow) return json({ error: "message not found" }, { status: 404 });
+
+    // Audit fix P10: voting used to skip the room gate, so any project member
+    // could vote in a room they cannot access (write + fanout).
+    const allowed = await canAccessRoom(env, auth, msgRow.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
 
     const result = await castPollVote(env, {
       messageId,
@@ -973,15 +1076,24 @@ export async function dispatchMessagesRoutes(request, url, h) {
     if (closeRequest !== true) {
       return json({ error: 'body must have {"closed":true}' }, { status: 400 });
     }
+    const msgRow = await env.DB.prepare(
+      "SELECT room_id, user_id FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!msgRow) return json({ error: "poll not found" }, { status: 404 });
+    // Audit fix P10-b: closing a poll is an author/moderator action on a room
+    // the caller can access (the lib checks nothing but existence/closed).
+    const allowed = await canAccessRoom(env, auth, msgRow.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+    const isAuthor = String(msgRow.user_id) === String(auth.userId);
+    if (!isAuthor && !hasAnyRole(auth.roles, ["owner", "admin", "moderator"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
     const result = await closeMessagePoll(env, messageId, auth.projectId);
     if (!result.ok) {
       return json({ error: result.error }, { status: result.status || 400 });
     }
-    const msgRow = await env.DB.prepare(
-      "SELECT room_id FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
-    )
-      .bind(messageId, auth.projectId)
-      .first();
     if (msgRow?.room_id) {
       await fanoutRoomInternal(env, auth.projectId, msgRow.room_id, "/announce", {
         method: "POST",
@@ -1177,6 +1289,82 @@ export async function dispatchMessagesRoutes(request, url, h) {
     return json({ items });
   }
 
+  // Wave E — saved messages: POST/DELETE /messages/:id/save
+  const messageSaveMatch = url.pathname.match(/^\/messages\/([^/]+)\/save$/);
+  if (messageSaveMatch && (request.method === "POST" || request.method === "DELETE")) {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(messageSaveMatch[1]);
+    if (!Number.isFinite(messageId) || messageId < 1) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const row = await env.DB.prepare(
+      "SELECT room_id FROM messages WHERE id = ? AND project_id = ? AND deleted_at IS NULL LIMIT 1",
+    )
+      .bind(messageId, auth.projectId)
+      .first();
+    if (!row) return json({ error: "message not found" }, { status: 404 });
+    const allowed = await canAccessRoom(env, auth, row.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
+    const result =
+      request.method === "POST"
+        ? await saveMessage(env, {
+            projectId: auth.projectId,
+            userId: auth.userId,
+            messageId,
+            roomId: row.room_id,
+          })
+        : await unsaveMessage(env, {
+            projectId: auth.projectId,
+            userId: auth.userId,
+            messageId,
+          });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: result.status || 400 });
+    }
+    return json(result);
+  }
+
+  // Wave E — forward: POST /messages/:id/forward { targetRoomId }
+  const messageForwardMatch = url.pathname.match(/^\/messages\/([^/]+)\/forward$/);
+  if (messageForwardMatch && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch((err) => {
+      if (err instanceof Response) throw err;
+      logError("auth.jwt_verify_failed", err, requestLogCtx);
+      return null;
+    });
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const messageId = Number(messageForwardMatch[1]);
+    if (!Number.isFinite(messageId) || messageId < 1) {
+      return json({ error: "invalid message id" }, { status: 400 });
+    }
+    const body = await request.json().catch(() => null);
+    const targetRoomId =
+      typeof body?.targetRoomId === "string" ? body.targetRoomId.trim() : "";
+    if (!targetRoomId) {
+      return json({ error: "target_room_required" }, { status: 400 });
+    }
+    const result = await forwardMessage(env, {
+      projectId: auth.projectId,
+      actorUserId: auth.userId,
+      actorRoles: auth.roles ?? [],
+      messageId,
+      targetRoomId,
+    });
+    if (!result.ok) {
+      return json({ error: result.error }, { status: result.status || 400 });
+    }
+    return json({ message: result.message }, { status: 201 });
+  }
+
   // Ably-style single fetch: GET /messages/:id (numeric id, not a string serial)
   const singleMessageMatch = url.pathname.match(/^\/messages\/(\d+)$/);
   if (singleMessageMatch && request.method === "GET") {
@@ -1193,7 +1381,7 @@ export async function dispatchMessagesRoutes(request, url, h) {
       return json({ error: "invalid message id" }, { status: 400 });
     }
     const row = await env.DB.prepare(
-      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status, metadata_json FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
+      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status, also_to_channel, metadata_json FROM messages WHERE id = ? AND project_id = ? LIMIT 1",
     )
       .bind(messageId, auth.projectId)
       .first();
@@ -1269,11 +1457,25 @@ export async function dispatchMessagesRoutes(request, url, h) {
     if (operation.error) {
       return json({ error: operation.error }, { status: 400 });
     }
-    await env.DB.prepare(
-      "UPDATE messages SET content = ?, edited_at = ?, metadata_json = ? WHERE id = ? AND project_id = ?"
+    const updated = await env.DB.prepare(
+      // Audit fix P12: optimistic concurrency — the row version advances with
+      // each edit; a losing concurrent edit (changes = 0) must not record an
+      // event or fan out, otherwise two edits share one version.
+      "UPDATE messages SET content = ?, edited_at = ?, metadata_json = ?, version = ? WHERE id = ? AND project_id = ? AND version = ?"
     )
-      .bind(nextContent, now, extras.json ?? existing.metadata_json ?? null, messageId, authProjectId)
+      .bind(
+        nextContent,
+        now,
+        extras.json ?? existing.metadata_json ?? null,
+        nextVersion,
+        messageId,
+        authProjectId,
+        existing.version,
+      )
       .run();
+    if (Number(updated?.meta?.changes) === 0) {
+      return json({ error: "edit_conflict" }, { status: 409 });
+    }
 
     try {
       await recordRoomMessageEvent(env, {
@@ -1604,6 +1806,11 @@ export async function dispatchMessagesRoutes(request, url, h) {
     if (!existing) {
       return json({ error: "message not found" }, { status: 404 });
     }
+    // Audit fix P8: sibling message handlers require access to the message's
+    // room; this path looked up id+project only, so a caller without access to
+    // the room could soft-delete its messages.
+    const allowed = await canAccessRoom(env, auth, existing.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
     const isAuthor = String(existing.user_id) === String(userId);
     const isPrivileged = hasAnyRole(roles, ["owner", "admin", "moderator"]);
     if (!isAuthor && !isPrivileged) {
@@ -1812,6 +2019,10 @@ export async function dispatchMessagesRoutes(request, url, h) {
     if (!existing) {
       return json({ error: "message not found" }, { status: 404 });
     }
+    // Audit fix P9: reaction mutations must not land in a room the caller
+    // cannot access (the two GET siblings above already gate on this).
+    const allowed = await canAccessRoom(env, auth, existing.room_id);
+    if (!allowed) return json({ error: "forbidden" }, { status: 403 });
     const roomId = existing.room_id;
     const now = new Date().toISOString();
     await applyReactionPlan(

@@ -21,8 +21,11 @@ import {
   deleteChannelMapping,
   disconnectBridge,
   getBridge,
+  listBridgeDeliveries,
   listBridges,
+  updateBridge,
   type BridgeConfig,
+  type BridgeDelivery,
   type ChannelMapping,
 } from "@/lib/bridge-client";
 
@@ -43,10 +46,14 @@ export default function BridgesPage() {
   const [bridges, setBridges] = useState<BridgeConfig[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mappings, setMappings] = useState<ChannelMapping[]>([]);
+  const [deliveries, setDeliveries] = useState<BridgeDelivery[]>([]);
+  const [patchToken, setPatchToken] = useState("");
+  const [patchSecret, setPatchSecret] = useState("");
 
   const [platform, setPlatform] = useState<"slack" | "discord">("slack");
   const [bridgeName, setBridgeName] = useState("");
   const [botToken, setBotToken] = useState("");
+  const [signingSecret, setSigningSecret] = useState("");
 
   const [mapRoomId, setMapRoomId] = useState("");
   const [mapChannelId, setMapChannelId] = useState("");
@@ -72,8 +79,12 @@ export default function BridgesPage() {
   const loadBridgeDetail = useCallback(async (bridgeId: string) => {
     if (!token) return;
     try {
-      const res = await getBridge(token, bridgeId);
+      const [res, deliveriesRes] = await Promise.all([
+        getBridge(token, bridgeId),
+        listBridgeDeliveries(token, bridgeId).catch(() => ({ deliveries: [] as BridgeDelivery[] })),
+      ]);
       setMappings(res.mappings ?? []);
+      setDeliveries(deliveriesRes.deliveries ?? []);
       setSelectedId(bridgeId);
     } catch (err) {
       setError(messageFromUnknown(err, "Failed to load bridge detail"));
@@ -92,9 +103,11 @@ export default function BridgesPage() {
         platform,
         name: bridgeName.trim(),
         token: botToken || undefined,
+        signingSecret: signingSecret || undefined,
       });
       setBridgeName("");
       setBotToken("");
+      setSigningSecret("");
       setNotice(`Bridge ${created.id} created.`);
       await loadBridges();
       await loadBridgeDetail(created.id);
@@ -151,6 +164,26 @@ export default function BridgesPage() {
     }
   }
 
+  async function handlePatchBridge(bridgeId: string) {
+    if (!token || (!patchToken.trim() && !patchSecret.trim())) return;
+    setBusy("patch");
+    try {
+      await updateBridge(token, bridgeId, {
+        token: patchToken.trim() || undefined,
+        signingSecret: patchSecret.trim() || undefined,
+      });
+      setPatchToken("");
+      setPatchSecret("");
+      setNotice("Bridge secrets updated.");
+      await loadBridges();
+      await loadBridgeDetail(bridgeId);
+    } catch (err) {
+      setError(messageFromUnknown(err, "Update failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function handleCreateMapping() {
     if (!token || !selectedId || !mapRoomId.trim() || !mapChannelId.trim()) return;
     setBusy("mapping");
@@ -160,7 +193,7 @@ export default function BridgesPage() {
         roomId: mapRoomId.trim(),
         externalChannelId: mapChannelId.trim(),
         externalChannelName: mapChannelName || undefined,
-        syncDirection: "bidirectional",
+        syncDirection: "both",
       });
       setMapChannelId("");
       setMapChannelName("");
@@ -198,7 +231,7 @@ export default function BridgesPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Slack &amp; Discord bridges"
-        description="Inbound webhooks sync external channel messages into FluxyChat rooms."
+        description="Two-way sync: signed inbound webhooks with Slack and Discord, outbound delivery with retry and per-delivery status."
         actions={
           <>
             <Link
@@ -239,7 +272,16 @@ export default function BridgesPage() {
                 </select>
                 <Input className="flex-1" placeholder="Bridge name" value={bridgeName} onChange={(e) => setBridgeName(e.target.value)} />
               </div>
-              <Input type="password" placeholder="Bot token (optional, stored encrypted)" value={botToken} onChange={(e) => setBotToken(e.target.value)} />
+              <Input type="password" placeholder="Bot token (optional; encrypted at rest with the server key)" value={botToken} onChange={(e) => setBotToken(e.target.value)} />
+              <Input
+                type="password"
+                placeholder={platform === "slack" ? "Signing secret (Slack, optional)" : "Application public key (Discord, optional)"}
+                value={signingSecret}
+                onChange={(e) => setSigningSecret(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Inbound webhooks are rejected (503) until a signing secret is set: Slack signs with x-slack-signature, Discord with ed25519.
+              </p>
               <Button size="sm" disabled={!token || busy === "create"} onClick={() => void handleCreateBridge()}>
                 {busy === "create" ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
                 Create bridge
@@ -289,6 +331,11 @@ export default function BridgesPage() {
                       {bridge.errorMessage && (
                         <p className="text-xs text-red-600">{bridge.errorMessage}</p>
                       )}
+                      {!bridge.hasSigningSecret && (
+                        <p className="text-xs text-amber-600">
+                          Inbound webhooks return 503 until a signing secret is set. Add one under Secrets below.
+                        </p>
+                      )}
                     </Panel>
                   );
                 })}
@@ -317,6 +364,64 @@ export default function BridgesPage() {
                       <Button size="sm" variant="ghost" disabled={!!busy} onClick={() => void handleDeleteMapping(m.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
+                    </div>
+                  ))
+                )}
+              </Panel>
+            </Section>
+          )}
+
+          {selectedBridge && (
+            <Section title={`Secrets: ${selectedBridge.name}`}>
+              <Panel className="p-4 space-y-3 max-w-xl">
+                <Input type="password" placeholder="New bot token (optional)" value={patchToken} onChange={(e) => setPatchToken(e.target.value)} />
+                <Input
+                  type="password"
+                  placeholder={selectedBridge.platform === "slack" ? "New signing secret (Slack)" : "New application public key (Discord)"}
+                  value={patchSecret}
+                  onChange={(e) => setPatchSecret(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  disabled={!token || busy === "patch" || (!patchToken.trim() && !patchSecret.trim())}
+                  onClick={() => void handlePatchBridge(selectedBridge.id)}
+                >
+                  {busy === "patch" ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                  Save secrets
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Secrets replace the stored value and are encrypted at rest when the server key is configured.
+                </p>
+              </Panel>
+            </Section>
+          )}
+
+          {selectedBridge && (
+            <Section title={`Deliveries: ${selectedBridge.name}`}>
+              <Panel className="p-4 space-y-2">
+                {deliveries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No outbound deliveries yet. Messages sent in a mapped room are queued here.
+                  </p>
+                ) : (
+                  deliveries.map((d) => (
+                    <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2 text-sm">
+                      <span className="truncate">
+                        <code>{d.fluxychatMessageId ?? "—"}</code> → <code>{d.externalChannelId}</code>
+                      </span>
+                      <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {d.status === "delivered" ? (
+                          <Badge>delivered</Badge>
+                        ) : d.status === "pending" ? (
+                          <Badge variant="secondary">pending</Badge>
+                        ) : (
+                          <Badge variant="destructive">{d.status}</Badge>
+                        )}
+                        <span>
+                          {d.attemptCount} attempt{d.attemptCount === 1 ? "" : "s"}
+                        </span>
+                        {d.lastError ? <code>{d.lastError}</code> : null}
+                      </span>
                     </div>
                   ))
                 )}

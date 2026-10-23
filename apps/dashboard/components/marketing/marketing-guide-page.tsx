@@ -21,11 +21,11 @@ export function MarketingGuidePage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <p className="text-sm text-muted-foreground">
-        <Link href="/guides" className="text-brand hover:underline">
+        <Link href="/guides" className="text-brand underline underline-offset-2">
           ← All guides
         </Link>
         {" · "}
-        <Link href={HOSTED_PATHS.landing} className="text-brand hover:underline">
+        <Link href={HOSTED_PATHS.landing} className="text-brand underline underline-offset-2">
           Home
         </Link>
       </p>
@@ -79,7 +79,7 @@ export function MarketingGuidePage({
                   href={section.link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-brand hover:underline"
+                  className="font-medium text-brand underline underline-offset-2"
                 >
                   {section.link.title} →
                 </a>
@@ -95,7 +95,7 @@ export function MarketingGuidePage({
           <ul className="mt-3 space-y-2 text-sm">
             {relatedGuides.map((guide) => (
               <li key={guide.href}>
-                <Link href={guide.href} className="text-brand hover:underline">
+                <Link href={guide.href} className="text-brand underline underline-offset-2">
                   {guide.label}
                 </Link>
               </li>

@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   attachmentUrlToR2Key,
   collectAttachmentR2Keys,
+  deleteUserAttachmentObjects,
+  r2KeyBelongsToProject,
   userUploadR2Prefix,
 } from "./attachment-storage.js";
 
@@ -19,9 +21,51 @@ describe("attachmentUrlToR2Key", () => {
     ).toBe("proj/u1/file.png");
   });
 
+  it("returns null for a URL without the /attachments/ prefix (audit F-09)", () => {
+    expect(
+      attachmentUrlToR2Key("https://evil.example/projB/userB/secret.png")
+    ).toBeNull();
+  });
+
   it("returns null for invalid input", () => {
     expect(attachmentUrlToR2Key("")).toBeNull();
     expect(attachmentUrlToR2Key(null)).toBeNull();
+  });
+});
+
+describe("r2KeyBelongsToProject (audit F-09)", () => {
+  it("accepts the project's own key spaces", () => {
+    expect(r2KeyBelongsToProject("p1/u1/file.png", "p1")).toBe(true);
+    expect(r2KeyBelongsToProject("ai-images/p1/i.png", "p1")).toBe(true);
+    expect(r2KeyBelongsToProject("voice/p1/r1/1.webm", "p1")).toBe(true);
+  });
+
+  it("rejects other projects and scoped prefixes for other projects", () => {
+    expect(r2KeyBelongsToProject("p2/u1/file.png", "p1")).toBe(false);
+    expect(r2KeyBelongsToProject("ai-images/p2/i.png", "p1")).toBe(false);
+    expect(r2KeyBelongsToProject("voice/p2/r1/1.webm", "p1")).toBe(false);
+    expect(r2KeyBelongsToProject("", "p1")).toBe(false);
+  });
+});
+
+describe("deleteUserAttachmentObjects (audit F-09)", () => {
+  it("never deletes objects outside the project's key space", async () => {
+    const deleted = [];
+    const env = {
+      ATTACHMENTS: {
+        list: async () => ({ objects: [], truncated: false }),
+        delete: async (key) => {
+          deleted.push(key);
+        },
+      },
+    };
+    const result = await deleteUserAttachmentObjects(env, "p1", "u1", [
+      { url: "/attachments/p1/u1/mine.png" },
+      { url: "/attachments/p2/u2/theirs.png" },
+    ]);
+    expect(deleted).toEqual(["p1/u1/mine.png"]);
+    expect(result.deleted).toBe(1);
+    expect(result.warnings.some((w) => w.includes("outside_project_key_space"))).toBe(true);
   });
 });
 

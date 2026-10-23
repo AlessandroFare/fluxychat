@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -90,8 +91,14 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	project, err := r.client.getProject(ctx, state.ID.ValueString())
 	if err != nil {
-		resp.State.RemoveResource(ctx)
-		resp.Diagnostics.AddWarning("Project not found", err.Error())
+		// Audit F-93: only a confirmed absence drops the resource from state;
+		// other errors (5xx, network) must surface instead of forgetting it.
+		if errors.Is(err, errResourceNotFound) {
+			resp.State.RemoveResource(ctx)
+			resp.Diagnostics.AddWarning("Project not found", err.Error())
+			return
+		}
+		resp.Diagnostics.AddError("Read project failed", err.Error())
 		return
 	}
 
@@ -115,6 +122,11 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	tflog.Info(ctx, "delete fluxychat project — state only (no Worker DELETE API yet)")
+	// Audit F-93: the no-op delete used to look like a successful destroy.
+	resp.Diagnostics.AddWarning(
+		"Project not deleted",
+		"The admin API has no DELETE /admin/projects endpoint yet, so the project still exists on the Worker. Remove it manually if needed.",
+	)
 }
 
 func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

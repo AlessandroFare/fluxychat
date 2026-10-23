@@ -51,7 +51,7 @@ export async function dispatchWidgetBuilderRoutes(request, url, h) {
   if (request.method === "PATCH" && path.match(/^\/admin\/widgets\/[^/]+$/)) {
     const id = path.split("/").pop();
     const body = await request.json();
-    const result = await updateWidget(env, { id, projectId, ...body });
+    const result = await updateWidget(env, { ...body, id, projectId });
     return respond(result, h);
   }
 

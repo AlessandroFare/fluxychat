@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { BarChart3, Loader2 } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Panel, Section } from "../../components/ui";
+import { Panel, Section, SkeletonCard } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatNumber } from "@/lib/format-number";
@@ -60,7 +60,15 @@ export default function TenantUsageSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   return (
@@ -73,9 +81,11 @@ export default function TenantUsageSettingsPage() {
       <ConsoleFeedback error={error} />
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          Loading usage…
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : usage ? (
         <div className="space-y-6">
@@ -165,7 +175,13 @@ export default function TenantUsageSettingsPage() {
           ) : null}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Paste an admin JWT on Projects to load usage.</p>
+        <Panel className="p-6 text-sm text-muted-foreground">
+          Open{" "}
+          <Link href="/projects" className="font-medium underline-offset-2 hover:underline">
+            Projects
+          </Link>{" "}
+          to paste an admin JWT, then return here.
+        </Panel>
       )}
     </ConsoleShell>
   );

@@ -30,8 +30,14 @@ export async function hashCanonicalInput(value) {
 }
 
 export function toolApprovalSecret(env) {
-  const s = env?.TOOL_APPROVAL_SECRET || env?.ART50_MARK_SECRET || env?.JWT_SECRET || "";
-  return typeof s === "string" ? s : "";
+  const dedicated = env?.TOOL_APPROVAL_SECRET || env?.ART50_MARK_SECRET;
+  if (typeof dedicated === "string" && dedicated) return dedicated;
+  // Audit F-73: the approval HMAC key fell back to JWT_SECRET — a session
+  // signing key must not double as a tool-approval key. Keep the dev fallback,
+  // refuse it in production (callers then see `signature_not_configured`).
+  if (env?.NODE_ENV === "production" || env?.ENVIRONMENT === "production") return "";
+  const fallback = env?.JWT_SECRET || "";
+  return typeof fallback === "string" ? fallback : "";
 }
 
 export async function signVercelToolApproval(secret, { approvalId, toolCallId, toolName, input }) {

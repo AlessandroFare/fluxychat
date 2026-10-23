@@ -45,6 +45,8 @@ export function RouteCopilotPanel({ copilot, loading }: RouteCopilotPanelProps) 
       <div className="mt-2 rounded bg-indigo-100/60 p-2 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200">
         <Bot className="mr-1 inline h-3 w-3" /> {copilot.advice}
       </div>
+
+      <div className="mt-2 text-[10px] text-muted-foreground/70">Hourly traffic pattern + randomised weather — heuristic, not live traffic.</div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MarketingShell } from "../components/marketing-shell";
 import { HOSTED_PATHS, docsSiteHref } from "@/lib/hosted-product";
 import { buildPageMetadata } from "@/lib/site-metadata";
+import styles from "../landing/landing-c.module.css";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Import a ChatGPT export",
@@ -11,46 +12,96 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/migrate-chatgpt",
 });
 
+const STEPS = [
+  "One shot. First non-empty ChatGPT conversation in the file, cap 400 messages.",
+  "Claude dumps with chat_messages use the same route.",
+  "In the console: Rooms, then Import ChatGPT/Claude JSON. Over HTTP: POST /rooms/import-transcript with a member JWT.",
+];
+
+const SKIPS = [
+  "We are not trying to replace ChatGPT.",
+  "No live pull from OpenAI. We do not scrape your account.",
+  "No email invites. Pass FluxyChat user ids only if those people already exist.",
+];
+
 export default function MigrateChatgptPage() {
   return (
-    <MarketingShell className="max-w-3xl py-12">
-      <h1 className="font-heading text-3xl font-bold tracking-tight">Import ChatGPT or Claude JSON</h1>
-      <p className="mt-3 text-sm text-muted-foreground">
-        OpenAI is shutting group chats to new groups and putting existing ones read-only on their
-        schedule. That is their product. Ours is a room Durable Object you run. If you already have
-        a <code>conversations.json</code> download, you can load it into a group room here.
-      </p>
+    <MarketingShell className={styles.pageNarrow}>
+      <header className={styles.pageHero}>
+        <div className={styles.pageHeroCopy}>
+          <span className={styles.pageEyebrow}>Import / one shot</span>
+          <h1 className={styles.pageTitle}>Bring the transcript with you.</h1>
+          <p className={styles.pageLede}>
+            OpenAI is shutting group chats to new groups and putting existing ones read-only on
+            their schedule. That is their product. Ours is a room Durable Object you run. If you
+            already have a <code>conversations.json</code> download, you can load it into a group
+            room here.
+          </p>
+          <div className={styles.pageActions}>
+            <Link href={HOSTED_PATHS.getStarted} className={`${styles.btn} ${styles.btnPrimary}`}>
+              Get started
+            </Link>
+            <a href={docsSiteHref("guides/import-transcript")} className={`${styles.btn} ${styles.btnGhost}`}>
+              Import docs
+            </a>
+          </div>
+        </div>
+        <div className={styles.pageMeta}>
+          <span>
+            <strong>400</strong> message cap
+          </span>
+          <span>
+            <strong>JSON</strong> only
+          </span>
+          <span>
+            <strong>No</strong> live sync
+          </span>
+        </div>
+      </header>
 
-      <h2 className="mt-10 font-heading text-lg font-semibold">How it works</h2>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed">
-        <li>One shot. First non-empty ChatGPT conversation in the file, cap 400 messages.</li>
-        <li>Claude dumps with <code>chat_messages</code> use the same route.</li>
-        <li>
-          In the console: Rooms, then Import ChatGPT/Claude JSON. Over HTTP:{" "}
-          <code>POST /rooms/import-transcript</code> with a member JWT.
-        </li>
-      </ul>
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>How it works</span>
+          <h2 className={styles.pageH2}>One file, one room.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <ul>
+            {STEPS.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
-      <h2 className="mt-10 font-heading text-lg font-semibold">What we skip</h2>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed">
-        <li>We are not trying to replace ChatGPT.</li>
-        <li>No live pull from OpenAI. We do not scrape your account.</li>
-        <li>No email invites. Pass FluxyChat user ids only if those people already exist.</li>
-      </ul>
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>What we skip</span>
+          <h2 className={styles.pageH2}>No scraping, no invites.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <ul>
+            {SKIPS.map((skip) => (
+              <li key={skip}>{skip}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
-      <p className="mt-10 text-sm">
-        <Link className="font-medium underline underline-offset-2" href={HOSTED_PATHS.getStarted}>
-          Get started
-        </Link>
-        {" · "}
-        <a className="font-medium underline underline-offset-2" href={docsSiteHref("guides/import-transcript")}>
-          Import docs
-        </a>
-        {" · "}
-        <Link className="font-medium underline underline-offset-2" href={HOSTED_PATHS.console}>
-          Console
-        </Link>
-      </p>
+      <div className={styles.pageCta}>
+        <div>
+          <span className={styles.pageEyebrow}>Next</span>
+          <p className={styles.pageH2}>Open a room, import the JSON.</p>
+          <p>Hosted is beta. Keep the original export; the import is one-way.</p>
+        </div>
+        <div className={styles.pageActions}>
+          <Link href={HOSTED_PATHS.console} className={`${styles.btn} ${styles.btnPrimary}`}>
+            Open the console
+          </Link>
+          <Link href="/guides" className={`${styles.btn} ${styles.btnGhost}`}>
+            Guides
+          </Link>
+        </div>
+      </div>
     </MarketingShell>
   );
 }

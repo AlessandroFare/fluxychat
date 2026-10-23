@@ -57,30 +57,40 @@ export function Cursor({ cursor, color }: CursorProps) {
         left: cursor.x,
         top: cursor.y,
         pointerEvents: "none",
-        transform: "translate(-2px, -2px)",
+        // The arrow tip (viewBox 5.5,3.2 at 18px) lands on the reported point.
+        transform: "translate(-4px, -2px)",
         zIndex: 50,
         willChange: reduced ? undefined : "left, top",
       }}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        style={{ filter: "drop-shadow(0 1px 2px rgb(0 0 0 / 0.4))" }}
+      >
         <path
           d="M5.5 3.2 19 12.4l-6.2 1.4 2.6 6.6-2.8 1.1-2.6-6.6L5.5 3.2Z"
           fill={fill}
-          stroke="#0f172a"
-          strokeWidth="1"
+          stroke="#ffffff"
+          strokeWidth="1.2"
         />
       </svg>
       {cursor.label ? (
         <span
           style={{
-            display: "block",
-            marginTop: 2,
-            padding: "1px 6px",
-            borderRadius: 4,
+            display: "inline-block",
+            marginTop: 4,
+            padding: "2px 8px",
+            borderRadius: 999,
             background: fill,
             color: "#fff",
             fontSize: 11,
+            fontWeight: 600,
+            lineHeight: "16px",
             whiteSpace: "nowrap",
+            boxShadow: "0 1px 3px rgb(0 0 0 / 0.35)",
           }}
         >
           {cursor.label}

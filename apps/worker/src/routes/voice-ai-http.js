@@ -23,7 +23,14 @@ export async function dispatchVoiceAiRoutes(request, url, h) {
   const path = url.pathname;
 
   if (request.method === "GET" && path === "/voice-ai/providers") {
-    const { json: respond } = pickRouteDeps(h, ["json"]);
+    // Audit F-65: the provider catalog was readable without any auth.
+    const { env, json: respond, verifyJwtAndGetContext } = pickRouteDeps(h, [
+      "env",
+      "json",
+      "verifyJwtAndGetContext",
+    ]);
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) return respond({ error: "unauthorized" }, h, 401);
     return respond({ providers: listVoiceAiProviders() }, h);
   }
 
@@ -205,10 +212,27 @@ async function dispatchMemberSpeech(request, path, h) {
     if (!audioBase64) {
       return json({ error: "audioBase64 required" }, { status: 400, headers: corsHeaders });
     }
+    // Audit F-62: cap the audio payload and validate the translation inputs
+    // before they reach the external clone service.
+    const decoded = decodeAudioBase64(audioBase64);
+    if (!decoded.ok) {
+      return json({ error: decoded.error }, { status: decoded.status, headers: corsHeaders });
+    }
+    const targetLang =
+      typeof body.targetLang === "string" && body.targetLang.trim()
+        ? body.targetLang.trim()
+        : "en";
+    if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(targetLang)) {
+      return json({ error: "invalid_target_lang" }, { status: 400, headers: corsHeaders });
+    }
+    const voiceId = typeof body.voiceId === "string" ? body.voiceId.trim() : null;
+    if (voiceId && !/^[A-Za-z0-9_.:-]{1,64}$/.test(voiceId)) {
+      return json({ error: "invalid_voice_id" }, { status: 400, headers: corsHeaders });
+    }
     const payload = {
       audioBase64,
-      targetLang: typeof body.targetLang === "string" ? body.targetLang : "en",
-      voiceId: typeof body.voiceId === "string" ? body.voiceId : null,
+      targetLang,
+      voiceId,
       projectId: auth.projectId,
       userId: auth.userId,
       roomId,

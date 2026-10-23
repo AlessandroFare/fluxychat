@@ -49,9 +49,10 @@ jobs:
           SDK_VERSION="${GITHUB_REF_NAME#sdk-v}"
           echo "Publishing com.fluxychat:shared:${SDK_VERSION}"
           if [[ -z "$OSSRH_USER" ]]; then
-            echo "OSSRH_USER not set — skipping Maven publish (local tag build only)"
-            gradle -PsdkVersion="$SDK_VERSION" :shared:assembleRelease
-            exit 0
+            # Audit F-94: this job only runs on sdk-v* tag pushes, so skipping
+            # silently meant a green release pipeline with nothing published.
+            echo "::error::OSSRH_USER secret is not set — cannot publish ${SDK_VERSION}"
+            exit 1
           fi
           gradle -PsdkVersion="$SDK_VERSION" :shared:publishAndroidReleasePublicationToSonatypeRepository :shared:publishJvmPublicationToSonatypeRepository
           bash ../../scripts/sonatype-upload-staging.sh
@@ -84,8 +85,9 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           FRAME_DIR="packages/sdk-kmp/shared/build/bin/iosArm64/releaseFramework"
           if [[ ! -d "$FRAME_DIR" ]]; then
-            echo "Framework output not found — skip release asset"
-            exit 0
+            # Audit F-94: a green run without the release asset hid a broken link task.
+            echo "::error::Framework output not found at $FRAME_DIR — link task produced nothing"
+            exit 1
           fi
           cd "$FRAME_DIR"
           zip -r FluxyChatSDK.xcframework.zip FluxyChatSDK.framework 2>/dev/null || zip -r FluxyChatSDK.xcframework.zip .

@@ -45,6 +45,34 @@ describe("ops-lint", () => {
     expect(good.ok).toBe(true);
   });
 
+  it("warns when a tool_call is missing required tool input, without blocking publish", () => {
+    const draft = (input) =>
+      lintOpsDefinition(
+        {
+          slug: "access",
+          steps: [
+            { id: "review", type: "human_task", assignee: { role: "security" }, timeout: { after: "1d" }, next: "approve" },
+            { id: "approve", type: "approval", roles: ["security"], quorum: { default: 2 }, timeout: { after: "1d" }, next: "write" },
+            { id: "write", type: "tool_call", tool: "mcp.call", ...(input ? { input } : {}), timeout: { after: "1m" }, next: "end" },
+            { id: "end", type: "end", timeout: { after: "1s" } },
+          ],
+        },
+        { tools, policy },
+      );
+
+    const warned = draft(null);
+    expect(warned.ok).toBe(true);
+    expect(warned.warnings).toContainEqual({
+      code: "tool_input_missing",
+      message: expect.stringContaining("mcp.call is missing required input server, tool"),
+      stepId: "write",
+    });
+
+    const filled = draft({ server: "grafana", tool: "query" });
+    expect(filled.ok).toBe(true);
+    expect(filled.warnings.filter((w) => w.code === "tool_input_missing")).toHaveLength(0);
+  });
+
   it("requires citations on file-search agent tasks", () => {
     const denied = lintOpsDefinition(
       {

@@ -2,9 +2,23 @@
  * P23-2: Human-in-the-Loop Approval — Worker Implementation
  * KV-backed approval store and gate for sensitive tool calls.
  */
+import { assertMakerCheckerDecision } from "./maker-checker.js";
 
 const APPROVAL_PREFIX = "hitl-approval:";
 const DEFAULT_TIMEOUT_MS = 300_000; // 5 minutes
+
+// Audit F-41/F-42: this legacy KV store has no chain config, so the four-eyes
+// rule is enforced unconditionally — the agent and the requester can never
+// decide their own request.
+function assertLegacyDecision(existing, userId) {
+  const check = assertMakerCheckerDecision({
+    makerChecker: true,
+    requesterUserId: existing.userId ?? existing.requesterUserId,
+    decidedBy: userId,
+    agentId: existing.agentId,
+  });
+  if (!check.ok) throw new Error(check.error);
+}
 
 /**
  * Create an approval store backed by Cloudflare KV.
@@ -44,6 +58,7 @@ export function createApprovalStore(kv) {
       const existing = await this.get(id);
       if (!existing) throw new Error("Approval request not found");
       if (existing.status !== "pending") throw new Error(`Request already ${existing.status}`);
+      assertLegacyDecision(existing, userId);
       const updated = {
         ...existing,
         status: "approved",
@@ -60,6 +75,7 @@ export function createApprovalStore(kv) {
       const existing = await this.get(id);
       if (!existing) throw new Error("Approval request not found");
       if (existing.status !== "pending") throw new Error(`Request already ${existing.status}`);
+      assertLegacyDecision(existing, userId);
       const updated = {
         ...existing,
         status: "denied",
@@ -99,6 +115,17 @@ export function createApprovalStore(kv) {
 }
 
 /**
+ * Audit F-41: with no explicit rule, a side-effect tool must not run
+ * unapproved — the gate defaults to require approval for write/send/
+ * delete-like tool names.
+ */
+const SENSITIVE_TOOL_PATTERN = /(write|create|update|delete|remove|send|post|publish|upload|invite|grant|revoke|transfer|payout|refund|charge|exec|shell|deploy|merge|archive|ban|kick|approve|reject|enable|disable)/i;
+
+export function isSensitiveToolName(toolName) {
+  return SENSITIVE_TOOL_PATTERN.test(String(toolName || ""));
+}
+
+/**
  * Create an approval gate that determines which tools need approval.
  * @param {Object} opts
  * @param {string[]} [opts.alwaysRequire] - Tools that always need approval
@@ -121,6 +148,9 @@ export function createApprovalGate({ alwaysRequire = [], neverRequire = [], gate
       if (gate?.needsApproval) {
         return gate.needsApproval(input, context);
       }
+
+      // Audit F-41: default-deny for side-effect tools.
+      if (isSensitiveToolName(toolName)) return true;
 
       // Default: no approval needed
       return false;

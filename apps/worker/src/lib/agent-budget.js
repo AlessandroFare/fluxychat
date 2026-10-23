@@ -14,10 +14,10 @@
  * Consumption is computed from `agent_runs` (input_tokens + output_tokens),
  * which every completed run already writes. No second ledger to drift.
  *
- * Concurrent invokes: `tryReserveRoomAgentTokens` holds the remaining budget
- * atomically (used + inflight + hold <= cap) so two mentions cannot both pass
- * a check-then-spend window. The hold is released in a finally block; actual
- * spend still lives in `agent_runs`.
+ * Concurrent invokes: the caller holds a per-invoke token estimate with
+ * `tryReserveRoomAgentTokens` (used + inflight + hold <= cap) so two mentions
+ * cannot both pass a check-then-spend window. The hold is released in a
+ * finally block; actual spend still lives in `agent_runs`.
  */
 
 export const BUDGET_MONTH_KEY_RE = /^\d{4}-\d{2}$/;

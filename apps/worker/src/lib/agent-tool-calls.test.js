@@ -251,3 +251,133 @@ describe("extractAnthropicToolCalls", () => {
     expect(out.toolCalls).toHaveLength(0);
   });
 });
+
+describe("validateToolCall (JSON Schema gate, P25-9)", () => {
+  const withSchema = [
+    {
+      type: "function",
+      function: {
+        name: "book_flight",
+        parameters: {
+          type: "object",
+          properties: {
+            city: { type: "string" },
+            seats: { type: "number", minimum: 1, maximum: 9 },
+            cabin: { type: "string", enum: ["economy", "business"] },
+            tags: { type: "array", items: { type: "string" } },
+            note: { type: "string", nullable: true },
+          },
+          required: ["city", "seats"],
+        },
+      },
+    },
+  ];
+
+  const call = (args) =>
+    validateToolCall(
+      {
+        id: "call_s",
+        type: "function",
+        function: { name: "book_flight", arguments: JSON.stringify(args) },
+      },
+      withSchema,
+      "run-s",
+    );
+
+  it("accepts arguments that match the schema", () => {
+    const r = call({ city: "Rome", seats: 2, cabin: "economy", tags: ["a"] });
+    expect(r.valid).toBe(true);
+    expect(JSON.parse(r.toolCall.arguments)).toEqual({
+      city: "Rome",
+      seats: 2,
+      cabin: "economy",
+      tags: ["a"],
+    });
+  });
+
+  it("rejects a missing required property", () => {
+    const r = call({ seats: 2 });
+    expect(r.valid).toBe(false);
+    expect(r.warning).toContain("tool_call_invalid_arguments_schema");
+    expect(r.warning).toContain("city is required");
+  });
+
+  it("rejects a wrong type", () => {
+    const r = call({ city: 42, seats: 2 });
+    expect(r.valid).toBe(false);
+    expect(r.warning).toContain("must be of type string");
+  });
+
+  it("rejects an enum violation", () => {
+    const r = call({ city: "Rome", seats: 2, cabin: "vip" });
+    expect(r.valid).toBe(false);
+    expect(r.warning).toContain("must be one of");
+  });
+
+  it("rejects an invalid array item and accepts null on a nullable field", () => {
+    expect(call({ city: "Rome", seats: 2, tags: ["a", 3] }).valid).toBe(false);
+    expect(call({ city: "Rome", seats: 2, note: null }).valid).toBe(true);
+  });
+
+  it("skips the gate when the tool declares no parameters", () => {
+    const r = validateToolCall(
+      { id: "c1", function: { name: "search_docs", arguments: '{"anything":true}' } },
+      registered,
+      "run-np"
+    );
+    expect(r.valid).toBe(true);
+  });
+
+  it("skips the gate for askHuman (own runtime validation)", () => {
+    const r = validateToolCall(
+      { id: "c2", function: { name: "askHuman", arguments: "{}" } },
+      [
+        {
+          type: "function",
+          function: {
+            name: "askHuman",
+            parameters: {
+              type: "object",
+              required: ["prompt"],
+              properties: { prompt: { type: "string" } },
+            },
+          },
+        },
+      ],
+      "run-h2"
+    );
+    expect(r.valid).toBe(true);
+  });
+
+  it("strips schema-invalid calls in extractOpenAIToolCalls", () => {
+    const out = extractOpenAIToolCalls(
+      {
+        choices: [
+          {
+            message: {
+              tool_calls: [
+                {
+                  id: "ok",
+                  type: "function",
+                  function: { name: "book_flight", arguments: '{"city":"Rome","seats":2}' },
+                },
+                {
+                  id: "bad",
+                  type: "function",
+                  function: { name: "book_flight", arguments: '{"city":"Rome"}' },
+                },
+              ],
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
+      },
+      withSchema,
+      "run-x"
+    );
+    expect(out.toolCalls.map((t) => t.id)).toEqual(["ok"]);
+    expect(
+      out.invalidWarnings.some((w) => w.includes("tool_call_invalid_arguments_schema"))
+    ).toBe(true);
+  });
+});

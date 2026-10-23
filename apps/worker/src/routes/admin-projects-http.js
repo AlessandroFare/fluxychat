@@ -4,6 +4,15 @@
  */
 import { pickRouteDeps } from "./route-http-deps.js";
 import { hostedTenantPlanMutationForbidden, isPlatformOperatorProject } from "../lib/hosted-saas-policy.js";
+
+// Upsert by primary key: a plan change must never drop stripe_customer_id /
+// stripe_subscription_id (billing portal and Stripe webhook routing depend on them)
+// and keeps billing_status unless the request body explicitly overrides it.
+// Binds: project_id, plan_name, billing override|null, msg/agent/webhook limits,
+// pricing_version, updated_at, project_id (created_at lookup), created_at fallback,
+// billing override|null.
+export const PROJECT_PLAN_UPSERT_SQL =
+  "INSERT INTO project_plans (project_id, plan_name, billing_status, message_limit_monthly, agent_invoke_limit_monthly, webhook_delivery_limit_monthly, pricing_version, manually_overridden, updated_at, created_at) VALUES (?, ?, COALESCE(?, 'manual'), ?, ?, ?, ?, 0, ?, COALESCE((SELECT created_at FROM project_plans WHERE project_id = ?), ?)) ON CONFLICT(project_id) DO UPDATE SET plan_name = excluded.plan_name, billing_status = COALESCE(?, project_plans.billing_status), message_limit_monthly = excluded.message_limit_monthly, agent_invoke_limit_monthly = excluded.agent_invoke_limit_monthly, webhook_delivery_limit_monthly = excluded.webhook_delivery_limit_monthly, pricing_version = excluded.pricing_version, manually_overridden = 0, updated_at = excluded.updated_at";
 import { normalizePlanName, planLimitsForTier } from "../lib/plan-tier-limits.js";
 import { parseHostedOverlayBody } from "@fluxy-chat/config";
 
@@ -219,21 +228,19 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
       const planName = normalizePlanName(body.planName);
       const limits = planLimitsForTier(env, planName);
       const now = new Date().toISOString();
-      await env.DB.prepare(
-        "INSERT OR REPLACE INTO project_plans (project_id, plan_name, billing_status, message_limit_monthly, agent_invoke_limit_monthly, webhook_delivery_limit_monthly, pricing_version, manually_overridden, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM project_plans WHERE project_id = ?), ?))"
-      )
+      await env.DB.prepare(PROJECT_PLAN_UPSERT_SQL)
         .bind(
           targetProjectId,
           planName,
-          body.billingStatus || "manual",
+          body.billingStatus || null,
           limits.messageLimitMonthly,
           limits.agentInvokeLimitMonthly,
           limits.webhookDeliveryLimitMonthly,
           body.pricingVersion || env.DEFAULT_PRICING_VERSION || "v1",
-          0,
           now,
           targetProjectId,
-          now
+          now,
+          body.billingStatus || null
         )
         .run();
       const plan = await getProjectPlan(env, targetProjectId);
@@ -345,12 +352,15 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
       const keyHash = await hashApiKey(apiKey, env);
 
       await env.DB.batch([
+        // Audit #28: new secret-key rows are stored with an opaque UUID id, so
+        // revoke-before-rotate matches fc_ rows by key_prefix (and legacy
+        // plaintext-id rows via id) instead of assuming id == plaintext key.
         env.DB.prepare(
-          "UPDATE api_keys SET revoked_at = ? WHERE project_id = ? AND revoked_at IS NULL AND id LIKE 'fc_%'"
+          "UPDATE api_keys SET revoked_at = ? WHERE project_id = ? AND revoked_at IS NULL AND (key_prefix LIKE 'fc_%' OR id LIKE 'fc_%')"
         ).bind(now, targetProjectId),
         env.DB.prepare(
           "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-        ).bind(apiKey, targetProjectId, keyPrefix, keyHash, keyHash, now),
+        ).bind(crypto.randomUUID(), targetProjectId, keyPrefix, keyHash, keyHash, now),
       ]);
 
       ctx.waitUntil(
@@ -420,6 +430,8 @@ export async function dispatchAdminProjectsRoutes(request, url, h) {
         env.DB.prepare(
           "UPDATE api_keys SET revoked_at = ? WHERE project_id = ? AND revoked_at IS NULL AND id LIKE 'pk_%'",
         ).bind(now, targetProjectId),
+        // pk_ ids stay recoverable by design (public browser-side identifier;
+        // audit #28 covers only the secret fc_ key — see worker.js insertNewProject).
         env.DB.prepare(
           "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
         ).bind(publishableKey, targetProjectId, pkPrefix, pkHash, pkHash, now),

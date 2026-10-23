@@ -142,6 +142,7 @@ export function parseConnectionRefusal(reason: string): string | null {
   if (text.includes("token_expired") || text.includes("expired")) return "token_expired";
   if (text.includes("invalid_token") || text.includes("invalid token")) return "invalid_token";
   if (text.includes("anonymous_not_allowed") || text.includes("anonymous")) return "anonymous_not_allowed";
+  if (text.includes("sign in")) return "anonymous_not_allowed";
   if (text.includes("channel_at_capacity") || text.includes("at capacity")) return "channel_at_capacity";
   if (text.includes("banned")) return "banned";
   if (text.includes("invalid_api_key")) return "invalid_api_key";
@@ -174,6 +175,68 @@ export function mapWebSocketCloseToError(code: number, reason = ""): Error | nul
     return new FluxyAuthError(undefined, refusal ?? undefined);
   }
   return new FluxyConnectionError(code, reason);
+}
+
+/**
+ * Typed reason for a closed socket (LiveKit `DisconnectReason` borrow): what UI
+ * copy to show and whether reconnect can help. See `onDisconnect` on the room
+ * connection.
+ */
+export type FluxyDisconnectReason =
+  | "client_initiated"
+  | "heartbeat_timeout"
+  | "token_expired"
+  | "not_member"
+  | "anonymous_not_allowed"
+  | "channel_at_capacity"
+  | "banned"
+  | "protocol_unsupported"
+  | "auth_failed"
+  | "removed"
+  | "server_error"
+  | "network"
+  | "reconnect_failed"
+  | "unknown";
+
+/** Payload of the `onDisconnect` callback. */
+export interface FluxyDisconnectInfo {
+  reason: FluxyDisconnectReason;
+  /** Raw WebSocket close code (0 when the SDK gave up before opening). */
+  code: number;
+  /** Raw close reason from the server, e.g. `terminated_by_moderator`. */
+  reasonText: string;
+  /** True when the SDK will try to reconnect automatically. */
+  willReconnect: boolean;
+  /** Mapped error for error closes (auth refusals, server errors); null otherwise. */
+  error: Error | null;
+}
+
+/**
+ * Map a WebSocket close to a typed disconnect reason. Codes FluxyChat emits:
+ * 1008 auth/policy refusals, 1011 `websocket_setup_failed`, 4000 heartbeat,
+ * 4001 moderator/admin terminate (raw reason kept in `reasonText`).
+ */
+export function mapWebSocketCloseToDisconnectReason(
+  code: number,
+  reason = "",
+): FluxyDisconnectReason {
+  const text = reason.trim().toLowerCase();
+  if (code === 4000 || text === "heartbeat_timeout") return "heartbeat_timeout";
+  if (code === 4001) return "removed";
+  if (code === FLUXY_WS_CLOSE_NORMAL) return "client_initiated";
+  if (code === FLUXY_WS_CLOSE_POLICY) {
+    if (text === "protocol_unsupported") return "protocol_unsupported";
+    const refusal = parseConnectionRefusal(reason);
+    if (refusal === "not_member" || refusal === "forbidden") return "not_member";
+    if (refusal === "token_expired" || refusal === "invalid_token") return "token_expired";
+    if (refusal === "anonymous_not_allowed") return "anonymous_not_allowed";
+    if (refusal === "channel_at_capacity") return "channel_at_capacity";
+    if (refusal === "banned") return "banned";
+    return "auth_failed";
+  }
+  if (code === 1001 || (code >= 1011 && code <= 1014)) return "server_error";
+  if (code === 1005 || code === 1006) return "network";
+  return "unknown";
 }
 
 export function computeReconnectBackoffMs(

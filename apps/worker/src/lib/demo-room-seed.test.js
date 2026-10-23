@@ -1,7 +1,32 @@
 import { describe, it, expect, vi } from "vitest";
-import { ensureDemoRoomSeeded, getDemoStatus } from "./demo-room-seed.js";
+import { ensureDemoRoomSeeded, getDemoStatus, seedDemoRooms } from "./demo-room-seed.js";
 
 describe("demo-room-seed", () => {
+  it("A2-21: seeds a project-scoped starter room so later projects get one too", async () => {
+    const inserts = [];
+    const env = {
+      DB: {
+        prepare: vi.fn((sql) => ({
+          bind: vi.fn((...args) => ({
+            first: vi.fn(async () => ({ c: 0 })),
+            run: vi.fn(async () => {
+              inserts.push({ sql, args });
+              return {};
+            }),
+          })),
+        })),
+      },
+    };
+    await seedDemoRooms(env, "proj_2");
+    const roomInsert = inserts.find((i) => i.sql.includes("INSERT OR IGNORE INTO rooms"));
+    expect(roomInsert.args[0]).toBe("general_proj_2");
+    expect(roomInsert.args[1]).toBe("proj_2");
+    const messageInsert = inserts.find(
+      (i) => i.sql.includes("INSERT INTO messages") && i.args[0] === "proj_2",
+    );
+    expect(messageInsert.args[1]).toBe("general_proj_2");
+  });
+
   it("getDemoStatus reflects env", () => {
     const status = getDemoStatus({
       DEMO_ENABLED: "true",

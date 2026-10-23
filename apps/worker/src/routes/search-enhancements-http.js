@@ -104,7 +104,7 @@ export async function dispatchSearchEnhancementsRoutes(request, url, h) {
 
     /* ── POST /search/saved/:id/use ── */
     if (savedUseMatch && request.method === "POST") {
-      await recordSearchUse(env, savedUseMatch[1]);
+      await recordSearchUse(env, savedUseMatch[1], auth.projectId);
       return json({ ok: true }, { headers: corsHeaders });
     }
 

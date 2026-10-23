@@ -30,3 +30,28 @@ Registry: `packages/protocol/errors/catalog.json`. Do not invent codes in app co
 | 50000 | [connection_failed](/docs/errors/connection_failed) | — | no |
 
 Stable URL shape: `https://docs.fluxychat.com/errors/<identifier>`.
+
+## Branch on codes
+
+`toFluxyErrorInfo` normalizes any caught error to its catalog entry; `errorInfoIs` matches an identifier or a numeric code. `terminal` tells you whether retrying with the same credential is pointless.
+
+```ts
+import { errorInfoIs, toFluxyErrorInfo } from "@fluxy-chat/sdk";
+
+try {
+  // any SDK call: REST request, token minting, connect follow-up
+} catch (cause) {
+  const info = toFluxyErrorInfo(cause as Error, "send message");
+  info.code;       // 40100
+  info.identifier; // "token_expired"
+  info.statusCode; // 401
+  info.href;       // this docs page for the code
+  info.terminal;   // stop retrying with the same credential?
+
+  if (errorInfoIs(info, "token_expired") || errorInfoIs(info, 40100)) {
+    // Mint a fresh member JWT and reconnect.
+  }
+}
+```
+
+For WebSocket disconnects, the room connection's `onDisconnect` hands you a mapped `error`; `describeConnectionError()` turns it into user-facing copy with `isTerminal` and `isMemberIssue`. The [Auth / JWT cookbook](/docs/cookbook/auth-jwt) shows the common refusals in context.

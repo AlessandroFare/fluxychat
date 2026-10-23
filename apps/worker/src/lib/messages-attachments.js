@@ -41,6 +41,7 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
     content: r.deleted_at ? "[deleted]" : r.content,
     createdAt: r.created_at,
     parentId: r.parent_id,
+    alsoToChannel: r.also_to_channel ? true : undefined,
     quotedMessageId:
       typeof extras.metadata?.quotedMessageId === "number" ? extras.metadata.quotedMessageId : undefined,
     editedAt: r.edited_at ?? null,
@@ -83,7 +84,7 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
   if (!mapped.length) return mapped;
   const ids = mapped.map((m) => m.id);
   const placeholders = ids.map(() => "?").join(",");
-  const sql = `SELECT id, room_id, message_id, kind, url, name, size_bytes, content_type, created_at
+  const sql = `SELECT id, room_id, message_id, kind, url, name, size_bytes, content_type, ai_summary, created_at
                FROM attachments
                WHERE project_id = ? AND room_id = ? AND message_id IN (${placeholders})
                ORDER BY created_at ASC`;
@@ -101,6 +102,7 @@ export async function attachAttachmentsToMessages(env, projectId, roomId, rows) 
       name: a.name,
       sizeBytes: a.size_bytes,
       contentType: a.content_type,
+      aiSummary: a.ai_summary ?? undefined,
     });
     byMessage.set(a.message_id, arr);
   }

@@ -7,7 +7,14 @@ import {
   deleteAction,
   executeAction,
   listExecutions,
+  redactActionConfig,
 } from "../lib/ai-actions.js";
+
+// Audit F-59: every action read leaves with secrets masked.
+const presentAction = (action) =>
+  action && typeof action === "object"
+    ? { ...action, config: redactActionConfig(action.config) }
+    : action;
 
 /**
  * AI Actions HTTP routes.
@@ -58,7 +65,7 @@ export async function dispatchAiActionsRoutes(request, url, h) {
     // GET /ai-actions
     if (request.method === "GET" && !actionId) {
       const actions = await listActions(env, { projectId: auth.projectId });
-      return json({ actions, count: actions.length }, { headers: corsHeaders });
+      return json({ actions: actions.map(presentAction), count: actions.length }, { headers: corsHeaders });
     }
 
     // POST /ai-actions — create
@@ -82,14 +89,14 @@ export async function dispatchAiActionsRoutes(request, url, h) {
         kind,
         config: config || {},
       });
-      return json(action, { status: 201, headers: corsHeaders });
+      return json(presentAction(action), { status: 201, headers: corsHeaders });
     }
 
     // GET /ai-actions/:id
     if (request.method === "GET" && actionId && !subAction) {
       const action = await getAction(env, { projectId: auth.projectId, actionId });
       if (!action) return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
-      return json(action, { headers: corsHeaders });
+      return json(presentAction(action), { headers: corsHeaders });
     }
 
     // PATCH /ai-actions/:id
@@ -98,9 +105,9 @@ export async function dispatchAiActionsRoutes(request, url, h) {
         return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
       }
       const body = await request.json();
-      const updated = await updateAction(env, { projectId: auth.projectId, actionId, ...body });
+      const updated = await updateAction(env, { ...body, actionId, projectId: auth.projectId });
       if (!updated) return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
-      return json(updated, { headers: corsHeaders });
+      return json(presentAction(updated), { headers: corsHeaders });
     }
 
     // DELETE /ai-actions/:id
@@ -114,6 +121,11 @@ export async function dispatchAiActionsRoutes(request, url, h) {
 
     // POST /ai-actions/:id/execute
     if (request.method === "POST" && actionId && subAction === "execute") {
+      // Audit F-60: actions can send email/HTTP from the project's domain —
+      // members must not be able to fire them.
+      if (!hasAnyRole(auth.roles, ["owner", "admin", "moderator"])) {
+        return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+      }
       const body = await request.json();
       const result = await executeAction(env, {
         projectId: auth.projectId,

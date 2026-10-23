@@ -29,9 +29,10 @@ const { messages, sendMessage, connectionState } = useChat({ roomId: "general" }
 ## Stream
 
 ```ts
-import { createWorkerFluxyStreamClient } from "@fluxy-chat/sdk";
+import { FluxyChatClient, createWorkerFluxyStreamClient } from "@fluxy-chat/sdk";
 
-const stream = createWorkerFluxyStreamClient({ baseUrl, token: jwt });
+const client = new FluxyChatClient({ baseUrl, userId, token }); // member JWT
+const stream = createWorkerFluxyStreamClient(client);
 ```
 
 Live event messages: `POST /api/live/events/:eventId/messages`.

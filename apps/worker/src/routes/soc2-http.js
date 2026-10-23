@@ -35,7 +35,7 @@ export async function dispatchSOC2Routes(request, url, h) {
   if (path.match(/^\/api\/soc2\/controls\/[a-z0-9]+$/) && request.method === "PATCH") {
     const controlDbId = path.split("/").pop();
     const body = await request.json();
-    const result = await SOC2.updateControl(env, { controlDbId, projectId, ...body });
+    const result = await SOC2.updateControl(env, { controlDbId, ...body, projectId });
     return json(result);
   }
 
@@ -71,7 +71,7 @@ export async function dispatchSOC2Routes(request, url, h) {
   if (path.match(/^\/api\/soc2\/risks\/[a-z0-9]+$/) && request.method === "PATCH") {
     const riskId = path.split("/").pop();
     const body = await request.json();
-    const result = await SOC2.updateRiskAssessment(env, { riskId, projectId, ...body });
+    const result = await SOC2.updateRiskAssessment(env, { riskId, ...body, projectId });
     return json(result);
   }
 
@@ -93,7 +93,7 @@ export async function dispatchSOC2Routes(request, url, h) {
   if (path.match(/^\/api\/soc2\/policies\/[a-z0-9]+$/) && request.method === "PATCH") {
     const policyId = path.split("/").pop();
     const body = await request.json();
-    const result = await SOC2.updatePolicy(env, { policyId, projectId, ...body });
+    const result = await SOC2.updatePolicy(env, { policyId, ...body, projectId });
     return json(result);
   }
 
@@ -129,7 +129,7 @@ export async function dispatchSOC2Routes(request, url, h) {
   if (path.match(/^\/api\/soc2\/incidents\/[a-z0-9]+$/) && request.method === "PATCH") {
     const incidentId = path.split("/").pop();
     const body = await request.json();
-    const result = await SOC2.updateIncident(env, { incidentId, projectId, ...body });
+    const result = await SOC2.updateIncident(env, { incidentId, ...body, projectId });
     return json(result);
   }
 
@@ -147,10 +147,28 @@ export async function dispatchSOC2Routes(request, url, h) {
     return json(result);
   }
 
+  if (path === "/api/soc2/reports/evidence" && request.method === "POST") {
+    const body = await request.json().catch(() => null);
+    const { generateOpsEvidence } = await import("../lib/ops-evidence.js");
+    const { evidence, document } = await generateOpsEvidence(env, { projectId, days: body?.days });
+    const report = await SOC2.createReport(env, {
+      projectId,
+      // report_type CHECK in migration 0129 allows: compliance, risk, incident,
+      // audit, readiness — an ops evidence pack is filed as an audit report.
+      reportType: "audit",
+      title: body?.title || `Operations evidence pack — last ${evidence.periodDays} days`,
+      content: document,
+      generatedBy: ctx.auth?.userId || null,
+      periodStart: evidence.since,
+      periodEnd: evidence.generatedAt,
+    });
+    return json({ ok: true, report, document, evidence });
+  }
+
   if (path.match(/^\/api\/soc2\/reports\/[a-z0-9]+$/) && request.method === "PATCH") {
     const reportId = path.split("/").pop();
     const body = await request.json();
-    const result = await SOC2.updateReport(env, { reportId, projectId, ...body });
+    const result = await SOC2.updateReport(env, { reportId, ...body, projectId });
     return json(result);
   }
 

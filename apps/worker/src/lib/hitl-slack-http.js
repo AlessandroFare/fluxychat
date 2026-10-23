@@ -1,5 +1,5 @@
 import { createD1ApprovalStore } from "./hitl-approval-d1.js";
-import { hitlTapSecret, verifyHitlTapToken } from "./hitl-tap-token.js";
+import { consumeHitlTapNonce, hitlTapSecret, verifyHitlTapToken } from "./hitl-tap-token.js";
 import { checkAndConsumeIpRateLimit } from "./ip-rate-limit.js";
 import {
   hitlSlackActionFromPayload,
@@ -47,6 +47,15 @@ export async function applyHitlSlackPayload(env, payload) {
   const tap = await verifyHitlTapToken(hitlTapSecret(env), token);
   if (!tap) {
     return slackAck("That HITL button is invalid or expired.");
+  }
+
+  // Audit F-74: the tap nonce is single-use — the Slack path skipped the
+  // consumption the browser tap path performs, so the button could be replayed.
+  const consumed = await consumeHitlTapNonce(env, tap.jti);
+  if (!consumed.ok) {
+    return consumed.error === "token_already_used"
+      ? slackAck("That HITL button was already used.")
+      : slackAck("Could not consume that approval button.", 503);
   }
 
   try {

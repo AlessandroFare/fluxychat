@@ -1,6 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import { invokeMentionedAgents } from "./agent-runtime.js";
 
+function agentFixture() {
+  return {
+    id: "agent-1",
+    name: "Assistant",
+    handle: "@assistant",
+    provider: "openai",
+    model: "gpt-4o-mini",
+    config: null,
+    system_prompt: "hi",
+    context_fetch_url: null,
+    tool_execute_url: null,
+    tools_schema: null,
+    rate_limit_rpm: null,
+  };
+}
+
 describe("invokeMentionedAgents parentId", () => {
   it("passes parent_id into stream start when provided", async () => {
     const streamBodies = [];
@@ -11,21 +27,7 @@ describe("invokeMentionedAgents parentId", () => {
             all: async () => {
               if (sql.includes("FROM bots")) {
                 return {
-                  results: [
-                    {
-                      id: "agent-1",
-                      name: "Assistant",
-                      handle: "@assistant",
-                      provider: "openai",
-                      model: "gpt-4o-mini",
-                      config: null,
-                      system_prompt: "hi",
-                      context_fetch_url: null,
-                      tool_execute_url: null,
-                      tools_schema: null,
-                      rate_limit_rpm: null,
-                    },
-                  ],
+                  results: [agentFixture()],
                 };
               }
               return { results: [] };
@@ -79,6 +81,74 @@ describe("invokeMentionedAgents parentId", () => {
     expect(streamBodies.some((b) => b.type === "message" && String(b.content || "").length > 0)).toBe(
       true,
     );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps raw provider errors out of the room when the run fails", async () => {
+    const messageInserts = [];
+    let nextRowId = 900;
+    const env = {
+      DB: {
+        prepare: (sql) => ({
+          bind: (...args) => ({
+            all: async () => {
+              if (sql.includes("FROM bots")) {
+                return { results: [agentFixture()] };
+              }
+              return { results: [] };
+            },
+            run: async () => {
+              if (sql.includes("INSERT INTO messages")) {
+                messageInserts.push(args);
+              }
+              return { meta: { last_row_id: nextRowId++ } };
+            },
+            first: async () => null,
+          }),
+        }),
+      },
+      ROOM: {
+        idFromName: () => "id",
+        get: () => ({
+          fetch: async () => new Response(JSON.stringify({ ok: true })),
+        }),
+      },
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 400,
+        text: async () =>
+          JSON.stringify({
+            error: {
+              type: "server_error",
+              message: "Upstream request failed: Model is unavailable",
+            },
+          }),
+      })),
+    );
+
+    await invokeMentionedAgents(
+      { AI_API_KEY: "sk-test", AI_BASE_URL: "https://api.openai.com", ...env },
+      "proj-1",
+      "room-1",
+      "user-1",
+      "@assistant hello",
+      ["assistant"],
+      "trace-1",
+      55,
+    );
+
+    const errorInsert = messageInserts.find((args) =>
+      String(args[3] || "").includes("couldn't reply"),
+    );
+    expect(errorInsert, "failed run writes a room message").toBeTruthy();
+    const content = String(errorInsert[3]);
+    expect(content).not.toContain("OpenAI API error");
+    expect(content).not.toContain("Model is unavailable");
 
     vi.unstubAllGlobals();
   });

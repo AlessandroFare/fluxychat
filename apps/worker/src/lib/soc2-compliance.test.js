@@ -97,4 +97,24 @@ describe("soc2-compliance", () => {
     expect(result).toHaveProperty("incidents");
     expect(result).toHaveProperty("policies");
   });
+
+  it("scopes every PATCH-able update by project (tenant boundary)", async () => {
+    const calls = [];
+    env.DB = {
+      prepare: vi.fn((sql) => {
+        calls.push(sql);
+        return mockDB([]);
+      }),
+    };
+    const SOC2 = await import("../lib/soc2-compliance.js");
+    await SOC2.updateControl(env, { controlDbId: "c1", projectId: "p1", status: "implemented" });
+    await SOC2.updateRiskAssessment(env, { riskId: "r1", projectId: "p1", status: "mitigated" });
+    await SOC2.updatePolicy(env, { policyId: "sp1", projectId: "p1", status: "reviewed" });
+    await SOC2.updateIncident(env, { incidentId: "si1", projectId: "p1", status: "resolved" });
+    await SOC2.updateReport(env, { reportId: "srpt1", projectId: "p1", status: "final" });
+
+    const updates = calls.filter((sql) => sql.startsWith("UPDATE"));
+    expect(updates).toHaveLength(5);
+    for (const sql of updates) expect(sql).toContain("WHERE id = ? AND project_id = ?");
+  });
 });

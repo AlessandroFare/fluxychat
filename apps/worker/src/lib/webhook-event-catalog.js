@@ -16,6 +16,7 @@ export const WEBHOOK_EVENT_TYPES = [
   "client_event",
   "cache_miss",
   "user.event",
+  "webhook.delivery_failed",
 ];
 
 const KNOWN = new Set(WEBHOOK_EVENT_TYPES);

@@ -20,8 +20,8 @@ import {
 export async function dispatchAiImageRoutes(request, url, h) {
   const {
     env, json, corsHeaders, requestLogCtx,
-    verifyJwtAndGetContext, logError, hasAnyRole,
-  } = pickRouteDeps(h, ["env", "json", "corsHeaders", "requestLogCtx", "verifyJwtAndGetContext", "logError", "hasAnyRole"]);
+    verifyJwtAndGetContext, logError, hasAnyRole, checkAndConsumeRateLimit,
+  } = pickRouteDeps(h, ["env", "json", "corsHeaders", "requestLogCtx", "verifyJwtAndGetContext", "logError", "hasAnyRole", "checkAndConsumeRateLimit"]);
 
   async function auth() {
     const a = await verifyJwtAndGetContext(request, env).catch((err) => {
@@ -40,9 +40,30 @@ export async function dispatchAiImageRoutes(request, url, h) {
     if (!body?.prompt) return json({ error: "prompt required" }, { status: 400 });
     if (!body?.roomId) return json({ error: "roomId required" }, { status: 400 });
 
+    // Audit F-61: image generation is a paid upstream call — rate limit it.
+    const rate = await checkAndConsumeRateLimit(env, {
+      key: `ai-image:${a.projectId}:${a.userId}`,
+      limit: Number(env.RATE_LIMIT_AI_IMAGES_PER_MINUTE || 10),
+      windowSeconds: 60,
+    });
+    if (!rate.allowed) {
+      return json(
+        { error: "rate_limit_exceeded", retryAfterSeconds: rate.retryAfterSeconds },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+      );
+    }
+
+    // Audit F-65: the target room must belong to the caller's project.
+    const room = await env.DB.prepare(
+      "SELECT id FROM rooms WHERE id = ? AND project_id = ?",
+    )
+      .bind(String(body.roomId), a.projectId)
+      .first();
+    if (!room) return json({ error: "room_not_found" }, { status: 404 });
+
     const result = await generateImage(env, {
       projectId: a.projectId,
-      roomId: body.roomId,
+      roomId: String(body.roomId),
       userId: a.userId,
       prompt: body.prompt,
       size: body.size,

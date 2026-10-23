@@ -15,10 +15,17 @@ function createMockEnv(overrides = {}) {
 
   const db = {
     prepare(sql) {
+      overrides.captureSql?.push(sql);
       return {
         bind(...args) {
           return {
             async first() {
+              if (sql.includes("FROM room_members")) {
+                return overrides.noRoomAccess ? null : { ok: 1 };
+              }
+              if (sql.includes("FROM rooms")) {
+                return overrides.noRoomAccess ? null : { id: "room_1", type: "public" };
+              }
               if (sql.includes("SELECT id, content_hash FROM message_embeddings")) {
                 const [, , messageId] = args;
                 return embeddings.find((e) => e.message_id === messageId) || null;
@@ -306,11 +313,63 @@ describe("searchSemanticMessages", () => {
     const result = await searchSemanticMessages(env, {
       query: "test query",
       projectId: "proj_1",
+      userId: "user_1",
+      roles: ["member"],
       roomId: "room_1",
       mode: "semantic",
     });
     expect(result.ok).toBe(true);
     expect(result.mode).toBe("semantic");
+
+    delete globalThis.fetch;
+  });
+
+  it("forbids semantic search in a room the member cannot access (audit F-78)", async () => {
+    const env = createMockEnv({ noRoomAccess: true });
+    const result = await searchSemanticMessages(env, {
+      query: "test query",
+      projectId: "proj_1",
+      userId: "user_1",
+      roles: ["member"],
+      roomId: "room_private",
+      mode: "semantic",
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("forbidden");
+  });
+
+  it("scopes project-wide semantic search to the member's rooms (audit F-78)", async () => {
+    const captureSql = [];
+    const env = createMockEnv({ captureSql });
+    globalThis.fetch = mockFetch({ data: [{ embedding: [1, 0, 0], index: 0 }] });
+
+    const result = await searchSemanticMessages(env, {
+      query: "test query",
+      projectId: "proj_1",
+      userId: "user_1",
+      roles: ["member"],
+    });
+    expect(result.ok).toBe(true);
+    const candidateSql = captureSql.find((s) => s.includes("FROM message_embeddings me"));
+    expect(candidateSql).toContain("room_members");
+
+    delete globalThis.fetch;
+  });
+
+  it("lets owner/admin search the whole project without a membership join (audit F-78)", async () => {
+    const captureSql = [];
+    const env = createMockEnv({ captureSql });
+    globalThis.fetch = mockFetch({ data: [{ embedding: [1, 0, 0], index: 0 }] });
+
+    const result = await searchSemanticMessages(env, {
+      query: "test query",
+      projectId: "proj_1",
+      userId: "user_1",
+      roles: ["admin"],
+    });
+    expect(result.ok).toBe(true);
+    const candidateSql = captureSql.find((s) => s.includes("FROM message_embeddings me"));
+    expect(candidateSql).not.toContain("room_members");
 
     delete globalThis.fetch;
   });

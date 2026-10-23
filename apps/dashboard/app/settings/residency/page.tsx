@@ -6,7 +6,7 @@ import { Globe2, Loader2, Save } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Button, Panel, Section } from "../../components/ui";
+import { Button, Panel, Section, SkeletonCard } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -63,7 +63,15 @@ export default function DataResidencySettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   function toggleAllowed(region: string) {
@@ -117,9 +125,10 @@ export default function DataResidencySettingsPage() {
       {!token ? (
         <Panel className="p-6 text-sm text-muted-foreground">Admin JWT required.</Panel>
       ) : loading ? (
-        <p className="text-sm text-muted-foreground">
-          <Loader2 className="inline h-4 w-4 animate-spin" aria-hidden /> Loading residency…
-        </p>
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       ) : (
         <div className="space-y-6">
           <Panel className="flex flex-wrap items-center gap-3 p-4">
@@ -181,7 +190,7 @@ export default function DataResidencySettingsPage() {
                       key={region}
                       type="button"
                       aria-pressed={active}
-                      className={`rounded-full border px-3 py-1 text-xs ${active ? "border-brand bg-brand/10 text-brand" : "border-border text-muted-foreground"}`}
+                      className={`rounded-full border px-3 py-1 text-xs ${active ? "border-brand bg-brand/10 text-[var(--brand-hover)]" : "border-border text-muted-foreground"}`}
                       onClick={() => toggleAllowed(region)}
                     >
                       {region}

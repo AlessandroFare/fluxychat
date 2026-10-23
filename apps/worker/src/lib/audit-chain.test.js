@@ -10,6 +10,7 @@ import {
 function createEnv() {
   const chain = [];
   return {
+    chain,
     AUDIT_CHAIN_ENABLED: "true",
     DB: {
       prepare(sql) {
@@ -17,6 +18,9 @@ function createEnv() {
           bind(...args) {
             return {
               async first() {
+                if (sql.includes("COUNT(*)")) {
+                  return { total: chain.length };
+                }
                 if (sql.includes("ORDER BY id DESC")) {
                   return chain.length ? { event_hash: chain[chain.length - 1].event_hash } : null;
                 }
@@ -75,6 +79,30 @@ describe("audit-chain", () => {
     const result = await verifyRoomAuditChain(env, { projectId: "p1" });
     expect(result.valid).toBe(true);
     expect(result.count).toBe(2);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("A2-14a: concurrent appends stay linked", async () => {
+    const env = createEnv();
+    await Promise.all([
+      appendRoomAuditChainEvent(env, { projectId: "p1", event: { n: 1 } }),
+      appendRoomAuditChainEvent(env, { projectId: "p1", event: { n: 2 } }),
+    ]);
+    expect(env.chain).toHaveLength(2);
+    expect(env.chain[0].prev_hash).toBe(AUDIT_CHAIN_GENESIS_HASH);
+    expect(env.chain[1].prev_hash).toBe(env.chain[0].event_hash);
+  });
+
+  it("A2-14b: verify flags a truncated scan instead of reporting a clean bill", async () => {
+    const env = createEnv();
+    await appendRoomAuditChainEvent(env, { projectId: "p1", event: { n: 1 } });
+    await appendRoomAuditChainEvent(env, { projectId: "p1", event: { n: 2 } });
+    await appendRoomAuditChainEvent(env, { projectId: "p1", event: { n: 3 } });
+    const truncated = await verifyRoomAuditChain(env, { projectId: "p1", limit: 2 });
+    expect(truncated.count).toBe(2);
+    expect(truncated.truncated).toBe(true);
+    const full = await verifyRoomAuditChain(env, { projectId: "p1", limit: 5000 });
+    expect(full.truncated).toBe(false);
   });
 
   it("sha256Hex is deterministic", async () => {

@@ -25,7 +25,8 @@ export function GetStartedSelfHostSection() {
           <p className="mt-4 flex flex-wrap gap-3">
             <a
               href="https://deploy.workers.cloudflare.com/?url=https://github.com/AlessandroFare/fluxychat/tree/main/apps/worker"
-              className="inline-flex items-center rounded-lg bg-[#F6821F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e5741a]"
+              className="inline-flex items-center rounded-lg bg-[#F6821F] px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-[#e5741a]"
+              style={{ color: "#18181b" }}
               target="_blank"
               rel="noopener noreferrer"
             >

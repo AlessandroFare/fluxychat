@@ -68,7 +68,7 @@ export function IntegrationsStatusCard({ className }: { className?: string }) {
             href="/demo"
             className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted"
           >
-            Open demo
+            Open Playground
           </Link>
           <a
             href="https://developers.cloudflare.com/turnstile/"

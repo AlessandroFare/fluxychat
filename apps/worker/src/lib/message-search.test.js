@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeFtsQuery } from "./message-search.js";
+import { sanitizeFtsQuery, toFtsMatchQuery } from "./message-search.js";
 
 describe("sanitizeFtsQuery", () => {
   it("trims and collapses whitespace", () => {
@@ -12,5 +12,17 @@ describe("sanitizeFtsQuery", () => {
 
   it("returns empty for blank input", () => {
     expect(sanitizeFtsQuery("   ")).toBe("");
+  });
+});
+
+describe("toFtsMatchQuery", () => {
+  it("quotes terms so an unbalanced quote cannot break FTS5 (audit F-91)", () => {
+    expect(toFtsMatchQuery('say "hi')).toBe('"say" "hi"');
+    expect(toFtsMatchQuery('decision AND "quote"')).toBe('"decision" AND "quote"');
+  });
+
+  it("returns empty for blank input", () => {
+    expect(toFtsMatchQuery("")).toBe("");
+    expect(toFtsMatchQuery('  ""  ')).toBe("");
   });
 });

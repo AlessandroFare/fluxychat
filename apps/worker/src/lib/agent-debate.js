@@ -3,6 +3,7 @@
  */
 
 import { chatCompletion, isAiConfigured } from "./ai-chat-completion.js";
+import { internalDoHeaders } from "./room-shard.js";
 
 const MAX_ROLES_PER_SESSION = 3;
 const DEFAULT_MAX_ROUNDS = 2;
@@ -192,6 +193,7 @@ async function announceRoomPayload(env, roomId, payload) {
     const stub = env.ROOM.get(id);
     await stub.fetch("https://internal/announce", {
       method: "POST",
+      headers: internalDoHeaders(env),
       body: JSON.stringify({ roomId, ...payload }),
     });
   } catch {

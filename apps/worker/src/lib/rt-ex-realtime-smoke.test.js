@@ -22,6 +22,9 @@ function createPollDb() {
               async run() {
                 return { meta: { changes: String(sql).includes("INSERT") ? 1 : 0 } };
               },
+              async first() {
+                return null;
+              },
             };
           },
         };

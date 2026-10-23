@@ -13,148 +13,154 @@
 
 :root,
 .light {
-  --am-midnight-ink: #111111;
-  --am-canvas-white: #ffffff;
-  --am-surface-charcoal: #272625;
-  --am-muted-ash: #6d6c6b;
-  --am-whisper-gray: #f4f3ef;
-  --am-light-taupe: #ecebea;
-  --am-deep-indigo: #10054d;
-  --am-petal-pink: #ffd7f0;
-  --am-mint-green: #b7efb2;
-  --am-canary-yellow: #ffef99;
-  --am-subtle-lavender: #e2ddfd;
-  --am-midnight-violet: #2e2460;
-  --am-gradient-phoenix: radial-gradient(386.06% 162.79% at -13.1926% -17.1008%, rgb(232, 64, 13) 0%, rgb(255, 238, 216) 26.1559%, rgb(208, 178, 255) 84.1533%);
-  --am-gradient-cyan: radial-gradient(80.17% 109.2% at 52.1169% 62.5363%, rgb(208, 178, 255) 0%, rgb(198, 236, 233) 35.282%, rgb(153, 255, 249) 96.5565%);
+  --font-sans: var(--fx-sans, system-ui, sans-serif);
+  --font-mono: var(--fx-mono, ui-monospace, monospace);
+  --am-midnight-ink: #1b1d1b;
+  --am-canvas-white: #f3f3f0;
+  --am-surface-charcoal: #2f322e;
+  --am-muted-ash: #595b57;
+  --am-whisper-gray: #deded9;
+  --am-light-taupe: #d6d6d0;
+  --am-deep-indigo: #1b1d1b;
+  --am-petal-pink: #eadfd8;
+  --am-mint-green: #cfe8d8;
+  --am-canary-yellow: #eee2b8;
+  --am-subtle-lavender: #dcdedb;
+  --am-midnight-violet: #2f322e;
+  --am-gradient-phoenix: radial-gradient(120% 120% at 0% 0%, rgba(30, 140, 78, 0.16) 0%, rgba(255, 106, 26, 0.08) 52%, rgba(232, 232, 228, 0) 100%);
+  --am-gradient-cyan: radial-gradient(120% 120% at 100% 0%, rgba(30, 140, 78, 0.14) 0%, rgba(232, 232, 228, 0.08) 55%, rgba(232, 232, 228, 0) 100%);
 
-  --background: #FDFBF9;
-  --background-rgb: 253 251 249;
-  --foreground: #0E1316;
-  --foreground-rgb: 14 19 22;
-  --surface: #FDFBF9;
-  --surface-muted: #F3F0EC;
-  --surface-muted-rgb: 243 240 236;
-  --surface-card: #FFFFFF;
-  --surface-card-rgb: 255 255 255;
-  --text-primary: #1a1a1a;
-  --text-muted: #57534e;
-  --border: #e5e0d8;
-  --border-rgb: 229 224 216;
-  --fluxy-cta-rgb: 194 65 12;
-  --fluxy-link-color: #C2410C;
-  --brand: #C2410C;
-  --brand-hover: #9A3A0A;
-  --destructive: #dc2626;
-  --success: #16a34a;
-  --ring: #C2410C;
-  --radius: 0.5rem;
-  /* Elevation by z-position (Refactoring UI). --shadow-subtle* were referenced in UI
-     but never defined here, so those shadows were a no-op. */
-  --shadow-1: 0 1px 3px hsla(0, 0%, 0%, 0.2);
-  --shadow-2: 0 4px 6px hsla(0, 0%, 0%, 0.2);
-  --shadow-3: 0 5px 15px hsla(0, 0%, 0%, 0.2);
-  --shadow-4: 0 10px 24px hsla(0, 0%, 0%, 0.2);
-  --shadow-5: 0 15px 35px hsla(0, 0%, 0%, 0.2);
+  --background: #e8e8e4;
+  --background-rgb: 232 232 228;
+  --foreground: #1b1d1b;
+  --foreground-rgb: 27 29 27;
+  --surface: #e8e8e4;
+  --surface-muted: #deded9;
+  --surface-muted-rgb: 222 222 217;
+  --surface-card: #f3f3f0;
+  --surface-card-rgb: 243 243 240;
+  --text-primary: #1b1d1b;
+  --text-muted: #595b57;
+  --border: #c9c9c4;
+  --border-rgb: 201 201 196;
+  --fluxy-cta-rgb: 27 29 27;
+  --fluxy-link-color: #166b3c;
+  --brand: #1e8c4e;
+  --brand-hover: #166b3c;
+  --destructive: #b42318;
+  --success: #1e8c4e;
+  --ring: #1e8c4e;
+  --radius: 0.125rem;
+  --shadow-1: 0 1px 2px hsla(0, 0%, 0%, 0.08);
+  --shadow-2: 0 6px 18px hsla(0, 0%, 0%, 0.1);
+  --shadow-3: 0 10px 28px hsla(0, 0%, 0%, 0.12);
+  --shadow-4: 0 16px 40px hsla(0, 0%, 0%, 0.14);
+  --shadow-5: 0 24px 60px hsla(0, 0%, 0%, 0.18);
   --shadow-subtle: inset 0 0 0 1px hsla(24, 12%, 12%, 0.08);
   --shadow-subtle-2: var(--shadow-2);
   --shadow-subtle-3: var(--shadow-3);
   --shadow-card: var(--shadow-1);
   --shadow-dropdown: var(--shadow-2);
   --shadow-modal: var(--shadow-5);
-  --text-tertiary: #57534e;
+  --text-tertiary: #6f716c;
 
-  /* FLUXYCHAT — BUBBLE COLOR SYSTEM */
-  --fluxy-logo-color: #FF6A1A;
-  --fluxy-cta-color: #C2410C;
+  --fluxy-logo-color: #ff6a1a;
+  --fluxy-cta-color: #1e8c4e;
 
-  /* Sent bubble: full brand orange */
-  --fluxy-bubble-sent-bg: #FF6A1A;
-  --fluxy-bubble-sent-text: #FFFFFF;
+  --fluxy-bubble-sent-bg: #ff6a1a;
+  --fluxy-bubble-sent-text: #ffffff;
+  --fluxy-bubble-received-bg: #f3f3f0;
+  --fluxy-bubble-received-border: #d6d6d0;
+  --fluxy-bubble-received-text: #1b1d1b;
 
-  /* Received bubble: neutral card surface (brand orange is reserved for sent
-     bubbles + accents; a tinted received wall reads "demo app") */
-  --fluxy-bubble-received-bg: #F4F4F5;
-  --fluxy-bubble-received-border: #E4E4E7;
-  --fluxy-bubble-received-text: #1A1A1A;
+  --fluxy-mention-bg: rgba(30, 140, 78, 0.16);
+  --fluxy-mention-text: #166b3c;
 
-  --fluxy-mention-bg: rgba(255, 106, 26, 0.18);
-  --fluxy-mention-text: #C2410C;
+  --fluxy-header-bg: #1b1d1b;
+  --fluxy-header-text: #ffffff;
+  --fluxy-header-subtext: #c9c9c4;
 
-  --fluxy-header-bg: #C2410C;
-  --fluxy-header-text: #FFFFFF;
-  /* Solid peach on orange — not white-at-opacity (washes to grey on color). */
-  --fluxy-header-subtext: #ffdcc8;
+  --fluxy-btn-primary-bg: #1b1d1b;
+  --fluxy-btn-primary-text: #f3f3f0;
+  --fluxy-btn-primary-hover-bg: #1e8c4e;
 
-  --fluxy-btn-primary-bg: #C2410C;
-  --fluxy-btn-primary-text: #FFFFFF;
-  --fluxy-btn-primary-hover-bg: #9A3A0A;
-
-  --fluxy-banner-bg: rgba(194, 65, 12, 0.05);
-  --fluxy-banner-border: rgba(194, 65, 12, 0.15);
-  --fluxy-banner-text: #C2410C;
+  --fluxy-banner-bg: rgba(30, 140, 78, 0.07);
+  --fluxy-banner-border: rgba(30, 140, 78, 0.2);
+  --fluxy-banner-text: #166b3c;
 }
 
 .dark {
-  --am-midnight-ink: #f5f5f5;
-  --am-canvas-white: #1e1e1e;
-  --am-surface-charcoal: #2a2a2a;
-  --am-muted-ash: #a1a1aa;
-  --am-whisper-gray: #252525;
-  --am-light-taupe: #2f2f2f;
-  --am-deep-indigo: #e4e4e7;
-  --am-petal-pink: #3b2232;
-  --am-mint-green: #1f3323;
-  --am-canary-yellow: #3a3318;
-  --am-subtle-lavender: #2a2440;
-  --am-midnight-violet: #352b69;
-  --am-gradient-phoenix: radial-gradient(180% 140% at 0% 0%, rgba(232, 64, 13, 0.35) 0%, rgba(208, 178, 255, 0.2) 55%, rgba(2, 6, 23, 0) 100%);
-  --am-gradient-cyan: radial-gradient(120% 130% at 100% 0%, rgba(153, 255, 249, 0.22) 0%, rgba(198, 236, 233, 0.12) 45%, rgba(2, 6, 23, 0) 100%);
+  --am-midnight-ink: #f0f0eb;
+  --am-canvas-white: #171a17;
+  --am-surface-charcoal: #222622;
+  --am-muted-ash: #a3a59f;
+  --am-whisper-gray: #1b1f1b;
+  --am-light-taupe: #2c302c;
+  --am-deep-indigo: #f0f0eb;
+  --am-petal-pink: #30251f;
+  --am-mint-green: #193526;
+  --am-canary-yellow: #36301a;
+  --am-subtle-lavender: #242824;
+  --am-midnight-violet: #222622;
+  --am-gradient-phoenix: radial-gradient(120% 120% at 0% 0%, rgba(79, 212, 134, 0.16) 0%, rgba(255, 122, 47, 0.08) 52%, rgba(16, 18, 16, 0) 100%);
+  --am-gradient-cyan: radial-gradient(120% 120% at 100% 0%, rgba(79, 212, 134, 0.14) 0%, rgba(16, 18, 16, 0.08) 55%, rgba(16, 18, 16, 0) 100%);
 
-  --background: #1e1e1e;
-  --background-rgb: 30 30 30;
-  --foreground: #f4f4f5;
-  --foreground-rgb: 244 244 245;
-  --surface: #1e1e1e;
-  --surface-muted: #252525;
-  --surface-muted-rgb: 37 37 37;
-  --surface-card: #2a2a2a;
-  --surface-card-rgb: 42 42 42;
-  --text-primary: #f4f4f5;
-  --text-muted: #a1a1aa;
-  --border: #3a3a3a;
-  --border-rgb: 58 58 58;
-  --fluxy-cta-rgb: 255 138 71;
-  --fluxy-cta-color: #ff8a47;
-  --fluxy-link-color: #ff8a47;
-  --brand: #ff8a47;
-  --brand-hover: #ff9f6b;
-  --destructive: #ef4444;
-  --success: #22c55e;
-  --ring: #ff8a47;
-  --radius: 0.5rem;
-  --shadow-1: 0 1px 3px hsla(0, 0%, 0%, 0.4);
-  --shadow-2: 0 4px 6px hsla(0, 0%, 0%, 0.4);
-  --shadow-3: 0 5px 15px hsla(0, 0%, 0%, 0.45);
-  --shadow-4: 0 10px 24px hsla(0, 0%, 0%, 0.5);
-  --shadow-5: 0 15px 35px hsla(0, 0%, 0%, 0.55);
+  --background: #101210;
+  --background-rgb: 16 18 16;
+  --foreground: #f0f0eb;
+  --foreground-rgb: 240 240 235;
+  --surface: #101210;
+  --surface-muted: #1b1f1b;
+  --surface-muted-rgb: 27 31 27;
+  --surface-card: #171a17;
+  --surface-card-rgb: 23 26 23;
+  --text-primary: #f0f0eb;
+  --text-muted: #a3a59f;
+  --border: #2c302c;
+  --border-rgb: 44 48 44;
+  --fluxy-cta-rgb: 240 240 235;
+  --fluxy-cta-color: #4fd486;
+  --fluxy-link-color: #4fd486;
+  --brand: #4fd486;
+  --brand-hover: #6ce39b;
+  --destructive: #ff6b5e;
+  --success: #4fd486;
+  --ring: #4fd486;
+  --radius: 0.125rem;
+  --shadow-1: 0 1px 2px hsla(0, 0%, 0%, 0.3);
+  --shadow-2: 0 6px 18px hsla(0, 0%, 0%, 0.35);
+  --shadow-3: 0 10px 28px hsla(0, 0%, 0%, 0.4);
+  --shadow-4: 0 16px 40px hsla(0, 0%, 0%, 0.45);
+  --shadow-5: 0 24px 60px hsla(0, 0%, 0%, 0.5);
   --shadow-subtle: inset 0 0 0 1px hsla(0, 0%, 100%, 0.08);
   --shadow-subtle-2: var(--shadow-2);
   --shadow-subtle-3: var(--shadow-3);
   --shadow-card: var(--shadow-1);
   --shadow-dropdown: var(--shadow-2);
   --shadow-modal: var(--shadow-5);
-  --text-tertiary: #a8a29e;
-  --fluxy-banner-text: #ff8a47;
-  --fluxy-mention-text: #ff8a47;
+  --text-tertiary: #8b8e88;
 
-  /* FLUXYCHAT — BUBBLE COLOR SYSTEM (dark) */
-  --fluxy-bubble-sent-bg: #E85F17;
-  --fluxy-bubble-sent-text: #FFFFFF;
-  --fluxy-bubble-received-bg: #1F2937;
-  --fluxy-bubble-received-border: #2B3648;
-  --fluxy-bubble-received-text: #F3F4F6;
-  --card-foreground: #f4f4f5;
+  --fluxy-bubble-sent-bg: #ff7a2f;
+  --fluxy-bubble-sent-text: #ffffff;
+  --fluxy-bubble-received-bg: #1b1f1b;
+  --fluxy-bubble-received-border: #2c302c;
+  --fluxy-bubble-received-text: #f0f0eb;
+  --card-foreground: #f0f0eb;
+
+  --fluxy-mention-bg: rgba(79, 212, 134, 0.16);
+  --fluxy-mention-text: #4fd486;
+
+  --fluxy-header-bg: #1b1d1b;
+  --fluxy-header-text: #f0f0eb;
+  --fluxy-header-subtext: #a3a59f;
+
+  --fluxy-btn-primary-bg: #f0f0eb;
+  --fluxy-btn-primary-text: #101210;
+  --fluxy-btn-primary-hover-bg: #4fd486;
+
+  --fluxy-banner-bg: rgba(79, 212, 134, 0.08);
+  --fluxy-banner-border: rgba(79, 212, 134, 0.22);
+  --fluxy-banner-text: #4fd486;
 }
 
 body {
@@ -682,7 +688,7 @@ html.dark #fc-marketing-root .mkt-panel {
   --foreground: #f4f4f5;
   --card: #171719;
   --muted: #1c1c1f;
-  background: rgba(11, 11, 12, 0.55);
+  background: rgba(11, 11, 12, 0.92);
   color: #f4f4f5;
 }
 
@@ -855,68 +861,68 @@ code {
     @apply bg-background text-foreground;
   }
   .theme {
-    --font-heading: var(--font-heading);
-    --font-sans: var(--font-sans);
-    --font-mono: var(--font-mono);
+    --font-heading: var(--fx-sans, system-ui, sans-serif);
+    --font-sans: var(--fx-sans, system-ui, sans-serif);
+    --font-mono: var(--fx-mono, ui-monospace, monospace);
   }
   :root {
-    --primary: #c2410c;
-    --primary-foreground: #ffffff;
-    --ring: #c2410c;
-    --success: #16a34a;
-    --background: #fdfbf9;
-    --foreground: #0e1316;
-    --card: #ffffff;
-    --card-foreground: #0e1316;
-    --popover: #ffffff;
-    --popover-foreground: #0e1316;
-    --secondary: #f3f0ec;
-    --secondary-foreground: #0e1316;
-    --muted: #f3f0ec;
-    --muted-foreground: #57534e;
-    --accent: #f3f0ec;
-    --accent-foreground: #0e1316;
-    --destructive: #dc2626;
-    --border: #e5e0d8;
-    --input: #e5e0d8;
-    --radius: 0.5rem;
-    --sidebar: #fdfbf9;
-    --sidebar-foreground: #0e1316;
-    --sidebar-primary: #c2410c;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #f3f0ec;
-    --sidebar-accent-foreground: #0e1316;
-    --sidebar-border: #e5e0d8;
-    --sidebar-ring: #c2410c;
+    --primary: #1b1d1b;
+    --primary-foreground: #f3f3f0;
+    --ring: #1e8c4e;
+    --success: #1e8c4e;
+    --background: #e8e8e4;
+    --foreground: #1b1d1b;
+    --card: #f3f3f0;
+    --card-foreground: #1b1d1b;
+    --popover: #f3f3f0;
+    --popover-foreground: #1b1d1b;
+    --secondary: #deded9;
+    --secondary-foreground: #1b1d1b;
+    --muted: #deded9;
+    --muted-foreground: #595b57;
+    --accent: #deded9;
+    --accent-foreground: #1b1d1b;
+    --destructive: #b42318;
+    --border: #c9c9c4;
+    --input: #c9c9c4;
+    --radius: 0.125rem;
+    --sidebar: #f3f3f0;
+    --sidebar-foreground: #1b1d1b;
+    --sidebar-primary: #1e8c4e;
+    --sidebar-primary-foreground: #f3f3f0;
+    --sidebar-accent: #deded9;
+    --sidebar-accent-foreground: #1b1d1b;
+    --sidebar-border: #c9c9c4;
+    --sidebar-ring: #1e8c4e;
   }
   .dark {
-    --primary: #ff8a47;
-    --primary-foreground: #141414;
-    --ring: #ff8a47;
-    --success: #22c55e;
-    --background: #1e1e1e;
-    --foreground: #f4f4f5;
-    --card: #2a2a2a;
-    --card-foreground: #f4f4f5;
-    --popover: #2a2a2a;
-    --popover-foreground: #f4f4f5;
-    --secondary: #252525;
-    --secondary-foreground: #f4f4f5;
-    --muted: #252525;
-    --muted-foreground: #a1a1aa;
-    --accent: #252525;
-    --accent-foreground: #f4f4f5;
-    --destructive: #ef4444;
-    --border: #3a3a3a;
-    --input: #3a3a3a;
-    --sidebar: #1e1e1e;
-    --sidebar-foreground: #f4f4f5;
-    --sidebar-primary: #ff8a47;
-    --sidebar-primary-foreground: #141414;
-    --sidebar-accent: #252525;
-    --sidebar-accent-foreground: #f4f4f5;
-    --sidebar-border: #3a3a3a;
-    --sidebar-ring: #ff8a47;
+    --primary: #f0f0eb;
+    --primary-foreground: #101210;
+    --ring: #4fd486;
+    --success: #4fd486;
+    --background: #101210;
+    --foreground: #f0f0eb;
+    --card: #171a17;
+    --card-foreground: #f0f0eb;
+    --popover: #171a17;
+    --popover-foreground: #f0f0eb;
+    --secondary: #1b1f1b;
+    --secondary-foreground: #f0f0eb;
+    --muted: #1b1f1b;
+    --muted-foreground: #a3a59f;
+    --accent: #1b1f1b;
+    --accent-foreground: #f0f0eb;
+    --destructive: #ff6b5e;
+    --border: #2c302c;
+    --input: #2c302c;
+    --sidebar: #171a17;
+    --sidebar-foreground: #f0f0eb;
+    --sidebar-primary: #4fd486;
+    --sidebar-primary-foreground: #101210;
+    --sidebar-accent: #1b1f1b;
+    --sidebar-accent-foreground: #f0f0eb;
+    --sidebar-border: #2c302c;
+    --sidebar-ring: #4fd486;
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
@@ -1262,4 +1268,241 @@ code {
   .rt-panel-enter {
     animation: none !important;
   }
+}
+
+
+/* Direction C app chrome. Console pages keep their product navigation and
+   density; the shared shell supplies aluminium ground, hairlines, graphite
+   ink, signal-green focus, and the flat 2px radius. */
+.fc-console {
+  --fc-hairline: var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--fx-sans), system-ui, sans-serif;
+}
+
+.fc-console ::selection {
+  background: color-mix(in srgb, var(--ring) 24%, transparent);
+  color: var(--foreground);
+}
+
+.fc-console :where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.fc-console [data-slot="card"] {
+  box-shadow: none;
+}
+
+.fc-console [data-slot="card"]:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.fc-console [data-slot="button"] {
+  box-shadow: none;
+}
+
+.fc-console [data-slot="button"]:hover {
+  transform: none;
+}
+
+.fc-console [data-slot="input"],
+.fc-console textarea,
+.fc-console select {
+  border-radius: 2px;
+  background: var(--surface-card);
+}
+
+.fc-console input[type="checkbox"],
+.fc-console input[type="radio"] {
+  accent-color: var(--ring);
+}
+
+.fc-console table thead {
+  font-family: var(--fx-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fc-console code,
+.fc-console kbd,
+.fc-console pre,
+.fc-console samp {
+  font-family: var(--fx-mono), ui-monospace, monospace;
+}
+
+/* 10px and below is unreadable in the dense console, and below the WCAG
+   minimum the scan enforces. */
+.fc-console .text-\[10px\],
+.fc-console .text-\[9px\],
+.fc-console .text-\[8px\] {
+  font-size: 11px;
+}
+
+/* Filled green controls keep white copy readable. */
+.fc-console [class*="bg-[var(--fluxy-cta-color)]"] {
+  background-color: #166b3c;
+}
+
+.fc-console .bg-white {
+  background-color: var(--surface-card);
+}
+
+.fc-console .bg-white\/90,
+.fc-console .bg-white\/80 {
+  background-color: color-mix(in srgb, var(--surface-card) 92%, transparent);
+}
+
+.fc-console .bg-slate-50,
+.fc-console .bg-slate-50\/80,
+.fc-console .bg-gray-50 {
+  background-color: var(--surface-muted);
+}
+
+.fc-console .text-slate-900,
+.fc-console .text-zinc-900,
+.fc-console .text-gray-900,
+.fc-console .text-neutral-900,
+.fc-console .text-slate-800 {
+  color: var(--foreground);
+}
+
+.fc-console .text-slate-700,
+.fc-console .text-slate-600,
+.fc-console .text-slate-500,
+.fc-console .text-zinc-600 {
+  color: var(--text-muted);
+}
+
+.fc-console .border-slate-200,
+.fc-console .border-slate-200\/80,
+.fc-console .border-gray-200,
+.fc-console .border-black\/\[0\.06\],
+.fc-console .border-black\/\[0\.08\],
+.fc-console .border-black\/\[0\.12\] {
+  border-color: var(--border);
+}
+
+/* Status text needs a darker step than Tailwind's 600 on pastel washes. */
+.fc-console .text-red-600,
+.fc-console .text-red-700 {
+  color: var(--destructive);
+}
+
+.fc-console .text-emerald-600,
+.fc-console .text-emerald-700,
+.fc-console .text-green-600,
+.fc-console .text-green-700 {
+  color: #166b3c;
+}
+
+.fc-console .text-amber-600,
+.fc-console .text-amber-700,
+.fc-console .text-yellow-600,
+.fc-console .text-yellow-700 {
+  color: #8a5300;
+}
+
+
+/* Keep legacy utility colours inside the C palette without a page-by-page
+   sweep: blue read as a link/info accent becomes signal green; navy code
+   surfaces become graphite. Status dots keep their semantic colours. */
+.fc-console .text-blue-500,
+.fc-console .text-blue-600,
+.fc-console .text-blue-700,
+.fc-console .text-sky-500,
+.fc-console .text-sky-600,
+.fc-console .text-indigo-500,
+.fc-console .text-indigo-600,
+.fc-console .text-indigo-700 {
+  color: var(--brand-hover);
+}
+
+.fc-console .bg-blue-50,
+.fc-console .bg-blue-50\/60,
+.fc-console .bg-sky-50,
+.fc-console .bg-indigo-50 {
+  background-color: color-mix(in srgb, var(--ring) 8%, transparent);
+}
+
+.fc-console .border-blue-200,
+.fc-console .border-blue-200\/60,
+.fc-console .border-sky-200,
+.fc-console .border-indigo-200 {
+  border-color: color-mix(in srgb, var(--ring) 26%, transparent);
+}
+
+/* Legacy status tints assume a white page. On the dark console, rebuild them
+   as low-alpha semantic washes so check results stay legible. */
+html.dark .fc-console .bg-red-50,
+html.dark .fc-console .bg-rose-50 {
+  background-color: color-mix(in srgb, #ff7a70 13%, transparent);
+}
+
+html.dark .fc-console .bg-amber-50,
+html.dark .fc-console .bg-yellow-50,
+html.dark .fc-console .bg-orange-50 {
+  background-color: color-mix(in srgb, #f2b84b 13%, transparent);
+}
+
+html.dark .fc-console .bg-emerald-50,
+html.dark .fc-console .bg-green-50 {
+  background-color: color-mix(in srgb, #63d69a 13%, transparent);
+}
+
+html.dark .fc-console .text-red-600,
+html.dark .fc-console .text-red-700,
+html.dark .fc-console .text-rose-600,
+html.dark .fc-console .text-rose-700 {
+  color: #ff9b90;
+}
+
+html.dark .fc-console .text-amber-600,
+html.dark .fc-console .text-amber-700,
+html.dark .fc-console .text-yellow-600,
+html.dark .fc-console .text-yellow-700 {
+  color: #f5c66d;
+}
+
+html.dark .fc-console .text-emerald-600,
+html.dark .fc-console .text-emerald-700,
+html.dark .fc-console .text-green-600,
+html.dark .fc-console .text-green-700 {
+  color: #7ddba8;
+}
+
+html.dark .fc-console .border-red-200,
+html.dark .fc-console .border-rose-200 {
+  border-color: color-mix(in srgb, #ff7a70 34%, transparent);
+}
+
+html.dark .fc-console .border-amber-200,
+html.dark .fc-console .border-yellow-200,
+html.dark .fc-console .border-orange-200 {
+  border-color: color-mix(in srgb, #f2b84b 34%, transparent);
+}
+
+.fc-console .bg-slate-900,
+.fc-console .bg-slate-950,
+.fc-console .bg-gray-900,
+.fc-console .bg-zinc-900,
+.fc-console .bg-neutral-900 {
+  background-color: #1b1d1b;
+}
+
+.fc-console pre,
+.fc-console pre code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+
+.fc-console [class*="shadow-[var(--shadow-1)]"],
+.fc-console [class*="shadow-[var(--shadow-2)]"],
+.fc-console [class*="shadow-[var(--shadow-3)]"] {
+  box-shadow: none;
 }

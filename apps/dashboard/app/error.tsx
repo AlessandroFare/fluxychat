@@ -1,32 +1,47 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
+import { TriangleAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { messageFromUnknown } from "@/lib/error-message";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
+import { ConsoleShell } from "./components/console-shell";
 
 export default function Error({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   useEffect(() => {
     console.error(messageFromUnknown(error, "Route error"));
   }, [error]);
 
   return (
-    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-4 py-16">
-      <h2 className="text-lg font-semibold text-neutral-900">Something went wrong</h2>
-      <p className="max-w-md text-center text-sm text-neutral-600">
-        Something broke in the dashboard. Try again, or reload the page.
-      </p>
-      <button
-        type="button"
-        className="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
-        onClick={() => reset()}
-      >
-        Try again
-      </button>
-    </div>
+    <ConsoleShell className="flex min-h-[50vh] items-center justify-center">
+      <div role="alert" className="flex max-w-md flex-col items-center text-center">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-surface-muted">
+          <TriangleAlert className="h-6 w-6 text-muted-foreground" aria-hidden />
+        </div>
+        <h1 className="text-xl font-semibold text-foreground">Something went wrong</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This screen hit an unexpected error. Nothing was lost — try again, or head back to the
+          console.
+        </p>
+        {error.digest ? (
+          <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+            Error ref: {error.digest}
+          </p>
+        ) : null}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <Button onClick={() => retry()}>Try again</Button>
+          <Button variant="outline" asChild>
+            <Link href={HOSTED_PATHS.console}>Console home</Link>
+          </Button>
+        </div>
+      </div>
+    </ConsoleShell>
   );
 }

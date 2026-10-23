@@ -26,7 +26,7 @@ export function LandingHeroClient() {
   }, []);
 
   return (
-    <section className="relative min-h-dvh overflow-hidden border-b border-[var(--mkt-border)] pt-16 pb-12 sm:pt-24 sm:pb-16 md:pb-24">
+    <section className="relative min-h-dvh overflow-hidden border-b border-[var(--mkt-border)] bg-[#f3efe8] pt-16 pb-12 sm:pt-24 sm:pb-16 md:pb-24 dark:bg-[#0b0b0c]">
       {isLight ? <HeroSignalField placement="hero" /> : null}
       <div
         className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(ellipse_70%_40%_at_50%_18%,color-mix(in_srgb,var(--mkt-bg)_22%,transparent)_0%,transparent_72%)]"

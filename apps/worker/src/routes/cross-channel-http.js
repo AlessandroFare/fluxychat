@@ -24,7 +24,7 @@ export async function dispatchCrossChannelRoutes(request, url, h) {
 
   if (request.method === "POST" && path === "/admin/cross-channel/bindings") {
     const body = await request.json().catch(() => null);
-    const result = await bindChannelIdentity(env, { projectId, ...body });
+    const result = await bindChannelIdentity(env, { ...body, projectId });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }
@@ -42,7 +42,7 @@ export async function dispatchCrossChannelRoutes(request, url, h) {
 
   if (request.method === "POST" && path === "/admin/cross-channel/journey") {
     const body = await request.json().catch(() => null);
-    const result = await recordJourneyStep(env, { projectId, ...body });
+    const result = await recordJourneyStep(env, { ...body, projectId });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }

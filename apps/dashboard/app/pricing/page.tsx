@@ -1,384 +1,299 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { buildPageMetadata } from "@/lib/site-metadata";
-import { Button } from "~/components/ui/button";
-import { Badge } from "~/components/ui/badge";
-import { landingPlanEntries } from "~/lib/plan-catalog";
+import { landingPlanEntries, type PublicPlanRow } from "@/lib/plan-catalog";
 import { PRICING_FAQ } from "@/lib/marketing-landing";
-import { HOSTED_COPY, HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
+import {
+  HOSTED_COPY,
+  HOSTED_PATHS,
+  docsSiteHref,
+  isClerkClientConfigured,
+} from "@/lib/hosted-product";
 import { formatNumber } from "@/lib/format-number";
-import { cn } from "@/lib/utils";
-import { Check, ArrowRight, MessagesSquare, Bot, Webhook, Shield, Server, Workflow, GitFork, GanttChartSquare, Zap } from "lucide-react";
-import { LandingShell } from "../landing/landing-shell";
+import { MarketingShell } from "../components/marketing-shell";
+import styles from "../landing/landing-c.module.css";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing",
-    description:
+  description:
     "Free weekend plan with pk_ in the browser. Paid plans for production traffic. Hosted is beta.",
   path: "/pricing",
 });
 
 const clerkOn = isClerkClientConfigured();
 const planEntries = landingPlanEntries();
-const planKeys = planEntries.map(([k]) => k);
+const planKeys = planEntries.map(([key]) => key);
+const startHref = clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted;
 
-function formatLimit(v: number): string {
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(v % 1_000_000 === 0 ? 0 : 1)}M`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`;
-  return String(v);
+function formatLimit(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
+  return String(value);
 }
 
 const COMPARISON_ROWS: { feature: string; values: Record<string, string> }[] = [
   {
     feature: "Messages / month",
-    values: Object.fromEntries(planEntries.map(([k, p]) => [k, p.messages === -1 ? "Unlimited" : formatLimit(p.messages)])),
+    values: Object.fromEntries(
+      planEntries.map(([key, plan]) => [
+        key,
+        plan.messages === -1 ? "Unlimited" : formatLimit(plan.messages),
+      ]),
+    ),
   },
   {
     feature: "Agent invokes / month",
-    values: Object.fromEntries(planEntries.map(([k, p]) => [k, p.agents === -1 ? "Unlimited" : formatLimit(p.agents)])),
+    values: Object.fromEntries(
+      planEntries.map(([key, plan]) => [
+        key,
+        plan.agents === -1 ? "Unlimited" : formatLimit(plan.agents),
+      ]),
+    ),
   },
   {
     feature: "Webhook deliveries / month",
-    values: Object.fromEntries(planEntries.map(([k, p]) => [k, p.webhooks === -1 ? "Unlimited" : formatLimit(p.webhooks)])),
+    values: Object.fromEntries(
+      planEntries.map(([key, plan]) => [
+        key,
+        plan.webhooks === -1 ? "Unlimited" : formatLimit(plan.webhooks),
+      ]),
+    ),
   },
-  { feature: "Rooms", values: Object.fromEntries(planKeys.map((k) => [k, "Unlimited ids"])) },
+  { feature: "Rooms", values: Object.fromEntries(planKeys.map((key) => [key, "Unlimited ids"])) },
   { feature: "Projects", values: { free: "1", starter: "1", pro: "1" } },
   { feature: "Team seats", values: { free: "1", starter: "1", pro: "1" } },
-  { feature: "SDK & dashboard", values: Object.fromEntries(planKeys.map((k) => [k, "✓"])) },
-  { feature: "Platform modules", values: Object.fromEntries(planKeys.map((k) => [k, "Same room DO"])) },
-  { feature: "AI agents", values: Object.fromEntries(planKeys.map((k) => [k, "✓"])) },
-  { feature: "Webhooks", values: { free: "—", starter: "Signed + retries", pro: "Signed + retries" } },
-  { feature: "GDPR export", values: { free: "Worker API", starter: "✓", pro: "✓" } },
-  { feature: "Priority support", values: { free: "Community", starter: "Email (best effort)", pro: "Priority" } },
-  { feature: "SSO / SAML", values: { free: "Unavailable on hosted", starter: "Unavailable on hosted", pro: "Unavailable on hosted" } },
-  { feature: "Audit logs", values: { free: "—", starter: "—", pro: "Contact us" } },
+  { feature: "SDK & dashboard", values: Object.fromEntries(planKeys.map((key) => [key, "Yes"])) },
+  {
+    feature: "Platform modules",
+    values: Object.fromEntries(planKeys.map((key) => [key, "Same room DO"])),
+  },
+  { feature: "AI agents", values: Object.fromEntries(planKeys.map((key) => [key, "Yes"])) },
+  {
+    feature: "Webhooks",
+    values: { free: "No", starter: "Signed + retries", pro: "Signed + retries" },
+  },
+  { feature: "GDPR export", values: { free: "Worker API", starter: "Yes", pro: "Yes" } },
+  {
+    feature: "Priority support",
+    values: { free: "Community", starter: "Email (best effort)", pro: "Priority" },
+  },
+  {
+    feature: "SSO / SAML",
+    values: { free: "Unavailable on hosted", starter: "Unavailable on hosted", pro: "Unavailable on hosted" },
+  },
+  { feature: "Audit logs", values: { free: "No", starter: "No", pro: "Contact us" } },
 ];
 
-function PricingHero() {
-  return (
-    <section className="relative overflow-hidden border-b border-white/10 bg-[#1e1e1e] px-4 pt-24 pb-16 sm:px-6 sm:pt-28 sm:pb-20">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(194,65,12,0.12)_0%,transparent_70%)]" />
-      <div className="relative mx-auto max-w-6xl text-center">
-        <Badge className="mb-4 border-0 bg-orange-500/15 px-4 py-1.5 text-sm font-semibold text-orange-100 hover:bg-orange-500/20">
-          Open beta. Pin SDK versions.
-        </Badge>
-        <h1 className="font-heading text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-          Pricing
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
-          Free is the weekend plan: public rooms, a pk_ in the client, no card. Cursors and presence
-          do not count as messages. Agent invokes are not extra seats or MAU. Starter is $20/mo when you
-          outgrow 200k persisted messages. Pro is $50/mo for heavier traffic.
-          Hosted is beta. Pin SDK versions.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Button asChild size="lg" className="bg-[var(--fluxy-cta-color)] text-white hover:opacity-90">
-            <Link href={clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}>
-              {HOSTED_COPY.startFree}
-              <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
-            <a href="mailto:founder@fluxychat.com?subject=FluxyChat%20sales">Talk to sales</a>
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PlanCards() {
-  return (
-    <section className="border-b border-white/10 bg-[#1e1e1e] px-4 py-16 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-lg rounded-xl border border-white/15 bg-[#252525]/80 p-4 text-center">
-          <p className="text-sm text-slate-200">
-            All plans include{" "}
-            <span className="font-semibold text-white">unlimited room ids</span>. Message quotas
-            count persisted chat and webhooked <code className="text-xs">client_event</code>{" "}
-            frames. Cursors and <code className="text-xs">presence_patch</code> do not. Agents are
-            invokes, not dashboard seats. Hosted is beta; pin{" "}
-            <code className="text-xs">@fluxy-chat/sdk</code>.
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {planEntries.map(([key, plan]) => {
-            const isFeatured = key === "starter";
-            const showCta = key !== "growth";
-            return (
-              <div
-                key={key}
-                className={cn(
-                  "relative flex min-w-0 flex-col rounded-2xl border p-6 pt-8 transition-shadow duration-300",
-                  isFeatured
-                    ? "z-[1] border-primary bg-[#2a2a2a] shadow-[0_0_0_1px_rgba(255,115,94,0.35)] hover:shadow-[0_0_20px_rgba(255,115,94,0.15)]"
-                    : "border-white/10 bg-[#252525]/70 hover:border-white/20",
-                )}
-              >
-                {isFeatured ? (
-                  <Badge className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap bg-primary text-primary-foreground shadow-md">
-                    Most teams start here
-                  </Badge>
-                ) : null}
-                <h3 className="font-heading text-xl font-semibold text-white">{plan.label}</h3>
-                <div className="mt-2 text-4xl font-bold text-white">{plan.price}</div>
-                <p className="mt-3 text-sm text-slate-300">{plan.tagline}</p>
-                <div className="mt-6 flex flex-1 flex-col">
-                  <ul className="flex flex-col gap-3 text-sm text-slate-300">
-                    <li className="flex min-w-0 gap-2">
-                      <MessagesSquare className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      <span className="min-w-0 break-words">
-                        {plan.messages === -1
-                          ? "Unlimited messages (fair use)"
-                          : `${formatNumber(plan.messages)} messages / month`}
-                      </span>
-                    </li>
-                    <li className="flex min-w-0 gap-2">
-                      <Bot className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      <span className="min-w-0 break-words">
-                        {plan.agents === -1
-                          ? "Unlimited agent invokes (fair use)"
-                          : `${formatNumber(plan.agents)} agent invokes / month`}
-                      </span>
-                    </li>
-                    <li className="flex min-w-0 gap-2">
-                      <Webhook className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      <span className="min-w-0 break-words">
-                        {plan.webhooks === -1
-                          ? "Unlimited webhook deliveries (fair use)"
-                          : `${formatNumber(plan.webhooks)} webhook deliveries / month`}
-                      </span>
-                    </li>
-                  </ul>
-                  <ul className="mt-4 space-y-3 border-t border-white/10 pt-4 text-sm text-slate-300">
-                    {plan.bullets.map((b) => (
-                      <li key={b} className="flex gap-2">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                        <span className="break-words">{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                {showCta ? (
-                  <Button
-                    asChild
-                    className={cn(
-                      "mt-8 w-full",
-                      isFeatured
-                        ? "bg-[var(--fluxy-cta-color)] text-white hover:opacity-90"
-                        : "bg-white/10 text-white hover:bg-white/20",
-                    )}
-                    variant={isFeatured ? "default" : "secondary"}
-                  >
-                    <Link href={clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}>
-                      {key === "free"
-                        ? HOSTED_COPY.startFree
-                        : clerkOn
-                          ? `Choose ${plan.label}`
-                          : HOSTED_COPY.connectAccount}
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button asChild variant="secondary" className="mt-8 w-full bg-white/10 text-white hover:bg-white/20">
-                    <Link href="/contact?plan=growth">Contact sales</Link>
-                  </Button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mx-auto mt-14 max-w-xl text-center">
-          <p className="text-sm text-slate-400">
-            Higher limits: email{" "}
-            <a className="text-slate-300 underline underline-offset-2" href="mailto:founder@fluxychat.com">
-              founder@fluxychat.com
-            </a>
-            . Hosted login does not include SAML.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ComparisonTable() {
-  return (
-    <section className="border-b border-white/10 bg-[#1e1e1e] px-4 py-16 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <h2 className="text-center font-heading text-2xl font-bold text-white">Compare plans side by side</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
-          Every feature, every plan. No hidden limits.
-        </p>
-
-        <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10">
-          <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/10 bg-[#252525]/80">
-                <th className="px-4 py-3 font-medium text-slate-200 sm:px-6">Feature</th>
-                {planEntries.map(([key, plan]) => (
-                  <th key={key} className="px-4 py-3 text-center font-medium text-slate-200 sm:px-6">
-                    {plan.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {COMPARISON_ROWS.map((row, i) => (
-                <tr key={row.feature} className={cn(i !== COMPARISON_ROWS.length - 1 && "border-b border-white/5")}>
-                  <td className="px-4 py-3 text-slate-200 sm:px-6">{row.feature}</td>
-                  {planKeys.map((key) => {
-                    const val = row.values[key] ?? "—";
-                    const isCheck = val === "✓";
-                    const isDash = val === "—";
-                    return (
-                      <td key={key} className="px-4 py-3 text-center sm:px-6">
-                        {isCheck ? (
-                          <Check className="mx-auto h-4 w-4 text-emerald-400" />
-                        ) : isDash ? (
-                          <span className="text-slate-500">—</span>
-                        ) : (
-                          <span className="text-slate-300">{val}</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FeatureShowcase() {
-  const features = [
-    { icon: Server, title: "Cloudflare Workers", desc: "Runs on Cloudflare's global network. PoP count and edge RTT are Cloudflare's, not a FluxyChat-measured SLO." },
-    { icon: Shield, title: "Encryption", desc: "TLS in transit. Room envelopes use a Worker-wrapped key. The LLM sees plaintext when invokeAgent runs." },
-    { icon: Workflow, title: "Agents on the timeline", desc: "invokeAgent writes chat messages. Streaming markdown, MCP tools, HITL. The side-panel copilot is UI you wire to your own model." },
-    { icon: GitFork, title: "Platform adapters", desc: "React, Vue, and Svelte packages on npm. React Native on npm. Flutter, Swift, and KMP live in this repo until they hit pub.dev / CocoaPods / Maven." },
-    { icon: GanttChartSquare, title: "Operator console", desc: "Rooms, agents, billing, and project keys. Hosted is beta." },
-    { icon: Zap, title: "Real-time sync", desc: "Durable Objects and WebSocket. Yjs is a second binary socket on the same room." },
-  ];
+function PlanCard({ planKey, plan }: { planKey: string; plan: PublicPlanRow }) {
+  const isFeatured = planKey === "starter";
 
   return (
-    <section className="border-b border-white/10 bg-[#1e1e1e] px-4 py-16 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <h2 className="text-center font-heading text-2xl font-bold text-white">What every plan includes</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
-          Chat, presence, Yjs, and invokeAgent. Extra studios in the console can hide behind flags. Hosted is beta.
-        </p>
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((f) => (
-            <div key={f.title} className="rounded-xl border border-white/10 bg-[#252525]/80 p-5">
-              <f.icon className="h-5 w-5 text-primary" />
-              <h3 className="mt-3 font-semibold text-white">{f.title}</h3>
-              <p className="mt-1 text-sm text-slate-300">{f.desc}</p>
-            </div>
-          ))}
-        </div>
+    <div className={`${styles.planCard} ${isFeatured ? styles.planCardFeatured : ""}`}>
+      <span className={styles.planTag}>{isFeatured ? "Most teams start here" : "Plan"}</span>
+      <h2 className={styles.planName}>{plan.label}</h2>
+      <div className={styles.planPrice}>{plan.price}</div>
+      <p className={styles.planTagline}>{plan.tagline}</p>
+      <ul className={styles.planList}>
+        <li>
+          {plan.messages === -1
+            ? "Unlimited messages (fair use)"
+            : `${formatNumber(plan.messages)} messages / month`}
+        </li>
+        <li>
+          {plan.agents === -1
+            ? "Unlimited agent invokes (fair use)"
+            : `${formatNumber(plan.agents)} agent invokes / month`}
+        </li>
+        <li>
+          {plan.webhooks === -1
+            ? "Unlimited webhook deliveries (fair use)"
+            : `${formatNumber(plan.webhooks)} webhook deliveries / month`}
+        </li>
+        {plan.bullets.map((bullet) => (
+          <li key={bullet}>{bullet}</li>
+        ))}
+      </ul>
+      <div className={styles.planCta}>
+        <Link
+          href={startHref}
+          className={`${styles.btn} ${isFeatured ? styles.btnPrimary : styles.btnGhost}`}
+        >
+          {planKey === "free" ? HOSTED_COPY.startFree : clerkOn ? `Choose ${plan.label}` : HOSTED_COPY.connectAccount}
+        </Link>
       </div>
-    </section>
-  );
-}
-
-function PricingFaq() {
-  return (
-    <section className="border-b border-white/10 bg-[#1e1e1e] px-4 py-16 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <h2 className="text-center font-heading text-2xl font-bold text-white">Frequently asked questions</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-slate-300">
-          Everything you need to know about FluxyChat pricing.
-        </p>
-        <div className="mx-auto mt-8 max-w-2xl space-y-3">
-          {PRICING_FAQ.map((item) => (
-            <details
-              key={item.q}
-              className="group rounded-xl border border-white/10 bg-[#252525]/70 px-4 py-3 open:bg-[#2a2a2a]"
-            >
-              <summary className="cursor-pointer list-none text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
-                <span className="flex items-center justify-between gap-3">
-                  {item.q}
-                  <span className="text-slate-400 transition group-open:rotate-180">▾</span>
-                </span>
-              </summary>
-              <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-slate-300">
-                {item.a}
-              </p>
-            </details>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PricingCta() {
-  return (
-    <section className="bg-[#1e1e1e] px-4 py-20 sm:px-6">
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="font-heading text-3xl font-bold tracking-tight text-white">
-          Start building for free
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-slate-300">
-          No credit card. Open beta, so pin SDK versions. The docs are the spec, not the compare table.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Button asChild size="lg" className="bg-[var(--fluxy-cta-color)] text-white hover:opacity-90">
-            <Link href={clerkOn ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}>
-              {HOSTED_COPY.startFree}
-              <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
-            <Link href={HOSTED_PATHS.landing}>Learn more about FluxyChat</Link>
-          </Button>
-        </div>
-        <p className="mt-6 text-sm text-slate-400">
-          Need enterprise SSO, VPC-style isolation, or custom SLOs?{" "}
-          <a className="text-slate-300 underline underline-offset-2" href="mailto:founder@fluxychat.com">
-            Email us
-          </a>
-          .
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function PricingFooter() {
-  return (
-    <footer className="border-t border-white/10 bg-[#1e1e1e] px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="flex flex-col items-center justify-between gap-4 text-sm text-slate-400 sm:flex-row">
-          <p>&copy; {new Date().getFullYear()} FluxyChat. Open source MIT.</p>
-          <nav className="flex gap-6">
-            <Link href={HOSTED_PATHS.landing} className="hover:text-white">Product</Link>
-            <Link href={HOSTED_PATHS.docs} className="hover:text-white">Docs</Link>
-            <Link href={HOSTED_PATHS.compare} className="hover:text-white">Compare</Link>
-            <Link href={HOSTED_PATHS.status} className="hover:text-white">Status</Link>
-            <Link href={HOSTED_PATHS.trust} className="hover:text-white">Trust</Link>
-            <a href="mailto:founder@fluxychat.com" className="hover:text-white">Contact</a>
-          </nav>
-        </div>
-      </div>
-    </footer>
+    </div>
   );
 }
 
 export default function PricingPage() {
   return (
-    <LandingShell>
-      <PricingHero />
-      <PlanCards />
-      <ComparisonTable />
-      <FeatureShowcase />
-      <PricingFaq />
-      <PricingCta />
-      <PricingFooter />
-    </LandingShell>
+    <MarketingShell className={styles.pageWide}>
+      <header className={styles.pageHero}>
+        <div className={styles.pageHeroCopy}>
+          <span className={styles.pageEyebrow}>Pricing / open beta</span>
+          <h1 className={styles.pageTitle}>Pay for the room, not the seats.</h1>
+          <p className={styles.pageLede}>
+            Free is the weekend plan: public rooms, a <code>pk_</code> in the browser, no card.
+            Starter is $20/mo when you outgrow 200k persisted messages. Pro is $50/mo for heavier
+            traffic. Cursors and presence do not count as messages; agent invokes are not extra
+            seats.
+          </p>
+          <div className={styles.pageActions}>
+            <Link href={startHref} className={`${styles.btn} ${styles.btnPrimary}`}>
+              {HOSTED_COPY.startFree}
+            </Link>
+            <a href="mailto:founder@fluxychat.com?subject=FluxyChat%20sales" className={`${styles.btn} ${styles.btnGhost}`}>
+              Talk to sales
+            </a>
+          </div>
+        </div>
+        <div className={styles.pageMeta}>
+          <span>
+            <strong>Hosted</strong> beta
+          </span>
+          <span>
+            <strong>SDK</strong> pin versions
+          </span>
+          <span>
+            <strong>Self-host</strong> MIT
+          </span>
+        </div>
+      </header>
+
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>Plans</span>
+          <h2 className={styles.pageH2}>One room. Three ways to run it.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <div className={styles.planNote}>
+            <strong>All plans include unlimited room ids.</strong> Message quotas count persisted
+            chat and webhooked <code>client_event</code> frames. Cursors and{" "}
+            <code>presence_patch</code> do not. Agents are invokes, not dashboard seats. Hosted is
+            beta; pin <code>@fluxy-chat/sdk</code>.
+          </div>
+          <div className={styles.planGrid}>
+            {planEntries.map(([key, plan]) => (
+              <PlanCard key={key} planKey={key} plan={plan} />
+            ))}
+          </div>
+          <p className={styles.sectionLead}>
+            Higher limits: email{" "}
+            <a href="mailto:founder@fluxychat.com">founder@fluxychat.com</a>. Hosted login does not
+            include SAML. Self-host keeps the same SDK and moves the Worker to your Cloudflare
+            account.
+          </p>
+        </div>
+      </section>
+
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>Compare</span>
+          <h2 className={styles.pageH2}>Every feature, every plan.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <div className={styles.pageTableWrap}>
+            <table className={styles.pageTable}>
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  {planEntries.map(([key, plan]) => (
+                    <th key={key}>{plan.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON_ROWS.map((row) => (
+                  <tr key={row.feature}>
+                    <td>{row.feature}</td>
+                    {planKeys.map((key) => (
+                      <td key={key}>{row.values[key] ?? "No"}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>Included</span>
+          <h2 className={styles.pageH2}>The kernel is the product.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <div className={styles.pageCards}>
+            {[
+              {
+                title: "Cloudflare Workers",
+                body: "Runs on Cloudflare's global network. PoP count and edge RTT are Cloudflare's, not a FluxyChat-measured SLO.",
+              },
+              {
+                title: "Encryption",
+                body: "TLS in transit. Room envelopes use a Worker-wrapped key. The LLM sees plaintext when invokeAgent runs.",
+              },
+              {
+                title: "Agents on the timeline",
+                body: "invokeAgent writes chat messages. Streaming markdown, MCP tools, HITL. The side-panel copilot is UI you wire to your own model.",
+              },
+              {
+                title: "Platform adapters",
+                body: "React, Vue, and Svelte packages on npm. React Native on npm. Flutter, Swift, and KMP stay in this repo until they hit their registries.",
+              },
+              {
+                title: "Operator console",
+                body: "Rooms, agents, billing, and project keys. Hosted is beta.",
+              },
+              {
+                title: "Real-time sync",
+                body: "Durable Objects and WebSocket. Yjs is a second binary socket on the same room.",
+              },
+            ].map((feature) => (
+              <div key={feature.title} className={styles.pageCard}>
+                <h3>{feature.title}</h3>
+                <p>{feature.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>Questions</span>
+          <h2 className={styles.pageH2}>Pricing, without the fog.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <div className={styles.pageFaq}>
+            {PRICING_FAQ.map((item) => (
+              <details key={item.q}>
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className={styles.pageCta}>
+        <div>
+          <span className={styles.pageEyebrow}>Start</span>
+          <p className={styles.pageH2}>Build for free this weekend.</p>
+          <p>
+            No credit card. Open beta, so pin SDK versions. The docs are the spec, not the compare
+            table.
+          </p>
+        </div>
+        <div className={styles.pageActions}>
+          <Link href={startHref} className={`${styles.btn} ${styles.btnPrimary}`}>
+            {HOSTED_COPY.startFree}
+          </Link>
+          <a href={docsSiteHref("quickstart")} className={`${styles.btn} ${styles.btnGhost}`}>
+            Read the quickstart
+          </a>
+        </div>
+      </div>
+    </MarketingShell>
   );
 }

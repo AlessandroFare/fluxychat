@@ -142,7 +142,7 @@ export async function dispatchWhiteLabelRoutes(request, url, h) {
 
     if (request.method === "PATCH") {
       const body = await request.json().catch(() => null);
-      const result = await updateReseller(env, { projectId: a.projectId, id, ...body });
+      const result = await updateReseller(env, { ...body, id, projectId: a.projectId });
       if (!result.ok) return json({ error: result.error }, { status: result.error === "not_found" ? 404 : 400 });
       return json({ ok: true });
     }

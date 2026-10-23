@@ -1,13 +1,7 @@
 {
   "title": "Realtime & Streaming",
   "pages": [
-    "index",
     "edge-room-history",
-    "web-push-vapid",
-    "quiet-hours",
-    "room-stream-sse",
-    "pusher-parity",
-    "stream-resumption",
-    "transport-fallback"
+    "..."
   ]
 }

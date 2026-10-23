@@ -11,12 +11,15 @@ What runs when you invoke tests from the repo root and how to run focused suites
 
 | Command | What runs |
 |---------|-----------|
-| `pnpm test` | Unit tests for protocol, sdk, react, ui, config, agent |
-| `pnpm test:packages` | Same as `pnpm test` (explicit alias) |
+| `pnpm test` | Everything: packages (unit), worker + pool, worker e2e, ai-agent, dashboard |
+| `pnpm test:packages` | Unit tests for the 12 packages wired into this command (protocol, sdk, react, vue, svelte, ui, config, agent, auth, react-native-sdk, chat-adapter-fluxychat, cloudflare-agents) |
+| `pnpm test:ai-agent` | AI agent service unit tests (`apps/ai-agent`) |
 | `pnpm test:e2e:smoke` | Dashboard Playwright smoke (`*.smoke.spec.ts`) — no worker/JWT |
 | `pnpm run check:bundle-size` | Gzip report for SDK entrypoints (`bundle-size-report.json`) |
 | `pnpm run check:publish-manifest` | Packed tarball has no `workspace:` ranges; exports resolve |
 | `pnpm run smoke:create-fluxy-chat` | Scaffold smoke for `create-fluxy-chat` CLI |
+| `pnpm run smoke:typecheck-templates` | Scaffold every `create-fluxy-chat` template and typecheck it (nightly drift check) |
+| `pnpm --filter @fluxy-chat/worker test:pool` | workerd pool tests: alarm queues + hibernation registry (`@cloudflare/vitest-plugin`) |
 
 CI (`.github/workflows/ci.yml`) also runs docs build, pricing/tenant/openapi checks, and integrated E2E on a separate job when configured.
 

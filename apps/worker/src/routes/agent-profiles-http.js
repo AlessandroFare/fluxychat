@@ -85,7 +85,7 @@ export async function dispatchAgentProfilesRoutes(request, url, h) {
     const profileId = url.pathname.split("/")[2];
     let body;
     try { body = await request.json(); } catch { return json({ error: "invalid_json" }, { status: 400, headers: corsHeaders }); }
-    const result = await updateProfile(env.DB, { projectId: auth.projectId, profileId, ...body });
+    const result = await updateProfile(env.DB, { ...body, profileId, projectId: auth.projectId });
     if (!result.ok) return json({ error: result.error }, { status: 400, headers: corsHeaders });
     return json(result, { headers: corsHeaders });
   }

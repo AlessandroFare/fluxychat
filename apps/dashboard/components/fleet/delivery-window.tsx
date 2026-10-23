@@ -58,6 +58,8 @@ export function DeliveryWindow({ data, loading }: DeliveryWindowProps) {
         {data.factors.peakHour && <span className="text-amber-600">Peak hour</span>}
         <span className="opacity-60">{data.sampleSize} samples</span>
       </div>
+
+      <div className="mt-2 text-[10px] text-muted-foreground/70">Average-speed heuristic from past trips — not an ML model.</div>
     </div>
   );
 }

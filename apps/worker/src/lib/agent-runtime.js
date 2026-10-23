@@ -7,7 +7,7 @@ import {
   resolveLlmConnectionWithFallback,
 } from "./llm-providers.js";
 import { createAgentStreamHooks, roomStreamOp, isStreamStoppedError } from "./room-stream.js";
-import { fanoutRoomInternal } from "./room-shard.js";
+import { fanoutRoomInternal, internalDoHeaders } from "./room-shard.js";
 import { isPrivateUrl } from "./url-ssrf.js";
 import { logInfo, logError } from "./worker-log.js";
 import { createLogger } from "./logger.js";
@@ -20,6 +20,7 @@ import {
   estimateCost,
 } from "./agent-llm.js";
 import { parseAgentToolAllowListFromEnv } from "./agent-tool-calls.js";
+import { enforceToolPolicy } from "./ai-action-policy.js";
 import { emitGenAiChatSpan, emitGenAiToolSpan, emitGenAiInvokeAgentSpan, tokenUsageFromLlmResponse } from "./genai-spans.js";
 import { classifyDoFailure } from "./do-retry-taxonomy.js";
 import { executeToolCall, fetchAppContext } from "./agent-tools.js";
@@ -35,6 +36,7 @@ import { cardToFallbackText } from "./cards.js";
 import { createSentMessage } from "./sent-message.js";
 import { createThreadStateStore } from "./thread-state.js";
 import { resolveAppKv } from "./app-kv.js";
+import { invokeRoomRunAgent } from "./agent-do-session.js";
 import { createLLMMiddleware, wrapLanguageModel, createLoggingMiddleware } from "./llm-middleware.js";
 import { createLoopController, LOOP_PRESETS } from "./loop-control.js";
 import { createApprovalStore, createApprovalGate } from "./hitl-approval.js";
@@ -120,6 +122,7 @@ async function announceRoomEvent(env, roomId, payload, projectId) {
   try {
     const init = {
       method: "POST",
+      headers: internalDoHeaders(env),
       body: JSON.stringify(payload, (_key, value) =>
         typeof value === "bigint" ? Number(value) : value,
       ),
@@ -130,7 +133,9 @@ async function announceRoomEvent(env, roomId, payload, projectId) {
     }
     await env.ROOM.get(env.ROOM.idFromName(roomId)).fetch("https://internal/announce", init);
   } catch (err) {
-    /* ignore */
+    // Audit F-58: best-effort is fine, silence is not — a swallowed failure
+    // hid realtime announce outages from operators.
+    logError("agent.announce_failed", err, { roomId, projectId: projectId || null });
   }
 }
 
@@ -244,14 +249,14 @@ export function mapBotRowToAgent(row) {
 }
 
 export async function upsertAgentFromBody(env, projectId, body) {
-  if (body.contextFetchUrl && isPrivateUrl(body.contextFetchUrl)) {
+  if (body.contextFetchUrl && isPrivateUrl(body.contextFetchUrl, env)) {
     throw new Error("contextFetchUrl must not target private/internal networks");
   }
-  if (body.toolExecuteUrl && isPrivateUrl(body.toolExecuteUrl)) {
+  if (body.toolExecuteUrl && isPrivateUrl(body.toolExecuteUrl, env)) {
     throw new Error("toolExecuteUrl must not target private/internal networks");
   }
   const llmBaseUrl = body.config?.llm?.baseUrl;
-  if (llmBaseUrl && isPrivateUrl(llmBaseUrl)) {
+  if (llmBaseUrl && isPrivateUrl(llmBaseUrl, env)) {
     throw new Error("config.llm.baseUrl must not target private/internal networks");
   }
   const now = new Date().toISOString();
@@ -352,6 +357,9 @@ async function persistMentionAgentRun(env, { runId, projectId, agentId, roomId, 
   }
 }
 
+/** Per-invoke budget hold estimate (the default per-call max output, 1024). */
+const ROOM_AGENT_INVOKE_HOLD_TOKENS = 1024;
+
 export async function invokeMentionedAgents(
   env,
   projectId,
@@ -406,7 +414,13 @@ export async function invokeMentionedAgents(
 
   let holdTokens = 0;
   if (budget.budget != null) {
-    const hold = Math.max(1, Number(budget.remaining) || 1);
+    // Audit fix M5: hold a per-invoke estimate, not the whole remaining budget
+    // — holding everything let one in-flight run reject every concurrent
+    // mention. Near exhaustion (< estimate) the remainder is still held whole.
+    const hold = Math.max(
+      1,
+      Math.min(Number(budget.remaining) || 1, ROOM_AGENT_INVOKE_HOLD_TOKENS),
+    );
     const reserved = await tryReserveRoomAgentTokens(
       env,
       projectId,
@@ -506,29 +520,52 @@ export async function invokeMentionedAgents(
         isTyping: true,
       }, projectId);
 
-      const streamHooks = createAgentStreamHooks(env, {
+      let result = null;
+      let mentionMessageId = null;
+      let streamedByHooks = false;
+      const roomRun = await invokeRoomRunAgent(env, {
         projectId,
         roomId,
-        userId: agentRow.id,
-        parentId: resolvedParentId,
-      });
-
-      const result = await executeAgentRun(env, {
-        agentRow,
-        projectId,
-        roomId,
-        userMessage: content,
+        agentId: agentRow.id,
         userId,
+        content,
         traceId,
-        streamHooks,
+        replyTo: resolvedParentId,
         attachments: options.attachments,
       });
+      if (roomRun?.run) {
+        // Ran on the room's agent DO: turns are serialized per room (TurnQueue).
+        result = roomRun.run;
+        mentionMessageId = toFiniteMessageId(roomRun.messageId);
+        streamedByHooks = Boolean(mentionMessageId);
+      } else if (roomRun?.reason === "turn_queue_full") {
+        logInfo("agent.mention_turn_queue_full", { projectId, roomId, agentId: agentRow.id });
+      } else {
+        // No AGENT binding / DO unreachable: run inline on this caller.
+        const streamHooks = createAgentStreamHooks(env, {
+          projectId,
+          roomId,
+          userId: agentRow.id,
+          parentId: resolvedParentId,
+        });
+        result = await executeAgentRun(env, {
+          agentRow,
+          projectId,
+          roomId,
+          userMessage: content,
+          userId,
+          traceId,
+          streamHooks,
+          attachments: options.attachments,
+        });
+        mentionMessageId = toFiniteMessageId(streamHooks.getMessageId());
+        streamedByHooks = Boolean(mentionMessageId);
+      }
 
-      if (result.status === "completed" && result.content) {
+      if (result && result.status === "completed" && result.content) {
         const createdAt = new Date().toISOString();
         const contentValidation = validateMessageContent(result.content);
         const agentContent = contentValidation.valid ? contentValidation.content : result.content.slice(0, MAX_MESSAGE_LENGTH);
-        let mentionMessageId = toFiniteMessageId(streamHooks.getMessageId());
 
         if (!mentionMessageId) {
           const agentMsgInsert = await env.DB.prepare(
@@ -564,7 +601,7 @@ export async function invokeMentionedAgents(
           }).catch(() => {});
         }
 
-        if (mentionMessageId && !streamHooks.getMessageId()) {
+        if (mentionMessageId && !streamedByHooks) {
           await safeSchedulePostMessageAutomations(env, {
             projectId,
             roomId,
@@ -576,7 +613,7 @@ export async function invokeMentionedAgents(
         }
 
         logInfo("agent.mention_invoke_completed", { projectId, agentId: agentRow.id, roomId, runId: result.runId, streamed: true });
-      } else if (result.status === "failed") {
+      } else if (result && result.status === "failed") {
         logInfo("agent.mention_invoke_failed", {
           projectId,
           agentId: agentRow.id,
@@ -585,7 +622,11 @@ export async function invokeMentionedAgents(
           error: result.error,
         });
         const createdAt = new Date().toISOString();
-        const errorContent = `I couldn't reply (${result.error || "agent_run_failed"}). Check the agent LLM provider and Worker AI_BASE_URL / AI_API_KEY.`;
+        // Never surface the raw provider error in room-visible content (craft P1):
+        // the technical detail stays on the run (persistMentionAgentRun below)
+        // and in the worker log (agent.mention_invoke_failed).
+        const errorContent =
+          "I couldn't reply — my LLM provider returned an error. Check the agent run log in the console (provider settings: AI_BASE_URL / AI_API_KEY).";
         try {
           const insert = await env.DB.prepare(
             "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -623,14 +664,16 @@ export async function invokeMentionedAgents(
         }
       }
 
-      await persistMentionAgentRun(env, {
-        runId: result.runId,
-        projectId,
-        agentId: agentRow.id,
-        roomId,
-        result,
-        createdAt: new Date().toISOString(),
-      });
+      if (result) {
+        await persistMentionAgentRun(env, {
+          runId: result.runId,
+          projectId,
+          agentId: agentRow.id,
+          roomId,
+          result,
+          createdAt: new Date().toISOString(),
+        });
+      }
 
       await announceRoomEvent(env, roomId, {
         type: "agentTyping",
@@ -675,7 +718,8 @@ export async function invokeMentionedAgents(
 }
 
 export async function executeAgentRun(env, { agentRow, projectId, roomId, userMessage, userId, invokerRoles, traceId, streamHooks, parentRunId = null, parentToolCallId = null, nestDepth = 0, skipRoomAnnounce = false, attachments = [] }) {
-  const startTime = performance.now();
+  // Wall clock: loop-control compares this against Date.now() for maxTimeMs.
+  const startTime = Date.now();
   const runId = crypto.randomUUID();
   const lineagePayload =
     parentRunId
@@ -979,8 +1023,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
   const d1ApprovalStore = createD1ApprovalStore(env);
   const activeApprovalStore = d1ApprovalStore ?? approvalStore;
   const baseApprovalGate =
-    euAiActPolicy.approvalGate ??
-    (agentConfig?.approvalGate ? createApprovalGate(agentConfig.approvalGate) : null);
+    euAiActPolicy.approvalGate ?? createApprovalGate(agentConfig?.approvalGate || {});
   const clmHitlCtx = { stateText: userMessage, projectId, roomId, userId, runId, agentId: agentRow.id };
   const twoKeyTurn = { readUntrusted: false, hasPrivateData: false };
   const { config: roomCfg } = await getRoomConfig(env, { projectId, roomId });
@@ -1204,6 +1247,7 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
               chatCompletionsUrl: connection.chatCompletionsUrl,
               gatewayHeaders: connection.gatewayHeaders,
               abortSignal: llmAbort.signal,
+              env,
             },
             async (delta, fullContent) => {
               try {
@@ -1637,13 +1681,29 @@ export async function executeAgentRun(env, { agentRow, projectId, roomId, userMe
         }
         agentLog.info("agent_lifecycle_onToolExecutionStart", { runId, toolName: tc.name, toolCallId: tc.id });
         const toolStarted = Date.now();
-        const toolResult = isNestedAgentToolName(tc.name)
+        // Audit F-65: apply the project's AI action policies before the tool runs.
+        const policyDecision = await enforceToolPolicy(env, {
+          projectId,
+          toolName: tc.name,
+          userRoles: invokerRoles,
+          agentId: agentRow.id,
+          userId,
+          roomId,
+        }).catch((err) => {
+          logError("agent.tool_policy_check_failed", err, { runId, toolName: tc.name });
+          return { allowed: false, reason: "policy_check_failed", requireApproval: false };
+        });
+        const toolResult = !policyDecision.allowed
+          ? { success: false, error: `policy_${policyDecision.reason}` }
+          : isNestedAgentToolName(tc.name)
           ? await runNestedAgentTool({
               executeAgentRun,
               env,
               projectId,
               roomId,
               userId,
+              // Audit F-57: carry the invoker roles into the nested run.
+              invokerRoles,
               traceId,
               parentAgentRow: agentRow,
               parentRunId: runId,

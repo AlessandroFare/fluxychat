@@ -2,13 +2,17 @@
 
 import { usePathname } from "next/navigation";
 import { isMarketingRoute } from "@/lib/is-marketing-route";
+import {
+  HOSTED_PATHS,
+  consoleEntryHref,
+  isClerkClientConfigured,
+} from "@/lib/hosted-product";
 import Header from "./Header";
-import { MarketingTopNav } from "./marketing-top-nav";
+import { LandingHeader } from "../landing/landing-chrome";
 
 /**
- * Landing, enter, pricing, and labs ship their own header (LandingShell).
- * Why/compare/guides/demo/docs/status/sign-in use MarketingTopNav.
- * Console routes use Header (auth controls).
+ * Public pages share the C pill header; landing and room pages include it in
+ * their own root. Console routes keep the operator header.
  */
 export default function ConditionalHeader() {
   const pathname = usePathname();
@@ -23,16 +27,20 @@ export default function ConditionalHeader() {
     pathname?.startsWith("/landing/") ||
     pathname === "/enter" ||
     pathname?.startsWith("/enter/") ||
-    pathname === "/pricing" ||
-    pathname?.startsWith("/pricing/") ||
-    pathname === "/labs" ||
-    pathname?.startsWith("/labs/")
+    pathname === "/solutions" ||
+    pathname?.startsWith("/solutions/")
   ) {
     return null;
   }
 
   if (isMarketingRoute(pathname)) {
-    return <MarketingTopNav />;
+    return (
+      <LandingHeader
+        startHref={isClerkClientConfigured() ? HOSTED_PATHS.signUp : HOSTED_PATHS.getStarted}
+        accountHref={consoleEntryHref()}
+        themeToggle
+      />
+    );
   }
 
   return <Header />;

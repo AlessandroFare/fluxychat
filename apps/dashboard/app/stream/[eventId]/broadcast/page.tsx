@@ -30,6 +30,7 @@ export default function BroadcastPage() {
   const [isLive, setIsLive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [cameraOn, setCameraOn] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -54,6 +55,7 @@ export default function BroadcastPage() {
   const toggleLive = async () => {
     if (!token || !eventId) return;
     setBusy(true);
+    setActionError(null);
     try {
       const newStatus = isLive ? "ended" : "live";
       const res = await fetch(`${WORKER_URL}/api/live/events/${eventId}`, {
@@ -70,14 +72,18 @@ export default function BroadcastPage() {
             setCameraOn(false);
           }
         }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error || `HTTP ${res.status}`);
       }
-    } catch { /* noop */ }
+    } catch { setActionError("Network error"); }
     setBusy(false);
   };
 
   const provisionStream = async () => {
     if (!token || !eventId) return;
     setProvisioning(true);
+    setActionError(null);
     try {
       const res = await fetch(`${WORKER_URL}/api/live/events/${eventId}/provision`, {
         method: "POST",
@@ -86,8 +92,15 @@ export default function BroadcastPage() {
       if (res.ok) {
         const data = await res.json();
         setEvent(data);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionError(
+          data.error === "cloudflare_stream_not_configured"
+            ? "Cloudflare Stream is not configured on this Worker — add the Stream secrets or use your own ingest."
+            : data.error || `HTTP ${res.status}`,
+        );
       }
-    } catch { /* noop */ }
+    } catch { setActionError("Network error"); }
     setProvisioning(false);
   };
 
@@ -181,6 +194,12 @@ export default function BroadcastPage() {
           </div>
         </div>
 
+        {actionError ? (
+          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+            {actionError}
+          </p>
+        ) : null}
+
         <div className="grid flex-1 gap-4 lg:grid-cols-3">
           {/* Camera preview */}
           <div className="relative lg:col-span-2">
@@ -194,6 +213,11 @@ export default function BroadcastPage() {
                 </div>
               )}
             </div>
+            {cameraOn && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Local preview only — this camera is not published. Send your feed via OBS (RTMPS) or WHIP using the ingest details.
+              </p>
+            )}
             {isLive && (
               <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-0.5 text-[10px] font-semibold text-white">
                 <span className="size-1.5 rounded-full bg-white animate-pulse" />
@@ -206,7 +230,7 @@ export default function BroadcastPage() {
           <div className="flex flex-col gap-3">
             {event.rtmpsUrl && event.streamKey && (
               <div className="rounded-xl bg-card shadow-[var(--shadow-2)] p-4">
-                <h3 className="mb-2 text-xs font-semibold text-foreground">RTMP ingest</h3>
+                <h3 className="mb-2 text-xs font-semibold text-foreground">RTMPS ingest</h3>
                 <div className="mb-2">
                   <label className="text-[10px] text-muted-foreground">Server URL</label>
                   <code className="block truncate rounded bg-muted px-2 py-1 text-[11px] font-mono text-foreground">
@@ -282,7 +306,7 @@ export default function BroadcastPage() {
                   <li>Open OBS Studio</li>
                   <li>Go to Settings &rarr; Stream</li>
                   <li>Service: Custom</li>
-                  <li>Server: RTMP URL from above</li>
+                  <li>Server: RTMPS URL from above</li>
                   <li>Stream Key: Key from above</li>
                   <li>Click Start Streaming</li>
                 </ol>

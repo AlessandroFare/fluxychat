@@ -1,112 +1,113 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import { Button } from "~/components/ui/button";
-import { MarketingShell } from "../components/marketing-shell";
-import { GetStartedAuthCta } from "../components/get-started-auth-cta";
-import { HOSTED_COPY, HOSTED_PATHS } from "@/lib/hosted-product";
+import { HOSTED_COPY, HOSTED_PATHS, docsSiteHref } from "@/lib/hosted-product";
 import { PAGE_METADATA } from "@/lib/marketing-copy";
 import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { WHY_CTA, WHY_FAQ, WHY_SECTIONS, WHY_THESIS } from "@/lib/why-copy";
+import { MarketingShell } from "../components/marketing-shell";
+import styles from "../landing/landing-c.module.css";
 
 export const metadata: Metadata = PAGE_METADATA.why;
 
 export default function WhyPage() {
   return (
-    <MarketingShell className="pb-16">
-      <Link
-        href={HOSTED_PATHS.landing}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        Back to home
-      </Link>
+    <MarketingShell className={styles.pageWide}>
+      <header className={styles.pageHero}>
+        <div className={styles.pageHeroCopy}>
+          <span className={styles.pageEyebrow}>Why FluxyChat</span>
+          <h1 className={styles.pageTitle}>Why I built FluxyChat.</h1>
+          <p className={styles.pageLede}>{WHY_THESIS}</p>
+          <div className={styles.pageActions}>
+            <Link href={HOSTED_PATHS.getStarted} className={`${styles.btn} ${styles.btnPrimary}`}>
+              {HOSTED_COPY.startFree}
+            </Link>
+            <Link href={HOSTED_PATHS.compare} className={`${styles.btn} ${styles.btnGhost}`}>
+              Compare alternatives
+            </Link>
+          </div>
+        </div>
+        <div className={styles.pageMeta}>
+          <span>
+            <strong>Solo</strong> build
+          </span>
+          <span>
+            <strong>Open</strong> beta
+          </span>
+          <span>
+            <strong>MIT</strong> self-host
+          </span>
+        </div>
+      </header>
 
-      <p className="mt-8 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Why Fluxychat</p>
-      <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-        Why I built Fluxychat
-      </h1>
-      <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{WHY_THESIS}</p>
-
-      <div className="mt-10 space-y-12">
-        {WHY_SECTIONS.map((section) => (
-          <section key={section.id} id={section.id} className="scroll-mt-24">
-            <h2 className="font-heading text-xl font-semibold text-foreground sm:text-2xl">{section.title}</h2>
-            {"paragraphs" in section && section.paragraphs ? (
-              <div className="mt-3 space-y-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
-                {section.paragraphs.map((p) => (
-                  <p key={p.slice(0, 48)}>{p}</p>
-                ))}
-              </div>
-            ) : null}
+      {WHY_SECTIONS.map((section) => (
+        <section key={section.id} id={section.id} className={styles.pageSection}>
+          <div className={styles.pageSectionHead}>
+            <span className={styles.pageEyebrow}>{section.id}</span>
+            <h2 className={styles.pageH2}>{section.title}</h2>
+          </div>
+          <div className={styles.pageBody}>
+            {"paragraphs" in section && section.paragraphs
+              ? section.paragraphs.map((paragraph) => <p key={paragraph.slice(0, 60)}>{paragraph}</p>)
+              : null}
             {section.bullets ? (
-              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground sm:text-base">
+              <ul>
                 {section.bullets.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             ) : null}
-          </section>
-        ))}
-      </div>
+          </div>
+        </section>
+      ))}
 
-      <section className="mt-14">
-        <h2 className="font-heading text-xl font-semibold text-foreground">Common questions</h2>
-        <div className="mt-4 space-y-3">
-          {WHY_FAQ.map((item) => (
-            <details
-              key={item.q}
-              className="group rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-2)] open:shadow-[var(--shadow-3)]"
-            >
-              <summary className="cursor-pointer list-none font-medium text-foreground [&::-webkit-details-marker]:hidden">
-                <span className="flex items-center justify-between gap-3">
-                  {item.q}
-                  <span className="text-muted-foreground transition group-open:rotate-180">▾</span>
-                </span>
-              </summary>
-              <p className="mt-3 border-t border-border pt-3 text-sm leading-relaxed text-muted-foreground">
-                {item.a}
-              </p>
-            </details>
-          ))}
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>Questions</span>
+          <h2 className={styles.pageH2}>The short answers.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <div className={styles.pageFaq}>
+            {WHY_FAQ.map((item) => (
+              <details key={item.q}>
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 
-      <div className="mt-14 flex flex-col gap-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-2)] sm:flex-row sm:items-center sm:justify-between">
+      <div className={styles.pageCta}>
         <div>
-          <p className="font-heading text-lg font-semibold text-foreground">{WHY_CTA.title}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{WHY_CTA.body}</p>
+          <span className={styles.pageEyebrow}>Try it</span>
+          <p className={styles.pageH2}>{WHY_CTA.title}</p>
+          <p>{WHY_CTA.body}</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <GetStartedAuthCta />
-          <Button asChild variant="outline">
-            <Link href={HOSTED_PATHS.docs}>
-              {HOSTED_COPY.viewDocs}
-              <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/compare">Compare alternatives</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <a href={DEVTO_SOCKET_FLEET_ARTICLE.href} target="_blank" rel="noopener noreferrer">
-              Dev.to guide
-            </a>
-          </Button>
-          <Button asChild variant="outline">
-            <a href="https://github.com/AlessandroFare/fluxychat" target="_blank" rel="noopener noreferrer">
-              GitHub
-            </a>
-          </Button>
+        <div className={styles.pageActions}>
+          <Link href={HOSTED_PATHS.getStarted} className={`${styles.btn} ${styles.btnPrimary}`}>
+            {HOSTED_COPY.startFree}
+          </Link>
+          <a href={docsSiteHref("quickstart")} className={`${styles.btn} ${styles.btnGhost}`}>
+            {HOSTED_COPY.viewDocs}
+          </a>
+          <a
+            href={DEVTO_SOCKET_FLEET_ARTICLE.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${styles.btn} ${styles.btnGhost}`}
+          >
+            Dev.to guide
+          </a>
+          <a
+            href="https://github.com/AlessandroFare/fluxychat"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${styles.btn} ${styles.btnGhost}`}
+          >
+            GitHub
+          </a>
         </div>
       </div>
-
-      <p className="mt-8 text-center text-xs text-muted-foreground">
-        Questions or feedback:{" "}
-        <a href="mailto:founder@fluxychat.com" className="text-primary underline underline-offset-2">
-          founder@fluxychat.com
-        </a>
-      </p>
     </MarketingShell>
   );
 }

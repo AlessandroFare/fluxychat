@@ -102,6 +102,11 @@ class FakeDB {
         og_image: ogImage,
         og_url: ogUrl,
         client_message_id: clientMessageId ?? null,
+        version: 1,
+        seq: null,
+        visibility: "room",
+        visible_to_json: null,
+        metadata_json: null,
       });
       return { meta: { last_row_id: id, changes: 1 } };
     }
@@ -138,6 +143,44 @@ class FakeDB {
         (t) => !(t.id === id && t.project_id === projectId)
       );
       return { meta: { changes: before - this.messageTemplates.length } };
+    }
+
+    if (sql.includes("UPDATE messages SET content = ?, edited_at = ?, metadata_json = ?")) {
+      const [content, editedAt, metadataJson, version, id, projectId, expectedVersion] = args;
+      const row = this.messages.find(
+        (m) => String(m.id) === String(id) && m.project_id === projectId
+      );
+      if (!row) return { meta: { changes: 0 } };
+      const currentVersion = Number(row.version) || 1;
+      if (currentVersion !== Number(expectedVersion ?? 1)) {
+        return { meta: { changes: 0 } };
+      }
+      row.content = content;
+      row.edited_at = editedAt;
+      row.metadata_json = metadataJson;
+      row.version = Number(version);
+      return { meta: { changes: 1 } };
+    }
+
+    if (sql.includes("UPDATE messages SET content = ?, edited_at = ?, version = ?")) {
+      const [content, editedAt, version, id, projectId, roomId, userId, expectedVersion] = args;
+      const row = this.messages.find(
+        (m) =>
+          String(m.id) === String(id) &&
+          m.project_id === projectId &&
+          m.room_id === roomId &&
+          m.user_id === userId &&
+          !m.deleted_at
+      );
+      if (!row) return { meta: { changes: 0 } };
+      const currentVersion = Number(row.version) || 1;
+      if (currentVersion !== Number(expectedVersion ?? 1)) {
+        return { meta: { changes: 0 } };
+      }
+      row.content = content;
+      row.edited_at = editedAt;
+      row.version = Number(version);
+      return { meta: { changes: 1 } };
     }
 
     if (
@@ -421,6 +464,49 @@ class FakeDB {
       return { meta: { changes: 1 } };
     }
 
+    if (sql.includes("INSERT INTO project_plans") && sql.includes("ON CONFLICT(project_id) DO UPDATE")) {
+      const [
+        projectId,
+        planName,
+        billingOverride,
+        messageLimitMonthly,
+        agentInvokeLimitMonthly,
+        webhookDeliveryLimitMonthly,
+        pricingVersion,
+        updatedAt,
+        _existingProjectId,
+        createdAt,
+      ] = args;
+      const existing = this.projectPlans.find((plan) => plan.project_id === projectId);
+      if (existing) {
+        existing.plan_name = planName;
+        if (billingOverride) existing.billing_status = billingOverride;
+        existing.message_limit_monthly = Number(messageLimitMonthly);
+        existing.agent_invoke_limit_monthly = Number(agentInvokeLimitMonthly);
+        existing.webhook_delivery_limit_monthly = Number(webhookDeliveryLimitMonthly);
+        existing.pricing_version = pricingVersion || existing.pricing_version || "v1";
+        existing.manually_overridden = 0;
+        existing.updated_at = updatedAt;
+        // stripe ids and created_at survive an upsert, unlike the REPLACE this replaced
+      } else {
+        this.projectPlans.push({
+          project_id: projectId,
+          plan_name: planName,
+          billing_status: billingOverride || "manual",
+          stripe_customer_id: null,
+          stripe_subscription_id: null,
+          message_limit_monthly: Number(messageLimitMonthly),
+          agent_invoke_limit_monthly: Number(agentInvokeLimitMonthly),
+          webhook_delivery_limit_monthly: Number(webhookDeliveryLimitMonthly),
+          pricing_version: pricingVersion || "v1",
+          manually_overridden: 0,
+          updated_at: updatedAt,
+          created_at: createdAt,
+        });
+      }
+      return { meta: { changes: 1 } };
+    }
+
     if (sql.includes("INSERT INTO project_plans")) {
       const [
         projectId,
@@ -526,39 +612,6 @@ class FakeDB {
       return { meta: { changes: 1 } };
     }
 
-    if (sql.includes("INSERT OR REPLACE INTO project_plans")) {
-      const [
-        projectId,
-        planName,
-        billingStatus,
-        messageLimitMonthly,
-        agentInvokeLimitMonthly,
-        webhookDeliveryLimitMonthly,
-        pricingVersion,
-        manuallyOverridden,
-        updatedAt,
-        _existingProjectId,
-        createdAt,
-      ] = args;
-      const existing = this.projectPlans.find((plan) => plan.project_id === projectId);
-      this.projectPlans = this.projectPlans.filter((plan) => plan.project_id !== projectId);
-      this.projectPlans.push({
-        project_id: projectId,
-        plan_name: planName,
-        billing_status: billingStatus,
-        stripe_customer_id: existing?.stripe_customer_id || null,
-        stripe_subscription_id: existing?.stripe_subscription_id || null,
-        message_limit_monthly: Number(messageLimitMonthly),
-        agent_invoke_limit_monthly: Number(agentInvokeLimitMonthly),
-        webhook_delivery_limit_monthly: Number(webhookDeliveryLimitMonthly),
-        pricing_version: pricingVersion || existing?.pricing_version || "v1",
-        manually_overridden: Number(manuallyOverridden) ? 1 : 0,
-        updated_at: updatedAt,
-        created_at: existing?.created_at || createdAt,
-      });
-      return { meta: { changes: 1 } };
-    }
-
     if (
       sql.includes("UPDATE project_usage_monthly") &&
       sql.includes("used_value = used_value + ?")
@@ -585,10 +638,10 @@ class FakeDB {
 
     if (
       sql.includes(
-        "INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at)"
+        "INSERT INTO automation_events (project_id, event_type, room_id, payload, created_at"
       )
     ) {
-      const [projectId, eventType, roomId, payload, createdAt] = args;
+      const [projectId, eventType, roomId, payload, createdAt, idempotencyKey] = args;
       const id = ++this.lastAutomationEventId;
       this.automationEvents.push({
         id,
@@ -597,6 +650,7 @@ class FakeDB {
         room_id: roomId,
         payload,
         created_at: createdAt,
+        idempotency_key: idempotencyKey ?? null,
       });
       return { meta: { changes: 1, last_row_id: id } };
     }
@@ -631,6 +685,20 @@ class FakeDB {
         created_at: createdAt,
         updated_at: updatedAt,
       });
+      return { meta: { changes: 1 } };
+    }
+
+    if (sql.includes("UPDATE webhook_deliveries SET status = 'processing'")) {
+      const [updatedAt, id, staleBefore] = args;
+      const row = this.webhookDeliveries.find((d) => d.id === id);
+      if (!row) return { meta: { changes: 0 } };
+      const claimable =
+        row.status === "pending" ||
+        (row.status === "processing" &&
+          Date.parse(row.updated_at) <= Date.parse(staleBefore));
+      if (!claimable) return { meta: { changes: 0 } };
+      row.status = "processing";
+      row.updated_at = updatedAt;
       return { meta: { changes: 1 } };
     }
 
@@ -674,6 +742,19 @@ class FakeDB {
       if (!row) return { meta: { changes: 0 } };
       row.status = "failed";
       row.attempt_count = Number(attemptCount);
+      row.last_http_status = statusCode;
+      row.last_error = error;
+      row.updated_at = updatedAt;
+      return { meta: { changes: 1 } };
+    }
+
+    if (sql.includes("UPDATE webhook_deliveries SET status = 'pending', attempt_count = ?")) {
+      const [attemptCount, retryAt, statusCode, error, updatedAt, id] = args;
+      const row = this.webhookDeliveries.find((d) => d.id === id);
+      if (!row) return { meta: { changes: 0 } };
+      row.status = "pending";
+      row.attempt_count = Number(attemptCount);
+      row.next_attempt_at = retryAt;
       row.last_http_status = statusCode;
       row.last_error = error;
       row.updated_at = updatedAt;
@@ -885,8 +966,24 @@ class FakeDB {
             room_id: row.room_id,
             user_id: row.user_id,
             deleted_at: row.deleted_at ?? null,
+            version: row.version ?? 1,
+            metadata_json: row.metadata_json ?? null,
           }
         : null;
+    }
+
+    // WS edit looks up only the concurrency fields, not the id, so the id
+    // matcher above never sees it.
+    if (sql.includes("SELECT version, seq FROM messages WHERE id = ?")) {
+      const [id, projectId, roomId] = args;
+      const row = this.messages.find(
+        (m) =>
+          String(m.id) === String(id) &&
+          m.project_id === projectId &&
+          m.room_id === roomId &&
+          !m.deleted_at
+      );
+      return row ? { version: row.version ?? 1, seq: row.seq ?? null } : null;
     }
 
     // Matches the live-message lookup regardless of which columns the production
@@ -1230,23 +1327,26 @@ class FakeDB {
     }
 
     if (
-      sql.includes("webhook_deliveries WHERE status = 'pending' AND next_attempt_at <= ?")
+      sql.includes("FROM webhook_deliveries") &&
+      sql.includes("status = 'pending' AND next_attempt_at <= ?") &&
+      sql.includes("status = 'processing' AND updated_at <= ?")
     ) {
-      const [nowIso, limit] = args;
+      const [nowIso, staleIso, limit] = args;
       const nowMs = Date.parse(nowIso);
-      console.log("[FAKEDB SELECT pending] nowIso=", nowIso, "nowMs=", nowMs, "deliveries=", this.webhookDeliveries.map(d => ({ id: d.id, status: d.status, next: d.next_attempt_at, nextMs: Date.parse(d.next_attempt_at) })));
+      const staleMs = Date.parse(staleIso);
       const rows = this.webhookDeliveries
         .filter(
           (d) =>
-            d.status === "pending" && Date.parse(d.next_attempt_at) <= nowMs
+            (d.status === "pending" && Date.parse(d.next_attempt_at) <= nowMs) ||
+            (d.status === "processing" && Date.parse(d.updated_at) <= staleMs)
         )
+        .sort((a, b) => Date.parse(a.next_attempt_at) - Date.parse(b.next_attempt_at))
         .slice(0, Number(limit))
         .map((d) => ({
           id: d.id,
           project_id: d.project_id,
           webhook_id: d.webhook_id,
           webhook_url: d.webhook_url,
-          webhook_secret: d.webhook_secret,
           payload: d.payload,
           attempt_count: d.attempt_count,
         }));
@@ -1318,6 +1418,15 @@ class FakeDB {
       return { results: rows };
     }
 
+    if (sql.includes("SELECT user_id, role FROM room_members WHERE room_id = ?")) {
+      const [roomId] = args;
+      return {
+        results: this.roomMembers
+          .filter((m) => m.room_id === roomId)
+          .map((m) => ({ user_id: m.user_id, role: m.role })),
+      };
+    }
+
     if (sql.includes("FROM bots WHERE project_id = ?")) {
       const [projectId] = args;
       return { results: this.bots.filter((b) => b.project_id === projectId) };
@@ -1341,9 +1450,8 @@ class FakeDB {
     }
 
     if (
-      sql.includes(
-        "SELECT user_id, content, created_at FROM messages WHERE project_id = ? AND room_id = ?"
-      ) &&
+      sql.includes("SELECT user_id, content, created_at") &&
+      sql.includes("FROM messages WHERE project_id = ? AND room_id = ?") &&
       sql.includes("ORDER BY created_at DESC LIMIT 50")
     ) {
       const [projectId, roomId] = args;
@@ -1355,6 +1463,8 @@ class FakeDB {
           user_id: m.user_id,
           content: m.content,
           created_at: m.created_at,
+          visibility: m.visibility ?? "room",
+          visible_to_json: m.visible_to_json ?? null,
         }));
       return { results };
     }
@@ -1372,6 +1482,7 @@ function createEnv(db) {
     RATE_LIMIT_FALLBACK_ALLOW: "true",
     QUOTAS_ENABLED: "true",
     QUOTA_MESSAGES_PER_MONTH: "200000",
+    REQUIRE_SSRF_HOST_ALLOWLIST: "false",
     ROOM: {
       idFromName(name) {
         return `room:${name}`;
@@ -1400,7 +1511,11 @@ function createEnv(db) {
 async function makeJwt(payload, secret) {
   const header = { alg: "HS256", typ: "JWT" };
   const headerB64 = base64urlEncode(JSON.stringify(header));
-  const payloadB64 = base64urlEncode(JSON.stringify(payload));
+  // Mint like the worker does (audit F-04): revocation needs a jti, and the
+  // previous-secret grace window (F-03) reads iat.
+  const claims = { iat: Math.floor(Date.now() / 1000), ...payload };
+  if (!claims.jti) claims.jti = crypto.randomUUID();
+  const payloadB64 = base64urlEncode(JSON.stringify(claims));
   const data = `${headerB64}.${payloadB64}`;
   const key = await crypto.subtle.importKey(
     "raw",
@@ -1412,6 +1527,26 @@ async function makeJwt(payload, secret) {
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   const sigB64 = base64urlEncode(new Uint8Array(sig));
   return `${data}.${sigB64}`;
+}
+
+async function makeStripeSignature(payload, secret) {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${timestamp}.${payload}`)
+  );
+  const hex = Array.from(new Uint8Array(sig))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  return `t=${timestamp},v1=${hex}`;
 }
 
 function base64urlEncode(input) {
@@ -1662,6 +1797,12 @@ describe("worker integration flows", () => {
       { sub: userId, tid: projectId, roles: ["member"], exp: Math.floor(Date.now() / 1000) + 3600 },
       jwtSecret
     );
+    db.roomMembers.push({
+      room_id: roomId,
+      user_id: "charlie",
+      role: "member",
+      joined_at: new Date().toISOString(),
+    });
 
     const createRes = await callWorker({
       env,
@@ -2175,7 +2316,7 @@ describe("worker integration flows", () => {
     expect(applyRes.status).toBe(200);
     const row = db.projectPlans.find((p) => p.project_id === tenantId);
     expect(row.plan_name).toBe("free");
-    expect(row.message_limit_monthly).toBe(50_000);
+    expect(row.message_limit_monthly).toBe(200_000);
     expect(row.manually_overridden).toBe(0);
   });
 
@@ -2708,22 +2849,32 @@ describe("worker integration flows", () => {
       updated_at: new Date().toISOString(),
     });
 
+    const stripeSecret = "whsec_e2e";
     const envStripe = createEnv(db);
+    envStripe.STRIPE_WEBHOOK_SECRET = stripeSecret;
+    const postStripe = async (event) =>
+      callWorker({
+        env: envStripe,
+        url: "https://fluxy.local/webhooks/stripe",
+        method: "POST",
+        body: event,
+        headers: {
+          "Stripe-Signature": await makeStripeSignature(
+            JSON.stringify(event),
+            stripeSecret
+          ),
+        },
+      });
 
-    const updateRes = await callWorker({
-      env: envStripe,
-      url: "https://fluxy.local/webhooks/stripe",
-      method: "POST",
-      body: {
-        id: "evt_subscription_updated_1",
-        type: "customer.subscription.updated",
-        data: {
-          object: {
-            id: "sub_abc",
-            customer: "cus_abc",
-            status: "past_due",
-            metadata: { project_id: projectId, plan_name: "pro" },
-          },
+    const updateRes = await postStripe({
+      id: "evt_subscription_updated_1",
+      type: "customer.subscription.updated",
+      data: {
+        object: {
+          id: "sub_abc",
+          customer: "cus_abc",
+          status: "past_due",
+          metadata: { project_id: projectId, plan_name: "pro" },
         },
       },
     });
@@ -2734,20 +2885,15 @@ describe("worker integration flows", () => {
     expect(db.projectPlans[0].agent_invoke_limit_monthly).toBe(45);
     expect(db.projectPlans[0].webhook_delivery_limit_monthly).toBe(67);
 
-    const duplicateRes = await callWorker({
-      env: envStripe,
-      url: "https://fluxy.local/webhooks/stripe",
-      method: "POST",
-      body: {
-        id: "evt_subscription_updated_1",
-        type: "customer.subscription.updated",
-        data: {
-          object: {
-            id: "sub_abc",
-            customer: "cus_abc",
-            status: "active",
-            metadata: { project_id: projectId, plan_name: "starter" },
-          },
+    const duplicateRes = await postStripe({
+      id: "evt_subscription_updated_1",
+      type: "customer.subscription.updated",
+      data: {
+        object: {
+          id: "sub_abc",
+          customer: "cus_abc",
+          status: "active",
+          metadata: { project_id: projectId, plan_name: "starter" },
         },
       },
     });
@@ -2758,20 +2904,15 @@ describe("worker integration flows", () => {
     expect(db.projectPlans[0].plan_name).toBe("pro");
     expect(db.projectPlans[0].billing_status).toBe("past_due");
 
-    const deleteRes = await callWorker({
-      env: envStripe,
-      url: "https://fluxy.local/webhooks/stripe",
-      method: "POST",
-      body: {
-        id: "evt_subscription_deleted_1",
-        type: "customer.subscription.deleted",
-        data: {
-          object: {
-            id: "sub_abc",
-            customer: "cus_abc",
-            status: "canceled",
-            metadata: { project_id: projectId, plan_name: "pro" },
-          },
+    const deleteRes = await postStripe({
+      id: "evt_subscription_deleted_1",
+      type: "customer.subscription.deleted",
+      data: {
+        object: {
+          id: "sub_abc",
+          customer: "cus_abc",
+          status: "canceled",
+          metadata: { project_id: projectId, plan_name: "pro" },
         },
       },
     });

@@ -92,7 +92,7 @@ export async function dispatchDevtoolsRoutes(request, url, h) {
               env.AI_API_KEY || "",
               modelOverride || env.AI_MODEL || "openai/gpt-4o-mini",
               messages,
-              { chatCompletionsUrl: transport.chatCompletionsUrl },
+              { chatCompletionsUrl: transport.chatCompletionsUrl, env },
               async (delta) => {
                 await push({ type: "text", text: delta });
               },
@@ -180,6 +180,7 @@ export async function dispatchDevtoolsRoutes(request, url, h) {
           {
             chatCompletionsUrl: connection.chatCompletionsUrl,
             gatewayHeaders: connection.gatewayHeaders,
+            env,
           },
           async (delta) => {
             await push({ type: "text", text: delta });

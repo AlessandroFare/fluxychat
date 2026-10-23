@@ -2,64 +2,7 @@ import { createD1ApprovalStore } from "./hitl-approval-d1.js";
 import { canonicalPayloadHash } from "./canonical-payload-hash.js";
 import { consumeHitlTapNonce, hitlTapSecret, verifyHitlTapToken } from "./hitl-tap-token.js";
 import { checkAndConsumeIpRateLimit } from "./ip-rate-limit.js";
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function htmlPage(title, bodyInner) {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex,nofollow" />
-    <title>${escapeHtml(title)}</title>
-  </head>
-  <body>
-    ${bodyInner}
-  </body>
-</html>`;
-}
-
-function tapResponse({ wantsJson, json, corsHeaders, status, ok, error, message, htmlInner }) {
-  if (wantsJson) {
-    return json({ ok, error: error || undefined, message }, { status, headers: corsHeaders });
-  }
-  return new Response(htmlPage(ok ? "Approval" : "Approval failed", htmlInner || `<p>${escapeHtml(message)}</p>`), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-store",
-      "X-Robots-Tag": "noindex, nofollow",
-    },
-  });
-}
-
-async function readTapToken(request, url) {
-  const fromQuery = url.searchParams.get("token") || "";
-  if (request.method === "GET") return fromQuery;
-  const ctype = String(request.headers.get("content-type") || "");
-  if (ctype.includes("application/json")) {
-    const body = await request.json().catch(() => ({}));
-    return String(body?.token || fromQuery);
-  }
-  if (ctype.includes("application/x-www-form-urlencoded") || ctype.includes("multipart/form-data")) {
-    const form = await request.formData().catch(() => null);
-    return String(form?.get("token") || fromQuery);
-  }
-  const text = await request.text().catch(() => "");
-  if (text.includes("=")) {
-    const params = new URLSearchParams(text);
-    return params.get("token") || fromQuery;
-  }
-  return fromQuery;
-}
+import { escapeHtml, readTapToken, tapResponse } from "./tap-http-common.js";
 
 export async function handlePublicHitlTap(request, url, env, json, corsHeaders) {
   const limited = await checkAndConsumeIpRateLimit(env, {

@@ -23,6 +23,19 @@ describe("console-command-items", () => {
     );
   });
 
+  it("maps labs surfaces and account pages to their groups", () => {
+    expect(items.some((item) => item.href === "/spatial" && item.group === "Labs")).toBe(true);
+    expect(items.some((item) => item.href === "/labs" && item.group === "Labs")).toBe(true);
+    expect(items.some((item) => item.href === "/settings" && item.group === "Account")).toBe(true);
+    expect(items.some((item) => item.href === "/settings" && item.group === "Operate")).toBe(false);
+  });
+
+  it("keeps group order: Industries before Labs before Account", () => {
+    const order = groupConsoleCommandItems(items).map((section) => section.group);
+    expect(order.indexOf("Industries")).toBeLessThan(order.indexOf("Labs"));
+    expect(order.indexOf("Labs")).toBeLessThan(order.indexOf("Account"));
+  });
+
   it("filters by label and keywords", () => {
     const filtered = filterConsoleCommandItems(items, "billing");
     expect(filtered.some((item) => item.label === "Billing")).toBe(true);

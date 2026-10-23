@@ -172,7 +172,10 @@ export function PublicShareLiveView() {
       <div className="max-w-xl">
         <h1 className="font-heading text-2xl font-bold tracking-tight">Live room</h1>
         <p className="mt-3 text-sm text-muted-foreground">{metaError}</p>
-        <Link href={HOSTED_PATHS.landing} className="mt-6 inline-block text-sm text-primary">
+        <Link
+          href={HOSTED_PATHS.landing}
+          className="mt-6 inline-block text-sm text-brand underline underline-offset-2"
+        >
           Back to home
         </Link>
       </div>
@@ -217,7 +220,7 @@ export function PublicShareLiveView() {
           href="https://github.com/AlessandroFare/fluxychat"
           target="_blank"
           rel="noreferrer"
-          className="underline-offset-2 hover:underline"
+          className="text-brand underline underline-offset-2"
         >
           Source on GitHub
         </a>

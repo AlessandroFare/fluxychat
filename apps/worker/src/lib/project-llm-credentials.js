@@ -1,4 +1,5 @@
 import { LLM_PROVIDER_REGISTRY } from "./llm-providers.js";
+import { isPrivateUrl } from "./url-ssrf.js";
 import {
   decryptSecret,
   encryptSecret,
@@ -92,6 +93,12 @@ export async function upsertProjectLlmCredential(env, projectId, providerId, bod
       : typeof body.baseUrl === "string"
         ? body.baseUrl.trim() || null
         : existing?.base_url ?? null;
+
+  // Audit F-23: reject private/internal targets at write time (SSRF surface).
+  // Self-host internal LLM hosts must be opted in via ALLOWED_SSRF_HOSTS.
+  if (typeof body.baseUrl === "string" && baseUrl && isPrivateUrl(baseUrl, env)) {
+    throw new Error("base_url_not_allowed");
+  }
 
   await env.DB.prepare(
     `INSERT INTO project_llm_credentials (project_id, provider_id, api_key_ciphertext, api_key_iv, base_url, updated_at)

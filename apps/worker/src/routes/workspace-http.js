@@ -109,7 +109,7 @@ export async function dispatchWorkspaceRoutes(request, url, h) {
   if (request.method === "DELETE" && path.match(/^\/admin\/workspace\/tabs\/[^/]+$/)) {
     if (!isAdmin) return respond({ error: "forbidden" }, h, 403);
     const id = path.split("/").pop();
-    const result = await removeTab(env, { id });
+    const result = await removeTab(env, { id, projectId });
     return respond(result, h);
   }
 
@@ -128,7 +128,7 @@ export async function dispatchWorkspaceRoutes(request, url, h) {
 
   if (request.method === "DELETE" && path.match(/^\/admin\/workspace\/pins\/[^/]+$/)) {
     const id = path.split("/").pop();
-    const result = await unpinItem(env, { id });
+    const result = await unpinItem(env, { id, projectId });
     return respond(result, h);
   }
 

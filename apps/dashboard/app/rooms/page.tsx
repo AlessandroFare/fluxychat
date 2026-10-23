@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { FluxyChatClient, type FluxyChatRoom } from "@fluxy-chat/sdk";
+import { FluxyChatClient, type FluxyChatRoom, type FluxyRoomFolder } from "@fluxy-chat/sdk";
 import { createMemberFluxyClient } from "@/lib/fluxy-member-client";
 import { useDashboardSession } from "../components/dashboard-session";
 import { ConsoleShell } from "../components/console-shell";
@@ -65,6 +65,11 @@ export default function RoomsPage() {
   const [editName, setEditName] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [folders, setFolders] = useState<FluxyRoomFolder[]>([]);
+  const [folderBusy, setFolderBusy] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [folderSelection, setFolderSelection] = useState("");
+
   const [memberUserId, setMemberUserId] = useState("");
   const [memberBusy, setMemberBusy] = useState(false);
   const [memberListKey, setMemberListKey] = useState(0);
@@ -123,6 +128,8 @@ export default function RoomsPage() {
     try {
       const list = await listClient.listRooms();
       setRooms(list);
+      const folderList = await listClient.listRoomFoldersRest().catch(() => []);
+      setFolders(folderList);
       if (!opts?.quiet) setNotice(`Loaded ${list.length} rooms.`);
       setSelectedId((prev) => {
         if (prev && list.some((r) => r.id === prev)) return prev;
@@ -144,6 +151,86 @@ export default function RoomsPage() {
     if (!roomFromQuery) return;
     setSelectedId(roomFromQuery);
   }, [roomFromQuery]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setFolderSelection("");
+      return;
+    }
+    setFolderSelection(folders.find((f) => f.roomIds.includes(selectedId))?.id ?? "");
+  }, [selectedId, folders]);
+
+  async function createFolder() {
+    const name = newFolderName.trim();
+    if (!listToken || folderBusy || !name) return;
+    setFolderBusy(true);
+    setError(null);
+    try {
+      await listClient.createRoomFolderRest(name);
+      setNewFolderName("");
+      await loadRooms({ quiet: true });
+    } catch (e) {
+      setError(messageFromUnknown(e, "Could not create folder"));
+    } finally {
+      setFolderBusy(false);
+    }
+  }
+
+  async function removeFolder(folderId: string) {
+    if (folderBusy) return;
+    setFolderBusy(true);
+    setError(null);
+    try {
+      await listClient.deleteRoomFolderRest(folderId);
+      await loadRooms({ quiet: true });
+    } catch (e) {
+      setError(messageFromUnknown(e, "Could not delete folder"));
+    } finally {
+      setFolderBusy(false);
+    }
+  }
+
+  async function assignFolder(folderId: string) {
+    if (!selectedId || folderBusy) return;
+    setFolderBusy(true);
+    setError(null);
+    try {
+      const current = folders.find((f) => f.roomIds.includes(selectedId));
+      if (current) await listClient.removeRoomFolderItemRest(current.id, selectedId);
+      if (folderId) await listClient.setRoomFolderItemRest(folderId, selectedId);
+      await loadRooms({ quiet: true });
+    } catch (e) {
+      setError(messageFromUnknown(e, "Could not move room"));
+    } finally {
+      setFolderBusy(false);
+    }
+  }
+
+  const renderRoomButton = (r: FluxyChatRoom & { unreadCount?: number }) => (
+    <button
+      key={r.id}
+      type="button"
+      onClick={() => setSelectedId(r.id)}
+      className={[
+        "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
+        selectedId === r.id
+          ? "border-primary/50 bg-primary/10 text-foreground"
+          : "border-border bg-muted/30 text-foreground hover:bg-muted/50",
+      ].join(" ")}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold">{r.name}</span>
+        {typeof r.unreadCount === "number" && r.unreadCount > 0 ? (
+          <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+            {r.unreadCount > 99 ? "99+" : r.unreadCount}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-0.5 text-xs text-muted-foreground">
+        {r.id} · {r.type}
+      </div>
+    </button>
+  );
 
   const createClient = useMemo(
     () =>
@@ -449,6 +536,7 @@ export default function RoomsPage() {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
             id="import-transcript-file"
+            aria-label="Import ChatGPT/Claude JSON"
             type="file"
             accept="application/json,.json"
             className="sr-only"
@@ -508,35 +596,70 @@ export default function RoomsPage() {
               </Button>
               ) : null}
             </div>
+          ) : folders.length === 0 ? (
+            <div className="flex flex-col gap-1.5">{rooms.map(renderRoomButton)}</div>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              {rooms.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setSelectedId(r.id)}
-                  className={[
-                    "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
-                    selectedId === r.id
-                      ? "border-primary/50 bg-primary/10 text-foreground"
-                      : "border-border bg-muted/30 text-foreground hover:bg-muted/50",
-                  ].join(" ")}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold">{r.name}</span>
-                    {typeof r.unreadCount === "number" && r.unreadCount > 0 ? (
-                      <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                        {r.unreadCount > 99 ? "99+" : r.unreadCount}
+            <div className="flex flex-col gap-3">
+              {folders.map((folder) => {
+                const folderRooms = rooms.filter((r) => folder.roomIds.includes(r.id));
+                return (
+                  <div key={folder.id} data-testid={`room-folder-${folder.id}`}>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {folder.name}
                       </span>
-                    ) : null}
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label={`Delete folder ${folder.name}`}
+                        disabled={folderBusy}
+                        onClick={() => void removeFolder(folder.id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {folderRooms.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Empty</p>
+                    ) : (
+                      <div className="flex flex-col gap-1.5">
+                        {folderRooms.map(renderRoomButton)}
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
-                    {r.id} · {r.type}
+                );
+              })}
+              {rooms.some((r) => !folders.some((f) => f.roomIds.includes(r.id))) ? (
+                <div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    No folder
                   </div>
-                </button>
-              ))}
+                  <div className="flex flex-col gap-1.5">
+                    {rooms
+                      .filter((r) => !folders.some((f) => f.roomIds.includes(r.id)))
+                      .map(renderRoomButton)}
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
+          {rooms.length > 0 ? (
+            <div className="mt-3 flex gap-1.5">
+              <Input
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="New folder"
+                data-testid="new-folder-input"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={folderBusy || !newFolderName.trim()}
+                onClick={() => void createFolder()}
+              >
+                Add folder
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         <div className="min-w-0 overflow-hidden rounded-xl bg-white/90 p-4 shadow-[var(--shadow-2)] backdrop-blur-sm">
@@ -564,6 +687,30 @@ export default function RoomsPage() {
                   Delete room
                 </Button>
               </div>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">Folder</span>
+                <select
+                  className="rounded border border-border bg-background px-1.5 py-1 text-xs"
+                  value={folderSelection}
+                  onChange={(e) => setFolderSelection(e.target.value)}
+                  data-testid="room-folder-select"
+                >
+                  <option value="">(no folder)</option>
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={folderBusy}
+                  onClick={() => void assignFolder(folderSelection)}
+                >
+                  Move to folder
+                </Button>
+              </div>
               {!adminJwt.trim() ? (
                 <p className="mb-2 text-xs text-amber-500">
                   Delete / manage members requires admin JWT in Projects.
@@ -578,7 +725,7 @@ export default function RoomsPage() {
                     onClick={() => setRoomTab(tab)}
                     className={[
                       "flex-1 rounded-md px-2 py-1.5 text-xs font-medium capitalize",
-                      roomTab === tab ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50",
+                      roomTab === tab ? "bg-primary/10 text-[var(--brand-hover)]" : "text-muted-foreground hover:bg-muted/50",
                     ].join(" ")}
                   >
                     {tab}

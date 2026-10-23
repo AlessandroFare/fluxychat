@@ -1,4 +1,4 @@
-import { mintLiveKitAccessToken } from "./livekit-token.js";
+import { mintLiveKitAccessToken, clampLiveKitTtl } from "./livekit-token.js";
 import { defaultHuddleProvider, huddleParticipantCap, isRealtimeSfuConfigured } from "./realtime-sfu.js";
 
 function generateId() {
@@ -191,6 +191,8 @@ export async function getCallStats(env, { projectId }) {
 export async function generateToken(env, provider, { roomId, userId, displayName, ttl, roomName, canPublish, canSubscribe }) {
   const livekitRoom = roomName || roomId;
   const resolved = defaultHuddleProvider(env, provider);
+  // Audit F-26: bound the token lifetime for every provider payload.
+  const ttlSeconds = clampLiveKitTtl(ttl);
 
   if (resolved === "cloudflare-realtime") {
     return {
@@ -205,7 +207,7 @@ export async function generateToken(env, provider, { roomId, userId, displayName
       iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
       identity: userId,
       displayName,
-      ttl: ttl || 3600,
+      ttl: ttlSeconds,
       note: "POST SDP through the Worker. The Realtime SFU app secret never leaves the Worker. LiveKit remains a fallback if REALTIME_SFU_* is unset.",
     };
   }
@@ -215,12 +217,12 @@ export async function generateToken(env, provider, { roomId, userId, displayName
       roomName: livekitRoom,
       identity: userId,
       displayName,
-      ttlSeconds: ttl || 3600,
+      ttlSeconds,
       canPublish: canPublish !== false,
       canSubscribe: canSubscribe !== false,
     });
     if (minted.error) {
-      const exp = Math.floor(Date.now() / 1000) + (ttl || 86400);
+      const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
       return {
         provider: "livekit",
         stub: true,
@@ -231,7 +233,7 @@ export async function generateToken(env, provider, { roomId, userId, displayName
     return minted;
   }
 
-  const exp = Math.floor(Date.now() / 1000) + (ttl || 86400);
+  const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
   const payload = { room: roomId, sub: userId, name: displayName, exp };
 
   if (provider === "daily") {

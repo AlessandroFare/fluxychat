@@ -6,7 +6,7 @@ import { ClipboardCheck, Loader2, Play, Plus, Upload, FlaskConical } from "lucid
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Button, Input, Panel, Section } from "../../components/ui";
+import { Button, EmptyState, Input, Panel, Section } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -208,7 +208,11 @@ export default function AgentEvalPage() {
 
           <Section title="Datasets">
             {datasets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No datasets yet.</p>
+              <EmptyState
+                compact
+                title="No datasets yet"
+                description="Datasets you create will show up here."
+              />
             ) : (
               <ul className="divide-y rounded-lg border border-border">
                 {datasets.map((d) => (

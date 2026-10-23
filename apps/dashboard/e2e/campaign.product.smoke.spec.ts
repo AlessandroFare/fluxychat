@@ -21,7 +21,9 @@ test.describe("campaign product smoke (no JWT)", () => {
     await expect(page.getByRole("heading", { name: "Projects", exact: true, level: 1 })).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText("Paste an admin JWT under Session settings to load projects.")).toBeVisible({
+    await expect(
+      page.getByText("Paste an admin JWT under Session settings to load projects.").first(),
+    ).toBeVisible({
       timeout: 20_000,
     });
   });

@@ -29,6 +29,7 @@ Returns the canonical `events[]` list (same as this page).
 | `client_event` | Client-sent `client-*` WS event | `roomId`, `event`, `data` |
 | `cache_miss` | Cache channel empty on subscribe | `roomId`, `at` |
 | `user.event` | User channel push | `userId`, `event` |
+| `webhook.delivery_failed` | A delivery exhausted its retries (error workflow; see below) | `deliveryId`, `webhookId`, `webhookUrl`, `eventType`, `attempts`, `lastHttpStatus`, `lastError` |
 
 Subscribe only to events you handle — unknown types are rejected at registration time.
 
@@ -70,6 +71,28 @@ Deliveries succeed when your endpoint returns **2xx** (typically `200`).
 | 5 | 60m |
 
 Max attempts: `WEBHOOK_MAX_ATTEMPTS` (default `5`). Failed deliveries appear under **Activities** in the console.
+
+## Error workflow (n8n-style)
+
+Register a **second** webhook subscribed to `webhook.delivery_failed` and it becomes your error workflow: every time a delivery exhausts its retries, that endpoint receives a notice with the failed delivery's metadata (`deliveryId`, `webhookId`, `eventType`, `attempts`, `lastHttpStatus`, `lastError`).
+
+```bash
+curl -X POST "$WORKER_URL/webhooks/register" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.example.com/fluxy/errors",
+    "eventTypes": ["webhook.delivery_failed"],
+    "secret": "whsec_your_other_secret"
+  }'
+```
+
+Rules, so the chain cannot loop:
+
+- The failing webhook itself is **never** notified about its own failure.
+- A failed `webhook.delivery_failed` delivery is **not** re-notified — the chain stops after one hop.
+- Only exhausted retries fire this event; deliveries blocked by signing configuration are not re-sent (the `last_error` on the delivery explains why).
+- The original payload is **not** re-sent: fetch it from Activities or `GET` the delivery if you need it.
 
 ## Batch verify (optional)
 

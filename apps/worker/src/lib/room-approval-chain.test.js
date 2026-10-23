@@ -27,6 +27,8 @@ describe("room-approval-chain", () => {
     expect(parsed.ok).toBe(true);
     if (parsed.ok) expect(parsed.chain.makerChecker).toBe(true);
   });
+
+  it("rejects empty approver ids", () => {
     expect(parseApprovalChain({ steps: [{ approverId: "" }] }).ok).toBe(false);
   });
 

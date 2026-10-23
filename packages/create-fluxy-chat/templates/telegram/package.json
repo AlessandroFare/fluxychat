@@ -9,7 +9,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@fluxy-chat/sdk": "^0.6.17",
+    "@fluxy-chat/sdk": "^0.7.0",
     "node-telegram-bot-api": "^0.66.0"
   },
   "devDependencies": {

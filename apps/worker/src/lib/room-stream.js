@@ -2,7 +2,7 @@
 const STREAM_PUSH_FLUSH_MS = 80;
 
 import { markdownTextChunk } from "./stream-chunks.js";
-import { getRoomStubForProject } from "./room-shard.js";
+import { getRoomStubForProject, internalDoHeaders } from "./room-shard.js";
 
 export function isStreamStoppedError(err) {
   const code = err && typeof err === "object" ? err.code : null;
@@ -26,7 +26,7 @@ export async function roomStreamOp(env, roomId, body) {
     : env.ROOM.get(env.ROOM.idFromName(roomId));
   const res = await stub.fetch("https://internal/stream", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: internalDoHeaders(env, { "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => ({}));

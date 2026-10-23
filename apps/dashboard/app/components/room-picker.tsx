@@ -128,6 +128,7 @@ export function RoomPicker({
       {loadError ? <p className="text-xs text-red-600">{loadError}</p> : null}
       {mode === "list" ? (
         <select
+          aria-label="Room"
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           value={listSelectValue}
           onChange={(e) => onChange(e.target.value)}

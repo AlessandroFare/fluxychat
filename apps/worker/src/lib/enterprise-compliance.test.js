@@ -8,9 +8,12 @@ import { createPolicy, checkPolicy, logViolation, getViolationStats } from './ai
 function createMockDb() {
   const store = {};
   const tables = ['data_classification_labels', 'room_classifications', 'message_classifications',
+    'rooms', 'messages',
     'retention_policies', 'legal_holds', 'export_snapshots', 'dlp_rules', 'dlp_scan_results',
     'ai_action_policies', 'ai_policy_violations', 'ai_action_executions'];
   for (const t of tables) store[t] = [];
+  store.rooms.push({ id: 'room-1', project_id: 'proj-1' });
+  store.messages.push({ id: 'msg-1', project_id: 'proj-1' });
 
   function findTable(sql) {
     for (const t of tables) {
@@ -70,7 +73,8 @@ function createMockDb() {
             return { results: store[table].filter(r => r.room_id === args[1] && r.project_id === args[0]) };
           }
           if (table === 'legal_holds') {
-            return { results: store[table].filter(r => r.project_id === args[0] && r.room_id === args[1] && !r.released_at) };
+            // A2-12: a NULL room_id is a project-wide hold and covers every room.
+            return { results: store[table].filter(r => r.project_id === args[0] && (r.room_id === args[1] || r.room_id === null) && !r.released_at) };
           }
           return { results: store[table].filter(r => r.project_id === args[0]) };
         },
@@ -173,6 +177,13 @@ describe('P18-C: Retention + Legal Hold', () => {
   it('should check if room is on hold', async () => {
     const db = createMockDb();
     await createLegalHold(env(db), { projectId: 'proj-1', roomId: 'room-1', reason: 'Audit', placedBy: 'admin' });
+    const onHold = await isRoomOnHold(env(db), { projectId: 'proj-1', roomId: 'room-1' });
+    expect(onHold).toBe(true);
+  });
+
+  it('A2-12: a project-wide hold covers every room', async () => {
+    const db = createMockDb();
+    await createLegalHold(env(db), { projectId: 'proj-1', reason: 'Litigation freeze', placedBy: 'admin' });
     const onHold = await isRoomOnHold(env(db), { projectId: 'proj-1', roomId: 'room-1' });
     expect(onHold).toBe(true);
   });

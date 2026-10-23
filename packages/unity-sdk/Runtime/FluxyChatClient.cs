@@ -14,6 +14,9 @@ namespace FluxyChat
         public string ApiUrl;
         public string WsUrl;
         public string ProjectId;
+        // Audit F-92: [Serializable] meant Unity serialized the bearer token
+        // into scenes/prefabs/JsonUtility output. Never serialize credentials.
+        [NonSerialized]
         public string Token;
     }
 
@@ -93,7 +96,33 @@ namespace FluxyChat
             }
         }
 
-        static string JsonQuote(string s) => "\"" + (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        // Audit F-92: the old escaper left control characters (newlines, tabs)
+        // raw, producing invalid JSON for messages containing them.
+        static string JsonQuote(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "\"\"";
+            var sb = new StringBuilder(s.Length + 8);
+            sb.Append('"');
+            foreach (var c in s)
+            {
+                switch (c)
+                {
+                    case '"': sb.Append("\\\""); break;
+                    case '\\': sb.Append("\\\\"); break;
+                    case '\b': sb.Append("\\b"); break;
+                    case '\f': sb.Append("\\f"); break;
+                    case '\n': sb.Append("\\n"); break;
+                    case '\r': sb.Append("\\r"); break;
+                    case '\t': sb.Append("\\t"); break;
+                    default:
+                        if (c < 0x20) sb.Append("\\u").Append(((int)c).ToString("x4"));
+                        else sb.Append(c);
+                        break;
+                }
+            }
+            sb.Append('"');
+            return sb.ToString();
+        }
 
         public void Dispose()
         {

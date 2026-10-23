@@ -1,3 +1,5 @@
+import { OPS_TOOL_EVENT_TYPES } from "./ops-tool-events.js";
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -13,6 +15,19 @@ function parseJson(text, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function eventFromRow(row, projectId) {
+  return {
+    id: row.id,
+    projectId,
+    runId: row.run_id,
+    actor: row.actor,
+    eventType: row.event_type,
+    inputHash: row.input_hash,
+    result: parseJson(row.result_json, {}),
+    createdAt: row.created_at,
+  };
 }
 
 function toolFromRow(row) {
@@ -76,6 +91,82 @@ function approvalFromRow(row, projectId) {
     required: row.required,
     decisions: parseJson(row.decisions_json, []),
     status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
+function mcpServerFromRow(row, projectId) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    projectId: projectId || row.project_id,
+    name: row.name,
+    url: row.url,
+    auth: row.auth === "oauth" || row.auth === "enterprise" ? row.auth : "secret",
+    secretCiphertext: row.secret_ciphertext || null,
+    secretIv: row.secret_iv || null,
+    oauthClientId: row.oauth_client_id || null,
+    oauthClientSecretCiphertext: row.oauth_client_secret_ciphertext || null,
+    oauthClientSecretIv: row.oauth_client_secret_iv || null,
+    oauthAuthorizeUrl: row.oauth_authorize_url || null,
+    oauthTokenUrl: row.oauth_token_url || null,
+    oauthScopes: row.oauth_scopes || null,
+    enterpriseIdpTokenUrl: row.enterprise_idp_token_url || null,
+    enterpriseIssuer: row.enterprise_issuer || null,
+    enterpriseAudience: row.enterprise_audience || null,
+    enterpriseJwksUrl: row.enterprise_jwks_url || null,
+    enterpriseResourceClientId: row.enterprise_resource_client_id || null,
+    enterpriseResourceClientSecretCiphertext: row.enterprise_resource_client_secret_ciphertext || null,
+    enterpriseResourceClientSecretIv: row.enterprise_resource_client_secret_iv || null,
+    allowedTools: parseJson(row.allowed_tools_json, []),
+    discoveredTools: parseJson(row.discovered_tools_json, []),
+    toolsCatalog: parseJson(row.tools_catalog_json, []),
+    enabled: row.enabled !== 0,
+    createdBy: row.created_by || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mcpConnectionFromRow(row, projectId) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    projectId: projectId || row.project_id,
+    serverId: row.server_id,
+    userId: row.user_id,
+    accessCiphertext: row.access_ciphertext,
+    accessIv: row.access_iv,
+    refreshCiphertext: row.refresh_ciphertext || null,
+    refreshIv: row.refresh_iv || null,
+    scopes: row.scopes || null,
+    tokenType: row.token_type || null,
+    tokenUrl: row.token_url || null,
+    clientId: row.client_id || null,
+    expiresAt: row.expires_at || null,
+    status: row.status || "active",
+    lastRefreshFailure: row.last_refresh_failure || null,
+    refreshAttempts: row.refresh_attempts || 0,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mcpOauthStateFromRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    stateHash: row.state_hash,
+    projectId: row.project_id,
+    serverId: row.server_id,
+    userId: row.user_id,
+    verifierCiphertext: row.verifier_ciphertext,
+    verifierIv: row.verifier_iv,
+    redirectUri: row.redirect_uri,
+    tokenUrl: row.token_url,
+    clientId: row.client_id || null,
+    mode: row.mode || "oauth",
+    expireAt: row.expire_at,
     createdAt: row.created_at,
   };
 }
@@ -234,6 +325,24 @@ export function createD1OpsStore(env) {
         .bind(projectId, slug)
         .first();
       return versionFromRow(row);
+    },
+    /** Latest published version of every definition (webhook trigger matching). */
+    async listLatestPublished(projectId) {
+      const { results } = await db
+        .prepare(
+          `SELECT v.*, d.slug AS slug FROM ops_process_versions v
+           INNER JOIN ops_process_definitions d ON d.id = v.definition_id AND d.project_id = v.project_id
+           WHERE v.project_id = ? AND v.status = 'published'
+             AND v.version = (
+               SELECT MAX(v2.version) FROM ops_process_versions v2
+               WHERE v2.project_id = v.project_id AND v2.definition_id = v.definition_id
+                 AND v2.status = 'published'
+             )
+           ORDER BY d.slug`,
+        )
+        .bind(projectId)
+        .all();
+      return (results || []).map((row) => ({ ...versionFromRow(row), slug: row.slug }));
     },
     async createSession({ projectId, roomId, createdBy }) {
       const row = {
@@ -449,7 +558,7 @@ export function createD1OpsStore(env) {
         .run();
       return task;
     },
-    async listOpenTasks(projectId, { assignee } = {}) {
+    async listOpenTasks(projectId, { assignee, roles = [] } = {}) {
       const { results } = await db
         .prepare("SELECT * FROM ops_tasks WHERE project_id = ? AND status = 'open'")
         .bind(projectId)
@@ -466,7 +575,8 @@ export function createD1OpsStore(env) {
           status: row.status,
           createdAt: row.created_at,
         }))
-        .filter((row) => !assignee || row.assignee === assignee || row.role === assignee);
+        // Same rule as the complete-task gate: assignee, or a holder of the role.
+        .filter((row) => !assignee || row.assignee === assignee || row.role === assignee || (row.role && roles.includes(row.role)));
     },
     async getTask(projectId, taskId) {
       const row = await db.prepare("SELECT * FROM ops_tasks WHERE project_id = ? AND id = ?").bind(projectId, taskId).first();
@@ -526,6 +636,230 @@ export function createD1OpsStore(env) {
         .all();
       return (results || []).map((row) => approvalFromRow(row, projectId)).filter(Boolean);
     },
+    /** All approvals (optional status filter) — evidence packs and audit views. */
+    async listApprovals(projectId, filter = {}) {
+      let sql = "SELECT * FROM ops_approvals WHERE project_id = ?";
+      const binds = [projectId];
+      if (filter.status) {
+        sql += " AND status = ?";
+        binds.push(filter.status);
+      }
+      sql += " ORDER BY created_at DESC LIMIT 200";
+      const { results } = await db.prepare(sql).bind(...binds).all();
+      return (results || []).map((row) => approvalFromRow(row, projectId)).filter(Boolean);
+    },
+    async listMcpServers(projectId) {
+      const { results } = await db
+        .prepare("SELECT * FROM ops_mcp_servers WHERE project_id = ? ORDER BY name")
+        .bind(projectId)
+        .all();
+      return (results || []).map((row) => mcpServerFromRow(row, projectId)).filter(Boolean);
+    },
+    async getMcpServer(projectId, serverId) {
+      const row = await db
+        .prepare("SELECT * FROM ops_mcp_servers WHERE project_id = ? AND id = ?")
+        .bind(projectId, serverId)
+        .first();
+      return mcpServerFromRow(row, projectId);
+    },
+    async getMcpServerByName(projectId, name) {
+      const row = await db
+        .prepare("SELECT * FROM ops_mcp_servers WHERE project_id = ? AND name = ?")
+        .bind(projectId, name)
+        .first();
+      return mcpServerFromRow(row, projectId);
+    },
+    async upsertMcpServer(projectId, server) {
+      const existing = await this.getMcpServerByName(projectId, server.name);
+      const now = nowIso();
+      const row = {
+        ...(existing || {}),
+        ...server,
+        id: existing?.id || server.id || id("omcp"),
+        projectId,
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+      };
+      await db
+        .prepare(
+          `INSERT INTO ops_mcp_servers (id, project_id, name, url, auth, secret_ciphertext, secret_iv,
+             oauth_client_id, oauth_client_secret_ciphertext, oauth_client_secret_iv,
+             oauth_authorize_url, oauth_token_url, oauth_scopes,
+             enterprise_idp_token_url, enterprise_issuer, enterprise_audience, enterprise_jwks_url,
+             enterprise_resource_client_id, enterprise_resource_client_secret_ciphertext,
+             enterprise_resource_client_secret_iv,
+             allowed_tools_json, discovered_tools_json, tools_catalog_json, enabled, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET name = excluded.name, url = excluded.url,
+             auth = excluded.auth,
+             secret_ciphertext = excluded.secret_ciphertext, secret_iv = excluded.secret_iv,
+             oauth_client_id = excluded.oauth_client_id,
+             oauth_client_secret_ciphertext = excluded.oauth_client_secret_ciphertext,
+             oauth_client_secret_iv = excluded.oauth_client_secret_iv,
+             oauth_authorize_url = excluded.oauth_authorize_url,
+             oauth_token_url = excluded.oauth_token_url,
+             oauth_scopes = excluded.oauth_scopes,
+             enterprise_idp_token_url = excluded.enterprise_idp_token_url,
+             enterprise_issuer = excluded.enterprise_issuer,
+             enterprise_audience = excluded.enterprise_audience,
+             enterprise_jwks_url = excluded.enterprise_jwks_url,
+             enterprise_resource_client_id = excluded.enterprise_resource_client_id,
+             enterprise_resource_client_secret_ciphertext = excluded.enterprise_resource_client_secret_ciphertext,
+             enterprise_resource_client_secret_iv = excluded.enterprise_resource_client_secret_iv,
+             allowed_tools_json = excluded.allowed_tools_json, discovered_tools_json = excluded.discovered_tools_json,
+             tools_catalog_json = excluded.tools_catalog_json,
+             enabled = excluded.enabled, updated_at = excluded.updated_at`,
+        )
+        .bind(
+          row.id,
+          projectId,
+          row.name,
+          row.url,
+          row.auth === "oauth" || row.auth === "enterprise" ? row.auth : "secret",
+          row.secretCiphertext || null,
+          row.secretIv || null,
+          row.oauthClientId || null,
+          row.oauthClientSecretCiphertext || null,
+          row.oauthClientSecretIv || null,
+          row.oauthAuthorizeUrl || null,
+          row.oauthTokenUrl || null,
+          row.oauthScopes || null,
+          row.enterpriseIdpTokenUrl || null,
+          row.enterpriseIssuer || null,
+          row.enterpriseAudience || null,
+          row.enterpriseJwksUrl || null,
+          row.enterpriseResourceClientId || null,
+          row.enterpriseResourceClientSecretCiphertext || null,
+          row.enterpriseResourceClientSecretIv || null,
+          JSON.stringify(row.allowedTools || []),
+          JSON.stringify(row.discoveredTools || []),
+          JSON.stringify(row.toolsCatalog || []),
+          row.enabled === false ? 0 : 1,
+          row.createdBy || null,
+          row.createdAt,
+          row.updatedAt,
+        )
+        .run();
+      return row;
+    },
+    async deleteMcpServer(projectId, serverId) {
+      const row = await this.getMcpServer(projectId, serverId);
+      if (!row) return null;
+      await db.prepare("DELETE FROM ops_mcp_servers WHERE project_id = ? AND id = ?").bind(projectId, serverId).run();
+      // Connections are the removed server's tokens: they must not survive it.
+      await db.prepare("DELETE FROM ops_mcp_connections WHERE project_id = ? AND server_id = ?").bind(projectId, serverId).run();
+      return row;
+    },
+    async upsertMcpConnection(projectId, connection) {
+      const existing = await this.getMcpConnection(projectId, connection.serverId, connection.userId);
+      const now = nowIso();
+      const row = {
+        ...(existing || {}),
+        ...connection,
+        id: existing?.id || connection.id || id("omcn"),
+        projectId,
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+      };
+      await db
+        .prepare(
+          `INSERT INTO ops_mcp_connections (id, project_id, server_id, user_id, access_ciphertext, access_iv,
+             refresh_ciphertext, refresh_iv, scopes, token_type, token_url, client_id, expires_at, status,
+             last_refresh_failure, refresh_attempts, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET access_ciphertext = excluded.access_ciphertext, access_iv = excluded.access_iv,
+             refresh_ciphertext = excluded.refresh_ciphertext, refresh_iv = excluded.refresh_iv,
+             scopes = excluded.scopes, token_type = excluded.token_type, token_url = excluded.token_url,
+             client_id = excluded.client_id, expires_at = excluded.expires_at, status = excluded.status,
+             last_refresh_failure = excluded.last_refresh_failure, refresh_attempts = excluded.refresh_attempts,
+             updated_at = excluded.updated_at`,
+        )
+        .bind(
+          row.id,
+          projectId,
+          row.serverId,
+          row.userId,
+          row.accessCiphertext,
+          row.accessIv,
+          row.refreshCiphertext || null,
+          row.refreshIv || null,
+          row.scopes || null,
+          row.tokenType || null,
+          row.tokenUrl || null,
+          row.clientId || null,
+          row.expiresAt || null,
+          row.status || "active",
+          row.lastRefreshFailure || null,
+          Number(row.refreshAttempts) || 0,
+          row.createdAt,
+          row.updatedAt,
+        )
+        .run();
+      return row;
+    },
+    async getMcpConnection(projectId, serverId, userId) {
+      const row = await db
+        .prepare("SELECT * FROM ops_mcp_connections WHERE project_id = ? AND server_id = ? AND user_id = ?")
+        .bind(projectId, serverId, userId)
+        .first();
+      return mcpConnectionFromRow(row, projectId);
+    },
+    async listMcpConnections(projectId, filter = {}) {
+      const { results } = await db
+        .prepare("SELECT * FROM ops_mcp_connections WHERE project_id = ? AND (? IS NULL OR user_id = ?) ORDER BY updated_at DESC")
+        .bind(projectId, filter.userId || null, filter.userId || null)
+        .all();
+      return (results || []).map((row) => mcpConnectionFromRow(row, projectId)).filter(Boolean);
+    },
+    async deleteMcpConnection(projectId, connectionId) {
+      const row = await db
+        .prepare("SELECT * FROM ops_mcp_connections WHERE project_id = ? AND id = ?")
+        .bind(projectId, connectionId)
+        .first();
+      if (!row) return null;
+      await db.prepare("DELETE FROM ops_mcp_connections WHERE project_id = ? AND id = ?").bind(projectId, connectionId).run();
+      return mcpConnectionFromRow(row, projectId);
+    },
+    async createMcpOauthState(state) {
+      const row = { id: id("omst"), createdAt: nowIso(), ...state };
+      await db
+        .prepare(
+          `INSERT INTO ops_mcp_oauth_states (id, state_hash, project_id, server_id, user_id, verifier_ciphertext, verifier_iv,
+             redirect_uri, token_url, client_id, mode, expire_at, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          row.id,
+          row.stateHash,
+          row.projectId,
+          row.serverId,
+          row.userId,
+          row.verifierCiphertext,
+          row.verifierIv,
+          row.redirectUri,
+          row.tokenUrl,
+          row.clientId || null,
+          row.mode || "oauth",
+          row.expireAt,
+          row.createdAt,
+        )
+        .run();
+      return row;
+    },
+    async takeMcpOauthState(stateHash) {
+      const row = await db.prepare("SELECT * FROM ops_mcp_oauth_states WHERE state_hash = ?").bind(stateHash).first();
+      if (!row) return null;
+      // Single-use: the delete must win the race, or the state was already consumed.
+      const deleted = await db
+        .prepare("DELETE FROM ops_mcp_oauth_states WHERE id = ? AND state_hash = ?")
+        .bind(row.id, stateHash)
+        .run();
+      if (!(Number(deleted.meta?.changes || 0) > 0)) return null;
+      return mcpOauthStateFromRow(row);
+    },
+    async purgeMcpOauthStates(before) {
+      await db.prepare("DELETE FROM ops_mcp_oauth_states WHERE expire_at < ?").bind(String(before)).run();
+    },
     async saveApproval(row) {
       await db
         .prepare("UPDATE ops_approvals SET decisions_json = ?, status = ? WHERE project_id = ? AND id = ?")
@@ -568,7 +902,16 @@ export function createD1OpsStore(env) {
         tokenHash: row.token_hash,
         expiresAt: row.expires_at,
         createdAt: row.created_at,
+        redeemedAt: row.redeemed_at || null,
       };
+    },
+    async markGuestRedeemed(projectId, guestId) {
+      // Audit F-88: single-use claim — only the first redemption reports a change.
+      const result = await db
+        .prepare("UPDATE ops_guests SET redeemed_at = ? WHERE id = ? AND project_id = ? AND redeemed_at IS NULL")
+        .bind(nowIso(), guestId, projectId)
+        .run();
+      return Number(result.meta?.changes || 0) > 0;
     },
     async appendEvent(row) {
       const event = { id: id("oev"), createdAt: nowIso(), ...row };
@@ -595,16 +938,45 @@ export function createD1OpsStore(env) {
         .prepare("SELECT * FROM ops_events WHERE project_id = ? AND (? IS NULL OR run_id = ?) ORDER BY created_at ASC")
         .bind(projectId, runId || null, runId || null)
         .all();
-      return (results || []).map((row) => ({
-        id: row.id,
-        projectId,
-        runId: row.run_id,
-        actor: row.actor,
-        eventType: row.event_type,
-        inputHash: row.input_hash,
-        result: parseJson(row.result_json, {}),
-        createdAt: row.created_at,
-      }));
+      return (results || []).map((row) => eventFromRow(row, projectId));
+    },
+    async listEventsSince(projectId, { since = null, until = null, limit = 5000 } = {}) {
+      const capped = Math.max(1, Math.min(Number(limit) || 5000, 20000));
+      const { results } = await db
+        .prepare(
+          `SELECT * FROM ops_events WHERE project_id = ?
+             AND (? IS NULL OR created_at >= ?) AND (? IS NULL OR created_at <= ?)
+           ORDER BY created_at ASC LIMIT ?`,
+        )
+        .bind(projectId, since, since, until, until, capped)
+        .all();
+      return (results || []).map((row) => eventFromRow(row, projectId));
+    },
+    async listToolEvents(projectId, { limit = 100, runId = null } = {}) {
+      const capped = Math.max(1, Math.min(Number(limit) || 100, 200));
+      const placeholders = OPS_TOOL_EVENT_TYPES.map(() => "?").join(", ");
+      const { results } = await db
+        .prepare(
+          `SELECT * FROM ops_events WHERE project_id = ? AND event_type IN (${placeholders})
+             AND (? IS NULL OR run_id = ?)
+           ORDER BY created_at DESC LIMIT ?`,
+        )
+        .bind(projectId, ...OPS_TOOL_EVENT_TYPES, runId || null, runId || null, capped)
+        .all();
+      return (results || []).map((row) => eventFromRow(row, projectId));
+    },
+    async countToolCallsSince(projectId, { tool, since = null } = {}) {
+      const row = await db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM ops_events
+            WHERE project_id = ?
+              AND event_type IN ('ops.tool.called', 'ops.tool.failed')
+              AND json_extract(result_json, '$.tool') = ?
+              AND (? IS NULL OR created_at >= ?)`,
+        )
+        .bind(projectId, tool, since, since)
+        .first();
+      return Number(row?.n) || 0;
     },
     async getBudget(projectId, runId) {
       const row = await db

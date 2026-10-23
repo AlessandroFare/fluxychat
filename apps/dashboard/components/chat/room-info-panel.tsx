@@ -7,6 +7,7 @@ import { Badge } from "~/components/ui/badge";
 import { formatDateTime } from "@/lib/format-datetime";
 import { messageFromUnknown } from "@/lib/error-message";
 import { fetchRoomInfoPanel, type RoomInfoPanelData } from "@/lib/room-info-client";
+import { RoomBookmarksSection } from "~/components/chat/room-bookmarks-section";
 import { cn } from "@/lib/utils";
 
 interface RoomInfoPanelProps {
@@ -162,6 +163,8 @@ export function RoomInfoPanel({
                 </ul>
               </section>
             ) : null}
+
+            <RoomBookmarksSection roomId={roomId} token={token} />
 
             <section className="border-t border-border pt-3 text-xs text-muted-foreground">
               <Link href={`/settings/e2e?room=${encodeURIComponent(roomId)}`} className="text-brand underline underline-offset-2">

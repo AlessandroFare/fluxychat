@@ -75,8 +75,8 @@ export const SOC2_READINESS_CHECKLIST = [
     id: "CC7.3",
     category: "security",
     criterion: "Incident response process",
-    fluxyModule: "soc2_incidents + incident-response.js",
-    evidenceHint: "POST /api/soc2/incidents",
+    fluxyModule: "soc2_incidents + incident-response.js + ops-evidence.js",
+    evidenceHint: "Operations evidence pack (POST /api/soc2/reports/evidence) + POST /api/soc2/incidents",
     selfAssessmentKey: "incident_process",
   },
   {
@@ -155,8 +155,8 @@ export const SOC2_READINESS_CHECKLIST = [
     id: "AI-1",
     category: "security",
     criterion: "AI agent tool policy and HITL approvals",
-    fluxyModule: "/settings/agent-tools + hitl-approval",
-    evidenceHint: "Tool policy audit + approval requests",
+    fluxyModule: "/settings/agent-tools + hitl-approval + ops-evidence.js",
+    evidenceHint: "Operations evidence pack (runs, approvals, tools in force) + tool policy audit",
     selfAssessmentKey: "ai_tool_policy",
   },
   {

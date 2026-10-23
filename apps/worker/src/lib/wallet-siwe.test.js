@@ -25,6 +25,70 @@ function signPersonal(message, priv) {
   return `0x${bytesToHex(eth)}`;
 }
 
+/** Minimal D1 mock: the SIWE nonce table with atomic single-use claim. */
+function makeEnv(extra = {}) {
+  const rows = new Map();
+  const kvStore = new Map();
+  const env = {
+    DB: {
+      prepare(sql) {
+        return {
+          bind(...args) {
+            return {
+              async run() {
+                if (sql.includes("INSERT INTO wallet_siwe_nonces")) {
+                  rows.set(`${args[0]}:${args[1]}`, {
+                    project_id: args[0],
+                    address: args[1],
+                    nonce: args[2],
+                    message: args[3],
+                    issued_at: args[4],
+                    expires_at: args[5],
+                  });
+                  return { meta: { changes: 1 } };
+                }
+                if (sql.includes("DELETE FROM wallet_siwe_nonces")) {
+                  if (env.__claimLoses) return { meta: { changes: 0 } };
+                  const key = `${args[0]}:${args[1]}`;
+                  const row = rows.get(key);
+                  if (row && row.nonce === args[2]) {
+                    rows.delete(key);
+                    return { meta: { changes: 1 } };
+                  }
+                  return { meta: { changes: 0 } };
+                }
+                return { meta: { changes: 0 } };
+              },
+              async first() {
+                if (sql.includes("FROM wallet_siwe_nonces")) {
+                  const row = rows.get(`${args[0]}:${args[1]}`);
+                  return row ? { ...row } : null;
+                }
+                return null;
+              },
+            };
+          },
+        };
+      },
+    },
+    // Test hook: simulate the losing side of a concurrent claim.
+    __claimLoses: false,
+    RATE_LIMIT_KV: {
+      async put(key, value) {
+        kvStore.set(key, value);
+      },
+      async get(key) {
+        return kvStore.get(key) ?? null;
+      },
+      async delete(key) {
+        kvStore.delete(key);
+      },
+    },
+    ...extra,
+  };
+  return env;
+}
+
 describe("wallet-siwe", () => {
   it("recovers the signer of a personal_sign message", () => {
     const priv = secp256k1.keygen().secretKey;
@@ -41,20 +105,7 @@ describe("wallet-siwe", () => {
   });
 
   it("issues a nonce and accepts a matching signature once", async () => {
-    const store = new Map();
-    const env = {
-      RATE_LIMIT_KV: {
-        async put(key, value) {
-          store.set(key, value);
-        },
-        async get(key) {
-          return store.get(key) ?? null;
-        },
-        async delete(key) {
-          store.delete(key);
-        },
-      },
-    };
+    const env = makeEnv({ WALLET_SIWE_ALLOW_ANY_WALLET: "true" });
     const priv = secp256k1.keygen().secretKey;
     const address = addressFromPrivateKey(priv);
     const issued = await issueWalletNonce(env, {
@@ -83,21 +134,32 @@ describe("wallet-siwe", () => {
     expect(again.error).toBe("nonce_expired");
   });
 
+  it("rejects a signature whose nonce was already claimed (audit F-36)", async () => {
+    const env = makeEnv({ WALLET_SIWE_ALLOW_ANY_WALLET: "true" });
+    const priv = secp256k1.keygen().secretKey;
+    const address = addressFromPrivateKey(priv);
+    const issued = await issueWalletNonce(env, {
+      projectId: "proj-1",
+      address,
+      domain: "fluxychat.com",
+      uri: "https://fluxychat.com/web3",
+    });
+    // Simulate the losing side of a concurrent replay: the read still sees the
+    // nonce but the atomic claim deletes zero rows.
+    env.__claimLoses = true;
+    const signature = signPersonal(issued.message, priv);
+    const denied = await verifyWalletSiwe(env, {
+      projectId: "proj-1",
+      address,
+      message: issued.message,
+      signature,
+      domain: "fluxychat.com",
+    });
+    expect(denied.error).toBe("nonce_expired");
+  });
+
   it("rejects allowlisted projects when the address is missing", async () => {
-    const store = new Map();
-    const env = {
-      RATE_LIMIT_KV: {
-        async put(key, value) {
-          store.set(key, value);
-        },
-        async get(key) {
-          return store.get(key) ?? null;
-        },
-        async delete(key) {
-          store.delete(key);
-        },
-      },
-    };
+    const env = makeEnv();
     await setWalletAllowlist(env, "proj-1", ["0x1111111111111111111111111111111111111111"]);
     const priv = secp256k1.keygen().secretKey;
     const address = addressFromPrivateKey(priv);
@@ -116,5 +178,26 @@ describe("wallet-siwe", () => {
       domain: "fluxychat.com",
     });
     expect(denied.error).toBe("not_allowlisted");
+  });
+
+  it("refuses sign-in when no allowlist is configured (audit F-36)", async () => {
+    const env = makeEnv();
+    const priv = secp256k1.keygen().secretKey;
+    const address = addressFromPrivateKey(priv);
+    const issued = await issueWalletNonce(env, {
+      projectId: "proj-1",
+      address,
+      domain: "fluxychat.com",
+      uri: "https://fluxychat.com/web3",
+    });
+    const signature = signPersonal(issued.message, priv);
+    const denied = await verifyWalletSiwe(env, {
+      projectId: "proj-1",
+      address,
+      message: issued.message,
+      signature,
+      domain: "fluxychat.com",
+    });
+    expect(denied).toMatchObject({ error: "allowlist_not_configured", status: 403 });
   });
 });

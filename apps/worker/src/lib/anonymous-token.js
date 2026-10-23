@@ -27,15 +27,11 @@ export async function issueAnonymousToken(env, deps, request, body = {}) {
     return { ok: false, status: 401, body: { error: "invalid_api_key", code: "unauthorized" } };
   }
 
-  let userId = typeof body.anonId === "string" ? body.anonId.trim() : "";
-  if (userId && !isValidId(userId)) {
-    return { ok: false, status: 400, body: { error: "invalid_anon_id", code: "invalid_request" } };
-  }
-  if (!userId) {
+  // Audit F-31: the anonymous id is minted server-side — a client-supplied
+  // `anonId` would let a pk_-key holder spoof another member's `sub`.
+  let userId = `anon_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  if (!isValidId(userId)) {
     userId = `anon_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-    if (!isValidId(userId)) {
-      userId = `anon_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-    }
   }
 
   const row = await env.DB.prepare(

@@ -1,5 +1,8 @@
 import { depsEnv } from "./deps-env.js";
 import { requireAdminJwt, requireJwt } from "./route-jwt-auth.js";
+import { enforceProjectIpWhitelist } from "./ip-whitelist.js";
+import { clientIpFromRequest } from "./client-ip.js";
+import { logInfo } from "./worker-log.js";
 
 /**
  * Resolve authenticated admin context for /admin/* style routes.
@@ -31,6 +34,27 @@ export async function resolveAdminContext(
     allowedRoles,
   );
   if (gate.response) return { response: gate.response };
+
+  // Audit F-35: when the operator enables enforcement, an enabled project
+  // whitelist gates admin access instead of being decorative.
+  const ipCheck = await enforceProjectIpWhitelist(env, {
+    projectId: gate.auth.projectId,
+    clientIp: clientIpFromRequest(request, env),
+  });
+  if (ipCheck.blocked) {
+    logInfo("ip_whitelist.blocked", {
+      projectId: gate.auth.projectId,
+      userId: gate.auth.userId,
+      reason: ipCheck.reason,
+    });
+    return {
+      response: new Response(JSON.stringify({ error: "ip_not_whitelisted" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...(h.corsHeaders || {}) },
+      }),
+    };
+  }
+
   return {
     auth: gate.auth,
     env,

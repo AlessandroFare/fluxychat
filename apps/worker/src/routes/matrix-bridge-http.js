@@ -79,7 +79,7 @@ export async function dispatchMatrixBridgeRoutes(request, url, h) {
     const bridgeId = path.split("/").pop();
     const gate = await requireBridge(bridgeId);
     if (gate.error) return gate.error;
-    const result = await deleteMatrixBridge(env, { bridgeId });
+    const result = await deleteMatrixBridge(env, { bridgeId, projectId });
     return respond(result, h);
   }
 
@@ -101,7 +101,8 @@ export async function dispatchMatrixBridgeRoutes(request, url, h) {
 
   if (request.method === "DELETE" && path.match(/^\/admin\/matrix\/mappings\/[^/]+$/)) {
     const mappingId = path.split("/").pop();
-    const result = await deleteMatrixRoomMapping(env, { mappingId });
+    // Audit F-70: deletion must resolve inside the admin's own project.
+    const result = await deleteMatrixRoomMapping(env, { mappingId, projectId });
     return respond(result, h);
   }
 

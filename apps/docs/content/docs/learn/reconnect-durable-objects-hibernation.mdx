@@ -13,6 +13,25 @@ Durable Objects can hibernate idle WebSocket connections to save resources. When
 
 That is why production chat pairs live WebSocket events with persisted history in D1.
 
+## Crash loops and sealed rooms
+
+A room Durable Object can wake into a state it cannot hydrate (in practice: a boot that runs out of memory). The DO guards itself: every boot leaves a marker, and a boot that never completes is counted as a crash. After **two consecutive crash boots** the room **seals itself and purges its storage**, so it cannot die on the same state forever.
+
+A sealed room:
+
+- closes WebSocket connections with code `1011`, reason `room_sealed` (SDK `onDisconnect` reports `reason: "server_error"`, `reasonText: "room_sealed"`);
+- refuses stream operations (`503 { error: "room_sealed" }`) and skips announcements and alarms (no agent schedules);
+- keeps serving reads, D1 history, and REST writes — messages still persist, nobody receives them live.
+
+```bash
+# Status — any room member
+curl "$WORKER_URL/rooms/$ROOM_ID/sealed" -H "Authorization: Bearer $JWT"
+
+# Recover — owner/admin. Clears the seal; purged DO storage is NOT restored
+# (use PITR snapshots at /rooms/{id}/pitr if you need the pre-crash state).
+curl -X POST "$WORKER_URL/rooms/$ROOM_ID/sealed" -H "Authorization: Bearer $ADMIN_JWT"
+```
+
 ## Reconnect storms (backoff + jitter)
 
 `computeReconnectBackoffMs` is on by default in `@fluxy-chat/sdk` (`FluxyChatRoomConnection.scheduleReconnect`). Exponential cap is 20s from a 500ms base. **Equal jitter** (`delay * (0.5 + random()/2)`) spreads retries so a Worker or DO blip does not slam one room with every client at 500ms, 1s, 2s.
@@ -27,6 +46,37 @@ That is why production chat pairs live WebSocket events with persisted history i
 - loadMore(): paginate older messages after refresh or reconnect.
 - clientMessageId: idempotent retries for sends that failed mid-flight.
 - deliveryStatus per message: pending, sent, failed with retryMessage().
+
+## Typed disconnect reasons
+
+`onDisconnect` fires on every socket close with a typed reason; the last one stays on
+`connection.disconnectReason`:
+
+```ts
+const conn = client.connectRoom(roomId, {
+  onDisconnect: ({ reason, reasonText, willReconnect, code, error }) => {
+    // reason: FluxyDisconnectReason · reasonText: raw server text (e.g. terminated_by_moderator)
+    if (!willReconnect) showToast(`Disconnected: ${reason}`, error);
+  },
+});
+```
+
+| reason | meaning | reconnects? |
+| --- | --- | --- |
+| `client_initiated` | your code called `close()` | no |
+| `network` | dropped connection (1005/1006) | yes |
+| `server_error` | DO/Worker restart or setup failure (1001, 1011–1014) | yes |
+| `heartbeat_timeout` | no pong within `heartbeatTimeoutMs` (close 4000) | yes |
+| `removed` | a moderator/admin terminated this socket (close 4001; `reasonText` keeps the raw value) | yes |
+| `token_expired`, `not_member`, `anonymous_not_allowed`, `channel_at_capacity`, `banned` | terminal refusals (close 1008) | no |
+| `protocol_unsupported` | client protocol newer than the server | no |
+| `auth_failed` | other 1008 refusals (`Unauthorized`, policy) | no |
+| `reconnect_failed` | attempts exhausted (pairs with `onReconnectFailed`) | no |
+| `unknown` | unrecognized code — inspect `code` / `reasonText` | — |
+
+`onDisconnect` can fire more than once per connection (once per dropped socket); a
+`willReconnect: false` entry is terminal. Raw mapping is exported too:
+`mapWebSocketCloseToDisconnectReason(code, reasonText)`.
 
 ## JWT refresh before expiry (partysocket-style)
 

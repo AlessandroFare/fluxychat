@@ -156,8 +156,30 @@ export async function validateEmbedParentOrigin(env, request, options) {
 
   const parent = String(parentOrigin || "").trim();
   if (parent) {
+    // Audit F-85: the parent origin arrives from the client — normalize it to a
+    // bare origin and require the caller to look like the served embed frame
+    // (browser fetches from our own frame carry that exact Origin). This blocks
+    // a foreign site/script from claiming an allowlisted parent it does not have.
+    let normalizedParent = "";
+    try {
+      normalizedParent = new URL(parent).origin;
+    } catch {
+      return { ok: false, error: "embed_origin_forbidden" };
+    }
+    const requestOrigin = request.headers.get("Origin") || "";
+    if (requestOrigin && requestOrigin !== "null") {
+      let ownOrigin = "";
+      try {
+        ownOrigin = new URL(request.url).origin;
+      } catch {
+        ownOrigin = "";
+      }
+      if (normalizedParent !== requestOrigin && requestOrigin !== ownOrigin) {
+        return { ok: false, error: "embed_origin_forbidden" };
+      }
+    }
     const fakeRequest = new Request(request.url, {
-      headers: { Origin: parent },
+      headers: { Origin: normalizedParent },
     });
     if (isDemoOriginAllowed(fakeRequest, allowed, env)) {
       return { ok: true };

@@ -7,7 +7,8 @@ import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
 import { RoomPicker } from "../../components/room-picker";
-import { Button, Panel, Section } from "../../components/ui";
+import { Button, EmptyState, Panel, Section, SkeletonCard } from "../../components/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -66,16 +67,33 @@ export default function EphemeralRetentionSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    void loadList().finally(() => setLoading(false));
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (cancelled) return;
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      await loadList().finally(() => setLoading(false));
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [token, loadList]);
 
   useEffect(() => {
-    if (roomId.trim()) void loadRoom();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled && roomId.trim()) await loadRoom();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [roomId, loadRoom]);
 
   async function save(mode: RoomMessageRetentionSettings["mode"]) {
@@ -134,9 +152,10 @@ export default function EphemeralRetentionSettingsPage() {
       {!token ? (
         <Panel className="p-6 text-sm text-muted-foreground">Admin JWT required from Projects.</Panel>
       ) : loading ? (
-        <p className="text-sm text-muted-foreground">
-          <Loader2 className="inline h-4 w-4 animate-spin" /> Loading…
-        </p>
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       ) : (
         <div className="space-y-8">
           <Section title="Configure room">
@@ -188,7 +207,7 @@ export default function EphemeralRetentionSettingsPage() {
                 ) : null}
               </div>
             ) : roomId.trim() ? (
-              <p className="mt-3 text-sm text-muted-foreground">Loading room settings…</p>
+              <Skeleton className="mt-3 h-16 w-full" />
             ) : (
               <p className="mt-3 text-sm text-muted-foreground">Pick a room to configure TTL.</p>
             )}
@@ -196,7 +215,11 @@ export default function EphemeralRetentionSettingsPage() {
 
           <Section title="Configured rooms">
             {configuredRooms.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No non-standard retention rooms yet.</p>
+              <EmptyState
+                compact
+                title="No non-standard retention rooms"
+                description="Rooms with ephemeral mode or a custom TTL appear here."
+              />
             ) : (
               <ul className="divide-y rounded-lg bg-card shadow-[var(--shadow-2)]">
                 {configuredRooms.map((r) => (

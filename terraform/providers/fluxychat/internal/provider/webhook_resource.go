@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -54,6 +55,9 @@ func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Required:    true,
 				Description: "Subscribed event types (see GET /webhooks/event-types).",
 			},
+			// Audit F-93: the secret is marked sensitive but still lands in the
+			// state file (write-only attributes need TF 1.11+). Use an encrypted
+			// backend for any workspace that sets it.
 			"secret": schema.StringAttribute{
 				Optional:    true,
 				Sensitive:   true,
@@ -115,12 +119,20 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 		secret = plan.Secret.ValueString()
 	}
 
-	created, err := r.client.createWebhook(ctx, plan.URL.ValueString(), eventTypes, secret)
+	// Audit F-93: the webhook URL was sent to the Worker unvalidated.
+	targetURL, err := validateWebhookURL(plan.URL.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid url", err.Error())
+		return
+	}
+
+	created, err := r.client.createWebhook(ctx, targetURL, eventTypes, secret)
 	if err != nil {
 		resp.Diagnostics.AddError("Create webhook failed", err.Error())
 		return
 	}
 
+	plan.URL = types.StringValue(targetURL)
 	plan.ID = types.StringValue(created.ID)
 	plan.CreatedAt = types.StringValue(created.CreatedAt)
 	tflog.Info(ctx, "created fluxychat webhook", map[string]interface{}{"id": created.ID})
@@ -137,8 +149,13 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	webhook, err := r.client.getWebhook(ctx, state.ID.ValueString())
 	if err != nil {
-		resp.State.RemoveResource(ctx)
-		resp.Diagnostics.AddWarning("Webhook not found", err.Error())
+		// Audit F-93: only a confirmed absence drops the resource from state.
+		if errors.Is(err, errResourceNotFound) {
+			resp.State.RemoveResource(ctx)
+			resp.Diagnostics.AddWarning("Webhook not found", err.Error())
+			return
+		}
+		resp.Diagnostics.AddError("Read webhook failed", err.Error())
 		return
 	}
 
@@ -173,7 +190,14 @@ func (r *webhookResource) Update(ctx context.Context, req resource.UpdateRequest
 		secret = plan.Secret.ValueString()
 	}
 
-	if err := r.client.updateWebhook(ctx, plan.ID.ValueString(), plan.URL.ValueString(), eventTypes, secret); err != nil {
+	// Audit F-93: the webhook URL was sent to the Worker unvalidated.
+	targetURL, err := validateWebhookURL(plan.URL.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid url", err.Error())
+		return
+	}
+
+	if err := r.client.updateWebhook(ctx, plan.ID.ValueString(), targetURL, eventTypes, secret); err != nil {
 		resp.Diagnostics.AddError("Update webhook failed", err.Error())
 		return
 	}

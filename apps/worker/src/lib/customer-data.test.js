@@ -57,6 +57,25 @@ describe("customer-data", () => {
     expect(result.id).toMatch(/^csm_/);
   });
 
+  it("A2-16: does not bump the segment count when the member already existed", async () => {
+    const sqls = [];
+    env.DB = {
+      prepare: vi.fn((sql) => {
+        sqls.push(sql);
+        return {
+          bind: vi.fn().mockReturnThis(),
+          run: vi.fn().mockResolvedValue({ meta: { changes: /INSERT OR IGNORE/.test(sql) ? 0 : 1 } }),
+          first: vi.fn().mockResolvedValue(null),
+          all: vi.fn().mockResolvedValue({ results: [] }),
+        };
+      }),
+    };
+    const { addSegmentMember } = await import("../lib/customer-data.js");
+    const result = await addSegmentMember(env, { segmentId: "csg_1", customerId: "cp_1" });
+    expect(result.added).toBe(false);
+    expect(sqls.some((sql) => /UPDATE customer_segments/.test(sql))).toBe(false);
+  });
+
   it("creates broadcast", async () => {
     const db = mockDB([]);
     env.DB = { prepare: vi.fn().mockReturnValue(db) };

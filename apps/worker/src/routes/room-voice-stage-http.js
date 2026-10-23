@@ -56,6 +56,13 @@ export async function dispatchRoomVoiceStageRoutes(request, url, h) {
         canPublish: body.canPublish,
         canSubscribe: body.canSubscribe,
       });
+      if (token.stub) {
+        // No LIVEKIT_* keys: never present a fake payload as a connectable token.
+        return json(
+          { ok: false, error: "livekit_not_configured", message: token.note },
+          { status: 503, headers: corsHeaders },
+        );
+      }
       return json({ ok: true, token }, { headers: corsHeaders });
     }
 

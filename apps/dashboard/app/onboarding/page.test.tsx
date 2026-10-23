@@ -52,6 +52,7 @@ describe("OnboardingPage", () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/onboarding");
   });
 
   it("always starts at step 1 (connect) for a scoped session", async () => {
@@ -77,5 +78,20 @@ describe("OnboardingPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("onboarding-playground")).toBeInTheDocument();
     });
+  });
+
+  it("review mode shows the revisit banner", async () => {
+    window.history.replaceState({}, "", "/onboarding?review=1");
+    render(
+      <DashboardSessionProvider>
+        <ClerkSessionBinder />
+        <OnboardingPage />
+      </DashboardSessionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-review-banner")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("onboarding-review-banner")).toHaveTextContent(/Review mode/);
   });
 });

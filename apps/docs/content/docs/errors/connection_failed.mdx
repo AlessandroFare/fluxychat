@@ -5,4 +5,17 @@ description: "WebSocket closed unexpectedly"
 
 # 50000 — connection_failed
 
-Abnormal close or network drop. Not always terminal: the client retries, then `suspended` / `failed`.
+The WebSocket closed abnormally, or the network dropped. Not always terminal: the client retries, then gives up as `suspended` / `failed`.
+
+**At a glance** — no HTTP status · SDK `FluxyConnectionError` (`.code`, `.reason`) · reconnect with backoff.
+
+## What to do
+
+- Let the SDK reconnect — it backs off exponentially (500 ms → 20 s cap) with jitter so clients do not stampede the same room.
+- Surface the status pill instead of an error toast while `retryIn` is set — see [Connection status](/docs/cookbook/connection-status).
+- Map the raw close code when you need to distinguish causes: 1005/1006 network, 1011–1014 server, 4000 heartbeat, 4001 moderator terminate.
+
+## Related
+
+- [10000 send_not_open](/docs/errors/send_not_open)
+- [10200 discontinuity](/docs/errors/discontinuity)

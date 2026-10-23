@@ -165,6 +165,11 @@ export function useOnboardingWizard() {
       (new URLSearchParams(window.location.search).get("from") === "cli" ||
         new URLSearchParams(window.location.search).get("cli") === "1");
     if (fromCli) return;
+    // Review (?review=1, returning users) starts at step 1 so the whole flow stays walkable.
+    const fromReview =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("review") === "1";
+    if (fromReview) return;
     const sent = userSentMessage || readFirstMessageSentForUser(clerkUser?.id, userId);
     const first = firstIncompleteOnboardingStep({
       adminJwt,

@@ -7,6 +7,8 @@ import {
   deleteAction,
   executeAction,
   listExecutions,
+  redactActionConfig,
+  REDACTED_CONFIG_VALUE,
 } from "./ai-actions.js";
 
 function createActionsEnv(overrides = {}) {
@@ -206,5 +208,55 @@ describe("listExecutions", () => {
     const env = createActionsEnv();
     const execs = await listExecutions(env, { projectId: "proj_1" });
     expect(execs).toHaveLength(0);
+  });
+});
+
+describe("redactActionConfig (audit F-59)", () => {
+  it("masks github_token and authorization headers", () => {
+    const redacted = redactActionConfig({
+      github_token: "ghp_secret",
+      url: "https://example.com/hook",
+      headers: { Authorization: "Bearer abc", "X-Trace": "t1" },
+    });
+    expect(redacted.github_token).toBe(REDACTED_CONFIG_VALUE);
+    expect(redacted.headers.Authorization).toBe(REDACTED_CONFIG_VALUE);
+    expect(redacted.headers["X-Trace"]).toBe("t1");
+    expect(redacted.url).toBe("https://example.com/hook");
+  });
+
+  it("keeps the stored token when an update echoes the mask", async () => {
+    const env = createActionsEnv();
+    const created = await createAction(env, {
+      projectId: "proj_1",
+      name: "gh",
+      kind: "github_issue",
+      config: { github_token: "ghp_secret" },
+    });
+    await updateAction(env, {
+      projectId: "proj_1",
+      actionId: created.id,
+      config: { github_token: REDACTED_CONFIG_VALUE, repo: "acme/x" },
+    });
+    const stored = await getAction(env, { projectId: "proj_1", actionId: created.id });
+    expect(stored.config.github_token).toBe("ghp_secret");
+    expect(stored.config.repo).toBe("acme/x");
+  });
+
+  it("drops a mask that never existed in the stored config", async () => {
+    const env = createActionsEnv();
+    const created = await createAction(env, {
+      projectId: "proj_1",
+      name: "wh",
+      kind: "webhook",
+      config: {},
+    });
+    await updateAction(env, {
+      projectId: "proj_1",
+      actionId: created.id,
+      config: { api_key: REDACTED_CONFIG_VALUE, url: "https://x.test/h" },
+    });
+    const stored = await getAction(env, { projectId: "proj_1", actionId: created.id });
+    expect(stored.config.api_key).toBeUndefined();
+    expect(stored.config.url).toBe("https://x.test/h");
   });
 });

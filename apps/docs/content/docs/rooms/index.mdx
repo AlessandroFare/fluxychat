@@ -30,20 +30,22 @@ await room.attach();
 
 | Field | Job |
 | --- | --- |
-| `messages` | Send, history, edit, delete, message reactions |
-| `presence` | Enter, leave, update. Leave does not close the socket |
-| `occupancy` | Socket count vs unique members |
-| `typing` | Ephemeral `keystroke` / `stop` |
-| `reactions` | Room-level bursts (`room_reaction`), not message emoji |
-| `cursors` | Batched pointer + last-position map |
-| `locks` | Exclusive lock on the Room DO |
-| `locations` | UI locus (`uiLocation`), not GPS |
-| `members` | Roster + leaver TTL |
+| [`messages`](/docs/rooms/messages) | Send, history, edit, delete, message reactions |
+| [`presence`](/docs/rooms/presence) | Enter, leave, update. Leave does not close the socket |
+| [`occupancy`](/docs/rooms/occupancy) | Socket count vs unique members |
+| [`typing`](/docs/rooms/typing) | Ephemeral `keystroke` / `stop` |
+| [`reactions`](/docs/rooms/reactions) | Room-level bursts (`room_reaction`), not message emoji |
+| [`cursors`](/docs/rooms/cursors) | Batched pointer + last-position map |
+| [`locks`](/docs/rooms/locks) | Exclusive lock on the Room DO |
+| [`locations`](/docs/rooms/locations) | UI locus (`uiLocation`), not GPS |
+| [`members`](/docs/rooms/members) | Roster + leaver TTL |
 | `objects` | Shared JSON bag (`derived` / `derived_set`) |
-| `status` | Attach lifecycle |
+| [`status`](/docs/rooms/status) | Attach lifecycle |
 | `onDiscontinuity` | Resume hole you could not fill |
 
 React hooks with the same names live on `FluxyRoomProvider`: `useMessages`, `usePresence`, `useOccupancy`, `useTyping`, `useLocks`, `useCursors`, `useMembers`, `useRoomStatus`.
+
+Dedicated pages: [Message history](/docs/rooms/history), [Message replies](/docs/rooms/replies), [Share media](/docs/rooms/media), [UI kit](/docs/rooms/ui-kit).
 
 ## Options
 

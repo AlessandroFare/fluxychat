@@ -5,4 +5,17 @@ description: "WebSocket closed with policy violation"
 
 # 10008 — ws_policy
 
-Browser/Worker mapped a 1008 policy close that did not match a named refusal. Treat as terminal until the reason is known.
+A 1008 policy close whose reason did not match a named refusal identifier. Treat it as terminal until the reason is known.
+
+**At a glance** — close 1008 (unmapped reason) · terminal · SDK `FluxyAuthError` without a `refusalCode`.
+
+## What to do
+
+- Log the raw close reason text — that is the whole point of this catch-all identifier.
+- Most 1008 closes are actually one of the named refusals; check [auth_refused](/docs/errors/auth_refused), [not_member](/docs/errors/not_member), and [token_expired](/docs/errors/token_expired) first.
+- The Worker also uses 1008 for `protocol_unsupported` and bare `Unauthorized` / `Forbidden` reasons — those arrive here too.
+
+## Related
+
+- [40108 auth_refused](/docs/errors/auth_refused)
+- [40300 not_member](/docs/errors/not_member)

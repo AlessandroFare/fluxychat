@@ -6,7 +6,7 @@ import { Key, Loader2, Plus, Scan, Trash2 } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Button, Input, Panel, Section, Textarea } from "../../components/ui";
+import { Button, EmptyState, Input, Panel, Section, SkeletonCard, Textarea } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -73,7 +73,15 @@ export default function DlpSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void loadAll();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await loadAll();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadAll]);
 
   async function handleCreateRule() {
@@ -184,8 +192,9 @@ export default function DlpSettingsPage() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : (
         <div className="space-y-8">
@@ -227,7 +236,12 @@ export default function DlpSettingsPage() {
 
               <Panel className="p-4 space-y-2">
                 {rules.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No custom rules yet. Built-in PHI/PCI patterns always apply.</p>
+                  <EmptyState
+                    compact
+                    className="border-0 bg-transparent"
+                    title="No custom rules"
+                    description="Built-in PHI/PCI patterns always apply."
+                  />
                 ) : (
                   rules.map((rule) => (
                     <div key={rule.id} className="flex items-start justify-between gap-2 border-b border-border pb-2 last:border-0">
@@ -282,7 +296,12 @@ export default function DlpSettingsPage() {
                 </Button>
               </div>
               {cmkKeys.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No CMK keys yet.</p>
+                <EmptyState
+                  compact
+                  className="border-0 bg-transparent"
+                  title="No CMK keys"
+                  description="Create one above to use customer-managed encryption keys."
+                />
               ) : (
                 cmkKeys.map((key) => (
                   <div key={key.keyId} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2 last:border-0">

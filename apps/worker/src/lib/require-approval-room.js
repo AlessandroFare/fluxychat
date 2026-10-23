@@ -22,7 +22,9 @@ export async function requireApprovalRoom(env, { projectId, requesterUserId, too
 
   const members = new Set([requesterUserId]);
   for (const id of approverIds || []) {
-    if (typeof id === "string" && id.trim() && members.size < 12) members.add(id.trim());
+    const candidate = typeof id === "string" ? id.trim().slice(0, 128) : "";
+    // Audit F-26: never let the requester be added as their own approver.
+    if (candidate && candidate !== requesterUserId && members.size < 12) members.add(candidate);
   }
   const stmts = [...members].map((userId, index) =>
     env.DB.prepare(

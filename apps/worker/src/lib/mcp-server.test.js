@@ -5,6 +5,11 @@ import {
   MCP_TOOLS,
 } from "./mcp-server.js";
 import { MCP_LEGACY_PROTOCOL_VERSION, MCP_PROTOCOL_VERSION } from "./mcp-protocol.js";
+import { incrementOperationalMetric } from "./operational-metrics.js";
+
+vi.mock("./operational-metrics.js", () => ({
+  incrementOperationalMetric: vi.fn(async () => {}),
+}));
 
 vi.mock("./mcp-room-message.js", () => ({
   publishMcpRoomMessage: vi.fn(async (_env, input) => ({
@@ -131,17 +136,49 @@ describe("MCP Server", () => {
       expect(result.result.tools.map((t) => t.name)).toContain("get_room_info");
     });
 
-    it("each tool has required fields", async () => {
+    it("each tool has required fields plus title and annotations", async () => {
       const result = await handleMcpRequest(
         { method: "tools/list", params: {}, id: 3 },
         { env: createMcpEnv(), auth, logError: createLogError() },
       );
       for (const tool of result.result.tools) {
         expect(tool.name).toBeTruthy();
+        expect(tool.title).toBeTruthy();
         expect(tool.description).toBeTruthy();
+        expect(tool.annotations).toBeTruthy();
         expect(tool.inputSchema).toBeDefined();
         expect(tool.inputSchema.type).toBe("object");
+        expect(tool.outputSchema).toBeDefined();
+        expect(tool.outputSchema.type).toBe("object");
       }
+    });
+
+    it("marks read-only tools and write tools with spec annotations", async () => {
+      const result = await handleMcpRequest(
+        { method: "tools/list", params: {}, id: 6 },
+        { env: createMcpEnv(), auth, logError: createLogError() },
+      );
+      const byName = Object.fromEntries(result.result.tools.map((t) => [t.name, t]));
+      expect(byName.list_rooms.annotations.readOnlyHint).toBe(true);
+      expect(byName.search_chat.annotations.readOnlyHint).toBe(true);
+      expect(byName.send_message.annotations.readOnlyHint).toBeUndefined();
+      expect(byName.send_message.annotations.destructiveHint).toBe(false);
+    });
+
+    it("counts handled requests into per-method mcp_requests metrics", async () => {
+      incrementOperationalMetric.mockClear();
+      await handleMcpRequest(
+        { method: "tools/list", params: {}, id: 7 },
+        { env: createMcpEnv(), auth, logError: createLogError() },
+      );
+      expect(incrementOperationalMetric).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          metricName: "mcp_requests.tools_list",
+          projectId: "proj_1",
+          value: 1,
+        }),
+      );
     });
   });
 
@@ -176,6 +213,7 @@ describe("MCP Server", () => {
       const data = JSON.parse(result.result.content[0].text);
       expect(data.rooms).toBeDefined();
       expect(Array.isArray(data.rooms)).toBe(true);
+      expect(result.result.structuredContent).toEqual(data);
     });
 
     it("respects limit parameter", async () => {
@@ -215,6 +253,7 @@ describe("MCP Server", () => {
       );
       expect(result.result.isError).toBe(true);
       expect(result.result.content[0].text).toContain("roomId is required");
+      expect(result.result.structuredContent).toBeUndefined();
     });
   });
 
@@ -357,7 +396,33 @@ describe("MCP Server", () => {
       expect(result.result.tools).toHaveLength(MCP_TOOLS.length);
     });
 
-    it("send_message without content elicits instead of failing", async () => {
+    it("send_message without content elicits from a capable client", async () => {
+      const headers = new Headers({
+        "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "send_message",
+      });
+      const result = await handleMcpRequest(
+        {
+          method: "tools/call",
+          params: {
+            name: "send_message",
+            arguments: { roomId: "room_1" },
+            _meta: {
+              "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION,
+              "io.modelcontextprotocol/clientCapabilities": { elicitation: {} },
+            },
+          },
+          id: 71,
+        },
+        { env: createMcpEnv(), auth, logError: createLogError(), requestHeaders: headers },
+      );
+      expect(result.result.resultType).toBe("input_required");
+      // MRTR InputRequests is a map keyed by request id (2026-07-28).
+      expect(result.result.inputRequests["elicit-1"].method).toBe("elicitation/create");
+    });
+
+    it("refuses to elicit from a client that never declared the capability", async () => {
       const headers = new Headers({
         "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
         "Mcp-Method": "tools/call",
@@ -367,12 +432,31 @@ describe("MCP Server", () => {
         {
           method: "tools/call",
           params: { name: "send_message", arguments: { roomId: "room_1" } },
-          id: 71,
+          id: 73,
         },
         { env: createMcpEnv(), auth, logError: createLogError(), requestHeaders: headers },
       );
-      expect(result.result.resultType).toBe("input_required");
-      expect(result.result.inputRequests[0].method).toBe("elicitation/create");
+      expect(result.result).toBeUndefined();
+      expect(result.httpStatus).toBe(400);
+      expect(result.error.code).toBe(-32021);
+      expect(result.error.data.requiredCapabilities).toEqual({ elicitation: {} });
+    });
+
+    it("answers resources/templates/list with the resourceTemplates key", async () => {
+      const headers = new Headers({
+        "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
+        "Mcp-Method": "resources/templates/list",
+      });
+      const result = await handleMcpRequest(
+        {
+          method: "resources/templates/list",
+          params: { _meta: { "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION } },
+          id: 74,
+        },
+        { env: createMcpEnv(), auth, logError: createLogError(), requestHeaders: headers },
+      );
+      expect(result.result.resourceTemplates).toEqual([]);
+      expect(result.result.resources).toBeUndefined();
     });
 
     it("retries send_message with inputResponses", async () => {
@@ -387,9 +471,9 @@ describe("MCP Server", () => {
           params: {
             name: "send_message",
             arguments: { roomId: "room_1" },
-            inputResponses: [
-              { result: { action: "accept", content: { content: "Hello after elicit" } } },
-            ],
+            inputResponses: {
+              "elicit-1": { action: "accept", content: { content: "Hello after elicit" } },
+            },
           },
           id: 72,
         },

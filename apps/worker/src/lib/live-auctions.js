@@ -42,15 +42,21 @@ export async function startLot(env, { id }) {
   return { id, started: true };
 }
 
-export async function getLot(env, id) {
-  const row = await env.DB.prepare("SELECT * FROM auction_lots WHERE id = ?").bind(id).first();
+/** Audit F-18: pass projectId to scope lot lookups to the caller's tenant. */
+export async function getLot(env, id, projectId) {
+  const query = projectId
+    ? "SELECT * FROM auction_lots WHERE id = ? AND project_id = ?"
+    : "SELECT * FROM auction_lots WHERE id = ?";
+  const stmt = env.DB.prepare(query);
+  const row = await (projectId ? stmt.bind(id, projectId) : stmt.bind(id)).first();
   return row ? mapLotRow(row) : null;
 }
 
-export async function getLotsByRoom(env, { roomId, status, limit = 50 }) {
+export async function getLotsByRoom(env, { roomId, status, projectId, limit = 50 }) {
   let query = "SELECT * FROM auction_lots WHERE room_id = ?";
   const params = [roomId];
 
+  if (projectId) { query += " AND project_id = ?"; params.push(projectId); }
   if (status) { query += " AND status = ?"; params.push(status); }
   query += " ORDER BY created_at DESC LIMIT ?";
   params.push(limit);
@@ -170,12 +176,12 @@ export async function getWatchers(env, { lotId }) {
   return (rows.results || []).map((r) => ({ userId: r.user_id, createdAt: r.created_at }));
 }
 
-export async function getAuctionStats(env, { roomId }) {
-  const rows = await env.DB.prepare(
-    "SELECT status, COUNT(*) as count, SUM(current_price) as total_value FROM auction_lots WHERE room_id = ? GROUP BY status"
-  )
-    .bind(roomId)
-    .all();
+export async function getAuctionStats(env, { roomId, projectId }) {
+  const query = projectId
+    ? "SELECT status, COUNT(*) as count, SUM(current_price) as total_value FROM auction_lots WHERE room_id = ? AND project_id = ? GROUP BY status"
+    : "SELECT status, COUNT(*) as count, SUM(current_price) as total_value FROM auction_lots WHERE room_id = ? GROUP BY status";
+  const stmt = env.DB.prepare(query);
+  const rows = await (projectId ? stmt.bind(roomId, projectId) : stmt.bind(roomId)).all();
 
   const stats = {};
   for (const r of rows.results || []) {

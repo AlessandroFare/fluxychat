@@ -34,6 +34,25 @@ const cases401 = [
     request: () => unauthorizedRequest("/messages", { method: "POST", body: { roomId: "room-1", content: "hi" } }),
   },
   {
+    name: "POST /messages/:id/save",
+    dispatch: dispatchMessagesRoutes,
+    request: () => unauthorizedRequest("/messages/1/save", { method: "POST" }),
+  },
+  {
+    name: "DELETE /messages/:id/save",
+    dispatch: dispatchMessagesRoutes,
+    request: () => unauthorizedRequest("/messages/1/save", { method: "DELETE" }),
+  },
+  {
+    name: "POST /messages/:id/forward",
+    dispatch: dispatchMessagesRoutes,
+    request: () =>
+      unauthorizedRequest("/messages/1/forward", {
+        method: "POST",
+        body: { targetRoomId: "room-2" },
+      }),
+  },
+  {
     name: "POST /bots",
     dispatch: dispatchAgentsRoutes,
     request: () => unauthorizedRequest("/bots", { method: "POST", body: { name: "Helper" } }),

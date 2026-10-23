@@ -25,15 +25,15 @@ export default function PrivacyPolicyPage() {
         </p>
         <p>
           Export and delete for a signed-in operator: console{" "}
-          <Link className="underline underline-offset-2" href="/privacy">
+          <Link className="text-brand underline underline-offset-2" href="/privacy">
             /privacy
           </Link>{" "}
           (JWT required). DPA:{" "}
-          <Link className="underline underline-offset-2" href={HOSTED_PATHS.dpa}>
+          <Link className="text-brand underline underline-offset-2" href={HOSTED_PATHS.dpa}>
             /dpa
           </Link>
           . Processors:{" "}
-          <Link className="underline underline-offset-2" href={HOSTED_PATHS.subprocessors}>
+          <Link className="text-brand underline underline-offset-2" href={HOSTED_PATHS.subprocessors}>
             /subprocessors
           </Link>
           .

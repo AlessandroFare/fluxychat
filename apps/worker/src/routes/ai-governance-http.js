@@ -28,21 +28,21 @@ export async function dispatchAiGovernanceRoutes(request, url, h) {
 
   if (request.method === "POST" && path === "/admin/ai-governance/models") {
     const body = await request.json().catch(() => null);
-    const result = await registerModel(env, { projectId, ...body, approvedBy: body?.approvedBy ?? userId });
+    const result = await registerModel(env, { ...body, projectId, approvedBy: body?.approvedBy ?? userId });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }
 
   if (request.method === "POST" && path === "/admin/ai-governance/prompts") {
     const body = await request.json().catch(() => null);
-    const result = await registerPrompt(env, { projectId, ...body });
+    const result = await registerPrompt(env, { ...body, projectId });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }
 
   if (request.method === "POST" && path === "/admin/ai-governance/tools") {
     const body = await request.json().catch(() => null);
-    const result = await registerTool(env, { projectId, ...body });
+    const result = await registerTool(env, { ...body, projectId });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }

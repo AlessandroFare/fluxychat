@@ -2,6 +2,7 @@
  * CP-021: Push inbox_updated over the user-channel WebSocket (User DO).
  */
 
+import { internalDoHeaders } from "./room-shard.js";
 import { logError } from "./worker-log.js";
 
 function userDoId(env, projectId, userId) {
@@ -32,6 +33,7 @@ export async function notifyInboxUpdated(env, input) {
     const stub = env.USER.get(userDoId(env, projectId, userId));
     const res = await stub.fetch("https://internal/deliver", {
       method: "POST",
+      headers: internalDoHeaders(env, { "Content-Type": "application/json" }),
       body: JSON.stringify({
         name: "inbox_updated",
         userId,

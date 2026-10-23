@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useClerkUser } from "@/lib/clerk-user";
 import { ArrowRight, CheckCircle2, Circle, ExternalLink, KeyRound, MinusCircle, UserPlus } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -14,7 +14,7 @@ import { CONSOLE_NAV_BUILD, CONSOLE_NAV_OPERATE } from "../components/console-na
 import { filterDashboardNavItems } from "@/lib/dashboard-feature-flags";
 import { WorkerHealthCard } from "../components/worker-health-card";
 import { SloOverviewCard } from "../components/slo-overview-card";
-import { HOSTED_PATHS } from "@/lib/hosted-product";
+import { HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
 import { useQuickstartHref } from "@/lib/use-quickstart-href";
 import {
   isQuickstartComplete,
@@ -37,17 +37,13 @@ export default function DashboardOverviewPage() {
   const quickstartHref = useQuickstartHref();
   const { user, isSignedIn } = useClerkUser();
   const { hasHydrated, clerkUserId, adminJwt, memberJwt, activeProject, lastRoom } = useDashboardSession();
-  const [progress, setProgress] = useState<QuickstartProgress>({});
-
   const activeClerkId = isSignedIn && user?.id ? user.id : null;
-
-  useEffect(() => {
-    if (!activeClerkId) {
-      setProgress({});
-      return;
-    }
-    setProgress(loadQuickstartProgress(activeClerkId));
-  }, [activeClerkId]);
+  // Derived from localStorage; hasHydrated keeps the value off the first paint
+  // (same timing the previous mount effect had, without setState-in-effect).
+  const progress = useMemo<QuickstartProgress>(
+    () => (hasHydrated && activeClerkId ? loadQuickstartProgress(activeClerkId) : {}),
+    [hasHydrated, activeClerkId],
+  );
 
   const quickstartComplete =
     hasHydrated &&
@@ -75,7 +71,17 @@ export default function DashboardOverviewPage() {
     invite: false,
   };
 
-  const primaryCta = quickstartComplete
+  // Self-host has no Clerk account to complete the hosted quickstart. A saved
+  // admin JWT plus a project is enough to use the console.
+  const selfHostConsoleReady =
+    hasHydrated &&
+    !isClerkClientConfigured() &&
+    adminJwt.trim().length >= 12 &&
+    Boolean(activeProject?.id);
+  const consoleReady = quickstartComplete || selfHostConsoleReady;
+  const checklistDoneCount = CHECKLIST.filter((item) => checklistDone[item.key]).length;
+
+  const primaryCta = consoleReady
     ? { href: "/rooms", label: "Open rooms" }
     : { href: HOSTED_PATHS.onboarding, label: "Continue quickstart" };
   const operateLinks = filterDashboardNavItems(CONSOLE_NAV_OPERATE);
@@ -101,16 +107,13 @@ export default function DashboardOverviewPage() {
         }
       />
 
-      <WorkerHealthCard />
-      <SloOverviewCard />
-
-      <section className="mb-8 rounded-2xl bg-white/90 p-4 shadow-[var(--shadow-2)] sm:p-6">
+      <section className="mb-8 rounded-2xl bg-card p-4 shadow-[var(--shadow-2)] sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-heading text-base font-semibold text-foreground">Session</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {quickstartComplete && activeProject
-                ? `Quickstart complete · ${activeProject.name}`
+              {consoleReady && activeProject
+                ? `Connected · ${activeProject.name}`
                 : phase === "ready" && activeProject
                   ? `Signed in · ${activeProject.name}. Finish the quickstart to use the console.`
                   : phase === "jwt_only"
@@ -125,7 +128,14 @@ export default function DashboardOverviewPage() {
             </Link>
           </Button>
         </div>
-        <ul className="mt-5 space-y-2 border-t border-black/[0.06] pt-4">
+        <details open className="mt-5 border-t border-black/[0.06] pt-4">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+            <span>Setup checklist</span>
+            <span className="font-mono text-[11px]">
+              {checklistDoneCount}/{CHECKLIST.length}
+            </span>
+          </summary>
+          <ul className="mt-3 space-y-2">
           {CHECKLIST.map((item) => {
             const done = checklistDone[item.key];
             const unknown = item.key === "install" || item.key === "invite";
@@ -191,8 +201,9 @@ export default function DashboardOverviewPage() {
               </li>
             );
           })}
-        </ul>
-        {!quickstartComplete ? (
+          </ul>
+        </details>
+        {!consoleReady ? (
           <p className="mt-3 text-xs text-muted-foreground">
             <Link href={quickstartHref} className="font-medium text-primary underline-offset-2 hover:underline">
               Open quickstart
@@ -201,7 +212,7 @@ export default function DashboardOverviewPage() {
           </p>
         ) : (
           <p className="mt-3 text-xs text-muted-foreground">
-            Revisit the tutorial anytime via{" "}
+            You can use the console now. Revisit the tutorial anytime via{" "}
             <Link href={quickstartHref} className="font-medium text-primary underline-offset-2 hover:underline">
               quickstart (review)
             </Link>
@@ -238,8 +249,15 @@ export default function DashboardOverviewPage() {
         </ul>
       </section>
 
-      <NotificationsOverviewCard />
-      <InboxOverviewCard />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <WorkerHealthCard />
+        <SloOverviewCard />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <NotificationsOverviewCard />
+        <InboxOverviewCard />
+      </div>
 
       <section>
         <h2 className="mb-3 font-heading text-sm font-semibold text-foreground">Quick links</h2>
@@ -272,7 +290,9 @@ export default function DashboardOverviewPage() {
           Stream, IoT, fleet, industries, and the rest live in one catalog so the main console stays Projects, Rooms, Agents.
         </p>
         <Button asChild variant="outline" size="sm">
-          <Link href="/labs">Open platform catalog</Link>
+          <Link href="/labs" target="_blank" rel="noreferrer">
+            Open platform catalog
+          </Link>
         </Button>
       </section>
     </ConsoleShell>

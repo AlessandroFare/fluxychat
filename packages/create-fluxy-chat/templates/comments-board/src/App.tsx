@@ -21,7 +21,7 @@ function CommentsBoard({ roomId }: { roomId: string }) {
   const [threadFilter, setThreadFilter] = useState<CommentThreadFilter>("open");
   useChat({
     roomId,
-    replay: "off",
+    replay: "request",
     onServerEvent: (ev) => {
       if (ev.name.startsWith("comment.")) void reload();
     },

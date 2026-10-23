@@ -400,7 +400,13 @@ export function earliestAgentScheduleDueAt(rows) {
     if (row.status !== "pending" && row.status !== "running") continue;
     const next = Number(row.nextRunAt);
     if (!Number.isFinite(next)) continue;
-    if (min == null || next < min) min = next;
+    let when = next;
+    if (row.status === "running") {
+      // Audit fix A2-29: a claimed row cannot run again until the stuck window
+      // expires — arming at the past nextRunAt loops the alarm without progress.
+      when = Math.max(next, (Number(row.claimedAt) || 0) + STUCK_CLAIM_MS);
+    }
+    if (min == null || when < min) min = when;
   }
   return min;
 }

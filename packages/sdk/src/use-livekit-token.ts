@@ -33,7 +33,8 @@ export interface UseLiveKitTokenResult {
   fetchToken: () => Promise<LiveKitTokenResponse | null>;
 }
 
-/** Fetch a LiveKit access token from POST /admin/calls/token (Worker mints JWT when configured). */
+/** Fetch a LiveKit access token from POST /admin/calls/token (Worker mints JWT when configured).
+ *  No LIVEKIT_* keys on the Worker → 503 livekit_not_configured; no stub token is returned. */
 export function useLiveKitToken(options: UseLiveKitTokenOptions): UseLiveKitTokenResult {
   const [token, setToken] = useState<LiveKitTokenResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,9 +64,13 @@ export function useLiveKitToken(options: UseLiveKitTokenOptions): UseLiveKitToke
           canSubscribe: options.canSubscribe,
         }),
       });
-      const data = (await res.json()) as { token?: LiveKitTokenResponse; error?: string };
+      const data = (await res.json()) as {
+        token?: LiveKitTokenResponse;
+        error?: string;
+        message?: string;
+      };
       if (!res.ok) {
-        throw new Error(data.error ?? `HTTP ${res.status}`);
+        throw new Error(data.message ?? data.error ?? `HTTP ${res.status}`);
       }
       const payload = data.token ?? null;
       setToken(payload);

@@ -5,7 +5,7 @@ import { Coins, Gavel, Loader2, Plus } from "lucide-react";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { ConsoleFeedback } from "../components/console-feedback";
-import { Button, Input, Panel, Section } from "../components/ui";
+import { Button, EmptyState, Input, Panel, Section } from "../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -196,7 +196,12 @@ export default function TruthMarketPage() {
           <Panel>
             <Section title="Open claims" description="Claims awaiting dispute or expiry.">
               {claims.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No open claims.</p>
+                <EmptyState
+                  compact
+                  className="border-0"
+                  title="No open claims"
+                  description="Claims awaiting dispute or expiry show up here."
+                />
               ) : (
                 <div className="space-y-2">
                   {claims.map((claim) => (

@@ -45,7 +45,7 @@ room.onMessage((msg) => {
 });
 
 // Send a message
-await room.sendMessage("Hello FluxyChat! 🎉");
+await room.sendMessage("Hello FluxyChat!");
 
 console.log("Connected! Type a message and press Enter to send.");
 process.stdin.on("data", (data) => {
@@ -204,9 +204,9 @@ console.log("Location tracker running. Waiting for GPS updates...");
 ];
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: "bg-green-500/15 text-green-600",
-  intermediate: "bg-amber-500/15 text-amber-600",
-  advanced: "bg-red-500/15 text-red-600",
+  beginner: "bg-green-500/10 text-green-600",
+  intermediate: "bg-amber-500/10 text-amber-600",
+  advanced: "bg-red-500/10 text-red-600",
 };
 
 const TEMPLATE_ICONS: Record<string, React.ReactNode> = {

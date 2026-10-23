@@ -24,4 +24,23 @@ describe("hitl-tap-token", () => {
     });
     expect(await verifyHitlTapToken("secret", token)).toBeNull();
   });
+
+  it("A2f: rejects tokens without exp (fail closed)", async () => {
+    const token = await signHitlTapToken("secret", {
+      approvalId: "appr_1",
+      action: "approve",
+      userId: "u1",
+    });
+    expect(await verifyHitlTapToken("secret", token)).toBeNull();
+  });
+
+  it("A2f: rejects tokens with an unparseable exp", async () => {
+    const token = await signHitlTapToken("secret", {
+      approvalId: "appr_1",
+      action: "approve",
+      userId: "u1",
+      exp: "not-a-number",
+    });
+    expect(await verifyHitlTapToken("secret", token)).toBeNull();
+  });
 });

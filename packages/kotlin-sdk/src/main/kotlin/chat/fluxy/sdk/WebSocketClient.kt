@@ -175,8 +175,25 @@ class WebSocketClient(
     private fun encode(value: String): String =
         java.net.URLEncoder.encode(value, Charsets.UTF_8)
 
-    private fun jsonString(value: String): String =
-        "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\""
+    // Audit F-92: the old escaper left \r, \t and other control characters raw.
+    private fun jsonString(value: String): String {
+        val sb = StringBuilder(value.length + 8)
+        sb.append('"')
+        for (c in value) {
+            when (c) {
+                '"' -> sb.append("\\\"")
+                '\\' -> sb.append("\\\\")
+                '\b' -> sb.append("\\b")
+                '\u000C' -> sb.append("\\f")
+                '\n' -> sb.append("\\n")
+                '\r' -> sb.append("\\r")
+                '\t' -> sb.append("\\t")
+                else -> if (c < ' ') sb.append("\\u%04x".format(c.code)) else sb.append(c)
+            }
+        }
+        sb.append('"')
+        return sb.toString()
+    }
 
     private fun log(message: String) {
         if (debug) println("[FluxyChat WS] $message")

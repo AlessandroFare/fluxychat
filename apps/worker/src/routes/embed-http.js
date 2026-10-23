@@ -2,10 +2,12 @@ import { pickRouteDeps } from "./route-http-deps.js";
 import {
   getAdminEmbedConfig,
   getEmbedConfigForProject,
+  getEffectiveEmbedOrigins,
   getPublicEmbedConfig,
   isEmbedWidgetGloballyEnabled,
   upsertEmbedConfig,
 } from "../lib/embed-config.js";
+import { parseAllowedOrigins } from "../lib/demo-guard.js";
 import { EMBED_LOADER_SOURCE } from "../lib/embed-loader.js";
 import { buildEmbedFrameHtml } from "../lib/embed-frame-html.js";
 import { isPublicGuestReadOnly } from "../lib/guest-auth.js";
@@ -61,13 +63,30 @@ export async function dispatchEmbedRoutes(request, url, h) {
     let launcherTitle = "Chat";
     let readOnly = isPublicGuestReadOnly(env);
 
+    let allowOrigins = [];
     if (resolvedProjectId) {
       const config = await getEmbedConfigForProject(env, resolvedProjectId);
       if (config?.enabled) {
         theme = config.theme;
         launcherTitle = config.launcherTitle;
       }
+      allowOrigins = await getEffectiveEmbedOrigins(env, resolvedProjectId, config);
     }
+    allowOrigins = [
+      ...new Set([
+        ...allowOrigins,
+        ...parseAllowedOrigins(env.PUBLIC_GUEST_ALLOWED_ORIGINS || env.DEMO_ALLOWED_ORIGINS),
+      ]),
+    ];
+    const nodeEnv = String(env.NODE_ENV || "").trim().toLowerCase();
+    // Audit F-81: the widget is framed cross-origin by the customer page, so
+    // SAMEORIGIN made it unrenderable. CSP frame-ancestors carries the
+    // designed allowlist (X-Frame-Options cannot express an origin list).
+    const frameAncestors = allowOrigins.length
+      ? allowOrigins.join(" ")
+      : nodeEnv === "development" || nodeEnv === "test"
+        ? "*"
+        : "'none'";
 
     const html = buildEmbedFrameHtml({
       primaryColor: theme.primaryColor,
@@ -79,7 +98,7 @@ export async function dispatchEmbedRoutes(request, url, h) {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-store",
-        "X-Frame-Options": "SAMEORIGIN",
+        "Content-Security-Policy": `frame-ancestors ${frameAncestors}`,
       },
     });
   }
@@ -95,6 +114,23 @@ export async function dispatchEmbedRoutes(request, url, h) {
       return json({ enabled: false, reason: "no_project" }, { headers: corsHeaders });
     }
     const config = await getPublicEmbedConfig(env, resolvedProjectId, hostname);
+    // Audit F-91: when the project restricts embed origins and the caller
+    // presents a concrete Origin, it must be allowlisted. Requests without an
+    // Origin (script tags, sandboxed frames) keep the old behavior — the frame
+    // itself stays gated by validateEmbedParentOrigin.
+    const requestOrigin = request.headers.get("Origin") || "";
+    if (config.enabled && requestOrigin && requestOrigin !== "null") {
+      const embedConfig = await getEmbedConfigForProject(env, resolvedProjectId);
+      const origins = [
+        ...new Set([
+          ...(await getEffectiveEmbedOrigins(env, resolvedProjectId, embedConfig)),
+          ...parseAllowedOrigins(env.PUBLIC_GUEST_ALLOWED_ORIGINS || env.DEMO_ALLOWED_ORIGINS),
+        ]),
+      ];
+      if (origins.length && !origins.includes(requestOrigin)) {
+        return json({ enabled: false, reason: "origin_not_allowed" }, { headers: corsHeaders });
+      }
+    }
     return json(config, { headers: corsHeaders });
   }
 

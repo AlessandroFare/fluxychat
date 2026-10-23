@@ -8,6 +8,7 @@ import {
   FLUXY_WS_CLOSE_POLICY,
   computeReconnectBackoffMs,
   mapWebSocketCloseToError,
+  mapWebSocketCloseToDisconnectReason,
   toFluxyErrorInfo,
   unableTo,
 } from "./errors";
@@ -32,6 +33,25 @@ describe("fluxy sdk errors", () => {
   it("maps token_expired refusal codes", () => {
     const err = mapWebSocketCloseToError(FLUXY_WS_CLOSE_POLICY, "token_expired");
     expect(err).toBeInstanceOf(FluxyTokenExpiredError);
+  });
+
+  it("maps close codes to typed disconnect reasons", () => {
+    const cases: Array<[number, string, string]> = [
+      [1000, "", "client_initiated"],
+      [FLUXY_WS_CLOSE_POLICY, "Unauthorized", "auth_failed"],
+      [FLUXY_WS_CLOSE_POLICY, "Forbidden", "not_member"],
+      [FLUXY_WS_CLOSE_POLICY, "token_expired", "token_expired"],
+      [FLUXY_WS_CLOSE_POLICY, "Sign in to join this room.", "anonymous_not_allowed"],
+      [FLUXY_WS_CLOSE_POLICY, "protocol_unsupported", "protocol_unsupported"],
+      [4000, "heartbeat_timeout", "heartbeat_timeout"],
+      [4001, "terminated_by_moderator", "removed"],
+      [1011, "websocket_setup_failed", "server_error"],
+      [1006, "gone", "network"],
+      [4712, "", "unknown"],
+    ];
+    for (const [code, reason, expected] of cases) {
+      expect(mapWebSocketCloseToDisconnectReason(code, reason), `${code} ${reason}`).toBe(expected);
+    }
   });
 
   it("describes terminal member errors for UI", () => {

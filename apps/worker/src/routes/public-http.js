@@ -8,6 +8,7 @@ import { guardDemoSessionRequest } from "../lib/demo-guard.js";
 import { issueDemoSession } from "../lib/demo-session.js";
 import { getDemoStatus } from "../lib/demo-room-seed.js";
 import { issueAnonymousToken } from "../lib/anonymous-token.js";
+import { linkGuestToAccount } from "../lib/guest-link.js";
 import { issueWalletNonce, verifyWalletSiwe, mintWalletMemberJwt } from "../lib/wallet-siwe.js";
 import { issuePublicGuestSession } from "../lib/guest-public-session.js";
 import { getPublicGuestHardeningConfig } from "../lib/public-guest-guard.js";
@@ -133,11 +134,14 @@ export async function dispatchPublicRoutes(request, url, h) {
   }
 
   if (url.pathname === "/llm-models/sync" && request.method === "POST") {
-    const secret = request.headers.get("X-Sync-Secret");
-    const expected = env.PLATFORM_BOOTSTRAP_SECRET || "dev-sync-secret";
+    const secret = request.headers.get("X-Sync-Secret")?.trim();
+    const expected = env.PLATFORM_BOOTSTRAP_SECRET?.trim();
     const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
     const isAdmin = auth && hasAnyRole(auth.roles, ["owner", "admin"]);
-    if (secret !== expected && !isAdmin) {
+    // Audit fix A2-2: no fallback secret — an unset PLATFORM_BOOTSTRAP_SECRET
+    // used to accept the well-known "dev-sync-secret" from anyone.
+    const secretOk = Boolean(expected && secret) && (await timingSafeEqual(secret, expected));
+    if (!secretOk && !isAdmin) {
       return json({ error: "forbidden" }, { status: 403 });
     }
     let result;
@@ -187,6 +191,16 @@ export async function dispatchPublicRoutes(request, url, h) {
   if (url.pathname === "/public/hitl/tap" && (request.method === "GET" || request.method === "POST")) {
     const { handlePublicHitlTap } = await import("../lib/hitl-tap-http.js");
     return handlePublicHitlTap(request, url, env, json, corsHeaders);
+  }
+
+  if (url.pathname === "/public/ops/approvals/tap" && (request.method === "GET" || request.method === "POST")) {
+    const { handlePublicOpsApprovalTap } = await import("../lib/ops-approval-tap-http.js");
+    return handlePublicOpsApprovalTap(request, url, env, json, corsHeaders);
+  }
+
+  if (url.pathname === "/public/ops/mcp/oauth/callback" && request.method === "GET") {
+    const { handleMcpOauthCallback } = await import("../lib/ops-mcp-oauth-http.js");
+    return handleMcpOauthCallback(request, url, env, json, corsHeaders);
   }
 
   if (url.pathname === "/public/hitl/slack" && request.method === "POST") {
@@ -404,18 +418,52 @@ export async function dispatchPublicRoutes(request, url, h) {
     );
     const roomId = sanitizeString(request.headers.get("X-Room-Id") || "", 128);
 
-    const contentLength = parseInt(request.headers.get("Content-Length") || "0", 10);
-    if (contentLength > 0 && !validateFileUpload(null, contentType, contentLength).valid) {
-      return json({ error: "file too large or invalid content type" }, { status: 400 });
+    // Audit #18: upload endpoints are rate limited per IP.
+    const uploadLimited = await checkAndConsumeIpRateLimit(env, {
+      request,
+      scope: "upload",
+      limit: 30,
+      windowSeconds: 60,
+    }).catch(() => ({ allowed: true }));
+    if (uploadLimited && uploadLimited.allowed === false) {
+      return json({ error: "rate_limited" }, { status: 429, headers: corsHeaders });
     }
 
-    const fileData = await request.arrayBuffer();
     const {
       getProjectMediaSettings,
       validateMediaUpload,
       enqueueAttachmentMediaPipeline,
     } = await import("../lib/media-pipeline.js");
+    // Audit #18: resolve project limits BEFORE reading the body, so a declared
+    // (or dishonest) Content-Length can never balloon memory.
     const mediaSettings = await getProjectMediaSettings(env, auth.projectId);
+    const maxUploadBytes = mediaSettings.maxFileSizeBytes;
+    const contentLength = parseInt(request.headers.get("Content-Length") || "0", 10);
+    if (Number.isFinite(contentLength) && contentLength > maxUploadBytes) {
+      return json({ error: "file_too_large", limitBytes: maxUploadBytes }, { status: 413 });
+    }
+
+    const chunks = [];
+    let totalBytes = 0;
+    const reader = request.body?.getReader();
+    if (reader) {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > maxUploadBytes) {
+          await reader.cancel().catch(() => {});
+          return json({ error: "file_too_large", limitBytes: maxUploadBytes }, { status: 413 });
+        }
+        chunks.push(value);
+      }
+    }
+    const fileData = new Uint8Array(totalBytes);
+    let writeOffset = 0;
+    for (const chunk of chunks) {
+      fileData.set(chunk, writeOffset);
+      writeOffset += chunk.byteLength;
+    }
     const validation = validateMediaUpload(mediaSettings, {
       contentType,
       sizeBytes: fileData.byteLength,
@@ -848,6 +896,35 @@ export async function dispatchPublicRoutes(request, url, h) {
     return json(result.body, { headers: corsHeaders });
   }
 
+  if (url.pathname === "/tokens/link-guest" && request.method === "POST") {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return json({ error: "unauthorized" }, { status: 401, headers: corsHeaders });
+    }
+    const body = await request.json().catch(() => ({}));
+    const result = await linkGuestToAccount(env, { verifyJwtAndGetContext }, {
+      projectId: auth.projectId,
+      targetUserId: auth.userId,
+      targetRoles: auth.roles,
+      guestToken: body?.guestToken,
+    });
+    if (result.ok) {
+      await writeAuditEvent(env, {
+        projectId: auth.projectId,
+        action: "guest.linked",
+        actorUserId: auth.userId,
+        targetType: "user",
+        targetId: auth.userId,
+        metadata: {
+          guestUserId: result.body.guestUserId,
+          roomsTransferred: result.body.roomsTransferred,
+          roomsAlreadyMember: result.body.roomsAlreadyMember,
+        },
+      }).catch(() => {});
+    }
+    return json(result.body, { status: result.status, headers: corsHeaders });
+  }
+
   if (url.pathname === "/auth/wallet/nonce" && request.method === "GET") {
     const apiKey = request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
     if (!apiKey) return json({ error: "api key required" }, { status: 401, headers: corsHeaders });
@@ -1055,6 +1132,21 @@ export async function dispatchPublicRoutes(request, url, h) {
     const { revokeJti } = await import("../lib/token-revocation.js");
     const res = await revokeJti(env, jti, exp);
     if (!res.ok) return json({ error: res.reason }, { status: 503 });
+
+    // Audit F-49: a revoked token must also drop the user's open DO sockets.
+    if (env.USER?.get && env.USER.idFromName) {
+      try {
+        const { internalDoHeaders } = await import("../lib/room-shard.js");
+        const stub = env.USER.get(env.USER.idFromName(`${projectId}__${sub}`));
+        await stub.fetch("https://internal/terminate", {
+          method: "POST",
+          headers: internalDoHeaders(env, { "Content-Type": "application/json" }),
+          body: JSON.stringify({ code: 4001, reason: "token_revoked" }),
+        });
+      } catch {
+        /* best effort — the jti deny-list entry is the authoritative revocation */
+      }
+    }
     return json({ ok: true, revoked: true, jti });
   }
 
@@ -1065,6 +1157,12 @@ export async function dispatchPublicRoutes(request, url, h) {
     const apiKey =
       request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
     if (!apiKey) return json({ error: "api key required" }, { status: 401 });
+    // Audit F-20: minting member JWTs with a client-chosen userId requires the
+    // secret key; publishable (pk_) keys would allow account takeover via OTP.
+    const secretOk = assertSecretApiKey(apiKey);
+    if (!secretOk.ok) {
+      return json({ error: secretOk.error }, { status: secretOk.status });
+    }
     const resolvedProjectId = await resolveProjectId(request, env);
     if (!resolvedProjectId || resolvedProjectId === (env.DEFAULT_PROJECT_ID || "default")) {
       return json({ error: "invalid api key" }, { status: 401 });
@@ -1092,6 +1190,11 @@ export async function dispatchPublicRoutes(request, url, h) {
     const apiKey =
       request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
     if (!apiKey) return json({ error: "api key required" }, { status: 401 });
+    // Audit F-20: same as /auth/sms-otp/send — secret key required to mint JWTs.
+    const secretOk = assertSecretApiKey(apiKey);
+    if (!secretOk.ok) {
+      return json({ error: secretOk.error }, { status: secretOk.status });
+    }
     const resolvedProjectId = await resolveProjectId(request, env);
     if (!resolvedProjectId || resolvedProjectId === (env.DEFAULT_PROJECT_ID || "default")) {
       return json({ error: "invalid api key" }, { status: 401 });
@@ -1124,7 +1227,11 @@ export async function dispatchPublicRoutes(request, url, h) {
     const capForTenant = isPlatformOperatorProject(resolvedProjectId, env) ? false : true;
     const rolesValidation = validateRoles(body.roles, { capElevated: capForTenant });
     const roles = rolesValidation.roles;
-    const ttlSeconds = Math.max(60, Math.min(Number(body.ttlSeconds || 3600), 86_400));
+    // Audit fix A2-23: a non-numeric ttl must not produce NaN → exp: null.
+    const requestedTtl = Number(body.ttlSeconds);
+    const ttlSeconds = Number.isFinite(requestedTtl)
+      ? Math.max(60, Math.min(requestedTtl, 86_400))
+      : 3600;
     const token = await signJwtHs256(row.jwt_secret, {
       sub: body.userId,
       tid: resolvedProjectId,

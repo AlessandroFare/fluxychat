@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ClipboardCheck, Loader2, Square } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { Banner, Button, EmptyState, Input, Section } from "../../components/ui";
 import { useDashboardSession } from "../../components/dashboard-session";
+import { OpsApprovalsSection } from "../../components/ops-approvals-section";
+import { OpsInputsSection } from "../../components/ops-inputs-section";
+import { OpsOversightSection } from "../../components/ops-oversight-section";
+import { OpsToolActivity } from "../../components/ops-tool-activity";
 import { messageFromUnknown } from "@/lib/error-message";
 import { opsCompleteTask, opsInbox, opsInviteGuest, opsKillRun, opsListRuns, type OpsRunRow } from "@/lib/ops-client";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -21,27 +25,29 @@ export default function OpsRunsPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [guestEmail, setGuestEmail] = useState("");
-
-  const load = useCallback(async () => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    setError(null);
-    try {
-      const [r, i] = await Promise.all([opsListRuns(token), opsInbox(token)]);
-      setRuns((r.runs || []) as OpsRunRow[]);
-      setTasks(i.items || []);
-    } catch (err) {
-      setError(messageFromUnknown(err, "Could not load runs"));
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+  const [loadKey, setLoadKey] = useState(0);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    const auth = token.trim();
+    if (!auth) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [r, i] = await Promise.all([opsListRuns(auth), opsInbox(auth)]);
+        if (cancelled) return;
+        setRuns((r.runs || []) as OpsRunRow[]);
+        setTasks(i.items || []);
+        setError(null);
+      } catch (err) {
+        if (!cancelled) setError(messageFromUnknown(err, "Could not load runs"));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, loadKey]);
 
   return (
     <ConsoleShell>
@@ -60,7 +66,7 @@ export default function OpsRunsPage() {
       />
       {error ? <Banner variant="error">{error}</Banner> : null}
       {notice ? <Banner variant="info">{notice}</Banner> : null}
-      {loading ? (
+      {token && loading ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Loading
         </p>
@@ -85,7 +91,7 @@ export default function OpsRunsPage() {
                     setBusy(task.id);
                     try {
                       await opsCompleteTask(token, task.id);
-                      await load();
+                      setLoadKey((key) => key + 1);
                     } catch (err) {
                       setError(messageFromUnknown(err, "Could not complete task"));
                     } finally {
@@ -101,6 +107,12 @@ export default function OpsRunsPage() {
         )}
       </Section>
 
+      <OpsApprovalsSection token={token} />
+      <OpsInputsSection token={token} />
+      <OpsOversightSection token={token} />
+
+      <OpsToolActivity token={token} />
+
       <Section title="All runs">
         {runs.length === 0 ? (
           <EmptyState title="No runs yet" description="Publish a draft from Processes, then start a run." />
@@ -113,6 +125,7 @@ export default function OpsRunsPage() {
                   <p className="text-muted-foreground">
                     {run.status}
                     {run.updatedAt ? ` · ${formatDateTime(run.updatedAt)}` : ""}
+                    {` · ${run.cost?.toolCalls ?? 0}${run.cost?.maxToolCalls ? `/${run.cost.maxToolCalls}` : ""} tool calls`}
                   </p>
                 </div>
                 <Button
@@ -124,7 +137,7 @@ export default function OpsRunsPage() {
                     setBusy(run.id);
                     try {
                       await opsKillRun(token, run.id);
-                      await load();
+                      setLoadKey((key) => key + 1);
                     } catch (err) {
                       setError(messageFromUnknown(err, "Kill switch failed"));
                     } finally {

@@ -26,6 +26,7 @@ import {
   normalizeShardCount,
   forEachRoomShard,
   getRoomShardCount,
+  internalDoHeaders,
 } from "../lib/room-shard.js";
 import { dispatchRoomInfoRoutes } from "./room-info-http.js";
 
@@ -747,7 +748,12 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
         return json({ error: "room not found" }, { status: 404 });
       }
     }
-    const role = body.role && ["owner", "admin", "moderator", "member"].includes(body.role) ? body.role : "member";
+    // Audit fix A2c: "mod" is the legacy alias of "moderator"; store canonical.
+    const requestedRole = body.role === "mod" ? "moderator" : body.role;
+    const role =
+      requestedRole && ["owner", "admin", "moderator", "member"].includes(requestedRole)
+        ? requestedRole
+        : "member";
     await env.DB.prepare(
       "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)"
     ).bind(roomId, body.userId, role, now).run();
@@ -1238,7 +1244,9 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     let live = { online: null, users: [] };
     try {
       const stub = env.ROOM.get(env.ROOM.idFromName(healthRoomId));
-      const liveRes = await stub.fetch("https://internal/live-stats");
+      const liveRes = await stub.fetch("https://internal/live-stats", {
+        headers: internalDoHeaders(env),
+      });
       if (liveRes.ok) live = await liveRes.json();
     } catch {
       /* DO may be cold */
@@ -1704,6 +1712,36 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
     }
   }
 
+  // Seal status + unseal (S3 crash-loop guard, `lib/do-crash-guard.js`).
+  // GET is member-readable (a sealed room must be visible to its users);
+  // POST (unseal) is owner/admin only.
+  if (
+    url.pathname.startsWith("/rooms/") &&
+    url.pathname.endsWith("/sealed") &&
+    (request.method === "GET" || request.method === "POST")
+  ) {
+    const auth = await verifyJwtAndGetContext(request, env).catch(() => null);
+    if (!auth) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const sealedRoomId = url.pathname.split("/")[2];
+    const canAccess = await canAccessRoom(env, auth, sealedRoomId);
+    if (!canAccess) return json({ error: "forbidden" }, { status: 403 });
+    if (request.method === "POST" && !hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
+    try {
+      const stub = env.ROOM.get(env.ROOM.idFromName(sealedRoomId));
+      const sealedRes = await stub.fetch("https://internal/sealed", { method: request.method });
+      const payload = await sealedRes
+        .json()
+        .catch(() => ({ ok: false, reason: "bad_do_response" }));
+      return json(payload, { status: sealedRes.status });
+    } catch {
+      return json({ ok: false, reason: "room_unavailable" }, { status: 503 });
+    }
+  }
+
   if (
     url.pathname.startsWith("/rooms/") &&
     url.pathname.endsWith("/live") &&
@@ -1775,7 +1813,7 @@ export async function dispatchRoomsMutationsRoutes(request, url, h) {
       const stub = env.ROOM.get(env.ROOM.idFromName(pinRoomId));
       await stub.fetch("https://internal/announce", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: internalDoHeaders(env, { "Content-Type": "application/json" }),
         body: JSON.stringify(announce),
       });
     } catch {

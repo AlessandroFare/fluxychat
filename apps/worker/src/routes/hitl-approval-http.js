@@ -232,6 +232,11 @@ export async function dispatchHitlApprovalRoutes(request, url, h) {
       "../lib/vercel-tool-approval-hmac.js"
     );
     const secret = toolApprovalSecret(env);
+    // Audit F-73: fail closed with a distinct error when a signature is offered
+    // but the deployment has no tool-approval secret configured.
+    if (!secret) {
+      return json({ error: "signature_not_configured" }, { status: 503, headers: corsHeaders });
+    }
     const ok = await verifyVercelToolApproval(secret, {
       signature: vercelSig,
       approvalId,

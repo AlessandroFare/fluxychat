@@ -13,7 +13,7 @@ export async function executeToolCall(
   traceId,
   options = {},
 ) {
-  if (isPrivateUrl(toolExecuteUrl)) {
+  if (isPrivateUrl(toolExecuteUrl, env)) {
     return { success: false, error: "tool_execute_url_blocked_ssrf" };
   }
   const controller = new AbortController();
@@ -42,7 +42,7 @@ export async function executeToolCall(
         dry_run: dryRun,
       }),
       signal: controller.signal,
-    });
+    }, env);
     if (!res.ok) {
       return { success: false, error: `tool_execute_http_${res.status}` };
     }
@@ -76,7 +76,7 @@ export async function fetchAppContext(
   userId,
   traceId
 ) {
-  if (isPrivateUrl(contextFetchUrl)) {
+  if (isPrivateUrl(contextFetchUrl, env)) {
     logInfo("agent.context_fetch_blocked_ssrf", { contextFetchUrl, projectId });
     return null;
   }
@@ -105,7 +105,7 @@ export async function fetchAppContext(
         "X-Fluxy-Trace-Id": traceId,
       },
       signal: controller.signal,
-    });
+    }, env);
     if (!res.ok) return null;
     const data = await res.json();
     if (env.RATE_LIMIT_KV && data) {

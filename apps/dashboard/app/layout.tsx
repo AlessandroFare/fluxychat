@@ -12,13 +12,11 @@ import { FluxyAutoConnect } from "./components/fluxy-auto-connect";
 import { FluxyRealtimeShell } from "./components/fluxy-realtime-shell";
 import { BetaBanner } from "./components/beta-banner";
 import { CookieConsentBanner } from "./components/cookie-consent-banner";
-import { Geist, Geist_Mono } from "next/font/google";
+import { cMono, cSans } from "./landing/c-fonts";
 import { cn } from "@/lib/utils";
 import { ROOT_METADATA } from "@/lib/site-metadata";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import { hasClerkPublishableKey } from "@/lib/clerk-config";
-
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   ...ROOT_METADATA,
@@ -68,13 +66,12 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("light font-sans", geist.variable, geistMono.variable)}
+      className={cn("light font-sans", cSans.variable, cMono.variable)}
     >
       <head suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{
-            __html:
-              "(function(){try{var t=localStorage.getItem('theme');if(t!=='dark')t='light';document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t);document.documentElement.style.colorScheme=t;}catch(e){document.documentElement.classList.add('light');document.documentElement.style.colorScheme='light';}})();",
+            __html: THEME_INIT_SCRIPT,
           }}
         />
         <link rel="llms" href={docsLlmsUrl} />

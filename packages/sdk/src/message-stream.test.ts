@@ -19,12 +19,13 @@ function mockConnection() {
     addEventListener(_type: "message", listener: (event: FluxyChatEvent) => void) {
       listeners.push(listener);
     },
-    removeEventListener() {
-      /* noop */
+    removeEventListener(_type: "message", listener: (event: FluxyChatEvent) => void) {
+      const index = listeners.indexOf(listener);
+      if (index >= 0) listeners.splice(index, 1);
     },
   } as unknown as FluxyChatRoomConnection;
 
-  return { connection, sends };
+  return { connection, sends, listenerCount: () => listeners.length };
 }
 
 describe("FluxyMessageStream", () => {
@@ -53,5 +54,22 @@ describe("FluxyMessageStream", () => {
       expect(sends.some((p) => p.type === "stream" && p.op === "end")).toBe(true),
     );
     vi.useRealTimers();
+  });
+
+  it("removes the capture listener on end (#26)", async () => {
+    const { connection, listenerCount } = mockConnection();
+    const stream = new FluxyMessageStream(connection, "agent-1");
+    stream.push("Hello");
+    expect(listenerCount()).toBe(1);
+    stream.end();
+    await vi.waitFor(() => expect(listenerCount()).toBe(0));
+  });
+
+  it("removes the capture listener on abort (#26)", () => {
+    const { connection, listenerCount } = mockConnection();
+    const stream = new FluxyMessageStream(connection, "agent-1");
+    stream.push("Hello");
+    stream.abort();
+    expect(listenerCount()).toBe(0);
   });
 });

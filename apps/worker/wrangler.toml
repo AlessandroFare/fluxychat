@@ -116,6 +116,13 @@ binding = "RATE_LIMIT_KV"
 id = "02d35b13ac6640c58fcd66166ea0214c"   # npx wrangler kv namespace create RATE_LIMIT_KV → paste id here
 preview_id = "536bdaedd5ce4e28b898e4bfb65ef3a2"   # npx wrangler kv namespace create RATE_LIMIT_KV --preview → paste id here
 
+# Optional defense-in-depth credential for internal-only room DO endpoints
+# (/announce, /stream — audit #15). Not required: the DO is only reachable via
+# its private binding. When set (e.g. `wrangler secret put INTERNAL_DO_TOKEN`,
+# 32+ random bytes), every internal caller attaches it via internalDoHeaders()
+# and the DO rejects requests without it.
+# INTERNAL_DO_TOKEN = ""
+
 # R2 bucket for file attachments and media storage.
 # Create with: wrangler r2 bucket create fluxychat-attachments
 [[r2_buckets]]

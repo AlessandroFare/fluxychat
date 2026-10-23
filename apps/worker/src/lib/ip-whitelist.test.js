@@ -7,6 +7,7 @@ import {
   toggleWhitelistRule,
   checkIpAccess,
   getWhitelistStats,
+  enforceProjectIpWhitelist,
 } from "./ip-whitelist.js";
 
 function makeEnv() {
@@ -42,15 +43,15 @@ function makeEnv() {
             if (sql.includes("INSERT")) {
               const exists = store.find((r) => r.project_id === params[1] && r.ip_address === params[2] && r.cidr_prefix === params[3]);
               if (exists) throw new Error("UNIQUE constraint");
-              store.push({ id: params[0], project_id: params[1], ip_address: params[2], cidr_prefix: params[3], label: params[4], enabled: params[5], created_at: params[6] });
+              store.push({ id: params[0], project_id: params[1], ip_address: params[2], cidr_prefix: params[3], label: params[4], enabled: 1, created_at: params[5] });
             } else if (sql.includes("DELETE")) {
               const before = store.length;
               for (let i = store.length - 1; i >= 0; i--) {
-                if (store[i].id === params[0]) store.splice(i, 1);
+                if (store[i].id === params[0] && store[i].project_id === params[1]) store.splice(i, 1);
               }
               return { meta: { changes: before - store.length } };
             } else if (sql.includes("UPDATE")) {
-              const idx = store.findIndex((r) => r.id === params[1]);
+              const idx = store.findIndex((r) => r.id === params[1] && r.project_id === params[2]);
               if (idx >= 0) store[idx].enabled = params[0];
               return { meta: { changes: idx >= 0 ? 1 : 0 } };
             }
@@ -107,6 +108,12 @@ describe("ip-whitelist", () => {
     it("handles IPv6 mapped IPv4", () => {
       const rules = [{ ip_address: "1.2.3.4", cidr_prefix: null, enabled: true }];
       expect(isIpAllowed("::ffff:1.2.3.4", rules)).toBe(true);
+    });
+
+    it("denies pure IPv6 addresses instead of mis-parsing them (audit F-38)", () => {
+      const rules = [{ ip_address: "1.2.3.4", cidr_prefix: null, enabled: true }];
+      expect(isIpAllowed("2001:db8::1.2.3.4", rules)).toBe(false);
+      expect(isIpAllowed("2001:db8::1", rules)).toBe(false);
     });
   });
 
@@ -168,6 +175,44 @@ describe("ip-whitelist", () => {
       const stats = await getWhitelistStats(env, { projectId: "p1" });
       expect(stats.total).toBe(2);
       expect(stats.enabled).toBe(2);
+    });
+  });
+
+  describe("project scoping (audit F-35)", () => {
+    it("cannot delete or toggle another project's rule", async () => {
+      const env = makeEnv();
+      await addWhitelistRule(env, { projectId: "p1", ipAddress: "10.0.0.1" });
+      const ruleId = env._store[0].id;
+
+      const foreignDelete = await removeWhitelistRule(env, { id: ruleId, projectId: "p2" });
+      expect(foreignDelete.deleted).toBe(0);
+      const foreignToggle = await toggleWhitelistRule(env, { id: ruleId, projectId: "p2", enabled: false });
+      expect(foreignToggle.updated).toBe(0);
+      expect(env._store[0].enabled).toBe(1);
+
+      const ownDelete = await removeWhitelistRule(env, { id: ruleId, projectId: "p1" });
+      expect(ownDelete.deleted).toBe(1);
+    });
+  });
+
+  describe("enforceProjectIpWhitelist (audit F-35)", () => {
+    it("is inert unless explicitly enabled", async () => {
+      const env = makeEnv();
+      await addWhitelistRule(env, { projectId: "p1", ipAddress: "10.0.0.1" });
+      const result = await enforceProjectIpWhitelist(env, { projectId: "p1", clientIp: "192.168.1.1" });
+      expect(result.blocked).toBe(false);
+    });
+
+    it("blocks non-allowlisted IPs when ENFORCE_IP_WHITELIST=true", async () => {
+      const env = makeEnv();
+      env.ENFORCE_IP_WHITELIST = "true";
+      await addWhitelistRule(env, { projectId: "p1", ipAddress: "10.0.0.1" });
+      const blocked = await enforceProjectIpWhitelist(env, { projectId: "p1", clientIp: "192.168.1.1" });
+      expect(blocked).toMatchObject({ blocked: true, reason: "not_whitelisted" });
+      const allowed = await enforceProjectIpWhitelist(env, { projectId: "p1", clientIp: "10.0.0.1" });
+      expect(allowed.blocked).toBe(false);
+      const noRules = await enforceProjectIpWhitelist(env, { projectId: "p2", clientIp: "192.168.1.1" });
+      expect(noRules.blocked).toBe(false);
     });
   });
 });

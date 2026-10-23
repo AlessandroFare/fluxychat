@@ -65,7 +65,7 @@ export function LandingPlatformIndex({ featured, more }: LandingPlatformIndexPro
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--mkt-text-muted)]">
             Also on the same worker
           </p>
-          <div className="mt-3 flex flex-wrap gap-1.5" role="list">
+          <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Also on the same worker">
             {more.map((item) => {
               const selected = item.title === active.title;
               return (

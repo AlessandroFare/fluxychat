@@ -6,7 +6,7 @@ import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
 import { RoomPicker } from "../../components/room-picker";
-import { Button, Panel, Section, Banner } from "../../components/ui";
+import { Banner, Button, EmptyState, Panel, Section, SkeletonCard } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -52,7 +52,11 @@ export default function RoomTranslationSettingsPage() {
   const [viewerLang, setViewerLang] = useState("en");
 
   useEffect(() => {
-    setViewerLang(getViewerTranslationLang());
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      setViewerLang(getViewerTranslationLang());
+    })();
   }, []);
 
   const loadRoom = useCallback(async () => {
@@ -83,16 +87,33 @@ export default function RoomTranslationSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    void loadList().finally(() => setLoading(false));
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (cancelled) return;
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      await loadList().finally(() => setLoading(false));
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [token, loadList]);
 
   useEffect(() => {
-    if (roomId.trim()) void loadRoom();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled && roomId.trim()) await loadRoom();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [roomId, loadRoom]);
 
   async function handleSave() {
@@ -125,9 +146,9 @@ export default function RoomTranslationSettingsPage() {
       {!token ? (
         <Banner variant="warn">Sign in with an admin JWT to configure room translation.</Banner>
       ) : loading ? (
-        <div className="flex items-center gap-2 py-12 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          Loading…
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : (
         <div className="space-y-6">
@@ -188,7 +209,7 @@ export default function RoomTranslationSettingsPage() {
                     value={targetLang}
                     onChange={(e) => setTargetLang(e.target.value)}
                     disabled={!enabled}
-                    className="w-full max-w-xs rounded-lg border border-border bg-background px-3 py-2 text-sm disabled:opacity-50"
+                    className="h-8 w-full max-w-xs rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm disabled:opacity-50"
                   >
                     {LANG_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -214,7 +235,12 @@ export default function RoomTranslationSettingsPage() {
 
           <Panel title="Configured rooms">
             {configuredRooms.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No rooms with translation settings yet.</p>
+              <EmptyState
+                compact
+                className="border-0 bg-transparent"
+                title="No configured rooms"
+                description="Rooms with auto-translate enabled appear here."
+              />
             ) : (
               <ul className="space-y-2">
                 {configuredRooms.map((room) => (

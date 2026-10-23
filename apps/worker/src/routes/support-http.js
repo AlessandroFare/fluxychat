@@ -36,14 +36,14 @@ export async function dispatchSupportRoutes(request, url, h) {
   if (path.match(/^\/api\/support\/tickets\/[a-z0-9]+$/) && request.method === "PATCH") {
     const ticketId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.updateTicket(env, { ticketId, projectId, ...body });
+    const result = await Support.updateTicket(env, { ...body, ticketId, projectId });
     return json(result);
   }
 
   if (path.match(/^\/api\/support\/tickets\/[a-z0-9]+\/messages$/) && request.method === "POST") {
     const ticketId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.addTicketMessage(env, { ticketId, projectId, ...body });
+    const result = await Support.addTicketMessage(env, { ...body, ticketId, projectId });
     return json(result);
   }
 
@@ -94,14 +94,14 @@ export async function dispatchSupportRoutes(request, url, h) {
   if (path.match(/^\/api\/support\/kb\/[a-z0-9]+$/) && request.method === "PATCH") {
     const articleId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.updateKBArticle(env, { articleId, projectId, ...body });
+    const result = await Support.updateKBArticle(env, { ...body, articleId, projectId });
     return json(result);
   }
 
   if (path.match(/^\/api\/support\/kb\/[a-z0-9]+\/impression$/) && request.method === "POST") {
     const articleId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.recordKBImpression(env, { articleId, projectId, ...body });
+    const result = await Support.recordKBImpression(env, { ...body, articleId, projectId });
     return json(result);
   }
 
@@ -114,7 +114,7 @@ export async function dispatchSupportRoutes(request, url, h) {
   if (path.match(/^\/api\/support\/surveys\/[a-z0-9]+\/respond$/) && request.method === "POST") {
     const surveyId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Support.respondToSurvey(env, { surveyId, projectId, ...body });
+    const result = await Support.respondToSurvey(env, { ...body, surveyId, projectId });
     return json(result);
   }
 

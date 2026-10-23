@@ -1,3 +1,5 @@
+import { sealSecretAtRest } from "./secrets-crypto.js";
+
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -76,6 +78,9 @@ export async function createConfiguration(env, { projectId, name, idpEntityId, i
 }
 
 export async function updateConfiguration(env, { configId, projectId, name, idpEntityId, idpSsoUrl, idpSloUrl, idpCertificate, idpMetadataUrl, spEntityId, spAcsUrl, spSloUrl, signRequests, wantAssertionsSigned, wantResponseSigned, attributeMapping, status, enforceSso, defaultRole }) {
+  // Audit F-38: the project scope is mandatory — a caller that forgets it must
+  // not be able to update another tenant's trust anchor (was optional).
+  if (!configId || !projectId) return { updated: false, error: "project_required" };
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
@@ -96,19 +101,17 @@ export async function updateConfiguration(env, { configId, projectId, name, idpE
   if (enforceSso !== undefined) { sets.push("enforce_sso = ?"); params.push(enforceSso ? 1 : 0); }
   if (defaultRole) { sets.push("default_role = ?"); params.push(defaultRole); }
   params.push(configId);
-  // Audit CRITICAL #7: scope by project_id so an admin of project A cannot
-  // overwrite project B's SAML trust anchor (idp_certificate/idp_entity_id).
-  let where = "WHERE id = ?";
-  if (projectId) { where += " AND project_id = ?"; params.push(projectId); }
+  params.push(projectId);
+  const where = "WHERE id = ? AND project_id = ?";
   await env.DB.prepare(`UPDATE saml_configurations SET ${sets.join(", ")} ${where}`).bind(...params).run();
   return { updated: true };
 }
 
 export async function getConfiguration(env, { configId, projectId }) {
-  let sql = "SELECT * FROM saml_configurations WHERE id = ?";
-  const params = [configId];
-  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
-  const row = await env.DB.prepare(sql).bind(...params).first();
+  // Audit F-38: mandatory project scope.
+  if (!projectId) return null;
+  const sql = "SELECT * FROM saml_configurations WHERE id = ? AND project_id = ?";
+  const row = await env.DB.prepare(sql).bind(configId, projectId).first();
   return row ? mapConfigRow(row) : null;
 }
 
@@ -122,10 +125,11 @@ export async function listConfigurations(env, { projectId, status }) {
 }
 
 export async function deleteConfiguration(env, { configId, projectId }) {
-  let sql = "DELETE FROM saml_configurations WHERE id = ?";
-  const params = [configId];
-  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
-  const result = await env.DB.prepare(sql).bind(...params).run();
+  // Audit F-38: mandatory project scope.
+  if (!configId || !projectId) return { deleted: 0, error: "project_required" };
+  const result = await env.DB.prepare(
+    "DELETE FROM saml_configurations WHERE id = ? AND project_id = ?",
+  ).bind(configId, projectId).run();
   return { deleted: result.meta?.changes || 0 };
 }
 
@@ -255,37 +259,60 @@ function escapeXml(value) {
     .replace(/"/g, "&quot;");
 }
 
+/** Epoch seconds. Accepts the epoch-seconds numbers older callers pass and the
+ * ISO strings `parseSamlAssertion` extracts from the XML. */
+function toEpochSeconds(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const parsed = Date.parse(String(value));
+  return Number.isNaN(parsed) ? null : Math.floor(parsed / 1000);
+}
+
 /** Validate SAML assertion NotBefore / NotOnOrAfter with clock skew (seconds). */
 export function validateSamlTiming(assertion, clockSkewSec = 300) {
   const now = Math.floor(Date.now() / 1000);
-  if (assertion.notBefore != null && now + clockSkewSec < assertion.notBefore) {
-    return { valid: false, reason: "assertion not yet valid" };
+  if (assertion.notBefore != null) {
+    const notBefore = toEpochSeconds(assertion.notBefore);
+    // Audit fix A2a: epoch-vs-ISO comparison was always false (NaN), so
+    // expired/not-yet-valid assertions passed. Fail closed on garbage too.
+    if (notBefore == null) return { valid: false, reason: "assertion notBefore invalid" };
+    if (now + clockSkewSec < notBefore) {
+      return { valid: false, reason: "assertion not yet valid" };
+    }
   }
-  if (assertion.notOnOrAfter != null && now - clockSkewSec > assertion.notOnOrAfter) {
-    return { valid: false, reason: "assertion expired" };
+  if (assertion.notOnOrAfter != null) {
+    const notOnOrAfter = toEpochSeconds(assertion.notOnOrAfter);
+    if (notOnOrAfter == null) return { valid: false, reason: "assertion notOnOrAfter invalid" };
+    if (now - clockSkewSec > notOnOrAfter) {
+      return { valid: false, reason: "assertion expired" };
+    }
   }
   return { valid: true };
 }
 
 /**
- * Audit #16: validate the assertion's AudienceRestriction against the SP
- * entityID and (when present) the SubjectConfirmationData Recipient against the
- * configured ACS URL. Prevents a validly-signed assertion minted for a
- * different SP from being replayed here (audience confusion / token reuse).
- * Fails closed when the assertion carries an Audience that does not match.
+ * Audit #16 + F-28: validate the assertion's AudienceRestriction against the SP
+ * entityID and the SubjectConfirmationData Recipient against the configured ACS
+ * URL. Prevents a validly-signed assertion minted for a different SP from being
+ * replayed here (audience confusion / token reuse).
+ *
+ * Fail-closed (audit F-28): when the SP configures an audience/ACS, a response
+ * WITHOUT them is rejected too — a missing claim is a mismatch, not a pass.
  */
 export function validateSamlAudience(assertion, config) {
   const expectedAudience = config?.spEntityId;
-  if (assertion.audience != null && expectedAudience) {
-    const audiences = Array.isArray(assertion.audience) ? assertion.audience : [assertion.audience];
+  if (expectedAudience) {
+    const audiences =
+      assertion.audience == null
+        ? []
+        : Array.isArray(assertion.audience)
+          ? assertion.audience
+          : [assertion.audience];
     if (!audiences.includes(expectedAudience)) {
       return { valid: false, reason: "audience_mismatch" };
     }
   }
-  if (assertion.recipient != null && config?.spAcsUrl) {
-    if (assertion.recipient !== config.spAcsUrl) {
-      return { valid: false, reason: "recipient_mismatch" };
-    }
+  if (config?.spAcsUrl && assertion.recipient !== config.spAcsUrl) {
+    return { valid: false, reason: "recipient_mismatch" };
   }
   return { valid: true };
 }
@@ -419,14 +446,6 @@ function findSignatureByteRangesFrom(xml, startIdx) {
   };
 }
 
-function extractSignatureValue(xml) {
-  const m = xml.match(/<ds:SignatureValue[^>]*>([\s\S]*?)<\/ds:SignatureValue>/);
-  if (m) return m[1].replace(/\s+/g, "");
-  const m2 = xml.match(/<SignatureValue[^>]*>([\s\S]*?)<\/SignatureValue>/);
-  if (m2) return m2[1].replace(/\s+/g, "");
-  return null;
-}
-
 function extractCanonicalizationMethod(xml) {
   const m = xml.match(/<ds:CanonicalizationMethod[^>]*Algorithm="([^"]+)"/);
   if (m) return m[1];
@@ -441,92 +460,154 @@ function extractSignatureMethod(xml) {
   return m2 ? m2[1] : null;
 }
 
-function extractReferenceUri(xml) {
-  // <ds:Reference URI="#assertion-id">  used when only the assertion
-  // (not the whole response) is signed.
-  const m = xml.match(/<ds:Reference[^>]*URI="([^"]+)"/);
-  return m ? m[1] : null;
+// --- DOM claim extraction (audit S-21 residual) ---
+//
+// Identity claims are read ONLY from the digest-verified DOM node: DOM queries
+// cannot see comments, CDATA sections or processing instructions, which the
+// digest canonicalization drops — a regex over the raw markup could (XML
+// Signature Wrapping via injected comments/CDATA).
+
+function localNameOf(el) {
+  const name = String(el?.nodeName || "");
+  const i = name.indexOf(":");
+  return i === -1 ? name : name.slice(i + 1);
 }
 
-function extractElementById(xml, id) {
-  if (!id) return null;
-  // We do a best-effort extraction; if the IdP uses a different ID
-  // attribute (e.g. wsu:Id), this is a known limitation  see the
-  // top-of-file residual-risk comment.
-  const re = new RegExp(
-    `<[a-zA-Z0-9:]+[^>]*\\s(?:wsu:)?[Ii][Dd]="${id.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}"[^>]*>[\\s\\S]*?<\\/[a-zA-Z0-9:]+>`,
-  );
-  const m = xml.match(re);
-  return m ? m[0] : null;
+function collectDescendantsByLocalName(node, name) {
+  const out = [];
+  if (!node?.getElementsByTagName) return out;
+  const all = node.getElementsByTagName("*");
+  for (let i = 0; i < all.length; i += 1) {
+    if (localNameOf(all[i]) === name) out.push(all[i]);
+  }
+  return out;
 }
 
-function extractIssuerAndNameId(xml) {
-  const issuerMatch = xml.match(/<(?:saml:)?Issuer[^>]*>([^<]+)<\/(?:saml:)?Issuer>/);
-  const nameIdMatch = xml.match(/<(?:saml:)?NameID[^>]*>([^<]+)<\/(?:saml:)?NameID>/);
-  // Pull NotBefore / NotOnOrAfter from <saml:Conditions>
-  const conditionsMatch = xml.match(/<(?:saml:)?Conditions[^>]*>/);
+function firstDescendantByLocalName(node, name) {
+  const found = collectDescendantsByLocalName(node, name);
+  return found.length ? found[0] : null;
+}
+
+// Audit F-38: claims are read by structure (direct children along the SAML
+// schema path), not "first descendant with this name" — wrappers such as
+// <Advice> or <Extensions> sit inside the signed element for some IdPs, and a
+// descendant scan can latch onto a decoy nested there.
+function directChildrenByLocalName(node, name) {
+  const out = [];
+  const children = node?.childNodes || [];
+  for (let i = 0; i < children.length; i += 1) {
+    const child = children[i];
+    if (child.nodeType === 1 && localNameOf(child) === name) out.push(child);
+  }
+  return out;
+}
+
+function firstDirectChildByLocalName(node, name) {
+  const found = directChildrenByLocalName(node, name);
+  return found.length ? found[0] : null;
+}
+
+/**
+ * Resolve the <Assertion> the digest-verified node is about: the node itself,
+ * or the single direct-child Assertion of a <Response>. Zero or several
+ * assertions make the response ambiguous — fail closed.
+ */
+function assertionNodeFor(node) {
+  if (!node) return null;
+  if (localNameOf(node) === "Assertion") return node;
+  const direct = directChildrenByLocalName(node, "Assertion");
+  return direct.length === 1 ? direct[0] : null;
+}
+
+function extractIssuerAndNameIdFromNode(assertionNode) {
+  const issuerEl = firstDirectChildByLocalName(assertionNode, "Issuer");
+  const subjectEl = firstDirectChildByLocalName(assertionNode, "Subject");
+  const nameIdEl = subjectEl ? firstDirectChildByLocalName(subjectEl, "NameID") : null;
+  const conditionsEl = firstDirectChildByLocalName(assertionNode, "Conditions");
   let notBefore = null;
   let notOnOrAfter = null;
-  if (conditionsMatch) {
-    const nb = conditionsMatch[0].match(/NotBefore="([^"]+)"/);
-    const na = conditionsMatch[0].match(/NotOnOrAfter="([^"]+)"/);
-    if (nb) notBefore = nb[1];
-    if (na) notOnOrAfter = na[1];
+  if (conditionsEl?.getAttribute) {
+    notBefore = conditionsEl.getAttribute("NotBefore") || null;
+    notOnOrAfter = conditionsEl.getAttribute("NotOnOrAfter") || null;
   }
   return {
-    issuer: issuerMatch ? issuerMatch[1].trim() : null,
-    nameId: nameIdMatch ? nameIdMatch[1].trim() : null,
+    issuer: issuerEl?.textContent ? issuerEl.textContent.trim() : null,
+    nameId: nameIdEl?.textContent ? nameIdEl.textContent.trim() : null,
     notBefore,
     notOnOrAfter,
   };
 }
 
-function extractAudienceAndRecipient(xml) {
-  const audiences = [];
-  const audRe = /<(?:saml:)?Audience[^>]*>([^<]+)<\/(?:saml:)?Audience>/g;
-  let a;
-  // eslint-disable-next-line no-cond-assign
-  while ((a = audRe.exec(xml)) !== null) audiences.push(a[1].trim());
-  // SubjectConfirmationData carries Recipient="<acs-url>"
-  const scd = xml.match(/<(?:saml:)?SubjectConfirmationData[^>]*>/);
-  let recipient = null;
-  if (scd) {
-    const r = scd[0].match(/Recipient="([^"]+)"/);
-    if (r) recipient = r[1];
-  }
+function extractAudienceAndRecipientFromNode(assertionNode) {
+  const conditionsEl = firstDirectChildByLocalName(assertionNode, "Conditions");
+  const audienceRestriction = conditionsEl
+    ? firstDirectChildByLocalName(conditionsEl, "AudienceRestriction")
+    : null;
+  const audiences = audienceRestriction
+    ? directChildrenByLocalName(audienceRestriction, "Audience")
+        .map((el) => String(el.textContent || "").trim())
+        .filter(Boolean)
+    : [];
+  const subjectEl = firstDirectChildByLocalName(assertionNode, "Subject");
+  const subjectConfirmation = subjectEl
+    ? firstDirectChildByLocalName(subjectEl, "SubjectConfirmation")
+    : null;
+  const confirmationData = subjectConfirmation
+    ? firstDirectChildByLocalName(subjectConfirmation, "SubjectConfirmationData")
+    : null;
+  const recipient = confirmationData?.getAttribute
+    ? confirmationData.getAttribute("Recipient")
+    : null;
   return {
     audience: audiences.length ? (audiences.length === 1 ? audiences[0] : audiences) : null,
-    recipient,
+    recipient: recipient || null,
   };
 }
 
-function extractDigestValue(xml) {
-  const m = xml.match(/<ds:DigestValue[^>]*>([\s\S]*?)<\/ds:DigestValue>/);
-  if (m) return m[1].replace(/\s+/g, "");
-  const m2 = xml.match(/<DigestValue[^>]*>([\s\S]*?)<\/DigestValue>/);
-  return m2 ? m2[1].replace(/\s+/g, "") : null;
+function extractAttributesFromNode(assertionNode) {
+  const attrs = {};
+  for (const statement of directChildrenByLocalName(assertionNode, "AttributeStatement")) {
+    for (const el of directChildrenByLocalName(statement, "Attribute")) {
+      const name = el.getAttribute
+        ? el.getAttribute("Name") || el.getAttribute("NameFormat")
+        : null;
+      if (!name) continue;
+      const values = directChildrenByLocalName(el, "AttributeValue").map(
+        (v) => String(v.textContent ?? ""),
+      );
+      attrs[name] = values.length === 1 ? values[0] : values;
+    }
+  }
+  return attrs;
+}
+
+/** Walk up from the SignedInfo node to its containing <ds:Signature> element. */
+function signatureElementForSignedInfo(signedInfoNode) {
+  let el = signedInfoNode?.parentNode || null;
+  while (el && localNameOf(el) !== "Signature") el = el.parentNode || null;
+  return el;
 }
 
 /**
- * Audit CRITICAL #6 (XML Signature Wrapping): independently verify that the
- * <ds:Reference DigestValue> equals the SHA-256 of the canonicalized element
- * the URI points at, so identity claims are read from a signed, digest-verified
- * node — not an attacker-injected sibling. Returns {ok, reason}.
+ * Audit F-21: Reference URI/DigestValue/Transforms MUST come from the
+ * SignedInfo DOM node whose signature was verified — regexing the raw XML
+ * lets an attacker prepend a decoy <Reference> and have the digest check
+ * pass over attacker-chosen content (XML Signature Wrapping).
  */
-async function verifyReferenceDigest(parsedDoc, refId, declaredDigestB64) {
-  if (!declaredDigestB64) return { ok: false, reason: "digest_value_missing" };
-  // Locate the element whose Id/ID/wsu:Id == refId.
-  let node = null;
-  const all = parsedDoc.getElementsByTagName("*");
-  for (let i = 0; i < all.length; i += 1) {
-    const el = all[i];
-    const idAttr =
-      (el.getAttribute && (el.getAttribute("ID") || el.getAttribute("Id") || el.getAttribute("wsu:Id")));
-    if (idAttr && idAttr === refId) { node = el; break; }
-  }
-  if (!node) return { ok: false, reason: "referenced_element_not_found" };
+function extractReferenceFromSignedInfo(signedInfoNode) {
+  const refEl = firstDescendantByLocalName(signedInfoNode, "Reference");
+  if (!refEl) return null;
+  const digestEl = firstDescendantByLocalName(refEl, "DigestValue");
+  const digest = digestEl ? String(digestEl.textContent || "").replace(/\s+/g, "") : null;
+  const transforms = collectDescendantsByLocalName(refEl, "Transform")
+    .map((t) => (t.getAttribute ? t.getAttribute("Algorithm") || "" : ""))
+    .filter(Boolean);
+  const uri = refEl.getAttribute ? refEl.getAttribute("URI") : null;
+  return { uri, digest, transforms };
+}
 
-  const canonical = await new Promise((resolve) => {
+function canonicalizeNodeExclusive(node) {
+  return new Promise((resolve) => {
     try {
       c14nFactory
         .createCanonicaliser("http://www.w3.org/2001/10/xml-exc-c14n#")
@@ -535,6 +616,52 @@ async function verifyReferenceDigest(parsedDoc, refId, declaredDigestB64) {
       resolve(null);
     }
   });
+}
+
+/**
+ * Audit CRITICAL #6 + S-21 residual (XML Signature Wrapping): verify that the
+ * <ds:Reference DigestValue> equals the SHA-256 of the referenced element as
+ * the IdP digested it — applying the declared enveloped-signature transform
+ * (strip the embedded <ds:Signature>) before exclusive C14N. Returns
+ * {ok, reason, node} where `node` is the digest-verified DOM element; claims
+ * MUST be read from that node via DOM queries only (comments/CDATA are not
+ * part of the digested node and must never reach claim extraction).
+ */
+async function verifyReferenceDigest(parsedDoc, refId, declaredDigestB64, transforms = []) {
+  if (!declaredDigestB64) return { ok: false, reason: "digest_value_missing" };
+  // Locate the element whose Id/ID/wsu:Id == refId. A document may legally
+  // carry the attribute on several element kinds, but the id must be unique:
+  // duplicate ids are the classic XML Signature Wrapping setup and make the
+  // reference ambiguous, so fail closed instead of guessing.
+  let node = null;
+  let matches = 0;
+  const all = parsedDoc.getElementsByTagName("*");
+  for (let i = 0; i < all.length; i += 1) {
+    const el = all[i];
+    const idAttr =
+      (el.getAttribute && (el.getAttribute("ID") || el.getAttribute("Id") || el.getAttribute("wsu:Id")));
+    if (idAttr && idAttr === refId) {
+      if (!node) node = el;
+      matches += 1;
+    }
+  }
+  if (!node) return { ok: false, reason: "referenced_element_not_found" };
+  if (matches > 1) return { ok: false, reason: "reference_id_ambiguous" };
+
+  let digestNode = node;
+  if (transforms.some((a) => /xmldsig#enveloped-signature$/i.test(a))) {
+    // The IdP excluded the signature element from the digest (the common
+    // assertion-signed layout): rebuild that view before canonicalizing.
+    digestNode = node.cloneNode(true);
+    const descendants = digestNode.getElementsByTagName("*");
+    const signatures = [];
+    for (let i = 0; i < descendants.length; i += 1) {
+      if (localNameOf(descendants[i]) === "Signature") signatures.push(descendants[i]);
+    }
+    for (const sig of signatures) sig.parentNode?.removeChild(sig);
+  }
+
+  const canonical = await canonicalizeNodeExclusive(digestNode);
   if (canonical == null) return { ok: false, reason: "reference_c14n_failed" };
 
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
@@ -543,24 +670,6 @@ async function verifyReferenceDigest(parsedDoc, refId, declaredDigestB64) {
     : Buffer.from(new Uint8Array(digest)).toString("base64");
   if (computedB64 !== declaredDigestB64) return { ok: false, reason: "digest_mismatch" };
   return { ok: true, node };
-}
-
-function extractAttributes(xml) {
-  const attrs = {};
-  const re = /<(?:saml:)?Attribute[^>]*?(?:Name|NameFormat)="([^"]+)"[^>]*>([\s\S]*?)<\/(?:saml:)?Attribute>/g;
-  let m;
-  // eslint-disable-next-line no-cond-assign
-  while ((m = re.exec(xml)) !== null) {
-    const name = m[1];
-    const inner = m[2];
-    const values = [];
-    const valueRe = /<(?:saml:)?AttributeValue[^>]*>([^<]*)<\/(?:saml:)?AttributeValue>/g;
-    let v;
-    // eslint-disable-next-line no-cond-assign
-    while ((v = valueRe.exec(inner)) !== null) values.push(v[1]);
-    attrs[name] = values.length === 1 ? values[0] : values;
-  }
-  return attrs;
 }
 
 /**
@@ -607,11 +716,6 @@ export async function parseSamlAssertion(encodedResponse, config) {
     return { isValid: false, reason: `unsupported_canonicalization:${c14nAlg}`, issuer: config.idpEntityId };
   }
 
-  const sigValueB64 = extractSignatureValue(xml);
-  if (!sigValueB64) {
-    return { isValid: false, reason: "signature_value_missing", issuer: config.idpEntityId };
-  }
-
   // Parse the response with a DOM parser and canonicalize SignedInfo
   // per the algorithm declared in the response. This is the proper
   // XMLDSig verification path  see the top-of-file comment.
@@ -624,6 +728,20 @@ export async function parseSamlAssertion(encodedResponse, config) {
   const c14nResult = await canonicalizeSignedInfo(parsedDoc);
   if (!c14nResult.ok) {
     return { isValid: false, reason: c14nResult.reason, issuer: config.idpEntityId };
+  }
+  // Audit F-21: bind the SignatureValue to the SAME <ds:Signature> element that
+  // contains the SignedInfo being verified (DOM, not raw-XML first match), so
+  // the signature we check and the Reference we digest can never diverge.
+  const sigElement = signatureElementForSignedInfo(c14nResult.node);
+  if (!sigElement) {
+    return { isValid: false, reason: "signature_missing", issuer: config.idpEntityId };
+  }
+  const sigValueEl = firstDescendantByLocalName(sigElement, "SignatureValue");
+  const sigValueB64 = sigValueEl
+    ? String(sigValueEl.textContent || "").replace(/\s+/g, "")
+    : null;
+  if (!sigValueB64) {
+    return { isValid: false, reason: "signature_value_missing", issuer: config.idpEntityId };
   }
   const signedInfoBytes = new TextEncoder().encode(c14nResult.canonical);
 
@@ -680,14 +798,15 @@ export async function parseSamlAssertion(encodedResponse, config) {
     };
   }
 
-  // Audit CRITICAL #6: enforce want_assertions_signed by independently
-  // verifying the Reference digest over the referenced element. SignedInfo
-  // being valid only proves the IdP signed *something*; without checking the
-  // digest of the referenced node an attacker can wrap a signed assertion and
-  // inject an unsigned one (XML Signature Wrapping). We now verify the digest
-  // and read identity claims ONLY from the digest-verified node.
-  const refUri = extractReferenceUri(xml);
-  let signedNodeXml = xml;
+  // Audit CRITICAL #6 + S-21 residual: enforce want_assertions_signed by
+  // independently verifying the Reference digest over the referenced element.
+  // SignedInfo being valid only proves the IdP signed *something*; without
+  // checking the digest of the referenced node an attacker can wrap a signed
+  // assertion and inject an unsigned one (XML Signature Wrapping). Identity
+  // claims are read ONLY from the digest-verified DOM node, via DOM queries:
+  // text regexes would also see comments/CDATA the digest never covered.
+  const refInfo = extractReferenceFromSignedInfo(c14nResult.node);
+  const refUri = refInfo?.uri || null;
   if (!refUri || !refUri.startsWith("#")) {
     return {
       isValid: false,
@@ -696,8 +815,13 @@ export async function parseSamlAssertion(encodedResponse, config) {
     };
   }
   const refId = refUri.slice(1);
-  const declaredDigest = extractDigestValue(xml);
-  const digestResult = await verifyReferenceDigest(parsedDoc, refId, declaredDigest);
+  const declaredDigest = refInfo.digest;
+  const digestResult = await verifyReferenceDigest(
+    parsedDoc,
+    refId,
+    declaredDigest,
+    refInfo.transforms,
+  );
   if (!digestResult.ok) {
     return {
       isValid: false,
@@ -705,12 +829,34 @@ export async function parseSamlAssertion(encodedResponse, config) {
       issuer: config.idpEntityId,
     };
   }
-  const byId = extractElementById(xml, refId);
-  if (byId) signedNodeXml = byId;
+  const signedNode = digestResult.node;
 
-  // Extract identity claims (from the signed node when assertion-signing is on)
-  const claims = extractIssuerAndNameId(signedNodeXml);
-  const audienceInfo = extractAudienceAndRecipient(signedNodeXml);
+  // Audit F-38: bind claims to the (single) Assertion — a response-signed
+  // layout otherwise lets claims resolve from Response-level wrappers.
+  const assertionNode = assertionNodeFor(signedNode);
+  if (!assertionNode) {
+    return {
+      isValid: false,
+      reason: "assertion_not_found",
+      issuer: config.idpEntityId,
+    };
+  }
+
+  // Audit F-27: this SP never emits an AuthnRequest (IdP-initiated only), so a
+  // Response carrying InResponseTo answers a request we did not send — reject.
+  const inResponseTo =
+    parsedDoc?.documentElement?.getAttribute?.("InResponseTo") || null;
+  if (inResponseTo) {
+    return {
+      isValid: false,
+      reason: "in_response_to_mismatch",
+      issuer: config.idpEntityId,
+    };
+  }
+
+  // Extract identity claims from the digest-verified Assertion (DOM only).
+  const claims = extractIssuerAndNameIdFromNode(assertionNode);
+  const audienceInfo = extractAudienceAndRecipientFromNode(assertionNode);
   if (claims.issuer !== config.idpEntityId) {
     return {
       isValid: false,
@@ -721,13 +867,17 @@ export async function parseSamlAssertion(encodedResponse, config) {
   if (!claims.nameId) {
     return { isValid: false, reason: "name_id_missing", issuer: claims.issuer };
   }
-  const attributes = extractAttributes(signedNodeXml);
+  const attributes = extractAttributesFromNode(assertionNode);
 
   return {
     isValid: true,
     reason: null,
     issuer: claims.issuer,
     nameId: claims.nameId,
+    // Audit F-27: assertion ID is the replay-protection key (must be unique).
+    assertionId:
+      assertionNode?.getAttribute?.("ID") || assertionNode?.getAttribute?.("Id") || null,
+    inResponseTo,
     notBefore: claims.notBefore,
     notOnOrAfter: claims.notOnOrAfter,
     audience: audienceInfo.audience,
@@ -736,6 +886,34 @@ export async function parseSamlAssertion(encodedResponse, config) {
     _c14n: c14nAlg,
     _sigAlg: sigAlg,
   };
+}
+
+/**
+ * Audit F-27: one-time consumption of a verified SAML assertion. Returns
+ * { ok: false, reason: "assertion_replayed" } when the same assertion ID was
+ * already used for this project (or is missing).
+ */
+export async function recordSamlAssertionUse(env, { projectId, assertionId, notOnOrAfter }) {
+  if (!assertionId) return { ok: false, reason: "assertion_id_missing" };
+  const expiryMs = notOnOrAfter ? Date.parse(notOnOrAfter) : NaN;
+  // Keep the row until the assertion itself expires (+ clock skew already
+  // applied by the timing check); fall back to a bounded window.
+  const expiresAt = new Date(
+    (Number.isNaN(expiryMs) ? Date.now() + 8 * 3600 * 1000 : expiryMs + 5 * 60 * 1000),
+  ).toISOString();
+  const result = await env.DB.prepare(
+    `INSERT OR IGNORE INTO saml_used_assertions (id, project_id, assertion_id, expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      `${projectId}|${assertionId}`,
+      projectId,
+      assertionId,
+      expiresAt,
+      new Date().toISOString(),
+    )
+    .run();
+  return result.meta?.changes ? { ok: true } : { ok: false, reason: "assertion_replayed" };
 }
 
 // Keep the legacy sync export shape for any caller that did not
@@ -766,6 +944,7 @@ export async function upsertSamlConfig(env, projectId, body) {
   if (existing?.id) {
     await updateConfiguration(env, {
       configId: existing.id,
+      projectId,
       idpEntityId: body.idp_entity_id,
       idpSsoUrl: body.idp_sso_url,
       idpCertificate: body.idp_certificate,
@@ -794,11 +973,13 @@ export async function createSsoSession(env, projectId, configurationId, assertio
   const id = `sso_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 8 * 3600 * 1000).toISOString();
+  // Audit F-37: the session's JWT was stored in clear text.
+  const sealed = await sealSecretAtRest(env, jwtToken);
   await env.DB.prepare(
     `INSERT INTO sso_sessions (id, project_id, configuration_id, name_id, jwt_token, expires_at, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   )
-    .bind(id, projectId, configurationId, assertion?.nameId || "unknown", jwtToken, expiresAt, now)
+    .bind(id, projectId, configurationId, assertion?.nameId || "unknown", sealed, expiresAt, now)
     .run();
   return { id };
 }

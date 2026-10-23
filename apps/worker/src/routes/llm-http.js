@@ -10,6 +10,7 @@ export async function dispatchLlmRoutes(request, url, h) {
     corsHeaders,
     json,
     verifyJwtAndGetContext,
+    hasAnyRole,
     projectId,
     listLlmProvidersForApi,
   } = pickRouteDeps(h, [
@@ -17,6 +18,7 @@ export async function dispatchLlmRoutes(request, url, h) {
     "corsHeaders",
     "json",
     "verifyJwtAndGetContext",
+    "hasAnyRole",
     "projectId",
     "listLlmProvidersForApi",
   ]);
@@ -64,6 +66,10 @@ export async function dispatchLlmRoutes(request, url, h) {
     if (!auth) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
+    // Audit F-23: baseUrl/apiKey writes are an exfiltration + SSRF surface; owner/admin only.
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
+    }
     const providerId = url.pathname.split("/").pop();
     const body = await request.json().catch(() => ({}));
     try {
@@ -79,7 +85,7 @@ export async function dispatchLlmRoutes(request, url, h) {
       const status =
         message === "encryption_not_configured"
           ? 503
-          : message === "unknown_provider"
+          : message === "unknown_provider" || message === "base_url_not_allowed"
             ? 400
             : 500;
       return json({ error: message }, { status });
@@ -96,6 +102,10 @@ export async function dispatchLlmRoutes(request, url, h) {
     });
     if (!auth) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    // Audit F-23: destructive credential changes are owner/admin only.
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403 });
     }
     const providerId = url.pathname.split("/").pop();
     const { deleteProjectLlmCredential } = await import("../lib/project-llm-credentials.js");

@@ -150,6 +150,9 @@ export async function runNestedAgentTool(input) {
     roomId: input.roomId,
     userMessage: parsed.prompt,
     userId: input.userId,
+    // Audit F-57: a nested run is the same invoker — dropping the roles made
+    // the two-key gate treat a guest invoker as trusted inside nested runs.
+    invokerRoles: input.invokerRoles,
     traceId: input.traceId,
     parentRunId: input.parentRunId,
     parentToolCallId: input.toolCall.id,

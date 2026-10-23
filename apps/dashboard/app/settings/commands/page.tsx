@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Plus, Terminal, Trash2 } from "lucide-react";
+import { Plus, Terminal, Trash2 } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Button, Input, Panel, Section } from "../../components/ui";
+import { Button, EmptyState, Input, Panel, Section, SkeletonCard } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -54,7 +54,15 @@ export default function SlashCommandsSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   async function handleCreate() {
@@ -103,9 +111,9 @@ export default function SlashCommandsSettingsPage() {
       <ConsoleFeedback error={error} notice={notice} />
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          Loading commands…
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : (
         <div className="space-y-6">
@@ -144,7 +152,12 @@ export default function SlashCommandsSettingsPage() {
                 </Button>
               </div>
               {custom.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No custom commands yet.</p>
+                <EmptyState
+                  compact
+                  className="border-0 bg-transparent"
+                  title="No custom commands"
+                  description="Add one above to extend the built-in set."
+                />
               ) : (
                 <div className="space-y-2">
                   {custom.map((cmd) => (

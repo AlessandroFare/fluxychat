@@ -46,7 +46,7 @@ export async function dispatchCustomRetentionRoutes(request, url, h) {
   if (request.method === "PATCH" && path.match(/^\/admin\/retention\/policies\/[^/]+$/)) {
     const id = path.split("/").pop();
     const body = await request.json();
-    const result = await updateRetentionPolicy(env, { id, projectId, ...body });
+    const result = await updateRetentionPolicy(env, { ...body, id, projectId });
     return respond(result, h);
   }
 

@@ -1,6 +1,6 @@
 import { resolveAdminContext } from "../lib/admin-route-context.js";
 import {
-  createBridgeConfig, connectBridge, disconnectBridge, getBridgeConfig, listBridgeConfigs, deleteBridgeConfig,
+  createBridgeConfig, updateBridgeConfig, connectBridge, disconnectBridge, getBridgeConfig, listBridgeConfigs, deleteBridgeConfig,
   createChannelMapping, listChannelMappings, deleteChannelMapping,
   syncInboundMessage, syncOutboundMessage, recordBridgeEvent, getBridgeStats,
 } from "../lib/bridge.js";
@@ -32,6 +32,7 @@ export async function dispatchBridgeRoutes(request, url, h) {
       botUserId: body.botUserId,
       botDisplayName: body.botDisplayName,
       settings: body.settings,
+      signingSecret: body.signingSecret,
     });
     return respond(result, h, 201);
   }
@@ -131,6 +132,47 @@ export async function dispatchBridgeRoutes(request, url, h) {
     });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
+  }
+
+  if (request.method === "PATCH" && path.match(/^\/admin\/bridges\/[^/]+$/)) {
+    const bridgeId = path.split("/")[3];
+    const gate = await requireBridge(bridgeId);
+    if (gate.error) return gate.error;
+    const body = await request.json();
+    const result = await updateBridgeConfig(env, {
+      bridgeId,
+      name: body.name,
+      token: body.token,
+      signingSecret: body.signingSecret,
+      webhookUrl: body.webhookUrl,
+      botUserId: body.botUserId,
+      botDisplayName: body.botDisplayName,
+    });
+    return respond(result, h);
+  }
+
+  if (request.method === "GET" && path.match(/^\/admin\/bridges\/[^/]+\/deliveries$/)) {
+    const bridgeId = path.split("/")[3];
+    const gate = await requireBridge(bridgeId);
+    if (gate.error) return gate.error;
+    const rows = await env.DB.prepare(
+      "SELECT id, fluxychat_message_id, external_channel_id, status, attempt_count, last_http_status, last_error, delivered_at, created_at, updated_at FROM bridge_deliveries WHERE bridge_id = ? ORDER BY created_at DESC LIMIT 20"
+    )
+      .bind(bridgeId)
+      .all();
+    const deliveries = (rows.results || []).map((r) => ({
+      id: r.id,
+      fluxychatMessageId: r.fluxychat_message_id,
+      externalChannelId: r.external_channel_id,
+      status: r.status,
+      attemptCount: r.attempt_count,
+      lastHttpStatus: r.last_http_status,
+      lastError: r.last_error,
+      deliveredAt: r.delivered_at,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }));
+    return respond({ deliveries }, h);
   }
 
   if (request.method === "GET" && path === "/admin/bridges/stats") {

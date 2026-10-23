@@ -175,6 +175,7 @@ async function dispatchSemanticSearch(request, url, h) {
   if (!result.ok) {
     const status =
       result.error === "query_required" ? 400 :
+      result.error === "forbidden" ? 403 :
       result.error === "ai_not_configured" ? 503 :
       result.error === "ai_provider_failed" ? 502 : 400;
     return json({ error: result.error }, { status, headers: corsHeaders });

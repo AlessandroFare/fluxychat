@@ -38,6 +38,24 @@ export function getCanonicalRoomStub(env, roomId) {
   return env.ROOM.get(env.ROOM.idFromName(id));
 }
 
+/**
+ * Room-scoped agent instance (`room-run:<project>:<room>`) shared by
+ * `POST /agents/:id/invoke` and @mentions, so room turns queue FIFO (CF-A-014).
+ */
+export function getRoomRunAgentStub(env, projectId, roomId) {
+  if (!env?.AGENT || typeof env.AGENT.idFromName !== "function") return null;
+  const project = String(projectId || "").trim();
+  const room = String(roomId || "").trim();
+  if (!project || !room) return null;
+  return env.AGENT.get(env.AGENT.idFromName(`room-run:${project}:${room}`));
+}
+
+export async function invokeRoomRunAgent(env, params) {
+  const stub = getRoomRunAgentStub(env, params?.projectId, params?.roomId);
+  if (!stub) return { ok: false, reason: "agent_do_unbound" };
+  return callDurableRpc(stub, AGENT_RPC_METHODS.room_invoke, params);
+}
+
 export async function callRoomDo(env, roomId, method, params = {}) {
   if (!Object.prototype.hasOwnProperty.call(ROOM_RPC_METHODS, method)) {
     return { ok: false, reason: "rpc_method_forbidden" };

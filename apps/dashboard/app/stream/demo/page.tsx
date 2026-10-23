@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   Eye, Hand, Users, Video, Loader2, Plus, Radio, Square,
   Gift, Vote, ShoppingBag, Sparkles, BarChart3, Camera,
   Award, MessageSquare, Send, TrendingUp, TrendingDown, Minus,
+  Volume2, VolumeX, Ban,
 } from "lucide-react";
 import { ConsoleShell } from "@/app/components/console-shell";
 import { ConsolePageHeader } from "@/app/components/console-page-header";
@@ -168,11 +170,11 @@ export default function FluxyStreamDemoPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="FluxyStream"
-        description="Live streaming and broadcast. Interactive demo with SDK-powered features."
+        description="Live streaming playground. The stat bar and tabs are seeded in-memory SDK state; events you create hit the real Worker."
         actions={
           <div className="flex items-center gap-2">
             <WorkerBackendBadge connected={Boolean(workerStream)} label="FluxyStream" />
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-red-600 dark:text-red-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-red-600 dark:text-red-400">
               <span className="size-1.5 rounded-full bg-red-600 animate-pulse" />
               LIVE
             </span>
@@ -182,6 +184,18 @@ export default function FluxyStreamDemoPage() {
           </div>
         }
       />
+
+      <p className="px-4 pt-3 text-xs text-muted-foreground">
+        Seeded tab data for the SDK surface. Real events live at{" "}
+        <Link href="/stream" className="underline underline-offset-2">
+          FluxyStream
+        </Link>
+        ; the public guest room is the{" "}
+        <Link href="/demo" className="underline underline-offset-2">
+          Playground
+        </Link>
+        .
+      </p>
 
       {/* Stats bar */}
       <div className="grid grid-cols-2 gap-2 border-b border-border px-4 py-2 sm:grid-cols-4 lg:grid-cols-6">
@@ -339,16 +353,18 @@ function ViewersPanel({ stream }: { stream: FluxyStreamApi }) {
                 onClick={() => { stream.muteViewer(v.userId, !v.isMuted); refresh(); }}
                 className={cn("rounded p-1.5 hover:bg-muted", v.isMuted ? "text-red-500" : "text-muted-foreground")}
                 title={v.isMuted ? "Unmute" : "Mute"}
+                aria-label={v.isMuted ? `Unmute ${v.username}` : `Mute ${v.username}`}
               >
-                {v.isMuted ? "🔇" : "🔊"}
+                {v.isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
               </button>
               <button
                 type="button"
                 onClick={() => { stream.banViewer(v.userId); refresh(); }}
                 className="rounded p-1.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
                 title="Ban"
+                aria-label={`Ban ${v.username}`}
               >
-                ⛔
+                <Ban className="size-4" />
               </button>
             </div>
           ))}
@@ -371,6 +387,7 @@ function ViewersPanel({ stream }: { stream: FluxyStreamApi }) {
           <button
             type="button"
             onClick={handleJoin}
+            aria-label="Add viewer"
             className="rounded-lg bg-[var(--fluxy-cta-color)] px-3 py-2 text-xs font-medium text-white hover:opacity-90"
           >
             <Plus className="size-4" />
@@ -381,11 +398,11 @@ function ViewersPanel({ stream }: { stream: FluxyStreamApi }) {
           Roles
         </h3>
         <div className="space-y-1 text-xs text-muted-foreground">
-          <p>🔴 Host: full control</p>
-          <p>🔵 Moderator: manage chat and viewers</p>
-          <p>🟣 VIP: special badge</p>
-          <p>🟢 Subscriber: paid supporter</p>
-          <p>⚪ Viewer: default</p>
+          <p className="flex items-center gap-2"><span className="size-2 rounded-full bg-red-500" /> Host: full control</p>
+          <p className="flex items-center gap-2"><span className="size-2 rounded-full bg-blue-500" /> Moderator: manage chat and viewers</p>
+          <p className="flex items-center gap-2"><span className="size-2 rounded-full bg-purple-500" /> VIP: special badge</p>
+          <p className="flex items-center gap-2"><span className="size-2 rounded-full bg-green-500" /> Subscriber: paid supporter</p>
+          <p className="flex items-center gap-2"><span className="size-2 rounded-full bg-muted-foreground/40" /> Viewer: default</p>
         </div>
 
         <h3 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

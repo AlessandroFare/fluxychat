@@ -5,6 +5,18 @@ description: "Session token expired or invalid"
 
 # 40100 — token_expired
 
-The JWT is expired or not a Fluxy member token. This is terminal: stop retrying with the same credential.
+The JWT is expired, or it is not a Fluxy member token. Terminal: stop retrying with the same credential.
 
-HTTP 401. WebSocket close 1008, reason `token_expired`. Mint a new JWT and connect again.
+**At a glance** — HTTP 401 · close 1008 `token_expired` · terminal · SDK `FluxyTokenExpiredError`.
+
+## What to do
+
+- Mint a new member JWT server-side (`POST /auth/token` with the `fc_` key) and reconnect with it. Never hand-craft or reuse another environment's token.
+- The SDK folds both `token_expired` and `invalid_token` closes into `FluxyTokenExpiredError`.
+- For long-lived clients, rotate before expiry with `scheduleSessionTokenRefresh` instead of reconnecting on failure.
+
+## Related
+
+- [40101 invalid_token](/docs/errors/invalid_token)
+- [40102 invalid_api_key](/docs/errors/invalid_api_key)
+- [40108 auth_refused](/docs/errors/auth_refused)

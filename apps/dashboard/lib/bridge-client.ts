@@ -14,8 +14,22 @@ export interface BridgeConfig {
   botDisplayName: string | null;
   status: string;
   settings: Record<string, unknown> | null;
+  hasSigningSecret: boolean;
   lastSyncAt: string | null;
   errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BridgeDelivery {
+  id: string;
+  fluxychatMessageId: string | null;
+  externalChannelId: string;
+  status: string;
+  attemptCount: number;
+  lastHttpStatus: number | null;
+  lastError: string | null;
+  deliveredAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,6 +80,7 @@ export async function createBridge(
     platform: string;
     name: string;
     token?: string;
+    signingSecret?: string;
     webhookUrl?: string;
     botUserId?: string;
     botDisplayName?: string;
@@ -75,6 +90,34 @@ export async function createBridge(
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+export async function updateBridge(
+  token: string,
+  bridgeId: string,
+  body: {
+    name?: string;
+    token?: string;
+    signingSecret?: string;
+    webhookUrl?: string;
+    botUserId?: string;
+    botDisplayName?: string;
+  },
+): Promise<{ updated: number }> {
+  return fetchWorkerJson(`${BASE}/admin/bridges/${encodeURIComponent(bridgeId)}`, {
+    method: "PATCH",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function listBridgeDeliveries(
+  token: string,
+  bridgeId: string,
+): Promise<{ deliveries: BridgeDelivery[] }> {
+  return fetchWorkerJson(`${BASE}/admin/bridges/${encodeURIComponent(bridgeId)}/deliveries`, {
+    headers: authHeaders(token),
   });
 }
 

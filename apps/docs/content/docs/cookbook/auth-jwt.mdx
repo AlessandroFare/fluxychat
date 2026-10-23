@@ -152,8 +152,10 @@ export async function POST(request: Request) {
 
 ## 7) Common failure modes
 
-- **401 invalid api key**: API key does not resolve a valid project (or is revoked)
-- **401 token expired**: `exp` passed — mint a new JWT (shorter TTL and rotation in your app)
-- **403 forbidden**: token role insufficient for admin endpoint
-- **403 WS**: user is not a room member (membership check)
+- **401 invalid api key** ([40102](/docs/errors/invalid_api_key)): API key does not resolve a valid project (or is revoked)
+- **401 token expired** ([40100](/docs/errors/token_expired)): `exp` passed — mint a new JWT (shorter TTL and rotation in your app)
+- **403 forbidden** ([40302](/docs/errors/forbidden)): token role insufficient for admin endpoint
+- **403 WS** ([40300 not_member](/docs/errors/not_member)): user is not a room member (membership check)
+
+Every refusal above has a numeric code in the [error catalog](/docs/errors) — branch on the identifier, not on the human-readable message.
 

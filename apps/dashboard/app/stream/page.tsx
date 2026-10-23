@@ -57,7 +57,7 @@ export default function StreamPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setEvents(Array.isArray(data) ? data : []);
+        setEvents(Array.isArray(data) ? data : data.events ?? []);
       }
     } catch { /* noop */ }
     setLoading(false);
@@ -93,10 +93,10 @@ export default function StreamPage() {
       <div className="flex flex-1 flex-col gap-4 p-4 pt-2">
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            SDK playground (local overlay state). Production streams are this page + Worker live events.
+            Events below are real (Worker + D1). The Stream studio in Labs is a seeded SDK playground.
           </p>
           <a href="/stream/demo" className="text-xs font-medium text-muted-foreground underline underline-offset-2">
-            Open playground
+            Open Stream studio
           </a>
         </div>
         {loading ? (

@@ -167,7 +167,8 @@ async function makeJwt(payload, secret) {
   const header = { alg: "HS256", typ: "JWT" };
   const enc = (o) =>
     btoa(JSON.stringify(o)).replace(/=+$/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-  const data = `${enc(header)}.${enc(payload)}`;
+  // Mint like the worker does (audit F-04): revocation needs a jti.
+  const data = `${enc(header)}.${enc({ ...payload, jti: payload.jti || crypto.randomUUID() })}`;
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),

@@ -23,6 +23,11 @@ export interface FluxySendMessageOptions {
   headers?: Record<string, string>;
   /** Stream quote — stored in metadata, does not start a reply thread. */
   quotedMessageId?: number | null;
+  /**
+   * Reply only: also post the message to the parent's channel, as well as the
+   * thread ("also send to channel"). Ignored without a reply parent.
+   */
+  alsoSendToChannel?: boolean;
 }
 
 export type FluxyPresenceIntent = "composing" | "away" | "viewing_thread" | "idle";

@@ -7,6 +7,7 @@ import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
 import { Button, Input, Panel, Section } from "../../components/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -75,7 +76,15 @@ export default function HipaaSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void loadAll();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await loadAll();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadAll]);
 
   function toggleCheck(id: string) {
@@ -163,8 +172,9 @@ export default function HipaaSettingsPage() {
       <ConsoleFeedback error={error} notice={notice} className="mt-4" />
 
       {loading ? (
-        <Panel className="mt-6 flex items-center gap-2 p-6 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        <Panel className="mt-6 space-y-3 p-6">
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-3 w-1/2" />
         </Panel>
       ) : null}
 

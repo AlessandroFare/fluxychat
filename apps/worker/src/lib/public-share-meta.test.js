@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getPublicShareMetaByToken, getPublicShareMetaForRoom } from "./public-share-meta.js";
+import {
+  getPublicShareMetaByToken,
+  getPublicShareMetaForRoom,
+  revokeRoomShareLink,
+} from "./public-share-meta.js";
 
 describe("public share tokens", () => {
   it("404s private rooms", async () => {
@@ -61,5 +65,49 @@ describe("public share tokens", () => {
     };
     const result = await getPublicShareMetaByToken(env, "lobby");
     expect(result.ok).toBe(false);
+  });
+
+  it("rotates the link on revoke: the old token dies, a fresh one is returned", async () => {
+    let activeToken = "a".repeat(48);
+    const revokedAt = [];
+    const inserted = [];
+    const env = {
+      DB: {
+        prepare(sql) {
+          const s = String(sql);
+          return {
+            bind(...args) {
+              return {
+                first: async () => {
+                  if (s.includes("FROM rooms")) {
+                    return { id: "lobby", name: "Lobby", type: "public", project_id: "p1" };
+                  }
+                  if (s.includes("FROM room_share_links")) {
+                    return activeToken ? { token: activeToken } : null;
+                  }
+                  return null;
+                },
+                run: async () => {
+                  if (s.startsWith("UPDATE room_share_links")) {
+                    revokedAt.push(args[0]);
+                    activeToken = null;
+                  } else if (s.startsWith("INSERT INTO room_share_links")) {
+                    inserted.push(args[0]);
+                    activeToken = args[0];
+                  }
+                  return { success: true };
+                },
+              };
+            },
+          };
+        },
+      },
+    };
+    const result = await revokeRoomShareLink(env, "lobby");
+    expect(result.ok).toBe(true);
+    expect(result.token).toMatch(/^[a-f0-9]{48}$/i);
+    expect(result.token).not.toBe("a".repeat(48));
+    expect(revokedAt.length).toBe(1);
+    expect(inserted).toEqual([result.token]);
   });
 });

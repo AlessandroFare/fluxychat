@@ -25,7 +25,7 @@ export async function dispatchCrmRoutes(request, url, h) {
   if (request.method === "POST" && path === "/admin/crm/connections") {
     const body = await request.json().catch(() => null);
     if (!body?.provider) return respond({ error: "provider required" }, h, 400);
-    const result = await upsertCrmConnection(env, { projectId, ...body });
+    const result = await upsertCrmConnection(env, { ...body, projectId });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }
@@ -60,7 +60,7 @@ export async function dispatchCrmRoutes(request, url, h) {
   if (request.method === "POST" && path === "/admin/crm/tickets") {
     const body = await request.json().catch(() => null);
     if (!body?.provider) return respond({ error: "provider required" }, h, 400);
-    const result = await createCrmTicket(env, { projectId, ...body });
+    const result = await createCrmTicket(env, { ...body, projectId });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }
@@ -70,7 +70,7 @@ export async function dispatchCrmRoutes(request, url, h) {
     if (!body?.provider || !body?.roomId || !body?.agentId) {
       return respond({ error: "provider, roomId, and agentId required" }, h, 400);
     }
-    const result = await handoffToAgent(env, { projectId, ...body });
+    const result = await handoffToAgent(env, { ...body, projectId });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }

@@ -86,6 +86,15 @@ export async function guardDemoSessionRequest(env, request, options = {}) {
         return { ok: false, status: 403, error: "turnstile_failed" };
       }
     }
+  } else {
+    // Audit F-34: with no Turnstile secret the demo minted sessions with no bot
+    // challenge at all. Fail closed outside development/test unless the operator
+    // explicitly opts out (DEMO_ALLOW_WITHOUT_TURNSTILE=true).
+    const nodeEnv = String(env?.NODE_ENV || "").trim().toLowerCase();
+    const isDev = nodeEnv === "development" || nodeEnv === "test";
+    if (!isDev && env.DEMO_ALLOW_WITHOUT_TURNSTILE !== "true") {
+      return { ok: false, status: 503, error: "turnstile_not_configured" };
+    }
   }
 
   return { ok: true };

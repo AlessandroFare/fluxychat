@@ -5,9 +5,12 @@ function hex(buf) {
 }
 
 async function hmac(secret, text) {
+  // OPS-05: never fall back to a fixed key — an unset secret would make every
+  // guest token forgeable. Fail closed instead.
+  if (!secret) throw new Error("ops_guest_secret_unconfigured");
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(secret || "ops-guest"),
+    new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
@@ -31,11 +34,18 @@ export async function issueOpsGuestInvite(store, { projectId, runId, email, can,
   return { guest, token, can: scope };
 }
 
-export async function redeemOpsGuestInvite(store, { projectId, token, secret }) {
+export async function redeemOpsGuestInvite(store, { projectId, token, secret, consume = false }) {
   const tokenHash = await hmac(secret, token);
   const guest = await store.getGuestByTokenHash(projectId, tokenHash);
   if (!guest) return { ok: false, error: "invalid_invite" };
   if (Date.parse(guest.expiresAt) < Date.now()) return { ok: false, error: "expired" };
+  // Audit F-88: entering via the invite link is single-use; the claim is atomic
+  // so two concurrent redemptions cannot both succeed. Per-action checks keep
+  // working with the token until expiry.
+  if (consume) {
+    const claimed = await store.markGuestRedeemed(projectId, guest.id);
+    if (!claimed) return { ok: false, error: "invite_already_used" };
+  }
   return { ok: true, guest, can: guest.scope };
 }
 

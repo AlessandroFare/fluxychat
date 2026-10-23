@@ -1,22 +1,17 @@
 /**
  * Audit D  axe-core a11y suite for FluxyChat dashboard.
  *
- * Scoped to the single public, auth-free, currently-passing page.
+ * Public, auth-free pages: landing, why, compare, get-started, docs, enter,
+ * plus the W6 public utilities (guides index + one guide rep, incident, report).
  * Auth-gated console routes are covered by `a11y.admin.integrated.spec.ts`
- * (requires E2E_ADMIN_JWT). Public marketing pages below may have known
- * contrast gaps documented in ROADMAP_EXECUTION.md.
+ * (requires E2E_ADMIN_JWT).
  *
- * KNOWN GAP: the broader marketing surface (`/landing`, `/why`,
- * `/compare`, `/get-started`, `/docs`) currently has ~30 color-
- * contrast violations (text-zinc-400/600 on warm light backgrounds,
- * plus several `link-in-text-block` instances on `text-brand`
- * links that lack an underline) and 1 landmark-unique violation
- * (a duplicate `<nav>` without an aria-label). These predate this
- * suite and are documented in ROADMAP_EXECUTION.md under
- * "M12  A11y contrast pass". Closing them requires a coordinated
- * design review (the warm-light theme and the brand-link style are
- * intentional design choices) and is out of scope for the surgical
- * pre-launch pass.
+ * W5 (Oct 2026): the warm-light contrast pass and the landmark-unique fix
+ * ("M12  A11y contrast pass" in ROADMAP_EXECUTION.md) are done — these pages
+ * are green. If a contrast finding reappears here, remember the hero WebGL
+ * backdrop is invisible to axe (headless, GPU disabled): the glass bands are
+ * intentionally self-sufficient (alpha 0.92) so the reported colours come
+ * from the fixed fallbacks, not the canvas.
  *
  * Gallery: landing `/` includes `#build-gallery` (mock previews).
  * Live Vite `--example` apps and docs MDX gallery are not in this file.
@@ -28,6 +23,13 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+// Sample the reduced-motion configuration: infinite decorative pulses
+// (`animate-pulse` on text wrong-footed axe mid-swing once — collab
+// "Explore all" pill sampled at ~56% opacity, 3.77:1). With prefers-reduced-
+// motion the pulsing text stops (motion-reduce:animate-none) and entrance
+// animations are skipped, so sampled colors are deterministic.
+test.use({ reducedMotion: "reduce" });
+
 const PUBLIC_PAGES = [
   { name: "landing", path: "/" },
   { name: "why", path: "/why" },
@@ -35,29 +37,15 @@ const PUBLIC_PAGES = [
   { name: "get-started", path: "/get-started" },
   { name: "docs", path: "/docs" },
   { name: "enter", path: "/enter" },
+  // W6: guides + public utilities (share is dynamic/worker-fed, kept out).
+  { name: "guides", path: "/guides" },
+  { name: "guide-jwt-auth", path: "/guides/jwt-auth" },
+  { name: "incident", path: "/incident" },
+  { name: "report", path: "/report" },
 ];
 
-// SKIP: requires Clerk session  covered by manual test plan
-// const ONBOARDING_STEPS = [
-//   { name: "step-1-welcome", path: "/onboarding?step=1" },
-//   ...
-// ];
-//
-// SKIP: pre-existing contrast + landmark violations on the warm-light
-// theme  documented in ROADMAP_EXECUTION.md "M12  A11y contrast pass"
-// const MARKETING_PAGES = [
-//   { name: "landing", path: "/" },
-//   { name: "why", path: "/why" },
-//   { name: "compare", path: "/compare" },
-//   { name: "get-started", path: "/get-started" },
-//   { name: "docs", path: "/docs" },
-// ];
-//
-// SKIP: requires Clerk session  covered by manual test plan
-// const AUTH_GATED_PAGES = [
-//   { name: "agents", path: "/agents" },
-//   { name: "projects", path: "/projects" },
-// ];
+// Onboarding steps: covered by e2e/onboarding.smoke.spec.ts. `?step=N` is not
+// a supported deep link, so the old ONBOARDING_STEPS paths are gone on purpose.
 
 const BLOCKING_IMPACTS = ["critical", "serious", "moderate"] as const;
 

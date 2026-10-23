@@ -5,7 +5,8 @@ vi.mock('./message-import.js', () => ({
 }));
 
 import { importAdminMessage } from './message-import.js';
-import { createBridgeConfig, connectBridge, disconnectBridge, getBridgeConfig, listBridgeConfigs, deleteBridgeConfig, createChannelMapping, listChannelMappings, getChannelMappingByRoom, getChannelMappingByExternal, deleteChannelMapping, mapMessage, findExternalMessage, findFluxychatMessage, recordBridgeEvent, getBridgeStats, syncInboundMessage, syncOutboundMessage } from './bridge.js';
+import { decryptSecret } from './secrets-crypto.js';
+import { createBridgeConfig, updateBridgeConfig, connectBridge, disconnectBridge, getBridgeConfig, listBridgeConfigs, deleteBridgeConfig, createChannelMapping, listChannelMappings, getChannelMappingByRoom, getChannelMappingByExternal, deleteChannelMapping, mapMessage, findExternalMessage, findFluxychatMessage, recordBridgeEvent, getBridgeStats, syncInboundMessage, syncOutboundMessage } from './bridge.js';
 
 beforeEach(() => {
   vi.mocked(importAdminMessage).mockResolvedValue({ imported: true, messageId: 42 });
@@ -19,7 +20,8 @@ function createEnv(rows = {}) {
       prepare(sql) {
         const isSelect = sql.startsWith('SELECT');
         return {
-          bind() {
+          bind(...args) {
+            if (Array.isArray(rows.captured)) rows.captured.push({ sql, args });
             return {
               first: async () => {
                 if (seq && callIdx < seq.length) return seq[callIdx++];
@@ -42,6 +44,33 @@ describe('bridge lib', () => {
       const config = await createBridgeConfig(env, { projectId: 'p1', platform: 'slack', name: 'My Slack' });
       expect(config.id).toMatch(/^br_/);
       expect(config.status).toBe('disconnected');
+    });
+  });
+
+  describe('updateBridgeConfig', () => {
+    it('stores a signing secret encrypted when the encryption key is set', async () => {
+      const key = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64');
+      const captured = [];
+      const env = { ...createEnv({ captured }), WEBHOOK_SECRET_ENCRYPTION_KEY: key };
+      const result = await updateBridgeConfig(env, { bridgeId: 'br-1', signingSecret: 'shh' });
+      expect(result.updated).toBe(1);
+      const update = captured.find((c) => c.sql.includes('UPDATE bridge_configs SET'));
+      expect(update.sql).toContain('signing_secret_ciphertext = ?');
+      expect(await decryptSecret(env, update.args[0], update.args[1])).toBe('shh');
+    });
+
+    it('falls back to settings when no encryption key is configured', async () => {
+      const captured = [];
+      const env = createEnv({ captured, first: { settings: null } });
+      await updateBridgeConfig(env, { bridgeId: 'br-1', signingSecret: 'shh' });
+      const update = captured.find((c) => c.sql.includes('UPDATE bridge_configs SET'));
+      expect(update.sql).toContain('settings = ?');
+      expect(JSON.parse(update.args[0]).signingSecret).toBe('shh');
+    });
+
+    it('is a no-op without fields', async () => {
+      const env = createEnv();
+      expect((await updateBridgeConfig(env, { bridgeId: 'br-1' })).updated).toBe(0);
     });
   });
 
@@ -96,6 +125,13 @@ describe('bridge lib', () => {
       const env = createEnv();
       const result = await createChannelMapping(env, { bridgeId: 'br-1', projectId: 'p1', fluxychatRoomId: 'r1', externalChannelId: 'C123' });
       expect(result.id).toMatch(/^bcm_/);
+    });
+    it('normalizes bidirectional to the schema value both', async () => {
+      const captured = [];
+      const env = createEnv({ captured });
+      await createChannelMapping(env, { bridgeId: 'br-1', projectId: 'p1', fluxychatRoomId: 'r1', externalChannelId: 'C123', syncDirection: 'bidirectional' });
+      const insert = captured.find((c) => c.sql.includes('INSERT INTO bridge_channel_mappings'));
+      expect(insert.args[6]).toBe('both');
     });
   });
 

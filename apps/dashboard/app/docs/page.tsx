@@ -8,6 +8,7 @@ import { StackBlitzButton } from "@/components/stackblitz-button";
 import { STACKBLITZ_TEMPLATES } from "@/lib/stackblitz-templates";
 import { HOSTED_COPY, HOSTED_PATHS, docsSiteHref } from "@/lib/hosted-product";
 import { DocsSearch } from "@/components/doc-search";
+import styles from "../landing/landing-c.module.css";
 
 export const metadata: Metadata = PAGE_METADATA.docs;
 
@@ -25,7 +26,7 @@ const GUIDES = [
     id: "quickstart",
     icon: Cloud,
     title: "Hosted quickstart",
-    summary: "Account, SDK install, and first room message on Fluxychat Cloud.",
+    summary: "Account, SDK install, and first room message on FluxyChat Cloud.",
     href: docsSiteHref("getting-started/quickstart"),
     cta: "Quickstart",
     external: true,
@@ -88,49 +89,52 @@ const GUIDES = [
 
 export default function DocsPage() {
   return (
-    <MarketingShell>
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Documentation</p>
-          <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-foreground">Guides and reference</h1>
-        </div>
-        <div className="shrink-0 sm:pt-1">
-          <Button asChild>
-            <a href={docsSiteHref("")} target="_blank" rel="noopener noreferrer">
+    <MarketingShell className={styles.pageWide}>
+      <header className={styles.pageHero}>
+        <div className={styles.pageHeroCopy}>
+          <span className={styles.pageEyebrow}>Documentation / quick hub</span>
+          <h1 className={styles.pageTitle}>Guides and reference.</h1>
+          <p className={styles.pageLede}>
+            Search, Ask AI, and the full SDK reference live on the docs site. This page is the
+            short path for the things people ask for first: auth, SDK setup, and the playground.
+          </p>
+          <div className={styles.pageActions}>
+            <a
+              href={docsSiteHref("")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${styles.btn} ${styles.btnPrimary}`}
+            >
               Full docs site
               <ExternalLink className="ml-2 size-4" aria-hidden />
             </a>
-          </Button>
+            <Link href="/demo" className={`${styles.btn} ${styles.btnGhost}`}>
+              Open the playground
+            </Link>
+            <Link href={HOSTED_PATHS.guides} className={`${styles.btn} ${styles.btnGhost}`}>
+              SEO guides
+            </Link>
+          </div>
+          <div className={styles.pageSearch}>
+            <DocsSearch variant="light" />
+          </div>
         </div>
-      </div>
-      <div className="mt-6 max-w-md">
-        <DocsSearch variant="light" />
-      </div>
-      <p className="mt-3 text-muted-foreground">
-        This page is a quick hub on fluxychat.com. Search, Ask AI, and the full SDK reference live on{" "}
-        <a href={docsSiteHref("")} className="text-primary underline underline-offset-2" target="_blank" rel="noopener noreferrer">
-          the docs site
-        </a>
-        . Try the product without signup on{" "}
-        <Link href="/demo" className="text-primary underline underline-offset-2">
-          /demo
-        </Link>
-        . SEO guides also live under{" "}
-        <Link href={HOSTED_PATHS.guides} className="text-primary underline underline-offset-2">
-          /guides
-        </Link>
-        .
-      </p>
+        <div className={styles.pageMeta}>
+          <span><strong>160+</strong> docs pages</span>
+          <span><strong>SDK</strong> React / Dart</span>
+          <span><strong>Beta</strong> hosted</span>
+        </div>
+      </header>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
+      <div className={styles.pageCards}>
         {GUIDES.map((guide) => {
           const external = "external" in guide && guide.external;
           const inner = (
             <>
               <guide.icon className="h-5 w-5 text-primary" aria-hidden />
-              <h2 className="mt-3 font-heading text-lg font-semibold text-foreground">{guide.title}</h2>
+              <h3>{guide.title}</h3>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{guide.summary}</p>
-              <span className="mt-3 inline-flex items-center text-sm font-medium text-primary">
+              <span className={styles.pageCardLink}>
                 {guide.cta}
                 <ArrowRight className="ml-1 h-3.5 w-3.5 transition group-hover:translate-x-0.5" aria-hidden />
               </span>
@@ -143,7 +147,7 @@ export default function DocsPage() {
                 href={guide.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group rounded-2xl bg-card p-4 shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
+                className={`${styles.pageCard} group`}
               >
                 {inner}
               </a>
@@ -153,7 +157,7 @@ export default function DocsPage() {
             <Link
               key={guide.id}
               href={guide.href}
-              className="group rounded-2xl bg-card p-4 shadow-[var(--shadow-2)] transition hover:shadow-[var(--shadow-3)]"
+              className={`${styles.pageCard} group`}
             >
               {inner}
             </Link>
@@ -248,7 +252,7 @@ export default function DocsPage() {
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           VAPID + RFC 8188 encrypted browser push, self-hosted and wire-compatible with Pusher Beams. Fetch the project
           public key from <code className="font-mono text-xs">GET /push/web/vapid-public-key</code> and register the
-          browser's <code className="font-mono text-xs">PushSubscription</code> via{" "}
+          browser&apos;s <code className="font-mono text-xs">PushSubscription</code> via{" "}
           <code className="font-mono text-xs">POST /push/web/subscribe</code>. No third-party push service required.
           Full protocol notes, SDK usage, and service worker snippet in{" "}
           <a

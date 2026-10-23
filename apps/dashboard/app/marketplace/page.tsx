@@ -79,7 +79,7 @@ export default function MarketplacePage() {
         description="Agent templates and MCP apps on the Worker. Apps tab persists manifests per project."
       />
 
-      <div role="tablist" className="mt-6 flex gap-1 border-b border-border">
+      <div role="tablist" className="mt-6 flex gap-1 overflow-x-auto border-b border-border">
         {([
           { id: "apps", label: "App Marketplace", icon: Package },
           { id: "templates", label: "Agent Templates", icon: Puzzle },
@@ -92,7 +92,7 @@ export default function MarketplacePage() {
             type="button"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className="-mb-px flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-4"
             style={{ borderColor: tab === t.id ? "var(--fluxy-cta-color)" : "transparent", color: tab === t.id ? "var(--foreground)" : "var(--muted-foreground)" }}
           >
             <t.icon className="h-4 w-4" />
@@ -436,14 +436,14 @@ function AgentTemplateGallery() {
         <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto"><X className="h-4 w-4" /></button>
+          <button onClick={() => setError(null)} aria-label="Dismiss error" className="ml-auto inline-flex size-8 items-center justify-center"><X className="h-4 w-4" /></button>
         </div>
       )}
       {successMsg && (
         <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>{successMsg}</span>
-          <button onClick={() => setSuccessMsg(null)} className="ml-auto"><X className="h-4 w-4" /></button>
+          <button onClick={() => setSuccessMsg(null)} aria-label="Dismiss message" className="ml-auto inline-flex size-8 items-center justify-center"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -500,7 +500,7 @@ function AgentTemplateGallery() {
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-auto">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <Input
             value={search}
@@ -926,7 +926,7 @@ function McpAppsMarketplaceTab() {
         <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
-          <button type="button" onClick={() => setError(null)} className="ml-auto"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setError(null)} aria-label="Dismiss error" className="ml-auto inline-flex size-8 items-center justify-center"><X className="h-4 w-4" /></button>
         </div>
       )}
       {notice && (

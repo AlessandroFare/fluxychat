@@ -145,6 +145,11 @@ export async function classifyRoom(env, { projectId, roomId, labelId, classified
   const label = await getLabelById(env, { projectId, labelId });
   if (!label) return { ok: false, error: "label_not_found" };
 
+  const room = await env.DB.prepare(
+    "SELECT id FROM rooms WHERE id = ? AND project_id = ? LIMIT 1"
+  ).bind(roomId, projectId).first();
+  if (!room) return { ok: false, error: "room_not_found" };
+
   const now = nowIso();
   await env.DB.prepare(
     `INSERT INTO room_classifications (room_id, project_id, label_id, classified_by, classified_at)
@@ -154,7 +159,7 @@ export async function classifyRoom(env, { projectId, roomId, labelId, classified
     .bind(roomId, projectId, labelId, classifiedBy, now, labelId, classifiedBy, now)
     .run();
 
-  return { roomId, projectId, labelId, classifiedBy, classifiedAt: now };
+  return { ok: true, roomId, projectId, labelId, classifiedBy, classifiedAt: now };
 }
 
 /**
@@ -176,6 +181,11 @@ export async function classifyMessage(env, { projectId, messageId, labelId, clas
   const label = await getLabelById(env, { projectId, labelId });
   if (!label) return { ok: false, error: "label_not_found" };
 
+  const message = await env.DB.prepare(
+    "SELECT id FROM messages WHERE id = ? AND project_id = ? LIMIT 1"
+  ).bind(messageId, projectId).first();
+  if (!message) return { ok: false, error: "message_not_found" };
+
   const now = nowIso();
   await env.DB.prepare(
     `INSERT INTO message_classifications (message_id, project_id, label_id, classified_by, classified_at)
@@ -185,7 +195,7 @@ export async function classifyMessage(env, { projectId, messageId, labelId, clas
     .bind(messageId, projectId, labelId, classifiedBy, now, classifiedBy, now)
     .run();
 
-  return { messageId, projectId, labelId, classifiedBy, classifiedAt: now };
+  return { ok: true, messageId, projectId, labelId, classifiedBy, classifiedAt: now };
 }
 
 /**

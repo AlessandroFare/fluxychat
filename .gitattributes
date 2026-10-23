@@ -1,0 +1,2 @@
+# Shell scripts must be LF: CRLF breaks bash on CI runners (audit F-94).
+*.sh text eol=lf

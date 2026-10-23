@@ -73,7 +73,7 @@ export default function CompareCometChatPage() {
       <h2 className="mt-10 font-heading text-xl font-semibold">Where FluxyChat is a different product</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         We do not sell MAU. You pay Cloudflare for the Worker, D1, and DO. Approvals are room HITL, including an
-        ephemeral room from <code className="text-foreground">requireApproval()</code> if you never built chat UI.
+        ephemeral room from <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">requireApproval()</code> if you never built chat UI.
         Quorum still wins over a single SDK HMAC.
       </p>
     </MarketingShell>

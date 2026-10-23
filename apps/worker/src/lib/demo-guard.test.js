@@ -58,4 +58,26 @@ describe("demo-guard", () => {
     expect(result.ok).toBe(false);
     expect(result.error).toBe("demo_origin_forbidden");
   });
+
+  it("requires Turnstile outside development unless explicitly opted out (audit F-34)", async () => {
+    const prodRequest = new Request("https://api/demo/session", {
+      method: "GET",
+      headers: { Origin: "https://allowed.com" },
+    });
+    const blocked = await guardDemoSessionRequest(
+      { NODE_ENV: "production", DEMO_ALLOWED_ORIGINS: "https://allowed.com" },
+      prodRequest,
+    );
+    expect(blocked).toMatchObject({ ok: false, status: 503, error: "turnstile_not_configured" });
+
+    const optedOut = await guardDemoSessionRequest(
+      {
+        NODE_ENV: "production",
+        DEMO_ALLOWED_ORIGINS: "https://allowed.com",
+        DEMO_ALLOW_WITHOUT_TURNSTILE: "true",
+      },
+      prodRequest,
+    );
+    expect(optedOut).toEqual({ ok: true });
+  });
 });

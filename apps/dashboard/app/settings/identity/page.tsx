@@ -6,7 +6,7 @@ import { Copy, Download, Loader2, Trash2 } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Button, Input, Panel, Section, Textarea } from "../../components/ui";
+import { Banner, Button, EmptyState, Input, Panel, Section, SkeletonCard, Textarea } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -61,7 +61,6 @@ export default function IdentitySettingsPage() {
 
   const loadAll = useCallback(async () => {
     if (!token) {
-      setError("Sign in and select a project with an admin JWT from Projects or Onboarding.");
       setLoading(false);
       return;
     }
@@ -94,7 +93,15 @@ export default function IdentitySettingsPage() {
   }, [token, projectId]);
 
   useEffect(() => {
-    void loadAll();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await loadAll();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadAll]);
 
   async function handleSaveSaml() {
@@ -230,8 +237,9 @@ export default function IdentitySettingsPage() {
           to paste an admin JWT, then return here.
         </Panel>
       ) : loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : (
         <div className="space-y-8">
@@ -304,7 +312,7 @@ export default function IdentitySettingsPage() {
             </p>
 
             {projectId ? (
-              <div className="mb-4 space-y-2 rounded-lg bg-white/80 shadow-[var(--shadow-2)] p-4 text-sm">
+              <div className="mb-4 space-y-2 rounded-lg bg-card shadow-[var(--shadow-2)] p-4 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-medium">Users endpoint</p>
@@ -325,7 +333,7 @@ export default function IdentitySettingsPage() {
                 </div>
               </div>
             ) : (
-              <p className="mb-4 text-sm text-amber-700">Select an active project to see SCIM endpoint URLs.</p>
+              <p className="mb-4 text-sm text-amber-700 dark:text-amber-300">Select an active project to see SCIM endpoint URLs.</p>
             )}
 
             <div className="mb-4 flex flex-wrap items-end gap-2">
@@ -344,19 +352,23 @@ export default function IdentitySettingsPage() {
             </div>
 
             {createdToken ? (
-              <Panel className="mb-4 border-amber-200 bg-amber-50/80 p-4">
-                <p className="text-sm font-medium text-amber-900">New token (copy now)</p>
-                <code className="mt-2 block break-all rounded bg-white p-2 font-mono text-xs">{createdToken}</code>
+              <Banner variant="warn" className="mb-4">
+                <p className="text-sm font-medium">New token (copy now)</p>
+                <code className="mt-2 block break-all rounded bg-muted p-2 font-mono text-xs">{createdToken}</code>
                 <Button size="sm" variant="outline" className="mt-2" onClick={() => copyText(createdToken)}>
                   <Copy className="mr-2 h-3 w-3" /> Copy
                 </Button>
-              </Panel>
+              </Banner>
             ) : null}
 
             {scimTokens.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No SCIM tokens yet.</p>
+              <EmptyState
+                compact
+                title="No SCIM tokens"
+                description="Create one above to provision users and groups from your IdP."
+              />
             ) : (
-              <ul className="divide-y rounded-lg bg-white/90 shadow-[var(--shadow-2)]">
+              <ul className="divide-y rounded-lg bg-card shadow-[var(--shadow-2)]">
                 {scimTokens.map((row) => (
                   <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                     <div>
@@ -386,9 +398,14 @@ export default function IdentitySettingsPage() {
               Add passkey
             </Button>
             {passkeys.length === 0 ? (
-              <p className="mt-4 text-sm text-muted-foreground">No passkeys registered for this user.</p>
+              <EmptyState
+                compact
+                className="mt-4"
+                title="No passkeys"
+                description="Register one above to sign in without a password."
+              />
             ) : (
-              <ul className="mt-4 divide-y rounded-lg bg-white/90 shadow-[var(--shadow-2)]">
+              <ul className="mt-4 divide-y rounded-lg bg-card shadow-[var(--shadow-2)]">
                 {passkeys.map((row) => (
                   <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                     <div>

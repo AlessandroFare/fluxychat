@@ -2,6 +2,11 @@ export type LiveCursorPointer = "mouse" | "touch";
 
 export interface LiveCursor {
   userId: string;
+  /**
+   * Presence layer name (Liveblocks-style `presenceKey`). Omitted = the default
+   * cursor layer; "agent" is the layer server-originated agent cursors use.
+   */
+  presenceKey?: string;
   roomId?: string;
   x: number;
   y: number;
@@ -14,6 +19,7 @@ export interface LiveCursor {
 export interface LiveCursorPublishInput {
   x: number;
   y: number;
+  presenceKey?: string;
   pointer?: LiveCursorPointer;
   color?: string;
   label?: string;
@@ -36,6 +42,7 @@ export function parseLiveCursorEvent(event: unknown): LiveCursor | null {
   if (!userId || !Number.isFinite(x) || !Number.isFinite(y)) return null;
   return {
     userId,
+    presenceKey: typeof rec.presenceKey === "string" && rec.presenceKey ? rec.presenceKey.slice(0, 64) : undefined,
     roomId: typeof rec.roomId === "string" ? rec.roomId : undefined,
     x,
     y,
@@ -52,6 +59,7 @@ export function buildCursorOutbound(input: LiveCursorPublishInput): Record<strin
     x: clampCursorCoordinate(input.x),
     y: clampCursorCoordinate(input.y),
     pointer: input.pointer === "touch" ? "touch" : "mouse",
+    ...(input.presenceKey ? { presenceKey: String(input.presenceKey).slice(0, 64) } : {}),
     ...(input.color ? { color: String(input.color).slice(0, 32) } : {}),
     ...(input.label ? { label: String(input.label).slice(0, 64) } : {}),
   };
@@ -61,6 +69,11 @@ export interface CursorBatchPoint {
   x: number;
   y: number;
   offsetMs: number;
+}
+
+/** Map key for a cursor layer: `userId` on the default layer, `userId#presenceKey` on named layers. */
+export function cursorLayerKey(cursor: Pick<LiveCursor, "userId" | "presenceKey">): string {
+  return cursor.presenceKey ? `${cursor.userId}#${cursor.presenceKey}` : cursor.userId;
 }
 
 const DEFAULT_BATCH_MS = 100;
@@ -159,6 +172,7 @@ export function createCursorBatcher(batchIntervalMs = DEFAULT_BATCH_MS) {
         pointer: input.pointer,
         color: input.color,
         label: input.label,
+        presenceKey: input.presenceKey,
       };
       if (!timer) timer = setTimeout(() => flush(send), batchIntervalMs);
     },

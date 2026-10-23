@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MarketingShell } from "../components/marketing-shell";
 import { HOSTED_PATHS, docsSiteHref } from "@/lib/hosted-product";
 import { buildPageMetadata } from "@/lib/site-metadata";
+import styles from "../landing/landing-c.module.css";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Ship FluxyChat in a SaaS",
@@ -37,52 +38,100 @@ const COMPANY = [
 
 export default function ForTeamsPage() {
   return (
-    <MarketingShell className="max-w-3xl py-12">
-      <h1 className="font-heading text-3xl font-bold tracking-tight">Ship this in a product</h1>
-      <p className="mt-3 text-sm text-muted-foreground">
-        For a startup that owns the app. Hosted is open beta: pin versions, no public SLA. Self-host
-        MIT if legal wants the Worker in your Cloudflare account. There is no SOC 2 pack, no HIPAA
-        BAA, and no 99.999% SLO on this page.
-      </p>
-
-      <h2 className="mt-10 font-heading text-lg font-semibold">What we ship</h2>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed">
-        {KERNEL.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-
-      <h2 className="mt-10 font-heading text-lg font-semibold">You bring these</h2>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed">
-        {BRING.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-
-      <h2 className="mt-10 font-heading text-lg font-semibold">Legal and ops for hosted</h2>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm">
-        {COMPANY.map((item) => (
-          <li key={item.href}>
-            <Link className="underline underline-offset-2" href={item.href}>
-              {item.label}
+    <MarketingShell className={styles.pageNarrow}>
+      <header className={styles.pageHero}>
+        <div className={styles.pageHeroCopy}>
+          <span className={styles.pageEyebrow}>For teams / hosted beta</span>
+          <h1 className={styles.pageTitle}>Ship this in a product.</h1>
+          <p className={styles.pageLede}>
+            For a startup that owns the app. Hosted is open beta: pin versions, no public SLA.
+            Self-host MIT if legal wants the Worker in your Cloudflare account. There is no SOC 2
+            pack, no HIPAA BAA, and no 99.999% SLO on this page.
+          </p>
+          <div className={styles.pageActions}>
+            <Link href={HOSTED_PATHS.getStarted} className={`${styles.btn} ${styles.btnPrimary}`}>
+              Get started
             </Link>
-          </li>
-        ))}
-      </ul>
+            <a href={docsSiteHref("getting-started/quickstart")} className={`${styles.btn} ${styles.btnGhost}`}>
+              Quickstart docs
+            </a>
+          </div>
+        </div>
+        <div className={styles.pageMeta}>
+          <span>
+            <strong>Bring</strong> your app
+          </span>
+          <span>
+            <strong>Keep</strong> your auth
+          </span>
+          <span>
+            <strong>Self-host</strong> MIT
+          </span>
+        </div>
+      </header>
 
-      <p className="mt-10 text-sm">
-        <Link className="font-medium underline underline-offset-2" href={HOSTED_PATHS.getStarted}>
-          Get started
-        </Link>
-        {" · "}
-        <a className="font-medium underline underline-offset-2" href={docsSiteHref("getting-started/quickstart")}>
-          Quickstart docs
-        </a>
-        {" · "}
-        <Link className="font-medium underline underline-offset-2" href={HOSTED_PATHS.onboarding}>
-          Console onboarding
-        </Link>
-      </p>
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>What we ship</span>
+          <h2 className={styles.pageH2}>Kernel, not a platform team.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <ul>
+            {KERNEL.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>You bring these</span>
+          <h2 className={styles.pageH2}>The parts that are yours.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <ul>
+            {BRING.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className={styles.pageSection}>
+        <div className={styles.pageSectionHead}>
+          <span className={styles.pageEyebrow}>Legal and ops</span>
+          <h2 className={styles.pageH2}>Read the hosted contract.</h2>
+        </div>
+        <div className={styles.pageBody}>
+          <ul>
+            {COMPANY.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href}>{item.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <div className={styles.pageCta}>
+        <div>
+          <span className={styles.pageEyebrow}>Onboarding</span>
+          <p className={styles.pageH2}>Create a project, copy the key.</p>
+          <p>
+            The console wizard gets you to a public room. Move the key server-side when you add
+            member tokens.
+          </p>
+        </div>
+        <div className={styles.pageActions}>
+          <Link href={HOSTED_PATHS.onboarding} className={`${styles.btn} ${styles.btnPrimary}`}>
+            Console onboarding
+          </Link>
+          <Link href="/pricing" className={`${styles.btn} ${styles.btnGhost}`}>
+            Pricing
+          </Link>
+        </div>
+      </div>
     </MarketingShell>
   );
 }

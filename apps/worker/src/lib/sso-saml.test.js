@@ -14,6 +14,46 @@ function mockDB(rows = []) {
 const env = {};
 
 describe("sso-saml", () => {
+  it("validateSamlAudience fails closed on missing audience/recipient (audit F-28)", async () => {
+    const { validateSamlAudience } = await import("../lib/sso-saml.js");
+    const config = { spEntityId: "fluxychat", spAcsUrl: "https://app.com/saml/acs" };
+    expect(validateSamlAudience({ audience: "fluxychat", recipient: config.spAcsUrl }, config)).toEqual({ valid: true });
+    expect(validateSamlAudience({ audience: null, recipient: config.spAcsUrl }, config)).toEqual({
+      valid: false,
+      reason: "audience_mismatch",
+    });
+    expect(validateSamlAudience({ audience: "app.com", recipient: config.spAcsUrl }, config)).toEqual({
+      valid: false,
+      reason: "audience_mismatch",
+    });
+    expect(validateSamlAudience({ audience: "fluxychat", recipient: null }, config)).toEqual({
+      valid: false,
+      reason: "recipient_mismatch",
+    });
+  });
+
+  it("recordSamlAssertionUse rejects a replayed assertion id (audit F-27)", async () => {
+    const { recordSamlAssertionUse } = await import("../lib/sso-saml.js");
+    const changes = { value: 1 };
+    const db = {
+      prepare: vi.fn().mockReturnValue({
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn(async () => ({ meta: { changes: changes.value } })),
+      }),
+    };
+    const first = await recordSamlAssertionUse({ DB: db }, {
+      projectId: "p1",
+      assertionId: "a-1",
+      notOnOrAfter: new Date(Date.now() + 60_000).toISOString(),
+    });
+    expect(first).toEqual({ ok: true });
+    changes.value = 0;
+    const replay = await recordSamlAssertionUse({ DB: db }, { projectId: "p1", assertionId: "a-1" });
+    expect(replay).toEqual({ ok: false, reason: "assertion_replayed" });
+    const missing = await recordSamlAssertionUse({ DB: db }, { projectId: "p1", assertionId: null });
+    expect(missing).toEqual({ ok: false, reason: "assertion_id_missing" });
+  });
+
   it("creates SAML configuration", async () => {
     const db = mockDB([]);
     env.DB = { prepare: vi.fn().mockReturnValue(db) };
@@ -223,6 +263,288 @@ describe("sso-saml", () => {
     expect(result.isValid).toBe(false);
     expect(result.reason).toBe("idp_certificate_missing");
   });
+
+  it("accepts a valid reference digest and reads claims from the verified node (S-21 residual)", async () => {
+    const { privateKey, pemCert } = await generateTestRsaKeyPairAndCert();
+    const { parseSamlAssertion } = await import("../lib/sso-saml.js");
+
+    const idpEntityId = "http://idp.example.com";
+    const assertionId = "_valid-assertion-1";
+    const { xml } = await buildSignedResponse({
+      idpEntityId,
+      assertionId,
+      nameId: "alice@example.com",
+      attributesXml:
+        `<saml:AttributeStatement><saml:Attribute Name="role">` +
+        `<saml:AttributeValue>admin</saml:AttributeValue>` +
+        `</saml:Attribute></saml:AttributeStatement>`,
+      privateKey,
+      enveloped: false,
+    });
+
+    const result = await parseSamlAssertion(xml, {
+      idpEntityId,
+      idpCertificate: pemCert,
+      wantAssertionsSigned: true,
+      wantResponseSigned: false,
+    });
+    // Regression: the earlier regex extraction truncated at the first inner
+    // closing tag, so a valid response failed with name_id_missing.
+    expect(result.isValid).toBe(true);
+    expect(result.nameId).toBe("alice@example.com");
+    expect(result.notBefore).toBe("2024-01-01T00:00:00Z");
+    expect(result.notOnOrAfter).toBe("2099-01-01T00:00:00Z");
+    expect(result.attributes).toEqual({ role: "admin" });
+  });
+
+  it("ignores wrapped markup in comments when extracting claims (S-21 residual)", async () => {
+    const { privateKey, pemCert } = await generateTestRsaKeyPairAndCert();
+    const { parseSamlAssertion } = await import("../lib/sso-saml.js");
+
+    const idpEntityId = "http://idp.example.com";
+    const assertionId = "_valid-assertion-2";
+    const { xml } = await buildSignedResponse({
+      idpEntityId,
+      assertionId,
+      nameId: "genuine@example.com",
+      attributesXml:
+        `<saml:AttributeStatement><saml:Attribute Name="role">` +
+        `<saml:AttributeValue>member</saml:AttributeValue>` +
+        `</saml:Attribute></saml:AttributeStatement>`,
+      privateKey,
+      enveloped: false,
+    });
+
+    // XML Signature Wrapping attempt: valid signature and digest, but an
+    // injected comment (dropped by the digest canonicalization, invisible to
+    // the DOM) carries fake claims in raw markup.
+    const fake =
+      `<saml:Assertion ID="${assertionId}">` +
+      `<saml:Issuer>${idpEntityId}</saml:Issuer>` +
+      `<saml:NameID>evil@example.com</saml:NameID>` +
+      `<saml:AttributeStatement><saml:Attribute Name="role">` +
+      `<saml:AttributeValue>owner</saml:AttributeValue>` +
+      `</saml:Attribute></saml:AttributeStatement>` +
+      `</saml:Assertion>`;
+    const wrapped = xml.replace(
+      `<saml:Assertion ID="${assertionId}">`,
+      `<!--${fake}--><saml:Assertion ID="${assertionId}">`,
+    );
+
+    const result = await parseSamlAssertion(wrapped, {
+      idpEntityId,
+      idpCertificate: pemCert,
+      wantAssertionsSigned: true,
+      wantResponseSigned: false,
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.nameId).toBe("genuine@example.com");
+    expect(result.attributes).toEqual({ role: "member" });
+  });
+
+  it("ignores claims nested in Advice and reads attributes structurally (audit F-38)", async () => {
+    const { privateKey, pemCert } = await generateTestRsaKeyPairAndCert();
+    const { parseSamlAssertion } = await import("../lib/sso-saml.js");
+
+    const idpEntityId = "http://idp.example.com";
+    const assertionId = "_valid-assertion-3";
+    // Advice is valid signed content, but claims must come from the schema path
+    // (AttributeStatement > Attribute), not from any descendant with that name.
+    const attributesXml =
+      `<saml:AttributeStatement><saml:Attribute Name="role">` +
+      `<saml:AttributeValue>member</saml:AttributeValue>` +
+      `</saml:Attribute></saml:AttributeStatement>` +
+      `<saml:Advice><saml:Attribute Name="role">` +
+      `<saml:AttributeValue>owner</saml:AttributeValue>` +
+      `</saml:Attribute></saml:Advice>`;
+    const { xml } = await buildSignedResponse({
+      idpEntityId,
+      assertionId,
+      nameId: "genuine@example.com",
+      attributesXml,
+      privateKey,
+      enveloped: false,
+    });
+
+    const result = await parseSamlAssertion(xml, {
+      idpEntityId,
+      idpCertificate: pemCert,
+      wantAssertionsSigned: true,
+      wantResponseSigned: false,
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.nameId).toBe("genuine@example.com");
+    expect(result.attributes).toEqual({ role: "member" });
+  });
+
+  it("reads Reference/Digest from the signed SignedInfo, not the first raw match (F-21)", async () => {
+    const { privateKey, pemCert } = await generateTestRsaKeyPairAndCert();
+    const { parseSamlAssertion } = await import("../lib/sso-saml.js");
+
+    const idpEntityId = "http://idp.example.com";
+    const assertionId = "_xsw-genuine-1";
+    const { xml } = await buildSignedResponse({
+      idpEntityId,
+      assertionId,
+      nameId: "genuine@example.com",
+      attributesXml: "",
+      privateKey,
+      enveloped: false,
+    });
+
+    // XML Signature Wrapping: an unsigned evil assertion plus a decoy
+    // <ds:Reference> whose digest matches it, both placed BEFORE the genuine
+    // signed payload. A raw-XML first-match extraction would verify the
+    // attacker's node and read claims from it.
+    const evilAssertion =
+      `<saml:Assertion ID="evil-1">` +
+      `<saml:Issuer>${idpEntityId}</saml:Issuer>` +
+      `<saml:Subject><saml:NameID>evil@example.com</saml:NameID></saml:Subject>` +
+      `<saml:Conditions NotBefore="2024-01-01T00:00:00Z" NotOnOrAfter="2099-01-01T00:00:00Z"/>` +
+      `</saml:Assertion>`;
+    const withEvil = xml.replace(
+      `<saml:Assertion ID="${assertionId}">`,
+      `${evilAssertion}<saml:Assertion ID="${assertionId}">`,
+    );
+    const evilDigest = await referenceDigestForTest(withEvil, "evil-1");
+    const decoyRef =
+      `<ds:Reference URI="#evil-1">` +
+      `<ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/></ds:Transforms>` +
+      `<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>` +
+      `<ds:DigestValue>${evilDigest}</ds:DigestValue>` +
+      `</ds:Reference>`;
+    const attack = withEvil.replace("</saml:Assertion>", `</saml:Assertion>${decoyRef}`);
+
+    const result = await parseSamlAssertion(attack, {
+      idpEntityId,
+      idpCertificate: pemCert,
+      wantAssertionsSigned: true,
+      wantResponseSigned: false,
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.nameId).toBe("genuine@example.com");
+    expect(result.attributes).toEqual({});
+  });
+
+  it("verifies an assertion with the signature enveloped inside it", async () => {
+    const { privateKey, pemCert } = await generateTestRsaKeyPairAndCert();
+    const { parseSamlAssertion } = await import("../lib/sso-saml.js");
+
+    const idpEntityId = "http://idp.example.com";
+    const assertionId = "_enveloped-assertion-1";
+    const { xml } = await buildSignedResponse({
+      idpEntityId,
+      assertionId,
+      nameId: "bob@example.com",
+      attributesXml: "",
+      privateKey,
+      enveloped: true,
+    });
+
+    const result = await parseSamlAssertion(xml, {
+      idpEntityId,
+      idpCertificate: pemCert,
+      wantAssertionsSigned: true,
+      wantResponseSigned: false,
+    });
+    // Regression: the digest used to be computed over the assertion INCLUDING
+    // the enveloped signature, so real assertion-signed IdP responses failed.
+    expect(result.isValid).toBe(true);
+    expect(result.nameId).toBe("bob@example.com");
+  });
+
+  it("rejects a duplicate reference id in both document orders (wrapping ambiguity)", async () => {
+    const { privateKey, pemCert } = await generateTestRsaKeyPairAndCert();
+    const { parseSamlAssertion } = await import("../lib/sso-saml.js");
+
+    const idpEntityId = "http://idp.example.com";
+    const assertionId = "_dup-assertion-1";
+    const { xml } = await buildSignedResponse({
+      idpEntityId,
+      assertionId,
+      nameId: "genuine@example.com",
+      attributesXml: "",
+      privateKey,
+      enveloped: false,
+    });
+    const decoy =
+      `<saml:Assertion ID="${assertionId}">` +
+      `<saml:Issuer>${idpEntityId}</saml:Issuer>` +
+      `<saml:Subject><saml:NameID>evil@example.com</saml:NameID></saml:Subject>` +
+      `<saml:Conditions NotBefore="2024-01-01T00:00:00Z" NotOnOrAfter="2099-01-01T00:00:00Z"/>` +
+      `</saml:Assertion>`;
+
+    // Decoy before the genuine assertion (a first-match id lookup would verify
+    // the wrong node) and after it (a second-identity smuggling attempt).
+    // Both must fail closed.
+    const decoyFirst = xml.replace(
+      `<saml:Assertion ID="${assertionId}">`,
+      `${decoy}<saml:Assertion ID="${assertionId}">`,
+    );
+    const decoySecond = xml.replace("</samlp:Response>", `${decoy}</samlp:Response>`);
+
+    for (const candidate of [decoyFirst, decoySecond]) {
+      const result = await parseSamlAssertion(candidate, {
+        idpEntityId,
+        idpCertificate: pemCert,
+        wantAssertionsSigned: true,
+        wantResponseSigned: false,
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toBe("reference_digest_reference_id_ambiguous");
+      expect(result.nameId).toBeUndefined();
+    }
+  });
+
+  it("rejects a Reference that does not point at a local fragment", async () => {
+    const { privateKey, pemCert } = await generateTestRsaKeyPairAndCert();
+    const { parseSamlAssertion } = await import("../lib/sso-saml.js");
+
+    const idpEntityId = "http://idp.example.com";
+    const { xml } = await buildSignedResponse({
+      idpEntityId,
+      assertionId: "_ref-uri-1",
+      nameId: "alice@example.com",
+      attributesXml: "",
+      privateKey,
+      enveloped: false,
+      refUri: "http://other-sp.example.com/assertion",
+    });
+
+    const result = await parseSamlAssertion(xml, {
+      idpEntityId,
+      idpCertificate: pemCert,
+      wantAssertionsSigned: true,
+      wantResponseSigned: false,
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.reason).toBe("assertion_reference_missing");
+  });
+
+  it("rejects assertion claims tampered after the IdP computed the digest", async () => {
+    const { privateKey, pemCert } = await generateTestRsaKeyPairAndCert();
+    const { parseSamlAssertion } = await import("../lib/sso-saml.js");
+
+    const idpEntityId = "http://idp.example.com";
+    const { xml } = await buildSignedResponse({
+      idpEntityId,
+      assertionId: "_tampered-1",
+      nameId: "genuine@example.com",
+      attributesXml: "",
+      privateKey,
+      enveloped: false,
+    });
+    const tampered = xml.replace("genuine@example.com", "attacker@example.com");
+
+    const result = await parseSamlAssertion(tampered, {
+      idpEntityId,
+      idpCertificate: pemCert,
+      wantAssertionsSigned: true,
+      wantResponseSigned: false,
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.reason).toBe("reference_digest_digest_mismatch");
+  });
 });
 
 // --- test helpers ---
@@ -290,5 +612,92 @@ function pemToDer(pem) {
 
 function bytesToBase64(bytes) {
   return Buffer.from(bytes).toString("base64");
+}
+
+/**
+ * Build a SAML response whose <ds:Reference> digest is computed the way an IdP
+ * does: exclusive C14N of the assertion (signature not yet inserted at digest
+ * time; for the enveloped case it is added afterwards, so the verifier strips
+ * it back to these exact bytes), SHA-256, base64. SignedInfo is signed with
+ * the test key.
+ */
+async function buildSignedResponse({
+  idpEntityId,
+  assertionId,
+  nameId,
+  attributesXml,
+  privateKey,
+  enveloped,
+  refUri,
+}) {
+  const assertion =
+    `<saml:Assertion ID="${assertionId}">` +
+    `<saml:Issuer>${idpEntityId}</saml:Issuer>` +
+    `<saml:Subject><saml:NameID>${nameId}</saml:NameID></saml:Subject>` +
+    `<saml:Conditions NotBefore="2024-01-01T00:00:00Z" NotOnOrAfter="2099-01-01T00:00:00Z"/>` +
+    attributesXml +
+    `</saml:Assertion>`;
+
+  const skeleton =
+    `<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" ` +
+    `xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ` +
+    `xmlns:ds="http://www.w3.org/2000/09/xmldsig#">` +
+    `<saml:Issuer>${idpEntityId}</saml:Issuer>` +
+    assertion +
+    `</samlp:Response>`;
+
+  const digestB64 = await referenceDigestForTest(skeleton, assertionId);
+
+  const signedInfo =
+    `<ds:SignedInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">` +
+    `<ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>` +
+    `<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>` +
+    `<ds:Reference URI="${refUri ?? `#${assertionId}`}">` +
+    `<ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/></ds:Transforms>` +
+    `<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>` +
+    `<ds:DigestValue>${digestB64}</ds:DigestValue>` +
+    `</ds:Reference>` +
+    `</ds:SignedInfo>`;
+
+  const canonicalSignedInfo = await canonicalizeForTest(signedInfo);
+  const sigBytes = await crypto.subtle.sign(
+    { name: "RSASSA-PKCS1-v1_5" },
+    privateKey,
+    new TextEncoder().encode(canonicalSignedInfo),
+  );
+  const sigB64 = bytesToBase64(new Uint8Array(sigBytes));
+
+  const signature = `<ds:Signature>${signedInfo}<ds:SignatureValue>${sigB64}</ds:SignatureValue></ds:Signature>`;
+
+  const xml = enveloped
+    ? skeleton.replace(`</saml:Assertion>`, `${signature}</saml:Assertion>`)
+    : skeleton.replace(`</samlp:Response>`, `${signature}</samlp:Response>`);
+  return { xml };
+}
+
+/** SHA-256(c14n(assertion)) as base64 — the assertion carries no signature yet. */
+async function referenceDigestForTest(responseXml, assertionId) {
+  const { DOMParser } = await import("@xmldom/xmldom");
+  const { default: C14nFactory } = await import("xml-c14n");
+  const doc = new DOMParser().parseFromString(responseXml, "application/xml");
+  const all = doc.getElementsByTagName("*");
+  let node = null;
+  for (let i = 0; i < all.length; i += 1) {
+    const el = all[i];
+    const id = el.getAttribute && (el.getAttribute("ID") || el.getAttribute("Id"));
+    if (id === assertionId) {
+      node = el;
+      break;
+    }
+  }
+  if (!node) throw new Error(`assertion ${assertionId} not found`);
+  const factory = new C14nFactory();
+  const canonical = await new Promise((resolve, reject) => {
+    factory
+      .createCanonicaliser("http://www.w3.org/2001/10/xml-exc-c14n#")
+      .canonicalise(node, (err, result) => (err ? reject(err) : resolve(result)));
+  });
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+  return bytesToBase64(new Uint8Array(digest));
 }
 

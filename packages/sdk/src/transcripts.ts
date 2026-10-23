@@ -33,9 +33,23 @@ export interface DeleteTarget {
   userKey: string;
 }
 
+export interface TranscriptsWorkerConfig {
+  /** Worker base URL, e.g. `https://fluxychat-worker.example.workers.dev`. */
+  baseUrl: string;
+  /** Admin JWT for the `/admin/transcripts` routes. */
+  token?: string;
+  /** Override fetch (tests). */
+  fetch?: typeof fetch;
+}
+
 export interface TranscriptsConfig {
   retention?: string | number;
   maxPerUser?: number;
+  /**
+   * Persist in the Worker (`/admin/transcripts`, D1). Omit for the in-memory
+   * store — fine for tests and local dev, gone on reload.
+   */
+  worker?: TranscriptsWorkerConfig;
 }
 
 export interface TranscriptsApi {
@@ -86,6 +100,22 @@ function keyFor(userKey: string): string {
 export function createTranscriptsApi(config?: TranscriptsConfig): TranscriptsApi {
   const maxPerUser = config?.maxPerUser ?? DEFAULT_MAX_PER_USER;
   const retentionMs = parseDuration(config?.retention);
+  const worker = config?.worker;
+  const workerBase = worker ? worker.baseUrl.replace(/\/+$/, "") : "";
+  const workerFetch = worker?.fetch ?? fetch;
+
+  function workerHeaders(withJson: boolean): HeadersInit {
+    const headers: Record<string, string> = {};
+    if (worker?.token) headers.Authorization = `Bearer ${worker.token}`;
+    if (withJson) headers["Content-Type"] = "application/json";
+    return headers;
+  }
+
+  async function workerJson<T>(path: string, init?: RequestInit): Promise<T> {
+    const res = await workerFetch(`${workerBase}${path}`, init);
+    if (!res.ok) throw new Error(`transcripts worker: HTTP ${res.status}`);
+    return (await res.json()) as T;
+  }
 
   const store: Record<string, Array<{ value: unknown; expiresAt: number | null }>> = {};
 
@@ -135,6 +165,24 @@ export function createTranscriptsApi(config?: TranscriptsConfig): TranscriptsApi
         text = msg.content;
       }
 
+      if (worker) {
+        const { entry } = await workerJson<{ entry: TranscriptEntry }>("/admin/transcripts", {
+          method: "POST",
+          headers: workerHeaders(true),
+          body: JSON.stringify({
+            userKey,
+            role,
+            text,
+            platform,
+            threadId,
+            platformMessageId,
+            maxPerUser,
+            retentionMs,
+          }),
+        });
+        return entry;
+      }
+
       const entry: TranscriptEntry = {
         id: crypto.randomUUID(),
         userKey,
@@ -155,6 +203,19 @@ export function createTranscriptsApi(config?: TranscriptsConfig): TranscriptsApi
     },
 
     async list(query: ListQuery): Promise<TranscriptEntry[]> {
+      if (worker) {
+        const params = new URLSearchParams({ userKey: query.userKey });
+        if (query.platforms?.length) params.set("platforms", query.platforms.join(","));
+        if (query.threadId !== undefined) params.set("threadId", query.threadId);
+        if (query.roles?.length) params.set("roles", query.roles.join(","));
+        if (query.limit !== undefined) params.set("limit", String(query.limit));
+        const { entries } = await workerJson<{ entries: TranscriptEntry[] }>(
+          `/admin/transcripts?${params.toString()}`,
+          { headers: workerHeaders(false) },
+        );
+        return entries;
+      }
+
       const raw = await memoryStore.getList<TranscriptEntry | Tombstone>(keyFor(query.userKey));
       let filtered = raw.filter((entry): entry is TranscriptEntry => !isTombstone(entry));
 
@@ -178,11 +239,24 @@ export function createTranscriptsApi(config?: TranscriptsConfig): TranscriptsApi
     },
 
     async count(query: { userKey: string }): Promise<number> {
+      if (worker) {
+        const { count } = await workerJson<{ count: number }>(
+          `/admin/transcripts/count?userKey=${encodeURIComponent(query.userKey)}`,
+          { headers: workerHeaders(false) },
+        );
+        return count;
+      }
       const raw = await memoryStore.getList(keyFor(query.userKey));
       return raw.filter((entry) => !isTombstone(entry)).length;
     },
 
     async delete(target: DeleteTarget): Promise<{ deleted: number }> {
+      if (worker) {
+        return workerJson<{ deleted: number }>(
+          `/admin/transcripts?userKey=${encodeURIComponent(target.userKey)}`,
+          { method: "DELETE", headers: workerHeaders(false) },
+        );
+      }
       const key = keyFor(target.userKey);
       const existing = await memoryStore.getList(key);
       const previous = existing.filter((entry) => !isTombstone(entry)).length;

@@ -5,6 +5,18 @@ description: "Session token is not valid"
 
 # 40101 — invalid_token
 
-The token string is malformed or unsigned with the project secret. Terminal.
+The token string is malformed, or it is signed with the wrong secret. Terminal.
 
-HTTP 401. Close 1008, reason `invalid_token`.
+**At a glance** — HTTP 401 · close 1008 `invalid_token` · terminal · SDK `FluxyTokenExpiredError` (the SDK folds `invalid_token` into the token-expired path).
+
+## What to do
+
+- Check the JWT is signed with this project's secret and carries `tid`, `sub`, and `exp` — the same claims the [Auth / JWT cookbook](/docs/cookbook/auth-jwt) mints.
+- Re-mint the token; do not patch the string.
+- On the WebSocket you see close 1008 with reason `invalid_token`.
+
+## Related
+
+- [40100 token_expired](/docs/errors/token_expired)
+- [40102 invalid_api_key](/docs/errors/invalid_api_key)
+- [40108 auth_refused](/docs/errors/auth_refused)

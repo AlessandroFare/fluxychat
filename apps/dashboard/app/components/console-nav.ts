@@ -19,6 +19,7 @@ import {
   Plug,
   Search,
   Settings2,
+  Star,
   Users,
   Sparkles,
   Shield,
@@ -59,6 +60,8 @@ export interface ConsoleNavItem {
   label: string;
   icon: LucideIcon;
   description?: string;
+  /** Public marketing page (no console chrome): open in a new tab so the console is not ejected. */
+  newTab?: boolean;
 }
 
 export interface ConsoleNavSubgroup {
@@ -80,7 +83,7 @@ export const CONSOLE_NAV_BUILD: ConsoleNavItem[] = [
   { href: "/rooms", label: "Rooms", icon: MessageSquare, description: "Join rooms and read traffic" },
   { href: "/inbox", label: "Inbox", icon: Inbox, description: "Mentions, unread, snooze, follow-ups" },
   { href: "/threads", label: "Threads", icon: MessagesSquare, description: "Reply threads, unread, jump to parent" },
-  { href: "/profile", label: "Profile", icon: UserCircle, description: "Your user profile" },
+  { href: "/saved", label: "Saved", icon: Star, description: "Messages saved for later" },
 ];
 
 export const CONSOLE_NAV_AGENTS: ConsoleNavItem[] = [
@@ -108,17 +111,12 @@ export const CONSOLE_NAV_MAIN = CONSOLE_NAV_BUILD;
 
 export const CONSOLE_NAV_OPERATE: ConsoleNavItem[] = [
   { href: "/webhooks", label: "Webhooks", icon: Plug, description: "Register, verify, and replay deliveries" },
-  { href: "/settings", label: "Settings", icon: Settings2, description: "Tenant and project configuration" },
-  { href: "/notifications", label: "Notifications", icon: Bell, description: "Mentions, DMs, and read state" },
-  { href: "/user-activity", label: "My activity", icon: Bell, description: "Cross-room mentions feed" },
   { href: "/agent-queue", label: "Agent queue", icon: Headphones, description: "Claim rooms, SLA timers, handoffs" },
   { href: "/automations", label: "Automations", icon: Zap, description: "IF-THEN workflow rules" },
   { href: "/ops", label: "Processes", icon: ClipboardCheck, description: "Describe work in plain language; people still approve writes" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, description: "Room stats and cost estimates" },
   { href: "/activities", label: "Activities", icon: Activity, description: "Webhooks, agents, automation" },
-  { href: "/billing", label: "Billing", icon: CreditCard, description: "Usage and plan changes" },
   { href: "/admin", label: "Admin", icon: Shield, description: "Mute, ban, webhooks" },
-  { href: "/labs", label: "Platform", icon: Layers, description: "All product modules" },
 ];
 
 export const CONSOLE_NAV_TRUST: ConsoleNavItem[] = [
@@ -133,8 +131,6 @@ export const CONSOLE_NAV_TRUST: ConsoleNavItem[] = [
 ];
 
 export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
-  { href: "/features", label: "Features hub", icon: Sparkles, description: "Capability overview with links" },
-  { href: "/features/realtime", label: "Realtime demos", icon: Zap, description: "Live SDK demos" },
   { href: "/devtools", label: "DevTools", icon: Terminal, description: "LLM inspector, tool calls, tokens" },
   { href: "/middleware", label: "LLM middleware", icon: Settings2, description: "Guardrails, RAG, PII redaction" },
   { href: "/playground", label: "Card builder", icon: LayoutTemplate, description: "Rich message cards" },
@@ -148,18 +144,12 @@ export const CONSOLE_NAV_TOOLS: ConsoleNavItem[] = [
 ];
 
 export const CONSOLE_NAV_PLATFORM: ConsoleNavItem[] = [
-  { href: "/collab", label: "FluxyCollab", icon: Pen, description: "Whiteboard, notes, and kanban on Yjs" },
+  { href: "/collab", label: "FluxyCollab", icon: Pen, description: "Whiteboard, notes, kanban, docs, and comments on Yjs" },
   { href: "/stream", label: "FluxyStream", icon: Video, description: "Live broadcast, HLS, and chat overlay" },
-  { href: "/stream/demo", label: "Stream studio", icon: Radio, description: "Go live with ingest and room chat" },
-  { href: "/huddles", label: "Huddles", icon: Headphones, description: "Audio and video huddles in the room" },
   { href: "/voice-ai", label: "Voice AI", icon: Mic, description: "STT, TTS, and realtime voice pipeline" },
   { href: "/game", label: "FluxyGame", icon: Gamepad2, description: "Matchmaking, ticks, and game rooms" },
   { href: "/iot", label: "FluxyIoT", icon: Cpu, description: "HTTP ingest, device shadow, room fan-out" },
   { href: "/fleet", label: "Fleet", icon: Truck, description: "Live GPS tracks and fleet rooms" },
-  { href: "/spatial", label: "Spatial twins", icon: Boxes, description: "3D rooms, entities, and spatial grants" },
-  { href: "/cartography", label: "Cartography", icon: Map, description: "Thematic room maps" },
-  { href: "/truth-market", label: "Truth Market", icon: Gavel, description: "Stake and dispute claims in-room" },
-  { href: "/transport", label: "WebTransport", icon: Zap, description: "WebTransport, WebSocket, SSE, long-poll" },
   { href: "/marketplace", label: "Marketplace", icon: Store, description: "Apps and agent skills" },
   { href: "/chatbot-builder", label: "Chatbot builder", icon: Bot, description: "Trigger-action rules" },
   { href: "/cross-channel", label: "Cross-channel", icon: ArrowRightLeft, description: "Unified sessions across channels" },
@@ -175,42 +165,58 @@ export const CONSOLE_NAV_INDUSTRIES: ConsoleNavItem[] = [
   { href: "/continuity", label: "Continuity", icon: Network, description: "Cross-device handoff and checkpoints" },
 ];
 
+/** Console surfaces the product itself ships as labs. Keep in sync with DASHBOARD_LAB_HREFS. */
+export const CONSOLE_NAV_LAB_SURFACES: ConsoleNavItem[] = [
+  { href: "/huddles", label: "Huddles", icon: Headphones, description: "Audio and video huddles in the room" },
+  { href: "/stream/demo", label: "Stream studio", icon: Radio, description: "Go live with ingest and room chat" },
+  { href: "/spatial", label: "Spatial twins", icon: Boxes, description: "3D rooms, entities, and spatial grants" },
+  { href: "/transport", label: "WebTransport", icon: Zap, description: "WebTransport, WebSocket, SSE, long-poll" },
+  { href: "/truth-market", label: "Truth Market", icon: Gavel, description: "Stake and dispute claims in-room" },
+  { href: "/cartography", label: "Cartography", icon: Map, description: "Thematic room maps" },
+];
+
+/** Marketing pages grouped under Labs: they leave the console, so they open in a new tab. */
+export const CONSOLE_NAV_LABS_LINKS: ConsoleNavItem[] = [
+  { href: "/labs", label: "Platform catalog", icon: Layers, description: "All product modules", newTab: true },
+  { href: "/features", label: "Features hub", icon: Sparkles, description: "Capability overview with links", newTab: true },
+  { href: "/features/realtime", label: "Realtime demos", icon: Zap, description: "Live SDK demos", newTab: true },
+];
+
+/** Account-scoped console pages. */
+export const CONSOLE_NAV_ACCOUNT: ConsoleNavItem[] = [
+  { href: "/profile", label: "Profile", icon: UserCircle, description: "Your user profile" },
+  { href: "/notifications", label: "Notifications", icon: Bell, description: "Mentions, DMs, and read state" },
+  { href: "/user-activity", label: "My activity", icon: Bell, description: "Cross-room mentions feed" },
+  { href: "/billing", label: "Billing", icon: CreditCard, description: "Usage and plan changes" },
+  { href: "/settings", label: "Settings", icon: Settings2, description: "Tenant and project configuration" },
+];
+
 function filterItems(items: ConsoleNavItem[]): ConsoleNavItem[] {
   return filterDashboardNavItems(items);
 }
 
+/**
+ * Single-level groups: one collapsible per section, items directly under it.
+ * Two collapsible levels (group > subgroup) put 13 labels before the first
+ * page link; the group holding the current page auto-opens via hasActiveChild.
+ */
 function buildConsoleNavGroups(): ConsoleNavGroup[] {
   return [
-    {
-      label: "Build",
-      subgroups: [
-        { label: "Core", items: filterItems(CONSOLE_NAV_BUILD) },
-        { label: "Agents", items: filterItems(CONSOLE_NAV_AGENTS) },
-        { label: "Connect", items: filterItems(CONSOLE_NAV_CONNECT) },
-      ],
-      defaultOpen: true,
-    },
-    {
-      label: "Operate",
-      subgroups: [
-        { label: "Ops", items: filterItems(CONSOLE_NAV_OPERATE) },
-        { label: "Trust & compliance", items: filterItems(CONSOLE_NAV_TRUST) },
-      ],
-      defaultOpen: true,
-    },
-    {
-      label: "AI & dev tools",
-      items: filterItems(CONSOLE_NAV_TOOLS),
-      defaultOpen: false,
-    },
+    { label: "Build", items: filterItems(CONSOLE_NAV_BUILD), defaultOpen: true },
+    { label: "Agents", items: filterItems(CONSOLE_NAV_AGENTS) },
+    { label: "Connect", items: filterItems(CONSOLE_NAV_CONNECT) },
+    { label: "Operate", items: filterItems(CONSOLE_NAV_OPERATE) },
+    { label: "Trust & compliance", items: filterItems(CONSOLE_NAV_TRUST) },
+    { label: "AI & dev tools", items: filterItems(CONSOLE_NAV_TOOLS) },
     {
       label: "Platform",
-      subgroups: [
-        { label: "Products", items: filterItems(CONSOLE_NAV_PLATFORM) },
-        { label: "Industries", items: filterItems(CONSOLE_NAV_INDUSTRIES) },
-      ],
-      defaultOpen: true,
+      items: filterItems([...CONSOLE_NAV_PLATFORM, ...CONSOLE_NAV_INDUSTRIES]),
     },
+    {
+      label: "Labs",
+      items: filterItems([...CONSOLE_NAV_LAB_SURFACES, ...CONSOLE_NAV_LABS_LINKS]),
+    },
+    { label: "Account", items: filterItems(CONSOLE_NAV_ACCOUNT) },
   ];
 }
 
@@ -227,6 +233,7 @@ export function flattenConsoleNavItems(): ConsoleNavItem[] {
 /** Full platform catalog (sidebar + /labs hub). */
 export const CONSOLE_NAV_LABS_CATALOG: ConsoleNavItem[] = [
   ...CONSOLE_NAV_PLATFORM,
+  ...CONSOLE_NAV_LAB_SURFACES,
   ...CONSOLE_NAV_INDUSTRIES,
 ];
 
@@ -261,9 +268,9 @@ export function isConsoleRoute(pathname: string | null): boolean {
 
 export function consoleNavLinkClass(isActive: boolean) {
   return cn(
-    "flex items-center gap-2.5 rounded-lg border-l-[3px] px-2.5 py-2 text-sm transition-colors",
+    "flex items-center gap-2.5 rounded-sm border-l-[3px] px-2.5 py-2 text-sm transition-colors",
     isActive
-      ? "border-l-primary bg-primary/10 font-semibold text-primary"
+      ? "border-l-[var(--ring)] bg-muted font-medium text-foreground"
       : "border-l-transparent font-normal text-muted-foreground hover:bg-muted hover:text-foreground",
   );
 }

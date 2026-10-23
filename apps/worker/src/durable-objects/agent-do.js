@@ -40,6 +40,9 @@ import { injectRoomAgentSteer, requestRoomAgentStop } from "../lib/room-agent-st
 
 import { withRuntimeConfig } from "../lib/with-runtime-config.js";
 
+/** Turns waiting behind the active one before RPC callers get 429 `turn_queue_full`. */
+export const AGENT_DO_MAX_TURN_QUEUE = 8;
+
 export class AgentDurableObject {
   constructor(state, env) {
     this.state = state;
@@ -47,6 +50,11 @@ export class AgentDurableObject {
     this.projectId = null;
     this.agentId = null;
     this.userId = null;
+
+    // CF-A-014 TurnQueue (Cloudflare Agents `queue()`): one model turn at a time
+    // per instance, FIFO — room runs share the `room-run:<project>:<room>` instance.
+    this.activeTurn = null;
+    this.turnQueue = [];
 
     if (typeof state?.blockConcurrencyWhile === "function" && state.storage) {
       this._hydrated = state.blockConcurrencyWhile(async () => {
@@ -69,13 +77,59 @@ export class AgentDurableObject {
   }
 
   async persistIdentity({ projectId, agentId, userId }) {
-    if (projectId) this.projectId = String(projectId);
-    if (agentId) this.agentId = String(agentId);
-    if (userId) this.userId = String(userId);
-    if (!this.state?.storage) return;
+    const next = { projectId, agentId, userId };
+    for (const [key, raw] of Object.entries(next)) {
+      if (!raw) continue;
+      const value = String(raw);
+      // Audit F-56: the DO instance is addressed by its identity — later RPC
+      // params must match the hydrated identity instead of silently
+      // re-pointing the instance at another project/agent/user.
+      if (this[key] && this[key] !== value) return false;
+      this[key] = value;
+    }
+    if (!this.state?.storage) return true;
     if (this.projectId) await this.state.storage.put("projectId", this.projectId);
     if (this.agentId) await this.state.storage.put("agentId", this.agentId);
     if (this.userId) await this.state.storage.put("userId", this.userId);
+    return true;
+  }
+
+  identityMismatchResponse() {
+    return Response.json({ ok: false, reason: "identity_mismatch" }, { status: 403 });
+  }
+
+  /**
+   * TurnQueue: queue `task` behind the active turn; extra callers resolve with
+   * `overflow` (each caller answers 429 / retryable) instead of racing.
+   */
+  enqueueTurn(task, overflow) {
+    return new Promise((resolve) => {
+      const entry = { task, resolve };
+      if (!this.activeTurn) {
+        this.activeTurn = entry;
+        void this.runQueuedTurn(entry);
+        return;
+      }
+      if (this.turnQueue.length >= AGENT_DO_MAX_TURN_QUEUE) {
+        resolve(overflow);
+        return;
+      }
+      this.turnQueue.push(entry);
+    });
+  }
+
+  async runQueuedTurn(entry) {
+    let response;
+    try {
+      response = await entry.task();
+    } catch (err) {
+      logError("agent_do.turn_failed", err, { agentId: this.agentId });
+      response = Response.json({ ok: false, reason: "turn_failed" }, { status: 500 });
+    }
+    entry.resolve(response);
+    const next = this.turnQueue.shift() || null;
+    this.activeTurn = next;
+    if (next) void this.runQueuedTurn(next);
   }
 
   async fetch(request) {
@@ -142,11 +196,23 @@ export class AgentDurableObject {
   async handleTurn(params) {
     const content = String(params.content || "").trim();
     if (!content) return Response.json({ ok: false, reason: "content_required" }, { status: 400 });
-    await this.persistIdentity({
+    return this.enqueueTurn(
+      () => this.runCopilotTurn(params),
+      Response.json(
+        { ok: false, reason: "turn_queue_full", queueDepth: AGENT_DO_MAX_TURN_QUEUE, retryAfterSeconds: 5 },
+        { status: 429 },
+      ),
+    );
+  }
+
+  async runCopilotTurn(params) {
+    const content = String(params.content || "").trim();
+    const persisted = await this.persistIdentity({
       projectId: params.projectId || this.projectId,
       agentId: params.agentId || this.agentId,
       userId: params.userId || this.userId,
     });
+    if (!persisted) return this.identityMismatchResponse();
     if (!this.projectId || !this.agentId || !this.userId) {
       return Response.json({ ok: false, reason: "identity_required" }, { status: 400 });
     }
@@ -203,15 +269,21 @@ export class AgentDurableObject {
     await saveCopilotState(this.state.storage, { meta, turns });
     const notifyRoomId = String(params.roomId || "").trim();
     if (notifyRoomId && !notifyRoomId.startsWith("copilot:")) {
-      await callRoomDo(this.env, notifyRoomId, "announce", {
-        type: "copilot_turn",
-        roomId: notifyRoomId,
-        agentId: this.agentId,
-        userId: this.userId,
-        runId: result.runId,
-        content: result.content,
-        status: result.status,
-      });
+      // Audit F-58: the copilot announce is a side notification — a failure is
+      // logged, not silently promoted to a failed turn.
+      try {
+        await callRoomDo(this.env, notifyRoomId, "announce", {
+          type: "copilot_turn",
+          roomId: notifyRoomId,
+          agentId: this.agentId,
+          userId: this.userId,
+          runId: result.runId,
+          content: result.content,
+          status: result.status,
+        });
+      } catch (err) {
+        logError("agent_do.copilot_announce_failed", err, { roomId: notifyRoomId });
+      }
     }
     return Response.json({
       ok: result.status !== "failed",
@@ -231,11 +303,12 @@ export class AgentDurableObject {
     if (!this.state?.storage) {
       return Response.json({ ok: false, reason: "storage_unavailable" }, { status: 503 });
     }
-    await this.persistIdentity({
+    const persisted = await this.persistIdentity({
       projectId: params.projectId || this.projectId,
       agentId: params.agentId || this.agentId,
       userId: params.userId || this.userId,
     });
+    if (!persisted) return this.identityMismatchResponse();
     const result = await withAgentScheduleRows(this.state.storage, (rows) =>
       upsertAgentSchedule(rows, {
         ...params,
@@ -265,11 +338,12 @@ export class AgentDurableObject {
   async handleRoomEvent(params) {
     const summary = String(params.summary || params.content || "").trim();
     if (!summary) return Response.json({ ok: false, reason: "content_required" }, { status: 400 });
-    await this.persistIdentity({
+    const persisted = await this.persistIdentity({
       projectId: params.projectId || this.projectId,
       agentId: params.agentId || this.agentId,
       userId: params.userId || this.userId,
     });
+    if (!persisted) return this.identityMismatchResponse();
     const loaded = await loadCopilotState(this.state.storage);
     const now = Date.now();
     const roomId = String(params.roomId || "").trim();
@@ -299,7 +373,22 @@ export class AgentDurableObject {
     if (!content || !roomId || !agentId || !projectId || !userId) {
       return Response.json({ ok: false, reason: "identity_required" }, { status: 400 });
     }
-    await this.persistIdentity({ projectId, agentId, userId });
+    return this.enqueueTurn(
+      () => this.runRoomInvoke({ content, roomId, agentId, projectId, userId, params }),
+      Response.json(
+        { ok: false, reason: "turn_queue_full", queueDepth: AGENT_DO_MAX_TURN_QUEUE, retryAfterSeconds: 5 },
+        { status: 429 },
+      ),
+    );
+  }
+
+  async runRoomInvoke({ content, roomId, agentId, projectId, userId, params }) {
+    // Audit fix A2-28: this DO is addressed as room-run:<project>:<room> and is
+    // shared by every caller (and agent) in the room — only the project is an
+    // invariant identity here. Persisting userId/agentId made every caller
+    // after the first fail with 403 identity_mismatch.
+    const persisted = await this.persistIdentity({ projectId });
+    if (!persisted) return this.identityMismatchResponse();
     if (this.state?.storage) {
       await this.state.storage.put("checkpoint", {
         roomId,
@@ -337,6 +426,7 @@ export class AgentDurableObject {
       invokerRoles: params.invokerRoles,
       traceId: params.traceId || roomId,
       streamHooks,
+      attachments: Array.isArray(params.attachments) ? params.attachments : [],
     });
     if (this.state?.storage) {
       await this.state.storage.put("checkpoint", {
@@ -347,7 +437,11 @@ export class AgentDurableObject {
         at: Date.now(),
       });
     }
-    return Response.json({ ok: result.status !== "failed", run: result });
+    return Response.json({
+      ok: result.status !== "failed",
+      run: result,
+      messageId: streamHooks ? streamHooks.getMessageId() ?? null : null,
+    });
   }
 
   async handleInject(params) {
@@ -410,7 +504,10 @@ export class AgentDurableObject {
     for (const schedule of claimed) {
       let fire;
       try {
-        fire = await fireAgentSchedule(this.env, schedule, { skipRoomAnnounce: true });
+        fire = await this.enqueueTurn(
+          () => fireAgentSchedule(this.env, schedule, { skipRoomAnnounce: true }),
+          { ok: false, error: "turn_queue_full", retry: true },
+        );
       } catch (err) {
         const classified = classifyDoFailure(err);
         fire = { ok: false, error: classified.message, retry: classified.retry };
@@ -430,6 +527,8 @@ export class AgentDurableObject {
         return { rows };
       });
     }
-    if (claimed.length) await this.armScheduleAlarm();
+    // Audit fix A2-29: re-arm even when nothing was claimable — a due row
+    // stuck inside its claim window must wake the DO when the window expires.
+    await this.armScheduleAlarm();
   }
 }

@@ -3,6 +3,7 @@
  */
 
 import { createKBArticle, listKBArticles, updateKBArticle } from "./enterprise-support.js";
+import { applyDocFeedback } from "./ops-search-hits.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
 
 const SOURCE_TYPES = new Set(["url", "notion", "confluence", "google_drive", "intercom", "zendesk", "file"]);
@@ -67,6 +68,27 @@ export async function listKbSources(env, { projectId }) {
   return readSources(env, projectId);
 }
 
+/**
+ * Probe a URL source at creation time: a broken address should be visible in
+ * the settings form, not at the first ingest. Best-effort, never blocks the save.
+ */
+export async function verifyKbSource(env, url) {
+  const checkedAt = new Date().toISOString();
+  try {
+    const response = await safeOutboundFetch(
+      String(url),
+      {
+        headers: { "User-Agent": "FluxyChat-KB-Connector/1.0" },
+        signal: AbortSignal.timeout(10000),
+      },
+      env,
+    );
+    return { checkedAt, ok: response.ok, status: response.status };
+  } catch (err) {
+    return { checkedAt, ok: false, error: String(err?.message || err).slice(0, 160) };
+  }
+}
+
 export async function createKbSource(env, { projectId, type, name, config }) {
   if (!SOURCE_TYPES.has(type)) {
     return { error: "invalid_type", message: `type must be one of: ${[...SOURCE_TYPES].join(", ")}` };
@@ -83,6 +105,9 @@ export async function createKbSource(env, { projectId, type, name, config }) {
     createdAt: new Date().toISOString(),
     lastSyncedAt: null,
   };
+  if (type === "url" && config?.url) {
+    source.verification = await verifyKbSource(env, config.url);
+  }
   sources.unshift(source);
   await writeSources(env, projectId, sources);
   return { source };
@@ -94,6 +119,51 @@ export async function deleteKbSource(env, { projectId, sourceId }) {
   if (next.length === sources.length) return { ok: false, error: "not_found" };
   await writeSources(env, projectId, next);
   return { ok: true };
+}
+
+const FEEDBACK_VERDICTS = new Set(["boost", "hide"]);
+
+/** Record (or clear) per-document boost/hide feedback for knowledge search. */
+export async function setKbDocFeedback(env, { projectId, docId, verdict, actor }) {
+  const id = String(docId || "").trim();
+  if (!id) return { error: "docId_required" };
+  if (verdict === "clear") {
+    await env.DB.prepare("DELETE FROM kb_doc_feedback WHERE project_id = ? AND doc_id = ?")
+      .bind(projectId, id)
+      .run();
+    return { ok: true, cleared: true };
+  }
+  if (!FEEDBACK_VERDICTS.has(verdict)) {
+    return { error: "invalid_verdict", message: "verdict must be one of: boost, hide, clear" };
+  }
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT INTO kb_doc_feedback (project_id, doc_id, verdict, actor, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(project_id, doc_id) DO UPDATE SET verdict = excluded.verdict, actor = excluded.actor, updated_at = excluded.updated_at`,
+  )
+    .bind(projectId, id, verdict, actor ?? null, now, now)
+    .run();
+  return { ok: true };
+}
+
+export async function listKbDocFeedback(env, { projectId }) {
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT doc_id, verdict, actor, updated_at FROM kb_doc_feedback WHERE project_id = ?",
+    )
+      .bind(projectId)
+      .all();
+    return (rows.results || []).map((row) => ({
+      docId: row.doc_id,
+      verdict: row.verdict,
+      actor: row.actor,
+      updatedAt: row.updated_at,
+    }));
+  } catch {
+    // shortcut: pre-0261 the table is missing — search runs unfiltered, never fails.
+    return [];
+  }
 }
 
 export async function ingestKbDocument(env, { projectId, sourceId, title, content, url, author }) {
@@ -174,7 +244,7 @@ export async function searchKbDocuments(env, { projectId, query, sourceId, limit
     status: "published",
     search: query?.trim() || undefined,
   });
-  return rows.slice(0, Math.min(limit, 50)).map((row) => ({
+  const hits = rows.map((row) => ({
     id: row.id,
     title: row.title,
     excerpt: (row.content || "").slice(0, 280),
@@ -182,6 +252,10 @@ export async function searchKbDocuments(env, { projectId, query, sourceId, limit
     tags: row.tags,
     updatedAt: row.updatedAt,
   }));
+  const feedback = new Map(
+    (await listKbDocFeedback(env, { projectId })).map((row) => [row.docId, row.verdict]),
+  );
+  return applyDocFeedback(hits, feedback).slice(0, Math.min(limit, 50));
 }
 
 export function buildRagContextFromHits(hits, userMessage) {

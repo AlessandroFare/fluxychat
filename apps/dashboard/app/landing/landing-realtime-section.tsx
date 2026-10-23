@@ -94,7 +94,7 @@ export function LandingRealtimeSection() {
               <h3 className="text-balance font-heading text-2xl font-semibold text-white">{active.title}</h3>
               <p className="text-pretty text-sm leading-relaxed text-slate-300">{active.description}</p>
               <pre className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-200">
-                <code><FeatureCodeSnippet tokens={active.code} /></code>
+                <code><FeatureCodeSnippet tokens={active.code} tone="dark" /></code>
               </pre>
             </div>
             <Link
@@ -239,7 +239,7 @@ function ChatPreview() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[11px] font-semibold text-white">{c.name}</p>
-              <p className="truncate text-[10px] text-slate-500">{c.preview}</p>
+              <p className="truncate text-[10px] text-slate-400">{c.preview}</p>
             </div>
             {c.unread ? (
               <span className="flex size-3.5 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white">
@@ -272,7 +272,7 @@ function ChatPreview() {
                   className={cn(
                     "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm animate-in fade-in-0 slide-in-from-bottom-2 duration-400",
                     m.side === "right"
-                      ? "rounded-br-sm bg-blue-500 text-white"
+                      ? "rounded-br-sm bg-blue-600 text-white"
                       : "rounded-bl-sm bg-white/10 text-slate-200",
                   )}
                 >
@@ -295,7 +295,7 @@ function ChatPreview() {
             );
           })}
           {visible < CHAT_MESSAGES.length ? (
-            <div className="flex items-center gap-1 px-1 text-[11px] text-slate-500">
+            <div className="flex items-center gap-1 px-1 text-[11px] text-slate-400">
               <span className="flex gap-0.5">
                 <span className="size-1 animate-bounce rounded-full bg-slate-500 motion-reduce:animate-none" style={{ animationDelay: "0ms" }} />
                 <span className="size-1 animate-bounce rounded-full bg-slate-500 motion-reduce:animate-none" style={{ animationDelay: "120ms" }} />
@@ -307,7 +307,7 @@ function ChatPreview() {
         </div>
 
         <div className="border-t border-white/10 px-4 py-2.5">
-          <div className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1.5 text-xs text-slate-500">
+          <div className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1.5 text-xs text-slate-400">
             Type your message...
           </div>
         </div>
@@ -550,14 +550,14 @@ function LocationPreview() {
             SI
           </span>
           <p className="flex-1 truncate text-xs text-slate-300">Sana Iqbal</p>
-          <span className="text-xs text-slate-500">0.9 mi</span>
+          <span className="text-xs text-slate-400">0.9 mi</span>
         </div>
         <div className="flex items-center gap-3 px-4 py-2.5 opacity-60">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-semibold text-slate-300">
             CR
           </span>
           <p className="flex-1 truncate text-xs text-slate-300">Callum Reyes</p>
-          <span className="text-xs text-slate-500">2.1 mi</span>
+          <span className="text-xs text-slate-400">2.1 mi</span>
         </div>
       </div>
 
@@ -616,7 +616,7 @@ function PushPreview() {
 
   return (
     <div className="mx-auto w-full max-w-full sm:max-w-xs rounded-[2rem] border border-white/10 bg-slate-900 p-3 shadow-2xl">
-      <div className="mb-2 flex items-center justify-between px-1 text-[10px] text-slate-500">
+      <div className="mb-2 flex items-center justify-between px-1 text-[10px] text-slate-400">
         <span>9:41</span>
         <span className="flex items-center gap-2">
           <Radio className="size-3" aria-hidden />
@@ -635,10 +635,10 @@ function PushPreview() {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                  <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
                     {n.source}
                   </span>
-                  <span className="text-[9px] text-slate-600">now</span>
+                  <span className="text-[9px] text-slate-400">now</span>
                 </div>
                 <p className="truncate text-xs font-semibold text-white">{n.title}</p>
                 <p className="truncate text-[11px] text-slate-400">{n.body}</p>
@@ -647,7 +647,7 @@ function PushPreview() {
           </div>
         ))}
         {visible.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center text-[11px] text-slate-600">
+          <div className="flex flex-1 items-center justify-center text-[11px] text-slate-400">
             Waiting for the next event...
           </div>
         ) : null}
@@ -727,9 +727,9 @@ function AiTransportPreview() {
       {/* session id bar */}
       <div className="border-b border-white/10 bg-slate-950/40 px-4 py-2">
         <div className="flex items-center gap-2 text-[10px]">
-          <span className="text-slate-500">session:</span>
+          <span className="text-slate-400">session:</span>
           <span className="font-mono text-slate-300">dur-session-04a2</span>
-          <span className="ml-auto flex items-center gap-1 text-slate-500">
+          <span className="ml-auto flex items-center gap-1 text-slate-400">
             <span className="relative flex size-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60 opacity-75 motion-reduce:animate-none" />
               <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
@@ -764,7 +764,7 @@ function AiTransportPreview() {
                   <span className="rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[9px] font-medium text-orange-300">device</span>
                 ) : null}
               </div>
-              <p className="text-[10px] text-slate-500">{ev.detail}</p>
+              <p className="text-[10px] text-slate-400">{ev.detail}</p>
             </div>
           ))}
         </div>
@@ -785,10 +785,10 @@ function AiTransportPreview() {
                     i < replayIdx ? "opacity-100" : "opacity-0",
                   )}
                 >
-                  <span className="font-mono text-slate-500">#{i + 1}</span>
+                  <span className="font-mono text-slate-400">#{i + 1}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-slate-300">{ev.label}</span>
-                    <span className="text-slate-600">{ev.detail}</span>
+                    <span className="text-slate-400">{ev.detail}</span>
                   </div>
                 </div>
               ))}
@@ -799,11 +799,11 @@ function AiTransportPreview() {
         {/* offset counter */}
         {events.length > 0 ? (
           <div className="flex gap-3 rounded-lg border border-white/5 bg-slate-950/40 px-3 py-2 text-[10px]">
-            <span className="text-slate-500">last offset</span>
+            <span className="text-slate-400">last offset</span>
             <span key={events.length} className="font-mono text-blue-300 tabular-nums animate-in fade-in-0 duration-200">
               {Math.min(events.length, 2)}
             </span>
-            <span className="ml-auto text-slate-600">{Math.min(events.length, 3)} event{events.length !== 1 ? "s" : ""}</span>
+            <span className="ml-auto text-slate-400">{Math.min(events.length, 3)} event{events.length !== 1 ? "s" : ""}</span>
           </div>
         ) : null}
       </div>
@@ -924,7 +924,7 @@ function VoicePreview() {
                 />
               );
             })
-          : <div className="flex items-center gap-2 text-[11px] text-slate-600">
+          : <div className="flex items-center gap-2 text-[11px] text-slate-400">
               <span className="relative flex size-3">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-500/40 opacity-75 motion-reduce:animate-none" />
                 <span className="relative inline-flex size-3 rounded-full bg-slate-500" />
@@ -946,7 +946,7 @@ function VoicePreview() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs text-slate-200">{t.text}</p>
-              <span className="text-[10px] text-slate-600">{t.mode.replace(/_/g, " ")}</span>
+              <span className="text-[10px] text-slate-400">{t.mode.replace(/_/g, " ")}</span>
             </div>
             <span className="shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">
               {Math.round(t.confidence * 100)}%
@@ -954,7 +954,7 @@ function VoicePreview() {
           </div>
         ))}
         {visible === 0 ? (
-          <div className="flex items-center justify-center py-6 text-[11px] text-slate-600">
+          <div className="flex items-center justify-center py-6 text-[11px] text-slate-400">
             <span className="flex items-center gap-2">
               <span className="flex gap-0.5">
                 <span className="size-1 animate-bounce rounded-full bg-slate-500 motion-reduce:animate-none" style={{ animationDelay: "0ms" }} />
@@ -1442,7 +1442,7 @@ function FleetPreview() {
           <Truck className={cn("size-6 transition-colors duration-300", arriving ? "text-emerald-300" : "text-emerald-400")} aria-hidden />
         </div>
       </div>
-      <p className="mt-2 text-[10px] text-slate-500">Geofence: warehouse → customer · ETA {Math.max(1, Math.round((88 - pos) / 5))} min</p>
+      <p className="mt-2 text-[10px] text-slate-400">Geofence: warehouse → customer · ETA {Math.max(1, Math.round((88 - pos) / 5))} min</p>
     </div>
   );
 }
@@ -1479,7 +1479,7 @@ function SpatialPreview() {
             <div
               className={cn(
                 "relative rounded-lg border px-2 py-3 text-center text-[10px] font-mono transition-all duration-300",
-                i === active ? "border-blue-400/50 bg-blue-500/15 text-blue-200 scale-105" : "border-white/10 text-slate-500",
+                i === active ? "border-blue-400/50 bg-blue-500/15 text-blue-200 scale-105" : "border-white/10 text-slate-400",
               )}
             >
               {node}
@@ -1546,7 +1546,7 @@ function EduLivePreview() {
           Breakout opened: {activeBreakout} · server_event fan-out
         </p>
       ) : (
-        <p className="mt-3 text-[11px] text-slate-500">Waiting for next breakout…</p>
+        <p className="mt-3 text-[11px] text-slate-400">Waiting for next breakout…</p>
       )}
     </div>
   );
@@ -1589,7 +1589,7 @@ function OmnichannelPreview() {
             key={ch}
             className={cn(
               "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-medium transition-all duration-300",
-              i < lit ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200" : "border-white/10 text-slate-600",
+              i < lit ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200" : "border-white/10 text-slate-400",
               justLanded === i && "scale-110",
             )}
           >
@@ -1597,7 +1597,7 @@ function OmnichannelPreview() {
             {i < lit ? <Check className="size-2.5 animate-in zoom-in-50 duration-200" aria-hidden /> : null}
           </span>
         ))}
-        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-slate-500">you create the vendor app</span>
+        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-slate-400">you create the vendor app</span>
       </div>
       {lit >= CHANNELS.length ? (
         <p className="mt-3 animate-in fade-in-0 text-[11px] text-emerald-300">Delivered to in-app + bridged channels</p>

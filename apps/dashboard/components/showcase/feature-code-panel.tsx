@@ -27,18 +27,25 @@ export function FeatureCodePanel({
   );
 }
 
-export function FeatureCodeSnippet({ tokens }: { tokens: readonly CodeToken[] }) {
+export function FeatureCodeSnippet({
+  tokens,
+  tone,
+}: {
+  tokens: readonly CodeToken[];
+  /** Set when the snippet renders on a fixed dark panel (landing mocks). */
+  tone?: "dark";
+}) {
   return tokens.map((token, index) => (
-    <span key={`${index}-${token.text}`} className={tokenClassName(token)}>
+    <span key={`${index}-${token.text}`} className={tokenClassName(token, tone)}>
       {token.text}
     </span>
   ));
 }
 
-function tokenClassName(token: CodeToken): string | undefined {
-  if (token.kind === "keyword") return "text-[var(--fluxy-cta-color)]";
-  if (token.kind === "identifier") return "text-[var(--fluxy-logo-color)]";
-  if (token.kind === "string") return "text-muted-foreground";
+function tokenClassName(token: CodeToken, tone?: "dark"): string | undefined {
+  if (token.kind === "keyword") return tone === "dark" ? "text-[#ff8a47]" : "text-[var(--brand-hover)]";
+  if (token.kind === "identifier") return tone === "dark" ? "text-[var(--fluxy-logo-color)]" : "text-[#a8460f]";
+  if (token.kind === "string") return tone === "dark" ? "text-slate-400" : "text-muted-foreground";
   return undefined;
 }
 

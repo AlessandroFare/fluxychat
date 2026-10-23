@@ -11,7 +11,10 @@ import {
   FluxyTimeoutError,
   FLUXY_WS_CLOSE_NORMAL,
   computeReconnectBackoffMs,
+  mapWebSocketCloseToDisconnectReason,
   mapWebSocketCloseToError,
+  type FluxyDisconnectInfo,
+  type FluxyDisconnectReason,
 } from "./errors";
 import { dispatchInboundWsFrame } from "./ws-inbound";
 import { isCapabilityRealtimeEvent } from "./capability-realtime";
@@ -44,6 +47,7 @@ const ROOM_OPTION_FINGERPRINT_SKIP = new Set([
   "onStatusChange",
   "onReconnectFailed",
   "onOutboundQueueDrop",
+  "onDisconnect",
 ]);
 
 export function fingerprintRoomOptions(options?: FluxyRoomConnectionOptions): string | null {
@@ -89,6 +93,8 @@ export interface FluxyRoomConnectionOptions {
   maxOutboundQueueAgeMs?: number;
   onAuthError?: (error: FluxyAuthError) => void;
   onConnectionError?: (error: Error) => void;
+  /** Typed close reason for every socket close; see `disconnectReason`. */
+  onDisconnect?: (info: FluxyDisconnectInfo) => void;
   onStatusChange?: (status: FluxyRoomConnectionStatus) => void;
   /** Called when max reconnect attempts are exhausted (not on auth failure). */
   onReconnectFailed?: () => void;
@@ -173,6 +179,9 @@ export class FluxyChatRoomConnection {
   private hasConnectedOnce = false;
   private pendingHistoryReplay = false;
   private lastError: Error | null = null;
+  private disconnectReasonValue: FluxyDisconnectReason | null = null;
+  /** Sockets closed in place (`reconnectWithFreshCredentials`): not disconnects. */
+  private replacedSockets = new WeakSet<WebSocket>();
   private nextReconnectAtMs: number | null = null;
   private scheduledReconnectDelayMs = 0;
   private listeners: MessageListener[] = [];
@@ -232,6 +241,11 @@ export class FluxyChatRoomConnection {
 
   get connectionStatus(): FluxyRoomConnectionStatus {
     return this.status;
+  }
+
+  /** Typed reason of the last socket close (null before any close). */
+  get disconnectReason(): FluxyDisconnectReason | null {
+    return this.disconnectReasonValue;
   }
 
   get reconnectAttempts(): number {
@@ -554,6 +568,7 @@ export class FluxyChatRoomConnection {
     this.clearReconnectTimer();
     this.stopHeartbeat();
     if (this.ws) {
+      this.replacedSockets.add(this.ws);
       try {
         this.ws.close(FLUXY_WS_CLOSE_NORMAL);
       } catch {
@@ -995,14 +1010,26 @@ export class FluxyChatRoomConnection {
     });
 
     ws.addEventListener("close", (event) => {
+      if (this.replacedSockets.delete(ws)) {
+        return; // in-place restart: the replacement socket continues this connection
+      }
       this.ws = null;
       this.stopHeartbeat();
+      const reasonText = event.reason || "";
       if (this.intentionallyClosed) {
         this.setStatus("disconnected");
+        this.emitDisconnect({
+          reason: "client_initiated",
+          code: event.code,
+          reasonText,
+          willReconnect: false,
+          error: null,
+        });
         return;
       }
 
-      const mapped = mapWebSocketCloseToError(event.code, event.reason || "");
+      const mapped = mapWebSocketCloseToError(event.code, reasonText);
+      const reason = mapWebSocketCloseToDisconnectReason(event.code, reasonText);
       if (mapped instanceof FluxyAuthError) {
         this.lastError = mapped;
         this.clearOutboundQueue();
@@ -1010,6 +1037,13 @@ export class FluxyChatRoomConnection {
         this.options.onConnectionError?.(mapped);
         this.rejectAllWaitFor(mapped);
         this.setStatus("failed");
+        this.emitDisconnect({
+          reason,
+          code: event.code,
+          reasonText,
+          willReconnect: false,
+          error: mapped,
+        });
         return;
       }
 
@@ -1018,6 +1052,14 @@ export class FluxyChatRoomConnection {
         this.options.onConnectionError?.(mapped);
       }
 
+      this.emitDisconnect({
+        reason,
+        code: event.code,
+        reasonText,
+        willReconnect: true,
+        error: mapped ?? null,
+      });
+
       if (this.options.usePartySocket) {
         this.setStatus("reconnecting");
         return;
@@ -1025,6 +1067,11 @@ export class FluxyChatRoomConnection {
 
       this.scheduleReconnect();
     });
+  }
+
+  private emitDisconnect(info: FluxyDisconnectInfo): void {
+    this.disconnectReasonValue = info.reason;
+    this.options.onDisconnect?.(info);
   }
 
   private scheduleReconnect(): void {
@@ -1039,6 +1086,13 @@ export class FluxyChatRoomConnection {
       this.setStatus("failed");
       this.rejectAllWaitFor(this.lastError);
       this.options.onReconnectFailed?.();
+      this.emitDisconnect({
+        reason: "reconnect_failed",
+        code: 0,
+        reasonText: "",
+        willReconnect: false,
+        error: this.lastError,
+      });
       return;
     }
 

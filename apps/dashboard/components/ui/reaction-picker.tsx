@@ -65,6 +65,8 @@ export interface ReactionPickerProps {
   open: boolean
   /** Anchor rect to position against (from getBoundingClientRect). */
   anchorRect?: DOMRect | null
+  /** Project custom emoji; reacting sends the `:name:` token. */
+  customEmojis?: readonly { name: string; imageUrl: string }[]
 }
 
 export function ReactionPicker({
@@ -74,6 +76,7 @@ export function ReactionPicker({
   className,
   open,
   anchorRect,
+  customEmojis = [],
 }: ReactionPickerProps) {
   const popoverRef = React.useRef<HTMLDivElement>(null)
   const [pos, setPos] = React.useState({ top: 0, left: 0 })
@@ -177,6 +180,26 @@ export function ReactionPicker({
               </div>
             </div>
           ))}
+          {customEmojis.length > 0 ? (
+            <div className="mb-2" data-testid="custom-emoji-category">
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Custom
+              </div>
+              <div className="flex flex-wrap gap-0.5">
+                {customEmojis.map((entry) => (
+                  <button
+                    key={entry.name}
+                    type="button"
+                    className="flex size-8 items-center justify-center rounded-md transition-transform duration-150 hover:scale-[1.3] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => handleReact(`:${entry.name}:`)}
+                    aria-label={`React with :${entry.name}:`}
+                  >
+                    <img src={entry.imageUrl} alt={`:${entry.name}:`} className="size-5" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

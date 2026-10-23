@@ -47,6 +47,9 @@ export function othersFromRoomState(input: {
   }
   for (const cursor of Object.values(input.liveCursors)) {
     if (input.selfUserId && cursor.userId === input.selfUserId) continue;
+    // Named layers (presenceKey, e.g. the agent cursor) stay layer-scoped: they are
+    // consumed via useLiveCursors and must not clobber the default cursor in presence.
+    if (cursor.presenceKey) continue;
     const existing = byUser.get(cursor.userId);
     const presence: FluxyPresence = {
       ...(existing?.presence ?? {}),

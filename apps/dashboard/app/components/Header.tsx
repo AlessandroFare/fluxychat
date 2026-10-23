@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FluxychatLogotype } from "@/components/FluxychatLogo";
+import { FluxychatLogotype, FluxychatMark } from "@/components/FluxychatLogo";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
+import { cn } from "@/lib/utils";
 import { isConsoleRoute } from "./console-nav";
 import { HeaderAuth } from "./header-auth";
 import { ThemeToggle } from "~/components/ui/ThemeToggle";
@@ -13,10 +14,27 @@ export default function Header() {
   const inConsole = isConsoleRoute(pathname);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full border-b border-border",
+        inConsole ? "bg-background/95 backdrop-blur" : "bg-background",
+      )}
+    >
       <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
         {inConsole ? (
-          <div className="flex-1" aria-hidden />
+          <>
+            <Link
+              href={HOSTED_PATHS.console}
+              className="inline-flex items-center gap-2 text-foreground lg:hidden"
+              aria-label="Fluxychat console home"
+            >
+              <FluxychatMark size={18} />
+              <span className="font-mono text-[11px] uppercase tracking-[0.1em]">Console</span>
+            </Link>
+            <span className="hidden font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground lg:inline">
+              Console
+            </span>
+          </>
         ) : (
           <Link
             href={HOSTED_PATHS.landing}

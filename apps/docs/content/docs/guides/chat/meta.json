@@ -1,18 +1,8 @@
 {
   "title": "Chat Features",
   "pages": [
-    "index",
-    "ephemeral-messages",
-    "reactions",
-    "threading",
-    "polls",
-    "in-chat-forms",
-    "ai-assist",
-    "message-translation",
-    "automation",
-    "moderation",
-    "file-sharing",
     "interactive-cards",
-    "inbox-notifications"
+    "inbox-notifications",
+    "..."
   ]
 }
